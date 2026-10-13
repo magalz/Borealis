@@ -17,8 +17,6 @@ Scope:
 * Protocol + decoder + host rules
 * Minimal: protocol + decoder only, with host rules as a spec and shared conformance fixtures
 * Broad app core in C++ (REST client with HTTP + TLS, host store, settings)
-* Earlier note: no shared core at all
-
 Language for `borealis-core`:
 
 * C++20
@@ -58,11 +56,6 @@ Note: common-c (C) and PyroWave (C++20) stay C/C++ regardless, to keep merging w
 * Good, because it maximizes sharing.
 * Bad, because HTTP and TLS move to C++ instead of the native stacks.
 * Bad, because heavy bindings are needed for UI data.
-
-### Scope: No shared core
-
-* Good, because each platform is idiomatic.
-* Bad, because host rules are duplicated across platforms.
 
 ### Language: C++20
 

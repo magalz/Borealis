@@ -19,7 +19,7 @@ How should Borealis record decisions and changes so that they are versioned, aud
 
 ## Decision Outcome
 
-Chosen option: "MADR ADRs in `docs/adr` + generated changelog", because the ADRs record the discarded alternatives, and the changelog is generated from Conventional Commits so it does not drift. ADR statuses are proposed, accepted or superseded. Memtrace Cortex decision memory indexes the ADRs and standing rules, confirmed with `memtrace govern`.
+Chosen option: "MADR ADRs in `docs/adr` + generated changelog", because the ADRs record the discarded alternatives, and the changelog is generated from Conventional Commits so it does not drift. ADR statuses are proposed, accepted, superseded or deprecated. Memtrace Cortex decision memory indexes the ADRs and standing rules, confirmed with `memtrace govern`.
 
 ### Consequences
 

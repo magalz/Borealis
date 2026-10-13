@@ -25,7 +25,7 @@ Chosen option: "Every change through a PR with green CI, opened under the owner'
 ### Consequences
 
 * Good, because every change passes green CI and a review, and the owner stays in control.
-* Good, because the audit trail records who opened and merged each PR.
+* Good, because PRs opened under the owner's own account and merged only by the owner keep history attributable to one accountable person.
 * Bad, because rulesets cannot require a formal approval, so the protection rests on status checks and the owner's review.
 
 ## Pros and Cons of the Options

@@ -23,7 +23,7 @@ Chosen option: "git-cliff", because it is a single binary that generates the cha
 
 ### Consequences
 
-* Good, because it is a single binary generated from Conventional Commits.
+* Good, because it is a single binary that generates the changelog from Conventional Commits.
 * Bad, because it needs a TOML configuration.
 
 ## Pros and Cons of the Options

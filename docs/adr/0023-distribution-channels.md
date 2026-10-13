@@ -32,7 +32,7 @@ Not now: F-Droid and IzzyOnDroid, because F-Droid requires reproducible builds o
 * Good, because TVs can be sideloaded and Fire TV is covered through Amazon.
 * Good, because Play gives reach and automatic updates.
 * Bad, because Play and Amazon each have their own review processes and policies.
-* Bad, because Amazon is moving new devices to Vega OS, so its Android reach may shrink.
+* Bad, because Amazon is moving new devices to Vega OS, which does not run Android apps.
 
 ## Pros and Cons of the Options
 

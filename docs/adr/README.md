@@ -12,7 +12,7 @@ This folder holds the architecture decision records (ADRs) for Borealis. Each AD
 
 ## Status lifecycle
 
-```
+```text
 proposed --> accepted --> superseded by ADR-NNNN
                      \--> deprecated
 ```

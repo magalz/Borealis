@@ -45,7 +45,8 @@ Chosen option: "Native per platform with a shared C/C++ core", because each plat
 ### KMP with Compose Multiplatform from day one
 
 * Good, because it guarantees code sharing.
-* Bad, because Compose Multiplatform is stable on iOS since 1.8 (May 2025), but the build complexity is high and the multiplatform cost is paid before iOS or desktop are confirmed.
+* Good, because Compose Multiplatform has been stable on iOS since 1.8 (May 2025).
+* Bad, because the build complexity is much higher and the multiplatform cost is paid before iOS or desktop are confirmed.
 * Bad, because desktop via KMP would still need to rewrite video decoding.
 
 ### Java only

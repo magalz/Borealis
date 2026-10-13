@@ -19,7 +19,7 @@ The LuminalShine REST API uses a token that must be stored on the device. How sh
 
 ## Decision Outcome
 
-Chosen option: "Tink + Android Keystore (AES-GCM with a non-exportable key)", because the key is non-exportable and the encryption is done by a maintained library. The trade-off is a new dependency. Plaintext storage was rejected as unacceptable.
+Chosen option: "Tink + Android Keystore (AES-GCM with a non-exportable key)", because the key is non-exportable and an established library does the encryption. The trade-off is a new dependency. Plaintext storage was rejected as unacceptable.
 
 ### Consequences
 

@@ -36,7 +36,7 @@ The name is used in the GitHub repository `magalz/Borealis` and the local folder
 
 ### CandelaMoon
 
-* Good, because it was the working name during analysis.
+* Neutral, because it was the working name during analysis.
 * Bad, because it was replaced and is obsolete; it appears only as the legacy name (e.g. `com.candelamoon` in ADR 0028).
 
 ## More Information

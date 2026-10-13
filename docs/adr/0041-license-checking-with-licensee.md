@@ -8,7 +8,7 @@ decision-makers: João Pedro Magalhães
 
 ## Context and Problem Statement
 
-Borealis is GPL-3.0 (see [0024](0024-public-repository-from-the-start.md)), so every dependency license must be compatible. How should license compliance be checked, and should the build fail on violations? (The allowlist is part of [0021](0021-audit.md).)
+GPL-3.0 applies (see [0024](0024-public-repository-from-the-start.md)), so every dependency license must be compatible. How should license compliance be checked, and should the build fail on violations? (The allowlist is part of [0021](0021-audit.md).)
 
 ## Considered Options
 

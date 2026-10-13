@@ -12,7 +12,7 @@ Which testing layers should Borealis use, and what development paradigm should g
 
 ## Considered Options
 
-All four layers were adopted, so the options are the four layers themselves. The notes give no alternatives for these layers.
+All four layers are adopted together, so the options below are the layers themselves rather than competing alternatives.
 
 * Unit tests on the JVM and core C++ tests
 * Robolectric and Compose UI tests on the JVM
@@ -39,9 +39,8 @@ Chosen options: all four layers, rolled out progressively, with TDD as the parad
 
 ### Unit tests on the JVM and core C++ tests (GoogleTest, ASan/UBSan, libFuzzer)
 
-* Good, because JVM and native logic is tested fast and in isolation.
-* Good, because sanitizers and fuzzing cover memory-unsafe code (see [0008](0008-shared-core-language-and-scope.md)).
-* Bad, because it does not cover the real decoder or GPU.
+* Good, because it covers JVM logic and native core logic with fast tests.
+* Good, because ASan/UBSan and libFuzzer on parsers mitigate the lack of memory safety in C++ (see [0008](0008-shared-core-language-and-scope.md)).
 
 ### Robolectric and Compose UI tests on the JVM
 
@@ -59,7 +58,7 @@ Chosen options: all four layers, rolled out progressively, with TDD as the parad
 * Good, because the fixtures are reusable by future platforms.
 * Good, because they are captured from a real LuminalShine.
 * Bad, because they must be recaptured per host version.
-* Bad, because real-host end-to-end tests are optional and need a real host.
+* Neutral, because real-host end-to-end tests are optional.
 
 ## More Information
 

@@ -29,14 +29,14 @@ Safeguards:
 * `beforeSend` applies the BorealisLog redaction (see [0020](0020-logging.md)).
 * The diagnostic bundle can be attached, and log events are sent as breadcrumbs.
 
-Complement: Play Console Android vitals (free, Play installs only), or an external service for consenting users, within the free-plan event quota.
+Complement: Play Console Android vitals (free, Play installs only).
 
 ### Consequences
 
 * Good, because native and Kotlin crashes are symbolicated, and it works without Google Play Services.
 * Good, because the same dashboard serves Android, desktop and iOS.
 * Good, because users must consent, and redaction runs before anything is sent.
-* Bad, because the free-plan event quota limits the number of events.
+* Bad, because it is an external service with a free-plan event quota.
 
 ## Pros and Cons of the Options
 
@@ -45,7 +45,7 @@ Complement: Play Console Android vitals (free, Play installs only), or an extern
 * Good, because it symbolicates Kotlin and native crashes.
 * Good, because it works without Google Play Services.
 * Good, because one dashboard covers Android, desktop (sentry-native) and iOS (sentry-cocoa).
-* Bad, because the free-plan event quota applies.
+* Bad, because it is an external service for consenting users only, with a free-plan event quota.
 
 ### Crashlytics, opt-in
 

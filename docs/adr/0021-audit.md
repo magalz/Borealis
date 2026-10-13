@@ -12,7 +12,7 @@ Borealis handles paired hosts, a REST token, TLS pinning and third-party native 
 
 ## Considered Options
 
-The notes record three chosen measures and one deferred measure. They give no alternatives for the chosen measures and no pros or cons for them. The Pros and Cons section below records only the rationale stated in the notes.
+Three measures were adopted and one was deferred. They are complementary rather than competing alternatives, so the section below records the rationale for each.
 
 ## Decision Outcome
 
@@ -28,7 +28,6 @@ Deferred: reproducible builds (needed for F-Droid), after version 1.0.
 
 * Good, because dependency risks, provenance and licenses are checked in CI.
 * Good, because the user can see and export a local audit trail of security-relevant events.
-* Bad, because the audit trail must be kept in sync with each new REST action and launch path.
 * Bad, because reproducible builds are not available until after 1.0, which blocks F-Droid for now (see [0023](0023-distribution-channels.md)).
 
 ## Pros and Cons of the Options
@@ -36,19 +35,13 @@ Deferred: reproducible builds (needed for F-Droid), after version 1.0.
 ### Supply-chain security (Dependabot, CodeQL, SBOM, checksums, attestations)
 
 * Good, because it covers dependencies, code scanning, SBOM and release provenance.
-* Bad, because it adds CI steps and tooling to maintain.
-
 ### In-app audit trail (Room, local only)
 
 * Good, because the record stays on the device and can be viewed, exported and erased.
-* Bad, because it adds storage and must be kept in sync with the actions it records.
-
 ### License compliance (GPL-3.0-compatible allowlist)
 
 * Good, because CI blocks incompatible licenses.
 * Good, because a NOTICE screen lists third-party licenses.
-* Bad, because the allowlist must be maintained as dependencies change.
-
 ### Reproducible builds (deferred)
 
 * Good, because they are needed for F-Droid.

@@ -27,7 +27,8 @@ Chosen option: "DataStore (new settings) + Room (session history, audit trail) +
 
 * Good, because each data shape uses the right tool.
 * Good, because history is queryable, with formal migrations and compile-time-checked queries.
-* Bad, because three mechanisms are used, and Room adds KSP to the build.
+* Bad, because three mechanisms are in use once upstream's are counted.
+* Bad, because Room adds KSP to the build.
 
 ## Pros and Cons of the Options
 
@@ -35,7 +36,7 @@ Chosen option: "DataStore (new settings) + Room (session history, audit trail) +
 
 * Good, because each data shape gets the right tool.
 * Good, because history is queryable with migrations and compile-time-checked queries.
-* Bad, because three mechanisms are needed (upstream already counts three).
+* Bad, because three mechanisms are in use once upstream's are counted.
 * Bad, because Room adds KSP.
 
 ### DataStore + rotating JSONL files

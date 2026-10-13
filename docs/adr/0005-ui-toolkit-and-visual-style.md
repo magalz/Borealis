@@ -45,7 +45,7 @@ Style details: the Mission Control palette comes from `luminalshine/src_assets/c
 ### AndroidX Views + Material 3
 
 * Good, because it is mature and works with Java.
-* Good, because every visual detail becomes a style, attr or drawable.
+* Bad, because every visual detail becomes a style, attr or drawable.
 * Bad, because TV D-pad navigation needs manual work.
 * Bad, because Leanback is deprecated.
 
@@ -68,7 +68,6 @@ Style details: the Mission Control palette comes from `luminalshine/src_assets/c
 
 ### Hybrid Views for mobile + Leanback for TV (earlier round)
 
-* Good, because each form factor gets a native toolkit.
 * Bad, because it means two UIs, and Leanback is deprecated.
 
 ## More Information

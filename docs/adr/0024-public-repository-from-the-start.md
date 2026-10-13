@@ -39,7 +39,7 @@ Chosen option: "Public from the start", because it gives unlimited GitHub Action
 ### Private until the first release
 
 * Good, because it gives freedom to experiment.
-* Good, because it avoids the Actions quota.
+* Bad, because it is subject to the Actions quota.
 * Bad, because the history becomes public later.
 
 ### Private, with a public mirror per release

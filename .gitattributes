@@ -1,0 +1,23 @@
+# Borealis-owned files are normalized to LF.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# apps/android is a git subtree of moonlight-android: keep upstream bytes
+# exactly as upstream stores them, so syncs never show line-ending churn.
+apps/android/** -text
+
+# Borealis-owned code inside the Android build is normalized again.
+apps/android/borealis/** text=auto eol=lf
+apps/android/build-logic/** text=auto eol=lf
+apps/android/app/src/main/jni/borealis/** text=auto eol=lf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.webp binary
+*.ttf binary
+*.otf binary
+*.jar binary
+*.so binary
+*.a binary

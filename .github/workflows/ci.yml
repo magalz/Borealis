@@ -1,0 +1,152 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      android: ${{ steps.filter.outputs.android }}
+      core: ${{ steps.filter.outputs.core }}
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: |
+            android:
+              - 'apps/android/**'
+              - 'core/**'
+              - '.gitmodules'
+              - '.github/workflows/ci.yml'
+            core:
+              - 'core/**'
+              - '.github/workflows/ci.yml'
+            docs:
+              - '**/*.md'
+              - '.markdownlint.jsonc'
+              - '.github/workflows/ci.yml'
+
+  android:
+    name: Android
+    needs: changes
+    if: needs.changes.outputs.android == 'true' || github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          fetch-depth: 0 # version is derived from android-v* tags
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Format, static analysis, unit tests and build
+        run: ./gradlew --stacktrace spotlessCheck detekt lint testDebugUnitTest assembleNonRootDebug
+      - name: Upload debug APK
+        if: success()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: borealis-android-debug
+          path: apps/android/app/build/outputs/apk/nonRoot/debug/*.apk
+          retention-days: 14
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-reports
+          path: |
+            apps/android/**/build/reports/
+            apps/android/**/build/test-results/
+          retention-days: 14
+
+  core:
+    name: Core (C++)
+    needs: changes
+    if: needs.changes.outputs.core == 'true' || github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: core
+    env:
+      CC: clang
+      CXX: clang++
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build clang clang-format clang-tidy
+      - name: Check formatting
+        run: find include src tests -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.cpp' \) -print0 | xargs -0 --no-run-if-empty clang-format --dry-run --Werror
+      - name: Build and test (dev, warnings as errors)
+        run: |
+          cmake --preset dev -DBOREALIS_CORE_WARNINGS_AS_ERRORS=ON
+          cmake --build --preset dev
+          ctest --preset dev
+      - name: Static analysis (clang-tidy)
+        run: find src -type f -name '*.cpp' -print0 | xargs -0 --no-run-if-empty clang-tidy -p build/dev --warnings-as-errors='*'
+      - name: Build and test with sanitizers (ASan + UBSan)
+        run: |
+          cmake --preset asan -DBOREALIS_CORE_WARNINGS_AS_ERRORS=ON
+          cmake --build --preset asan
+          ctest --preset asan
+      # Fuzz targets arrive with the first parser (Phase 1); a short libFuzzer run will be added here.
+
+  docs:
+    name: Docs
+    needs: changes
+    if: needs.changes.outputs.docs == 'true' || github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Lint Markdown (Borealis-owned docs only)
+        uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
+        with:
+          config: .markdownlint.jsonc
+          globs: |
+            *.md
+            docs/**/*.md
+            core/**/*.md
+            .github/**/*.md
+            apps/android/borealis/**/*.md
+
+  ci-ok:
+    name: CI result
+    # Single required status check: passes when every job that ran succeeded or was skipped.
+    if: always()
+    needs: [changes, android, core, docs]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate job results
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          for r in $RESULTS; do
+            if [ "$r" != "success" ] && [ "$r" != "skipped" ]; then
+              echo "::error::A CI job finished with result '$r'"
+              exit 1
+            fi
+          done

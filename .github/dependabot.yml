@@ -1,0 +1,43 @@
+version: 2
+updates:
+  # Borealis-owned Gradle dependencies (version catalog, build-logic, borealis modules).
+  # Dependencies declared by upstream Moonlight files are updated through upstream syncs
+  # (docs/development/upstream-sync.md), never by Dependabot, so upstream files stay untouched.
+  - package-ecosystem: gradle
+    directories:
+      - /apps/android
+      - /apps/android/build-logic
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
+      include: scope
+    ignore:
+      - dependency-name: com.android.tools.build:gradle
+      - dependency-name: org.bouncycastle:*
+      - dependency-name: org.jcodec:jcodec
+      - dependency-name: com.squareup.okhttp3:okhttp
+      - dependency-name: org.jmdns:jmdns
+      - dependency-name: com.github.cgutman:ShieldControllerExtensions
+      - dependency-name: com.android.tools:desugar_jdk_libs
+    groups:
+      kotlin-and-ksp:
+        patterns: ['org.jetbrains.kotlin*', 'com.google.devtools.ksp*']
+      quality-tooling:
+        patterns: ['com.diffplug.spotless*', 'io.gitlab.arturbosch.detekt*', 'dev.detekt*', 'com.facebook:ktfmt']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ['*']
+
+  # moonlight-common-c is intentionally not tracked here: its pointer follows the tested
+  # moonlight-android upstream sync (or the Borealis fork once it exists).

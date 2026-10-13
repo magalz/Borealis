@@ -1,0 +1,31 @@
+package io.github.magalz.borealis.buildlogic
+
+import com.android.build.api.dsl.LibraryExtension
+import org.gradle.api.JavaVersion
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.kotlin.dsl.configure
+
+/** Convention for Borealis Kotlin library modules (`:borealis:*`). */
+class BorealisAndroidLibraryPlugin : Plugin<Project> {
+    override fun apply(target: Project): Unit =
+        with(target) {
+            pluginManager.apply("com.android.library")
+
+            extensions.configure<LibraryExtension> {
+                compileSdk = BorealisBuild.COMPILE_SDK
+                defaultConfig { minSdk = BorealisBuild.MIN_SDK }
+                compileOptions {
+                    sourceCompatibility = JavaVersion.VERSION_17
+                    targetCompatibility = JavaVersion.VERSION_17
+                }
+                lint {
+                    warningsAsErrors = true
+                    abortOnError = true
+                }
+            }
+
+            dependencies.add("testImplementation", libs.findLibrary("junit").get())
+            dependencies.add("testImplementation", libs.findLibrary("truth").get())
+        }
+}

@@ -1,1 +1,17 @@
+// BOREALIS: Borealis convention plugins and root tooling live in the build-logic included build.
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    includeBuild('build-logic')
+}
+
+plugins {
+    id 'borealis.settings'
+}
+
 include ':app'
+// BOREALIS: Borealis Kotlin modules.
+include ':borealis:logging'

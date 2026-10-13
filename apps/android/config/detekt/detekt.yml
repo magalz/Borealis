@@ -1,0 +1,4 @@
+# Borealis detekt overrides on top of the default config (buildUponDefaultConfig = true).
+style:
+  ReturnCount:
+    max: 3

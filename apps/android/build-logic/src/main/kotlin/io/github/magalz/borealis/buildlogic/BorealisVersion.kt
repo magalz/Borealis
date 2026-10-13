@@ -5,7 +5,8 @@ data class BorealisVersion(val name: String, val code: Int) {
     companion object {
         val DEV = BorealisVersion(name = "0.0.0-dev", code = 1)
 
-        private val DESCRIBE = Regex("""^android-v(\d{1,4})\.(\d{1,3})\.(\d{1,3})-(\d+)-g([0-9a-f]+)$""")
+        private val DESCRIBE =
+            Regex("""^android-v(\d{1,4})\.(\d{1,3})\.(\d{1,3})-(\d+)-g([0-9a-f]+)$""")
 
         /**
          * Parses `git describe --tags --long --match "android-v*"` output; falls back to [DEV] when

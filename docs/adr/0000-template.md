@@ -44,4 +44,4 @@ Chosen option: "{Option 1}", because {justification: e.g. it best satisfies the 
 
 ## More Information
 
-{Optional: links to related ADRs, specs, or external references, e.g. "Related: [0013](0013-git-workflow.md)."}
+{Optional: links to related ADRs, specs, or external references, e.g. "Related: [0013](0013-github-flow-with-merge-commits.md)."}

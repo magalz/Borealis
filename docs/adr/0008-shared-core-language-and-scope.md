@@ -28,9 +28,9 @@ Language for `borealis-core`:
 
 ## Decision Outcome
 
-Chosen scope: "Protocol + decoder + host rules", which includes a fork of moonlight-common-c, the PyroWave decoder, and `borealis-core` with pure deterministic LuminalShine logic (capability bits and serverinfo parsing, launch retry policy, display-mode rules, host contract constants). HTTP transport and UI stay per platform.
+Chosen option (scope): "Protocol + decoder + host rules", which includes a fork of moonlight-common-c, the PyroWave decoder, and `borealis-core` with pure deterministic LuminalShine logic (capability bits and serverinfo parsing, launch retry policy, display-mode rules, host contract constants). HTTP transport and UI stay per platform.
 
-Chosen language: "C++20", because it is the same language as PyroWave and LuminalShine (C++23), so host headers such as `luminalshine/src/pyrowave/contract.h` can be reused. It also means one fewer toolchain, smaller binaries, and host contributions in the same language.
+Chosen option (language): "C++20", because it is the same language as PyroWave and LuminalShine (C++23), so host headers such as `luminalshine/src/pyrowave/contract.h` can be reused. It also means one fewer toolchain, smaller binaries, and host contributions in the same language.
 
 Note: common-c (C) and PyroWave (C++20) stay C/C++ regardless, to keep merging with their upstreams.
 

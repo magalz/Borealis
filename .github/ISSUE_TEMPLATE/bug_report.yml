@@ -1,0 +1,79 @@
+name: Bug report
+description: Something in Borealis does not work as expected
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please do not post secrets: no pairing PINs, keys, certificates, tokens or passwords.
+        Security problems go to a private advisory, not here: https://github.com/magalz/Borealis/security/advisories/new
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I did not include any PIN, key, certificate, token or password.
+          required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      description: Manufacturer and model, and the form factor (phone, tablet, Android TV, Fire TV, handheld).
+      placeholder: "Example: Google Pixel 8, phone"
+    validations:
+      required: true
+  - type: input
+    id: android-version
+    attributes:
+      label: Android version
+      placeholder: "Example: Android 15"
+    validations:
+      required: true
+  - type: input
+    id: borealis-version
+    attributes:
+      label: Borealis version
+      description: Shown in the app, or the release tag.
+      placeholder: "Example: android-v0.3.0"
+    validations:
+      required: true
+  - type: input
+    id: luminalshine-version
+    attributes:
+      label: LuminalShine version
+      description: The host version, or say which other host you use (for example Sunshine).
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostic bundle or logs
+      description: |
+        If the app can export a diagnostic bundle, attach it. Logs are redacted by the app, but check the bundle yourself before you upload it:
+        remove anything private such as host names or IP addresses you do not want public. Never paste PINs, keys, certificates or tokens.
+        Drag files into this box or paste short excerpts.

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/magalz/Borealis/security/advisories/new
+    about: Do not open a public issue for security problems. Use a private security advisory.
+  - name: LuminalShine host issues
+    url: https://github.com/NortheBridge/luminalshine/issues
+    about: Problems in the host (server) belong in the LuminalShine repository.
+  - name: Moonlight upstream issues
+    url: https://github.com/moonlight-stream/moonlight-android/issues
+    about: Bugs that also exist in stock Moonlight can be reported upstream.

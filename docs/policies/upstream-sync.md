@@ -15,7 +15,8 @@ procedure is in [../development/upstream-sync.md](../development/upstream-sync.m
    `sync/moonlight-<version>` and open a PR. Do not mix a sync with feature
    work.
 4. **Sync with the subtree command**, not by copying files:
-   `git subtree pull --prefix=apps/android moonlight-android master`.
+   `git subtree pull --prefix=apps/android -m "sync: moonlight-android <version>" moonlight-android <tag-or-commit>`
+   (prefer the upstream release tag over `master`).
 5. **The `moonlight-common-c` submodule stays at its upstream path**
    (`apps/android/app/src/main/jni/moonlight-core/moonlight-common-c`). Its
    pointer moves only with an upstream sync, unless a security fix requires

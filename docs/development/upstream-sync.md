@@ -33,11 +33,11 @@ One PR per Moonlight release. Never reformat upstream files at any step.
 ## 2. Pull
 
 ```sh
-git subtree pull --prefix=apps/android moonlight-android master
+git subtree pull --prefix=apps/android -m "sync: moonlight-android <version>" moonlight-android <tag-or-commit>
 ```
 
-Use the upstream tag or commit for the release when `master` has moved past
-it. Keep the default merge behaviour; do not squash away the upstream history
+Prefer the upstream release tag over `master`, so that the sync is exactly the
+release. Keep the default merge behaviour; do not squash away the upstream history
 unless the owner decides otherwise.
 
 ## 3. Resolve conflicts

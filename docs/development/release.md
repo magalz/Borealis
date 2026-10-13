@@ -22,8 +22,23 @@ git cliff --unreleased --tag android-v0.3.0
 ```
 
 Check that the sections (Added, Changed, Fixed, Security, Documentation,
-Upstream) read well. Fix poor commit messages by editing PR titles before the
-merge, not by rewriting history. Generate the final file as part of the
+Upstream) read well.
+
+**First release.** The upstream Moonlight history is in this repository (the
+subtree is not squashed), so the first changelog must start after the import:
+
+```sh
+git cliff f397cda5.. --tag android-v0.1.0
+```
+
+**Upstream commits.** Commits that arrive through upstream syncs are parsed
+like any other. Most Moonlight commits are not Conventional Commits and are
+filtered out (`filter_unconventional` and `filter_commits` in `cliff.toml`),
+but upstream commits that happen to start with `feat` or `fix` can appear. Read
+the generated notes before publishing and treat the "Upstream" group (the
+`sync:` commits) as the reliable record of what came from Moonlight.
+
+Fix poor commit messages by editing PR titles before the merge, not by rewriting history. Generate the final file as part of the
 release workflow.
 
 ## 3. Tag
@@ -42,14 +57,15 @@ Pre-releases use a suffix: `android-v0.3.0-rc.1`.
 
 Pushing the tag starts the release workflow, which:
 
-1. Builds the release artifacts from the tagged commit.
-2. Generates the changelog for the release notes with git-cliff.
-3. Generates the CycloneDX SBOM and the SHA-256 checksums.
-4. **Waits for manual approval** of the GitHub Environment `release`. Review
+1. Builds the **unsigned** release artifacts from the tagged commit.
+2. **Waits for manual approval** of the GitHub Environment `release`. Review
    the run, then approve it.
-5. After approval, signs the artifacts with the owner-held key (available only
+3. After approval, signs the artifacts with the owner-held key (available only
    in the `release` environment).
-6. Creates the build-provenance attestations.
+4. Generates the SHA-256 checksums and the CycloneDX SBOM of the **signed**
+   artifacts.
+5. Creates the build-provenance attestations for the signed artifacts.
+6. Generates the changelog for the release notes with git-cliff.
 7. Creates the GitHub Release (draft or pre-release first) with the APK(s),
    AAB, checksums, SBOM and release notes.
 

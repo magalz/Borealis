@@ -40,7 +40,9 @@ Install the SDK with the new Android CLI. The old `sdkmanager` is deprecated.
 android --no-metrics sdk install platform-tools platforms/android-37.0 build-tools/37.0.0 ndk/29.0.14206865 cmake/4.1.2
 ```
 
-The SDK lives under `%LOCALAPPDATA%\Android\Sdk`. Then:
+Borealis' setup installs it under `%LOCALAPPDATA%\Android\Sdk` (the location
+used with `--sdk`); any location works as long as `ANDROID_HOME` and
+`apps/android/local.properties` point to it. Then:
 
 1. Set the `ANDROID_HOME` environment variable to that directory.
 2. Create `apps/android/local.properties` (it is git-ignored) with the SDK

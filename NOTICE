@@ -40,7 +40,7 @@ Native libraries (apps/android/app/src/main/jni)
     Built with the scripts in moonlight-mobile-deps and
     moonlight-core/build-openssl.sh.
 
-  Opus (prebuilt static libraries and headers)
+  Opus 1.6.1 (prebuilt static libraries and headers)
     License: BSD-3-Clause
     https://opus-codec.org/
     Built from moonlight-mobile-deps.
@@ -80,11 +80,13 @@ Java and Kotlin libraries (apps/android/app/build.gradle)
     License: Apache-2.0
     https://github.com/jmdns/jmdns
 
-  ShieldControllerExtensions (cgutman)
-    License: see https://github.com/cgutman/ShieldControllerExtensions
+  ShieldControllerExtensions 1.0.1 (cgutman)
+    License: MIT
+    https://github.com/cgutman/ShieldControllerExtensions
 
-  desugar_jdk_libs (build-time desugaring library)
-    License: see https://github.com/google/desugar_jdk_libs
+  desugar_jdk_libs 2.1.5 (build-time desugaring library)
+    License: GPL-2.0 with Classpath Exception
+    https://github.com/google/desugar_jdk_libs
 
 ================================================================================
 Complete list

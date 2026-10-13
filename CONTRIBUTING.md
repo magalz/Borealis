@@ -49,8 +49,10 @@ changing untested upstream code, add characterization tests first. Details:
 <optional footers: Closes #123, Co-Authored-By: ...>
 ```
 
-Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`,
-`chore`, `revert`, and `sync` for upstream Moonlight syncs. Mark breaking
+Types: `feat`, `fix`, `security`, `docs`, `test`, `refactor`, `perf`,
+`build`, `ci`, `chore`, `style`, `revert`, and `sync` for upstream Moonlight
+syncs. `test`, `build`, `ci`, `chore` and `style` commits are left out of the
+changelog. Mark breaking
 changes with `!` or a `BREAKING CHANGE:` footer. The changelog is generated
 from these messages by git-cliff (see [cliff.toml](cliff.toml)).
 

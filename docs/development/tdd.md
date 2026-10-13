@@ -71,7 +71,7 @@ Not enough:
 - A test that cannot fail (no assertion, or asserts a constant).
 - Coverage numbers without assertions.
 
-## Tools
+## Tools (introduced progressively)
 
 | Area | Tools |
 | --- | --- |

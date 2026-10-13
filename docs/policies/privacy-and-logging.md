@@ -16,8 +16,8 @@ The user-facing statement is [PRIVACY.md](../../PRIVACY.md).
 
 ## Redaction rules
 
-Never write these to logs, the audit trail, exceptions that may be reported,
-fixtures, or screenshots:
+Never write the following to logs, the audit trail, exceptions that may be
+reported, fixtures, or screenshots, except where a row says otherwise:
 
 | Data | Rule |
 | --- | --- |

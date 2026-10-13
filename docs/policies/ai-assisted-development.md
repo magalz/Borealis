@@ -9,7 +9,7 @@ the rules. The working details (roles, task briefs, hand-offs) are in
 
 | Role | Responsibility |
 | --- | --- |
-| Owner ([@magalz](https://github.com/magalz)) | Decides direction, accepts ADRs, opens and owns every PR, and is the only one who merges. |
+| Owner ([@magalz](https://github.com/magalz)) | Decides direction, accepts ADRs, opens and owns every PR (for AI-assisted work), and is the only one who merges. |
 | Orchestrator | Plans work, splits it into small tasks with briefs, assigns file ownership, integrates results, and reports to the owner. Writes the agent-facing process files. |
 | Implementer | Does exactly one task in its own git worktree and branch, following the brief and TDD. Does not touch files it does not own. |
 | Reviewer | Reviews a branch independently of the implementer against the brief, the Definition of Done and the policies, and reports findings. Does not merge. |

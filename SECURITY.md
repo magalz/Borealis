@@ -14,7 +14,8 @@ releases are not patched; update to the latest release.
 
 Do not open a public issue or pull request for a security problem.
 
-Report it privately through GitHub Security Advisories:
+Private vulnerability reporting is enabled in the repository settings. Report
+it privately through GitHub Security Advisories:
 
 1. Open the [Security tab](https://github.com/magalz/Borealis/security) of the repository.
 2. Choose **Report a vulnerability**.

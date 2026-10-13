@@ -9,6 +9,11 @@ procedure is in [../development/release.md](../development/release.md).
 - Pre-1.0 (`0.y.z`), minor versions may contain breaking changes; this is
   called out in the changelog.
 - Pre-releases use SemVer suffixes (`android-v0.3.0-rc.1`).
+- `versionName` and `versionCode` are derived from the
+  `android-vMAJOR.MINOR.PATCH` tag by the Borealis convention plugin in
+  `apps/android/build-logic`, never by editing upstream files:
+  `versionCode = MAJOR * 1_000_000 + MINOR * 1_000 + PATCH`. Untagged builds
+  use `0.0.0-dev`.
 - Each app has its own tag namespace. Android tags are `android-vX.Y.Z`. The
   tag is the single source of truth for the version; no commit is made only to
   bump a version.

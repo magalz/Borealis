@@ -29,7 +29,7 @@ Development-only tools that are not shipped (formatters, linters, test
 libraries) are not subject to the allowlist but must not be incompatible with
 running in CI.
 
-The licence check (licensee-based) runs in CI and compares the detected
+The licence check (licensee-based; being introduced in Phase 0) runs in CI and compares the detected
 licences against this allowlist. The generated third-party list and the
 CycloneDX SBOM are the authoritative inventory; [NOTICE](../../NOTICE) is a
 summary.
@@ -65,13 +65,16 @@ libraries.
 
 ## Updates (Dependabot)
 
-- Dependabot is enabled for Gradle, GitHub Actions and submodules.
-- Version updates run weekly; security updates are raised immediately.
+- Dependabot is enabled weekly for Borealis-owned Gradle dependencies and GitHub
+  Actions. The moonlight-common-c submodule is not tracked by Dependabot; it
+  moves only with an upstream sync (see [upstream-sync.md](upstream-sync.md)).
+- Security updates are raised immediately.
 - Updates arrive as PRs and go through the normal CI. Group low-risk updates;
   review major updates individually.
 - The dependency review check blocks PRs that introduce a known-vulnerable or
   disallowed-licence dependency.
-- CodeQL and the SBOM are refreshed on every release.
+- CodeQL runs in CI, and the CycloneDX SBOM (being introduced in Phase 0) is
+  regenerated on every release.
 
 ## Removing and replacing
 
@@ -83,6 +86,7 @@ adding one.
 
 Dependencies imported with the Moonlight subtree are listed in
 [NOTICE](../../NOTICE). Version bumps that come with an upstream sync follow
-[upstream-sync.md](upstream-sync.md). Borealis-only bumps of upstream
-dependencies are allowed through Dependabot when they do not require editing
-upstream files beyond a version string.
+[upstream-sync.md](upstream-sync.md). Dependencies declared by upstream (in
+`apps/android/app/build.gradle`, the root `build.gradle` and the jni libraries)
+are not updated by Dependabot; they change only through an upstream sync. Do
+not bump them in Borealis commits.

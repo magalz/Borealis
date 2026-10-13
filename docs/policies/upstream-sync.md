@@ -20,8 +20,9 @@ procedure is in [../development/upstream-sync.md](../development/upstream-sync.m
    (`apps/android/app/src/main/jni/moonlight-core/moonlight-common-c`). Its
    pointer moves only with an upstream sync, unless a security fix requires
    moving it earlier (noted in the PR).
-6. **Compatibility is recorded.** Every sync PR updates the table of
-   Moonlight and LuminalShine versions tested together.
+6. **Compatibility is recorded.** Every sync PR adds a row to the compatibility table in
+   [../development/upstream-sync.md](../development/upstream-sync.md)
+   (Moonlight and LuminalShine versions tested together).
 7. **Offer fixes upstream.** If a Borealis fix belongs in Moonlight, send it
    there too, so the hook can shrink or disappear.
 

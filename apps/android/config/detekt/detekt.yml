@@ -2,3 +2,5 @@
 style:
   ReturnCount:
     max: 3
+  MagicNumber:
+    ignoreEnums: true

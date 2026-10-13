@@ -67,6 +67,7 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
                 }
             }
 
+            dependencies.add("implementation", project(":borealis:logging"))
             dependencies.add("implementation", libs.findLibrary("hilt-android").get())
             dependencies.add("ksp", libs.findLibrary("hilt-compiler").get())
         }

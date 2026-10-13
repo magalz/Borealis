@@ -23,8 +23,8 @@ extern "C" {
  *     with -fvisibility=hidden).
  */
 #if defined(_WIN32) || defined(__CYGWIN__)
-  #if defined(BOREALIS_CORE_SHARED)
-    #if defined(BOREALIS_CORE_BUILDING)
+  #ifdef BOREALIS_CORE_SHARED
+    #ifdef BOREALIS_CORE_BUILDING
       #define BOREALIS_CORE_API __declspec(dllexport)
     #else
       #define BOREALIS_CORE_API __declspec(dllimport)

@@ -1,5 +1,6 @@
 #include "borealis/core.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <gtest/gtest.h>
 #include <string>
@@ -30,12 +31,9 @@ namespace {
     if (part.size() > 1 && part.front() == '0') {
       return false;
     }
-    for (const char c : part) {
-      if (c < '0' || c > '9') {
-        return false;
-      }
-    }
-    return true;
+    return std::ranges::all_of(part, [](char c) {
+      return c >= '0' && c <= '9';
+    });
   }
 
 }  // namespace

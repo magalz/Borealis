@@ -1,0 +1,86 @@
+# EditorConfig: https://editorconfig.org
+# Borealis-owned files follow these rules. Files imported from upstream
+# Moonlight are excluded at the bottom so editors never rewrite them.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.{kt,kts,java}]
+indent_size = 4
+
+# C/C++ follows LuminalShine's .clang-format (IndentWidth: 2).
+[*.{c,cc,cpp,cxx,h,hh,hpp,hxx,inl}]
+indent_size = 2
+
+[*.{yml,yaml,json,jsonc,toml,xml}]
+indent_size = 2
+
+[*.md]
+indent_size = 2
+trim_trailing_whitespace = true
+
+[*.{bat,cmd}]
+end_of_line = crlf
+
+[Makefile]
+indent_style = tab
+
+# ---------------------------------------------------------------------------
+# Upstream (moonlight-android subtree): never reformat. Unset every formatting
+# rule so editors leave these files exactly as they are. Keep these sections
+# last so they override the rules above.
+# ---------------------------------------------------------------------------
+
+[apps/android/app/**]
+charset = unset
+end_of_line = unset
+indent_style = unset
+indent_size = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+
+[apps/android/{*.gradle,*.properties,*.txt,*.md,*.yml,gradlew,gradlew.bat}]
+charset = unset
+end_of_line = unset
+indent_style = unset
+indent_size = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+
+[apps/android/gradle/**]
+charset = unset
+end_of_line = unset
+indent_style = unset
+indent_size = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+
+[apps/android/fastlane/**]
+charset = unset
+end_of_line = unset
+indent_style = unset
+indent_size = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+
+[apps/android/LuaScripts/**]
+charset = unset
+end_of_line = unset
+indent_style = unset
+indent_size = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+
+[apps/android/store-assets/**]
+charset = unset
+end_of_line = unset
+indent_style = unset
+indent_size = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset

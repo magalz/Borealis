@@ -1,0 +1,22 @@
+{
+  // markdownlint configuration for Borealis-owned Markdown.
+  "default": true,
+
+  // Long lines are fine; prose is wrapped by the author or not at all.
+  "MD013": false,
+
+  // Allow the few HTML elements GitHub renders usefully.
+  "MD033": { "allowed_elements": ["details", "summary", "br", "kbd"] },
+
+  // First line of every file must be a top-level heading.
+  "MD041": true,
+
+  // One H1 per document.
+  "MD025": true,
+
+  // Allow repeated headings in different sections (e.g. "Example").
+  "MD024": { "siblings_only": true },
+
+  // Ordered lists use 1. 2. 3. numbering.
+  "MD029": { "style": "ordered" }
+}

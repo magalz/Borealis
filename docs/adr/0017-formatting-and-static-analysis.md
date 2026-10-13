@@ -27,6 +27,23 @@ Chosen option: "Spotless + detekt + Android Lint + clang-tidy + pre-commit hook 
 * Good, because the Android Lint baseline keeps upstream warnings out of new work.
 * Bad, because it has several tools to set up and maintain.
 
+Code and style rules recorded with this decision:
+
+* Kotlin: ktfmt kotlinlang style (see [0037](0037-kotlin-formatter-ktfmt.md)).
+* C++: LuminalShine's `.clang-format` (LLVM based) and clang-tidy.
+* Upstream Java is left untouched, and no new Java code is written.
+* Markdown: markdownlint.
+* `.editorconfig` at the repository root.
+* Upstream files are never reformatted. Upstream hooks are marked `// BOREALIS:`.
+
+Definition of Done:
+
+* A test is written first (TDD), see [0016](0016-testing-strategy-and-tdd.md).
+* CI is green: format, lint, detekt, tests and build.
+* Docs and the ADR are updated when a decision is made.
+* Log and audit entries are added when applicable.
+* No reformatting of upstream files.
+
 ## Pros and Cons of the Options
 
 ### Spotless + detekt + Android Lint + clang-tidy

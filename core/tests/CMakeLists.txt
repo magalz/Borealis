@@ -25,4 +25,18 @@ set_target_properties(
 )
 borealis_core_apply_build_options(borealis_core_tests)
 
+# Shared builds on Windows have no rpath: place dependent DLLs next to the test
+# executable. Must precede gtest_discover_tests, which runs the exe post-build.
+if(WIN32)
+  add_custom_command(
+    TARGET borealis_core_tests
+    POST_BUILD
+    COMMAND
+      ${CMAKE_COMMAND} -E
+      $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:borealis_core_tests>>,copy_if_different,true>
+      $<TARGET_RUNTIME_DLLS:borealis_core_tests> $<TARGET_FILE_DIR:borealis_core_tests>
+    COMMAND_EXPAND_LISTS
+  )
+endif()
+
 gtest_discover_tests(borealis_core_tests)

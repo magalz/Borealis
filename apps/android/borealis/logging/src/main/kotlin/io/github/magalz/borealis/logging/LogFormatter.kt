@@ -9,9 +9,13 @@ object LogFormatter {
     private val TIMESTAMP =
         DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
 
+    /** ISO-8601 UTC timestamp with milliseconds, e.g. `2023-11-14T22:13:20.123Z`. */
+    fun formatTimestamp(epochMillis: Long): String =
+        TIMESTAMP.format(Instant.ofEpochMilli(epochMillis))
+
     /** `2023-11-14T22:13:20.123Z INFO APP message key=value`; always exactly one line. */
     fun format(record: LogRecord): String = buildString {
-        append(TIMESTAMP.format(Instant.ofEpochMilli(record.timestampMillis)))
+        append(formatTimestamp(record.timestampMillis))
         append(' ').append(record.level.name)
         append(' ').append(record.tag.name)
         append(' ').append(formatBody(record))

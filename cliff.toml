@@ -47,7 +47,8 @@ commit_parsers = [
   # Merge commits are noise; the merged commits are listed instead.
   { message = "^Merge ", skip = true },
   { message = "^Revert ", skip = true },
-  # Breaking changes always surface under Changed (or their own group).
+  # Anything scoped (security) is a security change regardless of type.
+  { message = '^[a-z]+\(security\)', group = "Security" },
   { message = "^feat", group = "Added" },
   { message = "^sync", group = "Upstream" },
   { message = "^fix", group = "Fixed" },

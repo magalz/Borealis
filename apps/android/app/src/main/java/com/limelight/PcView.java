@@ -670,7 +670,8 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 return true;
 
             case VIEW_DETAILS_ID:
-                Dialog.displayDialog(PcView.this, getResources().getString(R.string.title_details), computer.details.toString(), false);
+                // BOREALIS: host capabilities after the details (host.caps)
+                Dialog.displayDialog(PcView.this, getResources().getString(R.string.title_details), io.github.magalz.borealis.host.caps.HostInfoText.appendTo(PcView.this, computer.details.toString(), computer.details.borealis), false);
                 return true;
 
             case TEST_NETWORK_ID:

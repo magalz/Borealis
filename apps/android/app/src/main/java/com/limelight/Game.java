@@ -1045,6 +1045,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     protected void onDestroy() {
         super.onDestroy();
         startupGuard.cancel(); // BOREALIS: first-frame watchdog
+        if (conn != null) { conn.cancelLaunch(); } // BOREALIS: end the launch retries (host.launch)
 
         if (controllerHandler != null) {
             controllerHandler.destroy();
@@ -1100,6 +1101,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (conn != null) {
             int videoFormat = decoderRenderer.getActiveVideoFormat();
 
+            conn.cancelLaunch(); // BOREALIS: end the launch retries (host.launch)
             displayedFailureDialog = true;
             stopConnection();
 
@@ -2234,6 +2236,16 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public void stageComplete(String stage) {
+    }
+
+    // BOREALIS: retry progress of a LuminalShine 409/503 answer on the spinner (host.launch)
+    @Override
+    public void launchRetrying(int category, int attempt, int maxAttempts, int delayMs) {
+        runOnUiThread(() -> {
+            if (spinner != null) {
+                spinner.setMessage(io.github.magalz.borealis.host.launch.LaunchProgressText.format(this, category, attempt, maxAttempts, delayMs));
+            }
+        });
     }
 
     private void stopConnection() {

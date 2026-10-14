@@ -39,6 +39,10 @@ import com.limelight.nvstream.http.NvHTTP;
 import com.limelight.nvstream.http.PairingManager;
 import com.limelight.nvstream.input.MouseButtonPacket;
 import com.limelight.nvstream.jni.MoonBridge;
+// BOREALIS: LuminalShine launch retries (host.launch)
+import io.github.magalz.borealis.host.launch.HostError;
+import io.github.magalz.borealis.host.launch.LaunchOutcome;
+import io.github.magalz.borealis.host.launch.LaunchRetries;
 
 public class NvConnection {
     // Context parameters
@@ -48,6 +52,8 @@ public class NvConnection {
     private static Semaphore connectionAllowed = new Semaphore(1);
     private final boolean isMonkey;
     private final Context appContext;
+    // BOREALIS: set by cancelLaunch() when the user leaves before the stream started (host.launch)
+    private volatile boolean launchCancelled;
 
     public NvConnection(Context appContext, ComputerDetails.AddressTuple host, int httpsPort, String uniqueId, StreamConfiguration config, LimelightCryptoProvider cryptoProvider, X509Certificate serverCert)
     {
@@ -99,6 +105,19 @@ public class NvConnection {
 
         // Now a pending connection can be processed
         connectionAllowed.release();
+    }
+
+    // BOREALIS: ends the retry wait of start() without stop(): the semaphore is only released by stop() (host.launch)
+    public void cancelLaunch() {
+        launchCancelled = true;
+    }
+
+    // BOREALIS: /launch and /resume through the host.launch retry runner (host.launch)
+    private LaunchOutcome launchWithRetry(NvHTTP h, String verb, int appId) throws IOException, XmlPullParserException {
+        return LaunchRetries.run(context.isNvidiaServerSoftware, verb,
+                () -> h.launchApp(context, verb, appId, context.negotiatedHdr),
+                e -> e instanceof HostHttpResponseException ? new HostError(((HostHttpResponseException) e).getErrorCode(), ((HostHttpResponseException) e).getErrorMessage()) : null,
+                () -> launchCancelled, context.connListener::launchRetrying);
     }
 
     private InetAddress resolveServerAddress() throws IOException {
@@ -311,7 +330,10 @@ public class NvConnection {
         if (h.getCurrentGame(serverInfo) != 0) {
             try {
                 if (h.getCurrentGame(serverInfo) == app.getAppId()) {
-                    if (!h.launchApp(context, "resume", app.getAppId(), context.negotiatedHdr)) {
+                    LaunchOutcome resumed = launchWithRetry(h, "resume", app.getAppId()); // BOREALIS: retries, cancellation and the no-app fallback
+                    if (resumed == LaunchOutcome.FALLBACK_TO_LAUNCH) { return launchNotRunningApp(h, context); } // BOREALIS
+                    if (resumed == LaunchOutcome.CANCELLED) { return false; } // BOREALIS
+                    if (resumed != LaunchOutcome.SUCCEEDED) { // BOREALIS: was !h.launchApp(context, "resume", ...)
                         context.connListener.displayMessage("Failed to resume existing session");
                         return false;
                     }
@@ -369,7 +391,9 @@ public class NvConnection {
     private boolean launchNotRunningApp(NvHTTP h, ConnectionContext context)
             throws IOException, XmlPullParserException {
         // Launch the app since it's not running
-        if (!h.launchApp(context, "launch", context.streamConfig.getApp().getAppId(), context.negotiatedHdr)) {
+        LaunchOutcome launched = launchWithRetry(h, "launch", context.streamConfig.getApp().getAppId()); // BOREALIS: retries and cancellation
+        if (launched == LaunchOutcome.CANCELLED) { return false; } // BOREALIS
+        if (launched != LaunchOutcome.SUCCEEDED) { // BOREALIS: was !h.launchApp(context, "launch", ...)
             context.connListener.displayMessage("Failed to launch application");
             return false;
         }
@@ -392,6 +416,7 @@ public class NvConnection {
 
                 try {
                     if (!startApp()) {
+                        if (launchCancelled) { return; } // BOREALIS: the user left, nothing to report
                         context.connListener.stageFailed(appName, 0, 0);
                         return;
                     }
@@ -408,6 +433,8 @@ public class NvConnection {
                     return;
                 }
 
+                if (launchCancelled) { return; } // BOREALIS: before the semaphore, which only stop() releases
+
                 ByteBuffer ib = ByteBuffer.allocate(16);
                 ib.putInt(context.riKeyId);
 
@@ -420,6 +447,7 @@ public class NvConnection {
                     context.connListener.stageFailed(appName, 0, 0);
                     return;
                 }
+                if (launchCancelled) { connectionAllowed.release(); return; } // BOREALIS: left while waiting for the semaphore
 
                 // Moonlight-core is not thread-safe with respect to connection start and stop, so
                 // we must not invoke that functionality in parallel.

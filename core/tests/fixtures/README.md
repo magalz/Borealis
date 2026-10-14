@@ -8,6 +8,7 @@ Host responses and golden vectors shared by the borealis-core tests and the Andr
 | --- | --- |
 | `luminalshine/<host version>/` | Responses of one LuminalShine release, named after the endpoint (`serverinfo-http.xml` is `/serverinfo` over HTTP). |
 | `vectors/*.tsv` | Golden input/output vectors for the core host rules, read by the GoogleTest suite and, once the Android JNI instrumented test exists (task T4), by that test. |
+| `redaction/secret-canaries.tsv` | Synthetic secrets and the text the log redactor must produce for them, read by the redaction tests of `:borealis:logging` and `:borealis:diagnostics`. |
 
 Each host version folder has a `PROVENANCE.md` with one row per file.
 
@@ -52,3 +53,7 @@ Common format:
 Notes for replayers that are not C: `codec_mask` values above `0x7FFFFFFF` must be parsed as unsigned (a `Long` in Java and Kotlin) and narrowed to a 32-bit int, and `attempts` is `uint32_t` in the ABI, so a negative 32-bit value from Java is a huge count and yields `FAIL`. A message field cannot contain a TAB or a line break, and a trailing CR is stripped as part of the line end.
 
 Error returns (NULL arguments, over-long inputs, unknown verbs) cannot be written as text and are covered by the unit tests only.
+
+## Redaction canaries
+
+`redaction/secret-canaries.tsv` uses the TSV rules above (header row, `#` comments, no quoting). Columns: `id`, `input`, `expected` and `secret`. `expected` is what the default redactor (address masking off) writes for `input`; `secret` is a value that must not appear in the output with masking on or off. Every value is made up: add a row for each new kind of secret that a log line could carry, and never a real credential.

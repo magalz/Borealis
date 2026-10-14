@@ -73,13 +73,18 @@ class CrashReportHandler(
 object CrashHandler {
     /**
      * Wraps the current default handler; installing again replaces the earlier report writer
-     * instead of chaining a second one.
+     * instead of chaining a second one. Pass the redactor that [BorealisLog] uses, so reports
+     * follow the address-masking switch.
      */
     @Synchronized
-    fun install(directory: File, header: List<String> = emptyList()): CrashReportHandler {
+    fun install(
+        directory: File,
+        header: List<String> = emptyList(),
+        redactor: Redactor = Redactor(),
+    ): CrashReportHandler {
         val current = Thread.getDefaultUncaughtExceptionHandler()
         val previous = if (current is CrashReportHandler) current.previous else current
-        return CrashReportHandler(directory, previous, header = header).also {
+        return CrashReportHandler(directory, previous, redactor, header = header).also {
             Thread.setDefaultUncaughtExceptionHandler(it)
         }
     }

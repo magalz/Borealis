@@ -59,10 +59,31 @@ All three come from the convention plugins (`BorealisCoverage`, `BorealisLicense
 
 - Levels `VERBOSE..ERROR`, subsystem tags `LogTag` (APP, HOST, PAIR, LAUNCH, RTSP, VIDEO, PYROWAVE, INPUT, REST, CORE, UPSTREAM), structured fields: `BorealisLog.i(LogTag.HOST, "paired", "host" to name)` renders as `... INFO HOST paired host=name`.
 - Before `BorealisLog.initialize(...)` (done in `BorealisApplication.onCreate`) records are dropped; sinks never throw into the caller.
-- `Redactor` runs on every message, field and stack trace before any sink: labelled PINs, `Bearer` and `token=`/`apiToken=` values, PEM blocks and long hex/base64 values in `cert`/`key`/`signature` fields. IP masking is opt-in (`Redactor(maskIpAddresses = true)`).
+- `Redactor` runs on every message, field and stack trace before any sink: labelled PINs, `Bearer` and `token=`/`apiToken=` values, PEM blocks and long hex/base64 values in `cert`/`key`/`signature` fields, and the pairing and launch secrets of the GameStream requests.
+  - URL query values become `[REDACTED]` except for the allowlist in `Redactor.ALLOWED_QUERY_KEYS` (the same list is in `docs/policies/privacy-and-logging.md`); query keys and paths stay, `key=value` pairs in the fragment (`#...`) are treated like query pairs, and `user:password@` in a URL is redacted. The scheme is limited to 32 characters, so a long dotted or hyphenated run cannot make URL detection slow.
+  - Address masking is off by default (`Redactor(maskAddresses = true)`). When on it masks IPv4 addresses whose four octets are at most 255 and that are not part of a longer dotted number (`7.1.431.0` stays), IPv6 addresses (`[IP]`) and host names (`[HOST]`): the host part of a URL and the values of keys named `host`, `hostname`, `computer` or `computerName` (also as a suffix, such as `serverHost`). A quoted value (`"Den PC"` or `'Den PC'`) is masked up to the closing quote. A host name in free text, including the upstream `LimeLog` lines, cannot be recognised and is not masked.
+  - `Redactor.maskAddresses` is volatile. `BorealisLog.setMaskAddresses(Boolean)` and `BorealisLog.setMinLevel(LogLevel)` change the running configuration without a new `initialize`; they affect new lines only and do nothing before `initialize`.
+  - The secret samples live in `core/tests/fixtures/redaction/secret-canaries.tsv` (columns `id`, `input`, `expected`, `secret`; synthetic values only). `RedactorSecretsTest` reads it through `borealis.fixtures.dir`, and `:borealis:diagnostics` tests are meant to reuse it.
+- `CrashHandler.install(dir, header, redactor)` takes the redactor of `BorealisLog` (created once in `BorealisApplication`), so crash reports follow "Mask addresses" too.
+- The minimum level applies to every sink. `BorealisApplication` initialises it to DEBUG in debug builds and INFO in release builds (so the file sink records INFO and above there); the logcat sink keeps its own minimum.
 - Sinks: `LogcatSink` (tag `Borealis.<TAG>`) and `RotatingFileSink` (`noBackupFilesDir/logs/borealis.log`, 5 files x 1 MB, one line per record, ISO-8601 UTC).
 - `JulBridge.install()` forwards the upstream `LimeLog` (`java.util.logging`) to `BorealisLog` with tag `UPSTREAM`.
 - `CrashHandler.install(dir, header)` writes a redacted `crash-<timestamp>.txt` next to the logs and delegates to the previous handler.
+
+## `:borealis:settings`
+
+The Borealis settings screen (ADR 0050 items 3 and 7). Package `io.github.magalz.borealis.settings`; it is a framework `PreferenceFragment` like the upstream screen, so the Activity cannot be reached with `android:fragment` and a custom Preference opens it.
+
+- `BorealisSettingsPreference` is the only entry in the upstream `app/src/main/res/xml/preferences.xml` (marked `<!-- BOREALIS: -->`). It starts `BorealisSettingsActivity` with an explicit intent. The Activity is declared in this module's manifest with `android:exported="false"` and no intent filter.
+- `res/xml/borealis_preferences.xml` holds the entries, one element each, so a new entry is one element in the first category (Wave 2 adds "Export diagnostics" and "Erase audit trail" as custom Preference classes):
+  - category "Privacy and diagnostics": `borealis_verbose_logging` ("Verbose logging") and `borealis_mask_addresses` ("Mask addresses in logs and diagnostics"), both default off, in the default SharedPreferences (`SettingsKeys` holds the key constants and must match the XML);
+  - category "About": version name with the commit (`borealis_git_sha`), "Source code" and "Privacy policy" as `LinkPreference`, "Licence: GPL-3.0" as plain text and "Open-source licences" as `LicensesPreference`.
+- `LinkPreference` opens its `url` attribute with `ACTION_VIEW`. When no activity can open it (Google TV often has no browser) it shows the URL in a dialog instead. The URL is also the summary.
+- `LicensesPreference` shows `assets/legal/NOTICE` and `LICENSE` (copied into the APK by `LegalAssetsTask`, ADR 0050 item 7) in a scrollable dialog; the text view takes focus, so a D-pad scrolls it. When a build bundles neither file the dialog says so. The unit tests cover the loader (`LegalTexts`) with fake files and the dialog's missing-file path, because this library module has no `legal/` assets of its own.
+- `ContentPadding` (installed by the Activity) pads the content view with the system-bar and display-cutout insets, because the window is edge-to-edge from Android 15, and with 15 dp overscan padding on a TV (`UI_MODE_TYPE_TELEVISION`), the values of upstream `UiHelper.notifyNewRootView`.
+- `LogSettings.start(context, baseLevel)` applies the two switches to `BorealisLog` at startup and on every change (verbose lowers the minimum level to DEBUG, otherwise it is `baseLevel`). `BorealisApplication` calls it once after `BorealisLog.initialize` and keeps the result in a field, because `SharedPreferences` holds its listeners weakly.
+- The module declares `borealis_git_sha` as `translatable="false"` with the value `unknown`; the app overrides it with the built commit. Strings are in `res/values/strings_settings.xml`, English only for now.
+- Upstream hooks outside the module, each marked `BOREALIS`: the one preference element in `preferences.xml`, and in `app/src/main/jni/moonlight-core/simplejni.c` an early return in `MoonBridge.findExternalAddressIP4` (returns `NULL`, no STUN request, no WAN address in logcat) and in `MoonBridge.testClientConnectivity` (returns `ML_TEST_RESULT_INCONCLUSIVE`, no connection test). The Java callers already handle both results.
 
 ## `:borealis:native`
 

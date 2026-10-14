@@ -284,4 +284,8 @@
             android:summary="@string/summary_privacy_policy"
             url="https://moonlight-stream.org/privacy.html"/>
     </PreferenceCategory-->
+    <!-- BOREALIS: opens the Borealis settings screen (borealis/settings) -->
+    <io.github.magalz.borealis.settings.BorealisSettingsPreference
+        android:title="@string/borealis_settings_title"
+        android:summary="@string/borealis_settings_summary" />
 </PreferenceScreen>

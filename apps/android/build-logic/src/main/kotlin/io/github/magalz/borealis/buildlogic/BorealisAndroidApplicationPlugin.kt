@@ -17,10 +17,13 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             pluginManager.apply("com.android.application")
             pluginManager.apply("com.google.devtools.ksp")
             pluginManager.apply("com.google.dagger.hilt.android")
+            with(BorealisCoverage) { configureCoverage(androidVariant = "nonRootDebug") }
+            with(BorealisLicenses) { configureLicensee() }
 
             val components = extensions.getByType<ApplicationAndroidComponentsExtension>()
             val version = BorealisVersion.fromGitDescribe(gitDescribe())
             requireTagForReleases(version)
+            with(BorealisSbom) { configureSbom(version) }
             configureDsl(components)
             configureVariants(components, version)
             buildNativeCoreBeforeNdkBuild()
@@ -105,9 +108,9 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
         tasks
             .matching { it.name.startsWith("configureNdkBuild") }
             .configureEach {
-                val buildType =
-                    if (name.startsWith("configureNdkBuildDebug")) "Debug" else "Release"
-                dependsOn(":borealis:native:externalNativeBuild$buildType")
+                dependsOn(
+                    ":borealis:native:externalNativeBuild${nativeBuildTypeForConfigureTask(name)}"
+                )
             }
     }
 

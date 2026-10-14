@@ -1,0 +1,275 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:1e545a7e-766e-565c-91fd-64bb42261a43",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "bom-ref": "borealis-android-native",
+      "name": "borealis-android-native",
+      "description": "Native components shipped in the Borealis Android APK that Gradle dependency resolution cannot see (hand-maintained; see docs/development/upstream-sync.md)",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-3.0-only"
+          }
+        }
+      ]
+    },
+    "properties": [
+      {
+        "name": "borealis:maintenance",
+        "value": "hand-maintained; update on every upstream sync and native dependency change"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "moonlight-common-c",
+      "name": "moonlight-common-c",
+      "version": "874ac9548f1bd6f095ef2b435c42cdde460e7821",
+      "description": "Moonlight streaming protocol core (git submodule), compiled into libmoonlight-core.so",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-3.0-only"
+          }
+        }
+      ],
+      "purl": "pkg:github/moonlight-stream/moonlight-common-c@874ac9548f1bd6f095ef2b435c42cdde460e7821",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/moonlight-stream/moonlight-common-c"
+        }
+      ],
+      "properties": [
+        {
+          "name": "borealis:source",
+          "value": "apps/android/app/src/main/jni/moonlight-core/moonlight-common-c (submodule pointer)"
+        },
+        {
+          "name": "borealis:linkage",
+          "value": "compiled-in"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "enet",
+      "name": "enet",
+      "version": "aca87840b57f045a1f7f9299e4b1b9b8e2a5e2f1",
+      "description": "ENet reliable UDP library (cgutman fork, git submodule status: v1.3.15-118-gaca8784), submodule of moonlight-common-c",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:github/cgutman/enet@aca87840b57f045a1f7f9299e4b1b9b8e2a5e2f1",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/cgutman/enet"
+        }
+      ],
+      "properties": [
+        {
+          "name": "borealis:source",
+          "value": "moonlight-common-c/enet (nested submodule pointer)"
+        },
+        {
+          "name": "borealis:linkage",
+          "value": "compiled-in"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "nanors",
+      "name": "nanors",
+      "version": "b1e3c22ca0cdc0bb83e3cd6ed1a2fc77869ed99a",
+      "description": "Reed-Solomon erasure coding, submodule of moonlight-common-c",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:github/sleepybishop/nanors@b1e3c22ca0cdc0bb83e3cd6ed1a2fc77869ed99a",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/sleepybishop/nanors"
+        }
+      ],
+      "properties": [
+        {
+          "name": "borealis:source",
+          "value": "moonlight-common-c/nanors (nested submodule pointer)"
+        },
+        {
+          "name": "borealis:linkage",
+          "value": "compiled-in"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "openssl",
+      "name": "openssl",
+      "version": "4.0.2",
+      "description": "OpenSSL libcrypto, prebuilt static libraries linked into libmoonlight-core.so",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:generic/openssl@4.0.2",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://www.openssl.org/"
+        }
+      ],
+      "properties": [
+        {
+          "name": "borealis:source",
+          "value": "apps/android/app/src/main/jni/moonlight-core/openssl (prebuilt, from moonlight-mobile-deps)"
+        },
+        {
+          "name": "borealis:linkage",
+          "value": "static"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "opus",
+      "name": "opus",
+      "version": "1.6.1",
+      "description": "Opus audio codec, prebuilt static libraries linked into libmoonlight-core.so",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:generic/opus@1.6.1",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://opus-codec.org/"
+        }
+      ],
+      "properties": [
+        {
+          "name": "borealis:source",
+          "value": "apps/android/app/src/main/jni/moonlight-core/opus (prebuilt, from moonlight-mobile-deps)"
+        },
+        {
+          "name": "borealis:linkage",
+          "value": "static"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "minisdl",
+      "name": "minisdl",
+      "version": "unversioned",
+      "description": "Portions derived from Simple DirectMedia Layer, compiled into libmoonlight-core.so",
+      "licenses": [
+        {
+          "license": {
+            "id": "Zlib"
+          }
+        }
+      ],
+      "purl": "pkg:generic/minisdl",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://www.libsdl.org/"
+        }
+      ],
+      "properties": [
+        {
+          "name": "borealis:source",
+          "value": "apps/android/app/src/main/jni/moonlight-core/minisdl.c"
+        },
+        {
+          "name": "borealis:linkage",
+          "value": "compiled-in"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "borealis-core",
+      "name": "borealis-core",
+      "version": "0.1.0",
+      "description": "Borealis C++ core, shipped as libborealis_core.so",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-3.0-only"
+          }
+        }
+      ],
+      "purl": "pkg:generic/borealis-core@0.1.0",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/magalz/Borealis"
+        }
+      ],
+      "properties": [
+        {
+          "name": "borealis:source",
+          "value": "core/ (version from core/CMakeLists.txt)"
+        },
+        {
+          "name": "borealis:linkage",
+          "value": "shared"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "libcxx-shared",
+      "name": "libc++_shared",
+      "version": "29.0.14206865",
+      "description": "LLVM libc++ from Android NDK r29, packaged as libc++_shared.so next to the Borealis native libraries",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 WITH LLVM-exception"
+        }
+      ],
+      "purl": "pkg:generic/android-ndk-libcxx@29.0.14206865",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://developer.android.com/ndk/guides/cpp-support"
+        }
+      ],
+      "properties": [
+        {
+          "name": "borealis:source",
+          "value": "Android NDK 29.0.14206865"
+        },
+        {
+          "name": "borealis:linkage",
+          "value": "shared"
+        }
+      ]
+    }
+  ]
+}

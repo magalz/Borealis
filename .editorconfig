@@ -1,0 +1,78 @@
+# EditorConfig: https://editorconfig.org
+# Borealis-owned files follow these rules. Everything under apps/android/ and
+# external/ is upstream by default and is left untouched; Borealis-owned
+# directories inside apps/android/ are carved out again at the bottom.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.{kt,kts,java}]
+indent_size = 4
+
+[*.{kt,kts}]
+max_line_length = 100
+
+# C/C++ follows LuminalShine's .clang-format (IndentWidth: 2).
+[*.{c,cc,cpp,cxx,h,hh,hpp,hxx,inl}]
+indent_size = 2
+
+[*.{yml,yaml,json,jsonc,toml,xml}]
+indent_size = 2
+
+[*.md]
+indent_size = 2
+trim_trailing_whitespace = true
+
+[*.{bat,cmd}]
+end_of_line = crlf
+
+[Makefile]
+indent_style = tab
+
+# ---------------------------------------------------------------------------
+# Upstream (moonlight-android subtree) and third-party forks: never reformat.
+# Unset every formatting rule so editors leave these files exactly as they are.
+# These sections must stay after the rules above and before the carve-outs.
+# ---------------------------------------------------------------------------
+
+[apps/android/**]
+charset = unset
+end_of_line = unset
+indent_style = unset
+indent_size = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+
+[external/**]
+charset = unset
+end_of_line = unset
+indent_style = unset
+indent_size = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+
+# ---------------------------------------------------------------------------
+# Borealis-owned directories inside apps/android/: formatting rules apply
+# again. Keep this list in sync with the Spotless targets.
+# ---------------------------------------------------------------------------
+
+[apps/android/{borealis,build-logic,app/src/main/jni/borealis,app/src/main/kotlin}/**]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[apps/android/{borealis,build-logic,app/src/main/kotlin}/**.{kt,kts}]
+indent_size = 4
+max_line_length = 100
+
+[apps/android/{borealis,build-logic,app/src/main/jni/borealis,app/src/main/kotlin}/**.{bat,cmd}]
+end_of_line = crlf

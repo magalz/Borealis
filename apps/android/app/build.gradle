@@ -1,3 +1,8 @@
+// BOREALIS: identity, minSdk, signing, Hilt and lint settings come from this convention plugin (build-logic).
+plugins {
+    id 'borealis.android.application'
+}
+
 apply plugin: 'com.android.application'
 
 android {

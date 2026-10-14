@@ -1,0 +1,44 @@
+# Codecov configuration (self-hosted instance: https://pipeline.magalz.space).
+# Coverage is informational until the gate is decided from the first pull
+# request's measured coverage (see docs/adr/0046-*).
+codecov:
+  branch: main
+
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
+
+flag_management:
+  individual_flags:
+    - name: android
+      paths:
+        - apps/android/borealis/
+        - apps/android/build-logic/
+        - apps/android/app/src/main/kotlin/
+      carryforward: true
+    - name: core
+      paths:
+        - core/include/
+        - core/src/
+      carryforward: true
+
+comment:
+  layout: "diff, flags, files"
+  behavior: default
+  require_changes: false
+
+ignore:
+  # Upstream Moonlight code (git subtree) has no Borealis tests.
+  - "apps/android/app/src/main/java/**"
+  - "apps/android/app/src/main/jni/moonlight-core/**"
+  - "apps/android/app/src/main/jni/evdev_reader/**"
+  # Tests and generated code.
+  - "**/src/test/**"
+  - "**/src/androidTest/**"
+  - "core/tests/**"
+  - "core/build/**"

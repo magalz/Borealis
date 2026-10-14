@@ -1,0 +1,37 @@
+# Development guide
+
+Start with [CONTRIBUTING.md](../../CONTRIBUTING.md) for the workflow and the
+Definition of Done. These pages hold the details.
+
+| Page | Contents |
+| --- | --- |
+| [building.md](building.md) | Toolchain setup and build, check and test commands (Windows first, Linux notes for CI). |
+| [tdd.md](tdd.md) | Red-green-refactor, commit order, characterization tests, what counts as a behaviour test. |
+| [upstream-sync.md](upstream-sync.md) | Step-by-step procedure for syncing a Moonlight release. |
+| [release.md](release.md) | Step-by-step procedure for cutting a release. |
+| [orchestration.md](orchestration.md) | How AI agents are orchestrated: roles, worktrees, hand-offs. |
+| [task-brief.md](task-brief.md) | Template for briefing an implementer on one task. |
+
+Policies behind these procedures are in [../policies/](../policies/):
+[dependencies](../policies/dependencies.md),
+[release](../policies/release.md),
+[upstream sync](../policies/upstream-sync.md),
+[AI-assisted development](../policies/ai-assisted-development.md),
+[host contributions](../policies/host-contributions.md) and
+[privacy and logging](../policies/privacy-and-logging.md).
+
+Architecture decisions: [../adr/README.md](../adr/README.md). Use cases:
+[../use-cases/README.md](../use-cases/README.md).
+
+## Repository layout
+
+| Path | Contents |
+| --- | --- |
+| `apps/android/` | Android client; a git subtree of moonlight-android. Upstream files are never reformatted. |
+| `apps/android/borealis/` | Borealis Android code. |
+| `apps/android/build-logic/` | Gradle convention plugins for Borealis modules. |
+| `core/` | `borealis-core`, C++20 library with CMake and GoogleTest. |
+| `design/` | Design tokens, icons, fonts. |
+| `docs/` | ADRs, use cases, host contract, development guides, policies. |
+| `tools/` | Developer tooling. |
+| `external/` | Third-party fork submodules, when needed. |

@@ -1,0 +1,57 @@
+package io.github.magalz.borealis.buildlogic
+
+import kotlinx.kover.gradle.plugin.dsl.KoverProjectExtension
+import kotlinx.kover.gradle.plugin.dsl.KoverReportFiltersConfig
+import org.gradle.api.Project
+import org.gradle.kotlin.dsl.configure
+
+/**
+ * Kover coverage conventions (ADR 0046). Every Borealis module contributes the same custom variant,
+ * so the root report can merge modules whose Android variants are named differently (`debug` in
+ * libraries, `nonRootDebug` in `:app`).
+ */
+internal object BorealisCoverage {
+    const val PLUGIN_ID = "org.jetbrains.kotlinx.kover"
+
+    /** Kover variant that merges the debug unit-test coverage of a module. */
+    const val VARIANT = "borealis"
+
+    /** The merged JaCoCo-format XML (the root `koverXmlReportBorealis` task), under `build/`. */
+    const val XML_REPORT = "reports/kover/coverage.xml"
+
+    /**
+     * Not Borealis code: the upstream Moonlight Java (`com.limelight`), generated Hilt/Dagger
+     * classes and the other build outputs that would only add noise to the coverage numbers.
+     */
+    val EXCLUDED_CLASSES =
+        listOf(
+            "com.limelight.*",
+            "dagger.hilt.*",
+            "hilt_aggregated_deps.*",
+            "*.Hilt_*",
+            "Hilt_*",
+            "*_HiltModules*",
+            "*_HiltComponents*",
+            "*_Factory",
+            "*_Factory$*",
+            "*_MembersInjector",
+            "*_GeneratedInjector",
+            "*.BuildConfig",
+            "*.R",
+            "*.R$*",
+            "*ComposableSingletons*",
+        )
+
+    fun KoverReportFiltersConfig.borealisFilters() {
+        excludes { classes(EXCLUDED_CLASSES) }
+    }
+
+    /** Applies Kover to a Borealis module and publishes its [androidVariant] as [VARIANT]. */
+    fun Project.configureCoverage(androidVariant: String) {
+        pluginManager.apply(PLUGIN_ID)
+        extensions.configure<KoverProjectExtension> {
+            currentProject { createVariant(VARIANT) { add(androidVariant) } }
+            reports { filters { borealisFilters() } }
+        }
+    }
+}

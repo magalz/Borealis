@@ -1,0 +1,53 @@
+name: Feature request
+description: Suggest an improvement or a new capability
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem first; the solution can follow. Larger ideas may become a use case (UC-NNN) or an ADR.
+        Changes that need the LuminalShine host are tracked as proposals to that project; the client must keep working without them.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can you not do today, and in which situation (device type, input method, network)?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like to happen? Alternatives you considered are welcome.
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - Android client
+        - Phone or tablet
+        - Android TV or Fire TV
+        - Handheld
+        - borealis-core
+        - Build, CI or release
+        - Documentation
+        - Needs a LuminalShine host change
+    validations:
+      required: true
+  - type: textarea
+    id: host
+    attributes:
+      label: Host dependency
+      description: Does this need a LuminalShine capability? What should the client do on hosts without it?
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I am willing to help test it.

@@ -204,3 +204,4 @@ When moonlight-android moves its submodule pointer:
 | Borealis tree | Moonlight Android | moonlight-common-c | LuminalShine versions tested | Notes |
 | --- | --- | --- | --- | --- |
 | initial import | 12.2 | fork `magalz/moonlight-common-c` `borealis`, upstream base `874ac95` plus the first full frame deadline patch (tag `borealis/874ac95-1`) | not yet tested | Baseline import. |
+| `phase/1-luminalshine-compat` at `d6b3116e` | 12.2 | tag `borealis/874ac95-1` | 26.09.1 | Galaxy S22 (Android 16) and Google TV Streamer (Android 14); results in [device-validation.md](device-validation.md) section 6. |

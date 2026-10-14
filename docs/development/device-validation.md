@@ -11,8 +11,8 @@ Sources: [host contract](../host-contract/luminalshine.md) (cited as "contract")
 that the repository does not confirm is marked `TODO(verify)`; check it on the
 device before relying on it.
 
-Placeholders: `<host>` is the LAN address of the PC, `<serial-s21>` is the ADB
-serial of the S21, `<serial-tv>` is `<ip>:<port>` of the Google TV Streamer and
+Placeholders: `<host>` is the LAN address of the PC, `<serial-s22>` is the ADB
+serial of the S22, `<serial-tv>` is `<ip>:<port>` of the Google TV Streamer and
 `<apk>` is the debug APK. Never type real addresses, PINs, certificates or
 pairing codes into this file or into any capture that is committed.
 
@@ -20,12 +20,12 @@ pairing codes into this file or into any capture that is committed.
 
 ### 1.1 Device setup
 
-1. On the S21, open Settings, About phone, Software information and tap Build
+1. On the S22, open Settings, About phone, Software information and tap Build
    number seven times to enable Developer options. `TODO(verify)`: menu names
    depend on the One UI version.
-2. On the S21, open Developer options and turn on USB debugging. Connect the
+2. On the S22, open Developer options and turn on USB debugging. Connect the
    phone with a USB cable and accept the debugging prompt on the phone.
-3. On the PC, run `adb devices` and note the S21 serial as `<serial-s21>`.
+3. On the PC, run `adb devices` and note the S22 serial as `<serial-s22>`.
 4. On the Google TV Streamer, connect it to the same LAN as the PC. Open
    Settings, System, About and select Android TV OS build seven times to enable
    Developer options. `TODO(verify)`: menu names depend on the Google TV version.
@@ -54,10 +54,10 @@ pairing codes into this file or into any capture that is committed.
    (checked on the 2026-10-14 phase branch build); it is `<apk>` below.
 4. The debug build has the application id `io.github.magalz.borealis.debug` and
    the label `Borealis Debug` (`build-logic`, `BorealisAndroidApplicationPlugin`).
-5. Install on the S21:
+5. Install on the S22:
 
    ```sh
-   adb -s <serial-s21> install -r <apk>
+   adb -s <serial-s22> install -r <apk>
    ```
 
 6. Install on the Streamer:
@@ -87,7 +87,11 @@ pairing codes into this file or into any capture that is committed.
    one. `TODO(verify)`: whether the browser warning appears.
 4. Make sure the PC firewall lets the devices reach the ports of contract
    section 2: TCP 47984 (HTTPS), 47989 (HTTP), 47990 (Web UI) and 48010 (RTSP),
-   and UDP 47998 (video), 47999 (control) and 48000 (audio).
+   and UDP 47998 (video), 47999 (control) and 48000 (audio). If the PC has
+   firewall block rules for the Web UI ports scoped to the `Internet` remote
+   address keyword, the Wi-Fi network must use the Private profile: on a
+   Public profile Windows applied them to the LAN, and pairing failed at the
+   HTTPS phase with a connect timeout on TCP 47984.
 5. Keep the host log open. Its location is the owner's choice; this runbook
    refers to it as "the host log" only.
 6. At the start of each scenario, no app runs on the host unless the scenario
@@ -123,13 +127,25 @@ through JNI and check the golden vectors of `core/tests/fixtures/vectors/`.
 
    ```sh
    cd apps/android
-   ANDROID_SERIAL=<serial-s21> ./gradlew :borealis:native:connectedDebugAndroidTest :app:connectedNonRootDebugAndroidTest
+   ANDROID_SERIAL=<serial-s22> ./gradlew :borealis:native:connectedDebugAndroidTest :app:connectedNonRootDebugAndroidTest
    ```
 
 2. Run the same command with `ANDROID_SERIAL=<serial-tv>`.
-3. `TODO(verify)`: that AGP honours `ANDROID_SERIAL` for the connected tasks.
-   Without it, the connected tasks run on every attached device. In PowerShell,
-   set the variable with `$env:ANDROID_SERIAL = "<serial>"`.
+3. AGP honours `ANDROID_SERIAL`: the connected tasks run only on that device
+   (checked 2026-10-14). In PowerShell, set it with
+   `$env:ANDROID_SERIAL = "<serial>"`. On Windows, a device connected over
+   ADB Wi-Fi has an `<ip>:<port>` serial, and the connected task then reports
+   `There were failing tests` even when every test passed (it cannot write
+   the result file named after that serial). For such a device, install the
+   test APKs and run the instrumentation directly, then check that every test
+   reports `INSTRUMENTATION_STATUS_CODE: 0` and the run ends with
+   `INSTRUMENTATION_CODE: -1`:
+
+   ```sh
+   adb -s <serial-tv> shell am instrument -r -w -e expectedCoreVersion 0.1.0 io.github.magalz.borealis.nativecore.test/androidx.test.runner.AndroidJUnitRunner
+   adb -s <serial-tv> shell am instrument -r -w -e expectedCoreVersion 0.1.0 io.github.magalz.borealis.debug.test/androidx.test.runner.AndroidJUnitRunner
+   ```
+
 4. Expected: all tests pass. They are:
    - `BorealisCoreInstrumentedTest.versionIsTheCoreProjectVersion`: the core
      version equals the one in `core/CMakeLists.txt` (`0.1.0` at this revision).
@@ -137,9 +153,8 @@ through JNI and check the golden vectors of `core/tests/fixtures/vectors/`.
      `launchDecisionVectorsMatch` and `launchFpsVectorsMatch` replay
      `host_caps.tsv`, `launch_decide.tsv` and `launch_fps.tsv` through
      `NativeHostRules`.
-   - `JniGuardsInstrumentedTest`: `loadLibrary`,
-     `parseCapsRejectsAnAppVersionOver64Bytes` and
-     `decideLaunchRejectsAMessageOver256Bytes` (the JNI length guards).
+   - `JniGuardsInstrumentedTest`: `parseCapsRejectsAnAppVersionOver64Bytes`
+     and `decideLaunchRejectsAMessageOver256Bytes` (the JNI length guards).
    - `NativeBridgeInstrumentedTest` in `:app`:
      `ndkBuildBridgeSeesTheCoreProjectVersion` and `bridgeAndModuleApiAgree`.
 5. Record the Gradle result and the serial. If a test fails, stop the scenarios
@@ -231,7 +246,7 @@ of section 1.4 for each scenario.
 ### 3.5 Two devices launching at the same time
 
 1. Pair both devices with the host (3.1). Make sure no app runs on the host.
-2. Start the same app on the S21 from its app list.
+2. Start the same app on the S22 from its app list.
 3. Within about 2 s, start the same app on the Streamer. The host holds a pending
    launch until it is claimed by RTSP or until `ping_timeout` (10 s by default,
    contract 7.5), so the second request must arrive inside that window to get
@@ -373,7 +388,7 @@ of section 1.4 for each scenario.
 Copy one table per device. Use `pass`, `fail` or `not applicable`, and add a
 short note for each `fail`.
 
-### 4.1 Samsung S21 (USB ADB)
+### 4.1 Samsung Galaxy S22 (USB ADB)
 
 | Scenario | Result | Evidence | Notes |
 | --- | --- | --- | --- |
@@ -417,7 +432,7 @@ moonlight-common-c values are those of the existing row of that table.
 
 | Borealis tree | Moonlight Android | moonlight-common-c | LuminalShine versions tested | Notes |
 | --- | --- | --- | --- | --- |
-| `<commit tested>` | 12.2 | fork `magalz/moonlight-common-c` `borealis`, upstream base `874ac95` plus the first full frame deadline patch (tag `borealis/874ac95-1`) | 26.09.1 | Samsung S21 (USB ADB) and Google TV Streamer (ADB over Wi-Fi) on `<date>`; instrumented tests `<pass/fail>`; scenarios `<n pass, n fail, n not applicable>`; see the results of this runbook. |
+| `<commit tested>` | 12.2 | fork `magalz/moonlight-common-c` `borealis`, upstream base `874ac95` plus the first full frame deadline patch (tag `borealis/874ac95-1`) | 26.09.1 | Samsung Galaxy S22 (USB ADB) and Google TV Streamer (ADB over Wi-Fi) on `<date>`; instrumented tests `<pass/fail>`; scenarios `<n pass, n fail, n not applicable>`; see the results of this runbook. |
 
 ## 5. Data hygiene
 
@@ -433,3 +448,40 @@ moonlight-common-c values are those of the existing row of that table.
    URLs. Crop them out of screenshots.
 4. Keep raw captures outside the repository. Commit only scrubbed excerpts and
    the filled templates.
+
+## 6. Results: Phase 1, 2026-10-14
+
+Tested tree: `phase/1-luminalshine-compat` at `d6b3116e` (debug APK), against
+LuminalShine 26.09.1 on Windows 11 25H2 with an NVIDIA RTX 3080 Ti, per-client
+virtual display, PyroWave off. Devices: Samsung Galaxy S22 (SM-S901E, Android 16,
+USB and later ADB Wi-Fi) and Google TV Streamer (Android 14, ADB Wi-Fi, 32-bit
+`armeabi-v7a` user space).
+
+| Scenario | Galaxy S22 | Google TV Streamer | Evidence and notes |
+| --- | --- | --- | --- |
+| 2 Instrumented tests | Pass, 8 of 8 | Pass, 8 of 8 (direct `am instrument`) | Golden vectors and JNI guards through the packaged libraries on both ABIs in use. |
+| 3.1 Pairing with the PIN hint | Pass | Pass | Needed the Private network profile (section 1.3). |
+| 3.2 Wrong PIN | Pass | Not run | "Incorrect PIN"; `Borealis.PAIR` logged `unpair not confirmed status=404`. The next attempt got 400 `Out of order call to getservercert`: the host keeps the pairing session after the client aborts on a wrong PIN, because `/unpair` is not routed; the attempt after that succeeds (NortheBridge/luminalshine discussion 196). |
+| 3.4 PC details dialog | Pass | Pass | Sunshine-compatible 7.1.431.-1; HEVC, HEVC 10-bit, 4:4:4; PyroWave off; HTTP 47989, HTTPS 47984. |
+| 3.5 Two devices at once | Started | Failed with 400 `An app is already running on this host` | The host queued the second `/launch` until the first session had started, then answered 400, not 409. No retry is expected for 400. The 409 window (between the `/launch` answer and the RTSP claim) is too short to hit by hand. |
+| 3.6 Relaunch right after quitting | Pass, several times | Not run | 503 `restoring the display` was not reproduced. |
+| 3.7 Cap FPS | Pass | Not run | Host: `raw_http='1280x720x59'` and `Requested display mode reconciled: HTTP and RTSP agree at 1280x720@59Hz`. |
+| 3.8 Cancel during a retry | Not reached | Not reached | No 409 or 503 occurred; covered by `LaunchRetryRunnerTest` and the instrumented golden vectors. |
+| 3.9 First frame | Pass | Pass | Preparing message shown until the first frame; first video packet 900 ms after the video stream started (S22, 720p60). |
+| 3.11 HEVC | Pass | Pass | `HEVC SPS: profile=Main chroma=4:2:0 depth=8/8`. |
+| 3.12 HDR and Main10 | Not run | Not run | Next validation round. |
+
+Host findings, reported upstream:
+
+- Every session that ended with a client disconnect (Back, not "Quit Session")
+  wedged in teardown phase "post-join cleanup (5)", and the host restarted 30 to
+  60 s later (`Fatal: Hang detected!`); "Quit Session" ended cleanly
+  (NortheBridge/luminalshine issue 198).
+- Unknown GET paths such as `/unpair` get a second, header-less response on the
+  same connection (NortheBridge/luminalshine issue 194).
+
+Follow-ups for the next sprint: a specific message (or one automatic restart)
+for the 400 `Out of order call` pairing answer; an option to join the running
+session after 400 `An app is already running on this host`; HDR and Main10;
+audio check on a longer S22 session (the first 7 s session logged no audio
+traffic, while the TV received audio).

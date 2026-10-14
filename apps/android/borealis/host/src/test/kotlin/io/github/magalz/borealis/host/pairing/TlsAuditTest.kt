@@ -17,9 +17,9 @@ class TlsAuditTest {
     private class FakeCertificate(private val der: ByteArray?) : Certificate("X.509") {
         override fun getEncoded(): ByteArray = der ?: throw CertificateEncodingException("broken")
 
-        override fun verify(key: PublicKey?) {}
+        override fun verify(key: PublicKey?) = Unit
 
-        override fun verify(key: PublicKey?, sigProvider: String?) {}
+        override fun verify(key: PublicKey?, sigProvider: String?) = Unit
 
         override fun toString() = "FAKE CERTIFICATE WITH SECRET CONTENT"
 

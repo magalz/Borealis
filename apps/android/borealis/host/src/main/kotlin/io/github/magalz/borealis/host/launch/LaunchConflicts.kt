@@ -116,6 +116,7 @@ internal constructor(
                 val name = nameOrNull(names, seen.id)
                 val choice = ask(prompt, seen.id, name, requestedAppId, requestedAppName)
                 BorealisLog.i(LogTag.LAUNCH, "running app conflict answered", "choice" to choice)
+                LaunchAudit.conflict(host, choice, seen.id)
                 when (choice) {
                     ConflictChoice.JOIN -> afterJoin(join.join(seen.id), relaunch)
                     ConflictChoice.QUIT_AND_RELAUNCH -> quitAndRelaunch.run()

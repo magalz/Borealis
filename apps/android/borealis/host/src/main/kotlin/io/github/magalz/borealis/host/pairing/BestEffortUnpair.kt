@@ -1,5 +1,8 @@
 package io.github.magalz.borealis.host.pairing
 
+import io.github.magalz.borealis.logging.AuditOutcome
+import io.github.magalz.borealis.logging.AuditType
+import io.github.magalz.borealis.logging.BorealisAudit
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogTag
 import java.io.IOException
@@ -51,7 +54,29 @@ object BestEffortUnpair {
             is Outcome.Unreachable ->
                 BorealisLog.w(LogTag.PAIR, "unpair failed", "error" to outcome.error)
         }
+        audit(url.host, outcome)
         return outcome == Outcome.Accepted
+    }
+
+    private fun audit(host: String, outcome: Outcome) {
+        if (outcome == Outcome.Accepted) {
+            BorealisAudit.record(AuditType.UNPAIR_CONFIRMED, AuditOutcome.SUCCESS, host)
+            return
+        }
+        val reason =
+            when (outcome) {
+                is Outcome.HttpFailure -> "http_${outcome.code}"
+                is Outcome.Rejected ->
+                    outcome.status?.let { "host_status_$it" } ?: "host_status_unreadable"
+                is Outcome.Unreachable -> "unreachable error=${outcome.error}"
+                Outcome.Accepted -> return
+            }
+        BorealisAudit.record(
+            AuditType.UNPAIR_NOT_CONFIRMED,
+            AuditOutcome.FAILURE,
+            host,
+            "reason=$reason",
+        )
     }
 
     private fun statusCode(body: String): Outcome {

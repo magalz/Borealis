@@ -8,7 +8,7 @@ import java.util.zip.ZipInputStream
 
 internal val SAMPLE_MANIFEST =
     BundleManifest(
-        app = AppInfo("1.2.3", 7L, "abc1234", "release"),
+        app = AppInfo("1.2.3", 7L, "9f8e7d6", "release"),
         device = DeviceInfo("15", 35, "Acme", "Phone 1", listOf("arm64-v8a")),
         createdUtc = "2026-10-14T12:34:56Z",
         logSettings = LogSettingsInfo(verbose = false, maskAddresses = false),

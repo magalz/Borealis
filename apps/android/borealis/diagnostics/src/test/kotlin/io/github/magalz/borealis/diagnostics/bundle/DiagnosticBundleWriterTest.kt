@@ -144,13 +144,13 @@ class DiagnosticBundleWriterTest {
                         TextSection("manifest.json", "x"),
                         TextSection("decoders.json", "x"),
                         TextSection("logs", "x"),
-                        TextSection("good.txt", "first"),
-                        TextSection("good.txt", "second"),
+                        TextSection("good.txt", "first\n"),
+                        TextSection("good.txt", "second\n"),
                     )
             )
 
         assertThat(entries.keys).containsExactly("manifest.json", "decoders.json", "good.txt")
-        assertThat(entries["good.txt"]).isEqualTo("first")
+        assertThat(entries["good.txt"]).isEqualTo("first\n")
         assertThat(manifestOf(entries)).isEqualTo(SAMPLE_MANIFEST)
     }
 
@@ -173,7 +173,13 @@ class DiagnosticBundleWriterTest {
     @Test
     fun `a full bundle stays within the size bound and drops the oldest logs first`() {
         val names =
-            listOf("borealis.log", "borealis.log.1", "borealis.log.2", "borealis.log.3", "borealis.log.4")
+            listOf(
+                "borealis.log",
+                "borealis.log.1",
+                "borealis.log.2",
+                "borealis.log.3",
+                "borealis.log.4",
+            )
         for (name in names) {
             File(logDir, name).writeLines(*Array(10) { "$name line $it ".padEnd(99, '.') })
         }

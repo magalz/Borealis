@@ -100,7 +100,9 @@ class DecoderCollectorTest {
                 )
             )
 
-        assertThat(report.decoders.single().profiles).containsExactly("Main", "profile-28672").inOrder()
+        assertThat(report.decoders.single().profiles)
+            .containsExactly("Main", "profile-28672")
+            .inOrder()
     }
 
     @Test

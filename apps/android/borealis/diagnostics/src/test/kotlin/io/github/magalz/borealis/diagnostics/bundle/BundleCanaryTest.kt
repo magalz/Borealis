@@ -31,11 +31,9 @@ class BundleCanaryTest {
         assertThat(CanaryCorpus.canaries().size).isAtLeast(30)
     }
 
-    @Test
-    fun `no secret reaches the bundle with address masking off`() = assertNoSecrets(false)
+    @Test fun `no secret reaches the bundle with address masking off`() = assertNoSecrets(false)
 
-    @Test
-    fun `no secret reaches the bundle with address masking on`() = assertNoSecrets(true)
+    @Test fun `no secret reaches the bundle with address masking on`() = assertNoSecrets(true)
 
     private fun assertNoSecrets(maskAddresses: Boolean) {
         val entries = bundleWithEveryCanary(maskAddresses)

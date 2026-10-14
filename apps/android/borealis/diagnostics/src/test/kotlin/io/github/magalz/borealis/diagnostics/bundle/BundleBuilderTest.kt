@@ -54,7 +54,9 @@ class BundleBuilderTest {
         assertThat(entries["logs/borealis.log"])
             .isEqualTo("pairing pin=[REDACTED]\nhost [IP] answered\n")
         assertThat(entries["audit.jsonl"]).isEqualTo("{\"detail\":\"password=[REDACTED]\"}\n")
-        assertThat(Json.decodeFromString<BundleManifest>(entries.getValue("manifest.json")).createdUtc)
+        assertThat(
+                Json.decodeFromString<BundleManifest>(entries.getValue("manifest.json")).createdUtc
+            )
             .isEqualTo("2026-10-14T12:34:56Z")
         assertThat(entries.getValue("decoders.json")).contains("displayHdrTypes")
     }

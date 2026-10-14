@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Replaced by the app with the built commit; this default is for libraries and tests. -->
+    <string name="borealis_git_sha" translatable="false">unknown</string>
+
+    <string name="borealis_export_title">Export diagnostics</string>
+    <string name="borealis_export_summary">Create a zip with redacted logs and device details to send with a bug report. Check it before you share it.</string>
+    <string name="borealis_export_chooser_title">Share diagnostics</string>
+    <string name="borealis_export_working">Creating the diagnostic bundle…</string>
+    <string name="borealis_export_failed">Could not create the diagnostic bundle. See the log for details.</string>
+    <string name="borealis_export_saved_title">Diagnostics saved</string>
+    <string name="borealis_export_saved_message">No app on this device can receive the file, so it was saved here:\n\n%1$s\n\nTo copy it to a computer, run:\n\n%2$s</string>
+    <string name="borealis_export_close">Close</string>
+</resources>

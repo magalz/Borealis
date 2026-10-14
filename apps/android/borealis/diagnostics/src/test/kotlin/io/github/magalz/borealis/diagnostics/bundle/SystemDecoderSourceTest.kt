@@ -40,7 +40,12 @@ class SystemDecoderSourceTest {
                 .setColorFormats(intArrayOf(MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface))
                 .setProfileLevels(
                     profiles
-                        .map { profile -> P().apply { this.profile = profile; level = 0 } }
+                        .map { profile ->
+                            P().apply {
+                                this.profile = profile
+                                level = 0
+                            }
+                        }
                         .toTypedArray()
                 )
                 .build()
@@ -56,7 +61,14 @@ class SystemDecoderSourceTest {
     @Test
     fun `lists the video decoders with their profiles and hardware flag, and not encoders`() {
         ShadowMediaCodecList.addCodec(
-            codec("c2.acme.hevc.decoder", "video/hevc", false, true, P.HEVCProfileMain, P.HEVCProfileMain10)
+            codec(
+                "c2.acme.hevc.decoder",
+                "video/hevc",
+                false,
+                true,
+                P.HEVCProfileMain,
+                P.HEVCProfileMain10,
+            )
         )
         ShadowMediaCodecList.addCodec(
             codec("c2.android.avc.decoder", "video/avc", false, false, P.AVCProfileHigh)

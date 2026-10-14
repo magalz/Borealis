@@ -38,7 +38,8 @@ class BorealisLogTest {
     fun `redact uses the running redactor and follows its address masking`() {
         BorealisLog.initialize(listOf(sink), redactor = Redactor(maskAddresses = false))
 
-        assertThat(BorealisLog.redact("pin=4821 at 192.0.2.5")).isEqualTo("pin=[REDACTED] at 192.0.2.5")
+        assertThat(BorealisLog.redact("pin=4821 at 192.0.2.5"))
+            .isEqualTo("pin=[REDACTED] at 192.0.2.5")
 
         BorealisLog.setMaskAddresses(true)
 

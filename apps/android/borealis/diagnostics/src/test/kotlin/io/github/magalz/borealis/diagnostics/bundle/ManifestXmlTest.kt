@@ -7,7 +7,10 @@ import org.junit.Test
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 
-/** The FileProvider is private, covers only the bundle directory, and the app may query for ACTION_SEND. */
+/**
+ * The FileProvider is private, covers only the bundle directory, and the app may query for
+ * ACTION_SEND.
+ */
 class ManifestXmlTest {
     private fun parse(path: String): Document {
         val file = File(path)
@@ -32,7 +35,8 @@ class ManifestXmlTest {
     fun `the file provider is private and grants only temporary access`() {
         val provider = manifest.elements("provider").single()
 
-        assertThat(provider.androidAttribute("name")).isEqualTo("androidx.core.content.FileProvider")
+        assertThat(provider.androidAttribute("name"))
+            .isEqualTo("androidx.core.content.FileProvider")
         assertThat(provider.androidAttribute("authorities"))
             .isEqualTo("\${applicationId}.diagnostics.fileprovider")
         assertThat(provider.androidAttribute("exported")).isEqualTo("false")

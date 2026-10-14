@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- BundleBuilder writes the zip to cacheDir/diagnostics; nothing else is shared. -->
+    <cache-path
+        name="diagnostics"
+        path="diagnostics/" />
+</paths>

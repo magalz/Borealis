@@ -42,10 +42,23 @@ class ExportDiagnosticsPreferenceTest {
     private fun preference(sections: Set<DiagnosticSection> = emptySet()) =
         ExportDiagnosticsPreference(activity).apply {
             sectionsProvider = { sections }
-            // Run the "background" work on the test thread so the result is there when onClick returns.
+            // androidx FileProvider cannot map Windows paths under Robolectric; its configuration
+            // is
+            // covered by FileProviderConfigTest and ManifestXmlTest.
+            uriFor = { file ->
+                Uri.Builder()
+                    .scheme("content")
+                    .authority(fileProviderAuthority(activity.packageName))
+                    .appendPath("diagnostics")
+                    .appendPath(file.name)
+                    .build()
+            }
+            // Run the "background" work on the test thread so the result is there when onClick
+            // returns.
             ioDispatcher = Dispatchers.Unconfined
         }
 
+    @Suppress("DEPRECATION")
     private fun allowSharing() {
         val send = Intent(Intent.ACTION_SEND).setType("application/zip")
         val resolved =
@@ -79,7 +92,8 @@ class ExportDiagnosticsPreferenceTest {
 
         val started = shadowOf(activity).nextStartedActivity
         assertThat(started.action).isEqualTo(Intent.ACTION_CHOOSER)
-        @Suppress("DEPRECATION") val send = started.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)!!
+        @Suppress("DEPRECATION")
+        val send = started.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)!!
         assertThat(send.type).isEqualTo("application/zip")
         @Suppress("DEPRECATION") val uri = send.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)!!
         assertThat(uri.scheme).isEqualTo("content")

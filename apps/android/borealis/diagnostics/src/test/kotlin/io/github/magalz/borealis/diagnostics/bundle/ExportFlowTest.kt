@@ -23,8 +23,9 @@ class ExportFlowTest {
     @Before
     fun setUp() {
         zip =
-            File(temp.newFolder("cache"), "borealis-diagnostics-20261014-123456.zip")
-                .apply { writeText("zip bytes") }
+            File(temp.newFolder("cache"), "borealis-diagnostics-20261014-123456.zip").apply {
+                writeText("zip bytes")
+            }
         external = File(temp.root, "external")
     }
 
@@ -57,12 +58,15 @@ class ExportFlowTest {
         assertThat(chooser.action).isEqualTo(Intent.ACTION_CHOOSER)
         assertThat(chooser.getCharSequenceExtra(Intent.EXTRA_TITLE).toString())
             .isEqualTo("Share diagnostics")
-        @Suppress("DEPRECATION") val send = chooser.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)!!
+        @Suppress("DEPRECATION")
+        val send = chooser.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)!!
         assertThat(send.action).isEqualTo(Intent.ACTION_SEND)
         assertThat(send.type).isEqualTo("application/zip")
         @Suppress("DEPRECATION")
         assertThat(send.getParcelableExtra<Uri>(Intent.EXTRA_STREAM).toString())
-            .isEqualTo("content://test.fileprovider/diagnostics/borealis-diagnostics-20261014-123456.zip")
+            .isEqualTo(
+                "content://test.fileprovider/diagnostics/borealis-diagnostics-20261014-123456.zip"
+            )
         assertThat(send.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION).isNotEqualTo(0)
         assertThat(chooser.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION).isNotEqualTo(0)
         assertThat(asked.single().action).isEqualTo(Intent.ACTION_SEND)

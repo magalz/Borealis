@@ -98,6 +98,7 @@ class LaunchRetryRunner(
             return when (decision.action) {
                 LaunchAction.FALLBACK_TO_LAUNCH -> LaunchOutcome.FALLBACK_TO_LAUNCH
                 LaunchAction.FAIL -> throw failure
+                LaunchAction.RESOLVE_CONFLICT -> throw failure
                 LaunchAction.RETRY -> retry(decision, failure)
             }
         }

@@ -101,6 +101,8 @@ internal object HostMarshalling {
         )
     }
 
+    fun decodePairDecision(raw: IntArray?): PairDecision? = null
+
     private fun isContinuation(byte: Byte) =
         byte.toInt() and UTF8_CONTINUATION_MASK == UTF8_CONTINUATION
 

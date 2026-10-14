@@ -6,6 +6,7 @@ import io.github.magalz.borealis.nativecore.LaunchAction
 import io.github.magalz.borealis.nativecore.LaunchCategory
 import io.github.magalz.borealis.nativecore.LaunchDecision
 import io.github.magalz.borealis.nativecore.LaunchVerb
+import io.github.magalz.borealis.nativecore.PairDecision
 import java.io.IOException
 
 /** A host answer as the upstream client raises it; stands in for `HostHttpResponseException`. */
@@ -26,6 +27,7 @@ data class DecideCall(
 class FakeHostRules(
     private val decide: (LaunchVerb, Int, String?, Int) -> LaunchDecision? = ::coreTable,
     private val caps: (String?, Int) -> HostCaps? = { _, _ -> null },
+    private val pairing: (Int, String?) -> PairDecision? = { _, _ -> null },
     private val fps: (Boolean, Int, Int) -> Int? = { _, _, _ -> null },
 ) : HostRules {
     val decideCalls = mutableListOf<DecideCall>()
@@ -46,6 +48,9 @@ class FakeHostRules(
         return decide(verb, status, message, attemptsInCategory)
     }
 
+    override fun classifyPairing(status: Int, message: String?): PairDecision? =
+        pairing(status, message)
+
     override fun launchFps(isGfe: Boolean, launchFps: Int, streamFps: Int): Int? =
         fps(isGfe, launchFps, streamFps)
 
@@ -64,6 +69,15 @@ class FakeHostRules(
             val text = message.orEmpty().lowercase()
             val (category, delays) =
                 when {
+                    verb == LaunchVerb.LAUNCH &&
+                        status == 400 &&
+                        "an app is already running" in text ->
+                        return LaunchDecision(
+                            LaunchAction.RESOLVE_CONFLICT,
+                            0,
+                            LaunchCategory.APP_RUNNING,
+                            0,
+                        )
                     verb == LaunchVerb.RESUME &&
                         status == 503 &&
                         "no running app to resume" in text ->

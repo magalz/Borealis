@@ -26,6 +26,13 @@ interface HostRules {
         attemptsInCategory: Int,
     ): LaunchDecision?
 
+    /**
+     * Classifies a `/pair` error the host answered with [status] and [message] (truncated to 256
+     * UTF-8 bytes): restart the pairing once, tell the user to wait for the host, or fail with a
+     * message for the category.
+     */
+    fun classifyPairing(status: Int, message: String?): PairDecision?
+
     /** The frame rate for the `/launch` `mode=WxHxFPS` parameter; never negative. */
     fun launchFps(isGfe: Boolean, launchFps: Int, streamFps: Int): Int?
 }
@@ -78,6 +85,9 @@ enum class LaunchAction {
 
     /** `/resume` found no app: call `/launch` instead. */
     FALLBACK_TO_LAUNCH,
+
+    /** `/launch` found another app running: ask the user, never cancel it unasked. */
+    RESOLVE_CONFLICT,
 }
 
 /** Failure category; retries are counted per category. */
@@ -88,11 +98,15 @@ enum class LaunchCategory {
     GPU_NOT_READY,
     CAPTURE_OR_DISPLAY,
     NO_RUNNING_APP,
+
+    /** 400 on `/launch`: an app is already running on the host. */
+    APP_RUNNING,
 }
 
 /**
  * [delayMs] is 0 unless [action] is [LaunchAction.RETRY]; [maxAttempts] is the number of retries
- * allowed in [category] (0 for [LaunchCategory.PERMANENT] and [LaunchCategory.NO_RUNNING_APP]).
+ * allowed in [category] (0 for [LaunchCategory.PERMANENT], [LaunchCategory.NO_RUNNING_APP] and
+ * [LaunchCategory.APP_RUNNING]).
  */
 data class LaunchDecision(
     val action: LaunchAction,
@@ -100,3 +114,30 @@ data class LaunchDecision(
     val category: LaunchCategory,
     val maxAttempts: Int,
 )
+
+/** What the caller does after a pairing error. */
+enum class PairAction {
+    /** Stop and show a message for the category. */
+    FAIL,
+
+    /** The host dropped its session: explain, then pair again with a new PIN, once. */
+    RESTART_ONCE,
+
+    /** The host holds another session: tell the user to wait or restart the host. */
+    WAIT_HOST_SESSION,
+}
+
+/** Which host pairing error it was; selects the message the user sees. */
+enum class PairCategory {
+    UNKNOWN,
+    STALE_SESSION,
+    EXCHANGE_INVALIDATED,
+    HOST_RESET,
+    IN_PROGRESS,
+    IDENTITY_MISMATCH,
+    TOO_MANY_PENDING,
+    PEER_MISMATCH,
+    SUPERSEDED,
+}
+
+data class PairDecision(val action: PairAction, val category: PairCategory)

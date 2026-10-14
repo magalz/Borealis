@@ -37,6 +37,8 @@ internal class HostRulesBinding(
             HostMarshalling.decodeDecision(raw)
         }
 
+    override fun classifyPairing(status: Int, message: String?): PairDecision? = null
+
     override fun launchFps(isGfe: Boolean, launchFps: Int, streamFps: Int): Int? =
         library.call("launchFps") { native.launchFps(isGfe, launchFps, streamFps) }
 }

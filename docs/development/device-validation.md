@@ -451,18 +451,26 @@ for both. Never put a bundle from a real run into the repository.
    host name appears in any entry.
 6. Expected: `decoders.json` lists the H.264, HEVC and AV1 decoders with profile
    names, and the display HDR types.
-7. On the Streamer (no share target), export. A dialog shows the saved path and an
-   `adb pull` command. The D-pad scrolls the text and reaches Close.
+7. On the Streamer, export. A toast "Creating the diagnostic bundle…" appears, and
+   then the "Diagnostics saved" dialog, even though apps such as VLC accept shared
+   files. The share sheet must not open by itself. The dialog shows
+   `Download/borealis-diagnostics-<timestamp>.zip` and the matching `adb pull`
+   command. Expected: Close has the focus, the D-pad scrolls the text and reaches
+   "Share…" and Close. Choose "Share…": the share sheet opens with the apps that
+   accept a zip (VLC can be among them); cancel it.
 8. On the PC, run the `adb pull` command of the dialog, or:
 
    ```sh
-   adb -s <serial-tv> pull /sdcard/Android/data/<package>/files/diagnostics/borealis-diagnostics-<timestamp>.zip
+   adb -s <serial-tv> pull /sdcard/Download/borealis-diagnostics-<timestamp>.zip
    ```
 
-   The package is `io.github.magalz.borealis.debug` for debug builds and
-   `io.github.magalz.borealis` for release builds. Expected: the zip opens and has
-   the layout of step 3.
-9. Export twice. Expected: only the newest bundle remains.
+   Expected: the zip opens and has the layout of step 3. On Android 9 (API 28) the
+   file is in the app's files directory instead, and the dialog shows that
+   `adb pull /sdcard/Android/data/<package>/files/diagnostics/...` command. The
+   package is `io.github.magalz.borealis.debug` for debug builds and
+   `io.github.magalz.borealis` for release builds.
+9. Export twice. Expected: only the newest bundle remains (in `cacheDir` and in
+   Downloads). Files of other apps in Downloads are not touched.
 10. Tap "Export diagnostics" twice quickly. Expected: the second tap does nothing
     while the first bundle is built.
 11. Leave the screen (Back) while the bundle is built. Expected: no crash in the

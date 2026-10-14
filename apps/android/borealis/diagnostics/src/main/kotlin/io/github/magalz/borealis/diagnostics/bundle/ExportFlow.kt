@@ -1,11 +1,13 @@
 package io.github.magalz.borealis.diagnostics.bundle
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import io.github.magalz.borealis.diagnostics.DiagnosticSection
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogStorage
+import io.github.magalz.borealis.logging.LogTag
 import java.io.File
 import java.time.Instant
 import java.time.ZoneOffset
@@ -41,7 +43,29 @@ internal class ExportFlow(
     private val store: BundleStore,
 ) {
     /** Blocking; never throws. */
-    fun run(): ExportResult = TODO()
+    fun run(): ExportResult = runCatching {
+        deliver()
+    }
+        .getOrElse { error ->
+            BorealisLog.e(LogTag.APP, "diagnostic export failed", error)
+            ExportResult.Failed
+        }
+
+    private fun deliver(): ExportResult {
+        val zip = buildBundle()
+        val uri = uriFor(zip)
+        val send =
+            Intent(Intent.ACTION_SEND)
+                .setType(ZIP_MIME_TYPE)
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                .apply { clipData = ClipData.newRawUri(null, uri) }
+        val chooser =
+            Intent.createChooser(send, chooserTitle).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        if (!isTelevision && canShare(send)) return ExportResult.Share(chooser)
+        val saved = store.save(zip)
+        return ExportResult.Saved(saved.location, saved.adbPullCommand, chooser)
+    }
 
     companion object {
         const val ZIP_MIME_TYPE = "application/zip"

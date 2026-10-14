@@ -9,6 +9,7 @@
     <string name="borealis_export_working">Creating the diagnostic bundle…</string>
     <string name="borealis_export_failed">Could not create the diagnostic bundle. See the log for details.</string>
     <string name="borealis_export_saved_title">Diagnostics saved</string>
-    <string name="borealis_export_saved_message">No app on this device can receive the file, so it was saved here:\n\n%1$s\n\nTo copy it to a computer, run:\n\n%2$s</string>
+    <string name="borealis_export_saved_message">The diagnostic bundle was saved here:\n\n%1$s\n\nTo copy it to a computer, run:\n\n%2$s</string>
+    <string name="borealis_export_share">Share…</string>
     <string name="borealis_export_close">Close</string>
 </resources>

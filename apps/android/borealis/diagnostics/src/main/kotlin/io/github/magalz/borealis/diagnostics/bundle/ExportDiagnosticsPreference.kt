@@ -3,6 +3,7 @@ package io.github.magalz.borealis.diagnostics.bundle
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Typeface
 import android.net.Uri
@@ -98,7 +99,19 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
         context.startActivity(chooser)
     }
 
-    /** The text can take focus, so a D-pad scrolls it and reaches the Close button. */
+    /** Share only when the user asks for it; the system can still refuse. */
+    private fun shareOnRequest(chooser: Intent) {
+        runCatching { share(chooser) }
+            .onFailure {
+                BorealisLog.e(LogTag.APP, "could not share the saved diagnostic bundle", it)
+                toast(R.string.borealis_export_failed)
+            }
+    }
+
+    /**
+     * The text can take focus, so a D-pad scrolls it, and both buttons are focusable. Close has the
+     * focus first; "Share…" is for a TV that has a mail or file app.
+     */
     private fun showSaved(saved: ExportResult.Saved) {
         val padding = (PADDING_DP * context.resources.displayMetrics.density).toInt()
         val body =
@@ -114,11 +127,18 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
                 isFocusable = true
                 setPadding(padding, padding, padding, padding)
             }
-        AlertDialog.Builder(context)
-            .setTitle(R.string.borealis_export_saved_title)
-            .setView(ScrollView(context).apply { addView(body) })
-            .setPositiveButton(R.string.borealis_export_close, null)
-            .show()
+        val dialog =
+            AlertDialog.Builder(context)
+                .setTitle(R.string.borealis_export_saved_title)
+                .setView(ScrollView(context).apply { addView(body) })
+                .setPositiveButton(R.string.borealis_export_close, null)
+                .setNeutralButton(R.string.borealis_export_share) { _, _ ->
+                    shareOnRequest(saved.chooser)
+                }
+                .show()
+        // After the first layout, which would otherwise pick the first focusable view.
+        val close = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+        close.post { close.requestFocus() }
     }
 
     private fun toast(message: Int) = Toast.makeText(context, message, Toast.LENGTH_LONG).show()

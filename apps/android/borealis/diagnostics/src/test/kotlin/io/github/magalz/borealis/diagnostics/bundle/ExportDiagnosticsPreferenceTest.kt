@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.ResolveInfo
 import android.net.Uri
+import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ScrollView
@@ -179,6 +180,7 @@ class ExportDiagnosticsPreferenceTest {
     @Test
     fun `the Close button has the focus when the saved dialog opens`() {
         preference().onClick()
+        shadowOf(Looper.getMainLooper()).idle()
 
         assertThat(savedDialog().getButton(AlertDialog.BUTTON_POSITIVE).hasFocus()).isTrue()
     }
@@ -188,6 +190,7 @@ class ExportDiagnosticsPreferenceTest {
         preference().onClick()
 
         savedDialog().getButton(AlertDialog.BUTTON_NEUTRAL).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
 
         val started = shadowOf(activity).nextStartedActivity
         assertThat(started.action).isEqualTo(Intent.ACTION_CHOOSER)
@@ -206,6 +209,7 @@ class ExportDiagnosticsPreferenceTest {
         preference(context = refusing).onClick()
 
         savedDialog().getButton(AlertDialog.BUTTON_NEUTRAL).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
 
         assertThat(ShadowToast.getTextOfLatestToast())
             .isEqualTo("Could not create the diagnostic bundle. See the log for details.")

@@ -57,11 +57,20 @@ class FakeDownloadsProvider : ContentProvider() {
         sortOrder: String?,
     ): Cursor {
         val prefix = selectionArgs?.firstOrNull()?.removeSuffix("%").orEmpty()
-        val cursor =
-            MatrixCursor(arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME))
-        for (row in rows) {
+        val columns =
+            projection?.map { it }?.toTypedArray()
+                ?: arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME)
+        val cursor = MatrixCursor(columns)
+        // A query on one item (".../downloads/<id>") answers that row only.
+        val itemId = runCatching { ContentUris.parseId(uri) }.getOrNull()
+        for (row in rows.filter { itemId == null || it.id == itemId }) {
             val name = row.current.getAsString(MediaStore.MediaColumns.DISPLAY_NAME)
-            if (name.startsWith(prefix)) cursor.addRow(arrayOf(row.id, name))
+            if (!name.startsWith(prefix)) continue
+            cursor.addRow(
+                columns.map { column ->
+                    if (column == MediaStore.MediaColumns._ID) row.id else row.current.get(column)
+                }
+            )
         }
         return cursor
     }

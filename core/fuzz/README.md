@@ -38,4 +38,7 @@ core/build/fuzz/launch_message_fuzz corpus/launch -dict=core/fuzz/launch_message
 ```
 
 Configuring with `BOREALIS_CORE_BUILD_FUZZERS=ON` and a non-clang compiler fails on purpose.
+The Windows llvm-mingw toolchain has no libFuzzer, so on Windows build and run the targets in WSL or rely on CI:
+the `Core (C++)` job runs both targets for 60 s each (same commands, empty corpus) when `core/**` changes
+and on every push to `main`, and uploads crash reproducers as the `core-fuzz-artifacts` artifact.
 Commit minimized seed corpora and crash reproducers next to the fuzzer once they exist.

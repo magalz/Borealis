@@ -133,7 +133,7 @@ jobs:
           sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build clang clang-tidy llvm
           pipx install "clang-format==${CLANG_FORMAT_VERSION}"
       - name: Check formatting
-        run: find include src tests -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.cpp' \) -print0 | xargs -0 --no-run-if-empty clang-format --dry-run --Werror
+        run: find include src tests fuzz -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.cpp' \) -print0 | xargs -0 --no-run-if-empty clang-format --dry-run --Werror
       - name: Build and test (dev, warnings as errors)
         run: |
           cmake --preset dev -DBOREALIS_CORE_WARNINGS_AS_ERRORS=ON
@@ -146,7 +146,27 @@ jobs:
           cmake --preset asan -DBOREALIS_CORE_WARNINGS_AS_ERRORS=ON
           cmake --build --preset asan
           ctest --preset asan
-      # Fuzz targets arrive with the first parser (Phase 1); a short libFuzzer run will be added here.
+      # libFuzzer needs Linux clang (the Windows toolchain has no libFuzzer), so fuzzing only runs here.
+      # It runs when core changed and on main, not on every PR (ADR 0049 keeps the core job itself on every PR).
+      - name: Fuzz the host rules (libFuzzer, 60 s per target)
+        if: needs.changes.outputs.core == 'true' || github.event_name != 'pull_request'
+        run: |
+          cmake -S . -B build/fuzz -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBOREALIS_CORE_BUILD_TESTS=OFF \
+                -DBOREALIS_CORE_BUILD_FUZZERS=ON -DBOREALIS_CORE_SANITIZE=ON
+          cmake --build build/fuzz
+          mkdir -p build/fuzz/corpus/appversion build/fuzz/corpus/launch build/fuzz/artifacts
+          build/fuzz/appversion_fuzz build/fuzz/corpus/appversion \
+                -max_total_time=60 -artifact_prefix=build/fuzz/artifacts/
+          build/fuzz/launch_message_fuzz build/fuzz/corpus/launch -dict=fuzz/launch_message_fuzz.dict \
+                -max_total_time=60 -artifact_prefix=build/fuzz/artifacts/
+      - name: Upload fuzz crash reproducers
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: core-fuzz-artifacts
+          path: core/build/fuzz/artifacts/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Coverage (llvm-cov)
         working-directory: .
         run: sh core/scripts/coverage.sh

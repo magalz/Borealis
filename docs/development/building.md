@@ -30,8 +30,9 @@ git submodule update --init --recursive
 ```
 
 The `moonlight-common-c` submodule lives at its upstream path,
-`apps/android/app/src/main/jni/moonlight-core/moonlight-common-c`, and is
-required for the native build.
+`apps/android/app/src/main/jni/moonlight-core/moonlight-common-c`, is cloned
+from the Borealis fork (`https://github.com/magalz/moonlight-common-c`, branch
+`borealis`) and is required for the native build.
 
 ## Android SDK setup
 

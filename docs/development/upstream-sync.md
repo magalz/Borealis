@@ -61,9 +61,10 @@ Conflicts happen where a Borealis hook sits in an upstream file.
 
 ## 4. Submodules and dependencies
 
-- If upstream moved `moonlight-common-c`, update the submodule so that it
-  points at the commit upstream chose, at the same path:
-  `git submodule update --init --recursive`.
+- If upstream moved `moonlight-common-c`, rebase the Borealis fork patches
+  onto the commit upstream chose and point the submodule at the new tagged fork
+  commit, at the same path (see
+  [the moonlight-common-c fork](#moonlight-common-c-fork)).
 - If prebuilt libraries or dependency versions changed, update
   [NOTICE](../../NOTICE) and check the
   [dependency policy](../policies/dependencies.md).
@@ -143,8 +144,63 @@ versions). Record anything that no longer works.
 - Delete the sync branch.
 - Check that the next release's changelog lists the sync under "Upstream".
 
+## moonlight-common-c fork
+
+The `moonlight-common-c` submodule is cloned from the Borealis fork,
+`https://github.com/magalz/moonlight-common-c` (branch `borealis`), declared in
+`.gitmodules`. The reason and the options considered are in
+[ADR 0048](../adr/0048-fork-moonlight-common-c.md). The fork holds the upstream
+history plus the Borealis patches on top, nothing else.
+
+### Patches
+
+| Patch | File | Upstream base | Purpose |
+| --- | --- | --- | --- |
+| Wait longer for the first full video frame and enforce the deadline during silence | `src/VideoStream.c` | `874ac95` | Adds `FIRST_FULL_FRAME_TIMEOUT_SEC 25`, measured from the first datagram of any size, for the `ML_ERROR_NO_VIDEO_FRAME` (-101) deadline, and evaluates it also when the receive times out, so a runt datagram followed by silence ends the stream. `FIRST_FRAME_TIMEOUT_SEC 10` still bounds the wait for any video traffic (-100). Needed because LuminalShine can need up to about 18 s after the client attaches to send the first frame and sends a 1-byte runt datagram about 8 s in, which leaves upstream's 10 s deadline no margin ([host contract](../host-contract/luminalshine.md), section 10.1). The worst case to terminate is about 35 s (up to 10 s waiting for any traffic, then 25 s), below the 45 s Android watchdog. |
+
+Every changed line carries a `BOREALIS:` comment. Offer each patch upstream.
+moonlight-common-c has no C test harness, so patches are verified by build,
+review and device logs (`Received first video packet after N ms`).
+
+### Working on the fork
+
+1. Clone or enter the submodule and check out the `borealis` branch:
+
+   ```sh
+   cd apps/android/app/src/main/jni/moonlight-core/moonlight-common-c
+   git fetch origin
+   git switch borealis
+   ```
+
+2. Add a patch as one commit on `borealis` that touches only the files it
+   needs, in upstream commit style. Match the line endings of the file.
+3. Push the fork commit and tag it `borealis/<upstream short sha>-<n>`
+   (for example `borealis/874ac95-1`; `<n>` counts the fork states for that
+   upstream commit). Tags are never rewritten or force-pushed.
+4. Only then commit the new submodule pointer in the Borealis tree. The
+   Borealis pointer may reference only a pushed, tagged fork commit.
+
+### Rebasing the patches onto a new upstream commit
+
+When moonlight-android moves its submodule pointer:
+
+1. Add the upstream remote once:
+   `git remote add upstream https://github.com/moonlight-stream/moonlight-common-c.git`.
+2. `git fetch upstream` and note the new upstream commit `<new>` that
+   moonlight-android points at.
+3. Create the new fork branch state without touching the old tags:
+   `git switch -c rebase-<new short sha> borealis`, then
+   `git rebase --onto <new> <old upstream commit>`.
+4. Resolve conflicts keeping each patch minimal with its `BOREALIS:` markers;
+   check that every patch in the table above still applies and works.
+5. Fast-forward `borealis` to the result, push it, and tag the commit
+   `borealis/<new short sha>-1`.
+6. Update the patch table (upstream base), the `moonlight-common-c` row of the
+   compatibility table, [NOTICE](../../NOTICE) and the SBOM, then point the
+   submodule at the tagged commit.
+
 ## Compatibility table
 
 | Borealis tree | Moonlight Android | moonlight-common-c | LuminalShine versions tested | Notes |
 | --- | --- | --- | --- | --- |
-| initial import | 12.2 | pointer recorded in the submodule | not yet tested | Baseline import. |
+| initial import | 12.2 | fork `magalz/moonlight-common-c` `borealis`, upstream base `874ac95` plus the first full frame deadline patch (tag `borealis/874ac95-1`) | not yet tested | Baseline import. |

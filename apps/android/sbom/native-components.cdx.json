@@ -29,8 +29,8 @@
       "type": "library",
       "bom-ref": "moonlight-common-c",
       "name": "moonlight-common-c",
-      "version": "874ac9548f1bd6f095ef2b435c42cdde460e7821",
-      "description": "Moonlight streaming protocol core (git submodule), compiled into libmoonlight-core.so",
+      "version": "591bddfa980406cf89ee5c9b150579a887cb160e",
+      "description": "Moonlight streaming protocol core (git submodule, Borealis fork), compiled into libmoonlight-core.so",
       "licenses": [
         {
           "license": {
@@ -38,17 +38,25 @@
           }
         }
       ],
-      "purl": "pkg:github/moonlight-stream/moonlight-common-c@874ac9548f1bd6f095ef2b435c42cdde460e7821",
+      "purl": "pkg:github/magalz/moonlight-common-c@591bddfa980406cf89ee5c9b150579a887cb160e",
       "externalReferences": [
         {
           "type": "vcs",
-          "url": "https://github.com/moonlight-stream/moonlight-common-c"
+          "url": "https://github.com/magalz/moonlight-common-c"
         }
       ],
       "properties": [
         {
           "name": "borealis:source",
           "value": "apps/android/app/src/main/jni/moonlight-core/moonlight-common-c (submodule pointer)"
+        },
+        {
+          "name": "borealis:upstream-base",
+          "value": "moonlight-stream/moonlight-common-c@874ac9548f1bd6f095ef2b435c42cdde460e7821"
+        },
+        {
+          "name": "borealis:patches",
+          "value": "src/VideoStream.c: wait longer for the first full video frame and enforce the deadline during silence (ADR 0048)"
         },
         {
           "name": "borealis:linkage",

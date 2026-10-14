@@ -1,4 +1,3 @@
-| `main-420-8bit-conformance-window.bin` | 1 (Main) | 1 (4:2:0) | 8/8 | 0 (`conformance_window_flag` 1) |
 # HEVC SPS fixtures
 
 Raw HEVC sequence parameter set NAL units (type 33), each with its Annex-B start code

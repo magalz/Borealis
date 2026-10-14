@@ -33,8 +33,8 @@ Fuzzers require a clang that ships libFuzzer and are off by default:
 cmake -S core -B core/build/fuzz -G Ninja -DCMAKE_CXX_COMPILER=clang++ \
       -DBOREALIS_CORE_BUILD_FUZZERS=ON -DBOREALIS_CORE_SANITIZE=ON
 cmake --build core/build/fuzz
-core/build/fuzz/appversion_fuzz corpus/appversion -max_total_time=60
-core/build/fuzz/launch_message_fuzz corpus/launch -dict=core/fuzz/launch_message_fuzz.dict -max_total_time=60
+core/build/fuzz/fuzz/appversion_fuzz corpus/appversion -max_total_time=60
+core/build/fuzz/fuzz/launch_message_fuzz corpus/launch -dict=core/fuzz/launch_message_fuzz.dict -max_total_time=60
 ```
 
 Configuring with `BOREALIS_CORE_BUILD_FUZZERS=ON` and a non-clang compiler fails on purpose.

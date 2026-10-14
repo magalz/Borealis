@@ -155,9 +155,9 @@ jobs:
                 -DBOREALIS_CORE_BUILD_FUZZERS=ON -DBOREALIS_CORE_SANITIZE=ON
           cmake --build build/fuzz
           mkdir -p build/fuzz/corpus/appversion build/fuzz/corpus/launch build/fuzz/artifacts
-          build/fuzz/appversion_fuzz build/fuzz/corpus/appversion \
+          build/fuzz/fuzz/appversion_fuzz build/fuzz/corpus/appversion \
                 -max_total_time=60 -artifact_prefix=build/fuzz/artifacts/
-          build/fuzz/launch_message_fuzz build/fuzz/corpus/launch -dict=fuzz/launch_message_fuzz.dict \
+          build/fuzz/fuzz/launch_message_fuzz build/fuzz/corpus/launch -dict=fuzz/launch_message_fuzz.dict \
                 -max_total_time=60 -artifact_prefix=build/fuzz/artifacts/
       - name: Upload fuzz crash reproducers
         if: failure()

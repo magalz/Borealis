@@ -110,6 +110,13 @@ From `apps/android/`:
   `apps/android/app/lint-baseline.xml`, and commit it in its own commit
   (`build: refresh lint baseline for moonlight-android <version>`). Findings in
   Borealis code are fixed, never baselined.
+- The baseline must work on every OS (CI runs on Linux, development on
+  Windows). Before committing a regenerated baseline, remove entries whose
+  location or message depends on the machine: absolute paths (for example jars
+  in the Gradle cache), `local.properties`, or Windows `\` paths inside
+  messages. Suppress those findings with a path-based `<ignore>` in
+  `apps/android/app/lint.xml` instead (marked `<!-- BOREALIS: -->`). CI fails
+  if the baseline contains absolute paths or `local.properties` entries.
 - Characterization and hook tests must pass. A failing one means the hook or
   the assumption changed; fix the hook, not the test, unless upstream
   behaviour legitimately changed (then update the test and say why).

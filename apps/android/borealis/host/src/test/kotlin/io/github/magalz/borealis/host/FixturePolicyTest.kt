@@ -2,12 +2,17 @@ package io.github.magalz.borealis.host
 
 import com.google.common.truth.Truth.assertThat
 import java.io.File
+import java.io.IOException
 import java.net.InetAddress
+import java.net.UnknownHostException
+import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.w3c.dom.Element
+import org.xml.sax.SAXException
+import org.xml.sax.helpers.DefaultHandler
 
 /** Guards the scrubbing and provenance rules of `core/tests/fixtures/README.md`. */
 class FixturePolicyTest {
@@ -182,20 +187,25 @@ class FixturePolicyTest {
     private fun violations(root: File): List<String> {
         val luminalshine = root.resolve("luminalshine")
         val versions = luminalshine.listFiles { f -> f.isDirectory }.orEmpty().sortedBy { it.name }
-        return versions.flatMap { version ->
-            val label = "luminalshine/${version.name}"
-            val xml = version.walkTopDown().filter { it.extension == "xml" }.toList()
-            xml.flatMap { scrubViolations(it, "$label/${relativePath(it, version)}") } +
-                provenanceViolations(version, label)
+        val fixtureCount = versions.sumOf { v ->
+            v.walkTopDown().count { it.isFile && it.name != PROVENANCE }
         }
+        val empty =
+            if (fixtureCount == 0) listOf("luminalshine: no fixtures found") else emptyList()
+        return empty +
+            versions.flatMap { version ->
+                val label = "luminalshine/${version.name}"
+                val xml = version.walkTopDown().filter { it.extension == "xml" }.toList()
+                xml.flatMap { scrubViolations(it, "$label/${relativePath(it, version)}") } +
+                    provenanceViolations(version, label)
+            }
     }
 
     private fun relativePath(file: File, base: File): String =
         file.relativeTo(base).path.replace(File.separatorChar, '/')
 
     private fun scrubViolations(file: File, label: String): List<String> {
-        val doc =
-            DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file).documentElement
+        val doc = parsePlainXml(file) ?: return listOf("$label: not readable as plain XML")
         val elements = doc.getElementsByTagName("*")
         return (0 until elements.length)
             .map { elements.item(it) as Element }
@@ -211,6 +221,27 @@ class FixturePolicyTest {
             }
     }
 
+    /** Parses [file] without DOCTYPE, entity expansion or XInclude; null when it cannot be read. */
+    private fun parsePlainXml(file: File): Element? {
+        val factory =
+            DocumentBuilderFactory.newInstance().apply {
+                setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
+                setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+                isXIncludeAware = false
+                isExpandEntityReferences = false
+            }
+        return try {
+            val builder = factory.newDocumentBuilder()
+            // DefaultHandler throws on fatal errors and stays quiet otherwise (no stderr output).
+            builder.setErrorHandler(DefaultHandler())
+            builder.parse(file).documentElement
+        } catch (_: SAXException) {
+            null
+        } catch (_: IOException) {
+            null
+        }
+    }
+
     private class ScrubRule(val description: String, val accepts: (String) -> Boolean)
 
     /** The scrubbing rule for an element, or null for fields the policy does not constrain. */
@@ -220,9 +251,7 @@ class FixturePolicyTest {
             element == "uniqueid" -> exactly("00000000-0000-0000-0000-000000000001")
             element == "mac" -> exactly("00:00:00:00:00:00")
             element == "LocalIP" || element == "ExternalIP" ->
-                ScrubRule("an address in 192.0.2.0/24") {
-                    it.startsWith("192.0.2.") && isLiteral(it)
-                }
+                ScrubRule("an address in 192.0.2.0/24") { isDocumentationIpv4(it) }
             element.contains("ip6", ignoreCase = true) ||
                 element.contains("ipv6", ignoreCase = true) ->
                 ScrubRule("an address in 2001:db8::/32") { isDocumentationIpv6(it) }
@@ -231,11 +260,22 @@ class FixturePolicyTest {
 
     private fun exactly(value: String) = ScrubRule("'$value'") { it == value }
 
-    private fun isLiteral(value: String) = Regex("[0-9.]+").matches(value)
+    private fun isDocumentationIpv4(value: String): Boolean {
+        val octets = value.split('.')
+        return octets.size == 4 &&
+            octets.all { Regex("[0-9]{1,3}").matches(it) && it.toInt() <= MAX_OCTET } &&
+            octets.take(3).map { it.toInt() } == listOf(192, 0, 2)
+    }
 
     private fun isDocumentationIpv6(value: String): Boolean {
         if (!Regex("[0-9a-fA-F:.]+").matches(value) || ':' !in value) return false
-        val bytes = InetAddress.getByName(value).address
+        // A literal containing ':' is never resolved through DNS; a malformed one throws.
+        val bytes =
+            try {
+                InetAddress.getByName(value).address
+            } catch (_: UnknownHostException) {
+                return false
+            }
         return bytes.size == 16 &&
             bytes[0] == 0x20.toByte() &&
             bytes[1] == 0x01.toByte() &&
@@ -252,20 +292,33 @@ class FixturePolicyTest {
                 .filter { it.trimStart().startsWith("|") }
                 .map { line -> line.trim().trim('|').split('|').map { it.trim().trim('`') } }
                 .filter { it.size >= 2 }
-                .associate { it[0] to it[1] }
+                .groupBy({ it[0] }, { it[1] })
         return version
             .walkTopDown()
-            .filter { it.isFile && it.name != "PROVENANCE.md" }
+            .filter { it.isFile && it.name != PROVENANCE }
             .map { relativePath(it, version) }
             .sorted()
-            .mapNotNull { name ->
-                when (val value = rows[name]) {
-                    null -> "$label/$name: no row in PROVENANCE.md"
-                    "device",
-                    "source" -> null
-                    else -> "$label/$name: provenance is '$value', expected device or source"
-                }
+            .flatMap { name ->
+                val values = rows[name].orEmpty()
+                val duplicate =
+                    if (values.size > 1) listOf("$label/$name: duplicate row in $PROVENANCE")
+                    else emptyList()
+                duplicate +
+                    when (val value = values.firstOrNull()) {
+                        null -> listOf("$label/$name: no row in $PROVENANCE")
+                        "device",
+                        "source" -> emptyList()
+                        else ->
+                            listOf(
+                                "$label/$name: provenance is '$value', expected device or source"
+                            )
+                    }
             }
             .toList()
+    }
+
+    private companion object {
+        const val PROVENANCE = "PROVENANCE.md"
+        const val MAX_OCTET = 255
     }
 }

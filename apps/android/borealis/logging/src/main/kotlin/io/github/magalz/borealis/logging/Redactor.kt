@@ -7,7 +7,8 @@ package io.github.magalz.borealis.logging
  */
 class Redactor(private val maskIpAddresses: Boolean = false) {
     /** Redacts secrets in free text. */
-    fun redact(text: String): String {
+    @Suppress("UnusedParameter")
+    fun redact(text: String, maxLength: Int = DEFAULT_MAX_LENGTH): String {
         var result = text
         result = PEM_BLOCK.replace(result, REDACTED)
         result = PEM_UNTERMINATED.replace(result, REDACTED)
@@ -34,6 +35,7 @@ class Redactor(private val maskIpAddresses: Boolean = false) {
     companion object {
         const val REDACTED = "[REDACTED]"
         const val IP_MASK = "[IP]"
+        const val DEFAULT_MAX_LENGTH = 16 * 1024
 
         private val PEM_BLOCK =
             Regex("""-----BEGIN [A-Z0-9 ]+-----[\s\S]*?-----END [A-Z0-9 ]+-----""")

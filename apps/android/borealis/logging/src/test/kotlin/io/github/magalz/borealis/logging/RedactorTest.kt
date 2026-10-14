@@ -16,7 +16,8 @@ class RedactorTest {
 
     @Test
     fun `numbers that are not labelled pins are untouched`() {
-        val text = "port 47984 open, build 1234, pin the window, pinned 1234 items, pin 12345"
+        val text =
+            "port 47984 open, build 1234, pin the window, pinned 1234 items, pin 123456789, spin 1234"
         assertThat(redactor.redact(text)).isEqualTo(text)
     }
 

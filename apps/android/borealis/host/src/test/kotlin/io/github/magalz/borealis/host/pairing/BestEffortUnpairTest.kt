@@ -12,8 +12,11 @@ import org.junit.Test
 
 class BestEffortUnpairTest {
     // A client with the default pool, which would reuse a connection that is not marked as closed.
+    // Retries are off: with them OkHttp silently repeats a request that failed on a poisoned
+    // pooled connection on a fresh one, which would hide the missing `Connection: close`.
     private val client =
         OkHttpClient.Builder()
+            .retryOnConnectionFailure(false)
             .readTimeout(5, TimeUnit.SECONDS)
             .connectTimeout(5, TimeUnit.SECONDS)
             .build()
@@ -49,6 +52,8 @@ class BestEffortUnpairTest {
                 val body = client.newCall(next).execute().use { it.body.string() }
 
                 assertThat(body).contains("status_code=\"200\"")
+                // The second request needed its own connection: the first one was not reused.
+                assertThat(server.heads).hasSize(2)
             }
     }
 
@@ -65,6 +70,25 @@ class BestEffortUnpairTest {
     fun `a status_code of 200 is a success`() {
         ReplayServer(ReplayServer.Reply(xmlResponse(200))).use { server ->
             assertThat(BestEffortUnpair.unpair(client, server.url("unpair"))).isTrue()
+        }
+    }
+
+    @Test
+    fun `status_code 200 is read whatever the XML spelling`() {
+        val bodies =
+            listOf(
+                "<root status_code='200'/>",
+                "<root status_message=\"OK\" status_code=\"200\"/>",
+                "<root status_code=\"200\" status_message=\"OK\"/>",
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<root status_code=\"200\"/>",
+                "<root status_code = \"200\"></root>",
+                "  \n<root\n  status_code\t=\t'200'\n>",
+            )
+        for (body in bodies) {
+            val reply = "HTTP/1.1 200 OK\r\nContent-Length: ${body.length}\r\n\r\n$body"
+            ReplayServer(ReplayServer.Reply(reply.toByteArray())).use { server ->
+                assertThat(BestEffortUnpair.unpair(client, server.url("unpair"))).isTrue()
+            }
         }
     }
 

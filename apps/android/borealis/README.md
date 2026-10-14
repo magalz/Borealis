@@ -90,7 +90,7 @@ AGP allows one `externalNativeBuild` per module, and upstream `:app` uses ndk-bu
 2. `prefabPublishing` + `prefab { create("borealis_core") }` publish `libborealis_core.so` and `core/include` as a Prefab package. The package name is the Gradle project name, so it is `native`.
 3. `:app` has `buildFeatures.prefab = true`. The Borealis-owned `jni/borealis/Android.mk` (picked up by upstream's `include $(call all-subdir-makefiles)`, so no upstream makefile changes) builds `libborealis_bridge.so` with `LOCAL_SHARED_LIBRARIES := borealis_core` and `$(call import-module,prefab/native)`. `NativeBridge.coreVersion()` calls it, proving that moonlight-core-side ndk-build code can link the core.
 
-Upstream native code (moonlight-common-c, evdev, `Application.mk`) is untouched; the only upstream-facing native settings are `APP_STL=c++_shared` (passed from the convention plugin) and the Prefab flag.
+Upstream native code (evdev, `Application.mk`) is untouched, and moonlight-common-c differs from upstream only by the reviewed patches on the Borealis fork (`docs/development/upstream-sync.md`); the only upstream-facing native settings are `APP_STL=c++_shared` (passed from the convention plugin) and the Prefab flag.
 
 ### Static or shared, and the STL
 

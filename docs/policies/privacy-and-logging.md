@@ -110,9 +110,10 @@ Fields per entry:
 Bounds:
 
 - Retention: the newest 2,000 entries or 90 days, whichever is smaller.
-- Deduplication: the same event type, host and detail is stored at most once
-  per 10 minutes. `/serverinfo` is polled every 1.5 s, so without this the
-  trail would fill with repeats.
+- Deduplication: only host certificate changes and TLS failures are
+  deduplicated, because `/serverinfo` polling (every 1.5 s) can repeat them.
+  The same type, host and detail is then stored at most once per 24 hours.
+  Every other event comes from a user action and is always stored.
 
 ## Backup
 

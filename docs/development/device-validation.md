@@ -1,9 +1,10 @@
-# Phase 1 device validation runbook
+# Device validation runbook
 
-This runbook checks Borealis Phase 1 on two devices against LuminalShine 26.09.1
-running on the owner's Windows PC. It is for the owner and for the orchestrator
-who runs the checks. Run the steps in order and record the results in the
-templates of section 4.
+This runbook checks Borealis Phase 1 and Sprint 2 on two devices against
+LuminalShine 26.09.1 running on the owner's Windows PC. It is for the owner and
+for the orchestrator who runs the checks. Run the steps in order and record the
+results in the templates of section 4 (Phase 1) or in the table of section 7
+(Sprint 2). Section 6 holds the Phase 1 results.
 
 Sources: [host contract](../host-contract/luminalshine.md) (cited as "contract"),
 [Borealis Android README](../../apps/android/borealis/README.md),
@@ -208,9 +209,21 @@ of section 1.4 for each scenario.
    wrong PIN and `BestEffortUnpair` logs the XML `status_code` that the host
    returns (`404`, see `core/tests/fixtures/luminalshine/26.09.1/unpair-http.response`).
    The client ignores the outcome, so the 404 does not replace "Incorrect PIN".
-5. Then run 3.1 with the correct PIN so that the device ends the scenario paired.
-6. Evidence: a screenshot of the message, the logcat capture and the host log
-   line for the rejected pairing.
+5. Start pairing again as in 3.1. The host may answer 400 `Out of order call to
+   getservercert`, because it keeps the pairing session after the wrong PIN
+   (section 6). Expected: the device shows "The host had an unfinished pairing
+   attempt and has cleared it. Enter the new PIN." (`pair_restart_cleared`) and
+   opens a new PIN dialog once. Enter the new PIN in the Web UI. Expected: the
+   device pairs.
+6. If the restarted attempt fails too, expected: a normal failure message and no
+   second new PIN dialog. The scenario must not loop. Record the message.
+7. If the host answers another pairing error, expected: a specific message from
+   `apps/android/borealis/host/src/main/res/values/strings_pairing.xml`, not the
+   generic "Pairing failed". Record the message.
+8. If the device is not paired at the end of the scenario, run 3.1 with the
+   correct PIN.
+9. Evidence: a screenshot of each message, the logcat capture and the host log
+   line for each rejected pairing.
 
 ### 3.3 Unpair from the PC menu
 
@@ -267,15 +280,27 @@ of section 1.4 for each scenario.
    - the device shows a clear failure after the retry budget (60 s,
      `DEFAULT_BUDGET_MS` in `LaunchRetryRunner`). `TODO(verify)`: the exact text
      of the final failure dialog.
-6. Expected: the client sends no `/cancel` request during the retries. The retry
+6. Expected for a 400 "An app is already running on this host" (the Phase 1
+   result on the Streamer, section 6): Borealis re-reads `/serverinfo` for up to
+   3 s. If no app runs any more, it launches again. Otherwise it shows the dialog
+   "An app is already running" with the buttons Join, Quit and relaunch, and
+   Cancel (`apps/android/app/src/main/res/values/strings_borealis_conflict.xml`).
+   Focus starts on Cancel. The text warns that quitting ends the session on the
+   other device.
+7. Run the three answers, each in a new attempt. Start the same app on the
+   Streamer while the S22 runs it, and answer the dialog as follows:
+   - Join: the device joins the running session and streams.
+   - Quit and relaunch: the S22 session ends and the app starts on the Streamer.
+   - Cancel: the device returns to the app list with no error dialog.
+8. Expected: the client sends no `/cancel` request during the retries. The retry
    code never calls it (README, `host.launch`). `TODO(verify)`: the host log line
    that a `/cancel` request writes, so that the owner can check for it.
-7. Caveat: if the second device asks for a different app while the first one
+9. Caveat: if the second device asks for a different app while the first one
    streams, Moonlight cancels and then launches (contract 7.6). That is the
    upstream behaviour and not a retry. Record it as a separate observation.
-8. Evidence: the logcat line `host asked to retry category=PENDING attempt=1 max=K
-   delay_ms=N` (fields as in `LaunchRetryRunner`), the final result, and the host
-   log.
+10. Evidence: the logcat line `host asked to retry category=PENDING attempt=1 max=K
+    delay_ms=N` (fields as in `LaunchRetryRunner`), the final result of each
+    answer in step 7, and the host log.
 
 ### 3.6 Relaunch right after quitting
 
@@ -390,6 +415,127 @@ of section 1.4 for each scenario.
    how to check the state on the device.
 6. Evidence: the logcat lines of steps 2 to 4, a screenshot and the device model.
 
+### 3.13 Borealis settings screen
+
+1. Open Settings and then "Borealis settings" (`borealis_settings_title`).
+2. Expected in the category "Privacy and diagnostics": the switches "Verbose
+   logging" and "Mask addresses in logs and diagnostics". Both are off by
+   default. With "Verbose logging" on, the new log lines include DEBUG lines in
+   the file. With "Mask addresses" on, new log lines show `[IP]` and `[HOST]` in
+   place of addresses and host names (`Redactor`, README `:borealis:logging`).
+3. Expected in the category "About":
+   - the version name with the commit;
+   - "Source code" opens `https://github.com/magalz/Borealis`;
+   - "Licence: GPL-3.0" is plain text;
+   - "Open-source licences" shows the NOTICE and LICENSE texts in a dialog;
+   - "Privacy policy" opens `https://github.com/magalz/Borealis/blob/main/PRIVACY.md`.
+4. On the Streamer: every entry is reachable with the D-pad. The licences text
+   scrolls with the D-pad. A link that no browser can open shows its URL as text
+   in a dialog.
+5. Evidence: screenshots without addresses, and the version line.
+   `TODO(verify)`: the exact version text on each device.
+
+### 3.14 Export diagnostics
+
+Steps 1 to 6 are for the phone, steps 7 and 8 for the Streamer, and steps 9 to 11
+for both. Never put a bundle from a real run into the repository.
+
+1. On the S22, open Settings, then "Borealis settings", then "Export diagnostics". A toast
+   "Creating the diagnostic bundle…" appears, then the share sheet.
+2. Send the zip to a test target (Files or Drive). Unzip it on the PC.
+3. Expected: the layout is `manifest.json`, `decoders.json`, `audit.jsonl` and
+   `logs/*`.
+4. Expected: no PIN, token or key appears in any entry. Search for the PIN of 3.1
+   and for any `token`, `key` or `cert` value.
+5. Expected with "Mask addresses in logs and diagnostics" on: no IP address and no
+   host name appears in any entry.
+6. Expected: `decoders.json` lists the H.264, HEVC and AV1 decoders with profile
+   names, and the display HDR types.
+7. On the Streamer (no share target), export. A dialog shows the saved path and an
+   `adb pull` command. The D-pad scrolls the text and reaches Close.
+8. On the PC, run the `adb pull` command of the dialog, or:
+
+   ```sh
+   adb -s <serial-tv> pull /sdcard/Android/data/<package>/files/diagnostics/borealis-diagnostics-<timestamp>.zip
+   ```
+
+   The package is `io.github.magalz.borealis.debug` for debug builds and
+   `io.github.magalz.borealis` for release builds. Expected: the zip opens and has
+   the layout of step 3.
+9. Export twice. Expected: only the newest bundle remains.
+10. Tap "Export diagnostics" twice quickly. Expected: the second tap does nothing
+    while the first bundle is built.
+11. Leave the screen (Back) while the bundle is built. Expected: no crash in the
+    logcat capture (no `FATAL EXCEPTION` line).
+12. Evidence: the unzipped layout (a listing, no contents), the logcat capture and
+    a screenshot of the dialog or the share sheet.
+
+### 3.15 Audit trail
+
+1. Pair the S22 with the host (3.1), launch an app (3.9 steps 1 and 2), stream it
+   for about one minute, and then quit it from the PC's app list with "Quit
+   Session" (`applist_menu_quit`).
+2. Export a bundle (3.14, steps 1 and 2).
+3. Expected in `audit.jsonl`: entries of the types PAIRING_*, LAUNCH_* and
+   SESSION_START and SESSION_END, with the fields documented in
+   [privacy-and-logging.md](../policies/privacy-and-logging.md) (section "Audit
+   trail").
+4. Expected: no PIN, token, key or certificate in any entry. With "Mask addresses"
+   on, no IP address and no host name.
+5. Open "Erase audit trail" (Privacy and diagnostics). Expected: a confirmation
+   dialog with Cancel focused. Choose Cancel first: nothing is erased. Then start
+   it again and choose "Erase": the message "Audit trail erased" appears.
+6. Export a bundle. Expected: `audit.jsonl` has no entries from before the erase.
+   The bundle exported in step 2 is not changed.
+7. Evidence: the unzipped `audit.jsonl` (scrubbed), and screenshots of the dialog.
+
+### 3.16 Stream logs
+
+1. Start a stream as in 3.9 steps 1 and 2, with the logcat capture of 1.4.
+2. Expected in logcat: lines with the tag `Borealis.COMMONC`, such as
+   `Received first video packet after N ms`. A line `N lines suppressed` can
+   appear during frame loss, because `COMMONC` is rate limited.
+3. Export a bundle (3.14, steps 1 and 2). Expected: `logs/borealis.log` contains
+   the `COMMONC` lines.
+4. Evidence: the logcat lines and the matching lines of the log file, scrubbed.
+
+### 3.17 Network privacy
+
+1. Start the logcat capture of 1.4. Add the PC by its address (`TODO(verify)`:
+   the menu entry for this). Let the add finish or fail.
+2. Expected: no "blocked ports" connection test result and no delay beyond the
+   normal timeout. The lookup of an external address and the connection test
+   return at once, because their JNI entry points are disabled
+   (`simplejni.c`, README `:borealis:settings`).
+3. Expected: the PC menu has no "Test network connection" entry.
+4. Connect to a PC that is off or blocked. Expected: the normal error message, with
+   no "blocked ports" result.
+5. `TODO(verify)`: how the owner can confirm on the PC that no DNS or HTTP request
+   reaches `moonlight-stream.org`, for example with a firewall or DNS log.
+6. Evidence: the logcat capture, the screenshots and the check of step 5.
+
+### 3.18 Release build smoke test
+
+1. Get the R8 release APK from the release dry run (artifact
+   `DRY-RUN-not-a-release`, [release.md](release.md) section 3). It is signed with a
+   throwaway key. Uninstall it before you install any real release. The package is
+   `io.github.magalz.borealis`, with the label "Borealis". Call the file
+   `<release-apk>` below.
+2. Install it next to Moonlight (`com.limelight`) and the debug build
+   (`io.github.magalz.borealis.debug`):
+
+   ```sh
+   adb -s <serial> install <release-apk>
+   ```
+
+3. Expected: the install succeeds, the three apps are installed side by side, and
+   Borealis starts.
+4. With the release build, pair (3.1), stream (3.9) and export diagnostics (3.14).
+   Expected: each step works as in the debug build.
+5. `TODO(verify)`: whether this smoke test runs on both devices.
+6. Evidence: `adb -s <serial> shell dumpsys package io.github.magalz.borealis`
+   (the `versionName` and the commit), the logcat capture and a screenshot.
+
 ## 4. Results templates
 
 Copy one table per device. Use `pass`, `fail` or `not applicable`, and add a
@@ -492,3 +638,23 @@ for the 400 `Out of order call` pairing answer; an option to join the running
 session after 400 `An app is already running on this host`; HDR and Main10;
 audio check on a longer S22 session (the first 7 s session logged no audio
 traffic, while the TV received audio).
+
+## 7. Results: Sprint 2, `<date>`
+
+Tested tree: `<commit tested>`, with the APK named in the notes of each row.
+Host: LuminalShine 26.09.1, as in section 6. Fill in the cells with `pass`,
+`fail` or `not applicable`, and add a short note for each `fail`.
+
+| Scenario | Galaxy S22 | Google TV Streamer | Evidence and notes |
+| --- | --- | --- | --- |
+| 3.2 Wrong PIN (changed) | TODO | TODO | Restart path of 3.2 steps 5 to 7. |
+| 3.5 Two devices launching at the same time (changed) | TODO | TODO | Includes the 400 conflict dialog of steps 6 and 7. |
+| 3.6 Relaunch right after quitting | - | TODO | Streamer only; the S22 result is in section 6. |
+| 3.7 Frame pacing "cap FPS" at the display rate | - | TODO | Streamer only; the S22 result is in section 6. |
+| 3.12 HDR and HEVC Main10 | TODO | TODO | Not run in Phase 1. |
+| 3.13 Borealis settings screen | TODO | TODO | |
+| 3.14 Export diagnostics | TODO | TODO | Phone steps on the S22, dialog steps on the Streamer. |
+| 3.15 Audit trail | TODO | TODO | |
+| 3.16 Stream logs | TODO | TODO | |
+| 3.17 Network privacy | TODO | TODO | |
+| 3.18 Release build smoke test | TODO | TODO | |

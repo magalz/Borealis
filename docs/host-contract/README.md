@@ -21,7 +21,7 @@ instead of re-reading the host source.
 | Commit | `5afdbdc6d04e0ad24cdcab5cfa9743bfc4f2dca8` (`NortheBridge/luminalshine@5afdbdc6`) |
 | Commit date | 2026-10-05 |
 | Nearest release tag | `26.09.1` (`git describe`: `26.09.1-15-g5afdbdc6`) |
-| Contract revision date | 2026-10-13 |
+| Contract revision date | 2026-10-14 |
 | Protocol version string the host reports | `7.1.431.-1` (`src/nvhttp.h:37`) |
 | Lineage | Sunshine, then Vibeshine, then LuminalShine; not derived from Apollo (`gh-pages-template/compare.html:66-82`) |
 
@@ -65,8 +65,9 @@ Artemis at commit `c5cf27f4` (2026-09-09).
 6. Update the contract fixtures (recorded host responses and captured
    handshakes used by the Borealis core tests). They live in
    `core/tests/fixtures/luminalshine/<version>/`, one directory per verified
-   LuminalShine version. The directory does not exist yet; it is created by the
-   task that adds the first fixture. Add a new directory for a new version
+   LuminalShine version. The directory exists: `26.09.1/` holds
+   `serverinfo-http.xml`, `unpair-http.response` and `PROVENANCE.md`, and the
+   golden vectors are in `core/tests/fixtures/vectors/`. Add a new directory for a new version
    instead of overwriting the old one.
 7. Run the contract tests against the new fixtures and record the result in the
    compatibility table.
@@ -95,7 +96,7 @@ above.
 
 | Borealis version | LuminalShine version | Host commit | Status | Notes |
 | --- | --- | --- | --- | --- |
-| (unreleased) | `26.09.1` + 15 commits | `5afdbdc6` | Documented, not yet tested | Contract written from static source reading only; no fixture set and no live-host test exists yet |
+| (unreleased) | `26.09.1` + 15 commits | `5afdbdc6` | Known issues | Device-tested on 26.09.1 in Phase 1 (Galaxy S22 and Google TV Streamer; see [device-validation.md](../development/device-validation.md)). Known issues: the 400 "Out of order call" after a wrong PIN, handled by one automatic restart; NortheBridge/luminalshine#194 (stray bytes after a 404); NortheBridge/luminalshine#198 (teardown hang after a disconnect) |
 
 Allowed status values:
 

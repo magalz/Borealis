@@ -56,7 +56,7 @@ Decision details:
      * session start (codec, resolution, fps and HDR) and session end (duration, reason or error code).
    * REST and token events arrive with Phase 3.
    * Retention: the newest 2,000 entries or 90 days, whichever is smaller.
-   * Deduplication: the same type, host and detail is stored at most once per 10 minutes, because `/serverinfo` is polled every 1.5 s.
+   * Deduplication applies only to the events that `/serverinfo` polling (every 1.5 s) can repeat: a host certificate change and a TLS failure. The same type, host and detail is stored at most once per 24 hours, so a lasting mismatch adds about one entry a day and cannot push the rest of the trail out. Every other event comes from a user action and is always stored.
    * The user can export the audit trail in the diagnostic bundle and erase it from the Borealis settings screen. The in-app viewer arrives with the Phase 2 UI.
    * Architecture: the facade (`BorealisAudit`, `AuditEvent` and `AuditSink`) lives in `:borealis:logging`, so the module graph stays acyclic. The Room implementation lives in `:borealis:diagnostics`. Hilt provides it, and it is injected into the Application.
 3. **Interim settings (amends [0011](0011-datastore-room-and-keystore-for-new-persistence.md)).**

@@ -44,6 +44,8 @@ LOCAL_SRC_FILES := moonlight-common-c/src/AudioStream.c \
                    callbacks.c \
                    minisdl.c \
 
+# BOREALIS: forwards moonlight-common-c log lines to BorealisLog
+LOCAL_SRC_FILES += borealis_log.c
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/moonlight-common-c/enet/include \
                     $(LOCAL_PATH)/moonlight-common-c/nanors/deps/obl \

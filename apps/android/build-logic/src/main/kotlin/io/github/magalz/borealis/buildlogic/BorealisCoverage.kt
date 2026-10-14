@@ -37,6 +37,8 @@ internal object BorealisCoverage {
             "*_Factory$*",
             "*_Provide*Factory",
             "*_Provide*Factory$*",
+            "*Module_*Factory",
+            "*Module_*Factory$*",
             "*_MembersInjector",
             "*_GeneratedInjector",
             "*_Impl",

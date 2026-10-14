@@ -13,4 +13,5 @@ enum class LogTag {
     REST,
     CORE,
     UPSTREAM,
+    COMMONC,
 }

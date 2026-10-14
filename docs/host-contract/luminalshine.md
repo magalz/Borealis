@@ -186,6 +186,23 @@ tell the user to restart pairing. 408 means "enter the PIN faster and restart".
 409 and 503 may be retried once after a short delay, or explained to the user
 (another device may be pairing).
 
+Borealis classifies these errors in `borealis_pair_classify` (`core/README.md`),
+by status and case-insensitive message text:
+
+| Status and message | Borealis action |
+| --- | --- |
+| 400 `Out of order call to getservercert`, 400 `Invalid uniqueid`, 400 `Pairing exchange invalidated`, 410 `Host pairing state was reset` | Tell the user the host cleared an unfinished attempt, then start pairing once more with a new PIN. A second one in the restarted attempt is shown as a normal failure |
+| 409 `Pairing exchange already in progress`, 409 `Pairing request identity mismatch`, 503 `Too many pending pairing requests` | A message per error: the host holds another session (it expires after 5 minutes; restarting LuminalShine clears it), or another device is pairing. No restart |
+| 403 `Pairing request peer mismatch`, 409 `Pairing request superseded by retry` | A message per error, no restart |
+| anything else | The upstream text |
+
+**After a wrong PIN.** LuminalShine has no `/unpair` route, so it keeps the
+session of the failed attempt. The next attempt's phase 1 is held until the PIN is
+typed in the Web UI, then fails with 400 `Out of order call to getservercert`;
+that failure deletes the session (`fail_pair`, `src/nvhttp.cpp:1929-1945`), so the
+attempt after it succeeds. The automatic restart turns this into one extra PIN
+dialog instead of a raw error.
+
 ## 5. Client identity and per-client host settings
 
 ### 5.1 Identity comes from the certificate
@@ -396,7 +413,7 @@ host guarantee. `ping_timeout` is 10 s by default (`src/config.cpp:844`).
 | --- | --- | --- | --- | --- |
 | 400 | `Missing a required launch parameter` | launch `src/nvhttp.cpp:2805` | A required query parameter is missing | No retry; client bug |
 | 400 | `Missing a required resume parameter` | resume `src/nvhttp.cpp:3256` | As above | No retry; client bug |
-| 400 | `An app is already running on this host` | launch `src/nvhttp.cpp:2816` | `/launch` was called while an app runs | No retry of `/launch`; resume (same app) or cancel then launch, which Moonlight's `startApp` already does from `currentgame` (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:310-340`) |
+| 400 | `An app is already running on this host` | launch `src/nvhttp.cpp:2816` | `/launch` was called while an app runs | No retry of `/launch`. Moonlight's `startApp` already resumes or quits first when `/serverinfo` shows a running app (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:310-340`); the 400 arrives when another device's launch started after that read. Borealis then re-reads `/serverinfo` for up to 3 s: `currentgame` 0 launches again once, otherwise the user chooses Join (`/resume`), Quit and relaunch (`/cancel`, then `/launch`) or Cancel. `/cancel` is never called without that choice (section 7.6) |
 | 409 | `Another client launch is already pending; retry the connection.` | launch `src/nvhttp.cpp:2831-2832`, `2853-2854`, `3157-3158`; resume `3265-3266`, `3281-3282`, `3495-3496` | A previous `/launch` or `/resume` has not been claimed by an RTSP connection yet; the pending launch expires after `ping_timeout` (`src/rtsp.cpp:606`) | Retry with backoff for up to about 12 s in total (for example 1, 2, 3, 5 s), then show the host message. Do not call `/cancel`: it would also cancel another client's pending launch (`src/rtsp.cpp:1132-1136`) |
 | 503 | `The previous stream is still restoring the display; retry the connection.` | launch `src/nvhttp.cpp:2845-2846`; resume `3274-3275` | The host waited 8 s (`acquire_launch(8s)`, `src/nvhttp.cpp:2841`, `3270`) for the previous session's cleanup and gave up | Retry, 2 to 3 attempts with 2 to 5 s delays (each attempt can itself take 8 s), then show the message |
 | 503 | `GPU/display stack is not ready; retry after recovery or reboot the host.` | launch `src/nvhttp.cpp:2968-2969`; resume `3331-3332` | The D3D11 health probe failed | Limited retries (for example 2 with 5 s delay), then tell the user to restart the host or its GPU driver |
@@ -438,6 +455,12 @@ the virtual display unless a deferred launch must be preserved
 different app by cancelling then launching
 (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:310-314`,
 `:341-366`).
+
+`/cancel` ends the app of any client, not only the caller's: every Moonlight-family
+client sends the same `uniqueid`, and the host does not check an owner. `/resume`
+has no owner check either (`src/nvhttp.cpp:3183-3360`). A client must therefore
+never call `/cancel` or `/resume` for an app it did not start without the user's
+explicit choice.
 
 ## 8. RTSP session setup
 
@@ -836,9 +859,10 @@ Moonlight Android 12.2 client already does the right thing the item says so.
    not retry. Use bounded backoff for 409 and 503, no retry for 400, 403, 404 and
    -1, never call `/cancel` to clear a 409, and show the host's message text for
    503. Make the retry budget a configuration value, not a constant.
-8. **Follow the existing `currentgame` logic**: resume when the running app is
-   the requested app, otherwise cancel then launch (section 7.5, the 400 `An app
-   is already running` row).
+8. **Follow the existing `currentgame` logic** when `/serverinfo` shows a running
+   app (upstream's resume or quit prompt in the app list), and **ask the user**
+   when the 400 `An app is already running` row arrives instead: Join, Quit and
+   relaunch, or Cancel (sections 7.5 and 7.6).
 9. **Send the same native mode in `/launch` and in ANNOUNCE.** `mode=WxHxFPS`
    must equal `clientViewportWd`, `clientViewportHt` and `maxFPS`, otherwise
    the host rebuilds the virtual display (section 7.4). Moonlight Android sets

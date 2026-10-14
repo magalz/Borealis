@@ -27,7 +27,7 @@ Never rewrite an accepted ADR to change its decision. If a decision changes, wri
 ## Index
 
 | Number | Title | Status | Date |
-|--------|-------|--------|------|
+| --- | --- | --- | --- |
 | 0001 | [Name the product Borealis](0001-name-the-product-borealis.md) | accepted | 2026-10-13 |
 | 0002 | [Base the app on vanilla Moonlight 12.2](0002-base-the-app-on-vanilla-moonlight-12-2.md) | accepted | 2026-10-13 |
 | 0003 | [Native apps per platform with a shared C/C++ core](0003-native-apps-per-platform-with-shared-core.md) | accepted | 2026-10-13 |

@@ -8,7 +8,7 @@ decision-makers: João Pedro Magalhães
 
 ## Context and Problem Statement
 
-How should Borealis measure test coverage in CI, with which tools for the Kotlin Android app and the C++ core, and should coverage block merges yet? The owner wants coverage reported on every pull request. Codecov is self-hosted by the owner at https://pipeline.magalz.space, and CI authenticates with the repository secret `CODECOV_TOKEN`. Coverage is uploaded per area with Codecov flags (`android`, `core`).
+How should Borealis measure test coverage in CI, with which tools for the Kotlin Android app and the C++ core, and should coverage block merges yet? The owner wants coverage reported on every pull request. Codecov is self-hosted by the owner at <https://pipeline.magalz.space>, and CI authenticates with the repository secret `CODECOV_TOKEN`. Coverage is uploaded per area with Codecov flags (`android`, `core`).
 
 ## Decision Drivers
 

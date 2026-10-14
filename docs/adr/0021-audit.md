@@ -35,13 +35,16 @@ Deferred: reproducible builds (needed for F-Droid), after version 1.0.
 ### Supply-chain security (Dependabot, CodeQL, SBOM, checksums, attestations)
 
 * Good, because it covers dependencies, code scanning, SBOM and release provenance.
+
 ### In-app audit trail (Room, local only)
 
 * Good, because the record stays on the device and can be viewed, exported and erased.
+
 ### License compliance (GPL-3.0-compatible allowlist)
 
 * Good, because CI blocks incompatible licenses.
 * Good, because a NOTICE screen lists third-party licenses.
+
 ### Reproducible builds (deferred)
 
 * Good, because they are needed for F-Droid.

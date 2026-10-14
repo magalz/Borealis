@@ -28,7 +28,7 @@ The only thing other languages see is `include/borealis/core.h`:
 
 ## Layout
 
-```
+```text
 core/
   CMakeLists.txt        library target borealis_core (alias borealis::core)
   CMakePresets.json     dev / asan / release / coverage presets
@@ -64,7 +64,7 @@ CMake options:
 | `BOREALIS_CORE_WARNINGS_AS_ERRORS`  | OFF (CI turns it ON)             | `-Werror` / `/WX`                                 |
 | `BOREALIS_CORE_SANITIZE`            | OFF                              | `-fsanitize=address,undefined` for core and tests |
 | `BOREALIS_CORE_BUILD_FUZZERS`       | OFF                              | libFuzzer helper and targets (clang only)         |
-| `BOREALIS_CORE_COVERAGE`            | OFF                              | llvm-cov instrumentation for core and tests (clang only) |
+| `BOREALIS_CORE_COVERAGE`            | OFF                              | llvm-cov instrumentation (clang only)             |
 
 `BUILD_SHARED_LIBS` is respected; the default is a static, position-independent library. Warnings
 and sanitizer flags are applied per target and never leak to a parent project.

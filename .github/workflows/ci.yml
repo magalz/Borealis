@@ -164,7 +164,7 @@ jobs:
       - name: Lint Markdown (Borealis-owned docs only)
         uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
         with:
-          config: .markdownlint.jsonc
+          # Rules come from .markdownlint.jsonc and ignores from .markdownlint-cli2.jsonc (auto-discovered).
           globs: |
             *.md
             docs/**/*.md

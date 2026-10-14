@@ -1,1 +1,1 @@
-Play games from your PC on Android
+Game streaming client based on Moonlight, tuned for LuminalShine

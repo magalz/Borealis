@@ -303,10 +303,20 @@ class LaunchConflictsTest {
     fun `the first choice wins`() {
         val answer = ConflictAnswer()
 
-        answer.choose(ConflictChoice.JOIN)
-        answer.choose(ConflictChoice.CANCEL)
+        val first = answer.choose(ConflictChoice.JOIN)
+        val second = answer.choose(ConflictChoice.CANCEL)
 
         assertThat(answer.get()).isEqualTo(ConflictChoice.JOIN)
+        assertThat(first).isTrue()
+        assertThat(second).isFalse()
+    }
+
+    @Test
+    fun `a repeated choice of the same value does not win again`() {
+        val answer = ConflictAnswer()
+
+        assertThat(answer.choose(ConflictChoice.CANCEL)).isTrue()
+        assertThat(answer.choose(ConflictChoice.CANCEL)).isFalse()
     }
 
     @Test

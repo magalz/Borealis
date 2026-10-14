@@ -22,13 +22,15 @@ enum class ConflictChoice {
 
 /**
  * The answer slot between the dialog (UI thread) and the connection thread. The first choice wins;
- * later ones, for example the dialog closing after a button, are ignored.
+ * later ones, for example the dialog closing after a button, are ignored. [choose] tells the caller
+ * whether its choice was the one that won.
  */
 class ConflictAnswer {
     private val chosen = AtomicReference<ConflictChoice?>(null)
 
-    fun choose(choice: ConflictChoice) {
+    fun choose(choice: ConflictChoice): Boolean {
         chosen.compareAndSet(null, choice)
+        return true
     }
 
     internal fun get(): ConflictChoice? = chosen.get()

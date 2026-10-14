@@ -128,6 +128,7 @@ internal object BundleBuilder {
                     logDir = File(context.noBackupFilesDir, LOG_DIRECTORY),
                     sections = sections,
                     redact = BorealisLog::redact,
+                    flushLogs = flushLogs,
                 )
             unfinished.outputStream().buffered().use {
                 writer.write(
@@ -142,4 +143,13 @@ internal object BundleBuilder {
         }
         return target
     }
+}
+
+/** Process-wide wiring the app sets up once at startup. */
+object DiagnosticBundleHooks {
+    /**
+     * Called once before an export reads the log files. The app sets it to drain the queue of its
+     * asynchronous file sink (`RotatingFileSink.flushAll`); the default does nothing.
+     */
+    @Volatile var flushLogs: () -> Unit = {}
 }

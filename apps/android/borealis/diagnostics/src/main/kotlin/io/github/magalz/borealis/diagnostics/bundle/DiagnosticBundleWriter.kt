@@ -26,6 +26,7 @@ class DiagnosticBundleWriter(
     private val sections: Collection<DiagnosticSection>,
     private val redact: (String) -> String,
     private val maxBytes: Long = DEFAULT_MAX_BYTES,
+    /** Runs once before the log files are read, so queued log lines reach them first. */
     private val flushLogs: () -> Unit = {},
 ) {
     private class Entry(val name: String, val bytes: ByteArray)
@@ -58,6 +59,13 @@ class DiagnosticBundleWriter(
             maxBytes - decodersBytes.size - encode(manifest).size - ENTRY_RESERVE * sections.size
         val sectionTruncated = mutableListOf<TruncatedEntry>()
         val sectionEntries = collectSections(sectionBudget, sectionTruncated)
+        runCatching(flushLogs).onFailure {
+            BorealisLog.w(
+                LogTag.APP,
+                "log flush failed before the diagnostic export",
+                "error" to it.javaClass.simpleName,
+            )
+        }
         val logs = readLogs()
         val fixedBytes = decodersBytes.size + sectionEntries.sumOf { it.bytes.size.toLong() }
 

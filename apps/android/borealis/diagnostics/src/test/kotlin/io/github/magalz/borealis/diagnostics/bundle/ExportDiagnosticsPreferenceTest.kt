@@ -98,6 +98,21 @@ class ExportDiagnosticsPreferenceTest {
     }
 
     @Test
+    fun `the app wires the flush through the hooks`() {
+        allowSharing()
+        val logDir = File(activity.noBackupFilesDir, "logs").apply { mkdirs() }
+        DiagnosticBundleHooks.flushLogs = { File(logDir, "borealis.log").writeText("hooked\n") }
+        try {
+            preference().onClick()
+        } finally {
+            DiagnosticBundleHooks.flushLogs = {}
+        }
+
+        val cache = File(activity.cacheDir, "diagnostics").listFiles()!!.single()
+        assertThat(unzip(cache.readBytes())["logs/borealis.log"]).isEqualTo("hooked\n")
+    }
+
+    @Test
     fun `a click shares the bundle through a chooser`() {
         allowSharing()
 

@@ -44,7 +44,7 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
     internal var uriFor: (File) -> Uri = {
         FileProvider.getUriForFile(context, fileProviderAuthority(context.packageName), it)
     }
-    internal var flushLogs: () -> Unit = {}
+    internal var flushLogs: () -> Unit = { DiagnosticBundleHooks.flushLogs() }
     internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -66,7 +66,9 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
         ExportFlow(
             packageName = context.packageName,
             chooserTitle = context.getString(R.string.borealis_export_chooser_title),
-            buildBundle = { BundleBuilder.build(context, sectionsProvider()) },
+            buildBundle = {
+                BundleBuilder.build(context, sectionsProvider(), flushLogs = flushLogs)
+            },
             uriFor = uriFor,
             canShare = { context.packageManager.queryIntentActivities(it, 0).isNotEmpty() },
             externalDir = { context.getExternalFilesDir(ExportFlow.EXTERNAL_DIR_NAME) },

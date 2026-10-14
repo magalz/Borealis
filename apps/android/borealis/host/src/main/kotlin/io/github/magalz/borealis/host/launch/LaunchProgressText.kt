@@ -9,7 +9,7 @@ object LaunchProgressText {
     private const val MILLIS_PER_SECOND = 1000
 
     /**
-     * "Another device is starting a stream on this host. Retrying in 2 s (attempt 2 of 4)." The
+     * "Another device is starting a stream on this host. Retrying in 2 s (retry 2 of 4)." The
      * [category] is the ordinal of `LaunchCategory` the listener received.
      */
     @JvmStatic

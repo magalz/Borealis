@@ -9,6 +9,7 @@ Definition of Done. These pages hold the details.
 | [tdd.md](tdd.md) | Red-green-refactor, commit order, characterization tests, what counts as a behaviour test. |
 | [upstream-sync.md](upstream-sync.md) | Step-by-step procedure for syncing a Moonlight release. |
 | [release.md](release.md) | Step-by-step procedure for cutting a release. |
+| [device-validation.md](device-validation.md) | Phase 1 runbook for the checks on a Samsung S21 and a Google TV Streamer against LuminalShine. |
 | [orchestration.md](orchestration.md) | How AI agents are orchestrated: roles, worktrees, hand-offs. |
 | [task-brief.md](task-brief.md) | Template for briefing an implementer on one task. |
 

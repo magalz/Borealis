@@ -10,7 +10,7 @@
     <!-- Host capabilities block of the PC details dialog. -->
     <string name="host_info_header">Host capabilities</string>
     <string name="host_info_family_gfe">GeForce Experience</string>
-    <string name="host_info_family_sunshine">Sunshine-based (LuminalShine)</string>
+    <string name="host_info_family_sunshine">Sunshine-compatible</string>
     <string name="host_info_family_unknown">Unknown</string>
     <string name="host_info_software">Host software: %1$s</string>
     <string name="host_info_software_version">Host software: %1$s, version %2$s</string>

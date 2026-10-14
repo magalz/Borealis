@@ -140,7 +140,7 @@ class HostInfoTextTest {
             .isEqualTo(
                 """
                 Capacidades do host
-                Software do host: Baseado em Sunshine (LuminalShine), versão 7.1.431.-1
+                Software do host: Compatível com Sunshine, versão 7.1.431.-1
                 Vídeo: HEVC, HEVC 10 bits
                 PyroWave: desativado
                 Portas: HTTP 47989, HTTPS 47984

@@ -10,7 +10,7 @@
     <!-- Bloco de capacidades do host na caixa de detalhes do PC. -->
     <string name="host_info_header">Capacidades do host</string>
     <string name="host_info_family_gfe">GeForce Experience</string>
-    <string name="host_info_family_sunshine">Baseado em Sunshine (LuminalShine)</string>
+    <string name="host_info_family_sunshine">Compatível com Sunshine</string>
     <string name="host_info_family_unknown">Desconhecido</string>
     <string name="host_info_software">Software do host: %1$s</string>
     <string name="host_info_software_version">Software do host: %1$s, versão %2$s</string>

@@ -193,7 +193,7 @@ class HostMarshallingTest {
         val record = sink.records.single()
         assertThat(record.level).isEqualTo(LogLevel.WARN)
         assertThat(record.tag).isEqualTo(LogTag.CORE)
-        assertThat(record.fields).contains("status" to -2)
+        assertThat(record.fields).contains("status" to "-2")
     }
 
     @Test
@@ -252,7 +252,7 @@ class HostMarshallingTest {
 
         val record = sink.records.single()
         assertThat(record.level).isEqualTo(LogLevel.WARN)
-        assertThat(record.fields).contains("status" to -1)
+        assertThat(record.fields).contains("status" to "-1")
     }
 
     @Test

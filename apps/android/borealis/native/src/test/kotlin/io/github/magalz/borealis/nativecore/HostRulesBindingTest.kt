@@ -113,7 +113,7 @@ class HostRulesBindingTest {
         assertThat(record.level).isEqualTo(LogLevel.WARN)
         assertThat(record.tag).isEqualTo(LogTag.CORE)
         assertThat(record.message).doesNotContain(appVersion)
-        assertThat(record.fields.map { "${it.second}" }).doesNotContain(appVersion)
+        assertThat(record.fields.map { it.second }).doesNotContain(appVersion)
     }
 
     @Test

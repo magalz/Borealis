@@ -22,7 +22,12 @@ internal data class BorealisSigning(
             )
 
         /** Returns null (release stays unsigned) unless all four values are available. */
-        fun load(projectRoot: File, env: Map<String, String> = System.getenv()): BorealisSigning? {
+        @Suppress("UnusedParameter")
+        fun load(
+            projectRoot: File,
+            env: Map<String, String> = System.getenv(),
+            onIncomplete: (missing: List<String>) -> Unit = {},
+        ): BorealisSigning? {
             val props = Properties()
             val file = File(projectRoot, "keystore.properties")
             if (file.isFile) file.inputStream().use { props.load(it) }

@@ -53,4 +53,26 @@ class BorealisSigningTest {
     fun `incomplete configuration leaves release unsigned`() {
         assertThat(BorealisSigning.load(temp.root, fullEnv - "BOREALIS_KEY_PASSWORD")).isNull()
     }
+
+    @Test
+    fun `partial configuration reports only the missing key names`() {
+        val reported = mutableListOf<String>()
+        val env = fullEnv - "BOREALIS_KEY_ALIAS" - "BOREALIS_KEY_PASSWORD"
+
+        val signing = BorealisSigning.load(temp.root, env) { reported += it }
+
+        assertThat(signing).isNull()
+        assertThat(reported).containsExactly("keyAlias", "keyPassword").inOrder()
+        assertThat(reported.joinToString()).doesNotContain("secret")
+    }
+
+    @Test
+    fun `no warning when nothing or everything is configured`() {
+        val reported = mutableListOf<String>()
+
+        BorealisSigning.load(temp.root, emptyMap()) { reported += it }
+        BorealisSigning.load(temp.root, fullEnv) { reported += it }
+
+        assertThat(reported).isEmpty()
+    }
 }

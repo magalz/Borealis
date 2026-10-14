@@ -53,4 +53,17 @@ class LogcatSinkTest {
 
         assertThat(calls.all { it.tag.length <= 23 }).isTrue()
     }
+
+    @Test
+    fun `records below the minimum level are not printed`() {
+        val filtered = mutableListOf<Call>()
+        val releaseSink =
+            LogcatSink(LogLevel.INFO) { priority, tag, message ->
+                filtered += Call(priority, tag, message)
+            }
+
+        LogLevel.entries.forEach { releaseSink.write(record(it, LogTag.APP)) }
+
+        assertThat(filtered.map { it.priority }).containsExactly(4, 5, 6).inOrder()
+    }
 }

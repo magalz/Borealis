@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.buildlogic
 
 import com.google.common.truth.Truth.assertThat
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class BorealisVersionTest {
@@ -49,5 +50,31 @@ class BorealisVersionTest {
             .isEqualTo(BorealisVersion.DEV)
         assertThat(BorealisVersion.fromGitDescribe("fatal: No names found"))
             .isEqualTo(BorealisVersion.DEV)
+    }
+
+    @Test
+    fun `pre-release tags are not valid release versions and fall back to dev`() {
+        // git is asked to skip these tags (--exclude "android-v*-*"); if one ever shows up it is
+        // ignored.
+        assertThat(BorealisVersion.fromGitDescribe("android-v1.2.3-rc1-0-gabc1234"))
+            .isEqualTo(BorealisVersion.DEV)
+    }
+
+    @Test
+    fun `components above 999 fail loudly instead of overflowing the version code`() {
+        for (tag in listOf("android-v2200.0.0", "android-v1.1000.0", "android-v1.0.1000")) {
+            val error =
+                assertThrows(IllegalArgumentException::class.java) {
+                    BorealisVersion.fromGitDescribe("$tag-0-gabc1234")
+                }
+            assertThat(error).hasMessageThat().contains(tag)
+        }
+    }
+
+    @Test
+    fun `the largest supported version still fits an int`() {
+        val version = BorealisVersion.fromGitDescribe("android-v999.999.999-0-gabc1234")
+
+        assertThat(version.code).isEqualTo(999_999_999)
     }
 }

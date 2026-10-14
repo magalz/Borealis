@@ -156,4 +156,30 @@ class CrashHandlerTest {
         assertThat(crashFiles()).hasSize(1)
         assertThat(previous.calls).hasSize(1)
     }
+
+    @Test
+    fun `only the newest ten crash reports are kept and other files are left alone`() {
+        logDir.mkdirs()
+        val log = File(logDir, "borealis.log").apply { writeText("log") }
+        var now = 1_700_000_000_000L
+        val handler = CrashReportHandler(logDir, null, clock = { now.also { now += 1_000L } })
+
+        repeat(12) { handler.uncaughtException(Thread.currentThread(), Error("crash $it")) }
+
+        val names = crashFiles().map { it.name }.sorted()
+        assertThat(names).hasSize(10)
+        assertThat(names.first()).isEqualTo("crash-20231114-221322-000.txt")
+        assertThat(names.last()).isEqualTo("crash-20231114-221331-000.txt")
+        assertThat(log.readText()).isEqualTo("log")
+    }
+
+    @Test
+    fun `a long exception message is not truncated in the report`() {
+        val handler = CrashReportHandler(logDir, null)
+        val message = "m".repeat(40_000)
+
+        handler.uncaughtException(Thread.currentThread(), RuntimeException(message))
+
+        assertThat(crashFiles().single().readText()).contains(message)
+    }
 }

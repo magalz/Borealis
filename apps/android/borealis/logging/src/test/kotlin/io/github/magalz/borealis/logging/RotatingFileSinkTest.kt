@@ -159,4 +159,15 @@ class RotatingFileSinkTest {
 
         assertThat(allLines()).hasSize(1)
     }
+
+    @Test
+    fun `writes after close are ignored and do not reopen the file`() {
+        val sink = RotatingFileSink(logDir)
+        sink.write(record("before"))
+        sink.close()
+
+        sink.write(record("after"))
+
+        assertThat(allLines().map { it.substringAfter("APP ") }).containsExactly("before")
+    }
 }

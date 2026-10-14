@@ -48,6 +48,56 @@ class BorealisCoreVersionTest {
     }
 
     @Test
+    fun `ignores a commented out project call`() {
+        val text =
+            """
+            # project(old VERSION 9.9.9)
+            project(core VERSION 1.2.3 LANGUAGES C)
+            """
+                .trimIndent()
+
+        assertThat(BorealisCoreVersion.parse(text)).isEqualTo("1.2.3")
+    }
+
+    @Test
+    fun `a comment with a closing parenthesis does not end the project call`() {
+        val text =
+            """
+            project(core # name (see ADR)
+              VERSION 1.2.3
+              LANGUAGES C)
+            """
+                .trimIndent()
+
+        assertThat(BorealisCoreVersion.parse(text)).isEqualTo("1.2.3")
+    }
+
+    @Test
+    fun `a closing parenthesis inside DESCRIPTION does not end the project call`() {
+        val text =
+            """
+            project(core DESCRIPTION "Rules (platform neutral)" VERSION 1.2.3 LANGUAGES C)
+            """
+                .trimIndent()
+
+        assertThat(BorealisCoreVersion.parse(text)).isEqualTo("1.2.3")
+    }
+
+    @Test
+    fun `a version mentioned in DESCRIPTION is not the project version`() {
+        val text = """project(core DESCRIPTION "Needs VERSION 9.9.9 of x" VERSION 1.2.3)"""
+
+        assertThat(BorealisCoreVersion.parse(text)).isEqualTo("1.2.3")
+    }
+
+    @Test
+    fun `a hash inside a quoted string is not a comment`() {
+        val text = """project(core DESCRIPTION "Issue #1 (fixed)" VERSION 1.2.3)"""
+
+        assertThat(BorealisCoreVersion.parse(text)).isEqualTo("1.2.3")
+    }
+
+    @Test
     fun `reads the file below the repository root`() {
         File(temp.root, "core").mkdirs()
         File(temp.root, "core/CMakeLists.txt").writeText(cmakeLists)

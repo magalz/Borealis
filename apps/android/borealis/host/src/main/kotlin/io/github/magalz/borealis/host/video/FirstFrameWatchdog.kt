@@ -2,7 +2,10 @@ package io.github.magalz.borealis.host.video
 
 import java.util.concurrent.atomic.AtomicReference
 
-/** A task handed to a [WatchdogScheduler]; [cancel] is safe to call at any time and any number of times. */
+/**
+ * A task handed to a [WatchdogScheduler]; [cancel] is safe to call at any time and any number of
+ * times.
+ */
 fun interface ScheduledTask {
     fun cancel()
 }
@@ -72,7 +75,9 @@ class FirstFrameWatchdog(
     }
 
     companion object {
-        /** Native code ends the stream after about 35 s at worst; this is the last line of defence. */
+        /**
+         * Native code ends the stream after about 35 s at worst; this is the last line of defence.
+         */
         const val DEFAULT_TIMEOUT_MILLIS = 45_000L
     }
 }

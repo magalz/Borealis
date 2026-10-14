@@ -14,15 +14,16 @@ object StreamErrorHints {
     const val ML_ERROR_NO_VIDEO_FRAME = -101
 
     /**
-     * Returns [message] for [errorCode], followed by the hint that the host may still be preparing its
-     * display or encoder when the stream ended before any video arrived. [getString] resolves a
+     * Returns [message] for [errorCode], followed by the hint that the host may still be preparing
+     * its display or encoder when the stream ended before any video arrived. [getString] resolves a
      * string resource id.
      */
     @JvmStatic
     fun withHint(errorCode: Int, message: String, getString: (Int) -> String): String =
         when (errorCode) {
             ML_ERROR_NO_VIDEO_TRAFFIC,
-            ML_ERROR_NO_VIDEO_FRAME -> message + "\n\n" + getString(R.string.stream_luminalshine_hint)
+            ML_ERROR_NO_VIDEO_FRAME ->
+                message + "\n\n" + getString(R.string.stream_luminalshine_hint)
             else -> message
         }
 }

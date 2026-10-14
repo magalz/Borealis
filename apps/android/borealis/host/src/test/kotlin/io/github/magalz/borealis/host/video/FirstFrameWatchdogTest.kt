@@ -41,7 +41,11 @@ class FirstFrameWatchdogTest {
     @Test
     fun `a custom timeout is honoured`() {
         val short =
-            FirstFrameWatchdog(scheduler, timeoutMillis = 1_000, onTimeout = { timeouts.incrementAndGet() })
+            FirstFrameWatchdog(
+                scheduler,
+                timeoutMillis = 1_000,
+                onTimeout = { timeouts.incrementAndGet() },
+            )
         short.arm()
 
         scheduler.advanceBy(1_000)

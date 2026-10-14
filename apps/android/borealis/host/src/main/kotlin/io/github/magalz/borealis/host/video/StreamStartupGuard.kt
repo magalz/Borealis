@@ -9,21 +9,23 @@ interface StreamStartupHost : StartupOverlay {
 
     /**
      * Ends the stream through the normal failure path with "no video frame" (-101). That path does
-     * network I/O, so the guard calls it off the main thread. The screen's own once-only dialog guard
-     * keeps a late native termination from showing a second dialog.
+     * network I/O, so the guard calls it off the main thread. The screen's own once-only dialog
+     * guard keeps a late native termination from showing a second dialog.
      */
     fun terminateNoVideoFrame()
 }
 
 /**
  * Covers the time between "connection started" and the first rendered frame, which can be long on
- * LuminalShine (about 18 s): it shows the [PreparingMessage] and runs the [FirstFrameWatchdog] as the
- * last safety net behind the native -100/-101 deadlines.
+ * LuminalShine (about 18 s): it shows the [PreparingMessage] and runs the [FirstFrameWatchdog] as
+ * the last safety net behind the native -100/-101 deadlines.
  *
  * [onFirstFrame] may be called from any thread (the decoder's render path); everything else runs on
  * the UI thread, as do the watchdog timeout and the message updates.
  */
-class StreamStartupGuard(
+class StreamStartupGuard
+@JvmOverloads
+constructor(
     private val host: StreamStartupHost,
     scheduler: WatchdogScheduler,
     timeoutMillis: Long = FirstFrameWatchdog.DEFAULT_TIMEOUT_MILLIS,
@@ -33,7 +35,8 @@ class StreamStartupGuard(
 
     fun onConnectionStarted() {
         watchdog.arm()
-        // Not armed means a frame already arrived or the guard was cancelled: keep the message away.
+        // Not armed means a frame already arrived or the guard was cancelled: keep the message
+        // away.
         if (watchdog.state == FirstFrameWatchdog.State.ARMED) message.show()
     }
 

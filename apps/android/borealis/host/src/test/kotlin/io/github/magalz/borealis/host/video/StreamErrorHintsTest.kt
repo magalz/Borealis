@@ -24,7 +24,12 @@ class StreamErrorHintsTest {
 
     @Test
     fun `the no-video-frame error keeps the upstream text and gets the hint`() {
-        val result = StreamErrorHints.withHint(-101, "Your network connection isn't performing well.", lookup)
+        val result =
+            StreamErrorHints.withHint(
+                -101,
+                "Your network connection isn't performing well.",
+                lookup,
+            )
 
         assertThat(result).isEqualTo("Your network connection isn't performing well.\n\n$hint")
     }
@@ -52,7 +57,8 @@ class StreamErrorHintsTest {
             .containsExactly("stream_preparing_display", "stream_luminalshine_hint")
         assertThat(portuguese.keys).isEqualTo(english.keys)
         for (text in english.values + portuguese.values) assertThat(text).isNotEmpty()
-        assertThat(portuguese["stream_luminalshine_hint"]).isNotEqualTo(english["stream_luminalshine_hint"])
+        assertThat(portuguese["stream_luminalshine_hint"])
+            .isNotEqualTo(english["stream_luminalshine_hint"])
     }
 
     private fun strings(directory: String): Map<String, String> {

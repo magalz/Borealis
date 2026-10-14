@@ -11,7 +11,7 @@ namespace borealis::core {
   namespace {
 
     // The pairing errors of LuminalShine src/nvhttp.cpp (docs/host-contract/luminalshine.md,
-    // section 5). A message only counts with the status the host sends it with.
+    // sections 4.2 and 4.3). A message only counts with the status the host sends it with.
     struct Rule {
       int32_t status;
       std::string_view needle;  // lower case

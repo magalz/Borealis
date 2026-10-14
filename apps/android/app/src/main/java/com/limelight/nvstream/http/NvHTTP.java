@@ -714,8 +714,10 @@ public class NvHTTP {
                 "pair", "devicename=roth&updateState=1&phrase=pairchallenge");
     }
 
-    public void unpair() throws IOException {
-        openHttpConnectionToString(httpClientLongConnectTimeout, baseUrlHttp, "unpair");
+    public boolean unpair() throws IOException {
+        // BOREALIS: LuminalShine does not route /unpair; send it once, without connection reuse.
+        return io.github.magalz.borealis.host.pairing.BestEffortUnpair.unpair(
+                httpClientLongConnectTimeout, getCompleteUrl(baseUrlHttp, "unpair", null));
     }
     
     public InputStream getBoxArt(NvApp app) throws IOException {

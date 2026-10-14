@@ -50,6 +50,7 @@ class LaunchRetryRunnerTest {
     private fun run(
         verb: LaunchVerb = LaunchVerb.LAUNCH,
         runner: LaunchRetryRunner = runner(),
+        conflictAllowed: () -> Boolean = { false },
         attempt: () -> Boolean,
     ): LaunchOutcome =
         runner.run(
@@ -59,6 +60,7 @@ class LaunchRetryRunnerTest {
                 retries += Retry(category, number, max, delay)
             },
             errorOf = { (it as? HostAnswer)?.error },
+            conflictAllowed = conflictAllowed,
             attempt = attempt,
         )
 
@@ -226,6 +228,71 @@ class LaunchRetryRunnerTest {
 
         assertThat(outcome).isEqualTo(LaunchOutcome.FALLBACK_TO_LAUNCH)
         assertThat(slices).isEmpty()
+    }
+
+    private val appRunning = "An app is already running on this host"
+
+    @Test
+    fun `a running app on launch is a conflict when the caller allows it`() {
+        val outcome = run(conflictAllowed = { true }, attempt = scripted(answer(400, appRunning)))
+
+        assertThat(outcome).isEqualTo(LaunchOutcome.CONFLICT)
+        assertThat(slices).isEmpty()
+        assertThat(retries).isEmpty()
+    }
+
+    @Test
+    fun `a running app on launch is rethrown unchanged when the caller does not allow it`() {
+        val failure = answer(400, appRunning)
+
+        val thrown = assertThrows(HostAnswer::class.java) { run(attempt = scripted(failure)) }
+
+        assertThat(thrown).isSameInstanceAs(failure)
+    }
+
+    @Test
+    fun `the caller is asked again for every conflict, so a second one can be refused`() {
+        var allowed = true
+        val failure = answer(400, appRunning)
+
+        val first = run(conflictAllowed = { allowed }, attempt = scripted(failure))
+        allowed = false
+        val thrown =
+            assertThrows(HostAnswer::class.java) {
+                run(conflictAllowed = { allowed }, attempt = scripted(failure))
+            }
+
+        assertThat(first).isEqualTo(LaunchOutcome.CONFLICT)
+        assertThat(thrown).isSameInstanceAs(failure)
+    }
+
+    @Test
+    fun `the same text on resume is not a conflict`() {
+        val failure = answer(400, appRunning)
+
+        val thrown =
+            assertThrows(HostAnswer::class.java) {
+                run(LaunchVerb.RESUME, conflictAllowed = { true }, attempt = scripted(failure))
+            }
+
+        assertThat(thrown).isSameInstanceAs(failure)
+    }
+
+    @Test
+    fun `without the native rules a running app is rethrown and not resolved`() {
+        val failure = answer(400, appRunning)
+        val unavailable = FakeHostRules(decide = { _, _, _, _ -> null })
+
+        val thrown =
+            assertThrows(HostAnswer::class.java) {
+                run(
+                    runner = runner(unavailable),
+                    conflictAllowed = { true },
+                    attempt = scripted(failure),
+                )
+            }
+
+        assertThat(thrown).isSameInstanceAs(failure)
     }
 
     @Test

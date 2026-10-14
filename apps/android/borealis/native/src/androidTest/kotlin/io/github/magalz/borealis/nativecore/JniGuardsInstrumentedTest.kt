@@ -34,4 +34,12 @@ class JniGuardsInstrumentedTest {
         assertThat(result).isNotNull()
         assertThat(result!![0]).isEqualTo(-2)
     }
+
+    @Test
+    fun classifyPairingRejectsAMessageOver256Bytes() {
+        val result = CoreJni.classifyPairing(400, ByteArray(257))
+
+        assertThat(result).isNotNull()
+        assertThat(result!![0]).isEqualTo(-2)
+    }
 }

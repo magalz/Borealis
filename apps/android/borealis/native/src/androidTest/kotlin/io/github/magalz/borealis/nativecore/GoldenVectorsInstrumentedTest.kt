@@ -102,6 +102,17 @@ class GoldenVectorsInstrumentedTest {
     }
 
     @Test
+    fun pairClassifyVectorsMatch() {
+        val rows = rows("pair_classify.tsv")
+        assertWithMessage("pair_classify.tsv rows").that(rows).isNotEmpty()
+        for (row in rows) {
+            val decision = NativeHostRules.classifyPairing(int(row[0]), text(row[1]))
+            val expected = PairDecision(PairAction.valueOf(row[2]), PairCategory.valueOf(row[3]))
+            assertWithMessage("$row").that(decision).isEqualTo(expected)
+        }
+    }
+
+    @Test
     fun launchFpsVectorsMatch() {
         val rows = rows("launch_fps.tsv")
         assertWithMessage("launch_fps.tsv rows").that(rows).isNotEmpty()

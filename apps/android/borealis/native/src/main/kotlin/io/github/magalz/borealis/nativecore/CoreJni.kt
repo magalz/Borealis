@@ -13,5 +13,7 @@ internal object CoreJni {
     @JvmStatic
     external fun decideLaunch(verb: Int, status: Int, message: ByteArray?, attempts: Int): IntArray?
 
+    @JvmStatic external fun classifyPairing(status: Int, message: ByteArray?): IntArray?
+
     @JvmStatic external fun launchFps(isGfe: Boolean, launchFps: Int, streamFps: Int): Int
 }

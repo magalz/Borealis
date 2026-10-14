@@ -6,6 +6,8 @@ internal interface HostNative {
 
     fun decideLaunch(verb: Int, status: Int, message: ByteArray?, attempts: Int): IntArray?
 
+    fun classifyPairing(status: Int, message: ByteArray?): IntArray?
+
     fun launchFps(isGfe: Boolean, launchFps: Int, streamFps: Int): Int
 }
 
@@ -20,6 +22,9 @@ internal object CoreHostNative : HostNative {
         message: ByteArray?,
         attempts: Int,
     ): IntArray? = CoreJni.decideLaunch(verb, status, message, attempts)
+
+    override fun classifyPairing(status: Int, message: ByteArray?): IntArray? =
+        CoreJni.classifyPairing(status, message)
 
     override fun launchFps(isGfe: Boolean, launchFps: Int, streamFps: Int): Int =
         CoreJni.launchFps(isGfe, launchFps, streamFps)

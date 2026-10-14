@@ -15,9 +15,10 @@ internal const val MESSAGE_MAX_BYTES = 256
  * The JNI answers with an int array whose first element is the `BOREALIS_*` status:
  * - caps: `[status, family, v0, v1, v2, v3, codec_flags, pyrowave_profiles]`
  * - launch decision: `[status, action, delay_ms, category, max_attempts]`
+ * - pairing decision: `[status, action, category]`
  *
- * The enum values of `host.h` equal the ordinals of [HostFamily], [LaunchAction] and
- * [LaunchCategory], and [LaunchVerb.ordinal] is the verb value.
+ * The enum values of `host.h` equal the ordinals of [HostFamily], [LaunchAction], [LaunchCategory],
+ * [PairAction] and [PairCategory], and [LaunchVerb.ordinal] is the verb value.
  */
 internal object HostMarshalling {
     private const val STATUS = 0
@@ -34,8 +35,12 @@ internal object HostMarshalling {
     private const val DECISION_CATEGORY = 3
     private const val DECISION_MAX_ATTEMPTS = 4
 
+    private const val PAIR_ACTION = 1
+    private const val PAIR_CATEGORY = 2
+
     private const val CAPS_SIZE = 8
     private const val DECISION_SIZE = 5
+    private const val PAIR_SIZE = 3
     private const val UTF8_CONTINUATION_MASK = 0xC0
     private const val UTF8_CONTINUATION = 0x80
 
@@ -99,6 +104,17 @@ internal object HostMarshalling {
             category = category,
             maxAttempts = wire[DECISION_MAX_ATTEMPTS],
         )
+    }
+
+    fun decodePairDecision(raw: IntArray?): PairDecision? {
+        val wire = validated(raw, PAIR_SIZE, "pairing decision") ?: return null
+        val action = PairAction.entries.getOrNull(wire[PAIR_ACTION])
+        val category = PairCategory.entries.getOrNull(wire[PAIR_CATEGORY])
+        if (action == null || category == null) {
+            BorealisLog.w(LogTag.CORE, "native pairing decision has an unknown action or category")
+            return null
+        }
+        return PairDecision(action, category)
     }
 
     private fun isContinuation(byte: Byte) =

@@ -1,4 +1,4 @@
-// Fuzzes borealis_launch_decide and borealis_launch_fps. Input layout: 4 bytes
+// Fuzzes borealis_launch_decide, borealis_pair_classify and borealis_launch_fps. Input layout: 4 bytes
 // status, 1 byte verb (taken modulo 3 so an unknown verb is reached too), 4 bytes
 // attempts, 1 byte flags (bit 0: pass a NULL message), the rest is the host
 // message. The functions must never crash and keep their outputs in range.
@@ -50,8 +50,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   if (rc != BOREALIS_OK) {
     check(out.action == 0 && out.delay_ms == 0 && out.category == 0 && out.max_attempts == 0);
   } else {
-    check(out.action >= BOREALIS_LAUNCH_ACTION_FAIL && out.action <= BOREALIS_LAUNCH_ACTION_FALLBACK_TO_LAUNCH);
-    check(out.category >= BOREALIS_LAUNCH_CATEGORY_PERMANENT && out.category <= BOREALIS_LAUNCH_CATEGORY_NO_RUNNING_APP);
+    check(out.action >= BOREALIS_LAUNCH_ACTION_FAIL && out.action <= BOREALIS_LAUNCH_ACTION_RESOLVE_CONFLICT);
+    check(out.category >= BOREALIS_LAUNCH_CATEGORY_PERMANENT && out.category <= BOREALIS_LAUNCH_CATEGORY_APP_RUNNING);
     check(out.max_attempts >= 0 && out.max_attempts <= 4);
     check(out.delay_ms >= 0 && out.delay_ms <= 5000);
     if (out.action == BOREALIS_LAUNCH_ACTION_RETRY) {
@@ -62,8 +62,28 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     if (out.action == BOREALIS_LAUNCH_ACTION_FALLBACK_TO_LAUNCH) {
       check(verb == BOREALIS_LAUNCH_VERB_RESUME && status == 503);
     }
-    if (status != 409 && status != 503) {
+    if (out.action == BOREALIS_LAUNCH_ACTION_RESOLVE_CONFLICT) {
+      check(verb == BOREALIS_LAUNCH_VERB_LAUNCH && status == 400 && out.category == BOREALIS_LAUNCH_CATEGORY_APP_RUNNING);
+    }
+    if (status != 409 && status != 503 && !(status == 400 && verb == BOREALIS_LAUNCH_VERB_LAUNCH)) {
       check(out.category == BOREALIS_LAUNCH_CATEGORY_PERMANENT && out.action == BOREALIS_LAUNCH_ACTION_FAIL);
+    }
+  }
+
+  // The same message and status go through the pairing classifier.
+  borealis_pair_decision pair;
+  std::memset(&pair, 0xA5, sizeof(pair));
+  const int pair_rc = borealis_pair_classify(status, null_message ? nullptr : msg, used_len, &pair);
+  check(pair_rc == (used_len > BOREALIS_HOST_MESSAGE_MAX_LEN ? BOREALIS_ERR_INPUT_TOO_LARGE : BOREALIS_OK));
+  if (pair_rc != BOREALIS_OK) {
+    check(pair.action == 0 && pair.category == 0);
+  } else {
+    check(pair.action >= BOREALIS_PAIR_ACTION_FAIL && pair.action <= BOREALIS_PAIR_ACTION_WAIT_HOST_SESSION);
+    check(pair.category >= BOREALIS_PAIR_CATEGORY_UNKNOWN && pair.category <= BOREALIS_PAIR_CATEGORY_SUPERSEDED);
+    if (pair.category == BOREALIS_PAIR_CATEGORY_UNKNOWN) {
+      check(pair.action == BOREALIS_PAIR_ACTION_FAIL);
+    } else {
+      check(status == 400 || status == 403 || status == 409 || status == 410 || status == 503);
     }
   }
 

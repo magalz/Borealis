@@ -53,3 +53,5 @@ Deferred: reproducible builds (needed for F-Droid), after version 1.0.
 ## More Information
 
 See [0015](0015-github-actions-for-ci-cd.md), [0011](0011-datastore-room-and-keystore-for-new-persistence.md), [0020](0020-logging.md), [0040](0040-dependency-updates-dependabot.md) and [0042](0042-sbom-with-cyclonedx.md).
+
+Amended by [0050](0050-diagnostics-audit-and-interim-settings.md).

@@ -62,3 +62,5 @@ Specification:
 ## More Information
 
 See [0021](0021-audit.md), [0022](0022-crash-reporting-and-privacy.md) and [0014](0014-semver-per-app-with-prefixed-tags.md).
+
+Amended by [0050](0050-diagnostics-audit-and-interim-settings.md).

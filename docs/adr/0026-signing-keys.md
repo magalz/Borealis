@@ -60,3 +60,5 @@ Details:
 ## More Information
 
 See [0023](0023-distribution-channels.md), [0021](0021-audit.md) (build provenance) and [0045](0045-store-publishing-automation.md).
+
+Amended by [0050](0050-diagnostics-audit-and-interim-settings.md).

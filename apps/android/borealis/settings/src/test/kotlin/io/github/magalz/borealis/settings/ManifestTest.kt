@@ -11,7 +11,11 @@ class ManifestTest {
     private val activities: List<Element> by lazy {
         val manifest = File("src/main/AndroidManifest.xml")
         check(manifest.isFile) { "missing ${manifest.absolutePath}" }
-        val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(manifest)
+        val document =
+            DocumentBuilderFactory.newInstance()
+                .apply { isNamespaceAware = true }
+                .newDocumentBuilder()
+                .parse(manifest)
         val nodes = document.getElementsByTagName("activity")
         (0 until nodes.length).map { nodes.item(it) as Element }
     }

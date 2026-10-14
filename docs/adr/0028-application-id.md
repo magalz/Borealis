@@ -1,6 +1,6 @@
 ---
-status: proposed
-date: 2026-10-13
+status: accepted
+date: 2026-10-14
 decision-makers: João Pedro Magalhães
 ---
 
@@ -21,13 +21,13 @@ The Android `applicationId` identifies the app on devices and in Google Play. It
 
 Chosen option: "`io.github.magalz.borealis`", because the GitHub namespace guarantees ownership, and the name is unique on Google Play. Its length is the trade-off.
 
-Status: proposed. Confirm before the first Play upload, because the identifier cannot change afterwards.
+The owner confirmed it on 2026-10-14, before the first release (`android-v0.1.0`). From that release on the identifier does not change: Android treats a different applicationId as a different app, and Google Play makes it permanent at the first upload.
 
 ### Consequences
 
 * Good, because ownership is guaranteed through the GitHub namespace, and the name is unique on Google Play.
 * Bad, because the identifier is long.
-* Bad, because it is immutable after the first Play upload, so it must be confirmed before that upload.
+* Bad, because it is permanent from the first release on.
 
 ## Pros and Cons of the Options
 

@@ -55,7 +55,7 @@ Never rewrite an accepted ADR to change its decision. If a decision changes, wri
 | 0025 | [Require PRs with green CI and let only the owner merge, with AI assistance](0025-review-and-ai-assisted-development-policy.md) | accepted | 2026-10-13 |
 | 0026 | [Use one owner-generated app signing key for all channels](0026-signing-keys.md) | accepted | 2026-10-13 |
 | 0027 | [Organize AI agents as an orchestrator with specialized br-* roles](0027-agent-organization.md) | accepted | 2026-10-13 |
-| 0028 | [Use io.github.magalz.borealis as applicationId](0028-application-id.md) | proposed | 2026-10-13 |
+| 0028 | [Use io.github.magalz.borealis as applicationId](0028-application-id.md) | accepted | 2026-10-14 |
 | 0029 | [Use Kotlin Coroutines and Flow for async](0029-async-with-coroutines-and-flow.md) | accepted | 2026-10-13 |
 | 0030 | [Use kotlinx.serialization](0030-serialization-with-kotlinx.md) | accepted | 2026-10-13 |
 | 0031 | [Use OkHttp with kotlinx.serialization for the LuminalShine REST client](0031-rest-client-okhttp.md) | accepted | 2026-10-13 |

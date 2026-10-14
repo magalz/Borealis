@@ -18,9 +18,13 @@ procedure is in [../development/upstream-sync.md](../development/upstream-sync.m
    `git subtree pull --prefix=apps/android -m "sync: moonlight-android <version>" moonlight-android <tag-or-commit>`
    (prefer the upstream release tag over `master`).
 5. **The `moonlight-common-c` submodule stays at its upstream path**
-   (`apps/android/app/src/main/jni/moonlight-core/moonlight-common-c`). Its
-   pointer moves only with an upstream sync, unless a security fix requires
-   moving it earlier (noted in the PR).
+   (`apps/android/app/src/main/jni/moonlight-core/moonlight-common-c`), but its
+   URL is the Borealis fork `magalz/moonlight-common-c` (branch `borealis`,
+   [ADR 0048](../adr/0048-fork-moonlight-common-c.md)). Its pointer moves only
+   with an upstream sync or a reviewed fork patch, unless a security fix
+   requires moving it earlier (noted in the PR). Every commit the pointer
+   references carries a fork tag `borealis/<upstream short sha>-<n>`; fork tags
+   are never rewritten. Fork patches are offered upstream.
 6. **Compatibility is recorded.** Every sync PR adds a row to the compatibility table in
    [../development/upstream-sync.md](../development/upstream-sync.md)
    (Moonlight and LuminalShine versions tested together).

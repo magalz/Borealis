@@ -31,6 +31,7 @@ import com.limelight.utils.UiHelper;
 import io.github.magalz.borealis.host.pairing.PairingHints;
 // BOREALIS: LuminalShine pairing errors (host.pairing)
 import io.github.magalz.borealis.host.launch.HostError;
+import io.github.magalz.borealis.host.pairing.PairingAudit;
 import io.github.magalz.borealis.host.pairing.PairingErrors;
 import io.github.magalz.borealis.host.pairing.PairingFailure;
 import com.limelight.nvstream.http.HostHttpResponseException;
@@ -422,6 +423,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 String message;
                 boolean success = false;
                 boolean restart = false; // BOREALIS: the host dropped its pairing session (host.pairing)
+                final String auditHost = io.github.magalz.borealis.logging.BorealisAudit.hostLabel(computer.name, computer.activeAddress.address); // BOREALIS: audit trail
                 try {
                     // Stop updates and wait while pairing
                     stopComputerUpdates(true);
@@ -436,6 +438,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                     }
                     else {
                         final String pinStr = PairingManager.generatePinString();
+                        PairingAudit.started(auditHost, restarted); // BOREALIS: audit trail
 
                         // Spin the dialog off in a thread because it blocks
                         Dialog.displayDialog(PcView.this, getResources().getString(R.string.pair_pairing_title),
@@ -446,6 +449,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                         PairingManager pm = httpConn.getPairingManager();
 
                         PairState pairState = pm.pair(httpConn.getServerInfo(true), pinStr);
+                        PairingAudit.finished(auditHost, pairState.name()); // BOREALIS: audit trail
                         if (pairState == PairState.PIN_WRONG) {
                             message = getResources().getString(R.string.pair_incorrect_pin);
                         }
@@ -485,7 +489,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                     e.printStackTrace();
                     // BOREALIS: LuminalShine pairing errors get their own text; a dropped host session restarts pairing once (host.pairing)
                     HostHttpResponseException hostError = e instanceof HostHttpResponseException ? (HostHttpResponseException) e : null;
-                    PairingFailure failure = PairingErrors.describe(PcView.this, hostError == null ? null : new HostError(hostError.getErrorCode(), hostError.getErrorMessage()), e.getMessage(), restarted);
+                    PairingFailure failure = PairingErrors.describe(PcView.this, hostError == null ? null : new HostError(hostError.getErrorCode(), hostError.getErrorMessage()), e.getMessage(), restarted, auditHost);
                     message = failure.getMessage();
                     restart = failure.getRestart();
                 }

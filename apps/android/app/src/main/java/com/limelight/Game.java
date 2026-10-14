@@ -2259,6 +2259,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         startupGuard.cancel(); // BOREALIS: first-frame watchdog
         if (connecting || connected) {
             connecting = connected = false;
+            io.github.magalz.borealis.host.launch.SessionAudit.stopped(); // BOREALIS: audit trail
             updatePipAutoEnter();
 
             controllerHandler.stop();
@@ -2330,6 +2331,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             @Override
             public void run() {
                 startupGuard.cancel(); // BOREALIS: first-frame watchdog
+                io.github.magalz.borealis.host.launch.SessionAudit.terminated(errorCode); // BOREALIS: audit trail
 
                 // Let the display go to sleep now
                 getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -2452,6 +2454,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 connecting = false;
                 updatePipAutoEnter();
                 startupGuard.onConnectionStarted(); // BOREALIS: preparing message and first-frame watchdog
+                io.github.magalz.borealis.host.launch.SessionAudit.started(pcName, Game.this.getIntent().getStringExtra(EXTRA_HOST), decoderRenderer.getActiveVideoFormat(), prefConfig.width, prefConfig.height, prefConfig.fps); // BOREALIS: audit trail
 
                 // Hide the mouse cursor now after a short delay.
                 // Doing it before dismissing the spinner seems to be undone

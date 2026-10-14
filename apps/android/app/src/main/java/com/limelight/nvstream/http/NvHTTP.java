@@ -143,12 +143,14 @@ public class NvHTTP {
                     // Check the server certificate if we've paired to this host
                     if (certs.length == 1 && NvHTTP.this.serverCert != null) {
                         if (!certs[0].equals(NvHTTP.this.serverCert)) {
+                            io.github.magalz.borealis.host.pairing.TlsAudit.certificateChanged(NvHTTP.this.baseUrlHttp.host(), certs[0], NvHTTP.this.serverCert); // BOREALIS: audit trail
                             throw new CertificateException("Certificate mismatch");
                         }
                     }
                     else {
                         // The cert chain doesn't look like a self-signed cert or we don't have
                         // a certificate pinned, so re-throw the original validation error.
+                        io.github.magalz.borealis.host.pairing.TlsAudit.failure(NvHTTP.this.baseUrlHttp.host(), e); // BOREALIS: audit trail
                         throw e;
                     }
                 }
@@ -324,6 +326,7 @@ public class NvHTTP {
                         throw new HostHttpResponseException(401, "Server certificate mismatch");
                     }
                     else {
+                        io.github.magalz.borealis.host.pairing.TlsAudit.failure(baseUrlHttp.host(), e); // BOREALIS: audit trail
                         throw e;
                     }
                 }

@@ -5,6 +5,8 @@ import android.os.Build
 import com.limelight.BuildConfig
 import com.limelight.R
 import dagger.hilt.android.HiltAndroidApp
+import io.github.magalz.borealis.logging.AuditSink
+import io.github.magalz.borealis.logging.BorealisAudit
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.CrashHandler
 import io.github.magalz.borealis.logging.JulBridge
@@ -16,11 +18,15 @@ import io.github.magalz.borealis.logging.RotatingFileSink
 import io.github.magalz.borealis.nativecore.BorealisCore
 import io.github.magalz.borealis.settings.LogSettings
 import java.io.File
+import javax.inject.Inject
 
 @HiltAndroidApp
 class BorealisApplication : Application() {
     // Kept so that the preference listener of LogSettings stays registered.
     private lateinit var logSettings: LogSettings
+
+    // The Room-backed audit trail (:borealis:diagnostics); injected by Hilt in super.onCreate().
+    @Inject lateinit var auditSink: AuditSink
 
     override fun onCreate() {
         super.onCreate()
@@ -36,6 +42,8 @@ class BorealisApplication : Application() {
             minLevel = baseLevel,
             redactor = redactor,
         )
+        // The audit trail shares the redactor, so "Mask addresses" applies to it as well.
+        BorealisAudit.install(auditSink, redactor, BuildConfig.VERSION_NAME)
         logSettings = LogSettings.start(this, baseLevel)
         JulBridge.install()
         CrashHandler.install(

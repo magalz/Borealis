@@ -136,16 +136,15 @@ when the four `BOREALIS_*` values from the
 the release workflow never does: it signs the unsigned artifacts afterwards.
 
 ```sh
-./gradlew assembleNonRootRelease bundleNonRootRelease
+./gradlew assembleNonRootRelease
 # apps/android/app/build/outputs/apk/nonRoot/release/app-nonRoot-release-unsigned.apk
-# apps/android/app/build/outputs/bundle/nonRootRelease/app-nonRoot-release.aab
 ```
 
-To try the signing and verification commands of
-[release.yml](../../.github/workflows/release.yml), create a throwaway keystore
-outside the repository (`keytool -genkeypair ...`) and run `apksigner sign`,
-`apksigner verify` and `jarsigner` from build-tools `37.0.0` on the unsigned
-files.
+There is no AAB until Phase 5 (see [release.md](release.md)). To try the
+release checks and signing, run `.github/scripts/check-apk.sh` and
+`.github/scripts/sign-apk.sh` against the unsigned APK with a throwaway
+keystore created outside the repository, or start the dry run on GitHub
+(`gh workflow run release.yml --ref <branch>`).
 
 Other test levels (as they land): Robolectric and Compose UI tests run with
 the unit tests; emulator tests use Gradle Managed Devices; screenshot tests

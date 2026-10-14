@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Checks that a release APK carries the Borealis identity and that R8 kept the JNI entry classes.
+# Checks that a release APK carries the Borealis identity, that R8 kept the JNI entry classes and
+# that the universal APK has the native libraries for all four ABIs.
 # Used by the release workflow's build job, for real releases and for the dry run.
 #
 # Usage: check-apk.sh APK VERSION      (VERSION is MAJOR.MINOR.PATCH, as in the tag)
@@ -51,7 +52,11 @@ for class in \
     fail "R8 removed or renamed $class."
 done
 
+# The release is one universal APK (ADR 0050), so every ABI must carry the native libraries.
+abis=$(unzip -l "$apk" | grep -oE 'lib/[^/]+/libmoonlight-core\.so' | sort -u | wc -l)
+[ "$abis" -eq 4 ] || fail "Expected libmoonlight-core.so for 4 ABIs, found $abis."
+
 if [ "$failed" -ne 0 ]; then
   exit 1
 fi
-echo "APK identity and JNI classes verified"
+echo "APK identity, JNI classes and the four ABIs verified"

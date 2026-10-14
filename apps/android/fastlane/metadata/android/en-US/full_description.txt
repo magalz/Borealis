@@ -1,4 +1,4 @@
-Borealis streams games, programs or your full desktop from your PC to your Android phone, tablet or TV. It is a client based on <a href="https://github.com/moonlight-stream/moonlight-android">Moonlight</a>, tuned for the <a href="https://github.com/NortheBridge/luminalshine">LuminalShine</a> host. It also works with other hosts that speak the same protocol, such as <a href="https://github.com/LizardByte/Sunshine">Sunshine</a>, but LuminalShine is the host Borealis is tested against.
+Borealis streams games, programs or your full desktop from your PC to your Android phone, tablet or TV. It is a client based on <a href="https://github.com/moonlight-stream/moonlight-android">Moonlight</a>, tuned for the <a href="https://github.com/NortheBridge/luminalshine">LuminalShine</a> host. It may also work with other hosts that speak the same protocol, such as <a href="https://github.com/LizardByte/Sunshine">Sunshine</a>, but only LuminalShine is tested.
 
 Borealis connects only to the host you choose. It has no ads, no in-app purchases and no analytics.
 
@@ -16,7 +16,7 @@ Features
 Getting started
 1. Install and set up LuminalShine on your PC.
 2. Open Borealis and tap your PC in the list. If it is not listed, add it by its address.
-3. Enter the PIN that Borealis shows in the host's web interface.
+3. Borealis shows a PIN: enter it in the host's web interface.
 4. Start streaming.
 
 A mid-range or better wireless router with a 5 GHz connection to your device, and a wired connection from your PC to the router, give the best results.

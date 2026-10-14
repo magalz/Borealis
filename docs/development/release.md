@@ -231,7 +231,10 @@ add the keystore or its passwords anywhere else.
    `^borealis-android-[0-9.]+\.apk$`. Each release has one APK asset, named
    `borealis-android-X.Y.Z.apk`; the filter makes Obtainium ignore
    `SHA256SUMS` and the SBOMs.
-3. Leave pre-releases off. Obtainium does not see draft releases, so publish the
+3. Set "Version string extraction regex" to `[0-9]+\.[0-9]+\.[0-9]+`. The tag is
+   `android-vX.Y.Z` while the installed versionName is `X.Y.Z`, so Obtainium
+   must compare only the numbers. Confirm this on the first real update.
+4. Leave pre-releases off. Obtainium does not see draft releases, so publish the
    draft first.
 
 Stores come in Phase 5. Uploads are manual at first; automation comes later.

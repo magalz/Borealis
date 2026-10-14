@@ -184,7 +184,8 @@ jobs:
       - name: Sign and verify the APK with the release script
         run: |
           mkdir -p dist
-          cp "unsigned/borealis-android-${VERSION}.cdx.json" "unsigned/borealis-android-native-${VERSION}.cdx.json" dist/
+          # The release notes are included so the rendered notes and compatibility note can be read.
+          cp "unsigned/borealis-android-${VERSION}.cdx.json" "unsigned/borealis-android-native-${VERSION}.cdx.json" unsigned/release-notes.md dist/
           bash .github/scripts/sign-apk.sh \
             "unsigned/borealis-android-${VERSION}-unsigned.apk" \
             "dist/borealis-android-${VERSION}-DRY-RUN-NOT-A-RELEASE.apk" \

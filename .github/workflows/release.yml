@@ -81,6 +81,11 @@ jobs:
         run: |
           # Commits since the previous release; the first release starts after the Moonlight import.
           previous=$(git describe --tags --abbrev=0 --match 'android-v[0-9]*' --exclude 'android-v*-*' "${TAG}^" 2>/dev/null || true)
+          # Only a plain release tag may end up in the git-cliff arguments.
+          if [ -n "$previous" ] && ! printf '%s' "$previous" | grep -Eq '^android-v[0-9]+[.][0-9]+[.][0-9]+$'; then
+            echo "::warning::Ignoring unexpected previous tag name; the changelog starts at ${FIRST_RELEASE_BASE}."
+            previous=""
+          fi
           if [ -n "$previous" ]; then
             echo "range=${previous}..${TAG}" >> "$GITHUB_OUTPUT"
           else
@@ -97,7 +102,7 @@ jobs:
           name: borealis-android-unsigned
           path: dist/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
   publish:
     name: Sign, attest and create the draft release
@@ -118,6 +123,10 @@ jobs:
         with:
           name: borealis-android-unsigned
           path: unsigned
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '17' # keytool and jarsigner come from this JDK, not the runner default
       - name: Locate the Android build tools
         run: |
           tools="${ANDROID_HOME}/build-tools/${BUILD_TOOLS_VERSION}"
@@ -160,10 +169,12 @@ jobs:
         run: |
           apk="dist/borealis-android-${VERSION}.apk"
           aab="dist/borealis-android-${VERSION}.aab"
-          report=$("${BUILD_TOOLS}/apksigner" verify --verbose --print-certs --min-sdk-version 24 "$apk")
-          echo "$report" | grep -E 'Verified using v(2|3) scheme|Number of signers'
-          echo "$report" | grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true'
+          # minSdk is 28, where the v3 signature is the one that counts (v2 is also written, for
+          # tools that only read v2, but apksigner skips it when verifying for API 28 and up).
+          report=$("${BUILD_TOOLS}/apksigner" verify --verbose --print-certs --min-sdk-version 28 "$apk")
+          echo "$report" | grep -E 'Verified using v3 scheme|Number of signers'
           echo "$report" | grep -q 'Verified using v3 scheme (APK Signature Scheme v3): true'
+          echo "$report" | grep -q 'Number of signers: 1'
           "${BUILD_TOOLS}/zipalign" -c -P 16 4 "$apk"
           jarsigner -verify -certs "$aab" | grep -q 'jar verified'
           # The APK must be signed by the key in the keystore, not merely by some key.
@@ -196,6 +207,7 @@ jobs:
             dist/borealis-android-${{ env.VERSION }}.aab
             dist/borealis-android-${{ env.VERSION }}.cdx.json
             dist/borealis-android-native-${{ env.VERSION }}.cdx.json
+            dist/SHA256SUMS
       - name: Create the draft GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

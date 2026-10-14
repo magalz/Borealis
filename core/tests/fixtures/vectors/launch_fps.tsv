@@ -1,0 +1,26 @@
+# Golden vectors for borealis_launch_fps. Format: see tests/fixtures/README.md.
+# is_gfe is 1 for a GFE host, 0 for any other host. expected is the fps of the /launch mode parameter.
+is_gfe	launch_fps	stream_fps	expected
+# GFE keeps the upstream rule: above 60 becomes 0, the stream fps is ignored.
+1	30	30	30
+1	60	60	60
+1	61	61	0
+1	120	59	0
+1	60	120	60
+1	59	144	59
+# Other hosts get the RTSP maxFPS so /launch and RTSP agree.
+0	60	59	59
+0	120	120	120
+0	144	90	90
+0	30	60	60
+# Non-positive stream fps falls back to the upstream rule.
+0	60	0	60
+0	120	0	0
+0	90	-1	0
+0	45	-5	45
+# Non-positive launch fps yields 0 (host default) whenever it is the value used.
+1	0	60	0
+1	-30	60	0
+0	0	0	0
+0	-30	-30	0
+0	-30	90	90

@@ -22,7 +22,12 @@ moonlight-common-c (moonlight-stream/moonlight-common-c)
   License: GPL-3.0
   https://github.com/moonlight-stream/moonlight-common-c
   Included as a git submodule at
-  apps/android/app/src/main/jni/moonlight-core/moonlight-common-c.
+  apps/android/app/src/main/jni/moonlight-core/moonlight-common-c, built from
+  the Borealis fork https://github.com/magalz/moonlight-common-c (branch
+  borealis).
+  Notice of modification (GPL-3.0): Borealis modified src/VideoStream.c, which
+  now waits longer for the first full video frame. The fork marks every changed
+  line with a "BOREALIS:" comment.
 
 ================================================================================
 Third-party components present in apps/android

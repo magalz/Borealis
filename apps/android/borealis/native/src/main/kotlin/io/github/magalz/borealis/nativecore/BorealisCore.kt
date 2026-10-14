@@ -5,7 +5,7 @@ import io.github.magalz.borealis.logging.LogTag
 
 /** Kotlin entry point to borealis-core. */
 object BorealisCore {
-    private val library = NativeLibrary("borealis_jni")
+    internal val library = NativeLibrary("borealis_jni")
 
     /** The borealis-core version, or null when the native library is unavailable. */
     fun version(): String? = library.call("version") { CoreJni.version() }

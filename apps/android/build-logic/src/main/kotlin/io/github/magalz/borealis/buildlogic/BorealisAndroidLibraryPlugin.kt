@@ -13,6 +13,7 @@ class BorealisAndroidLibraryPlugin : Plugin<Project> {
             pluginManager.apply("com.android.library")
             with(BorealisCoverage) { configureCoverage(androidVariant = "debug") }
             with(BorealisLicenses) { configureLicensee() }
+            configureFixtures()
 
             extensions.configure<LibraryExtension> {
                 compileSdk = BorealisBuild.COMPILE_SDK

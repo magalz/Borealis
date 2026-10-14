@@ -14,5 +14,6 @@ plugins {
 
 include ':app'
 // BOREALIS: Borealis Kotlin modules.
+include ':borealis:host'
 include ':borealis:logging'
 include ':borealis:native'

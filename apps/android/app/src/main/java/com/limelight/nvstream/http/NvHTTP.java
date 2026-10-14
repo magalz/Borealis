@@ -386,6 +386,11 @@ public class NvHTTP {
         // The MJOLNIR codename was used by GFE but never by any third-party server
         details.nvidiaServer = getXmlString(serverInfo, "state", true).contains("MJOLNIR");
 
+        // BOREALIS: host family, codecs and ports for the details dialog (host.caps)
+        details.borealis = io.github.magalz.borealis.host.caps.HostInfoReader.SHARED.read(details.uuid,
+                getXmlString(serverInfo, "appversion", false), getXmlString(serverInfo, "ServerCodecModeSupport", false),
+                details.httpsPort, baseUrlHttp.port());
+
         // We could reach it so it's online
         details.state = ComputerDetails.State.ONLINE;
 
@@ -714,8 +719,10 @@ public class NvHTTP {
                 "pair", "devicename=roth&updateState=1&phrase=pairchallenge");
     }
 
-    public void unpair() throws IOException {
-        openHttpConnectionToString(httpClientLongConnectTimeout, baseUrlHttp, "unpair");
+    public boolean unpair() throws IOException {
+        // BOREALIS: LuminalShine does not route /unpair; send it once, without connection reuse.
+        return io.github.magalz.borealis.host.pairing.BestEffortUnpair.unpair(
+                httpClientLongConnectTimeout, getCompleteUrl(baseUrlHttp, "unpair", null));
     }
     
     public InputStream getBoxArt(NvApp app) throws IOException {
@@ -759,8 +766,9 @@ public class NvHTTP {
         // so force it to 0 to ensure the correct resolution is set. We
         // used to use 60 here but that locked the frame rate to 60 FPS
         // on GFE 3.20.3.
-        int fps = context.isNvidiaServerSoftware && context.streamConfig.getLaunchRefreshRate() > 60 ?
-                0 : context.streamConfig.getLaunchRefreshRate();
+        // BOREALIS: hosts other than GFE get the stream frame rate, so /launch and RTSP agree (was the upstream expression)
+        int fps = io.github.magalz.borealis.host.launch.LaunchFrameRate.forLaunch(context.isNvidiaServerSoftware,
+                context.streamConfig.getLaunchRefreshRate(), context.streamConfig.getRefreshRate());
 
         boolean enableSops = context.streamConfig.getSops();
         if (context.isNvidiaServerSoftware) {

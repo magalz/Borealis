@@ -27,6 +27,8 @@ import com.limelight.utils.HelpLauncher;
 import com.limelight.utils.ServerHelper;
 import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.UiHelper;
+// BOREALIS: pairing hints for LuminalShine
+import io.github.magalz.borealis.host.pairing.PairingHints;
 
 import android.app.Activity;
 import android.app.ActivityManager;
@@ -427,7 +429,8 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                         // Spin the dialog off in a thread because it blocks
                         Dialog.displayDialog(PcView.this, getResources().getString(R.string.pair_pairing_title),
                                 getResources().getString(R.string.pair_pairing_msg)+" "+pinStr+"\n\n"+
-                                getResources().getString(R.string.pair_pairing_help), false);
+                                // BOREALIS: Web UI address and device name instead of the Sunshine hint
+                                PairingHints.pinHint(PcView.this, computer.activeAddress.address, computer.activeAddress.port), false);
 
                         PairingManager pm = httpConn.getPairingManager();
 
@@ -551,8 +554,11 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                             computer.httpsPort, managerBinder.getUniqueId(), computer.serverCert,
                             PlatformBinding.getCryptoProvider(PcView.this));
                     if (httpConn.getPairState() == PairingManager.PairState.PAIRED) {
-                        httpConn.unpair();
-                        if (httpConn.getPairState() == PairingManager.PairState.NOT_PAIRED) {
+                        // BOREALIS: the host did not confirm: unpairing happens in its Web UI
+                        if (!httpConn.unpair()) {
+                            message = PairingHints.unpairHint(PcView.this, computer.activeAddress.address, computer.activeAddress.port);
+                        }
+                        else if (httpConn.getPairState() == PairingManager.PairState.NOT_PAIRED) {
                             message = getResources().getString(R.string.unpair_success);
                         }
                         else {
@@ -664,7 +670,8 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 return true;
 
             case VIEW_DETAILS_ID:
-                Dialog.displayDialog(PcView.this, getResources().getString(R.string.title_details), computer.details.toString(), false);
+                // BOREALIS: host capabilities after the details (host.caps)
+                Dialog.displayDialog(PcView.this, getResources().getString(R.string.title_details), io.github.magalz.borealis.host.caps.HostInfoText.appendTo(PcView.this, computer.details.toString(), computer.details.borealis), false);
                 return true;
 
             case TEST_NETWORK_ID:

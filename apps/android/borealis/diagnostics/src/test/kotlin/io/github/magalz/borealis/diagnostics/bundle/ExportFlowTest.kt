@@ -18,7 +18,12 @@ class ExportFlowTest {
     @get:Rule val temp = TemporaryFolder()
 
     private lateinit var zip: File
-    private lateinit var external: File
+    private val saved = mutableListOf<File>()
+
+    private val recordingStore = BundleStore { file ->
+        saved += file
+        SavedBundle("Download/${file.name}", "adb pull /sdcard/Download/${file.name}")
+    }
 
     @Before
     fun setUp() {
@@ -26,18 +31,17 @@ class ExportFlowTest {
             File(temp.newFolder("cache"), "borealis-diagnostics-20261014-123456.zip").apply {
                 writeText("zip bytes")
             }
-        external = File(temp.root, "external")
     }
 
     private fun flow(
         canShare: Boolean = true,
+        television: Boolean = false,
         build: () -> File = { zip },
         uriFor: (File) -> Uri = { Uri.parse("content://test.fileprovider/diagnostics/${it.name}") },
-        externalDir: File? = external,
+        store: BundleStore = recordingStore,
         asked: MutableList<Intent> = mutableListOf(),
     ) =
         ExportFlow(
-            packageName = "io.github.magalz.borealis",
             chooserTitle = "Share diagnostics",
             buildBundle = build,
             uriFor = uriFor,
@@ -45,11 +49,18 @@ class ExportFlowTest {
                 asked += intent
                 canShare
             },
-            externalDir = { externalDir },
+            isTelevision = television,
+            store = store,
         )
 
+    private fun sendOf(chooser: Intent): Intent {
+        @Suppress("DEPRECATION")
+        val send = chooser.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)!!
+        return send
+    }
+
     @Test
-    fun `shares the bundle through a chooser when an app can receive it`() {
+    fun `a phone shares the bundle through a chooser when an app can receive it`() {
         val asked = mutableListOf<Intent>()
 
         val result = flow(canShare = true, asked = asked).run()
@@ -58,8 +69,7 @@ class ExportFlowTest {
         assertThat(chooser.action).isEqualTo(Intent.ACTION_CHOOSER)
         assertThat(chooser.getCharSequenceExtra(Intent.EXTRA_TITLE).toString())
             .isEqualTo("Share diagnostics")
-        @Suppress("DEPRECATION")
-        val send = chooser.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)!!
+        val send = sendOf(chooser)
         assertThat(send.action).isEqualTo(Intent.ACTION_SEND)
         assertThat(send.type).isEqualTo("application/zip")
         @Suppress("DEPRECATION")
@@ -70,39 +80,49 @@ class ExportFlowTest {
         assertThat(send.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION).isNotEqualTo(0)
         assertThat(chooser.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION).isNotEqualTo(0)
         assertThat(asked.single().action).isEqualTo(Intent.ACTION_SEND)
-        assertThat(external.exists()).isFalse()
+        assertThat(saved).isEmpty()
     }
 
     @Test
-    fun `saves a copy and gives the adb command when nothing can receive the bundle`() {
+    fun `a TV saves the bundle even when an app, such as a video player, can receive it`() {
+        val result = flow(canShare = true, television = true).run()
+
+        val savedResult = result as ExportResult.Saved
+        assertThat(saved).containsExactly(zip)
+        assertThat(savedResult.location).isEqualTo("Download/${zip.name}")
+        assertThat(savedResult.adbPullCommand).isEqualTo("adb pull /sdcard/Download/${zip.name}")
+    }
+
+    @Test
+    fun `a phone with no receiver saves the bundle`() {
         val result = flow(canShare = false).run()
 
-        val saved = result as ExportResult.Saved
-        assertThat(saved.file.parentFile).isEqualTo(external)
-        assertThat(saved.file.name).isEqualTo(zip.name)
-        assertThat(saved.file.readText()).isEqualTo("zip bytes")
-        assertThat(saved.adbPullCommand)
+        assertThat(result).isInstanceOf(ExportResult.Saved::class.java)
+        assertThat(saved).containsExactly(zip)
+    }
+
+    @Test
+    fun `a saved result still offers a chooser for the file provider uri`() {
+        val result = flow(television = true).run() as ExportResult.Saved
+
+        val chooser = result.chooser
+        assertThat(chooser.action).isEqualTo(Intent.ACTION_CHOOSER)
+        assertThat(chooser.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION).isNotEqualTo(0)
+        val send = sendOf(chooser)
+        assertThat(send.type).isEqualTo("application/zip")
+        assertThat(send.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION).isNotEqualTo(0)
+        @Suppress("DEPRECATION")
+        assertThat(send.getParcelableExtra<Uri>(Intent.EXTRA_STREAM).toString())
             .isEqualTo(
-                "adb pull /sdcard/Android/data/io.github.magalz.borealis/files/diagnostics/" +
-                    "borealis-diagnostics-20261014-123456.zip"
+                "content://test.fileprovider/diagnostics/borealis-diagnostics-20261014-123456.zip"
             )
     }
 
     @Test
-    fun `saving replaces earlier bundles in the external directory`() {
-        external.mkdirs()
-        File(external, "borealis-diagnostics-20250101-000000.zip").writeText("old")
-        File(external, "keep.txt").writeText("not mine")
+    fun `fails instead of throwing when the bundle cannot be saved`() {
+        val failing = BundleStore { throw IOException("no space") }
 
-        flow(canShare = false).run()
-
-        assertThat(external.list()!!.toList())
-            .containsExactly("borealis-diagnostics-20261014-123456.zip", "keep.txt")
-    }
-
-    @Test
-    fun `fails when there is no external directory to save to`() {
-        assertThat(flow(canShare = false, externalDir = null).run()).isEqualTo(ExportResult.Failed)
+        assertThat(flow(television = true, store = failing).run()).isEqualTo(ExportResult.Failed)
     }
 
     @Test

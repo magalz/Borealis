@@ -87,6 +87,92 @@ class FixturePolicyTest {
             .containsExactly("luminalshine/1.0: PROVENANCE.md is missing")
     }
 
+    @Test
+    fun `an empty fixtures tree is reported instead of passing`() {
+        temp.newFolder("luminalshine", "1.0")
+
+        assertThat(violations(temp.root)).contains("luminalshine: no fixtures found")
+    }
+
+    @Test
+    fun `a DOCTYPE is rejected instead of resolving entities`() {
+        val version = temp.newFolder("luminalshine", "1.0")
+        version
+            .resolve("serverinfo-http.xml")
+            .writeText(
+                "<!DOCTYPE root [<!ENTITY h \"LUMINALSHINE-HOST\">]>" +
+                    "<root><hostname>&h;</hostname></root>"
+            )
+        version
+            .resolve("PROVENANCE.md")
+            .writeText(provenanceTable("serverinfo-http.xml" to "device"))
+
+        assertThat(violations(temp.root))
+            .containsExactly("luminalshine/1.0/serverinfo-http.xml: not readable as plain XML")
+    }
+
+    @Test
+    fun `malformed XML is reported with the file`() {
+        val version = temp.newFolder("luminalshine", "1.0")
+        version.resolve("serverinfo-http.xml").writeText("<root><hostname>")
+        version
+            .resolve("PROVENANCE.md")
+            .writeText(provenanceTable("serverinfo-http.xml" to "device"))
+
+        assertThat(violations(temp.root))
+            .containsExactly("luminalshine/1.0/serverinfo-http.xml: not readable as plain XML")
+    }
+
+    @Test
+    fun `malformed IPv6 values are reported with file and field`() {
+        val version = temp.newFolder("luminalshine", "1.0")
+        version
+            .resolve("serverinfo-http.xml")
+            .writeText(
+                "<root><LocalIP6>2001:db8</LocalIP6><ExternalIP6>2001:db8::g</ExternalIP6></root>"
+            )
+        version
+            .resolve("PROVENANCE.md")
+            .writeText(provenanceTable("serverinfo-http.xml" to "device"))
+
+        val found = violations(temp.root).joinToString("\n")
+
+        assertThat(found).contains("luminalshine/1.0/serverinfo-http.xml: <LocalIP6>")
+        assertThat(found).contains("luminalshine/1.0/serverinfo-http.xml: <ExternalIP6>")
+    }
+
+    @Test
+    fun `IPv4 values must be a dotted quad in 192_0_2_0 24`() {
+        val version = temp.newFolder("luminalshine", "1.0")
+        version
+            .resolve("serverinfo-http.xml")
+            .writeText(
+                "<root><LocalIP>192.0.2.999</LocalIP><ExternalIP>192.0.2..</ExternalIP></root>"
+            )
+        version
+            .resolve("PROVENANCE.md")
+            .writeText(provenanceTable("serverinfo-http.xml" to "device"))
+
+        val found = violations(temp.root).joinToString("\n")
+
+        assertThat(found)
+            .contains("luminalshine/1.0/serverinfo-http.xml: <LocalIP> is '192.0.2.999'")
+        assertThat(found)
+            .contains("luminalshine/1.0/serverinfo-http.xml: <ExternalIP> is '192.0.2..'")
+    }
+
+    @Test
+    fun `duplicate provenance rows are reported`() {
+        val version = temp.newFolder("luminalshine", "1.0")
+        version.resolve("a.xml").writeText("<root/>")
+        version
+            .resolve("PROVENANCE.md")
+            .writeText(provenanceTable("a.xml" to "device", "a.xml" to "source"))
+
+        assertThat(violations(temp.root))
+            .containsExactly("luminalshine/1.0/a.xml: duplicate row in PROVENANCE.md")
+    }
+
     private fun provenanceTable(vararg rows: Pair<String, String>): String =
         "| File | Provenance | Capture | Scrubbed fields |\n| --- | --- | --- | --- |\n" +
             rows.joinToString("\n") { (file, provenance) ->

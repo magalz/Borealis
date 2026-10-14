@@ -1,9 +1,14 @@
 package io.github.magalz.borealis.host.pairing
 
 import android.content.Context
+import io.github.magalz.borealis.host.R
 import io.github.magalz.borealis.host.launch.HostError
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.nativecore.HostRules
 import io.github.magalz.borealis.nativecore.NativeHostRules
+import io.github.magalz.borealis.nativecore.PairAction
+import io.github.magalz.borealis.nativecore.PairCategory
 
 /** What `doPair` shows after a failed pairing step and whether it pairs again. */
 data class PairingFailure(val message: String?, val restart: Boolean)
@@ -30,5 +35,39 @@ object PairingErrors {
         fallback: String?,
         restarted: Boolean,
         getString: (Int) -> String,
-    ): PairingFailure = PairingFailure(fallback, restart = false)
+    ): PairingFailure {
+        val decision = error?.let { rules.classifyPairing(it.code, it.message) }
+        val text = decision?.let { textFor(it.category, restarted) }
+        if (error == null || decision == null || text == null) {
+            return PairingFailure(fallback, restart = false)
+        }
+        // Status and category only: the host text and anything near a PIN stay out of the log.
+        BorealisLog.i(
+            LogTag.PAIR,
+            "host pairing error classified",
+            "status" to error.code,
+            "category" to decision.category,
+            "action" to decision.action,
+            "restarted" to restarted,
+        )
+        return PairingFailure(
+            getString(text),
+            restart = decision.action == PairAction.RESTART_ONCE && !restarted,
+        )
+    }
+
+    /** The message of [category]; null keeps the upstream text. */
+    private fun textFor(category: PairCategory, restarted: Boolean): Int? =
+        when (category) {
+            PairCategory.UNKNOWN -> null
+            PairCategory.STALE_SESSION,
+            PairCategory.EXCHANGE_INVALIDATED,
+            PairCategory.HOST_RESET ->
+                if (restarted) R.string.pair_restart_failed_again else R.string.pair_restart_cleared
+            PairCategory.IN_PROGRESS -> R.string.pair_host_session_in_progress
+            PairCategory.IDENTITY_MISMATCH -> R.string.pair_host_other_device
+            PairCategory.TOO_MANY_PENDING -> R.string.pair_host_too_many_pending
+            PairCategory.PEER_MISMATCH -> R.string.pair_host_peer_mismatch
+            PairCategory.SUPERSEDED -> R.string.pair_host_superseded
+        }
 }

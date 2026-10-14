@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD041 -- appended to the generated release notes, which use level 2 headings -->
 ## Compatibility
 
 * Tested with LuminalShine 26.09.1.

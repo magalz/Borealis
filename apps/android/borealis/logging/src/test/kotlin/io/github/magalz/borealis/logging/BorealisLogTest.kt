@@ -35,6 +35,25 @@ class BorealisLogTest {
     }
 
     @Test
+    fun `redact uses the running redactor and follows its address masking`() {
+        BorealisLog.initialize(listOf(sink), redactor = Redactor(maskAddresses = false))
+
+        assertThat(BorealisLog.redact("pin=4821 at 192.0.2.5"))
+            .isEqualTo("pin=[REDACTED] at 192.0.2.5")
+
+        BorealisLog.setMaskAddresses(true)
+
+        assertThat(BorealisLog.redact("pin=4821 at 192.0.2.5")).isEqualTo("pin=[REDACTED] at [IP]")
+    }
+
+    @Test
+    fun `redact still removes secrets before initialisation`() {
+        assertThat(BorealisLog.isInitialized).isFalse()
+
+        assertThat(BorealisLog.redact("password=hunter2")).isEqualTo("password=[REDACTED]")
+    }
+
+    @Test
     fun `records carry level, tag, message, ordered fields and the clock time`() {
         BorealisLog.initialize(listOf(sink), clock = { 42L })
 

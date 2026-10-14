@@ -14,6 +14,8 @@ object BorealisLog {
 
     private val INVALID_KEY_CHARS = Regex("[^A-Za-z0-9_.-]")
 
+    private val FALLBACK_REDACTOR = Redactor()
+
     @Volatile private var state: State? = null
 
     val isInitialized: Boolean
@@ -50,6 +52,13 @@ object BorealisLog {
     fun setMaskAddresses(enabled: Boolean) {
         state?.redactor?.maskAddresses = enabled
     }
+
+    /**
+     * Redacts [text] with the running configuration's redactor (and so its address-masking switch);
+     * a default redactor (no address masking) before [initialize]. Text over the redactor's length
+     * cap is cut, so pass a line, not a file.
+     */
+    fun redact(text: String): String = (state?.redactor ?: FALLBACK_REDACTOR).redact(text)
 
     fun log(
         level: LogLevel,

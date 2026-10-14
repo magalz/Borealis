@@ -10,8 +10,11 @@ import io.github.magalz.borealis.host.launch.ConflictChoice
 /**
  * The question "an app is already running": Join, Quit and relaunch or Cancel. Thin UI glue: the
  * decision logic is `LaunchConflicts` in `:borealis:host`. Everything here runs on the main thread.
- * The three buttons are focusable, so a D-pad works; Back, [dismiss] and anything else that closes
- * the dialog count as Cancel (the first answer wins).
+ * The three buttons are focusable, so a D-pad works, and Cancel, the safe one, has the focus when
+ * the dialog opens (the destructive Quit and relaunch must never be one Enter away). Back,
+ * [dismiss] and anything else that closes the dialog count as Cancel (the first answer wins). When
+ * Cancel wins the activity is finished: the launch ended quietly and nothing else would leave the
+ * spinner; that is harmless when the activity is already stopping.
  */
 object LaunchConflictDialog {
     private var current: AlertDialog? = null
@@ -44,17 +47,24 @@ object LaunchConflictDialog {
             AlertDialog.Builder(activity)
                 .setTitle(R.string.conflict_title)
                 .setMessage(question + "\n\n" + activity.getString(R.string.conflict_quit_warning))
-                .setPositiveButton(R.string.conflict_join, choose(answer, ConflictChoice.JOIN))
+                .setPositiveButton(
+                    R.string.conflict_join,
+                    choosing(activity, answer, ConflictChoice.JOIN),
+                )
                 .setNeutralButton(
                     R.string.conflict_quit_and_relaunch,
-                    choose(answer, ConflictChoice.QUIT_AND_RELAUNCH),
+                    choosing(activity, answer, ConflictChoice.QUIT_AND_RELAUNCH),
                 )
-                .setNegativeButton(android.R.string.cancel, choose(answer, ConflictChoice.CANCEL))
+                .setNegativeButton(
+                    android.R.string.cancel,
+                    choosing(activity, answer, ConflictChoice.CANCEL),
+                )
                 .setOnDismissListener {
-                    answer.choose(ConflictChoice.CANCEL)
+                    choose(activity, answer, ConflictChoice.CANCEL)
                     current = null
                 }
                 .show()
+        current?.getButton(AlertDialog.BUTTON_NEGATIVE)?.requestFocus()
     }
 
     /** Closes the dialog, if it is open; the pending question is answered with Cancel. */
@@ -64,8 +74,13 @@ object LaunchConflictDialog {
         current = null
     }
 
-    private fun choose(answer: ConflictAnswer, choice: ConflictChoice) =
+    private fun choosing(activity: Activity, answer: ConflictAnswer, choice: ConflictChoice) =
         DialogInterface.OnClickListener { _, _ ->
-            answer.choose(choice)
+            choose(activity, answer, choice)
         }
+
+    /** Records [choice]; when it is the winning Cancel, ends [activity] too. */
+    private fun choose(activity: Activity, answer: ConflictAnswer, choice: ConflictChoice) {
+        if (answer.choose(choice) && choice == ConflictChoice.CANCEL) activity.finish()
+    }
 }

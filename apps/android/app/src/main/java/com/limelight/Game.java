@@ -1045,7 +1045,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     protected void onDestroy() {
         super.onDestroy();
         startupGuard.cancel(); // BOREALIS: first-frame watchdog
-        io.github.magalz.borealis.LaunchConflictDialog.dismiss(); // BOREALIS: a pending "app already running" question is a cancel (host.launch)
         if (conn != null) { conn.cancelLaunch(); } // BOREALIS: end the launch retries (host.launch)
 
         if (controllerHandler != null) {

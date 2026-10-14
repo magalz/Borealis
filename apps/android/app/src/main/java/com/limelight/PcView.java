@@ -502,7 +502,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                             Toast.makeText(PcView.this, toastMessage, Toast.LENGTH_LONG).show();
                         }
 
-                        if (toastRestart) { doPair(computer, true); return; } // BOREALIS: pair again once, with a new PIN (host.pairing)
+                        if (toastRestart && !isFinishing()) { doPair(computer, true); return; } // BOREALIS: pair again once, with a new PIN, unless the user left (host.pairing)
 
                         if (toastSuccess) {
                             // Open the app list after a successful pairing attempt

@@ -123,13 +123,20 @@ public class NvConnection {
                 () -> launchCancelled, context.connListener::launchRetrying, conflicts::isOpen);
     }
 
+    // BOREALIS: Join: /resume of the running app, with upstream's message when the host answers 200 without resuming (host.launch)
+    private LaunchOutcome joinRunning(NvHTTP h, ConnectionContext context, int appId) throws IOException, XmlPullParserException {
+        LaunchOutcome joined = launchWithRetry(h, "resume", appId);
+        if (joined == LaunchOutcome.FAILED) { context.connListener.displayMessage("Failed to resume existing session"); }
+        return joined;
+    }
+
     // BOREALIS: another app is running although /serverinfo said none: Join, Quit and relaunch or Cancel, asked once (host.launch)
     private boolean resolveConflict(NvHTTP h, ConnectionContext context) throws IOException, XmlPullParserException {
         NvApp app = context.streamConfig.getApp();
         return conflicts.resolve(() -> h.getCurrentGame(h.getServerInfo(true)),
                 id -> { NvApp running = h.getAppById(id); return running != null ? running.getAppName() : null; },
                 app.getAppId(), app.getAppName(), context.connListener::launchConflict,
-                () -> launchNotRunningApp(h, context), id -> launchWithRetry(h, "resume", id), () -> quitAndLaunch(h, context));
+                () -> launchNotRunningApp(h, context), id -> joinRunning(h, context, id), () -> quitAndLaunch(h, context));
     }
 
     private InetAddress resolveServerAddress() throws IOException {

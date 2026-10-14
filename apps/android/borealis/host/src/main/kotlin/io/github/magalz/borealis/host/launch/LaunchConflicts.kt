@@ -28,10 +28,7 @@ enum class ConflictChoice {
 class ConflictAnswer {
     private val chosen = AtomicReference<ConflictChoice?>(null)
 
-    fun choose(choice: ConflictChoice): Boolean {
-        chosen.compareAndSet(null, choice)
-        return true
-    }
+    fun choose(choice: ConflictChoice): Boolean = chosen.compareAndSet(null, choice)
 
     internal fun get(): ConflictChoice? = chosen.get()
 }

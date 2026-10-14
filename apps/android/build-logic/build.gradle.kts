@@ -10,6 +10,9 @@ dependencies {
     implementation(libs.hilt.gradlePlugin)
     implementation(libs.spotless.gradlePlugin)
     implementation(libs.detekt.gradlePlugin)
+    implementation(libs.kover.gradlePlugin)
+    implementation(libs.licensee.gradlePlugin)
+    implementation(libs.cyclonedx.gradlePlugin)
 }
 
 gradlePlugin {

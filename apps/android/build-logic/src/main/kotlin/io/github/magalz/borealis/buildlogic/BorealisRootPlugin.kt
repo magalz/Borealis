@@ -4,6 +4,7 @@ import com.diffplug.gradle.spotless.SpotlessExtension
 import com.diffplug.gradle.spotless.SpotlessPlugin
 import dev.detekt.gradle.extensions.DetektExtension
 import dev.detekt.gradle.plugin.DetektPlugin
+import kotlinx.kover.gradle.plugin.dsl.KoverProjectExtension
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -17,6 +18,7 @@ internal class BorealisRootPlugin : Plugin<Project> {
         with(target) {
             pluginManager.apply(SpotlessPlugin::class.java)
             pluginManager.apply(DetektPlugin::class.java)
+            configureCoverage()
 
             val kotlinTargets =
                 listOf("borealis/**/*.kt", "build-logic/**/*.kt", "app/src/main/kotlin/**/*.kt")
@@ -63,6 +65,29 @@ internal class BorealisRootPlugin : Plugin<Project> {
                 buildUponDefaultConfig.set(true)
             }
         }
+
+    /**
+     * One merged Kover report for every module that applies the Borealis coverage convention. The
+     * XML is in JaCoCo format (Codecov reads it); the modules are listed here instead of in each
+     * build file so that a new `:borealis:*` module needs no root edit.
+     */
+    private fun Project.configureCoverage() {
+        pluginManager.apply(BorealisCoverage.PLUGIN_ID)
+        subprojects.forEach { module ->
+            module.pluginManager.withPlugin(BorealisCoverage.PLUGIN_ID) {
+                dependencies.add("kover", module)
+            }
+        }
+        extensions.configure<KoverProjectExtension> {
+            currentProject { createVariant(BorealisCoverage.VARIANT) {} }
+            reports {
+                variant(BorealisCoverage.VARIANT) {
+                    filters { with(BorealisCoverage) { borealisFilters() } }
+                    xml { xmlFile.set(layout.buildDirectory.file(BorealisCoverage.XML_REPORT)) }
+                }
+            }
+        }
+    }
 
     /**
      * Spotless insists on the exact `clang-format` version it is told, so use the one on PATH

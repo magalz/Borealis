@@ -1,6 +1,6 @@
-#include <jni.h>
-
 #include "borealis/core.h"
+
+#include <jni.h>
 
 /* JNI binding for io.github.magalz.borealis.NativeBridge. */
 JNIEXPORT jstring JNICALL Java_io_github_magalz_borealis_NativeBridge_nativeCoreVersion(

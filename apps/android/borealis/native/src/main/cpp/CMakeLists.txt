@@ -4,9 +4,9 @@ project(borealis_native LANGUAGES C CXX)
 # Repository root: this file lives in apps/android/borealis/native/src/main/cpp.
 get_filename_component(BOREALIS_REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../.." ABSOLUTE)
 
-# borealis-core is published as a shared library (see apps/android/borealis/README.md): it keeps
-# its own static libc++ and exports only the C ABI, so every consumer (this module's JNI library
-# and the ndk-build bridge in :app) shares one copy.
+# borealis-core is published as a shared library linked against libc++_shared (see
+# apps/android/borealis/README.md): it exports only the C ABI, so every consumer (this module's JNI
+# library and the ndk-build bridge in :app) shares one copy.
 block()
   set(BUILD_SHARED_LIBS ON)
   set(BOREALIS_CORE_BUILD_TESTS OFF)

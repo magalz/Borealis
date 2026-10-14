@@ -48,7 +48,18 @@ class PairingTextTest {
         val portuguese = strings("values-pt-rBR")
 
         assertThat(english.keys)
-            .containsExactly("pair_pin_hint", "unpair_webui_hint", "webui_url_unknown")
+            .containsExactly(
+                "pair_pin_hint",
+                "unpair_webui_hint",
+                "webui_url_unknown",
+                "pair_restart_cleared",
+                "pair_restart_failed_again",
+                "pair_host_session_in_progress",
+                "pair_host_other_device",
+                "pair_host_too_many_pending",
+                "pair_host_peer_mismatch",
+                "pair_host_superseded",
+            )
         assertThat(portuguese.keys).isEqualTo(english.keys)
         for ((name, text) in english) {
             assertThat(placeholders(portuguese.getValue(name))).isEqualTo(placeholders(text))

@@ -240,17 +240,23 @@ class CrashHandlerTest {
     }
 
     @Test
-    fun `by default queued lines of the file sink reach the disk before the process dies`() {
+    fun `flushing the file sinks puts queued lines on the disk before the process dies`() {
         val gate = java.util.concurrent.CountDownLatch(1)
         val sink = RotatingFileSink(logDir, writeGate = { gate.await() })
         sink.write(LogRecord(1_700_000_000_000L, LogLevel.INFO, LogTag.APP, "last words"))
-        Thread {
-            Thread.sleep(100)
-            gate.countDown()
-        }
-            .start()
+        // The writer stays stalled until the handler asks for the flush, so the line can only be
+        // on the disk if the flush waited for it.
+        val handler =
+            CrashReportHandler(
+                logDir,
+                null,
+                flushLogs = {
+                    gate.countDown()
+                    RotatingFileSink.flushAll(timeoutMillis = 10_000)
+                },
+            )
 
-        CrashReportHandler(logDir, null).uncaughtException(Thread.currentThread(), Error("x"))
+        handler.uncaughtException(Thread.currentThread(), Error("x"))
 
         assertThat(File(logDir, RotatingFileSink.FILE_NAME).readText()).contains("last words")
         sink.close()

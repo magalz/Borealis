@@ -18,7 +18,12 @@ import kotlin.concurrent.withLock
  * the disk. The queue holds at most [queueCapacity] records. When it is full, new records are
  * dropped and counted, and a `N records dropped` line is queued as soon as there is room (or at the
  * next [flush] or [close]). Records are written in the order they were accepted. Call [flush] (or
- * [flushAll]) before the process dies to get the queued records onto the disk.
+ * [flushAll]) before the process dies to get the queued records onto the disk. Close the sink when
+ * done: its writer thread otherwise lives as long as the process.
+ *
+ * The `N records dropped` line is queued only when the queue has room. If it is still full when
+ * [flush] or [close] runs, it completes without the line: [flush] keeps the count for a later call,
+ * [close] loses it.
  *
  * [writeGate] runs on the writer thread before every record and exists for tests only.
  */
@@ -152,7 +157,8 @@ class RotatingFileSink(
 
         private val STOP = LogRecord(0L, LogLevel.VERBOSE, LogTag.APP, "")
 
-        // Weakly held, so a sink that is dropped without close() does not leak.
+        // Open sinks, for flushAll. Weakly held so the registry itself pins nothing, but the writer
+        // thread of a sink that was never closed keeps that sink alive: callers must close().
         private val openSinks: MutableSet<RotatingFileSink> =
             Collections.newSetFromMap(WeakHashMap())
 

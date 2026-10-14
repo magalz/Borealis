@@ -5,12 +5,30 @@ import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
 class RotatingFileSinkAsyncTest {
     @get:Rule val temp = TemporaryFolder()
+
+    private val opened = mutableListOf<RotatingFileSink>()
+
+    private fun newSink(
+        maxFiles: Int = RotatingFileSink.DEFAULT_MAX_FILES,
+        maxFileBytes: Long = RotatingFileSink.DEFAULT_MAX_FILE_BYTES,
+        queueCapacity: Int = RotatingFileSink.DEFAULT_QUEUE_CAPACITY,
+        writeGate: () -> Unit = {},
+    ) =
+        RotatingFileSink(logDir, maxFiles, maxFileBytes, queueCapacity, writeGate).also {
+            opened += it
+        }
+
+    @After
+    fun closeSinks() {
+        opened.forEach { it.close() }
+    }
 
     private val logDir
         get() = File(temp.root, "logs")
@@ -32,7 +50,7 @@ class RotatingFileSinkAsyncTest {
     @Test
     fun `write returns while the writer is stalled and the lines land after it resumes`() {
         val gate = CountDownLatch(1)
-        val sink = RotatingFileSink(logDir, writeGate = { gate.await() })
+        val sink = newSink(writeGate = { gate.await() })
 
         repeat(3) { sink.write(record("pending $it")) }
 
@@ -48,7 +66,7 @@ class RotatingFileSinkAsyncTest {
     @Test
     fun `a full queue drops new records and accounts for each of them in summaries`() {
         val gate = CountDownLatch(1)
-        val sink = RotatingFileSink(logDir, queueCapacity = 4, writeGate = { gate.await() })
+        val sink = newSink(queueCapacity = 4, writeGate = { gate.await() })
         repeat(20) { sink.write(record("message $it")) }
 
         gate.countDown()
@@ -69,8 +87,7 @@ class RotatingFileSinkAsyncTest {
         val gate = CountDownLatch(1)
         val entered = CountDownLatch(1)
         val sink =
-            RotatingFileSink(
-                logDir,
+            newSink(
                 queueCapacity = 2,
                 writeGate = {
                     entered.countDown()
@@ -93,7 +110,7 @@ class RotatingFileSinkAsyncTest {
     @Test
     fun `flush gives up after its timeout while the writer is stalled`() {
         val gate = CountDownLatch(1)
-        val sink = RotatingFileSink(logDir, writeGate = { gate.await() })
+        val sink = newSink(writeGate = { gate.await() })
         sink.write(record("stuck"))
 
         val started = System.nanoTime()
@@ -109,7 +126,7 @@ class RotatingFileSinkAsyncTest {
 
     @Test
     fun `flush on an idle sink returns at once`() {
-        val sink = RotatingFileSink(logDir)
+        val sink = newSink()
 
         assertThat(sink.flush(timeoutMillis = 100)).isTrue()
     }
@@ -117,7 +134,7 @@ class RotatingFileSinkAsyncTest {
     @Test
     fun `close drains the queued records before returning`() {
         val gate = CountDownLatch(1)
-        val sink = RotatingFileSink(logDir, writeGate = { gate.await() })
+        val sink = newSink(writeGate = { gate.await() })
         repeat(3) { sink.write(record("queued $it")) }
 
         gate.countDown()
@@ -129,7 +146,7 @@ class RotatingFileSinkAsyncTest {
     @Test
     fun `flushAll drains every open sink`() {
         val gate = CountDownLatch(1)
-        val sink = RotatingFileSink(logDir, writeGate = { gate.await() })
+        val sink = newSink(writeGate = { gate.await() })
         sink.write(record("before the crash"))
         Thread {
             Thread.sleep(100)
@@ -146,8 +163,7 @@ class RotatingFileSinkAsyncTest {
     @Test
     fun `records from concurrent producers keep their order across rotated files`() {
         val sink =
-            RotatingFileSink(
-                logDir,
+            newSink(
                 maxFiles = 500,
                 maxFileBytes = 1_500,
                 queueCapacity = 10_000,

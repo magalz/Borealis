@@ -104,7 +104,7 @@ scenario so that the lines belong to it:
 
 ```sh
 adb -s <serial> logcat -c
-adb -s <serial> logcat -v time Borealis.APP:V Borealis.HOST:V Borealis.PAIR:V Borealis.LAUNCH:V Borealis.RTSP:V Borealis.VIDEO:V Borealis.PYROWAVE:V Borealis.INPUT:V Borealis.REST:V Borealis.CORE:V Borealis.UPSTREAM:V Borealis.COMMONC:V *:S > <capture-outside-repo>.log
+adb -s <serial> logcat -v time Borealis.APP:V Borealis.HOST:V Borealis.PAIR:V Borealis.LAUNCH:V Borealis.RTSP:V Borealis.VIDEO:V Borealis.PYROWAVE:V Borealis.INPUT:V Borealis.REST:V Borealis.CORE:V Borealis.UPSTREAM:V Borealis.COMMONC:V moonlight-common-c:V *:S > <capture-outside-repo>.log
 ```
 
 Borealis logs use the tag `Borealis.<TAG>` (`LogcatSink`). The debug build logs
@@ -114,8 +114,10 @@ upstream native library (moonlight-common-c) logs under `Borealis.COMMONC`:
 redacted and also reaches the log file and the diagnostic bundle. `COMMONC` is rate
 limited (a burst of 100 lines, then 10 lines per second); a line `N lines suppressed`
 marks what was left out, so a frame-loss burst shows as that line plus a counter,
-not as every loss. Only if forwarding is unavailable does the line fall back to the
-old logcat tag `moonlight-common-c`. The upstream Java logger `LimeLog` is
+not as every loss. The old logcat tag `moonlight-common-c` still appears for lines
+that are not forwarded: those logged before `BorealisLog` is initialised, those where
+forwarding fails, and the direct `__android_log_print` calls in `simplejni.c`; keep
+both tags in the filter. The upstream Java logger `LimeLog` is
 forwarded to `Borealis.UPSTREAM` (`JulBridge`).
 
 Log lines are `message key=value`, for example

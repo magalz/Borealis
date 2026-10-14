@@ -5,12 +5,30 @@ import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
 class RotatingFileSinkTest {
     @get:Rule val temp = TemporaryFolder()
+
+    private val opened = mutableListOf<RotatingFileSink>()
+
+    private fun newSink(
+        maxFiles: Int = RotatingFileSink.DEFAULT_MAX_FILES,
+        maxFileBytes: Long = RotatingFileSink.DEFAULT_MAX_FILE_BYTES,
+        queueCapacity: Int = RotatingFileSink.DEFAULT_QUEUE_CAPACITY,
+        writeGate: () -> Unit = {},
+    ) =
+        RotatingFileSink(logDir, maxFiles, maxFileBytes, queueCapacity, writeGate).also {
+            opened += it
+        }
+
+    @After
+    fun closeSinks() {
+        opened.forEach { it.close() }
+    }
 
     private val logDir
         get() = File(temp.root, "logs")
@@ -25,7 +43,7 @@ class RotatingFileSinkTest {
 
     @Test
     fun `writes one utf-8 line per record and creates the directory`() {
-        val sink = RotatingFileSink(logDir)
+        val sink = newSink()
 
         sink.write(record("héllo ✓ wörld"))
         sink.write(record("second"))
@@ -43,7 +61,7 @@ class RotatingFileSinkTest {
 
     @Test
     fun `lines are readable without closing the sink`() {
-        val sink = RotatingFileSink(logDir)
+        val sink = newSink()
 
         sink.write(record("flushed"))
         sink.flush()
@@ -53,7 +71,7 @@ class RotatingFileSinkTest {
 
     @Test
     fun `rolls over when the size limit would be exceeded`() {
-        val sink = RotatingFileSink(logDir, maxFiles = 5, maxFileBytes = 300)
+        val sink = newSink(maxFiles = 5, maxFileBytes = 300)
 
         repeat(20) { sink.write(record("message number $it")) }
         sink.flush()
@@ -66,7 +84,7 @@ class RotatingFileSinkTest {
 
     @Test
     fun `keeps at most max files and deletes the oldest`() {
-        val sink = RotatingFileSink(logDir, maxFiles = 3, maxFileBytes = 200)
+        val sink = newSink(maxFiles = 3, maxFileBytes = 200)
 
         repeat(100) { sink.write(record("message number $it")) }
         sink.flush()
@@ -94,7 +112,7 @@ class RotatingFileSinkTest {
 
     @Test
     fun `a record larger than the limit is still written whole`() {
-        val sink = RotatingFileSink(logDir, maxFiles = 2, maxFileBytes = 100)
+        val sink = newSink(maxFiles = 2, maxFileBytes = 100)
 
         sink.write(record("x".repeat(500)))
         sink.write(record("after"))
@@ -106,12 +124,12 @@ class RotatingFileSinkTest {
 
     @Test
     fun `appends to an existing log across instances`() {
-        RotatingFileSink(logDir).apply {
+        newSink().apply {
             write(record("first run"))
             close()
         }
 
-        RotatingFileSink(logDir).apply {
+        newSink().apply {
             write(record("second run"))
             flush()
         }
@@ -125,7 +143,7 @@ class RotatingFileSinkTest {
     fun `rotation does not touch other files such as crash reports`() {
         logDir.mkdirs()
         val crash = File(logDir, "crash-20260101-000000-000.txt").apply { writeText("report") }
-        val sink = RotatingFileSink(logDir, maxFiles = 2, maxFileBytes = 100)
+        val sink = newSink(maxFiles = 2, maxFileBytes = 100)
 
         repeat(30) { sink.write(record("message number $it")) }
         sink.flush()
@@ -135,8 +153,7 @@ class RotatingFileSinkTest {
 
     @Test
     fun `concurrent writers lose no lines and never interleave`() {
-        val sink =
-            RotatingFileSink(logDir, maxFiles = 500, maxFileBytes = 2_000, queueCapacity = 10_000)
+        val sink = newSink(maxFiles = 500, maxFileBytes = 2_000, queueCapacity = 10_000)
         val threads = 8
         val perThread = 250
         val pool = Executors.newFixedThreadPool(threads)
@@ -162,7 +179,7 @@ class RotatingFileSinkTest {
 
     @Test
     fun `close is idempotent`() {
-        val sink = RotatingFileSink(logDir)
+        val sink = newSink()
         sink.write(record("x"))
 
         sink.close()
@@ -173,7 +190,7 @@ class RotatingFileSinkTest {
 
     @Test
     fun `writes after close are ignored and do not reopen the file`() {
-        val sink = RotatingFileSink(logDir)
+        val sink = newSink()
         sink.write(record("before"))
         sink.close()
 

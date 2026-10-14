@@ -74,3 +74,6 @@ Never rewrite an accepted ADR to change its decision. If a decision changes, wri
 | 0044 | [Generate BorealisTokens.kt from design/tokens.json](0044-design-tokens-pipeline.md) | accepted | 2026-10-13 |
 | 0045 | [Automate store publishing with Gradle Play Publisher and an Amazon submission script](0045-store-publishing-automation.md) | proposed | 2026-10-13 |
 | 0046 | [Measure test coverage with Kover and llvm-cov, reported to a self-hosted Codecov](0046-test-coverage-with-kover-llvm-cov-and-codecov.md) | accepted | 2026-10-13 |
+| 0047 | [Harvest upstream code, then emancipate at a milestone](0047-harvest-upstream-then-emancipate.md) | accepted | 2026-10-14 |
+| 0048 | [Fork moonlight-common-c with a first-frame deadline patch](0048-fork-moonlight-common-c.md) | accepted | 2026-10-14 |
+| 0049 | [Gate pull requests on 90% patch coverage and a 1% project tolerance](0049-coverage-gate.md) | accepted | 2026-10-14 |

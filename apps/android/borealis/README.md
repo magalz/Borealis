@@ -6,9 +6,9 @@ New code is Kotlin under the package root `io.github.magalz.borealis`.
 ## Build setup
 
 - `../build-logic` is an included build (registered with `pluginManagement { includeBuild }` in `settings.gradle`) with the convention plugins:
-  - `borealis.android.application`: applied by `app/build.gradle`. Through the AGP variant API it sets the application id (`io.github.magalz.borealis`, `.debug` suffix for debug), the labels (`Borealis` / `Borealis Debug`), minSdk 28, disables the upstream `root` flavor, derives the version from git, configures release signing, the Android Lint baseline and Hilt/KSP. For the native chain it also enables Prefab, passes `APP_STL=c++_shared` to ndk-build, depends on `:borealis:native` and orders that module's CMake build before the ndk-build configure step (ndk-build checks that the Prefab library file exists).
-  - `borealis.android.library`: use it for every `:borealis:*` module (compileSdk 37, minSdk 28, NDK 29.0.14206865 like upstream, Java 17, Lint warnings are errors, JUnit 4 + Truth, AndroidX test runner for `androidTest`). Instrumented tests receive the borealis-core version from `core/CMakeLists.txt` as the instrumentation argument `expectedCoreVersion` (also set on `:app`).
-  - `borealis.settings`: applies Spotless and detekt to Borealis-owned paths only: ktfmt (kotlinlang style) for Kotlin and clang-format with `core/.clang-format` for `borealis/native/src/main/cpp` and `app/src/main/jni/borealis`. `clang-format` must be on `PATH`; Spotless needs its exact version, so the build reads it from `clang-format --version`. Upstream Java/Groovy/C is never formatted.
+  - `borealis.android.application`: applied by `app/build.gradle`. Through the AGP variant API it sets the application id (`io.github.magalz.borealis`, `.debug` suffix for debug), the labels (`Borealis` / `Borealis Debug`), minSdk 28, disables the upstream `root` flavor, derives the version from git, configures release signing, the Android Lint baseline and Hilt/KSP, and applies Kover, licensee and the CycloneDX SBOM. For the native chain it also enables Prefab, passes `APP_STL=c++_shared` to ndk-build, depends on `:borealis:native` and orders that module's CMake build before the ndk-build configure step (ndk-build checks that the Prefab library file exists).
+  - `borealis.android.library`: use it for every `:borealis:*` module (compileSdk 37, minSdk 28, NDK 29.0.14206865 like upstream, Java 17, Lint warnings are errors, JUnit 4 + Truth, AndroidX test runner for `androidTest`). It also applies Kover and licensee. Instrumented tests receive the borealis-core version from `core/CMakeLists.txt` as the instrumentation argument `expectedCoreVersion` (also set on `:app`).
+  - `borealis.settings`: applies Spotless and detekt to Borealis-owned paths only: ktfmt (kotlinlang style) for Kotlin and clang-format with `core/.clang-format` for `borealis/native/src/main/cpp` and `app/src/main/jni/borealis`. `clang-format` must be on `PATH`; Spotless needs its exact version, so the build reads it from `clang-format --version`. Without it the C/C++ Spotless tasks fail with "clang-format 22.x not found on PATH". Upstream Java/Groovy/C is never formatted. It also applies Kover to the root project and merges the modules' coverage there.
 - Versions live in `../gradle/libs.versions.toml`.
 - Upstream hooks are marked `BOREALIS` in `settings.gradle`, `app/build.gradle` and `app/src/main/AndroidManifest.xml`.
 
@@ -29,8 +29,8 @@ Release stays unsigned unless all four values are present, either in `apps/andro
 
 ### Checks (from `apps/android`)
 
-```
-./gradlew spotlessCheck detekt lint testDebugUnitTest assembleNonRootDebug
+```sh
+./gradlew spotlessCheck detekt lint testDebugUnitTest assembleNonRootDebug licensee
 ./gradlew :build-logic:test        # build-logic unit tests
 ./gradlew spotlessApply            # format Borealis-owned Kotlin
 ./gradlew :app:updateLintBaseline  # only when deliberately accepting upstream lint findings
@@ -38,6 +38,20 @@ Release stays unsigned unless all four values are present, either in `apps/andro
 
 Lint on `:app` uses `app/lint-baseline.xml` for the existing upstream findings; anything new fails the build, and Borealis modules have no baseline.
 An opt-in pre-commit hook lives in `.githooks` at the repository root (`git config core.hooksPath .githooks`).
+
+### Coverage, licences and SBOM
+
+All three come from the convention plugins (`BorealisCoverage`, `BorealisLicenses`, `BorealisSbom` in `build-logic`); details in `docs/development/building.md`.
+
+```sh
+./gradlew koverXmlReportBorealis koverHtmlReportBorealis  # build/reports/kover/coverage.xml (JaCoCo format) and htmlBorealis/
+./gradlew licensee                                        # part of check; fails on a licence outside the allowlist
+./gradlew :app:cyclonedxDirectBom                         # app/build/reports/sbom/borealis-android.cdx.json
+```
+
+- Kover merges the debug unit-test coverage (`debug` in `:borealis:*`, `nonRootDebug` in `:app`) into one report at the root. Upstream `com.limelight.*` and generated Hilt/Dagger/`BuildConfig`/`R`/Compose singleton classes are excluded.
+- licensee allows Apache-2.0, MIT, BSD-2/3-Clause, ISC and Zlib plus URL-only licences of Bouncy Castle and JCodec, each with a justification in `BorealisLicenses.kt`.
+- `../sbom/native-components.cdx.json` is the hand-maintained SBOM of the native components in the APK; update it with every upstream sync (`docs/development/upstream-sync.md`).
 
 ## `:borealis:logging`
 
@@ -54,7 +68,7 @@ An opt-in pre-commit hook lives in `.githooks` at the repository root (`git conf
 
 The Android side of the C++ core (ADR 0010, 0043). Package `io.github.magalz.borealis.nativecore`.
 
-```
+```text
 borealis/native/
   build.gradle.kts                CMake + Prefab publishing
   src/main/cpp/CMakeLists.txt     add_subdirectory(<repo>/core), builds libborealis_jni.so
@@ -89,7 +103,7 @@ The core is published as a shared library (`BUILD_SHARED_LIBS=ON` inside the mod
 
 ### Verifying without a device
 
-```
+```sh
 ./gradlew assembleNonRootDebug :borealis:native:assembleDebugAndroidTest :app:assembleNonRootDebugAndroidTest
 ```
 

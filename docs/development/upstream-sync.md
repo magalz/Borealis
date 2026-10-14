@@ -67,6 +67,21 @@ Conflicts happen where a Borealis hook sits in an upstream file.
 - If prebuilt libraries or dependency versions changed, update
   [NOTICE](../../NOTICE) and check the
   [dependency policy](../policies/dependencies.md).
+- Update the native SBOM, `apps/android/sbom/native-components.cdx.json`
+  (CycloneDX JSON, shipped with every release), whenever the native components
+  change. Gradle cannot see them, so nothing fails if it goes stale:
+  - `moonlight-common-c`: the commit from `git submodule status --recursive`
+    (also its `purl` and `version`), plus the nested `enet` and `nanors`
+    commits.
+  - OpenSSL, Opus and minisdl: the versions under
+    `apps/android/app/src/main/jni/moonlight-core` (`opensslv.h`, the
+    `moonlight-mobile-deps` build, [NOTICE](../../NOTICE)).
+  - `libc++_shared`: the NDK version (`ndkVersion` in `app/build.gradle`).
+  - `borealis-core`: the version in `core/CMakeLists.txt`.
+  - Keep the licences equal to [NOTICE](../../NOTICE). The Gradle dependencies
+    need no manual step: the SBOM is generated from the build, and
+    `./gradlew licensee` fails on a new licence (see
+    [building](building.md#coverage-licences-and-sbom)).
 - Keep the duplicated toolchain values in step. Upstream declares them in its
   own files and Borealis repeats them in build logic, so a sync that bumps one
   side must bump the other in the same PR:
@@ -84,7 +99,7 @@ From `apps/android/`:
 
 ```sh
 ./gradlew assembleNonRootDebug
-./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test
+./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test licensee
 ```
 
 - Lint treats warnings as errors and the baseline matches on message text, so

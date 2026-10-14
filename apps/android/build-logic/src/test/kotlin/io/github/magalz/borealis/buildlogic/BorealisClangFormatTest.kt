@@ -26,8 +26,6 @@ class BorealisClangFormatTest {
     @Test
     fun `the missing tool message names the tool and the building guide`() {
         assertThat(ClangFormat.MISSING_MESSAGE)
-            .isEqualTo(
-                "clang-format 22.x not found on PATH (see docs/development/building.md)"
-            )
+            .isEqualTo("clang-format 22.x not found on PATH (see docs/development/building.md)")
     }
 }

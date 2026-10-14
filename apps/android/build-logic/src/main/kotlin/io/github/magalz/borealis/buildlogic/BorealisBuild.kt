@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.buildlogic
 
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.VersionCatalog
 import org.gradle.api.artifacts.VersionCatalogsExtension
@@ -32,3 +33,19 @@ internal fun Project.addInstrumentedTestDependencies() {
         dependencies.add("androidTestImplementation", libs.findLibrary(name).get())
     }
 }
+
+/**
+ * The AGP build type ("Debug" or "Release") of an ndk-build configure task such as
+ * `configureNdkBuildDebug[arm64-v8a]`. Anything else fails the build: guessing would silently order
+ * the wrong native build.
+ */
+internal fun nativeBuildTypeForConfigureTask(taskName: String): String =
+    when {
+        taskName.startsWith("configureNdkBuildDebug") -> "Debug"
+        taskName.startsWith("configureNdkBuildRelease") -> "Release"
+        else ->
+            throw GradleException(
+                "Unsupported build type for task '$taskName': add it to " +
+                    "nativeBuildTypeForConfigureTask in build-logic."
+            )
+    }

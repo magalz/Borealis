@@ -105,9 +105,9 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
         tasks
             .matching { it.name.startsWith("configureNdkBuild") }
             .configureEach {
-                val buildType =
-                    if (name.startsWith("configureNdkBuildDebug")) "Debug" else "Release"
-                dependsOn(":borealis:native:externalNativeBuild$buildType")
+                dependsOn(
+                    ":borealis:native:externalNativeBuild${nativeBuildTypeForConfigureTask(name)}"
+                )
             }
     }
 

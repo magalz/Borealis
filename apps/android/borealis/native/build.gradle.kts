@@ -5,6 +5,13 @@ android {
 
     buildFeatures { prefabPublishing = true }
 
+    // The instrumented test replays the golden vectors that core/ is tested with.
+    sourceSets {
+        getByName("androidTest") {
+            assets.directories.add("../../../../core/tests/fixtures/vectors")
+        }
+    }
+
     // borealis-core is the CMake project at <repo>/core; src/main/cpp/CMakeLists.txt adds it as a
     // subdirectory and builds the JNI library next to it.
     externalNativeBuild {

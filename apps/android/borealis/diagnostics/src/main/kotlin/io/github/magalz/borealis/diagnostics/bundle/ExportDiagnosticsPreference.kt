@@ -71,14 +71,14 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
 
     private fun newFlow() =
         ExportFlow(
-            packageName = context.packageName,
             chooserTitle = context.getString(R.string.borealis_export_chooser_title),
             buildBundle = {
                 BundleBuilder.build(context, sectionsProvider(), flushLogs = flushLogs)
             },
             uriFor = uriFor,
             canShare = { context.packageManager.queryIntentActivities(it, 0).isNotEmpty() },
-            externalDir = { context.getExternalFilesDir(ExportFlow.EXTERNAL_DIR_NAME) },
+            isTelevision = isTelevision(context),
+            store = defaultBundleStore(context),
         )
 
     /** The settings screen may have been closed while the bundle was being built. */
@@ -106,7 +106,7 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
                 text =
                     context.getString(
                         R.string.borealis_export_saved_message,
-                        saved.file.absolutePath,
+                        saved.location,
                         saved.adbPullCommand,
                     )
                 typeface = Typeface.MONOSPACE

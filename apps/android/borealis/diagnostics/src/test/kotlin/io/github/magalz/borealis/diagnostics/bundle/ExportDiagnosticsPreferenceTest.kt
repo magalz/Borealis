@@ -20,6 +20,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowAlertDialog
 import org.robolectric.shadows.ShadowToast
@@ -34,11 +35,12 @@ class RefusingActivity : Activity() {
 @RunWith(RobolectricTestRunner::class)
 class ExportDiagnosticsPreferenceTest {
     private val activity: Activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+    private lateinit var provider: FakeDownloadsProvider
 
     @Before
     fun setUp() {
         File(activity.cacheDir, "diagnostics").deleteRecursively()
-        activity.getExternalFilesDir("diagnostics")?.deleteRecursively()
+        provider = FakeDownloadsProvider.install()
     }
 
     @After
@@ -135,23 +137,78 @@ class ExportDiagnosticsPreferenceTest {
         assertThat(ShadowAlertDialog.getLatestAlertDialog()).isNull()
     }
 
+    private fun savedName() =
+        provider.rows
+            .single()
+            .current
+            .getAsString(android.provider.MediaStore.MediaColumns.DISPLAY_NAME)
+
+    private fun savedDialog(): AlertDialog = ShadowAlertDialog.getLatestAlertDialog()
+
     @Test
-    fun `with no share target the path and the adb command are shown in a dialog`() {
+    fun `with no share target the Downloads path and the adb command are shown in a dialog`() {
         preference().onClick()
 
         assertThat(shadowOf(activity).nextStartedActivity).isNull()
-        val dialog: AlertDialog = ShadowAlertDialog.getLatestAlertDialog()
+        val dialog = savedDialog()
         assertThat(dialog.isShowing).isTrue()
-        val saved = checkNotNull(activity.getExternalFilesDir("diagnostics")).listFiles()!!.single()
         val text = texts(dialog.window!!.decorView).joinToString("\n")
-        assertThat(text).contains(saved.absolutePath)
-        assertThat(text)
-            .contains(
-                "adb pull /sdcard/Android/data/${activity.packageName}/files/diagnostics/${saved.name}"
-            )
-        // A D-pad reaches the text (it scrolls) and the Close button.
+        assertThat(text).contains("Download/${savedName()}")
+        assertThat(text).contains("adb pull /sdcard/Download/${savedName()}")
+        // A D-pad reaches the text (it scrolls) and both buttons.
         assertThat(containsScrollView(dialog.window!!.decorView)).isTrue()
         assertThat(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isFocusable).isTrue()
+        assertThat(dialog.getButton(AlertDialog.BUTTON_NEUTRAL).isFocusable).isTrue()
+    }
+
+    @Test
+    fun `a TV saves the bundle and shows the dialog even when a receiver exists`() {
+        RuntimeEnvironment.setQualifiers("+television")
+        val tv = Robolectric.buildActivity(Activity::class.java).setup().get()
+        allowSharing()
+
+        preference(context = tv).onClick()
+
+        assertThat(shadowOf(tv).nextStartedActivity).isNull()
+        val dialog = savedDialog()
+        assertThat(dialog.isShowing).isTrue()
+        assertThat(texts(dialog.window!!.decorView).joinToString("\n"))
+            .contains("adb pull /sdcard/Download/${savedName()}")
+    }
+
+    @Test
+    fun `the Close button has the focus when the saved dialog opens`() {
+        preference().onClick()
+
+        assertThat(savedDialog().getButton(AlertDialog.BUTTON_POSITIVE).hasFocus()).isTrue()
+    }
+
+    @Test
+    fun `the Share button opens the chooser with a read grant for the bundle`() {
+        preference().onClick()
+
+        savedDialog().getButton(AlertDialog.BUTTON_NEUTRAL).performClick()
+
+        val started = shadowOf(activity).nextStartedActivity
+        assertThat(started.action).isEqualTo(Intent.ACTION_CHOOSER)
+        assertThat(started.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION).isNotEqualTo(0)
+        @Suppress("DEPRECATION")
+        val send = started.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)!!
+        assertThat(send.type).isEqualTo("application/zip")
+        assertThat(send.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION).isNotEqualTo(0)
+        @Suppress("DEPRECATION") val uri = send.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)!!
+        assertThat(uri.authority).isEqualTo("${activity.packageName}.diagnostics.fileprovider")
+    }
+
+    @Test
+    fun `a Share button that the system refuses becomes a message and does not crash`() {
+        val refusing = Robolectric.buildActivity(RefusingActivity::class.java).setup().get()
+        preference(context = refusing).onClick()
+
+        savedDialog().getButton(AlertDialog.BUTTON_NEUTRAL).performClick()
+
+        assertThat(ShadowToast.getTextOfLatestToast())
+            .isEqualTo("Could not create the diagnostic bundle. See the log for details.")
     }
 
     @Test

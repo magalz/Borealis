@@ -54,7 +54,7 @@ class LaunchRetryRunner(
      * number of the retry that is about to start, the retries allowed and the wait in milliseconds.
      * It blocks while waiting, so the main thread must not call it.
      */
-    @Suppress("LongParameterList", "TooGenericExceptionCaught")
+    @Suppress("LongParameterList")
     fun run(
         verb: LaunchVerb,
         isCancelled: () -> Boolean,
@@ -62,9 +62,27 @@ class LaunchRetryRunner(
         errorOf: (Throwable) -> HostError?,
         attempt: () -> Boolean,
     ): LaunchOutcome {
-        val startedAt = clock()
-        val retries = EnumMap<LaunchCategory, Int>(LaunchCategory::class.java)
+        val request = Request(verb, isCancelled, onRetry, errorOf)
         while (true) {
+            request.next(attempt)?.let {
+                return it
+            }
+        }
+    }
+
+    /** The state of one [run]: when it started and how many retries each category has used. */
+    private inner class Request(
+        private val verb: LaunchVerb,
+        private val isCancelled: () -> Boolean,
+        private val onRetry: (LaunchCategory, Int, Int, Int) -> Unit,
+        private val errorOf: (Throwable) -> HostError?,
+    ) {
+        private val startedAt = clock()
+        private val retries = EnumMap<LaunchCategory, Int>(LaunchCategory::class.java)
+
+        /** Makes one attempt; null means that a retry wait went by and the next attempt is due. */
+        @Suppress("TooGenericExceptionCaught")
+        fun next(attempt: () -> Boolean): LaunchOutcome? {
             if (isCancelled()) return LaunchOutcome.CANCELLED
             val failure =
                 try {
@@ -72,76 +90,72 @@ class LaunchRetryRunner(
                 } catch (e: Throwable) {
                     e
                 }
-            if (isCancelled()) return LaunchOutcome.CANCELLED
-            val error = errorOf(failure) ?: throw failure
-            val decision = decide(verb, error, retries) ?: throw unavailable(failure, error)
-            when (decision.action) {
-                LaunchAction.FALLBACK_TO_LAUNCH -> return LaunchOutcome.FALLBACK_TO_LAUNCH
+            return if (isCancelled()) LaunchOutcome.CANCELLED else recover(failure)
+        }
+
+        private fun recover(failure: Throwable): LaunchOutcome? {
+            val decision = decision(failure)
+            return when (decision.action) {
+                LaunchAction.FALLBACK_TO_LAUNCH -> LaunchOutcome.FALLBACK_TO_LAUNCH
                 LaunchAction.FAIL -> throw failure
-                LaunchAction.RETRY -> {
-                    if (clock() - startedAt + decision.delayMs > budgetMs) throw failure
-                    val number = (retries[decision.category] ?: 0) + 1
-                    retries[decision.category] = number
-                    announce(decision, number, onRetry)
-                    if (!wait(decision.delayMs, isCancelled)) return LaunchOutcome.CANCELLED
+                LaunchAction.RETRY -> retry(decision, failure)
+            }
+        }
+
+        /** What the rules say about [failure]; rethrows it when they have nothing to say. */
+        private fun decision(failure: Throwable): LaunchDecision {
+            val error = errorOf(failure) ?: throw failure
+            // The category is only known after the first answer, so a second call carries the
+            // count.
+            val first = rules.decideLaunch(verb, error.code, error.message, 0)
+            val used = first?.let { retries[it.category] } ?: 0
+            val decision =
+                if (used == 0) first else rules.decideLaunch(verb, error.code, error.message, used)
+            if (decision == null) {
+                BorealisLog.e(
+                    LogTag.LAUNCH,
+                    "host rules unavailable, not retrying",
+                    null,
+                    "status" to error.code,
+                )
+                throw failure
+            }
+            return decision
+        }
+
+        private fun retry(decision: LaunchDecision, failure: Throwable): LaunchOutcome? {
+            if (clock() - startedAt + decision.delayMs > budgetMs) throw failure
+            val number = (retries[decision.category] ?: 0) + 1
+            retries[decision.category] = number
+            BorealisLog.i(
+                LogTag.LAUNCH,
+                "host asked to retry",
+                "category" to decision.category,
+                "attempt" to number,
+                "max" to decision.maxAttempts,
+                "delay_ms" to decision.delayMs,
+            )
+            onRetry(decision.category, number, decision.maxAttempts, decision.delayMs)
+            return if (wait(decision.delayMs)) null else LaunchOutcome.CANCELLED
+        }
+
+        /** Waits in slices; false when cancelled or interrupted before the wait was over. */
+        private fun wait(delayMs: Int): Boolean {
+            var left = delayMs.toLong()
+            try {
+                while (left > 0) {
+                    val slice = minOf(SLICE_MS, left)
+                    sleeper(slice)
+                    left -= slice
+                    if (isCancelled()) return false
                 }
+            } catch (e: InterruptedException) {
+                BorealisLog.d(LogTag.LAUNCH, "retry wait interrupted")
+                Thread.currentThread().interrupt()
+                return false
             }
+            return true
         }
-    }
-
-    /** The category is only known after the first answer, so a second call carries the count. */
-    private fun decide(
-        verb: LaunchVerb,
-        error: HostError,
-        retries: Map<LaunchCategory, Int>,
-    ): LaunchDecision? {
-        val first = rules.decideLaunch(verb, error.code, error.message, 0)
-        val used = first?.let { retries[it.category] } ?: 0
-        return if (used == 0) first else rules.decideLaunch(verb, error.code, error.message, used)
-    }
-
-    private fun unavailable(failure: Throwable, error: HostError): Throwable {
-        BorealisLog.e(
-            LogTag.LAUNCH,
-            "host rules unavailable, not retrying",
-            null,
-            "status" to error.code,
-        )
-        return failure
-    }
-
-    private fun announce(
-        decision: LaunchDecision,
-        number: Int,
-        onRetry: (LaunchCategory, Int, Int, Int) -> Unit,
-    ) {
-        BorealisLog.i(
-            LogTag.LAUNCH,
-            "host asked to retry",
-            "category" to decision.category,
-            "attempt" to number,
-            "max" to decision.maxAttempts,
-            "delay_ms" to decision.delayMs,
-        )
-        onRetry(decision.category, number, decision.maxAttempts, decision.delayMs)
-    }
-
-    /** Waits [delayMs] in slices; false when cancelled or interrupted before the wait was over. */
-    private fun wait(delayMs: Int, isCancelled: () -> Boolean): Boolean {
-        var left = delayMs.toLong()
-        try {
-            while (left > 0) {
-                val slice = minOf(SLICE_MS, left)
-                sleeper(slice)
-                left -= slice
-                if (isCancelled()) return false
-            }
-        } catch (e: InterruptedException) {
-            BorealisLog.d(LogTag.LAUNCH, "retry wait interrupted")
-            Thread.currentThread().interrupt()
-            return false
-        }
-        return true
     }
 
     companion object {

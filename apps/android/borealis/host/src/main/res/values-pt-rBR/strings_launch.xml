@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Progresso das novas tentativas no indicador de conexão: %1$s segundos, %2$s número da tentativa, %3$s tentativas permitidas. -->
     <string name="launch_retry_pending">Outro dispositivo está iniciando uma transmissão neste host. Tentando de novo em %1$s s (tentativa %2$s de %3$s).</string>
     <string name="launch_retry_restoring_display">O host ainda está restaurando a tela após a transmissão anterior. Tentando de novo em %1$s s (tentativa %2$s de %3$s).</string>
@@ -18,7 +18,7 @@
     <string name="host_info_codecs_h264_only">somente H.264</string>
     <string name="host_info_codec_hevc">HEVC</string>
     <string name="host_info_codec_hevc_main10">HEVC 10 bits</string>
-    <string name="host_info_codec_av1">AV1</string>
+    <string name="host_info_codec_av1" tools:ignore="Typos">AV1</string>
     <string name="host_info_codec_av1_main10">AV1 10 bits</string>
     <string name="host_info_codec_yuv444">4:4:4</string>
     <string name="host_info_pyrowave">PyroWave: %1$s</string>

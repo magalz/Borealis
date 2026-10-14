@@ -67,6 +67,9 @@ All three come from the convention plugins (`BorealisCoverage`, `BorealisLicense
 - `CrashHandler.install(dir, header, redactor)` takes the redactor of `BorealisLog` (created once in `BorealisApplication`), so crash reports follow "Mask addresses" too.
 - The minimum level applies to every sink. `BorealisApplication` initialises it to DEBUG in debug builds and INFO in release builds (so the file sink records INFO and above there); the logcat sink keeps its own minimum.
 - Sinks: `LogcatSink` (tag `Borealis.<TAG>`) and `RotatingFileSink` (`noBackupFilesDir/logs/borealis.log`, 5 files x 1 MB, one line per record, ISO-8601 UTC).
+  - `RotatingFileSink` is asynchronous. `write` queues the record in a bounded queue of 1,024 records, and a writer thread appends them. When the queue is full the record is dropped and counted, and a `N records dropped` line is queued once there is room. `flush` waits for the queue to drain (2 s by default), and `flushAll` does so for every open sink. The crash handler and the diagnostic bundle call it first.
+  - `LogStorage` holds the directory name (`logs`, under `noBackupFilesDir`) and the keys of the two switches.
+  - `NativeLogForwarder` passes the moonlight-common-c lines to `BorealisLog` under `LogTag.COMMONC`, so they are redacted. A token bucket limits them to a burst of 100 lines, refilled at 10 lines per second. The first line accepted after a suppression is preceded by `N lines suppressed`.
 - `JulBridge.install()` forwards the upstream `LimeLog` (`java.util.logging`) to `BorealisLog` with tag `UPSTREAM`.
 - `CrashHandler.install(dir, header)` writes a redacted `crash-<timestamp>.txt` next to the logs and delegates to the previous handler.
 
@@ -75,8 +78,8 @@ All three come from the convention plugins (`BorealisCoverage`, `BorealisLicense
 The Borealis settings screen (ADR 0050 items 3 and 7). Package `io.github.magalz.borealis.settings`; it is a framework `PreferenceFragment` like the upstream screen, so the Activity cannot be reached with `android:fragment` and a custom Preference opens it.
 
 - `BorealisSettingsPreference` is the only entry in the upstream `app/src/main/res/xml/preferences.xml` (marked `<!-- BOREALIS: -->`). It starts `BorealisSettingsActivity` with an explicit intent. The Activity is declared in this module's manifest with `android:exported="false"` and no intent filter.
-- `res/xml/borealis_preferences.xml` holds the entries, one element each, so a new entry is one element in the first category (Wave 2 adds "Export diagnostics" and "Erase audit trail" as custom Preference classes):
-  - category "Privacy and diagnostics": `borealis_verbose_logging` ("Verbose logging") and `borealis_mask_addresses` ("Mask addresses in logs and diagnostics"), both default off, in the default SharedPreferences (`SettingsKeys` holds the key constants and must match the XML);
+- `res/xml/borealis_preferences.xml` holds the entries, one element each, so a new entry is one element in the first category:
+  - category "Privacy and diagnostics": `borealis_verbose_logging` ("Verbose logging") and `borealis_mask_addresses` ("Mask addresses in logs and diagnostics"), both default off, in the default SharedPreferences (`SettingsKeys` holds the key constants and must match the XML); "Export diagnostics" (`ExportDiagnosticsPreference`) and "Erase audit trail" (`EraseAuditPreference`) are custom Preference classes of `:borealis:diagnostics`;
   - category "About": version name with the commit (`borealis_git_sha`), "Source code" and "Privacy policy" as `LinkPreference`, "Licence: GPL-3.0" as plain text and "Open-source licences" as `LicensesPreference`.
 - `LinkPreference` opens its `url` attribute with `ACTION_VIEW`. When no activity can open it (Google TV often has no browser) it shows the URL in a dialog instead. The URL is also the summary.
 - `LicensesPreference` shows `assets/legal/NOTICE` and `LICENSE` (copied into the APK by `LegalAssetsTask`, ADR 0050 item 7) in a scrollable dialog; the text view takes focus, so a D-pad scrolls it. When a build bundles neither file the dialog says so. The unit tests cover the loader (`LegalTexts`) with fake files and the dialog's missing-file path, because this library module has no `legal/` assets of its own.
@@ -84,6 +87,33 @@ The Borealis settings screen (ADR 0050 items 3 and 7). Package `io.github.magalz
 - `LogSettings.start(context, baseLevel)` applies the two switches to `BorealisLog` at startup and on every change (verbose lowers the minimum level to DEBUG, otherwise it is `baseLevel`). `BorealisApplication` calls it once after `BorealisLog.initialize` and keeps the result in a field, because `SharedPreferences` holds its listeners weakly.
 - The module declares `borealis_git_sha` as `translatable="false"` with the value `unknown`; the app overrides it with the built commit. Strings are in `res/values/strings_settings.xml`, English only for now.
 - Upstream hooks outside the module, each marked `BOREALIS`: the one preference element in `preferences.xml`, and in `app/src/main/jni/moonlight-core/simplejni.c` an early return in `MoonBridge.findExternalAddressIP4` (returns `NULL`, no STUN request, no WAN address in logcat) and in `MoonBridge.testClientConnectivity` (returns `ML_TEST_RESULT_INCONCLUSIVE`, no connection test). The Java callers already handle both results.
+
+## `:borealis:diagnostics`
+
+The local audit trail and the diagnostic bundle (ADR 0050). Package `io.github.magalz.borealis.diagnostics`; it depends on `:borealis:logging`. `:borealis:settings` shows its two entries ("Export diagnostics" and "Erase audit trail"). The policy is in [privacy-and-logging.md](../../../docs/policies/privacy-and-logging.md).
+
+### Audit trail
+
+- `BorealisAudit` in `:borealis:logging` is the facade that the host code calls. Until a sink is installed, events are dropped. It redacts each event before the sink receives it.
+- `AuditStore` queues each event, and one writer coroutine stores them in a Room database at `noBackupFilesDir/audit.db` (table `audit_events`). The queue holds 256 events and drops the oldest one when it is full.
+- Retention keeps the newest 2,000 entries and nothing older than 90 days. Deduplication applies only to `CERTIFICATE_CHANGED` and `TLS_FAILURE`, within 24 hours (`AuditDeduplicator`).
+- `AuditSection` writes the trail to `audit.jsonl` in the bundle: one JSON object per line, oldest first, UTC timestamps. It redacts each entry again with the current "Mask addresses" setting.
+- `EraseAuditPreference` is the "Erase audit trail" row. It asks for confirmation, with Cancel focused first, and deletes the stored entries. Bundles that were exported before are not changed.
+
+### Diagnostic bundle
+
+- `ExportDiagnosticsPreference` runs `ExportFlow`, which builds the zip in `cacheDir/diagnostics`. The file name is `borealis-diagnostics-<timestamp>.zip`. A second tap while the bundle is being built does nothing, and only the newest bundle is kept.
+- Layout: `manifest.json`, `decoders.json`, one file per section (`audit.jsonl`) and the log files under `logs/`.
+- The uncompressed content stays within 16 MiB. Sections are written first. The log files get the rest, newest first. The first file that does not fit keeps its newest lines, and the older files are dropped. `manifest.json` lists what was cut.
+- Each section redacts its own content, so a JSON line is not redacted twice. The log lines are re-redacted line by line with the current setting, so "Mask addresses" also applies to lines written before it was turned on.
+- `flushLogs` runs before the log files are read, so queued lines reach the files first.
+- `DecoderReport` builds `decoders.json`: the H.264, HEVC and AV1 decoders with their profile names, and the HDR types of the default display.
+- The zip is shared through a `FileProvider` with the authority `${applicationId}.diagnostics.fileprovider` (paths in `borealis_diagnostics_paths.xml`). When no app can receive it, as on Google TV, the zip is saved under `getExternalFilesDir("diagnostics")`, and the dialog shows its path and an `adb pull` command.
+
+### Hilt
+
+- `BundleModule` declares `@Multibinds Set<DiagnosticSection>`, so the bundle works with no contributor. A module adds a section with `@Provides @IntoSet` or `@Binds @IntoSet` (`AuditModule` uses `@Provides @IntoSet` for `AuditSection`).
+- `DiagnosticsEntryPoint` gives the set to classes that Hilt does not create, such as the preferences.
 
 ## `:borealis:native`
 

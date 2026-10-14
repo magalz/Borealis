@@ -56,7 +56,8 @@ the JNI layer can map them to an `IntArray`.
 | Function | Purpose |
 | --- | --- |
 | `borealis_host_parse_caps(appversion, len, codec_mask, out)` | Classifies the host (`UNKNOWN`, `GFE`, `SUNSHINE`) from `appversion`, parses its four version parts, and derives `codec_flags` (HEVC, HEVC Main10, AV1, AV1 Main10, any 4:4:4) and the four PyroWave `pyrowave_profiles` bits from `ServerCodecModeSupport`. `appversion` is at most `BOREALIS_HOST_APPVERSION_MAX_LEN` (64) bytes. |
-| `borealis_launch_decide(verb, status, msg, len, attempts_in_category, out)` | Decides `FAIL`, `RETRY` (with `delay_ms`) or `FALLBACK_TO_LAUNCH` after a non-200 `/launch` or `/resume`, from the status and an ASCII case-insensitive substring of the host message (at most `BOREALIS_HOST_MESSAGE_MAX_LEN`, 256, bytes). |
+| `borealis_launch_decide(verb, status, msg, len, attempts_in_category, out)` | Decides `FAIL`, `RETRY` (with `delay_ms`), `FALLBACK_TO_LAUNCH` or `RESOLVE_CONFLICT` after a non-200 `/launch` or `/resume`, from the status and an ASCII case-insensitive substring of the host message (at most `BOREALIS_HOST_MESSAGE_MAX_LEN`, 256, bytes). |
+| `borealis_pair_classify(status, msg, len, out)` | Classifies a `/pair` error from the status and an ASCII case-insensitive substring of the host message: `RESTART_ONCE` (the host dropped its session), `WAIT_HOST_SESSION` (the host holds another session) or `FAIL`, with a `category` that selects the user message. A known message only counts with the status the host sends it with. |
 | `borealis_launch_fps(is_gfe, launch_fps, stream_fps)` | The fps for the `/launch` `mode=` parameter: the upstream GFE rule, or the RTSP `maxFPS` for any other host. Cannot fail. |
 
 `appversion` is exactly `a.b.c.d` (decimal, no whitespace, only the fourth part may be negative):
@@ -75,10 +76,25 @@ below `max_attempts` and `FAIL` afterwards. The caller also owns the overall tim
 | 503 "GPU/display stack is not ready" | `GPU_NOT_READY` | 2 (5000, 5000) |
 | any other or message-less 503 (capture, encoder, virtual display) | `CAPTURE_OR_DISPLAY` | 1 (3000) |
 | `RESUME` with 503 "No running app to resume" | `NO_RUNNING_APP` | `FALLBACK_TO_LAUNCH` |
+| `LAUNCH` with 400 "An app is already running on this host" | `APP_RUNNING` | `RESOLVE_CONFLICT`: the caller asks the user (join, quit and relaunch, cancel) and never cancels the other app unasked |
 | every other status | `PERMANENT` | none, `FAIL` |
 
-The rules come from `docs/host-contract/luminalshine.md` (sections 6, 7.4 and 7.5) and
-`docs/host-contract/pyrowave.md` (section 3.1). Golden vectors for all three functions live in
+`borealis_pair_classify` is stateless too; the caller owns the single restart:
+
+| Status and host message | Category | Action |
+| --- | --- | --- |
+| 400 "Out of order call to getservercert", 400 "Invalid uniqueid" | `STALE_SESSION` | `RESTART_ONCE` |
+| 400 "Pairing exchange invalidated" | `EXCHANGE_INVALIDATED` | `RESTART_ONCE` |
+| 410 "Host pairing state was reset" | `HOST_RESET` | `RESTART_ONCE` |
+| 409 "Pairing exchange already in progress" | `IN_PROGRESS` | `WAIT_HOST_SESSION` |
+| 409 "Pairing request identity mismatch" (another device is pairing) | `IDENTITY_MISMATCH` | `WAIT_HOST_SESSION` |
+| 503 "Too many pending pairing requests" | `TOO_MANY_PENDING` | `WAIT_HOST_SESSION` |
+| 403 "Pairing request peer mismatch" | `PEER_MISMATCH` | `FAIL` |
+| 409 "Pairing request superseded by retry" | `SUPERSEDED` | `FAIL` |
+| anything else | `UNKNOWN` | `FAIL` |
+
+The rules come from `docs/host-contract/luminalshine.md` (sections 5, 6, 7.4 and 7.5) and
+`docs/host-contract/pyrowave.md` (section 3.1). Golden vectors for the three decision functions live in
 `tests/fixtures/vectors/` and are replayed by the unit tests; the Android JNI instrumented test (task T4) will replay the same files.
 
 ## Build and test

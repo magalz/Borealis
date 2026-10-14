@@ -111,7 +111,7 @@ The APK has `lib/<abi>/libborealis_core.so`, `libborealis_jni.so`, `libborealis_
 
 ## `:borealis:host`
 
-Every LuminalShine compatibility rule on the Android side lives here (the host contract in `docs/host-contract` is the reference). Package root `io.github.magalz.borealis.host`; the module depends on `:borealis:logging` and `:borealis:native`, and `:app` depends on it. It has no production code yet: the packages below are added by the phase 1 tasks.
+Every LuminalShine compatibility rule on the Android side lives here (the host contract in `docs/host-contract` is the reference). Package root `io.github.magalz.borealis.host`; the module depends on `:borealis:logging` and `:borealis:native`, and `:app` depends on it. The packages below are added by the phase 1 tasks.
 
 | Package | Content |
 | --- | --- |
@@ -119,6 +119,14 @@ Every LuminalShine compatibility rule on the Android side lives here (the host c
 | `host.launch` | App launch and resume requests |
 | `host.caps` | Host capabilities derived from `/serverinfo` |
 | `host.video` | Codec and video-stream selection |
+
+### `host.pairing`
+
+LuminalShine does not route `/unpair`, and the user types the PIN and the device name in the host Web UI (contract sections 4.1 and 10.2, requirement 4).
+
+- `BestEffortUnpair.unpair(client, url)`: sends `/unpair` with `Connection: close`, because LuminalShine writes stray bytes after its response on that connection, reads at most 16 KiB of body and returns true only when the XML root has `status_code="200"`. Any I/O error, non-2xx status or unreadable body is false; it never throws and logs on `LogTag.PAIR` without the URL. `NvHTTP.unpair()` delegates to it and returns the result; `PairingManager` ignores it, `PcView.doUnpair` shows the Web UI hint when it is false.
+- `PairingHints`: `webUiUrl(address, httpPort)` is `https://<host>:<httpPort + 1>` (IPv6 bracketed once, zone id percent-encoded per RFC 6874, null for a port outside 1..65534 or an unusable address); `suggestedDeviceName(model)` removes `xbox` and `webos` in any case and falls back to `Borealis`; `pinHint` and `unpairHint` build the texts of `strings_pairing.xml` for the PIN dialog of `PcView.doPair` and the failed unpair.
+- The `okhttp` dependency of the module is declared with a literal version next to a `//noinspection UseTomlInstead`; keep it equal to `app/build.gradle` (a version catalog entry would make Lint flag the upstream declaration).
 
 User-facing strings of the module stay in the module, one file per area, with Brazilian Portuguese next to the default English: `res/values/strings_pairing.xml`, `strings_stream.xml`, `strings_launch.xml` and the same names under `res/values-pt-rBR/`.
 

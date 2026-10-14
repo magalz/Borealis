@@ -23,8 +23,10 @@ class PairingHintsTest {
     fun `a zone id is percent-encoded as RFC 6874 requires`() {
         assertThat(PairingHints.webUiUrl("fe80::1%wlan0", 47989))
             .isEqualTo("https://[fe80::1%25wlan0]:47990")
-        assertThat(PairingHints.webUiUrl("[fe80::1%wlan 0]", 47989))
-            .isEqualTo("https://[fe80::1%25wlan%200]:47990")
+        assertThat(PairingHints.webUiUrl("[fe80::1%wlan+0]", 47989))
+            .isEqualTo("https://[fe80::1%25wlan%2B0]:47990")
+        assertThat(PairingHints.webUiUrl("fe80::1%ü", 47989))
+            .isEqualTo("https://[fe80::1%25%C3%BC]:47990")
     }
 
     @Test

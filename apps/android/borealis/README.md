@@ -144,6 +144,7 @@ LuminalShine can need about 18 s after the client attaches to send the first fra
 - `FirstFrameWatchdog` (states IDLE, ARMED, SATISFIED, FIRED, CANCELLED; one terminal state per stream) ends the stream with `ML_ERROR_NO_VIDEO_FRAME` if no frame is rendered 45 s after `connectionStarted`, above the about 35 s worst case of the patched moonlight-common-c deadlines. The termination runs off the main thread because `Game.connectionTerminated` does network I/O first. The watchdog is cancelled on stop, `onStop`, `onDestroy` and termination.
 - `FirstFrameSignal` is raised by `MediaCodecDecoderRenderer` at the first output buffer released for rendering (Choreographer and renderer-thread paths); after that it costs one volatile read per frame.
 - `StreamErrorHints.withHint` appends a LuminalShine hint to the -100 (no video traffic) and -101 (no complete frame) messages; the blocked-port message is left unchanged.
+- `HevcSpsMonitor` (fed by `MediaCodecDecoderRenderer` with each HEVC SPS) logs the profile, chroma format and bit depth on `LogTag.VIDEO` when they change, and warns when the stream is 10-bit and the decoder does not declare Main10 or when 4:4:4 is downgraded to 4:2:0; `HevcSps` reads the SPS (emulation prevention, sub-layers, bounded Exp-Golomb) without ever throwing, so decoding is unaffected.
 
 User-facing strings of the module stay in the module, one file per area, with Brazilian Portuguese next to the default English: `res/values/strings_pairing.xml`, `strings_stream.xml`, `strings_launch.xml` and the same names under `res/values-pt-rBR/`.
 

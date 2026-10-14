@@ -24,3 +24,6 @@ apps/android/app/src/main/jni/borealis/** text=auto eol=lf
 
 # Raw host responses are byte-exact captures (CRLF line ends, trailing bytes).
 core/tests/fixtures/**/*.response binary
+
+# HEVC SPS test fixtures (raw NAL units).
+apps/android/borealis/host/src/test/resources/hevc/*.bin binary

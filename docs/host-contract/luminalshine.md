@@ -813,16 +813,18 @@ Moonlight Android 12.2 client already does the right thing the item says so.
    `borealis:apps/android/app/src/main/java/com/limelight/PcView.java:554`).
    Borealis must treat that call as best-effort, and must explain that removing a
    host on the phone does not unpair it on the host (unpair through the Web UI or
-   `POST /api/clients/unpair`). **Unverified:** two cases to test against a live
-   host. If the host's 404 reaches the client as an HTTP 404 status, OkHttp
-   handling in `NvHTTP.openHttpConnection` throws `FileNotFoundException`
-   (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:445-446`),
-   which could mask a PIN_WRONG or FAILED pairing result in `PairingManager` and
-   `PcView`. If instead the host answers HTTP 200 with an XML body whose
-   `status_code` is 404, `unpair()` ignores the body. The host writes the XML
-   body and then an `HTTP/1.1 404 NOT FOUND` line into the response
-   (`src/nvhttp.cpp:2136-2140`), so which of the two the client sees is not
-   established statically.
+   `POST /api/clients/unpair`). **Verified against LuminalShine 26.09.1
+   (2026-10-14, fixture `core/tests/fixtures/luminalshine/26.09.1/unpair-http.response`):**
+   over plain HTTP the host answers `HTTP/1.1 200 OK` with `Content-Length: 64`
+   and an XML body whose `status_code` is 404, then writes 88 more bytes on the
+   same connection (`HTTP/1.1 404 NOT FOUND`, CRLF and the XML again, with no
+   header block) and closes the socket about 80 ms later
+   (`src/nvhttp.cpp:2136-2140`). The client therefore does not get an HTTP 404:
+   `unpair()` returns normally and ignores the body, so `FileNotFoundException`
+   does not mask PIN_WRONG or FAILED. The risk is the trailing bytes: an HTTP
+   client that pools the connection can read them as the start of its next
+   response on that connection. Send `/unpair` without connection reuse and
+   read its XML `status_code`.
 5. **Keep the client certificate stable and use HTTPS for everything except
    pairing phases 1 to 4 and the initial `/serverinfo`.** Identity, per-client
    settings and the virtual display depend on the certificate (section 5.1).

@@ -21,3 +21,6 @@ apps/android/app/src/main/jni/borealis/** text=auto eol=lf
 *.jar binary
 *.so binary
 *.a binary
+
+# Raw host responses are byte-exact captures (CRLF line ends, trailing bytes).
+core/tests/fixtures/**/*.response binary

@@ -13,17 +13,26 @@ import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.logging.LogcatSink
 import io.github.magalz.borealis.logging.RotatingFileSink
 import io.github.magalz.borealis.nativecore.BorealisCore
+import io.github.magalz.borealis.settings.LogSettings
 import java.io.File
 
 @HiltAndroidApp
 class BorealisApplication : Application() {
+    // Kept so that the preference listener of LogSettings stays registered.
+    private lateinit var logSettings: LogSettings
+
     override fun onCreate() {
         super.onCreate()
 
         // noBackupFilesDir: logs and crash reports must never end up in Auto Backup.
         val logDir = File(noBackupFilesDir, "logs")
-        val logcatLevel = if (BuildConfig.DEBUG) LogLevel.DEBUG else LogLevel.INFO
-        BorealisLog.initialize(listOf(LogcatSink(logcatLevel), RotatingFileSink(logDir)))
+        // Release builds log INFO and above; "Verbose logging" in the settings lowers it to DEBUG.
+        val baseLevel = if (BuildConfig.DEBUG) LogLevel.DEBUG else LogLevel.INFO
+        BorealisLog.initialize(
+            listOf(LogcatSink(baseLevel), RotatingFileSink(logDir)),
+            minLevel = baseLevel,
+        )
+        logSettings = LogSettings.start(this, baseLevel)
         JulBridge.install()
         CrashHandler.install(
             logDir,

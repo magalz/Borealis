@@ -29,7 +29,7 @@ reported, fixtures, or screenshots, except where a row says otherwise:
 | Private keys, client keys, key material | Never logged. |
 | Certificates (client and host PEM/DER) | Never logged in full. A short SHA-256 fingerprint prefix may be logged. |
 | IP addresses and host names | Logged as-is when the "Mask addresses" setting is off. When it is on, they are masked when lines are written, and again in the diagnostic bundle. Masking covers IPv4 addresses (octets of at most 255), IPv6 addresses and host names, for example `192.168.x.x` or a stable host alias. Never sent in crash reports. |
-| URL query values | Redacted, except an allowlist of non-identifying protocol parameters such as `phrase` and `mode`. Query keys may stay. TODO(verify): the final allowlist, which the implementer sets and this row must then list. |
+| URL query values | Replaced by `[REDACTED]`, except for this allowlist of non-identifying GameStream parameters (compared without regard to case): `phrase`, `updateState`, `mode`, `additionalStates`, `sops`, `hdrMode`, `clientHdrCapVersion`, `clientHdrCapSupportedFlagsInUint32`, `clientHdrCapMetaDataId`, `clientHdrCapDisplayData`, `localAudioPlayMode`, `surroundAudioInfo`, `remoteControllersBitmap`, `gcmap`, `gcpersist`, `corever`, `AssetType` and `AssetIdx`. Query keys stay. `uniqueid`, `uuid`, `devicename`, `appid`, `rikey`, `rikeyid`, `salt`, `clientcert` and every pairing parameter are never in the list. Credentials in a URL (`user:password@`) are redacted too. |
 | Stream content, controller input, window titles | Never logged. |
 
 Implementation requirements:

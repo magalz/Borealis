@@ -190,7 +190,7 @@ TEST(HostCapsMask, EachPyrowaveBitMapsToItsProfile) {
          Row {0x01000000U, BOREALIS_PYROWAVE_SDR_444},
          Row {0x02000000U, BOREALIS_PYROWAVE_HDR_420},
          Row {0x04000000U, BOREALIS_PYROWAVE_HDR_444},
-         Row {0x05800000U, BOREALIS_PYROWAVE_SDR_420 | BOREALIS_PYROWAVE_HDR_444},
+         Row {0x04800000U, BOREALIS_PYROWAVE_SDR_420 | BOREALIS_PYROWAVE_HDR_444},
        }) {
     const auto caps = parse_ok("7.1.431.-1", row.mask);
     EXPECT_EQ(caps.pyrowave_profiles, row.profiles) << std::hex << row.mask;

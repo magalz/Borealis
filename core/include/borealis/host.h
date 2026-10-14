@@ -28,6 +28,12 @@
 extern "C" {
 #endif
 
+/*
+ * The constants below are macros on purpose: this header must compile as C and the
+ * values are mapped one-to-one by the JNI layer.
+ */
+/* NOLINTBEGIN(cppcoreguidelines-macro-usage) */
+
 /* Status codes returned by the functions that return int. */
 #define BOREALIS_OK 0
 #define BOREALIS_ERR_INVALID_ARGUMENT (-1) /* NULL out, NULL pointer with len > 0, unknown verb */
@@ -55,6 +61,7 @@ extern "C" {
 #define BOREALIS_PYROWAVE_HDR_420 0x04u
 #define BOREALIS_PYROWAVE_HDR_444 0x08u
 
+  /* NOLINTNEXTLINE(modernize-use-using): C header */
   typedef struct borealis_host_caps {
     int32_t family; /* BOREALIS_HOST_FAMILY_* */
     int32_t version[4]; /* parsed appversion, all 0 when family is UNKNOWN */
@@ -102,6 +109,7 @@ extern "C" {
 #define BOREALIS_LAUNCH_CATEGORY_CAPTURE_OR_DISPLAY 4 /* 503, capture/encoder/virtual-display failure */
 #define BOREALIS_LAUNCH_CATEGORY_NO_RUNNING_APP 5 /* 503 on /resume, nothing to resume */
 
+  /* NOLINTNEXTLINE(modernize-use-using): C header */
   typedef struct borealis_launch_decision {
     int32_t action; /* BOREALIS_LAUNCH_ACTION_* */
     int32_t delay_ms; /* wait before the retry, 0 unless action is RETRY */
@@ -150,6 +158,8 @@ extern "C" {
    * Pure arithmetic, no ownership. Cannot fail.
    */
   BOREALIS_CORE_API int32_t borealis_launch_fps(int32_t is_gfe, int32_t launch_fps, int32_t stream_fps);
+
+  /* NOLINTEND(cppcoreguidelines-macro-usage) */
 
 #ifdef __cplusplus
 } /* extern "C" */

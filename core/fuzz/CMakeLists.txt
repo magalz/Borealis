@@ -1,6 +1,5 @@
 # libFuzzer scaffolding. Included from core/CMakeLists.txt only when
-# BOREALIS_CORE_BUILD_FUZZERS is ON (clang only). No fuzz targets exist yet;
-# they arrive with the first parser (see README.md).
+# BOREALIS_CORE_BUILD_FUZZERS is ON (clang only). See README.md.
 
 # borealis_add_fuzzer(<name> <source>)
 # Builds a libFuzzer executable linked against borealis::core with
@@ -18,3 +17,6 @@ function(borealis_add_fuzzer name source)
   target_link_options(${name} PRIVATE -fsanitize=fuzzer,address,undefined)
   borealis_core_apply_build_options(${name})
 endfunction()
+
+borealis_add_fuzzer(appversion_fuzz appversion_fuzz.cpp)
+borealis_add_fuzzer(launch_message_fuzz launch_message_fuzz.cpp)

@@ -14,7 +14,12 @@ class BorealisAndroidLibraryPlugin : Plugin<Project> {
 
             extensions.configure<LibraryExtension> {
                 compileSdk = BorealisBuild.COMPILE_SDK
-                defaultConfig { minSdk = BorealisBuild.MIN_SDK }
+                ndkVersion = BorealisBuild.NDK_VERSION
+                defaultConfig {
+                    minSdk = BorealisBuild.MIN_SDK
+                    testInstrumentationRunner = BorealisBuild.INSTRUMENTATION_RUNNER
+                    testInstrumentationRunnerArguments[CORE_VERSION_ARGUMENT] = coreVersion()
+                }
                 compileOptions {
                     sourceCompatibility = JavaVersion.VERSION_17
                     targetCompatibility = JavaVersion.VERSION_17
@@ -27,5 +32,6 @@ class BorealisAndroidLibraryPlugin : Plugin<Project> {
 
             dependencies.add("testImplementation", libs.findLibrary("junit").get())
             dependencies.add("testImplementation", libs.findLibrary("truth").get())
+            addInstrumentedTestDependencies()
         }
 }

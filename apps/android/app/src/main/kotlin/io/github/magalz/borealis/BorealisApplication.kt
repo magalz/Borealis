@@ -11,6 +11,7 @@ import io.github.magalz.borealis.logging.LogLevel
 import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.logging.LogcatSink
 import io.github.magalz.borealis.logging.RotatingFileSink
+import io.github.magalz.borealis.nativecore.BorealisCore
 import java.io.File
 
 @HiltAndroidApp
@@ -36,6 +37,7 @@ class BorealisApplication : Application() {
             "applicationId" to BuildConfig.APPLICATION_ID,
             "sdk" to Build.VERSION.SDK_INT,
         )
+        BorealisCore.logStartup(bridgeVersion = NativeBridge.coreVersion())
     }
 
     private companion object {

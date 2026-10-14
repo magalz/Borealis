@@ -19,7 +19,12 @@ internal class BorealisRootPlugin : Plugin<Project> {
 
             val kotlinTargets =
                 listOf("borealis/**/*.kt", "build-logic/**/*.kt", "app/src/main/kotlin/**/*.kt")
-            val excluded = listOf("**/build/**", "**/.gradle/**")
+            val nativeTargets =
+                listOf("borealis/native/src/main/cpp", "app/src/main/jni/borealis").flatMap { dir ->
+                    listOf("c", "cc", "cpp", "h", "hpp").map { "$dir/**/*.$it" }
+                }
+            val coreClangFormat = rootDir.resolve("../../core/.clang-format").canonicalPath
+            val excluded = listOf("**/build/**", "**/.gradle/**", "**/.cxx/**")
 
             // The version catalog accessor is only registered once the build script is evaluated.
             afterEvaluate {
@@ -29,6 +34,13 @@ internal class BorealisRootPlugin : Plugin<Project> {
                         target(kotlinTargets)
                         targetExclude(excluded)
                         ktfmt(ktfmtVersion).kotlinlangStyle()
+                    }
+                    // clang-format must be on PATH (or set spotless's `pathToExe`); the style is
+                    // core's, so the native code in this tree follows the same rules.
+                    cpp {
+                        target(nativeTargets)
+                        targetExclude(excluded)
+                        clangFormat(installedClangFormatVersion()).style("file:${coreClangFormat}")
                     }
                     kotlinGradle {
                         target("**/*.gradle.kts")
@@ -49,4 +61,29 @@ internal class BorealisRootPlugin : Plugin<Project> {
                 buildUponDefaultConfig.set(true)
             }
         }
+
+    /**
+     * Spotless insists on the exact `clang-format` version it is told, so use the one on PATH
+     * instead of pinning a version that CI images and developer machines will not share. When there
+     * is none, Spotless reports the missing executable itself.
+     */
+    private fun Project.installedClangFormatVersion(): String =
+        runCatching {
+            providers
+                .exec {
+                    commandLine("clang-format", "--version")
+                    isIgnoreExitValue = true
+                }
+                .standardOutput
+                .asText
+                .get()
+        }
+            .getOrNull()
+            ?.let { CLANG_FORMAT_VERSION_OUTPUT.find(it)?.groupValues?.get(1) }
+            ?: CLANG_FORMAT_FALLBACK_VERSION
+
+    private companion object {
+        val CLANG_FORMAT_VERSION_OUTPUT = Regex("""clang-format version (\d+(?:\.\d+)*)""")
+        const val CLANG_FORMAT_FALLBACK_VERSION = "21"
+    }
 }

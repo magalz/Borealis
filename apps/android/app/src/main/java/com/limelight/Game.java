@@ -36,11 +36,6 @@ import com.limelight.utils.ServerHelper;
 import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.SpinnerDialog;
 import com.limelight.utils.UiHelper;
-// BOREALIS: first-frame message and watchdog (host.video)
-import io.github.magalz.borealis.host.video.HandlerWatchdogScheduler;
-import io.github.magalz.borealis.host.video.StreamErrorHints;
-import io.github.magalz.borealis.host.video.StreamStartupGuard;
-import io.github.magalz.borealis.host.video.StreamStartupHost;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
@@ -154,20 +149,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     private MediaCodecDecoderRenderer decoderRenderer;
 
-    // BOREALIS: shows the preparing message and runs the first-frame watchdog (host.video)
-    private final StreamStartupGuard startupGuard = new StreamStartupGuard(new StreamStartupHost() {
-        private void request(int visibility) {
-            requestedNotificationOverlayVisibility = visibility;
-            if (!isHidingOverlays) notificationOverlayView.setVisibility(visibility);
-        }
-        @Override public void showPreparing() {
-            notificationOverlayView.setText(io.github.magalz.borealis.host.R.string.stream_preparing_display);
-            request(View.VISIBLE);
-        }
-        @Override public void clearPreparing() { request(View.GONE); }
-        @Override public void runOnUi(Runnable action) { runOnUiThread(action); }
-        @Override public void terminateNoVideoFrame() { connectionTerminated(MoonBridge.ML_ERROR_NO_VIDEO_FRAME); }
-    }, new HandlerWatchdogScheduler());
+    // BOREALIS: preparing message and first-frame watchdog (host.video)
+    private final io.github.magalz.borealis.host.video.StreamStartupGuard startupGuard =
+            io.github.magalz.borealis.host.video.StreamStartup.create(this::runOnUiThread,
+                    id -> notificationOverlayView.setText(id), v -> requestedNotificationOverlayVisibility = v,
+                    v -> notificationOverlayView.setVisibility(v), () -> isHidingOverlays,
+                    () -> connectionTerminated(MoonBridge.ML_ERROR_NO_VIDEO_FRAME));
     private boolean reportedCrash;
 
     private WifiManager.WifiLock highPerfWifiLock;
@@ -2381,7 +2368,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                                     break;
                             }
                             // BOREALIS: LuminalShine hint on the no-video errors (-100, -101)
-                            message = StreamErrorHints.withHint(errorCode, message, id -> getString(id));
+                            message = io.github.magalz.borealis.host.video.StreamErrorHints.withHint(errorCode, message, Game.this::getString);
                         }
 
                         if (portFlags != 0) {

@@ -1,0 +1,108 @@
+# Host contract
+
+This folder is the canonical, source-referenced description of what the
+LuminalShine host offers to a streaming client and what it requires from one.
+Every later Borealis task that touches the host (retry policy, capability
+parsing, PyroWave, REST companion features) builds on the facts recorded here
+instead of re-reading the host source.
+
+## Contents
+
+| File | Subject |
+| --- | --- |
+| [luminalshine.md](luminalshine.md) | GameStream HTTP(S), pairing, client identity, launch/resume, RTSP, control stream, input, audio, encryption, discovery, REST API, WebRTC preemption, client obligations for Borealis, gaps versus Apollo/Artemis clients, proposals for LuminalShine |
+| [pyrowave.md](pyrowave.md) | The experimental PyroWave codec: provenance, availability gating, negotiation, host constraints, bitstream and transport layout, client feedback, decoder requirements, Android limitations |
+
+## Verified against
+
+| Item | Value |
+| --- | --- |
+| Host repository | `NortheBridge/luminalshine` (<https://github.com/NortheBridge/luminalshine>) |
+| Commit | `5afdbdc6d04e0ad24cdcab5cfa9743bfc4f2dca8` (`NortheBridge/luminalshine@5afdbdc6`) |
+| Commit date | 2026-10-05 |
+| Nearest release tag | `26.09.1` (`git describe`: `26.09.1-15-g5afdbdc6`) |
+| Contract revision date | 2026-10-13 |
+| Protocol version string the host reports | `7.1.431.-1` (`src/nvhttp.h:37`) |
+| Lineage | Sunshine, then Vibeshine, then LuminalShine; not derived from Apollo (`gh-pages-template/compare.html:66-82`) |
+
+The host source tree is the only authority for the host side. The Moonlight
+client facts were checked against the Moonlight Android 12.2 subtree in this
+repository (`apps/android`). Comparisons with Artemis were checked against
+Artemis at commit `c5cf27f4` (2026-09-09).
+
+## Reference conventions
+
+- A reference of the form `src/nvhttp.cpp:2831` is a path relative to the
+  luminalshine repository root at `5afdbdc6`, followed by a line (or
+  `first-last` line range).
+- A reference prefixed with `borealis:` is relative to the root of this
+  repository (for example `borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:781`).
+- A reference prefixed with `artemis:` is relative to the Artemis repository
+  root at `c5cf27f4`.
+- A claim marked **Unverified** was not confirmed against source or against a
+  running host. Do not build behaviour on it without verifying it first.
+- Statements under the heading "Borealis recommendation" or in the
+  "Client obligations for Borealis" section are design guidance, not host
+  behaviour.
+- No claim about a live host session is made anywhere in this folder. The
+  analysis was static source reading only.
+
+## How to update the contract when the host changes
+
+1. Fetch the new LuminalShine revision and record its commit hash, commit date
+   and nearest tag.
+2. Re-verify every reference. Open each cited path and line range, fix line
+   numbers that drifted, and correct or delete any claim the source no longer
+   supports. The most volatile areas are listed in the next section.
+3. Diff the revision against `5afdbdc6` for the files named in the next
+   section so that new endpoints, status codes and attributes are not missed
+   (a plain `git diff 5afdbdc6..<new> -- <paths>` is sufficient).
+4. Update `luminalshine.md` and `pyrowave.md`, keeping the section structure.
+   Move superseded behaviour into a short "Changed since" note rather than
+   silently rewriting it, so Borealis can still talk to older hosts.
+5. Bump the "Verified against" table above (commit, date, tag) and the
+   compatibility table below.
+6. Update the contract fixtures (recorded host responses and captured
+   handshakes used by the Borealis core tests). They live in
+   `core/tests/fixtures/luminalshine/<version>/`, one directory per verified
+   LuminalShine version. The directory does not exist yet; it is created by the
+   task that adds the first fixture. Add a new directory for a new version
+   instead of overwriting the old one.
+7. Run the contract tests against the new fixtures and record the result in the
+   compatibility table.
+8. Commit with a Conventional Commit message such as
+   `docs(host-contract): re-verify against luminalshine <tag>`.
+
+### Volatile areas to re-check first
+
+| Area | Host files |
+| --- | --- |
+| Launch/resume status codes and messages | `src/nvhttp.cpp` (`launch`, `resume`, `cancel`) |
+| Pairing flow and limits | `src/nvhttp.cpp` (`pair`, `submit_pin`) |
+| Codec advertisement | `src/nvhttp.cpp` (`serverinfo`), `src/rtsp.cpp` (`cmd_describe`) |
+| ANNOUNCE parsing and validation | `src/rtsp.cpp` (`cmd_announce`) |
+| Display-mode reconciliation | `src/rtsp.cpp`, `src/requested_display_mode.h` |
+| Control stream and feedback | `src/stream.cpp` (`controlBroadcastThread`) |
+| PyroWave contract | `src/pyrowave/contract.h`, `src/pyrowave/backend.cpp`, `src/pyrowave/pyrowave_encode.cpp`, `third-party/pyrowave/src/pyrowave/pyrowave_common.h`, `docs/pyrowave.md` |
+| REST API and authentication | `src/confighttp.cpp`, `src/http_auth.cpp` |
+| Default settings | `src/config.cpp` |
+
+## Compatibility table
+
+The table is a stub. A row is added for each Borealis release; the status
+column is filled in by the contract tests and manual verification described
+above.
+
+| Borealis version | LuminalShine version | Host commit | Status | Notes |
+| --- | --- | --- | --- | --- |
+| (unreleased) | `26.09.1` + 15 commits | `5afdbdc6` | Documented, not yet tested | Contract written from static source reading only; no fixture set and no live-host test exists yet |
+
+Allowed status values:
+
+| Status | Meaning |
+| --- | --- |
+| Documented, not yet tested | The contract exists but no automated or manual test has run against this host version |
+| Fixture-tested | Contract tests pass against recorded fixtures for this version |
+| Live-verified | A Borealis build was exercised against a real host of this version (pairing, launch, resume, stream) |
+| Known issues | A deviation from the contract was found; see the notes column |
+| Unsupported | The host version is known to be incompatible |

@@ -82,6 +82,7 @@ object HevcSpsBuilder {
         nalType: Int = 33,
         layerId: Int = 0,
         startCode: ByteArray = START_CODE_4,
+        extraFields: Int = 1,
         escaped: Boolean = true,
     ): ByteArray {
         val w = BitWriter()
@@ -111,7 +112,8 @@ object HevcSpsBuilder {
         if (conformanceWindow) repeat(4) { w.ue(it + 1) }
         w.ue(bitDepthLuma - 8)
         w.ue(bitDepthChroma - 8)
-        w.ue(4) // log2_max_pic_order_cnt_lsb_minus4: later syntax the parser must not need
+        // Later syntax (log2_max_pic_order_cnt_lsb_minus4 and so on) the parser must not need.
+        repeat(extraFields) { w.ue(4) }
         val rbsp = w.rbspTrailingBits()
         val header =
             byteArrayOf(

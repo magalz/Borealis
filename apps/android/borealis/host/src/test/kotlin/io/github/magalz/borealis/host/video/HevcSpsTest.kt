@@ -15,6 +15,7 @@ class HevcSpsTest {
     private val fixtures =
         mapOf(
             "main-420-8bit.bin" to HevcSpsInfo(1, flags(1, 2), 1, false, 8, 8),
+            "main-420-8bit-conformance-window.bin" to HevcSpsInfo(1, flags(1, 2), 1, false, 8, 8),
             "main10-420-10bit.bin" to HevcSpsInfo(2, flags(2), 1, false, 10, 10),
             "rext-444-8bit.bin" to HevcSpsInfo(4, flags(4), 3, false, 8, 8),
             "rext-444-10bit.bin" to HevcSpsInfo(4, flags(4), 3, false, 10, 10),
@@ -75,8 +76,9 @@ class HevcSpsTest {
     fun `every truncation of a valid SPS is null or the full result`() {
         val built =
             listOf(
-                HevcSpsBuilder.sps(conformanceWindow = true),
+                HevcSpsBuilder.sps(conformanceWindow = true, extraFields = 40),
                 HevcSpsBuilder.sps(
+                    extraFields = 40,
                     profileIdc = 4,
                     chromaFormatIdc = 3,
                     bitDepthLuma = 10,
@@ -86,14 +88,17 @@ class HevcSpsTest {
         for (nal in fixtures.keys.map(::fixture) + built) {
             val full = HevcSps.parse(nal)
             assertThat(full).isNotNull()
-            var parsedPrefixes = 0
             for (length in 0..nal.size) {
                 val result = HevcSps.parse(nal, 0, length)
                 assertThat(result == null || result == full).isTrue()
-                if (result != null) parsedPrefixes++
             }
-            assertThat(parsedPrefixes).isAtLeast(1)
-            assertThat(HevcSps.parse(nal, 0, nal.size)).isEqualTo(full)
+            // A bounded prefix suffices: from the shortest parsable length on, every longer one
+            // gives the full result, and that length is shorter than the whole NAL.
+            val shortest = (0..nal.size).first { HevcSps.parse(nal, 0, it) != null }
+            assertThat(shortest).isLessThan(nal.size)
+            for (length in shortest..nal.size) {
+                assertThat(HevcSps.parse(nal, 0, length)).isEqualTo(full)
+            }
             assertThat(HevcSps.parse(nal, 0, 10)).isNull()
         }
     }

@@ -7,10 +7,13 @@ package io.github.magalz.borealis.logging
  * - labelled pairing PINs (4-8 digits), password/secret/token/API-key values, `Authorization` and
  *   `Cookie` headers, PEM blocks and long hex/base64 values in cert/key/signature fields.
  *
- * IP addresses are only masked when [maskIpAddresses] is on. Input is capped at a maximum length
+ * IP addresses are only masked when [maskAddresses] is on. Input is capped at a maximum length
  * first, so hostile or huge strings cannot make redaction expensive.
  */
-class Redactor(private val maskIpAddresses: Boolean = false) {
+class Redactor(maskAddresses: Boolean = false) {
+    /** Address masking; may be switched while the redactor is in use and affects later calls. */
+    @Volatile var maskAddresses: Boolean = maskAddresses
+
     /** Redacts secrets in free text; text longer than [maxLength] is cut and marked. */
     fun redact(text: String, maxLength: Int = DEFAULT_MAX_LENGTH): String {
         if (text.length <= maxLength) return redactAll(text)
@@ -39,7 +42,7 @@ class Redactor(private val maskIpAddresses: Boolean = false) {
         result = PAIRING_PARAM.replace(result) { it.groupValues[1] + REDACTED }
         result = PIN.replace(result) { it.groupValues[1] + REDACTED }
         result = LONG_SECRET.replace(result) { it.groupValues[1] + it.groupValues[2] + REDACTED }
-        if (maskIpAddresses) {
+        if (maskAddresses) {
             result = IPV4.replace(result, IP_MASK)
             result = IPV6.replace(result, IP_MASK)
         }

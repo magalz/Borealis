@@ -40,6 +40,16 @@ object BorealisLog {
         previous?.sinks?.forEach { runCatching { it.close() } }
     }
 
+    /** Changes the minimum level of the running configuration; ignored before [initialize]. */
+    fun setMinLevel(level: LogLevel) {
+        // Not implemented yet.
+    }
+
+    /** Switches address masking of the running configuration; ignored before [initialize]. */
+    fun setMaskAddresses(enabled: Boolean) {
+        // Not implemented yet.
+    }
+
     fun log(
         level: LogLevel,
         tag: LogTag,

@@ -115,6 +115,7 @@ internal object BundleBuilder {
         context: Context,
         sections: Collection<DiagnosticSection>,
         now: Instant = Instant.now(),
+        flushLogs: () -> Unit = {},
     ): File {
         val dir = File(context.cacheDir, DIRECTORY)
         check(dir.isDirectory || dir.mkdirs()) { "Cannot create $dir" }

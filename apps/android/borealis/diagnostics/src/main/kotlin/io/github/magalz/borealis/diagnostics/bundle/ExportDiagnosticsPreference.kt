@@ -44,6 +44,7 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
     internal var uriFor: (File) -> Uri = {
         FileProvider.getUriForFile(context, fileProviderAuthority(context.packageName), it)
     }
+    internal var flushLogs: () -> Unit = {}
     internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

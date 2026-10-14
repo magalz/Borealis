@@ -62,6 +62,22 @@ class BundleBuilderTest {
     }
 
     @Test
+    fun `the log flush runs before the log files are read`() {
+        val zip =
+            BundleBuilder.build(
+                context,
+                emptyList(),
+                Instant.parse("2026-10-14T12:34:56Z"),
+                flushLogs = {
+                    logDir.mkdirs()
+                    File(logDir, "borealis.log").writeLines("queued line")
+                },
+            )
+
+        assertThat(entriesOf(zip)["logs/borealis.log"]).isEqualTo("queued line\n")
+    }
+
+    @Test
     fun `a new bundle replaces the older ones and leaves no unfinished file`() {
         val dir = File(context.cacheDir, "diagnostics").apply { mkdirs() }
         File(dir, "borealis-diagnostics-20250101-000000.zip").writeText("old")

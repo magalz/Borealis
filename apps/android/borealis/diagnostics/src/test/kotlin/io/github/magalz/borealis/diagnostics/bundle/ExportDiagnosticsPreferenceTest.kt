@@ -85,6 +85,19 @@ class ExportDiagnosticsPreferenceTest {
                 (0 until view.childCount).any { containsScrollView(view.getChildAt(it)) })
 
     @Test
+    fun `a click flushes the pending log lines into the bundle`() {
+        allowSharing()
+        val logDir = File(activity.noBackupFilesDir, "logs").apply { mkdirs() }
+
+        preference()
+            .apply { flushLogs = { File(logDir, "borealis.log").writeText("queued\n") } }
+            .onClick()
+
+        val cache = File(activity.cacheDir, "diagnostics").listFiles()!!.single()
+        assertThat(unzip(cache.readBytes())["logs/borealis.log"]).isEqualTo("queued\n")
+    }
+
+    @Test
     fun `a click shares the bundle through a chooser`() {
         allowSharing()
 

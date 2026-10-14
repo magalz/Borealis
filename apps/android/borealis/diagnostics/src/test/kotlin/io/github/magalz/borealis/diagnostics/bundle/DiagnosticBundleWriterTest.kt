@@ -25,9 +25,10 @@ class DiagnosticBundleWriterTest {
         sections: List<DiagnosticSection> = emptyList(),
         maxBytes: Long = DiagnosticBundleWriter.DEFAULT_MAX_BYTES,
         redact: (String) -> String = { it },
+        flushLogs: () -> Unit = {},
     ): Map<String, String> {
         val out = ByteArrayOutputStream()
-        DiagnosticBundleWriter(logDir, sections, redact, maxBytes)
+        DiagnosticBundleWriter(logDir, sections, redact, maxBytes, flushLogs)
             .write(SAMPLE_MANIFEST, SAMPLE_DECODERS, out)
         return unzip(out.toByteArray())
     }
@@ -239,6 +240,31 @@ class DiagnosticBundleWriterTest {
         val truncated = manifestOf(entries).truncated.single()
         assertThat(truncated.name).isEqualTo("big.txt")
         assertThat(truncated.reason).isEqualTo("size-limit")
+    }
+
+    @Test
+    fun `pending log lines are flushed once before the log files are read`() {
+        var flushes = 0
+
+        val entries =
+            bundle(
+                flushLogs = {
+                    flushes++
+                    File(logDir, "borealis.log").writeLines("written by the flush")
+                }
+            )
+
+        assertThat(flushes).isEqualTo(1)
+        assertThat(entries["logs/borealis.log"]).isEqualTo("written by the flush\n")
+    }
+
+    @Test
+    fun `a flush that fails does not stop the bundle`() {
+        File(logDir, "borealis.log").writeLines("kept")
+
+        val entries = bundle(flushLogs = { throw IllegalStateException("queue stuck") })
+
+        assertThat(entries["logs/borealis.log"]).isEqualTo("kept\n")
     }
 
     @Test

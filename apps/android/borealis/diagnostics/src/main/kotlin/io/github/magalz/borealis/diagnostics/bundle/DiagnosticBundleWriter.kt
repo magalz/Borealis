@@ -26,6 +26,7 @@ class DiagnosticBundleWriter(
     private val sections: Collection<DiagnosticSection>,
     private val redact: (String) -> String,
     private val maxBytes: Long = DEFAULT_MAX_BYTES,
+    private val flushLogs: () -> Unit = {},
 ) {
     private class Entry(val name: String, val bytes: ByteArray)
 

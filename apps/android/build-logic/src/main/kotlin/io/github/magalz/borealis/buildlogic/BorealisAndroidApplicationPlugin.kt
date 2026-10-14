@@ -46,6 +46,8 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             // Imports the Prefab package published by :borealis:native into the ndk-build.
             dsl.buildFeatures.prefab = true
             dsl.defaultConfig.testInstrumentationRunner = BorealisBuild.INSTRUMENTATION_RUNNER
+            dsl.defaultConfig.testInstrumentationRunnerArguments[CORE_VERSION_ARGUMENT] =
+                coreVersion()
             // Prefab rejects a shared library that bundles its own libc++, so the app uses the
             // shared one. Upstream native code is plain C: only Borealis modules are affected.
             dsl.defaultConfig.externalNativeBuild.ndkBuild.arguments += "APP_STL=c++_shared"

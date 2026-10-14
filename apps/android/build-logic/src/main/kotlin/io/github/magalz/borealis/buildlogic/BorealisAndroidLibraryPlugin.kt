@@ -18,6 +18,7 @@ class BorealisAndroidLibraryPlugin : Plugin<Project> {
                 defaultConfig {
                     minSdk = BorealisBuild.MIN_SDK
                     testInstrumentationRunner = BorealisBuild.INSTRUMENTATION_RUNNER
+                    testInstrumentationRunnerArguments[CORE_VERSION_ARGUMENT] = coreVersion()
                 }
                 compileOptions {
                     sourceCompatibility = JavaVersion.VERSION_17

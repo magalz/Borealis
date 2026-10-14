@@ -20,6 +20,12 @@ internal object BorealisBuild {
 internal val Project.libs: VersionCatalog
     get() = extensions.getByType<VersionCatalogsExtension>().named("libs")
 
+/** Instrumentation argument that carries the borealis-core version the tests expect. */
+internal const val CORE_VERSION_ARGUMENT = "expectedCoreVersion"
+
+/** borealis-core's version, from `core/CMakeLists.txt` (the repository root is two levels up). */
+internal fun Project.coreVersion(): String = BorealisCoreVersion.read(rootDir.resolve("../.."))
+
 /** Instrumented (`androidTest`) tests: AndroidX runner, JUnit 4 extensions and Truth. */
 internal fun Project.addInstrumentedTestDependencies() {
     for (name in listOf("androidx-test-runner", "androidx-test-ext-junit", "truth")) {

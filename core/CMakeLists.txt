@@ -13,6 +13,7 @@ project(
 option(BOREALIS_CORE_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 option(BOREALIS_CORE_SANITIZE "Build borealis_core and its tests with ASan + UBSan" OFF)
 option(BOREALIS_CORE_BUILD_FUZZERS "Build libFuzzer targets (requires clang)" OFF)
+option(BOREALIS_CORE_COVERAGE "Instrument core and its tests for llvm-cov (requires clang)" OFF)
 
 # Tests are only on by default when core is the top-level project, so that a
 # parent project consuming core with add_subdirectory() never fetches GoogleTest.
@@ -28,6 +29,13 @@ if(BOREALIS_CORE_BUILD_FUZZERS AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   message(
     FATAL_ERROR
       "BOREALIS_CORE_BUILD_FUZZERS requires clang (libFuzzer); found ${CMAKE_CXX_COMPILER_ID}"
+  )
+endif()
+
+if(BOREALIS_CORE_COVERAGE AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  message(
+    FATAL_ERROR
+      "BOREALIS_CORE_COVERAGE requires clang (source-based coverage); found ${CMAKE_CXX_COMPILER_ID}"
   )
 endif()
 
@@ -53,6 +61,11 @@ function(borealis_core_apply_build_options target)
     endif()
     target_compile_options(${target} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
     target_link_options(${target} PRIVATE -fsanitize=address,undefined)
+  endif()
+
+  if(BOREALIS_CORE_COVERAGE)
+    target_compile_options(${target} PRIVATE -fprofile-instr-generate -fcoverage-mapping)
+    target_link_options(${target} PRIVATE -fprofile-instr-generate)
   endif()
 endfunction()
 

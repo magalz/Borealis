@@ -32,12 +32,22 @@
       "displayName": "Release",
       "inherits": "base",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "coverage",
+      "displayName": "Debug + llvm-cov coverage (clang)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BOREALIS_CORE_COVERAGE": "ON"
+      }
     }
   ],
   "buildPresets": [
     { "name": "dev", "configurePreset": "dev" },
     { "name": "asan", "configurePreset": "asan" },
-    { "name": "release", "configurePreset": "release" }
+    { "name": "release", "configurePreset": "release" },
+    { "name": "coverage", "configurePreset": "coverage" }
   ],
   "testPresets": [
     {
@@ -54,6 +64,14 @@
       "name": "release",
       "configurePreset": "release",
       "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "coverage",
+      "configurePreset": "coverage",
+      "output": { "outputOnFailure": true },
+      "environment": {
+        "LLVM_PROFILE_FILE": "${sourceDir}/build/coverage/profiles/%p-%m.profraw"
+      }
     }
   ]
 }

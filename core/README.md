@@ -31,7 +31,8 @@ The only thing other languages see is `include/borealis/core.h`:
 ```
 core/
   CMakeLists.txt        library target borealis_core (alias borealis::core)
-  CMakePresets.json     dev / asan / release presets
+  CMakePresets.json     dev / asan / release / coverage presets
+  scripts/              coverage.sh (llvm-cov lcov report)
   include/borealis/     public C header(s)
   src/                  implementation; version_config.h.in is generated into the build dir
   tests/                GoogleTest unit tests (fetched with a pinned URL + SHA256)
@@ -51,7 +52,7 @@ cmake --build --preset dev
 ctest --preset dev
 ```
 
-Presets: `dev` (Debug), `asan` (Debug + ASan/UBSan), `release`. Build trees go to `core/build/<preset>`.
+Presets: `dev` (Debug), `asan` (Debug + ASan/UBSan), `release`, `coverage` (Debug + llvm-cov, clang). Build trees go to `core/build/<preset>`.
 On Windows without a Visual Studio environment, put the compiler and `ninja` on `PATH` (and set
 `CXX`), or add a git-ignored `CMakeUserPresets.json`.
 
@@ -63,9 +64,34 @@ CMake options:
 | `BOREALIS_CORE_WARNINGS_AS_ERRORS`  | OFF (CI turns it ON)             | `-Werror` / `/WX`                                 |
 | `BOREALIS_CORE_SANITIZE`            | OFF                              | `-fsanitize=address,undefined` for core and tests |
 | `BOREALIS_CORE_BUILD_FUZZERS`       | OFF                              | libFuzzer helper and targets (clang only)         |
+| `BOREALIS_CORE_COVERAGE`            | OFF                              | llvm-cov instrumentation for core and tests (clang only) |
 
 `BUILD_SHARED_LIBS` is respected; the default is a static, position-independent library. Warnings
 and sanitizer flags are applied per target and never leak to a parent project.
+
+## Coverage
+
+Source-based coverage with clang and llvm-cov. `BOREALIS_CORE_COVERAGE=ON` adds
+`-fprofile-instr-generate -fcoverage-mapping` to core and its tests only (per target, never to a
+parent project) and fails configuration on a non-clang compiler. The `coverage` preset turns it on
+and makes `ctest` write profiles to `core/build/coverage/profiles/`.
+
+```sh
+cd core
+sh scripts/coverage.sh
+```
+
+The script configures, builds and tests the `coverage` preset, merges the profiles with
+`llvm-profdata merge -sparse`, prints an `llvm-cov report` summary and writes
+`core/build/coverage/coverage.lcov`. The report covers `include/` and `src/` only (no tests,
+GoogleTest or generated files) and `SF:` paths are relative to the repository root
+(`core/src/version.cpp`), which is what Codecov expects.
+
+Environment variables: `CXX` (clang++), `LLVM_SUFFIX` (version suffix of the LLVM tools, for
+example `-18` on Ubuntu), `LLVM_PROFDATA` and `LLVM_COV` (explicit tool paths). The compiler and
+the LLVM tools must come from the same LLVM version. On Ubuntu: `sudo apt-get install clang llvm`.
+On Windows the script runs under Git Bash with llvm-mingw (clang, `llvm-profdata`, `llvm-cov` on
+`PATH`, plus `ninja`).
 
 ## Formatting and static analysis
 

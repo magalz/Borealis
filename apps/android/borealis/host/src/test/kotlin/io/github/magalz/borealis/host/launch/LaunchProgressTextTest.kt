@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.host.launch
 
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.host.R
 import io.github.magalz.borealis.nativecore.LaunchCategory
 import java.io.File
@@ -71,6 +72,21 @@ class LaunchProgressTextTest {
         for (folder in listOf("values", "values-pt-rBR")) {
             for ((_, text) in strings(folder).filterKeys { it.startsWith("launch_retry_") }) {
                 assertThat(placeholders(text)).containsExactly("%1\$s", "%2\$s", "%3\$s")
+            }
+        }
+    }
+
+    @Test
+    fun `the number counts retries, not attempts`() {
+        // The first request is not a retry: "retry 1 of 4" is the second request.
+        val endings =
+            mapOf(
+                "values" to "(retry %2\$s of %3\$s).",
+                "values-pt-rBR" to "(nova tentativa %2\$s de %3\$s).",
+            )
+        for ((folder, ending) in endings) {
+            for ((name, text) in strings(folder).filterKeys { it.startsWith("launch_retry_") }) {
+                assertWithMessage(name).that(text).endsWith(ending)
             }
         }
     }

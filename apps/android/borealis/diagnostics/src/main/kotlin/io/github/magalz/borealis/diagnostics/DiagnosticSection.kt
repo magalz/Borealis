@@ -14,7 +14,9 @@ interface DiagnosticSection {
     fun writeTo(out: OutputStream)
 
     companion object {
+        private val SAFE_NAME = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
+
         /** A plain file name: no directories, no leading dot, at most 64 characters. */
-        fun isSafeFileName(name: String): Boolean = false
+        fun isSafeFileName(name: String): Boolean = SAFE_NAME.matches(name) && ".." !in name
     }
 }

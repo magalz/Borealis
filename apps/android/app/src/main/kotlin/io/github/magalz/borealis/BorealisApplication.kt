@@ -3,6 +3,7 @@ package io.github.magalz.borealis
 import android.app.Application
 import android.os.Build
 import com.limelight.BuildConfig
+import com.limelight.R
 import dagger.hilt.android.HiltAndroidApp
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.CrashHandler
@@ -33,6 +34,7 @@ class BorealisApplication : Application() {
             LogTag.APP,
             "startup",
             "version" to BuildConfig.VERSION_NAME,
+            "commit" to getString(R.string.borealis_git_sha),
             "base" to UPSTREAM_BASE,
             "applicationId" to BuildConfig.APPLICATION_ID,
             "sdk" to Build.VERSION.SDK_INT,

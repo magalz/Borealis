@@ -28,6 +28,7 @@ class DiagnosticBundleWriter(
     private val maxBytes: Long = DEFAULT_MAX_BYTES,
     /** Runs once before the log files are read, so queued log lines reach them first. */
     private val flushLogs: () -> Unit = {},
+    private val readBytes: (File) -> ByteArray = File::readBytes,
 ) {
     private class Entry(val name: String, val bytes: ByteArray)
 

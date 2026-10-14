@@ -19,9 +19,12 @@ class BundleCanaryTest {
         File(logDir, "borealis.log").writeLines(*lines)
         File(logDir, "borealis.log.1").writeLines(*lines.reversedArray())
         File(logDir, "crash-20261014-120000-000.txt").writeLines(*lines)
-        val section = TextSection("audit.jsonl", lines.joinToString("") { "$it\n" })
+        // A section redacts its own content; the writer leaves it as it is.
+        val redactor = Redactor(maskAddresses)
+        val section =
+            TextSection("audit.jsonl", lines.joinToString("") { redactor.redact(it) + "\n" })
         val out = ByteArrayOutputStream()
-        DiagnosticBundleWriter(logDir, listOf(section), Redactor(maskAddresses)::redact)
+        DiagnosticBundleWriter(logDir, listOf(section), redactor::redact)
             .write(SAMPLE_MANIFEST, SAMPLE_DECODERS, out)
         return unzip(out.toByteArray())
     }

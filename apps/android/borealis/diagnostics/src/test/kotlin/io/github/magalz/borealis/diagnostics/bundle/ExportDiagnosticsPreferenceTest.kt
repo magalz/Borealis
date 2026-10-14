@@ -24,6 +24,13 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowAlertDialog
 import org.robolectric.shadows.ShadowToast
 
+/** An activity whose `startActivity` fails the way a revoked grant or a bad intent would. */
+class RefusingActivity : Activity() {
+    override fun startActivity(intent: Intent?) {
+        throw SecurityException("not allowed")
+    }
+}
+
 @RunWith(RobolectricTestRunner::class)
 class ExportDiagnosticsPreferenceTest {
     private val activity: Activity = Robolectric.buildActivity(Activity::class.java).setup().get()
@@ -39,12 +46,14 @@ class ExportDiagnosticsPreferenceTest {
         ShadowToast.reset()
     }
 
-    private fun preference(sections: Set<DiagnosticSection> = emptySet()) =
-        ExportDiagnosticsPreference(activity).apply {
+    private fun preference(
+        sections: Set<DiagnosticSection> = emptySet(),
+        context: Activity = activity,
+    ) =
+        ExportDiagnosticsPreference(context).apply {
             sectionsProvider = { sections }
-            // androidx FileProvider cannot map Windows paths under Robolectric; its configuration
-            // is
-            // covered by FileProviderConfigTest and ManifestXmlTest.
+            // androidx FileProvider cannot map Windows paths under Robolectric; the real one is
+            // covered by FileProviderConfigTest (not on Windows) and ManifestXmlTest.
             uriFor = { file ->
                 Uri.Builder()
                     .scheme("content")
@@ -98,18 +107,14 @@ class ExportDiagnosticsPreferenceTest {
     }
 
     @Test
-    fun `the app wires the flush through the hooks`() {
+    fun `a share that the system refuses becomes a message and does not crash`() {
         allowSharing()
-        val logDir = File(activity.noBackupFilesDir, "logs").apply { mkdirs() }
-        DiagnosticBundleHooks.flushLogs = { File(logDir, "borealis.log").writeText("hooked\n") }
-        try {
-            preference().onClick()
-        } finally {
-            DiagnosticBundleHooks.flushLogs = {}
-        }
+        val refusing = Robolectric.buildActivity(RefusingActivity::class.java).setup().get()
 
-        val cache = File(activity.cacheDir, "diagnostics").listFiles()!!.single()
-        assertThat(unzip(cache.readBytes())["logs/borealis.log"]).isEqualTo("hooked\n")
+        preference(context = refusing).onClick()
+
+        assertThat(ShadowToast.getTextOfLatestToast())
+            .isEqualTo("Could not create the diagnostic bundle. See the log for details.")
     }
 
     @Test

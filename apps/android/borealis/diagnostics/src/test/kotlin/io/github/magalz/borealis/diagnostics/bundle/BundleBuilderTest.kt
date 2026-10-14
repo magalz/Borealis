@@ -4,7 +4,11 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogLevel
+import io.github.magalz.borealis.logging.LogRecord
+import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.logging.Redactor
+import io.github.magalz.borealis.logging.RotatingFileSink
 import java.io.File
 import java.time.Instant
 import kotlinx.serialization.json.Json
@@ -42,7 +46,7 @@ class BundleBuilderTest {
         val zip =
             BundleBuilder.build(
                 context,
-                listOf(TextSection("audit.jsonl", "{\"detail\":\"password=hunter2\"}\n")),
+                listOf(TextSection("audit.jsonl", "{\"detail\":\"already redacted\"}\n")),
                 Instant.parse("2026-10-14T12:34:56Z"),
             )
 
@@ -53,12 +57,28 @@ class BundleBuilderTest {
             .containsExactly("manifest.json", "decoders.json", "logs/borealis.log", "audit.jsonl")
         assertThat(entries["logs/borealis.log"])
             .isEqualTo("pairing pin=[REDACTED]\nhost [IP] answered\n")
-        assertThat(entries["audit.jsonl"]).isEqualTo("{\"detail\":\"password=[REDACTED]\"}\n")
+        assertThat(entries["audit.jsonl"]).isEqualTo("{\"detail\":\"already redacted\"}\n")
         assertThat(
                 Json.decodeFromString<BundleManifest>(entries.getValue("manifest.json")).createdUtc
             )
             .isEqualTo("2026-10-14T12:34:56Z")
         assertThat(entries.getValue("decoders.json")).contains("displayHdrTypes")
+    }
+
+    @Test
+    fun `by default the open file sinks are drained before the logs are read`() {
+        // The writer thread takes 300 ms per record, so the line is only on disk if we wait.
+        val sink = RotatingFileSink(logDir, writeGate = { Thread.sleep(300) })
+        try {
+            sink.write(LogRecord(1_700_000_000_000L, LogLevel.INFO, LogTag.APP, "queued line"))
+
+            val zip =
+                BundleBuilder.build(context, emptyList(), Instant.parse("2026-10-14T12:34:56Z"))
+
+            assertThat(entriesOf(zip).getValue("logs/borealis.log")).contains("queued line")
+        } finally {
+            sink.close()
+        }
     }
 
     @Test

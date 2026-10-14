@@ -49,6 +49,16 @@ class RedactorAddressTest {
     }
 
     @Test
+    fun `json literals as host values are left alone`() {
+        assertThat(masking.redact("""{"host":null,"computer":true,"hostname": false}"""))
+            .isEqualTo("""{"host":null,"computer":true,"hostname": false}""")
+        assertThat(masking.redact("""{"host":null}""")).isEqualTo("""{"host":null}""")
+        // Only the whole literal counts: names that merely start with one are still hosts.
+        assertThat(masking.redact("host=nullable")).isEqualTo("host=[HOST]")
+        assertThat(masking.redact("host=null.example.org")).isEqualTo("host=[HOST]")
+    }
+
+    @Test
     fun `values of host and computer fields are masked whole`() {
         val keys = listOf("host", "hostname", "serverHost", "computer", "computerName")
         for (key in keys) {

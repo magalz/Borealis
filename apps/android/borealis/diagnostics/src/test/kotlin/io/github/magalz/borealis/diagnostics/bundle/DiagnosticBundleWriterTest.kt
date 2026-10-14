@@ -26,9 +26,10 @@ class DiagnosticBundleWriterTest {
         maxBytes: Long = DiagnosticBundleWriter.DEFAULT_MAX_BYTES,
         redact: (String) -> String = { it },
         flushLogs: () -> Unit = {},
+        readBytes: (File) -> ByteArray = File::readBytes,
     ): Map<String, String> {
         val out = ByteArrayOutputStream()
-        DiagnosticBundleWriter(logDir, sections, redact, maxBytes, flushLogs)
+        DiagnosticBundleWriter(logDir, sections, redact, maxBytes, flushLogs, readBytes)
             .write(SAMPLE_MANIFEST, SAMPLE_DECODERS, out)
         return unzip(out.toByteArray())
     }
@@ -116,21 +117,91 @@ class DiagnosticBundleWriterTest {
     }
 
     @Test
-    fun `each section becomes one entry with its content redacted`() {
+    fun `each section becomes one entry and is written as the section gave it`() {
+        // A section redacts its own content (the DiagnosticSection contract), so the writer must
+        // not change it: re-redaction breaks structured lines such as JSON.
         val entries =
             bundle(
                 sections =
                     listOf(
                         TextSection("audit.jsonl", "{\"detail\":\"pin=4821\"}\n"),
-                        TextSection("extra.txt", "hello\n"),
+                        TextSection("extra.txt", "hello"),
                     ),
                 redact = Redactor()::redact,
             )
 
         assertThat(entries.keys)
             .containsExactly("manifest.json", "decoders.json", "audit.jsonl", "extra.txt")
-        assertThat(entries["audit.jsonl"]).isEqualTo("{\"detail\":\"pin=[REDACTED]\"}\n")
-        assertThat(entries["extra.txt"]).isEqualTo("hello\n")
+        assertThat(entries["audit.jsonl"]).isEqualTo("{\"detail\":\"pin=4821\"}\n")
+        assertThat(entries["extra.txt"]).isEqualTo("hello")
+    }
+
+    @Test
+    fun `a JSONL section stays valid JSON with address masking on`() {
+        val lines =
+            listOf(
+                """{"type":"pairing","host":null,"detail":"Cookie: id=5"}""",
+                """{"type":"launch","host":"x","detail":"-----BEGIN CERTIFICATE-----abc"}""",
+                """{"type":"session","host":true,"hostname":false}""",
+            )
+        val section = TextSection("audit.jsonl", lines.joinToString("") { "$it\n" })
+
+        val entries =
+            bundle(sections = listOf(section), redact = Redactor(maskAddresses = true)::redact)
+
+        val written = entries.getValue("audit.jsonl").lines().filter { it.isNotEmpty() }
+        assertThat(written).isEqualTo(lines)
+        for (line in written) Json.parseToJsonElement(line)
+    }
+
+    @Test
+    fun `section names that differ only in case from reserved names are skipped`() {
+        val entries =
+            bundle(
+                sections =
+                    listOf(
+                        TextSection("Manifest.json", "x"),
+                        TextSection("DECODERS.JSON", "x"),
+                        TextSection("Logs", "x"),
+                        TextSection("Audit.jsonl", "first"),
+                        TextSection("audit.jsonl", "second"),
+                    )
+            )
+
+        assertThat(entries.keys).containsExactly("manifest.json", "decoders.json", "Audit.jsonl")
+        assertThat(entries["Audit.jsonl"]).isEqualTo("first")
+    }
+
+    @Test
+    fun `a log file that cannot be read is recorded`() {
+        File(logDir, "borealis.log").writeLines("fine")
+        File(logDir, "borealis.log.1").writeLines("locked")
+
+        val entries =
+            bundle(
+                readBytes = { file ->
+                    if (file.name == "borealis.log.1") throw java.io.IOException("denied")
+                    file.readBytes()
+                }
+            )
+
+        assertThat(entries.keys)
+            .containsExactly("manifest.json", "decoders.json", "logs/borealis.log")
+        assertThat(manifestOf(entries).truncated)
+            .containsExactly(TruncatedEntry("logs/borealis.log.1", "read-error", 0, 0))
+    }
+
+    @Test
+    fun `original bytes is the size on disk, not the redacted size`() {
+        for (name in listOf("borealis.log", "borealis.log.1", "borealis.log.2")) {
+            File(logDir, name).writeLines(*Array(10) { "$name line $it ".padEnd(99, '.') })
+        }
+
+        // Redaction that makes every line longer, with a bound that drops the oldest file.
+        val entries = bundle(maxBytes = 3_000, redact = { it + " [more]" })
+
+        val dropped = manifestOf(entries).truncated.single { it.name == "logs/borealis.log.2" }
+        assertThat(dropped.originalBytes).isEqualTo(File(logDir, "borealis.log.2").length())
     }
 
     @Test

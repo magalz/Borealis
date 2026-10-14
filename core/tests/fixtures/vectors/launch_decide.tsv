@@ -1,0 +1,98 @@
+# Golden vectors for borealis_launch_decide. Format: see tests/fixtures/README.md.
+# Retry schedules: PENDING 1000/2000/3000/5000, RESTORING_DISPLAY 2000/3000/5000, GPU_NOT_READY 5000/5000, CAPTURE_OR_DISPLAY 3000.
+verb	status	message	attempts	action	delay_ms	category	max_attempts
+# LAUNCH, 409: PENDING, with and without the host message.
+LAUNCH	409	Another client launch is already pending; retry the connection.	0	RETRY	1000	PENDING	4
+LAUNCH	409	Another client launch is already pending; retry the connection.	1	RETRY	2000	PENDING	4
+LAUNCH	409	Another client launch is already pending; retry the connection.	2	RETRY	3000	PENDING	4
+LAUNCH	409	Another client launch is already pending; retry the connection.	3	RETRY	5000	PENDING	4
+LAUNCH	409	Another client launch is already pending; retry the connection.	4	FAIL	0	PENDING	4
+LAUNCH	409	Another client launch is already pending; retry the connection.	100	FAIL	0	PENDING	4
+LAUNCH	409	<null>	0	RETRY	1000	PENDING	4
+LAUNCH	409	<null>	4	FAIL	0	PENDING	4
+LAUNCH	409	Some other conflict	1	RETRY	2000	PENDING	4
+# LAUNCH, 503 restoring the display (case-insensitive).
+LAUNCH	503	The previous stream is still restoring the display; retry the connection.	0	RETRY	2000	RESTORING_DISPLAY	3
+LAUNCH	503	The previous stream is still restoring the display; retry the connection.	1	RETRY	3000	RESTORING_DISPLAY	3
+LAUNCH	503	The previous stream is still restoring the display; retry the connection.	2	RETRY	5000	RESTORING_DISPLAY	3
+LAUNCH	503	The previous stream is still restoring the display; retry the connection.	3	FAIL	0	RESTORING_DISPLAY	3
+LAUNCH	503	THE PREVIOUS STREAM IS STILL RESTORING THE DISPLAY; RETRY THE CONNECTION.	0	RETRY	2000	RESTORING_DISPLAY	3
+# LAUNCH, 503 GPU/display stack not ready.
+LAUNCH	503	GPU/display stack is not ready; retry after recovery or reboot the host.	0	RETRY	5000	GPU_NOT_READY	2
+LAUNCH	503	GPU/display stack is not ready; retry after recovery or reboot the host.	1	RETRY	5000	GPU_NOT_READY	2
+LAUNCH	503	GPU/display stack is not ready; retry after recovery or reboot the host.	2	FAIL	0	GPU_NOT_READY	2
+LAUNCH	503	gpu/display stack is not ready	0	RETRY	5000	GPU_NOT_READY	2
+# LAUNCH, 503 capture, encoder, virtual-display failures and any other or message-less 503.
+LAUNCH	503	Failed to initialize video capture/encoding. Is a display connected and turned on?	0	RETRY	3000	CAPTURE_OR_DISPLAY	1
+LAUNCH	503	Failed to initialize video capture/encoding. Is a display connected and turned on?	1	FAIL	0	CAPTURE_OR_DISPLAY	1
+LAUNCH	503	Failed to prepare the client virtual display.	0	RETRY	3000	CAPTURE_OR_DISPLAY	1
+LAUNCH	503	Windows did not activate the virtual display.	0	RETRY	3000	CAPTURE_OR_DISPLAY	1
+LAUNCH	503	Windows did not activate the virtual display.	1	FAIL	0	CAPTURE_OR_DISPLAY	1
+LAUNCH	503	Something unexpected	0	RETRY	3000	CAPTURE_OR_DISPLAY	1
+LAUNCH	503	<null>	0	RETRY	3000	CAPTURE_OR_DISPLAY	1
+LAUNCH	503	<empty>	1	FAIL	0	CAPTURE_OR_DISPLAY	1
+# LAUNCH, permanent failures.
+LAUNCH	400	Missing a required launch parameter	0	FAIL	0	PERMANENT	0
+LAUNCH	400	An app is already running on this host	0	FAIL	0	PERMANENT	0
+LAUNCH	403	Encryption is mandatory for this host but unsupported by the client	0	FAIL	0	PERMANENT	0
+LAUNCH	404	Failed to start the specified application	0	FAIL	0	PERMANENT	0
+LAUNCH	-1	Failed to start the specified application	0	FAIL	0	PERMANENT	0
+LAUNCH	418	<null>	0	FAIL	0	PERMANENT	0
+LAUNCH	470	<null>	0	FAIL	0	PERMANENT	0
+LAUNCH	525	<null>	0	FAIL	0	PERMANENT	0
+LAUNCH	599	<null>	0	FAIL	0	PERMANENT	0
+LAUNCH	200	<null>	0	FAIL	0	PERMANENT	0
+LAUNCH	0	<null>	0	FAIL	0	PERMANENT	0
+LAUNCH	500	Another client launch is already pending; retry the connection.	0	FAIL	0	PERMANENT	0
+LAUNCH	502	The previous stream is still restoring the display; retry the connection.	0	FAIL	0	PERMANENT	0
+# RESUME, 409: PENDING, with and without the host message.
+RESUME	409	Another client launch is already pending; retry the connection.	0	RETRY	1000	PENDING	4
+RESUME	409	Another client launch is already pending; retry the connection.	1	RETRY	2000	PENDING	4
+RESUME	409	Another client launch is already pending; retry the connection.	2	RETRY	3000	PENDING	4
+RESUME	409	Another client launch is already pending; retry the connection.	3	RETRY	5000	PENDING	4
+RESUME	409	Another client launch is already pending; retry the connection.	4	FAIL	0	PENDING	4
+RESUME	409	Another client launch is already pending; retry the connection.	100	FAIL	0	PENDING	4
+RESUME	409	<null>	0	RETRY	1000	PENDING	4
+RESUME	409	<null>	4	FAIL	0	PENDING	4
+RESUME	409	Some other conflict	1	RETRY	2000	PENDING	4
+# RESUME, 503 restoring the display (case-insensitive).
+RESUME	503	The previous stream is still restoring the display; retry the connection.	0	RETRY	2000	RESTORING_DISPLAY	3
+RESUME	503	The previous stream is still restoring the display; retry the connection.	1	RETRY	3000	RESTORING_DISPLAY	3
+RESUME	503	The previous stream is still restoring the display; retry the connection.	2	RETRY	5000	RESTORING_DISPLAY	3
+RESUME	503	The previous stream is still restoring the display; retry the connection.	3	FAIL	0	RESTORING_DISPLAY	3
+RESUME	503	THE PREVIOUS STREAM IS STILL RESTORING THE DISPLAY; RETRY THE CONNECTION.	0	RETRY	2000	RESTORING_DISPLAY	3
+# RESUME, 503 GPU/display stack not ready.
+RESUME	503	GPU/display stack is not ready; retry after recovery or reboot the host.	0	RETRY	5000	GPU_NOT_READY	2
+RESUME	503	GPU/display stack is not ready; retry after recovery or reboot the host.	1	RETRY	5000	GPU_NOT_READY	2
+RESUME	503	GPU/display stack is not ready; retry after recovery or reboot the host.	2	FAIL	0	GPU_NOT_READY	2
+RESUME	503	gpu/display stack is not ready	0	RETRY	5000	GPU_NOT_READY	2
+# RESUME, 503 capture, encoder, virtual-display failures and any other or message-less 503.
+RESUME	503	Failed to initialize video capture/encoding. Is a display connected and turned on?	0	RETRY	3000	CAPTURE_OR_DISPLAY	1
+RESUME	503	Failed to initialize video capture/encoding. Is a display connected and turned on?	1	FAIL	0	CAPTURE_OR_DISPLAY	1
+RESUME	503	Failed to prepare the client virtual display.	0	RETRY	3000	CAPTURE_OR_DISPLAY	1
+RESUME	503	Windows did not activate the virtual display.	0	RETRY	3000	CAPTURE_OR_DISPLAY	1
+RESUME	503	Windows did not activate the virtual display.	1	FAIL	0	CAPTURE_OR_DISPLAY	1
+RESUME	503	Something unexpected	0	RETRY	3000	CAPTURE_OR_DISPLAY	1
+RESUME	503	<null>	0	RETRY	3000	CAPTURE_OR_DISPLAY	1
+RESUME	503	<empty>	1	FAIL	0	CAPTURE_OR_DISPLAY	1
+# RESUME, permanent failures.
+RESUME	400	Missing a required launch parameter	0	FAIL	0	PERMANENT	0
+RESUME	400	An app is already running on this host	0	FAIL	0	PERMANENT	0
+RESUME	403	Encryption is mandatory for this host but unsupported by the client	0	FAIL	0	PERMANENT	0
+RESUME	404	Failed to start the specified application	0	FAIL	0	PERMANENT	0
+RESUME	-1	Failed to start the specified application	0	FAIL	0	PERMANENT	0
+RESUME	418	<null>	0	FAIL	0	PERMANENT	0
+RESUME	470	<null>	0	FAIL	0	PERMANENT	0
+RESUME	525	<null>	0	FAIL	0	PERMANENT	0
+RESUME	599	<null>	0	FAIL	0	PERMANENT	0
+RESUME	200	<null>	0	FAIL	0	PERMANENT	0
+RESUME	0	<null>	0	FAIL	0	PERMANENT	0
+RESUME	500	Another client launch is already pending; retry the connection.	0	FAIL	0	PERMANENT	0
+RESUME	502	The previous stream is still restoring the display; retry the connection.	0	FAIL	0	PERMANENT	0
+# RESUME with nothing to resume falls back to /launch, whatever the attempt count.
+RESUME	503	No running app to resume	0	FALLBACK_TO_LAUNCH	0	NO_RUNNING_APP	0
+RESUME	503	No running app to resume	7	FALLBACK_TO_LAUNCH	0	NO_RUNNING_APP	0
+RESUME	503	no running app to resume	0	FALLBACK_TO_LAUNCH	0	NO_RUNNING_APP	0
+RESUME	404	No running app to resume	0	FAIL	0	PERMANENT	0
+# The same text on /launch is not a fallback (the host never sends it there): an ordinary 503.
+LAUNCH	503	No running app to resume	0	RETRY	3000	CAPTURE_OR_DISPLAY	1

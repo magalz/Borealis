@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import io.github.magalz.borealis.diagnostics.DiagnosticSection
 import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogStorage
 import io.github.magalz.borealis.logging.LogTag
 import java.io.File
 import java.time.Instant
@@ -108,9 +109,6 @@ internal object BundleFiles {
 internal object BundleBuilder {
     private const val DIRECTORY = "diagnostics"
 
-    // The directory BorealisApplication gives the rotating log files.
-    private const val LOG_DIRECTORY = "logs"
-
     fun build(
         context: Context,
         sections: Collection<DiagnosticSection>,
@@ -125,7 +123,7 @@ internal object BundleBuilder {
         try {
             val writer =
                 DiagnosticBundleWriter(
-                    logDir = File(context.noBackupFilesDir, LOG_DIRECTORY),
+                    logDir = File(context.noBackupFilesDir, LogStorage.DIRECTORY),
                     sections = sections,
                     redact = BorealisLog::redact,
                     flushLogs = flushLogs,

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One element per entry: Wave 2 adds "Export diagnostics" and "Erase audit trail" to the first category. -->
+<!-- One element per entry. The diagnostics entries come from :borealis:diagnostics (ADR 0050). -->
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
     <PreferenceCategory android:title="@string/borealis_category_privacy">
@@ -13,6 +13,12 @@
             android:title="@string/borealis_title_mask_addresses"
             android:summary="@string/borealis_summary_mask_addresses"
             android:defaultValue="false" />
+        <io.github.magalz.borealis.diagnostics.bundle.ExportDiagnosticsPreference
+            android:key="borealis_export_diagnostics"
+            android:title="@string/borealis_export_title"
+            android:summary="@string/borealis_export_summary" />
+        <io.github.magalz.borealis.diagnostics.audit.EraseAuditPreference
+            android:key="borealis_erase_audit" />
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/borealis_category_about">

@@ -6,6 +6,7 @@ import android.content.pm.PackageInfo
 import android.os.Build
 import android.preference.PreferenceManager
 import io.github.magalz.borealis.diagnostics.R
+import io.github.magalz.borealis.logging.LogStorage
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlinx.serialization.Serializable
@@ -54,9 +55,6 @@ data class TruncatedEntry(
 
 /** Reads the manifest fields from the running app and device. */
 object ManifestCollector {
-    // The keys of SettingsKeys in :borealis:settings, which depends on this module.
-    private const val KEY_VERBOSE_LOGGING = "borealis_verbose_logging"
-    private const val KEY_MASK_ADDRESSES = "borealis_mask_addresses"
     private const val UNKNOWN = "unknown"
 
     @Suppress("DEPRECATION")
@@ -76,8 +74,8 @@ object ManifestCollector {
             createdUtc = now.truncatedTo(ChronoUnit.SECONDS).toString(),
             logSettings =
                 LogSettingsInfo(
-                    verbose = preferences.getBoolean(KEY_VERBOSE_LOGGING, false),
-                    maskAddresses = preferences.getBoolean(KEY_MASK_ADDRESSES, false),
+                    verbose = preferences.getBoolean(LogStorage.VERBOSE_LOGGING_KEY, false),
+                    maskAddresses = preferences.getBoolean(LogStorage.MASK_ADDRESSES_KEY, false),
                 ),
         )
     }

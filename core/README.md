@@ -2,7 +2,8 @@
 
 `borealis-core` is the C++20 library shared by all Borealis clients. It will hold the pure,
 deterministic LuminalShine host rules: capability parsing, launch retry policy and display-mode
-rules. Today it is a walking skeleton that exposes a single function, `borealis_core_version()`.
+rules. It exposes `borealis_core_version()` and, in `include/borealis/host.h`, the LuminalShine host
+rules described below.
 
 ## Scope and non-goals
 
@@ -14,7 +15,7 @@ in the platform clients (`apps/android` today, a Qt desktop client later).
 
 ## C ABI rules
 
-The only thing other languages see is `include/borealis/core.h`:
+The only things other languages see are `include/borealis/core.h` and `include/borealis/host.h`:
 
 - Plain C declarations inside `extern "C"`; the header must compile as C and C++.
 - Every exported function is marked `BOREALIS_CORE_API` (default visibility on clang/gcc,
@@ -33,13 +34,52 @@ core/
   CMakeLists.txt        library target borealis_core (alias borealis::core)
   CMakePresets.json     dev / asan / release / coverage presets
   scripts/              coverage.sh (llvm-cov lcov report)
-  include/borealis/     public C header(s)
+  include/borealis/     public C headers (core.h, host.h)
   src/                  implementation; version_config.h.in is generated into the build dir
   tests/                GoogleTest unit tests (fetched with a pinned URL + SHA256)
-  fuzz/                 libFuzzer scaffolding (no targets yet, see fuzz/README.md)
+  tests/fixtures/       host responses and golden vectors (see fixtures/README.md)
+  fuzz/                 libFuzzer targets (see fuzz/README.md)
   .clang-format         copied from LuminalShine
   .clang-tidy
 ```
+
+## Host rules API (`borealis/host.h`)
+
+Pure and stateless: no I/O, no allocation, no global state, thread-safe. Strings are `(pointer, length)`
+pairs, are not NUL-terminated by contract and are never retained after the call; the caller owns every
+buffer and every output struct. A NULL pointer is valid only with length 0. Every function that returns
+`int` yields `BOREALIS_OK` (0), `BOREALIS_ERR_INVALID_ARGUMENT` (NULL `out`, NULL pointer with a
+non-zero length, unknown verb) or `BOREALIS_ERR_INPUT_TOO_LARGE`, and on any error zeroes `out`
+(all-zero is the safe value of every struct). Structs use fixed-width integers and `#define` constants so
+the JNI layer can map them to an `IntArray`.
+
+| Function | Purpose |
+| --- | --- |
+| `borealis_host_parse_caps(appversion, len, codec_mask, out)` | Classifies the host (`UNKNOWN`, `GFE`, `SUNSHINE`) from `appversion`, parses its four version parts, and derives `codec_flags` (HEVC, HEVC Main10, AV1, AV1 Main10, any 4:4:4) and the four PyroWave `pyrowave_profiles` bits from `ServerCodecModeSupport`. `appversion` is at most `BOREALIS_HOST_APPVERSION_MAX_LEN` (64) bytes. |
+| `borealis_launch_decide(verb, status, msg, len, attempts_in_category, out)` | Decides `FAIL`, `RETRY` (with `delay_ms`) or `FALLBACK_TO_LAUNCH` after a non-200 `/launch` or `/resume`, from the status and an ASCII case-insensitive substring of the host message (at most `BOREALIS_HOST_MESSAGE_MAX_LEN`, 256, bytes). |
+| `borealis_launch_fps(is_gfe, launch_fps, stream_fps)` | The fps for the `/launch` `mode=` parameter: the upstream GFE rule, or the RTSP `maxFPS` for any other host. Cannot fail. |
+
+`appversion` is exactly `a.b.c.d` (decimal, no whitespace, only the fourth part may be negative):
+a negative fourth part is `SUNSHINE` (LuminalShine sends `7.1.431.-1`), a non-negative one `GFE`, and
+anything else is `UNKNOWN` with a zero version, which is not an error. Mask bits that Borealis does not
+know are ignored.
+
+`borealis_launch_decide` is stateless. The caller counts the retries it already made in the returned
+`category` and passes the count back as `attempts_in_category`; core answers `RETRY` while the count is
+below `max_attempts` and `FAIL` afterwards. The caller also owns the overall time budget.
+
+| Situation | Category | Retries (`delay_ms`) |
+| --- | --- | --- |
+| 409, with any message | `PENDING` | 4 (1000, 2000, 3000, 5000) |
+| 503 "restoring the display" | `RESTORING_DISPLAY` | 3 (2000, 3000, 5000) |
+| 503 "GPU/display stack is not ready" | `GPU_NOT_READY` | 2 (5000, 5000) |
+| any other or message-less 503 (capture, encoder, virtual display) | `CAPTURE_OR_DISPLAY` | 1 (3000) |
+| `RESUME` with 503 "No running app to resume" | `NO_RUNNING_APP` | `FALLBACK_TO_LAUNCH` |
+| every other status | `PERMANENT` | none, `FAIL` |
+
+The rules come from `docs/host-contract/luminalshine.md` (sections 6, 7.4 and 7.5) and
+`docs/host-contract/pyrowave.md` (section 3.1). Golden vectors for all three functions live in
+`tests/fixtures/vectors/` and are replayed by the unit tests; the Android JNI instrumented test (task T4) will replay the same files.
 
 ## Build and test
 
@@ -96,7 +136,7 @@ On Windows the script runs under Git Bash with llvm-mingw (clang, `llvm-profdata
 ## Formatting and static analysis
 
 ```sh
-clang-format --dry-run --Werror include/borealis/*.h src/*.cpp tests/*.cpp
+clang-format --dry-run --Werror include/borealis/*.h src/*.cpp tests/*.cpp fuzz/*.cpp
 clang-tidy -p build/dev src/*.cpp
 ```
 
@@ -107,8 +147,8 @@ The dev preset exports `compile_commands.json` for clang-tidy.
 - ASan/UBSan: `cmake --preset asan && cmake --build --preset asan && ctest --preset asan`. CI runs
   this on Linux. A consumer that wants sanitized binaries must also link its own targets with
   `-fsanitize=address,undefined`.
-- Fuzzing: parsers get libFuzzer targets starting in Phase 1; see `fuzz/README.md`. libFuzzer needs
-  a clang target that supports it (Linux CI), not the Windows MinGW target.
+- Fuzzing: `appversion_fuzz` and `launch_message_fuzz`, see `fuzz/README.md`. libFuzzer needs a clang
+  target that supports it (Linux CI), not the Windows MinGW target.
 
 ## Consuming borealis-core
 

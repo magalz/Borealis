@@ -14,11 +14,20 @@ set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-add_executable(borealis_core_tests version_test.cpp)
+add_executable(
+  borealis_core_tests
+  version_test.cpp
+  host_caps_test.cpp
+  launch_decide_test.cpp
+  launch_fps_test.cpp
+  vectors_test.cpp
+)
 target_link_libraries(borealis_core_tests PRIVATE borealis::core GTest::gtest_main)
 # The expected value comes from the CMake project version, not a literal.
 target_compile_definitions(
-  borealis_core_tests PRIVATE BOREALIS_CORE_EXPECTED_VERSION="${borealis_core_VERSION}"
+  borealis_core_tests
+  PRIVATE BOREALIS_CORE_EXPECTED_VERSION="${borealis_core_VERSION}"
+          BOREALIS_CORE_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
 )
 set_target_properties(
   borealis_core_tests PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF

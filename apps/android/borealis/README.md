@@ -115,10 +115,10 @@ Every LuminalShine compatibility rule on the Android side lives here (the host c
 
 | Package | Content |
 | --- | --- |
-| `host.pairing` | Pairing and the paired-host state |
-| `host.launch` | App launch and resume requests |
+| `host.pairing` | PIN and unpair hints, best-effort `/unpair` |
+| `host.launch` | App launch and resume requests (retries, cancellation) |
 | `host.caps` | Host capabilities derived from `/serverinfo` |
-| `host.video` | Codec and video-stream selection |
+| `host.video` | Stream startup: first-frame message and watchdog, no-video error hints |
 
 ### `host.pairing`
 
@@ -126,6 +126,16 @@ LuminalShine does not route `/unpair`, and the user types the PIN and the device
 
 - `BestEffortUnpair.unpair(client, url)`: sends `/unpair` with `Connection: close`, because LuminalShine writes stray bytes after its response on that connection, reads at most 16 KiB of body and returns true only when the XML root has `status_code="200"`. An I/O error, a non-2xx status or an unreadable body is false instead of an exception (it blocks on the network, so call it off the main thread) and the outcome is logged on `LogTag.PAIR` without the URL. `NvHTTP.unpair()` delegates to it and returns the result; `PairingManager` ignores it, `PcView.doUnpair` shows the Web UI hint when it is false.
 - `PairingHints`: `webUiUrl(address, httpPort)` is `https://<host>:<httpPort + 1>` (IPv6 bracketed once, zone id percent-encoded per RFC 6874, null for a port outside 1..65534 or an unusable address); `suggestedDeviceName(model)` removes `xbox` and `webos` in any case and falls back to `Borealis`; `pinHint` and `unpairHint` build the texts of `strings_pairing.xml` for the PIN dialog of `PcView.doPair` and the failed unpair.
+
+### `host.video`
+
+LuminalShine can need about 18 s after the client attaches to send the first frame (contract section 10.1); upstream Moonlight dismisses the spinner at `connectionStarted`, long before that.
+
+- `StreamStartup.create(...)` builds the `StreamStartupGuard` that `Game` holds. `Game` passes only plumbing (UI-thread runner, overlay text and visibility setters, the picture-in-picture flag and the termination callback), so its hooks hold no logic.
+- `PreparingMessage` shows "host is preparing the display" on the non-modal notification overlay from `connectionStarted` until the first rendered frame. A connection warning takes precedence, and once the first frame arrives the overlay follows only the last connection status.
+- `FirstFrameWatchdog` (states IDLE, ARMED, SATISFIED, FIRED, CANCELLED; one terminal state per stream) ends the stream with `ML_ERROR_NO_VIDEO_FRAME` if no frame is rendered 45 s after `connectionStarted`, above the about 35 s worst case of the patched moonlight-common-c deadlines. The termination runs off the main thread because `Game.connectionTerminated` does network I/O first. The watchdog is cancelled on stop, `onStop`, `onDestroy` and termination.
+- `FirstFrameSignal` is raised by `MediaCodecDecoderRenderer` at the first output buffer released for rendering (Choreographer and renderer-thread paths); after that it costs one volatile read per frame.
+- `StreamErrorHints.withHint` appends a LuminalShine hint to the -100 (no video traffic) and -101 (no complete frame) messages; the blocked-port message is left unchanged.
 
 User-facing strings of the module stay in the module, one file per area, with Brazilian Portuguese next to the default English: `res/values/strings_pairing.xml`, `strings_stream.xml`, `strings_launch.xml` and the same names under `res/values-pt-rBR/`.
 

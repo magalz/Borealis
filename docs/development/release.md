@@ -83,27 +83,31 @@ two jobs.
    the range from the previous `android-vX.Y.Z` tag to this tag. The first
    release starts at `f397cda5`, the last upstream commit before the Borealis
    import.
-5. Uploads everything as the artifact `borealis-android-unsigned` (7 days).
+5. Uploads everything as the artifact `borealis-android-unsigned`, kept for
+   30 days. Approve within that time; after it expires, delete the tag only if
+   nothing was published, otherwise release a new patch version (see "If
+   something is wrong").
 
 **`publish`** (`environment: release`):
 
 1. **Waits for manual approval** of the `release` environment. Review the run,
    the tagged commit and the unsigned artifacts first. The environment secrets
    are released only after approval.
-2. Downloads the unsigned artifacts and locates `apksigner` and `zipalign`
-   (build-tools `37.0.0`).
+2. Downloads the unsigned artifacts, sets up JDK 17 (for `keytool` and
+   `jarsigner`) and locates `apksigner` and `zipalign` (build-tools `37.0.0`).
 3. Decodes the keystore from `BOREALIS_KEYSTORE_BASE64` into a temporary file.
 4. Signs the APK with `apksigner` (APK Signature Scheme v2 and v3; v1 and v4
    off, because minSdk is 28) and the AAB with `jarsigner`.
-5. Verifies: `zipalign -c -P 16 4`, `apksigner verify` (v2 and v3 must both be
-   `true`), `jarsigner -verify`, and that the APK signer's certificate SHA-256
-   equals the keystore's.
+5. Verifies: `zipalign -c -P 16 4`, `apksigner verify --min-sdk-version 28`
+   (the v3 signature must verify; v2 is also written but apksigner skips it
+   for API 28 and up), `jarsigner -verify`, and that the APK signer's
+   certificate SHA-256 equals the keystore's.
 6. Removes the keystore file with `shred -u`, always, also when an earlier step
    failed.
 7. Writes `SHA256SUMS` over the signed APK, the signed AAB and both SBOMs and
    checks it.
 8. Creates build-provenance attestations (`actions/attest-build-provenance`)
-   for those four files.
+   for the APK, the AAB, both SBOMs and `SHA256SUMS`.
 9. Creates a **draft** GitHub Release for the tag (`gh release create --draft`)
    with the generated notes and these assets: `borealis-android-X.Y.Z.apk`,
    `borealis-android-X.Y.Z.aab`, `SHA256SUMS`,
@@ -115,9 +119,18 @@ splits are not built yet; the one APK contains all four ABIs.
 
 ### One-time setup (owner)
 
-Create the GitHub Environment `release` (Settings, Environments) with required
-reviewers, and add these **environment secrets** (not repository secrets, so
-that only the approved `publish` job can read them):
+1. **Tag ruleset.** Add a repository ruleset (Settings, Rules, Rulesets) that
+   targets tags matching `android-v*` and restricts creation, update and
+   deletion to the owner. Only the owner can then start a release, and a
+   published tag cannot be moved or removed.
+2. **Environment.** Create the GitHub Environment `release` (Settings,
+   Environments) with required reviewers. Under "Deployment branches and
+   tags", select "Selected branches and tags" and allow only the tag pattern
+   `android-v*`, so no branch or other tag can reach the signing secrets.
+3. **Self-review.** With a single maintainer, leave "Prevent self-review"
+   **off** on the environment. If it is on, nobody can approve the run.
+4. **Secrets.** Add these **environment secrets** (not repository secrets, so
+   that only the approved `publish` job can read them):
 
 | Secret | Content |
 | --- | --- |

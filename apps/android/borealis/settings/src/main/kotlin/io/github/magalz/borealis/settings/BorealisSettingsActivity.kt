@@ -8,6 +8,7 @@ class BorealisSettingsActivity : Activity() {
     @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ContentPadding.install(this)
         if (savedInstanceState == null) {
             fragmentManager
                 .beginTransaction()

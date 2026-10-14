@@ -11,6 +11,7 @@ import io.github.magalz.borealis.logging.JulBridge
 import io.github.magalz.borealis.logging.LogLevel
 import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.logging.LogcatSink
+import io.github.magalz.borealis.logging.Redactor
 import io.github.magalz.borealis.logging.RotatingFileSink
 import io.github.magalz.borealis.nativecore.BorealisCore
 import io.github.magalz.borealis.settings.LogSettings
@@ -28,15 +29,19 @@ class BorealisApplication : Application() {
         val logDir = File(noBackupFilesDir, "logs")
         // Release builds log INFO and above; "Verbose logging" in the settings lowers it to DEBUG.
         val baseLevel = if (BuildConfig.DEBUG) LogLevel.DEBUG else LogLevel.INFO
+        // One redactor for log lines and crash reports, so both follow "Mask addresses".
+        val redactor = Redactor()
         BorealisLog.initialize(
             listOf(LogcatSink(baseLevel), RotatingFileSink(logDir)),
             minLevel = baseLevel,
+            redactor = redactor,
         )
         logSettings = LogSettings.start(this, baseLevel)
         JulBridge.install()
         CrashHandler.install(
             logDir,
             header = listOf("app=Borealis ${BuildConfig.VERSION_NAME}", "base=$UPSTREAM_BASE"),
+            redactor = redactor,
         )
 
         BorealisLog.i(

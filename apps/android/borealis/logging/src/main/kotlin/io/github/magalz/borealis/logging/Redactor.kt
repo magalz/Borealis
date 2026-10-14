@@ -8,7 +8,7 @@ package io.github.magalz.borealis.logging
  *   `Cookie` headers, PEM blocks and long hex/base64 values in cert/key/signature fields.
  *
  * - query values of URLs, except for the allowlisted protocol parameters in [ALLOWED_QUERY_KEYS],
- *   and the credentials of a URL.
+ *   and the credentials of a URL. Query and fragment pairs are treated alike.
  *
  * IP addresses (IPv4 with octets of at most 255, IPv6) and host names (the host of a URL and the
  * values of `host`, `hostname`, `computer` and `computerName` keys) are only masked when
@@ -51,11 +51,19 @@ class Redactor(maskAddresses: Boolean = false) {
         val masking = maskAddresses
         result = URL.replace(result) { redactUrl(it, masking) }
         if (masking) {
-            result = HOST_VALUE.replace(result) { it.groupValues[1] + HOST_MASK }
+            result = HOST_VALUE.replace(result) { maskHostValue(it) }
             result = IPV4.replace(result, IP_MASK)
             result = IPV6.replace(result, IP_MASK)
         }
         return result
+    }
+
+    /** Masks a host value up to its closing quote, or to the next separator when unquoted. */
+    private fun maskHostValue(match: MatchResult): String {
+        val groups = match.groups
+        val open = groups[2]?.value ?: groups[4]?.value ?: ""
+        val close = groups[3]?.value ?: groups[5]?.value ?: ""
+        return groups[1]!!.value + open + HOST_MASK + close
     }
 
     private fun redactUrl(match: MatchResult, masking: Boolean): String {
@@ -149,14 +157,17 @@ class Redactor(maskAddresses: Boolean = false) {
         // scheme://[userinfo@]host[:port][/path][?query][#fragment]
         private val URL =
             Regex(
-                """(?i)\b([a-z][a-z0-9+.-]*://)(?:([^\s/?#@"'<>]*)@)?""" +
+                """(?i)\b([a-z][a-z0-9+.-]{0,31}://)(?:([^\s/?#@"'<>]*)@)?""" +
                     """(\[[0-9a-f:.]+]|[^\s/?#:"'<>\[\]]*)([^\s"'<>]*)"""
             )
-        private val QUERY_PARAM = Regex("""(?<=[?&])([^=&#\s]+)=[^&#\s]*""")
+        private val QUERY_PARAM = Regex("""(?<=[?&#])([^=&#\s]+)=[^&#\s]*""")
         private const val HOST_KEYS = "host|hostname|computer|computername"
         private val HOST_FIELD = Regex("""(?i)[\w.-]{0,64}(?:$HOST_KEYS)""")
         private val HOST_VALUE =
-            Regex("""(?i)\b([\w.-]{0,64}(?:$HOST_KEYS)["']?\s*[=:]\s*["']?)[^\s"',;&]+""")
+            Regex(
+                """(?i)\b([\w.-]{0,64}(?:$HOST_KEYS)["']?\s*[=:]\s*)""" +
+                    """(?:(")[^"\r\n]*("?)|(')[^\r\n']*('?)|[^\s"',;&]+)"""
+            )
 
         private const val OCTET = """(?:25[0-5]|2[0-4]\d|1\d\d|0?\d?\d)"""
         private val IPV4 = Regex("""(?<![\d.])(?:$OCTET\.){3}$OCTET(?!\d|\.\d)""")

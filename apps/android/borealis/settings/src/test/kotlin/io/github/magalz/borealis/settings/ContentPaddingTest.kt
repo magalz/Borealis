@@ -1,9 +1,6 @@
 package io.github.magalz.borealis.settings
 
 import android.app.Activity
-import android.app.UiModeManager
-import android.content.Context
-import android.content.res.Configuration
 import android.graphics.Insets
 import android.view.View
 import android.view.WindowInsets
@@ -12,7 +9,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
+import org.robolectric.RuntimeEnvironment
 
 @RunWith(RobolectricTestRunner::class)
 class ContentPaddingTest {
@@ -32,15 +29,11 @@ class ContentPaddingTest {
     }
 
     private fun startSettings(television: Boolean): Activity {
-        val app =
-            androidx.test.core.app.ApplicationProvider.getApplicationContext<
-                android.app.Application
-            >()
-        val modeManager = app.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
-        shadowOf(modeManager).currentModeType =
-            if (television) Configuration.UI_MODE_TYPE_TELEVISION
-            else Configuration.UI_MODE_TYPE_NORMAL
-        return Robolectric.buildActivity(BorealisSettingsActivity::class.java).setup().get()
+        if (television) RuntimeEnvironment.setQualifiers("+television")
+        // The app theme has no action bar, which would add its own top padding in this test.
+        val controller = Robolectric.buildActivity(BorealisSettingsActivity::class.java)
+        controller.get().setTheme(android.R.style.Theme_DeviceDefault_NoActionBar)
+        return controller.setup().get()
     }
 
     private fun Activity.content(): View = findViewById(android.R.id.content)

@@ -126,17 +126,21 @@ class SystemDecoderSource(private val context: Context) : DecoderSource {
     }
         .getOrDefault(emptyList())
 
-    @Suppress("DEPRECATION")
     override fun displayHdrTypes(): List<Int> = runCatching {
-        context
-            .getSystemService(DisplayManager::class.java)
-            .getDisplay(Display.DEFAULT_DISPLAY)
-            .hdrCapabilities // null on some old devices
-            ?.supportedHdrTypes
-            ?.toList()
-            .orEmpty()
+        val display =
+            context.getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            display.mode.supportedHdrTypes.toList()
+        } else {
+            legacyHdrTypes(display)
+        }
     }
         .getOrDefault(emptyList())
+
+    // Display.getHdrCapabilities() is deprecated from API 34; it can return null on old devices.
+    @Suppress("DEPRECATION")
+    private fun legacyHdrTypes(display: Display): List<Int> =
+        display.hdrCapabilities?.supportedHdrTypes?.toList().orEmpty()
 
     private fun describe(info: MediaCodecInfo, mime: String) =
         VideoDecoder(

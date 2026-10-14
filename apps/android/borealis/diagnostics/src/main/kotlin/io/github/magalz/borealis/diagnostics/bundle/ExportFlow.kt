@@ -115,7 +115,7 @@ internal object BundleBuilder {
         context: Context,
         sections: Collection<DiagnosticSection>,
         now: Instant = Instant.now(),
-        flushLogs: () -> Unit = {},
+        flushLogs: () -> Unit = { DiagnosticBundleWriter.flushOpenSinks() },
     ): File {
         val dir = File(context.cacheDir, DIRECTORY)
         check(dir.isDirectory || dir.mkdirs()) { "Cannot create $dir" }
@@ -143,13 +143,4 @@ internal object BundleBuilder {
         }
         return target
     }
-}
-
-/** Process-wide wiring the app sets up once at startup. */
-object DiagnosticBundleHooks {
-    /**
-     * Called once before an export reads the log files. The app sets it to drain the queue of its
-     * asynchronous file sink (`RotatingFileSink.flushAll`); the default does nothing.
-     */
-    @Volatile var flushLogs: () -> Unit = {}
 }

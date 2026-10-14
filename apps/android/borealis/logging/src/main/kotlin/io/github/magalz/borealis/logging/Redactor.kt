@@ -166,7 +166,9 @@ class Redactor(maskAddresses: Boolean = false) {
         private val HOST_VALUE =
             Regex(
                 """(?i)\b([\w.-]{0,64}(?:$HOST_KEYS)["']?\s*[=:]\s*)""" +
-                    """(?:(")[^"\r\n]*("?)|(')[^\r\n']*('?)|[^\s"',;&]+)"""
+                    """(?:(")[^"\r\n]*("?)|(')[^\r\n']*('?)|""" +
+                    // The JSON literals are not host names: `"host":null` stays valid JSON.
+                    """(?!(?:null|true|false)(?![\w.-]))[^\s"',;&]+)"""
             )
 
         private const val OCTET = """(?:25[0-5]|2[0-4]\d|1\d\d|0?\d?\d)"""

@@ -2,7 +2,6 @@ package io.github.magalz.borealis.diagnostics.bundle
 
 import android.app.Activity
 import android.app.AlertDialog
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
@@ -44,7 +43,7 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
     internal var uriFor: (File) -> Uri = {
         FileProvider.getUriForFile(context, fileProviderAuthority(context.packageName), it)
     }
-    internal var flushLogs: () -> Unit = { DiagnosticBundleHooks.flushLogs() }
+    internal var flushLogs: () -> Unit = { DiagnosticBundleWriter.flushOpenSinks() }
     internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -58,7 +57,15 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
         scope.launch {
             val result = withContext(ioDispatcher) { flow.run() }
             running = false
-            if (!isGone()) present(result)
+            if (!isGone()) {
+                // The system can refuse the share or the dialog (revoked grant, dead window); the
+                // click handler must not take the app down with it.
+                runCatching { present(result) }
+                    .onFailure {
+                        BorealisLog.e(LogTag.APP, "could not present the diagnostic export", it)
+                        toast(R.string.borealis_export_failed)
+                    }
+            }
         }
     }
 
@@ -88,12 +95,7 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
 
     private fun share(chooser: Intent) {
         if (context !is Activity) chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        try {
-            context.startActivity(chooser)
-        } catch (error: ActivityNotFoundException) {
-            BorealisLog.e(LogTag.APP, "no activity to share the diagnostic bundle", error)
-            toast(R.string.borealis_export_failed)
-        }
+        context.startActivity(chooser)
     }
 
     /** The text can take focus, so a D-pad scrolls it and reaches the Close button. */

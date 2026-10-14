@@ -51,6 +51,13 @@ object BorealisLog {
         state?.redactor?.maskAddresses = enabled
     }
 
+    /**
+     * Redacts [text] with the running configuration's redactor (and so its address-masking switch);
+     * a default redactor (no address masking) before [initialize]. Text over the redactor's length
+     * cap is cut, so pass a line, not a file.
+     */
+    fun redact(text: String): String = TODO()
+
     fun log(
         level: LogLevel,
         tag: LogTag,

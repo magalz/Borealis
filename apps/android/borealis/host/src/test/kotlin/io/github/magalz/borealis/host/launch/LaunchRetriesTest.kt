@@ -20,6 +20,7 @@ class LaunchRetriesTest {
     private val progress = mutableListOf<List<Int>>()
     private val onProgress = RetryProgress { c, a, m, d -> progress += listOf(c, a, m, d) }
     private val notCancelled = BooleanSupplier { false }
+    private var conflictOpen = BooleanSupplier { true }
 
     private fun raising(vararg failures: Throwable): LaunchAttempt {
         val queue = ArrayDeque(failures.toList())
@@ -32,7 +33,17 @@ class LaunchRetriesTest {
         attempt: LaunchAttempt,
         cancelled: BooleanSupplier = notCancelled,
         with: LaunchRetryRunner = runner,
-    ) = LaunchRetries.run(with, isGfe, verb, attempt, extractor, cancelled, onProgress)
+    ) =
+        LaunchRetries.run(
+            with,
+            isGfe,
+            verb,
+            attempt,
+            extractor,
+            cancelled,
+            onProgress,
+            conflictOpen,
+        )
 
     @Test
     fun `a GFE host bypasses the runner and its errors propagate unchanged`() {
@@ -104,6 +115,7 @@ class LaunchRetriesTest {
                     extractor,
                     notCancelled,
                     onProgress,
+                    conflictOpen,
                 )
             }
 
@@ -115,8 +127,43 @@ class LaunchRetriesTest {
     @Test
     fun `the public entry point bypasses the runner for GFE`() {
         val outcome =
-            LaunchRetries.run(true, "launch", { true }, extractor, notCancelled, onProgress)
+            LaunchRetries.run(
+                true,
+                "launch",
+                { true },
+                extractor,
+                notCancelled,
+                onProgress,
+                conflictOpen,
+            )
 
         assertThat(outcome).isEqualTo(LaunchOutcome.SUCCEEDED)
+    }
+
+    @Test
+    fun `a running app on launch is a conflict while the guard is open`() {
+        val running = HostAnswer(HostError(400, "An app is already running on this host"))
+
+        assertThat(run(false, "launch", raising(running))).isEqualTo(LaunchOutcome.CONFLICT)
+        assertThat(sleeps).isEmpty()
+    }
+
+    @Test
+    fun `a running app on launch is rethrown once the guard is closed`() {
+        val running = HostAnswer(HostError(400, "An app is already running on this host"))
+        conflictOpen = BooleanSupplier { false }
+
+        val thrown = assertThrows(HostAnswer::class.java) { run(false, "launch", raising(running)) }
+
+        assertThat(thrown).isSameInstanceAs(running)
+    }
+
+    @Test
+    fun `a GFE host never reports a conflict`() {
+        val running = HostAnswer(HostError(400, "An app is already running on this host"))
+
+        val thrown = assertThrows(HostAnswer::class.java) { run(true, "launch", raising(running)) }
+
+        assertThat(thrown).isSameInstanceAs(running)
     }
 }

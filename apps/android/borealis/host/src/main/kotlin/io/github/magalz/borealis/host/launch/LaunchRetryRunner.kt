@@ -25,6 +25,9 @@ enum class LaunchOutcome {
 
     /** The user gave up; nothing is left to report. */
     CANCELLED,
+
+    /** `/launch` found another app running: the caller resolves it once, with the user. */
+    CONFLICT,
 }
 
 /**
@@ -60,9 +63,10 @@ class LaunchRetryRunner(
         isCancelled: () -> Boolean,
         onRetry: (LaunchCategory, Int, Int, Int) -> Unit,
         errorOf: (Throwable) -> HostError?,
+        conflictAllowed: () -> Boolean = { false },
         attempt: () -> Boolean,
     ): LaunchOutcome {
-        val request = Request(verb, isCancelled, onRetry, errorOf)
+        val request = Request(verb, isCancelled, onRetry, errorOf, conflictAllowed)
         while (true) {
             request.next(attempt)?.let {
                 return it
@@ -76,6 +80,7 @@ class LaunchRetryRunner(
         private val isCancelled: () -> Boolean,
         private val onRetry: (LaunchCategory, Int, Int, Int) -> Unit,
         private val errorOf: (Throwable) -> HostError?,
+        private val conflictAllowed: () -> Boolean,
     ) {
         private val startedAt = clock()
         private val retries = EnumMap<LaunchCategory, Int>(LaunchCategory::class.java)

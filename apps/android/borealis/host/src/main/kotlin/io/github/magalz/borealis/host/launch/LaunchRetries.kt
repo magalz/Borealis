@@ -32,6 +32,8 @@ object LaunchRetries {
     /**
      * Runs the request, retrying what LuminalShine asks to retry. GFE hosts never retry: their
      * errors are rethrown as upstream does. [verb] is the upstream verb, `"launch"` or `"resume"`.
+     * [conflictAllowed] says whether an app that is already running may still be resolved with the
+     * user ([LaunchOutcome.CONFLICT]); when it is false that answer is rethrown like any failure.
      * Blocks while waiting, so call it off the main thread.
      */
     @JvmStatic
@@ -44,8 +46,18 @@ object LaunchRetries {
         errors: HostErrorExtractor,
         cancelled: BooleanSupplier,
         progress: RetryProgress,
+        conflictAllowed: BooleanSupplier,
     ): LaunchOutcome =
-        run(LaunchRetryRunner(NativeHostRules), isGfe, verb, attempt, errors, cancelled, progress)
+        run(
+            LaunchRetryRunner(NativeHostRules),
+            isGfe,
+            verb,
+            attempt,
+            errors,
+            cancelled,
+            progress,
+            conflictAllowed,
+        )
 
     @Suppress("LongParameterList")
     internal fun run(
@@ -56,6 +68,7 @@ object LaunchRetries {
         errors: HostErrorExtractor,
         cancelled: BooleanSupplier,
         progress: RetryProgress,
+        conflictAllowed: BooleanSupplier,
     ): LaunchOutcome {
         if (isGfe) return if (attempt.run()) LaunchOutcome.SUCCEEDED else LaunchOutcome.FAILED
         return runner.run(
@@ -65,6 +78,7 @@ object LaunchRetries {
                 progress.onRetry(category.ordinal, number, max, delayMs)
             },
             errorOf = errors::errorOf,
+            conflictAllowed = conflictAllowed::getAsBoolean,
             attempt = attempt::run,
         )
     }

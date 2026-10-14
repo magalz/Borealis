@@ -76,6 +76,7 @@ public class ComputerDetails {
     public int runningGameId;
     public String rawAppList;
     public boolean nvidiaServer;
+    public io.github.magalz.borealis.host.caps.BorealisHostInfo borealis; // BOREALIS: host capabilities (host.caps)
 
     public ComputerDetails() {
         // Use defaults
@@ -145,6 +146,7 @@ public class ComputerDetails {
         this.pairState = details.pairState;
         this.runningGameId = details.runningGameId;
         this.nvidiaServer = details.nvidiaServer;
+        this.borealis = details.borealis; // BOREALIS: host capabilities (host.caps)
         this.rawAppList = details.rawAppList;
     }
 

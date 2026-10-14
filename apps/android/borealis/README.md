@@ -135,6 +135,33 @@ LuminalShine does not route `/unpair`, and the user types the PIN and the device
 - `BestEffortUnpair.unpair(client, url)`: sends `/unpair` with `Connection: close`, because LuminalShine writes stray bytes after its response on that connection, reads at most 16 KiB of body and returns true only when the XML root has `status_code="200"`. An I/O error, a non-2xx status or an unreadable body is false instead of an exception (it blocks on the network, so call it off the main thread) and the outcome is logged on `LogTag.PAIR` without the URL. `NvHTTP.unpair()` delegates to it and returns the result; `PairingManager` ignores it, `PcView.doUnpair` shows the Web UI hint when it is false.
 - `PairingHints`: `webUiUrl(address, httpPort)` is `https://<host>:<httpPort + 1>` (IPv6 bracketed once, zone id percent-encoded per RFC 6874, null for a port outside 1..65534 or an unusable address); `suggestedDeviceName(model)` removes `xbox` and `webos` in any case and falls back to `Borealis`; `pinHint` and `unpairHint` build the texts of `strings_pairing.xml` for the PIN dialog of `PcView.doPair` and the failed unpair.
 
+### `host.launch`
+
+LuminalShine answers `/launch` and `/resume` with 409 and 503 errors that ask the client to retry (another launch is pending, the previous stream is still restoring the display, the GPU or display stack is not ready; host contract 7.5), and rebuilds its virtual display when the `/launch` and RTSP modes differ (7.4). Upstream Moonlight never retries and, with frame pacing "cap FPS", sends two different rates.
+
+- `LaunchRetryRunner` runs one request through an attempt function. A `HostError(code, message)` that the hook's extractor recognises goes to `HostRules.decideLaunch`. The runner counts retries per category (the core is stateless, so a first call learns the category and a second one carries the count), waits the decided delay in slices of at most 250 ms while polling the cancel supplier, and gives up when the next wait would pass the total budget (`DEFAULT_BUDGET_MS`, 60 s). It reports `SUCCEEDED`, `FAILED` (the host answered 200 but did not start the app), `FALLBACK_TO_LAUNCH` (a `/resume` answered 503 "No running app to resume") or `CANCELLED`. A cancellation, including an interrupted wait, returns without throwing.
+- Everything else is rethrown as the original instance, so upstream's 470/525/599 handling and `stageFailed` mapping keep working: a throwable the extractor does not recognise, a FAIL decision, an exhausted category or budget. When `HostRules` returns null (native library not loaded) the original exception is rethrown too, with one ERROR on `LogTag.LAUNCH`. Retries log the category, the attempt and the delay, never the host message. The runner has no HTTP access and never calls `/cancel`, which would also cancel another client's pending launch.
+- `LaunchRetries.run(...)` is the Java-facing entry point. GFE hosts (`isNvidiaServerSoftware`) bypass the runner, as upstream. It maps the verb string, the cancel `BooleanSupplier` and a `RetryProgress` callback (category ordinal, attempt, retries allowed, delay) to the runner.
+- `LaunchProgressText.format` builds the spinner message in English or pt-BR from `strings_launch.xml`, for example "Another device is starting a stream on this host. Retrying in 2 s (retry 2 of 4)." The number counts retries, not requests: the first request is not a retry. There is one text per retried category plus a generic one.
+- `LaunchFrameRate.forLaunch(isGfe, launchFps, streamFps)` is the `mode=` frame rate of `/launch`: the stream rate announced over RTSP for non-GFE hosts, and the upstream rule (`isGfe && launchFps > 60 ? 0 : launchFps`) for GFE and whenever `HostRules.launchFps` returns null.
+
+Upstream hooks (each marked `// BOREALIS:`):
+
+| File | Hook |
+| --- | --- |
+| `NvConnection` | `launchWithRetry` feeds `launchApp` to `LaunchRetries` for the `/resume` and `/launch` calls; the resume outcome is kept in a local so that `FALLBACK_TO_LAUNCH` calls `launchNotRunningApp` after the resume try/catch (a 470 or 525 of the fallback `/launch` is not handled as a resume error), and both calls return on `CANCELLED`; `volatile launchCancelled` with `cancelLaunch()`; `start()` returns without `stageFailed` when the flag is set, before `connectionAllowed.acquire()` and again right after it |
+| `NvConnectionListener` | `default launchRetrying(category, attempt, maxAttempts, delayMs)` |
+| `NvHTTP.launchApp` | the `mode=` frame rate comes from `LaunchFrameRate` |
+| `Game` | `launchRetrying` sets the spinner message on the UI thread; `onStop` and `onDestroy` call `conn.cancelLaunch()` |
+
+The cancel flag never goes through `NvConnection.stop()`: `stop()` releases the static `connectionAllowed` semaphore unconditionally, and `Game` only calls it for a connection that was started. For the same reason a launch cancelled after `acquire()` releases the permit it just took before returning.
+
+### `host.caps`
+
+- `HostInfoReader.read(hostId, appVersion, codecMask, httpsPort, httpPort)` builds a `BorealisHostInfo` (the `HostCaps` of `HostRules.parseCaps` plus both ports) from the raw `appversion` and `ServerCodecModeSupport` texts of `/serverinfo`. A missing or unreadable mask counts as 0 (the low 32 bits of a larger number are kept, so `0x80000000` arrives as `2147483648`), so a malformed host cannot break the poll. It returns null when the rules are unavailable or reject the version text.
+- `/serverinfo` is polled all the time, so the reader logs one INFO on `LogTag.HOST` per host, and only when the information of that host changes. `NativeHostRules.parseCaps` itself still logs a WARN on every call for an `appversion` over 64 bytes.
+- `NvHTTP.getComputerDetails` stores the result in the transient `ComputerDetails.borealis`, which `update()` copies. `HostInfoText.appendTo` appends a localized block to the PC details dialog (`PcView`): host software and version, HEVC, AV1, 10-bit and 4:4:4, the PyroWave profiles or "off", and the HTTP and HTTPS ports.
+
 ### `host.video`
 
 LuminalShine can need about 18 s after the client attaches to send the first frame (contract section 10.1); upstream Moonlight dismisses the spinner at `connectionStarted`, long before that.

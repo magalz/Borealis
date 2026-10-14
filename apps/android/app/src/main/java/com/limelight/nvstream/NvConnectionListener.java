@@ -20,4 +20,8 @@ public interface NvConnectionListener {
     void setMotionEventState(short controllerNumber, byte motionType, short reportRateHz);
 
     void setControllerLED(short controllerNumber, byte r, byte g, byte b);
+
+    // BOREALIS: the host asked to try /launch or /resume again (host.launch); category is a LaunchCategory ordinal
+    default void launchRetrying(int category, int attempt, int maxAttempts, int delayMs) {
+    }
 }

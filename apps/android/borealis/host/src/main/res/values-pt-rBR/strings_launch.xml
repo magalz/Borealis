@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Progresso das novas tentativas no indicador de conexão: %1$s segundos, %2$s número da nova tentativa, %3$s tentativas permitidas. -->
+    <string name="launch_retry_pending">Outro dispositivo está iniciando uma transmissão neste host. Tentando de novo em %1$s s (nova tentativa %2$s de %3$s).</string>
+    <string name="launch_retry_restoring_display">O host ainda está restaurando a tela após a transmissão anterior. Tentando de novo em %1$s s (nova tentativa %2$s de %3$s).</string>
+    <string name="launch_retry_gpu_not_ready">A GPU ou a pilha de vídeo do host ainda não está pronta. Tentando de novo em %1$s s (nova tentativa %2$s de %3$s).</string>
+    <string name="launch_retry_capture_or_display">O host não conseguiu preparar a tela virtual ou a captura de vídeo. Tentando de novo em %1$s s (nova tentativa %2$s de %3$s).</string>
+    <string name="launch_retry_generic">O host pediu para tentar de novo. Tentando de novo em %1$s s (nova tentativa %2$s de %3$s).</string>
+
+    <!-- Bloco de capacidades do host na caixa de detalhes do PC. -->
+    <string name="host_info_header">Capacidades do host</string>
+    <string name="host_info_family_gfe">GeForce Experience</string>
+    <string name="host_info_family_sunshine">Baseado em Sunshine (LuminalShine)</string>
+    <string name="host_info_family_unknown">Desconhecido</string>
+    <string name="host_info_software">Software do host: %1$s</string>
+    <string name="host_info_software_version">Software do host: %1$s, versão %2$s</string>
+    <string name="host_info_codecs">Vídeo: %1$s</string>
+    <string name="host_info_codecs_h264_only">somente H.264</string>
+    <string name="host_info_codec_hevc">HEVC</string>
+    <string name="host_info_codec_hevc_main10">HEVC 10 bits</string>
+    <string name="host_info_codec_av1" tools:ignore="Typos">AV1</string>
+    <string name="host_info_codec_av1_main10">AV1 10 bits</string>
+    <string name="host_info_codec_yuv444">4:4:4</string>
+    <string name="host_info_pyrowave">PyroWave: %1$s</string>
+    <string name="host_info_pyrowave_off">PyroWave: desativado</string>
+    <string name="host_info_pyrowave_sdr_420">SDR 4:2:0</string>
+    <string name="host_info_pyrowave_sdr_444">SDR 4:4:4</string>
+    <string name="host_info_pyrowave_hdr_420">HDR 4:2:0</string>
+    <string name="host_info_pyrowave_hdr_444">HDR 4:4:4</string>
+    <string name="host_info_ports">Portas: HTTP %1$s, HTTPS %2$s</string>
+</resources>

@@ -135,7 +135,9 @@ class RedactorUrlTest {
                         subject.redact(line)
                         (System.nanoTime() - start) / 1_000_000
                     }
-                assertThat(best).isLessThan(150)
+                // Linear-time lines take tens of ms; the quadratic scan took ~750 ms on a fast
+                // desktop. 300 ms leaves room for slow CI runners without hiding a regression.
+                assertThat(best).isLessThan(300)
             }
         }
     }

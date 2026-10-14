@@ -12,5 +12,5 @@ object BorealisCore {
     /**
      * Logs the core version and cross-checks it against the version the ndk-build bridge reports.
      */
-    fun logStartup(bridgeVersion: String?) = Unit
+    fun logStartup(bridgeVersion: String?, coreVersion: String? = version()) = Unit
 }

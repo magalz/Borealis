@@ -29,6 +29,7 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             dependencies.add("implementation", project(":borealis:native"))
             dependencies.add("implementation", libs.findLibrary("hilt-android").get())
             dependencies.add("ksp", libs.findLibrary("hilt-compiler").get())
+            addInstrumentedTestDependencies()
         }
 
     /** Runs after app/build.gradle has been evaluated, so these values win over upstream's. */
@@ -44,10 +45,9 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             dsl.defaultConfig.minSdk = BorealisBuild.MIN_SDK
             // Imports the Prefab package published by :borealis:native into the ndk-build.
             dsl.buildFeatures.prefab = true
-            // Prefab refuses a shared library that bundles libc++ (c++_static); the one STL per app
-            // is
-            // therefore libc++_shared. Upstream native code is plain C, so this only affects
-            // Borealis.
+            dsl.defaultConfig.testInstrumentationRunner = BorealisBuild.INSTRUMENTATION_RUNNER
+            // Prefab rejects a shared library that bundles its own libc++, so the app uses the
+            // shared one. Upstream native code is plain C: only Borealis modules are affected.
             dsl.defaultConfig.externalNativeBuild.ndkBuild.arguments += "APP_STL=c++_shared"
             dsl.lint {
                 baseline = file("lint-baseline.xml")

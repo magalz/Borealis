@@ -11,9 +11,18 @@ internal object BorealisBuild {
     const val COMPILE_SDK = 37
     const val MIN_SDK = 28
 
+    const val INSTRUMENTATION_RUNNER = "androidx.test.runner.AndroidJUnitRunner"
+
     /** Must match `android.ndkVersion` in the upstream app/build.gradle. */
     const val NDK_VERSION = "29.0.14206865"
 }
 
 internal val Project.libs: VersionCatalog
     get() = extensions.getByType<VersionCatalogsExtension>().named("libs")
+
+/** Instrumented (`androidTest`) tests: AndroidX runner, JUnit 4 extensions and Truth. */
+internal fun Project.addInstrumentedTestDependencies() {
+    for (name in listOf("androidx-test-runner", "androidx-test-ext-junit", "truth")) {
+        dependencies.add("androidTestImplementation", libs.findLibrary(name).get())
+    }
+}

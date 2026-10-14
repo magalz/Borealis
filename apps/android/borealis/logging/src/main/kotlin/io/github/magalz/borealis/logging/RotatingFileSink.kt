@@ -15,6 +15,8 @@ class RotatingFileSink(
     private val directory: File,
     private val maxFiles: Int = DEFAULT_MAX_FILES,
     private val maxFileBytes: Long = DEFAULT_MAX_FILE_BYTES,
+    private val queueCapacity: Int = DEFAULT_QUEUE_CAPACITY,
+    private val writeGate: () -> Unit = {},
 ) : LogSink {
     private val lock = Any()
     private var stream: FileOutputStream? = null
@@ -45,6 +47,9 @@ class RotatingFileSink(
             }
         }
     }
+
+    /** Placeholder until the asynchronous writer exists. */
+    fun flush(timeoutMillis: Long = DEFAULT_FLUSH_TIMEOUT_MILLIS): Boolean = true
 
     override fun close() {
         synchronized(lock) {
@@ -93,5 +98,10 @@ class RotatingFileSink(
         const val FILE_NAME = "borealis.log"
         const val DEFAULT_MAX_FILES = 5
         const val DEFAULT_MAX_FILE_BYTES = 1024L * 1024L
+        const val DEFAULT_QUEUE_CAPACITY = 1024
+        const val DEFAULT_FLUSH_TIMEOUT_MILLIS = 2_000L
+
+        /** Placeholder until the asynchronous writer exists. */
+        fun flushAll(timeoutMillis: Long = DEFAULT_FLUSH_TIMEOUT_MILLIS) {}
     }
 }

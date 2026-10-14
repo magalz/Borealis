@@ -16,6 +16,7 @@ class CrashReportHandler(
     private val redactor: Redactor = Redactor(),
     private val clock: () -> Long = System::currentTimeMillis,
     private val header: List<String> = emptyList(),
+    private val flushLogs: () -> Unit = {},
 ) : Thread.UncaughtExceptionHandler {
     override fun uncaughtException(thread: Thread, throwable: Throwable) {
         runCatching { writeReport(thread, throwable) }

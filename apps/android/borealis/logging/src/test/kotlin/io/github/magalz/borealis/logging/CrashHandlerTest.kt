@@ -210,4 +210,49 @@ class CrashHandlerTest {
         val text = crashFiles().single().readText(Charsets.UTF_8)
         assertThat(text).contains("host=[HOST] at [IP]")
     }
+
+    @Test
+    fun `pending log lines are flushed before the report is written`() {
+        val order = mutableListOf<String>()
+        val previous = FakeHandler()
+        val handler =
+            CrashReportHandler(
+                logDir,
+                previous,
+                flushLogs = { order += "flush:${crashFiles().size}" },
+            )
+
+        handler.uncaughtException(Thread.currentThread(), IllegalStateException("boom"))
+
+        assertThat(order).containsExactly("flush:0")
+        assertThat(crashFiles()).hasSize(1)
+    }
+
+    @Test
+    fun `a failing log flush does not stop the report or the delegation`() {
+        val previous = FakeHandler()
+        val handler = CrashReportHandler(logDir, previous, flushLogs = { error("flush failed") })
+
+        handler.uncaughtException(Thread.currentThread(), IllegalStateException("boom"))
+
+        assertThat(crashFiles()).hasSize(1)
+        assertThat(previous.calls).hasSize(1)
+    }
+
+    @Test
+    fun `by default queued lines of the file sink reach the disk before the process dies`() {
+        val gate = java.util.concurrent.CountDownLatch(1)
+        val sink = RotatingFileSink(logDir, writeGate = { gate.await() })
+        sink.write(LogRecord(1_700_000_000_000L, LogLevel.INFO, LogTag.APP, "last words"))
+        Thread {
+            Thread.sleep(100)
+            gate.countDown()
+        }
+            .start()
+
+        CrashReportHandler(logDir, null).uncaughtException(Thread.currentThread(), Error("x"))
+
+        assertThat(File(logDir, RotatingFileSink.FILE_NAME).readText()).contains("last words")
+        sink.close()
+    }
 }

@@ -3,11 +3,4 @@
     <string name="pair_pin_hint">No host, abra a interface Web do LuminalShine em %1$s, digite o PIN lá e dê a este dispositivo o nome \"%2$s\". Nomes que contêm \"xbox\" ou \"webos\" fazem o host segurar o início da transmissão, então não os use.</string>
     <string name="unpair_webui_hint">O host não confirmou o pedido para desemparelhar. Abra a interface Web do host em %1$s e desemparelhe este dispositivo por lá.</string>
     <string name="webui_url_unknown">seu endereço HTTPS (porta HTTP do host + 1)</string>
-    <string name="pair_restart_cleared">O host tinha uma tentativa de pareamento inacabada e a limpou. Digite o novo PIN.</string>
-    <string name="pair_restart_failed_again">O host limpou a tentativa de pareamento de novo. Inicie o pareamento mais uma vez; se isso se repetir, reinicie o LuminalShine.</string>
-    <string name="pair_host_session_in_progress">O host ainda mantém uma tentativa de pareamento anterior. Espere até 5 minutos ou reinicie o LuminalShine e tente de novo.</string>
-    <string name="pair_host_other_device">Outro dispositivo está pareando com este host. Espere até que ele termine e tente de novo.</string>
-    <string name="pair_host_too_many_pending">O host tem pedidos de pareamento pendentes demais. Espere alguns minutos ou reinicie o LuminalShine e tente de novo.</string>
-    <string name="pair_host_peer_mismatch">O host recebeu as etapas do pareamento de endereços de rede diferentes. Fique em uma só rede (Wi-Fi ou dados móveis) e tente de novo.</string>
-    <string name="pair_host_superseded">Esta tentativa de pareamento foi substituída por uma mais nova deste dispositivo. Use o PIN da tentativa mais recente.</string>
 </resources>

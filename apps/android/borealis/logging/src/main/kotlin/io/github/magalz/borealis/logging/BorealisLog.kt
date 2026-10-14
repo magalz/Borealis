@@ -5,7 +5,7 @@ package io.github.magalz.borealis.logging
  * Until [initialize] is called, records are dropped. Logging never throws.
  */
 object BorealisLog {
-    private class State(
+    private data class State(
         val sinks: List<LogSink>,
         val minLevel: LogLevel,
         val redactor: Redactor,
@@ -41,13 +41,14 @@ object BorealisLog {
     }
 
     /** Changes the minimum level of the running configuration; ignored before [initialize]. */
+    @Synchronized
     fun setMinLevel(level: LogLevel) {
-        // Not implemented yet.
+        state = state?.copy(minLevel = level)
     }
 
     /** Switches address masking of the running configuration; ignored before [initialize]. */
     fun setMaskAddresses(enabled: Boolean) {
-        // Not implemented yet.
+        state?.redactor?.maskAddresses = enabled
     }
 
     fun log(

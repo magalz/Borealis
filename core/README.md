@@ -79,7 +79,7 @@ below `max_attempts` and `FAIL` afterwards. The caller also owns the overall tim
 
 The rules come from `docs/host-contract/luminalshine.md` (sections 6, 7.4 and 7.5) and
 `docs/host-contract/pyrowave.md` (section 3.1). Golden vectors for all three functions live in
-`tests/fixtures/vectors/` and are replayed by the unit tests and by the Android JNI test.
+`tests/fixtures/vectors/` and are replayed by the unit tests; the Android JNI instrumented test (task T4) will replay the same files.
 
 ## Build and test
 

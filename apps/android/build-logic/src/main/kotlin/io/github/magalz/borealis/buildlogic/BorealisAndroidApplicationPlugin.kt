@@ -28,6 +28,7 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             configureVariants(components, version)
             buildNativeCoreBeforeNdkBuild()
 
+            dependencies.add("implementation", project(":borealis:host"))
             dependencies.add("implementation", project(":borealis:logging"))
             dependencies.add("implementation", project(":borealis:native"))
             dependencies.add("implementation", libs.findLibrary("hilt-android").get())

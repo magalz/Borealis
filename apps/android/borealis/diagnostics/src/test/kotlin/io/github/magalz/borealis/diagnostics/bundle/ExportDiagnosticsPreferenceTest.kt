@@ -178,6 +178,30 @@ class ExportDiagnosticsPreferenceTest {
     }
 
     @Test
+    fun `a TV dialog has no Share button and Close keeps the focus`() {
+        RuntimeEnvironment.setQualifiers("+television")
+        val tv = Robolectric.buildActivity(Activity::class.java).setup().get()
+        allowSharing()
+
+        preference(context = tv).onClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        val dialog = savedDialog()
+        assertThat(dialog.getButton(AlertDialog.BUTTON_NEUTRAL).visibility).isEqualTo(View.GONE)
+        assertThat(texts(dialog.window!!.decorView)).doesNotContain("Share…")
+        assertThat(dialog.getButton(AlertDialog.BUTTON_POSITIVE).hasFocus()).isTrue()
+    }
+
+    @Test
+    fun `a phone with no receiver still has the Share button`() {
+        preference().onClick()
+
+        val share = savedDialog().getButton(AlertDialog.BUTTON_NEUTRAL)
+        assertThat(share.visibility).isEqualTo(View.VISIBLE)
+        assertThat(share.text.toString()).isEqualTo("Share…")
+    }
+
+    @Test
     fun `the Close button has the focus when the saved dialog opens`() {
         preference().onClick()
         shadowOf(Looper.getMainLooper()).idle()

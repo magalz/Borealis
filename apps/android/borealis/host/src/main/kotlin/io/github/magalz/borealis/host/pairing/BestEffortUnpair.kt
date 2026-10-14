@@ -14,8 +14,9 @@ import okhttp3.Request
  * LuminalShine does not route `/unpair`. Over HTTP it answers `200 OK` with a body whose root
  * `status_code` is 404 and then writes more bytes on the same connection, so a client that reuses
  * the connection reads them as the start of its next response. The request therefore asks for
- * `Connection: close`, the body is read for the XML `status_code`, and every failure is a plain
- * `false`.
+ * `Connection: close` and the body is read for the XML `status_code`. I/O errors, non-2xx statuses
+ * and unreadable bodies are reported as `false`, not thrown. The call blocks on the network: make
+ * it off the main thread.
  */
 object BestEffortUnpair {
     private const val STATUS_OK = 200

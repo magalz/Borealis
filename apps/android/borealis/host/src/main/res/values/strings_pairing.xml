@@ -2,5 +2,5 @@
 <resources>
     <string name="pair_pin_hint">On the host, open the LuminalShine Web UI at %1$s, enter the PIN there and name this device \"%2$s\". Names that contain \"xbox\" or \"webos\" make the host hold the stream start, so do not use them.</string>
     <string name="unpair_webui_hint">The host did not confirm the unpair request. Open the host Web UI at %1$s and unpair this device there.</string>
-    <string name="webui_url_unknown">the host Web UI (HTTPS, one port above the host HTTP port)</string>
+    <string name="webui_url_unknown">its HTTPS address (host HTTP port + 1)</string>
 </resources>

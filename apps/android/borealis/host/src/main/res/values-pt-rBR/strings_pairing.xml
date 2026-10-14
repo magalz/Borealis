@@ -2,5 +2,5 @@
 <resources>
     <string name="pair_pin_hint">No host, abra a interface Web do LuminalShine em %1$s, digite o PIN lá e dê a este dispositivo o nome \"%2$s\". Nomes que contêm \"xbox\" ou \"webos\" fazem o host segurar o início da transmissão, então não os use.</string>
     <string name="unpair_webui_hint">O host não confirmou o pedido para desemparelhar. Abra a interface Web do host em %1$s e desemparelhe este dispositivo por lá.</string>
-    <string name="webui_url_unknown">a interface Web do host (HTTPS, uma porta acima da porta HTTP do host)</string>
+    <string name="webui_url_unknown">seu endereço HTTPS (porta HTTP do host + 1)</string>
 </resources>

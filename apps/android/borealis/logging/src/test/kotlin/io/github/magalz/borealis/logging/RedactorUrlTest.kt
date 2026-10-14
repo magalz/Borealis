@@ -98,4 +98,45 @@ class RedactorUrlTest {
 
         assertThat((System.nanoTime() - start) / 1_000_000).isLessThan(1_000)
     }
+
+    @Test
+    fun `fragment pairs are redacted like query pairs`() {
+        assertThat(redactor.redact("https://h/p#uuid=x&mode=1&token2=y"))
+            .isEqualTo("https://h/p#uuid=[REDACTED]&mode=1&token2=[REDACTED]")
+        assertThat(redactor.redact("https://h/p?uuid=x#uniqueid=y"))
+            .isEqualTo("https://h/p?uuid=[REDACTED]#uniqueid=[REDACTED]")
+    }
+
+    @Test
+    fun `a fragment that is not a pair is kept`() {
+        val text = "https://h/p?mode=1#top"
+        assertThat(redactor.redact(text)).isEqualTo(text)
+    }
+
+    @Test
+    fun `hostile 16 KB lines are processed within a tight budget`() {
+        val hostile =
+            listOf(
+                "a-".repeat(8_192),
+                "a.".repeat(8_192),
+                "a-a.".repeat(4_096),
+                "a+".repeat(8_192),
+                "http://".repeat(2_300),
+                "x://a@".repeat(2_700),
+                "?a=1&".repeat(3_200),
+            )
+        for (masking in listOf(false, true)) {
+            val subject = Redactor(maskAddresses = masking)
+            for (line in hostile) {
+                subject.redact(line) // warm-up
+                val best =
+                    (1..3).minOf {
+                        val start = System.nanoTime()
+                        subject.redact(line)
+                        (System.nanoTime() - start) / 1_000_000
+                    }
+                assertThat(best).isLessThan(150)
+            }
+        }
+    }
 }

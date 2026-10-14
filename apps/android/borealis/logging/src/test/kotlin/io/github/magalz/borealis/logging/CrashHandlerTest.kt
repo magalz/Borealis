@@ -182,4 +182,32 @@ class CrashHandlerTest {
 
         assertThat(crashFiles().single().readText()).contains(message)
     }
+
+    @Test
+    fun `a report follows the masking switch of its redactor`() {
+        val redactor = Redactor()
+        val handler = CrashReportHandler(logDir, null, redactor = redactor)
+
+        handler.uncaughtException(Thread.currentThread(), IllegalStateException("to 10.0.0.5"))
+        redactor.maskAddresses = true
+        handler.uncaughtException(Thread.currentThread(), IllegalStateException("to 10.0.0.6"))
+
+        val texts = crashFiles().sortedBy { it.name }.map { it.readText(Charsets.UTF_8) }
+        assertThat(texts.count { it.contains("10.0.0.5") }).isEqualTo(1)
+        assertThat(texts.single { it.contains("[IP]") }).doesNotContain("10.0.0.6")
+    }
+
+    @Test
+    fun `an installed handler uses the redactor it was given`() {
+        val redactor = Redactor(maskAddresses = true)
+
+        val installed = CrashHandler.install(logDir, redactor = redactor)
+        installed.uncaughtException(
+            Thread.currentThread(),
+            IllegalStateException("host=Den-PC at 10.0.0.5"),
+        )
+
+        val text = crashFiles().single().readText(Charsets.UTF_8)
+        assertThat(text).contains("host=[HOST] at [IP]")
+    }
 }

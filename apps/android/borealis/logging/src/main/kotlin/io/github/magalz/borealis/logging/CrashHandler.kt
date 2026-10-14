@@ -76,7 +76,11 @@ object CrashHandler {
      * instead of chaining a second one.
      */
     @Synchronized
-    fun install(directory: File, header: List<String> = emptyList()): CrashReportHandler {
+    fun install(
+        directory: File,
+        header: List<String> = emptyList(),
+        redactor: Redactor = Redactor(),
+    ): CrashReportHandler {
         val current = Thread.getDefaultUncaughtExceptionHandler()
         val previous = if (current is CrashReportHandler) current.previous else current
         return CrashReportHandler(directory, previous, header = header).also {

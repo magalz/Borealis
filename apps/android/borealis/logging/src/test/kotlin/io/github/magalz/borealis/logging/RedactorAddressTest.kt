@@ -84,4 +84,19 @@ class RedactorAddressTest {
         redactor.maskAddresses = false
         assertThat(redactor.redact("to 10.0.0.5")).isEqualTo("to 10.0.0.5")
     }
+
+    @Test
+    fun `quoted host values are masked up to the closing quote`() {
+        assertThat(masking.redact("""computerName="Den PC" ok"""))
+            .isEqualTo("""computerName="[HOST]" ok""")
+        assertThat(masking.redact("host='Gaming PC', next")).isEqualTo("host='[HOST]', next")
+        assertThat(masking.redact("""{"computer":"Den PC","port":1}"""))
+            .isEqualTo("""{"computer":"[HOST]","port":1}""")
+    }
+
+    @Test
+    fun `an unterminated quoted host value is masked to the end of the line`() {
+        assertThat(masking.redact("""host="Den PC""" + "\nnext line"))
+            .isEqualTo("""host="[HOST]""" + "\nnext line")
+    }
 }

@@ -75,6 +75,13 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install \
             "platforms;android-37.0" "build-tools;37.0.0" "ndk;29.0.14206865" "cmake;4.1.2" > /dev/null
+      - name: Check the lint baseline is machine-independent
+        run: |
+          test -f app/lint-baseline.xml || { echo "::error::apps/android/app/lint-baseline.xml is missing"; exit 1; }
+          if grep -nE 'file="([A-Za-z]:)?/|local\.properties|`src\\' app/lint-baseline.xml; then
+            echo "::error file=apps/android/app/lint-baseline.xml::The lint baseline contains machine-specific entries (absolute paths, local.properties or Windows paths). See docs/development/upstream-sync.md."
+            exit 1
+          fi
       - name: Format, static analysis, licences, unit tests, coverage and build
         run: ./gradlew --stacktrace spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleNonRootDebug licensee koverXmlReportBorealis
       - name: Upload Android coverage to Codecov

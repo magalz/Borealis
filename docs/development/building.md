@@ -47,10 +47,12 @@ used with `--sdk`); any location works as long as `ANDROID_HOME` and
 
 1. Set the `ANDROID_HOME` environment variable to that directory.
 2. Create `apps/android/local.properties` (it is git-ignored) with the SDK
-   path. Use forward slashes or escaped backslashes:
+   path. Escape the drive-letter colon (`C\:`), use forward slashes (or `\\`),
+   and save the file with LF line endings; otherwise Android Lint reports
+   `PropertyEscape`:
 
    ```properties
-   sdk.dir=C\:\\Users\\<you>\\AppData\\Local\\Android\\Sdk
+   sdk.dir=C\:/Users/<you>/AppData/Local/Android/Sdk
    ```
 
 3. Make sure `JAVA_HOME` points at JDK 17 (`java -version` must report 17).

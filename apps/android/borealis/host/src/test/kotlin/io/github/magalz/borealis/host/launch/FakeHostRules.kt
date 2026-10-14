@@ -64,7 +64,9 @@ class FakeHostRules(
             val text = message.orEmpty().lowercase()
             val (category, delays) =
                 when {
-                    verb == LaunchVerb.RESUME && status == 503 && "no running app" in text ->
+                    verb == LaunchVerb.RESUME &&
+                        status == 503 &&
+                        "no running app to resume" in text ->
                         return LaunchDecision(
                             LaunchAction.FALLBACK_TO_LAUNCH,
                             0,

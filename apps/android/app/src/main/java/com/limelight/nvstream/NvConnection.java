@@ -328,12 +328,12 @@ public class NvConnection {
         
         // If there's a game running, resume it
         if (h.getCurrentGame(serverInfo) != 0) {
+            LaunchOutcome resumed = LaunchOutcome.SUCCEEDED; // BOREALIS: kept outside the try so the fallback launch is not handled as a resume error
             try {
                 if (h.getCurrentGame(serverInfo) == app.getAppId()) {
-                    LaunchOutcome resumed = launchWithRetry(h, "resume", app.getAppId()); // BOREALIS: retries, cancellation and the no-app fallback
-                    if (resumed == LaunchOutcome.FALLBACK_TO_LAUNCH) { return launchNotRunningApp(h, context); } // BOREALIS
+                    resumed = launchWithRetry(h, "resume", app.getAppId()); // BOREALIS: retries, cancellation and the no-app fallback
                     if (resumed == LaunchOutcome.CANCELLED) { return false; } // BOREALIS
-                    if (resumed != LaunchOutcome.SUCCEEDED) { // BOREALIS: was !h.launchApp(context, "resume", ...)
+                    if (resumed == LaunchOutcome.FAILED) { // BOREALIS: was !h.launchApp(context, "resume", ...)
                         context.connListener.displayMessage("Failed to resume existing session");
                         return false;
                     }
@@ -357,7 +357,8 @@ public class NvConnection {
                     throw e;
                 }
             }
-            
+            if (resumed == LaunchOutcome.FALLBACK_TO_LAUNCH) { return launchNotRunningApp(h, context); } // BOREALIS: nothing to resume, launch instead
+
             LimeLog.info("Resumed existing game session");
             return true;
         }

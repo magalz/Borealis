@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Progresso das novas tentativas no indicador de conexão: %1$s segundos, %2$s número da tentativa, %3$s tentativas permitidas. -->
-    <string name="launch_retry_pending">Outro dispositivo está iniciando uma transmissão neste host. Tentando de novo em %1$s s (tentativa %2$s de %3$s).</string>
-    <string name="launch_retry_restoring_display">O host ainda está restaurando a tela após a transmissão anterior. Tentando de novo em %1$s s (tentativa %2$s de %3$s).</string>
-    <string name="launch_retry_gpu_not_ready">A GPU ou a pilha de vídeo do host ainda não está pronta. Tentando de novo em %1$s s (tentativa %2$s de %3$s).</string>
-    <string name="launch_retry_capture_or_display">O host não conseguiu preparar a tela virtual ou a captura de vídeo. Tentando de novo em %1$s s (tentativa %2$s de %3$s).</string>
-    <string name="launch_retry_generic">O host pediu para tentar de novo. Tentando de novo em %1$s s (tentativa %2$s de %3$s).</string>
+    <!-- Progresso das novas tentativas no indicador de conexão: %1$s segundos, %2$s número da nova tentativa, %3$s tentativas permitidas. -->
+    <string name="launch_retry_pending">Outro dispositivo está iniciando uma transmissão neste host. Tentando de novo em %1$s s (nova tentativa %2$s de %3$s).</string>
+    <string name="launch_retry_restoring_display">O host ainda está restaurando a tela após a transmissão anterior. Tentando de novo em %1$s s (nova tentativa %2$s de %3$s).</string>
+    <string name="launch_retry_gpu_not_ready">A GPU ou a pilha de vídeo do host ainda não está pronta. Tentando de novo em %1$s s (nova tentativa %2$s de %3$s).</string>
+    <string name="launch_retry_capture_or_display">O host não conseguiu preparar a tela virtual ou a captura de vídeo. Tentando de novo em %1$s s (nova tentativa %2$s de %3$s).</string>
+    <string name="launch_retry_generic">O host pediu para tentar de novo. Tentando de novo em %1$s s (nova tentativa %2$s de %3$s).</string>
 
     <!-- Bloco de capacidades do host na caixa de detalhes do PC. -->
     <string name="host_info_header">Capacidades do host</string>

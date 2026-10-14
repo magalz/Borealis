@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Retry progress on the connection spinner: %1$s seconds, %2$s retry number, %3$s retries allowed. -->
-    <string name="launch_retry_pending">Another device is starting a stream on this host. Retrying in %1$s s (attempt %2$s of %3$s).</string>
-    <string name="launch_retry_restoring_display">The host is still restoring the display after the previous stream. Retrying in %1$s s (attempt %2$s of %3$s).</string>
-    <string name="launch_retry_gpu_not_ready">The GPU or display stack of the host is not ready yet. Retrying in %1$s s (attempt %2$s of %3$s).</string>
-    <string name="launch_retry_capture_or_display">The host could not prepare its virtual display or video capture. Retrying in %1$s s (attempt %2$s of %3$s).</string>
-    <string name="launch_retry_generic">The host asked to try again. Retrying in %1$s s (attempt %2$s of %3$s).</string>
+    <string name="launch_retry_pending">Another device is starting a stream on this host. Retrying in %1$s s (retry %2$s of %3$s).</string>
+    <string name="launch_retry_restoring_display">The host is still restoring the display after the previous stream. Retrying in %1$s s (retry %2$s of %3$s).</string>
+    <string name="launch_retry_gpu_not_ready">The GPU or display stack of the host is not ready yet. Retrying in %1$s s (retry %2$s of %3$s).</string>
+    <string name="launch_retry_capture_or_display">The host could not prepare its virtual display or video capture. Retrying in %1$s s (retry %2$s of %3$s).</string>
+    <string name="launch_retry_generic">The host asked to try again. Retrying in %1$s s (retry %2$s of %3$s).</string>
 
     <!-- Host capabilities block of the PC details dialog. -->
     <string name="host_info_header">Host capabilities</string>

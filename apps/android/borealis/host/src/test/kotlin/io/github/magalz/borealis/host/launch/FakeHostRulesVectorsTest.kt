@@ -35,21 +35,20 @@ class FakeHostRulesVectorsTest {
         assertThat(rows).isNotEmpty()
 
         for (row in rows) {
-            val (verb, status, message, attempts, action, delay, category, max) = row
             val expected =
                 LaunchDecision(
-                    LaunchAction.valueOf(action),
-                    delay.toInt(),
-                    LaunchCategory.valueOf(category),
-                    max.toInt(),
+                    LaunchAction.valueOf(row[4]),
+                    row[5].toInt(),
+                    LaunchCategory.valueOf(row[6]),
+                    row[7].toInt(),
                 )
 
             val actual =
                 FakeHostRules.coreTable(
-                    LaunchVerb.valueOf(verb),
-                    status.toInt(),
-                    message(message),
-                    attempts.toInt(),
+                    LaunchVerb.valueOf(row[0]),
+                    row[1].toInt(),
+                    message(row[2]),
+                    row[3].toInt(),
                 )
 
             assertWithMessage("vector $row").that(actual).isEqualTo(expected)
@@ -65,10 +64,4 @@ class FakeHostRulesVectorsTest {
         assertThat(actual.action).isEqualTo(LaunchAction.RETRY)
         assertThat(actual.category).isEqualTo(LaunchCategory.CAPTURE_OR_DISPLAY)
     }
-
-    private operator fun <T> List<T>.component6() = this[5]
-
-    private operator fun <T> List<T>.component7() = this[6]
-
-    private operator fun <T> List<T>.component8() = this[7]
 }

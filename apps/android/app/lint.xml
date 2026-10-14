@@ -3,4 +3,11 @@
     <issue id="InvalidPackage">
         <ignore path="**/bcpkix-jdk15on-*.jar"/>
     </issue>
+    <!-- BOREALIS: path-based ignores instead of baseline entries, because baseline locations and messages differ between Windows and Linux. -->
+    <issue id="TrustAllX509TrustManager">
+        <ignore path="**/bcpkix-jdk18on-*.jar"/>
+    </issue>
+    <issue id="IconMissingDensityFolder">
+        <ignore path="src/main/res"/>
+    </issue>
 </lint>

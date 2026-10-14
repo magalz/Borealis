@@ -101,17 +101,6 @@
     </issue>
 
     <issue
-        id="PropertyEscape"
-        message="Windows file separators (`\`) and drive letter separators (&apos;:&apos;) must be escaped (`\\`) in property files; use C\\:/Users/magal/AppData/Local/Android/Sdk\\r"
-        errorLine1="sdk.dir=C:/Users/magal/AppData/Local/Android/Sdk"
-        errorLine2="         ~">
-        <location
-            file="../local.properties"
-            line="1"
-            column="10"/>
-    </issue>
-
-    <issue
         id="UnusedAttribute"
         message="Attribute `gwpAsanMode` is only used in API level 30 and higher (current min is 28)"
         errorLine1="        android:gwpAsanMode=&quot;always&quot;"
@@ -868,13 +857,6 @@
             file="src/main/java/com/limelight/HelpActivity.java"
             line="51"
             column="9"/>
-    </issue>
-
-    <issue
-        id="TrustAllX509TrustManager"
-        message="`checkServerTrusted` is empty, which could cause insecure network traffic due to trusting arbitrary TLS/SSL certificates presented by peers">
-        <location
-            file="C:/Users/magal/.gradle/caches/modules-2/files-2.1/org.bouncycastle/bcpkix-jdk18on/1.85/b33d047adc6801a1cfc8ffe1634b23b306a670c1/bcpkix-jdk18on-1.85.jar"/>
     </issue>
 
     <issue
@@ -2384,13 +2366,6 @@
             file="src/main/res/mipmap-xhdpi/ic_launcher.png"/>
         <location
             file="src/main/res/drawable/app_icon.png"/>
-    </issue>
-
-    <issue
-        id="IconMissingDensityFolder"
-        message="Missing density variation folders in `src\main\res`: drawable-hdpi, drawable-mdpi, drawable-xxhdpi">
-        <location
-            file="src/main/res"/>
     </issue>
 
     <issue

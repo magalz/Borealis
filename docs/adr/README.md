@@ -73,3 +73,4 @@ Never rewrite an accepted ADR to change its decision. If a decision changes, wri
 | 0043 | [Use a thin C API with hand-written JNI](0043-thin-c-api-with-hand-written-jni.md) | accepted | 2026-10-13 |
 | 0044 | [Generate BorealisTokens.kt from design/tokens.json](0044-design-tokens-pipeline.md) | accepted | 2026-10-13 |
 | 0045 | [Automate store publishing with Gradle Play Publisher and an Amazon submission script](0045-store-publishing-automation.md) | proposed | 2026-10-13 |
+| 0046 | [Measure test coverage with Kover and llvm-cov, reported to a self-hosted Codecov](0046-test-coverage-with-kover-llvm-cov-and-codecov.md) | accepted | 2026-10-13 |

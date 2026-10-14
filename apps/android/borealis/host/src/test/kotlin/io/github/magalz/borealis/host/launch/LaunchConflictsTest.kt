@@ -147,6 +147,7 @@ class LaunchConflictsTest {
         answerWith = ConflictChoice.CANCEL
 
         resolve(reader(5), AppNameLookup { null })
+        cancelled = false
         resolve(reader(5), AppNameLookup { throw IOException("offline") })
 
         assertThat(prompts.map { it.runningName }).containsExactly(null, null)

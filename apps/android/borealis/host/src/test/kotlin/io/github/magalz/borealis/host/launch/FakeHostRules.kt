@@ -142,18 +142,23 @@ class FakeHostRules(
             message: String?,
             attempts: Int,
         ): LaunchDecision {
+            val running = "an app is already running" in message.orEmpty().lowercase()
+            return if (verb == LaunchVerb.LAUNCH && status == 400 && running) {
+                LaunchDecision(LaunchAction.RESOLVE_CONFLICT, 0, LaunchCategory.APP_RUNNING, 0)
+            } else {
+                retryTable(verb, status, message, attempts)
+            }
+        }
+
+        private fun retryTable(
+            verb: LaunchVerb,
+            status: Int,
+            message: String?,
+            attempts: Int,
+        ): LaunchDecision {
             val text = message.orEmpty().lowercase()
             val (category, delays) =
                 when {
-                    verb == LaunchVerb.LAUNCH &&
-                        status == 400 &&
-                        "an app is already running" in text ->
-                        return LaunchDecision(
-                            LaunchAction.RESOLVE_CONFLICT,
-                            0,
-                            LaunchCategory.APP_RUNNING,
-                            0,
-                        )
                     verb == LaunchVerb.RESUME &&
                         status == 503 &&
                         "no running app to resume" in text ->

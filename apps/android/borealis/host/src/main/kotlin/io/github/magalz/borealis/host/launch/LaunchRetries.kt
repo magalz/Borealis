@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.host.launch
 
+import io.github.magalz.borealis.nativecore.LaunchCategory
 import io.github.magalz.borealis.nativecore.LaunchVerb
 import io.github.magalz.borealis.nativecore.NativeHostRules
 import java.io.IOException
@@ -47,6 +48,7 @@ object LaunchRetries {
         cancelled: BooleanSupplier,
         progress: RetryProgress,
         conflictAllowed: BooleanSupplier,
+        host: String? = null,
     ): LaunchOutcome =
         run(
             LaunchRetryRunner(NativeHostRules),
@@ -57,6 +59,7 @@ object LaunchRetries {
             cancelled,
             progress,
             conflictAllowed,
+            host,
         )
 
     @Suppress("LongParameterList")
@@ -69,12 +72,49 @@ object LaunchRetries {
         cancelled: BooleanSupplier,
         progress: RetryProgress,
         conflictAllowed: BooleanSupplier,
+        host: String? = null,
+    ): LaunchOutcome {
+        val audited = if (verb == RESUME) RESUME else LAUNCH
+        val outcome =
+            try {
+                execute(
+                    runner,
+                    isGfe,
+                    verb,
+                    attempt,
+                    errors,
+                    cancelled,
+                    progress,
+                    conflictAllowed,
+                ) { category, number, max, delayMs ->
+                    LaunchAudit.retry(host, audited, category, number, max, delayMs)
+                }
+            } catch (@Suppress("TooGenericExceptionCaught") e: Throwable) {
+                LaunchAudit.failed(host, audited, errors.errorOf(e), e)
+                throw e
+            }
+        LaunchAudit.attempt(host, audited, outcome)
+        return outcome
+    }
+
+    @Suppress("LongParameterList")
+    private fun execute(
+        runner: LaunchRetryRunner,
+        isGfe: Boolean,
+        verb: String,
+        attempt: LaunchAttempt,
+        errors: HostErrorExtractor,
+        cancelled: BooleanSupplier,
+        progress: RetryProgress,
+        conflictAllowed: BooleanSupplier,
+        onRetried: (LaunchCategory, Int, Int, Int) -> Unit,
     ): LaunchOutcome {
         if (isGfe) return if (attempt.run()) LaunchOutcome.SUCCEEDED else LaunchOutcome.FAILED
         return runner.run(
             if (verb == RESUME) LaunchVerb.RESUME else LaunchVerb.LAUNCH,
             isCancelled = cancelled::getAsBoolean,
             onRetry = { category, number, max, delayMs ->
+                onRetried(category, number, max, delayMs)
                 progress.onRetry(category.ordinal, number, max, delayMs)
             },
             errorOf = errors::errorOf,
@@ -84,4 +124,5 @@ object LaunchRetries {
     }
 
     private const val RESUME = "resume"
+    private const val LAUNCH = "launch"
 }

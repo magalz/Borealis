@@ -18,7 +18,7 @@ object PairingErrors {
     /**
      * [error] is the host answer behind the failure, or null for any other exception; [fallback] is
      * the upstream text that stays for everything this class does not know. [restarted] is true for
-     * the attempt that already is the automatic restart.
+     * the attempt that already is the automatic restart. [host] labels the audit events.
      */
     @JvmStatic
     fun describe(
@@ -26,8 +26,9 @@ object PairingErrors {
         error: HostError?,
         fallback: String?,
         restarted: Boolean,
+        host: String?,
     ): PairingFailure =
-        describe(NativeHostRules, error, fallback, restarted) { context.getString(it) }
+        describe(NativeHostRules, error, fallback, restarted, { context.getString(it) }, host)
 
     internal fun describe(
         rules: HostRules,
@@ -35,10 +36,12 @@ object PairingErrors {
         fallback: String?,
         restarted: Boolean,
         getString: (Int) -> String,
+        host: String? = null,
     ): PairingFailure {
         val decision = error?.let { rules.classifyPairing(it.code, it.message) }
         val text = decision?.let { textFor(it.category, restarted) }
         if (error == null || decision == null || text == null) {
+            PairingAudit.failed(host, error?.code, decision, restarted)
             return PairingFailure(fallback, restart = false)
         }
         // Status and category only: the host text and anything near a PIN stay out of the log.
@@ -50,10 +53,10 @@ object PairingErrors {
             "action" to decision.action,
             "restarted" to restarted,
         )
-        return PairingFailure(
-            getString(text),
-            restart = decision.action == PairAction.RESTART_ONCE && !restarted,
-        )
+        val restart = decision.action == PairAction.RESTART_ONCE && !restarted
+        PairingAudit.failed(host, error.code, decision, restarted)
+        if (restart) PairingAudit.restarting(host, decision)
+        return PairingFailure(getString(text), restart)
     }
 
     /** The message of [category]; null keeps the upstream text. */

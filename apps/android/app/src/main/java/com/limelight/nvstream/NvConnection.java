@@ -120,7 +120,7 @@ public class NvConnection {
         return LaunchRetries.run(context.isNvidiaServerSoftware, verb,
                 () -> h.launchApp(context, verb, appId, context.negotiatedHdr),
                 e -> e instanceof HostHttpResponseException ? new HostError(((HostHttpResponseException) e).getErrorCode(), ((HostHttpResponseException) e).getErrorMessage()) : null,
-                () -> launchCancelled, context.connListener::launchRetrying, conflicts::isOpen);
+                () -> launchCancelled, context.connListener::launchRetrying, conflicts::isOpen, context.serverAddress.address);
     }
 
     // BOREALIS: Join: /resume of the running app, with upstream's message when the host answers 200 without resuming (host.launch)
@@ -136,7 +136,7 @@ public class NvConnection {
         return conflicts.resolve(() -> h.getCurrentGame(h.getServerInfo(true)),
                 id -> { NvApp running = h.getAppById(id); return running != null ? running.getAppName() : null; },
                 app.getAppId(), app.getAppName(), context.connListener::launchConflict,
-                () -> launchNotRunningApp(h, context), id -> joinRunning(h, context, id), () -> quitAndLaunch(h, context));
+                () -> launchNotRunningApp(h, context), id -> joinRunning(h, context, id), () -> quitAndLaunch(h, context), context.serverAddress.address);
     }
 
     private InetAddress resolveServerAddress() throws IOException {

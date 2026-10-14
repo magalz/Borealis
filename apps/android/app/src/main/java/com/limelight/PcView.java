@@ -29,6 +29,11 @@ import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.UiHelper;
 // BOREALIS: pairing hints for LuminalShine
 import io.github.magalz.borealis.host.pairing.PairingHints;
+// BOREALIS: LuminalShine pairing errors (host.pairing)
+import io.github.magalz.borealis.host.launch.HostError;
+import io.github.magalz.borealis.host.pairing.PairingErrors;
+import io.github.magalz.borealis.host.pairing.PairingFailure;
+import com.limelight.nvstream.http.HostHttpResponseException;
 
 import android.app.Activity;
 import android.app.ActivityManager;
@@ -382,6 +387,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         }
 
         menu.add(Menu.NONE, TEST_NETWORK_ID, 5, getResources().getString(R.string.pcview_menu_test_network));
+        menu.removeItem(TEST_NETWORK_ID); // BOREALIS: the connection test is disabled in the JNI layer, so the entry is not offered
         menu.add(Menu.NONE, DELETE_ID, 6, getResources().getString(R.string.pcview_menu_delete_pc));
         menu.add(Menu.NONE, VIEW_DETAILS_ID, 7,  getResources().getString(R.string.pcview_menu_details));
     }
@@ -395,6 +401,10 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
     }
 
     private void doPair(final ComputerDetails computer) {
+        doPair(computer, false); // BOREALIS: restarted is true for the automatic second attempt (host.pairing)
+    }
+
+    private void doPair(final ComputerDetails computer, final boolean restarted) {
         if (computer.state == ComputerDetails.State.OFFLINE || computer.activeAddress == null) {
             Toast.makeText(PcView.this, getResources().getString(R.string.pair_pc_offline), Toast.LENGTH_SHORT).show();
             return;
@@ -411,6 +421,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 NvHTTP httpConn;
                 String message;
                 boolean success = false;
+                boolean restart = false; // BOREALIS: the host dropped its pairing session (host.pairing)
                 try {
                     // Stop updates and wait while pairing
                     stopComputerUpdates(true);
@@ -472,19 +483,26 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                     message = getResources().getString(R.string.error_404);
                 } catch (XmlPullParserException | IOException e) {
                     e.printStackTrace();
-                    message = e.getMessage();
+                    // BOREALIS: LuminalShine pairing errors get their own text; a dropped host session restarts pairing once (host.pairing)
+                    HostHttpResponseException hostError = e instanceof HostHttpResponseException ? (HostHttpResponseException) e : null;
+                    PairingFailure failure = PairingErrors.describe(PcView.this, hostError == null ? null : new HostError(hostError.getErrorCode(), hostError.getErrorMessage()), e.getMessage(), restarted);
+                    message = failure.getMessage();
+                    restart = failure.getRestart();
                 }
 
                 Dialog.closeDialogs();
 
                 final String toastMessage = message;
                 final boolean toastSuccess = success;
+                final boolean toastRestart = restart; // BOREALIS
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         if (toastMessage != null) {
                             Toast.makeText(PcView.this, toastMessage, Toast.LENGTH_LONG).show();
                         }
+
+                        if (toastRestart) { doPair(computer, true); return; } // BOREALIS: pair again once, with a new PIN (host.pairing)
 
                         if (toastSuccess) {
                             // Open the app list after a successful pairing attempt

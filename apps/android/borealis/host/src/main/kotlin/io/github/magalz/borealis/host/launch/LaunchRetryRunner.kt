@@ -63,7 +63,7 @@ class LaunchRetryRunner(
         isCancelled: () -> Boolean,
         onRetry: (LaunchCategory, Int, Int, Int) -> Unit,
         errorOf: (Throwable) -> HostError?,
-        conflictAllowed: () -> Boolean = { false },
+        conflictAllowed: () -> Boolean,
         attempt: () -> Boolean,
     ): LaunchOutcome {
         val request = Request(verb, isCancelled, onRetry, errorOf, conflictAllowed)

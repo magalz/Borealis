@@ -1045,6 +1045,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     protected void onDestroy() {
         super.onDestroy();
         startupGuard.cancel(); // BOREALIS: first-frame watchdog
+        io.github.magalz.borealis.LaunchConflictDialog.dismiss(); // BOREALIS: a pending "app already running" question is a cancel (host.launch)
         if (conn != null) { conn.cancelLaunch(); } // BOREALIS: end the launch retries (host.launch)
 
         if (controllerHandler != null) {
@@ -1090,6 +1091,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     protected void onStop() {
         super.onStop();
         startupGuard.cancel(); // BOREALIS: first-frame watchdog
+        io.github.magalz.borealis.LaunchConflictDialog.dismiss(); // BOREALIS: a pending "app already running" question is a cancel (host.launch)
 
         SpinnerDialog.closeDialogs(this);
         Dialog.closeDialogs();
@@ -2236,6 +2238,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public void stageComplete(String stage) {
+    }
+
+    // BOREALIS: another app is running on the host: Join, Quit and relaunch or Cancel (host.launch)
+    @Override
+    public void launchConflict(int runningAppId, String runningAppName, int requestedAppId, String requestedAppName, io.github.magalz.borealis.host.launch.ConflictAnswer answer) {
+        runOnUiThread(() -> io.github.magalz.borealis.LaunchConflictDialog.show(this, runningAppId, runningAppName, requestedAppId, requestedAppName, answer));
     }
 
     // BOREALIS: retry progress of a LuminalShine 409/503 answer on the spinner (host.launch)

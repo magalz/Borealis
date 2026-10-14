@@ -6,6 +6,7 @@ import java.io.IOException
 import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
+import org.xmlpull.v1.XmlPullParserException
 
 class LaunchConflictsTest {
     @get:Rule val log = RecordingLogSink()
@@ -149,8 +150,10 @@ class LaunchConflictsTest {
         resolve(reader(5), AppNameLookup { null })
         cancelled = false
         resolve(reader(5), AppNameLookup { throw IOException("offline") })
+        cancelled = false
+        resolve(reader(5), AppNameLookup { throw XmlPullParserException("bad list") })
 
-        assertThat(prompts.map { it.runningName }).containsExactly(null, null)
+        assertThat(prompts.map { it.runningName }).containsExactly(null, null, null)
     }
 
     @Test

@@ -24,4 +24,9 @@ public interface NvConnectionListener {
     // BOREALIS: the host asked to try /launch or /resume again (host.launch); category is a LaunchCategory ordinal
     default void launchRetrying(int category, int attempt, int maxAttempts, int delayMs) {
     }
+
+    // BOREALIS: another app is running on the host: the listener asks the user and sets the answer; without a UI the launch is cancelled (host.launch)
+    default void launchConflict(int runningAppId, String runningAppName, int requestedAppId, String requestedAppName, io.github.magalz.borealis.host.launch.ConflictAnswer answer) {
+        answer.choose(io.github.magalz.borealis.host.launch.ConflictChoice.CANCEL);
+    }
 }

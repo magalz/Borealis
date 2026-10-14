@@ -75,9 +75,11 @@ The exact rules are in
 ## Backup
 
 - Logs and the audit trail are never included in Android backup.
-- Your pairing credentials and host list follow Android backup. They are
-  encrypted where your device supports it. If your device cannot encrypt
-  backups, they are not backed up.
+- Your pairing identity (the client certificate and key) and your host list
+  follow Android backup and device-to-device transfer, as in Moonlight. On
+  Android 12 and later they go to cloud backup only when your device can
+  encrypt the backup end to end, which needs a screen lock. On Android 9 to 11,
+  Android encrypts cloud backups end to end when a screen lock is set.
 
 ## Planned: opt-in crash reporting
 

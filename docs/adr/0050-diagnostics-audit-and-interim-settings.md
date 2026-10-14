@@ -20,18 +20,13 @@ Sprint 2 must let users send useful diagnostics, keep a local record of security
 
 ## Considered Options
 
-The owner approved the items below as one set on 2026-10-14. The source notes do not record the alternatives considered for each item. The earlier ADRs do record some of them, for example the storage options in [0011](0011-datastore-room-and-keystore-for-new-persistence.md) and the logging options in [0020](0020-logging.md).
+The owner chose among these alternatives on 2026-10-14. Storage and logging libraries were already chosen in [0011](0011-datastore-room-and-keystore-for-new-persistence.md) and [0020](0020-logging.md).
 
-* Diagnostic bundle created on request, with a size bound
-* Audit trail in Room, local only, as decided in [0011](0011-datastore-room-and-keystore-for-new-persistence.md)
-* Interim settings in SharedPreferences with a `borealis_` key prefix until Phase 2
-* Logging at INFO in release builds, with a "Verbose logging" switch to DEBUG
-* Disable the inherited STUN and connection-test endpoints
-* Exclude logs and the audit trail from Android backup
-* Bundle `NOTICE` and `LICENSE` as assets and show them in the app
-* Ship `android-v0.1.0` as a universal APK on GitHub Releases
-
-TODO(verify): the owner should add the alternatives considered for each item, if any, before this ADR is merged.
+* Network endpoints: disable the STUN lookup and the connection test; keep them and disclose them; make them an opt-in setting, off by default; or replace STUN with another public STUN server and disable the test
+* Interim settings: SharedPreferences with a `borealis_` prefix until Phase 2; DataStore now, bridged to the framework preference screen; or no new settings until the Phase 2 UI
+* moonlight-common-c log lines: forward them into `BorealisLog` through a bounded queue; copy the app's own logcat into the bundle at export time; or leave them in logcat only
+* Audit trail access: export and erase now, with the in-app viewer in Phase 2; or a simple viewer now in the upstream screen style
+* First release channel: a universal APK on GitHub Releases, followed by Obtainium; or also Google Play internal testing now
 
 ## Decision Outcome
 
@@ -70,7 +65,7 @@ Decision details:
 4. **Logging (refines [0020](0020-logging.md) and the [privacy policy](../policies/privacy-and-logging.md)).**
    * Release builds write INFO and above to the log file. A "Verbose logging" setting raises the level to DEBUG.
    * A "Mask addresses" setting masks IPv4 addresses (octets of at most 255), IPv6 addresses and host names. It applies when lines are written and again at export.
-   * URL query values are redacted, except for an allowlist of non-identifying protocol parameters such as `phrase` and `mode`. The implementer finalizes the exact list, and the policy names it. TODO(verify): the final allowlist.
+   * URL query values are redacted, except for an allowlist of non-identifying protocol parameters such as `phrase` and `mode`. The implementer finalizes the exact list, and the policy names it. S2-T1 records the final list in the policy.
    * moonlight-common-c log lines reach `BorealisLog` under the `COMMONC` tag. They pass through a bounded asynchronous queue with a rate limit. Suppressed lines are summarized as "N lines suppressed", so frame-loss bursts cannot evict pairing and launch history from the 5 × 1 MB file ring.
 5. **Network endpoints.**
    * The inherited STUN lookup (`stun.moonlight-stream.org`) and the connection test (`android.conntest.moonlight-stream.org`) are disabled at their JNI entry points. The "Test network connection" menu item is hidden.
@@ -78,7 +73,7 @@ Decision details:
    * Reason: the privacy policy says the app talks only to the host the user chooses.
 6. **Android backup.**
    * Logs and the audit trail live in `noBackupFilesDir` and are excluded from backup.
-   * The client pairing identity and the host list keep upstream behaviour. They follow Android backup, encrypted where the platform supports it (`disableIfNoEncryptionCapabilities`).
+   * The client pairing identity and the host list keep upstream behaviour: they follow Android backup and device-to-device transfer. On Android 12 and later, cloud backup runs only when the device can encrypt it end to end (`disableIfNoEncryptionCapabilities`). On Android 9 to 11, Android encrypts cloud backups end to end when a screen lock is set.
    * [PRIVACY.md](../../PRIVACY.md) states this plainly.
 7. **Licences screen (fulfils the NOTICE screen in [0021](0021-audit.md)).** `NOTICE` and `LICENSE` are bundled as assets and shown in the app, so they work on TV without a browser.
 8. **First release channel (notes on [0023](0023-distribution-channels.md) and [0026](0026-signing-keys.md)).**
@@ -102,38 +97,34 @@ This ADR refines [0020](0020-logging.md) and [0021](0021-audit.md), amends [0011
 
 ## Pros and Cons of the Options
 
-### Diagnostic bundle created on request
+### Network endpoints
 
-* Good, because nothing is collected without the user's action.
-* Good, because the user can check the bundle before sharing it.
-* Bad, because the user must act to report a problem.
+* Disable both (chosen). Good, because the app contacts only the host the user chooses. Bad, because external-address discovery and the automatic port test are gone.
+* Keep and disclose. Good, because no code changes. Bad, because the app contacts a third party without being asked, using Moonlight's infrastructure under another name.
+* Opt-in setting, off by default. Good, because users who want the features can turn them on. Bad, because it adds a setting and more upstream hooks.
+* Another public STUN server. Good, because external-address discovery stays. Bad, because it only swaps one third party for another.
 
-### Audit trail in Room, local only
+### Interim settings
 
-* Good, because history is queryable and has schema migrations.
-* Good, because the record never leaves the device.
-* Bad, because Room adds KSP to the build.
+* SharedPreferences with a prefix (chosen). Good, because it fits the upstream preference screen with no bridge code. Bad, because two settings mechanisms exist until Phase 2.
+* DataStore now. Good, because it follows [0011](0011-datastore-room-and-keystore-for-new-persistence.md) at once. Bad, because the framework preference screen is synchronous, so the bridge must block on DataStore.
+* No new settings until Phase 2. Good, because there is no interim code. Bad, because the 0.1.0 release could not offer verbose logging, address masking, export or erase.
 
-### Interim settings in SharedPreferences
+### moonlight-common-c log lines
 
-* Good, because the upstream code that reads these keys keeps working.
-* Good, because no migration is needed before Phase 2.
-* Bad, because there are two settings mechanisms until Phase 2.
+* Forward through a bounded queue (chosen). Good, because the lines survive app restarts, pass through redaction and reach the bundle. Bad, because it needs a small native hook and a rate limit.
+* Copy the app's logcat at export. Good, because no native hook is needed. Bad, because logcat holds only the current process, its buffer is short and shared, and the lines skip redaction until export.
+* Logcat only. Good, because nothing changes. Bad, because stream-level evidence never reaches the bundle.
 
-### Disable the STUN and connection-test endpoints
+### Audit trail access
 
-* Good, because the app contacts only the host the user chooses.
-* Bad, because there is no automatic external-address discovery and no automatic port test.
+* Export and erase now, viewer in Phase 2 (chosen). Good, because no screen is built twice. Bad, because the user reads the trail through the exported bundle until Phase 2.
+* Viewer now. Good, because the trail is visible at once. Bad, because the screen would be rebuilt with the Phase 2 UI.
 
-### Exclude logs and the audit trail from backup
+### First release channel
 
-* Good, because logs and audit records are not copied to backups.
-* Bad, because a restored device starts with an empty audit trail.
-
-### Universal APK on GitHub Releases
-
-* Good, because one file serves all devices, including TVs sideloaded through Obtainium.
-* Bad, because the file is larger than per-ABI APKs, which are deferred.
+* Universal APK on GitHub Releases (chosen). Good, because one file serves phones and TVs, and Obtainium follows it. Bad, because the file is larger than per-ABI APKs.
+* Also Google Play internal testing. Good, because it starts the store path early. Bad, because it needs the separate upload key, a store listing and the data safety form, which the roadmap places in Phase 5.
 
 ## More Information
 

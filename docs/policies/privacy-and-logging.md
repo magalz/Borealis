@@ -118,8 +118,11 @@ Bounds:
 
 - Logs and the audit trail live in `noBackupFilesDir` and are excluded from
   Android backup.
-- The client pairing identity and the host list follow Android backup. They
-  are encrypted where the platform supports it (`disableIfNoEncryptionCapabilities`).
+- The client pairing identity and the host list follow Android backup and
+  device-to-device transfer, as upstream does. On Android 12 and later, cloud
+  backup runs only when the device can encrypt it end to end
+  (`disableIfNoEncryptionCapabilities`). On Android 9 to 11, Android encrypts
+  cloud backups end to end when a screen lock is set.
 
 ## Crash reporting (planned, not implemented)
 

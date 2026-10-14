@@ -19,6 +19,7 @@ class RotatingFileSink(
     private val lock = Any()
     private var stream: FileOutputStream? = null
     private var size = 0L
+    private var closed = false
 
     init {
         require(maxFiles >= 1) { "maxFiles must be at least 1" }
@@ -28,6 +29,7 @@ class RotatingFileSink(
     override fun write(record: LogRecord) {
         val bytes = (LogFormatter.format(record) + "\n").toByteArray(Charsets.UTF_8)
         synchronized(lock) {
+            if (closed) return
             try {
                 var out = openCurrent()
                 if (size > 0 && size + bytes.size > maxFileBytes) {
@@ -45,7 +47,10 @@ class RotatingFileSink(
     }
 
     override fun close() {
-        synchronized(lock) { closeStream() }
+        synchronized(lock) {
+            closed = true
+            closeStream()
+        }
     }
 
     private fun openCurrent(): FileOutputStream {

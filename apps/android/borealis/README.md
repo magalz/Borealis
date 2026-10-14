@@ -14,7 +14,7 @@ New code is Kotlin under the package root `io.github.magalz.borealis`.
 
 ### Version
 
-`versionName`/`versionCode` come from the latest `android-vMAJOR.MINOR.PATCH` tag (`versionCode = MAJOR * 1_000_000 + MINOR * 1_000 + PATCH`). Without a tag: `0.0.0-dev`, code 1. Commits after a tag show as `1.2.3-5-gabcdef1`.
+`versionName`/`versionCode` come from the newest plain `android-vMAJOR.MINOR.PATCH` tag (pre-release tags such as `-rc1` are skipped; components above 999 fail the build; `versionCode = MAJOR * 1_000_000 + MINOR * 1_000 + PATCH`). Without a tag: `0.0.0-dev`, code 1 for debug builds; release builds fail with a message (fetch tags, CI: `fetch-depth: 0`). Commits after a tag show as `1.2.3-5-gabcdef1`.
 
 ### Release signing
 
@@ -46,6 +46,6 @@ An opt-in pre-commit hook lives in `.githooks` at the repository root (`git conf
 - Levels `VERBOSE..ERROR`, subsystem tags `LogTag` (APP, HOST, PAIR, LAUNCH, RTSP, VIDEO, PYROWAVE, INPUT, REST, CORE, UPSTREAM), structured fields: `BorealisLog.i(LogTag.HOST, "paired", "host" to name)` renders as `... INFO HOST paired host=name`.
 - Before `BorealisLog.initialize(...)` (done in `BorealisApplication.onCreate`) records are dropped; sinks never throw into the caller.
 - `Redactor` runs on every message, field and stack trace before any sink: labelled PINs, `Bearer` and `token=`/`apiToken=` values, PEM blocks and long hex/base64 values in `cert`/`key`/`signature` fields. IP masking is opt-in (`Redactor(maskIpAddresses = true)`).
-- Sinks: `LogcatSink` (tag `Borealis.<TAG>`) and `RotatingFileSink` (`filesDir/logs/borealis.log`, 5 files x 1 MB, one line per record, ISO-8601 UTC).
+- Sinks: `LogcatSink` (tag `Borealis.<TAG>`) and `RotatingFileSink` (`noBackupFilesDir/logs/borealis.log`, 5 files x 1 MB, one line per record, ISO-8601 UTC).
 - `JulBridge.install()` forwards the upstream `LimeLog` (`java.util.logging`) to `BorealisLog` with tag `UPSTREAM`.
 - `CrashHandler.install(dir, header)` writes a redacted `crash-<timestamp>.txt` next to the logs and delegates to the previous handler.

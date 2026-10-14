@@ -21,8 +21,10 @@ internal data class BorealisSigning(
                 "keyPassword" to "BOREALIS_KEY_PASSWORD",
             )
 
-        /** Returns null (release stays unsigned) unless all four values are available. */
-        @Suppress("UnusedParameter")
+        /**
+         * Returns null (release stays unsigned) unless all four values are available. A partial
+         * configuration is reported through [onIncomplete] with the missing key names.
+         */
         fun load(
             projectRoot: File,
             env: Map<String, String> = System.getenv(),
@@ -39,7 +41,11 @@ internal data class BorealisSigning(
                             ?.let { prop to it }
                     }
                     .toMap()
-            if (values.size != ENV_NAMES.size) return null
+            if (values.size != ENV_NAMES.size) {
+                // Only key names are ever reported, never values.
+                if (values.isNotEmpty()) onIncomplete(ENV_NAMES.keys.filter { it !in values })
+                return null
+            }
 
             val path = File(values.getValue("storeFile"))
             return BorealisSigning(

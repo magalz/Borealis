@@ -7,6 +7,7 @@ import dagger.hilt.android.HiltAndroidApp
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.CrashHandler
 import io.github.magalz.borealis.logging.JulBridge
+import io.github.magalz.borealis.logging.LogLevel
 import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.logging.LogcatSink
 import io.github.magalz.borealis.logging.RotatingFileSink
@@ -17,8 +18,10 @@ class BorealisApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        val logDir = File(filesDir, "logs")
-        BorealisLog.initialize(listOf(LogcatSink(), RotatingFileSink(logDir)))
+        // noBackupFilesDir: logs and crash reports must never end up in Auto Backup.
+        val logDir = File(noBackupFilesDir, "logs")
+        val logcatLevel = if (BuildConfig.DEBUG) LogLevel.DEBUG else LogLevel.INFO
+        BorealisLog.initialize(listOf(LogcatSink(logcatLevel), RotatingFileSink(logDir)))
         JulBridge.install()
         CrashHandler.install(
             logDir,

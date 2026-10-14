@@ -33,7 +33,8 @@ class CrashReportHandler(
             append(throwable.stackTraceToString())
         }
         val file = newReportFile(now)
-        file.writeText(redactor.redact(report), Charsets.UTF_8)
+        file.writeText(redactor.redact(report, CRASH_MAX_LENGTH), Charsets.UTF_8)
+        pruneOldReports()
     }
 
     /** Creates a fresh, uniquely named report file so crashes in one millisecond do not collide. */
@@ -48,7 +49,21 @@ class CrashReportHandler(
         }
     }
 
+    /** Keeps only the newest [MAX_REPORTS] `crash-*.txt` files; other files are left alone. */
+    private fun pruneOldReports() {
+        // Names embed a fixed-width UTC timestamp (plus an optional -N suffix), so name order is
+        // age order.
+        directory
+            .listFiles { f -> f.name.startsWith("crash-") && f.name.endsWith(".txt") }
+            .orEmpty()
+            .sortedBy { it.name.removeSuffix(".txt") }
+            .dropLast(MAX_REPORTS)
+            .forEach { it.delete() }
+    }
+
     private companion object {
+        const val MAX_REPORTS = 10
+        const val CRASH_MAX_LENGTH = 256 * 1024
         val FILE_TIMESTAMP: DateTimeFormatter =
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS").withZone(ZoneOffset.UTC)
     }

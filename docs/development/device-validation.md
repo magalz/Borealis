@@ -104,13 +104,18 @@ scenario so that the lines belong to it:
 
 ```sh
 adb -s <serial> logcat -c
-adb -s <serial> logcat -v time Borealis.APP:V Borealis.HOST:V Borealis.PAIR:V Borealis.LAUNCH:V Borealis.RTSP:V Borealis.VIDEO:V Borealis.PYROWAVE:V Borealis.INPUT:V Borealis.REST:V Borealis.CORE:V Borealis.UPSTREAM:V moonlight-common-c:V *:S > <capture-outside-repo>.log
+adb -s <serial> logcat -v time Borealis.APP:V Borealis.HOST:V Borealis.PAIR:V Borealis.LAUNCH:V Borealis.RTSP:V Borealis.VIDEO:V Borealis.PYROWAVE:V Borealis.INPUT:V Borealis.REST:V Borealis.CORE:V Borealis.UPSTREAM:V Borealis.COMMONC:V *:S > <capture-outside-repo>.log
 ```
 
 Borealis logs use the tag `Borealis.<TAG>` (`LogcatSink`). The debug build logs
 at DEBUG and above; release logs at INFO (`BorealisApplication.onCreate`). The
-upstream native library logs under the tag `moonlight-common-c`
-(`callbacks.c`, `BridgeClLogMessage`). The upstream Java logger `LimeLog` is
+upstream native library (moonlight-common-c) logs under `Borealis.COMMONC`:
+`BridgeClLogMessage` in `callbacks.c` hands each line to `BorealisLog`, so it is
+redacted and also reaches the log file and the diagnostic bundle. `COMMONC` is rate
+limited (a burst of 100 lines, then 10 lines per second); a line `N lines suppressed`
+marks what was left out, so a frame-loss burst shows as that line plus a counter,
+not as every loss. Only if forwarding is unavailable does the line fall back to the
+old logcat tag `moonlight-common-c`. The upstream Java logger `LimeLog` is
 forwarded to `Borealis.UPSTREAM` (`JulBridge`).
 
 Log lines are `message key=value`, for example
@@ -327,7 +332,7 @@ of section 1.4 for each scenario.
    (`stream_preparing_display`) from the start until the first video frame
    (`PreparingMessage`), then the overlay hides.
 3. Expected in logcat: one line `Received first video packet after N ms` with
-   tag `moonlight-common-c` (`VideoStream.c`, the `Limelog` call). Note the N.
+   tag `Borealis.COMMONC` (`VideoStream.c`, the `Limelog` call). Note the N.
    `N` is measured inside moonlight-common-c, so it is not the same as the
    wall-clock time that you note.
 4. The contract says the first frame can need about 18 s on a slow host

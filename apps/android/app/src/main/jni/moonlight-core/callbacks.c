@@ -9,6 +9,7 @@
 #include <android/log.h>
 
 #include <cpu-features.h>
+#include "borealis_log.h" // BOREALIS: log forwarding
 
 static OpusMSDecoder* Decoder;
 static OPUS_MULTISTREAM_CONFIGURATION OpusConfig;
@@ -102,6 +103,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_init(JNIEnv *env, jclass clazz) {
     BridgeClRumbleTriggersMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClRumbleTriggers", "(SSS)V");
     BridgeClSetMotionEventStateMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetMotionEventState", "(SBS)V");
     BridgeClSetControllerLEDMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetControllerLED", "(SBBB)V");
+    BorealisLogInit(env, clazz); // BOREALIS: look up the log forwarding method
 }
 
 int BridgeDrSetup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags) {
@@ -392,7 +394,10 @@ void BridgeClSetControllerLED(uint16_t controllerNumber, uint8_t r, uint8_t g, u
 void BridgeClLogMessage(const char* format, ...) {
     va_list va;
     va_start(va, format);
-    __android_log_vprint(ANDROID_LOG_INFO, "moonlight-common-c", format, va);
+    // BOREALIS: forward to BorealisLog; use logcat only when that is not possible
+    if (!BorealisLogForward(format, va)) {
+        __android_log_vprint(ANDROID_LOG_INFO, "moonlight-common-c", format, va);
+    }
     va_end(va);
 }
 

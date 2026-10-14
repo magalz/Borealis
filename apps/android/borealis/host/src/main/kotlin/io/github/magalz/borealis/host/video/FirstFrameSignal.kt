@@ -1,8 +1,21 @@
 package io.github.magalz.borealis.host.video
 
-/** Stub, replaced by the implementation commit. */
+import java.util.concurrent.atomic.AtomicBoolean
+
+/**
+ * Raised by the video decoder when it releases its first output buffer for rendering, from either
+ * render path (the Choreographer callback or the renderer thread). It notifies [listener] at most
+ * once per instance, on the rendering thread, so the listener must hand off quickly.
+ *
+ * The render path pays one atomic read per frame after the first: no allocation, no logging.
+ */
 class FirstFrameSignal {
     @Volatile var listener: Runnable? = null
 
-    fun frameRendered() = Unit
+    private val raised = AtomicBoolean(false)
+
+    fun frameRendered() {
+        if (raised.get() || !raised.compareAndSet(false, true)) return
+        listener?.run()
+    }
 }

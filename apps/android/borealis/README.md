@@ -108,3 +108,20 @@ The core is published as a shared library (`BUILD_SHARED_LIBS=ON` inside the mod
 ```
 
 The APK has `lib/<abi>/libborealis_core.so`, `libborealis_jni.so`, `libborealis_bridge.so` and `libc++_shared.so` for armeabi-v7a, arm64-v8a, x86 and x86_64. `llvm-nm -D` shows `borealis_core_version` defined in the core library and undefined (imported) in the JNI and bridge libraries. On a device or emulator run `./gradlew :borealis:native:connectedDebugAndroidTest :app:connectedNonRootDebugAndroidTest`; both assert that the packaged libraries report the version declared in `core/CMakeLists.txt`.
+
+## `:borealis:host`
+
+Every LuminalShine compatibility rule on the Android side lives here (the host contract in `docs/host-contract` is the reference). Package root `io.github.magalz.borealis.host`; the module depends on `:borealis:logging` and `:borealis:native`, and `:app` depends on it. It has no production code yet: the packages below are added by the phase 1 tasks.
+
+| Package | Content |
+| --- | --- |
+| `host.pairing` | Pairing and the paired-host state |
+| `host.launch` | App launch and resume requests |
+| `host.caps` | Host capabilities derived from `/serverinfo` |
+| `host.video` | Codec and video-stream selection |
+
+User-facing strings of the module stay in the module, one file per area, with Brazilian Portuguese next to the default English: `res/values/strings_pairing.xml`, `strings_stream.xml`, `strings_launch.xml` and the same names under `res/values-pt-rBR/`.
+
+### Fixtures in unit tests
+
+`borealis.android.library` gives every unit-test task of a `:borealis:*` module the system property `borealis.fixtures.dir`, the absolute path of `core/tests/fixtures` (layout, provenance and scrubbing rules in its `README.md`). The directory is a test input, so changing a fixture re-runs the tests. In `:borealis:host` the test helper `Fixtures` resolves a fixture by relative path (`Fixtures.text("luminalshine/26.09.1/serverinfo-http.xml")`) and fails with a clear message when the property or the file is missing. `FixturePolicyTest` enforces the public-repository rules on every file under `luminalshine/`: scrubbed host name, `uniqueid`, MAC and addresses, and a `device` or `source` provenance row for each file.

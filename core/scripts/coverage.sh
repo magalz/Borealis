@@ -70,7 +70,9 @@ done
 "$llvm_cov" report "$@" -instr-profile="$profdata_file" "$core_dir/include" "$core_dir/src"
 
 # Keep only records for core's own sources and make their paths repo-relative.
-# On Windows (Git Bash), llvm-cov emits drive-letter paths: use the native root.
+# Branch records (BRDA/BRF/BRH) are dropped: the Codecov gate is line-based
+# (ADR 0049). On Windows (Git Bash), llvm-cov emits drive-letter paths: use
+# the native root.
 native_repo_dir=$(cd "$repo_dir" && { pwd -W 2>/dev/null || pwd; } | tr '\\' '/')
 "$llvm_cov" export -format=lcov "$@" -instr-profile="$profdata_file" \
   "$core_dir/include" "$core_dir/src" | tr '\\' '/' |
@@ -83,6 +85,7 @@ native_repo_dir=$(cd "$repo_dir" && { pwd -W 2>/dev/null || pwd; } | tr '\\' '/'
         $0 = "SF:core/" substr(path, length(root "/core/") + 1)
       }
     }
+    /^(BRDA|BRF|BRH):/ { next }
     keep { print }
     /^end_of_record/ { keep = 0 }
   ' >"$lcov_file"

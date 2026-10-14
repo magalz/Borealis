@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.diagnostics.audit
 
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.logging.AuditEvent
 import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
 import org.junit.Test
@@ -8,73 +9,116 @@ import org.junit.Test
 class AuditDeduplicatorTest {
     private val dedup = AuditDeduplicator()
 
+    /** Asks like the store does: store the event and remember it only when it was stored. */
+    private fun offer(event: AuditEvent): Boolean {
+        val store = dedup.shouldStore(event)
+        if (store) dedup.markStored(event)
+        return store
+    }
+
+    /** An event of a type that repeats on every `/serverinfo` poll. */
+    private fun repeating(
+        at: Long = 0,
+        type: AuditType = AuditType.CERTIFICATE_CHANGED,
+        host: String? = "den-pc",
+        detail: String? = "detail",
+        outcome: AuditOutcome = AuditOutcome.FAILURE,
+    ) = event(at = at, type = type, host = host, detail = detail, outcome = outcome)
+
     @Test
-    fun `the first event is stored and a repeat inside ten minutes is not`() {
-        assertThat(dedup.shouldStore(event(at = 0))).isTrue()
-        assertThat(dedup.shouldStore(event(at = 1))).isFalse()
-        assertThat(dedup.shouldStore(event(at = 10 * MINUTE - 1))).isFalse()
+    fun `a repeating event is stored once per day`() {
+        assertThat(offer(repeating(at = 0))).isTrue()
+        assertThat(offer(repeating(at = 1))).isFalse()
+        assertThat(offer(repeating(at = 10 * MINUTE))).isFalse()
+        assertThat(offer(repeating(at = DAY - 1))).isFalse()
     }
 
     @Test
-    fun `the same event is stored again once ten minutes have passed`() {
-        dedup.shouldStore(event(at = 0))
+    fun `it is stored again once a day has passed`() {
+        offer(repeating(at = 0))
 
-        assertThat(dedup.shouldStore(event(at = 10 * MINUTE))).isTrue()
+        assertThat(offer(repeating(at = DAY))).isTrue()
     }
 
     @Test
     fun `a suppressed repeat does not extend the window`() {
-        dedup.shouldStore(event(at = 0))
-        dedup.shouldStore(event(at = 9 * MINUTE))
+        offer(repeating(at = 0))
+        offer(repeating(at = DAY - MINUTE))
 
-        assertThat(dedup.shouldStore(event(at = 10 * MINUTE))).isTrue()
+        assertThat(offer(repeating(at = DAY))).isTrue()
     }
 
     @Test
-    fun `another type, host or detail is a different event`() {
-        dedup.shouldStore(event(at = 0))
+    fun `both polled types are deduplicated`() {
+        for (type in listOf(AuditType.CERTIFICATE_CHANGED, AuditType.TLS_FAILURE)) {
+            assertThat(offer(repeating(at = 0, type = type))).isTrue()
+            assertThat(offer(repeating(at = 1, type = type))).isFalse()
+        }
+    }
 
-        assertThat(dedup.shouldStore(event(at = 1, type = AuditType.TLS_FAILURE))).isTrue()
-        assertThat(dedup.shouldStore(event(at = 1, host = "other-pc"))).isTrue()
-        assertThat(dedup.shouldStore(event(at = 1, detail = "other"))).isTrue()
-        assertThat(dedup.shouldStore(event(at = 1, host = null))).isTrue()
+    @Test
+    fun `no other type is ever deduplicated`() {
+        val others = AuditType.entries - setOf(AuditType.CERTIFICATE_CHANGED, AuditType.TLS_FAILURE)
+        assertThat(others).isNotEmpty()
+
+        for (type in others) {
+            assertThat(offer(event(at = 0, type = type))).isTrue()
+            assertThat(offer(event(at = 1, type = type))).isTrue()
+        }
+        assertThat(dedup.size).isEqualTo(0)
+    }
+
+    @Test
+    fun `another host or detail is a different event`() {
+        offer(repeating(at = 0))
+
+        assertThat(offer(repeating(at = 1, host = "other-pc"))).isTrue()
+        assertThat(offer(repeating(at = 1, detail = "other"))).isTrue()
+        assertThat(offer(repeating(at = 1, host = null))).isTrue()
+        assertThat(offer(repeating(at = 1, type = AuditType.TLS_FAILURE))).isTrue()
     }
 
     @Test
     fun `the outcome and the time do not make an event different`() {
-        dedup.shouldStore(event(at = 0))
+        offer(repeating(at = 0))
 
-        assertThat(dedup.shouldStore(event(at = 5, outcome = AuditOutcome.FAILURE))).isFalse()
+        assertThat(offer(repeating(at = 5, outcome = AuditOutcome.SUCCESS))).isFalse()
+    }
+
+    @Test
+    fun `an event that was asked about but not stored is not remembered`() {
+        assertThat(dedup.shouldStore(repeating(at = 0))).isTrue()
+        assertThat(dedup.shouldStore(repeating(at = 1))).isTrue()
     }
 
     @Test
     fun `a clock that went backwards stores the event`() {
-        dedup.shouldStore(event(at = 10 * MINUTE))
+        offer(repeating(at = DAY))
 
-        assertThat(dedup.shouldStore(event(at = 0))).isTrue()
+        assertThat(offer(repeating(at = 0))).isTrue()
     }
 
     @Test
     fun `clearing forgets what was stored`() {
-        dedup.shouldStore(event(at = 0))
+        offer(repeating(at = 0))
 
         dedup.clear()
 
-        assertThat(dedup.shouldStore(event(at = 1))).isTrue()
+        assertThat(offer(repeating(at = 1))).isTrue()
     }
 
     @Test
     fun `expired entries are dropped so the window stays small`() {
-        for (i in 0 until 50) dedup.shouldStore(event(at = 0, detail = "d$i"))
+        for (i in 0 until 50) offer(repeating(at = 0, detail = "d$i"))
 
-        dedup.shouldStore(event(at = 11 * MINUTE, detail = "new"))
+        offer(repeating(at = 2 * DAY, detail = "new"))
 
         assertThat(dedup.size).isEqualTo(1)
     }
 
     @Test
     fun `a flood of different events cannot grow the window without bound`() {
-        for (i in 0 until 10_000) dedup.shouldStore(event(at = 0, detail = "d$i"))
+        for (i in 0 until 10_000) offer(repeating(at = 0, detail = "d$i"))
 
         assertThat(dedup.size).isAtMost(AuditDeduplicator.MAX_KEYS)
         assertThat(dedup.size).isGreaterThan(0)

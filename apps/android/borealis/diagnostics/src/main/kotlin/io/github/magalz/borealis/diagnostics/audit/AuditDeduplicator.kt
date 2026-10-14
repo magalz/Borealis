@@ -33,6 +33,8 @@ class AuditDeduplicator(private val windowMillis: Long = WINDOW_MILLIS) {
         return true
     }
 
+    fun markStored(event: AuditEvent) {}
+
     @Synchronized
     fun clear() {
         lastStored.clear()

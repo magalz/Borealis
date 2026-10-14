@@ -24,6 +24,7 @@ class AuditStore(
     private val maxEntries: Int = MAX_ENTRIES,
     private val maxAgeMillis: Long = MAX_AGE_MILLIS,
     private val dedup: AuditDeduplicator = AuditDeduplicator(),
+    private val clock: () -> Long = System::currentTimeMillis,
 ) : AuditSink {
     private val queue = Channel<AuditEvent>(QUEUE_CAPACITY, BufferOverflow.DROP_OLDEST)
     private val lock = Any()

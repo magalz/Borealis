@@ -85,21 +85,74 @@ class AuditStoreTest {
     }
 
     @Test
-    fun `the same type host and detail is stored once per ten minutes`() {
-        store.write(event(at = 0))
-        store.write(event(at = 5 * MINUTE))
-        store.write(event(at = 10 * MINUTE))
+    fun `a repeating event is stored once per day`() {
+        store.write(event(at = 0, type = AuditType.TLS_FAILURE))
+        store.write(event(at = 10 * MINUTE, type = AuditType.TLS_FAILURE))
+        store.write(event(at = DAY, type = AuditType.TLS_FAILURE))
         settle()
 
-        assertThat(store.entries().map { it.timestampMillis }).containsExactly(0L, 10 * MINUTE)
+        assertThat(store.entries().map { it.timestampMillis }).containsExactly(0L, DAY)
+    }
+
+    @Test
+    fun `user-driven events are never deduplicated`() {
+        store.write(event(at = 0, type = AuditType.SESSION_START))
+        store.write(event(at = MINUTE / 2, type = AuditType.SESSION_START))
+        settle()
+
+        assertThat(db.dao().count()).isEqualTo(2)
+    }
+
+    @Test
+    fun `an event whose insert failed does not suppress its repeat`() {
+        val sqlite = db.openHelper.writableDatabase
+        sqlite.execSQL(
+            "CREATE TRIGGER refuse BEFORE INSERT ON audit_events " +
+                "BEGIN SELECT RAISE(ABORT, 'refused'); END"
+        )
+        store.write(event(at = 0, type = AuditType.CERTIFICATE_CHANGED))
+        settle()
+        assertThat(db.dao().count()).isEqualTo(0)
+
+        sqlite.execSQL("DROP TRIGGER refuse")
+        store.write(event(at = MINUTE, type = AuditType.CERTIFICATE_CHANGED))
+        settle()
+
+        assertThat(db.dao().count()).isEqualTo(1)
+    }
+
+    @Test
+    fun `a burst larger than the queue neither blocks nor throws and keeps the newest events`() {
+        val burst = 1_000
+        for (i in 0 until burst) store.write(event(at = i.toLong(), detail = "d$i"))
+
+        settle()
+
+        val details = store.entries().map { it.detail }
+        assertThat(details).hasSize(256)
+        assertThat(details.last()).isEqualTo("d${burst - 1}")
+    }
+
+    @Test
+    fun `a clock far in the future does not drop older entries early`() {
+        val wallClock = 200 * DAY
+        val clamped = AuditStore(db.dao(), scope, dispatcher, clock = { wallClock })
+        clamped.write(event(at = wallClock - 89 * DAY, detail = "recent"))
+        clamped.write(event(at = wallClock + 1_000 * DAY, detail = "from the future"))
+        settle()
+
+        assertThat(clamped.entries().map { it.detail })
+            .containsExactly("recent", "from the future")
+            .inOrder()
     }
 
     @Test
     fun `a restart forgets the window and the event is stored again`() {
-        store.write(event(at = 0))
+        store.write(event(at = 0, type = AuditType.TLS_FAILURE))
         settle()
 
-        AuditStore(db.dao(), scope, dispatcher).write(event(at = MINUTE))
+        AuditStore(db.dao(), scope, dispatcher)
+            .write(event(at = MINUTE, type = AuditType.TLS_FAILURE))
         settle()
 
         assertThat(db.dao().count()).isEqualTo(2)
@@ -136,13 +189,13 @@ class AuditStoreTest {
     @Test
     fun `erasing deletes everything and forgets the window`() =
         runTest(dispatcher) {
-            store.write(event(at = 0))
+            store.write(event(at = 0, type = AuditType.TLS_FAILURE))
             scheduler.runCurrent()
 
             store.erase()
 
             assertThat(db.dao().count()).isEqualTo(0)
-            store.write(event(at = MINUTE))
+            store.write(event(at = MINUTE, type = AuditType.TLS_FAILURE))
             scheduler.runCurrent()
             assertThat(db.dao().count()).isEqualTo(1)
         }

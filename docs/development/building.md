@@ -67,7 +67,7 @@ cd apps/android
 Checks (format, static analysis, lint and JVM unit tests):
 
 ```sh
-./gradlew spotlessCheck detekt lint testDebugUnitTest
+./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test
 ```
 
 Fix formatting of Borealis code:

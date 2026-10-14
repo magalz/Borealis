@@ -67,6 +67,16 @@ Conflicts happen where a Borealis hook sits in an upstream file.
 - If prebuilt libraries or dependency versions changed, update
   [NOTICE](../../NOTICE) and check the
   [dependency policy](../policies/dependencies.md).
+- Keep the duplicated toolchain values in step. Upstream declares them in its
+  own files and Borealis repeats them in build logic, so a sync that bumps one
+  side must bump the other in the same PR:
+  - AGP: `apps/android/build.gradle` (`com.android.tools.build:gradle:<x>`)
+    and `agp` in `apps/android/gradle/libs.versions.toml`. Keep the bundled
+    Kotlin version in the catalog equal to the one AGP ships with.
+  - `compileSdk`: `apps/android/app/build.gradle` and `BorealisBuild` in
+    `apps/android/build-logic`.
+  - NDK: `ndkVersion` in `apps/android/app/build.gradle`; update the SDK
+    install command in [building](building.md) if it changes.
 
 ## 5. Re-run the checks
 
@@ -74,11 +84,17 @@ From `apps/android/`:
 
 ```sh
 ./gradlew assembleNonRootDebug
-./gradlew spotlessCheck detekt lint testDebugUnitTest
+./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test
 ```
 
-- New Android Lint warnings that come from upstream code go into the lint
-  baseline; warnings in Borealis code are fixed.
+- Lint treats warnings as errors and the baseline matches on message text, so
+  new upstream code, new lint checks from an AGP bump, or changed version
+  messages can fail `lint` after a sync. When every new finding comes from
+  upstream code, regenerate the baseline deliberately with
+  `./gradlew :app:updateLintBaseline`, review the diff of
+  `apps/android/app/lint-baseline.xml`, and commit it in its own commit
+  (`build: refresh lint baseline for moonlight-android <version>`). Findings in
+  Borealis code are fixed, never baselined.
 - Characterization and hook tests must pass. A failing one means the hook or
   the assumption changed; fix the hook, not the test, unless upstream
   behaviour legitimately changed (then update the test and say why).

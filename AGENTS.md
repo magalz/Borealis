@@ -29,7 +29,7 @@ Borealis is a game-streaming client built on Moonlight and tailored to the Lumin
 
 Run the checks for what you touched before finishing:
 
-- Android: `./gradlew spotlessCheck detekt lint testDebugUnitTest assembleNonRootDebug` from `apps/android`.
+- Android: `./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleNonRootDebug` from `apps/android`.
 - Core: `cmake --preset dev && cmake --build --preset dev && ctest --preset dev` from `core`.
 
 ## GitHub and merges

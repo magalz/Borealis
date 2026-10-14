@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # Keep in sync with docs/development/building.md (local formatting must match CI).
+  CLANG_FORMAT_VERSION: '22.1.8'
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -62,8 +66,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
-      - name: Install clang-format (Spotless formats Borealis C/C++ sources)
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang-format
+      - name: Install pinned clang-format (Spotless formats Borealis C/C++ sources)
+        run: pipx install "clang-format==${CLANG_FORMAT_VERSION}"
       - name: Format, static analysis, unit tests and build
         run: ./gradlew --stacktrace spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleNonRootDebug
       - name: Upload debug APK
@@ -99,7 +103,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install toolchain
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build clang clang-format clang-tidy llvm
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build clang clang-tidy llvm
+          pipx install "clang-format==${CLANG_FORMAT_VERSION}"
       - name: Check formatting
         run: find include src tests -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.cpp' \) -print0 | xargs -0 --no-run-if-empty clang-format --dry-run --Werror
       - name: Build and test (dev, warnings as errors)

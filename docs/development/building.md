@@ -12,7 +12,8 @@ Primary development platform is Windows. Linux notes for CI are at the end.
 | Android NDK | `29.0.14206865` | Native code (moonlight-core). |
 | CMake | `4.1.2` (SDK) for Android; host `core/` needs 3.25 or newer | Native builds. |
 | Ninja | any recent (the SDK's `cmake/4.1.2/bin` ships `ninja.exe`) | `core/` presets. |
-| clang / LLVM | recent | `core/` host build, clang-format, clang-tidy. |
+| clang / LLVM | recent | `core/` host build, clang-tidy. |
+| clang-format | 22.x (CI pins 22.1.8 via `CLANG_FORMAT_VERSION` in `.github/workflows/ci.yml`) | Formatting of `core/` and Borealis C/C++ in `apps/android` (Spotless calls it from PATH). A different major version can format differently; `pip install clang-format==22.1.8` gives the same binary as CI. |
 
 ## Clone
 

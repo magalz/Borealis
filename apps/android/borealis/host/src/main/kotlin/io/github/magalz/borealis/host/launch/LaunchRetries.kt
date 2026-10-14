@@ -47,6 +47,7 @@ object LaunchRetries {
         cancelled: BooleanSupplier,
         progress: RetryProgress,
         conflictAllowed: BooleanSupplier,
+        host: String? = null,
     ): LaunchOutcome =
         run(
             LaunchRetryRunner(NativeHostRules),
@@ -57,6 +58,7 @@ object LaunchRetries {
             cancelled,
             progress,
             conflictAllowed,
+            host,
         )
 
     @Suppress("LongParameterList")
@@ -69,6 +71,7 @@ object LaunchRetries {
         cancelled: BooleanSupplier,
         progress: RetryProgress,
         conflictAllowed: BooleanSupplier,
+        host: String? = null,
     ): LaunchOutcome {
         if (isGfe) return if (attempt.run()) LaunchOutcome.SUCCEEDED else LaunchOutcome.FAILED
         return runner.run(

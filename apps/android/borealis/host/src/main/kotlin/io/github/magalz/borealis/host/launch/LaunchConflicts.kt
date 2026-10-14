@@ -106,6 +106,7 @@ internal constructor(
         relaunch: LaunchAttempt,
         join: ConflictJoin,
         quitAndRelaunch: LaunchAttempt,
+        host: String? = null,
     ): Boolean {
         used.set(true)
         return when (val seen = pollRunningApp(reader)) {

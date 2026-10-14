@@ -26,8 +26,9 @@ object PairingErrors {
         error: HostError?,
         fallback: String?,
         restarted: Boolean,
+        host: String?,
     ): PairingFailure =
-        describe(NativeHostRules, error, fallback, restarted) { context.getString(it) }
+        describe(NativeHostRules, error, fallback, restarted, { context.getString(it) }, host)
 
     internal fun describe(
         rules: HostRules,
@@ -35,6 +36,7 @@ object PairingErrors {
         fallback: String?,
         restarted: Boolean,
         getString: (Int) -> String,
+        host: String? = null,
     ): PairingFailure {
         val decision = error?.let { rules.classifyPairing(it.code, it.message) }
         val text = decision?.let { textFor(it.category, restarted) }

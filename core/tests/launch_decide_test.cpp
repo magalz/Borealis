@@ -15,6 +15,7 @@ namespace {
   constexpr std::string_view kCapture = "Failed to initialize video capture/encoding. Is a display connected and turned on?";
   constexpr std::string_view kPrepare = "Failed to prepare the client virtual display.";
   constexpr std::string_view kNoApp = "No running app to resume";
+  constexpr std::string_view kAppRunning = "An app is already running on this host";
 
   constexpr int32_t kVerbs[] = {BOREALIS_LAUNCH_VERB_LAUNCH, BOREALIS_LAUNCH_VERB_RESUME};
 
@@ -153,6 +154,29 @@ TEST(LaunchDecideNoRunningApp, OtherStatusesDoNotFallBack) {
   expect_permanent(BOREALIS_LAUNCH_VERB_RESUME, 400, kNoApp);
 }
 
+TEST(LaunchDecideAppRunning, LaunchAsksTheUserWithoutRetrying) {
+  for (const uint32_t attempts : {0U, 1U, 7U, UINT32_MAX}) {
+    const auto out = decide(BOREALIS_LAUNCH_VERB_LAUNCH, 400, kAppRunning, attempts);
+    EXPECT_EQ(out.action, BOREALIS_LAUNCH_ACTION_RESOLVE_CONFLICT) << attempts;
+    EXPECT_EQ(out.delay_ms, 0);
+    EXPECT_EQ(out.category, BOREALIS_LAUNCH_CATEGORY_APP_RUNNING);
+    EXPECT_EQ(out.max_attempts, 0);
+  }
+  EXPECT_EQ(
+    decide(BOREALIS_LAUNCH_VERB_LAUNCH, 400, "AN APP IS ALREADY RUNNING ON THIS HOST", 0).category,
+    BOREALIS_LAUNCH_CATEGORY_APP_RUNNING
+  );
+}
+
+TEST(LaunchDecideAppRunning, OnlyLaunchWithStatus400AsksTheUser) {
+  expect_permanent(BOREALIS_LAUNCH_VERB_RESUME, 400, kAppRunning);
+  expect_permanent(BOREALIS_LAUNCH_VERB_LAUNCH, 403, kAppRunning);
+  expect_permanent(BOREALIS_LAUNCH_VERB_LAUNCH, 400, "Missing a required launch parameter");
+  expect_permanent(BOREALIS_LAUNCH_VERB_LAUNCH, 400, "");
+  expect_retries(BOREALIS_LAUNCH_VERB_LAUNCH, 409, kAppRunning, BOREALIS_LAUNCH_CATEGORY_PENDING, {1000, 2000, 3000, 5000});
+  expect_retries(BOREALIS_LAUNCH_VERB_LAUNCH, 503, kAppRunning, BOREALIS_LAUNCH_CATEGORY_CAPTURE_OR_DISPLAY, {3000});
+}
+
 TEST(LaunchDecideMatching, IsCaseInsensitive) {
   for (const int32_t verb : kVerbs) {
     EXPECT_EQ(
@@ -223,7 +247,6 @@ TEST(LaunchDecidePermanent, MessagesOfRetryableCategoriesDoNotLeakAcrossStatuses
 TEST(LaunchDecidePermanent, HostTableRows) {
   for (const int32_t verb : kVerbs) {
     expect_permanent(verb, 400, "Missing a required launch parameter");
-    expect_permanent(verb, 400, "An app is already running on this host");
     expect_permanent(verb, 403, "Encryption is mandatory for this host but unsupported by the client");
     expect_permanent(verb, 404, "Failed to start the specified application");
     expect_permanent(verb, -1, "Failed to start the specified application");

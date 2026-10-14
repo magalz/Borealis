@@ -134,6 +134,9 @@ namespace {
     if (name == "FALLBACK_TO_LAUNCH") {
       return BOREALIS_LAUNCH_ACTION_FALLBACK_TO_LAUNCH;
     }
+    if (name == "RESOLVE_CONFLICT") {
+      return BOREALIS_LAUNCH_ACTION_RESOLVE_CONFLICT;
+    }
     ADD_FAILURE() << "unknown action " << name;
     return -1;
   }
@@ -157,7 +160,45 @@ namespace {
     if (name == "NO_RUNNING_APP") {
       return BOREALIS_LAUNCH_CATEGORY_NO_RUNNING_APP;
     }
+    if (name == "APP_RUNNING") {
+      return BOREALIS_LAUNCH_CATEGORY_APP_RUNNING;
+    }
     ADD_FAILURE() << "unknown category " << name;
+    return -1;
+  }
+
+  int32_t pair_action_value(const std::string &name) {
+    if (name == "FAIL") {
+      return BOREALIS_PAIR_ACTION_FAIL;
+    }
+    if (name == "RESTART_ONCE") {
+      return BOREALIS_PAIR_ACTION_RESTART_ONCE;
+    }
+    if (name == "WAIT_HOST_SESSION") {
+      return BOREALIS_PAIR_ACTION_WAIT_HOST_SESSION;
+    }
+    ADD_FAILURE() << "unknown pair action " << name;
+    return -1;
+  }
+
+  int32_t pair_category_value(const std::string &name) {
+    static const std::pair<const char *, int32_t> kCategories[] = {
+      {"UNKNOWN", BOREALIS_PAIR_CATEGORY_UNKNOWN},
+      {"STALE_SESSION", BOREALIS_PAIR_CATEGORY_STALE_SESSION},
+      {"EXCHANGE_INVALIDATED", BOREALIS_PAIR_CATEGORY_EXCHANGE_INVALIDATED},
+      {"HOST_RESET", BOREALIS_PAIR_CATEGORY_HOST_RESET},
+      {"IN_PROGRESS", BOREALIS_PAIR_CATEGORY_IN_PROGRESS},
+      {"IDENTITY_MISMATCH", BOREALIS_PAIR_CATEGORY_IDENTITY_MISMATCH},
+      {"TOO_MANY_PENDING", BOREALIS_PAIR_CATEGORY_TOO_MANY_PENDING},
+      {"PEER_MISMATCH", BOREALIS_PAIR_CATEGORY_PEER_MISMATCH},
+      {"SUPERSEDED", BOREALIS_PAIR_CATEGORY_SUPERSEDED},
+    };
+    for (const auto &[label, value] : kCategories) {
+      if (name == label) {
+        return value;
+      }
+    }
+    ADD_FAILURE() << "unknown pair category " << name;
     return -1;
   }
 
@@ -216,6 +257,19 @@ TEST(GoldenVectors, LaunchDecide) {
     EXPECT_EQ(out.delay_ms, to_int(row[5]));
     EXPECT_EQ(out.category, category_value(row[6]));
     EXPECT_EQ(out.max_attempts, to_int(row[7]));
+  }
+}
+
+TEST(GoldenVectors, PairClassify) {
+  const Table table = load_table("pair_classify.tsv");
+  ASSERT_FALSE(table.rows.empty());
+  for (const Row &row : table.rows) {
+    SCOPED_TRACE(row[0] + " [" + row[1] + "]");
+    const Text message = to_text(row[1]);
+    borealis_pair_decision out {};
+    ASSERT_EQ(borealis_pair_classify(to_int(row[0]), message.data(), message.value.size(), &out), BOREALIS_OK);
+    EXPECT_EQ(out.action, pair_action_value(row[2]));
+    EXPECT_EQ(out.category, pair_category_value(row[3]));
   }
 }
 

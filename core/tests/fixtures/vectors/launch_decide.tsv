@@ -31,9 +31,15 @@ LAUNCH	503	Windows did not activate the virtual display.	1	FAIL	0	CAPTURE_OR_DIS
 LAUNCH	503	Something unexpected	0	RETRY	3000	CAPTURE_OR_DISPLAY	1
 LAUNCH	503	<null>	0	RETRY	3000	CAPTURE_OR_DISPLAY	1
 LAUNCH	503	<empty>	1	FAIL	0	CAPTURE_OR_DISPLAY	1
+# LAUNCH, 400 with an app already running: ask the user (case-insensitive, any attempts), never retry.
+LAUNCH	400	An app is already running on this host	0	RESOLVE_CONFLICT	0	APP_RUNNING	0
+LAUNCH	400	An app is already running on this host	3	RESOLVE_CONFLICT	0	APP_RUNNING	0
+LAUNCH	400	an app is already running on this host	0	RESOLVE_CONFLICT	0	APP_RUNNING	0
+LAUNCH	400	AN APP IS ALREADY RUNNING ON THIS HOST	0	RESOLVE_CONFLICT	0	APP_RUNNING	0
+LAUNCH	409	An app is already running on this host	0	RETRY	1000	PENDING	4
+LAUNCH	503	An app is already running on this host	0	RETRY	3000	CAPTURE_OR_DISPLAY	1
 # LAUNCH, permanent failures.
 LAUNCH	400	Missing a required launch parameter	0	FAIL	0	PERMANENT	0
-LAUNCH	400	An app is already running on this host	0	FAIL	0	PERMANENT	0
 LAUNCH	403	Encryption is mandatory for this host but unsupported by the client	0	FAIL	0	PERMANENT	0
 LAUNCH	404	Failed to start the specified application	0	FAIL	0	PERMANENT	0
 LAUNCH	-1	Failed to start the specified application	0	FAIL	0	PERMANENT	0

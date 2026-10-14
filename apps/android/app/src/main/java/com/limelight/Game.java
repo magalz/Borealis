@@ -148,6 +148,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private TextView performanceOverlayView;
 
     private MediaCodecDecoderRenderer decoderRenderer;
+
+    // BOREALIS: preparing message and first-frame watchdog (host.video)
+    private final io.github.magalz.borealis.host.video.StreamStartupGuard startupGuard =
+            io.github.magalz.borealis.host.video.StreamStartup.create(this::runOnUiThread,
+                    id -> notificationOverlayView.setText(id), v -> requestedNotificationOverlayVisibility = v,
+                    v -> notificationOverlayView.setVisibility(v), () -> isHidingOverlays,
+                    () -> connectionTerminated(MoonBridge.ML_ERROR_NO_VIDEO_FRAME));
     private boolean reportedCrash;
 
     private WifiManager.WifiLock highPerfWifiLock;
@@ -392,6 +399,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 willStreamHdr,
                 glPrefs.glRenderer,
                 this);
+        // BOREALIS: first rendered frame ends the preparing message and the watchdog
+        decoderRenderer.firstFrameSignal.setListener(startupGuard::onFirstFrame);
 
         // Don't stream HDR if the decoder can't support it
         if (willStreamHdr && !decoderRenderer.isHevcMain10Hdr10Supported() && !decoderRenderer.isAv1Main10Supported()) {
@@ -1035,6 +1044,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        startupGuard.cancel(); // BOREALIS: first-frame watchdog
 
         if (controllerHandler != null) {
             controllerHandler.destroy();
@@ -1078,6 +1088,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     @Override
     protected void onStop() {
         super.onStop();
+        startupGuard.cancel(); // BOREALIS: first-frame watchdog
 
         SpinnerDialog.closeDialogs(this);
         Dialog.closeDialogs();
@@ -2226,6 +2237,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     private void stopConnection() {
+        startupGuard.cancel(); // BOREALIS: first-frame watchdog
         if (connecting || connected) {
             connecting = connected = false;
             updatePipAutoEnter();
@@ -2298,6 +2310,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                startupGuard.cancel(); // BOREALIS: first-frame watchdog
+
                 // Let the display go to sleep now
                 getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -2353,6 +2367,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                                             getResources().getString(R.string.error_code_prefix) + " " + errorCodeString;
                                     break;
                             }
+                            // BOREALIS: LuminalShine hint on the no-video errors (-100, -101)
+                            message = io.github.magalz.borealis.host.video.StreamErrorHints.withHint(errorCode, message, Game.this::getString);
                         }
 
                         if (portFlags != 0) {
@@ -2389,9 +2405,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     }
 
                     requestedNotificationOverlayVisibility = View.VISIBLE;
+                    startupGuard.onWarning(); // BOREALIS: a warning replaces the preparing message
                 }
                 else if (connectionStatus == MoonBridge.CONN_STATUS_OKAY) {
                     requestedNotificationOverlayVisibility = View.GONE;
+                    startupGuard.onWarningCleared(); // BOREALIS: the preparing message may come back
                 }
 
                 if (!isHidingOverlays) {
@@ -2414,6 +2432,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 connected = true;
                 connecting = false;
                 updatePipAutoEnter();
+                startupGuard.onConnectionStarted(); // BOREALIS: preparing message and first-frame watchdog
 
                 // Hide the mouse cursor now after a short delay.
                 // Doing it before dismissing the spinner seems to be undone

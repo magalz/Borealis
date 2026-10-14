@@ -193,7 +193,8 @@ class HostRulesBindingTest {
         val decision = rules.classifyPairing(400, "Out of order call to getservercert")
 
         assertThat(fake.pairStatus).isEqualTo(400)
-        assertThat(fake.pairMessage).isEqualTo("Out of order call to getservercert".encodeToByteArray())
+        assertThat(fake.pairMessage)
+            .isEqualTo("Out of order call to getservercert".encodeToByteArray())
         assertThat(decision)
             .isEqualTo(PairDecision(PairAction.RESTART_ONCE, PairCategory.STALE_SESSION))
     }

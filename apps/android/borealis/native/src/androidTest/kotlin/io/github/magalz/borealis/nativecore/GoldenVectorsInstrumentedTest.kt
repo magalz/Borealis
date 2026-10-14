@@ -107,8 +107,7 @@ class GoldenVectorsInstrumentedTest {
         assertWithMessage("pair_classify.tsv rows").that(rows).isNotEmpty()
         for (row in rows) {
             val decision = NativeHostRules.classifyPairing(int(row[0]), text(row[1]))
-            val expected =
-                PairDecision(PairAction.valueOf(row[2]), PairCategory.valueOf(row[3]))
+            val expected = PairDecision(PairAction.valueOf(row[2]), PairCategory.valueOf(row[3]))
             assertWithMessage("$row").that(decision).isEqualTo(expected)
         }
     }

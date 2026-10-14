@@ -57,6 +57,9 @@ class StreamErrorHintsTest {
             .containsExactly("stream_preparing_display", "stream_luminalshine_hint")
         assertThat(portuguese.keys).isEqualTo(english.keys)
         for (text in english.values + portuguese.values) assertThat(text).isNotEmpty()
+        for (text in listOf(english, portuguese).map { it.getValue("stream_preparing_display") }) {
+            assertThat(text.any { it.isDigit() }).isFalse() // no promised duration
+        }
         assertThat(portuguese["stream_luminalshine_hint"])
             .isNotEqualTo(english["stream_luminalshine_hint"])
     }

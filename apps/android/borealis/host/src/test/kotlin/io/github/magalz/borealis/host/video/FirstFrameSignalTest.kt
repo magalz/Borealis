@@ -38,6 +38,17 @@ class FirstFrameSignalTest {
     }
 
     @Test
+    fun `a frame without a listener does not use up the signal`() {
+        signal.frameRendered()
+
+        signal.listener = Runnable { calls.incrementAndGet() }
+        signal.frameRendered()
+        signal.frameRendered()
+
+        assertThat(calls.get()).isEqualTo(1)
+    }
+
+    @Test
     fun `frames from several threads notify once`() {
         signal.listener = Runnable { calls.incrementAndGet() }
         val pool = Executors.newFixedThreadPool(4)

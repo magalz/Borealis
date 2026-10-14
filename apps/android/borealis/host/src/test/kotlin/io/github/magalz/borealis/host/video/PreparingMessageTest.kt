@@ -96,6 +96,16 @@ class PreparingMessageTest {
     }
 
     @Test
+    fun `clearing a warning shows the message again even if the status update hid the overlay`() {
+        message.show()
+        overlay.visible = false // the OKAY status update sets the overlay to GONE first
+
+        message.onWarningCleared()
+
+        assertThat(overlay.visible).isTrue()
+    }
+
+    @Test
     fun `clearing the warning after the frame arrived leaves the overlay to the connection status`() {
         message.show()
         message.onWarning()

@@ -28,9 +28,10 @@ how a real client behaves as **Unverified** unless it says otherwise.
 
 The wire contract (the profile bits, the ANNOUNCE attributes and the 0x5502
 feedback message) is defined by the pinned Aurora and `moonlight-common-c`
-revisions (`src/pyrowave/contract.h:17-18`, `src/stream.cpp:1322-1328`). Neither
-repository is present in the reference trees, so any detail of their behaviour
-that is not visible from the host side is **Unverified**.
+revisions (`src/pyrowave/contract.h:17-18`, `src/stream.cpp:1322-1328`). The
+Aurora fork is not present in the reference trees; upstream moonlight-common-c at
+874ac95, which Moonlight Android uses, was checked where this document says so.
+Any detail of the fork that is not visible from the host side is **Unverified**.
 
 Moonlight Android in this repository is GPL-3.0
 (`borealis:apps/android/LICENSE.txt:1-2`). The vendored `src/vk` helpers are
@@ -146,13 +147,21 @@ fit. The table below is derived from those formulas for the default
 | --- | --- | --- |
 | 256 | 392064 | 224 |
 | 1024 | 2749056 | 32 |
-| 1392 (Moonlight Android's value, `borealis:apps/android/app/src/main/java/com/limelight/Game.java:473`) | 3878448 | 23 |
+| 1392 (Moonlight Android's LAN value, `borealis:apps/android/app/src/main/java/com/limelight/Game.java:473`) | 3878448 | 23 |
 | 1500 | 4209900 | 21 |
 | 2048 | 5891712 | 15 |
 
-Consequence: with the default host bitrate a session below about 23 fps is
-rejected with RTSP 400, and a lower host bitrate lowers that minimum
-proportionally. At 700 Mbps and 60 fps the average frame budget is 1458333
+Moonlight Android negotiates 1024 instead of 1392 on connections it classifies
+as remote (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:285-287`,
+passed to the native library at `:433`), which raises the minimum to 32 fps at
+700 Mbps. When video encryption is enabled, upstream moonlight-common-c announces
+`packetSize` minus 32 bytes (`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/SdpGenerator.c:322-330`), which raises the
+minimums slightly (about 24 fps at 1392 - 32 and about 34 fps at 1024 - 32,
+derived).
+
+Consequence: with the default host bitrate a session below about 23 fps (LAN) or
+32 fps (remote) is rejected with RTSP 400, and a lower host bitrate lowers that
+minimum proportionally. At 700 Mbps and 60 fps the average frame budget is 1458333
 bytes.
 
 ## 5. Bitstream and transport layout
@@ -171,11 +180,10 @@ for a KEEP frame (`src/stream.cpp:1982-1989`,
 The video payload carried by one packet is `packetSize - sizeof(NV_VIDEO_PACKET)`
 bytes: the host uses that value as the PyroWave payload size and as the divisor
 for `lastPayloadLen` (`src/pyrowave/backend.cpp:527`,
-`src/stream.cpp:1986-1988`). `NV_VIDEO_PACKET` is defined in moonlight-common-c,
-which is not checked out in either reference tree, so its size (16 bytes in
-upstream moonlight-common-c, to the best of our knowledge) is **Unverified**
-locally. This document writes the payload size as `packetSize - 16` on that
-basis.
+`src/stream.cpp:1986-1988`). `NV_VIDEO_PACKET` is 16 bytes (4 + 4 + 1 + 1 + 1 +
+1 + 4) in upstream moonlight-common-c at 874ac95
+(`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/Video.h:27-35`; not the Aurora fork), so this document writes the
+payload size as `packetSize - 16`.
 
 Each encoded frame is one self-delimiting blob
 (`src/pyrowave/pyrowave_encode.cpp:695-861`):
@@ -361,13 +369,21 @@ exceeds total data, when received parity exceeds total parity, when
 "unrecoverable" when fewer packets arrived than there are data packets
 (`src/pyrowave/contract.h:87-95`).
 
-The client sends one such report for each completed FEC block
-(`src/stream.cpp:1322-1328`).
+The client sends one such report for each completed FEC block (per the host
+comment at `src/stream.cpp:1322-1324`). Upstream moonlight-common-c at 874ac95
+(not the Aurora fork) sends this message in exactly this layout to Sunshine
+hosts: the struct is `SS_FRAME_FEC_STATUS` with big-endian fields and type
+`0x5502` (`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/Video.h:56-70`), it is filled in
+`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/RtpVideoQueue.c:93-109`, sent at `borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/RtpVideoQueue.c:346`, `598` and
+`642`, enabled by the client feature flag announced at
+`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/SdpGenerator.c:270-275`, and transmitted unreliably on the control stream
+(`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/ControlStream.c:1401-1415`). The Aurora fork was not examined; whether it
+differs from upstream here is **Unverified**.
 
 ### 6.3 Host reaction
 
-The reaction happens only for a frame that has been transmitted and only for the
-first loss report of each frame (`src/stream.cpp:1336-1339`):
+The reaction happens only after the first frame has been transmitted and only
+for the first loss report of each frame (`src/stream.cpp:1336-1339`):
 
 | Condition | Action | Reference |
 | --- | --- | --- |
@@ -479,16 +495,20 @@ selects fp16 or fp32 wavelet precision
   [luminalshine.md](luminalshine.md) section 20 asks the host to honour a client
   cap.
 - **Minimum frame rate.** With the default bitrate the host rejects frame rates
-  below roughly 23 fps at Moonlight Android's packet size (section 4.1).
+  below roughly 23 fps at Moonlight Android's LAN packet size (1392), and below
+  roughly 32 fps when the client classifies the connection as remote and
+  negotiates 1024 (section 4.1).
 - **No stock PyroWave support in the client stack.** The stock Moonlight client
   negotiates a regular codec (`docs/pyrowave.md:28-29`). Moonlight Android decodes
   with `MediaCodec` through a renderer typed `MediaCodecDecoderRenderer`
   (`borealis:apps/android/app/src/main/java/com/limelight/Game.java:150`) and its
   native library registers decoder callbacks in
   `borealis:apps/android/app/src/main/jni/moonlight-core/callbacks.c:399-405`.
-  PyroWave needs a new Vulkan decode and present path, the format-3 and
-  profile-bit handling, and the 0x5502 feedback message, which come from the
-  pinned `moonlight-common-c` fork; none of that exists in this tree.
+  PyroWave needs a new Vulkan decode and present path and the format-3 and
+  profile-bit handling, which come from the pinned `moonlight-common-c` fork;
+  upstream moonlight-common-c at 874ac95 contains no PyroWave support (a search of
+  its `src` for `pyrowave` finds nothing). The 0x5502 feedback message already
+  exists upstream (section 6.2); the host drops it unless the session is PyroWave.
 - **GPU and driver support is unproven on Android.** The decoder has fallbacks for
   Adreno and for 8-bit storage on non-desktop vendors
   (`third-party/pyrowave/src/pyrowave/pyrowave_decoder.cpp:544-585`), but no document records a tested Android

@@ -28,12 +28,12 @@ runtime behaviour that the source alone cannot establish are marked
 - `/serverinfo` reports `state` as `SUNSHINE_SERVER_BUSY` while an app is
   running and `SUNSHINE_SERVER_FREE` otherwise, and `currentgame` as the running
   app id (`src/nvhttp.cpp:2578-2581`). Moonlight therefore classifies the host
-  as non-NVIDIA (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:386`).
-- The first-party client the host project recommends is Twilight (LG webOS),
-  and it states that any Moonlight client works
+  as non-NVIDIA (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:386-387`).
+- The host project lists Twilight (LG webOS) as its first-party client, and its
+  documentation states that any Moonlight client works
   (`docs/system_requirements.md:70-76`, `gh-pages-template/clients.html:86-96`).
-  No code in `src` checks for an Artemis, Apollo, Moonlight or Aurora client
-  (searched `src` for those names: no matches).
+  No code branches on the names Artemis, Apollo, Moonlight or Aurora; only
+  comments and moonlight-common-c includes mention them (searched `src`).
 
 ## 2. Ports and discovery
 
@@ -50,11 +50,10 @@ All ports are offsets from the base port, default 47989
 | Audio (UDP) | +11 | 48000 | `src/stream.h:25` |
 | RTSP (TCP) | +21 | 48010 | `src/rtsp.h:27` |
 
-The video, control and audio ports and the RTSP port are announced to the client
-through `server_port=<port>` in the RTSP SETUP response and the `sessionUrl0`
-value of `/launch` and `/resume` (`src/rtsp.cpp:1389-1390`,
-`src/nvhttp.cpp:3135-3142`). A client should use those values instead of
-hard-coding offsets.
+The `sessionUrl0` value of `/launch` and `/resume` carries only the RTSP port
+(`src/nvhttp.cpp:3135-3142`). The video, control and audio ports are announced
+through `server_port=<port>` in the RTSP SETUP responses (`src/rtsp.cpp:1389-1390`).
+A client should use those values instead of hard-coding offsets.
 
 Discovery is mDNS service type `_nvstream._tcp`
 (`src/platform/common.h:907`), registered on the HTTP port with a single empty
@@ -64,9 +63,10 @@ instance name, host name and HTTP port. The MAC address is returned only over
 HTTPS to a paired client; over HTTP the placeholder `00:00:00:00:00:00` is
 returned (`src/nvhttp.cpp:2518-2523`).
 
-For HTTPS `/serverinfo` the host returns `LocalIP` as `127.0.0.1` when the
-request arrives over a real IPv6 address, so a client must not overwrite its
-stored LAN IPv4 address with it (`src/nvhttp.cpp:2525-2538`;
+For `/serverinfo` the host returns `LocalIP` as `127.0.0.1` when the request
+arrives over a real IPv6 address, so a client must not overwrite its stored LAN
+IPv4 address with it (`src/nvhttp.cpp:2525-2538`, the branch at `2534-2535` is not
+conditional on the scheme;
 Moonlight already skips `127.` addresses in
 `borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/ComputerDetails.java:119`).
 
@@ -79,7 +79,7 @@ server returns an XML body with `status_code` 404 (`src/nvhttp.cpp:2127-2143`,
 | Path | HTTP | HTTPS | Purpose |
 | --- | --- | --- | --- |
 | `/serverinfo` | yes | yes | Host description. Over HTTPS, `PairStatus` is 1 whenever the request carries a `uniqueid` query parameter; the host does not look the client up, because the HTTPS server only serves clients whose certificate is paired (`src/nvhttp.cpp:2494-2501`) |
-| `/pair` | yes | yes (only the `pairchallenge` phrase) | Pairing (section 4) |
+| `/pair` | yes | yes (all phases are accepted; a normal client sends only `pairchallenge` here) | Pairing (section 4; `src/nvhttp.cpp:3725`, `3744`, `2204-2345`) |
 | `/applist` | no | yes | App ids, titles and `IsHdrSupported` (`src/nvhttp.cpp:2665-2689`) |
 | `/appasset` | no | yes | App cover as `image/png` for an `appid` (`src/nvhttp.cpp:3588-3599`) |
 | `/launch` | no | yes | Start an app and prepare a stream (section 7) |
@@ -149,10 +149,13 @@ then `pairchallenge` over HTTPS): `src/nvhttp.cpp:1941-2106`, dispatched at
   between IPv4 and IPv6 between phases, for example when Android changes
   network, will fail pairing.
 - A phase 1 retry with the same certificate and salt is answered idempotently
-  (`src/nvhttp.cpp:2212-2230`). A retry that replaces a still-pending request
-  re-arms the held response and answers the previous held request with 409
-  `Pairing request superseded by retry` (`src/nvhttp.cpp:2184`,
-  `src/nvhttp.cpp:2252-2271`).
+  only after the PIN was applied, while the session is in the `getservercert`
+  phase (`last_phase == GETSERVERCERT`, `src/nvhttp.cpp:2210-2233`). Any other
+  non-initial phase, including a same-certificate retry in a later phase, gets
+  409 `Pairing exchange already in progress` (`src/nvhttp.cpp:2230`). A retry
+  while the PIN is still pending re-arms the held response and answers the
+  previous held request with 409 `Pairing request superseded by retry`
+  (`src/nvhttp.cpp:2184`, `src/nvhttp.cpp:2252-2271`).
 - Any out-of-order phase, short salt, short secret, invalid certificate or
   failed hash makes the host delete the session and answer 400 with a message
   such as `Out of order call to getservercert`
@@ -172,7 +175,7 @@ noted otherwise by the web server).
 | 403 | `Pairing request peer mismatch` | A later phase came from a different IP | `src/nvhttp.cpp:2314` |
 | 404 | `Invalid pairing request` | Unknown query | `src/nvhttp.cpp:2342` |
 | 408 | `Pairing request expired` | The 5 minute window elapsed before the PIN was entered | `src/nvhttp.cpp:1908-1910` |
-| 409 | `Pairing exchange already in progress` | A different attempt owns this `uniqueid` | `src/nvhttp.cpp:2230` |
+| 409 | `Pairing exchange already in progress` | A phase 1 request arrived after the PIN was applied and it is not an exact retry in the `getservercert` phase (this includes a same-certificate retry in a later phase) | `src/nvhttp.cpp:2230` |
 | 409 | `Pairing request identity mismatch` | Retry used a different certificate or salt while the PIN is pending | `src/nvhttp.cpp:2265` |
 | 409 | `Pairing request superseded by retry` | The held phase 1 request was replaced by a retry | `src/nvhttp.cpp:2184` |
 | 410 | `Host pairing state was reset` | The host operator reset stored state | `src/nvhttp.cpp:3905` |
@@ -215,16 +218,26 @@ are changed only on the host, in the Web UI or with `POST /api/clients/update`
 | `always_use_virtual_display` | Forces a virtual display for this client; clears `output_name_override` | `src/nvhttp.cpp:1523-1525`, `src/nvhttp.cpp:3946` |
 | `output_name_override` | Capture a named output | `src/nvhttp.cpp:1525-1527` |
 | `virtual_display_mode` (`disabled`, `per_client`, `shared`) | Overrides the host virtual display mode | `src/nvhttp.cpp:1528-1533`, `src/config.h:25-29` |
-| `virtual_display_layout` (`exclusive`, `extended`, `extended_primary`, `extended_isolated`) | Display layout while streaming | `src/nvhttp.cpp:1534-1538`, `src/config.h:31-36` |
-| `hdr_profile` (ICC name) | Applied to the virtual display or physical output | `src/nvhttp.cpp:1539-1541`, `src/nvhttp.cpp:3034-3038`, `3407` |
+| `virtual_display_layout` (`exclusive`, `extended`, `extended_primary`, `extended_isolated`, `extended_primary_isolated`) | Display layout while streaming | `src/nvhttp.cpp:1534-1538`, `src/config.h:32-37` |
+| `hdr_profile` (ICC name) | Applied to the virtual display or physical output | `src/nvhttp.cpp:1538-1540`, `src/nvhttp.cpp:3034-3038`, `3407` |
 | `prefer_10bit_sdr` | Per-client override of the host setting (section 9.2) | `src/rtsp.cpp:1636-1637` |
 | `config_overrides` | Per-client overrides of an allow-listed set of stream, input and PyroWave settings | `src/config.cpp:2113-2170`, applied at `src/nvhttp.cpp:2896-2932` |
 
-`POST /api/clients/update` replaces the extended fields as a whole. Fields that
-are omitted from the body are reset to their empty or false values, and a name
-that is omitted becomes empty (`src/nvhttp.cpp:3915-3960`). A companion that
-changes one setting must read the client with `GET /api/clients/list` and send
-the complete set back.
+`POST /api/clients/update` is a partial replace. When the body contains at least
+one extended field (`name`, `display_mode`, `output_name_override`,
+`always_use_virtual_display`, `virtual_display_mode`, `virtual_display_layout`,
+`config_overrides` or `prefer_10bit_sdr`), the fields `name`, `display_mode`,
+`output_name_override`, `always_use_virtual_display`, `virtual_display_mode`,
+`virtual_display_layout` and `prefer_10bit_sdr` are reset to empty, false or
+unset when they are omitted, and an omitted name becomes empty
+(`src/confighttp.cpp:2038-2059`, `src/confighttp.cpp:2092`,
+`src/nvhttp.cpp:3943-3949`). `config_overrides` and `hdr_profile` are kept when
+omitted (`src/confighttp.cpp:2029-2036`, `src/confighttp.cpp:2061-2064`,
+`src/nvhttp.cpp:3950-3955`). A body with no extended field changes only
+`hdr_profile`, and clears it when `hdr_profile` is also absent
+(`src/confighttp.cpp:2038-2052`). A companion that changes one setting must read
+the client with `GET /api/clients/list` and send the complete set of the
+resettable fields back.
 
 ## 6. `/serverinfo` fields
 
@@ -234,7 +247,7 @@ the complete set back.
 | `appversion` | `7.1.431.-1` | `src/nvhttp.cpp:2511` |
 | `GfeVersion` | `3.23.0.74` | `src/nvhttp.cpp:2512` |
 | `uniqueid` | Host unique id | `src/nvhttp.cpp:2513` |
-| `HttpsPort`, `ExternalPort` | HTTPS and HTTP ports | `src/nvhttp.cpp:2511-2515` |
+| `HttpsPort`, `ExternalPort` | HTTPS and HTTP ports | `src/nvhttp.cpp:2514-2515` |
 | `mac` | MAC over HTTPS, placeholder over HTTP | `src/nvhttp.cpp:2518-2523` |
 | `LocalIP` | Local address, `127.0.0.1` over IPv6 | `src/nvhttp.cpp:2525-2538` |
 | `MaxLumaPixelsHEVC` | `1869449984` when HEVC is active, otherwise `0` | `src/nvhttp.cpp:2540` |
@@ -296,7 +309,9 @@ for resume the equivalent is `resume` 1 (`src/nvhttp.cpp:3471-3486`).
 - The host setting `virtual_display_mode` defaults to `per_client`
   (`src/config.cpp:802`, `src/config.cpp:712-721`; documented as a default in
   `docs/configuration.md:1142-1160`). The default therefore creates a virtual
-  display (LuminalVGD) for every launch.
+  display (LuminalVGD) for every launch, unless an app or per-client output
+  override, or `virtual_display_mode=disabled`, applies
+  (`src/nvhttp.cpp:275-278`, `292-294`, `1563`).
 - In `per_client` mode the monitor is keyed by the client's certificate UUID, so
   a returning client reclaims its connector and per-monitor Windows settings, and
   it is labelled with the paired name (`src/nvhttp.cpp:455-466`,
@@ -357,9 +372,12 @@ above the display refresh rate, and a refresh rate above 49 Hz,
 a 60 Hz selection
 (`borealis:apps/android/app/src/main/java/com/limelight/Game.java:446-461`).
 A host with the default per-client virtual display then rebuilds the monitor
-on every such launch. **Unverified:** that the native
-library sends `chosenFrameRate` as `maxFPS` (moonlight-common-c is not checked
-out in this tree).
+on every such launch. This is confirmed: the Android client passes
+`getRefreshRate()` (the `chosenFrameRate`) to the native library
+(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:432`),
+and upstream moonlight-common-c writes `StreamConfig.fps` into
+`x-nv-video[0].maxFPS` (`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/SdpGenerator.c:320-321`, upstream 874ac95; this is
+not the Aurora fork).
 
 When a per-client `display_mode` override is configured on the host, the host's
 mode wins and no reconciliation happens. **Unverified:** what the stream looks
@@ -392,9 +410,9 @@ host guarantee. `ping_timeout` is 10 s by default (`src/config.cpp:844`).
 
 Notes on the table:
 
-- Launch and resume failures set `gamesession` (launch) or `resume` (resume) to
-  0 in the same body (`src/nvhttp.cpp:2833`, `src/nvhttp.cpp:3156`). With a
-  non-200 status Moonlight throws before it reads either field.
+- Failure bodies carry `resume` 0 and/or `gamesession` 0, depending on the path
+  (`src/nvhttp.cpp:2804`, `2815`, `2833`, `3156`, `3466`). With a non-200 status
+  Moonlight throws before it reads either field.
 - On every launch or resume the host first checks for a pending launch, then
   waits for the display lease, then re-checks (`src/nvhttp.cpp:2828-2856`,
   `src/nvhttp.cpp:3262-3283`). A client therefore sees 409 quickly but 503 after
@@ -454,12 +472,26 @@ the video and audio ports.
 ### 8.3 ANNOUNCE (client to host)
 
 The host reads the ANNOUNCE attributes in `src/rtsp.cpp:1410-1760`. The video
-attributes it uses are `x-nv-video[0].clientViewportWd`, `clientViewportHt`, `maxFPS`,
-`clientRefreshRateX100`, `packetSize`, `videoEncoderSlicesPerFrame`,
+attributes it uses are `x-nv-video[0].clientViewportWd`, `clientViewportHt`,
+`maxFPS`, `clientRefreshRateX100`, `packetSize`, `videoEncoderSlicesPerFrame`,
 `maxNumReferenceFrames`, `encoderCscMode`, `dynamicRangeMode`,
 `x-nv-vqos[0].bitStreamFormat`, `x-nv-vqos[0].bw.maximumBitrateKbps`,
 `x-ss-video[0].chromaSamplingType`, `x-ss-video[0].intraRefresh` and
 `x-ml-video.configuredBitrateKbps` (`src/rtsp.cpp:1523-1550`, `1576`).
+
+Attributes without a default are mandatory; a missing one is answered with RTSP
+400 (`src/rtsp.cpp:1519-1550`, `1577-1578`): `x-nv-audio.surround.numChannels`,
+`x-nv-audio.surround.channelMask`, `x-nv-audio.surround.AudioQuality`,
+`x-nv-video[0].packetSize`, `clientViewportWd`, `clientViewportHt`, `maxFPS`,
+`x-nv-vqos[0].bw.maximumBitrateKbps`, `x-nv-video[0].videoEncoderSlicesPerFrame`
+and `x-nv-video[0].maxNumReferenceFrames`. All other attributes the host reads
+have defaults (`src/rtsp.cpp:1496-1510`).
+
+Upstream moonlight-common-c also announces `x-ml-general.featureFlags` with a
+frame-FEC-status bit to Sunshine hosts (`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/SdpGenerator.c:270-275`,
+upstream 874ac95) and, when video encryption is enabled, subtracts the 32-byte
+`ENC_VIDEO_HEADER` from the announced `packetSize` (`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/SdpGenerator.c:322-330`,
+`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/Video.h:15-19`).
 
 Responses to ANNOUNCE:
 
@@ -492,11 +524,14 @@ configuration (`src/nvhttp.cpp:2542-2576`):
   enabled and available (`src/nvhttp.cpp:2573-2575`); see
   [pyrowave.md](pyrowave.md) for the bit values.
 
-Bit values used by the Moonlight client for the legacy codecs come from
-moonlight-common-c, which is not checked out in either reference tree. Only
-`0x200` (HEVC Main10) and `0x20000` (AV1 Main10) are confirmed, through
-`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:248`
-and `:259`. **Unverified:** the remaining legacy bit values.
+The legacy bit values come from upstream moonlight-common-c at 874ac95 (not the
+Aurora fork), which the Moonlight Android client uses: `SCM_H264` `0x1`,
+`SCM_HEVC` `0x100`, `SCM_HEVC_MAIN10` `0x200`, `SCM_AV1_MAIN8` `0x10000` and
+`SCM_AV1_MAIN10` `0x20000` (`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/Limelight.h:506-510`). The Android client tests
+`0x200` and `0x20000` for HDR
+(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:248`,
+`:259`). The 4:4:4 bits (`SCM_H264_HIGH8_444` and following) are defined
+immediately after them in the same header; they were not needed here.
 
 The client selects a format with `x-nv-vqos[0].bitStreamFormat` (0 H.264, 1 HEVC,
 2 AV1, 3 PyroWave per `src/rtsp.cpp:1673-1744`),
@@ -523,8 +558,8 @@ The client selects a format with `x-nv-vqos[0].bitStreamFormat` (0 H.264, 1 HEVC
   (`src/video.cpp:2765-2774`).
 
 A client that requests 4:4:4 must therefore detect a chroma change from the
-bitstream (new SPS for HEVC and H.264, new sequence header for AV1, new
-sequence header for PyroWave) at the next IDR instead of trusting the
+bitstream (new SPS for HEVC and H.264, new sequence header for AV1) at the next
+IDR instead of trusting the
 negotiation. The Moonlight Android client has no 4:4:4 support today.
 
 ### 9.2 `prefer_10bit_sdr`
@@ -637,7 +672,7 @@ discriminate by direction, not by type.
 - The host accepts the standard Sunshine input extensions: relative and absolute
   mouse, buttons, vertical and horizontal scroll, keyboard, UTF-8 text, pen,
   touch, controller arrival, controller touch, controller motion and controller
-  battery (`src/input.cpp:400-446`).
+  battery (`src/input.cpp:1593`, `src/input.cpp:1640-1682`).
 - Feature bits advertised in DESCRIBE `x-ss-general.featureFlags`
   (`src/platform/common.h:254-260`, `src/platform/windows/input.cpp:1811-1829`):
   `0x01` pen and touch events (set only if the Windows API
@@ -755,7 +790,7 @@ credential (`src/http_auth.cpp:1403-1476`):
 | `GET /api/sessions`, `GET /api/sessions/{id}` | Session telemetry, proxied to the LuminalShineSessionMonitor service; 503 if that service is unreachable | `src/confighttp.cpp:2146-2200`, `src/confighttp.cpp:4591-4599` |
 | `/api/webrtc/sessions/**` | Browser transport signaling | `src/confighttp.cpp:4602-4615` |
 
-POST endpoints require `Content-Type: application/json`.
+The POST endpoints in this table require `Content-Type: application/json`.
 
 ## 18. Client obligations for Borealis
 
@@ -778,8 +813,16 @@ Moonlight Android 12.2 client already does the right thing the item says so.
    `borealis:apps/android/app/src/main/java/com/limelight/PcView.java:554`).
    Borealis must treat that call as best-effort, and must explain that removing a
    host on the phone does not unpair it on the host (unpair through the Web UI or
-   `POST /api/clients/unpair`). **Unverified:** how the existing error handling
-   reacts to the 404; verify before relying on it.
+   `POST /api/clients/unpair`). **Unverified:** two cases to test against a live
+   host. If the host's 404 reaches the client as an HTTP 404 status, OkHttp
+   handling in `NvHTTP.openHttpConnection` throws `FileNotFoundException`
+   (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:445-446`),
+   which could mask a PIN_WRONG or FAILED pairing result in `PairingManager` and
+   `PcView`. If instead the host answers HTTP 200 with an XML body whose
+   `status_code` is 404, `unpair()` ignores the body. The host writes the XML
+   body and then an `HTTP/1.1 404 NOT FOUND` line into the response
+   (`src/nvhttp.cpp:2136-2140`), so which of the two the client sees is not
+   established statically.
 5. **Keep the client certificate stable and use HTTPS for everything except
    pairing phases 1 to 4 and the initial `/serverinfo`.** Identity, per-client
    settings and the virtual display depend on the certificate (section 5.1).
@@ -819,6 +862,10 @@ Moonlight Android 12.2 client already does the right thing the item says so.
     (0x5502, host to client). Expect no trigger effects.
 14. **Send `corever` of 1 and the `x-ss-general.encryptionEnabled` flags**, and
     treat a 403 on launch or ANNOUNCE as a hard protocol error (section 15).
+    `corever` is required only when the encryption policy is mandatory
+    (`src/nvhttp.cpp:3096`, `src/rtsp.cpp:1748`); upstream moonlight-common-c
+    always sends `&corever=1` (`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/Connection.c:553`, upstream 874ac95), so
+    Moonlight Android already complies.
 15. **Do not offer microphone passthrough, clipboard sync, server commands,
     OTP pairing or a virtual-display toggle that depends on host support**
     (section 19).

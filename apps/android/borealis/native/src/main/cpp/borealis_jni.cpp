@@ -173,5 +173,5 @@ extern "C" JNIEXPORT jint JNICALL Java_io_github_magalz_borealis_nativecore_Core
   jint launchFps,
   jint streamFps
 ) {
-  return borealis_launch_fps(isGfe == JNI_TRUE ? 1 : 0, launchFps, streamFps);
+  return borealis_launch_fps(isGfe != JNI_FALSE ? 1 : 0, launchFps, streamFps);
 }

@@ -60,7 +60,7 @@ namespace borealis::core {
         if (last != (dot == std::string_view::npos)) {
           return false;
         }
-        if (!parse_component(text.substr(0, dot), last, slot)) {
+        if (!parse_component(std::string_view(text.data(), last ? text.size() : dot), last, slot)) {
           return false;
         }
         text.remove_prefix(last ? text.size() : dot + 1);
@@ -77,7 +77,7 @@ namespace borealis::core {
 }  // namespace borealis::core
 
 // NOLINTBEGIN(bugprone-easily-swappable-parameters): the C ABI order is fixed.
-extern "C" int borealis_host_parse_caps(const char *appversion, size_t len, uint32_t codec_mask, borealis_host_caps *out) {
+extern "C" int borealis_host_parse_caps(const char *appversion, size_t len, uint32_t codec_mask, borealis_host_caps *out) noexcept {
   using namespace borealis::core;
 
   if (out == nullptr) {

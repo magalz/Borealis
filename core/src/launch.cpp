@@ -67,7 +67,7 @@ extern "C" int borealis_launch_decide(
   size_t len,
   uint32_t attempts_in_category,
   borealis_launch_decision *out
-) {
+) noexcept {
   using namespace borealis::core;
 
   if (out == nullptr) {
@@ -96,7 +96,7 @@ extern "C" int borealis_launch_decide(
 // NOLINTEND(bugprone-easily-swappable-parameters)
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the C ABI order is fixed.
-extern "C" int32_t borealis_launch_fps(int32_t is_gfe, int32_t launch_fps, int32_t stream_fps) {
+extern "C" int32_t borealis_launch_fps(int32_t is_gfe, int32_t launch_fps, int32_t stream_fps) noexcept {
   if (is_gfe == 0 && stream_fps > 0) {
     return stream_fps;
   }

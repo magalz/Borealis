@@ -34,6 +34,13 @@ extern "C" {
  */
 /* NOLINTBEGIN(cppcoreguidelines-macro-usage) */
 
+/* No exception may cross the C boundary: the C++ definitions are noexcept. */
+#ifdef __cplusplus
+  #define BOREALIS_NOEXCEPT noexcept
+#else
+  #define BOREALIS_NOEXCEPT
+#endif
+
 /* Status codes returned by the functions that return int. */
 #define BOREALIS_OK 0
 #define BOREALIS_ERR_INVALID_ARGUMENT (-1) /* NULL out, NULL pointer with len > 0, unknown verb */
@@ -90,7 +97,7 @@ extern "C" {
     size_t len,
     uint32_t codec_mask,
     borealis_host_caps *out
-  );
+  ) BOREALIS_NOEXCEPT;
 
 /* borealis_launch_decide verb */
 #define BOREALIS_LAUNCH_VERB_LAUNCH 0
@@ -142,10 +149,15 @@ extern "C" {
     size_t len,
     uint32_t attempts_in_category,
     borealis_launch_decision *out
-  );
+  ) BOREALIS_NOEXCEPT;
 
   /*
    * Returns the frame rate to put in the /launch `mode=WxHxFPS` parameter.
+   *
+   * `is_gfe` is the caller's NVIDIA-server signal (Moonlight's
+   * isNvidiaServerSoftware, i.e. the serverinfo `state` contains "MJOLNIR"), not
+   * the appversion family: a host whose family is UNKNOWN is treated as non-GFE
+   * when the caller passes 0.
    *
    * A GFE host (is_gfe non-zero) keeps the upstream Moonlight rule: a
    * launch_fps above 60 becomes 0 (GFE would otherwise fall back to 720p60),
@@ -157,7 +169,7 @@ extern "C" {
    *
    * Pure arithmetic, no ownership. Cannot fail.
    */
-  BOREALIS_CORE_API int32_t borealis_launch_fps(int32_t is_gfe, int32_t launch_fps, int32_t stream_fps);
+  BOREALIS_CORE_API int32_t borealis_launch_fps(int32_t is_gfe, int32_t launch_fps, int32_t stream_fps) BOREALIS_NOEXCEPT;
 
   /* NOLINTEND(cppcoreguidelines-macro-usage) */
 

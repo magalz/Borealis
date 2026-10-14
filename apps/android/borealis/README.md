@@ -73,12 +73,20 @@ borealis/native/
   build.gradle.kts                CMake + Prefab publishing
   src/main/cpp/CMakeLists.txt     add_subdirectory(<repo>/core), builds libborealis_jni.so
   src/main/cpp/borealis_jni.cpp   hand-written JNI for CoreJni
-  src/main/kotlin/                BorealisCore, NativeLibrary, CoreJni
+  src/main/kotlin/                BorealisCore, NativeLibrary, CoreJni, HostRules, HostMarshalling
 app/src/main/jni/borealis/        Android.mk + borealis_bridge.c (ndk-build side)
 app/src/main/kotlin/.../NativeBridge.kt
 ```
 
 - `BorealisCore.version()` returns the core version (`borealis_core_version()`), or `null` when the native library is unavailable.
+- `HostRules` / `NativeHostRules` expose the three LuminalShine host rules of `core/include/borealis/host.h`: `parseCaps(appVersion, codecMask)` (family, version, HEVC, HEVC Main10, AV1, AV1 Main10, 4:4:4 and the PyroWave profiles), `decideLaunch(verb, status, message, attemptsInCategory)` (the launch/resume retry decision) and `launchFps(isGfe, launchFps, streamFps)`. Every call returns `null` when the native library is unavailable or the core rejects the input, so callers fall back to the upstream behaviour; `HostRules` is the interface T4b's consumers take so JVM tests can use a fake.
+- The JNI carries only primitives: UTF-8 `ByteArray` inputs (`null` array = NULL pointer with length 0, an empty array = empty string) and `IntArray` results whose first element is the `BOREALIS_*` status (caps: `[status, family, v0..v3, codec_flags, pyrowave_profiles]`; decision: `[status, action, delay_ms, category, max_attempts]`). `HostMarshalling` holds the pure Kotlin side and is unit-tested on the JVM:
+  - the host message is cut to 256 UTF-8 bytes without splitting a character (the core matches ASCII substrings only);
+  - an `appversion` over 64 bytes is not truncated: the call returns `null` and logs a WARN on `CORE` with the byte count only;
+  - `codecMask` keeps its raw 32-bit pattern (`0x80000000` is `Int.MIN_VALUE`); a negative `attemptsInCategory` is clamped to `Int.MAX_VALUE` because the core reads it as `uint32` (a huge count, hence `FAIL`);
+  - a non-OK status, a malformed array or an unknown enum value decodes to `null` with a WARN on `CORE` (status or value only, never input content). `HostCaps.version` is always four ints, all 0 for `HostFamily.UNKNOWN`.
+- `borealis_jni.cpp` copies the inputs into bounded stack buffers (`GetByteArrayRegion` after a length check), never throws and clears any pending Java exception before returning `null`.
+- `GoldenVectorsInstrumentedTest` replays `core/tests/fixtures/vectors/*.tsv` (added as androidTest assets in `build.gradle.kts`) through `NativeHostRules`, so the C ABI and the Kotlin binding cannot drift apart. It needs a device or emulator (`connectedDebugAndroidTest`); `assembleDebugAndroidTest` only compiles it.
 - `NativeLibrary(name)` loads a JNI library once and never throws: a missing library or symbol is logged once through `BorealisLog` (tag `CORE`, fields `library`, `operation`) and calls return `null`. Its `loader` parameter is the seam for JVM tests, which therefore never need a real `.so`.
 - `BorealisApplication.onCreate` calls `BorealisCore.logStartup(NativeBridge.coreVersion())`: one INFO line `... CORE borealis-core loaded core=0.1.0`, plus a WARN when the ndk-build bridge reports another version or either library is unavailable.
 

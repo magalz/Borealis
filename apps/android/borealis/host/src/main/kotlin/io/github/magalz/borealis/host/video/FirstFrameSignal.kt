@@ -15,7 +15,9 @@ class FirstFrameSignal {
     private val raised = AtomicBoolean(false)
 
     fun frameRendered() {
-        if (raised.get() || !raised.compareAndSet(false, true)) return
-        listener?.run()
+        if (raised.get()) return
+        // Without a listener nobody heard the frame, so the signal is not used up.
+        val target = listener ?: return
+        if (raised.compareAndSet(false, true)) target.run()
     }
 }

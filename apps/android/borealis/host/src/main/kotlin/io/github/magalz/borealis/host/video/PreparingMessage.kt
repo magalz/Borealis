@@ -48,6 +48,9 @@ class PreparingMessage(private val overlay: StartupOverlay) {
 
     fun onWarningCleared() {
         warning = false
+        // The status update that cleared the warning set the overlay to GONE, so whatever was
+        // displayed is gone and the message has to go back on.
+        displayed = false
         display()
     }
 

@@ -29,7 +29,7 @@ Development-only tools that are not shipped (formatters, linters, test
 libraries) are not subject to the allowlist but must not be incompatible with
 running in CI.
 
-The licence check (licensee-based; being introduced in Phase 0) runs in CI and compares the detected
+The licence check (licensee, `./gradlew licensee`, also part of `check`) runs in CI and compares the detected
 licences against this allowlist. The generated third-party list and the
 CycloneDX SBOM are the authoritative inventory; [NOTICE](../../NOTICE) is a
 summary.
@@ -73,7 +73,7 @@ libraries.
   review major updates individually.
 - The dependency review check blocks PRs that introduce a known-vulnerable or
   disallowed-licence dependency.
-- CodeQL runs in CI, and the CycloneDX SBOM (being introduced in Phase 0) is
+- CodeQL runs in CI, and the CycloneDX SBOM (Gradle `:app:cyclonedxDirectBom` plus the hand-maintained `apps/android/sbom/native-components.cdx.json`) is
   regenerated on every release.
 
 ## Removing and replacing

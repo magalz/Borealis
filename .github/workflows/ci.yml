@@ -56,6 +56,8 @@ jobs:
     defaults:
       run:
         working-directory: apps/android
+    env:
+      HAS_CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN != '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -68,8 +70,23 @@ jobs:
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
       - name: Install pinned clang-format (Spotless formats Borealis C/C++ sources)
         run: pipx install "clang-format==${CLANG_FORMAT_VERSION}"
-      - name: Format, static analysis, unit tests and build
-        run: ./gradlew --stacktrace spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleNonRootDebug
+      - name: Install Android SDK packages (same versions as local builds)
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install \
+            "platforms;android-37.0" "build-tools;37.0.0" "ndk;29.0.14206865" "cmake;4.1.2" > /dev/null
+      - name: Format, static analysis, licences, unit tests, coverage and build
+        run: ./gradlew --stacktrace spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleNonRootDebug licensee koverXmlReportBorealis
+      - name: Upload Android coverage to Codecov
+        if: env.HAS_CODECOV_TOKEN == 'true'
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          url: https://pipeline.magalz.space
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: apps/android/build/reports/kover/coverage.xml
+          flags: android
+          disable_search: true
+          fail_ci_if_error: false
       - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -83,6 +100,7 @@ jobs:
         with:
           name: android-reports
           path: |
+            apps/android/build/reports/
             apps/android/**/build/reports/
             apps/android/**/build/test-results/
           retention-days: 14

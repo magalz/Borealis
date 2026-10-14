@@ -38,10 +38,12 @@ import android.view.Choreographer;
 import android.view.SurfaceHolder;
 // BOREALIS: first-frame signal for the stream startup guard (host.video)
 import io.github.magalz.borealis.host.video.FirstFrameSignal;
+import io.github.magalz.borealis.host.video.HevcSpsMonitor; // BOREALIS: HEVC SPS diagnostics (host.video)
 
 public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements Choreographer.FrameCallback {
     // BOREALIS: raised once, when the first output buffer is released for rendering
     public final FirstFrameSignal firstFrameSignal = new FirstFrameSignal();
+    private final HevcSpsMonitor hevcSpsMonitor; // BOREALIS: logs the stream profile, never affects decoding
 
     private static final boolean USE_FRAME_RENDER_TIME = false;
     private static final boolean FRAME_RENDER_TIME_ONLY = USE_FRAME_RENDER_TIME && false;
@@ -310,6 +312,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         else {
             LimeLog.info("No HEVC decoder found");
         }
+        hevcSpsMonitor = HevcSpsMonitor.forDecoder(hevcDecoder, requestedHdr, BuildConfig.DEBUG); // BOREALIS: HEVC SPS diagnostics
 
         av1Decoder = findAv1Decoder(prefs);
         if (av1Decoder != null) {
@@ -1577,6 +1580,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                 // Batch this to submit together with other CSD per AOSP docs
                 byte[] naluBuffer = new byte[decodeUnitLength];
                 System.arraycopy(decodeUnitData, 0, naluBuffer, 0, decodeUnitLength);
+                hevcSpsMonitor.onSps(naluBuffer, 0, naluBuffer.length); // BOREALIS: HEVC SPS diagnostics
                 spsBuffers.add(naluBuffer);
                 return MoonBridge.DR_OK;
             }

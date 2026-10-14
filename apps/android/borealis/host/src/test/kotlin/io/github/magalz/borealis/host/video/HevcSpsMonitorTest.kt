@@ -231,6 +231,13 @@ class HevcSpsMonitorTest {
     }
 
     @Test
+    fun `a session without an HEVC decoder declares no Main10`() {
+        HevcSpsMonitor.forDecoder(null, requestedHdr = true, debugBuild = false).onSps(main10)
+
+        assertThat(at(LogLevel.WARN)).hasSize(1)
+    }
+
+    @Test
     fun `Main10 is declared by any of the Main10 profile constants`() {
         assertThat(HevcSpsMonitor.declaresMain10(intArrayOf(2))).isTrue()
         assertThat(HevcSpsMonitor.declaresMain10(intArrayOf(1, 4096))).isTrue()

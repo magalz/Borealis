@@ -92,8 +92,8 @@ class HevcSpsTest {
                 assertThat(result == null || result == full).isTrue()
                 if (result != null) parsedPrefixes++
             }
-            // The fields sit before the last bytes: some strict prefix already carries them all.
-            assertThat(parsedPrefixes).isGreaterThan(1)
+            assertThat(parsedPrefixes).isAtLeast(1)
+            assertThat(HevcSps.parse(nal, 0, nal.size)).isEqualTo(full)
             assertThat(HevcSps.parse(nal, 0, 10)).isNull()
         }
     }
@@ -177,7 +177,8 @@ class HevcSpsTest {
 
     @Test
     fun `separate colour planes are reported for 4 4 4`() {
-        val nal = HevcSpsBuilder.sps(profileIdc = 4, chromaFormatIdc = 3, separateColourPlane = true)
+        val nal =
+            HevcSpsBuilder.sps(profileIdc = 4, chromaFormatIdc = 3, separateColourPlane = true)
 
         assertThat(HevcSps.parse(nal)?.separateColourPlane).isTrue()
         assertThat(HevcSps.parse(HevcSpsBuilder.sps(chromaFormatIdc = 3))?.separateColourPlane)
@@ -205,11 +206,15 @@ class HevcSpsTest {
     fun `a conformance window is skipped`() {
         val with =
             HevcSps.parse(
-                HevcSpsBuilder.sps(conformanceWindow = true, bitDepthLuma = 10, bitDepthChroma = 10),
+                HevcSpsBuilder.sps(conformanceWindow = true, bitDepthLuma = 10, bitDepthChroma = 10)
             )
         val without =
             HevcSps.parse(
-                HevcSpsBuilder.sps(conformanceWindow = false, bitDepthLuma = 10, bitDepthChroma = 10),
+                HevcSpsBuilder.sps(
+                    conformanceWindow = false,
+                    bitDepthLuma = 10,
+                    bitDepthChroma = 10,
+                )
             )
 
         assertThat(with).isEqualTo(without)

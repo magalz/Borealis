@@ -20,9 +20,10 @@ abstract class AuditDao {
     @Query("DELETE FROM audit_events WHERE timestamp < :cutoff")
     protected abstract fun deleteOlderThan(cutoff: Long)
 
+    /** Deletes every row but the newest [keep]: all ids up to the one at position [keep]. */
     @Query(
-        "DELETE FROM audit_events WHERE id NOT IN " +
-            "(SELECT id FROM audit_events ORDER BY id DESC LIMIT :keep)"
+        "DELETE FROM audit_events WHERE id <= " +
+            "(SELECT id FROM audit_events ORDER BY id DESC LIMIT 1 OFFSET :keep)"
     )
     protected abstract fun keepNewest(keep: Int)
 

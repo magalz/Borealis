@@ -59,11 +59,16 @@ class AuditStore(
         try {
             synchronized(lock) {
                 if (dedup.shouldStore(event)) {
+                    // The cutoff is the event's own time, but never later than the wall clock: an
+                    // event from a clock that jumped far ahead must not drop the older entries.
+                    val now = minOf(event.timestampMillis, clock())
                     dao.insertAndPrune(
                         AuditEntity.of(event),
-                        cutoff = event.timestampMillis - maxAgeMillis,
+                        cutoff = now - maxAgeMillis,
                         keep = maxEntries,
                     )
+                    // Only now: a failed insert above must not suppress the repeat.
+                    dedup.markStored(event)
                 }
             }
         } catch (e: Exception) {

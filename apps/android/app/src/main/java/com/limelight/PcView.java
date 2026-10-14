@@ -423,7 +423,8 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 String message;
                 boolean success = false;
                 boolean restart = false; // BOREALIS: the host dropped its pairing session (host.pairing)
-                final String auditHost = io.github.magalz.borealis.logging.BorealisAudit.hostLabel(computer.name, computer.activeAddress.address); // BOREALIS: audit trail
+                final ComputerDetails.AddressTuple auditAddress = computer.activeAddress; // BOREALIS: read once, the polling thread may clear it
+                final String auditHost = io.github.magalz.borealis.logging.BorealisAudit.hostLabel(computer.name, auditAddress != null ? auditAddress.address : null); // BOREALIS: audit trail
                 try {
                     // Stop updates and wait while pairing
                     stopComputerUpdates(true);

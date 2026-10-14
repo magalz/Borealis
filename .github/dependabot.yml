@@ -1,8 +1,9 @@
 version: 2
 updates:
-  # Borealis-owned Gradle dependencies (version catalog, build-logic, borealis modules).
-  # Dependencies declared by upstream Moonlight files are updated through upstream syncs
-  # (docs/development/upstream-sync.md), never by Dependabot, so upstream files stay untouched.
+  # Gradle dependencies, including the Gradle wrapper and libraries declared in upstream
+  # Moonlight files: while harvesting upstream, build tooling may move ahead of it when CI
+  # passes (ADR 0047). AGP is declared twice (apps/android/build.gradle and the version
+  # catalog), so it stays ignored until it has a single source.
   - package-ecosystem: gradle
     directories:
       - /apps/android
@@ -16,12 +17,6 @@ updates:
       include: scope
     ignore:
       - dependency-name: com.android.tools.build:gradle
-      - dependency-name: org.bouncycastle:*
-      - dependency-name: org.jcodec:jcodec
-      - dependency-name: com.squareup.okhttp3:okhttp
-      - dependency-name: org.jmdns:jmdns
-      - dependency-name: com.github.cgutman:ShieldControllerExtensions
-      - dependency-name: com.android.tools:desugar_jdk_libs
     groups:
       kotlin-and-ksp:
         patterns: ['org.jetbrains.kotlin*', 'com.google.devtools.ksp*']
@@ -39,5 +34,5 @@ updates:
       actions:
         patterns: ['*']
 
-  # moonlight-common-c is intentionally not tracked here: its pointer follows the tested
-  # moonlight-android upstream sync (or the Borealis fork once it exists).
+  # moonlight-common-c is intentionally not tracked here: the submodule points at the
+  # Borealis fork, whose patches are rebased deliberately (ADR 0048).

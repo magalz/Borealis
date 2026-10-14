@@ -93,7 +93,7 @@ jobs:
           files: apps/android/build/reports/kover/coverage.xml
           flags: android
           disable_search: true
-          fail_ci_if_error: false
+          fail_ci_if_error: true
       - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -114,8 +114,9 @@ jobs:
 
   core:
     name: Core (C++)
+    # Runs on every pull request (about a minute) so each PR uploads coverage
+    # and Codecov always posts the required codecov/* statuses (ADR 0049).
     needs: changes
-    if: needs.changes.outputs.core == 'true' || github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -158,7 +159,7 @@ jobs:
           files: core/build/coverage/coverage.lcov
           flags: core
           disable_search: true
-          fail_ci_if_error: false
+          fail_ci_if_error: true
 
   docs:
     name: Docs

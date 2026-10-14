@@ -7,7 +7,8 @@ cyclonedx = "3.4.1"
 detekt = "2.0.0-alpha.6"
 hilt = "2.60.1"
 junit = "4.13.2"
-# Kotlin Gradle plugin bundled with AGP 9.4.0 (built-in Kotlin); keep in sync with AGP.
+# Kotlin Gradle plugin used by AGP built-in Kotlin. It may lead the version bundled with
+# AGP when CI passes (ADR 0047); Dependabot groups it with KSP.
 kotlin = "2.4.21"
 kover = "0.9.11"
 ksp = "2.3.12"

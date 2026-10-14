@@ -1,17 +1,30 @@
 # Codecov configuration (self-hosted instance: https://pipeline.magalz.space).
-# Coverage is informational until the gate is decided from the first pull
-# request's measured coverage (see docs/adr/0046-*).
+# Gate (ADR 0049): new code in a pull request needs at least 90% line
+# coverage, and total coverage may not drop by more than 1%.
 codecov:
   branch: main
 
 coverage:
+  precision: 2
+  round: down
   status:
     project:
       default:
-        informational: true
+        target: auto
+        threshold: 1%
+        informational: false
+        if_not_found: success
     patch:
       default:
-        informational: true
+        target: 90%
+        informational: false
+        if_not_found: success
+
+parsers:
+  jacoco:
+    # Kotlin `when`, null-safety and default arguments produce partially
+    # covered lines in JaCoCo-format reports; count them as covered.
+    partials_as_hits: true
 
 flag_management:
   individual_flags:

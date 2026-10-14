@@ -14,6 +14,7 @@ class BorealisAndroidLibraryPlugin : Plugin<Project> {
 
             extensions.configure<LibraryExtension> {
                 compileSdk = BorealisBuild.COMPILE_SDK
+                ndkVersion = BorealisBuild.NDK_VERSION
                 defaultConfig { minSdk = BorealisBuild.MIN_SDK }
                 compileOptions {
                     sourceCompatibility = JavaVersion.VERSION_17

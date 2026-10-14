@@ -23,8 +23,10 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             requireTagForReleases(version)
             configureDsl(components)
             configureVariants(components, version)
+            buildNativeCoreBeforeNdkBuild()
 
             dependencies.add("implementation", project(":borealis:logging"))
+            dependencies.add("implementation", project(":borealis:native"))
             dependencies.add("implementation", libs.findLibrary("hilt-android").get())
             dependencies.add("ksp", libs.findLibrary("hilt-compiler").get())
         }
@@ -40,6 +42,13 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             }
         components.finalizeDsl { dsl ->
             dsl.defaultConfig.minSdk = BorealisBuild.MIN_SDK
+            // Imports the Prefab package published by :borealis:native into the ndk-build.
+            dsl.buildFeatures.prefab = true
+            // Prefab refuses a shared library that bundles libc++ (c++_static); the one STL per app
+            // is
+            // therefore libc++_shared. Upstream native code is plain C, so this only affects
+            // Borealis.
+            dsl.defaultConfig.externalNativeBuild.ndkBuild.arguments += "APP_STL=c++_shared"
             dsl.lint {
                 baseline = file("lint-baseline.xml")
                 warningsAsErrors = true
@@ -83,6 +92,21 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
                 output.versionCode.set(version.code)
             }
         }
+    }
+
+    /**
+     * The Prefab package points ndk-build at the core library inside `:borealis:native`'s CMake
+     * output, and ndk-build checks that the file exists while configuring. AGP does not order the
+     * two, so build the core first.
+     */
+    private fun Project.buildNativeCoreBeforeNdkBuild() {
+        tasks
+            .matching { it.name.startsWith("configureNdkBuild") }
+            .configureEach {
+                val buildType =
+                    if (name.startsWith("configureNdkBuildDebug")) "Debug" else "Release"
+                dependsOn(":borealis:native:externalNativeBuild$buildType")
+            }
     }
 
     /** Debug builds keep the 0.0.0-dev fallback; release builds must come from a tag. */

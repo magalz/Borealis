@@ -10,6 +10,9 @@ internal object BorealisBuild {
     const val APPLICATION_ID = "io.github.magalz.borealis"
     const val COMPILE_SDK = 37
     const val MIN_SDK = 28
+
+    /** Must match `android.ndkVersion` in the upstream app/build.gradle. */
+    const val NDK_VERSION = "29.0.14206865"
 }
 
 internal val Project.libs: VersionCatalog

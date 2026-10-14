@@ -66,8 +66,12 @@ libraries.
 ## Updates (Dependabot)
 
 - Dependabot is enabled weekly for Borealis-owned Gradle dependencies and GitHub
-  Actions. The moonlight-common-c submodule is not tracked by Dependabot; it
-  moves only with an upstream sync (see [upstream-sync.md](upstream-sync.md)).
+  Actions. Until the independence milestone ([ADR 0047](../adr/0047-harvest-upstream-then-emancipate.md)),
+  it also updates the Gradle wrapper, Kotlin and dependencies declared in
+  upstream files (such as `apps/android/app/build.gradle`). AGP stays ignored
+  until it is declared in one place. Kotlin may lead the version bundled with
+  AGP when CI passes. The moonlight-common-c submodule is not tracked by
+  Dependabot; it moves only with an upstream sync (see [upstream-sync.md](upstream-sync.md)).
 - Security updates are raised immediately.
 - Updates arrive as PRs and go through the normal CI. Group low-risk updates;
   review major updates individually.
@@ -88,5 +92,6 @@ Dependencies imported with the Moonlight subtree are listed in
 [NOTICE](../../NOTICE). Version bumps that come with an upstream sync follow
 [upstream-sync.md](upstream-sync.md). Dependencies declared by upstream (in
 `apps/android/app/build.gradle`, the root `build.gradle` and the jni libraries)
-are not updated by Dependabot; they change only through an upstream sync. Do
-not bump them in Borealis commits.
+are updated by Dependabot as described under Updates, per
+[ADR 0047](../adr/0047-harvest-upstream-then-emancipate.md). Upstream syncs
+resolve conflicts with a later update by taking the newer version.

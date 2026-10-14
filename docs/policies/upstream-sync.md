@@ -4,6 +4,14 @@ Borealis tracks [moonlight-android](https://github.com/moonlight-stream/moonligh
 through a git subtree at `apps/android/`. This page is the policy; the
 procedure is in [../development/upstream-sync.md](../development/upstream-sync.md).
 
+## Strategy
+
+Borealis harvests upstream until the independence milestone, the end of Phase 2
+or an earlier owner decision ([ADR 0047](../adr/0047-harvest-upstream-then-emancipate.md)).
+Until then, the principles below apply. After the milestone, this policy becomes
+historical: inherited code becomes Borealis code, and upstream changes arrive by
+cherry-pick. The `moonlight-android` remote stays configured.
+
 ## Principles
 
 1. **Stay close to upstream.** Borealis code lives in

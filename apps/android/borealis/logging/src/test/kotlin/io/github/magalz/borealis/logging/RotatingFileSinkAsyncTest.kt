@@ -42,8 +42,11 @@ class RotatingFileSinkAsyncTest {
         assertThat(messages()).containsExactly("pending 0", "pending 1", "pending 2").inOrder()
     }
 
+    private fun droppedIn(lines: List<String>) =
+        lines.filter { it.endsWith(" records dropped") }.sumOf { it.substringBefore(' ').toInt() }
+
     @Test
-    fun `a full queue drops new records and writes one summary once there is room`() {
+    fun `a full queue drops new records and accounts for each of them in summaries`() {
         val gate = CountDownLatch(1)
         val sink = RotatingFileSink(logDir, queueCapacity = 4, writeGate = { gate.await() })
         repeat(20) { sink.write(record("message $it")) }
@@ -54,28 +57,37 @@ class RotatingFileSinkAsyncTest {
         assertThat(sink.flush()).isTrue()
 
         val lines = messages()
-        val summaries = lines.filter { it.endsWith("records dropped") }
-        assertThat(summaries).hasSize(1)
-        val dropped = summaries.single().substringBefore(' ').toInt()
         val kept = lines.filter { it.startsWith("message ") }
-        assertThat(dropped).isGreaterThan(0)
-        assertThat(kept.size + dropped).isEqualTo(20)
+        assertThat(droppedIn(lines)).isGreaterThan(0)
+        assertThat(kept.size + droppedIn(lines)).isEqualTo(20)
         assertThat(kept.map { it.substringAfter(' ').toInt() }).isInStrictOrder()
         assertThat(lines.last()).isEqualTo("after")
-        assertThat(lines.indexOf(summaries.single())).isEqualTo(lines.size - 2)
     }
 
     @Test
     fun `flush writes the drop summary even when no record follows`() {
         val gate = CountDownLatch(1)
-        val sink = RotatingFileSink(logDir, queueCapacity = 2, writeGate = { gate.await() })
-        repeat(10) { sink.write(record("message $it")) }
+        val entered = CountDownLatch(1)
+        val sink =
+            RotatingFileSink(
+                logDir,
+                queueCapacity = 2,
+                writeGate = {
+                    entered.countDown()
+                    gate.await()
+                },
+            )
+        sink.write(record("in flight"))
+        assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue()
+        repeat(9) { sink.write(record("message $it")) } // two fit, seven are dropped
 
         gate.countDown()
         assertThat(sink.flush()).isTrue()
         assertThat(sink.flush()).isTrue()
 
-        assertThat(messages().count { it.endsWith("records dropped") }).isEqualTo(1)
+        assertThat(messages().filter { it.endsWith("records dropped") })
+            .containsExactly("7 records dropped")
+        assertThat(messages().count { it.startsWith("message ") }).isEqualTo(2)
     }
 
     @Test

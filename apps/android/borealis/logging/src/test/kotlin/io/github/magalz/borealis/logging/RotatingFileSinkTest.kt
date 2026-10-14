@@ -29,6 +29,7 @@ class RotatingFileSinkTest {
 
         sink.write(record("héllo ✓ wörld"))
         sink.write(record("second"))
+        sink.flush()
 
         val file = File(logDir, "borealis.log")
         assertThat(file.readText(Charsets.UTF_8))
@@ -45,6 +46,7 @@ class RotatingFileSinkTest {
         val sink = RotatingFileSink(logDir)
 
         sink.write(record("flushed"))
+        sink.flush()
 
         assertThat(allLines()).hasSize(1)
     }
@@ -54,6 +56,7 @@ class RotatingFileSinkTest {
         val sink = RotatingFileSink(logDir, maxFiles = 5, maxFileBytes = 300)
 
         repeat(20) { sink.write(record("message number $it")) }
+        sink.flush()
 
         val names = logFiles().map { it.name }
         assertThat(names).contains("borealis.log.1")
@@ -66,6 +69,7 @@ class RotatingFileSinkTest {
         val sink = RotatingFileSink(logDir, maxFiles = 3, maxFileBytes = 200)
 
         repeat(100) { sink.write(record("message number $it")) }
+        sink.flush()
 
         assertThat(logFiles().map { it.name })
             .containsExactly("borealis.log", "borealis.log.1", "borealis.log.2")
@@ -94,6 +98,7 @@ class RotatingFileSinkTest {
 
         sink.write(record("x".repeat(500)))
         sink.write(record("after"))
+        sink.flush()
 
         assertThat(allLines().any { it.endsWith("x".repeat(500)) }).isTrue()
         assertThat(allLines().any { it.endsWith("after") }).isTrue()
@@ -106,7 +111,10 @@ class RotatingFileSinkTest {
             close()
         }
 
-        RotatingFileSink(logDir).write(record("second run"))
+        RotatingFileSink(logDir).apply {
+            write(record("second run"))
+            flush()
+        }
 
         assertThat(allLines().map { it.substringAfter("APP ") })
             .containsExactly("first run", "second run")
@@ -120,13 +128,15 @@ class RotatingFileSinkTest {
         val sink = RotatingFileSink(logDir, maxFiles = 2, maxFileBytes = 100)
 
         repeat(30) { sink.write(record("message number $it")) }
+        sink.flush()
 
         assertThat(crash.readText()).isEqualTo("report")
     }
 
     @Test
     fun `concurrent writers lose no lines and never interleave`() {
-        val sink = RotatingFileSink(logDir, maxFiles = 10_000, maxFileBytes = 2_000)
+        val sink =
+            RotatingFileSink(logDir, maxFiles = 500, maxFileBytes = 2_000, queueCapacity = 10_000)
         val threads = 8
         val perThread = 250
         val pool = Executors.newFixedThreadPool(threads)
@@ -141,6 +151,7 @@ class RotatingFileSinkTest {
         start.countDown()
         pool.shutdown()
         assertThat(pool.awaitTermination(60, TimeUnit.SECONDS)).isTrue()
+        assertThat(sink.flush(timeoutMillis = 30_000)).isTrue()
 
         val lines = allLines()
         assertThat(lines).hasSize(threads * perThread)
@@ -167,6 +178,7 @@ class RotatingFileSinkTest {
         sink.close()
 
         sink.write(record("after"))
+        sink.flush()
 
         assertThat(allLines().map { it.substringAfter("APP ") }).containsExactly("before")
     }

@@ -107,7 +107,10 @@ class AuditStoreTest {
 
     @Test
     fun `only the newest 2000 entries are kept`() {
-        for (i in 0..AuditStore.MAX_ENTRIES) store.write(event(at = i.toLong(), detail = "d$i"))
+        for (i in 0..AuditStore.MAX_ENTRIES) {
+            store.write(event(at = i.toLong(), detail = "d$i"))
+            if (i % 100 == 0) settle()
+        }
         settle()
 
         val details = store.entries().map { it.detail }

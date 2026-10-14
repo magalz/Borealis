@@ -37,7 +37,12 @@ class EraseAuditPreferenceTest {
 
     private fun dialog(): AlertDialog = ShadowAlertDialog.getLatestAlertDialog()
 
-    private fun press(view: View, keyCode: Int) {
+    private fun open() {
+        preference.onClick()
+        shadowOf(Looper.getMainLooper()).idle()
+    }
+
+    private fun press(keyCode: Int) {
         for (action in listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP)) {
             dialog().window!!.decorView.dispatchKeyEvent(KeyEvent(action, keyCode))
         }
@@ -52,7 +57,7 @@ class EraseAuditPreferenceTest {
 
     @Test
     fun `a click asks before it erases`() {
-        preference.onClick()
+        open()
 
         assertThat(dialog().isShowing).isTrue()
         val shown = texts(dialog().window!!.decorView)
@@ -62,7 +67,7 @@ class EraseAuditPreferenceTest {
 
     @Test
     fun `the safe button has the focus when the dialog opens`() {
-        preference.onClick()
+        open()
 
         val cancel = dialog().getButton(DialogInterface.BUTTON_NEGATIVE)
         val erase = dialog().getButton(DialogInterface.BUTTON_POSITIVE)
@@ -73,9 +78,9 @@ class EraseAuditPreferenceTest {
 
     @Test
     fun `cancelling with the d-pad keeps the trail`() {
-        preference.onClick()
+        open()
 
-        press(dialog().getButton(DialogInterface.BUTTON_NEGATIVE), KeyEvent.KEYCODE_DPAD_CENTER)
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
 
         assertThat(erased).isEqualTo(0)
         assertThat(dialog().isShowing).isFalse()
@@ -83,11 +88,11 @@ class EraseAuditPreferenceTest {
 
     @Test
     fun `confirming with the d-pad erases and says so`() {
-        preference.onClick()
+        open()
         val erase = dialog().getButton(DialogInterface.BUTTON_POSITIVE)
         erase.requestFocus()
 
-        press(erase, KeyEvent.KEYCODE_DPAD_CENTER)
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
 
         assertThat(erased).isEqualTo(1)
         assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("Audit trail erased")
@@ -96,7 +101,7 @@ class EraseAuditPreferenceTest {
     @Test
     fun `a failing erase is reported and does not crash`() {
         preference.eraser = { error("disk full") }
-        preference.onClick()
+        open()
 
         dialog().getButton(DialogInterface.BUTTON_POSITIVE).performClick()
         shadowOf(Looper.getMainLooper()).idle()

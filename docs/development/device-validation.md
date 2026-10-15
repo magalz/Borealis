@@ -455,9 +455,9 @@ for both. Never put a bundle from a real run into the repository.
    then the "Diagnostics saved" dialog, even though apps such as VLC accept shared
    files. The share sheet must not open by itself. The dialog shows
    `Download/borealis-diagnostics-<timestamp>.zip` and the matching `adb pull`
-   command. Expected: Close has the focus, the D-pad scrolls the text and reaches
-   "Share…" and Close. Choose "Share…": the share sheet opens with the apps that
-   accept a zip (VLC can be among them); cancel it.
+   command. Expected: there is no "Share…" button, only Close, which has the focus,
+   and the D-pad scrolls the text. On a phone with no receiver the dialog does have
+   a "Share…" button.
 8. On the PC, run the `adb pull` command of the dialog, or:
 
    ```sh

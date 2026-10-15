@@ -513,14 +513,6 @@ class ExportDiagnosticsPreferenceTest {
             else -> null
         }
 
-    private fun scrollViewOf(view: View): ScrollView? =
-        when (view) {
-            is ScrollView -> view
-            is ViewGroup ->
-                (0 until view.childCount).firstNotNullOfOrNull { scrollViewOf(view.getChildAt(it)) }
-            else -> null
-        }
-
     private fun positionOf(view: View): Rect {
         val at = IntArray(2)
         view.getLocationInWindow(at)
@@ -534,7 +526,9 @@ class ExportDiagnosticsPreferenceTest {
         val instructions = test.viewWithText(root, "Scan this code")!!
         val url = test.viewWithText(root, "http://")!!
         val status = test.viewWithText(root, "Waiting")!!
-        val scroll = test.scrollViewOf(root)!!
+        /** The scroll view that holds the dialog body (not the empty one of the message panel). */
+        val scroll =
+            generateSequence(qr.parent) { it.parent }.filterIsInstance<ScrollView>().first()
     }
 
     private fun assertNothingClipped(views: TransferViews) {
@@ -564,6 +558,8 @@ class ExportDiagnosticsPreferenceTest {
         assertThat(positionOf(views.status).top).isAtLeast(positionOf(views.instructions).bottom)
         assertThat(views.qr.drawable.intrinsicWidth).isAtMost(shortSide / 2)
         assertNothingClipped(views)
+        assertThat(views.url.isFocusable).isTrue()
+        assertThat(transfer.getButton(AlertDialog.BUTTON_POSITIVE).hasFocus()).isTrue()
         dismissAndIdle(transfer)
     }
 

@@ -61,15 +61,18 @@ internal class TransferDialog(
     }
 
     private fun showLink(server: OneShotFileServer, link: String) {
-        val padding = (PADDING_DP * context.resources.displayMetrics.density).toInt()
+        val metrics = context.resources.displayMetrics
+        // A TV is wider than tall: the code goes left of the text, so the countdown and the status
+        // stay in view. Stacked, they would be squeezed out of the dialog. The height is short on a
+        // 720p screen, so the padding is smaller there too.
+        val landscape = metrics.widthPixels > metrics.heightPixels
+        val padding =
+            ((if (landscape) LANDSCAPE_PADDING_DP else PADDING_DP) * metrics.density).toInt()
         val countdown = TextView(context)
         val status = TextView(context)
-        val content =
+        val details =
             LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER_HORIZONTAL
-                setPadding(padding, padding, padding, padding)
-                addView(qrView(link))
                 addView(
                     TextView(context).apply { setText(R.string.borealis_transfer_instructions) }
                 )
@@ -83,6 +86,25 @@ internal class TransferDialog(
                 )
                 addView(countdown)
                 addView(status)
+            }
+        val content =
+            LinearLayout(context).apply {
+                setPadding(padding, padding, padding, padding)
+                addView(
+                    qrView(link, if (landscape) LANDSCAPE_QR_FRACTION else PORTRAIT_QR_FRACTION)
+                )
+                if (landscape) {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    val beside =
+                        LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    beside.marginStart = padding
+                    addView(details, beside)
+                } else {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER_HORIZONTAL
+                    addView(details)
+                }
             }
         render(server, countdown, status)
         val dialog =
@@ -99,9 +121,9 @@ internal class TransferDialog(
         tick(dialog, server, countdown, status)
     }
 
-    private fun qrView(link: String): ImageView {
+    private fun qrView(link: String, screenFraction: Double): ImageView {
         val metrics = context.resources.displayMetrics
-        val target = (minOf(metrics.widthPixels, metrics.heightPixels) * QR_SCREEN_FRACTION).toInt()
+        val target = (minOf(metrics.widthPixels, metrics.heightPixels) * screenFraction).toInt()
         return ImageView(context).apply {
             setImageBitmap(TransferQr.toBitmap(TransferQr.encode(link), target))
             contentDescription = context.getString(R.string.borealis_transfer_qr_description)
@@ -176,7 +198,9 @@ internal class TransferDialog(
 
     private companion object {
         const val PADDING_DP = 16
-        const val QR_SCREEN_FRACTION = 0.6
+        const val LANDSCAPE_PADDING_DP = 8
+        const val PORTRAIT_QR_FRACTION = 0.6
+        const val LANDSCAPE_QR_FRACTION = 0.5
         const val TICK_MILLIS = 1_000L
         const val MILLIS_PER_SECOND = 1_000L
         const val SECONDS_PER_MINUTE = 60

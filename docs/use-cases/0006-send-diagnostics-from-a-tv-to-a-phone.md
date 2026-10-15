@@ -79,13 +79,13 @@ opens one download link that works once and closes after 5 minutes.
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
-| UC-006-T1 | Given a TV with no private IPv4 address, when Send to phone opens, then the dialog shows the adb command and no link is started. | unit | planned |
-| UC-006-T2 | Given a private IPv4 address, when the link starts, then the link uses only a private IPv4 address and a one-time 128-bit token. | unit | planned |
-| UC-006-T3 | Given the file was downloaded once, when the same link is requested again, then the answer is HTTP 410. | contract | planned |
-| UC-006-T4 | Given the link is open, when 5 minutes pass, then the link closes and the dialog shows that it expired. | unit | planned |
-| UC-006-T5 | Given the dialog is closed before a download, when the user closes it, then the link stops and does not answer. | emulator | planned |
-| UC-006-T6 | Given a phone, when the diagnostics are exported, then Send to phone is not offered. | UI | planned |
-| UC-006-T7 | Given the link is shown, when the QR code is read, then it encodes the link text. | unit | planned |
+| UC-006-T1 | Given a TV with no private IPv4 address, when Send to phone opens, then the dialog shows the adb command and no link is started. | unit | exists (Sprint 3) |
+| UC-006-T2 | Given a private IPv4 address, when the link starts, then the link uses only a private IPv4 address and a one-time 128-bit token. | unit | exists (Sprint 3) |
+| UC-006-T3 | Given the file was downloaded once, when the same link is requested again, then the answer is HTTP 410. | unit | exists (Sprint 3) |
+| UC-006-T4 | Given the link is open, when 5 minutes pass, then the link closes and the dialog shows that it expired. | unit | exists (Sprint 3) |
+| UC-006-T5 | Given the dialog is closed before a download, when the user closes it, then the link stops and does not answer. | unit | exists (Sprint 3) |
+| UC-006-T6 | Given a phone, when the diagnostics are exported, then Send to phone is not offered. | unit | exists (Sprint 3) |
+| UC-006-T7 | Given the link is shown, when the QR code is read, then it encodes the link text. | unit | exists (Sprint 3) |
 
 Planned tests cover the Phase 2 screens; tests marked as existing cover logic
 that the Phase 2 screens reuse.
@@ -97,8 +97,8 @@ capability.
 
 ## Related
 
-- ADRs: 0051 (send the diagnostic bundle to a phone with a QR code; not in this
-  worktree), [0052](../adr/0052-structure-the-phase-2-ui.md).
+- ADRs: [0051](../adr/0051-send-the-diagnostic-bundle-to-a-phone-with-a-qr-code.md),
+  [0052](../adr/0052-structure-the-phase-2-ui.md).
 - Policies: [privacy and logging](../policies/privacy-and-logging.md)
   ("Nothing leaves unless the user exports it or opts in to crash reporting.";
   the diagnostic bundle section).
@@ -107,9 +107,8 @@ capability.
   the screen says adb pull only.
 - Development: [device validation](../development/device-validation.md)
   (export diagnostics on a TV).
-- Existing tests: `ExportDiagnosticsPreferenceTest`. The transfer tests
-  `OneShotFileServerTest`, `TransferQrTest` and `LocalNetworkTest` were not
-  found under `apps/android/borealis`, so their behaviours stay planned.
+- Existing tests (Sprint 3): `OneShotFileServerTest`, `TransferQrTest`,
+  `LocalNetworkTest` and `ExportDiagnosticsPreferenceTest`.
 - The link is plain `http://` on the local network, protected by the
   one-time token (ADR 0051). The transfer writes no audit entry: it moves
   an already redacted bundle that the user exported on purpose.

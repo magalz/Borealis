@@ -5,15 +5,27 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.ResolveInfo
+import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.ScrollView
 import android.widget.TextView
 import com.google.common.truth.Truth.assertThat
+import com.google.zxing.BinaryBitmap
+import com.google.zxing.DecodeHintType
+import com.google.zxing.RGBLuminanceSource
+import com.google.zxing.common.HybridBinarizer
+import com.google.zxing.qrcode.QRCodeReader
 import io.github.magalz.borealis.diagnostics.DiagnosticSection
 import java.io.File
+import java.net.ConnectException
+import java.net.InetAddress
+import java.net.Socket
+import java.time.Duration
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.Dispatchers
 import org.junit.After
 import org.junit.Before
@@ -37,6 +49,7 @@ class RefusingActivity : Activity() {
 class ExportDiagnosticsPreferenceTest {
     private val activity: Activity = Robolectric.buildActivity(Activity::class.java).setup().get()
     private lateinit var provider: FakeDownloadsProvider
+    private val clock = AtomicLong(1_000L)
 
     @Before
     fun setUp() {
@@ -52,9 +65,12 @@ class ExportDiagnosticsPreferenceTest {
     private fun preference(
         sections: Set<DiagnosticSection> = emptySet(),
         context: Activity = activity,
+        address: InetAddress? = InetAddress.getByName("127.0.0.1"),
     ) =
         ExportDiagnosticsPreference(context).apply {
             sectionsProvider = { sections }
+            transferAddress = { address }
+            transferClock = clock::get
             // androidx FileProvider cannot map Windows paths under Robolectric; the real one is
             // covered by FileProviderConfigTest (not on Windows) and ManifestXmlTest.
             uriFor = { file ->
@@ -178,7 +194,7 @@ class ExportDiagnosticsPreferenceTest {
     }
 
     @Test
-    fun `a TV dialog has no Share button and Close keeps the focus`() {
+    fun `a TV dialog offers Send to phone instead of Share and Close keeps the focus`() {
         RuntimeEnvironment.setQualifiers("+television")
         val tv = Robolectric.buildActivity(Activity::class.java).setup().get()
         allowSharing()
@@ -187,7 +203,10 @@ class ExportDiagnosticsPreferenceTest {
         shadowOf(Looper.getMainLooper()).idle()
 
         val dialog = savedDialog()
-        assertThat(dialog.getButton(AlertDialog.BUTTON_NEUTRAL).visibility).isEqualTo(View.GONE)
+        val send = dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
+        assertThat(send.visibility).isEqualTo(View.VISIBLE)
+        assertThat(send.text.toString()).isEqualTo("Send to phone")
+        assertThat(send.isFocusable).isTrue()
         assertThat(texts(dialog.window!!.decorView)).doesNotContain("Share…")
         assertThat(dialog.getButton(AlertDialog.BUTTON_POSITIVE).hasFocus()).isTrue()
     }
@@ -249,5 +268,185 @@ class ExportDiagnosticsPreferenceTest {
         assertThat(ShadowToast.getTextOfLatestToast())
             .isEqualTo("Could not create the diagnostic bundle. See the log for details.")
         assertThat(shadowOf(activity).nextStartedActivity).isNull()
+    }
+
+    private var tvActivity: Activity? = null
+
+    private fun tvSendToPhone(
+        address: InetAddress? = InetAddress.getByName("127.0.0.1")
+    ): Pair<AlertDialog, AlertDialog> {
+        RuntimeEnvironment.setQualifiers("+television")
+        val tv = Robolectric.buildActivity(Activity::class.java).setup().get()
+        tvActivity = tv
+        preference(context = tv, address = address).onClick()
+        val saved = savedDialog()
+        saved.getButton(AlertDialog.BUTTON_NEUTRAL).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        return saved to ShadowAlertDialog.getLatestAlertDialog()
+    }
+
+    private fun imageOf(view: View): ImageView? =
+        when (view) {
+            is ImageView -> view
+            is ViewGroup ->
+                (0 until view.childCount).firstNotNullOfOrNull { imageOf(view.getChildAt(it)) }
+            else -> null
+        }
+
+    private fun urlIn(dialog: AlertDialog): String =
+        texts(dialog.window!!.decorView).first { it.startsWith("http://") }
+
+    private fun portOf(url: String) = url.substringAfterLast(":").substringBefore("/").toInt()
+
+    private fun decode(image: ImageView): String {
+        val bitmap = (image.drawable as BitmapDrawable).bitmap
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        val source = RGBLuminanceSource(bitmap.width, bitmap.height, pixels)
+        return QRCodeReader()
+            .decode(
+                BinaryBitmap(HybridBinarizer(source)),
+                mapOf(DecodeHintType.PURE_BARCODE to true),
+            )
+            .text
+    }
+
+    private fun assertRefused(url: String) {
+        var refused = false
+        try {
+            Socket("127.0.0.1", portOf(url)).close()
+        } catch (_: ConnectException) {
+            refused = true
+        }
+        assertThat(refused).isTrue()
+    }
+
+    @Test
+    fun `Send to phone keeps the saved dialog and shows a QR code of the link`() {
+        val (saved, transfer) = tvSendToPhone()
+
+        assertThat(saved.isShowing).isTrue()
+        assertThat(transfer).isNotSameInstanceAs(saved)
+        assertThat(transfer.isShowing).isTrue()
+        val url = urlIn(transfer)
+        assertThat(url).matches("http://127\\.0\\.0\\.1:\\d+/[0-9a-f]{32}")
+        assertThat(decode(imageOf(transfer.window!!.decorView)!!)).isEqualTo(url)
+        transfer.dismiss()
+    }
+
+    @Test
+    fun `the QR code is about 60 percent of the shorter screen side`() {
+        val (_, transfer) = tvSendToPhone()
+
+        val metrics = tvActivity!!.resources.displayMetrics
+        val target = (minOf(metrics.widthPixels, metrics.heightPixels) * 0.6).toInt()
+        val width = imageOf(transfer.window!!.decorView)!!.drawable.intrinsicWidth
+        assertThat(width).isAtMost(target)
+        assertThat(width).isGreaterThan(target - 45)
+        transfer.dismiss()
+    }
+
+    @Test
+    fun `the transfer dialog explains the link, counts down and starts as waiting`() {
+        val (_, transfer) = tvSendToPhone()
+
+        val text = texts(transfer.window!!.decorView).joinToString("\n")
+        assertThat(text).contains("Scan this code with your phone's camera")
+        assertThat(text).contains("same network")
+        assertThat(text).contains("one download")
+        assertThat(text).contains("5 minutes")
+        assertThat(text).contains("Expires in 5:00")
+        assertThat(text).contains("Waiting")
+        assertThat(transfer.getButton(AlertDialog.BUTTON_POSITIVE).text.toString())
+            .isEqualTo("Close")
+        assertThat(transfer.getButton(AlertDialog.BUTTON_POSITIVE).hasFocus()).isTrue()
+        transfer.dismiss()
+    }
+
+    @Test
+    fun `the countdown follows the clock`() {
+        val (_, transfer) = tvSendToPhone()
+
+        clock.addAndGet(61_000L)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1))
+
+        assertThat(texts(transfer.window!!.decorView)).contains("Expires in 3:59")
+        transfer.dismiss()
+    }
+
+    @Test
+    fun `a finished download shows Downloaded`() {
+        val (_, transfer) = tvSendToPhone()
+        val url = urlIn(transfer)
+        val name = File(activity.cacheDir, "diagnostics").listFiles()!!.single().name
+
+        Socket("127.0.0.1", portOf(url)).use {
+            val path = "/${url.substringAfterLast("/")}/$name"
+            it.getOutputStream().write("GET $path HTTP/1.1\r\n\r\n".toByteArray())
+            it.getInputStream().readBytes()
+        }
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1))
+
+        assertThat(texts(transfer.window!!.decorView)).contains("Downloaded")
+        transfer.dismiss()
+    }
+
+    @Test
+    fun `an expired link shows Expired`() {
+        val (_, transfer) = tvSendToPhone()
+
+        clock.addAndGet(300_001L)
+        val deadline = System.nanoTime() + 5_000_000_000L
+        while ("Expired" !in texts(transfer.window!!.decorView) && System.nanoTime() < deadline) {
+            Thread.sleep(50)
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1))
+        }
+
+        assertThat(texts(transfer.window!!.decorView)).contains("Expired")
+        transfer.dismiss()
+    }
+
+    @Test
+    fun `closing the transfer dialog stops the server`() {
+        val (saved, transfer) = tvSendToPhone()
+        val url = urlIn(transfer)
+
+        transfer.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertThat(transfer.isShowing).isFalse()
+        assertThat(saved.isShowing).isTrue()
+        assertRefused(url)
+    }
+
+    @Test
+    fun `a settings screen that is finishing stops the server`() {
+        val (_, transfer) = tvSendToPhone()
+        val url = urlIn(transfer)
+
+        tvActivity!!.finish()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1))
+
+        assertRefused(url)
+    }
+
+    @Test
+    fun `with no local network a message replaces the QR code and the saved dialog stays`() {
+        val (saved, transfer) = tvSendToPhone(address = null)
+
+        val text = texts(transfer.window!!.decorView).joinToString("\n")
+        assertThat(text).contains("No local network")
+        assertThat(imageOf(transfer.window!!.decorView)).isNull()
+        assertThat(saved.isShowing).isTrue()
+        assertThat(texts(saved.window!!.decorView).joinToString("\n")).contains("adb pull")
+    }
+
+    @Test
+    fun `an address that cannot be bound becomes a message and does not crash`() {
+        val (_, transfer) = tvSendToPhone(address = InetAddress.getByName("203.0.113.1"))
+
+        assertThat(texts(transfer.window!!.decorView).joinToString("\n"))
+            .contains("Could not start the transfer")
+        assertThat(imageOf(transfer.window!!.decorView)).isNull()
     }
 }

@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Typeface
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.preference.Preference
 import android.util.AttributeSet
@@ -16,9 +17,11 @@ import androidx.core.content.FileProvider
 import dagger.hilt.android.EntryPointAccessors
 import io.github.magalz.borealis.diagnostics.DiagnosticSection
 import io.github.magalz.borealis.diagnostics.R
+import io.github.magalz.borealis.diagnostics.transfer.activeLocalIpv4
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogTag
 import java.io.File
+import java.net.InetAddress
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +49,10 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
     }
     internal var flushLogs: () -> Unit = { DiagnosticBundleWriter.flushOpenSinks() }
     internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    internal var transferAddress: () -> InetAddress? = {
+        context.getSystemService(ConnectivityManager::class.java)?.let(::activeLocalIpv4)
+    }
+    internal var transferClock: () -> Long = { System.nanoTime() / 1_000_000L }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var running = false

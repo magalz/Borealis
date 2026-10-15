@@ -14,19 +14,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.designsystem.assertPixel
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
-import kotlin.math.abs
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -179,22 +177,11 @@ class FocusIndicationTest {
         composeRule.waitForIdle()
     }
 
-    private fun assertPixel(x: Float, y: Float, expected: Color) {
-        val pixels = composeRule.onNodeWithTag(FRAME).captureToImage().toPixelMap()
-        val actual = pixels[(x * PIXELS_PER_DP).toInt(), (y * PIXELS_PER_DP).toInt()]
-        val distance =
-            abs(actual.red - expected.red) +
-                abs(actual.green - expected.green) +
-                abs(actual.blue - expected.blue)
-        assertWithMessage("pixel at ($x, $y) dp is $actual, expected $expected")
-            .that(distance < TOLERANCE)
-            .isTrue()
-    }
+    private fun assertPixel(x: Float, y: Float, expected: Color) =
+        composeRule.onNodeWithTag(FRAME).assertPixel(x, y, expected)
 
     private companion object {
         const val FRAME = "frame"
-        const val PIXELS_PER_DP = 2
-        const val TOLERANCE = 0.02f
 
         /** Early enough that a 150 to 250 ms animation has not reached the tile scale. */
         const val EARLY_MILLIS = 32L

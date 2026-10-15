@@ -105,7 +105,7 @@ internal constructor(
                 "wait_ms" to SETTLE_WAIT_MS,
             )
         }
-        return wait(SETTLE_WAIT_MS)
+        return waitInSlices(SETTLE_WAIT_MS)
     }
 
     /** A same-app `/resume` was accepted. Not for Join from the conflict dialog. */
@@ -174,6 +174,7 @@ internal constructor(
     fun refuseQuit(): Boolean {
         BorealisLog.w(LogTag.LAUNCH, "restart found another app running, not quitting it")
         collision = true
+        LaunchAudit.resumeRefusedQuit(host.get())
         return false
     }
 
@@ -181,21 +182,21 @@ internal constructor(
     fun collided(): Boolean = collision
 
     /** Waits in slices; false when cancelled or interrupted before the wait was over. */
-    private fun wait(totalMs: Long): Boolean {
+    private fun waitInSlices(totalMs: Long): Boolean {
         var left = totalMs
         try {
             while (left > 0) {
+                if (cancelled.asBoolean) return false
                 val slice = minOf(SLICE_MS, left)
                 sleeper(slice)
                 left -= slice
-                if (cancelled.asBoolean) return false
             }
         } catch (e: InterruptedException) {
             BorealisLog.d(LogTag.LAUNCH, "resume wait interrupted")
             Thread.currentThread().interrupt()
             return false
         }
-        return true
+        return !cancelled.asBoolean
     }
 
     companion object {

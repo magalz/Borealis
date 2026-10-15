@@ -89,5 +89,12 @@ internal object LaunchAudit {
     }
 
     /** The restart found another app running and did not quit it; the start gives up. */
-    fun resumeRefusedQuit(host: String?) = Unit
+    fun resumeRefusedQuit(host: String?) {
+        BorealisAudit.record(
+            AuditType.LAUNCH_ATTEMPT,
+            AuditOutcome.FAILURE,
+            host,
+            "verb=resume result=other_app_running",
+        )
+    }
 }

@@ -64,6 +64,8 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             // Imports the Prefab package published by :borealis:native into the ndk-build.
             dsl.buildFeatures.prefab = true
             dsl.defaultConfig.testInstrumentationRunner = BorealisBuild.INSTRUMENTATION_RUNNER
+            // The merged manifest is what the launcher tests query.
+            dsl.testOptions.unitTests.isIncludeAndroidResources = true
             dsl.defaultConfig.testInstrumentationRunnerArguments[CORE_VERSION_ARGUMENT] =
                 coreVersion()
             // Prefab rejects a shared library that bundles its own libc++, so the app uses the

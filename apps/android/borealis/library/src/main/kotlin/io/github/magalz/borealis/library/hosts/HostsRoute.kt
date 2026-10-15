@@ -27,10 +27,12 @@ import kotlinx.coroutines.launch
 @Composable
 fun HostsRoute(
     onOpenApps: (String) -> Unit,
-    onOpenPairing: (String) -> Unit,
+    onOpenPairing: (hostId: String, hostName: String?) -> Unit,
     onOpenAddHost: () -> Unit,
     onOpenSettings: () -> Unit,
     onStartStream: (StreamRequest) -> Unit,
+    message: String? = null,
+    onMessageShown: () -> Unit = {},
     viewModel: HostsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -48,7 +50,7 @@ fun HostsRoute(
             viewModel.effects.collect { effect ->
                 when (effect) {
                     is HostsEffect.OpenApps -> currentOnOpenApps(effect.hostId)
-                    is HostsEffect.OpenPairing -> currentOnOpenPairing(effect.hostId)
+                    is HostsEffect.OpenPairing -> currentOnOpenPairing(effect.hostId, null)
                     HostsEffect.OpenAddHost -> currentOnOpenAddHost()
                     HostsEffect.OpenSettings -> currentOnOpenSettings()
                     is HostsEffect.StartStream -> currentOnStartStream(effect.request)

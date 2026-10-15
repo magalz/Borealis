@@ -1,0 +1,291 @@
+package io.github.magalz.borealis.library.shell
+
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.pressKey
+import androidx.lifecycle.Lifecycle
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.common.truth.Truth.assertThat
+import dagger.hilt.android.testing.BindValue
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
+import dagger.hilt.android.testing.HiltTestApplication
+import io.github.magalz.borealis.library.domain.AppRepository
+import io.github.magalz.borealis.library.domain.AppsSnapshot
+import io.github.magalz.borealis.library.domain.HostRepository
+import io.github.magalz.borealis.library.domain.LegacyBridge
+import io.github.magalz.borealis.library.domain.PairingInstructions
+import io.github.magalz.borealis.library.domain.PairingOutcome
+import io.github.magalz.borealis.library.domain.PairingService
+import io.github.magalz.borealis.library.domain.RunningApp
+import io.github.magalz.borealis.library.domain.StreamLauncher
+import io.github.magalz.borealis.library.domain.StreamRequest
+import io.github.magalz.borealis.library.testing.FakeAppRepository
+import io.github.magalz.borealis.library.testing.FakeHostRepository
+import io.github.magalz.borealis.library.testing.FakeLegacyBridge
+import io.github.magalz.borealis.library.testing.FakePairingService
+import io.github.magalz.borealis.library.testing.FakeStreamLauncher
+import io.github.magalz.borealis.library.testing.PHONE
+import io.github.magalz.borealis.library.testing.TV
+import io.github.magalz.borealis.library.testing.aHost
+import io.github.magalz.borealis.library.testing.anApp
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+
+/**
+ * The whole Library through its activity: Hilt with fake repositories, the real ViewModels, the
+ * navigation and the shell. A phone unless a test says otherwise.
+ */
+@HiltAndroidTest
+@RunWith(AndroidJUnit4::class)
+@Config(application = HiltTestApplication::class, qualifiers = PHONE)
+class LibraryActivityTest {
+    @get:Rule(order = 0) val hiltRule = HiltAndroidRule(this)
+    @get:Rule(order = 1) val composeRule = createAndroidComposeRule<LibraryActivity>()
+
+    private val hosts = FakeHostRepository()
+    private val apps = FakeAppRepository()
+    private val pairing = FakePairingService()
+    private val streams = FakeStreamLauncher()
+    private val bridge = FakeLegacyBridge()
+
+    @BindValue @JvmField val hostRepository: HostRepository = hosts
+    @BindValue @JvmField val appRepository: AppRepository = apps
+    @BindValue @JvmField val pairingService: PairingService = pairing
+    @BindValue @JvmField val streamLauncher: StreamLauncher = streams
+    @BindValue @JvmField val legacyBridge: LegacyBridge = bridge
+
+    private val desk = aHost(id = "desk", name = "Desk PC")
+
+    @Before fun inject() = hiltRule.inject()
+
+    @Test
+    fun `it starts on Hosts`() {
+        hosts.emit(desk)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
+    }
+
+    @Test
+    fun `Add host then Cancel returns to Hosts`() {
+        hosts.emit(desk)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithContentDescription("Add host").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Cancel").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
+        composeRule.onNodeWithText("Cancel").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a host that was added returns to Hosts and says so`() {
+        hosts.emit(desk)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithContentDescription("Add host").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNode(hasSetTextAction()).performTextInput("192.168.1.20")
+        composeRule.onNode(hasText("Add host") and hasClickAction()).performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
+        composeRule.onNodeWithText("New PC added. Pair it to see its apps.").assertIsDisplayed()
+    }
+
+    @Test
+    fun `pairing opens the apps and Back from them returns to Hosts, not to Pairing`() {
+        hosts.emit(aHost(id = "studio", name = "Studio", paired = false))
+        apps.emit(
+            AppsSnapshot(
+                host = aHost(id = "studio", name = "Studio"),
+                apps = listOf(anApp(1, "Hades II")),
+                loading = false,
+            )
+        )
+        pairing.prepared += PairingInstructions("4817", "https://192.0.2.10:47990", "Galaxy S22")
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Pair", useUnmergedTree = true).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Pair with Studio").assertIsDisplayed()
+        pairing.pairCalls.single().outcome.complete(PairingOutcome.Paired)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Hades II").assertIsDisplayed()
+        composeRule.onNodeWithText("Pair with Studio").assertDoesNotExist()
+
+        back()
+
+        composeRule.onNodeWithTag("host:studio").assertIsDisplayed()
+        composeRule.onNodeWithText("Hades II").assertDoesNotExist()
+        composeRule.onNodeWithText("Pair with Studio").assertDoesNotExist()
+    }
+
+    @Test
+    fun `Back from Add host returns to Hosts`() {
+        hosts.emit(desk)
+        composeRule.waitForIdle()
+        composeRule.onNodeWithContentDescription("Add host").performClick()
+        composeRule.waitForIdle()
+
+        back()
+
+        composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
+    }
+
+    @Test
+    fun `Continue starts the stream of the running app`() {
+        hosts.emit(aHost(id = "desk", name = "Desk PC", runningApp = RunningApp(7, "Steam")))
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("continue:desk").performClick()
+        composeRule.waitForIdle()
+
+        assertThat(streams.requests)
+            .containsExactly(StreamRequest("desk", 7, "Steam", hdrSupported = false))
+    }
+
+    @Test
+    fun `a stream that cannot start because the host is gone says so`() {
+        streams.known = false
+        hosts.emit(aHost(id = "desk", name = "Desk PC", runningApp = RunningApp(7, "Steam")))
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("continue:desk").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("This host is no longer available.").assertIsDisplayed()
+    }
+
+    @Test
+    fun `an Apps screen that closes with a message shows it on Hosts`() {
+        hosts.emit(desk)
+        apps.emit(AppsSnapshot(host = null, apps = emptyList(), loading = false))
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Open", useUnmergedTree = true).performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
+        composeRule.onNodeWithText("This PC is no longer in your list.").assertIsDisplayed()
+    }
+
+    @Test
+    fun `Settings opens the stream settings`() {
+        hosts.emit(desk)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithContentDescription("Settings").performClick()
+
+        assertThat(bridge.settingsOpened).isEqualTo(1)
+    }
+
+    @Test
+    fun `the launcher work runs once after the content is set and again on every resume`() {
+        composeRule.waitForIdle()
+
+        assertThat(bridge.contentSetAtCreate).containsExactly(true)
+        assertThat(bridge.resumed).isEqualTo(1)
+
+        composeRule.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
+        composeRule.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+
+        assertThat(bridge.contentSetAtCreate).hasSize(1)
+        assertThat(bridge.resumed).isEqualTo(2)
+    }
+
+    @Test
+    fun `Back on Hosts finishes the activity`() {
+        composeRule.waitForIdle()
+
+        back()
+
+        assertThat(composeRule.activity.isFinishing).isTrue()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV the rail stays on Apps and its Hosts item returns to Hosts`() {
+        hosts.emit(desk)
+        apps.emit(AppsSnapshot(host = desk, apps = listOf(anApp(1, "Hades II")), loading = false))
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("host:desk").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Hades II").assertIsDisplayed()
+        composeRule.onNode(railItem("Hosts")).assertIsDisplayed()
+        composeRule.onNode(railItem("Hosts")).performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
+        composeRule.onNodeWithText("Hades II").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV the rail opens Add host and Settings, and Add host has no rail`() {
+        hosts.emit(desk)
+        composeRule.waitForIdle()
+
+        composeRule.onNode(railItem("Settings")).performClick()
+        assertThat(bridge.settingsOpened).isEqualTo(1)
+
+        composeRule.onNode(railItem("Add host")).performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Cancel").assertIsDisplayed()
+        composeRule.onNode(railItem("Settings")).assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV the D-pad moves between the rail and the content`() {
+        hosts.emit(desk)
+        apps.emit(AppsSnapshot(host = desk, apps = listOf(anApp(1, "Hades II")), loading = false))
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("host:desk").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNode(isFocused()).assert(isRailItem)
+
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNode(isFocused()).assert(isNotRailItem)
+    }
+
+    private fun back() {
+        composeRule.runOnUiThread { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
+        composeRule.waitForIdle()
+    }
+
+    private val isRailItem = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
+    private val isNotRailItem =
+        SemanticsMatcher("is not a rail item") {
+            it.config.getOrNull(SemanticsProperties.Role) != Role.Tab
+        }
+
+    private fun railItem(label: String) = hasText(label) and isRailItem
+}

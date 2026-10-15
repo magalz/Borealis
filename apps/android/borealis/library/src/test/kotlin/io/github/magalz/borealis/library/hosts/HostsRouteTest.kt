@@ -28,7 +28,8 @@ class HostsRouteTest {
 
     private val repository = FakeHostRepository()
     private val opened = mutableListOf<String>()
-    private val paired = mutableListOf<String>()
+    private val paired = mutableListOf<Pair<String, String?>>()
+    private var messageShown = 0
     private val streams = mutableListOf<StreamRequest>()
     private var addHost = 0
     private var settings = 0
@@ -70,7 +71,25 @@ class HostsRouteTest {
 
         composeRule.onNodeWithText("Pair", useUnmergedTree = true).performClick()
 
-        assertThat(paired).containsExactly("studio")
+        assertThat(paired).containsExactly("studio" to "Studio")
+    }
+
+    @Test
+    fun `an incoming message shows in a snackbar and is reported as shown`() {
+        repository.emit(aHost())
+        show(message = "New PC added. Pair it to see its apps.")
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("New PC added. Pair it to see its apps.").assertIsDisplayed()
+        assertThat(messageShown).isEqualTo(1)
+    }
+
+    @Test
+    fun `without an incoming message nothing is reported as shown`() {
+        repository.emit(aHost())
+        show()
+
+        assertThat(messageShown).isEqualTo(0)
     }
 
     @Test
@@ -175,15 +194,17 @@ class HostsRouteTest {
             .assertIsDisplayed()
     }
 
-    private fun show() {
+    private fun show(message: String? = null) {
         val viewModel = HostsViewModel(repository)
         composeRule.setContent {
             HostsRoute(
                 onOpenApps = { opened += it },
-                onOpenPairing = { paired += it },
+                onOpenPairing = { id, name -> paired += id to name },
                 onOpenAddHost = { addHost++ },
                 onOpenSettings = { settings++ },
                 onStartStream = { streams += it },
+                message = message,
+                onMessageShown = { messageShown++ },
                 viewModel = viewModel,
             )
         }

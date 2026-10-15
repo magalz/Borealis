@@ -106,8 +106,13 @@ class ServerInfoRetryTest {
         val records = log.records.filter { it.tag == LogTag.LAUNCH }
         assertThat(records).hasSize(1)
         assertThat(records.single().level).isEqualTo(LogLevel.INFO)
-        assertThat(records.single().fields).contains("attempt" to 2)
-        assertThat(records.single().fields).contains("max" to ServerInfoRetry.MAX_ATTEMPTS)
+        assertThat(records.single().fields).contains("attempt" to "2")
+        assertThat(records.single().fields).contains("max" to "${ServerInfoRetry.MAX_ATTEMPTS}")
+    }
+
+    @Test
+    fun `the public entry point reads with the system clock`() {
+        assertThat(ServerInfoRetry.read({ "<root/>" }, { false })).isEqualTo("<root/>")
     }
 
     private companion object {

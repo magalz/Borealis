@@ -5,6 +5,7 @@ group = "io.github.magalz.borealis.buildlogic"
 dependencies {
     // AGP must live in the plugin classloader of the Borealis convention plugins.
     implementation(libs.android.gradlePlugin)
+    implementation(libs.kotlin.compose.gradlePlugin)
     implementation(libs.kotlin.gradlePlugin)
     implementation(libs.kotlin.serialization.gradlePlugin)
     implementation(libs.ksp.gradlePlugin)
@@ -13,6 +14,7 @@ dependencies {
     implementation(libs.detekt.gradlePlugin)
     implementation(libs.kover.gradlePlugin)
     implementation(libs.licensee.gradlePlugin)
+    implementation(libs.roborazzi.gradlePlugin)
     implementation(libs.cyclonedx.gradlePlugin)
 }
 
@@ -31,6 +33,10 @@ gradlePlugin {
             id = "borealis.android.library"
             implementationClass =
                 "io.github.magalz.borealis.buildlogic.BorealisAndroidLibraryPlugin"
+        }
+        register("borealisAndroidCompose") {
+            id = "borealis.android.compose"
+            implementationClass = "io.github.magalz.borealis.buildlogic.BorealisComposePlugin"
         }
         register("borealisAndroidHilt") {
             id = "borealis.android.hilt"

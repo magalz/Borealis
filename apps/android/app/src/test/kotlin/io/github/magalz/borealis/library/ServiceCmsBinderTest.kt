@@ -11,6 +11,10 @@ import com.limelight.Game
 import com.limelight.computers.ComputerManagerService
 import com.limelight.discovery.DiscoveryService
 import com.limelight.nvstream.http.NvApp
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -69,6 +73,29 @@ class ServiceCmsBinderTest {
     }
 
     @Test
+    fun `the connector returns before a slow warm-up finishes and runs it off the main thread`() {
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val finished = AtomicBoolean(false)
+        val warmUpThread = AtomicReference<Thread>()
+
+        // Gives up after a few seconds, so a connector that waits for it fails instead of hanging.
+        val returned =
+            connectWith {
+                warmUpThread.set(Thread.currentThread())
+                started.countDown()
+                release.await(SLOW_WARM_UP_SECONDS, TimeUnit.SECONDS)
+                finished.set(true)
+            }
+
+        assertThat(returned.uniqueId).matches("[0-9a-f]{16}")
+        assertThat(finished.get()).isFalse()
+        assertThat(started.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue()
+        assertThat(warmUpThread.get()).isNotSameInstanceAs(Looper.getMainLooper().thread)
+        release.countDown()
+    }
+
+    @Test
     fun `a poller for a host can be created and stopped before it started`() {
         val poller = binder.createAppListPoller(details(uuid = "a"))
 
@@ -106,5 +133,7 @@ class ServiceCmsBinderTest {
 
     private companion object {
         const val POLL_MS = 20L
+        const val SLOW_WARM_UP_SECONDS = 3L
+        const val WAIT_SECONDS = 5L
     }
 }

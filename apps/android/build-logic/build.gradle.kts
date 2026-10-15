@@ -46,6 +46,11 @@ gradlePlugin {
             id = "borealis.android.room"
             implementationClass = "io.github.magalz.borealis.buildlogic.BorealisRoomPlugin"
         }
+        register("borealisDesignTokens") {
+            id = "borealis.design.tokens"
+            implementationClass =
+                "io.github.magalz.borealis.buildlogic.tokens.BorealisDesignTokensPlugin"
+        }
         register("borealisKotlinSerialization") {
             id = "borealis.kotlin.serialization"
             implementationClass = "io.github.magalz.borealis.buildlogic.BorealisSerializationPlugin"

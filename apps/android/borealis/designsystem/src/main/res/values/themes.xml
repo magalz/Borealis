@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The dark Borealis window theme (ADR 0052). No AppCompat: Compose draws everything inside. -->
+    <style name="Theme.Borealis" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/borealis_page</item>
+        <item name="android:colorBackground">@color/borealis_page</item>
+        <item name="android:statusBarColor">@color/borealis_chrome</item>
+        <item name="android:navigationBarColor">@color/borealis_chrome</item>
+    </style>
+</resources>

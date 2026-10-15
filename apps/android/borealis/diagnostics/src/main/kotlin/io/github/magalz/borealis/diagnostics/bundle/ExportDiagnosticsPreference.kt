@@ -109,8 +109,8 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
     }
 
     /**
-     * The text can take focus, so a D-pad scrolls it, and both buttons are focusable. Close has the
-     * focus first; "Share…" is for a TV that has a mail or file app.
+     * The text can take focus, so a D-pad scrolls it, and the buttons are focusable. Close has the
+     * focus first. "Share…" is only there on a phone or tablet.
      */
     private fun showSaved(saved: ExportResult.Saved) {
         val padding = (PADDING_DP * context.resources.displayMetrics.density).toInt()
@@ -127,15 +127,18 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
                 isFocusable = true
                 setPadding(padding, padding, padding, padding)
             }
-        val dialog =
+        val builder =
             AlertDialog.Builder(context)
                 .setTitle(R.string.borealis_export_saved_title)
                 .setView(ScrollView(context).apply { addView(body) })
                 .setPositiveButton(R.string.borealis_export_close, null)
-                .setNeutralButton(R.string.borealis_export_share) { _, _ ->
-                    shareOnRequest(saved.chooser)
-                }
-                .show()
+        // On a TV the only receiver is usually a video player, so there is nothing to share to.
+        if (!isTelevision(context)) {
+            builder.setNeutralButton(R.string.borealis_export_share) { _, _ ->
+                shareOnRequest(saved.chooser)
+            }
+        }
+        val dialog = builder.show()
         // After the first layout, which would otherwise pick the first focusable view.
         val close = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
         close.post { close.requestFocus() }

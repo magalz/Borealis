@@ -135,6 +135,10 @@ private fun Swatch(name: String, color: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier.size(22.dp)
+                .background(
+                    if (color.alpha < 1f) MID_GREY else Color.Transparent,
+                    MaterialTheme.shapes.small,
+                )
                 .background(color, MaterialTheme.shapes.small)
                 .border(1.dp, colors.ink3, MaterialTheme.shapes.small)
         )
@@ -196,3 +200,6 @@ private fun sample(style: String) =
         "kicker" -> "LIVING ROOM PC"
         else -> "Living room PC"
     }
+
+/** Translucent tokens (lines, hover, scrim, tints) are drawn over this so they can be seen. */
+private val MID_GREY = Color(0xFF808080)

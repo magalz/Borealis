@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.designsystem.theme
 
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -26,6 +27,13 @@ class BorealisThemeCompositionTest {
         assertThat(seen.background).isEqualTo(BorealisTokens.Color.Page)
         assertThat(seen.accent).isEqualTo(BorealisTokens.Color.Accent)
         assertThat(seen.gutterDp).isEqualTo(16f)
+    }
+
+    @Test
+    fun `text and icons default to the ink colour under the theme`() {
+        val seen = themed(formFactor = null)
+
+        assertThat(seen.contentColor).isEqualTo(BorealisTokens.Color.Ink)
     }
 
     @Test
@@ -60,6 +68,7 @@ class BorealisThemeCompositionTest {
             accent = LocalBorealisColors.current.accent,
             gutterDp = LocalBorealisSpacing.current.gutter.value,
             pinSize = LocalBorealisType.current.pin.fontSize,
+            contentColor = LocalContentColor.current,
         )
 
     private class Seen(
@@ -69,5 +78,6 @@ class BorealisThemeCompositionTest {
         val accent: Color,
         val gutterDp: Float,
         val pinSize: TextUnit,
+        val contentColor: Color,
     )
 }

@@ -3,6 +3,7 @@ package io.github.magalz.borealis.designsystem.theme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontListFontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -37,6 +38,44 @@ class BorealisThemeTest {
         assertThat(scheme.scrim).isEqualTo(colors.Scrim)
         assertThat(scheme.surfaceContainer).isEqualTo(colors.Surface)
         assertThat(scheme.surfaceContainerHigh).isEqualTo(colors.SurfaceRaised)
+    }
+
+    @Test
+    fun `no container puts text on accent strong`() {
+        val scheme = borealisColorScheme()
+
+        assertThat(scheme.primaryContainer).isEqualTo(colors.SurfaceRaised)
+        assertThat(scheme.onPrimaryContainer).isEqualTo(colors.AccentSoft)
+        // Inverse primary is text on the light inverse surface, where accent soft would be 1.5:1.
+        assertThat(scheme.inverseSurface).isEqualTo(colors.Ink)
+        assertThat(scheme.inversePrimary).isEqualTo(colors.AccentStrong)
+    }
+
+    @Test
+    fun `Sans has regular medium and semibold`() {
+        val fonts = (BorealisFonts.Sans as? FontListFontFamily)?.fonts
+
+        assertThat(fonts?.map { it.weight })
+            .containsExactly(
+                BorealisTokens.FontWeight.Regular,
+                BorealisTokens.FontWeight.Medium,
+                BorealisTokens.FontWeight.Semibold,
+            )
+            .inOrder()
+    }
+
+    @Test
+    fun `Mono has regular medium and semibold and differs from Sans`() {
+        val fonts = (BorealisFonts.Mono as? FontListFontFamily)?.fonts
+
+        assertThat(fonts?.map { it.weight })
+            .containsExactly(
+                BorealisTokens.FontWeight.Regular,
+                BorealisTokens.FontWeight.Medium,
+                BorealisTokens.FontWeight.Semibold,
+            )
+            .inOrder()
+        assertThat(BorealisFonts.Mono).isNotEqualTo(BorealisFonts.Sans)
     }
 
     @Test

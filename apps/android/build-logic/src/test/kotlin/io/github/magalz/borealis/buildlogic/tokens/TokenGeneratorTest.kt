@@ -199,6 +199,61 @@ class TokenGeneratorTest {
     }
 
     @Test
+    fun `a group name collision after conversion names both group paths`() {
+        val error =
+            assertThrows(IllegalArgumentException::class.java) {
+                TokenGenerator.generate(
+                    tokens(
+                        """{"font": {"weight": {"~type": "fontWeight", "bold": {"~value": 700}}},
+                           "font-weight": {"~type": "fontWeight", "bold": {"~value": 700}}}"""
+                    )
+                )
+            }
+
+        assertThat(error).hasMessageThat().contains("font-weight")
+        assertThat(error).hasMessageThat().contains("FontWeight")
+    }
+
+    @Test
+    fun `a token without a value is an error that names its path`() {
+        val error =
+            assertThrows(IllegalArgumentException::class.java) {
+                TokenGenerator.generate(
+                    tokens(
+                        """{"color": {"~type": "color", "page": {"~description": "no value"}}}"""
+                    )
+                )
+            }
+
+        assertThat(error).hasMessageThat().contains("color.page")
+    }
+
+    @Test
+    fun `an empty group is an error that names its path`() {
+        val error =
+            assertThrows(IllegalArgumentException::class.java) {
+                TokenGenerator.generate(tokens("""{"size": {"~type": "dimension", "tv": {}}}"""))
+            }
+
+        assertThat(error).hasMessageThat().contains("size.tv")
+    }
+
+    @Test
+    fun `the sizes radii spacing focus scale and weights of the real file are generated`() {
+        val kotlin = TokenGenerator.generate(realTokens()).kotlin
+
+        assertThat(kotlin).contains("val Title = 18.sp")
+        assertThat(kotlin).contains("val Secondary = 12.5.sp")
+        assertThat(kotlin).contains("val Rail = 14.5.sp")
+        assertThat(kotlin).contains("val Pin = 34.sp")
+        assertThat(kotlin).contains("val Pill = 999.dp")
+        assertThat(kotlin).contains("val Card = 12.dp")
+        assertThat(kotlin).contains("val GutterTv = 34.dp")
+        assertThat(kotlin).contains("val TileScale = 1.04f")
+        assertThat(kotlin).contains("val Semibold = FontWeight(600)")
+    }
+
+    @Test
     fun `the output is identical for the same input`() {
         val json = realTokens()
 

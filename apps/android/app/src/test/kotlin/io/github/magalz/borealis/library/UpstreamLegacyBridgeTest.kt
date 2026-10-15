@@ -2,12 +2,16 @@ package io.github.magalz.borealis.library
 
 import android.app.Activity
 import android.os.Build
+import android.os.Looper
+import android.view.View
+import android.view.ViewGroup
 import com.google.common.truth.Truth.assertThat
 import com.limelight.preferences.GlPreferences
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 
 @RunWith(RobolectricTestRunner::class)
 class UpstreamLegacyBridgeTest {
@@ -35,12 +39,21 @@ class UpstreamLegacyBridgeTest {
             }
         }
 
-    private val probe = GlRendererProbe { _, onRenderer ->
+    private var onProbe: (Activity) -> Unit = {}
+
+    private val probe = GlRendererProbe { probed, onRenderer ->
         probes++
+        onProbe(probed)
         renderer?.let(onRenderer)
     }
 
     private val bridge = UpstreamLegacyBridge(startup, probe)
+
+    /** Creates the launcher and lets the main looper run what it posted. */
+    private fun create() {
+        bridge.onLauncherCreated(activity)
+        shadowOf(Looper.getMainLooper()).idle()
+    }
 
     @Test
     fun `creating the launcher sets the default preferences and the locale`() {
@@ -51,7 +64,7 @@ class UpstreamLegacyBridgeTest {
 
     @Test
     fun `the GL renderer is probed on the first run and saved with the build fingerprint`() {
-        bridge.onLauncherCreated(activity)
+        create()
 
         assertThat(probes).isEqualTo(1)
         val saved = GlPreferences.readPreferences(activity)
@@ -61,22 +74,22 @@ class UpstreamLegacyBridgeTest {
 
     @Test
     fun `the GL renderer is not probed again while the fingerprint is the same`() {
-        bridge.onLauncherCreated(activity)
-        bridge.onLauncherCreated(activity)
+        create()
+        create()
 
         assertThat(probes).isEqualTo(1)
     }
 
     @Test
     fun `the GL renderer is probed again when the build fingerprint changed`() {
-        bridge.onLauncherCreated(activity)
+        create()
         GlPreferences.readPreferences(activity).apply {
             savedFingerprint = "an older build"
             writePreferences()
         }
         renderer = "Mali-G715"
 
-        bridge.onLauncherCreated(activity)
+        create()
 
         assertThat(probes).isEqualTo(2)
         assertThat(GlPreferences.readPreferences(activity).glRenderer).isEqualTo("Mali-G715")
@@ -91,7 +104,7 @@ class UpstreamLegacyBridgeTest {
             writePreferences()
         }
 
-        bridge.onLauncherCreated(activity)
+        create()
 
         assertThat(probes).isEqualTo(1)
     }
@@ -100,9 +113,34 @@ class UpstreamLegacyBridgeTest {
     fun `a probe that never answers saves nothing`() {
         renderer = null
 
-        bridge.onLauncherCreated(activity)
+        create()
 
         assertThat(GlPreferences.readPreferences(activity).glRenderer).isEmpty()
+    }
+
+    @Test
+    fun `the probe runs after the content that the launcher sets later in the same callback`() {
+        var childrenWhenProbed = -1
+        onProbe = {
+            childrenWhenProbed = it.findViewById<ViewGroup>(android.R.id.content).childCount
+        }
+
+        bridge.onLauncherCreated(activity)
+        assertThat(probes).isEqualTo(0)
+        activity.setContentView(View(activity))
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertThat(probes).isEqualTo(1)
+        assertThat(childrenWhenProbed).isEqualTo(1)
+    }
+
+    @Test
+    fun `an activity that is finishing is not probed`() {
+        bridge.onLauncherCreated(activity)
+        activity.finish()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertThat(probes).isEqualTo(0)
     }
 
     @Test

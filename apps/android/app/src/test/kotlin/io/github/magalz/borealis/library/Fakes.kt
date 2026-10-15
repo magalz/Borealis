@@ -134,12 +134,18 @@ internal class FakeCmsBinder : CmsBinder {
     val pollers = mutableListOf<FakeAppListPoller>()
     val streams = mutableListOf<Triple<Activity, NvApp, ComputerDetails>>()
 
+    /** Run inside the call of the same name, like something happening on another thread. */
+    var onStartPolling: () -> Unit = {}
+    var onStopPolling: () -> Unit = {}
+    var onCreatePoller: () -> Unit = {}
+
     /** What polling a new host does to its details; returns whether the host answered. */
     var onAdd: (ComputerDetails) -> Boolean = { true }
 
     override fun startPolling(listener: ComputerManagerListener) {
         log += "startPolling"
         this.listener = listener
+        onStartPolling()
         // Like the service, which reports every known host when polling starts.
         computers.values.forEach { listener.notifyComputerUpdated(it) }
     }
@@ -147,6 +153,7 @@ internal class FakeCmsBinder : CmsBinder {
     override fun stopPolling() {
         log += "stopPolling"
         listener = null
+        onStopPolling()
     }
 
     override fun waitForPollingStopped() {
@@ -166,7 +173,10 @@ internal class FakeCmsBinder : CmsBinder {
     }
 
     override fun createAppListPoller(computer: ComputerDetails): AppListPoller =
-        FakeAppListPoller(computer).also { pollers += it }
+        FakeAppListPoller(computer).also {
+            pollers += it
+            onCreatePoller()
+        }
 
     override fun startStream(activity: Activity, app: NvApp, computer: ComputerDetails) {
         streams += Triple(activity, app, computer)
@@ -184,9 +194,11 @@ internal class FakeCmsBinder : CmsBinder {
 
 internal class FakeCmsConnector(val binder: FakeCmsBinder = FakeCmsBinder()) : CmsConnector {
     var connects = 0
+    var failure: IOException? = null
 
     override suspend fun connect(): CmsBinder {
         connects++
+        failure?.let { throw it }
         return binder
     }
 }

@@ -2,7 +2,10 @@ package io.github.magalz.borealis.library
 
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.http.ComputerDetails
+import com.limelight.nvstream.http.PairingManager.PairState
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -265,5 +268,86 @@ class ComputerManagerConnectionTest {
 
             assertThat(live.serverCert).isEqualTo(cert)
             assertThat(binder.invalidated).containsExactly("a")
+        }
+
+    @Test
+    fun `a collector cancelled right after polling started still stops polling`() = runTest {
+        val connection = newConnection()
+        lateinit var job: Job
+        binder.onStartPolling = { job.cancel() }
+        job =
+            launch(UnconfinedTestDispatcher(testScheduler), CoroutineStart.LAZY) {
+                connection.hostUpdates().collect {}
+            }
+
+        job.start()
+        job.join()
+
+        assertThat(binder.events).containsExactly("startPolling", "stopPolling").inOrder()
+    }
+
+    @Test
+    fun `an app list collector cancelled right after its poller started stops both`() = runTest {
+        val connection = newConnection()
+        binder.computers["a"] = details(uuid = "a")
+        lateinit var job: Job
+        binder.onCreatePoller = { job.cancel() }
+        job =
+            launch(UnconfinedTestDispatcher(testScheduler), CoroutineStart.LAZY) {
+                connection.appListUpdates("a").collect {}
+            }
+
+        job.start()
+        job.join()
+
+        assertThat(binder.pollers.single().stopped).isEqualTo(1)
+        assertThat(binder.events).containsExactly("startPolling", "stopPolling").inOrder()
+    }
+
+    @Test
+    fun `a pause cancelled right after polling stopped lets polling resume`() = runTest {
+        val connection = newConnection()
+        val collector =
+            launch(UnconfinedTestDispatcher(testScheduler)) { connection.hostUpdates().collect {} }
+        lateinit var paused: Job
+        binder.onStopPolling = { paused.cancel() }
+        paused =
+            launch(UnconfinedTestDispatcher(testScheduler), CoroutineStart.LAZY) {
+                connection.pausePolling { binder.record("inside") }
+            }
+
+        paused.start()
+        paused.join()
+
+        assertThat(binder.events).doesNotContain("inside")
+        assertThat(binder.events.last()).isEqualTo("startPolling")
+        collector.cancelAndJoin()
+    }
+
+    @Test
+    fun `a certificate that was pinned makes the host paired and its state unknown before any poll`() =
+        runTest {
+            val connection = newConnection()
+            binder.computers["a"] =
+                details(uuid = "a", pairState = PairState.NOT_PAIRED, state = ComputerDetails.State.ONLINE)
+            val cert = testCertificate()
+
+            connection.pinCertificate("a", cert)
+
+            val published = connection.updates.value.getValue("a")
+            assertThat(published.pairState).isEqualTo(PairState.PAIRED)
+            assertThat(published.state).isEqualTo(ComputerDetails.State.UNKNOWN)
+            assertThat(published.serverCert).isEqualTo(cert)
+            assertThat(published).isNotSameInstanceAs(binder.computers["a"])
+        }
+
+    @Test
+    fun `a host that the service does not know is not published when a certificate is pinned`() =
+        runTest {
+            val connection = newConnection()
+
+            connection.pinCertificate("nobody", testCertificate())
+
+            assertThat(connection.updates.value).isEmpty()
         }
 }

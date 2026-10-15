@@ -28,6 +28,7 @@ import org.robolectric.RobolectricTestRunner
 class ComputerHostRepositoryTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private val binder = FakeCmsBinder()
+    private val connector = FakeCmsConnector(binder)
     private val clients = FakeHostClients(binder)
     private val woken = mutableListOf<ComputerDetails>()
     private var wakeFailure: IOException? = null
@@ -39,7 +40,7 @@ class ComputerHostRepositoryTest {
         val io = UnconfinedTestDispatcher(testScheduler)
         return ComputerHostRepository(
             context = context,
-            connection = ComputerManagerConnection(FakeCmsConnector(binder), io),
+            connection = ComputerManagerConnection(connector, io),
             clients = clients,
             waker = {
                 wakeFailure?.let { failure -> throw failure }
@@ -164,6 +165,14 @@ class ComputerHostRepositoryTest {
             assertThat(repository.addHost(HostAddress("10.0.0.7")))
                 .isEqualTo(AddHostResult.WrongSubnet)
         }
+
+    @Test
+    fun `a service that cannot be bound makes the host unreachable instead of crashing`() = runTest {
+        val repository = repository()
+        connector.failure = IOException("The computer manager service could not be bound")
+
+        assertThat(repository.addHost(HostAddress("192.168.1.9"))).isEqualTo(AddHostResult.Unreachable)
+    }
 
     @Test
     fun `an address that cannot be a host is invalid, and the service is not asked`() = runTest {

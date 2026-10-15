@@ -46,7 +46,7 @@ class ServiceCmsBinderTest {
             )
 
         // The connector waits on a background thread; the service callbacks need the main looper.
-        val connecting = CoroutineScope(Dispatchers.Default).async { ServiceCmsConnector(app).connect() }
+        val connecting = CoroutineScope(Dispatchers.Default).async { ServiceCmsConnector(app, Dispatchers.IO).connect() }
         while (!connecting.isCompleted) {
             looper.idle()
             Thread.sleep(POLL_MS)

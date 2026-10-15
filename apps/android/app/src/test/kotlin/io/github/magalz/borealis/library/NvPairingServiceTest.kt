@@ -136,6 +136,20 @@ class NvPairingServiceTest {
     }
 
     @Test
+    fun `after pairing the host is reported as paired before any poll`() = runTest {
+        known()
+        client.pairing = { PairResult(PairState.PAIRED, testCertificate()) }
+        val io = UnconfinedTestDispatcher(testScheduler)
+        val connection = ComputerManagerConnection(FakeCmsConnector(binder), io)
+
+        newService(connection, io).pair("host-1", "1234", restarted = false)
+
+        val published = connection.updates.value.getValue("host-1")
+        assertThat(published.pairState).isEqualTo(PairState.PAIRED)
+        assertThat(published.state).isEqualTo(ComputerDetails.State.UNKNOWN)
+    }
+
+    @Test
     fun `a wrong PIN is reported as such`() = runTest {
         known()
         client.pairing = { PairResult(PairState.PIN_WRONG, null) }

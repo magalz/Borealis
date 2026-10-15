@@ -18,6 +18,7 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -29,7 +30,10 @@ import kotlinx.coroutines.withContext
 @Singleton
 internal class ServiceCmsConnector
 @Inject
-constructor(@ApplicationContext private val context: Context) : CmsConnector {
+constructor(
+    @ApplicationContext private val context: Context,
+    @IoDispatcher private val io: CoroutineDispatcher,
+) : CmsConnector {
     override suspend fun connect(): CmsBinder {
         val bound = CompletableDeferred<ComputerManagerBinder>()
         val connection =

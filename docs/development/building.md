@@ -110,9 +110,9 @@ Verify the screens against the committed references:
   reference, and it uploads the differences as an artifact.
 - The Linux Android job renders the same tests without comparing them. The
   tests still count for coverage.
-- Plan B, if the Windows rendering drifts: record and verify on Linux.
-  `TODO(verify)`: `ci.yml` has no Linux record job yet, so plan B is not
-  implemented.
+- If the Windows rendering ever drifts between the development machine and
+  `windows-latest`, the fallback is to record and verify on Linux instead
+  (WSL2 or a manual CI job). That fallback is not set up yet.
 
 ### Coverage, licences and SBOM
 

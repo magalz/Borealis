@@ -660,13 +660,16 @@ items or placeholders. The host endpoints are in
 
 ## Next steps
 
-1. Implement the acceptance tests of [UC-001](../use-cases/0001-pair-with-a-host.md)
-   to [UC-008](../use-cases/0008-add-a-host-by-address.md) first
-   ([TDD](../development/tdd.md)). The use cases are written now.
-2. Build the Phase 2 screens in Compose, one screen at a time, with
-   Roborazzi screenshots for the states above ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)).
-3. Generate the Kotlin tokens from `design/tokens.json` through the token
-   pipeline ([ADR 0044](../adr/0044-design-tokens-pipeline.md)).
+1. Sprint 4 built the Library screens with the token pipeline
+   ([ADR 0044](../adr/0044-design-tokens-pipeline.md)) and Roborazzi
+   screenshots ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)).
+2. Next: the starting stream, conflict and error screens, the in-game menu,
+   the keyboard and the overlay.
+3. Then: Settings, Privacy and diagnostics, the audit trail viewer and Send to
+   phone in Compose.
+
+Each screen comes with the acceptance tests of its use case first
+([TDD](../development/tdd.md)).
 
 ## How to open the prototype
 

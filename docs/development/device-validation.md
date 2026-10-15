@@ -3,9 +3,8 @@
 This runbook checks Borealis Phase 1 and Sprints 2 to 4 on two devices against
 LuminalShine 26.09.1 running on the owner's Windows PC. It is for the owner and
 for the orchestrator who runs the checks. Run the steps in order and record the
-results in the templates of section 4 (Phase 1) or in the table of section 7
-(Sprint 2). Sections 6 to 9 hold the results of Phase 1 and Sprints 2 to 4, in
-that order.
+results as a new section with a table, like sections 7 to 9. Sections 6 to 9
+hold the results of Phase 1 and Sprints 2 to 4, in that order.
 
 Sources: [host contract](../host-contract/luminalshine.md) (cited as "contract"),
 [Borealis Android README](../../apps/android/borealis/README.md),

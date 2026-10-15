@@ -54,7 +54,14 @@ class HostsViewModelTest {
 
         assertThat(viewModel.uiState.value.items)
             .containsExactly(
-                HostItemUiState("a", "Alpha", Reachability.ONLINE, true, "Steam", HostAction.OPEN),
+                HostItemUiState(
+                    "a",
+                    "Alpha",
+                    Reachability.ONLINE,
+                    true,
+                    RunningApp(7, "Steam"),
+                    HostAction.OPEN,
+                ),
                 HostItemUiState("b", "beta", Reachability.OFFLINE, false, null, HostAction.NONE),
                 HostItemUiState("c", "zeta", Reachability.ONLINE, true, null, HostAction.OPEN),
             )

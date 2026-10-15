@@ -21,7 +21,11 @@ constructor(private val connection: ComputerManagerConnection) : StreamLauncher 
                 ?: return false
         val cached = parseApps(computer.rawAppList).firstOrNull { it.appId == request.appId }
         val hdr = cached?.isHdrSupported ?: request.hdrSupported
-        binder.startStream(activity, NvApp(request.appName, request.appId, hdr), computer)
+        binder.startStream(
+            activity,
+            NvApp(request.appName ?: UNKNOWN_APP_NAME, request.appId, hdr),
+            computer,
+        )
         return true
     }
 }

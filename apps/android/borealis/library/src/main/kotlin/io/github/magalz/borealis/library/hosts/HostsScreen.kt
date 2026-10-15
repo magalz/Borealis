@@ -242,7 +242,7 @@ private fun HostGrid(
                 span = { _, _ -> fullWidth() },
             ) { index, item ->
                 ContinueCard(
-                    appName = item.appName,
+                    appName = item.appName.orEmpty(),
                     detail = stringResource(R.string.hosts_continue_detail, item.hostName),
                     resumeLabel = stringResource(R.string.hosts_continue_resume),
                     onClick = { handlers.onContinue(item.hostId) },
@@ -295,7 +295,7 @@ private fun HostItem(
         statusText = stringResource(item.statusTextRes()),
         onClick = { handlers.onHostSelected(item.id) },
         modifier = modifier.testTag("host:${item.id}"),
-        runningApp = item.runningAppName,
+        runningApp = item.runningApp?.name,
         action = action,
         onOptions = { handlers.onOptions(item.id) },
         optionsLabel = optionsLabel,

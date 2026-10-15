@@ -109,7 +109,7 @@ private fun List<Host>.toUiState(details: String?): HostsUiState {
 }
 
 private fun Host.toItem() =
-    HostItemUiState(id, name, reachability, paired, runningApp?.name, primaryAction())
+    HostItemUiState(id, name, reachability, paired, runningApp, primaryAction())
 
 private fun Host.primaryAction(): HostAction =
     when {

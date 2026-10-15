@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.library.hosts
 
 import io.github.magalz.borealis.library.domain.Reachability
+import io.github.magalz.borealis.library.domain.RunningApp
 import io.github.magalz.borealis.library.domain.StreamRequest
 
 /** What tapping a host does. */
@@ -23,7 +24,7 @@ data class HostItemUiState(
     val name: String,
     val reachability: Reachability,
     val paired: Boolean,
-    val runningAppName: String?,
+    val runningApp: RunningApp?,
     val action: HostAction,
 )
 
@@ -32,10 +33,13 @@ data class ContinueItemUiState(
     val hostId: String,
     val hostName: String,
     val appId: Int,
-    val appName: String,
+    /** Null while the host does not report the name of the app. */
+    val appName: String?,
 )
 
 data class HostsUiState(
+    /** True until the repository reports the known hosts for the first time. */
+    val loading: Boolean = false,
     /** True while no host is known yet: the screen explains the next step (ADR 0052, D8). */
     val searching: Boolean = true,
     /** The hosts, sorted by name. */

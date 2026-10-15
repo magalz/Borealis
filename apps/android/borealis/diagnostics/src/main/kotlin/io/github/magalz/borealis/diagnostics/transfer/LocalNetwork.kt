@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.diagnostics.transfer
 
+import android.annotation.SuppressLint
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import java.net.Inet4Address
@@ -10,6 +11,8 @@ import java.net.InetAddress
  * network can reach; null when there is no such network (mobile data, no connection, public address
  * only).
  */
+// The app module declares ACCESS_NETWORK_STATE; this library has no other use for it.
+@SuppressLint("MissingPermission")
 internal fun activeLocalIpv4(connectivity: ConnectivityManager): InetAddress? {
     val network = connectivity.activeNetwork ?: return null
     val local =

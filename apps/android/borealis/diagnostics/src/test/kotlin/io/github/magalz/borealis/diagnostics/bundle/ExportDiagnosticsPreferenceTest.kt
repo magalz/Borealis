@@ -449,4 +449,17 @@ class ExportDiagnosticsPreferenceTest {
             .contains("Could not start the transfer")
         assertThat(imageOf(transfer.window!!.decorView)).isNull()
     }
+
+    @Test
+    fun `a transfer that fails to open becomes a message and does not crash`() {
+        RuntimeEnvironment.setQualifiers("+television")
+        val tv = Robolectric.buildActivity(Activity::class.java).setup().get()
+        preference(context = tv).apply { transferAddress = { error("no network stack") } }.onClick()
+
+        savedDialog().getButton(AlertDialog.BUTTON_NEUTRAL).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertThat(ShadowToast.getTextOfLatestToast())
+            .isEqualTo("Could not start the transfer. See the log for details.")
+    }
 }

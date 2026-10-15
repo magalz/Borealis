@@ -377,6 +377,21 @@ class OneShotFileServerTest {
         assertThat(headerSafeName("plain-1.zip")).isEqualTo("plain-1.zip")
     }
 
+    @Test
+    fun `sizes are shown in bytes, KiB and MiB`() {
+        assertThat(TransferHttp.formatSize(512)).isEqualTo("512 B")
+        assertThat(TransferHttp.formatSize(40_000)).isEqualTo("39.1 KiB")
+        assertThat(TransferHttp.formatSize(3L * 1024 * 1024 + 512 * 1024)).isEqualTo("3.5 MiB")
+    }
+
+    @Test
+    fun `the default clock only moves forward`() {
+        val first = monotonicMillis()
+        Thread.sleep(5)
+
+        assertThat(monotonicMillis()).isGreaterThan(first)
+    }
+
     private fun serverThreads(): Int =
         Thread.getAllStackTraces().keys.count {
             it.name == OneShotFileServer.THREAD_NAME && it.isAlive

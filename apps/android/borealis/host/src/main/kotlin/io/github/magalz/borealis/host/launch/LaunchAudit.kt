@@ -87,4 +87,7 @@ internal object LaunchAudit {
             "verb=resume result=rtsp_failed error=$error",
         )
     }
+
+    /** The restart found another app running and did not quit it; the start gives up. */
+    fun resumeRefusedQuit(host: String?) = Unit
 }

@@ -228,4 +228,15 @@ class LaunchAuditTest {
         assertThat(event.host).isEqualTo(host)
         assertThat(event.detail).isEqualTo("verb=resume result=rtsp_failed error=-1")
     }
+
+    @Test
+    fun `refusing to quit another app after the restart is a failed resume attempt`() {
+        LaunchAudit.resumeRefusedQuit(host)
+
+        val event = audit.events.single()
+        assertThat(event.type).isEqualTo(AuditType.LAUNCH_ATTEMPT)
+        assertThat(event.outcome).isEqualTo(AuditOutcome.FAILURE)
+        assertThat(event.host).isEqualTo(host)
+        assertThat(event.detail).isEqualTo("verb=resume result=other_app_running")
+    }
 }

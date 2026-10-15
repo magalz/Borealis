@@ -8,6 +8,7 @@ import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.logging.LogLevel
 import io.github.magalz.borealis.nativecore.LaunchCategory
 import java.net.SocketTimeoutException
+import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
 
@@ -294,5 +295,88 @@ class ResumeCollisionsTest {
             )
         val text = log.records.joinToString { "${it.message} ${it.fields}" }
         assertThat(text).doesNotContain(host)
+    }
+
+    @Test
+    fun `refusing the quit after the restart is audited as a failed resume attempt`() {
+        resumedStart()
+        rtspFailure()
+        collisions.restartAfterFailure()
+        audit.events.clear()
+
+        collisions.refuseQuit()
+
+        val event = audit.events.single()
+        assertThat(event.type).isEqualTo(AuditType.LAUNCH_ATTEMPT)
+        assertThat(event.outcome).isEqualTo(AuditOutcome.FAILURE)
+        assertThat(event.host).isEqualTo(host)
+        assertThat(event.detail).isEqualTo("verb=resume result=other_app_running")
+    }
+
+    @Test
+    fun `refusing the quit logs a warning without the host address`() {
+        collisions.refuseQuit()
+
+        val warning = log.records.single { it.level == LogLevel.WARN }
+        assertThat("${warning.message} ${warning.fields}").doesNotContain(host)
+    }
+
+    @Test
+    fun `an already cancelled start does not sleep at all`() {
+        serverInfo(takes = 6_700L)
+        cancelled = true
+
+        assertThat(collisions.settleBeforeResume()).isFalse()
+        assertThat(slices).isEmpty()
+    }
+
+    @Test
+    fun `a failure at exactly 5 s after the resume is held and one millisecond later is not`() {
+        resumedStart()
+        now += ResumeCollisions.RTSP_FAILURE_WINDOW_MS
+        assertThat(rtspFailure()).isEqualTo(StageFailure.HOLD)
+
+        collisions.restartAfterFailure()
+        resumedStart()
+        now += ResumeCollisions.RTSP_FAILURE_WINDOW_MS + 1
+        assertThat(rtspFailure()).isEqualTo(StageFailure.REPORT)
+    }
+
+    @Test
+    fun `a serverinfo error other than the timeout is propagated and does not mark the host busy`() {
+        val failure = java.io.IOException("connection reset")
+        val thrown =
+            assertThrows(java.io.IOException::class.java) {
+                collisions.readServerInfo { throw failure }
+            }
+        assertThat(thrown).isSameInstanceAs(failure)
+
+        // The state of the failed read must not make the next, fast start wait.
+        serverInfo()
+        assertThat(collisions.settleBeforeResume()).isTrue()
+        assertThat(slices).isEmpty()
+    }
+
+    @Test
+    fun `an interrupt during the busy host wait returns false and keeps the interrupt flag`() {
+        val interrupting =
+            ResumeCollisions(
+                { false },
+                { _, _, _, _ -> },
+                { host },
+                { 0L },
+                { throw InterruptedException() },
+            )
+        var calls = 0
+        interrupting.readServerInfo {
+            if (++calls == 1) throw SocketTimeoutException("timed out")
+            "<root/>"
+        }
+        try {
+            assertThat(interrupting.settleBeforeResume()).isFalse()
+            assertThat(Thread.currentThread().isInterrupted).isTrue()
+        } finally {
+            Thread.interrupted()
+        }
     }
 }

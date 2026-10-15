@@ -449,6 +449,7 @@ public class NvConnection {
                     context.connListener.stageFailed(appName, 0, e.getErrorCode());
                     return;
                 } catch (XmlPullParserException | IOException e) {
+                    if (launchCancelled) { return; } // BOREALIS: the user left during the /serverinfo retry, nothing to report
                     e.printStackTrace();
                     context.connListener.displayMessage(e.getMessage());
                     context.connListener.stageFailed(appName, MoonBridge.ML_PORT_FLAG_TCP_47984 | MoonBridge.ML_PORT_FLAG_TCP_47989, 0);

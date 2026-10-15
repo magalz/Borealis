@@ -291,11 +291,13 @@ class HostsScreenTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `loading shows a progress indicator and neither the empty state nor Add host`() {
+    fun `loading shows a progress indicator and not the empty state with its Add host button`() {
         showPhone(loadingHosts)
 
         composeRule.onNodeWithTag("hosts-loading").assertIsDisplayed()
         composeRule.onNodeWithText("Looking for hosts").assertDoesNotExist()
+        // The phone's top bar names Add host by description only: this text is the empty-state
+        // button.
         composeRule.onNodeWithText("Add host").assertDoesNotExist()
         composeRule.onNodeWithText("CONTINUE").assertDoesNotExist()
     }

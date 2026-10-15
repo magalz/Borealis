@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -29,6 +30,8 @@ import org.robolectric.Shadows.shadowOf
 /** The real computer manager service and discovery service, driven by Robolectric. */
 @RunWith(RobolectricTestRunner::class)
 class ServiceCmsBinderTest {
+    @get:Rule val log = RecordingLog()
+
     private val app = ApplicationProvider.getApplicationContext<Application>()
     private val looper = shadowOf(Looper.getMainLooper())
     private lateinit var binder: CmsBinder
@@ -93,6 +96,21 @@ class ServiceCmsBinderTest {
         assertThat(started.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue()
         assertThat(warmUpThread.get()).isNotSameInstanceAs(Looper.getMainLooper().thread)
         release.countDown()
+    }
+
+    @Test
+    fun `a warm-up that throws neither fails the connection nor leaks more than its class`() {
+        val returned = connectWith { throw IllegalStateException("secret detail") }
+
+        assertThat(returned.uniqueId).matches("[0-9a-f]{16}")
+        val deadline = System.currentTimeMillis() + WAIT_SECONDS * 1_000
+        while (log.records.none { it.message == "warm-up failed" } && System.currentTimeMillis() < deadline) {
+            Thread.sleep(POLL_MS)
+        }
+        val logged = log.records.single { it.message == "warm-up failed" }
+        assertThat(logged.fields).containsExactly("error" to "IllegalStateException")
+        assertThat(logged.toString()).doesNotContain("secret detail")
+        assertThat(logged.stackTrace).isNull()
     }
 
     @Test

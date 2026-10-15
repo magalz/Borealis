@@ -255,6 +255,21 @@ class AppsViewModelTest {
     }
 
     @Test
+    fun `the sheet does not reopen when its app comes back`() = runTest {
+        repository.emit(snapshot(desktop, steam))
+        subscribe(viewModel.uiState)
+        viewModel.onActions(2)
+        runCurrent()
+        repository.emit(snapshot(desktop))
+        runCurrent()
+
+        repository.emit(snapshot(desktop, steam))
+        runCurrent()
+
+        assertThat(viewModel.uiState.value.actions).isNull()
+    }
+
+    @Test
     fun `dismissing the actions clears them`() = runTest {
         repository.emit(snapshot(desktop))
         subscribe(viewModel.uiState)

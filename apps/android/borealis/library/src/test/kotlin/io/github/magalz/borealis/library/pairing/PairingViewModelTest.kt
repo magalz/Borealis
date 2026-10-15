@@ -59,6 +59,15 @@ class PairingViewModelTest {
     }
 
     @Test
+    fun `the string form of the waiting state hides the PIN`() {
+        val text = waiting("4821").toString()
+
+        assertThat(text).doesNotContain("4821")
+        assertThat(text).contains("pin=****")
+        assertThat(text).contains("deviceName=Pixel")
+    }
+
+    @Test
     fun `pairing succeeds and opens the apps`() = runTest {
         service.prepared += instructions()
         val viewModel = viewModel()

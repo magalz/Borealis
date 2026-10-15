@@ -75,3 +75,5 @@ Style details: the Mission Control palette comes from `luminalshine/src_assets/c
 See [0003](0003-native-apps-per-platform-with-shared-core.md), [0004](0004-kotlin-for-new-android-code.md), [0006](0006-min-sdk-28.md), [0034](0034-screenshot-testing-with-roborazzi.md) and [0044](0044-design-tokens-pipeline.md).
 
 Amended by [0052](0052-structure-the-phase-2-ui.md): violet accent shades and dark only for 1.0.
+
+Amended by [0053](0053-material-3-with-borealis-focus-on-tv.md): Material 3 with a Borealis focus indication instead of `androidx.tv.material3`.

@@ -50,8 +50,14 @@ internal object BorealisCoverage {
             "*ComposableSingletons*",
         )
 
+    private const val PREVIEW_ANNOTATION = "androidx.compose.ui.tooling.preview.Preview"
+
     fun KoverReportFiltersConfig.borealisFilters() {
-        excludes { classes(EXCLUDED_CLASSES) }
+        excludes {
+            classes(EXCLUDED_CLASSES)
+            // @Preview composables only feed the IDE and the screenshot tests.
+            annotatedBy(PREVIEW_ANNOTATION)
+        }
     }
 
     /** Applies Kover to a Borealis module and publishes its [androidVariant] as [VARIANT]. */

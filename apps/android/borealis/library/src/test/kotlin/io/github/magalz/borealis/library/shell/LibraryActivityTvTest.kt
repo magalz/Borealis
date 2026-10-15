@@ -115,6 +115,23 @@ class LibraryActivityTvTest {
     }
 
     @Test
+    fun `Add host from the rail of Apps closes onto Hosts`() {
+        hosts.emit(desk)
+        apps.emit(AppsSnapshot(host = desk, apps = listOf(anApp(1, "Hades II")), loading = false))
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("host:desk").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNode(railItem("Add host")).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Cancel").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Hades II").assertDoesNotExist()
+    }
+
+    @Test
     fun `on a TV the D-pad moves between the rail and the content`() {
         hosts.emit(desk)
         apps.emit(AppsSnapshot(host = desk, apps = listOf(anApp(1, "Hades II")), loading = false))

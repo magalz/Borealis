@@ -30,8 +30,10 @@ opens one download link that works once and closes after 5 minutes.
    link uses a one-time 128-bit token and expires after 5 minutes.
 4. The dialog shows a QR code and the link text, for example
    `http://192.168.1.20:40125/<token>`, and a countdown.
-5. The user scans the QR code with the phone's camera. The phone downloads the
-   file.
+5. The user scans the QR code with the phone's camera. The phone opens a small
+   page on the TV's link, with the file name, the size and a Download link.
+   Tapping Download fetches the zip at `/<token>/<file name>`. Opening the page
+   does not use up the download (ADR 0051).
 6. The system closes the link after the download. The dialog shows "Downloaded.
    The link is closed."
 
@@ -47,8 +49,6 @@ opens one download link that works once and closes after 5 minutes.
 
 1. The user chooses Close. The system stops the link at once.
 2. The use case ends.
-
-## Failure flows
 
 ### E1: A second download is requested (branches from step 6)
 
@@ -87,6 +87,9 @@ opens one download link that works once and closes after 5 minutes.
 | UC-006-T6 | Given a phone, when the diagnostics are exported, then Send to phone is not offered. | UI | planned |
 | UC-006-T7 | Given the link is shown, when the QR code is read, then it encodes the link text. | unit | planned |
 
+Planned tests cover the Phase 2 screens; tests marked as existing cover logic
+that the Phase 2 screens reuse.
+
 ## Host dependency
 
 None. The transfer runs on the TV and the phone. It needs no LuminalShine
@@ -94,16 +97,19 @@ capability.
 
 ## Related
 
-- ADRs: [0051](../adr/0051-send-the-diagnostic-bundle-to-a-phone-with-a-qr-code.md),
-  [0052](../adr/0052-structure-the-phase-2-ui.md).
+- ADRs: 0051 (send the diagnostic bundle to a phone with a QR code; not in this
+  worktree), [0052](../adr/0052-structure-the-phase-2-ui.md).
 - Policies: [privacy and logging](../policies/privacy-and-logging.md)
-  ("Nothing leaves this device unless you export it"; the diagnostic bundle
-  section).
+  ("Nothing leaves unless the user exports it or opts in to crash reporting.";
+  the diagnostic bundle section).
 - Existing logic: Send to phone on a TV exists from Sprint 3 (one download, 5
   minutes). The Phase 2 dialog is planned. The prototype's "Today" note for
   the screen says adb pull only.
 - Development: [device validation](../development/device-validation.md)
   (export diagnostics on a TV).
+- Existing tests: `ExportDiagnosticsPreferenceTest`. The transfer tests
+  `OneShotFileServerTest`, `TransferQrTest` and `LocalNetworkTest` were not
+  found under `apps/android/borealis`, so their behaviours stay planned.
 - The link is plain `http://` on the local network, protected by the
   one-time token (ADR 0051). The transfer writes no audit entry: it moves
   an already redacted bundle that the user exported on purpose.

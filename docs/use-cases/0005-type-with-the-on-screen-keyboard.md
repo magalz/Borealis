@@ -54,10 +54,8 @@ awkward to type.
    three-finger tap. Both keyboards can be used at the same time; the
    on-screen modifiers latch only for keys typed on screen.
 
-## Failure flows
-
-None in the approved design. Shortcut chips and keys send what they name; the
-host's response to a key is outside this use case.
+No failure flow is defined in the approved design. Shortcut chips and keys send
+what they name; the host's response to a key is outside this use case.
 
 ## Postconditions
 
@@ -77,6 +75,9 @@ host's response to a key is outside this use case.
 | UC-005-T4 | Given the handheld keyboard is open, when Y is pressed, then Backspace is sent. | UI | planned |
 | UC-005-T5 | Given the phone keyboard is open, when the stream is shown, then the picture stays visible above the keyboard. | UI | planned |
 | UC-005-T6 | Given keys are typed, when logs and the audit trail are read, then no typed key text appears in them. | unit | planned |
+
+Planned tests cover the Phase 2 screens; tests marked as existing cover logic
+that the Phase 2 screens reuse.
 
 ## Host dependency
 

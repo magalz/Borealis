@@ -35,9 +35,10 @@ says what happened and what to do next.
 6. The host sets up the stream and sends the first frame. The system waits for
    it. A first frame can take about 18 s; the system must not give up earlier
    ([host contract, section 10](../host-contract/luminalshine.md)).
-7. The picture appears. The system writes SESSION_START with the codec,
-   resolution, frame rate and HDR state. A hint explains how to open the menu
-   on this device the first time.
+7. The picture appears. The system wrote SESSION_START when the connection
+   started, before the first frame. It holds the codec, resolution, frame rate
+   and HDR state. A hint explains how to open the menu on this device the first
+   time.
 8. The session ends when the user leaves it or the host ends it. The system
    writes SESSION_END with the duration and the reason.
 
@@ -68,8 +69,6 @@ says what happened and what to do next.
 1. The host reports a running app and the system shows the conflict dialog.
 2. The flow continues in [UC-003](0003-join-or-replace-a-running-app.md).
 
-## Failure flows
-
 ### E1: The host is offline (branches from step 3)
 
 1. The Connection error screen says the host is offline and offers Wake PC.
@@ -87,16 +86,18 @@ says what happened and what to do next.
 
 1. After the retries in A1, the Connection error screen says the host is busy
    and offers Try again.
-2. The system writes LAUNCH_ATTEMPT with the failure outcome. No launch
-   request is sent.
+2. No audit entry is written; the retry and the final timeout are in the log.
+   LAUNCH_ATTEMPT and LAUNCH_RETRY are written only for `/launch` and
+   `/resume`. No launch request is sent.
 3. The use case ends.
 
 ### E4: The first frame does not arrive (branches from step 6)
 
-1. The stream ends with error -100 (no video traffic) or -101 (no video
-   frame) from moonlight-common-c. If neither arrives, a first-frame watchdog
-   ends the wait after 45 s. The system shows the Connection error screen
-   with the raw code and the LuminalShine hint.
+1. The stream ends with error -100 or -101 from moonlight-common-c. If no
+   frame has been rendered 45 s after the connection started, the Borealis
+   first-frame watchdog ends the stream through the same -101 path
+   ([ADR 0048](../adr/0048-fork-moonlight-common-c.md)). The system shows the
+   Connection error screen with the raw code and the LuminalShine hint.
 2. SESSION_START was written when the connection started. The system writes
    SESSION_END with outcome FAILURE and `reason=error code=<code>`.
 
@@ -105,20 +106,23 @@ says what happened and what to do next.
 - On success: the picture of the app is shown. SESSION_START is in the audit
   trail.
 - On failure or cancel: no stream is running. The error code is shown. No
-  secret is stored. An audit entry records the attempt.
+  secret is stored. An audit entry records a launch attempt when one was made.
 
 ## Acceptance tests
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
 | UC-002-T1 | Given the host answers at once, when the user starts an app, then the stages appear in order and the picture is shown after the first frame. | emulator | planned |
-| UC-002-T2 | Given `/serverinfo` times out twice and then answers, when the stream starts, then a third attempt is made within 25 s and the launch continues. | unit | planned |
+| UC-002-T2 | Given `/serverinfo` times out twice and then answers, when the stream starts, then a third attempt is made within 25 s and the launch continues. | unit | exists (Sprint 3, unit) |
 | UC-002-T3 | Given `/serverinfo` still times out after 3 attempts, when the budget ends, then the screen shows Host busy and no `/launch` is sent. | unit | planned |
-| UC-002-T4 | Given the host asks for a retry, when the launch retries, then LAUNCH_RETRY is written for each retry and the screen shows the count. | unit | planned |
+| UC-002-T4 | Given the host asks for a retry, when the launch retries, then LAUNCH_RETRY is written for each retry and the screen shows the count. | unit | exists (Sprint 2, unit) |
 | UC-002-T5 | Given a pending launch, when the user chooses Cancel at any stage, then the Apps screen returns and no stream starts. | UI | planned |
 | UC-002-T6 | Given the host certificate changed, when the stream starts, then the error screen offers Pair again and CERTIFICATE_CHANGED is written. | unit | planned |
 | UC-002-T7 | Given the host does not answer, when the start ends, then the screen says the host is offline and offers Wake PC. | UI | planned |
-| UC-002-T8 | Given a picture is shown, when the session ends, then SESSION_START holds the codec, resolution, frame rate and HDR state, and SESSION_END holds the duration and the reason. | unit | planned |
+| UC-002-T8 | Given a picture is shown, when the session ends, then SESSION_START holds the codec, resolution, frame rate and HDR state, and SESSION_END holds the duration and the reason. | unit | exists (Sprint 3, unit) |
+
+Planned tests cover the Phase 2 screens; tests marked as existing cover logic
+that the Phase 2 screens reuse.
 
 ## Host dependency
 
@@ -143,3 +147,5 @@ cannot be resolved ([section 7.3](../host-contract/luminalshine.md)).
 - Existing logic: the launch retries, the `/serverinfo` retry at stream start
   (3 attempts in about 25 s), and the Sprint 2 error dialog exist. The Phase 2
   screens are planned.
+- Existing tests: `ServerInfoRetryTest`, `LaunchRetriesTest`,
+  `LaunchRetryRunnerTest`, `SessionAuditTest`.

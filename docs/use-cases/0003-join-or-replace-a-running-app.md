@@ -48,8 +48,6 @@ app again, or to cancel. Every choice is explicit, and Cancel has the focus.
    request that changes the host.
 3. The Apps screen returns. The use case ends.
 
-## Failure flows
-
 ### E1: The host still reports the app running (branches from step 3 or 1)
 
 1. The host answers that an app is already running. The system does not show
@@ -64,19 +62,22 @@ app again, or to cancel. Every choice is explicit, and Cancel has the focus.
 - On Quit and relaunch or quit and start: the chosen app runs for this device.
   The other device's stream has ended.
 - On Cancel: the host is unchanged.
-- In every case LAUNCH_CONFLICT holds the choice. The entry holds no app
-  name; the Sprint 3 code logs the choice only.
+- In every case LAUNCH_CONFLICT holds the detail `choice=<join|quit|cancel>`
+  plus the id of the running app. It does not hold the app name.
 
 ## Acceptance tests
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
 | UC-003-T1 | Given another device runs the app, when the user starts it, then the Conflict dialog shows with Cancel focused. | UI | planned |
-| UC-003-T2 | Given the user chooses Join, when the host accepts the resume, then the stream starts without a new app launch. | unit | planned |
-| UC-003-T3 | Given the user chooses Quit and relaunch, when the quit succeeds, then the app is launched once and LAUNCH_CONFLICT records "quit". | unit | planned |
-| UC-003-T4 | Given the user cancels or presses Back, when the dialog closes, then no request changes the host and LAUNCH_CONFLICT records "cancel". | unit | planned |
-| UC-003-T5 | Given the user has made one choice, when the host still reports a conflict, then the dialog is not shown again and the launch fails with the error. | unit | planned |
+| UC-003-T2 | Given the user chooses Join, when the host accepts the resume, then the stream starts without a new app launch. | unit | exists (Sprint 2, unit) |
+| UC-003-T3 | Given the user chooses Quit and relaunch, when the quit succeeds, then the app is launched once and LAUNCH_CONFLICT records "quit". | unit | exists (Sprint 2, unit) |
+| UC-003-T4 | Given the user cancels or presses Back, when the dialog closes, then no request changes the host and LAUNCH_CONFLICT records "cancel". | unit | exists (Sprint 2, unit) |
+| UC-003-T5 | Given the user has made one choice, when the host still reports a conflict, then the dialog is not shown again and the launch fails with the error. | unit | exists (Sprint 2, unit) |
 | UC-003-T6 | Given the dialog is open, when the user reads it, then it says that quitting ends the stream on the other device. | UI | planned |
+
+Planned tests cover the Phase 2 screens; tests marked as existing cover logic
+that the Phase 2 screens reuse.
 
 ## Host dependency
 
@@ -87,7 +88,8 @@ The client therefore quits or resumes only after the user's explicit choice.
 
 Known host limit (LuminalShine issue #201): in `per_client` mode, a second
 device that joins a running app shares the first device's virtual display.
-When either device leaves, both sessions can end. Join is therefore a
+When the second device leaves, the first device's session can end (LuminalShine
+issue #201). The cause in the issue is not confirmed. Join is therefore a
 host limitation, not only a client choice.
 
 ## Related
@@ -100,3 +102,4 @@ host limitation, not only a client choice.
 - Policies: [privacy and logging](../policies/privacy-and-logging.md#audit-trail).
 - Existing logic: the conflict dialog and the choice logic exist from Sprint 2
   and 3. The Phase 2 dialog is planned; it rebuilds the screen, not the logic.
+- Existing tests: `LaunchConflictsTest`.

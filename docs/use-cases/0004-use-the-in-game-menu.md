@@ -53,10 +53,8 @@ accident.
 3. The system returns to the Apps screen. The app is no longer running on the
    host.
 
-## Failure flows
-
-None in the approved design. The Display for next launch row is disabled; it
-needs the Phase 3 host API and cannot be chosen.
+No failure flow is defined in the approved design. The Display for next launch
+row is disabled; it needs the Phase 3 host API and cannot be chosen.
 
 ## Postconditions
 
@@ -77,6 +75,9 @@ needs the Phase 3 host API and cannot be chosen.
 | UC-004-T5 | Given the menu is open, when the user chooses Quit, then the app ends on the host and SESSION_END is written. | emulator | planned |
 | UC-004-T6 | Given the Overlay row is set to Off, Compact or Detailed, when the menu closes, then the overlay shows that choice. | UI | planned |
 | UC-004-T7 | Given the menu is open, when the user reads the Display for next launch row, then the row is disabled and cannot be chosen. | UI | planned |
+
+Planned tests cover the Phase 2 screens; tests marked as existing cover logic
+that the Phase 2 screens reuse.
 
 ## Host dependency
 

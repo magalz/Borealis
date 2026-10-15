@@ -39,9 +39,11 @@ host, and it is the only way a host becomes trusted.
 
 ## Alternative flows
 
-### A1: The host restarts the pairing (branches from step 3)
+### A1: The client restarts the pairing once (branches from step 3)
 
-1. The host clears an unfinished attempt and asks for a new PIN.
+1. After certain failures ([host contract, section 4.3](../host-contract/luminalshine.md)),
+   the client restarts the pairing once with a new PIN. The host does not ask
+   for a new PIN.
 2. The system writes PAIRING_RESTART and shows a note and the new PIN.
 3. Rejoins the main flow at step 3.
 
@@ -52,8 +54,6 @@ host, and it is the only way a host becomes trusted.
    attempt with an error, the system records PAIRING_FAILURE, as today.
 3. The use case ends.
 
-## Failure flows
-
 ### E1: The PIN expires (branches from step 3)
 
 1. After 5 minutes the screen says that the PIN expired and offers Get a new
@@ -61,10 +61,12 @@ host, and it is the only way a host becomes trusted.
 2. The system writes PAIRING_FAILURE.
 3. Get a new PIN restarts from step 2; Cancel ends the use case.
 
-### E2: The host rejects the pairing (branches from step 5)
+### E2: The host rejects the pairing (branches from steps 3 and 4)
 
-1. The system shows a message for the host's error, for example that the host
-   cleared an unfinished attempt or that another pairing is in progress
+1. The host can reject the pairing while the user enters the PIN on the host
+   (step 4), or while the client sends the pairing steps (step 3). The system
+   shows a message for the host's error, for example that the host cleared an
+   unfinished attempt or that another pairing is in progress
    ([host contract, section 4.3](../host-contract/luminalshine.md)).
 2. The system writes PAIRING_FAILURE with the host's error code.
 3. The use case ends. The user can pair again.
@@ -81,11 +83,14 @@ host, and it is the only way a host becomes trusted.
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
 | UC-001-T1 | Given a host that offers Pair, when pairing starts, then the screen shows a four-digit PIN and says where to enter it. | UI | planned |
-| UC-001-T2 | Given the host accepts the PIN, when pairing completes, then PAIRING_SUCCESS is written and no log or audit entry contains the PIN. | unit | planned |
-| UC-001-T3 | Given an unfinished attempt on the host, when the host asks for a new PIN, then the screen shows the new PIN and PAIRING_RESTART is written. | unit | planned |
+| UC-001-T2 | Given the host accepts the PIN, when pairing completes, then PAIRING_SUCCESS is written and no log or audit entry contains the PIN. | unit | exists (Sprint 2, unit) |
+| UC-001-T3 | Given a host error that allows one restart, when the client restarts the pairing, then the new PIN is shown and PAIRING_RESTART is written. | unit | exists (Sprint 2, unit) |
 | UC-001-T4 | Given no PIN accepted within 5 minutes, when the timer ends, then the screen shows Expired with Get a new PIN and PAIRING_FAILURE is written. | UI | planned |
 | UC-001-T5 | Given the pairing screen is open, when the user reads the steps, then the screen tells the user to avoid `xbox` and `webos` in the device name. | UI | planned |
 | UC-001-T6 | Given the user chooses Cancel, when the screen closes, then no pairing is stored. | UI | planned |
+
+Planned tests cover the Phase 2 screens; tests marked as existing cover logic
+that the Phase 2 screens reuse.
 
 ## Host dependency
 
@@ -106,6 +111,8 @@ does not need any capability beyond the standard pairing exchange.
   [5.1](../host-contract/luminalshine.md#51-identity-comes-from-the-certificate),
   [10.2](../host-contract/luminalshine.md#102-strict-first-frame-clients).
 - Policies: [privacy and logging](../policies/privacy-and-logging.md#audit-trail).
+- Existing tests: `PairingAuditTest`, `PairingErrorsTest`, and the core
+  `borealis_pair_classify` vectors (`core/tests/pair_classify_test.cpp`).
 - Existing logic: the pairing restart and the host pairing errors exist from
   Sprint 2 and 3. The Phase 2 screen is planned; it rebuilds the screen, not the
   logic.

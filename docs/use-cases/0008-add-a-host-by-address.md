@@ -39,24 +39,23 @@ can be paired ([UC-001](0001-pair-with-a-host.md)).
 1. The user chooses Cancel. The Hosts screen returns and nothing is added.
 2. The use case ends.
 
-## Failure flows
-
-### E1: The address is not valid (branches from step 4)
+### E1: The address fails the 12.2 checks (branches from step 4)
 
 1. The rules are the ones Moonlight 12.2 applies. An empty field shows "You
    must enter an IP address". A name that does not resolve shows "Unable to
-   resolve PC address". A public address that looks like a private one shows
-   the 12.2 "doesn't look right" message.
+   resolve PC address". A private (site-local) IPv4 address that is not on any
+   of the device's own subnets fires the 12.2 subnet check
+   (`AddComputerManually.isWrongSubnetSiteLocalAddress`) and shows
+   `addpc_wrong_sitelocal` ("That address doesn't look right...").
 2. The host is not added.
 3. The use case ends.
 
 ### E2: The host does not answer (branches from step 4)
 
-1. The host is not added, as in Moonlight 12.2. The message says the client
-   could not connect and that the ports must be allowed through the
-   firewall.
-2. The use case ends. The error text uses the Connection error copy, for
-   example "Can't reach the PC", with a Wake or Try again action.
+1. The host is not added, as in Moonlight 12.2 only. A dialog shows "Unable to
+   connect to the specified computer. Make sure the required ports are allowed
+   through the firewall."
+2. The use case ends.
 
 ## Postconditions
 
@@ -74,6 +73,9 @@ can be paired ([UC-001](0001-pair-with-a-host.md)).
 | UC-008-T4 | Given an address with a port, when the host is added, then that port is used. | unit | planned |
 | UC-008-T5 | Given the user chooses Cancel, when the screen closes, then the Hosts list is unchanged. | UI | planned |
 
+Planned tests cover the Phase 2 screens; tests marked as existing cover logic
+that the Phase 2 screens reuse.
+
 ## Host dependency
 
 The client connects to the GameStream HTTP port (47989 by default) to check the
@@ -86,6 +88,7 @@ is the only way to reach a host that discovery does not find.
 - Host contract sections: [1](../host-contract/luminalshine.md#1-host-identity),
   [2](../host-contract/luminalshine.md#2-ports-and-discovery).
 - Policies: [privacy and logging](../policies/privacy-and-logging.md) (host
-  addresses are masked in logs when "Hide addresses" is on).
+  addresses are masked in logs when "Mask addresses in logs and diagnostics"
+  is on).
 - Existing logic: the manual add of Moonlight 12.2 (`AddComputerManually`),
   unchanged in Sprints 1 to 3. The Phase 2 screen is planned.

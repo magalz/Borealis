@@ -309,8 +309,8 @@ Sprint 3 retry makes up to 3 attempts within about 25 s
 
 ### Stream
 
-Purpose: the picture, the compact overlay and nothing else. The first time, a
-hint says how to open the menu on this device.
+Purpose: the picture and, when the user turns it on, the overlay. Nothing else.
+The first time, a hint says how to open the menu on this device.
 
 States: none.
 
@@ -363,7 +363,8 @@ Decisions: none.
 
 ### Settings
 
-Purpose: global settings in five groups, with the current value on each row.
+Purpose: global settings in five groups (Stream, Video, Input, Audio, About),
+plus a link to Privacy and diagnostics. Each row shows its current value.
 Per-host overrides come later.
 
 States: none.
@@ -396,7 +397,7 @@ Changes from 12.2: a Sprint 2 interim screen.
 
 Decisions: none.
 
-Rows: detailed logs, hide addresses in logs and diagnostics, export diagnostic
+Rows: Verbose logging, Mask addresses in logs and diagnostics, export diagnostic
 bundle, audit trail, and erase audit trail. The erase row says that it cannot
 be undone. See [privacy and logging](../policies/privacy-and-logging.md).
 
@@ -473,10 +474,11 @@ disabled are marked.
 
 ### In-stream keyboard
 
-- A top row of chips: Alt+Tab, Win, Ctrl+Shift+Esc, Alt+F4, Win+D, Esc and
-  F11, and a Close button.
-- Letter rows in the QWERTY layout, a Backspace key, and a row with Shift,
-  Ctrl, Win, Alt, Space, Tab, Fn and Enter.
+- A shortcut row: Alt+Tab, Win, Ctrl+Shift+Esc, Alt+F4, Win+D, Esc, F11 and
+  Close.
+- Three letter rows. The first is Q to P. The second is A to L and ends with
+  Backspace. The third starts with Shift, has Z to M, and ends with Enter.
+- A bottom row: Ctrl, Win, Alt, Space, Tab and Fn.
 - Ctrl, Alt, Win and Shift latch. The next typed key is sent with them, and
   the latch is cleared.
 
@@ -509,14 +511,14 @@ The prototype's figures are examples. The overlay is off by default
 | Video | Codec, HDR, Full range, Performance overlay |
 | Input | Touch, Mouse back and forward buttons, Gamepad mouse, Deadzone |
 | Audio | Channels, Play audio on the PC |
-| Privacy and diagnostics | Link to the privacy screen |
+| Privacy and diagnostics (link, not a group) | Opens the Privacy and diagnostics screen |
 | About | Borealis version and commit, Source code, Open-source licences |
 
 The prototype fills the rows with example values, not defaults. Phase 2 keeps
 the current defaults: 1280 x 720, 60 fps, automatic bitrate, lowest-latency
 frame pacing, automatic codec, HDR off, full range off, overlay off,
-trackpad on, stereo audio, audio on the PC off, detailed logs off and
-address masking off.
+trackpad on, stereo audio, audio on the PC off, Verbose logging off and
+Mask addresses in logs and diagnostics off.
 
 ### Audit event names
 
@@ -652,9 +654,9 @@ items or placeholders. The host endpoints are in
 
 ## Next steps
 
-1. Write the use cases [UC-001](../use-cases/0001-pair-with-a-host.md) to
-   [UC-008](../use-cases/0008-add-a-host-by-address.md) with their acceptance
-   tests (planned). The tests are written first ([TDD](../development/tdd.md)).
+1. Implement the acceptance tests of [UC-001](../use-cases/0001-pair-with-a-host.md)
+   to [UC-008](../use-cases/0008-add-a-host-by-address.md) first
+   ([TDD](../development/tdd.md)). The use cases are written now.
 2. Build the Phase 2 screens in Compose, one screen at a time, with
    Roborazzi screenshots for the states above ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)).
 3. Generate the Kotlin tokens from `design/tokens.json` through the token
@@ -678,3 +680,6 @@ listed in the Screens section.
 
 The prototype uses example data only: host names, addresses, apps and session
 figures are illustrative.
+
+The prototype loads IBM Plex from Google Fonts, so opening it contacts Google's
+font servers. The app itself will bundle its fonts.

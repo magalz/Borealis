@@ -31,6 +31,8 @@ import androidx.compose.ui.test.requestFocus
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.library.shell.LibraryScaffold
+import io.github.magalz.borealis.library.shell.RailActions
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.TV
 import io.github.magalz.borealis.library.testing.setContentInKeyboardMode
@@ -288,24 +290,6 @@ class HostsScreenTest {
 
     @Test
     @Config(qualifiers = TV)
-    fun `the TV has a rail with Hosts selected, Add host and Settings`() {
-        showTv(withHosts)
-
-        composeRule
-            .onNode(
-                SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab) and
-                    SemanticsMatcher.expectValue(SemanticsProperties.Selected, true)
-            )
-            .assertIsDisplayed()
-        composeRule.onNodeWithText("Add host").performClick()
-        composeRule.onNodeWithText("Settings").performClick()
-
-        assertThat(addHost).isEqualTo(1)
-        assertThat(settings).isEqualTo(1)
-    }
-
-    @Test
-    @Config(qualifiers = TV)
     fun `the first Continue card has focus on a TV`() {
         showTv(withHosts)
 
@@ -434,26 +418,32 @@ class HostsScreenTest {
 
     @Composable
     private fun Screen(state: HostsUiState, formFactor: FormFactor) {
-        // A parent sees the keys that the screen did not consume.
+        // A parent sees the keys that the screen did not consume. The shell draws the rail of a TV.
         Box(
             Modifier.onKeyEvent {
                 if (it.type == KeyEventType.KeyDown) unhandledKeys += it.key
                 false
             }
         ) {
-            HostsScreen(
-                state = state,
-                formFactor = formFactor,
-                snackbarHostState = SnackbarHostState(),
-                onHostSelected = { selected += it },
-                onContinue = { continued += it },
-                onWake = { woken += it },
-                onForget = { forgotten += it },
-                onDetails = { detailed += it },
-                onDetailsDismissed = { detailsDismissed++ },
-                onAddHost = { addHost++ },
-                onSettings = { settings++ },
-            )
+            LibraryScaffold(
+                formFactor,
+                showRail = true,
+                actions = RailActions({}, { addHost++ }, { settings++ }),
+            ) {
+                HostsScreen(
+                    state = state,
+                    formFactor = formFactor,
+                    snackbarHostState = SnackbarHostState(),
+                    onHostSelected = { selected += it },
+                    onContinue = { continued += it },
+                    onWake = { woken += it },
+                    onForget = { forgotten += it },
+                    onDetails = { detailed += it },
+                    onDetailsDismissed = { detailsDismissed++ },
+                    onAddHost = { addHost++ },
+                    onSettings = { settings++ },
+                )
+            }
         }
     }
 

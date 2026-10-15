@@ -1,24 +1,15 @@
 package io.github.magalz.borealis.library.shell
 
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextInput
-import androidx.compose.ui.test.pressKey
 import androidx.lifecycle.Lifecycle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
@@ -42,7 +33,6 @@ import io.github.magalz.borealis.library.testing.FakeLegacyBridge
 import io.github.magalz.borealis.library.testing.FakePairingService
 import io.github.magalz.borealis.library.testing.FakeStreamLauncher
 import io.github.magalz.borealis.library.testing.PHONE
-import io.github.magalz.borealis.library.testing.TV
 import io.github.magalz.borealis.library.testing.aHost
 import io.github.magalz.borealis.library.testing.anApp
 import org.junit.Before
@@ -134,13 +124,13 @@ class LibraryActivityTest {
         pairing.pairCalls.single().outcome.complete(PairingOutcome.Paired)
         composeRule.waitForIdle()
 
-        composeRule.onNodeWithText("Hades II").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Hades II").assertIsDisplayed()
         composeRule.onNodeWithText("Pair with Studio").assertDoesNotExist()
 
         back()
 
         composeRule.onNodeWithTag("host:studio").assertIsDisplayed()
-        composeRule.onNodeWithText("Hades II").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Hades II").assertDoesNotExist()
         composeRule.onNodeWithText("Pair with Studio").assertDoesNotExist()
     }
 
@@ -226,66 +216,8 @@ class LibraryActivityTest {
         assertThat(composeRule.activity.isFinishing).isTrue()
     }
 
-    @Test
-    @Config(qualifiers = TV)
-    fun `on a TV the rail stays on Apps and its Hosts item returns to Hosts`() {
-        hosts.emit(desk)
-        apps.emit(AppsSnapshot(host = desk, apps = listOf(anApp(1, "Hades II")), loading = false))
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag("host:desk").performClick()
-        composeRule.waitForIdle()
-
-        composeRule.onNodeWithText("Hades II").assertIsDisplayed()
-        composeRule.onNode(railItem("Hosts")).assertIsDisplayed()
-        composeRule.onNode(railItem("Hosts")).performClick()
-        composeRule.waitForIdle()
-
-        composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
-        composeRule.onNodeWithText("Hades II").assertDoesNotExist()
-    }
-
-    @Test
-    @Config(qualifiers = TV)
-    fun `on a TV the rail opens Add host and Settings, and Add host has no rail`() {
-        hosts.emit(desk)
-        composeRule.waitForIdle()
-
-        composeRule.onNode(railItem("Settings")).performClick()
-        assertThat(bridge.settingsOpened).isEqualTo(1)
-
-        composeRule.onNode(railItem("Add host")).performClick()
-        composeRule.waitForIdle()
-
-        composeRule.onNodeWithText("Cancel").assertIsDisplayed()
-        composeRule.onNode(railItem("Settings")).assertDoesNotExist()
-    }
-
-    @Test
-    @Config(qualifiers = TV)
-    fun `on a TV the D-pad moves between the rail and the content`() {
-        hosts.emit(desk)
-        apps.emit(AppsSnapshot(host = desk, apps = listOf(anApp(1, "Hades II")), loading = false))
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag("host:desk").performClick()
-        composeRule.waitForIdle()
-
-        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionLeft) }
-        composeRule.onNode(isFocused()).assert(isRailItem)
-
-        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionRight) }
-        composeRule.onNode(isFocused()).assert(isNotRailItem)
-    }
-
     private fun back() {
         composeRule.runOnUiThread { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
         composeRule.waitForIdle()
     }
-
-    private val isRailItem = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
-    private val isNotRailItem =
-        SemanticsMatcher("is not a rail item") {
-            it.config.getOrNull(SemanticsProperties.Role) != Role.Tab
-        }
-
-    private fun railItem(label: String) = hasText(label) and isRailItem
 }

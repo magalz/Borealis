@@ -14,6 +14,8 @@ import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.library.shell.LibraryScaffold
+import io.github.magalz.borealis.library.shell.RailActions
 import io.github.magalz.borealis.library.testing.HANDHELD
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.TV
@@ -26,7 +28,7 @@ import org.robolectric.annotation.Config
 /**
  * Screenshots of the Hosts screen; the references live in `src/test/screenshots` and are named
  * `<screen>_<device>_<state>.png`. The TV and handheld ones are taken in keyboard input mode, as a
- * D-pad user sees them, with the focus outline on the first card.
+ * D-pad user sees them, with the focus outline on the first card and the shell's rail beside them.
  */
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalRoborazziApi::class)
@@ -87,19 +89,22 @@ class HostsScreenshotTest {
 
     @Composable
     private fun Screen(state: HostsUiState, formFactor: FormFactor) {
-        HostsScreen(
-            state = state,
-            formFactor = formFactor,
-            snackbarHostState = SnackbarHostState(),
-            onHostSelected = {},
-            onContinue = {},
-            onWake = {},
-            onForget = {},
-            onDetails = {},
-            onDetailsDismissed = {},
-            onAddHost = {},
-            onSettings = {},
-        )
+        // The shell draws the rail beside Hosts on a TV and a handheld.
+        LibraryScaffold(formFactor, showRail = true, actions = RailActions({}, {}, {})) {
+            HostsScreen(
+                state = state,
+                formFactor = formFactor,
+                snackbarHostState = SnackbarHostState(),
+                onHostSelected = {},
+                onContinue = {},
+                onWake = {},
+                onForget = {},
+                onDetails = {},
+                onDetailsDismissed = {},
+                onAddHost = {},
+                onSettings = {},
+            )
+        }
     }
 
     private fun shoot(name: String) {

@@ -6,6 +6,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.library.shell.LibraryScaffold
+import io.github.magalz.borealis.library.shell.RailActions
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -14,8 +16,8 @@ import org.robolectric.annotation.Config
 /**
  * Screenshots of the Apps screen and its actions sheet in the states of the Phase 2 proposal; the
  * references live in `src/test/screenshots`, named `<screen>_<device>_<state>.png`. The apps are
- * the ones of the proposal captures. The TV and handheld screens are shown without the navigation
- * rail, which the launcher adds.
+ * the ones of the proposal captures. The TV and handheld screens are shown with the navigation rail
+ * that the shell draws beside them.
  */
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalRoborazziApi::class)
@@ -142,18 +144,21 @@ class AppsScreenshotTest {
 
     private fun shoot(name: String, formFactor: FormFactor, state: AppsUiState) {
         composeRule.setContent {
-            AppsScreen(
-                state = state,
-                formFactor = formFactor,
-                snackbarHostState = SnackbarHostState(),
-                onBack = {},
-                onAppSelected = {},
-                onActions = {},
-                onActionChosen = {},
-                onActionsDismissed = {},
-                onDetailsDismissed = {},
-                onToggleShowHidden = {},
-            )
+            // The shell draws the rail beside Apps on a TV and a handheld.
+            LibraryScaffold(formFactor, showRail = true, actions = RailActions({}, {}, {})) {
+                AppsScreen(
+                    state = state,
+                    formFactor = formFactor,
+                    snackbarHostState = SnackbarHostState(),
+                    onBack = {},
+                    onAppSelected = {},
+                    onActions = {},
+                    onActionChosen = {},
+                    onActionsDismissed = {},
+                    onDetailsDismissed = {},
+                    onToggleShowHidden = {},
+                )
+            }
         }
         composeRule.waitForIdle()
         // The whole screen, not the root node: the sheet is a window of its own.

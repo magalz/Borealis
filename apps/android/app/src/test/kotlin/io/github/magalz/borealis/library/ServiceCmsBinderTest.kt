@@ -31,6 +31,11 @@ class ServiceCmsBinderTest {
 
     @Before
     fun connect() {
+        binder = connectWith {}
+    }
+
+    /** Binds the real services and returns what the connector returns when [warmUp] is its seam. */
+    private fun connectWith(warmUp: CryptoWarmUp): CmsBinder {
         val discovery = Robolectric.buildService(DiscoveryService::class.java).create().get()
         shadowOf(app)
             .setComponentNameAndServiceForBindService(
@@ -46,12 +51,15 @@ class ServiceCmsBinderTest {
             )
 
         // The connector waits on a background thread; the service callbacks need the main looper.
-        val connecting = CoroutineScope(Dispatchers.Default).async { ServiceCmsConnector(app, Dispatchers.IO).connect() }
+        val connecting =
+            CoroutineScope(Dispatchers.Default).async {
+                ServiceCmsConnector(app, Dispatchers.IO, warmUp).connect()
+            }
         while (!connecting.isCompleted) {
             looper.idle()
             Thread.sleep(POLL_MS)
         }
-        binder = runBlocking { connecting.await() }
+        return runBlocking { connecting.await() }
     }
 
     @Test

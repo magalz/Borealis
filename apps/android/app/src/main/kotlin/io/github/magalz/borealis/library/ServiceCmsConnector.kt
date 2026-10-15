@@ -32,6 +32,7 @@ internal class ServiceCmsConnector
 constructor(
     @ApplicationContext private val context: Context,
     @IoDispatcher private val io: CoroutineDispatcher,
+    private val warmUp: CryptoWarmUp,
 ) : CmsConnector {
     override suspend fun connect(): CmsBinder {
         val bound = CompletableDeferred<ComputerManagerBinder>()
@@ -52,8 +53,7 @@ constructor(
             val binder = bound.await()
             withContext(io) {
                 binder.waitForReady()
-                // Generates the keypair now, so that the first host request does not wait for it.
-                AndroidCryptoProvider(context).clientCertificate
+                warmUp.run()
             }
             connected = true
             return ServiceCmsBinder(binder)
@@ -61,6 +61,21 @@ constructor(
             // A cancelled or failed connect must not leave a binding that nobody will use.
             if (!connected) context.unbindService(connection)
         }
+    }
+}
+
+/** Work that makes the first host request faster and that nothing depends on. */
+internal fun interface CryptoWarmUp {
+    fun run()
+}
+
+/** Loads the client keypair, generating it on first use, as the first host request would. */
+@Singleton
+internal class AndroidCryptoWarmUp
+@Inject
+constructor(@ApplicationContext private val context: Context) : CryptoWarmUp {
+    override fun run() {
+        AndroidCryptoProvider(context).clientCertificate
     }
 }
 

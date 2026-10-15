@@ -65,6 +65,17 @@ class PairingAuditTest {
     }
 
     @Test
+    fun `a PIN that expired is a failure with the reason pin_expired`() {
+        PairingAudit.expired(host)
+
+        val event = audit.events.single()
+        assertThat(event.type).isEqualTo(AuditType.PAIRING_FAILURE)
+        assertThat(event.outcome).isEqualTo(AuditOutcome.FAILURE)
+        assertThat(event.detail).isEqualTo("reason=pin_expired")
+        assertThat(event.host).isEqualTo(host)
+    }
+
+    @Test
     fun `a state that is not a result records nothing`() {
         PairingAudit.finished(host, "NOT_PAIRED")
         PairingAudit.finished(host, "")

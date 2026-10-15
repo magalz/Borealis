@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pairing_title">Pair with %1$s</string>
+    <string name="pairing_title_unknown_host">Pair with this PC</string>
+    <string name="pairing_back">Cancel pairing</string>
+    <string name="pairing_preparing">Preparing the PIN</string>
+    <string name="pairing_step_web_ui_at">Open the LuminalShine Web UI at this address.</string>
+    <string name="pairing_step_web_ui_on_pc">Open the LuminalShine Web UI on your PC.</string>
+    <string name="pairing_step_clients">Go to the Clients page.</string>
+    <string name="pairing_step_pin">Enter this PIN and a device name, for example “%1$s”.</string>
+    <string name="pairing_step_name_warning">Avoid “xbox” or “webos” in the name. The host treats those devices differently.</string>
+    <string name="pairing_pin_valid">The PIN stays valid for 5 minutes.</string>
+    <string name="pairing_restarted">The PC cleared an unfinished pairing. Use this new PIN.</string>
+    <string name="pairing_paired">Paired</string>
+    <string name="pairing_expired">The PIN expired.</string>
+    <string name="pairing_failed_pin_wrong">The PIN was wrong.</string>
+    <string name="pairing_failed_in_progress">Another pairing is already in progress on the PC.</string>
+    <string name="pairing_failed_offline">The PC went offline.</string>
+    <string name="pairing_failed_other">Pairing failed.</string>
+    <string name="pairing_host_unknown">This PC is no longer in your list.</string>
+    <string name="pairing_get_new_pin">Get a new PIN</string>
+    <string name="pairing_try_again">Try again</string>
+    <string name="pairing_cancel">Cancel</string>
+    <string name="pairing_close">Close</string>
+</resources>

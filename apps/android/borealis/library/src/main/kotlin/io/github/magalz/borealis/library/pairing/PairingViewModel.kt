@@ -34,6 +34,7 @@ constructor(@Assisted private val hostId: String, private val service: PairingSe
     private val state = MutableStateFlow<PairingUiState>(PairingUiState.Preparing)
     private val effectChannel = Channel<PairingEffect>(Channel.BUFFERED)
     private var pairJob: Job? = null
+    private var cancelled = false
 
     val uiState: StateFlow<PairingUiState> = state.asStateFlow()
     val effects: Flow<PairingEffect> = effectChannel.receiveAsFlow()
@@ -47,7 +48,10 @@ constructor(@Assisted private val hostId: String, private val service: PairingSe
         if (state.value is PairingUiState.Expired || state.value is PairingUiState.Failed) start()
     }
 
+    /** Closes once; ignored after the host accepted the PIN, when the screen opens the apps. */
     fun onCancel() {
+        if (cancelled || state.value is PairingUiState.Paired) return
+        cancelled = true
         pairJob?.cancel()
         effectChannel.trySend(PairingEffect.Close)
     }

@@ -237,6 +237,40 @@ class PairingViewModelTest {
     }
 
     @Test
+    fun `a second cancel closes only once`() = runTest {
+        service.prepared += instructions()
+        val viewModel = viewModel()
+        runCurrent()
+
+        viewModel.onCancel()
+        viewModel.onCancel()
+        runCurrent()
+
+        viewModel.effects.test {
+            assertThat(awaitItem()).isEqualTo(PairingEffect.Close)
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `cancel after pairing succeeded does not close`() = runTest {
+        service.prepared += instructions()
+        val viewModel = viewModel()
+        runCurrent()
+        service.pairCalls.single().outcome.complete(PairingOutcome.Paired)
+        runCurrent()
+
+        viewModel.onCancel()
+        runCurrent()
+
+        assertThat(viewModel.uiState.value).isEqualTo(PairingUiState.Paired)
+        viewModel.effects.test {
+            assertThat(awaitItem()).isEqualTo(PairingEffect.OpenApps("host-1"))
+            expectNoEvents()
+        }
+    }
+
+    @Test
     fun `clearing the view model aborts the host request`() = runTest {
         service.prepared += instructions()
         val store = ViewModelStore()

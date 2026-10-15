@@ -157,6 +157,7 @@ private fun AppsSnapshot.toUiState(
         loading = loading,
         hostName = host?.name,
         runningAppId = running?.id,
+        runningAppName = running?.name,
         showHidden = showHidden,
         items = items,
         actions =

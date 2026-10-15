@@ -69,8 +69,22 @@ internal object LaunchAudit {
     }
 
     /** The start is repeated once because RTSP failed right after an accepted `/resume`. */
-    fun resumeRestarted(host: String?, error: Int, delayMs: Int) = Unit
+    fun resumeRestarted(host: String?, error: Int, delayMs: Int) {
+        BorealisAudit.record(
+            AuditType.LAUNCH_RETRY,
+            AuditOutcome.FAILURE,
+            host,
+            "verb=resume reason=rtsp_after_resume error=$error attempt=1/1 delay_ms=$delayMs",
+        )
+    }
 
     /** RTSP failed again after the restart; the start gives up. */
-    fun resumeGaveUp(host: String?, error: Int) = Unit
+    fun resumeGaveUp(host: String?, error: Int) {
+        BorealisAudit.record(
+            AuditType.LAUNCH_ATTEMPT,
+            AuditOutcome.FAILURE,
+            host,
+            "verb=resume result=rtsp_failed error=$error",
+        )
+    }
 }

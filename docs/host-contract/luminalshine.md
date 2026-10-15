@@ -346,6 +346,17 @@ for resume the equivalent is `resume` 1 (`src/nvhttp.cpp:3471-3486`).
   `config::video.dd.config_revert_on_disconnect` is true; otherwise the existing
   virtual display is preserved, or recreated on demand if it is gone
   (`src/nvhttp.cpp:3295-3296`, `src/nvhttp.cpp:286-324`).
+- **Observed, not verified in the source:** while the host builds a per-client
+  virtual display for one client's `/launch` (about 14 s on the Sprint 2 test
+  host), it answers no other HTTPS request, because the server has a single io
+  thread (upstream issue `NortheBridge/luminalshine#202`; the proposed fix,
+  PR #203, is not merged). A second client's `GET /serverinfo` then runs into the
+  client's 7 s read timeout. Borealis retries a `/serverinfo` read timeout at
+  stream start, up to 3 attempts within about 25 s and until the launch is
+  cancelled, and then reports the timeout as before. Only `/serverinfo` is
+  retried: `/launch`, `/resume`, `/cancel`, `/quit` and pairing are not
+  idempotent. A client that polls `/serverinfo` in the background can see the
+  host as briefly offline during that window.
 
 ### 7.4 Mode reconciliation between `/launch` and RTSP
 

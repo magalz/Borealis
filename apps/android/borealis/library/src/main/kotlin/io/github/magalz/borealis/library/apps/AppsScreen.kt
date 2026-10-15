@@ -60,9 +60,10 @@ private val SNACKBAR_PADDING = 16.dp
  * The apps of one host as a grid of covers: [AppsUiState.items] in order, the running app first. A
  * tap or OK runs [onAppSelected]; a long press, holding OK or X runs [onActions]. The actions and
  * details of [AppsUiState] open as a sheet and a dialog over the grid, and Back closes them before
- * it leaves the screen. A phone has a top bar with Back and the toggle for hidden apps; a TV or
- * handheld has a header with the toggle as a button, and [onBack] is the system Back there.
- * Messages go through [snackbarHostState]. Provides its own theme for [formFactor].
+ * anything else. A phone has a top bar with a back arrow, which calls [onBack], and the toggle for
+ * hidden apps; a TV or handheld has a header with the toggle as a button and no back arrow, because
+ * the system Back there is handled by the navigation of the shell. Messages go through
+ * [snackbarHostState]. Provides its own theme for [formFactor].
  */
 @Composable
 fun AppsScreen(
@@ -116,8 +117,9 @@ private fun PhoneBar(state: AppsUiState, onBack: () -> Unit, onToggleShowHidden:
         IconButton(onClick = onToggleShowHidden) {
             Icon(
                 painterResource(
-                    if (state.showHidden) R.drawable.ic_apps_visibility
-                    else R.drawable.ic_apps_visibility_off
+                    // The icon shows what the toggle does: open eye shows them, crossed eye hides.
+                    if (state.showHidden) R.drawable.ic_apps_visibility_off
+                    else R.drawable.ic_apps_visibility
                 ),
                 stringResource(toggleLabel(state)),
             )
@@ -148,7 +150,7 @@ private fun toggleLabel(state: AppsUiState) =
 @Composable
 private fun Title(state: AppsUiState, modifier: Modifier) {
     val colors = LocalBorealisColors.current
-    val running = state.items.firstOrNull { it.running }
+    val running = state.runningAppId != null
     Column(modifier, verticalArrangement = Arrangement.spacedBy(HEADER_GAP)) {
         Text(
             state.hostName.orEmpty(),
@@ -160,12 +162,13 @@ private fun Title(state: AppsUiState, modifier: Modifier) {
             horizontalArrangement = Arrangement.spacedBy(STATUS_GAP),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (running != null) StatusDot(DotStatus.Online, contentDescription = null)
+            if (running) StatusDot(DotStatus.Online, contentDescription = null)
             Text(
-                if (running != null) {
-                    stringResource(R.string.apps_status_running, running.name)
-                } else {
-                    stringResource(R.string.apps_status_idle)
+                when {
+                    state.runningAppName != null ->
+                        stringResource(R.string.apps_status_running, state.runningAppName)
+                    running -> stringResource(R.string.apps_status_running_unknown)
+                    else -> stringResource(R.string.apps_status_idle)
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.ink3,

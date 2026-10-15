@@ -6,6 +6,7 @@
     <string name="apps_hidden">Hidden</string>
     <string name="apps_options">Options</string>
     <string name="apps_status_running">%1$s running</string>
+    <string name="apps_status_running_unknown">An app is running</string>
     <string name="apps_status_idle">Nothing running</string>
     <string name="apps_show_hidden">Show hidden apps</string>
     <string name="apps_hide_hidden">Hide hidden apps</string>

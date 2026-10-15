@@ -86,7 +86,7 @@ fun PairingScreen(
                     } else {
                         stringResource(R.string.pairing_title_unknown_host)
                     },
-                showBack = formFactor == FormFactor.Phone,
+                showBack = formFactor == FormFactor.Phone && state !is PairingUiState.Paired,
                 onBack = onCancel,
                 modifier = Modifier.padding(horizontal = gutter),
             )

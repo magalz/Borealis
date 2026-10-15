@@ -10,8 +10,9 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
 /**
- * Copies the repository's `NOTICE` and `LICENSE` into generated assets under `legal/`, so the app
- * can show them without a browser (ADR 0050) and no second copy is committed.
+ * Copies the repository's `NOTICE`, `LICENSE` and the bundled font licence (`OFL.txt`) into
+ * generated assets under `legal/`, so the app can show them without a browser (ADR 0050) and no
+ * second copy is committed. Each entry is a repository-relative path; the copy keeps its file name.
  */
 abstract class LegalAssetsTask : DefaultTask() {
     @get:InputFiles
@@ -30,6 +31,6 @@ abstract class LegalAssetsTask : DefaultTask() {
 
     internal companion object {
         const val ASSET_DIR = "legal"
-        val FILES = listOf("NOTICE", "LICENSE")
+        val FILES = listOf("NOTICE", "LICENSE", "design/fonts/ibm-plex/OFL.txt")
     }
 }

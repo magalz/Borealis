@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.designsystem.theme
 
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -14,9 +15,12 @@ fun BorealisTheme(formFactor: FormFactor = FormFactor.Phone, content: @Composabl
     val colorScheme = remember { borealisColorScheme() }
     val shapes = remember { borealisShapes() }
     val typography = remember(formFactor) { borealisTypography(formFactor) }
+    val colors = remember { BorealisColors() }
     CompositionLocalProvider(
         LocalFormFactor provides formFactor,
-        LocalBorealisColors provides remember { BorealisColors() },
+        LocalBorealisColors provides colors,
+        // Material leaves the content colour black; text and icons outside a Surface need ink.
+        LocalContentColor provides colors.ink,
         LocalBorealisType provides remember(formFactor) { borealisType(formFactor) },
         LocalBorealisShapes provides remember { borealisExtraShapes() },
         LocalBorealisSpacing provides remember(formFactor) { borealisSpacing(formFactor) },

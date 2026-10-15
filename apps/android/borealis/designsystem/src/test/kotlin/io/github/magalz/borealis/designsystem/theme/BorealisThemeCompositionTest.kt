@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -34,6 +35,29 @@ class BorealisThemeCompositionTest {
         val seen = themed(formFactor = null)
 
         assertThat(seen.contentColor).isEqualTo(BorealisTokens.Color.Ink)
+    }
+
+    @Test
+    fun `PIN digits are monospaced and Sans is not`() {
+        var narrowPin = 0
+        var widePin = 0
+        var narrowSans = 0
+        var wideSans = 0
+        composeRule.setContent {
+            BorealisTheme {
+                val measurer = rememberTextMeasurer()
+                val pin = LocalBorealisType.current.pin
+                val sans = MaterialTheme.typography.bodyMedium
+                narrowPin = measurer.measure("1111", pin).size.width
+                widePin = measurer.measure("8888", pin).size.width
+                narrowSans = measurer.measure("iiii", sans).size.width
+                wideSans = measurer.measure("WWWW", sans).size.width
+            }
+        }
+        composeRule.waitForIdle()
+
+        assertThat(narrowPin).isEqualTo(widePin)
+        assertThat(narrowSans).isLessThan(wideSans)
     }
 
     @Test

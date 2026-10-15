@@ -43,14 +43,20 @@ class BorealisColors {
 
 val LocalBorealisColors = staticCompositionLocalOf { BorealisColors() }
 
-/** The dark Material 3 scheme of Borealis (ADR 0052, 0053). */
+/**
+ * The dark Material 3 scheme of Borealis (ADR 0052, 0053).
+ *
+ * Accent-strong carries no text (token rule), so the primary container is a raised surface with
+ * accent-soft text. [ColorScheme.inversePrimary] is the one place accent-strong is text: it sits on
+ * the light inverse surface (ink), where it has 4.7:1 and accent-soft would have 1.5:1.
+ */
 fun borealisColorScheme(): ColorScheme {
     val colors = BorealisColors()
     return darkColorScheme(
         primary = colors.accent,
         onPrimary = colors.onAccent,
-        primaryContainer = colors.accentStrong,
-        onPrimaryContainer = colors.ink,
+        primaryContainer = colors.surfaceRaised,
+        onPrimaryContainer = colors.accentSoft,
         inversePrimary = colors.accentStrong,
         secondary = colors.accentSoft,
         onSecondary = colors.onAccent,

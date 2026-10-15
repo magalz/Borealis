@@ -60,10 +60,14 @@ object TokenGenerator {
         for ((key, value) in group) {
             if (key !is String || key.startsWith("$") || value !is Map<*, *>) continue
             val child = path + key
-            if (value.containsKey("\$value")) {
-                token(child, value, type)?.let(into::add)
-            } else {
-                collect(value, child, type, into)
+            when {
+                value.containsKey("\$value") -> token(child, value, type)?.let(into::add)
+                // A map with no value and no child maps is a token that lost its value.
+                value.values.none { it is Map<*, *> } ->
+                    throw IllegalArgumentException(
+                        "${child.joinToString(".")}: neither a token (\$value) nor a group of tokens"
+                    )
+                else -> collect(value, child, type, into)
             }
         }
     }

@@ -10,9 +10,14 @@ import io.github.magalz.borealis.host.launch.StageFailure
  * `/resume` is held back here so that [com.limelight.nvstream.NvConnection] can restart the start
  * once; every decision is made by [collisions].
  */
-class HeldStageFailures(
+class HeldStageFailures
+@JvmOverloads
+constructor(
     private val inner: NvConnectionListener,
     private val collisions: ResumeCollisions,
+    private val rtspStageName: () -> String = {
+        MoonBridge.getStageName(ResumeCollisions.STAGE_RTSP_HANDSHAKE)
+    },
 ) : NvConnectionListener by inner {
     override fun stageFailed(stage: String, portFlags: Int, errorCode: Int) {
         val isRtspStage = stage == MoonBridge.getStageName(ResumeCollisions.STAGE_RTSP_HANDSHAKE)

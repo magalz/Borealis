@@ -14,11 +14,17 @@ import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvApp
 import com.limelight.utils.ServerHelper
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogTag
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -34,6 +40,20 @@ constructor(
     @IoDispatcher private val io: CoroutineDispatcher,
     private val warmUp: CryptoWarmUp,
 ) : CmsConnector {
+    /** Outlives a call of [connect]: the warm-up goes on when the caller is cancelled. */
+    private val background =
+        CoroutineScope(
+            SupervisorJob() +
+                io +
+                CoroutineExceptionHandler { _, error ->
+                    BorealisLog.w(
+                        LogTag.HOST,
+                        "warm-up failed",
+                        "error" to error.javaClass.simpleName,
+                    )
+                }
+        )
+
     override suspend fun connect(): CmsBinder {
         val bound = CompletableDeferred<ComputerManagerBinder>()
         val connection =
@@ -51,11 +71,11 @@ constructor(
         var connected = false
         try {
             val binder = bound.await()
-            withContext(io) {
-                binder.waitForReady()
-                warmUp.run()
-            }
+            withContext(io) { binder.waitForReady() }
             connected = true
+            // Loading the keypair takes seconds on a TV and the known hosts do not need it. Pairing
+            // and streaming get the key from the provider, whose lock makes them wait for it.
+            background.launch { warmUp.run() }
             return ServiceCmsBinder(binder)
         } finally {
             // A cancelled or failed connect must not leave a binding that nobody will use.

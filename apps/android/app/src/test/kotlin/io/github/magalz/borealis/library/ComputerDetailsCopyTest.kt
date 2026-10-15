@@ -79,4 +79,27 @@ class ComputerDetailsCopyTest {
         assertThat(copy.localAddress).isNull()
         assertThat(copy.state).isEqualTo(ComputerDetails.State.UNKNOWN)
     }
+
+    @Test
+    fun `a list carried over goes on a copy and leaves the details it came from alone`() {
+        val fresh = details(uuid = "a", rawAppList = null)
+        val previous = details(uuid = "a", rawAppList = APP_LIST)
+
+        val carried = fresh.withListFrom(previous)
+
+        assertThat(carried.rawAppList).isEqualTo(APP_LIST)
+        assertThat(carried).isNotSameInstanceAs(fresh)
+        assertThat(fresh.rawAppList).isNull()
+        assertThat(previous.rawAppList).isEqualTo(APP_LIST)
+    }
+
+    @Test
+    fun `details with a list, or without a list to carry over, are returned as they are`() {
+        val withList = details(uuid = "a", rawAppList = APP_LIST)
+        val without = details(uuid = "a", rawAppList = null)
+
+        assertThat(withList.withListFrom(details(rawAppList = "<old/>"))).isSameInstanceAs(withList)
+        assertThat(without.withListFrom(null)).isSameInstanceAs(without)
+        assertThat(without.withListFrom(details(rawAppList = null))).isSameInstanceAs(without)
+    }
 }

@@ -31,6 +31,16 @@ internal fun ComputerDetails.snapshot(): ComputerDetails {
     }
 }
 
+/**
+ * These details, or a copy of them with the app list of [previous] when they have none and
+ * [previous] has one. Nothing is mutated.
+ */
+internal fun ComputerDetails.withListFrom(previous: ComputerDetails?): ComputerDetails {
+    val list = previous?.rawAppList
+    if (rawAppList != null || list == null) return this
+    return snapshot().also { it.rawAppList = list }
+}
+
 /** The tuple constructor rejects a port that is not positive: such a tuple is shared as it is. */
 private fun AddressTuple?.copied(): AddressTuple? =
     if (this == null || port <= 0) this else AddressTuple(address, port)

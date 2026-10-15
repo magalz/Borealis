@@ -31,6 +31,10 @@ import kotlinx.coroutines.withContext
  * Binds the real `ComputerManagerService` once and keeps the binding for the life of the process:
  * the service then keeps its database and its known hosts, and [ComputerManagerConnection] decides
  * when it polls.
+ *
+ * Connecting does not wait for the client keypair. The host polls still wait for it on the lock of
+ * `AndroidCryptoProvider` until [CryptoWarmUp] ends, so the known hosts can be listed before their
+ * online or offline state arrives.
  */
 @Singleton
 internal class ServiceCmsConnector

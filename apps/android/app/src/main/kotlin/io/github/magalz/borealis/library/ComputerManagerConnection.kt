@@ -43,16 +43,15 @@ constructor(
      * upstream's `AppView` ignores such a null for the same reason.
      */
     private val listener = ComputerManagerListener { details ->
-        details.uuid?.let { id -> publish(id) { details.snapshot() } }
+        details.uuid?.let { id -> publish(id, details.snapshot()) }
     }
 
-    /** Stores the copy [make] returns for [id], with the last app list when the copy has none. */
-    private inline fun publish(id: String, make: () -> ComputerDetails) {
-        state.update { known ->
-            val copy = make()
-            if (copy.rawAppList == null) copy.rawAppList = known[id]?.rawAppList
-            known + (id to copy)
-        }
+    /**
+     * Stores [copy] for [id], with the last app list when it has none. The update may run again
+     * when another thread changes the state first, so it only builds new values.
+     */
+    private fun publish(id: String, copy: ComputerDetails) {
+        state.update { known -> known + (id to copy.withListFrom(known[id])) }
     }
 
     // The gate, the pollers and the binder are only changed with the lock held.
@@ -167,7 +166,7 @@ constructor(
             paired.pairState = PairState.PAIRED
             paired.state = ComputerDetails.State.UNKNOWN
             paired.serverCert = cert
-            publish(uuid) { paired }
+            publish(uuid, paired)
         }
     }
 

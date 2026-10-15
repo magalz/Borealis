@@ -46,13 +46,27 @@ class HostMappingTest {
     }
 
     @Test
-    fun `the running app is called app when the list is unknown or lacks it`() {
+    fun `the running app of a paired host has no name when the list is unknown or lacks it`() {
         assertThat(details(runningGameId = 7, rawAppList = null).toHost().runningApp)
-            .isEqualTo(RunningApp(7, "app"))
+            .isEqualTo(RunningApp(7, null))
         assertThat(details(runningGameId = 99, rawAppList = APP_LIST).toHost().runningApp)
-            .isEqualTo(RunningApp(99, "app"))
+            .isEqualTo(RunningApp(99, null))
         assertThat(details(runningGameId = 7, rawAppList = "not xml").toHost().runningApp)
-            .isEqualTo(RunningApp(7, "app"))
+            .isEqualTo(RunningApp(7, null))
+    }
+
+    @Test
+    fun `a host that is not paired shows no running app`() {
+        for (pairState in listOf(PairState.NOT_PAIRED, PairState.FAILED)) {
+            assertThat(details(pairState = pairState, runningGameId = 7).toHost().runningApp)
+                .isNull()
+            assertThat(
+                    details(pairState = pairState, runningGameId = 7, rawAppList = APP_LIST)
+                        .toHost()
+                        .runningApp
+                )
+                .isNull()
+        }
     }
 
     @Test

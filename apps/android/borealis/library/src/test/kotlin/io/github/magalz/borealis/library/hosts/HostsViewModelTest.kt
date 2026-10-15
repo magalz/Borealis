@@ -2,6 +2,8 @@ package io.github.magalz.borealis.library.hosts
 
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.library.domain.Host
+import io.github.magalz.borealis.library.domain.HostRepository
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.RunningApp
 import io.github.magalz.borealis.library.domain.StreamRequest
@@ -10,18 +12,75 @@ import io.github.magalz.borealis.library.testing.FakeHostRepository
 import io.github.magalz.borealis.library.testing.MainDispatcherRule
 import io.github.magalz.borealis.library.testing.aHost
 import io.github.magalz.borealis.library.testing.subscribe
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HostsViewModelTest {
     @get:Rule val mainDispatcher = MainDispatcherRule()
 
     private val repository = FakeHostRepository()
     // Lazy: a ViewModel must be created after the rule has set the main dispatcher.
     private val viewModel by lazy { HostsViewModel(repository) }
+
+    /** A repository whose hosts are reported only when the test emits them. */
+    private fun repositoryEmitting(reports: Flow<List<Host>>): HostRepository =
+        object : HostRepository by repository {
+            override val hosts = reports
+        }
+
+    @Test
+    fun `the state is loading and not searching before the repository reported the hosts`() =
+        runTest {
+            val pending = MutableSharedFlow<List<Host>>()
+            val viewModel = HostsViewModel(repositoryEmitting(pending))
+            subscribe(viewModel.uiState)
+            runCurrent()
+
+            assertThat(viewModel.uiState.value.loading).isTrue()
+            assertThat(viewModel.uiState.value.searching).isFalse()
+            assertThat(viewModel.uiState.value.items).isEmpty()
+        }
+
+    @Test
+    fun `a first report without hosts ends the loading and starts the search`() = runTest {
+        val pending = MutableSharedFlow<List<Host>>()
+        val viewModel = HostsViewModel(repositoryEmitting(pending))
+        subscribe(viewModel.uiState)
+        runCurrent()
+
+        pending.emit(emptyList())
+        runCurrent()
+
+        assertThat(viewModel.uiState.value.loading).isFalse()
+        assertThat(viewModel.uiState.value.searching).isTrue()
+    }
+
+    @Test
+    fun `a first report with hosts shows them without ever searching`() = runTest {
+        val pending = MutableSharedFlow<List<Host>>()
+        val viewModel = HostsViewModel(repositoryEmitting(pending))
+        val states = mutableListOf<HostsUiState>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect { states += it }
+        }
+        runCurrent()
+
+        pending.emit(listOf(aHost(id = "a", name = "Alpha")))
+        runCurrent()
+
+        assertThat(states.any { it.searching }).isFalse()
+        assertThat(states.last().loading).isFalse()
+        assertThat(states.last().items.map { it.id }).containsExactly("a")
+    }
 
     @Test
     fun `an empty list means the screen is searching`() = runTest {
@@ -143,6 +202,26 @@ class HostsViewModelTest {
                 )
                 .inOrder()
         }
+
+    @Test
+    fun `an app without a known name is still running and still continues`() = runTest {
+        subscribe(viewModel.uiState)
+        repository.emit(aHost(id = "h", name = "Den", runningApp = RunningApp(7, null)))
+        runCurrent()
+
+        assertThat(viewModel.uiState.value.items.single().runningApp).isEqualTo(RunningApp(7, null))
+        assertThat(viewModel.uiState.value.continueItems)
+            .containsExactly(ContinueItemUiState("h", "Den", 7, null))
+
+        viewModel.onContinue("h")
+
+        viewModel.effects.test {
+            assertThat(awaitItem())
+                .isEqualTo(
+                    HostsEffect.StartStream(StreamRequest("h", 7, null, hdrSupported = false))
+                )
+        }
+    }
 
     @Test
     fun `selecting an online paired host opens its apps`() = runTest {

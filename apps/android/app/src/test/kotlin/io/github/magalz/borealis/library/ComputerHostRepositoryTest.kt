@@ -13,6 +13,7 @@ import io.github.magalz.borealis.library.domain.WakeResult
 import java.io.IOException
 import java.net.Inet4Address
 import java.net.InetAddress
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
@@ -36,7 +37,7 @@ class ComputerHostRepositoryTest {
     private var localNetworks = listOf<LocalIpv4>()
     private val hiddenApps = HiddenApps(context)
 
-    private fun TestScope.repository(): ComputerHostRepository {
+    private fun TestScope.repository(connector: CmsConnector = this@ComputerHostRepositoryTest.connector): ComputerHostRepository {
         val io = UnconfinedTestDispatcher(testScheduler)
         return ComputerHostRepository(
             context = context,
@@ -74,6 +75,40 @@ class ComputerHostRepositoryTest {
         assertThat(seen.last().first().id).isEqualTo("a")
         assertThat(binder.events).containsExactly("startPolling")
     }
+
+    @Test
+    fun `nothing is emitted before the service is connected`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val repository =
+            repository(
+                object : CmsConnector {
+                    override suspend fun connect(): CmsBinder {
+                        gate.await()
+                        return binder
+                    }
+                }
+            )
+
+        val seen = collectHosts(repository)
+
+        assertThat(seen).isEmpty()
+        assertThat(binder.events).isEmpty()
+
+        gate.complete(Unit)
+
+        assertThat(seen).hasSize(1)
+    }
+
+    @Test
+    fun `the first emission after connecting lists the hosts the service already knew`() =
+        runTest {
+            binder.computers["a"] = details(uuid = "a", name = "Alpha")
+            binder.computers["b"] = details(uuid = "b", name = "Beta", pairState = PairState.NOT_PAIRED)
+
+            val seen = collectHosts(repository())
+
+            assertThat(seen.first().map { it.name }).containsExactly("Alpha", "Beta").inOrder()
+        }
 
     @Test
     fun `an update that changes nothing the screen shows is not emitted again`() = runTest {

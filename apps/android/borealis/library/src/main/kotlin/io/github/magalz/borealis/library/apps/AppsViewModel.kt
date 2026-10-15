@@ -64,7 +64,9 @@ constructor(@Assisted private val hostId: String, private val repository: AppRep
     }
 
     fun onActionChosen(action: AppAction) {
-        val app = uiState.value.actions?.app ?: return
+        val sheet = uiState.value.actions ?: return
+        if (action !in sheet.choices) return
+        val app = sheet.app
         actionsAppId.value = null
         when (action) {
             AppAction.RESUME,
@@ -105,8 +107,10 @@ constructor(@Assisted private val hostId: String, private val repository: AppRep
         val reason =
             when {
                 host == null -> AppsMessage.HostUnknown
-                !host.paired -> AppsMessage.HostNotPaired
                 host.reachability == Reachability.OFFLINE -> AppsMessage.HostOffline
+                // Right after pairing the state is UNKNOWN and not paired until the next poll.
+                host.reachability == Reachability.ONLINE && !host.paired ->
+                    AppsMessage.HostNotPaired
                 else -> return
             }
         if (!closed) {

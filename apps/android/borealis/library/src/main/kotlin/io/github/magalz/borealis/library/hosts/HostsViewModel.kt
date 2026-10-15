@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class HostsViewModel @Inject constructor(private val repository: HostRepository) : ViewModel() {
     private val details = MutableStateFlow<String?>(null)
+    private var detailsHostId: String? = null
     private val effectChannel = Channel<HostsEffect>(Channel.BUFFERED)
 
     /** Collecting it starts host polling; it stops five seconds after the last collector leaves. */
@@ -60,15 +61,20 @@ class HostsViewModel @Inject constructor(private val repository: HostRepository)
     }
 
     fun onForget(hostId: String) {
+        if (detailsHostId == hostId) onDetailsDismissed()
         viewModelScope.launch { repository.forget(hostId) }
     }
 
     fun onDetails(hostId: String) {
-        viewModelScope.launch { details.value = repository.details(hostId) }
+        viewModelScope.launch {
+            details.value = repository.details(hostId)
+            detailsHostId = hostId
+        }
     }
 
     fun onDetailsDismissed() {
         details.value = null
+        detailsHostId = null
     }
 
     fun onAddHost() = send(HostsEffect.OpenAddHost)

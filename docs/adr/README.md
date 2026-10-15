@@ -78,3 +78,4 @@ Never rewrite an accepted ADR to change its decision. If a decision changes, wri
 | 0048 | [Fork moonlight-common-c with a first-frame deadline patch](0048-fork-moonlight-common-c.md) | accepted | 2026-10-14 |
 | 0049 | [Gate pull requests on 90% patch coverage and a 1% project tolerance](0049-coverage-gate.md) | accepted | 2026-10-14 |
 | 0050 | [Record diagnostics, audit trail, interim settings and the first release channel](0050-diagnostics-audit-and-interim-settings.md) | accepted | 2026-10-14 |
+| 0051 | [Send the diagnostic bundle from a TV to a phone with a QR code](0051-send-the-diagnostic-bundle-to-a-phone-with-a-qr-code.md) | accepted | 2026-10-15 |

@@ -130,3 +130,5 @@ This ADR refines [0020](0020-logging.md) and [0021](0021-audit.md), amends [0011
 
 * Related: [0020](0020-logging.md), [0021](0021-audit.md), [0011](0011-datastore-room-and-keystore-for-new-persistence.md), [0022](0022-crash-reporting-and-privacy.md), [0023](0023-distribution-channels.md) and [0026](0026-signing-keys.md).
 * Policy: [privacy-and-logging.md](../policies/privacy-and-logging.md). User statement: [PRIVACY.md](../../PRIVACY.md).
+
+Amended by [0051](0051-send-the-diagnostic-bundle-to-a-phone-with-a-qr-code.md).

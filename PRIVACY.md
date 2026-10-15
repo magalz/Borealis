@@ -20,7 +20,9 @@ will be kept in step with the code.
 - **The app contacts only the host you choose.** Moonlight's external-address
   lookup and connection test are disabled.
 - **Logs, the diagnostic bundle and the audit trail stay on your device** unless
-  you export and share them yourself.
+  you export and share them yourself. On a TV you can also send the diagnostic
+  bundle to your phone over your local network (see below); it is not uploaded
+  anywhere else.
 - **Crash reporting is planned, opt-in and off by default.** It is not
   implemented yet.
 
@@ -63,9 +65,18 @@ your external address and does not contact Moonlight's test servers.
   screen. It holds the logs, the audit trail, a manifest with the app and device
   details, and the video decoders on your device. Addresses are masked again
   when the bundle is made, if masking is on. You decide where it goes. On a
-  device with no share target, it is saved to the app's external files folder,
-  and the app shows you the path. Check it before you share it, for example
-  when you attach it to a GitHub issue.
+  device with no share target, such as a TV, it is saved to the Downloads
+  folder (the app's external files folder on Android 9), and the app shows you
+  the path. Check it before you share it, for example when you attach it to a
+  GitHub issue.
+- On a TV, "Send to phone" shows a QR code. While that dialog is open, the TV
+  serves the bundle over plain HTTP on your local network, on the TV's private
+  Wi-Fi or Ethernet address only. The link holds a random one-time token. A
+  phone on the same network that scans the code can download the bundle once.
+  The link stops working after that one download, after 5 minutes, or when you
+  close the dialog. The bundle goes only to the device that opens the link and
+  is not uploaded anywhere else. Anyone on your network who sees the link in
+  that time could download the bundle first, so use it on a network you trust.
 - The audit trail is local and under your control. You can export it and erase
   it at any time.
 

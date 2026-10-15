@@ -19,7 +19,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
@@ -48,13 +47,20 @@ constructor(
         if (!context.bindService(intent, connection, Context.BIND_AUTO_CREATE)) {
             throw IOException("The computer manager service could not be bound")
         }
-        val binder = bound.await()
-        withContext(Dispatchers.IO) {
-            binder.waitForReady()
-            // Generates the keypair now, so that the first host request does not wait for it.
-            AndroidCryptoProvider(context).clientCertificate
+        var connected = false
+        try {
+            val binder = bound.await()
+            withContext(io) {
+                binder.waitForReady()
+                // Generates the keypair now, so that the first host request does not wait for it.
+                AndroidCryptoProvider(context).clientCertificate
+            }
+            connected = true
+            return ServiceCmsBinder(binder)
+        } finally {
+            // A cancelled or failed connect must not leave a binding that nobody will use.
+            if (!connected) context.unbindService(connection)
         }
-        return ServiceCmsBinder(binder)
     }
 }
 

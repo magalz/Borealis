@@ -50,25 +50,26 @@ constructor(
             if (host.isEmpty()) null
             else runCatching { AddressTuple(host, address.port) }.getOrNull()
         if (manual == null) return AddHostResult.InvalidAddress
-        val details = ComputerDetails().also { it.manualAddress = manual }
-        val added =
-            try {
-                connection.addComputer(details)
-            } catch (e: IllegalArgumentException) {
-                // OkHttp throws this when the host name does not canonicalize to a valid name.
-                BorealisLog.w(
-                    LogTag.HOST,
-                    "invalid host address",
-                    "error" to e.javaClass.simpleName,
-                )
-                return AddHostResult.InvalidAddress
-            }
-        return when {
-            added -> AddHostResult.Added(details.uuid, details.name)
-            withContext(io) { subnet.isWrongSiteLocalAddress(host) } -> AddHostResult.WrongSubnet
-            else -> AddHostResult.Unreachable
-        }
+        return add(ComputerDetails().also { it.manualAddress = manual }, host)
     }
+
+    private suspend fun add(details: ComputerDetails, host: String): AddHostResult =
+        try {
+            when {
+                connection.addComputer(details) -> AddHostResult.Added(details.uuid, details.name)
+                withContext(io) { subnet.isWrongSiteLocalAddress(host) } ->
+                    AddHostResult.WrongSubnet
+                else -> AddHostResult.Unreachable
+            }
+        } catch (e: IllegalArgumentException) {
+            // OkHttp throws this when the host name does not canonicalize to a valid name.
+            BorealisLog.w(LogTag.HOST, "invalid host address", "error" to e.javaClass.simpleName)
+            AddHostResult.InvalidAddress
+        } catch (e: IOException) {
+            // The service could not be bound: the host cannot be reached through it.
+            BorealisLog.w(LogTag.HOST, "host not added", "error" to e.javaClass.simpleName)
+            AddHostResult.Unreachable
+        }
 
     override suspend fun wake(hostId: String): WakeResult {
         val details = connection.lookup(hostId) ?: return WakeResult.FAILED

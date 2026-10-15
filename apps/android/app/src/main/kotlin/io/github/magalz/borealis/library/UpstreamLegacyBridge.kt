@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Intent
 import android.opengl.GLSurfaceView
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.preference.PreferenceManager
 import android.view.ViewGroup
 import com.limelight.R
@@ -35,7 +37,14 @@ internal fun interface GlRendererProbe {
     fun probe(activity: Activity, onRenderer: (String) -> Unit)
 }
 
-/** [LegacyBridge] over the upstream helpers of `PcView`. */
+/**
+ * [LegacyBridge] over the upstream helpers of `PcView`.
+ *
+ * [onLauncherCreated] may be called before or after the activity sets its content: the GL renderer
+ * probe is not started inside the call but posted to the main looper, so it runs after the callback
+ * that is running now (an `onCreate` that sets its content later in the same callback included) and
+ * its surface is not replaced by that content. It does not run for an activity that is finishing.
+ */
 @Singleton
 internal class UpstreamLegacyBridge
 @Inject
@@ -44,7 +53,17 @@ constructor(private val startup: UpstreamStartup, private val glProbe: GlRendere
     override fun onLauncherCreated(activity: Activity) {
         startup.setDefaultPreferences(activity)
         startup.applyLocale(activity)
-        // Decoder choices for Adreno and PowerVR depend on the renderer name: keep it up to date.
+        Handler(Looper.getMainLooper()).post {
+            if (!activity.isFinishing && !activity.isDestroyed) probeRendererIfNeeded(activity)
+        }
+    }
+
+    override fun onLauncherResumed(activity: Activity) = startup.showDecoderCrashDialog(activity)
+
+    override fun openStreamSettings(activity: Activity) = startup.openStreamSettings(activity)
+
+    /** Decoder choices for Adreno and PowerVR depend on the renderer name: keep it up to date. */
+    private fun probeRendererIfNeeded(activity: Activity) {
         val saved = GlPreferences.readPreferences(activity)
         if (saved.savedFingerprint != Build.FINGERPRINT || saved.glRenderer.isEmpty()) {
             glProbe.probe(activity) { renderer ->
@@ -57,10 +76,6 @@ constructor(private val startup: UpstreamStartup, private val glProbe: GlRendere
             BorealisLog.i(LogTag.APP, "GL renderer cached", "renderer" to saved.glRenderer)
         }
     }
-
-    override fun onLauncherResumed(activity: Activity) = startup.showDecoderCrashDialog(activity)
-
-    override fun openStreamSettings(activity: Activity) = startup.openStreamSettings(activity)
 }
 
 /** [UpstreamStartup] over the helpers that `PcView` calls. */

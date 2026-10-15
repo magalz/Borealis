@@ -2,7 +2,9 @@ package io.github.magalz.borealis.library
 
 import com.limelight.computers.ComputerManagerListener
 import com.limelight.nvstream.http.ComputerDetails
+import com.limelight.nvstream.http.PairingManager.PairState
 import java.security.cert.X509Certificate
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
@@ -38,7 +40,7 @@ constructor(
      * Runs on a polling thread of the service: stores a copy, which the service goes on mutating.
      */
     private val listener = ComputerManagerListener { details ->
-        details.uuid?.let { id -> state.update { it + (id to ComputerDetails(details)) } }
+        details.uuid?.let { id -> state.update { it + (id to details.snapshot()) } }
     }
 
     // The gate, the pollers and the binder are only changed with the lock held.
@@ -58,28 +60,41 @@ constructor(
 
     /** [updates] while collected; the first collector starts polling, the last one stops it. */
     fun hostUpdates(): Flow<Map<String, ComputerDetails>> = flow {
-        locked { gate.addCollector(connected()) }
+        // Set inside the locked block, so that a cancellation that arrives after the block
+        // finished but before this coroutine resumed still undoes what the block did.
+        val added = AtomicBoolean(false)
         try {
+            locked {
+                gate.addCollector(connected())
+                added.set(true)
+            }
             emitAll(state)
         } finally {
-            withContext(NonCancellable) { locked { gate.removeCollector(connected()) } }
+            if (added.get()) {
+                withContext(NonCancellable) { locked { gate.removeCollector(connected()) } }
+            }
         }
     }
 
     /** The details of [uuid] while collected; also polls the host's app list. */
     fun appListUpdates(uuid: String): Flow<ComputerDetails?> = flow {
-        val sharing = locked {
-            val binder = connected()
-            gate.addCollector(binder)
-            pollers.start(binder, uuid)
-        }
+        val added = AtomicBoolean(false)
+        val sharing = AtomicBoolean(false)
         try {
+            locked {
+                val binder = connected()
+                gate.addCollector(binder)
+                added.set(true)
+                sharing.set(pollers.start(binder, uuid))
+            }
             emitAll(state.map { it[uuid] })
         } finally {
-            withContext(NonCancellable) {
-                locked {
-                    if (sharing) pollers.stop(uuid)
-                    gate.removeCollector(connected())
+            if (added.get()) {
+                withContext(NonCancellable) {
+                    locked {
+                        if (sharing.get()) pollers.stop(uuid)
+                        gate.removeCollector(connected())
+                    }
                 }
             }
         }
@@ -88,12 +103,16 @@ constructor(
     /** Stops polling and waits for it to stop around [block], then resumes it if still needed. */
     suspend fun <T> pausePolling(block: suspend () -> T): T {
         val binder = binder()
-        locked { gate.pause(binder) }
+        val paused = AtomicBoolean(false)
         try {
+            locked {
+                gate.pause(binder)
+                paused.set(true)
+            }
             withContext(io) { binder.waitForPollingStopped() }
             return block()
         } finally {
-            withContext(NonCancellable) { locked { gate.resume(binder) } }
+            if (paused.get()) withContext(NonCancellable) { locked { gate.resume(binder) } }
         }
     }
 
@@ -101,7 +120,7 @@ constructor(
     suspend fun lookup(hostId: String): ComputerDetails? =
         state.value[hostId]
             ?: binder().let { binder ->
-                withContext(io) { binder.getComputer(hostId)?.let { ComputerDetails(it) } }
+                withContext(io) { binder.getComputer(hostId)?.snapshot() }
             }
 
     /** Polls the host in [details] once, adds it when it answers; true when it did. */
@@ -118,12 +137,25 @@ constructor(
         details.uuid?.let { id -> state.update { it - id } }
     }
 
-    /** Pins [cert] for [uuid] and makes the next poll read the pairing state again. */
+    /**
+     * Pins [cert] for [uuid] after a successful pairing. The service reads the pairing state again
+     * on its next poll; until then the host is published as paired with its state unknown, so that
+     * a screen opened right after the pairing does not see it as unpaired.
+     */
     suspend fun pinCertificate(uuid: String, cert: X509Certificate?) {
         val binder = binder()
-        withContext(io) {
-            if (cert != null) binder.getComputer(uuid)?.serverCert = cert
-            binder.invalidateStateForComputer(uuid)
+        val paired =
+            withContext(io) {
+                val live = binder.getComputer(uuid)
+                if (cert != null && live != null) live.serverCert = cert
+                binder.invalidateStateForComputer(uuid)
+                live?.snapshot()
+            }
+        if (paired != null && cert != null) {
+            paired.pairState = PairState.PAIRED
+            paired.state = ComputerDetails.State.UNKNOWN
+            paired.serverCert = cert
+            state.update { it + (uuid to paired) }
         }
     }
 

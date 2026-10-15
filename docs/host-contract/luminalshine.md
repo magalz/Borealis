@@ -361,11 +361,11 @@ for resume the equivalent is `resume` 1 (`src/nvhttp.cpp:3471-3486`).
   `/resume` is accepted while the first client's `/launch` is still setting up,
   the host logs `Failed to verify RTSP message tag` and the second client's RTSP
   `OPTIONS` fails (`Failed to decrypt RTSP response`, error -1). The first
-  client streams normally.
+  client streams normally. Reported upstream as `NortheBridge/luminalshine#205`.
 - **Observed (Sprint 3):** the host process crashed once right after the virtual
   display cleanup of an ended session (`unhandled exception 0x20474343` in
   `KERNELBASE.dll`) and restarted about 9 s later. Requests in that window get a
-  connection reset.
+  connection reset. Reported upstream as `NortheBridge/luminalshine#204`.
 
 ### 7.4 Mode reconciliation between `/launch` and RTSP
 

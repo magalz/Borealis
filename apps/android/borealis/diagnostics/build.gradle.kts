@@ -15,6 +15,7 @@ dependencies {
     implementation(project(":borealis:logging"))
     implementation(libs.androidx.core)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.zxing.core)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)

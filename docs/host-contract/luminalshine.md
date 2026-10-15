@@ -361,11 +361,16 @@ for resume the equivalent is `resume` 1 (`src/nvhttp.cpp:3471-3486`).
   `/resume` is accepted while the first client's `/launch` is still setting up,
   the host logs `Failed to verify RTSP message tag` and the second client's RTSP
   `OPTIONS` fails (`Failed to decrypt RTSP response`, error -1). The first
-  client streams normally.
+  client streams normally. Reported upstream as `NortheBridge/luminalshine#205`.
+  Borealis waits about 3 s before `/resume` when the host was slow to answer
+  `/serverinfo`; when RTSP still fails with error -1 within 5 s of an accepted
+  same-app `/resume` on a non-GFE host, it restarts the whole start once, never
+  quits another device's app, and on a second failure shows an explanation
+  instead of the firewall paragraph.
 - **Observed (Sprint 3):** the host process crashed once right after the virtual
   display cleanup of an ended session (`unhandled exception 0x20474343` in
   `KERNELBASE.dll`) and restarted about 9 s later. Requests in that window get a
-  connection reset.
+  connection reset. Reported upstream as `NortheBridge/luminalshine#204`.
 
 ### 7.4 Mode reconciliation between `/launch` and RTSP
 

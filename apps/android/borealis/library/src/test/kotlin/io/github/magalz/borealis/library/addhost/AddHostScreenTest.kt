@@ -1,0 +1,215 @@
+package io.github.magalz.borealis.library.addhost
+
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performTextInput
+import androidx.test.espresso.Espresso
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.library.testing.PHONE
+import io.github.magalz.borealis.library.testing.TV
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+
+@RunWith(AndroidJUnit4::class)
+class AddHostScreenTest {
+    @get:Rule val composeRule = createComposeRule()
+
+    private val changes = mutableListOf<String>()
+    private var submitted = 0
+    private var cancelled = 0
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the field has focus when the screen opens`() {
+        show(AddHostUiState())
+
+        composeRule.onNode(hasSetTextAction()).assertIsFocused()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the field has focus on a TV as well`() {
+        show(AddHostUiState(), FormFactor.Tv)
+
+        composeRule.onNode(hasSetTextAction()).assertIsFocused()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the label, the hint and the port line show`() {
+        show(AddHostUiState())
+
+        composeRule.onNodeWithText("Address").assertIsDisplayed()
+        composeRule
+            .onNodeWithText("IP address or host name, for example 192.168.1.20")
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithText("Add :port only if you changed the LuminalShine port (default 47989).")
+            .assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `typing reports the address`() {
+        show(AddHostUiState())
+
+        composeRule.onNode(hasSetTextAction()).performTextInput("192.168.1.20")
+
+        assertThat(changes).containsExactly("192.168.1.20")
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `Done on the keyboard submits`() {
+        show(AddHostUiState(address = "192.168.1.20"))
+
+        composeRule.onNode(hasSetTextAction()).performImeAction()
+
+        assertThat(submitted).isEqualTo(1)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `Add host submits`() {
+        show(AddHostUiState(address = "192.168.1.20"))
+
+        composeRule.onNode(hasText("Add host") and hasClickAction()).performClick()
+
+        assertThat(submitted).isEqualTo(1)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `Cancel calls onCancel and submits nothing`() {
+        show(AddHostUiState(address = "192.168.1.20"))
+
+        composeRule.onNodeWithText("Cancel").performClick()
+
+        assertThat(cancelled).isEqualTo(1)
+        assertThat(submitted).isEqualTo(0)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `Back cancels`() {
+        show(AddHostUiState())
+
+        Espresso.pressBack()
+
+        assertThat(cancelled).isEqualTo(1)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `Back does nothing while busy`() {
+        show(AddHostUiState(address = "192.168.1.20", busy = true))
+
+        Espresso.pressBack()
+
+        assertThat(cancelled).isEqualTo(0)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `an empty address shows its error`() {
+        show(AddHostUiState(error = AddHostError.EMPTY))
+
+        composeRule.onNodeWithText("Enter an IP address or a host name.").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `an invalid address shows its error`() {
+        show(AddHostUiState(error = AddHostError.INVALID))
+
+        composeRule
+            .onNodeWithText("Unable to resolve this address. Check it for typos.")
+            .assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a wrong subnet shows its error`() {
+        show(AddHostUiState(error = AddHostError.WRONG_SUBNET))
+
+        composeRule
+            .onNodeWithText(
+                "That address is not on this network. " +
+                    "For streaming over the Internet, use your router's public IP address."
+            )
+            .assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `an unreachable host shows its error`() {
+        show(AddHostUiState(error = AddHostError.UNREACHABLE))
+
+        composeRule
+            .onNodeWithText(
+                "Unable to connect to the specified computer. " +
+                    "Make sure the required ports are allowed through the firewall."
+            )
+            .assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `no error text without an error`() {
+        show(AddHostUiState())
+
+        composeRule.onNodeWithText("Enter an IP address or a host name.").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `while busy there is a progress indicator and the buttons are disabled`() {
+        show(AddHostUiState(address = "192.168.1.20", busy = true))
+
+        composeRule
+            .onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo))
+            .assertIsDisplayed()
+        composeRule.onNode(hasText("Add host") and hasClickAction()).assertIsNotEnabled()
+        composeRule.onNodeWithText("Cancel").assertIsNotEnabled()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `when idle there is no progress indicator and the buttons are enabled`() {
+        show(AddHostUiState(address = "192.168.1.20"))
+
+        composeRule
+            .onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo))
+            .assertDoesNotExist()
+        composeRule.onNode(hasText("Add host") and hasClickAction()).assertIsEnabled()
+        composeRule.onNodeWithText("Cancel").assertIsEnabled()
+    }
+
+    private fun show(state: AddHostUiState, formFactor: FormFactor = FormFactor.Phone) {
+        composeRule.setContent {
+            AddHostScreen(
+                state = state,
+                formFactor = formFactor,
+                onAddressChanged = { changes += it },
+                onSubmit = { submitted++ },
+                onCancel = { cancelled++ },
+            )
+        }
+        composeRule.waitForIdle()
+    }
+}

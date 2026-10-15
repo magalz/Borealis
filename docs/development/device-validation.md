@@ -1,10 +1,10 @@
 # Device validation runbook
 
-This runbook checks Borealis Phase 1 and Sprint 2 on two devices against
+This runbook checks Borealis Phase 1 and Sprints 2 to 4 on two devices against
 LuminalShine 26.09.1 running on the owner's Windows PC. It is for the owner and
 for the orchestrator who runs the checks. Run the steps in order and record the
-results in the templates of section 4 (Phase 1) or in the table of section 7
-(Sprint 2). Section 6 holds the Phase 1 results.
+results as a new section with a table, like sections 7 to 9. Sections 6 to 9
+hold the results of Phase 1 and Sprints 2 to 4, in that order.
 
 Sources: [host contract](../host-contract/luminalshine.md) (cited as "contract"),
 [Borealis Android README](../../apps/android/borealis/README.md),
@@ -732,3 +732,58 @@ Follow-ups:
 - In that case the RTSP error -1 text points to firewall ports, which is
   misleading.
 - Check the Send to phone dialog on the Streamer at 720p output.
+
+## 9. Results: Sprint 4, 2026-10-15
+
+Build: the debug APK from the phase branch at `f84d89c5`, installed on both
+devices with `adb install -r` (data kept). Earlier smoke tests used `c21276fd`
+and the builds of the two fixes listed under "Defects found and fixed". Host:
+LuminalShine 26.09.1 on the PC, with the `mouse` and `keyboard` settings
+enabled. The owner enabled `keyboard` on 2026-10-15. Both devices used ADB over
+Wi-Fi.
+
+| Scenario | Galaxy S22 | Google TV Streamer | Evidence and notes |
+| --- | --- | --- | --- |
+| Launcher (Sprint 4, S4-T7) | pass | pass | The package manager resolves the launcher activity to `LibraryActivity`: MAIN and LAUNCHER on the S22, LEANBACK_LAUNCHER on the TV. One icon on each device. The TV banner is unchanged. `am start -W` total time is 2.4 s on the S22 and about 4.0 s on the TV. |
+| Decoder setup kept (GL probe) | not checked | pass | TV logcat shows `GL renderer cached` with the renderer name on the first launch of the new launcher. |
+| Dark system bars | pass | not applicable | The S22 status bar icons are light on the dark page. |
+| Hosts | pass | pass | Both show the paired PC as online and openable. Both also show an unpaired host with a Pair action, a warning mark and no running-app mark. TV: the rail is on the left, focus starts on the first card, and D-pad Right and OK open the host. |
+| Cold start loading state | not checked | pass | The TV shows a progress indicator first, then the hosts at about 4.6 s from process start. Before the crypto warm-up moved off the connect path, this took about 9.2 s. No focusable Add host button is shown while loading. |
+| Apps | pass | pass | The app list shows within one poll on both devices. TV: a five-column grid beside the rail, with the first tile focused. |
+| Start a stream from Apps | pass | pass | Tapping or pressing OK on a desktop app sends `/launch`, and the host reports a new session. The picture appears. |
+| Continue row and resume | pass | not run | After leaving a stream with Back, the Continue row on Hosts shows the running app. Resume sends `/resume`, which the host accepts, and the picture returns. Apps marks the app as running. |
+| App actions and Quit | pass | not run | A long-press on the running app opens Resume, Quit and Details, each with a line that states the consequence. Quit asks for confirmation. After Quit, the host reports that nothing is running. |
+| Hide and show hidden apps | pass | not run | A hidden app leaves the list. Show hidden apps lists it dimmed, and it returns to the list when restored. |
+| Add host (UC-008) | pass | not run | The address field has focus and the keyboard opens at once (UC-008-T1). An address on another subnet is rejected with the wrong-subnet message. An address on the local subnet is added, and the screen returns to Hosts. The unreachable-host case was not run. |
+| Pairing screen (UC-001) | pass (screen and Cancel only) | not run | Pair on the unpaired host opens the pairing screen. It shows the PIN digits, the 5-minute validity, and four steps, including the Web UI address and the note about `xbox` and `webos`. Cancel returns to Hosts. A full pairing was not run, because there was no unpaired host that the owner wanted to pair. Expiry is covered by unit tests only. |
+| Settings | pass | not run | The Settings action opens the upstream stream settings. Back returns to Hosts. |
+| Scenario 3.5: second device joins during another device's launch | first device streams | pass | With a 1 s gap, the TV logged `server info timed out, retrying attempt=2 max=3`, then `host busy, waiting before resume serverinfo_ms=9429 wait_ms=3000`, then `/resume`. The RTSP handshake completed and the picture appeared. The host logged `Virtual display already active`, `[active sessions: 2]` and `CLIENT CONNECTED` twice, and no `Failed to verify RTSP message tag`. With a 4 s gap, the TV waited 3 s (`serverinfo_ms=6255`), then resumed. The RTSP handshake completed, and the host logged two active sessions. No restart was needed in either run. The automatic restart and the new error text were not exercised on a device; unit tests cover them. |
+| Send to phone at 720p (Sprint 3 follow-up) | not applicable | not run | Needs the TV output at 720p. Covered only by Robolectric tests. |
+| Keyboard input in a stream | not run | not run | The host keyboard is enabled. Not tested, to avoid typing into the PC's foreground app unattended. |
+| Handheld layout | not run | not run | No handheld device. Covered by the Roborazzi `*_handheld_*` screenshots. |
+
+Defects found and fixed:
+
+- The Apps screen stayed on its loading indicator on the TV. Upstream
+  `ComputerDetails.update()` resets the stored app list on each host poll. The
+  adapter now keeps the last list the service published for the host
+  (`7d8484e4`).
+- On a cold start, the empty "looking for hosts" state with a focusable Add
+  host button showed for 7 to 10 s. An unpaired host showed a running-app mark
+  for a fake app. The connect path also waited about 4.5 s for the client
+  keypair (BouncyCastle) before it listed the known hosts. The Hosts screen now
+  shows a loading state until the first report (`dbd44015`), and the known
+  hosts are reported without waiting for the crypto warm-up (`ced6afc0`).
+
+Follow-ups:
+
+- Test the unreachable add-host case, and a full pairing from start to end, on
+  a device.
+- Test keyboard input in a stream, Send to phone at 720p, and a handheld
+  device.
+- The launcher shortcuts still open the 12.2 `PcView` and `AppView`
+  (`ShortcutTrampoline`) until Sprint 6.
+- The host card does not yet show the detail line (version and address) or the
+  codec and HDR chips. The state does not hold them yet.
+- The app start time on the TV (about 4 s to the first frame of the activity)
+  is unchanged. It is outside this sprint.

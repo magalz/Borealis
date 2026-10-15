@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shell_host_added">%1$s added. Pair it to see its apps.</string>
+    <string name="shell_host_unavailable">This host is no longer available.</string>
+</resources>

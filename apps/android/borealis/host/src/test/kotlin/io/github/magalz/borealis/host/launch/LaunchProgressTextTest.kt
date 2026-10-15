@@ -49,7 +49,7 @@ class LaunchProgressTextTest {
     }
 
     @Test
-    fun `English and Brazilian Portuguese define the same strings with the same placeholders`() {
+    fun `every Brazilian Portuguese string has an English one with the same placeholders`() {
         val english = strings("values")
         val portuguese = strings("values-pt-rBR")
 
@@ -61,9 +61,11 @@ class LaunchProgressTextTest {
                 "launch_retry_capture_or_display",
                 "launch_retry_generic",
             )
-        assertThat(portuguese.keys).isEqualTo(english.keys)
-        for ((name, text) in english) {
-            assertThat(placeholders(portuguese.getValue(name))).isEqualTo(placeholders(text))
+        // The app is English-only until the translation sprint: new strings need no Portuguese
+        // counterpart, but a Portuguese string never exists without its English one.
+        assertThat(english.keys).containsAtLeastElementsIn(portuguese.keys)
+        for ((name, text) in portuguese) {
+            assertThat(placeholders(text)).isEqualTo(placeholders(english.getValue(name)))
         }
     }
 

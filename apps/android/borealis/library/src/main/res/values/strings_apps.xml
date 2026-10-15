@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="apps_back">Back</string>
+    <string name="apps_loading">Loading apps</string>
+    <string name="apps_running">Running</string>
+    <string name="apps_hidden">Hidden</string>
+    <string name="apps_options">Options</string>
+    <string name="apps_status_running">%1$s running</string>
+    <string name="apps_status_running_unknown">An app is running</string>
+    <string name="apps_status_idle">Nothing running</string>
+    <string name="apps_show_hidden">Show hidden apps</string>
+    <string name="apps_hide_hidden">Hide hidden apps</string>
+    <string name="apps_empty_title">No apps to show</string>
+    <string name="apps_empty_body">Add apps in the LuminalShine Web UI. If you hid some, use Show hidden apps.</string>
+
+    <string name="apps_action_resume">Resume</string>
+    <string name="apps_action_resume_consequence">Go back to %1$s where you left it.</string>
+    <string name="apps_action_start">Start</string>
+    <string name="apps_action_start_consequence">Start %1$s on the PC.</string>
+    <string name="apps_action_quit">Quit %1$s</string>
+    <string name="apps_action_quit_consequence">Ends %1$s on the PC. Unsaved work is lost.</string>
+    <string name="apps_action_quit_and_start">Quit %1$s and start %2$s</string>
+    <string name="apps_action_quit_and_start_consequence">Ends %1$s on the PC first. Unsaved work in it is lost.</string>
+    <string name="apps_action_details">Details</string>
+    <string name="apps_action_details_consequence">App id and HDR support.</string>
+    <string name="apps_action_hide">Hide from this list</string>
+    <string name="apps_action_hide_consequence">You can show it again with Show hidden apps.</string>
+    <string name="apps_action_unhide">Show in this list</string>
+    <string name="apps_action_unhide_consequence"></string>
+    <string name="apps_running_app_fallback">the running app</string>
+
+    <string name="apps_confirm_quit">Quit %1$s? Unsaved work is lost.</string>
+    <string name="apps_confirm_quit_button">Quit</string>
+    <string name="apps_confirm_cancel">Cancel</string>
+
+    <string name="apps_details_id">App ID</string>
+    <string name="apps_details_hdr">HDR</string>
+    <string name="apps_details_hdr_supported">Supported</string>
+    <string name="apps_details_hdr_unsupported">Not supported</string>
+    <string name="apps_details_close">Close</string>
+
+    <string name="apps_message_host_unknown">This PC is no longer in your list.</string>
+    <string name="apps_message_host_not_paired">This PC is not paired. Pair it first.</string>
+    <string name="apps_message_host_offline">This PC is offline.</string>
+    <string name="apps_message_quit_done">App quit.</string>
+    <string name="apps_message_quit_failed">Failed to quit.</string>
+</resources>

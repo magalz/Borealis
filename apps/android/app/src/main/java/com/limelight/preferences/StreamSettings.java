@@ -114,7 +114,7 @@ public class StreamSettings extends Activity {
             PreferenceConfiguration newPrefs = PreferenceConfiguration.readPreferences(this);
             if (!newPrefs.language.equals(previousPrefs.language)) {
                 // Restart the PC view to apply UI changes
-                Intent intent = new Intent(this, PcView.class);
+                Intent intent = new Intent(this, io.github.magalz.borealis.library.shell.LibraryActivity.class); // BOREALIS: the Compose Library replaced PcView as the launcher
                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent, null);
             }

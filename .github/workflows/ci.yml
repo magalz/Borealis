@@ -36,6 +36,7 @@ jobs:
           filters: |
             android:
               - 'apps/android/**'
+              - 'design/**'
               - 'core/**'
               - '.gitmodules'
               - '.github/workflows/ci.yml'
@@ -109,6 +110,49 @@ jobs:
           path: |
             apps/android/build/reports/
             apps/android/**/build/reports/
+            apps/android/**/build/test-results/
+          retention-days: 14
+
+  screenshots:
+    # Compose screenshot references are recorded on Windows, so they are verified on Windows:
+    # text rasterization differs between operating systems. The Android job above renders the
+    # same tests without comparing them.
+    name: Android screenshots
+    needs: changes
+    if: needs.changes.outputs.android == 'true' || github.event_name != 'pull_request'
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+        working-directory: apps/android
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          fetch-depth: 0 # version is derived from android-v* tags
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Install Android SDK packages (same versions as local builds)
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager.bat"
+          if [ ! -d "$ANDROID_HOME/platforms/android-37.0" ] || [ ! -d "$ANDROID_HOME/build-tools/37.0.0" ]; then
+            yes | "$SDKMANAGER" --licenses > /dev/null || true
+            "$SDKMANAGER" --install "platforms;android-37.0" "build-tools;37.0.0" > /dev/null
+          fi
+      - name: Verify the screenshot tests against the committed references
+        run: ./gradlew --stacktrace :borealis:designsystem:testDebugUnitTest :borealis:library:testDebugUnitTest -Proborazzi.test.verify=true
+      - name: Upload screenshot differences and test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-screenshot-differences
+          path: |
+            apps/android/**/build/outputs/roborazzi/**
+            apps/android/**/build/reports/tests/
             apps/android/**/build/test-results/
           retention-days: 14
 

@@ -9,14 +9,17 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -43,7 +46,9 @@ import io.github.magalz.borealis.designsystem.components.HostCard
 import io.github.magalz.borealis.designsystem.components.HostCardAction
 import io.github.magalz.borealis.designsystem.components.Kicker
 import io.github.magalz.borealis.designsystem.components.NavigationRail
+import io.github.magalz.borealis.designsystem.focus.InitialFocusState
 import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
@@ -138,6 +143,7 @@ private fun HostsLayout(
         modifier
             .fillMaxSize()
             .background(LocalBorealisColors.current.page)
+            .windowInsetsPadding(WindowInsets.safeDrawing)
             // A gamepad's B is Back at the top level: it must not leave the home screen.
             .onKeyEvent { formFactor != FormFactor.Phone && it.key == Key.ButtonB }
     ) {
@@ -168,6 +174,16 @@ private class HostsHandlers(
     val onAddHost: () -> Unit,
 )
 
+/**
+ * The element that starts with focus on a TV or handheld, and the guard that lets the screen take
+ * it once: a host that sorts first, a Continue card that appears or a card that scrolls back into
+ * view later must not pull focus away from where the user moved it.
+ */
+private class StartFocus(val requester: FocusRequester, val state: InitialFocusState)
+
+private fun Modifier.withStartFocus(start: StartFocus?): Modifier =
+    if (start == null) this else initialFocus(start.requester, start.state)
+
 @Composable
 private fun HostsBody(
     state: HostsUiState,
@@ -177,16 +193,18 @@ private fun HostsBody(
 ) {
     BoxWithConstraints(modifier) {
         // A phone leaves focus alone; a TV or handheld starts on the first card, or inside the
-        // empty state (a focus group hands focus to its first child).
-        val startFocus = remember { FocusRequester() }.takeIf { formFactor != FormFactor.Phone }
+        // empty state (a focus group hands focus to its first child). The guard starts again when
+        // the search ends, so the first hosts to arrive take the focus.
+        val requester = remember { FocusRequester() }
+        val initialFocus = rememberInitialFocusState(state.searching)
+        val startFocus =
+            if (formFactor != FormFactor.Phone) StartFocus(requester, initialFocus) else null
         if (state.searching) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 EmptyState(
                     title = stringResource(R.string.hosts_empty_title),
                     body = stringResource(R.string.hosts_empty_body),
-                    modifier =
-                        if (startFocus != null) Modifier.initialFocus(startFocus).focusGroup()
-                        else Modifier,
+                    modifier = Modifier.withStartFocus(startFocus).focusGroup(),
                     action =
                         EmptyStateAction(
                             stringResource(R.string.hosts_add_host),
@@ -207,7 +225,7 @@ private fun LazyGridItemSpanScope.fullWidth() = GridItemSpan(maxLineSpan)
 private fun HostGrid(
     state: HostsUiState,
     columns: Int,
-    startFocus: FocusRequester?,
+    startFocus: StartFocus?,
     handlers: HostsHandlers,
 ) {
     val optionsLabel = stringResource(R.string.hosts_options)
@@ -223,8 +241,11 @@ private fun HostGrid(
             item(key = "continue-section", span = { fullWidth() }) {
                 Kicker(stringResource(R.string.hosts_section_continue))
             }
-            items(state.continueItems, key = { "continue:${it.hostId}" }, span = { fullWidth() }) {
-                item ->
+            itemsIndexed(
+                state.continueItems,
+                key = { _, item -> "continue:${item.hostId}" },
+                span = { _, _ -> fullWidth() },
+            ) { index, item ->
                 ContinueCard(
                     appName = item.appName,
                     detail = stringResource(R.string.hosts_continue_detail, item.hostName),
@@ -232,13 +253,7 @@ private fun HostGrid(
                     onClick = { handlers.onContinue(item.hostId) },
                     modifier =
                         Modifier.fillMaxWidth()
-                            .then(
-                                if (startFocus != null && item === state.continueItems.first()) {
-                                    Modifier.initialFocus(startFocus)
-                                } else {
-                                    Modifier
-                                }
-                            )
+                            .withStartFocus(startFocus.takeIf { index == 0 })
                             .testTag("continue:${item.hostId}"),
                 )
             }
@@ -249,13 +264,13 @@ private fun HostGrid(
                 Modifier.padding(top = SECTION_PADDING),
             )
         }
-        items(state.items, key = { it.id }) { item ->
-            val first = state.continueItems.isEmpty() && item === state.items.first()
+        itemsIndexed(state.items, key = { _, item -> item.id }) { index, item ->
+            val first = index == 0 && state.continueItems.isEmpty()
             HostItem(
                 item,
                 handlers,
                 optionsLabel,
-                if (startFocus != null && first) Modifier.initialFocus(startFocus) else Modifier,
+                Modifier.withStartFocus(startFocus.takeIf { first }),
             )
         }
     }

@@ -7,11 +7,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -61,10 +64,16 @@ fun AddHostScreen(
     modifier: Modifier = Modifier,
 ) {
     BorealisTheme(formFactor) {
-        BackHandler(onBack = onCancel)
+        // Back is ignored while an add runs, so the screen does not close under it.
+        BackHandler(onBack = { if (!state.busy) onCancel() })
         val colors = LocalBorealisColors.current
         val addressFocus = remember { FocusRequester() }
-        Box(modifier.fillMaxSize().background(colors.page)) {
+        Box(
+            modifier
+                .fillMaxSize()
+                .background(colors.page)
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+        ) {
             Column(
                 Modifier.widthIn(max = CONTENT_MAX_WIDTH)
                     .fillMaxWidth()
@@ -88,30 +97,7 @@ fun AddHostScreen(
                     Hint(stringResource(R.string.addhost_address_hint))
                     Hint(stringResource(R.string.addhost_port_hint))
                 }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    BorealisButton(
-                        stringResource(R.string.addhost_submit),
-                        onSubmit,
-                        enabled = !state.busy,
-                    )
-                    BorealisButton(
-                        stringResource(R.string.addhost_cancel),
-                        onCancel,
-                        style = BorealisButtonStyle.Secondary,
-                        enabled = !state.busy,
-                    )
-                    if (state.busy) {
-                        val busy = stringResource(R.string.addhost_busy)
-                        CircularProgressIndicator(
-                            Modifier.size(PROGRESS_SIZE).semantics { contentDescription = busy },
-                            color = colors.accent,
-                            strokeWidth = PROGRESS_STROKE,
-                        )
-                    }
-                }
+                AddHostButtons(state.busy, onSubmit, onCancel)
             }
         }
     }
@@ -134,3 +120,27 @@ private fun AddHostError.textRes(): Int =
         AddHostError.WRONG_SUBNET -> R.string.addhost_error_wrong_subnet
         AddHostError.UNREACHABLE -> R.string.addhost_error_unreachable
     }
+
+@Composable
+private fun AddHostButtons(busy: Boolean, onSubmit: () -> Unit, onCancel: () -> Unit) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BorealisButton(stringResource(R.string.addhost_submit), onSubmit, enabled = !busy)
+        BorealisButton(
+            stringResource(R.string.addhost_cancel),
+            onCancel,
+            style = BorealisButtonStyle.Secondary,
+            enabled = !busy,
+        )
+        if (busy) {
+            val description = stringResource(R.string.addhost_busy)
+            CircularProgressIndicator(
+                Modifier.size(PROGRESS_SIZE).semantics { contentDescription = description },
+                color = LocalBorealisColors.current.accent,
+                strokeWidth = PROGRESS_STROKE,
+            )
+        }
+    }
+}

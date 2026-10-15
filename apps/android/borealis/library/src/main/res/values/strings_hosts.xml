@@ -41,6 +41,7 @@
     <string name="hosts_empty_body">Borealis searches the local network for LuminalShine hosts. The PC must be on, with LuminalShine running, and on the same network. If it does not show up, use Add host to enter its address.</string>
 
     <string name="hosts_message_unavailable">This host is offline. Wake it or check that LuminalShine is running.</string>
+    <string name="hosts_message_checking">Still checking this host. Try again in a moment.</string>
     <string name="hosts_message_wake_sent">Wake-up sent. The PC can take a minute to appear.</string>
     <string name="hosts_message_already_online">The PC is already on.</string>
     <string name="hosts_message_no_mac">Borealis does not know this PC\'s network address yet. Pair it once while it is on.</string>

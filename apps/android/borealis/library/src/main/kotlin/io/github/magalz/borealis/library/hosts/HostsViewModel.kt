@@ -42,7 +42,7 @@ class HostsViewModel @Inject constructor(private val repository: HostRepository)
             HostAction.OPEN -> send(HostsEffect.OpenApps(hostId))
             HostAction.PAIR -> send(HostsEffect.OpenPairing(hostId))
             HostAction.WAKE -> onWake(hostId)
-            HostAction.NONE -> send(HostsEffect.ShowMessage(HostsMessage.HOST_UNAVAILABLE))
+            HostAction.NONE -> send(HostsEffect.ShowMessage(item.reachability.noActionMessage()))
         }
     }
 
@@ -126,3 +126,7 @@ private fun WakeResult.toMessage(): HostsMessage =
         WakeResult.NO_MAC_ADDRESS -> HostsMessage.NO_MAC_ADDRESS
         WakeResult.FAILED -> HostsMessage.WAKE_FAILED
     }
+
+/** Why tapping a host with no action does nothing: it is not polled yet, or it cannot be woken. */
+private fun Reachability.noActionMessage(): HostsMessage =
+    if (this == Reachability.UNKNOWN) HostsMessage.HOST_CHECKING else HostsMessage.HOST_UNAVAILABLE

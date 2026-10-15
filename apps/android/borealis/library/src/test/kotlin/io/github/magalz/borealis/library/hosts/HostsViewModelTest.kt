@@ -267,6 +267,24 @@ class HostsViewModelTest {
     }
 
     @Test
+    fun `forgetting a host closes its open details dialog but not another host's`() = runTest {
+        subscribe(viewModel.uiState)
+        repository.emit(aHost(id = "h"), aHost(id = "other", name = "Other"))
+        repository.detailsResult = "Desk PC"
+        runCurrent()
+        viewModel.onDetails("h")
+        runCurrent()
+
+        viewModel.onForget("other")
+        runCurrent()
+        assertThat(viewModel.uiState.value.details).isEqualTo("Desk PC")
+
+        viewModel.onForget("h")
+        runCurrent()
+        assertThat(viewModel.uiState.value.details).isNull()
+    }
+
+    @Test
     fun `add host and settings are navigation effects`() = runTest {
         viewModel.onAddHost()
         viewModel.onSettings()

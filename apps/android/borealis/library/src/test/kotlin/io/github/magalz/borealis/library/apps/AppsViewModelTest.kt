@@ -440,6 +440,54 @@ class AppsViewModelTest {
     }
 
     @Test
+    fun `a host that is not polled yet and not paired keeps the screen open until it is online and paired`() =
+        runTest {
+            repository.emit(
+                snapshot(desktop, host = aHost(reachability = Reachability.UNKNOWN, paired = false))
+            )
+            subscribe(viewModel.uiState)
+
+            viewModel.effects.test { expectNoEvents() }
+
+            repository.emit(
+                snapshot(desktop, host = aHost(reachability = Reachability.ONLINE, paired = true))
+            )
+            runCurrent()
+
+            assertThat(viewModel.uiState.value.items).containsExactly(item(desktop))
+            viewModel.effects.test { expectNoEvents() }
+        }
+
+    @Test
+    fun `an offline host that is not paired closes the screen as offline`() = runTest {
+        repository.emit(
+            snapshot(desktop, host = aHost(reachability = Reachability.OFFLINE, paired = false))
+        )
+        subscribe(viewModel.uiState)
+
+        viewModel.effects.test {
+            assertThat(awaitItem()).isEqualTo(AppsEffect.Close(AppsMessage.HostOffline))
+        }
+    }
+
+    @Test
+    fun `an action that is not in the open sheet is ignored`() = runTest {
+        repository.emit(snapshot(desktop, steam))
+        subscribe(viewModel.uiState)
+        viewModel.onActions(2)
+        runCurrent()
+        val sheet = viewModel.uiState.value.actions
+
+        viewModel.onActionChosen(AppAction.QUIT)
+        viewModel.onActionChosen(AppAction.RESUME)
+        runCurrent()
+
+        assertThat(repository.quitCalls).isEqualTo(0)
+        assertThat(viewModel.uiState.value.actions).isEqualTo(sheet)
+        viewModel.effects.test { expectNoEvents() }
+    }
+
+    @Test
     fun `a host that goes offline closes the screen once`() = runTest {
         repository.emit(snapshot(desktop))
         subscribe(viewModel.uiState)

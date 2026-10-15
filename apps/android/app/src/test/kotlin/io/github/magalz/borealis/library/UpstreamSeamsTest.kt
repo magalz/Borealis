@@ -7,6 +7,7 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import com.limelight.preferences.StreamSettings
 import java.io.File
+import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -60,6 +61,23 @@ class UpstreamSeamsTest {
         PcViewStartup().showDecoderCrashDialog(activity)
 
         assertThat(ShadowDialog.getLatestDialog()).isNull()
+    }
+
+    @Test
+    fun `a host client is built for a host with an active address`() {
+        val client = NvHostClientFactory(app).create(details(address = "192.168.1.5"), "unique")
+
+        assertThat(client).isInstanceOf(NvHostClient::class.java)
+    }
+
+    @Test
+    fun `a host client cannot be built for a host without an active address`() {
+        try {
+            NvHostClientFactory(app).create(details(address = null), "unique")
+            throw AssertionError("a client was built without an address")
+        } catch (expected: IOException) {
+            assertThat(expected).hasMessageThat().contains("No active address")
+        }
     }
 
     @Test

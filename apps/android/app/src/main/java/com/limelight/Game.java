@@ -2311,6 +2311,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                         dialogText += "\n\n" + getResources().getString(R.string.check_ports_msg) + "\n" +
                                 MoonBridge.stringifyPortFlags(portFlags, "\n");
                     }
+                    dialogText = io.github.magalz.borealis.host.launch.ResumeCollisions.withHint(conn != null && conn.endedByResumeCollision(), dialogText, Game.this::getString); // BOREALIS: say what happened when another device was starting its stream
 
                     if (portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0)  {
                         dialogText += "\n\n" + getResources().getString(R.string.nettest_text_blocked);

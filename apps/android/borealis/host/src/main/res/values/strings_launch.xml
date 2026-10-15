@@ -7,6 +7,9 @@
     <string name="launch_retry_capture_or_display">The host could not prepare its virtual display or video capture. Retrying in %1$s s (retry %2$s of %3$s).</string>
     <string name="launch_retry_generic">The host asked to try again. Retrying in %1$s s (retry %2$s of %3$s).</string>
 
+    <!-- Appended to the connection error when another device was still starting its stream on the host. -->
+    <string name="launch_resume_collision" tools:ignore="MissingTranslation">The host was still starting a stream for another device, so this device could not connect. Wait a few seconds and try again.</string>
+
     <!-- Host capabilities block of the PC details dialog. -->
     <string name="host_info_header">Host capabilities</string>
     <string name="host_info_family_gfe">GeForce Experience</string>

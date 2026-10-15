@@ -690,5 +690,5 @@ Follow-ups for the next sprint:
 - Retry `/serverinfo` when it times out while another client's launch holds the host.
 - Touch trackpad and mouse input did not work on the S22 with the release build. Compare with stock Moonlight.
 - The Streamer has hardware AV1 decoders (`c2.mtk.av1.decoder.lowlatency`), but the upstream decoder selection logged "No AV1 decoder found".
-- The first HDR frame on the S22 logged `Trying to restart decoder after CodecException` before the stream settled.
+- The first HDR frame on the S22 logged `Trying to restart decoder after CodecException` before the stream settled. Handled in S3-T3: the first IDR now goes to the restarted decoder instead of being dropped.
 - The audit `SESSION_START` records the requested frame rate (60), not the negotiated one (59).

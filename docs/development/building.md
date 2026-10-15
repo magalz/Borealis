@@ -161,6 +161,13 @@ cmake --build --preset dev
 ctest --preset dev
 ```
 
+Formatting check, as CI runs it (clang-format 22; the version is pinned in `.github/workflows/ci.yml`):
+
+```sh
+cd core
+find include src tests fuzz -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.cpp' \) -print0 | xargs -0 clang-format --dry-run --Werror
+```
+
 Sanitizers (ASan/UBSan):
 
 ```sh

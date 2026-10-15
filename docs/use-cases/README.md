@@ -46,5 +46,13 @@ lists the tests that prove it, and those tests are written first (see
 
 ## Index
 
-No use cases have been written yet. Add a table of `ID | Title | Status` here
-when the first one lands.
+| ID | Title | Status |
+| --- | --- | --- |
+| UC-001 | [Pair with a host](0001-pair-with-a-host.md) | Accepted |
+| UC-002 | [Start a stream](0002-start-a-stream.md) | Accepted |
+| UC-003 | [Join or replace a running app](0003-join-or-replace-a-running-app.md) | Accepted |
+| UC-004 | [Use the in-game menu](0004-use-the-in-game-menu.md) | Accepted |
+| UC-005 | [Type with the on-screen keyboard](0005-type-with-the-on-screen-keyboard.md) | Accepted |
+| UC-006 | [Send diagnostics from a TV to a phone](0006-send-diagnostics-from-a-tv-to-a-phone.md) | Accepted |
+| UC-007 | [Review and erase the audit trail](0007-review-and-erase-the-audit-trail.md) | Accepted |
+| UC-008 | [Add a host by address](0008-add-a-host-by-address.md) | Accepted |

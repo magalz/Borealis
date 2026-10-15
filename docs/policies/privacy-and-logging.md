@@ -10,8 +10,8 @@ behind these rules are in [0020](../adr/0020-logging.md),
 
 - **No telemetry.** No usage analytics, no advertising or tracking SDKs.
 - **Local first.** Logs, the diagnostic bundle and the audit trail stay on the
-  device. Nothing leaves unless the user exports it or opts in to crash
-  reporting.
+  device. Nothing leaves unless the user exports it (including the local
+  link of "Send to phone" on a TV) or opts in to crash reporting.
 - **Redact at the source.** Sensitive values are removed before they are
   written, not when they are exported.
 - **Least data.** If a value is not needed to diagnose a problem, do not log
@@ -72,7 +72,28 @@ Implementation requirements:
 - Vulkan capabilities are deferred to Phase 4 (PyroWave).
 - The bundle has a size bound.
 - It is shared through a FileProvider. On devices with no share target (Google
-  TV), it is saved to the app's external files directory and the path is shown.
+  TV), it is saved to the Downloads collection (the app's external files
+  directory on Android 9) and the path is shown.
+- On a TV, "Send to phone" serves the bundle once over a local link, as
+  [0051](../adr/0051-send-the-diagnostic-bundle-to-a-phone-with-a-qr-code.md)
+  decides:
+  - the server is plain HTTP and binds only the private IPv4 address of the
+    active Wi-Fi or Ethernet network, never `0.0.0.0`, on an ephemeral port;
+  - the URL path holds a 128-bit random token (compared in constant time); the
+    token and the full URL are never logged;
+  - the QR code holds the URL of a static page; the zip is a separate path, so a
+    link preview does not use up the download;
+  - one connection at a time, a read timeout of 10 seconds and a request head
+    capped at 8 KiB; no request body is read;
+  - the server stops after the first complete download, after 5 minutes (a
+    watchdog thread closes a connection still in flight at that point, so a
+    stalled client cannot extend it), or
+    when the dialog is dismissed or the settings screen is closed;
+  - the file is the bundle already built and redacted; nothing is added to it and
+    nothing is uploaded elsewhere.
+  - Residual risk: HTTP is not encrypted, so a device on the same network that
+    can see the link can fetch the file once, before the intended phone does.
+    Use it on a trusted network.
 - The user chooses where to share it. The bundle must not contain secrets; the
   bug report template warns users to check before posting.
 

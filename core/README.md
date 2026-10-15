@@ -108,6 +108,13 @@ cmake --build --preset dev
 ctest --preset dev
 ```
 
+Formatting is checked in CI with clang-format 22 (the exact version is pinned in `.github/workflows/ci.yml`). Run the same check before pushing:
+
+```sh
+cd core
+find include src tests fuzz -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.cpp' \) -print0 | xargs -0 clang-format --dry-run --Werror
+```
+
 Presets: `dev` (Debug), `asan` (Debug + ASan/UBSan), `release`, `coverage` (Debug + llvm-cov, clang). Build trees go to `core/build/<preset>`.
 On Windows without a Visual Studio environment, put the compiler and `ninja` on `PATH` (and set
 `CXX`), or add a git-ignored `CMakeUserPresets.json`.

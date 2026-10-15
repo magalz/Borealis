@@ -44,6 +44,7 @@ import io.github.magalz.borealis.host.launch.HostError;
 import io.github.magalz.borealis.host.launch.LaunchConflicts;
 import io.github.magalz.borealis.host.launch.LaunchOutcome;
 import io.github.magalz.borealis.host.launch.LaunchRetries;
+import io.github.magalz.borealis.host.launch.ServerInfoRetry;
 
 public class NvConnection {
     // Context parameters
@@ -261,7 +262,7 @@ public class NvConnection {
     {
         NvHTTP h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, context.serverCert, cryptoProvider);
 
-        String serverInfo = h.getServerInfo(true);
+        String serverInfo = ServerInfoRetry.read(() -> h.getServerInfo(true), () -> launchCancelled); // BOREALIS: retry a timed-out /serverinfo (host.launch)
         
         context.serverAppVersion = h.getServerVersion(serverInfo);
         if (context.serverAppVersion == null) {
@@ -448,6 +449,7 @@ public class NvConnection {
                     context.connListener.stageFailed(appName, 0, e.getErrorCode());
                     return;
                 } catch (XmlPullParserException | IOException e) {
+                    if (launchCancelled) { return; } // BOREALIS: the user left during the /serverinfo retry, nothing to report
                     e.printStackTrace();
                     context.connListener.displayMessage(e.getMessage());
                     context.connListener.stageFailed(appName, MoonBridge.ML_PORT_FLAG_TCP_47984 | MoonBridge.ML_PORT_FLAG_TCP_47989, 0);

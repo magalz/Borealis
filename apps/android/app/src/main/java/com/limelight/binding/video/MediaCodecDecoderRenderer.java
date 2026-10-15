@@ -38,12 +38,14 @@ import android.view.Choreographer;
 import android.view.SurfaceHolder;
 // BOREALIS: first-frame signal for the stream startup guard (host.video)
 import io.github.magalz.borealis.host.video.FirstFrameSignal;
+import io.github.magalz.borealis.host.video.HdrRestartReuse; // BOREALIS: keeps the first IDR across the HDR decoder restart (host.video)
 import io.github.magalz.borealis.host.video.HevcSpsMonitor; // BOREALIS: HEVC SPS diagnostics (host.video)
 
 public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements Choreographer.FrameCallback {
     // BOREALIS: raised once, when the first output buffer is released for rendering
     public final FirstFrameSignal firstFrameSignal = new FirstFrameSignal();
     private final HevcSpsMonitor hevcSpsMonitor; // BOREALIS: logs the stream profile, never affects decoding
+    private final HdrRestartReuse hdrRestartReuse = new HdrRestartReuse(); // BOREALIS: set by setHdrMode, used once by the IDR CSD fetch
 
     private static final boolean USE_FRAME_RENDER_TIME = false;
     private static final boolean FRAME_RENDER_TIME_ONLY = USE_FRAME_RENDER_TIME && false;
@@ -1282,6 +1284,8 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             // HACK: Reset codec recovery attempt counter, since this is an expected "recovery"
             codecRecoveryAttempts = 0;
 
+            hdrRestartReuse.requested(); // BOREALIS: before the promotion, so a recovery cannot run ahead of the mark
+
             // Promote None/Flush to Restart and leave Reset alone
             if (!codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESTART)) {
                 codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_FLUSH, CR_RECOVERY_TYPE_RESTART);
@@ -1597,7 +1601,9 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                 // If this is the first CSD blob or we aren't supporting fused IDR frames, we will
                 // submit the CSD blob in a separate input buffer for each IDR frame.
                 if (!submittedCsd || !fusedIdrFrame) {
-                    if (!fetchNextInputBuffer()) {
+                    // BOREALIS: an HDR restart clears the CSD in configureAndStartDecoder; restore it and fetch once more to keep this IDR
+                    hdrRestartReuse.snapshot(vpsBuffers, spsBuffers, ppsBuffers);
+                    if (!fetchNextInputBuffer() && !(hdrRestartReuse.restoreForRetry(vpsBuffers, spsBuffers, ppsBuffers) && fetchNextInputBuffer())) {
                         return MoonBridge.DR_NEED_IDR;
                     }
 

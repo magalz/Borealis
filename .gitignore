@@ -17,6 +17,7 @@ build/
 .cxx/
 .externalNativeBuild/
 captures/
+!docs/ux/captures/
 
 # Signing material (never commit)
 *.jks

@@ -346,6 +346,26 @@ for resume the equivalent is `resume` 1 (`src/nvhttp.cpp:3471-3486`).
   `config::video.dd.config_revert_on_disconnect` is true; otherwise the existing
   virtual display is preserved, or recreated on demand if it is gone
   (`src/nvhttp.cpp:3295-3296`, `src/nvhttp.cpp:286-324`).
+- **Observed, not verified in the source:** while the host builds a per-client
+  virtual display for one client's `/launch` (about 14 s on the Sprint 2 test
+  host), it answers no other HTTPS request, because the server has a single io
+  thread (upstream issue `NortheBridge/luminalshine#202`; the proposed fix,
+  PR #203, is not merged). A second client's `GET /serverinfo` then runs into the
+  client's 7 s read timeout. Borealis retries a `/serverinfo` read timeout at
+  stream start, up to 3 attempts within about 25 s and until the launch is
+  cancelled, and then reports the timeout as before. Only `/serverinfo` is
+  retried: `/launch`, `/resume`, `/cancel`, `/quit` and pairing are not
+  idempotent. A client that polls `/serverinfo` in the background can see the
+  host as briefly offline during that window.
+- **Observed, not verified in the source (Sprint 3):** when a second client's
+  `/resume` is accepted while the first client's `/launch` is still setting up,
+  the host logs `Failed to verify RTSP message tag` and the second client's RTSP
+  `OPTIONS` fails (`Failed to decrypt RTSP response`, error -1). The first
+  client streams normally.
+- **Observed (Sprint 3):** the host process crashed once right after the virtual
+  display cleanup of an ended session (`unhandled exception 0x20474343` in
+  `KERNELBASE.dll`) and restarted about 9 s later. Requests in that window get a
+  connection reset.
 
 ### 7.4 Mode reconciliation between `/launch` and RTSP
 
@@ -546,6 +566,10 @@ configuration (`src/nvhttp.cpp:2542-2576`):
 - PyroWave bits are added by `pyrowave::server_codec_mask` when PyroWave is
   enabled and available (`src/nvhttp.cpp:2573-2575`); see
   [pyrowave.md](pyrowave.md) for the bit values.
+- AV1 needs an AV1 encoder on the host. On the Sprint 2 and 3 test host (an
+  RTX 3080 Ti) the host logs `Encoder [av1_nvenc] is not supported on this GPU`
+  and advertises no AV1. Moonlight 12.2, and Borealis with it, selects an AV1
+  decoder only when the user forces AV1.
 
 The legacy bit values come from upstream moonlight-common-c at 874ac95 (not the
 Aurora fork), which the Moonlight Android client uses: `SCM_H264` `0x1`,
@@ -712,6 +736,13 @@ discriminate by direction, not by type.
   (`src/platform/windows/input.cpp:1191-1194`).
 - DualSense adaptive trigger effects and trigger rumble are not produced by the
   Windows host (no emitter in `src/platform/windows/input.cpp`).
+- The host settings `mouse` and `keyboard` gate all client input. With
+  `mouse = disabled` the host drops every relative and absolute mouse, button,
+  scroll, touch and pen packet (`src/input.cpp:452-983`); with
+  `keyboard = disabled` it drops keys (`src/input.cpp:771-772`, `:872-873`). The
+  host does not advertise either setting, so a client cannot tell. Observed in
+  Sprint 2: touch "did not work" on the Galaxy S22 because the test host had
+  `mouse = disabled`.
 
 ## 14. Audio
 

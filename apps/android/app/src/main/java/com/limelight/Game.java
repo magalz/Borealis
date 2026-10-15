@@ -114,6 +114,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private VirtualController virtualController;
 
     private PreferenceConfiguration prefConfig;
+    private int streamFrameRate; // BOREALIS: the frame rate negotiated with the host, for the audit trail (host.launch)
     private SharedPreferences tombstonePrefs;
 
     private NvConnection conn;
@@ -471,6 +472,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             }
         }
 
+        streamFrameRate = chosenFrameRate; // BOREALIS: audited as negotiated, not as requested (host.launch)
         StreamConfiguration config = new StreamConfiguration.Builder()
                 .setResolution(prefConfig.width, prefConfig.height)
                 .setLaunchRefreshRate(prefConfig.fps)
@@ -2454,7 +2456,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 connecting = false;
                 updatePipAutoEnter();
                 startupGuard.onConnectionStarted(); // BOREALIS: preparing message and first-frame watchdog
-                io.github.magalz.borealis.host.launch.SessionAudit.started(pcName, Game.this.getIntent().getStringExtra(EXTRA_HOST), decoderRenderer.getActiveVideoFormat(), prefConfig.width, prefConfig.height, prefConfig.fps); // BOREALIS: audit trail
+                io.github.magalz.borealis.host.launch.SessionAudit.started(pcName, Game.this.getIntent().getStringExtra(EXTRA_HOST), decoderRenderer.getActiveVideoFormat(), prefConfig.width, prefConfig.height, streamFrameRate); // BOREALIS: audit trail
 
                 // Hide the mouse cursor now after a short delay.
                 // Doing it before dismissing the spinner seems to be undone

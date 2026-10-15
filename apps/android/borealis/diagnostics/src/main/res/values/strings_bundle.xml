@@ -11,5 +11,17 @@
     <string name="borealis_export_saved_title">Diagnostics saved</string>
     <string name="borealis_export_saved_message">The diagnostic bundle was saved here:\n\n%1$s\n\nTo copy it to a computer, run:\n\n%2$s</string>
     <string name="borealis_export_share">Share…</string>
+    <string name="borealis_export_send_to_phone">Send to phone</string>
     <string name="borealis_export_close">Close</string>
+
+    <string name="borealis_transfer_title">Send to phone</string>
+    <string name="borealis_transfer_instructions">Scan this code with your phone\'s camera while it is on the same network. The link works for one download and expires in 5 minutes.</string>
+    <string name="borealis_transfer_qr_description">QR code with the link to download the diagnostic bundle</string>
+    <string name="borealis_transfer_expires">Expires in %1$s</string>
+    <string name="borealis_transfer_status_waiting">Waiting for the phone…</string>
+    <string name="borealis_transfer_status_downloaded">Downloaded</string>
+    <string name="borealis_transfer_status_expired">Expired</string>
+    <string name="borealis_transfer_status_stopped">Stopped</string>
+    <string name="borealis_transfer_no_network">No local network was found. Connect the TV to Wi-Fi or Ethernet and try again, or copy the bundle with the adb command shown before.</string>
+    <string name="borealis_transfer_failed">Could not start the transfer. See the log for details.</string>
 </resources>

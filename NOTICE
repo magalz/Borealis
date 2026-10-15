@@ -111,6 +111,10 @@ Borealis Kotlin modules (apps/android/gradle/libs.versions.toml)
     License: Apache-2.0
     https://github.com/Kotlin/kotlinx.serialization
 
+  ZXing core (QR code generation)
+    License: Apache-2.0
+    https://github.com/zxing/zxing
+
 ================================================================================
 Complete list
 ================================================================================

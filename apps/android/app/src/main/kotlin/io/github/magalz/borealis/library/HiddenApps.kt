@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.library
 
 import android.content.Context
+import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -28,14 +29,14 @@ internal class HiddenApps @Inject constructor(@ApplicationContext private val co
     @Synchronized
     fun set(hostId: String, appId: Int, hidden: Boolean) {
         val ids = if (hidden) read(hostId) + appId else read(hostId) - appId
-        prefs.edit().putStringSet(hostId, ids.mapTo(HashSet()) { it.toString() }).apply()
+        prefs.edit { putStringSet(hostId, ids.mapTo(HashSet()) { it.toString() }) }
         changes.update { it + 1 }
     }
 
     /** Forgets the hidden apps of a host that was removed. */
     @Synchronized
     fun clear(hostId: String) {
-        prefs.edit().remove(hostId).apply()
+        prefs.edit { remove(hostId) }
         changes.update { it + 1 }
     }
 

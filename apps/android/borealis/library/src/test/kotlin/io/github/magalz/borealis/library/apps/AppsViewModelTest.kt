@@ -24,7 +24,8 @@ class AppsViewModelTest {
     @get:Rule val mainDispatcher = MainDispatcherRule()
 
     private val repository = FakeAppRepository()
-    private val viewModel = AppsViewModel("host-1", repository)
+    // Lazy: a ViewModel must be created after the rule has set the main dispatcher.
+    private val viewModel by lazy { AppsViewModel("host-1", repository) }
 
     private val desktop = anApp(id = 1, name = "Desktop")
     private val steam = anApp(id = 2, name = "steam", hdrSupported = true)

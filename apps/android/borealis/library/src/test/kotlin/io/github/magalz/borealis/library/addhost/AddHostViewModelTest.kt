@@ -16,7 +16,8 @@ class AddHostViewModelTest {
     @get:Rule val mainDispatcher = MainDispatcherRule()
 
     private val repository = FakeHostRepository()
-    private val viewModel = AddHostViewModel(repository)
+    // Lazy: a ViewModel must be created after the rule has set the main dispatcher.
+    private val viewModel by lazy { AddHostViewModel(repository) }
 
     @Test
     fun `typing keeps the address`() = runTest {

@@ -20,7 +20,8 @@ class HostsViewModelTest {
     @get:Rule val mainDispatcher = MainDispatcherRule()
 
     private val repository = FakeHostRepository()
-    private val viewModel = HostsViewModel(repository)
+    // Lazy: a ViewModel must be created after the rule has set the main dispatcher.
+    private val viewModel by lazy { HostsViewModel(repository) }
 
     @Test
     fun `an empty list means the screen is searching`() = runTest {

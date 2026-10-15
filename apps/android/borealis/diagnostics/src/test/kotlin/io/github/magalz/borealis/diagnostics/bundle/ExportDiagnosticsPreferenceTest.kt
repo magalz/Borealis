@@ -287,7 +287,7 @@ class ExportDiagnosticsPreferenceTest {
 
     private fun imageOf(view: View): ImageView? =
         when (view) {
-            is ImageView -> view
+            is ImageView -> view.takeIf { it.contentDescription?.contains("QR code") == true }
             is ViewGroup ->
                 (0 until view.childCount).firstNotNullOfOrNull { imageOf(view.getChildAt(it)) }
             else -> null

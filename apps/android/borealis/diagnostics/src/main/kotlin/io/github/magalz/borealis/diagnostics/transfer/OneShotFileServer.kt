@@ -39,7 +39,7 @@ internal enum class TransferStatus {
 internal class OneShotFileServer(
     private val file: File,
     private val bindAddress: InetAddress,
-    private val clock: () -> Long = { System.nanoTime() / NANOS_PER_MILLI },
+    private val clock: () -> Long = ::monotonicMillis,
     private val lifetimeMillis: Long = DEFAULT_LIFETIME_MILLIS,
     private val readTimeoutMillis: Int = DEFAULT_READ_TIMEOUT_MILLIS,
 ) {
@@ -271,3 +271,8 @@ private fun reply(
     TransferHttp.reply(client.getOutputStream(), status, extraHeaders, body, contentType)
     BorealisLog.i(LogTag.APP, "diagnostic transfer request", "status" to status.code)
 }
+
+/** A clock that only moves forward, in milliseconds; the default for lifetimes and countdowns. */
+internal fun monotonicMillis(): Long = System.nanoTime() / NANOS_PER_MILLI_CLOCK
+
+private const val NANOS_PER_MILLI_CLOCK = 1_000_000L

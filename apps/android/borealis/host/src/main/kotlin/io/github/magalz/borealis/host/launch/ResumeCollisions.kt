@@ -22,8 +22,8 @@ enum class StageFailure {
 }
 
 /**
- * Handles a second device that joins while LuminalShine is still building another device's
- * virtual display (host contract 7.3, luminalshine#205). The host answers the second device's slow
+ * Handles a second device that joins while LuminalShine is still building another device's virtual
+ * display (host contract 7.3, luminalshine#205). The host answers the second device's slow
  * `/serverinfo`, accepts its `/resume`, and then cannot decrypt its RTSP messages. Waiting a few
  * seconds before `/resume`, and restarting the whole start once when RTSP still fails right after
  * an accepted `/resume`, lets the second device in; when that fails too, the error says what
@@ -168,8 +168,8 @@ internal constructor(
     fun isRestart(): Boolean = restarts > 0
 
     /**
-     * The restart never quits another device's app. Always false; the caller then reports the
-     * start as failed, with the collision text.
+     * The restart never quits another device's app. Always false; the caller then reports the start
+     * as failed, with the collision text.
      */
     fun refuseQuit(): Boolean {
         BorealisLog.w(LogTag.LAUNCH, "restart found another app running, not quitting it")

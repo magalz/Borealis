@@ -44,6 +44,7 @@ import io.github.magalz.borealis.host.launch.HostError;
 import io.github.magalz.borealis.host.launch.LaunchConflicts;
 import io.github.magalz.borealis.host.launch.LaunchOutcome;
 import io.github.magalz.borealis.host.launch.LaunchRetries;
+import io.github.magalz.borealis.host.launch.ResumeCollisions;
 import io.github.magalz.borealis.host.launch.ServerInfoRetry;
 
 public class NvConnection {
@@ -58,6 +59,8 @@ public class NvConnection {
     private volatile boolean launchCancelled;
     // BOREALIS: one resolution of "an app is already running" per launch (host.launch)
     private final LaunchConflicts conflicts = new LaunchConflicts(() -> launchCancelled, this::cancelLaunch);
+    // BOREALIS: wait, then restart once, when a /resume collides with another device's launch (host.launch)
+    private final ResumeCollisions collisions = new ResumeCollisions(() -> launchCancelled, (c, a, m, d) -> context.connListener.launchRetrying(c, a, m, d), () -> context.serverAddress.address);
 
     public NvConnection(Context appContext, ComputerDetails.AddressTuple host, int httpsPort, String uniqueId, StreamConfiguration config, LimelightCryptoProvider cryptoProvider, X509Certificate serverCert)
     {
@@ -115,6 +118,8 @@ public class NvConnection {
     public void cancelLaunch() {
         launchCancelled = true;
     }
+
+    public boolean endedByResumeCollision() { return collisions.collided(); } // BOREALIS: the start failed because another device was starting its stream (host.launch)
 
     // BOREALIS: /launch and /resume through the host.launch retry runner (host.launch)
     private LaunchOutcome launchWithRetry(NvHTTP h, String verb, int appId) throws IOException, XmlPullParserException {
@@ -262,7 +267,7 @@ public class NvConnection {
     {
         NvHTTP h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, context.serverCert, cryptoProvider);
 
-        String serverInfo = ServerInfoRetry.read(() -> h.getServerInfo(true), () -> launchCancelled); // BOREALIS: retry a timed-out /serverinfo (host.launch)
+        String serverInfo = collisions.readServerInfo(() -> h.getServerInfo(true)); // BOREALIS: retry a timed-out /serverinfo (host.launch)
         
         context.serverAppVersion = h.getServerVersion(serverInfo);
         if (context.serverAppVersion == null) {
@@ -351,14 +356,14 @@ public class NvConnection {
             LaunchOutcome resumed = LaunchOutcome.SUCCEEDED; // BOREALIS: kept outside the try so the fallback launch is not handled as a resume error
             try {
                 if (h.getCurrentGame(serverInfo) == app.getAppId()) {
-                    resumed = launchWithRetry(h, "resume", app.getAppId()); // BOREALIS: retries, cancellation and the no-app fallback
+                    resumed = collisions.settleBeforeResume() ? launchWithRetry(h, "resume", app.getAppId()) : LaunchOutcome.CANCELLED; // BOREALIS: wait while the host is busy; retries, cancellation and the no-app fallback
                     if (resumed == LaunchOutcome.CANCELLED) { return false; } // BOREALIS
                     if (resumed == LaunchOutcome.FAILED) { // BOREALIS: was !h.launchApp(context, "resume", ...)
                         context.connListener.displayMessage("Failed to resume existing session");
                         return false;
                     }
                 } else {
-                    return quitAndLaunch(h, context);
+                    return collisions.isRestart() ? collisions.refuseQuit() : quitAndLaunch(h, context); // BOREALIS: a restart never quits another device's app
                 }
             } catch (HostHttpResponseException e) {
                 if (e.getErrorCode() == 470) {
@@ -379,6 +384,7 @@ public class NvConnection {
             }
             if (resumed == LaunchOutcome.FALLBACK_TO_LAUNCH) { return launchNotRunningApp(h, context); } // BOREALIS: nothing to resume, launch instead
 
+            collisions.resumeAccepted(context.isNvidiaServerSoftware); // BOREALIS
             LimeLog.info("Resumed existing game session");
             return true;
         }
@@ -475,7 +481,7 @@ public class NvConnection {
                 // Moonlight-core is not thread-safe with respect to connection start and stop, so
                 // we must not invoke that functionality in parallel.
                 synchronized (MoonBridge.class) {
-                    MoonBridge.setupBridge(videoDecoderRenderer, audioRenderer, connectionListener);
+                    MoonBridge.setupBridge(videoDecoderRenderer, audioRenderer, new io.github.magalz.borealis.HeldStageFailures(connectionListener, collisions)); // BOREALIS: hold an RTSP failure that collides with another device
                     int ret = MoonBridge.startConnection(context.serverAddress.address,
                             context.serverAppVersion, context.serverGfeVersion, context.rtspSessionUrl,
                             context.serverCodecModeSupport,
@@ -494,6 +500,7 @@ public class NvConnection {
                         // to stop the connection themselves. We need to release their
                         // semaphore count for them.
                         connectionAllowed.release();
+                        if (collisions.restartAfterFailure()) { start(audioRenderer, videoDecoderRenderer, connectionListener); } // BOREALIS: restart the whole start once
                         return;
                     }
                 }

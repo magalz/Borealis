@@ -13,6 +13,8 @@ import java.net.SocketTimeoutException
 import java.net.URLEncoder
 import java.security.MessageDigest
 import java.security.SecureRandom
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /** Where a transfer stands. Everything but [WAITING] is final. */
 internal enum class TransferStatus {
@@ -34,7 +36,10 @@ internal enum class TransferStatus {
  * - Anything else is 404 (wrong token or path), 405 (not GET), 400, 408 or 431.
  *
  * One thread accepts and serves one connection at a time, so a second connection waits in the
- * backlog. It stops at the first of a complete download, [lifetimeMillis] (on [clock]) and [stop].
+ * backlog. A second, watchdog thread enforces [lifetimeMillis] (on [clock]) by closing the
+ * listening socket and the connection in flight, so a client that stalls cannot keep the link
+ * alive. The server stops at the first of a complete download, the lifetime and [stop]; both
+ * threads end.
  */
 internal class OneShotFileServer(
     private val file: File,
@@ -46,6 +51,8 @@ internal class OneShotFileServer(
     private val lock = Any()
     private var serverSocket: ServerSocket? = null
     private var thread: Thread? = null
+    private var watchdog: Thread? = null
+    private val over = CountDownLatch(1)
     private var activeClient: Socket? = null
     private var link: String? = null
     private var token: ByteArray = ByteArray(0)
@@ -56,7 +63,7 @@ internal class OneShotFileServer(
         private set
 
     val isRunning: Boolean
-        get() = synchronized(lock) { thread?.isAlive == true }
+        get() = synchronized(lock) { thread?.isAlive == true || watchdog?.isAlive == true }
 
     /**
      * Binds an ephemeral port on the bind address and starts serving; returns the link to show.
@@ -75,11 +82,8 @@ internal class OneShotFileServer(
             serverSocket = socket
             val url = "http://${bindAddress.hostAddress}:${socket.localPort}/$tokenText"
             link = url
-            thread =
-                Thread({ serve(socket) }, THREAD_NAME).apply {
-                    isDaemon = true
-                    start()
-                }
+            thread = daemon(THREAD_NAME) { serve(socket) }
+            watchdog = daemon("$THREAD_NAME-watchdog") { enforceLifetime() }
             BorealisLog.i(
                 LogTag.APP,
                 "diagnostic transfer started",
@@ -97,38 +101,53 @@ internal class OneShotFileServer(
 
     /**
      * Stops the server: closes the listening socket and the connection being served, which frees
-     * the thread wherever it is blocked, and waits for it. Safe to call again, from any thread.
+     * the threads wherever they are blocked, and waits for them. Safe to call again, from any
+     * thread.
      */
     fun stop() {
-        val toClose =
-            synchronized(lock) {
-                finish(TransferStatus.STOPPED)
-                listOfNotNull(serverSocket, activeClient)
-            }
-        toClose.forEach { runCatching { it.close() } }
-        val running = synchronized(lock) { thread }
-        if (running != null && running !== Thread.currentThread()) {
+        finish(TransferStatus.STOPPED, close = true)
+        val running = synchronized(lock) { listOfNotNull(thread, watchdog) }
+        for (thread in running) {
+            if (thread === Thread.currentThread()) continue
             try {
-                running.join(JOIN_MILLIS)
+                thread.join(JOIN_MILLIS)
             } catch (_: InterruptedException) {
                 Thread.currentThread().interrupt()
             }
         }
     }
 
-    private fun finish(final: TransferStatus) {
-        synchronized(lock) { if (status == TransferStatus.WAITING) status = final }
+    /** Moves a waiting transfer to [final]; with [close], also closes what the threads block on. */
+    private fun finish(final: TransferStatus, close: Boolean = false) {
+        val toClose =
+            synchronized(lock) {
+                if (status == TransferStatus.WAITING) status = final
+                if (close) listOfNotNull(serverSocket, activeClient) else emptyList()
+            }
+        toClose.forEach { runCatching { it.close() } }
     }
 
-    /** False once the server was stopped or its lifetime ran out. */
-    private fun keepServing(): Boolean {
-        if (clock() >= expiresAtMillis) finish(TransferStatus.EXPIRED)
-        return status == TransferStatus.WAITING || status == TransferStatus.DOWNLOADED
+    /** True until the server was stopped or its lifetime ran out. */
+    private val isActive: Boolean
+        get() = status == TransferStatus.WAITING || status == TransferStatus.DOWNLOADED
+
+    /**
+     * Runs beside the serving thread: at the deadline it ends the transfer and closes whatever the
+     * serving thread is blocked on, which a blocked write to a stalled client would otherwise hold
+     * past the lifetime. It ends with the serving thread.
+     */
+    private fun enforceLifetime() {
+        while (!over.await(POLL_MILLIS.toLong(), TimeUnit.MILLISECONDS)) {
+            if (clock() >= expiresAtMillis) {
+                finish(TransferStatus.EXPIRED, close = true)
+                return
+            }
+        }
     }
 
     private fun serve(socket: ServerSocket) {
         try {
-            while (keepServing()) {
+            while (isActive) {
                 // Once the file is gone, only connections already queued are answered (with 410).
                 val downloaded = status == TransferStatus.DOWNLOADED
                 socket.soTimeout = if (downloaded) DRAIN_MILLIS else POLL_MILLIS
@@ -140,15 +159,13 @@ internal class OneShotFileServer(
         } finally {
             runCatching { socket.close() }
             finish(TransferStatus.STOPPED)
+            over.countDown()
             BorealisLog.i(LogTag.APP, "diagnostic transfer stopped", "reason" to status.name)
         }
     }
 
     private fun handle(client: Socket) {
-        val accepted =
-            synchronized(lock) {
-                (status != TransferStatus.STOPPED).also { if (it) activeClient = client }
-            }
+        val accepted = synchronized(lock) { isActive.also { if (it) activeClient = client } }
         try {
             if (accepted) {
                 client.soTimeout = readTimeoutMillis
@@ -271,6 +288,12 @@ private fun reply(
     TransferHttp.reply(client.getOutputStream(), status, extraHeaders, body, contentType)
     BorealisLog.i(LogTag.APP, "diagnostic transfer request", "status" to status.code)
 }
+
+private fun daemon(name: String, body: () -> Unit): Thread =
+    Thread(body, name).apply {
+        isDaemon = true
+        start()
+    }
 
 /** A clock that only moves forward, in milliseconds; the default for lifetimes and countdowns. */
 internal fun monotonicMillis(): Long = System.nanoTime() / NANOS_PER_MILLI_CLOCK

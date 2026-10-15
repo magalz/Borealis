@@ -69,14 +69,14 @@ internal object TransferHttp {
     }
         .toByteArray(Charsets.US_ASCII)
 
-    /** A complete small reply; the body defaults to the reason phrase. */
+    /** A complete small reply. */
     @Throws(IOException::class)
     fun reply(
         out: OutputStream,
         status: HttpStatus,
-        extraHeaders: List<String> = emptyList(),
-        body: ByteArray = status.reason.toByteArray(),
-        contentType: String = "text/plain; charset=utf-8",
+        extraHeaders: List<String>,
+        body: ByteArray,
+        contentType: String,
     ) {
         out.write(
             head(

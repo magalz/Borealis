@@ -49,7 +49,15 @@ internal class TransferDialog(
                 showMessage(R.string.borealis_transfer_failed)
                 return
             }
-        showLink(server, link)
+        // The link only exists on screen once showLink returns; if building it fails, nothing could
+        // ever stop the server, so stop it here.
+        var shown = false
+        try {
+            showLink(server, link)
+            shown = true
+        } finally {
+            if (!shown) server.stop()
+        }
     }
 
     private fun showLink(server: OneShotFileServer, link: String) {

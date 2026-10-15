@@ -98,6 +98,14 @@ class LocalNetworkTest {
     }
 
     @Test
+    fun `an active network with unknown capabilities gives nothing`() {
+        val manager = connectivity(NetworkCapabilities.TRANSPORT_WIFI, "192.168.1.23")
+        shadowOf(manager).setNetworkCapabilities(manager.activeNetwork!!, null)
+
+        assertThat(activeLocalIpv4(manager)).isNull()
+    }
+
+    @Test
     fun `no active network gives nothing`() {
         val manager = connectivity(null, active = false)
 

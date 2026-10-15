@@ -74,6 +74,8 @@ class ExportDiagnosticsPreferenceTest {
     @After
     fun tearDown() {
         ShadowToast.reset()
+        // Every transfer dialog a test opens must have stopped its server.
+        assertThat(transferThreads()).isEqualTo(0)
     }
 
     private fun preference(
@@ -345,7 +347,7 @@ class ExportDiagnosticsPreferenceTest {
         val url = urlIn(transfer)
         assertThat(url).matches("http://127\\.0\\.0\\.1:\\d+/[0-9a-f]{32}")
         assertThat(decode(imageOf(transfer.window!!.decorView)!!)).isEqualTo(url)
-        transfer.dismiss()
+        dismissAndIdle(transfer)
     }
 
     @Test
@@ -357,7 +359,7 @@ class ExportDiagnosticsPreferenceTest {
         val width = imageOf(transfer.window!!.decorView)!!.drawable.intrinsicWidth
         assertThat(width).isAtMost(target)
         assertThat(width).isGreaterThan(target - 45)
-        transfer.dismiss()
+        dismissAndIdle(transfer)
     }
 
     @Test
@@ -374,7 +376,7 @@ class ExportDiagnosticsPreferenceTest {
         assertThat(transfer.getButton(AlertDialog.BUTTON_POSITIVE).text.toString())
             .isEqualTo("Close")
         assertThat(transfer.getButton(AlertDialog.BUTTON_POSITIVE).hasFocus()).isTrue()
-        transfer.dismiss()
+        dismissAndIdle(transfer)
     }
 
     @Test
@@ -385,7 +387,7 @@ class ExportDiagnosticsPreferenceTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1))
 
         assertThat(texts(transfer.window!!.decorView)).contains("Expires in 3:59")
-        transfer.dismiss()
+        dismissAndIdle(transfer)
     }
 
     @Test
@@ -402,7 +404,7 @@ class ExportDiagnosticsPreferenceTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1))
 
         assertThat(texts(transfer.window!!.decorView)).contains("Downloaded")
-        transfer.dismiss()
+        dismissAndIdle(transfer)
     }
 
     @Test
@@ -417,7 +419,7 @@ class ExportDiagnosticsPreferenceTest {
         }
 
         assertThat(texts(transfer.window!!.decorView)).contains("Expired")
-        transfer.dismiss()
+        dismissAndIdle(transfer)
     }
 
     @Test
@@ -492,6 +494,12 @@ class ExportDiagnosticsPreferenceTest {
         assertThat(ShadowToast.getTextOfLatestToast())
             .isEqualTo("Could not start the transfer. See the log for details.")
         assertThat(transferThreads()).isEqualTo(before)
+    }
+
+    /** The dismiss listener, which stops the server, is posted to the main looper. */
+    private fun dismissAndIdle(dialog: AlertDialog) {
+        dialog.dismiss()
+        shadowOf(Looper.getMainLooper()).idle()
     }
 
     private fun transferThreads(): Int =

@@ -1601,8 +1601,9 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                 // If this is the first CSD blob or we aren't supporting fused IDR frames, we will
                 // submit the CSD blob in a separate input buffer for each IDR frame.
                 if (!submittedCsd || !fusedIdrFrame) {
-                    // BOREALIS: an HDR restart leaves the CSD intact, so fetch once more and keep this IDR
-                    if (!fetchNextInputBuffer() && !(hdrRestartReuse.retryAfterRecovery(frameType == MoonBridge.FRAME_TYPE_IDR) && fetchNextInputBuffer())) {
+                    // BOREALIS: an HDR restart clears the CSD in configureAndStartDecoder; restore it and fetch once more to keep this IDR
+                    hdrRestartReuse.snapshot(vpsBuffers, spsBuffers, ppsBuffers);
+                    if (!fetchNextInputBuffer() && !(hdrRestartReuse.restoreForRetry(vpsBuffers, spsBuffers, ppsBuffers) && fetchNextInputBuffer())) {
                         return MoonBridge.DR_NEED_IDR;
                     }
 

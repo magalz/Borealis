@@ -1,0 +1,186 @@
+package io.github.magalz.borealis.designsystem.components
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.unit.dp
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.theme.BorealisTheme
+import io.github.magalz.borealis.designsystem.theme.FormFactor
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+
+@RunWith(AndroidJUnit4::class)
+@Config(qualifiers = "w360dp-h640dp-xhdpi")
+class SmallComponentsTest {
+    @get:Rule val composeRule = createComposeRule()
+
+    @Test
+    fun `a kicker is set in capitals`() {
+        composeRule.setContent { BorealisTheme { Kicker("Living room PC") } }
+
+        composeRule.onNodeWithText("LIVING ROOM PC").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a PIN is announced digit by digit`() {
+        composeRule.setContent { BorealisTheme { PinDisplay("4817") } }
+
+        composeRule.onNodeWithContentDescription("4, 8, 1, 7").assertIsDisplayed()
+        composeRule
+            .onNodeWithContentDescription("4, 8, 1, 7")
+            .assertContentDescriptionEquals("4, 8, 1, 7")
+    }
+
+    @Test
+    fun `an empty state shows its title and body`() {
+        composeRule.setContent {
+            BorealisTheme { EmptyState(title = "Looking for hosts", body = "Keep the PC on.") }
+        }
+
+        composeRule.onNodeWithText("Looking for hosts").assertIsDisplayed()
+        composeRule.onNodeWithText("Keep the PC on.").assertIsDisplayed()
+    }
+
+    @Test
+    fun `an empty state action runs`() {
+        var runs = 0
+        composeRule.setContent {
+            BorealisTheme {
+                EmptyState(
+                    title = "Looking for hosts",
+                    body = "Keep the PC on.",
+                    action = EmptyStateAction("Add host") { runs++ },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Add host").performClick()
+
+        assertThat(runs).isEqualTo(1)
+    }
+
+    @Test
+    fun `an empty state without an action has no button`() {
+        composeRule.setContent {
+            BorealisTheme { EmptyState(title = "Looking for hosts", body = "Keep the PC on.") }
+        }
+
+        composeRule.onNodeWithText("Add host").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the text field shows its label and the typed text`() {
+        composeRule.setContent { Field() }
+
+        composeRule.onNodeWithText("Address").assertIsDisplayed()
+        composeRule.onNodeWithText("Address").performTextInput("desk.local")
+
+        composeRule.onNodeWithText("desk.local").assertIsDisplayed()
+    }
+
+    @Test
+    fun `the text field shows its error`() {
+        composeRule.setContent { Field(error = "Enter an IP address or a host name") }
+
+        composeRule.onNodeWithText("Enter an IP address or a host name").assertIsDisplayed()
+    }
+
+    @Test
+    fun `the text field shows no error by default`() {
+        composeRule.setContent { Field() }
+
+        composeRule.onNodeWithText("Enter an IP address or a host name").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the IME Done action calls the callback`() {
+        var done = 0
+        composeRule.setContent { Field(onDone = { done++ }) }
+
+        composeRule.onNodeWithText("Address").performImeAction()
+
+        assertThat(done).isEqualTo(1)
+    }
+
+    @Test
+    fun `the rail shows every item and marks the selected one`() {
+        composeRule.setContent { Rail(selected = 1) }
+
+        composeRule.onNodeWithText("Home").assertIsNotSelected()
+        composeRule.onNodeWithText("Settings").assertIsSelected()
+    }
+
+    @Test
+    fun `choosing a rail item reports its index`() {
+        val chosen = mutableListOf<Int>()
+        composeRule.setContent { Rail(selected = 0, onSelect = { chosen += it }) }
+
+        composeRule.onNodeWithText("Settings").performClick()
+
+        assertThat(chosen).containsExactly(1)
+    }
+
+    @Composable
+    private fun Field(error: String? = null, onDone: () -> Unit = {}) {
+        var value by remember { mutableStateOf("") }
+        BorealisTheme {
+            Column {
+                BorealisTextField(
+                    value = value,
+                    onValueChange = { value = it },
+                    label = "Address",
+                    error = error,
+                    onDone = onDone,
+                )
+            }
+        }
+    }
+
+    @Composable
+    private fun Rail(selected: Int, onSelect: (Int) -> Unit = {}) {
+        BorealisTheme(FormFactor.Tv) {
+            NavigationRail(
+                items = listOf(RailItem("Home", ICON), RailItem("Settings", ICON)),
+                selectedIndex = selected,
+                onSelect = onSelect,
+            )
+        }
+    }
+
+    private companion object {
+        val ICON: ImageVector =
+            ImageVector.Builder(
+                    defaultWidth = 24.dp,
+                    defaultHeight = 24.dp,
+                    viewportWidth = 24f,
+                    viewportHeight = 24f,
+                )
+                .path {
+                    moveTo(4f, 4f)
+                    lineTo(20f, 4f)
+                    lineTo(20f, 20f)
+                    lineTo(4f, 20f)
+                    close()
+                }
+                .build()
+    }
+}

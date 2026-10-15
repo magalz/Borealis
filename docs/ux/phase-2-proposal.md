@@ -6,10 +6,14 @@ Approved by the owner on 2026-10-15, in Sprint 3. All eight decisions take the
 first (recommended) option. The choices are recorded in
 [ADR 0052](../adr/0052-structure-the-phase-2-ui.md).
 
-Phase 2 builds nothing yet. No Compose code exists. The screens below are the
-approved design; implementation follows in Phase 2 sprints, with Roborazzi
-screenshots ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)) and
-the token pipeline ([ADR 0044](../adr/0044-design-tokens-pipeline.md)).
+Sprint 4 implemented the Library screens in Compose: Hosts with Continue, Add
+host, Pairing, Apps and App actions. They are the launcher now, and they replace
+the 12.2 host list and app grid. The starting stream, conflict and error screens, the stream, the in-game
+menu, the keyboard, Settings and Privacy and diagnostics remain planned, for
+Sprints 5 and 6. The screens below are the approved design. Screenshots use
+Roborazzi ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)), and
+the colours and type come from the token pipeline
+([ADR 0044](../adr/0044-design-tokens-pipeline.md)).
 
 Sources of this document:
 
@@ -118,6 +122,8 @@ States:
 - With hosts (default).
 - Searching: no host found yet. The empty screen explains the next step
   ([D8](#decisions)).
+- Loading: before the first host report arrives, the screen shows a progress
+  indicator and nothing can be focused.
 
 - Touch: tap a host to see its apps. Pair and Wake are inline buttons, so no
   long-press menus are needed.
@@ -654,13 +660,16 @@ items or placeholders. The host endpoints are in
 
 ## Next steps
 
-1. Implement the acceptance tests of [UC-001](../use-cases/0001-pair-with-a-host.md)
-   to [UC-008](../use-cases/0008-add-a-host-by-address.md) first
-   ([TDD](../development/tdd.md)). The use cases are written now.
-2. Build the Phase 2 screens in Compose, one screen at a time, with
-   Roborazzi screenshots for the states above ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)).
-3. Generate the Kotlin tokens from `design/tokens.json` through the token
-   pipeline ([ADR 0044](../adr/0044-design-tokens-pipeline.md)).
+1. Sprint 4 built the Library screens with the token pipeline
+   ([ADR 0044](../adr/0044-design-tokens-pipeline.md)) and Roborazzi
+   screenshots ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)).
+2. Next: the starting stream, conflict and error screens, the in-game menu,
+   the keyboard and the overlay.
+3. Then: Settings, Privacy and diagnostics, the audit trail viewer and Send to
+   phone in Compose.
+
+Each screen comes with the acceptance tests of its use case first
+([TDD](../development/tdd.md)).
 
 ## How to open the prototype
 

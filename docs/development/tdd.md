@@ -86,6 +86,13 @@ Mock at boundaries (network, clock, storage), not inside the unit under test.
 Use fakes for the host where a fake is simple. Tests use throwaway values for
 PINs, keys and certificates, never real ones.
 
+### Screenshot tests
+
+A screenshot test follows the same order. The test that renders a new screen
+or state is committed before the implementation. The reference image is
+recorded on Windows and committed with the implementation. Commands, the CI job and the Linux plan B are in
+[building](building.md#screenshot-tests).
+
 ## Practicalities
 
 - Keep tests fast and deterministic: no real network, no sleeps, injected

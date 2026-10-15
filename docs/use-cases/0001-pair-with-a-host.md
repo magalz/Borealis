@@ -82,12 +82,12 @@ host, and it is the only way a host becomes trusted.
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
-| UC-001-T1 | Given a host that offers Pair, when pairing starts, then the screen shows a four-digit PIN and says where to enter it. | UI | planned |
+| UC-001-T1 | Given a host that offers Pair, when pairing starts, then the screen shows a four-digit PIN and says where to enter it. | UI | exists (Sprint 4, UI) |
 | UC-001-T2 | Given the host accepts the PIN, when pairing completes, then PAIRING_SUCCESS is written and no log or audit entry contains the PIN. | unit | exists (Sprint 2, unit) |
 | UC-001-T3 | Given a host error that allows one restart, when the client restarts the pairing, then the new PIN is shown and PAIRING_RESTART is written. | unit | exists (Sprint 2, unit) |
-| UC-001-T4 | Given no PIN accepted within 5 minutes, when the timer ends, then the screen shows Expired with Get a new PIN and PAIRING_FAILURE is written. | UI | planned |
-| UC-001-T5 | Given the pairing screen is open, when the user reads the steps, then the screen tells the user to avoid `xbox` and `webos` in the device name. | UI | planned |
-| UC-001-T6 | Given the user chooses Cancel, when the screen closes, then no pairing is stored. | UI | planned |
+| UC-001-T4 | Given no PIN accepted within 5 minutes, when the timer ends, then the screen shows Expired with Get a new PIN and PAIRING_FAILURE is written. | UI | exists (Sprint 4, UI) |
+| UC-001-T5 | Given the pairing screen is open, when the user reads the steps, then the screen tells the user to avoid `xbox` and `webos` in the device name. | UI | exists (Sprint 4, UI) |
+| UC-001-T6 | Given the user chooses Cancel, when the screen closes, then no pairing is stored. | UI | exists (Sprint 4, UI) |
 
 Planned tests cover the Phase 2 screens; tests marked as existing cover logic
 that the Phase 2 screens reuse.

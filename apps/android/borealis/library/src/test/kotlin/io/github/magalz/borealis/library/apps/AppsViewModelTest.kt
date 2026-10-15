@@ -95,7 +95,7 @@ class AppsViewModelTest {
         runCurrent()
         assertThat(viewModel.uiState.value.showHidden).isTrue()
         assertThat(viewModel.uiState.value.items)
-            .containsExactly(item(secret), item(desktop))
+            .containsExactly(item(desktop), item(secret))
             .inOrder()
 
         viewModel.onToggleShowHidden()
@@ -217,6 +217,7 @@ class AppsViewModelTest {
         repository.emit(snapshot(desktop, secret))
         subscribe(viewModel.uiState)
         viewModel.onToggleShowHidden()
+        runCurrent()
 
         viewModel.onActions(4)
         runCurrent()

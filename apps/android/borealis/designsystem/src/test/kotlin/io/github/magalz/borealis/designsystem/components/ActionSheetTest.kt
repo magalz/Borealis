@@ -50,14 +50,13 @@ class ActionSheetTest {
 
     @Test
     @Config(qualifiers = TV)
-    fun `on a TV the sheet is a dialog centred in the window`() {
+    fun `on a TV the sheet is a dialog narrower than the window`() {
         composeRule.setContent { Specimen(FormFactor.Tv) }
 
-        val bounds = composeRule.onNodeWithText("Desktop").getUnclippedBoundsInRoot()
+        // An action fills the 420dp dialog less the 8dp list padding on each side, not the window.
+        val action = composeRule.onNodeWithText("Resume").getUnclippedBoundsInRoot()
 
-        // A dialog is narrower than the 960dp window and does not touch its sides.
-        assertThat(bounds.left).isGreaterThan(100.dp)
-        assertThat(bounds.right).isLessThan(860.dp)
+        assertThat(action.right - action.left).isEqualTo(404.dp)
     }
 
     @Test
@@ -72,7 +71,8 @@ class ActionSheetTest {
         val last =
             composeRule.onNodeWithText("Closes the app on the host").getUnclippedBoundsInRoot()
         assertThat(last.bottom).isGreaterThan(520.dp)
-        assertThat(title.getUnclippedBoundsInRoot().left).isLessThan(40.dp)
+        val action = composeRule.onNodeWithText("Resume").getUnclippedBoundsInRoot()
+        assertThat(action.right - action.left).isEqualTo(344.dp)
     }
 
     @Test

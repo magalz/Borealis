@@ -37,6 +37,8 @@ fun Modifier.optionsClickable(
     role: Role? = null,
 ): Modifier =
     (if (onOptions == null) this else onOptionsRequest(onOptions)).combinedClickable(
+        interactionSource = null,
+        indication = BorealisPressIndication,
         role = role,
         onLongClick = onOptions,
         onClick = onClick,

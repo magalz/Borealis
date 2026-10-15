@@ -18,6 +18,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.width
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.assertPixel
+import io.github.magalz.borealis.designsystem.pixelAt
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -97,6 +99,22 @@ class BorealisButtonTest {
         composeRule.setContent { Specimen(style = BorealisButtonStyle.Secondary) }
 
         composeRule.onNodeWithTag(FRAME).assertPixel(x = 27f, y = 44f, BorealisTokens.Color.Page)
+    }
+
+    @Test
+    fun `a pressed button gets a faint wash that goes when it is released`() {
+        composeRule.setContent { Specimen(style = BorealisButtonStyle.Secondary) }
+        val unpressed = composeRule.onNodeWithTag(FRAME).pixelAt(x = 27f, y = 44f)
+
+        composeRule.onNodeWithText("Open").performTouchInput { down(center) }
+        composeRule.waitForIdle()
+        val pressed = composeRule.onNodeWithTag(FRAME).pixelAt(x = 27f, y = 44f)
+        composeRule.onNodeWithText("Open").performTouchInput { up() }
+        composeRule.waitForIdle()
+        val released = composeRule.onNodeWithTag(FRAME).pixelAt(x = 27f, y = 44f)
+
+        assertThat(pressed.red).isGreaterThan(unpressed.red)
+        assertThat(released).isEqualTo(unpressed)
     }
 
     @Test

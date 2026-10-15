@@ -8,6 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 
 /** From this width a window is a tablet or handheld; below it, a phone whatever controls it has. */
@@ -43,16 +45,21 @@ private fun hasGamepadControls(touchscreen: Int, navigation: Int) =
         navigation == Configuration.NAVIGATION_TRACKBALL ||
         navigation == Configuration.NAVIGATION_WHEEL
 
-/** The [FormFactor] of this device and window, read again when the configuration changes. */
+/**
+ * The [FormFactor] of this device and window, read again when the configuration or the window size
+ * changes. The width is the window's, not the screen's, so a split-screen window is narrow.
+ */
 @Composable
 fun rememberFormFactor(): FormFactor {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
-    return remember(context, configuration) {
+    val density = LocalDensity.current
+    val windowWidthPx = LocalWindowInfo.current.containerSize.width
+    return remember(context, configuration, density, windowWidthPx) {
         formFactorOf(
             isTvFeature = context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK),
             uiModeType = uiModeTypeOf(context),
-            widthDp = configuration.screenWidthDp,
+            widthDp = with(density) { windowWidthPx.toDp().value.toInt() },
             touchscreen = configuration.touchscreen,
             navigation = configuration.navigation,
         )

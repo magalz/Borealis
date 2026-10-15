@@ -13,6 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.input.key.Key
@@ -22,6 +24,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
@@ -38,6 +41,7 @@ import org.robolectric.annotation.Config
  * `src/test/screenshots` and are named `<component>_<device>_<state>.png`.
  */
 @RunWith(AndroidJUnit4::class)
+@OptIn(ExperimentalRoborazziApi::class)
 class ComponentScreenshotTest {
     @get:Rule val composeRule = createComposeRule()
     private val focus = FocusRequester()
@@ -155,9 +159,22 @@ class ComponentScreenshotTest {
         composeRule.setContentInKeyboardMode {
             Page(FormFactor.Tv) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    CoverTile("Desktop", onClick = {}, modifier = tile().focusRequester(focus))
-                    CoverTile("Steam Big Picture", onClick = {}, modifier = tile())
-                    CoverTile("Hades II", onClick = {}, hidden = true, modifier = tile())
+                    CoverTile(
+                        "Desktop",
+                        onClick = {},
+                        modifier = Modifier.width(TILE_WIDTH).focusRequester(focus),
+                    )
+                    CoverTile(
+                        "Steam Big Picture",
+                        onClick = {},
+                        modifier = Modifier.width(TILE_WIDTH),
+                    )
+                    CoverTile(
+                        "Hades II",
+                        onClick = {},
+                        hidden = true,
+                        modifier = Modifier.width(TILE_WIDTH),
+                    )
                 }
             }
         }
@@ -171,8 +188,13 @@ class ComponentScreenshotTest {
         composeRule.setContent {
             Page(FormFactor.Tv) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    CoverTile("Desktop", onClick = {}, runningLabel = "Running", modifier = tile())
-                    CoverTile("Playnite", onClick = {}, modifier = tile())
+                    CoverTile(
+                        "Desktop",
+                        onClick = {},
+                        runningLabel = "Running",
+                        modifier = Modifier.width(TILE_WIDTH),
+                    )
+                    CoverTile("Playnite", onClick = {}, modifier = Modifier.width(TILE_WIDTH))
                 }
             }
         }
@@ -317,8 +339,6 @@ class ComponentScreenshotTest {
         )
     }
 
-    @Composable private fun tile() = Modifier.width(128.dp)
-
     @Composable
     private fun Page(formFactor: FormFactor, content: @Composable () -> Unit) {
         BorealisTheme(formFactor) {
@@ -344,6 +364,7 @@ class ComponentScreenshotTest {
     }
 
     private companion object {
+        val TILE_WIDTH = 128.dp
         const val PHONE = "w360dp-h640dp-xhdpi"
         const val TV = "w960dp-h540dp-land-television-xhdpi"
         val ICON: ImageVector =
@@ -353,7 +374,7 @@ class ComponentScreenshotTest {
                     viewportWidth = 24f,
                     viewportHeight = 24f,
                 )
-                .path {
+                .path(fill = SolidColor(Color.White)) {
                     moveTo(4f, 11f)
                     lineTo(12f, 3f)
                     lineTo(20f, 11f)

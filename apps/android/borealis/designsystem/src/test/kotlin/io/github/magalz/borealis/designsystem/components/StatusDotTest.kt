@@ -54,7 +54,7 @@ class StatusDotTest {
     }
 
     private fun assertCentre(expected: androidx.compose.ui.graphics.Color) {
-        // The dot is 8dp wide on a 12dp frame, so its centre is at 12dp.
+        // The dot is 8dp wide inside an 8dp padding, so its centre is at 12dp.
         composeRule.onNodeWithTag(FRAME).assertPixel(x = 12f, y = 12f, expected)
     }
 

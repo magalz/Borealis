@@ -68,7 +68,7 @@ internal class ExportFlow(
             Intent.createChooser(send, chooserTitle).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         if (!isTelevision && canShare(send)) return ExportResult.Share(chooser)
         val saved = store.save(zip)
-        return ExportResult.Saved(saved.location, saved.adbPullCommand, chooser, File(""))
+        return ExportResult.Saved(saved.location, saved.adbPullCommand, chooser, zip)
     }
 
     companion object {

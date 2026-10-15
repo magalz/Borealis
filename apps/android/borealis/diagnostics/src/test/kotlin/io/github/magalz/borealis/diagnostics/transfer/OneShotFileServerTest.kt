@@ -128,12 +128,15 @@ class OneShotFileServerTest {
         val server = server()
         val url = server.start()
         val path = "${pathOf(url)}/${zip.name}"
-        // Queued before the first download ends, as a retrying browser or a preview would be.
+        val download = connect(portOf(url))
+        download.send("GET $path HTTP/1.1\r\n\r\n")
+        // Queued while the first download is served, as a retrying browser or a preview would be.
         val late = connect(portOf(url))
-
-        val first = get(portOf(url), path)!!
         late.send("GET $path HTTP/1.1\r\n\r\n")
+
+        val first = download.readReply()!!
         val second = late.readReply()!!
+        download.close()
         late.close()
 
         assertThat(first.status).isEqualTo(200)

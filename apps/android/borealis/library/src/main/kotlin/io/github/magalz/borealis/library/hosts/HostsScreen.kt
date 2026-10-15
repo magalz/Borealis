@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -45,7 +44,6 @@ import io.github.magalz.borealis.designsystem.components.EmptyStateAction
 import io.github.magalz.borealis.designsystem.components.HostCard
 import io.github.magalz.borealis.designsystem.components.HostCardAction
 import io.github.magalz.borealis.designsystem.components.Kicker
-import io.github.magalz.borealis.designsystem.components.NavigationRail
 import io.github.magalz.borealis.designsystem.focus.InitialFocusState
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
@@ -67,9 +65,9 @@ private val SECTION_PADDING = 6.dp
  * The screen is stateless and draws itself in [BorealisTheme] for [formFactor]:
  * - **Phone (touch):** a top bar with Add host and Settings, then one column of cards whose Open,
  *   Pair and Wake buttons are inline, so no long press is needed. A long press opens the options.
- * - **TV and handheld:** a [NavigationRail] with Hosts selected, Add host and Settings, then the
- *   cards in a grid. The first Continue card has focus when the screen opens, else the first host
- *   card. OK opens, hold OK, X or Menu opens the options.
+ * - **TV and handheld:** a header, then the cards in a grid; the shell draws the rail (Hosts, Add
+ *   host, Settings) beside the screen. The first Continue card has focus when the screen opens,
+ *   else the first host card. OK opens, hold OK, X or Menu opens the options.
  *
  * The options (Details, Wake, Forget) and the Forget confirmation belong to the screen: it keeps
  * which host they are open for and calls [onDetails], [onWake] or [onForget] when the user chooses.
@@ -153,12 +151,9 @@ private fun HostsLayout(
                 HostsBody(state, formFactor, handlers, Modifier.weight(1f))
             }
         } else {
-            Row(Modifier.fillMaxSize()) {
-                HostsRail(handlers.onAddHost, onSettings)
-                Column(Modifier.weight(1f)) {
-                    TvHeader(state)
-                    HostsBody(state, formFactor, handlers, Modifier.weight(1f))
-                }
+            Column(Modifier.fillMaxSize()) {
+                TvHeader(state)
+                HostsBody(state, formFactor, handlers, Modifier.weight(1f))
             }
         }
         SnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter))

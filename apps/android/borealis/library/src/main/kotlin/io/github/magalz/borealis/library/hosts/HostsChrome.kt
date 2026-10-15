@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,22 +19,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import io.github.magalz.borealis.designsystem.components.NavigationRail
-import io.github.magalz.borealis.designsystem.components.RailItem
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
 
-private val RAIL_WIDTH = 200.dp
 private val ACTION_SIZE = 48.dp
 private val ACTION_GAP = 10.dp
 private val ACTION_ICON_SIZE = 24.dp
 private val TOP_BAR_PADDING = 8.dp
-
-private const val RAIL_ADD_HOST = 1
-private const val RAIL_SETTINGS = 2
 
 @Composable
 internal fun PhoneTopBar(onAddHost: () -> Unit, onSettings: () -> Unit) {
@@ -80,36 +73,6 @@ private fun IconAction(icon: ImageVector, description: String, onClick: () -> Un
             tint = LocalBorealisColors.current.ink2,
         )
     }
-}
-
-@Composable
-internal fun HostsRail(onAddHost: () -> Unit, onSettings: () -> Unit) {
-    val items =
-        listOf(
-            RailItem(
-                stringResource(R.string.hosts_title),
-                ImageVector.vectorResource(R.drawable.ic_hosts_home),
-            ),
-            RailItem(
-                stringResource(R.string.hosts_add_host),
-                ImageVector.vectorResource(R.drawable.ic_hosts_add),
-            ),
-            RailItem(
-                stringResource(R.string.hosts_settings),
-                ImageVector.vectorResource(R.drawable.ic_hosts_settings),
-            ),
-        )
-    NavigationRail(
-        items = items,
-        selectedIndex = 0,
-        onSelect = { index ->
-            when (index) {
-                RAIL_ADD_HOST -> onAddHost()
-                RAIL_SETTINGS -> onSettings()
-            }
-        },
-        modifier = Modifier.width(RAIL_WIDTH),
-    )
 }
 
 @Composable

@@ -112,6 +112,9 @@ Events:
 - unpair, confirmed or not confirmed;
 - host certificate change, TLS failures and pinning failures;
 - launch attempts, retries and the user's choice in the running-app conflict;
+  a start restarted after an RTSP failure that followed an accepted `/resume`
+  is recorded as `LAUNCH_RETRY` with `reason=rtsp_after_resume`, so one tap can
+  produce two `LAUNCH_ATTEMPT` entries;
 - session start (codec, resolution, fps and HDR) and session end (duration,
   reason or error code).
 

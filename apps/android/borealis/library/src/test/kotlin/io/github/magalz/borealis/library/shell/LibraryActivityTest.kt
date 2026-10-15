@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
@@ -214,6 +215,35 @@ class LibraryActivityTest {
         back()
 
         assertThat(composeRule.activity.isFinishing).isTrue()
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h640dp-notnight-xhdpi")
+    fun `the system bars keep light icons on the dark UI in system light mode`() {
+        composeRule.waitForIdle()
+
+        val window = composeRule.activity.window
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        assertThat(controller.isAppearanceLightStatusBars).isFalse()
+        assertThat(controller.isAppearanceLightNavigationBars).isFalse()
+    }
+
+    @Test
+    fun `a message left for Hosts is shown once and not again after the activity is recreated`() {
+        hosts.emit(desk)
+        composeRule.waitForIdle()
+        composeRule.onNodeWithContentDescription("Add host").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNode(hasSetTextAction()).performTextInput("192.168.1.20")
+        composeRule.onNode(hasText("Add host") and hasClickAction()).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("New PC added. Pair it to see its apps.").assertIsDisplayed()
+
+        composeRule.activityRule.scenario.recreate()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
+        composeRule.onNodeWithText("New PC added. Pair it to see its apps.").assertDoesNotExist()
     }
 
     private fun back() {

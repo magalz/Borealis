@@ -227,8 +227,12 @@ of section 1.4 for each scenario.
 
 ### 3.3 Unpair from the PC menu
 
-1. With the device paired (3.1), open the PC menu and choose "Unpair"
-   (`pcview_menu_unpair_pc`). `TODO(verify)`: the gesture that opens the PC menu.
+1. Moonlight 12.2 no longer offers "Unpair" in the PC menu (long press on the
+   PC shows "Delete PC" and the other entries; checked on the Galaxy S22 on
+   2026-10-14). Unpair the device in the host Web UI instead, then use
+   "Delete PC" on the device if needed. Steps 2 to 4 apply only to builds
+   that still show the entry; the hint is also reached after a wrong PIN
+   (3.2), where `unpair not confirmed status=404` is logged.
 2. Expected: the device shows "The host did not confirm the unpair request. Open
    the host Web UI at `https://<host>:47990` and unpair this device there."
    (`unpair_webui_hint`). It must not show "Unpaired successfully"
@@ -647,22 +651,44 @@ session after 400 `An app is already running on this host`; HDR and Main10;
 audio check on a longer S22 session (the first 7 s session logged no audio
 traffic, while the TV received audio).
 
-## 7. Results: Sprint 2, `<date>`
+## 7. Results: Sprint 2, 2026-10-14
 
-Tested tree: `<commit tested>`, with the APK named in the notes of each row.
-Host: LuminalShine 26.09.1, as in section 6. Fill in the cells with `pass`,
-`fail` or `not applicable`, and add a short note for each `fail`.
+Builds:
+
+- **Galaxy S22:** debug APK built from `3583ffeb`. Release dry-run APK `0.1.0` (versionCode 1000, R8, throwaway signing key) from release workflow run 38651807419 at `a7e0017b`.
+- **Google TV Streamer:** debug APK built from `20cfaf09` and, for the final export check, from `26b81a70`.
+
+Host: LuminalShine 26.09.1, as in section 6. Both devices used ADB over Wi-Fi.
 
 | Scenario | Galaxy S22 | Google TV Streamer | Evidence and notes |
 | --- | --- | --- | --- |
-| 3.2 Wrong PIN (changed) | TODO | TODO | Restart path of 3.2 steps 5 to 7. |
-| 3.5 Two devices launching at the same time (changed) | TODO | TODO | Includes the 400 conflict dialog of steps 6 and 7. |
-| 3.6 Relaunch right after quitting | - | TODO | Streamer only; the S22 result is in section 6. |
-| 3.7 Frame pacing "cap FPS" at the display rate | - | TODO | Streamer only; the S22 result is in section 6. |
-| 3.12 HDR and HEVC Main10 | TODO | TODO | Not run in Phase 1. |
-| 3.13 Borealis settings screen | TODO | TODO | |
-| 3.14 Export diagnostics | TODO | TODO | Phone steps on the S22, dialog steps on the Streamer. |
-| 3.15 Audit trail | TODO | TODO | |
-| 3.16 Stream logs | TODO | TODO | |
-| 3.17 Network privacy | TODO | TODO | |
-| 3.18 Release build smoke test | TODO | TODO | |
+| 2 Instrumented tests | pass, 10 of 10 | pass, 10 of 10 | Direct `am instrument` on both devices. Includes the new `pairClassifyVectorsMatch` and `classifyPairingRejectsAMessageOver256Bytes`. |
+| 3.2 Wrong PIN (changed) | pass | not run | Wrong PIN, then the next attempt got 400 `Out of order call to getservercert`. Logged `category=STALE_SESSION action=RESTART_ONCE`. The pairing reopened with a new PIN and paired. The release build behaved the same. |
+| 3.3 Unpair from the PC menu | not applicable | not applicable | Moonlight 12.2 shows no "Unpair" entry; see 3.3. |
+| 3.5 Two devices launching at the same time (changed) | pass (first device) | partial | The second device joined through `/resume`, and both streamed at the same time. The 400 conflict dialog could not be reached by hand: while the host builds the first device's virtual display (about 14 s) it does not answer the second device's HTTPS `/serverinfo`, so the second device timed out after 7 s with a connection error (code 0). The dialog branches are covered by unit tests. Host findings below. |
+| 3.6 Relaunch right after quitting | - | pass | No 503. Each `/launch` takes about 12 to 14 s because the host builds the virtual display before answering. |
+| 3.7 Frame pacing "cap FPS" at the display rate | - | pass | `mode=1280x720x59`. Host: `HTTP and RTSP agree at 1280x720@59Hz`. |
+| 3.12 HDR and HEVC Main10 | pass | not applicable | `hdrMode=1`, `HEVC SPS: profile=Main10 chroma=4:2:0 depth=10/10`, `Display HDR mode: enabled`. The picture looked right. The TV attached to the Streamer reports no HDR types (`decoders.json`). |
+| 3.13 Borealis settings screen | pass | pass | Switches, version with commit, licences text, and privacy link (browser on the S22, URL text on the TV). The Streamer was driven by the D-pad only. |
+| 3.14 Export diagnostics | pass | pass after fix | S22: share sheet, and the zip was saved to Downloads. Streamer: the first build offered the zip to VLC, because VLC accepts any `ACTION_SEND`. Fixed: a TV now saves to `Download/` and shows the `adb pull` command, with no Share button. `adb pull /sdcard/Download/<name>` worked. |
+| 3.15 Audit trail | pass | pass | S22 trail: wrong PIN, `STALE_SESSION` restart, pairing success, launches and sessions with codec, resolution and duration. "Erase audit trail" removed entries 1 to 17; only the later sessions remained. |
+| 3.16 Stream logs | pass | pass | `Borealis.COMMONC` lines, including "Received first video packet after N ms", in logcat and in the exported `logs/borealis.log`. |
+| 3.17 Network privacy | pass | pass | No STUN, WAN-address or connection-test lines in logcat or in either bundle. The "Test network connection" menu entry is gone. |
+| 3.18 Release build smoke test | pass | not run | Installed next to the debug build. It started, paired (again through the automatic restart), streamed HEVC and exported diagnostics. |
+
+Secret scan of both exported bundles: no PEM block, salt, rikey, client certificate, pairing secret, uniqueid value or PIN.
+
+Host findings (LuminalShine 26.09.1):
+
+- A second device that resumes a running app joins the first device's per-client virtual display. When either device leaves, the host tears that display down and ends both sessions. On the first join the host also dropped both sessions about 6 s after the second device connected, with `Control stream connection failed: 4` and "No audio traffic was ever received from the host" on both clients.
+- While the host builds a virtual display for one `/launch`, about 14 s, it does not answer another client's HTTPS `/serverinfo`.
+- The teardown hang of NortheBridge/luminalshine issue 198 recurred after these sessions ended, and the host restarted each time.
+
+Follow-ups for the next sprint:
+
+- Transfer the diagnostic bundle from a TV to a phone with a QR code and a temporary local link.
+- Retry `/serverinfo` when it times out while another client's launch holds the host.
+- Touch trackpad and mouse input did not work on the S22 with the release build. Compare with stock Moonlight.
+- The Streamer has hardware AV1 decoders (`c2.mtk.av1.decoder.lowlatency`), but the upstream decoder selection logged "No AV1 decoder found".
+- The first HDR frame on the S22 logged `Trying to restart decoder after CodecException` before the stream settled.
+- The audit `SESSION_START` records the requested frame rate (60), not the negotiated one (59).

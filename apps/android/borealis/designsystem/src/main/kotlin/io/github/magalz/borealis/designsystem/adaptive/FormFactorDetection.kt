@@ -19,11 +19,19 @@ internal const val WIDE_WINDOW_DP = 600
  * The device class of a window, decided from facts the platform reports (ADR 0052):
  * - **TV** when the leanback feature is present or the UI mode is television. It wins over every
  *   other fact, so a TV with a touch screen or a narrow window is still a TV.
- * - **Handheld** when the window is [WIDE_WINDOW_DP] wide or more and the device has the controls
- *   of a gamepad console: a D-pad, a trackball or a wheel as its navigation, or no touch screen at
- *   all. A touch tablet reports no navigation and a touch screen, so it stays a phone; a phone in
- *   portrait is narrower than 600dp, so a paired controller does not turn it into a handheld.
+ * - **Handheld** when the window is [WIDE_WINDOW_DP] wide or more and the device reports the
+ *   controls of a gamepad console: a D-pad, a trackball or a wheel as its navigation, or no touch
+ *   screen at all.
  * - **Phone** otherwise.
+ *
+ * Consequences, all intended:
+ * - A touch tablet reports no navigation and a touch screen, so it stays a phone layout.
+ * - A phone with a clip-on or paired gamepad (Backbone, Kishi) in landscape, 600dp or wider, counts
+ *   as a handheld: that is the use the handheld layout is for.
+ * - The result follows the window, so it flips when the phone is rotated or the gamepad is plugged
+ *   in or out; the screens recompose with the other layout and keep their state.
+ * - A Chromebook or other non-touch device that is 600dp wide or more counts as a handheld, because
+ *   it reports no touch screen. Its layout is the TV/handheld one, which a keyboard can navigate.
  */
 fun formFactorOf(
     isTvFeature: Boolean,
@@ -55,20 +63,27 @@ fun rememberFormFactor(): FormFactor {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val windowWidthPx = LocalWindowInfo.current.containerSize.width
+    // On the first composition the window may not have a size yet, so the configuration backs it.
+    @Suppress("ConfigurationScreenWidthHeight")
+    val configurationWidthDp = configuration.screenWidthDp
     return remember(context, configuration, density, windowWidthPx) {
         formFactorOf(
             isTvFeature = context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK),
             uiModeType = uiModeTypeOf(context),
-            widthDp = with(density) { windowWidthPx.toDp().value.toInt() },
+            widthDp = windowWidthDp(windowWidthPx, density.density, configurationWidthDp),
             touchscreen = configuration.touchscreen,
             navigation = configuration.navigation,
         )
     }
 }
 
-// Stub: the behaviour tests fail against it until the implementation lands.
+/**
+ * The width of the window in dp: the container size once the window has one, the configuration's
+ * width before that (a window that is not laid out yet reports 0, which would make a wide handheld
+ * a phone for its first frame).
+ */
 internal fun windowWidthDp(containerWidthPx: Int, density: Float, configurationWidthDp: Int): Int =
-    0
+    if (containerWidthPx > 0) (containerWidthPx / density).toInt() else configurationWidthDp
 
 private fun uiModeTypeOf(context: Context): Int =
     context.getSystemService(UiModeManager::class.java)?.currentModeType

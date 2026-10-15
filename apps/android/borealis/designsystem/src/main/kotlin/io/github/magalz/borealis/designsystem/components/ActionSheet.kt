@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -51,14 +53,16 @@ private val DIALOG_WIDTH = 420.dp
 private val CONTENT_PADDING = 20.dp
 /** The list sits 8dp from the edge, so the 12dp padding of a row puts its text at 20dp. */
 private val LIST_PADDING = 8.dp
-private val ACTION_GAP = 8.dp
+/** An outline sits 5dp outside its row, so neighbouring rows need 10dp between them. */
+private val ACTION_GAP = 10.dp
 private val ACTION_PADDING_HORIZONTAL = 12.dp
 private val ACTION_PADDING_VERTICAL = 10.dp
 
 /**
  * The actions of an item with the consequence under each label. On a phone it is a bottom sheet; on
  * a TV or handheld a centred dialog whose first action has focus. Back dismisses either. Choosing
- * an action calls [onAction] and leaves the sheet open: the screen closes it.
+ * an action calls [onAction] and leaves the sheet open: the screen closes it. The title stays and
+ * the actions scroll when the window is too short for all of them.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,22 +111,40 @@ private fun <T> ActionList(
     focusFirst: Boolean,
 ) {
     val firstAction = remember { FocusRequester() }
-    Column(
-        Modifier.fillMaxWidth().padding(vertical = CONTENT_PADDING, horizontal = LIST_PADDING),
-        verticalArrangement = Arrangement.spacedBy(ACTION_GAP),
-    ) {
+    Column(Modifier.fillMaxWidth()) {
         Text(
             title,
-            modifier = Modifier.padding(horizontal = ACTION_PADDING_HORIZONTAL),
+            modifier =
+                Modifier.padding(
+                    start = CONTENT_PADDING,
+                    top = CONTENT_PADDING,
+                    end = CONTENT_PADDING,
+                ),
             style = MaterialTheme.typography.titleLarge,
         )
-        actions.forEachIndexed { index, action ->
-            ActionRow(
-                action,
-                onClick = { onAction(action) },
-                modifier =
-                    if (focusFirst && index == 0) Modifier.initialFocus(firstAction) else Modifier,
-            )
+        // The title stays in view and the actions scroll, so a long list is reachable in a short
+        // window. The padding is inside the scroll area: the area clips, and an outline reaches 5dp
+        // outside its row.
+        Column(
+            Modifier.weight(1f, fill = false)
+                .verticalScroll(rememberScrollState())
+                .padding(
+                    start = LIST_PADDING,
+                    top = ACTION_GAP,
+                    end = LIST_PADDING,
+                    bottom = CONTENT_PADDING,
+                ),
+            verticalArrangement = Arrangement.spacedBy(ACTION_GAP),
+        ) {
+            actions.forEachIndexed { index, action ->
+                ActionRow(
+                    action,
+                    onClick = { onAction(action) },
+                    modifier =
+                        if (focusFirst && index == 0) Modifier.initialFocus(firstAction)
+                        else Modifier,
+                )
+            }
         }
     }
 }

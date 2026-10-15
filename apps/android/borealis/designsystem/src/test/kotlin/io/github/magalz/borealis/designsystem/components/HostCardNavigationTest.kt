@@ -1,8 +1,11 @@
 package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -55,6 +58,29 @@ class HostCardNavigationTest {
     }
 
     @Test
+    @Config(qualifiers = "w360dp-h640dp-xhdpi")
+    fun `on a phone the inline button is beside the card text so Right reaches it and Left returns`() {
+        composeRule.setContentInKeyboardMode { Specimen(formFactor = FormFactor.Phone) }
+        card().requestFocus()
+
+        card().performKeyInput { pressKey(Key.DirectionRight) }
+        button().assertIsFocused()
+
+        button().performKeyInput { pressKey(Key.DirectionLeft) }
+        card().assertIsFocused()
+    }
+
+    @Test
+    fun `D-pad Down from the inline button moves on to what is below the card`() {
+        composeRule.setContentInKeyboardMode { Specimen(withNeighbourBelow = true) }
+        button().requestFocus()
+
+        button().performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.onNodeWithTag(BELOW).assertIsFocused()
+    }
+
+    @Test
     fun `the card outline is not drawn while the inline button has focus`() {
         composeRule.setContentInKeyboardMode { Specimen() }
         card().requestFocus()
@@ -99,18 +125,24 @@ class HostCardNavigationTest {
         )
 
     @Composable
-    private fun Specimen() {
-        BorealisTheme(FormFactor.Tv) {
-            Box(Modifier.testTag(FRAME).background(BorealisTokens.Color.Page).padding(24.dp)) {
-                HostCard(
-                    name = "Living Room PC",
-                    status = DotStatus.Offline,
-                    statusText = "Offline",
-                    action = HostCardAction("Wake") { acted++ },
-                    onClick = { opened++ },
-                    onOptions = { optionsRequested++ },
-                    modifier = Modifier.width(220.dp).testTag(CARD),
-                )
+    private fun Specimen(
+        formFactor: FormFactor = FormFactor.Tv,
+        withNeighbourBelow: Boolean = false,
+    ) {
+        BorealisTheme(formFactor) {
+            Column {
+                Box(Modifier.testTag(FRAME).background(BorealisTokens.Color.Page).padding(24.dp)) {
+                    HostCard(
+                        name = "Living Room PC",
+                        status = DotStatus.Offline,
+                        statusText = "Offline",
+                        action = HostCardAction("Wake") { acted++ },
+                        onClick = { opened++ },
+                        onOptions = { optionsRequested++ },
+                        modifier = Modifier.width(220.dp).testTag(CARD),
+                    )
+                }
+                if (withNeighbourBelow) Box(Modifier.size(40.dp).testTag(BELOW).focusable())
             }
         }
     }
@@ -118,5 +150,6 @@ class HostCardNavigationTest {
     private companion object {
         const val FRAME = "frame"
         const val CARD = "card"
+        const val BELOW = "below"
     }
 }

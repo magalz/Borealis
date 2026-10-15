@@ -12,9 +12,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -38,9 +42,11 @@ private val CHIP_PADDING_VERTICAL = 2.dp
 /**
  * A host: its [name], a status dot with [statusText], a secondary [detail] line (version and
  * address), the app it is running if any, and at most one inline [action]. A tap or OK runs
- * [onClick]; every way of asking for options (long press, hold OK, X, Menu) runs [onOptions]. On a
- * phone the action sits at the end of the row; on a TV or handheld it sits under the text, where a
- * card in a grid has the room.
+ * [onClick]; every way of asking for options (long press, hold OK, X, Menu) runs [onOptions], named
+ * [optionsLabel] for a screen reader. The card and the action are two focus stops: the D-pad goes
+ * from the card to the action (down on a TV, towards the end on a phone) and back. On a phone the
+ * action sits at the end of the row; on a TV or handheld it sits under the text, where a card in a
+ * grid has the room.
  */
 @Composable
 fun HostCard(
@@ -57,35 +63,67 @@ fun HostCard(
 ) {
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.large
+    val inline = LocalFormFactor.current == FormFactor.Phone
+    val cardFocus = remember { FocusRequester() }
+    val actionFocus = remember { FocusRequester() }
     Box(
         modifier
             .borealisFocusIndication(shape)
             .background(colors.surface, shape)
             .border(1.dp, colors.line, shape)
             .clip(shape)
-            .optionsClickable(onClick, onOptions, Role.Button)
+            .focusRequester(cardFocus)
+            .then(
+                // The action is inside the card, so the focus search would never leave the card
+                // for it: point the D-pad at it. It is beside the text on a phone, under it else.
+                if (action == null) {
+                    Modifier
+                } else {
+                    Modifier.focusProperties {
+                        if (inline) end = actionFocus else down = actionFocus
+                    }
+                }
+            )
+            .optionsClickable(onClick, onOptions, Role.Button, optionsLabel)
             .padding(LocalBorealisSpacing.current.cardPadding)
     ) {
-        if (LocalFormFactor.current == FormFactor.Phone) {
+        val actionModifier =
+            Modifier.focusRequester(actionFocus).focusProperties {
+                // Properties are inherited from the card, so the way back is set here, and the way
+                // on is reset to the default.
+                if (inline) {
+                    start = cardFocus
+                    end = FocusRequester.Default
+                } else {
+                    up = cardFocus
+                    down = FocusRequester.Default
+                }
+            }
+        if (inline) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(CONTENT_GAP),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 HostInfo(name, status, statusText, detail, runningApp, Modifier.weight(1f))
-                action?.let { HostActionButton(it) }
+                action?.let { HostActionButton(it, actionModifier) }
             }
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(CONTENT_GAP)) {
                 HostInfo(name, status, statusText, detail, runningApp, Modifier)
-                action?.let { HostActionButton(it) }
+                action?.let { HostActionButton(it, actionModifier) }
             }
         }
     }
 }
 
 @Composable
-private fun HostActionButton(action: HostCardAction) {
-    BorealisButton(action.label, action.onClick, style = BorealisButtonStyle.Secondary)
+private fun HostActionButton(action: HostCardAction, modifier: Modifier) {
+    BorealisButton(
+        action.label,
+        action.onClick,
+        modifier,
+        style = BorealisButtonStyle.Secondary,
+    )
 }
 
 @Composable

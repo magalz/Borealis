@@ -38,6 +38,11 @@ import kotlinx.coroutines.launch
  * phone never leaves an outline behind. It is [shape] laid out on the rectangle grown by the offset
  * and half the stroke, so it keeps the corner radii of [shape].
  *
+ * The outline reaches about 5dp outside the element (2dp offset plus 3dp stroke), and a scaled tile
+ * grows by 2% of its size on each side more. A parent that clips (a lazy grid or list, a scroll
+ * area) cuts it unless it has `contentPadding` of at least 10dp, and neighbours closer than 10dp
+ * have outlines that overlap: use at least 10dp of spacing between focusable items.
+ *
  * Put this modifier before the one that makes the element focusable (`clickable`, `focusable`): it
  * reads the focus of what follows it.
  */

@@ -27,7 +27,8 @@ fun Modifier.onOptionsRequest(onOptions: () -> Unit): Modifier = onKeyEvent { ev
 /**
  * A focusable item with a main action and, optionally, its options. Everything that opens the
  * options calls [onOptions]: a long press on touch, holding OK or Enter on a TV, X on a gamepad and
- * the Menu key. A long press or a held OK is not also a click.
+ * the Menu key. A long press or a held OK is not also a click. [onOptionsLabel] names the options
+ * action for a screen reader ("App actions"); it is the label of the long click.
  *
  * Put the focus indication before this modifier, as described on [borealisFocusIndication].
  */
@@ -39,6 +40,7 @@ fun Modifier.optionsClickable(
 ): Modifier =
     (if (onOptions == null) this else onOptionsRequest(onOptions)).combinedClickable(
         interactionSource = null,
+        onLongClickLabel = onOptionsLabel,
         indication = BorealisPressIndication,
         role = role,
         onLongClick = onOptions,

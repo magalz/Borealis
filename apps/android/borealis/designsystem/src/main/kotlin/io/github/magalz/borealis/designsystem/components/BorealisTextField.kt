@@ -17,7 +17,9 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 /**
  * A single-line text field: the input radius, a line-strong border that turns accent on focus, and
  * [error] under it in danger-ink (it also turns the border and label to danger-ink). The keyboard
- * action is Done, which calls [onDone].
+ * action is Done: it calls [onDone] if there is one and then does what Done does by default, which
+ * is to hide the keyboard and clear focus. [keyboardType] picks the keyboard layout, such as Uri
+ * for a host address.
  */
 @Composable
 fun BorealisTextField(
@@ -40,7 +42,13 @@ fun BorealisTextField(
         singleLine = true,
         shape = MaterialTheme.shapes.medium,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { onDone?.invoke() }),
+        keyboardActions =
+            KeyboardActions(
+                onDone = {
+                    onDone?.invoke()
+                    defaultKeyboardAction(ImeAction.Done)
+                }
+            ),
         colors =
             OutlinedTextFieldDefaults.colors(
                 focusedTextColor = colors.ink,

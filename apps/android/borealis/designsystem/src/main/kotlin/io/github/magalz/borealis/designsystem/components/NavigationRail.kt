@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,7 +35,8 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisType
 class RailItem(val label: String, val icon: ImageVector)
 
 private val RAIL_PADDING = 12.dp
-private val ITEM_GAP = 4.dp
+/** An outline sits 5dp outside its item, so neighbours need 10dp between them. */
+private val ITEM_GAP = 10.dp
 private val ITEM_PADDING_HORIZONTAL = 12.dp
 private val ITEM_PADDING_VERTICAL = 10.dp
 private val ICON_GAP = 12.dp
@@ -56,7 +58,8 @@ fun NavigationRail(
         modifier
             .fillMaxHeight()
             .background(LocalBorealisColors.current.chrome)
-            .padding(RAIL_PADDING),
+            .padding(RAIL_PADDING)
+            .selectableGroup(),
         verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
     ) {
         items.forEachIndexed { index, item ->

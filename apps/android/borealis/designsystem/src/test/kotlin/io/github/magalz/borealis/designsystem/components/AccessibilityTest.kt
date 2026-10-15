@@ -6,7 +6,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -122,7 +121,7 @@ class AccessibilityTest {
         composeRule
             .onNodeWithText("Home")
             .onParent()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.SelectableGroup))
     }
 
     @Test

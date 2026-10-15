@@ -49,7 +49,7 @@ fun ContinueCard(
             .background(colors.accentTint, shape)
             .border(1.dp, colors.accentLine, shape)
             .clip(shape)
-            .optionsClickable(onClick, onOptions, Role.Button)
+            .optionsClickable(onClick, onOptions, Role.Button, optionsLabel)
             .padding(LocalBorealisSpacing.current.cardPadding),
         horizontalArrangement = Arrangement.spacedBy(CONTENT_GAP),
         verticalAlignment = Alignment.CenterVertically,

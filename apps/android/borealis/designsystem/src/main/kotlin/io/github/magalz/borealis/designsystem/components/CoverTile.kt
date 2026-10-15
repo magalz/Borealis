@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
@@ -46,7 +47,9 @@ private val LABEL_GAP = 8.dp
  * An app of a host in the grid: a placeholder cover (the app initials until Phase 3 brings covers)
  * with the name under it. [runningLabel], when not null, adds the "running" badge; [hidden] dims
  * the tile. The cover is the focusable target: a tap or OK runs [onClick], every way of asking for
- * options runs [onOptions], and it grows on focus. The cover is announced by the app name.
+ * options runs [onOptions] (named [optionsLabel] for a screen reader), and it grows on focus. The
+ * cover is announced by the app name and its state: [runningLabel] and, for a hidden app,
+ * [hiddenLabel], so the state is spoken and not only shown.
  */
 @Composable
 fun CoverTile(
@@ -61,6 +64,10 @@ fun CoverTile(
 ) {
     val colors = LocalBorealisColors.current
     val shape = LocalBorealisShapes.current.cover
+    val state =
+        listOfNotNull(runningLabel, hiddenLabel.takeIf { hidden }).joinToString(", ").ifEmpty {
+            null
+        }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(LABEL_GAP)) {
         CoverPlaceholder(
             name,
@@ -69,8 +76,9 @@ fun CoverTile(
                 .borealisFocusIndication(shape, scaleOnFocus = true)
                 .alpha(if (hidden) HIDDEN_ALPHA else 1f),
             interaction =
-                Modifier.optionsClickable(onClick, onOptions, Role.Button).semantics {
+                Modifier.optionsClickable(onClick, onOptions, Role.Button, optionsLabel).semantics {
                     contentDescription = name
+                    if (state != null) stateDescription = state
                 },
         ) {
             if (runningLabel != null) RunningBadge(runningLabel)

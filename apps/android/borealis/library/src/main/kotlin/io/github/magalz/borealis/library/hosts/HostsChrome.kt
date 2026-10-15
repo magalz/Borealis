@@ -84,7 +84,7 @@ internal fun TvHeader(state: HostsUiState) {
         verticalAlignment = Alignment.Bottom,
     ) {
         Text(stringResource(R.string.hosts_title), style = MaterialTheme.typography.titleLarge)
-        if (!state.searching) {
+        if (!state.loading && !state.searching) {
             Text(
                 pluralStringResource(R.plurals.hosts_count, state.items.size, state.items.size),
                 style = MaterialTheme.typography.bodySmall,

@@ -31,7 +31,7 @@ class HostsViewModel @Inject constructor(private val repository: HostRepository)
             .stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
-                HostsUiState(),
+                HostsUiState(loading = true, searching = false),
             )
 
     val effects: Flow<HostsEffect> = effectChannel.receiveAsFlow()
@@ -93,6 +93,7 @@ class HostsViewModel @Inject constructor(private val repository: HostRepository)
 private fun List<Host>.toUiState(details: String?): HostsUiState {
     val hosts = sortedBy { it.name.lowercase() }
     return HostsUiState(
+        loading = false,
         searching = hosts.isEmpty(),
         items = hosts.map { it.toItem() },
         continueItems =

@@ -39,9 +39,9 @@ data class ContinueItemUiState(
 
 data class HostsUiState(
     /** True until the repository reports the known hosts for the first time. */
-    val loading: Boolean = false,
-    /** True while no host is known yet: the screen explains the next step (ADR 0052, D8). */
-    val searching: Boolean = true,
+    val loading: Boolean = true,
+    /** True once loaded with no host known: the screen explains the next step (ADR 0052, D8). */
+    val searching: Boolean = false,
     /** The hosts, sorted by name. */
     val items: List<HostItemUiState> = emptyList(),
     /** The hosts with a running app, in host name order. */

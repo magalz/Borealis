@@ -85,7 +85,9 @@ Implementation requirements:
     link preview does not use up the download;
   - one connection at a time, a read timeout of 10 seconds and a request head
     capped at 8 KiB; no request body is read;
-  - the server stops after the first complete download, after 5 minutes, or
+  - the server stops after the first complete download, after 5 minutes (a
+    watchdog thread closes a connection still in flight at that point, so a
+    stalled client cannot extend it), or
     when the dialog is dismissed or the settings screen is closed;
   - the file is the bundle already built and redacted; nothing is added to it and
     nothing is uploaded elsewhere.

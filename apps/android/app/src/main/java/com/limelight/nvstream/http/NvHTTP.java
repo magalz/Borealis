@@ -727,6 +727,9 @@ public class NvHTTP {
         return io.github.magalz.borealis.host.pairing.BestEffortUnpair.unpair(
                 httpClientLongConnectTimeout, getCompleteUrl(baseUrlHttp, "unpair", null));
     }
+
+    // BOREALIS: aborts the requests in flight (the three clients share one dispatcher), so a cancelled pairing does not wait for the PIN.
+    public void cancelPendingRequests() { httpClientLongConnectTimeout.dispatcher().cancelAll(); }
     
     public InputStream getBoxArt(NvApp app) throws IOException {
         ResponseBody resp = openHttpConnection(httpClientLongConnectTimeout, getHttpsUrl(true), "appasset", "appid=" + app.getAppId() + "&AssetType=2&AssetIdx=0");

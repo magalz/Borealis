@@ -31,7 +31,8 @@ class TokenGeneratorTest {
             )
 
         assertThat(generated.kotlin).contains("val Line = Color(0x12FFFFFF)")
-        assertThat(generated.colorsXml).contains("""<color name="borealis_line">#12FFFFFF</color>""")
+        assertThat(generated.colorsXml)
+            .contains("""<color name="borealis_line">#12FFFFFF</color>""")
     }
 
     @Test
@@ -42,7 +43,8 @@ class TokenGeneratorTest {
             )
 
         assertThat(generated.kotlin).contains("val Page = Color(0xFF0E1013)")
-        assertThat(generated.colorsXml).contains("""<color name="borealis_page">#FF0E1013</color>""")
+        assertThat(generated.colorsXml)
+            .contains("""<color name="borealis_page">#FF0E1013</color>""")
     }
 
     @Test
@@ -118,8 +120,11 @@ class TokenGeneratorTest {
 
         assertThat(generated.kotlin).contains("/** Screen background */")
         assertThat(generated.kotlin)
-            .contains("Generated from design/tokens.json by BorealisTokensTask (ADR 0044). Do not edit.")
-        assertThat(generated.kotlin).contains("package io.github.magalz.borealis.designsystem.tokens")
+            .contains(
+                "Generated from design/tokens.json by BorealisTokensTask (ADR 0044). Do not edit."
+            )
+        assertThat(generated.kotlin)
+            .contains("package io.github.magalz.borealis.designsystem.tokens")
         assertThat(generated.kotlin).contains("object BorealisTokens {")
     }
 

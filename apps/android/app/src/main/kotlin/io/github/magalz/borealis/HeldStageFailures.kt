@@ -20,7 +20,7 @@ constructor(
     },
 ) : NvConnectionListener by inner {
     override fun stageFailed(stage: String, portFlags: Int, errorCode: Int) {
-        val isRtspStage = stage == MoonBridge.getStageName(ResumeCollisions.STAGE_RTSP_HANDSHAKE)
+        val isRtspStage = stage == rtspStageName()
         when (collisions.onStageFailed(isRtspStage, errorCode)) {
             StageFailure.HOLD -> Unit
             StageFailure.REPORT_COLLISION -> inner.stageFailed(stage, 0, errorCode)

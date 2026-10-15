@@ -115,6 +115,18 @@ Borealis Kotlin modules (apps/android/gradle/libs.versions.toml)
     License: Apache-2.0
     https://github.com/zxing/zxing
 
+  Jetpack Compose, Material 3, Navigation, Lifecycle, Activity and Hilt
+  Navigation for Compose (AndroidX)
+    License: Apache-2.0
+    https://developer.android.com/jetpack/androidx
+
+Fonts (design/fonts/)
+
+  IBM Plex Sans and IBM Plex Mono
+    Copyright 2017 IBM Corp., with Reserved Font Name "Plex"
+    License: SIL Open Font License 1.1 (design/fonts/ibm-plex/OFL.txt)
+    https://github.com/IBM/plex
+
 ================================================================================
 Complete list
 ================================================================================

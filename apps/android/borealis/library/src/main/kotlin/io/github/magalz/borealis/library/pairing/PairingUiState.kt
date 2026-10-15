@@ -23,7 +23,11 @@ sealed interface PairingUiState {
         val deviceName: String,
         /** True for the automatic second attempt, after the host dropped its pairing session. */
         val restarted: Boolean,
-    ) : PairingUiState
+    ) : PairingUiState {
+        /** Keeps the PIN out of logs and crash reports. */
+        override fun toString() =
+            "Waiting(pin=****, webUiUrl=$webUiUrl, deviceName=$deviceName, restarted=$restarted)"
+    }
 
     data object Paired : PairingUiState
 

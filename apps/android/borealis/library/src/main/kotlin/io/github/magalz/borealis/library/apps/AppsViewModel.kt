@@ -38,7 +38,7 @@ constructor(@Assisted private val hostId: String, private val repository: AppRep
     /** Collecting it polls the app list; it stops five seconds after the last collector leaves. */
     val uiState: StateFlow<AppsUiState> =
         combine(
-                repository.apps(hostId).onEach(::closeIfUnavailable),
+                repository.apps(hostId).onEach(::closeIfUnavailable).onEach(::clearGoneActions),
                 showHidden,
                 actionsAppId,
                 detailsAppId,
@@ -113,6 +113,12 @@ constructor(@Assisted private val hostId: String, private val repository: AppRep
             closed = true
             send(AppsEffect.Close(reason))
         }
+    }
+
+    /** A sheet for an app that is gone must not reopen if the app returns. */
+    private fun clearGoneActions(snapshot: AppsSnapshot) {
+        val id = actionsAppId.value ?: return
+        if (snapshot.apps.none { it.id == id }) actionsAppId.value = null
     }
 
     private fun send(effect: AppsEffect) {

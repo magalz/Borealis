@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Typeface
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.preference.Preference
 import android.util.AttributeSet
@@ -16,9 +17,13 @@ import androidx.core.content.FileProvider
 import dagger.hilt.android.EntryPointAccessors
 import io.github.magalz.borealis.diagnostics.DiagnosticSection
 import io.github.magalz.borealis.diagnostics.R
+import io.github.magalz.borealis.diagnostics.transfer.TransferDialog
+import io.github.magalz.borealis.diagnostics.transfer.activeLocalIpv4
+import io.github.magalz.borealis.diagnostics.transfer.monotonicMillis
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogTag
 import java.io.File
+import java.net.InetAddress
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +51,10 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
     }
     internal var flushLogs: () -> Unit = { DiagnosticBundleWriter.flushOpenSinks() }
     internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    internal var transferAddress: () -> InetAddress? = {
+        context.getSystemService(ConnectivityManager::class.java)?.let(::activeLocalIpv4)
+    }
+    internal var transferClock: () -> Long = ::monotonicMillis
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var running = false
@@ -110,7 +119,8 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
 
     /**
      * The text can take focus, so a D-pad scrolls it, and the buttons are focusable. Close has the
-     * focus first. "Share…" is only there on a phone or tablet.
+     * focus first. The neutral button is "Share…" on a phone or tablet and "Send to phone" on a TV,
+     * where the only receiver is usually a video player.
      */
     private fun showSaved(saved: ExportResult.Saved) {
         val padding = (PADDING_DP * context.resources.displayMetrics.density).toInt()
@@ -127,21 +137,40 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
                 isFocusable = true
                 setPadding(padding, padding, padding, padding)
             }
+        val television = isTelevision(context)
         val builder =
             AlertDialog.Builder(context)
                 .setTitle(R.string.borealis_export_saved_title)
                 .setView(ScrollView(context).apply { addView(body) })
                 .setPositiveButton(R.string.borealis_export_close, null)
-        // On a TV the only receiver is usually a video player, so there is nothing to share to.
-        if (!isTelevision(context)) {
+        if (television) {
+            builder.setNeutralButton(R.string.borealis_export_send_to_phone, null)
+        } else {
             builder.setNeutralButton(R.string.borealis_export_share) { _, _ ->
                 shareOnRequest(saved.chooser)
             }
         }
         val dialog = builder.show()
+        // A dialog button closes the dialog; this one must leave the saved dialog (and its adb
+        // command) under the transfer dialog, so its listener is set after show().
+        if (television) {
+            dialog.getButton(DialogInterface.BUTTON_NEUTRAL).setOnClickListener {
+                sendToPhone(saved)
+            }
+        }
         // After the first layout, which would otherwise pick the first focusable view.
         val close = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
         close.post { close.requestFocus() }
+    }
+
+    private fun sendToPhone(saved: ExportResult.Saved) {
+        runCatching {
+            TransferDialog(context, saved.bundle, transferAddress, transferClock, ::isGone).show()
+        }
+            .onFailure {
+                BorealisLog.e(LogTag.APP, "could not show the diagnostic transfer", it)
+                toast(R.string.borealis_transfer_failed)
+            }
     }
 
     private fun toast(message: Int) = Toast.makeText(context, message, Toast.LENGTH_LONG).show()

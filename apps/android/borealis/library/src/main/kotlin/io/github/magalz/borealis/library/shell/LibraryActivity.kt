@@ -1,7 +1,9 @@
 package io.github.magalz.borealis.library.shell
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import dagger.hilt.android.AndroidEntryPoint
@@ -21,7 +23,12 @@ class LibraryActivity : Hilt_LibraryActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // The UI is dark only: light icons whatever the system theme, which uiMode changes in
+        // configChanges would never re-evaluate.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+        )
         setContent {
             LibraryNavHost(
                 onStartStream = { streamLauncher.start(this, it) },

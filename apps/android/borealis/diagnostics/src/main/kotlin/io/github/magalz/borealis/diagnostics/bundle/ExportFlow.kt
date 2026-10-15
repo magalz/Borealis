@@ -22,8 +22,12 @@ sealed interface ExportResult {
      * The zip was saved at [location] (a TV, or a phone with no receiver); show how to fetch it
      * with [adbPullCommand]. [chooser] shares it anyway, for a user with a mail or file app.
      */
-    class Saved(val location: String, val adbPullCommand: String, val chooser: Intent) :
-        ExportResult
+    class Saved(
+        val location: String,
+        val adbPullCommand: String,
+        val chooser: Intent,
+        val bundle: File,
+    ) : ExportResult
 
     /** The bundle could not be built or saved; the cause is in the log. */
     data object Failed : ExportResult
@@ -64,7 +68,7 @@ internal class ExportFlow(
             Intent.createChooser(send, chooserTitle).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         if (!isTelevision && canShare(send)) return ExportResult.Share(chooser)
         val saved = store.save(zip)
-        return ExportResult.Saved(saved.location, saved.adbPullCommand, chooser)
+        return ExportResult.Saved(saved.location, saved.adbPullCommand, chooser, File(""))
     }
 
     companion object {

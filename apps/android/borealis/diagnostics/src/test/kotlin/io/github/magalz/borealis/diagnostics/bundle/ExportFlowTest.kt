@@ -91,6 +91,7 @@ class ExportFlowTest {
         assertThat(saved).containsExactly(zip)
         assertThat(savedResult.location).isEqualTo("Download/${zip.name}")
         assertThat(savedResult.adbPullCommand).isEqualTo("adb pull /sdcard/Download/${zip.name}")
+        assertThat(savedResult.bundle).isEqualTo(zip)
     }
 
     @Test

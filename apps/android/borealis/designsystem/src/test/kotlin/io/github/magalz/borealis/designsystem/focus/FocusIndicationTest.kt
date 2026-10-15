@@ -5,6 +5,7 @@ import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,6 +41,7 @@ import org.robolectric.annotation.Config
 class FocusIndicationTest {
     @get:Rule val composeRule = createComposeRule()
     private val focus = FocusRequester()
+    private val elsewhere = FocusRequester()
 
     @Test
     fun `a focused element in keyboard mode has an accent-soft outline outside its shape`() {
@@ -67,6 +69,7 @@ class FocusIndicationTest {
     @Test
     fun `an element that is not focused has no outline`() {
         composeRule.setContentInKeyboardMode { Specimen() }
+        clearFocus()
 
         assertPixel(x = 74f, y = 24f - 3.5f, PAGE)
     }
@@ -85,9 +88,9 @@ class FocusIndicationTest {
     fun `the outline goes away when focus leaves`() {
         composeRule.setContentInKeyboardMode { Specimen() }
         focusTheSquare()
+        assertPixel(x = 74f, y = 24f - 3.5f, OUTLINE)
 
-        composeRule.runOnIdle { focus.freeFocus() }
-        composeRule.waitForIdle()
+        clearFocus()
 
         assertPixel(x = 74f, y = 24f - 3.5f, PAGE)
     }
@@ -95,6 +98,7 @@ class FocusIndicationTest {
     @Test
     fun `a focused element scales to the tile scale once the animation ends`() {
         composeRule.setContentInKeyboardMode { Specimen(scaleOnFocus = true) }
+        clearFocus()
         assertPixel(x = 74f, y = 24f - 1f, PAGE)
 
         focusTheSquare()
@@ -116,6 +120,7 @@ class FocusIndicationTest {
     @Test
     fun `the scale animates by default`() {
         composeRule.setContentInKeyboardMode { Specimen(scaleOnFocus = true) }
+        clearFocus()
         composeRule.mainClock.autoAdvance = false
 
         composeRule.runOnIdle { focus.requestFocus() }
@@ -136,6 +141,7 @@ class FocusIndicationTest {
             0f,
         )
         composeRule.setContentInKeyboardMode { Specimen(scaleOnFocus = true) }
+        clearFocus()
         composeRule.mainClock.autoAdvance = false
 
         composeRule.runOnIdle { focus.requestFocus() }
@@ -147,16 +153,25 @@ class FocusIndicationTest {
     @Composable
     private fun Specimen(scaleOnFocus: Boolean = false) {
         BorealisTheme {
-            Box(Modifier.testTag(FRAME).background(PAGE).padding(24.dp)) {
-                Box(
-                    Modifier.size(100.dp)
-                        .borealisFocusIndication(RoundedCornerShape(8.dp), scaleOnFocus)
-                        .background(FILL, RoundedCornerShape(8.dp))
-                        .focusRequester(focus)
-                        .focusable()
-                )
+            Column {
+                Box(Modifier.testTag(FRAME).background(PAGE).padding(24.dp)) {
+                    Box(
+                        Modifier.size(100.dp)
+                            .borealisFocusIndication(RoundedCornerShape(8.dp), scaleOnFocus)
+                            .background(FILL, RoundedCornerShape(8.dp))
+                            .focusRequester(focus)
+                            .focusable()
+                    )
+                }
+                Box(Modifier.size(10.dp).focusRequester(elsewhere).focusable())
             }
         }
+    }
+
+    /** Entering keyboard mode gives the first focusable focus; the cases here start without. */
+    private fun clearFocus() {
+        composeRule.runOnIdle { elsewhere.requestFocus() }
+        composeRule.waitForIdle()
     }
 
     private fun focusTheSquare() {

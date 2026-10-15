@@ -37,6 +37,9 @@
     <string name="hosts_forget_confirm">Forget</string>
     <string name="hosts_forget_cancel">Cancel</string>
 
+    <string name="hosts_loading">Loading hosts</string>
+    <string name="hosts_app_running">An app is running</string>
+
     <string name="hosts_empty_title">Looking for hosts</string>
     <string name="hosts_empty_body">Borealis searches the local network for LuminalShine hosts. The PC must be on, with LuminalShine running, and on the same network. If it does not show up, use Add host to enter its address.</string>
 

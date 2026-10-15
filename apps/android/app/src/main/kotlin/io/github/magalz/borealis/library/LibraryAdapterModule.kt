@@ -30,6 +30,8 @@ internal abstract class LibraryAdapterModule {
 
     @Binds abstract fun cmsConnector(impl: ServiceCmsConnector): CmsConnector
 
+    @Binds abstract fun cryptoWarmUp(impl: AndroidCryptoWarmUp): CryptoWarmUp
+
     @Binds abstract fun hostClientFactory(impl: NvHostClientFactory): HostClientFactory
 
     @Binds abstract fun hostTexts(impl: ResourceHostTexts): HostTexts

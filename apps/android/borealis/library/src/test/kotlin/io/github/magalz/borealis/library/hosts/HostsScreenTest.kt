@@ -12,6 +12,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
@@ -286,6 +287,49 @@ class HostsScreenTest {
         composeRule.onNodeWithText("Add host").performClick()
 
         assertThat(addHost).isEqualTo(1)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `loading shows a progress indicator and not the empty state with its Add host button`() {
+        showPhone(loadingHosts)
+
+        composeRule.onNodeWithTag("hosts-loading").assertIsDisplayed()
+        composeRule.onNodeWithText("Looking for hosts").assertDoesNotExist()
+        // The phone's top bar names Add host by description only: this text is the empty-state
+        // button.
+        composeRule.onNodeWithText("Add host").assertDoesNotExist()
+        composeRule.onNodeWithText("CONTINUE").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `loading on a TV shows a progress indicator and leaves the focus in the rail`() {
+        showTv(loadingHosts)
+
+        composeRule.onNodeWithTag("hosts-loading").assertIsDisplayed()
+        composeRule.onNodeWithText("Looking for hosts").assertDoesNotExist()
+        composeRule
+            .onNode(isFocused())
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `an app without a known name is called an app that is running`() {
+        showPhone(
+            HostsUiState(
+                loading = false,
+                searching = false,
+                items = listOf(unnamedAppPc),
+                continueItems = listOf(ContinueItemUiState("unnamed", "Den PC", 7, null)),
+            )
+        )
+
+        composeRule
+            .onAllNodes(hasText("An app is running"), useUnmergedTree = true)
+            .assertCountEquals(2)
+        composeRule.onNodeWithText("app").assertDoesNotExist()
     }
 
     @Test

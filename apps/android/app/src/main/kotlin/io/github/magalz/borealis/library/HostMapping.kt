@@ -13,7 +13,7 @@ import java.io.IOException
 import java.io.StringReader
 import org.xmlpull.v1.XmlPullParserException
 
-/** The name of the running app when the cached app list does not know it (upstream uses it too). */
+/** The name that upstream gives an app it only resumes; never shown, only passed to the stream. */
 internal const val UNKNOWN_APP_NAME = "app"
 
 /** The apps in a raw `/applist` answer; empty when [raw] is null or cannot be read. */
@@ -38,15 +38,17 @@ private fun unreadable(error: Exception): List<NvApp> {
 
 /**
  * The host as the Library shows it. [knownApps] is the parsed app list when the caller has it;
- * otherwise the cached raw list is parsed when a running app needs its name.
+ * otherwise the cached raw list is parsed when a running app needs its name. A host that is not
+ * paired has no app list, so it shows no running app; a paired host whose list does not name the
+ * running app shows it without a name.
  */
 internal fun ComputerDetails.toHost(knownApps: List<NvApp>? = null): Host {
     val running =
         runningGameId
-            .takeIf { it != 0 }
+            .takeIf { it != 0 && pairState == PairState.PAIRED }
             ?.let { id ->
                 val app = (knownApps ?: parseApps(rawAppList)).firstOrNull { it.appId == id }
-                RunningApp(id, app?.appName ?: UNKNOWN_APP_NAME)
+                RunningApp(id, app?.appName)
             }
     return Host(
         id = uuid,

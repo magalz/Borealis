@@ -28,7 +28,7 @@ class ServiceCmsConnectorTest {
             )
         val connecting =
             CoroutineScope(Dispatchers.Default).launch {
-                ServiceCmsConnector(app, Dispatchers.IO).connect()
+                ServiceCmsConnector(app, Dispatchers.IO) {}.connect()
             }
         // The service callback needs the main looper, which this test never runs.
         val deadline = System.currentTimeMillis() + WAIT_MS

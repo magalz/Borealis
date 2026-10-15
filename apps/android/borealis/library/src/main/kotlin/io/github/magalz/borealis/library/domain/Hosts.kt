@@ -22,7 +22,8 @@ enum class Reachability {
     UNKNOWN,
 }
 
-data class RunningApp(val id: Int, val name: String)
+/** An app that is running on a host. [name] is null while the host's app list does not know it. */
+data class RunningApp(val id: Int, val name: String?)
 
 /** A user-entered host after parsing: a host name or an IP literal, and the HTTP port. */
 data class HostAddress(val host: String, val port: Int = DEFAULT_PORT) {

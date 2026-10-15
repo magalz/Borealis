@@ -1,10 +1,18 @@
 package io.github.magalz.borealis.library.hosts
 
 import io.github.magalz.borealis.library.domain.Reachability
+import io.github.magalz.borealis.library.domain.RunningApp
 
 /** Hosts named like the captures of the proposal; the addresses are never shown. */
 internal val deskPc =
-    HostItemUiState("desk", "Desk PC", Reachability.ONLINE, true, "Desktop", HostAction.OPEN)
+    HostItemUiState(
+        "desk",
+        "Desk PC",
+        Reachability.ONLINE,
+        true,
+        RunningApp(1, "Desktop"),
+        HostAction.OPEN,
+    )
 internal val livingRoomPc =
     HostItemUiState("living", "Living Room PC", Reachability.OFFLINE, true, null, HostAction.WAKE)
 internal val studio =
@@ -16,6 +24,7 @@ internal val continueDesktop = ContinueItemUiState("desk", "Desk PC", 1, "Deskto
 
 internal val withHosts =
     HostsUiState(
+        loading = false,
         searching = false,
         items = listOf(deskPc, livingRoomPc, studio),
         continueItems = listOf(continueDesktop),
@@ -23,4 +32,18 @@ internal val withHosts =
 
 internal val withHostsNoContinue = withHosts.copy(continueItems = emptyList())
 
-internal val searching = HostsUiState()
+internal val searching = HostsUiState(loading = false, searching = true)
+
+/** Before the repository reported the hosts for the first time. */
+internal val loadingHosts = HostsUiState(loading = true, searching = false)
+
+/** A paired host that runs an app whose name the app list did not give yet. */
+internal val unnamedAppPc =
+    HostItemUiState(
+        "unnamed",
+        "Den PC",
+        Reachability.ONLINE,
+        true,
+        RunningApp(7, null),
+        HostAction.OPEN,
+    )

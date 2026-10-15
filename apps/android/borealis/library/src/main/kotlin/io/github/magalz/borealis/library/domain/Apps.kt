@@ -37,7 +37,8 @@ interface AppRepository {
 data class StreamRequest(
     val hostId: String,
     val appId: Int,
-    val appName: String,
+    /** Null when the name is not known; the launcher then uses the name upstream uses to resume. */
+    val appName: String?,
     val hdrSupported: Boolean,
 )
 

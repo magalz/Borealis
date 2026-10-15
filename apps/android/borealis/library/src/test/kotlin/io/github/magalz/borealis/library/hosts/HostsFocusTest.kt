@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.library.hosts
 
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -18,6 +19,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.domain.Reachability
+import io.github.magalz.borealis.library.shell.LibraryScaffold
+import io.github.magalz.borealis.library.shell.RailActions
 import io.github.magalz.borealis.library.testing.TV
 import io.github.magalz.borealis.library.testing.setContentInKeyboardMode
 import org.junit.Rule
@@ -66,6 +69,17 @@ class HostsFocusTest {
     fun `the first card takes the focus when the hosts arrive after the search`() {
         state.value = searching
         show()
+
+        state.value = withHosts
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("continue:desk").assertIsFocused()
+    }
+
+    @Test
+    fun `the first card takes the focus when the hosts arrive after the loading`() {
+        state.value = loadingHosts
+        show(withRail = true)
 
         state.value = withHosts
         composeRule.waitForIdle()
@@ -125,21 +139,32 @@ class HostsFocusTest {
             it.config.getOrNull(SemanticsProperties.TestTag)
         }
 
-    private fun show() {
+    /** [withRail] draws the shell's rail: it is what has focus while the hosts load. */
+    private fun show(withRail: Boolean = false) {
         composeRule.setContentInKeyboardMode {
-            HostsScreen(
-                state = state.value,
-                formFactor = FormFactor.Tv,
-                snackbarHostState = SnackbarHostState(),
-                onHostSelected = { selected += it },
-                onContinue = {},
-                onWake = {},
-                onForget = {},
-                onDetails = {},
-                onDetailsDismissed = {},
-                onAddHost = {},
-                onSettings = {},
-            )
+            val screen =
+                @Composable {
+                    HostsScreen(
+                        state = state.value,
+                        formFactor = FormFactor.Tv,
+                        snackbarHostState = SnackbarHostState(),
+                        onHostSelected = { selected += it },
+                        onContinue = {},
+                        onWake = {},
+                        onForget = {},
+                        onDetails = {},
+                        onDetailsDismissed = {},
+                        onAddHost = {},
+                        onSettings = {},
+                    )
+                }
+            if (withRail) {
+                LibraryScaffold(FormFactor.Tv, showRail = true, RailActions({}, {}, {})) {
+                    screen()
+                }
+            } else {
+                screen()
+            }
         }
     }
 

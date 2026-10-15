@@ -342,6 +342,57 @@ class ComputerManagerConnectionTest {
         }
 
     @Test
+    fun `the app list of one host never shows up on another host`() = runTest {
+        val connection = newConnection()
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
+            connection.hostUpdates().collect {}
+        }
+
+        binder.emit(details(uuid = "a", rawAppList = APP_LIST))
+        binder.emit(details(uuid = "b", rawAppList = null))
+
+        assertThat(connection.updates.value.getValue("a").rawAppList).isEqualTo(APP_LIST)
+        assertThat(connection.updates.value.getValue("b").rawAppList).isNull()
+        job.cancelAndJoin()
+    }
+
+    @Test
+    fun `a host that was removed and added again has no app list until it gets one`() = runTest {
+        val connection = newConnection()
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
+            connection.hostUpdates().collect {}
+        }
+        val live = details(uuid = "a", rawAppList = APP_LIST)
+        binder.emit(live)
+        connection.remove(live)
+
+        binder.emit(details(uuid = "a", rawAppList = null))
+        assertThat(connection.updates.value.getValue("a").rawAppList).isNull()
+
+        binder.emit(details(uuid = "a", rawAppList = APP_LIST))
+        assertThat(connection.updates.value.getValue("a").rawAppList).isEqualTo(APP_LIST)
+        job.cancelAndJoin()
+    }
+
+    @Test
+    fun `a new app list replaces the one that was kept`() = runTest {
+        val connection = newConnection()
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
+            connection.hostUpdates().collect {}
+        }
+        val other = APP_LIST.replace("Desktop", "Games")
+
+        binder.emit(details(uuid = "a", rawAppList = APP_LIST))
+        binder.emit(details(uuid = "a", rawAppList = null))
+        assertThat(connection.updates.value.getValue("a").rawAppList).isEqualTo(APP_LIST)
+
+        binder.emit(details(uuid = "a", rawAppList = other))
+
+        assertThat(connection.updates.value.getValue("a").rawAppList).isEqualTo(other)
+        job.cancelAndJoin()
+    }
+
+    @Test
     fun `pinning a certificate keeps the app list that was already received`() = runTest {
         val connection = newConnection()
         val live = details(uuid = "a", rawAppList = APP_LIST)

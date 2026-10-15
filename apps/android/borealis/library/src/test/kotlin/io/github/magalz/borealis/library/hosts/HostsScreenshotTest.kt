@@ -77,6 +77,16 @@ class HostsScreenshotTest {
 
     @Test
     @Config(qualifiers = TV)
+    fun hostsTvLoading() {
+        // The indicator spins for ever: freeze the clock so the capture is the same every run.
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContentInKeyboardMode { Screen(loadingHosts, FormFactor.Tv) }
+
+        shoot("hosts_tv_loading")
+    }
+
+    @Test
+    @Config(qualifiers = TV)
     fun hostsTvOptions() {
         composeRule.setContentInKeyboardMode { Screen(withHosts, FormFactor.Tv) }
         composeRule.onNodeWithTag("host:living").requestFocus()

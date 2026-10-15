@@ -13,12 +13,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -35,6 +37,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.adaptive.hostGridColumns
 import io.github.magalz.borealis.designsystem.components.ContinueCard
@@ -57,6 +61,7 @@ import io.github.magalz.borealis.library.domain.Reachability
 /** An outline sits 5dp outside its card, so neighbouring cards need 10dp between them. */
 private val GRID_GAP = 12.dp
 private val SECTION_PADDING = 6.dp
+private val LOADING_SIZE = 40.dp
 
 /**
  * The Hosts home screen: the session to continue, then every host with its state and the one action
@@ -189,12 +194,24 @@ private fun HostsBody(
     BoxWithConstraints(modifier) {
         // A phone leaves focus alone; a TV or handheld starts on the first card, or inside the
         // empty state (a focus group hands focus to its first child). The guard starts again when
-        // the search ends, so the first hosts to arrive take the focus.
+        // the hosts load or the search ends, so the first hosts to arrive take the focus.
         val requester = remember { FocusRequester() }
-        val initialFocus = rememberInitialFocusState(state.searching)
+        val initialFocus = rememberInitialFocusState(state.loading || state.searching)
         val startFocus =
             if (formFactor != FormFactor.Phone) StartFocus(requester, initialFocus) else null
-        if (state.searching) {
+        if (state.loading) {
+            // Nothing to press while the hosts load: an OK pressed now must not open Add host.
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                val description = stringResource(R.string.hosts_loading)
+                CircularProgressIndicator(
+                    modifier =
+                        Modifier.size(LOADING_SIZE).testTag("hosts-loading").semantics {
+                            contentDescription = description
+                        },
+                    color = LocalBorealisColors.current.accent,
+                )
+            }
+        } else if (state.searching) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 EmptyState(
                     title = stringResource(R.string.hosts_empty_title),
@@ -224,6 +241,7 @@ private fun HostGrid(
     handlers: HostsHandlers,
 ) {
     val optionsLabel = stringResource(R.string.hosts_options)
+    val unnamedApp = stringResource(R.string.hosts_app_running)
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
         modifier = Modifier.fillMaxSize(),
@@ -242,7 +260,7 @@ private fun HostGrid(
                 span = { _, _ -> fullWidth() },
             ) { index, item ->
                 ContinueCard(
-                    appName = item.appName,
+                    appName = item.appName ?: unnamedApp,
                     detail = stringResource(R.string.hosts_continue_detail, item.hostName),
                     resumeLabel = stringResource(R.string.hosts_continue_resume),
                     onClick = { handlers.onContinue(item.hostId) },
@@ -265,6 +283,7 @@ private fun HostGrid(
                 item,
                 handlers,
                 optionsLabel,
+                unnamedApp,
                 Modifier.withStartFocus(startFocus.takeIf { first }),
             )
         }
@@ -276,6 +295,7 @@ private fun HostItem(
     item: HostItemUiState,
     handlers: HostsHandlers,
     optionsLabel: String,
+    unnamedApp: String,
     modifier: Modifier,
 ) {
     // Open and Pair both select the host: the ViewModel decides between apps and pairing.
@@ -295,7 +315,7 @@ private fun HostItem(
         statusText = stringResource(item.statusTextRes()),
         onClick = { handlers.onHostSelected(item.id) },
         modifier = modifier.testTag("host:${item.id}"),
-        runningApp = item.runningAppName,
+        runningApp = item.runningApp?.let { it.name ?: unnamedApp },
         action = action,
         onOptions = { handlers.onOptions(item.id) },
         optionsLabel = optionsLabel,

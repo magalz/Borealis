@@ -80,3 +80,4 @@ Never rewrite an accepted ADR to change its decision. If a decision changes, wri
 | 0050 | [Record diagnostics, audit trail, interim settings and the first release channel](0050-diagnostics-audit-and-interim-settings.md) | accepted | 2026-10-14 |
 | 0051 | [Send the diagnostic bundle from a TV to a phone with a QR code](0051-send-the-diagnostic-bundle-to-a-phone-with-a-qr-code.md) | accepted | 2026-10-15 |
 | 0052 | [Structure the Phase 2 UI: hosts home, a Back-opened in-game menu and a dark theme](0052-structure-the-phase-2-ui.md) | accepted | 2026-10-15 |
+| 0053 | [Use Material 3 with a Borealis focus indication on TV](0053-material-3-with-borealis-focus-on-tv.md) | accepted | 2026-10-15 |

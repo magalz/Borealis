@@ -1,32 +1,122 @@
 package io.github.magalz.borealis.library.hosts
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.magalz.borealis.library.domain.Host
 import io.github.magalz.borealis.library.domain.HostRepository
+import io.github.magalz.borealis.library.domain.Reachability
+import io.github.magalz.borealis.library.domain.StreamRequest
+import io.github.magalz.borealis.library.domain.WakeResult
 import javax.inject.Inject
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class HostsViewModel @Inject constructor(private val repository: HostRepository) : ViewModel() {
-    val uiState: StateFlow<HostsUiState> = MutableStateFlow(HostsUiState())
-    val effects: Flow<HostsEffect> = emptyFlow()
+    private val details = MutableStateFlow<String?>(null)
+    private val effectChannel = Channel<HostsEffect>(Channel.BUFFERED)
 
-    fun onHostSelected(hostId: String) = Unit
+    /** Collecting it starts host polling; it stops five seconds after the last collector leaves. */
+    val uiState: StateFlow<HostsUiState> =
+        combine(repository.hosts, details) { hosts, details -> hosts.toUiState(details) }
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
+                HostsUiState(),
+            )
 
-    fun onContinue(hostId: String) = Unit
+    val effects: Flow<HostsEffect> = effectChannel.receiveAsFlow()
 
-    fun onWake(hostId: String) = Unit
+    fun onHostSelected(hostId: String) {
+        val item = uiState.value.items.firstOrNull { it.id == hostId } ?: return
+        when (item.action) {
+            HostAction.OPEN -> send(HostsEffect.OpenApps(hostId))
+            HostAction.PAIR -> send(HostsEffect.OpenPairing(hostId))
+            HostAction.WAKE -> onWake(hostId)
+            HostAction.NONE -> send(HostsEffect.ShowMessage(HostsMessage.HOST_UNAVAILABLE))
+        }
+    }
 
-    fun onForget(hostId: String) = Unit
+    fun onContinue(hostId: String) {
+        val item = uiState.value.continueItems.firstOrNull { it.hostId == hostId } ?: return
+        // The adapter decides HDR from the app and the device when it starts the stream.
+        send(
+            HostsEffect.StartStream(
+                StreamRequest(hostId, item.appId, item.appName, hdrSupported = false)
+            )
+        )
+    }
 
-    fun onDetails(hostId: String) = Unit
+    fun onWake(hostId: String) {
+        viewModelScope.launch { send(HostsEffect.ShowMessage(repository.wake(hostId).toMessage())) }
+    }
 
-    fun onDetailsDismissed() = Unit
+    fun onForget(hostId: String) {
+        viewModelScope.launch { repository.forget(hostId) }
+    }
 
-    fun onAddHost() = Unit
+    fun onDetails(hostId: String) {
+        viewModelScope.launch { details.value = repository.details(hostId) }
+    }
 
-    fun onSettings() = Unit
+    fun onDetailsDismissed() {
+        details.value = null
+    }
+
+    fun onAddHost() = send(HostsEffect.OpenAddHost)
+
+    fun onSettings() = send(HostsEffect.OpenSettings)
+
+    private fun send(effect: HostsEffect) {
+        effectChannel.trySend(effect)
+    }
+
+    private companion object {
+        const val STOP_TIMEOUT_MS = 5_000L
+    }
 }
+
+private fun List<Host>.toUiState(details: String?): HostsUiState {
+    val hosts = sortedBy { it.name.lowercase() }
+    return HostsUiState(
+        searching = hosts.isEmpty(),
+        items = hosts.map { it.toItem() },
+        continueItems =
+            hosts.mapNotNull { host ->
+                val app = host.runningApp
+                if (host.reachability == Reachability.ONLINE && host.paired && app != null) {
+                    ContinueItemUiState(host.id, host.name, app.id, app.name)
+                } else {
+                    null
+                }
+            },
+        details = details,
+    )
+}
+
+private fun Host.toItem() =
+    HostItemUiState(id, name, reachability, paired, runningApp?.name, primaryAction())
+
+private fun Host.primaryAction(): HostAction =
+    when {
+        reachability == Reachability.ONLINE && paired -> HostAction.OPEN
+        reachability == Reachability.ONLINE -> HostAction.PAIR
+        reachability == Reachability.OFFLINE && canWake -> HostAction.WAKE
+        else -> HostAction.NONE
+    }
+
+private fun WakeResult.toMessage(): HostsMessage =
+    when (this) {
+        WakeResult.SENT -> HostsMessage.WAKE_SENT
+        WakeResult.ALREADY_ONLINE -> HostsMessage.ALREADY_ONLINE
+        WakeResult.NO_MAC_ADDRESS -> HostsMessage.NO_MAC_ADDRESS
+        WakeResult.FAILED -> HostsMessage.WAKE_FAILED
+    }

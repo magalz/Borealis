@@ -116,6 +116,16 @@ class AddHostScreenTest {
 
     @Test
     @Config(qualifiers = PHONE)
+    fun `Back does nothing while busy`() {
+        show(AddHostUiState(address = "192.168.1.20", busy = true))
+
+        Espresso.pressBack()
+
+        assertThat(cancelled).isEqualTo(0)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
     fun `an empty address shows its error`() {
         show(AddHostUiState(error = AddHostError.EMPTY))
 

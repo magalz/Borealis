@@ -135,6 +135,19 @@ class HostsRouteTest {
     }
 
     @Test
+    fun `a host that was not polled yet says it is still being checked`() {
+        repository.emit(offline.copy(reachability = Reachability.UNKNOWN))
+        show()
+
+        composeRule.onNodeWithTag("host:living").performClick()
+        composeRule.waitForIdle()
+
+        composeRule
+            .onNodeWithText("Still checking this host. Try again in a moment.")
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun `the message of a PC that is already on`() {
         repository.wakeResult = WakeResult.ALREADY_ONLINE
         repository.emit(offline)

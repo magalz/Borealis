@@ -87,4 +87,5 @@ private fun HostsMessage.textRes(): Int =
         HostsMessage.ALREADY_ONLINE -> R.string.hosts_message_already_online
         HostsMessage.NO_MAC_ADDRESS -> R.string.hosts_message_no_mac
         HostsMessage.WAKE_FAILED -> R.string.hosts_message_wake_failed
+        HostsMessage.HOST_CHECKING -> R.string.hosts_message_unavailable
     }

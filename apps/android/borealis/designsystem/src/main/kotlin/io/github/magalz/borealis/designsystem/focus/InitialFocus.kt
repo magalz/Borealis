@@ -1,5 +1,7 @@
 package io.github.magalz.borealis.designsystem.focus
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -47,3 +49,18 @@ private class InitialFocusNode(var requester: FocusRequester) :
         requester.requestFocus()
     }
 }
+
+/** Whether the screen already took its initial focus. */
+class InitialFocusState {
+    internal var done = false
+}
+
+/** An [InitialFocusState] that starts again when [key] changes. */
+@Composable
+fun rememberInitialFocusState(key: Any? = null): InitialFocusState =
+    remember(key) {
+        InitialFocusState()
+    }
+
+fun Modifier.initialFocus(requester: FocusRequester, state: InitialFocusState): Modifier =
+    initialFocus(requester)

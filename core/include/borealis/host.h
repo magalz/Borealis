@@ -188,8 +188,7 @@ extern "C" {
    * Returns BOREALIS_OK, BOREALIS_ERR_INVALID_ARGUMENT (NULL out, or NULL msg
    * with len > 0) or BOREALIS_ERR_INPUT_TOO_LARGE.
    */
-  BOREALIS_CORE_API int borealis_pair_classify(int32_t status, const char *msg, size_t len, borealis_pair_decision *out)
-    BOREALIS_NOEXCEPT;
+  BOREALIS_CORE_API int borealis_pair_classify(int32_t status, const char *msg, size_t len, borealis_pair_decision *out) BOREALIS_NOEXCEPT;
 
   /*
    * Returns the frame rate to put in the /launch `mode=WxHxFPS` parameter.

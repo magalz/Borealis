@@ -40,6 +40,13 @@ class StatusDotTest {
     }
 
     @Test
+    fun `an online host that needs attention is a warning dot`() {
+        composeRule.setContent { Specimen(DotStatus.Attention) }
+
+        assertCentre(BorealisTokens.Color.Warning)
+    }
+
+    @Test
     fun `an unknown state looks like offline`() {
         composeRule.setContent { Specimen(DotStatus.Unknown) }
 

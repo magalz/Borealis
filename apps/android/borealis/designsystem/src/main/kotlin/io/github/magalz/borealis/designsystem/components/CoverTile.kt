@@ -55,7 +55,9 @@ fun CoverTile(
     modifier: Modifier = Modifier,
     runningLabel: String? = null,
     hidden: Boolean = false,
+    hiddenLabel: String? = null,
     onOptions: (() -> Unit)? = null,
+    optionsLabel: String? = null,
 ) {
     val colors = LocalBorealisColors.current
     val shape = LocalBorealisShapes.current.cover

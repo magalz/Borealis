@@ -66,6 +66,10 @@ fun rememberFormFactor(): FormFactor {
     }
 }
 
+// Stub: the behaviour tests fail against it until the implementation lands.
+internal fun windowWidthDp(containerWidthPx: Int, density: Float, configurationWidthDp: Int): Int =
+    0
+
 private fun uiModeTypeOf(context: Context): Int =
     context.getSystemService(UiModeManager::class.java)?.currentModeType
         ?: Configuration.UI_MODE_TYPE_NORMAL

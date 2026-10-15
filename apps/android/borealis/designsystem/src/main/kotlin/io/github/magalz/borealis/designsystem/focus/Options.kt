@@ -35,6 +35,7 @@ fun Modifier.optionsClickable(
     onClick: () -> Unit,
     onOptions: (() -> Unit)? = null,
     role: Role? = null,
+    onOptionsLabel: String? = null,
 ): Modifier =
     (if (onOptions == null) this else onOptionsRequest(onOptions)).combinedClickable(
         interactionSource = null,

@@ -73,7 +73,7 @@ class ComponentScreenshotTest {
             Page(FormFactor.Phone) {
                 HostCard(
                     name = "Studio",
-                    status = DotStatus.Online,
+                    status = DotStatus.Attention,
                     statusText = "Not paired",
                     detail = "LuminalShine 26.09.1 · found on this network",
                     action = HostCardAction("Pair") {},

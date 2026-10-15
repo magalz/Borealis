@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 
 /**
@@ -25,7 +26,8 @@ fun BorealisTextField(
     label: String,
     modifier: Modifier = Modifier,
     error: String? = null,
-    onDone: () -> Unit = {},
+    onDone: (() -> Unit)? = null,
+    keyboardType: KeyboardType = KeyboardType.Text,
 ) {
     val colors = LocalBorealisColors.current
     OutlinedTextField(
@@ -37,8 +39,8 @@ fun BorealisTextField(
         isError = error != null,
         singleLine = true,
         shape = MaterialTheme.shapes.medium,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { onDone() }),
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { onDone?.invoke() }),
         colors =
             OutlinedTextFieldDefaults.colors(
                 focusedTextColor = colors.ink,

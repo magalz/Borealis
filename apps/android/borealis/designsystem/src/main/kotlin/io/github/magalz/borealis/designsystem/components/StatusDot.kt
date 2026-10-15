@@ -16,6 +16,7 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 /** The reachability of a host as the dot shows it. */
 enum class DotStatus {
     Online,
+    Attention,
     Offline,
     Unknown,
 }

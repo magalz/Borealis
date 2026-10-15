@@ -49,6 +49,16 @@ class RememberFormFactorTest {
         assertThat(detected()).isEqualTo(FormFactor.Handheld)
     }
 
+    @Test
+    @Config(qualifiers = "w700dp-h400dp-xhdpi-dpad")
+    fun `the very first composition already sees a wide handheld`() {
+        val seen = mutableListOf<FormFactor>()
+        composeRule.setContent { seen += rememberFormFactor() }
+        composeRule.waitForIdle()
+
+        assertThat(seen.first()).isEqualTo(FormFactor.Handheld)
+    }
+
     private fun detected(): FormFactor {
         var formFactor: FormFactor? = null
         composeRule.setContent { formFactor = rememberFormFactor() }

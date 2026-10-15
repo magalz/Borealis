@@ -38,6 +38,7 @@ fun ContinueCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     onOptions: (() -> Unit)? = null,
+    optionsLabel: String? = null,
 ) {
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.large

@@ -10,10 +10,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -107,6 +114,21 @@ class FocusIndicationTest {
     }
 
     @Test
+    fun `the outline goes away when the window returns to touch mode`() {
+        val mode = FakeInputModeManager(InputMode.Keyboard)
+        composeRule.setContent {
+            CompositionLocalProvider(LocalInputModeManager provides mode) { Specimen() }
+        }
+        focusTheSquare()
+        assertPixel(x = 74f, y = 24f - 3.5f, OUTLINE)
+
+        composeRule.runOnIdle { mode.inputMode = InputMode.Touch }
+        composeRule.waitForIdle()
+
+        assertPixel(x = 74f, y = 24f - 3.5f, PAGE)
+    }
+
+    @Test
     fun `an element without scale on focus keeps its size`() {
         composeRule.setContentInKeyboardMode { Specimen(scaleOnFocus = false) }
 
@@ -179,6 +201,16 @@ class FocusIndicationTest {
 
     private fun assertPixel(x: Float, y: Float, expected: Color) =
         composeRule.onNodeWithTag(FRAME).assertPixel(x, y, expected)
+
+    /** A window whose input mode a test can flip, as a touch or a key does on a device. */
+    private class FakeInputModeManager(initial: InputMode) : InputModeManager {
+        override var inputMode: InputMode by mutableStateOf(initial)
+
+        override fun requestInputMode(inputMode: InputMode): Boolean {
+            this.inputMode = inputMode
+            return true
+        }
+    }
 
     private companion object {
         const val FRAME = "frame"

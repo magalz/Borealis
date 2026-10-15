@@ -7,6 +7,7 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -111,12 +112,72 @@ class ActionSheetTest {
         assertThat(dismissed).isEqualTo(1)
     }
 
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV the dialog is centred in the window with margins on both sides`() {
+        composeRule.setContent { Specimen(FormFactor.Tv) }
+        composeRule.waitForIdle()
+
+        val row = composeRule.onNodeWithText("Resume").fetchSemanticsNode().boundsInWindow
+        val windowWidth = 960f * composeRule.density.density
+
+        assertThat(row.left).isGreaterThan(0f)
+        assertThat(row.left).isWithin(1f).of(windowWidth - row.right)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `on a phone the sheet spans the width of the window`() {
+        composeRule.setContent { Specimen(FormFactor.Phone) }
+        composeRule.waitForIdle()
+
+        val row = composeRule.onNodeWithText("Resume").fetchSemanticsNode().boundsInWindow
+        val windowWidth = 360f * composeRule.density.density
+
+        // Only the 8dp list padding separates a row from the window edge.
+        val margin = 8f * composeRule.density.density
+        assertThat(row.left).isWithin(1f).of(margin)
+        assertThat(windowWidth - row.right).isWithin(1f).of(margin)
+    }
+
+    @Test
+    @Config(qualifiers = SHORT_PHONE)
+    fun `the last of six actions is reachable on a short phone`() {
+        composeRule.setContent { Specimen(FormFactor.Phone, SIX_ACTIONS) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Action 6").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = SHORT_TV)
+    fun `the last of six actions is reachable in a short dialog`() {
+        composeRule.setContent { Specimen(FormFactor.Tv, SIX_ACTIONS) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Action 6").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = SHORT_PHONE)
+    fun `the title stays in view while the actions scroll`() {
+        composeRule.setContent { Specimen(FormFactor.Phone, SIX_ACTIONS) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Action 6").performScrollTo()
+
+        composeRule.onNodeWithText("Desktop").assertIsDisplayed()
+    }
+
     @Composable
-    private fun Specimen(formFactor: FormFactor) {
+    private fun Specimen(
+        formFactor: FormFactor,
+        actions: List<ActionSheetAction<String>> = listOf(resume, quit),
+    ) {
         BorealisTheme(formFactor) {
             ActionSheet(
                 title = "Desktop",
-                actions = listOf(resume, quit),
+                actions = actions,
                 onAction = { chosen += it },
                 onDismiss = { dismissed++ },
             )
@@ -125,6 +186,10 @@ class ActionSheetTest {
 
     private companion object {
         const val PHONE = "w360dp-h640dp-xhdpi"
+        const val SHORT_PHONE = "w360dp-h360dp-xhdpi"
+        const val SHORT_TV = "w960dp-h360dp-land-television-xhdpi"
+        val SIX_ACTIONS =
+            (1..6).map { ActionSheetAction("a$it", "Action $it", "What action $it does") }
         const val TV = "w960dp-h540dp-land-television-xhdpi"
     }
 }

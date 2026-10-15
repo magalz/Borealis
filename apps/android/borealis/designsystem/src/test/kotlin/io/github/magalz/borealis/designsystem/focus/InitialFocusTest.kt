@@ -6,10 +6,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
@@ -17,6 +21,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
@@ -29,6 +34,7 @@ class InitialFocusTest {
     private val second = FocusRequester()
     private val first = FocusRequester()
     private val recompositions = mutableIntStateOf(0)
+    private var manager: InputModeManager? = null
 
     @Test
     fun `the element with the initial focus has focus after the first layout`() {
@@ -59,8 +65,34 @@ class InitialFocusTest {
         composeRule.onNodeWithTag(FIRST).assertIsFocused()
     }
 
+    @Test
+    fun `a TV window switches to keyboard mode`() {
+        composeRule.setContent { Screen(FormFactor.Tv) }
+        composeRule.waitForIdle()
+
+        assertThat(checkNotNull(manager).inputMode).isEqualTo(InputMode.Keyboard)
+    }
+
+    @Test
+    fun `a handheld window switches to keyboard mode`() {
+        composeRule.setContent { Screen(FormFactor.Handheld) }
+        composeRule.waitForIdle()
+
+        assertThat(checkNotNull(manager).inputMode).isEqualTo(InputMode.Keyboard)
+    }
+
+    @Test
+    fun `a phone window stays in touch mode`() {
+        composeRule.setContent { Screen(FormFactor.Phone) }
+        composeRule.waitForIdle()
+
+        assertThat(checkNotNull(manager).inputMode).isEqualTo(InputMode.Touch)
+    }
+
     @Composable
     private fun Screen(formFactor: FormFactor) {
+        val current = LocalInputModeManager.current
+        SideEffect { manager = current }
         BorealisTheme(formFactor) {
             Column {
                 Text("${recompositions.intValue}")

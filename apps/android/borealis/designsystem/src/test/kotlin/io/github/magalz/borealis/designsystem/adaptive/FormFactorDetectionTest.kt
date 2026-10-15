@@ -93,6 +93,18 @@ class FormFactorDetectionTest {
         assertThat(hostGridColumns(FormFactor.Phone, widthDp = 600)).isEqualTo(2)
     }
 
+    @Test
+    fun `the window width is the container width in dp once the window has a size`() {
+        assertThat(windowWidthDp(containerWidthPx = 1400, density = 2f, configurationWidthDp = 360))
+            .isEqualTo(700)
+    }
+
+    @Test
+    fun `before the window has a size the width comes from the configuration`() {
+        assertThat(windowWidthDp(containerWidthPx = 0, density = 2f, configurationWidthDp = 700))
+            .isEqualTo(700)
+    }
+
     /** A plain touch phone unless a test says otherwise. */
     private fun detect(
         isTvFeature: Boolean = false,

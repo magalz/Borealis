@@ -85,6 +85,35 @@ report it; never reformat upstream code. Spotless formats Borealis C/C++ with
 the `clang-format` on `PATH`; without it the C/C++ Spotless tasks fail with
 "clang-format 22.x not found on PATH" while the rest of the build keeps working.
 
+### Screenshot tests
+
+The Compose screens in `:borealis:designsystem` and `:borealis:library` are
+checked against reference images
+([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)). The references
+are in `src/test/screenshots/` of each module. Run these commands from
+`apps/android/`.
+
+Record the references on Windows, after a change that alters a screen:
+
+```sh
+./gradlew :borealis:designsystem:recordRoborazziDebug :borealis:library:recordRoborazziDebug
+```
+
+Verify the screens against the committed references:
+
+```sh
+./gradlew :borealis:designsystem:testDebugUnitTest :borealis:library:testDebugUnitTest -Proborazzi.test.verify=true
+```
+
+- The "Android screenshots" job in CI (`.github/workflows/ci.yml`) runs the
+  verify command on `windows-latest`. It fails when a screen differs from its
+  reference, and it uploads the differences as an artifact.
+- The Linux Android job renders the same tests without comparing them. The
+  tests still count for coverage.
+- Plan B, if the Windows rendering drifts: record and verify on Linux.
+  `TODO(verify)`: `ci.yml` has no Linux record job yet, so plan B is not
+  implemented.
+
 ### Coverage, licences and SBOM
 
 ```sh

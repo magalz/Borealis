@@ -5,9 +5,11 @@ import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogRecord
 import io.github.magalz.borealis.logging.LogSink
 import java.io.File
+import java.io.IOException
 import java.io.RandomAccessFile
 import java.net.ConnectException
 import java.net.InetAddress
+import java.net.SocketTimeoutException
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicLong
 import org.junit.After
@@ -378,6 +380,64 @@ class OneShotFileServerTest {
     }
 
     @Test
+    fun `the lifetime also ends a download that the client stopped reading`() {
+        val big = File(temp.root, "big.zip")
+        RandomAccessFile(big, "rw").use { it.setLength(24L * 1024 * 1024) }
+        val server = server(file = big)
+        val url = server.start()
+        val stalled = connect(portOf(url))
+        stalled.send("GET ${pathOf(url)}/${big.name} HTTP/1.1\r\n\r\n")
+        stalled.getInputStream().read(ByteArray(1_024))
+        // The server is now blocked writing to a client that reads nothing more.
+        Thread.sleep(200)
+
+        now.addAndGet(300_001L)
+        awaitStopped(server)
+
+        assertThat(server.status).isEqualTo(TransferStatus.EXPIRED)
+        assertThat(serverThreads()).isEqualTo(0)
+        // The connection was closed: draining it ends in EOF or a reset, not in a timeout.
+        var timedOut = false
+        try {
+            stalled.getInputStream().readBytes()
+        } catch (_: SocketTimeoutException) {
+            timedOut = true
+        } catch (_: IOException) {
+            // A reset is a closed connection too.
+        }
+        assertThat(timedOut).isFalse()
+        stalled.close()
+    }
+
+    @Test
+    fun `the lifetime also ends a connection that never sends a request`() {
+        val server = server()
+        val url = server.start()
+        val silent = connect(portOf(url))
+        Thread.sleep(100)
+
+        now.addAndGet(300_001L)
+        // Far sooner than the 10 second read timeout.
+        awaitStopped(server)
+
+        assertThat(server.status).isEqualTo(TransferStatus.EXPIRED)
+        assertThat(silent.readReply()).isNull()
+        silent.close()
+    }
+
+    @Test
+    fun `an interrupted caller of stop keeps its interrupt flag`() {
+        val server = server()
+        server.start()
+
+        Thread.currentThread().interrupt()
+        server.stop()
+
+        assertThat(Thread.interrupted()).isTrue()
+        assertThat(server.status).isEqualTo(TransferStatus.STOPPED)
+    }
+
+    @Test
     fun `sizes are shown in bytes, KiB and MiB`() {
         assertThat(TransferHttp.formatSize(512)).isEqualTo("512 B")
         assertThat(TransferHttp.formatSize(40_000)).isEqualTo("39.1 KiB")
@@ -394,6 +454,6 @@ class OneShotFileServerTest {
 
     private fun serverThreads(): Int =
         Thread.getAllStackTraces().keys.count {
-            it.name == OneShotFileServer.THREAD_NAME && it.isAlive
+            it.name.startsWith(OneShotFileServer.THREAD_NAME) && it.isAlive
         }
 }

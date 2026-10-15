@@ -5,6 +5,7 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.ResolveInfo
+import android.content.res.Resources
 import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.os.Looper
@@ -37,6 +38,19 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowAlertDialog
 import org.robolectric.shadows.ShadowToast
+
+/** An activity whose resources fail once on demand, as a window that cannot be built would. */
+class FailingResourcesActivity : Activity() {
+    var failuresLeft = 0
+
+    override fun getResources(): Resources {
+        if (failuresLeft > 0) {
+            failuresLeft--
+            throw IllegalStateException("no resources")
+        }
+        return super.getResources()
+    }
+}
 
 /** An activity whose `startActivity` fails the way a revoked grant or a bad intent would. */
 class RefusingActivity : Activity() {
@@ -462,4 +476,26 @@ class ExportDiagnosticsPreferenceTest {
         assertThat(ShadowToast.getTextOfLatestToast())
             .isEqualTo("Could not start the transfer. See the log for details.")
     }
+
+    @Test
+    fun `a dialog that cannot be built stops the server it started`() {
+        RuntimeEnvironment.setQualifiers("+television")
+        val tv = Robolectric.buildActivity(FailingResourcesActivity::class.java).setup().get()
+        preference(context = tv).onClick()
+        val saved = savedDialog()
+        val before = transferThreads()
+
+        tv.failuresLeft = 1
+        saved.getButton(AlertDialog.BUTTON_NEUTRAL).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertThat(ShadowToast.getTextOfLatestToast())
+            .isEqualTo("Could not start the transfer. See the log for details.")
+        assertThat(transferThreads()).isEqualTo(before)
+    }
+
+    private fun transferThreads(): Int =
+        Thread.getAllStackTraces().keys.count {
+            it.name.startsWith("borealis-diagnostic-transfer") && it.isAlive
+        }
 }

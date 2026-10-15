@@ -81,7 +81,7 @@ configure_file(
 # ---------------------------------------------------------------------------
 # Library
 # ---------------------------------------------------------------------------
-add_library(borealis_core src/version.cpp src/host_caps.cpp src/launch.cpp)
+add_library(borealis_core src/version.cpp src/host_caps.cpp src/launch.cpp src/pair.cpp)
 add_library(borealis::core ALIAS borealis_core)
 
 target_include_directories(

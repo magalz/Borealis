@@ -182,4 +182,83 @@ class CrashHandlerTest {
 
         assertThat(crashFiles().single().readText()).contains(message)
     }
+
+    @Test
+    fun `a report follows the masking switch of its redactor`() {
+        val redactor = Redactor()
+        val handler = CrashReportHandler(logDir, null, redactor = redactor)
+
+        handler.uncaughtException(Thread.currentThread(), IllegalStateException("to 10.0.0.5"))
+        redactor.maskAddresses = true
+        handler.uncaughtException(Thread.currentThread(), IllegalStateException("to 10.0.0.6"))
+
+        val texts = crashFiles().sortedBy { it.name }.map { it.readText(Charsets.UTF_8) }
+        assertThat(texts.count { it.contains("10.0.0.5") }).isEqualTo(1)
+        assertThat(texts.single { it.contains("[IP]") }).doesNotContain("10.0.0.6")
+    }
+
+    @Test
+    fun `an installed handler uses the redactor it was given`() {
+        val redactor = Redactor(maskAddresses = true)
+
+        val installed = CrashHandler.install(logDir, redactor = redactor)
+        installed.uncaughtException(
+            Thread.currentThread(),
+            IllegalStateException("host=Den-PC at 10.0.0.5"),
+        )
+
+        val text = crashFiles().single().readText(Charsets.UTF_8)
+        assertThat(text).contains("host=[HOST] at [IP]")
+    }
+
+    @Test
+    fun `pending log lines are flushed before the report is written`() {
+        val order = mutableListOf<String>()
+        val previous = FakeHandler()
+        val handler =
+            CrashReportHandler(
+                logDir,
+                previous,
+                flushLogs = { order += "flush:${crashFiles().size}" },
+            )
+
+        handler.uncaughtException(Thread.currentThread(), IllegalStateException("boom"))
+
+        assertThat(order).containsExactly("flush:0")
+        assertThat(crashFiles()).hasSize(1)
+    }
+
+    @Test
+    fun `a failing log flush does not stop the report or the delegation`() {
+        val previous = FakeHandler()
+        val handler = CrashReportHandler(logDir, previous, flushLogs = { error("flush failed") })
+
+        handler.uncaughtException(Thread.currentThread(), IllegalStateException("boom"))
+
+        assertThat(crashFiles()).hasSize(1)
+        assertThat(previous.calls).hasSize(1)
+    }
+
+    @Test
+    fun `flushing the file sinks puts queued lines on the disk before the process dies`() {
+        val gate = java.util.concurrent.CountDownLatch(1)
+        val sink = RotatingFileSink(logDir, writeGate = { gate.await() })
+        sink.write(LogRecord(1_700_000_000_000L, LogLevel.INFO, LogTag.APP, "last words"))
+        // The writer stays stalled until the handler asks for the flush, so the line can only be
+        // on the disk if the flush waited for it.
+        val handler =
+            CrashReportHandler(
+                logDir,
+                null,
+                flushLogs = {
+                    gate.countDown()
+                    RotatingFileSink.flushAll(timeoutMillis = 10_000)
+                },
+            )
+
+        handler.uncaughtException(Thread.currentThread(), Error("x"))
+
+        assertThat(File(logDir, RotatingFileSink.FILE_NAME).readText()).contains("last words")
+        sink.close()
+    }
 }

@@ -69,3 +69,5 @@ Chosen option: "DataStore (new settings) + Room (session history, audit trail) +
 ## More Information
 
 See [0021](0021-audit.md) (the audit trail is stored in Room) and [0035](0035-secrets-storage-with-tink-and-keystore.md).
+
+Amended by [0050](0050-diagnostics-audit-and-interim-settings.md).

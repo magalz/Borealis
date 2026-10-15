@@ -8,6 +8,7 @@ Host responses and golden vectors shared by the borealis-core tests and the Andr
 | --- | --- |
 | `luminalshine/<host version>/` | Responses of one LuminalShine release, named after the endpoint (`serverinfo-http.xml` is `/serverinfo` over HTTP). |
 | `vectors/*.tsv` | Golden input/output vectors for the core host rules, read by the GoogleTest suite and, once the Android JNI instrumented test exists (task T4), by that test. |
+| `redaction/secret-canaries.tsv` | Synthetic secrets and the text the log redactor must produce for them, read by the redaction tests of `:borealis:logging` and `:borealis:diagnostics`. |
 
 Each host version folder has a `PROVENANCE.md` with one row per file.
 
@@ -32,7 +33,7 @@ Never commit certificates, keys, pairing secrets, `rikey` values or session URLs
 
 ## Golden vectors
 
-`vectors/*.tsv` pin the behaviour of the three core host functions. The GoogleTest suite (`tests/vectors_test.cpp`) replays them through the C ABI today. The Android JNI instrumented test (task T4) will replay the same files through the Kotlin binding, so a rule cannot drift between platforms.
+`vectors/*.tsv` pin the behaviour of the core host functions. The GoogleTest suite (`tests/vectors_test.cpp`) replays them through the C ABI today. The Android JNI instrumented test (task T4) will replay the same files through the Kotlin binding, so a rule cannot drift between platforms.
 
 Common format:
 
@@ -45,9 +46,14 @@ Common format:
 | File | Columns | Function |
 | --- | --- | --- |
 | `host_caps.tsv` | `appversion`, `codec_mask`, `family` (`UNKNOWN`, `GFE`, `SUNSHINE`), `v0`..`v3`, `codec_flags`, `pyrowave_profiles` | `borealis_host_parse_caps`; every row returns `BOREALIS_OK` |
-| `launch_decide.tsv` | `verb` (`LAUNCH`, `RESUME`), `status`, `message`, `attempts` (retries already made in the category), `action` (`FAIL`, `RETRY`, `FALLBACK_TO_LAUNCH`), `delay_ms`, `category` (`PERMANENT`, `PENDING`, `RESTORING_DISPLAY`, `GPU_NOT_READY`, `CAPTURE_OR_DISPLAY`, `NO_RUNNING_APP`), `max_attempts` | `borealis_launch_decide`; every row returns `BOREALIS_OK` |
+| `launch_decide.tsv` | `verb` (`LAUNCH`, `RESUME`), `status`, `message`, `attempts` (retries already made in the category), `action` (`FAIL`, `RETRY`, `FALLBACK_TO_LAUNCH`, `RESOLVE_CONFLICT`), `delay_ms`, `category` (`PERMANENT`, `PENDING`, `RESTORING_DISPLAY`, `GPU_NOT_READY`, `CAPTURE_OR_DISPLAY`, `NO_RUNNING_APP`, `APP_RUNNING`), `max_attempts` | `borealis_launch_decide`; every row returns `BOREALIS_OK` |
+| `pair_classify.tsv` | `status`, `message`, `action` (`FAIL`, `RESTART_ONCE`, `WAIT_HOST_SESSION`), `category` (`UNKNOWN`, `STALE_SESSION`, `EXCHANGE_INVALIDATED`, `HOST_RESET`, `IN_PROGRESS`, `IDENTITY_MISMATCH`, `TOO_MANY_PENDING`, `PEER_MISMATCH`, `SUPERSEDED`) | `borealis_pair_classify`; every row returns `BOREALIS_OK` |
 | `launch_fps.tsv` | `is_gfe` (1 or 0), `launch_fps`, `stream_fps`, `expected` | `borealis_launch_fps` |
 
 Notes for replayers that are not C: `codec_mask` values above `0x7FFFFFFF` must be parsed as unsigned (a `Long` in Java and Kotlin) and narrowed to a 32-bit int, and `attempts` is `uint32_t` in the ABI, so a negative 32-bit value from Java is a huge count and yields `FAIL`. A message field cannot contain a TAB or a line break, and a trailing CR is stripped as part of the line end.
 
 Error returns (NULL arguments, over-long inputs, unknown verbs) cannot be written as text and are covered by the unit tests only.
+
+## Redaction canaries
+
+`redaction/secret-canaries.tsv` uses the TSV rules above (header row, `#` comments, no quoting). Columns: `id`, `input`, `expected` and `secret`. `expected` is what the default redactor (address masking off) writes for `input`; `secret` is a value that must not appear in the output with masking on or off. Every value is made up: add a row for each new kind of secret that a log line could carry, and never a real credential.

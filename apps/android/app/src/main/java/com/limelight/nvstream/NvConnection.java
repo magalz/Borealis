@@ -41,6 +41,7 @@ import com.limelight.nvstream.input.MouseButtonPacket;
 import com.limelight.nvstream.jni.MoonBridge;
 // BOREALIS: LuminalShine launch retries (host.launch)
 import io.github.magalz.borealis.host.launch.HostError;
+import io.github.magalz.borealis.host.launch.LaunchConflicts;
 import io.github.magalz.borealis.host.launch.LaunchOutcome;
 import io.github.magalz.borealis.host.launch.LaunchRetries;
 
@@ -54,6 +55,8 @@ public class NvConnection {
     private final Context appContext;
     // BOREALIS: set by cancelLaunch() when the user leaves before the stream started (host.launch)
     private volatile boolean launchCancelled;
+    // BOREALIS: one resolution of "an app is already running" per launch (host.launch)
+    private final LaunchConflicts conflicts = new LaunchConflicts(() -> launchCancelled, this::cancelLaunch);
 
     public NvConnection(Context appContext, ComputerDetails.AddressTuple host, int httpsPort, String uniqueId, StreamConfiguration config, LimelightCryptoProvider cryptoProvider, X509Certificate serverCert)
     {
@@ -117,7 +120,23 @@ public class NvConnection {
         return LaunchRetries.run(context.isNvidiaServerSoftware, verb,
                 () -> h.launchApp(context, verb, appId, context.negotiatedHdr),
                 e -> e instanceof HostHttpResponseException ? new HostError(((HostHttpResponseException) e).getErrorCode(), ((HostHttpResponseException) e).getErrorMessage()) : null,
-                () -> launchCancelled, context.connListener::launchRetrying);
+                () -> launchCancelled, context.connListener::launchRetrying, conflicts::isOpen, context.serverAddress.address);
+    }
+
+    // BOREALIS: Join: /resume of the running app, with upstream's message when the host answers 200 without resuming (host.launch)
+    private LaunchOutcome joinRunning(NvHTTP h, ConnectionContext context, int appId) throws IOException, XmlPullParserException {
+        LaunchOutcome joined = launchWithRetry(h, "resume", appId);
+        if (joined == LaunchOutcome.FAILED) { context.connListener.displayMessage("Failed to resume existing session"); }
+        return joined;
+    }
+
+    // BOREALIS: another app is running although /serverinfo said none: Join, Quit and relaunch or Cancel, asked once (host.launch)
+    private boolean resolveConflict(NvHTTP h, ConnectionContext context) throws IOException, XmlPullParserException {
+        NvApp app = context.streamConfig.getApp();
+        return conflicts.resolve(() -> h.getCurrentGame(h.getServerInfo(true)),
+                id -> { NvApp running = h.getAppById(id); return running != null ? running.getAppName() : null; },
+                app.getAppId(), app.getAppName(), context.connListener::launchConflict,
+                () -> launchNotRunningApp(h, context), id -> joinRunning(h, context, id), () -> quitAndLaunch(h, context), context.serverAddress.address);
     }
 
     private InetAddress resolveServerAddress() throws IOException {
@@ -394,6 +413,7 @@ public class NvConnection {
         // Launch the app since it's not running
         LaunchOutcome launched = launchWithRetry(h, "launch", context.streamConfig.getApp().getAppId()); // BOREALIS: retries and cancellation
         if (launched == LaunchOutcome.CANCELLED) { return false; } // BOREALIS
+        if (launched == LaunchOutcome.CONFLICT) { return resolveConflict(h, context); } // BOREALIS: ask the user once
         if (launched != LaunchOutcome.SUCCEEDED) { // BOREALIS: was !h.launchApp(context, "launch", ...)
             context.connListener.displayMessage("Failed to launch application");
             return false;

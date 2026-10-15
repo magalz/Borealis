@@ -6,6 +6,7 @@ dependencies {
     // AGP must live in the plugin classloader of the Borealis convention plugins.
     implementation(libs.android.gradlePlugin)
     implementation(libs.kotlin.gradlePlugin)
+    implementation(libs.kotlin.serialization.gradlePlugin)
     implementation(libs.ksp.gradlePlugin)
     implementation(libs.hilt.gradlePlugin)
     implementation(libs.spotless.gradlePlugin)
@@ -30,6 +31,18 @@ gradlePlugin {
             id = "borealis.android.library"
             implementationClass =
                 "io.github.magalz.borealis.buildlogic.BorealisAndroidLibraryPlugin"
+        }
+        register("borealisAndroidHilt") {
+            id = "borealis.android.hilt"
+            implementationClass = "io.github.magalz.borealis.buildlogic.BorealisHiltPlugin"
+        }
+        register("borealisAndroidRoom") {
+            id = "borealis.android.room"
+            implementationClass = "io.github.magalz.borealis.buildlogic.BorealisRoomPlugin"
+        }
+        register("borealisKotlinSerialization") {
+            id = "borealis.kotlin.serialization"
+            implementationClass = "io.github.magalz.borealis.buildlogic.BorealisSerializationPlugin"
         }
     }
 }

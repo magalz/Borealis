@@ -6,6 +6,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.getByType
+import org.gradle.kotlin.dsl.register
 
 /**
  * Applies the Borealis identity and build settings to the upstream Moonlight `:app` module through
@@ -25,12 +26,14 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             requireTagForReleases(version)
             with(BorealisSbom) { configureSbom(version) }
             configureDsl(components)
-            configureVariants(components, version)
+            configureVariants(components, version, gitSha())
             buildNativeCoreBeforeNdkBuild()
 
+            dependencies.add("implementation", project(":borealis:diagnostics"))
             dependencies.add("implementation", project(":borealis:host"))
             dependencies.add("implementation", project(":borealis:logging"))
             dependencies.add("implementation", project(":borealis:native"))
+            dependencies.add("implementation", project(":borealis:settings"))
             dependencies.add("implementation", libs.findLibrary("hilt-android").get())
             dependencies.add("ksp", libs.findLibrary("hilt-compiler").get())
             addInstrumentedTestDependencies()
@@ -73,10 +76,16 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
         }
     }
 
-    private fun configureVariants(
+    private fun Project.configureVariants(
         components: ApplicationAndroidComponentsExtension,
         version: BorealisVersion,
+        gitSha: String,
     ) {
+        val legalAssets =
+            tasks.register<LegalAssetsTask>("borealisLegalAssets") {
+                // The repository root is two levels above the Gradle root.
+                sources.from(LegalAssetsTask.FILES.map { rootDir.resolve("../../$it") })
+            }
         // minSdk 28 makes upstream's `root` flavor (maxSdk 25) empty: disable, do not delete.
         components.beforeVariants(components.selector().withFlavor("root" to "root")) {
             it.enable = false
@@ -92,6 +101,15 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             variant.resValues.put(
                 variant.makeResValueKey("string", "app_label_root"),
                 ResValue(label),
+            )
+            // Overrides the "unknown" default that Borealis library modules declare.
+            variant.resValues.put(
+                variant.makeResValueKey("string", "borealis_git_sha"),
+                ResValue(gitSha),
+            )
+            variant.sources.assets?.addGeneratedSourceDirectory(
+                legalAssets,
+                LegalAssetsTask::outputDir,
             )
             variant.outputs.forEach { output ->
                 output.versionName.set(version.name)
@@ -128,6 +146,23 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
                 dependsOn(guard)
             }
     }
+
+    /** Short SHA of the built commit, or "unknown" outside a git checkout. */
+    private fun Project.gitSha(): String =
+        runCatching {
+            providers
+                .exec {
+                    workingDir = rootDir
+                    commandLine("git", "rev-parse", "--short=12", "HEAD")
+                    isIgnoreExitValue = true
+                }
+                .standardOutput
+                .asText
+                .get()
+                .trim()
+        }
+            .getOrNull()
+            ?.ifEmpty { null } ?: "unknown"
 
     private fun Project.gitDescribe(): String? = runCatching {
         providers

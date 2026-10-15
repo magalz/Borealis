@@ -20,6 +20,7 @@ add_executable(
   host_caps_test.cpp
   launch_decide_test.cpp
   launch_fps_test.cpp
+  pair_classify_test.cpp
   vectors_test.cpp
 )
 target_link_libraries(borealis_core_tests PRIVATE borealis::core GTest::gtest_main)

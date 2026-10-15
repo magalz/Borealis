@@ -4,12 +4,11 @@ Borealis is a game-streaming client. This page states what it does with data
 today and what is planned. It describes the code in this repository; it is not
 a legal contract.
 
-Status: Borealis is in early development and currently equals the imported
-Moonlight Android 12.2 code base. The local log redaction, diagnostic bundle
-and audit trail below are design requirements that are being built; until a
-release includes them, only the stock Moonlight behaviour applies (no
-telemetry, pairing data stored locally). This page will be kept in step with
-the code.
+Status: Borealis is in early development. From release 0.1.0 the local log
+redaction, the diagnostic bundle and the audit trail below are part of the app.
+Before 0.1.0, only the stock Moonlight logging behaviour applies. In every
+release, no telemetry is sent and pairing data is stored locally. This page
+will be kept in step with the code.
 
 ## Summary
 
@@ -18,6 +17,8 @@ the code.
 - **No account.** Borealis has no Borealis account and no Borealis server.
   Streaming goes directly between your device and your LuminalShine (or other
   Moonlight-compatible) host.
+- **The app contacts only the host you choose.** Moonlight's external-address
+  lookup and connection test are disabled.
 - **Logs, the diagnostic bundle and the audit trail stay on your device** unless
   you export and share them yourself.
 - **Crash reporting is planned, opt-in and off by default.** It is not
@@ -28,12 +29,14 @@ the code.
 - The list of hosts you added or discovered, and the pairing credentials
   needed to talk to them (client certificate and private key, host
   certificate). These are stored in the app's private storage and are never
-  uploaded by Borealis.
+  uploaded by Borealis. They can be included in an Android backup; see
+  [Backup](#backup).
 - Your settings.
 - Local logs, with redaction (see below).
-- A local audit trail of security-relevant events: pairing, certificate
-  changes, TLS failures, launches, sessions and REST actions. You can view,
-  export and erase it in the app.
+- A local audit trail of security-relevant events: pairing, unpairing,
+  certificate changes, TLS failures, launches and sessions. REST and token
+  events are added with a later release. You can export the trail in the
+  diagnostic bundle and erase it in the app. Viewing it in the app comes later.
 
 ## What never leaves the device
 
@@ -45,21 +48,38 @@ Borealis never sends any of these anywhere on its own initiative:
 - Logs, the diagnostic bundle and the audit trail.
 
 Network traffic the app does produce goes to the host you choose (discovery on
-the local network, pairing, REST calls and the stream itself).
+the local network, pairing, REST calls and the stream itself). Moonlight's STUN
+server lookup and connection test are disabled, so the app does not look up
+your external address and does not contact Moonlight's test servers.
 
 ## Logs, diagnostic bundle and audit trail
 
 - Logs are local, size-limited and rotated, and are redacted before they are
-  written: PINs, tokens and keys or certificates are removed, and IP addresses
-  can optionally be masked.
-- The diagnostic bundle is created only when you ask for it. You decide where
-  it goes (for example attaching it to a GitHub issue). Check it before you
-  share it.
-- The audit trail is local and under your control; you can erase it at any
-  time.
+  written: PINs, tokens and keys or certificates are removed. IP addresses and
+  host names can be masked with the "Mask addresses" setting.
+- Release builds record INFO and above. Verbose logging is off by default and
+  can be turned on in settings.
+- The diagnostic bundle is created only when you ask for it, from the settings
+  screen. It holds the logs, the audit trail, a manifest with the app and device
+  details, and the video decoders on your device. Addresses are masked again
+  when the bundle is made, if masking is on. You decide where it goes. On a
+  device with no share target, it is saved to the app's external files folder,
+  and the app shows you the path. Check it before you share it, for example
+  when you attach it to a GitHub issue.
+- The audit trail is local and under your control. You can export it and erase
+  it at any time.
 
 The exact rules are in
 [docs/policies/privacy-and-logging.md](docs/policies/privacy-and-logging.md).
+
+## Backup
+
+- Logs and the audit trail are never included in Android backup.
+- Your pairing identity (the client certificate and key) and your host list
+  follow Android backup and device-to-device transfer, as in Moonlight. On
+  Android 12 and later they go to cloud backup only when your device can
+  encrypt the backup end to end, which needs a screen lock. On Android 9 to 11,
+  Android encrypts cloud backups end to end when a screen lock is set.
 
 ## Planned: opt-in crash reporting
 

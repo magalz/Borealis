@@ -1,0 +1,28 @@
+# Golden vectors for borealis_pair_classify. Format: see tests/fixtures/README.md.
+# Host texts and statuses: luminalshine src/nvhttp.cpp at 5afdbdc6 (26.09.1).
+status	message	action	category
+# The host dropped (or never had) its pairing session: restart once with a new PIN.
+400	Out of order call to getservercert	RESTART_ONCE	STALE_SESSION
+400	out of order call to getservercert	RESTART_ONCE	STALE_SESSION
+400	OUT OF ORDER CALL TO GETSERVERCERT	RESTART_ONCE	STALE_SESSION
+400	Invalid uniqueid	RESTART_ONCE	STALE_SESSION
+400	Pairing exchange invalidated	RESTART_ONCE	EXCHANGE_INVALIDATED
+410	Host pairing state was reset	RESTART_ONCE	HOST_RESET
+# The host holds another session: wait or restart the host.
+409	Pairing exchange already in progress	WAIT_HOST_SESSION	IN_PROGRESS
+409	Pairing request identity mismatch	WAIT_HOST_SESSION	IDENTITY_MISMATCH
+503	Too many pending pairing requests	WAIT_HOST_SESSION	TOO_MANY_PENDING
+# Specific failures with their own message.
+403	Pairing request peer mismatch	FAIL	PEER_MISMATCH
+409	Pairing request superseded by retry	FAIL	SUPERSEDED
+# A known message with another status, or any other error.
+409	Out of order call to getservercert	FAIL	UNKNOWN
+400	Pairing exchange already in progress	FAIL	UNKNOWN
+500	Pairing request peer mismatch	FAIL	UNKNOWN
+400	Something else	FAIL	UNKNOWN
+400	<null>	FAIL	UNKNOWN
+400	<empty>	FAIL	UNKNOWN
+503	<null>	FAIL	UNKNOWN
+200	<null>	FAIL	UNKNOWN
+0	<null>	FAIL	UNKNOWN
+-1	Out of order call to getservercert	FAIL	UNKNOWN

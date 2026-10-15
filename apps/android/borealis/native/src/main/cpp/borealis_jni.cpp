@@ -17,6 +17,7 @@ namespace {
 
   constexpr jsize kCapsResultSize = 8;  // status, family, version[4], codec_flags, pyrowave_profiles
   constexpr jsize kDecisionResultSize = 5;  // status, action, delay_ms, category, max_attempts
+  constexpr jsize kPairResultSize = 3;  // status, action, category
 
   enum class ReadResult {
     Ok,
@@ -164,6 +165,25 @@ extern "C" JNIEXPORT jintArray JNICALL
     decision.max_attempts,
   };
   return makeResult(env, values.data(), kDecisionResultSize);
+}
+
+extern "C" JNIEXPORT jintArray JNICALL
+  Java_io_github_magalz_borealis_nativecore_CoreJni_classifyPairing(
+    JNIEnv *env,
+    jclass /*clazz*/,
+    jint status,
+    jbyteArray message
+  ) {
+  ByteInput<BOREALIS_HOST_MESSAGE_MAX_LEN> input;
+  const ReadResult read = input.read(env, message);
+  if (read != ReadResult::Ok) {
+    return rejectedInput(env, read, kPairResultSize);
+  }
+
+  borealis_pair_decision decision {};
+  const int result = borealis_pair_classify(status, input.data(), input.length(), &decision);
+  const std::array<jint, kPairResultSize> values {result, decision.action, decision.category};
+  return makeResult(env, values.data(), kPairResultSize);
 }
 
 extern "C" JNIEXPORT jint JNICALL Java_io_github_magalz_borealis_nativecore_CoreJni_launchFps(

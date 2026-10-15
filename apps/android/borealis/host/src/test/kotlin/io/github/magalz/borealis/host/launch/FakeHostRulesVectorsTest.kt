@@ -7,6 +7,9 @@ import io.github.magalz.borealis.nativecore.LaunchAction
 import io.github.magalz.borealis.nativecore.LaunchCategory
 import io.github.magalz.borealis.nativecore.LaunchDecision
 import io.github.magalz.borealis.nativecore.LaunchVerb
+import io.github.magalz.borealis.nativecore.PairAction
+import io.github.magalz.borealis.nativecore.PairCategory
+import io.github.magalz.borealis.nativecore.PairDecision
 import org.junit.Test
 
 /**
@@ -50,6 +53,26 @@ class FakeHostRulesVectorsTest {
                     message(row[2]),
                     row[3].toInt(),
                 )
+
+            assertWithMessage("vector $row").that(actual).isEqualTo(expected)
+        }
+    }
+
+    @Test
+    fun `the fake answers every pairing vector of the core`() {
+        val rows =
+            Fixtures.text("vectors/pair_classify.tsv")
+                .lines()
+                .map { it.trimEnd('\r') }
+                .filter { it.isNotEmpty() && !it.startsWith("#") }
+                .drop(1)
+                .map { it.split('\t') }
+        assertThat(rows).isNotEmpty()
+
+        for (row in rows) {
+            val expected = PairDecision(PairAction.valueOf(row[2]), PairCategory.valueOf(row[3]))
+
+            val actual = FakeHostRules.corePairTable(row[0].toInt(), message(row[1]))
 
             assertWithMessage("vector $row").that(actual).isEqualTo(expected)
         }

@@ -7,10 +7,18 @@ package io.github.magalz.borealis.logging
  * - labelled pairing PINs (4-8 digits), password/secret/token/API-key values, `Authorization` and
  *   `Cookie` headers, PEM blocks and long hex/base64 values in cert/key/signature fields.
  *
- * IP addresses are only masked when [maskIpAddresses] is on. Input is capped at a maximum length
- * first, so hostile or huge strings cannot make redaction expensive.
+ * - query values of URLs, except for the allowlisted protocol parameters in [ALLOWED_QUERY_KEYS],
+ *   and the credentials of a URL. Query and fragment pairs are treated alike.
+ *
+ * IP addresses (IPv4 with octets of at most 255, IPv6) and host names (the host of a URL and the
+ * values of `host`, `hostname`, `computer` and `computerName` keys) are only masked when
+ * [maskAddresses] is on. Input is capped at a maximum length first, so hostile or huge strings
+ * cannot make redaction expensive.
  */
-class Redactor(private val maskIpAddresses: Boolean = false) {
+class Redactor(maskAddresses: Boolean = false) {
+    /** Address masking; may be switched while the redactor is in use and affects later calls. */
+    @Volatile var maskAddresses: Boolean = maskAddresses
+
     /** Redacts secrets in free text; text longer than [maxLength] is cut and marked. */
     fun redact(text: String, maxLength: Int = DEFAULT_MAX_LENGTH): String {
         if (text.length <= maxLength) return redactAll(text)
@@ -21,6 +29,7 @@ class Redactor(private val maskIpAddresses: Boolean = false) {
     /** Redacts a structured field value, taking the field name into account. */
     fun redactField(key: String, value: String): String {
         if (SENSITIVE_FIELD.matches(key)) return REDACTED
+        if (maskAddresses && HOST_FIELD.matches(key)) return HOST_MASK
         // Redact "key=value" so key-labelled rules (cert=, key=, signature=) also apply to field
         // values.
         val redacted = redact("$key=$value")
@@ -39,17 +48,69 @@ class Redactor(private val maskIpAddresses: Boolean = false) {
         result = PAIRING_PARAM.replace(result) { it.groupValues[1] + REDACTED }
         result = PIN.replace(result) { it.groupValues[1] + REDACTED }
         result = LONG_SECRET.replace(result) { it.groupValues[1] + it.groupValues[2] + REDACTED }
-        if (maskIpAddresses) {
+        val masking = maskAddresses
+        result = URL.replace(result) { redactUrl(it, masking) }
+        if (masking) {
+            result = HOST_VALUE.replace(result) { maskHostValue(it) }
             result = IPV4.replace(result, IP_MASK)
             result = IPV6.replace(result, IP_MASK)
         }
         return result
     }
 
+    /** Masks a host value up to its closing quote, or to the next separator when unquoted. */
+    private fun maskHostValue(match: MatchResult): String {
+        val groups = match.groups
+        val open = groups[2]?.value ?: groups[4]?.value ?: ""
+        val close = groups[3]?.value ?: groups[5]?.value ?: ""
+        return groups[1]!!.value + open + HOST_MASK + close
+    }
+
+    private fun redactUrl(match: MatchResult, masking: Boolean): String {
+        val groups = match.groups
+        val credentials = if (groups[2] != null) "$REDACTED@" else ""
+        val host = if (masking) HOST_MASK else groups[3]!!.value
+        val query =
+            QUERY_PARAM.replace(groups[4]!!.value) { param ->
+                val key = param.groupValues[1]
+                if (key.lowercase() in ALLOWED_QUERY_KEYS) param.value else "$key=$REDACTED"
+            }
+        return groups[1]!!.value + credentials + host + query
+    }
+
     companion object {
         const val REDACTED = "[REDACTED]"
         const val IP_MASK = "[IP]"
+        const val HOST_MASK = "[HOST]"
         const val DEFAULT_MAX_LENGTH = 16 * 1024
+
+        /**
+         * Non-identifying GameStream parameters whose query values stay readable in logs.
+         * Everything else (`uniqueid`, `uuid`, `devicename`, `appid`, `rikey`, `rikeyid`, `salt`,
+         * `clientcert` and every other pairing parameter) is redacted. Keys are compared in lower
+         * case.
+         */
+        val ALLOWED_QUERY_KEYS =
+            setOf(
+                "phrase",
+                "updatestate",
+                "mode",
+                "additionalstates",
+                "sops",
+                "hdrmode",
+                "clienthdrcapversion",
+                "clienthdrcapsupportedflagsinuint32",
+                "clienthdrcapmetadataid",
+                "clienthdrcapdisplaydata",
+                "localaudioplaymode",
+                "surroundaudioinfo",
+                "remotecontrollersbitmap",
+                "gcmap",
+                "gcpersist",
+                "corever",
+                "assettype",
+                "assetidx",
+            )
 
         // Names (request parameters / XML elements) whose values are always secret.
         private const val PAIRING_NAMES =
@@ -93,7 +154,25 @@ class Redactor(private val maskIpAddresses: Boolean = false) {
                     """authorization|cookie|$PAIRING_NAMES)"""
             )
 
-        private val IPV4 = Regex("""(?<![\d.])(?:\d{1,3}\.){3}\d{1,3}(?!\d)""")
+        // scheme://[userinfo@]host[:port][/path][?query][#fragment]
+        private val URL =
+            Regex(
+                """(?i)\b([a-z][a-z0-9+.-]{0,31}://)(?:([^\s/?#@"'<>]*)@)?""" +
+                    """(\[[0-9a-f:.]+]|[^\s/?#:"'<>\[\]]*)([^\s"'<>]*)"""
+            )
+        private val QUERY_PARAM = Regex("""(?<=[?&#])([^=&#\s]+)=[^&#\s]*""")
+        private const val HOST_KEYS = "host|hostname|computer|computername"
+        private val HOST_FIELD = Regex("""(?i)[\w.-]{0,64}(?:$HOST_KEYS)""")
+        private val HOST_VALUE =
+            Regex(
+                """(?i)\b([\w.-]{0,64}(?:$HOST_KEYS)["']?\s*[=:]\s*)""" +
+                    """(?:(")[^"\r\n]*("?)|(')[^\r\n']*('?)|""" +
+                    // The JSON literals are not host names: `"host":null` stays valid JSON.
+                    """(?!(?:null|true|false)(?![\w.-]))[^\s"',;&]+)"""
+            )
+
+        private const val OCTET = """(?:25[0-5]|2[0-4]\d|1\d\d|0?\d?\d)"""
+        private val IPV4 = Regex("""(?<![\d.])(?:$OCTET\.){3}$OCTET(?!\d|\.\d)""")
         private const val HEXTET = "[0-9A-Fa-f]{1,4}"
         private val IPV6 =
             Regex(

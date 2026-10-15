@@ -61,3 +61,5 @@ Not now: F-Droid and IzzyOnDroid, because F-Droid requires reproducible builds o
 ## More Information
 
 See [0026](0026-signing-keys.md), [0045](0045-store-publishing-automation.md) and [0021](0021-audit.md).
+
+Amended by [0050](0050-diagnostics-audit-and-interim-settings.md).

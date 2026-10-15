@@ -222,12 +222,14 @@ class HostMarshallingTest {
         assertThat(decode(0, 0).action).isEqualTo(LaunchAction.FAIL)
         assertThat(decode(1, 0).action).isEqualTo(LaunchAction.RETRY)
         assertThat(decode(2, 0).action).isEqualTo(LaunchAction.FALLBACK_TO_LAUNCH)
+        assertThat(decode(3, 0).action).isEqualTo(LaunchAction.RESOLVE_CONFLICT)
         assertThat(decode(0, 0).category).isEqualTo(LaunchCategory.PERMANENT)
         assertThat(decode(0, 1).category).isEqualTo(LaunchCategory.PENDING)
         assertThat(decode(0, 2).category).isEqualTo(LaunchCategory.RESTORING_DISPLAY)
         assertThat(decode(0, 3).category).isEqualTo(LaunchCategory.GPU_NOT_READY)
         assertThat(decode(0, 4).category).isEqualTo(LaunchCategory.CAPTURE_OR_DISPLAY)
         assertThat(decode(0, 5).category).isEqualTo(LaunchCategory.NO_RUNNING_APP)
+        assertThat(decode(0, 6).category).isEqualTo(LaunchCategory.APP_RUNNING)
     }
 
     @Test
@@ -257,8 +259,8 @@ class HostMarshallingTest {
 
     @Test
     fun `an unknown action or category decodes to null and warns`() {
-        assertThat(HostMarshalling.decodeDecision(decisionWire(action = 3))).isNull()
-        assertThat(HostMarshalling.decodeDecision(decisionWire(category = 6))).isNull()
+        assertThat(HostMarshalling.decodeDecision(decisionWire(action = 4))).isNull()
+        assertThat(HostMarshalling.decodeDecision(decisionWire(category = 7))).isNull()
         assertThat(HostMarshalling.decodeDecision(decisionWire(action = -1))).isNull()
 
         assertThat(sink.records).hasSize(3)
@@ -269,6 +271,53 @@ class HostMarshallingTest {
         assertThat(HostMarshalling.decodeDecision(null)).isNull()
         assertThat(HostMarshalling.decodeDecision(intArrayOf(0))).isNull()
         assertThat(HostMarshalling.decodeDecision(decisionWire() + 0)).isNull()
+
+        assertThat(sink.records).hasSize(3)
+    }
+
+    // [status, action, category].
+    private fun pairWire(action: Int = 1, category: Int = 1, status: Int = 0) =
+        intArrayOf(status, action, category)
+
+    @Test
+    fun `every pairing action and category value is decoded`() {
+        fun decode(action: Int, category: Int) =
+            HostMarshalling.decodePairDecision(pairWire(action, category))!!
+
+        assertThat(decode(0, 0)).isEqualTo(PairDecision(PairAction.FAIL, PairCategory.UNKNOWN))
+        assertThat(decode(1, 1))
+            .isEqualTo(PairDecision(PairAction.RESTART_ONCE, PairCategory.STALE_SESSION))
+        assertThat(decode(2, 4))
+            .isEqualTo(PairDecision(PairAction.WAIT_HOST_SESSION, PairCategory.IN_PROGRESS))
+        assertThat(PairCategory.entries.map { decode(0, it.ordinal).category })
+            .containsExactlyElementsIn(PairCategory.entries)
+            .inOrder()
+        assertThat(sink.records).isEmpty()
+    }
+
+    @Test
+    fun `a non OK pairing status decodes to null and warns with the status only`() {
+        assertThat(HostMarshalling.decodePairDecision(pairWire(status = -2))).isNull()
+
+        val record = sink.records.single()
+        assertThat(record.level).isEqualTo(LogLevel.WARN)
+        assertThat(record.fields).contains("status" to "-2")
+    }
+
+    @Test
+    fun `an unknown pairing action or category decodes to null and warns`() {
+        assertThat(HostMarshalling.decodePairDecision(pairWire(action = 3))).isNull()
+        assertThat(HostMarshalling.decodePairDecision(pairWire(category = 9))).isNull()
+        assertThat(HostMarshalling.decodePairDecision(pairWire(action = -1))).isNull()
+
+        assertThat(sink.records).hasSize(3)
+    }
+
+    @Test
+    fun `a missing or wrongly sized pairing array decodes to null and warns`() {
+        assertThat(HostMarshalling.decodePairDecision(null)).isNull()
+        assertThat(HostMarshalling.decodePairDecision(intArrayOf(0, 1))).isNull()
+        assertThat(HostMarshalling.decodePairDecision(pairWire() + 0)).isNull()
 
         assertThat(sink.records).hasSize(3)
     }

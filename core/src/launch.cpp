@@ -1,6 +1,6 @@
 #include "borealis/host.h"
+#include "match.h"
 
-#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -24,19 +24,10 @@ namespace borealis::core {
       std::span<const int32_t> delays;
     };
 
-    char ascii_lower(char c) {
-      return c >= 'A' && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c;
-    }
-
-    // ASCII case-insensitive substring test; `needle` must already be lower case.
-    bool contains_ci(std::string_view text, std::string_view needle) {
-      const auto match = std::ranges::search(text, needle, [](char a, char b) {
-        return ascii_lower(a) == b;
-      });
-      return !match.empty();
-    }
-
     Classification classify(bool is_resume, int32_t status, std::string_view msg) {
+      if (status == 400 && !is_resume && contains_ci(msg, "an app is already running")) {
+        return {.category = BOREALIS_LAUNCH_CATEGORY_APP_RUNNING, .delays = {}};
+      }
       if (status == 409) {
         return {.category = BOREALIS_LAUNCH_CATEGORY_PENDING, .delays = kPendingDelays};
       }
@@ -86,6 +77,8 @@ extern "C" int borealis_launch_decide(
   out->max_attempts = static_cast<int32_t>(found.delays.size());
   if (found.category == BOREALIS_LAUNCH_CATEGORY_NO_RUNNING_APP) {
     out->action = BOREALIS_LAUNCH_ACTION_FALLBACK_TO_LAUNCH;
+  } else if (found.category == BOREALIS_LAUNCH_CATEGORY_APP_RUNNING) {
+    out->action = BOREALIS_LAUNCH_ACTION_RESOLVE_CONFLICT;
   } else if (attempts_in_category < found.delays.size()) {
     out->action = BOREALIS_LAUNCH_ACTION_RETRY;
     out->delay_ms = *std::next(found.delays.begin(), static_cast<std::ptrdiff_t>(attempts_in_category));

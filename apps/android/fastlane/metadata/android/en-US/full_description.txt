@@ -1,37 +1,26 @@
-This app streams games, programs, or your full desktop from your PC or <a href="https://github.com/LizardByte/Sunshine">Sunshine</a> on your local network or the Internet. Mouse, keyboard, and controller input is sent from your Android device to the PC.
+Borealis streams games, programs or your full desktop from your PC to your Android phone, tablet or TV. It is a client based on <a href="https://github.com/moonlight-stream/moonlight-android">Moonlight</a>, tuned for the <a href="https://github.com/NortheBridge/luminalshine">LuminalShine</a> host. It may also work with other hosts that speak the same protocol, such as <a href="https://github.com/LizardByte/Sunshine">Sunshine</a>, but only LuminalShine is tested.
 
-Streaming performance may vary based on your client device and network setup. HDR requires an HDR10-capable device, a GPU that can encode HEVC Main 10, and an HDR10-enabled game.
+Borealis connects only to the host you choose. It has no ads, no in-app purchases and no analytics.
 
-'''Features'''
-* Open-source and completely free (no ads, IAPs, or "Pro")
-* Streams games purchased from any store
-* Works on your home network or over the Internet/LTE
-* Up to 4K 120 FPS HDR streaming with 7.1 surround sound
-* H.264, HEVC, and AV1 codec support (AV1 requires Sunshine and a supported host GPU)
-* Keyboard and mouse support (best with Android 8.0 or later)
-* Stylus/S-Pen support
-* Supports PS3/4/5, Xbox 360/One/Series, and Android gamepads
-* Local co-op with up to 16 connected controllers (max of 4 controllers with GFE)
-* Force feedback and gamepad motion sensor support
-* Mouse control via gamepad by long-pressing Start
+Streaming performance depends on your device and your network. HDR needs an HDR10-capable device, a host GPU that can encode HEVC Main 10 and a game with HDR10 enabled.
 
-'''Quick Setup Host Instructions for GeForce Experience (NVIDIA-only)'''
-# Make sure GeForce Experience is open on your PC. Turn on GameStream in the SHIELD settings page.
-# Tap on the PC in Moonlight and type the PIN on your PC
-# Start streaming!
+Features
+* Free and open source (GPL-3.0)
+* Streams games from any store, over your home network or the Internet
+* Video up to 4K at 120 FPS with 7.1 surround sound and HDR
+* H.264, HEVC and AV1 (AV1 needs a host GPU that can encode it)
+* Keyboard, mouse, stylus and gamepad support, including Xbox and PlayStation controllers
+* Local co-op with several controllers, force feedback and gamepad motion sensors
+* Optional diagnostic bundle that you share yourself. It leaves your device only when you send it.
 
-'''Quick Setup Host Instructions for Sunshine (all GPUs)'''
-# Install Sunshine on your PC from https://github.com/LizardByte/Sunshine/releases
-# Navigate to the Sunshine Web UI on your PC for first-time setup
-# Tap on the PC in Moonlight and type the PIN in the Sunshine Web UI on your PC
-# Start streaming!
+Getting started
+1. Install and set up LuminalShine on your PC.
+2. Open Borealis and tap your PC in the list. If it is not listed, add it by its address.
+3. Borealis shows a PIN: enter it in the host's web interface.
+4. Start streaming.
 
-To have a good experience, you need a mid to high-end wireless router with a good wireless connection to your Android device (5 GHz highly recommended) and a good connection from your PC to your router (Ethernet highly recommended).
+A mid-range or better wireless router with a 5 GHz connection to your device, and a wired connection from your PC to the router, give the best results.
 
-'''Detailed Setup Instructions'''
-See the full setup guide https://bit.ly/1skHFjN for:
-* Adding a PC manually (if your PC is not detected)
-* Streaming over the Internet or LTE
-* Using a controller connected directly to your PC
-* Streaming your full desktop
-* Adding custom apps to stream
+Source code, issue tracker and documentation: https://github.com/magalz/Borealis
+
+Borealis is not affiliated with the Moonlight project, NVIDIA or LizardByte.

@@ -19,11 +19,14 @@ class HostRulesBindingTest {
         var message: ByteArray? = null
         var attempts = -1
         var fpsArgs: Triple<Boolean, Int, Int>? = null
+        var pairStatus = -1
+        var pairMessage: ByteArray? = null
         var calls = 0
 
         var capsResult: IntArray? = intArrayOf(0, 2, 7, 1, 431, -1, 0x13, 0)
         var decisionResult: IntArray? = intArrayOf(0, 1, 2000, 2, 3)
         var fpsResult = 59
+        var pairResult: IntArray? = intArrayOf(0, 1, 1)
 
         override fun parseCaps(appVersion: ByteArray?, codecMask: Int): IntArray? {
             calls++
@@ -44,6 +47,13 @@ class HostRulesBindingTest {
             this.message = message
             this.attempts = attempts
             return decisionResult
+        }
+
+        override fun classifyPairing(status: Int, message: ByteArray?): IntArray? {
+            calls++
+            pairStatus = status
+            pairMessage = message
+            return pairResult
         }
 
         override fun launchFps(isGfe: Boolean, launchFps: Int, streamFps: Int): Int {
@@ -179,6 +189,33 @@ class HostRulesBindingTest {
     }
 
     @Test
+    fun `classifyPairing passes the status and the UTF-8 message and decodes the result`() {
+        val decision = rules.classifyPairing(400, "Out of order call to getservercert")
+
+        assertThat(fake.pairStatus).isEqualTo(400)
+        assertThat(fake.pairMessage)
+            .isEqualTo("Out of order call to getservercert".encodeToByteArray())
+        assertThat(decision)
+            .isEqualTo(PairDecision(PairAction.RESTART_ONCE, PairCategory.STALE_SESSION))
+    }
+
+    @Test
+    fun `classifyPairing passes an absent message as a null array and truncates to 256 bytes`() {
+        rules.classifyPairing(503, null)
+        assertThat(fake.pairMessage).isNull()
+
+        rules.classifyPairing(503, "a".repeat(300))
+        assertThat(fake.pairMessage!!.size).isEqualTo(256)
+    }
+
+    @Test
+    fun `classifyPairing is null when native reports an error status`() {
+        fake.pairResult = intArrayOf(-1, 0, 0)
+
+        assertThat(rules.classifyPairing(400, null)).isNull()
+    }
+
+    @Test
     fun `launchFps passes its arguments and returns the native value`() {
         assertThat(rules.launchFps(isGfe = false, launchFps = 60, streamFps = 59)).isEqualTo(59)
 
@@ -189,9 +226,11 @@ class HostRulesBindingTest {
     fun `a native result of null is passed through`() {
         fake.capsResult = null
         fake.decisionResult = null
+        fake.pairResult = null
 
         assertThat(rules.parseCaps("7.1.431.-1", 0)).isNull()
         assertThat(rules.decideLaunch(LaunchVerb.LAUNCH, 409, null, 0)).isNull()
+        assertThat(rules.classifyPairing(400, null)).isNull()
     }
 
     @Test
@@ -204,6 +243,7 @@ class HostRulesBindingTest {
 
         assertThat(unavailable.parseCaps("7.1.431.-1", 0)).isNull()
         assertThat(unavailable.decideLaunch(LaunchVerb.LAUNCH, 409, null, 0)).isNull()
+        assertThat(unavailable.classifyPairing(400, null)).isNull()
         assertThat(unavailable.launchFps(true, 60, 60)).isNull()
 
         assertThat(fake.calls).isEqualTo(0)
@@ -223,6 +263,9 @@ class HostRulesBindingTest {
                     attempts: Int,
                 ): IntArray? = throw UnsatisfiedLinkError("no symbol")
 
+                override fun classifyPairing(status: Int, message: ByteArray?): IntArray? =
+                    throw UnsatisfiedLinkError("no symbol")
+
                 override fun launchFps(isGfe: Boolean, launchFps: Int, streamFps: Int): Int =
                     throw UnsatisfiedLinkError("no symbol")
             }
@@ -230,6 +273,7 @@ class HostRulesBindingTest {
 
         assertThat(rules.parseCaps("7.1.431.-1", 0)).isNull()
         assertThat(rules.decideLaunch(LaunchVerb.LAUNCH, 409, null, 0)).isNull()
+        assertThat(rules.classifyPairing(400, null)).isNull()
         assertThat(rules.launchFps(true, 60, 60)).isNull()
     }
 
@@ -237,6 +281,7 @@ class HostRulesBindingTest {
     fun `NativeHostRules is null instead of a crash when the native library is missing on the JVM`() {
         assertThat(NativeHostRules.parseCaps("7.1.431.-1", 0)).isNull()
         assertThat(NativeHostRules.decideLaunch(LaunchVerb.LAUNCH, 409, null, 0)).isNull()
+        assertThat(NativeHostRules.classifyPairing(400, null)).isNull()
         assertThat(NativeHostRules.launchFps(false, 60, 60)).isNull()
     }
 }

@@ -35,6 +35,25 @@ class BorealisLogTest {
     }
 
     @Test
+    fun `redact uses the running redactor and follows its address masking`() {
+        BorealisLog.initialize(listOf(sink), redactor = Redactor(maskAddresses = false))
+
+        assertThat(BorealisLog.redact("pin=4821 at 192.0.2.5"))
+            .isEqualTo("pin=[REDACTED] at 192.0.2.5")
+
+        BorealisLog.setMaskAddresses(true)
+
+        assertThat(BorealisLog.redact("pin=4821 at 192.0.2.5")).isEqualTo("pin=[REDACTED] at [IP]")
+    }
+
+    @Test
+    fun `redact still removes secrets before initialisation`() {
+        assertThat(BorealisLog.isInitialized).isFalse()
+
+        assertThat(BorealisLog.redact("password=hunter2")).isEqualTo("password=[REDACTED]")
+    }
+
+    @Test
     fun `records carry level, tag, message, ordered fields and the clock time`() {
         BorealisLog.initialize(listOf(sink), clock = { 42L })
 
@@ -111,13 +130,53 @@ class BorealisLogTest {
 
     @Test
     fun `ip masking follows the redactor passed at initialisation`() {
-        BorealisLog.initialize(listOf(sink), redactor = Redactor(maskIpAddresses = true))
+        BorealisLog.initialize(listOf(sink), redactor = Redactor(maskAddresses = true))
 
         BorealisLog.i(LogTag.HOST, "connect 10.0.0.5", "addr" to "10.0.0.5")
 
         val record = sink.records.single()
         assertThat(record.message).isEqualTo("connect [IP]")
         assertThat(record.fields).containsExactly("addr" to "[IP]")
+    }
+
+    @Test
+    fun `address masking can be switched while logging`() {
+        BorealisLog.initialize(listOf(sink))
+
+        BorealisLog.i(LogTag.HOST, "before 10.0.0.5")
+        BorealisLog.setMaskAddresses(true)
+        BorealisLog.i(LogTag.HOST, "masked 10.0.0.5", "host" to "Den-PC")
+        BorealisLog.setMaskAddresses(false)
+        BorealisLog.i(LogTag.HOST, "after 10.0.0.5")
+
+        assertThat(sink.records.map { it.message })
+            .containsExactly("before 10.0.0.5", "masked [IP]", "after 10.0.0.5")
+            .inOrder()
+        assertThat(sink.records[1].fields).containsExactly("host" to "[HOST]")
+    }
+
+    @Test
+    fun `the minimum level can be changed while logging`() {
+        BorealisLog.initialize(listOf(sink), minLevel = LogLevel.INFO)
+
+        BorealisLog.d(LogTag.APP, "dropped")
+        BorealisLog.setMinLevel(LogLevel.DEBUG)
+        BorealisLog.d(LogTag.APP, "kept")
+        BorealisLog.setMinLevel(LogLevel.WARN)
+        BorealisLog.i(LogTag.APP, "dropped again")
+
+        assertThat(sink.records.map { it.message }).containsExactly("kept")
+    }
+
+    @Test
+    fun `changing the settings before initialisation is safe`() {
+        BorealisLog.setMaskAddresses(true)
+        BorealisLog.setMinLevel(LogLevel.ERROR)
+
+        BorealisLog.initialize(listOf(sink))
+        BorealisLog.i(LogTag.APP, "to 10.0.0.5")
+
+        assertThat(sink.records.map { it.message }).containsExactly("to 10.0.0.5")
     }
 
     @Test

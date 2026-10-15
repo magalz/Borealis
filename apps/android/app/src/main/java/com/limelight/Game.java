@@ -1090,6 +1090,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     protected void onStop() {
         super.onStop();
         startupGuard.cancel(); // BOREALIS: first-frame watchdog
+        io.github.magalz.borealis.LaunchConflictDialog.dismiss(); // BOREALIS: a pending "app already running" question is a cancel (host.launch)
 
         SpinnerDialog.closeDialogs(this);
         Dialog.closeDialogs();
@@ -2238,6 +2239,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     public void stageComplete(String stage) {
     }
 
+    // BOREALIS: another app is running on the host: Join, Quit and relaunch or Cancel (host.launch)
+    @Override
+    public void launchConflict(int runningAppId, String runningAppName, int requestedAppId, String requestedAppName, io.github.magalz.borealis.host.launch.ConflictAnswer answer) {
+        runOnUiThread(() -> io.github.magalz.borealis.LaunchConflictDialog.show(this, runningAppId, runningAppName, requestedAppId, requestedAppName, answer));
+    }
+
     // BOREALIS: retry progress of a LuminalShine 409/503 answer on the spinner (host.launch)
     @Override
     public void launchRetrying(int category, int attempt, int maxAttempts, int delayMs) {
@@ -2252,6 +2259,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         startupGuard.cancel(); // BOREALIS: first-frame watchdog
         if (connecting || connected) {
             connecting = connected = false;
+            io.github.magalz.borealis.host.launch.SessionAudit.stopped(); // BOREALIS: audit trail
             updatePipAutoEnter();
 
             controllerHandler.stop();
@@ -2323,6 +2331,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             @Override
             public void run() {
                 startupGuard.cancel(); // BOREALIS: first-frame watchdog
+                io.github.magalz.borealis.host.launch.SessionAudit.terminated(errorCode); // BOREALIS: audit trail
 
                 // Let the display go to sleep now
                 getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -2445,6 +2454,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 connecting = false;
                 updatePipAutoEnter();
                 startupGuard.onConnectionStarted(); // BOREALIS: preparing message and first-frame watchdog
+                io.github.magalz.borealis.host.launch.SessionAudit.started(pcName, Game.this.getIntent().getStringExtra(EXTRA_HOST), decoderRenderer.getActiveVideoFormat(), prefConfig.width, prefConfig.height, prefConfig.fps); // BOREALIS: audit trail
 
                 // Hide the mouse cursor now after a short delay.
                 // Doing it before dismissing the spinner seems to be undone

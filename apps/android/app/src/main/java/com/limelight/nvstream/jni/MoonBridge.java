@@ -328,6 +328,11 @@ public class MoonBridge {
         }
     }
 
+    // BOREALIS: called from borealis_log.c for each moonlight-common-c log line; false makes the native side use logcat
+    public static boolean bridgeClLogMessage(byte[] message) {
+        return io.github.magalz.borealis.logging.NativeLogForwarder.forward(message);
+    }
+
     public static void setupBridge(VideoDecoderRenderer videoRenderer, AudioRenderer audioRenderer, NvConnectionListener connectionListener) {
         MoonBridge.videoRenderer = videoRenderer;
         MoonBridge.audioRenderer = audioRenderer;

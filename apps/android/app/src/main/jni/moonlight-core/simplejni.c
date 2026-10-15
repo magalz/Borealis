@@ -136,6 +136,9 @@ Java_com_limelight_nvstream_jni_MoonBridge_getStageName(JNIEnv *env, jclass claz
 
 JNIEXPORT jstring JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_findExternalAddressIP4(JNIEnv *env, jclass clazz, jstring stunHostName, jint stunPort) {
+    // BOREALIS: no STUN lookup: the app contacts only the host the user chooses (ADR 0050)
+    return NULL;
+
     int err;
     struct in_addr wanAddr;
     const char* stunHostNameStr = (*env)->GetStringUTFChars(env, stunHostName, NULL);
@@ -170,6 +173,9 @@ Java_com_limelight_nvstream_jni_MoonBridge_getPendingVideoFrames(JNIEnv *env, jc
 
 JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_testClientConnectivity(JNIEnv *env, jclass clazz, jstring testServerHostName, jint referencePort, jint testFlags) {
+    // BOREALIS: no connection test: the app contacts only the host the user chooses (ADR 0050)
+    return ML_TEST_RESULT_INCONCLUSIVE;
+
     int ret;
     const char* testServerHostNameStr = (*env)->GetStringUTFChars(env, testServerHostName, NULL);
 

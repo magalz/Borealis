@@ -5,7 +5,7 @@ libFuzzer targets for the parsers and decision functions that take untrusted hos
 | Target | Function under test | Input layout |
 | --- | --- | --- |
 | `appversion_fuzz` | `borealis_host_parse_caps` | 4 bytes codec mask, then the `appversion` text |
-| `launch_message_fuzz` | `borealis_launch_decide`, `borealis_launch_fps` | 4 bytes status, 1 byte verb (modulo 3), 4 bytes attempts, 1 byte flags (bit 0: NULL message), then the host message |
+| `launch_message_fuzz` | `borealis_launch_decide`, `borealis_pair_classify`, `borealis_launch_fps` | 4 bytes status, 1 byte verb (modulo 3), 4 bytes attempts, 1 byte flags (bit 0: NULL message), then the host message (the same status and message also feed `borealis_pair_classify`) |
 
 `fuzz/launch_message_fuzz.dict` lists the host messages and the substrings the decision matches, in original and lower case, so the fuzzer reaches every category quickly.
 

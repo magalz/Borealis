@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.host.launch
 
+import io.github.magalz.borealis.nativecore.LaunchCategory
 import io.github.magalz.borealis.nativecore.LaunchVerb
 import io.github.magalz.borealis.nativecore.NativeHostRules
 import java.io.IOException
@@ -32,6 +33,8 @@ object LaunchRetries {
     /**
      * Runs the request, retrying what LuminalShine asks to retry. GFE hosts never retry: their
      * errors are rethrown as upstream does. [verb] is the upstream verb, `"launch"` or `"resume"`.
+     * [conflictAllowed] says whether an app that is already running may still be resolved with the
+     * user ([LaunchOutcome.CONFLICT]); when it is false that answer is rethrown like any failure.
      * Blocks while waiting, so call it off the main thread.
      */
     @JvmStatic
@@ -44,8 +47,20 @@ object LaunchRetries {
         errors: HostErrorExtractor,
         cancelled: BooleanSupplier,
         progress: RetryProgress,
+        conflictAllowed: BooleanSupplier,
+        host: String? = null,
     ): LaunchOutcome =
-        run(LaunchRetryRunner(NativeHostRules), isGfe, verb, attempt, errors, cancelled, progress)
+        run(
+            LaunchRetryRunner(NativeHostRules),
+            isGfe,
+            verb,
+            attempt,
+            errors,
+            cancelled,
+            progress,
+            conflictAllowed,
+            host,
+        )
 
     @Suppress("LongParameterList")
     internal fun run(
@@ -56,18 +71,58 @@ object LaunchRetries {
         errors: HostErrorExtractor,
         cancelled: BooleanSupplier,
         progress: RetryProgress,
+        conflictAllowed: BooleanSupplier,
+        host: String? = null,
+    ): LaunchOutcome {
+        val audited = if (verb == RESUME) RESUME else LAUNCH
+        val outcome =
+            try {
+                execute(
+                    runner,
+                    isGfe,
+                    verb,
+                    attempt,
+                    errors,
+                    cancelled,
+                    progress,
+                    conflictAllowed,
+                ) { category, number, max, delayMs ->
+                    LaunchAudit.retry(host, audited, category, number, max, delayMs)
+                }
+            } catch (@Suppress("TooGenericExceptionCaught") e: Throwable) {
+                LaunchAudit.failed(host, audited, errors.errorOf(e), e)
+                throw e
+            }
+        LaunchAudit.attempt(host, audited, outcome)
+        return outcome
+    }
+
+    @Suppress("LongParameterList")
+    private fun execute(
+        runner: LaunchRetryRunner,
+        isGfe: Boolean,
+        verb: String,
+        attempt: LaunchAttempt,
+        errors: HostErrorExtractor,
+        cancelled: BooleanSupplier,
+        progress: RetryProgress,
+        conflictAllowed: BooleanSupplier,
+        onRetried: (LaunchCategory, Int, Int, Int) -> Unit,
     ): LaunchOutcome {
         if (isGfe) return if (attempt.run()) LaunchOutcome.SUCCEEDED else LaunchOutcome.FAILED
         return runner.run(
             if (verb == RESUME) LaunchVerb.RESUME else LaunchVerb.LAUNCH,
             isCancelled = cancelled::getAsBoolean,
             onRetry = { category, number, max, delayMs ->
+                onRetried(category, number, max, delayMs)
                 progress.onRetry(category.ordinal, number, max, delayMs)
             },
             errorOf = errors::errorOf,
+            conflictAllowed = conflictAllowed::getAsBoolean,
             attempt = attempt::run,
         )
     }
 
     private const val RESUME = "resume"
+    private const val LAUNCH = "launch"
 }

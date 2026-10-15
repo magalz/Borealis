@@ -93,7 +93,7 @@ class RedactorTest {
 
     @Test
     fun `ip addresses are masked when the switch is on`() {
-        val masking = Redactor(maskIpAddresses = true)
+        val masking = Redactor(maskAddresses = true)
 
         assertThat(masking.redact("connect 192.168.1.10:47989 ok"))
             .isEqualTo("connect [IP]:47989 ok")
@@ -105,7 +105,7 @@ class RedactorTest {
 
     @Test
     fun `masking leaves times and versions alone`() {
-        val masking = Redactor(maskIpAddresses = true)
+        val masking = Redactor(maskAddresses = true)
         val text = "at 12:34:56 version 1.2.3 build 12:34"
 
         assertThat(masking.redact(text)).isEqualTo(text)

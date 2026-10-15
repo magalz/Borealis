@@ -7,8 +7,8 @@ import java.time.format.DateTimeFormatter
 
 /**
  * Uncaught-exception handler that writes a redacted `crash-<timestamp>.txt` report into [directory]
- * and then delegates to the [previous] handler. Failing to write the report never prevents the
- * delegation.
+ * after flushing the queued log lines, and then delegates to the [previous] handler. Failing to
+ * flush or write never prevents the delegation.
  */
 class CrashReportHandler(
     private val directory: File,
@@ -16,8 +16,11 @@ class CrashReportHandler(
     private val redactor: Redactor = Redactor(),
     private val clock: () -> Long = System::currentTimeMillis,
     private val header: List<String> = emptyList(),
+    private val flushLogs: () -> Unit = { RotatingFileSink.flushAll(FLUSH_TIMEOUT_MILLIS) },
 ) : Thread.UncaughtExceptionHandler {
     override fun uncaughtException(thread: Thread, throwable: Throwable) {
+        // Lines queued for the log file would otherwise die with the process.
+        runCatching { flushLogs() }
         runCatching { writeReport(thread, throwable) }
         previous?.uncaughtException(thread, throwable)
     }
@@ -63,6 +66,7 @@ class CrashReportHandler(
 
     private companion object {
         const val MAX_REPORTS = 10
+        const val FLUSH_TIMEOUT_MILLIS = 1_000L
         const val CRASH_MAX_LENGTH = 256 * 1024
         val FILE_TIMESTAMP: DateTimeFormatter =
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS").withZone(ZoneOffset.UTC)
@@ -73,13 +77,18 @@ class CrashReportHandler(
 object CrashHandler {
     /**
      * Wraps the current default handler; installing again replaces the earlier report writer
-     * instead of chaining a second one.
+     * instead of chaining a second one. Pass the redactor that [BorealisLog] uses, so reports
+     * follow the address-masking switch.
      */
     @Synchronized
-    fun install(directory: File, header: List<String> = emptyList()): CrashReportHandler {
+    fun install(
+        directory: File,
+        header: List<String> = emptyList(),
+        redactor: Redactor = Redactor(),
+    ): CrashReportHandler {
         val current = Thread.getDefaultUncaughtExceptionHandler()
         val previous = if (current is CrashReportHandler) current.previous else current
-        return CrashReportHandler(directory, previous, header = header).also {
+        return CrashReportHandler(directory, previous, redactor, header = header).also {
             Thread.setDefaultUncaughtExceptionHandler(it)
         }
     }

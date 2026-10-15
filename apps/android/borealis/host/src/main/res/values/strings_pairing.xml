@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="pair_pin_hint">On the host, open the LuminalShine Web UI at %1$s, enter the PIN there and name this device \"%2$s\". Names that contain \"xbox\" or \"webos\" make the host hold the stream start, so do not use them.</string>
     <string name="unpair_webui_hint">The host did not confirm the unpair request. Open the host Web UI at %1$s and unpair this device there.</string>
     <string name="webui_url_unknown">its HTTPS address (host HTTP port + 1)</string>
+    <!-- English only for now; translations come in a later sprint. -->
+    <string name="pair_restart_cleared" tools:ignore="MissingTranslation">The host had an unfinished pairing attempt and has cleared it. Enter the new PIN.</string>
+    <string name="pair_restart_failed_again" tools:ignore="MissingTranslation">The host cleared the pairing attempt again. Start pairing once more; if this repeats, restart LuminalShine.</string>
+    <string name="pair_host_session_in_progress" tools:ignore="MissingTranslation">The host is still holding a previous pairing attempt. Wait up to 5 minutes or restart LuminalShine, then try again.</string>
+    <string name="pair_host_other_device" tools:ignore="MissingTranslation">Another device is pairing with this host, or this device changed network address. Wait a moment, then try again.</string>
+    <string name="pair_host_too_many_pending" tools:ignore="MissingTranslation">The host has too many pending pairing requests. Wait a few minutes or restart LuminalShine, then try again.</string>
+    <string name="pair_host_peer_mismatch" tools:ignore="MissingTranslation">The host received the pairing steps from different network addresses. Stay on one network (Wi-Fi or mobile data) and try again.</string>
+    <string name="pair_host_superseded" tools:ignore="MissingTranslation">This pairing attempt was replaced by a newer one from this device. Use the PIN of the newest attempt.</string>
 </resources>

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.ResolveInfo
 import android.content.res.Resources
+import android.graphics.Rect
 import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.os.Looper
@@ -74,6 +75,8 @@ class ExportDiagnosticsPreferenceTest {
     @After
     fun tearDown() {
         ShadowToast.reset()
+        opened?.let { if (it.isShowing) dismissAndIdle(it) }
+        opened = null
         // Every transfer dialog a test opens must have stopped its server.
         assertThat(transferThreads()).isEqualTo(0)
     }
@@ -288,17 +291,21 @@ class ExportDiagnosticsPreferenceTest {
 
     private var tvActivity: Activity? = null
 
+    /** The last transfer dialog a test opened; closed in tearDown if the test failed before it. */
+    private var opened: AlertDialog? = null
+
     private fun tvSendToPhone(
-        address: InetAddress? = InetAddress.getByName("127.0.0.1")
+        address: InetAddress? = InetAddress.getByName("127.0.0.1"),
+        qualifiers: String = "+television",
     ): Pair<AlertDialog, AlertDialog> {
-        RuntimeEnvironment.setQualifiers("+television")
+        RuntimeEnvironment.setQualifiers(qualifiers)
         val tv = Robolectric.buildActivity(Activity::class.java).setup().get()
         tvActivity = tv
         preference(context = tv, address = address).onClick()
         val saved = savedDialog()
         saved.getButton(AlertDialog.BUTTON_NEUTRAL).performClick()
         shadowOf(Looper.getMainLooper()).idle()
-        return saved to ShadowAlertDialog.getLatestAlertDialog()
+        return saved to ShadowAlertDialog.getLatestAlertDialog().also { opened = it }
     }
 
     private fun imageOf(view: View): ImageView? =
@@ -494,6 +501,100 @@ class ExportDiagnosticsPreferenceTest {
         assertThat(ShadowToast.getTextOfLatestToast())
             .isEqualTo("Could not start the transfer. See the log for details.")
         assertThat(transferThreads()).isEqualTo(before)
+    }
+
+    private fun viewWithText(view: View, prefix: String): TextView? =
+        when (view) {
+            is TextView -> view.takeIf { it.text.startsWith(prefix) }
+            is ViewGroup ->
+                (0 until view.childCount).firstNotNullOfOrNull {
+                    viewWithText(view.getChildAt(it), prefix)
+                }
+            else -> null
+        }
+
+    private fun positionOf(view: View): Rect {
+        val at = IntArray(2)
+        view.getLocationInWindow(at)
+        return Rect(at[0], at[1], at[0] + view.width, at[1] + view.height)
+    }
+
+    /** The views of an open transfer dialog, laid out. */
+    private class TransferViews(dialog: AlertDialog, test: ExportDiagnosticsPreferenceTest) {
+        val root: View = dialog.window!!.decorView
+        val qr = test.imageOf(root)!!
+        val instructions = test.viewWithText(root, "Scan this code")!!
+        val url = test.viewWithText(root, "http://")!!
+        val status = test.viewWithText(root, "Waiting")!!
+        /** The scroll view that holds the dialog body (not the empty one of the message panel). */
+        val scroll =
+            generateSequence(qr.parent) { it.parent }.filterIsInstance<ScrollView>().first()
+    }
+
+    private fun assertNothingClipped(views: TransferViews) {
+        val content = views.scroll.getChildAt(0)
+        assertThat(content.height).isGreaterThan(0)
+        // The scroll view shows all of its content: no row, the status line included, is cut off.
+        assertThat(views.scroll.height).isAtLeast(content.height)
+        val status = positionOf(views.status)
+        assertThat(status.height()).isEqualTo(views.status.measuredHeight)
+        assertThat(status.height()).isGreaterThan(0)
+        val shown = Rect()
+        assertThat(views.status.getGlobalVisibleRect(shown)).isTrue()
+        assertThat(shown.height()).isEqualTo(status.height())
+    }
+
+    private fun landscape(qualifiers: String, shortSide: Int) {
+        val (_, transfer) = tvSendToPhone(qualifiers = qualifiers)
+        val views = TransferViews(transfer, this)
+
+        val metrics = tvActivity!!.resources.displayMetrics
+        assertThat(minOf(metrics.widthPixels, metrics.heightPixels)).isEqualTo(shortSide)
+        val qr = positionOf(views.qr)
+        // The code is on the left, the instructions, link and status on the right.
+        assertThat(qr.right).isAtMost(positionOf(views.instructions).left)
+        assertThat(qr.right).isAtMost(positionOf(views.url).left)
+        assertThat(qr.right).isAtMost(positionOf(views.status).left)
+        assertThat(positionOf(views.status).top).isAtLeast(positionOf(views.instructions).bottom)
+        assertThat(views.qr.drawable.intrinsicWidth).isAtMost(shortSide / 2)
+        assertNothingClipped(views)
+        assertThat(views.url.isFocusable).isTrue()
+        assertThat(transfer.getButton(AlertDialog.BUTTON_POSITIVE).hasFocus()).isTrue()
+        dismissAndIdle(transfer)
+    }
+
+    @Test
+    fun `on a 1080p TV the code is left of the text, large enough to scan, and nothing is clipped`() {
+        landscape("+w960dp-h540dp-land-television-xhdpi", 1080)
+    }
+
+    @Test
+    fun `the 1080p TV code is at least 400 pixels wide`() {
+        val (_, transfer) = tvSendToPhone(qualifiers = "+w960dp-h540dp-land-television-xhdpi")
+
+        assertThat(imageOf(transfer.window!!.decorView)!!.drawable.intrinsicWidth).isAtLeast(400)
+        dismissAndIdle(transfer)
+    }
+
+    @Test
+    fun `on a 720p TV the code is left of the text and nothing is clipped`() {
+        landscape("+w640dp-h360dp-land-television-xhdpi", 720)
+    }
+
+    @Test
+    fun `in portrait the code stays above the text`() {
+        val (_, transfer) = tvSendToPhone(qualifiers = "+w360dp-h640dp-port-television-xhdpi")
+        val views = TransferViews(transfer, this)
+
+        val qr = positionOf(views.qr)
+        assertThat(qr.bottom).isAtMost(positionOf(views.instructions).top)
+        assertThat(positionOf(views.instructions).bottom).isAtMost(positionOf(views.url).top)
+        assertThat(positionOf(views.url).bottom).isAtMost(positionOf(views.status).top)
+        val metrics = tvActivity!!.resources.displayMetrics
+        val target = (minOf(metrics.widthPixels, metrics.heightPixels) * 0.6).toInt()
+        assertThat(views.qr.drawable.intrinsicWidth).isAtMost(target)
+        assertThat(views.qr.drawable.intrinsicWidth).isGreaterThan(target - 45)
+        dismissAndIdle(transfer)
     }
 
     /** The dismiss listener, which stops the server, is posted to the main looper. */

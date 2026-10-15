@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.buildlogic.tokens
 
 import groovy.json.JsonSlurper
-import java.math.BigDecimal
 
 /** The two files generated from `design/tokens.json`. */
 data class GeneratedTokens(val kotlin: String, val colorsXml: String)
@@ -23,8 +22,6 @@ object TokenGenerator {
     private const val FONT_GROUP = "font"
     private const val FONT_FAMILY = "fontFamily"
 
-    private val COLOR = Regex("#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?")
-    private val DIMENSION = Regex("(\\d+(?:\\.\\d+)?)(dp|sp)")
     private val IDENTIFIER = Regex("[A-Za-z][A-Za-z0-9]*")
     private val SEPARATORS = Regex("[^A-Za-z0-9]+")
 
@@ -77,47 +74,20 @@ object TokenGenerator {
         requireNotNull(type) { "$dotted: no \$type on the token or on any group above it" }
         if (type == FONT_FAMILY) return null
         val value = node["\$value"]
-        val description = (node["\$description"] as? String)?.let(::singleLine)
+        val description = (node["\$description"] as? String)?.let(TokenValues::singleLine)
         return when (type) {
             "color" -> {
-                val argb = argb(dotted, value)
+                val argb = TokenValues.argb(dotted, value)
                 Token(path, type, "Color(0x$argb)", description, argb)
             }
-            "dimension" -> Token(path, type, dimension(dotted, value), description, null)
-            "number" -> Token(path, type, number(dotted, value), description, null)
-            "fontWeight" -> Token(path, type, fontWeight(dotted, value), description, null)
+            "dimension" ->
+                Token(path, type, TokenValues.dimension(dotted, value), description, null)
+            "number" -> Token(path, type, TokenValues.number(dotted, value), description, null)
+            "fontWeight" ->
+                Token(path, type, TokenValues.fontWeight(dotted, value), description, null)
             else -> throw IllegalArgumentException("$dotted: unsupported \$type \"$type\"")
         }
     }
-
-    private fun argb(dotted: String, value: Any?): String {
-        val match = (value as? String)?.let(COLOR::matchEntire)
-        requireNotNull(match) { "$dotted: \"$value\" is not a #RRGGBB or #RRGGBBAA colour" }
-        val rgb = match.groupValues[1]
-        val alpha = match.groupValues[2].ifEmpty { "FF" }
-        return (alpha + rgb).uppercase()
-    }
-
-    private fun dimension(dotted: String, value: Any?): String {
-        val match = (value as? String)?.let(DIMENSION::matchEntire)
-        requireNotNull(match) { "$dotted: \"$value\" is not a number followed by dp or sp" }
-        return "${match.groupValues[1]}.${match.groupValues[2]}"
-    }
-
-    private fun number(dotted: String, value: Any?): String {
-        require(value is Number) { "$dotted: \"$value\" is not a number" }
-        val plain = BigDecimal(value.toString()).toPlainString()
-        return if ('.' in plain) "${plain}f" else "$plain.0f"
-    }
-
-    private fun fontWeight(dotted: String, value: Any?): String {
-        require(value is Int && value in 1..1000) {
-            "$dotted: \"$value\" is not a font weight between 1 and 1000"
-        }
-        return "FontWeight($value)"
-    }
-
-    private fun singleLine(text: String) = text.replace("*/", "* /").replace(Regex("\\s+"), " ")
 
     private fun kotlinName(path: List<String>, segment: String): String {
         val name =

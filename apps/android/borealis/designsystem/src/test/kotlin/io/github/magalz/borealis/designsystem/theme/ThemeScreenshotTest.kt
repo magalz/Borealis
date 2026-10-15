@@ -178,7 +178,7 @@ private fun TypeSpecimen(columns: Int) {
                             color = colors.ink3,
                         )
                         Text(
-                            if (name == "pin") "482 913" else "Living room PC",
+                            sample(name),
                             style = style,
                             color = if (name == "kicker") Color.Unspecified else colors.ink,
                         )
@@ -188,3 +188,11 @@ private fun TypeSpecimen(columns: Int) {
         }
     }
 }
+
+/** Kickers are set in capitals, and the PIN shows digits. */
+private fun sample(style: String) =
+    when (style) {
+        "pin" -> "482 913"
+        "kicker" -> "LIVING ROOM PC"
+        else -> "Living room PC"
+    }

@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.designsystem.theme
 
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
@@ -43,4 +44,44 @@ class BorealisColors {
 val LocalBorealisColors = staticCompositionLocalOf { BorealisColors() }
 
 /** The dark Material 3 scheme of Borealis (ADR 0052, 0053). */
-fun borealisColorScheme(): ColorScheme = TODO("not implemented")
+fun borealisColorScheme(): ColorScheme {
+    val colors = BorealisColors()
+    return darkColorScheme(
+        primary = colors.accent,
+        onPrimary = colors.onAccent,
+        primaryContainer = colors.accentStrong,
+        onPrimaryContainer = colors.ink,
+        inversePrimary = colors.accentStrong,
+        secondary = colors.accentSoft,
+        onSecondary = colors.onAccent,
+        secondaryContainer = colors.surfaceRaised,
+        onSecondaryContainer = colors.ink,
+        tertiary = colors.accentSoft,
+        onTertiary = colors.onAccent,
+        tertiaryContainer = colors.surfaceRaised,
+        onTertiaryContainer = colors.ink,
+        background = colors.page,
+        onBackground = colors.ink,
+        surface = colors.surface,
+        onSurface = colors.ink,
+        surfaceVariant = colors.surfaceRaised,
+        onSurfaceVariant = colors.ink2,
+        surfaceTint = colors.accent,
+        inverseSurface = colors.ink,
+        inverseOnSurface = colors.page,
+        error = colors.dangerInk,
+        onError = colors.page,
+        errorContainer = colors.surfaceRaised,
+        onErrorContainer = colors.dangerInk,
+        outline = colors.lineStrong,
+        outlineVariant = colors.line,
+        scrim = colors.scrim,
+        surfaceBright = colors.surfaceRaised,
+        surfaceDim = colors.page,
+        surfaceContainerLowest = colors.page,
+        surfaceContainerLow = colors.surface,
+        surfaceContainer = colors.surface,
+        surfaceContainerHigh = colors.surfaceRaised,
+        surfaceContainerHighest = colors.surfaceRaised,
+    )
+}

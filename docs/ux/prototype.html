@@ -1,0 +1,1190 @@
+<!doctype html>
+<!-- Borealis Phase 2 UX prototype, approved by the owner on 2026-10-15. Open it in a browser; it loads IBM Plex from Google Fonts. Deep links: #<screen>.<mode>[.<state>]. See phase-2-proposal.md. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Borealis Phase 2 UX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a review studio. Screen index on the left, the live device frame in the middle, notes for the
+   current screen on the right; decisions, navigation map and tokens follow below. Page chrome uses the
+   LuminalShine Mission Control language (dark-first, hairlines, Plex) with the Borealis purple accent. */
+:root{
+  color-scheme:dark;
+  --bg:#0B0D10; --panel:#14171B; --panel-2:#1A1E24; --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.12);
+  --ink:#E8EAED; --ink-2:#C3C7CC; --ink-3:#8B9096; --ink-4:#6F757C;
+  --acc:#A78BFA; --acc-soft:#C4B5FD; --acc-tint:rgba(167,139,250,.12); --acc-line:rgba(167,139,250,.35);
+  --ok:#7BD389; --warn:#FFC857; --bad:#FF8A80;
+  --sans:"IBM Plex Sans","Segoe UI Variable","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",Consolas,"Courier New",monospace;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    color-scheme:light;
+    --bg:#F4F3F8; --panel:#FFFFFF; --panel-2:#F1EFF7; --line:rgba(22,16,46,.10); --line-2:rgba(22,16,46,.18);
+    --ink:#16151C; --ink-2:#3B3947; --ink-3:#5E5B6B; --ink-4:#6E6B80;
+    --acc:#6D28D9; --acc-soft:#7C3AED; --acc-tint:rgba(109,40,217,.08); --acc-line:rgba(109,40,217,.35);
+    --ok:#2E7D32; --warn:#8A5300; --bad:#C62828;
+  }
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  --bg:#F4F3F8; --panel:#FFFFFF; --panel-2:#F1EFF7; --line:rgba(22,16,46,.10); --line-2:rgba(22,16,46,.18);
+  --ink:#16151C; --ink-2:#3B3947; --ink-3:#5E5B6B; --ink-4:#6E6B80;
+  --acc:#6D28D9; --acc-soft:#7C3AED; --acc-tint:rgba(109,40,217,.08); --acc-line:rgba(109,40,217,.35);
+  --ok:#2E7D32; --warn:#8A5300; --bad:#C62828;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0B0D10; --panel:#14171B; --panel-2:#1A1E24; --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.12);
+  --ink:#E8EAED; --ink-2:#C3C7CC; --ink-3:#8B9096; --ink-4:#6F757C;
+  --acc:#A78BFA; --acc-soft:#C4B5FD; --acc-tint:rgba(167,139,250,.12); --acc-line:rgba(167,139,250,.35);
+  --ok:#7BD389; --warn:#FFC857; --bad:#FF8A80;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1480px;margin:0 auto;padding-inline:20px;padding-block:20px 64px}
+h1,h2,h3{letter-spacing:-.01em;text-wrap:balance;margin:0}
+.kicker{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-4);font-weight:600}
+.mono{font-family:var(--mono)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+/* Header */
+.top{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.brand{display:flex;gap:14px;align-items:center}
+.brand svg{width:44px;height:44px;flex:none}
+.brand h1{font-size:22px;font-weight:600}
+.brand p{margin:2px 0 0;color:var(--ink-3);font-size:13px}
+.controls{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center}
+.ctl{display:flex;gap:8px;align-items:center}
+.seg{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line-2);border-radius:9px;background:var(--panel)}
+.seg button{border:0;background:transparent;padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:500;color:var(--ink-2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--acc-tint);color:var(--acc)}
+.linkbtn{border:1px solid var(--line-2);background:transparent;border-radius:8px;padding:5px 11px;font-size:12.5px;color:var(--ink-2);cursor:pointer}
+
+/* Studio */
+.studio{display:grid;grid-template-columns:210px minmax(0,1fr) 340px;gap:20px;margin-top:20px;align-items:start}
+.index{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;gap:14px}
+.index .grp{display:flex;flex-direction:column;gap:2px}
+.index .grp .kicker{padding:0 10px 4px}
+.index button{text-align:left;border:0;background:transparent;border-radius:8px;padding:6px 10px;font-size:13px;color:var(--ink-2);cursor:pointer;display:flex;justify-content:space-between;gap:8px}
+.index button:hover{background:var(--acc-tint)}
+.index button[aria-current="true"]{background:var(--acc-tint);color:var(--acc);font-weight:600}
+.index button .n{font-family:var(--mono);font-size:11px;color:var(--ink-4)}
+.stage{min-width:0;display:flex;flex-direction:column;gap:12px;align-items:center}
+.stagebox{width:100%;display:flex;justify-content:center}
+.device{position:relative;flex:none}
+.device-inner{transform-origin:top left;position:absolute;top:0;left:0}
+.bezel{background:#050608;border-radius:44px;padding:12px;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 20px 60px rgba(0,0,0,.45)}
+.bezel.land{border-radius:36px}
+.bezel.tv{border-radius:10px;padding:10px;background:#0a0a0c}
+.bezel.hh{border-radius:30px;padding:14px 70px;background:#16171b}
+.screen{overflow:hidden;position:relative;border-radius:32px}
+.bezel.land .screen{border-radius:24px}
+.bezel.tv .screen{border-radius:2px}
+.bezel.hh .screen{border-radius:6px}
+.hh-pad{position:absolute;top:50%;transform:translateY(-50%);width:44px;display:flex;flex-direction:column;gap:10px;align-items:center}
+.hh-pad.l{left:13px}.hh-pad.r{right:13px}
+.hh-pad i{display:block;width:30px;height:30px;border-radius:50%;background:#24262c;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.tvstand{width:140px;height:10px;background:#0a0a0c;margin:0 auto;border-radius:0 0 8px 8px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;font-size:12px;color:var(--ink-3)}
+.legend kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line-2);border-bottom-width:2px;border-radius:5px;padding:0 5px;color:var(--ink-2);background:var(--panel)}
+.remote{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center}
+.remote button{border:1px solid var(--line-2);background:var(--panel);border-radius:999px;min-width:40px;height:34px;padding:0 12px;font-size:12.5px;color:var(--ink-2);cursor:pointer;font-weight:500}
+.remote button:active{background:var(--acc-tint);color:var(--acc)}
+.remote .dpad{display:grid;grid-template-columns:repeat(3,38px);grid-template-rows:repeat(3,32px);gap:3px}
+.remote .dpad button{min-width:0;height:auto;padding:0;border-radius:8px}
+
+/* Notes */
+.notes{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;min-width:0}
+.notes-h{padding:14px 16px 12px;border-bottom:1px solid var(--line)}
+.notes-h h2{font-size:16px;font-weight:600;margin-top:2px}
+.notes-b{padding:12px 16px 16px;display:flex;flex-direction:column;gap:14px;font-size:13px;color:var(--ink-2)}
+.notes-b p{margin:0}
+.states{display:flex;flex-wrap:wrap;gap:6px}
+.states button{border:1px solid var(--line-2);background:transparent;border-radius:999px;padding:3px 10px;font-size:12px;color:var(--ink-2);cursor:pointer}
+.states button[aria-pressed="true"]{border-color:var(--acc-line);background:var(--acc-tint);color:var(--acc)}
+.kv{display:grid;grid-template-columns:86px minmax(0,1fr);gap:6px 12px}
+.kv dt{color:var(--ink-4);font-size:12px;font-weight:500}
+.kv dd{margin:0}
+.dref{display:inline-flex;font-family:var(--mono);font-size:11px;border:1px solid var(--acc-line);color:var(--acc);border-radius:999px;padding:0 7px;margin-right:4px;text-decoration:none}
+
+/* Sections below */
+section.block{margin-top:44px}
+section.block > header{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+section.block h2{font-size:18px;font-weight:600}
+section.block > header p{margin:0;color:var(--ink-3);font-size:13px;max-width:70ch}
+.decisions{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.dec{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.dec h3{font-size:14px;font-weight:600;display:flex;gap:8px;align-items:baseline}
+.dec h3 .id{font-family:var(--mono);font-size:11.5px;color:var(--acc)}
+.dec p{margin:0;font-size:13px;color:var(--ink-3)}
+.dec ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--ink-2)}
+.dec li.rec::marker{color:var(--acc)}
+.dec li .r{font-size:11px;font-weight:600;color:var(--acc);text-transform:uppercase;letter-spacing:.05em;margin-left:4px}
+.dec li .pc{display:block;color:var(--ink-3);font-size:12.5px}
+.mapbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;overflow-x:auto}
+.tokens{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+.tok{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;min-width:0}
+.tok h3{font-size:13px;font-weight:600;padding:12px 16px;border-bottom:1px solid var(--line)}
+.sw{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:1px;background:var(--line)}
+.sw div{background:var(--panel);padding:10px 12px;display:flex;flex-direction:column;gap:6px;font-size:11.5px}
+.sw i{display:block;height:34px;border-radius:7px;border:1px solid var(--line-2)}
+.sw b{font-weight:500;color:var(--ink-2)}
+.sw span{font-family:var(--mono);color:var(--ink-4);font-size:11px}
+.ctab{width:100%;border-collapse:collapse;font-size:12.5px}
+.ctab td,.ctab th{padding:7px 16px;border-top:1px solid var(--line);text-align:left}
+.ctab th{color:var(--ink-4);font-weight:500;font-size:11.5px}
+.ctab td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.pill{display:inline-block;border-radius:999px;font-size:11px;font-weight:600;padding:1px 8px;border:1px solid}
+.pill.ok{color:var(--ok);border-color:currentColor}
+.pill.mid{color:var(--warn);border-color:currentColor}
+.pill.bad{color:var(--bad);border-color:currentColor}
+.next{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;font-size:13px;color:var(--ink-2)}
+.next h3{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px}
+.next p{margin:0}
+footer.foot{margin-top:40px;color:var(--ink-4);font-size:12px}
+
+@media (max-width:1180px){
+  .studio{grid-template-columns:minmax(0,1fr)}
+  .index{position:static;flex-direction:row;flex-wrap:wrap;gap:8px 16px}
+  .index .grp{flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px}
+  .index .grp .kicker{padding:0 4px 0 0;width:100%}
+  .index button .n{display:none}
+}
+@media (max-width:560px){.wrap{padding-inline:16px}.brand h1{font-size:19px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* Capture mode (#cap.<screen>.<mode>[.<state>[.<step>]]): the device frame alone, at full size. */
+.cap .top,.cap .index,.cap .notes,.cap .legend,.cap .remote,.cap section.block,.cap footer.foot{display:none}
+.cap .wrap{padding:0;max-width:none}
+.cap .studio,.cap .stage,.cap .stagebox{display:block;margin:0}
+.cap body,.cap{background:#050608}
+.cap *{animation:none!important;transition:none!important}
+
+/* ============ App tokens (the proposal itself) ============ */
+.app{
+  --a-page:#0E1013; --a-chrome:#0B0D10; --a-surface:#14171B; --a-surface-2:#1A1E24;
+  --a-line:rgba(255,255,255,.07); --a-line-2:rgba(255,255,255,.12); --a-hover:rgba(255,255,255,.04);
+  --a-ink:#E8EAED; --a-ink-2:#C3C7CC; --a-ink-3:#8B9096; --a-ink-4:#7A8087;
+  --a-acc:#A78BFA; --a-acc-soft:#C4B5FD; --a-acc-strong:#7C3AED; --a-on-acc:#160B2E; --a-acc-tint:rgba(167,139,250,.13); --a-acc-line:rgba(167,139,250,.4);
+  --a-focus:#C4B5FD;
+  --a-ok:#4CAF50; --a-ok-ink:#7BD389; --a-warn:#FFA726; --a-warn-ink:#FFC857; --a-bad:#F44336; --a-bad-ink:#FF8A80;
+  --a-scrim:rgba(14,16,19,.72);
+  color-scheme:dark;
+  font-family:var(--sans);color:var(--a-ink);background:var(--a-page);
+  position:relative;width:100%;height:100%;overflow:hidden;font-size:14px;line-height:1.45;
+}
+.app[data-apptheme="light"]{
+  --a-page:#F6F5FA; --a-chrome:#EDEBF3; --a-surface:#FFFFFF; --a-surface-2:#F1EFF7;
+  --a-line:rgba(22,16,46,.10); --a-line-2:rgba(22,16,46,.18); --a-hover:rgba(22,16,46,.04);
+  --a-ink:#16151C; --a-ink-2:#3B3947; --a-ink-3:#5E5B6B; --a-ink-4:#6E6B80;
+  --a-acc:#6D28D9; --a-acc-soft:#7C3AED; --a-acc-strong:#5B21B6; --a-on-acc:#FFFFFF; --a-acc-tint:rgba(109,40,217,.10); --a-acc-line:rgba(109,40,217,.4);
+  --a-focus:#6D28D9;
+  --a-ok:#2E7D32; --a-ok-ink:#2E7D32; --a-warn:#B26A00; --a-warn-ink:#8A5300; --a-bad:#C62828; --a-bad-ink:#C62828;
+  --a-scrim:rgba(22,16,46,.45);
+  color-scheme:light;
+}
+.app *{box-sizing:border-box}
+:where(.app) button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
+.app svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.app svg.i.s{width:18px;height:18px}
+.app .fill{fill:currentColor;stroke:none}
+.a-scroll{overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
+.a-k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--a-ink-4);font-weight:600;display:flex;align-items:center;gap:10px}
+.a-k::after{content:"";flex:1;height:1px;background:var(--a-line)}
+.a-mono{font-family:var(--mono)}
+.a-muted{color:var(--a-ink-3)}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;background:#4B5158;box-shadow:0 0 0 3px rgba(75,81,88,.18)}
+.dot.on{background:var(--a-ok);box-shadow:0 0 0 3px rgba(76,175,80,.18)}
+.dot.live{background:var(--a-acc);box-shadow:0 0 0 3px var(--a-acc-tint);animation:pulse 1.6s ease-in-out infinite}
+.dot.warn{background:var(--a-warn);box-shadow:0 0 0 3px rgba(255,167,38,.18)}
+@keyframes pulse{50%{opacity:.45}}
+.tag{display:inline-flex;align-items:center;gap:5px;border-radius:999px;font-size:11px;font-weight:500;padding:2px 8px;border:1px solid var(--a-line-2);color:var(--a-ink-3);white-space:nowrap}
+.tag.live{color:var(--a-acc);border-color:var(--a-acc-line);background:var(--a-acc-tint)}
+.tag.ok{color:var(--a-ok-ink);border-color:rgba(76,175,80,.35);background:rgba(76,175,80,.08)}
+.tag.warn{color:var(--a-warn-ink);border-color:rgba(255,200,87,.3);background:rgba(255,167,38,.08)}
+.tag.bad{color:var(--a-bad-ink);border-color:rgba(244,67,54,.35);background:rgba(244,67,54,.08)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:8px;font-weight:600;font-size:14px;white-space:nowrap}
+.app .btn.pri{background:var(--a-acc);color:var(--a-on-acc)}
+.app .btn.neu{background:var(--a-hover);border:1px solid var(--a-line-2);color:var(--a-ink)}
+.app .btn.dan{border:1px solid rgba(244,67,54,.35);color:var(--a-bad-ink)}
+.app .btn.ghost{color:var(--a-acc)}
+.app .btn:disabled{opacity:.45;cursor:default}
+.card{background:var(--a-surface);border:1px solid var(--a-line);border-radius:12px}
+.app .ib{width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;color:var(--a-ink-2)}
+.app .ib:hover{background:var(--a-hover)}
+
+/* focus mode (TV, handheld) */
+.app.focusmode [data-f]{transition:transform .12s ease, box-shadow .12s ease, background .12s ease}
+.app.focusmode .is-f{outline:3px solid var(--a-focus);outline-offset:2px;border-radius:10px}
+.app.focusmode .tile.is-f{outline:none}
+.app.focusmode .tile.is-f .cover{outline:3px solid var(--a-focus);outline-offset:3px;transform:scale(1.04)}
+.app.focusmode .tile.is-f .tt{color:var(--a-ink)}
+.app.focusmode .row.is-f,.app.focusmode .mrow.is-f{outline:none;background:var(--a-acc-tint);box-shadow:inset 3px 0 0 var(--a-acc)}
+.app.focusmode .rail-i.is-f{outline:none;background:var(--a-acc-tint);color:var(--a-acc)}
+.app.focusmode .btn.is-f{outline-offset:3px}
+
+/* phone chrome */
+.ph{display:flex;flex-direction:column;height:100%}
+.sbar{height:30px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px 0 26px;font-size:12.5px;font-weight:600;color:var(--a-ink)}
+.sbar .bt{display:flex;gap:6px;align-items:center}
+.sbar .bt i{display:block;width:22px;height:11px;border:1.5px solid currentColor;border-radius:3px;position:relative;opacity:.9}
+.sbar .bt i::after{content:"";position:absolute;inset:1.5px 6px 1.5px 1.5px;background:currentColor;border-radius:1px}
+.gbar{height:22px;flex:none;display:flex;align-items:center;justify-content:center}
+.gbar i{display:block;width:120px;height:4px;border-radius:2px;background:var(--a-ink);opacity:.55}
+.ph-body{flex:1;min-height:0;position:relative;display:flex;flex-direction:column}
+.abar{height:56px;flex:none;display:flex;align-items:center;gap:4px;padding:0 8px}
+.abar h2{font-size:18px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:6px}
+.abar .sub{display:block;font-size:12px;font-weight:400;color:var(--a-ink-3)}
+.abar .wm{display:flex;align-items:center;gap:10px;flex:1;padding-left:8px;font-size:18px;font-weight:600}
+.abar .wm svg{width:28px;height:28px}
+.pbody{flex:1;min-height:0;padding:4px 16px 20px;display:flex;flex-direction:column;gap:14px}
+
+/* big screen chrome (TV, handheld) */
+.big{display:grid;grid-template-columns:184px minmax(0,1fr);height:100%}
+.hh .big{grid-template-columns:150px minmax(0,1fr)}
+.rail{background:var(--a-chrome);border-right:1px solid var(--a-line);padding:26px 12px;display:flex;flex-direction:column;gap:4px}
+.rail .wm{display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px;padding:0 10px 22px}
+.rail .wm svg{width:28px;height:28px}
+.rail-i{display:flex;align-items:center;gap:12px;height:42px;padding:0 12px;border-radius:9px;color:var(--a-ink-2);font-weight:500;font-size:14.5px}
+.rail-i[aria-current="true"]{color:var(--a-acc)}
+.bigmain{min-width:0;display:flex;flex-direction:column;padding:28px 34px 0;gap:18px;position:relative}
+.hh .bigmain{padding:22px 24px 0;gap:14px}
+.bighead{display:flex;align-items:baseline;justify-content:space-between;gap:16px}
+.bighead h2{font-size:24px;font-weight:600}
+.hh .bighead h2{font-size:20px}
+.bighead .sub{color:var(--a-ink-3);font-size:13.5px}
+.hint{position:absolute;left:0;right:0;bottom:0;height:34px;background:var(--a-chrome);border-top:1px solid var(--a-line);display:flex;align-items:center;justify-content:flex-end;gap:18px;padding:0 18px;font-size:12px;color:var(--a-ink-3);z-index:30}
+.hint b{display:inline-flex;width:20px;height:20px;border-radius:50%;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-right:6px;color:#fff}
+.hint .ga{background:#2E7D32}.hint .gb{background:#C62828}.hint .gx{background:#1565C0}.hint .gm{background:#4B5158;border-radius:6px;width:auto;padding:0 6px}
+
+/* hosts */
+.cont{display:flex;gap:14px;align-items:center;padding:14px;border-radius:12px;background:linear-gradient(120deg,var(--a-acc-tint),transparent 70%),var(--a-surface);border:1px solid var(--a-acc-line)}
+.cont .th{width:64px;height:64px;border-radius:10px;flex:none}
+.cont .tx{flex:1;min-width:0}
+.cont .tx b{display:block;font-size:15px}
+.cont .tx span{font-size:12.5px;color:var(--a-ink-3)}
+.hosts{display:flex;flex-direction:column;gap:10px}
+.host{display:flex;gap:12px;align-items:center;padding:14px;width:100%}
+.host .hi{width:42px;height:42px;border-radius:10px;background:var(--a-surface-2);display:flex;align-items:center;justify-content:center;color:var(--a-ink-2);flex:none;position:relative}
+.host .hi .dot{position:absolute;right:-2px;bottom:-2px}
+.host .tx{flex:1;min-width:0}
+.host .tx b{display:block;font-size:15px;font-weight:600}
+.host .tx span{display:block;font-size:12.5px;color:var(--a-ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.host .tags{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.hostgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.hostgrid .host{flex-direction:column;align-items:flex-start;padding:18px;gap:14px;min-height:150px}
+.hostgrid .host .hi{width:48px;height:48px}
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;color:var(--a-ink-3);padding:24px}
+.empty b{color:var(--a-ink);font-size:16px}
+.spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--a-line-2);border-top-color:var(--a-acc);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* apps */
+.appgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 14px}
+.big .appgrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:20px 18px}
+.hh .big .appgrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.tile{display:flex;flex-direction:column;gap:7px;position:relative;width:100%}
+.cover{aspect-ratio:3/4;border-radius:10px;position:relative;overflow:hidden;display:flex;align-items:flex-end;padding:10px;border:1px solid rgba(255,255,255,.06);transition:transform .12s ease}
+.cover .ini{position:absolute;top:10px;left:12px;font-family:var(--mono);font-weight:600;font-size:22px;color:rgba(255,255,255,.85)}
+.cover .tag{background:rgba(11,13,16,.78);border-color:var(--a-acc-line);color:#C4B5FD}
+.tile .tt{font-size:13px;font-weight:500;color:var(--a-ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:26px}
+.tile .more{position:absolute;right:-6px;bottom:-8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--a-ink-3);border-radius:8px}
+.hostbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--a-ink-3)}
+
+/* overlays */
+.scrim{position:absolute;inset:0;background:var(--a-scrim);z-index:40;display:flex}
+.sheet{margin-top:auto;width:100%;background:var(--a-surface);border-top-left-radius:18px;border-top-right-radius:18px;border:1px solid var(--a-line-2);border-bottom:0;padding:8px 0 18px}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--a-line-2);margin:4px auto 10px}
+.sheet h3{font-size:16px;padding:0 20px 2px}
+.sheet .sub{font-size:12.5px;color:var(--a-ink-3);padding:0 20px 10px}
+.row{display:flex;align-items:center;gap:14px;min-height:50px;padding:6px 20px;width:100%}
+.row:hover{background:var(--a-hover)}
+.row .tx{flex:1;min-width:0}
+.row .tx b{display:block;font-weight:500;font-size:14.5px}
+.row .tx span{display:block;font-size:12.5px;color:var(--a-ink-3)}
+.row .val{font-size:13px;color:var(--a-ink-3);white-space:nowrap}
+.row.danger{color:var(--a-bad-ink)}
+.row.danger .tx span{color:var(--a-ink-3)}
+.dlg{margin:auto;width:min(92%,420px);background:var(--a-surface);border:1px solid var(--a-line-2);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.dlg h3{font-size:17px;font-weight:600}
+.dlg p{margin:0;color:var(--a-ink-2);font-size:14px}
+.note{display:flex;gap:10px;padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.4}
+.note.warn{background:rgba(255,167,38,.08);border:1px solid rgba(255,200,87,.25);color:var(--a-warn-ink)}
+.note.info{background:var(--a-acc-tint);border:1px solid var(--a-acc-line);color:var(--a-ink-2)}
+.note.bad{background:rgba(244,67,54,.08);border:1px solid rgba(244,67,54,.3);color:var(--a-bad-ink)}
+.note svg{margin-top:1px}
+.acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:4px}
+.toast{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);background:var(--a-surface-2);border:1px solid var(--a-line-2);color:var(--a-ink);padding:8px 14px;border-radius:999px;font-size:13px;z-index:60;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+
+/* pairing */
+.pin{display:flex;gap:10px;justify-content:center;margin:6px 0}
+.pin span{width:58px;height:70px;border-radius:12px;background:var(--a-surface);border:1px solid var(--a-line-2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:34px;font-weight:600;color:var(--a-ink)}
+.steps{display:flex;flex-direction:column;gap:10px;counter-reset:s;margin:0;padding:0;list-style:none}
+.steps li{display:flex;gap:12px;font-size:13.5px;color:var(--a-ink-2)}
+.steps li::before{counter-increment:s;content:counter(s);flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--a-line-2);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-family:var(--mono);color:var(--a-ink-3)}
+.status{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--a-ink-3)}
+.status .spin{width:16px;height:16px;border-width:2px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:12.5px;font-weight:500;color:var(--a-ink-2)}
+.field .in{height:44px;border-radius:8px;background:var(--a-page);border:1px solid var(--a-line-2);display:flex;align-items:center;padding:0 12px;font-family:var(--mono);font-size:14px;color:var(--a-ink)}
+.field .in.is-f,.field .in.on{border-color:var(--a-acc);box-shadow:0 0 0 3px var(--a-acc-tint)}
+.field small{font-size:12px;color:var(--a-ink-4)}
+.caret{display:inline-block;width:1.5px;height:18px;background:var(--a-acc);margin-left:1px;animation:pulse 1s steps(1) infinite}
+
+/* launch */
+.launch{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 30%,var(--a-acc-tint),transparent 60%),var(--a-page)}
+.launch .col{width:min(86%,440px);display:flex;flex-direction:column;gap:18px;align-items:center;text-align:center}
+.launch .th{width:84px;height:112px;border-radius:10px}
+.launch h3{font-size:19px;font-weight:600}
+.launch .sub{font-size:13px;color:var(--a-ink-3);margin-top:-12px}
+.lsteps{width:100%;display:flex;flex-direction:column;gap:2px;text-align:left}
+.ls{display:flex;gap:12px;align-items:flex-start;padding:8px 12px;border-radius:9px;font-size:13.5px;color:var(--a-ink-4)}
+.ls .st{width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.ls .st i{width:8px;height:8px;border-radius:50%;background:var(--a-line-2)}
+.ls.done{color:var(--a-ink-2)}
+.ls.done .st{color:var(--a-ok-ink)}
+.ls.act{color:var(--a-ink);background:var(--a-surface)}
+.ls.act .spin{width:16px;height:16px;border-width:2px}
+.ls small{display:block;color:var(--a-ink-3);font-size:12.5px;margin-top:2px}
+.ls small.w{color:var(--a-warn-ink)}
+
+/* stream */
+.desk{position:absolute;inset:0;background:
+  radial-gradient(ellipse 60% 50% at 30% 30%,rgba(110,231,183,.30),transparent 60%),
+  radial-gradient(ellipse 50% 60% at 70% 40%,rgba(196,181,253,.35),transparent 60%),
+  linear-gradient(180deg,#1B0E3A,#3D1E7E 70%,#0E1013);overflow:hidden}
+.desk .ridge{position:absolute;left:0;right:0;bottom:0;height:38%;background:#0E1013;clip-path:polygon(0 45%,18% 25%,30% 40%,46% 12%,62% 38%,78% 20%,100% 42%,100% 100%,0 100%)}
+.desk .icons{position:absolute;top:18px;left:18px;display:grid;gap:16px}
+.desk .icons i{display:block;width:34px;height:30px;border-radius:6px;background:rgba(255,255,255,.18)}
+.desk .task{position:absolute;left:0;right:0;bottom:0;height:34px;background:rgba(20,18,30,.86);display:flex;align-items:center;justify-content:center;gap:10px}
+.desk .task i{display:block;width:20px;height:20px;border-radius:5px;background:rgba(255,255,255,.22)}
+.desk .task i:first-child{background:#7C3AED}
+.desk .cursor{position:absolute;left:58%;top:46%;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:16px solid #fff;transform:rotate(-30deg);filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))}
+.ovl{position:absolute;top:10px;left:10px;background:rgba(11,13,16,.74);color:#E8EAED;border-radius:8px;padding:5px 10px;font-family:var(--mono);font-size:11px;z-index:20;display:flex;gap:10px;white-space:nowrap}
+.ovl.det{flex-direction:column;gap:2px;padding:8px 12px;font-size:11px}
+.ovl b{color:#C4B5FD;font-weight:500}
+.handle{position:absolute;top:0;left:50%;transform:translateX(-50%);width:64px;height:20px;border-radius:0 0 12px 12px;background:rgba(11,13,16,.55);display:flex;align-items:center;justify-content:center;z-index:25;color:#E8EAED}
+.side{margin-left:auto;width:min(360px,52%);height:100%;background:var(--a-surface);border-left:1px solid var(--a-line-2);display:flex;flex-direction:column}
+.side-h{padding:14px 16px 10px;border-bottom:1px solid var(--a-line)}
+.side-h b{display:block;font-size:15px}
+.side-h span{font-size:12px;color:var(--a-ink-3);font-family:var(--mono)}
+.mrow{display:flex;align-items:center;gap:12px;min-height:44px;padding:4px 16px;width:100%;font-size:14px}
+.mrow:hover{background:var(--a-hover)}
+.mrow .tx{flex:1;min-width:0}
+.mrow .tx span{display:block;font-size:11.5px;color:var(--a-ink-3)}
+.mrow.danger{color:var(--a-bad-ink)}
+.mrow[aria-disabled="true"]{opacity:.5}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:4px 16px 10px}
+.chip{border:1px solid var(--a-line-2);border-radius:7px;padding:4px 9px;font-family:var(--mono);font-size:12px;color:var(--a-ink-2)}
+.chip.on{border-color:var(--a-acc-line);background:var(--a-acc-tint);color:var(--a-acc)}
+.segs{display:inline-flex;gap:2px;padding:3px;border-radius:9px;border:1px solid var(--a-line-2)}
+.segs button{padding:3px 9px;border-radius:7px;font-size:12px;color:var(--a-ink-3)}
+.segs button.on{background:var(--a-acc-tint);color:var(--a-acc)}
+.app.focusmode .segs button.is-f{outline:2px solid var(--a-focus);outline-offset:1px}
+.info{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;padding:2px 16px 12px;font-size:12px}
+.info dt{color:var(--a-ink-4)}
+.info dd{margin:0;font-family:var(--mono);color:var(--a-ink-2);text-align:right}
+.kb{position:absolute;left:0;right:0;bottom:0;background:var(--a-surface);border-top:1px solid var(--a-line-2);padding:8px 10px 10px;z-index:45;display:flex;flex-direction:column;gap:5px}
+.kb .krow{display:flex;gap:5px;justify-content:center}
+.kb .key{flex:1;max-width:44px;height:32px;border-radius:7px;background:var(--a-surface-2);border:1px solid var(--a-line);font-size:13px;display:flex;align-items:center;justify-content:center;color:var(--a-ink)}
+.kb .key.w{max-width:72px;font-size:11.5px;color:var(--a-ink-2)}
+.kb .key.sp{max-width:240px}
+.kb .key.on{background:var(--a-acc-tint);border-color:var(--a-acc-line);color:var(--a-acc)}
+.kb .ktop{display:flex;gap:6px;align-items:center;overflow-x:auto;scrollbar-width:none}
+.kb .ktop .chip{white-space:nowrap}
+
+/* settings */
+.list{display:flex;flex-direction:column}
+.list .row{padding-left:4px;padding-right:4px;border-bottom:1px solid var(--a-line)}
+.sw2{width:38px;height:22px;border-radius:999px;background:var(--a-line-2);position:relative;flex:none}
+.sw2::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--a-ink-3);transition:left .15s}
+.sw2.on{background:var(--a-acc)}
+.sw2.on::after{left:19px;background:var(--a-on-acc)}
+.twopane{display:grid;grid-template-columns:220px minmax(0,1fr);gap:20px;min-height:0;flex:1}
+.hh .twopane{grid-template-columns:170px minmax(0,1fr)}
+.cats{display:flex;flex-direction:column;gap:2px}
+.cats .row{border-radius:9px;min-height:40px;padding:4px 12px}
+.cats .row[aria-current="true"]{color:var(--a-acc);background:var(--a-acc-tint)}
+.ev{display:grid;grid-template-columns:48px minmax(0,1fr);gap:12px;padding:10px 4px;border-bottom:1px solid var(--a-line);font-size:13px}
+.ev time{font-family:var(--mono);font-size:12px;color:var(--a-ink-4);padding-top:1px}
+.ev b{font-weight:500}
+.ev .c{font-family:var(--mono);font-size:11px;color:var(--a-ink-4);margin-left:6px}
+.ev p{margin:2px 0 0;color:var(--a-ink-3);font-size:12.5px}
+.qr{display:flex;gap:22px;align-items:center}
+.qr canvas{background:#fff;border-radius:10px;padding:10px;flex:none;image-rendering:pixelated}
+</style>
+
+<style>body{margin:0}</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="bmark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1B0E3A"/><stop offset="1" stop-color="#3D1E7E"/></linearGradient>
+    <symbol id="mark" viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="8" fill="url(#bmark)"/>
+      <path d="M4 15c6-6 12 2 24-6" stroke="#6EE7B7" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      <path d="M4 19.5c7-5 13 1 24-5" stroke="#C4B5FD" stroke-width="2" fill="none" stroke-linecap="round" opacity=".9"/>
+      <path d="M0 26l8-5 6 3 7-6 11 7v7H0z" fill="#0E1013"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg aria-hidden="true"><use href="#mark"/></svg>
+      <div>
+        <h1>Borealis Phase 2 UX</h1>
+        <p>Proposal for review · Sprint 3 · 15 Oct 2026 · Compose + Material 3 + Compose for TV, Mission Control tokens with the Borealis purple</p>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="ctl"><span class="kicker">Device</span>
+        <div class="seg" id="modeSeg" role="group" aria-label="Device">
+          <button type="button" id="m-phone" data-mode="phone">Phone</button>
+          <button type="button" id="m-tv" data-mode="tv">TV</button>
+          <button type="button" id="m-handheld" data-mode="handheld">Handheld</button>
+        </div>
+      </div>
+      <div class="ctl"><span class="kicker">App theme</span>
+        <div class="seg" id="themeSeg" role="group" aria-label="App theme">
+          <button type="button" id="t-dark" data-apptheme="dark">Dark</button>
+          <button type="button" id="t-light" data-apptheme="light">Light</button>
+        </div>
+      </div>
+      <button type="button" class="linkbtn" id="resetBtn">Start over</button>
+    </div>
+  </header>
+
+  <div class="studio">
+    <nav class="index" id="index" aria-label="Screens"></nav>
+    <div class="stage">
+      <div class="stagebox" id="stagebox"><div class="device" id="device"><div class="device-inner" id="deviceInner"></div></div></div>
+      <div class="legend" id="legend"></div>
+      <div class="remote" id="remote"></div>
+    </div>
+    <aside class="notes" id="notes" aria-live="polite"></aside>
+  </div>
+
+  <section class="block" id="decisions-sec">
+    <header><h2>Decisions to review</h2><p>Each decision lists the options considered. The first option is the recommendation the prototype shows; the others are alternatives to pick from.</p></header>
+    <div class="decisions" id="decisions"></div>
+  </section>
+
+  <section class="block">
+    <header><h2>Navigation map</h2><p>The same map serves all three input modes. Back always moves one step up this map; during a stream it opens the in-game menu instead of leaving.</p></header>
+    <div class="mapbox">
+<pre class="mermaid">
+flowchart LR
+  Hosts["Hosts (home)"] --> Apps
+  Hosts --> Pair["Pairing"]
+  Hosts --> Add["Add host"]
+  Hosts --> Settings
+  Apps --> Actions["App actions"]
+  Apps --> Start["Starting stream"]
+  Actions --> Start
+  Apps -- "app already running" --> Conflict["Conflict dialog"]
+  Conflict --> Start
+  Start -- "host does not answer" --> Error["Connection error"]
+  Start --> Stream
+  Stream <--> Menu["In-game menu"]
+  Menu --> Keyboard
+  Menu -- "Disconnect or Quit" --> Apps
+  Settings --> Privacy["Privacy and diagnostics"]
+  Privacy --> Audit["Audit trail"]
+  Privacy --> Send["Send to phone (TV)"]
+</pre>
+    </div>
+  </section>
+
+  <section class="block">
+    <header><h2>Tokens</h2><p>Mission Control surfaces, ink and status colours from the LuminalShine web UI. The gold accent family is replaced by violet; contrast ratios are computed live from these values (WCAG 2.x).</p></header>
+    <div class="tokens" id="tokens"></div>
+  </section>
+
+  <section class="block">
+    <header><h2>After approval</h2><p>Nothing in Compose is built in Sprint 3. The approved version becomes versioned documents.</p></header>
+    <div class="next">
+      <div><h3>docs/ux/phase-2-proposal.md</h3><p>Screens, states and input rules from this page, with captures of each screen in the three modes.</p></div>
+      <div><h3>Use cases UC-001 onward</h3><p>One per user goal (pair, start a stream, join a running app, use the in-game menu, send diagnostics), each with acceptance tests.</p></div>
+      <div><h3>design/tokens.json</h3><p>The palette, type scale, radii and spacing below, as the single source the Phase 2 token pipeline (ADR 0044) generates Kotlin from.</p></div>
+      <div><h3>ADR 0005 note</h3><p>The chosen violet shades and the light-theme decision.</p></div>
+    </div>
+  </section>
+
+  <footer class="foot">Example data only: host names, addresses, apps and session figures are illustrative. Covers are placeholders until the host REST API (Phase 3).</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+// ---------- icons ----------
+const P={
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>', back:'<path d="M15 5l-7 7 7 7"/>', chev:'<path d="M9 6l6 6-6 6"/>',
+  more:'<circle class="fill" cx="5" cy="12" r="1.6"/><circle class="fill" cx="12" cy="12" r="1.6"/><circle class="fill" cx="19" cy="12" r="1.6"/>',
+  power:'<path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/>', play:'<path d="M8 5l11 7-11 7z"/>',
+  kb:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/>',
+  mouse:'<rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 7v3"/>', info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>', check:'<path d="M5 12l5 5 9-10"/>', refresh:'<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
+  monitor:'<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  qr:'<rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2M18 18h2v2M14 18h2"/>',
+  shield:'<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/>', list:'<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>',
+  lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>', home:'<path d="M4 11l8-7 8 7v9H4z"/>',
+  bolt:'<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>', send:'<path d="M4 12l16-8-6 16-3-7z"/>',
+  pad:'<rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 10.5v4M5 12.5h4M16 11.5h.01M18 13.5h.01"/>',
+  layers:'<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>', exit:'<path d="M14 4h5v16h-5"/><path d="M10 8l-4 4 4 4M6 12h10"/>',
+  down:'<path d="M6 9l6 6 6-6"/>', wifi:'<path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><path d="M12 19.5h.01"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', code:'<path d="M8 8l-4 4 4 4M16 8l4 4-4 4"/>'
+};
+const ic=(n,c)=>'<svg class="i'+(c?' '+c:'')+'" viewBox="0 0 24 24" aria-hidden="true">'+P[n]+'</svg>';
+const mark='<svg aria-hidden="true"><use href="#mark"/></svg>';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// ---------- example data ----------
+const HOSTS=[
+  {id:'desk',name:'Desk PC',state:'online',paired:true,running:'Desktop',meta:'LuminalShine 26.09.1 · 192.168.1.20',caps:['HEVC 10-bit','HDR']},
+  {id:'living',name:'Living Room PC',state:'offline',paired:true,meta:'Last seen 2 days ago · 192.168.1.31'},
+  {id:'studio',name:'Studio',state:'online',paired:false,meta:'LuminalShine 26.09.1 · found on this network'}
+];
+const APPS=['Desktop','Steam Big Picture','Playnite','Hades II','Forza Horizon 5','Elden Ring','Balatro','Cities: Skylines II','Stardew Valley','Remote Desktop'];
+function hue(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))>>>0;return h}
+function coverBg(n){const h=[262,270,250,170,200,285,230,160][hue(n)%8];return 'linear-gradient(160deg,hsl('+h+' 42% 34%),hsl('+(h+28)+' 50% 14%))'}
+function initials(n){return n.split(/[\s:]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase()}
+
+// ---------- screens ----------
+const SCREENS={
+  hosts:{g:'Library',label:'Hosts',variants:['With hosts','Searching']},
+  add:{g:'Library',label:'Add host'},
+  pair:{g:'Library',label:'Pairing',variants:['Waiting for PIN','New PIN after restart','Paired','Expired']},
+  apps:{g:'Library',label:'Apps',variants:['Desktop running','Nothing running']},
+  actions:{g:'Library',label:'App actions',variants:['Running app','Other app running']},
+  launch:{g:'Starting',label:'Starting stream',variants:['Progress','Host busy (retry)']},
+  conflict:{g:'Starting',label:'Conflict dialog',variants:['Same app','Other app']},
+  error:{g:'Starting',label:'Connection error',variants:['Host busy','Host offline','Certificate changed']},
+  stream:{g:'Streaming',label:'Stream',land:true,variants:['Overlay off','Compact overlay','Detailed overlay']},
+  menu:{g:'Streaming',label:'In-game menu',land:true},
+  keyboard:{g:'Streaming',label:'Keyboard',land:true},
+  settings:{g:'Settings',label:'Settings'},
+  privacy:{g:'Settings',label:'Privacy and diagnostics'},
+  audit:{g:'Settings',label:'Audit trail'},
+  send:{g:'Settings',label:'Send to phone',variants:['Waiting','Downloaded','Expired','No local network']}
+};
+const PARENT={add:'hosts',pair:'hosts',apps:'hosts',actions:'apps',conflict:'apps',launch:'apps',error:'apps',stream:'menu',menu:'stream',keyboard:'stream',settings:'hosts',privacy:'settings',audit:'privacy',send:'privacy'};
+
+const NOTES={
+  hosts:{t:'Hosts',p:'Home. Shows the session to continue first, then every known or discovered host with its state and the one action that state allows.',
+    touch:'Tap a host to see its apps. Pair and Wake are inline buttons, so no long-press menus are needed.',
+    tv:'Left rail plus a host grid. Focus starts on Continue. OK opens the host; hold OK for host options (details, wake, forget).',
+    pad:'Same as TV. A opens, X shows options, B does nothing at the top level.',
+    today:'12.2 hides pairing, wake and details in a long-press context menu, and has no continue row.',d:['D2','D8']},
+  add:{t:'Add host',p:'Manual add for hosts that discovery does not find, for example across VLANs.',
+    touch:'One field; the system keyboard opens at once.',tv:'The system TV keyboard opens on OK. The default port needs no input.',pad:'Same as TV.',today:'Same flow, restyled; no port hint today.',d:[]},
+  pair:{t:'Pairing',p:'The PIN is entered on the host, in the LuminalShine Web UI. The screen explains where, keeps the PIN large enough to read from a couch, and covers the restart and expiry cases Borealis already handles.',
+    touch:'Cancel only. The screen closes by itself when the host accepts the PIN.',tv:'Same, with the PIN digits at TV size. Back cancels.',pad:'Same as TV.',
+    today:'12.2 shows the PIN in a small dialog; the Borealis restart and host-error messages arrive as toasts.',d:[]},
+  apps:{t:'Apps',p:'The apps of one host. The running app is marked and comes first. Covers are placeholders until the host REST API serves covers by UUID (Phase 3).',
+    touch:'Tap starts or resumes the app. The ⋯ button (or long-press) opens its actions.',tv:'Five columns. OK starts or resumes; hold OK opens the actions.',pad:'Four columns. A starts, X opens the actions, B goes back.',
+    today:'Same grid and context menu, restyled, with the running state visible without opening a menu.',d:['D6']},
+  actions:{t:'App actions',p:'Every action an app allows in its current state, with the consequence spelled out under each label.',
+    touch:'Bottom sheet.',tv:'Centered dialog; focus starts on the first action.',pad:'Same as TV.',today:'Context menu with Resume Session, Quit Session, Quit Current Game and Start.',d:['D6']},
+  launch:{t:'Starting stream',p:'Each stage of starting a stream, including the per-client virtual display the host builds (up to about 15 s) and the host retries Borealis already performs.',
+    touch:'Cancel stays available at every step.',tv:'Back cancels.',pad:'B cancels.',
+    today:'12.2 shows one spinner dialog; Sprint 2 added the retry text to it.',d:[]},
+  conflict:{t:'Conflict dialog',p:'Another device started an app on this host. Join and Quit and relaunch are explicit; Cancel has the focus so a stray OK changes nothing.',
+    touch:'Dialog.',tv:'Focus starts on Cancel.',pad:'Focus starts on Cancel; B cancels.',today:'Sprint 2 dialog, restyled.',d:[]},
+  error:{t:'Connection error',p:'Errors say what happened, what the host was doing, and offer the next step. The raw code stays visible for support.',
+    touch:'Try again, the state-specific action, and Diagnostics.',tv:'Focus on Try again.',pad:'Same as TV.',today:'Generic "Connection error" dialog with a code.',d:[]},
+  stream:{t:'Stream',p:'The picture and, when the user turns it on, the overlay. Nothing else. The first time, a hint says how to open the menu on this device.',
+    touch:'Pull the top handle down, or press Back, to open the menu. Three-finger tap opens the keyboard as in 12.2.',tv:'Back opens the menu instead of leaving the stream.',pad:'Hold Select + Start for the menu; every other button goes to the PC.',
+    today:'Back leaves the stream at once; there is no menu.',d:['D3','D4','D5']},
+  menu:{t:'In-game menu',p:'One menu for every device. Session actions at the bottom, separated by intent: Disconnect leaves the app running, Quit ends it.',
+    touch:'Side panel over the stream; tap outside to close.',tv:'Focus starts on Back to stream. Back closes the menu.',pad:'B closes the menu.',
+    today:'Not in 12.2. Artemis has a dialog-style menu with similar items.',d:['D3','D5','D6']},
+  keyboard:{t:'Keyboard',p:'A full keyboard with modifiers that latch, and one row of Windows shortcuts that are awkward to type.',
+    touch:'Docked at the bottom; the stream stays visible above it.',tv:'D-pad moves across keys; OK types.',pad:'D-pad moves, A types, B closes, Y is Backspace.',
+    today:'12.2 opens the Android soft keyboard; Android 16 keyboard capture stays for physical keyboards.',d:[]},
+  settings:{t:'Settings',p:'Global settings in five groups, with the current value on each row. Per-host overrides come later.',
+    touch:'One list.',tv:'Two panes: categories on the left, items on the right.',pad:'Same as TV.',
+    today:'One long preference screen plus a separate Borealis screen.',d:['D7']},
+  privacy:{t:'Privacy and diagnostics',p:'Everything about logs and diagnostics in one place, including the audit trail viewer promised for Phase 2.',
+    touch:'Export shares the bundle.',tv:'Export saves the bundle and offers Send to phone.',pad:'Same as TV.',today:'Sprint 2 interim screen.',d:[]},
+  audit:{t:'Audit trail',p:'Security-relevant events, newest first, in plain words with the event code for support.',
+    touch:'Scrolls; tap an entry for its detail.',tv:'D-pad scrolls entry by entry.',pad:'Same as TV.',today:'Only inside the exported bundle (Sprint 2).',d:[]},
+  send:{t:'Send to phone',p:'The Sprint 3 transfer: a one-download link on the local network, shown as a QR code, closed after the download or 5 minutes.',
+    touch:'Not offered on phones; they share instead.',tv:'Close has the focus. The dialog closing stops the link.',pad:'Same as TV.',today:'adb pull only.',d:[]}
+};
+
+const DECISIONS=[
+  {id:'D1',t:'Light theme',q:'LuminalShine is dark-only, TVs are dark rooms, and the stream itself is the content.',o:[
+    ['Dark only for 1.0','One palette to test; matches the host UI; no flash when a stream ends.'],
+    ['Dark, plus light that follows the system on phones','Respects the system choice; doubles visual QA (try the App theme switch above).'],
+    ['Dark, plus a manual light option','Choice without following the system; still two palettes to keep.'],
+    ['Light by default on phones','Common for phone apps; clashes with the host UI and with streaming at night.']]},
+  {id:'D2',t:'Home',q:'What opens first.',o:[
+    ['Hosts, with a Continue row on top','One tap back into a running session; stays close to how people think about PCs.'],
+    ['One library of apps from every host','Fast with many hosts; hides which PC an app runs on and its state.'],
+    ['Open the only host directly when there is one','Saves a step for most users; inconsistent once a second host appears.'],
+    ['Hosts only, as 12.2','No change to learn; no quick resume.']]},
+  {id:'D3',t:'Opening the in-game menu',q:'Back leaves the stream in 12.2. A menu needs a trigger that does not steal input from games.',o:[
+    ['Back opens the menu; top handle on touch; Select + Start held on gamepads','Works on every device; Back keeps a single meaning; nothing floats over the game.'],
+    ['Floating button (Artemis style)','Always visible; covers part of the picture.'],
+    ['Five-finger tap on touch (Artemis)','Invisible; hard to discover and impossible on TV.'],
+    ['Keep Back = leave; menu only from the handle','Same as today; no menu on TV or gamepad-only devices.']]},
+  {id:'D4',t:'Default touch mode',q:'How a finger drives the PC mouse on phones and tablets.',o:[
+    ['Trackpad (relative), as today','Precise on small screens; familiar to 12.2 users.'],
+    ['Direct touch (absolute)','Natural on tablets; imprecise on phones.'],
+    ['Ask on the first stream','Explicit; one more step before the first stream.'],
+    ['Remember per host','Fits mixed use; more state to explain.']]},
+  {id:'D5',t:'Performance overlay',q:'What the stream shows by default.',o:[
+    ['Off, one tap away in the menu (Compact or Detailed)','Clean picture; diagnostics are close at hand.'],
+    ['Compact on by default','Problems are visible at once; permanent clutter.'],
+    ['Detailed on by default','Best for testers; heavy for everyone else.'],
+    ['Only when the stream degrades','Smart; needs thresholds that can misfire.']]},
+  {id:'D6',t:'Leaving a session',q:'12.2 says Quit Session and Disconnect, and users mix them up.',o:[
+    ['"Disconnect" and "Quit <app>", each with a one-line consequence','Plain words; the app name makes the target explicit.'],
+    ['"Leave" and "End app"','Short; less precise.'],
+    ['"Suspend" and "Close"','Familiar from consoles; suspend is not what the host does.'],
+    ['Keep the 12.2 labels','No change; keeps the confusion.']]},
+  {id:'D7',t:'Settings scope',q:'Where stream settings live.',o:[
+    ['Global now; per-host overrides later','Small first step; the screen leaves room for overrides.'],
+    ['Per-host profiles now','Fits a desk PC and a living-room PC; more screens and migration now.'],
+    ['Per-app profiles','Fine control; heavy to manage.'],
+    ['Presets (Quality, Balanced, Lowest latency) over global values','Simple for most; advanced values still needed.']]},
+  {id:'D8',t:'First run',q:'What a new user sees before the first host appears.',o:[
+    ['No onboarding; the empty Hosts screen explains the next step','Nothing to skip; the empty state carries the teaching.'],
+    ['A three-step welcome','Friendly; one more thing to maintain.'],
+    ['Welcome plus a privacy consent page','Needed only once crash reporting exists (ADR 0022).'],
+    ['A setup wizard that ends in pairing','Guided; rigid for users with several hosts.']]}
+];
+
+// ---------- state ----------
+const DEF=()=>({mode:'phone',theme:'dark',screen:'hosts',v:{},focus:null,overlay:'off',eraseAsk:false,mouse:'trackpad',padMouse:false,keysOpen:false,infoOpen:false,mods:{},toast:'',hint:true,step:0,settingsCat:'Stream',hdr:true,verbose:false,mask:false,app:'Desktop',sendLeft:299});
+let S=DEF();
+try{const m=localStorage.getItem('bx-mode');if(m)S.mode=m;}catch(e){}
+let timers=[];
+let CAP=false;
+const clearTimers=()=>{timers.forEach(clearTimeout);timers=[];};
+const later=(ms,f)=>timers.push(setTimeout(f,ms));
+const OVL=['off','compact','detailed'];
+const variant=()=>{const sc=SCREENS[S.screen];return sc.variants?(S.v[S.screen]??0):0;};
+
+const deviceInner=document.getElementById('deviceInner');
+const device=document.getElementById('device');
+const stagebox=document.getElementById('stagebox');
+
+function size(){
+  const land=SCREENS[S.screen].land;
+  if(S.mode==='tv') return {w:960,h:540,b:'tv'};
+  if(S.mode==='handheld') return {w:800,h:450,b:'hh'};
+  return land?{w:780,h:360,b:'land'}:{w:380,h:780,b:'ph'};
+}
+const big=()=>S.mode!=='phone';
+const hh=()=>S.mode==='handheld';
+
+// ---------- shared pieces ----------
+function rail(active){
+  return '<nav class="rail">'+'<div class="wm">'+mark+'Borealis</div>'+
+    '<button class="rail-i" data-f="r-home" data-act="go" data-arg="hosts" aria-current="'+(active==='hosts')+'">'+ic('home')+'Home</button>'+
+    '<button class="rail-i" data-f="r-set" data-act="go" data-arg="settings" aria-current="'+(active==='settings')+'">'+ic('gear')+'Settings</button></nav>';
+}
+function bigShell(active,head,body){
+  return '<div class="big">'+rail(active)+'<div class="bigmain">'+head+'<div class="a-scroll" style="flex:1;min-height:0;padding:6px 6px '+(hh()?'48px':'28px')+';margin:0 -6px">'+body+'</div></div></div>';
+}
+function phoneBar(title,opts){
+  opts=opts||{};
+  let h='<div class="abar">';
+  if(opts.back) h+='<button class="ib" data-act="back" aria-label="Back">'+ic('back')+'</button>';
+  if(opts.wordmark) h+='<div class="wm">'+mark+'Borealis</div>';
+  else h+='<h2>'+esc(title)+(opts.sub?'<span class="sub">'+esc(opts.sub)+'</span>':'')+'</h2>';
+  (opts.actions||[]).forEach(a=>{h+='<button class="ib" data-act="'+a[1]+'" data-arg="'+(a[2]||'')+'" aria-label="'+a[0]+'">'+ic(a[0])+'</button>';});
+  return h+'</div>';
+}
+function cover(name,extra){
+  return '<div class="cover" style="background:'+coverBg(name)+'"><span class="ini">'+esc(initials(name))+'</span>'+(extra||'')+'</div>';
+}
+function hostCard(hst,i){
+  const dot=hst.state==='offline'?'':(hst.running?'live':'on');
+  let tags='';
+  if(hst.running) tags+='<span class="tag live"><span class="dot live" style="width:6px;height:6px;box-shadow:none"></span>'+esc(hst.running)+' running</span>';
+  if(!hst.paired) tags+='<span class="tag warn">Not paired</span>';
+  if(hst.state==='offline') tags+='<span class="tag">Offline</span>';
+  (hst.caps||[]).forEach(c=>tags+='<span class="tag">'+c+'</span>');
+  const act=hst.state==='offline'?['wake','Wake']:(!hst.paired?['pair','Pair']:null);
+  const inner='<div class="hi">'+ic('monitor')+'<span class="dot '+dot+'"></span></div><div class="tx"><b>'+esc(hst.name)+'</b><span>'+esc(hst.meta)+'</span><div class="tags">'+tags+'</div></div>';
+  const main=hst.state==='offline'?'wake':(!hst.paired?'pair':'go');
+  const arg=main==='go'?'apps':hst.id;
+  if(big()) return '<button class="card host" data-f="h-'+hst.id+'" data-act="'+main+'" data-arg="'+arg+'"'+(i===0?' data-auto':'')+'>'+inner+(act?'<span class="btn neu" style="height:32px;font-size:13px">'+act[1]+'</span>':'')+'</button>';
+  return '<div class="card host"><button style="display:flex;gap:12px;align-items:center;flex:1;min-width:0" data-act="'+main+'" data-arg="'+arg+'">'+inner+'</button>'+(act?'<button class="btn neu" style="height:34px;font-size:13px;padding:0 12px" data-act="'+act[0]+'" data-arg="'+hst.id+'">'+act[1]+'</button>':'')+'</div>';
+}
+
+// ---------- screen renderers ----------
+const R={};
+R.hosts=function(){
+  const searching=variant()===1;
+  const contTxt='<div class="tx"><b>Desktop</b><span>Running on Desk PC · started 14 min ago</span></div>';
+  const cont='<button class="cont" style="width:100%;text-align:left" data-f="cont" data-act="resume" data-auto>'+'<div class="th" style="background:'+coverBg('Desktop')+'"></div>'+contTxt+'<span class="btn pri" style="height:36px">'+ic('play','s')+'Resume</span></button>';
+  const emptyB='<div class="empty"><div class="spin"></div><b>Looking for hosts on this network</b><span>Start LuminalShine on your PC. It appears here when it is on the same network.</span><button class="btn neu" data-f="e-add" data-act="go" data-arg="add" data-auto>'+ic('plus','s')+'Add a host by address</button></div>';
+  if(big()){
+    const head='<div class="bighead"><h2>Home</h2><span class="sub">3 hosts</span></div>';
+    const body=searching?emptyB:('<div style="display:flex;flex-direction:column;gap:18px"><div class="a-k">Continue</div>'+cont+'<div class="a-k">Hosts</div><div class="hostgrid">'+HOSTS.map(hostCard).join('')+'</div><div><button class="btn neu" data-f="addh" data-act="go" data-arg="add">'+ic('plus','s')+'Add host</button></div></div>');
+    return bigShell('hosts',head,body);
+  }
+  const body=searching?emptyB:('<div class="a-k">Continue</div>'+cont+'<div class="a-k">Hosts</div><div class="hosts">'+HOSTS.map(hostCard).join('')+'</div>');
+  return phoneBar('',{wordmark:true,actions:[['plus','go','add'],['gear','go','settings']]})+'<div class="pbody a-scroll">'+body+'</div>';
+};
+R.add=function(){
+  const form='<div class="field"><label for="addr">Address</label><div class="in on is-static" data-f="addr" data-auto>192.168.1.4<span class="caret"></span></div><small>IP address or host name, for example desk-pc.local. Add :port only if you changed the LuminalShine port (default 47989).</small></div>'+
+    '<div class="acts" style="justify-content:flex-start"><button class="btn pri" data-f="addgo" data-act="toast" data-arg="Studio added. Pair it to see its apps.">Add host</button><button class="btn neu" data-f="addc" data-act="back">Cancel</button></div>';
+  if(big()) return bigShell('hosts','<div class="bighead"><h2>Add host</h2></div>','<div style="max-width:460px;display:flex;flex-direction:column;gap:16px">'+form+'</div>');
+  return phoneBar('Add host',{back:true})+'<div class="pbody">'+form+'</div>';
+};
+R.pair=function(){
+  const v=variant();
+  let top='',status='';
+  if(v===1) top='<div class="note info">'+ic('refresh','s')+'<span>The host cleared an unfinished pairing attempt. Here is a new PIN.</span></div>';
+  if(v===0||v===1) status='<div class="status"><div class="spin"></div>Waiting for the PIN · expires in <span class="a-mono">4:52</span></div>';
+  if(v===2) status='<div class="note info" style="color:var(--a-ok-ink);background:rgba(76,175,80,.08);border-color:rgba(76,175,80,.3)">'+ic('check','s')+'<span>Paired with Studio. Opening its apps…</span></div>';
+  if(v===3) status='<div class="note bad">'+ic('info','s')+'<span>The PIN expired after 5 minutes. Start again to get a new PIN.</span></div>';
+  const pin=(v===1?'2093':'4817').split('').map(d=>'<span>'+d+'</span>').join('');
+  const btns=v===3?'<button class="btn pri" data-f="pa" data-act="variant" data-arg="0" data-auto>Get a new PIN</button><button class="btn neu" data-f="pc" data-act="back">Cancel</button>':'<button class="btn neu" data-f="pc" data-act="back" data-auto>Cancel</button>';
+  const steps='<ol class="steps"><li><span>On the PC, open the LuminalShine Web UI and go to <b>Clients</b>.<br><span class="a-mono a-muted" style="font-size:12px">https://studio.local:47990</span></span></li><li><span>Enter this PIN and give this device a name, for example “Galaxy S22”.</span></li><li><span>Avoid names with “xbox” or “webos”: the host then waits up to 8 s before each stream starts.</span></li></ol>';
+  const inner=top+'<div class="pin">'+pin+'</div>'+status+steps+'<div class="acts" style="justify-content:flex-start">'+btns+'</div>';
+  if(big()) return bigShell('hosts','<div class="bighead"><h2>Pair with Studio</h2><span class="sub">LuminalShine 26.09.1</span></div>','<div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:28px;align-items:start"><div style="display:flex;flex-direction:column;gap:14px">'+top+'<div class="pin">'+pin+'</div>'+status+'</div><div style="display:flex;flex-direction:column;gap:16px">'+steps+'<div class="acts" style="justify-content:flex-start">'+btns+'</div></div></div>');
+  return phoneBar('Pair with Studio',{back:true,sub:'LuminalShine 26.09.1'})+'<div class="pbody a-scroll">'+inner+'</div>';
+};
+R.apps=function(){
+  const running=variant()===0;
+  const tiles=APPS.map((a,i)=>{
+    const run=running&&a==='Desktop';
+    const badge=run?'<span class="tag"><span class="dot live" style="width:6px;height:6px;box-shadow:none"></span>Running</span>':'';
+    if(big()) return '<button class="tile" data-f="t-'+i+'" data-act="tile" data-arg="'+esc(a)+'"'+(i===0?' data-auto':'')+'>'+cover(a,badge)+'<span class="tt">'+esc(a)+'</span></button>';
+    return '<div class="tile"><button data-act="tile" data-arg="'+esc(a)+'" style="display:flex;flex-direction:column;gap:7px;width:100%">'+cover(a,badge)+'<span class="tt">'+esc(a)+'</span></button><button class="more" data-act="actions" data-arg="'+esc(a)+'" aria-label="Actions for '+esc(a)+'">'+ic('more','s')+'</button></div>';
+  }).join('');
+  const bar='<div class="hostbar"><span class="dot '+(running?'live':'on')+'"></span>'+(running?'Desktop running · 1 stream':'Online · nothing running')+'<span class="tag">HEVC 10-bit</span><span class="tag">HDR</span></div>';
+  if(big()) return bigShell('hosts','<div class="bighead"><div><h2>Desk PC</h2></div>'+bar+'</div>','<div class="appgrid">'+tiles+'</div>');
+  return phoneBar('Desk PC',{back:true,sub:running?'Desktop running':'Online',actions:[['refresh','toast','Refreshed the app list']]})+'<div class="pbody a-scroll">'+bar+'<div class="appgrid">'+tiles+'</div></div>';
+};
+function overApps(inner){
+  const base=R.apps.call(null);
+  return base+'<div class="scrim">'+inner+'</div>';
+}
+R.actions=function(){
+  const other=variant()===1;
+  const app=other?'Hades II':'Desktop';
+  const rows=other?[
+      ['play','Quit Desktop and start Hades II','Ends Desktop on the PC, including on other devices','launch','',true],
+      ['info','Details','Install path, last played, HDR support','toast','Details open here'],
+      ['x','Hide from this list','Show hidden apps from Settings','toast','Hades II hidden']]
+    :[['play','Resume','Back to the running session','resume','',true],
+      ['exit','Quit Desktop','Ends the app on the PC. Unsaved work is lost.','toast','Desktop quit'],
+      ['info','Details','Install path, last played, HDR support','toast','Details open here']];
+  const list=rows.map((r,i)=>'<button class="row'+(r[0]==='exit'?' danger':'')+'" data-f="ac'+i+'" data-act="'+r[3]+'" data-arg="'+esc(r[4])+'"'+(r[5]?' data-auto':'')+'>'+ic(r[0])+'<span class="tx"><b>'+esc(r[1])+'</b><span>'+esc(r[2])+'</span></span></button>').join('');
+  if(big()) return overApps('<div class="dlg" style="padding:16px 0 10px;width:440px"><h3 style="padding:0 20px">'+app+'</h3><p style="padding:0 20px 6px;color:var(--a-ink-3);font-size:13px">Desk PC · '+(other?'Desktop is running':'running now')+'</p>'+list+'</div>');
+  return overApps('<div class="sheet"><div class="grab"></div><h3>'+app+'</h3><div class="sub">Desk PC · '+(other?'Desktop is running':'running now')+'</div>'+list+'</div>');
+};
+R.conflict=function(){
+  const other=variant()===1;
+  const msg=other?'Desktop is running on Desk PC. Quit it and start Hades II?':'Desktop is already running on Desk PC, started from another device. You can join it, or quit it and start it again.';
+  const btns=other?'<button class="btn neu" data-f="cc" data-act="back" data-auto>Cancel</button><button class="btn dan" data-f="cq" data-act="launch">Quit and start</button>'
+    :'<button class="btn neu" data-f="cc" data-act="back" data-auto>Cancel</button><button class="btn dan" data-f="cq" data-act="launch">Quit and relaunch</button><button class="btn pri" data-f="cj" data-act="resume">Join</button>';
+  return overApps('<div class="dlg"><h3>An app is already running</h3><p>'+msg+'</p><div class="note warn">'+ic('info','s')+'<span>Quitting ends the stream on the other device. Unsaved work in the app is lost.</span></div><div class="acts">'+btns+'</div></div>');
+};
+R.launch=function(){
+  const retry=variant()===1;
+  const st=S.step;
+  const items=[
+    ['Connecting to Desk PC',''],
+    ['Starting '+S.app, retry?'<small class="w">Another device is starting a stream on this host. Retrying in 3 s (retry 1 of 6).</small>':''],
+    ['Preparing the display','<small>The host builds a display for this device. This can take up to 15 s.</small>'],
+    ['Waiting for the first frame','']
+  ];
+  const lst=items.map((it,i)=>{
+    const cls=i<st?'done':(i===st?'act':'');
+    const icn=i<st?ic('check','s'):(i===st?'<div class="spin"></div>':'<i></i>');
+    return '<div class="ls '+cls+'"><span class="st">'+icn+'</span><span>'+it[0]+(i===st?it[1]:'')+'</span></div>';
+  }).join('');
+  return '<div class="launch"><div class="col"><div class="th" style="background:'+coverBg(S.app)+'"></div><div><h3>'+esc(S.app)+'</h3></div><div class="sub">Desk PC · 2560 × 1440 · 60 fps · HDR</div><div class="lsteps">'+lst+'</div><button class="btn neu" data-f="lc" data-act="back" data-auto>Cancel</button></div></div>';
+};
+R.error=function(){
+  const v=variant();
+  const E=[
+    ['Desk PC is busy','The host did not answer in time. It is probably building a display for another device that is starting a stream.','Error 0 · /serverinfo timed out 3 times',['refresh','Try again','launch'],null],
+    ['Can’t reach Living Room PC','The PC is off, asleep, or on another network.','Error 0 · no answer on port 47989',['power','Wake PC','toast','Wake-on-LAN packet sent'],['refresh','Try again','toast','Still no answer']],
+    ['Desk PC has a new certificate','The host identity changed since you paired. This happens after a reinstall; otherwise someone may be impersonating the host.','CERTIFICATE_CHANGED · recorded in the audit trail',['lock','Pair again','go','pair'],null]
+  ][v];
+  const btns='<button class="btn pri" data-f="e1" data-act="'+E[3][2]+'" data-arg="'+(E[3][3]||'')+'" data-auto>'+ic(E[3][0],'s')+E[3][1]+'</button>'+(E[4]?'<button class="btn neu" data-f="e2" data-act="'+E[4][2]+'" data-arg="'+E[4][3]+'">'+E[4][1]+'</button>':'')+'<button class="btn neu" data-f="e3" data-act="go" data-arg="privacy">Diagnostics</button>';
+  const inner='<div style="display:flex;flex-direction:column;gap:14px;max-width:460px"><div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:'+(v===2?'rgba(244,67,54,.1);color:var(--a-bad-ink)':'rgba(255,167,38,.1);color:var(--a-warn-ink)')+'">'+ic(v===2?'shield':'wifi')+'</div><h3 style="font-size:20px;font-weight:600;margin:0">'+E[0]+'</h3><p style="margin:0;color:var(--a-ink-2)">'+E[1]+'</p><span class="a-mono a-muted" style="font-size:12px">'+E[2]+'</span><div class="acts" style="justify-content:flex-start">'+btns+'</div></div>';
+  if(big()) return bigShell('hosts','<div class="bighead"><h2>&nbsp;</h2></div>',inner);
+  return phoneBar('',{back:true})+'<div class="pbody">'+inner+'</div>';
+};
+function desk(){
+  let o='';
+  if(S.overlay==='compact') o='<div class="ovl"><span><b>59</b> fps</span><span>host <b>4.1</b> ms</span><span>net <b>9</b> ms</span><span>HEVC 10-bit HDR</span></div>';
+  if(S.overlay==='detailed') o='<div class="ovl det"><span>2560×1440 · <b>59</b> fps (cap) · HEVC Main10 · HDR10</span><span>Decoder c2.qti.hevc.decoder.low_latency</span><span>Host processing <b>3.8 / 4.1 / 6.0</b> ms (min/avg/max)</span><span>Network <b>9</b> ms ± 2 · loss 0.0 % · 38.2 Mbps</span><span>Decode 2.1 ms · render queue 4.9 ms</span></div>';
+  const hint=S.hint&&S.screen==='stream'?'<div class="toast" style="bottom:46px">'+(S.mode==='phone'?'Pull the handle down or press Back for the menu':(hh()?'Hold Select + Start for the menu':'Press Back for the menu'))+'</div>':'';
+  return '<div class="desk"><div class="icons"><i></i><i></i><i></i></div><div class="ridge"></div><div class="cursor"></div><div class="task"><i></i><i></i><i></i><i></i><i></i></div></div>'+o+
+    (S.mode==='phone'?'<button class="handle" data-act="menu" aria-label="Open menu">'+ic('down','s')+'</button>':'')+hint;
+}
+R.stream=function(){return desk();};
+R.menu=function(){
+  const keys=['Alt+Tab','Win','Ctrl+Shift+Esc','Alt+F4','Win+D','Win+G','Esc','Win+Alt+B'];
+  const seg=(name,opts,cur)=>'<span class="segs">'+opts.map(o=>'<button class="'+(o[0]===cur?'on':'')+'" data-f="'+name+'-'+o[0]+'" data-act="'+name+'" data-arg="'+o[0]+'">'+o[1]+'</button>').join('')+'</span>';
+  let h='<div class="side"><div class="side-h"><b>Desktop · Desk PC</b><span>59 fps · host 4.1 ms · net 9 ms</span></div><div class="a-scroll" style="flex:1;min-height:0;padding:6px 0">';
+  h+='<button class="mrow" data-f="m-back" data-act="closemenu" data-auto>'+ic('play','s')+'<span class="tx">Back to stream</span></button>';
+  h+='<button class="mrow" data-f="m-kb" data-act="go" data-arg="keyboard">'+ic('kb','s')+'<span class="tx">Keyboard</span></button>';
+  h+='<button class="mrow" data-f="m-keys" data-act="keys">'+ic('code','s')+'<span class="tx">Send keys</span>'+ic(S.keysOpen?'down':'chev','s')+'</button>';
+  if(S.keysOpen) h+='<div class="chips">'+keys.map((k,i)=>'<button class="chip" data-f="k'+i+'" data-act="toast" data-arg="Sent '+k+'">'+k+'</button>').join('')+'</div>';
+  if(S.mode==='phone') h+='<div class="mrow">'+ic('mouse','s')+'<span class="tx">Touch</span>'+seg('mouse',[['trackpad','Trackpad'],['direct','Direct'],['off','Off']],S.mouse)+'</div>';
+  else h+='<div class="mrow">'+ic('pad','s')+'<span class="tx">Gamepad mouse</span>'+seg('padmouse',[['on','On'],['off','Off']],S.padMouse?'on':'off')+'</div>';
+  h+='<div class="mrow">'+ic('layers','s')+'<span class="tx">Overlay</span>'+seg('overlay',[['off','Off'],['compact','Compact'],['detailed','Detailed']],S.overlay)+'</div>';
+  h+='<button class="mrow" data-f="m-idr" data-act="toast" data-arg="Requested a new keyframe">'+ic('bolt','s')+'<span class="tx">Refresh the picture<span>Asks the host for a keyframe when the image is smeared</span></span></button>';
+  h+='<button class="mrow" data-f="m-info" data-act="info">'+ic('info','s')+'<span class="tx">Session info</span>'+ic(S.infoOpen?'down':'chev','s')+'</button>';
+  if(S.infoOpen) h+='<dl class="info"><dt>Video</dt><dd>2560×1440 · 59 fps</dd><dt>Codec</dt><dd>HEVC Main10 · HDR10</dd><dt>Decoder</dt><dd>c2.qti.hevc…low_latency</dd><dt>Host</dt><dd>3.8 / 4.1 / 6.0 ms</dd><dt>Network</dt><dd>9 ms ± 2 · 0.0 %</dd><dt>Bitrate</dt><dd>38.2 of 40 Mbps</dd></dl>';
+  h+='<div class="mrow" aria-disabled="true">'+ic('monitor','s')+'<span class="tx">Display for next launch<span>Needs the host API (Phase 3)</span></span></div>';
+  h+='<div style="height:1px;background:var(--a-line);margin:6px 0"></div>';
+  h+='<button class="mrow" data-f="m-disc" data-act="disconnect">'+ic('exit','s')+'<span class="tx">Disconnect<span>Desktop keeps running on the PC</span></span></button>';
+  h+='<button class="mrow danger" data-f="m-quit" data-act="quitapp">'+ic('power','s')+'<span class="tx">Quit Desktop<span>Ends the app on the PC</span></span></button>';
+  h+='</div></div>';
+  return desk()+'<div class="scrim" style="background:rgba(14,16,19,.35)" data-act="closemenu-bg">'+h+'</div>';
+};
+R.keyboard=function(){
+  const m=S.mods;
+  const mk=(k,cls)=>'<button class="key'+(cls?' '+cls:'')+(m[k]?' on':'')+'" data-f="kb-'+k+'" data-act="'+(['Ctrl','Alt','Win','Shift'].includes(k)?'mod':'type')+'" data-arg="'+k+'">'+k+'</button>';
+  const row=keys=>'<div class="krow">'+keys.map(k=>Array.isArray(k)?mk(k[0],k[1]):mk(k)).join('')+'</div>';
+  const top='<div class="ktop">'+['Alt+Tab','Win','Ctrl+Shift+Esc','Alt+F4','Win+D','Esc','F11'].map((k,i)=>'<button class="chip" data-f="kc'+i+'" data-act="toast" data-arg="Sent '+k+'">'+k+'</button>').join('')+'<button class="chip" data-f="kclose" data-act="back" style="margin-left:auto">Close</button></div>';
+  const kb='<div class="kb">'+top+row(['q','w','e','r','t','y','u','i','o','p'])+row(['a','s','d','f','g','h','j','k','l',['⌫','w']])+row([['Shift','w'],'z','x','c','v','b','n','m',['Enter','w']])+row([['Ctrl','w'],['Win','w'],['Alt','w'],['Space','sp'],['Tab','w'],['Fn','w']])+'</div>';
+  return desk()+kb;
+};
+R.settings=function(){
+  const groups={
+    Stream:[['Resolution','2560 × 1440 (native)'],['Frame rate','60 fps'],['Bitrate','40 Mbps (automatic)'],['Frame pacing','Lowest latency']],
+    Video:[['Codec','Automatic (HEVC first)'],['HDR',S.hdr,'hdr'],['Full range','Off'],['Performance overlay','Off']],
+    Input:[['Touch','Trackpad'],['Mouse back and forward buttons','Off'],['Gamepad mouse','Hold Start'],['Deadzone','7 %']],
+    Audio:[['Channels','Stereo'],['Play audio on the PC','Off']],
+    'Privacy and diagnostics':[['Open','','go:privacy']],
+    About:[['Borealis','0.2.0 (commit 6d9c9ff7)'],['Source code','github.com/magalz/Borealis'],['Open-source licences','']]
+  };
+  const rowFor=(r,i,g)=>{
+    if(typeof r[1]==='boolean') return '<button class="row" data-f="s-'+g+i+'" data-act="toggle" data-arg="'+r[2]+'"><span class="tx"><b>'+r[0]+'</b></span><span class="sw2'+(r[1]?' on':'')+'"></span></button>';
+    if(r[2]&&r[2].startsWith('go:')) return '<button class="row" data-f="s-'+g+i+'" data-act="go" data-arg="'+r[2].slice(3)+'">'+ic('shield','s')+'<span class="tx"><b>Privacy and diagnostics</b><span>Logs, diagnostic bundle, audit trail</span></span>'+ic('chev','s')+'</button>';
+    return '<button class="row" data-f="s-'+g+i+'" data-act="toast" data-arg="'+esc(r[0])+' opens a picker"><span class="tx"><b>'+esc(r[0])+'</b></span><span class="val">'+esc(r[1])+'</span>'+ic('chev','s')+'</button>';
+  };
+  if(big()){
+    const cats=Object.keys(groups).map((g,i)=>'<button class="row" data-f="c-'+i+'" data-act="cat" data-arg="'+g+'" aria-current="'+(S.settingsCat===g)+'"'+(S.settingsCat===g?' data-auto':'')+'><span class="tx"><b style="font-size:14px">'+g+'</b></span></button>').join('');
+    const items=groups[S.settingsCat].map((r,i)=>rowFor(r,i,'x')).join('');
+    return bigShell('settings','<div class="bighead"><h2>Settings</h2></div>','<div class="twopane"><div class="cats">'+cats+'</div><div class="list">'+items+'</div></div>');
+  }
+  let body='';
+  Object.keys(groups).forEach((g,gi)=>{ if(g==='Privacy and diagnostics'){body+='<div class="list">'+rowFor(groups[g][0],0,'p')+'</div>';return;} body+='<div class="a-k">'+g+'</div><div class="list">'+groups[g].map((r,i)=>rowFor(r,i,gi)).join('')+'</div>';});
+  return phoneBar('Settings',{back:true})+'<div class="pbody a-scroll">'+body+'</div>';
+};
+R.privacy=function(){
+  const rows='<button class="row" data-f="p1" data-act="toggle" data-arg="verbose" data-auto><span class="tx"><b>Verbose logging</b><span>Writes debug details to the local log file while you diagnose a problem</span></span><span class="sw2'+(S.verbose?' on':'')+'"></span></button>'+
+    '<button class="row" data-f="p2" data-act="toggle" data-arg="mask"><span class="tx"><b>Mask addresses in logs and diagnostics</b><span>Replaces IP addresses and host names with placeholders</span></span><span class="sw2'+(S.mask?' on':'')+'"></span></button>'+
+    '<button class="row" data-f="p3" data-act="'+(big()?'go':'toast')+'" data-arg="'+(big()?'send':'Opened the share sheet')+'">'+ic('send','s')+'<span class="tx"><b>Export diagnostic bundle</b><span>'+(big()?'Saves it to Downloads and offers Send to phone':'Logs, decoders and the audit trail, already redacted')+'</span></span>'+ic('chev','s')+'</button>'+
+    '<button class="row" data-f="p4" data-act="go" data-arg="audit">'+ic('list','s')+'<span class="tx"><b>Audit trail</b><span>Pairing, certificate and session events on this device</span></span>'+ic('chev','s')+'</button>'+
+    '<button class="row danger" data-f="p5" data-act="eraseask">'+ic('trash','s')+'<span class="tx"><b>Erase audit trail</b><span>Cannot be undone</span></span></button>';
+  const ask=S.eraseAsk?'<div class="scrim"><div class="dlg"><h3>Erase the audit trail?</h3><p>This deletes every audit entry stored on this device. Diagnostic bundles that you exported before are not changed.</p><div class="acts"><button class="btn neu" data-f="ec" data-act="erasecancel" data-auto>Cancel</button><button class="btn dan" data-f="eo" data-act="eraseok">Erase</button></div></div></div>':'';
+  if(big()) return bigShell('settings','<div class="bighead"><h2>Privacy and diagnostics</h2></div>','<div class="list" style="max-width:640px">'+rows+'</div>')+ask;
+  return phoneBar('Privacy and diagnostics',{back:true})+'<div class="pbody a-scroll"><div class="list">'+rows+'</div><p class="a-muted" style="font-size:12.5px;margin:0">Nothing leaves this device unless you export it. Read the privacy policy for details.</p></div>'+ask;
+};
+R.audit=function(){
+  const E=[
+    ['20:42','Stream ended','SESSION_END','Desk PC · Desktop · 8 min 12 s'],
+    ['20:34','Stream started','SESSION_START','Desk PC · HEVC Main10 · 2560×1440 · 59 fps'],
+    ['20:33','Host asked to retry','LAUNCH_RETRY','Desk PC · 503 restoring the display · retry 1'],
+    ['20:33','App started','LAUNCH_ATTEMPT','Desk PC · Desktop'],
+    ['18:02','Paired','PAIRING_SUCCESS','Studio'],
+    ['18:01','Pairing restarted','PAIRING_RESTART','Studio · unfinished attempt cleared, new PIN'],
+    ['18:00','Pairing started','PAIRING_START','Studio'],
+    ['Mon','Host certificate changed','CERTIFICATE_CHANGED','Living Room PC · pair again if you did not reinstall the host']
+  ];
+  const list=E.map((e,i)=>'<div class="ev" data-f="ev'+i+'"'+(i===0?' data-auto':'')+'><time>'+e[0]+'</time><div><b'+(e[2]==='CERTIFICATE_CHANGED'?' style="color:var(--a-warn-ink)"':'')+'>'+e[1]+'</b><span class="c">'+e[2]+'</span><p>'+esc(e[3])+'</p></div></div>').join('');
+  if(big()) return bigShell('settings','<div class="bighead"><h2>Audit trail</h2><span class="sub">Kept for 90 days or 2,000 entries</span></div>','<div style="max-width:720px">'+list+'</div>');
+  return phoneBar('Audit trail',{back:true,sub:'Kept for 90 days or 2,000 entries'})+'<div class="pbody a-scroll" style="gap:0">'+list+'</div>';
+};
+R.send=function(){
+  const v=variant();
+  let body;
+  if(v===3) body='<div class="note warn">'+ic('wifi','s')+'<span>This device is not on a local network, so a phone cannot reach it. Use the adb command below instead.</span></div><span class="a-mono a-muted" style="font-size:12.5px">adb pull /sdcard/Download/borealis-diagnostics-20261015-204210.zip</span>';
+  else {
+    const st=['<span class="status"><span class="spin"></span>Waiting for the phone · <span class="a-mono">'+Math.floor(S.sendLeft/60)+':'+String(S.sendLeft%60).padStart(2,'0')+'</span> left</span>',
+      '<span class="status" style="color:var(--a-ok-ink)">'+ic('check','s')+'Downloaded. The link is closed.</span>',
+      '<span class="status" style="color:var(--a-warn-ink)">'+ic('info','s')+'The link expired. Open Send to phone again for a new one.</span>'][v];
+    body='<div class="qr"><canvas id="qrc" width="174" height="174" aria-label="Example QR code" style="width:174px;height:174px'+(v>0?';opacity:.25':'')+'"></canvas><div style="display:flex;flex-direction:column;gap:10px;min-width:0"><p style="margin:0;color:var(--a-ink-2)">Scan with your phone’s camera. Both devices must be on the same network. The link works for one download.</p><span class="a-mono a-muted" style="font-size:12px;word-break:break-all">http://192.168.1.41:40125/Qk3J…</span>'+st+'</div></div>';
+  }
+  const dlg='<div class="dlg" style="width:560px;max-width:94%"><h3>Send to phone</h3><span class="a-muted" style="font-size:12.5px">borealis-diagnostics-20261015-204210.zip · 58 KB</span>'+body+'<div class="acts"><button class="btn pri" data-f="sc" data-act="back" data-auto>Close</button></div></div>';
+  return R.privacy()+'<div class="scrim">'+dlg+'</div>';
+};
+
+// ---------- QR placeholder ----------
+function drawQR(){
+  const c=document.getElementById('qrc'); if(!c) return;
+  const x=c.getContext('2d'), n=29, m=6; x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.fillStyle='#000';
+  let seed=17; const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+  const finder=(r,cc)=>r<7&&cc<7;
+  const isF=(r,cc)=>finder(r,cc)||finder(r,n-1-cc)||finder(n-1-r,cc);
+  for(let r=0;r<n;r++)for(let cc=0;cc<n;cc++){
+    let on;
+    if(isF(r,cc)){const rr=r<7?r:n-1-r, c2=cc<7?cc:n-1-cc; const a=r<7&&cc<7?[r,cc]:(r<7?[r,n-1-cc]:[n-1-r,cc]); const d=Math.max(Math.abs(a[0]-3),Math.abs(a[1]-3)); on=d!==2; void rr; void c2;}
+    else if((r===7||cc===7||r===n-8||cc===n-8)&&(r<8||cc<8||r>n-9&&cc<8||cc>n-9&&r<8)) on=false;
+    else if(r===6||cc===6) on=(r+cc)%2===0;
+    else on=rnd()>.52;
+    if(on) x.fillRect(cc*m,r*m,m,m);
+  }
+}
+
+// ---------- actions ----------
+function go(screen,opts){
+  clearTimers();
+  S.screen=screen; S.focus=null; S.eraseAsk=false;
+  if(screen==='stream') S.overlay=OVL[S.v.stream||0];
+  if(screen==='launch'){S.step=0;runLaunch();}
+  if(screen==='stream'){S.hint=true;later(2600,()=>{S.hint=false;if(S.screen==='stream')render();});}
+  if(screen==='send'&&variant()===0){S.sendLeft=299;tickSend();}
+  if(!(opts&&opts.keep)){S.keysOpen=false;S.infoOpen=false;}
+  render();
+}
+function runLaunch(){
+  const retry=variant()===1;
+  const plan=retry?[1600,1600,2600,1300]:[900,1300,2400,1100];
+  let t=0;
+  plan.forEach((d,i)=>{t+=d;later(t,()=>{if(S.screen!=='launch')return; if(i<3){S.step=i+1;render();} else {go('stream');}});});
+}
+function tickSend(){later(1000,()=>{if(S.screen!=='send'||variant()!==0)return;S.sendLeft=Math.max(0,S.sendLeft-1);const s=document.querySelector('#deviceInner .status .a-mono');if(s)s.textContent=Math.floor(S.sendLeft/60)+':'+String(S.sendLeft%60).padStart(2,'0');tickSend();});}
+function toast(msg){S.toast=msg;render();later(1800,()=>{S.toast='';render();});}
+function back(){
+  const sc=S.screen;
+  if(S.eraseAsk){S.eraseAsk=false;S.focus=null;render();return;}
+  if(sc==='hosts') return;
+  if(sc==='stream'){go('menu');return;}
+  if(sc==='launch'){toast('Start cancelled');S.screen='apps';render();return;}
+  go(PARENT[sc]||'hosts');
+}
+function act(name,arg){
+  switch(name){
+    case 'go': go(arg); break;
+    case 'back': back(); break;
+    case 'variant': S.v[S.screen]=+arg; go(S.screen); break;
+    case 'resume': S.app='Desktop'; S.v.launch=0; go('launch'); break;
+    case 'launch': if(S.screen==='conflict'&&S.v.conflict===1) S.app='Hades II'; S.v.launch=0; go('launch'); break;
+    case 'tile':
+      S.app=arg;
+      if(variant()===0&&arg!=='Desktop'){S.v.conflict=1;go('conflict');}
+      else go('launch');
+      break;
+    case 'actions': S.app=arg; S.v.actions=(arg==='Desktop'||variant()===1)?0:1; go('actions'); break;
+    case 'pair': S.v.pair=0; go('pair'); later(5200,()=>{if(S.screen==='pair'&&variant()===0){S.v.pair=2;render();later(1600,()=>{if(S.screen==='pair')go('apps');});}}); break;
+    case 'wake': toast('Wake-on-LAN packet sent to Living Room PC'); break;
+    case 'toast': toast(arg); break;
+    case 'menu': go('menu'); break;
+    case 'closemenu': go('stream'); break;
+    case 'keys': S.keysOpen=!S.keysOpen; render(); break;
+    case 'info': S.infoOpen=!S.infoOpen; render(); break;
+    case 'overlay': S.overlay=arg; S.v.stream=OVL.indexOf(arg); render(); break;
+    case 'mouse': S.mouse=arg; render(); break;
+    case 'padmouse': S.padMouse=arg==='on'; render(); break;
+    case 'disconnect': S.v.apps=0; go('apps'); toast('Disconnected. Desktop keeps running.'); break;
+    case 'quitapp': S.v.apps=1; go('apps'); toast('Quit Desktop on Desk PC'); break;
+    case 'mod': S.mods[arg]=!S.mods[arg]; render(); break;
+    case 'type': { const mods=Object.keys(S.mods).filter(k=>S.mods[k]); S.mods={}; toast('Sent '+(mods.length?mods.join('+')+'+':'')+arg); break; }
+    case 'toggle': S[arg]=!S[arg]; render(); break;
+    case 'cat': S.settingsCat=arg; render(); break;
+    case 'eraseask': S.eraseAsk=true; S.focus=null; render(); break;
+    case 'erasecancel': S.eraseAsk=false; S.focus=null; render(); break;
+    case 'eraseok': S.eraseAsk=false; S.focus=null; toast('Audit trail erased'); break;
+  }
+}
+
+// ---------- render ----------
+function render(){
+  const sz=size();
+  const app='<div class="app'+(big()?' focusmode':'')+(hh()?' hh':'')+'" data-apptheme="'+S.theme+'">';
+  let content=R[S.screen]();
+  if(S.toast) content+='<div class="toast">'+esc(S.toast)+'</div>';
+  let inner;
+  if(S.mode==='phone'&&!SCREENS[S.screen].land) inner='<div class="ph"><div class="sbar"><span>20:41</span><span class="bt">5G <i></i></span></div><div class="ph-body">'+content+'</div><div class="gbar"><i></i></div></div>';
+  else inner=content;
+  if(hh()) inner+='<div class="hint">'+(SCREENS[S.screen].land&&S.screen!=='menu'&&S.screen!=='keyboard'?'<span><b class="gm">Select+Start</b>Menu (hold)</span>':'<span><b class="ga">A</b>Select</span><span><b class="gb">B</b>Back</span>'+(S.screen==='apps'?'<span><b class="gx">X</b>Options</span>':''))+'</div>';
+  const pad=sz.b==='tv'?10:(sz.b==='hh'?14:12);
+  const padX=sz.b==='hh'?70:pad;
+  const bez='<div class="bezel '+sz.b+'"><div class="screen" style="width:'+sz.w+'px;height:'+sz.h+'px">'+app+inner+'</div></div>'+(sz.b==='hh'?'<div class="hh-pad l"><i></i><i></i></div><div class="hh-pad r"><i></i><i></i></div>':'')+'</div>';
+  deviceInner.innerHTML=bez;
+  const fullW=sz.w+padX*2, fullH=sz.h+pad*2+(sz.b==='tv'?10:0);
+  if(sz.b==='tv') deviceInner.insertAdjacentHTML('beforeend','<div class="tvstand"></div>');
+  const avail=stagebox.clientWidth;
+  const scale=CAP?1:Math.min(1,avail/fullW);
+  deviceInner.style.width=fullW+'px';
+  deviceInner.style.transform='scale('+scale+')';
+  device.style.width=(fullW*scale)+'px';
+  device.style.height=(fullH*scale)+'px';
+  device.dataset.scale=scale;
+  drawQR();
+  restoreFocus();
+  renderChrome();
+}
+function focusables(){return [...deviceInner.querySelectorAll('[data-f]')].filter(e=>e.getClientRects().length&&e.getAttribute('aria-disabled')!=='true');}
+function setFocus(el){
+  deviceInner.querySelectorAll('.is-f').forEach(e=>e.classList.remove('is-f'));
+  if(!el) return; S.focus=el.dataset.f; el.classList.add('is-f'); keepVisible(el);
+}
+function restoreFocus(){
+  if(!big()) return;
+  const els=focusables(); if(!els.length) return;
+  const el=els.find(e=>e.dataset.f===S.focus)||els.find(e=>e.hasAttribute('data-auto'))||els[0];
+  setFocus(el);
+}
+function keepVisible(el){
+  const sc=+device.dataset.scale||1;
+  let p=el.parentElement;
+  while(p&&p!==deviceInner){
+    const st=getComputedStyle(p);
+    if(/(auto|scroll)/.test(st.overflowY)){
+      const er=el.getBoundingClientRect(), pr=p.getBoundingClientRect();
+      if(er.top<pr.top) p.scrollTop-=(pr.top-er.top)/sc+16;
+      else if(er.bottom>pr.bottom) p.scrollTop+=(er.bottom-pr.bottom)/sc+16;
+    }
+    p=p.parentElement;
+  }
+}
+function move(dir){
+  const els=focusables(); if(!els.length) return;
+  const cur=els.find(e=>e.dataset.f===S.focus);
+  if(!cur){setFocus(els[0]);return;}
+  const r=cur.getBoundingClientRect();
+  let best=null,bs=Infinity;
+  for(const e of els){
+    if(e===cur) continue;
+    const q=e.getBoundingClientRect();
+    let prim,orth;
+    if(dir==='right'){if(q.left<r.right-4&&!(q.left>r.left+4))continue; if(q.left<=r.left)continue; prim=Math.max(0,q.left-r.right); orth=Math.max(0,q.top-r.bottom,r.top-q.bottom);}
+    else if(dir==='left'){if(q.right>=r.right)continue; prim=Math.max(0,r.left-q.right); orth=Math.max(0,q.top-r.bottom,r.top-q.bottom);}
+    else if(dir==='down'){if(q.top<=r.top+2)continue; prim=Math.max(0,q.top-r.bottom); orth=Math.max(0,q.left-r.right,r.left-q.right);}
+    else {if(q.bottom>=r.bottom-2)continue; prim=Math.max(0,r.top-q.bottom); orth=Math.max(0,q.left-r.right,r.left-q.right);}
+    const sc=prim+orth*3+Math.abs((q.left+q.right)/2-(r.left+r.right)/2)*((dir==='up'||dir==='down')?.05:0)+Math.abs((q.top+q.bottom)/2-(r.top+r.bottom)/2)*((dir==='left'||dir==='right')?.05:0);
+    if(sc<bs){bs=sc;best=e;}
+  }
+  if(best) setFocus(best);
+}
+function activate(){
+  const el=deviceInner.querySelector('.is-f'); if(!el) return;
+  const a=el.dataset.act; if(a) act(a,el.dataset.arg);
+}
+function options(){
+  const el=deviceInner.querySelector('.is-f');
+  if(S.screen==='apps'&&el&&el.dataset.act==='tile') act('actions',el.dataset.arg);
+  else if(S.screen==='hosts') toast('Host options: details, wake, forget');
+}
+function key(k){
+  if(!big()) return false;
+  const sc=S.screen;
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(k)){
+    if(sc==='stream'){toast(hh()?'D-pad sent to the PC':'D-pad moves the PC cursor');return true;}
+    move(k.slice(5).toLowerCase());return true;
+  }
+  if(k==='Enter'){ if(sc==='stream'){toast(hh()?'A sent to the PC':'OK clicks on the PC');return true;} activate();return true;}
+  if(k==='HoldOK'||k==='x'||k==='X'){options();return true;}
+  if(k==='Escape'||k==='Backspace'){
+    if(sc==='stream'&&hh()){toast('B sent to the PC');return true;}
+    back();return true;
+  }
+  if((k==='q'||k==='Q')&&hh()){ if(sc==='stream') go('menu'); else if(sc==='menu') go('stream'); return true;}
+  if((k==='y'||k==='Y')&&hh()&&sc==='keyboard'){toast('Sent Backspace');return true;}
+  return false;
+}
+document.addEventListener('keydown',e=>{
+  if(e.altKey||e.ctrlKey||e.metaKey) return;
+  let k=e.key; if(k==='Enter'&&e.shiftKey) k='HoldOK';
+  if(key(k)) e.preventDefault();
+});
+deviceInner.addEventListener('click',e=>{
+  const t=e.target.closest('[data-act]'); if(!t||!deviceInner.contains(t)) return;
+  if(t.dataset.act==='closemenu-bg'){ if(e.target===t) go('stream'); return; }
+  if(big()&&t.dataset.f) setFocus(t);
+  act(t.dataset.act,t.dataset.arg);
+});
+
+// ---------- page chrome ----------
+function renderChrome(){
+  // index
+  const groups={};
+  Object.entries(SCREENS).forEach(([id,s],i)=>{(groups[s.g]=groups[s.g]||[]).push([id,s,i+1]);});
+  document.getElementById('index').innerHTML=Object.entries(groups).map(([g,list])=>'<div class="grp"><span class="kicker">'+g+'</span>'+list.map(([id,s,n])=>'<button type="button" data-scr="'+id+'" aria-current="'+(S.screen===id)+'"><span>'+s.label+'</span><span class="n">'+String(n).padStart(2,'0')+'</span></button>').join('')+'</div>').join('');
+  // segments
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===S.mode));
+  document.querySelectorAll('#themeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.apptheme===S.theme));
+  // legend + remote
+  const L=document.getElementById('legend'), Rm=document.getElementById('remote');
+  if(S.mode==='phone'){L.innerHTML='<span>Tap to use. The ⋯ button on a tile stands for a long-press.</span>';Rm.innerHTML='';}
+  else if(S.mode==='tv'){
+    L.innerHTML='<span><kbd>←↑→↓</kbd> D-pad</span><span><kbd>Enter</kbd> OK</span><span><kbd>Shift</kbd>+<kbd>Enter</kbd> hold OK</span><span><kbd>Esc</kbd> Back</span>';
+    Rm.innerHTML=dpad()+'<button type="button" data-k="HoldOK">Hold OK</button><button type="button" data-k="Escape">Back</button>';
+  } else {
+    L.innerHTML='<span><kbd>←↑→↓</kbd> D-pad</span><span><kbd>Enter</kbd> A</span><span><kbd>Esc</kbd> B</span><span><kbd>X</kbd> X</span><span><kbd>Q</kbd> hold Select + Start</span>';
+    Rm.innerHTML=dpad()+'<button type="button" data-k="Escape">B</button><button type="button" data-k="x">X</button><button type="button" data-k="q">Select + Start</button>';
+  }
+  // notes
+  const n=NOTES[S.screen], sc=SCREENS[S.screen];
+  const vs=sc.variants?'<div><div class="kicker" style="margin-bottom:6px">States</div><div class="states">'+sc.variants.map((v,i)=>'<button type="button" data-var="'+i+'" aria-pressed="'+(variant()===i)+'">'+v+'</button>').join('')+'</div></div>':'';
+  const mode={phone:['Touch',n.touch],tv:['D-pad (TV)',n.tv],handheld:['Gamepad',n.pad]}[S.mode];
+  document.getElementById('notes').innerHTML='<div class="notes-h"><span class="kicker">'+sc.g+' · screen '+String(Object.keys(SCREENS).indexOf(S.screen)+1).padStart(2,'0')+'</span><h2>'+n.t+'</h2></div><div class="notes-b"><p>'+n.p+'</p>'+vs+
+    '<dl class="kv"><dt>'+mode[0]+'</dt><dd>'+mode[1]+'</dd><dt>Other modes</dt><dd>'+[['Touch',n.touch],['D-pad',n.tv],['Gamepad',n.pad]].filter(m=>m[0]!==mode[0].split(' ')[0]).map(m=>'<b style="font-weight:500;color:var(--ink)">'+m[0]+':</b> '+m[1]).join('<br>')+'</dd><dt>Today</dt><dd>'+n.today+'</dd>'+(n.d.length?'<dt>Decisions</dt><dd>'+n.d.map(d=>'<a class="dref" href="#'+d+'">'+d+'</a>').join('')+'</dd>':'')+'</dl></div>';
+}
+function dpad(){return '<div class="dpad"><span></span><button type="button" data-k="ArrowUp" aria-label="Up">▲</button><span></span><button type="button" data-k="ArrowLeft" aria-label="Left">◀</button><button type="button" data-k="Enter">'+(hh()?'A':'OK')+'</button><button type="button" data-k="ArrowRight" aria-label="Right">▶</button><span></span><button type="button" data-k="ArrowDown" aria-label="Down">▼</button><span></span></div>';}
+
+document.getElementById('index').addEventListener('click',e=>{const b=e.target.closest('[data-scr]');if(b){S.v[b.dataset.scr]=S.v[b.dataset.scr]||0;go(b.dataset.scr);}});
+document.getElementById('modeSeg').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(!b)return;S.mode=b.dataset.mode;S.focus=null;try{localStorage.setItem('bx-mode',S.mode);}catch(x){}render();});
+document.getElementById('themeSeg').addEventListener('click',e=>{const b=e.target.closest('[data-apptheme]');if(!b)return;S.theme=b.dataset.apptheme;render();renderTokens();});
+document.getElementById('resetBtn').addEventListener('click',()=>{const m=S.mode;clearTimers();S=DEF();S.mode=m;render();});
+document.getElementById('remote').addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(b)key(b.dataset.k);});
+document.getElementById('notes').addEventListener('click',e=>{const b=e.target.closest('[data-var]');if(b){S.v[S.screen]=+b.dataset.var;go(S.screen);}});
+let rz; window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(render,80);});
+
+// ---------- decisions ----------
+document.getElementById('decisions').innerHTML=DECISIONS.map(d=>'<article class="dec" id="'+d.id+'"><h3><span class="id">'+d.id+'</span>'+d.t+'</h3><p>'+d.q+'</p><ol>'+d.o.map((o,i)=>'<li class="'+(i===0?'rec':'')+'">'+esc(o[0])+(i===0?'<span class="r">Recommended</span>':'')+'<span class="pc">'+esc(o[1])+'</span></li>').join('')+'</ol></article>').join('');
+
+// ---------- tokens ----------
+function lum(hex){const v=hex.replace('#','');const c=[0,2,4].map(i=>parseInt(v.substr(i,2),16)/255).map(x=>x<=.04045?x/12.92:Math.pow((x+.055)/1.055,2.4));return .2126*c[0]+.7152*c[1]+.0722*c[2];}
+function ratio(a,b){const A=lum(a),B=lum(b);return (Math.max(A,B)+.05)/(Math.min(A,B)+.05);}
+const PAL={
+  dark:{page:'#0E1013',chrome:'#0B0D10',surface:'#14171B',surface2:'#1A1E24',ink:'#E8EAED',ink2:'#C3C7CC',ink3:'#8B9096',ink4:'#7A8087',acc:'#A78BFA',accSoft:'#C4B5FD',accStrong:'#7C3AED',onAcc:'#160B2E',okInk:'#7BD389',warnInk:'#FFC857',badInk:'#FF8A80'},
+  light:{page:'#F6F5FA',chrome:'#EDEBF3',surface:'#FFFFFF',surface2:'#F1EFF7',ink:'#16151C',ink2:'#3B3947',ink3:'#5E5B6B',ink4:'#6E6B80',acc:'#6D28D9',accSoft:'#7C3AED',accStrong:'#5B21B6',onAcc:'#FFFFFF',okInk:'#2E7D32',warnInk:'#8A5300',badInk:'#C62828'}
+};
+const NAMES={page:'Page',chrome:'Chrome',surface:'Surface',surface2:'Raised',ink:'Ink',ink2:'Ink 2',ink3:'Ink 3',ink4:'Ink 4',acc:'Accent',accSoft:'Accent soft',accStrong:'Accent strong',onAcc:'On accent',okInk:'Success text',warnInk:'Warning text',badInk:'Danger text'};
+const PAIRS=[['ink','page','Body text',4.5],['ink2','surface','Secondary text on surface',4.5],['ink3','surface','Tertiary text on surface',4.5],['ink4','page','Hints and kickers',3],['acc','page','Accent text and links',4.5],['acc','surface','Accent on surface',4.5],['onAcc','acc','Text on accent buttons',4.5],['accStrong','page','Accent borders (UI, 3:1)',3],['okInk','surface','Success text',4.5],['warnInk','surface','Warning text',4.5],['badInk','surface','Danger text',4.5]];
+function renderTokens(){
+  document.getElementById('tokens').innerHTML=['dark','light'].map(t=>{
+    const p=PAL[t];
+    const sw=Object.keys(p).map(k=>'<div><i style="background:'+p[k]+'"></i><b>'+NAMES[k]+'</b><span>'+p[k]+'</span></div>').join('');
+    const rows=PAIRS.map(([f,b,label,min])=>{const r=ratio(p[f],p[b]);const cls=r>=Math.max(min,4.5)?'ok':(r>=min?'mid':'bad');const tag=r>=7?'AAA':(r>=4.5?'AA':(r>=3?'UI / large':'Fail'));return '<tr><td>'+label+'</td><td class="num">'+r.toFixed(2)+':1</td><td><span class="pill '+cls+'">'+tag+'</span></td></tr>';}).join('');
+    return '<div class="tok"><h3>'+(t==='dark'?'Dark (proposed default)':'Light (only if D1 allows it)')+'</h3><div class="sw">'+sw+'</div><table class="ctab"><thead><tr><th>Pair</th><th>Contrast</th><th>Level</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  }).join('')+'<div class="tok"><h3>Type, radii and spacing</h3><table class="ctab"><tbody>'+
+    [['Typefaces','IBM Plex Sans (UI), IBM Plex Mono (data, codes, PIN)'],['Phone scale','Title 18/600 · body 14 · secondary 12.5 · kicker 11 caps +0.07em'],['TV scale','Title 24/600 · body 15 · rail 14.5 · 10-foot minimum 12'],['Radii','Card 12 · button and input 8 · tile cover 10 · chip 7 · pill 999'],['Spacing','4 px base · screen gutter 16 phone, 34 TV · card padding 14–18'],['Focus (TV, gamepad)','3 px accent-soft outline, 2–3 px offset; tiles scale to 1.04'],['Status colours','Reserved for state: success, warning, danger; never decorative']].map(r=>'<tr><td style="color:var(--ink-4);width:150px">'+r[0]+'</td><td>'+r[1]+'</td></tr>').join('')+'</tbody></table></div>';
+}
+
+// Deep link: #<screen>.<mode>[.<state>[.<step>]], or #cap.… for a bare full-size frame.
+function fromHash(){
+  const h=(location.hash||'').slice(1).split('.');
+  if(h[0]==='cap'){CAP=true;h.shift();document.documentElement.classList.add('cap');}
+  if(!SCREENS[h[0]]) return;
+  S.screen=h[0];
+  if(['phone','tv','handheld'].includes(h[1])) S.mode=h[1];
+  if(h[2]!==undefined&&SCREENS[h[0]].variants) S.v[h[0]]=Math.min(+h[2]||0,SCREENS[h[0]].variants.length-1);
+  if(h[3]!==undefined) S.step=+h[3]||0;
+  if(h[0]==='stream') S.overlay=OVL[S.v.stream||0];
+  if(CAP) S.hint=false;
+}
+fromHash();
+window.addEventListener('hashchange',()=>{const s=(location.hash||'').slice(1).split('.')[0];if(SCREENS[s]){clearTimers();fromHash();render();}});
+renderTokens();
+render();
+})();
+</script>
+</body>
+</html>

@@ -73,3 +73,5 @@ Style details: the Mission Control palette comes from `luminalshine/src_assets/c
 ## More Information
 
 See [0003](0003-native-apps-per-platform-with-shared-core.md), [0004](0004-kotlin-for-new-android-code.md), [0006](0006-min-sdk-28.md), [0034](0034-screenshot-testing-with-roborazzi.md) and [0044](0044-design-tokens-pipeline.md).
+
+Amended by [0052](0052-structure-the-phase-2-ui.md): violet accent shades and dark only for 1.0.

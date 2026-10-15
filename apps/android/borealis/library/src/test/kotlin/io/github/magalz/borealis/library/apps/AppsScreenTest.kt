@@ -63,6 +63,7 @@ class AppsScreenTest {
             loading = loading,
             hostName = "Desk PC",
             runningAppId = items.firstOrNull { it.running }?.id,
+            runningAppName = items.firstOrNull { it.running }?.name,
             showHidden = showHidden,
             items = items.toList(),
             actions = actions,
@@ -224,6 +225,91 @@ class AppsScreenTest {
         composeRule.waitForIdle()
 
         tile("Desktop").assertIsFocused()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the header names a running app that is hidden and not listed`() {
+        show(
+            AppsUiState(
+                loading = false,
+                hostName = "Desk PC",
+                runningAppId = 9,
+                runningAppName = "Quiet",
+                items = listOf(steam),
+            )
+        )
+
+        composeRule.onNodeWithText("Quiet running").assertIsDisplayed()
+        composeRule.onNodeWithText("Nothing running").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the header says an app is running when its name is not known`() {
+        show(
+            AppsUiState(
+                loading = false,
+                hostName = "Desk PC",
+                runningAppId = 9,
+                items = listOf(steam),
+            )
+        )
+
+        composeRule.onNodeWithText("An app is running").assertIsDisplayed()
+        composeRule.onNodeWithText("Nothing running").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the header says nothing is running when no app runs`() {
+        show(state(steam))
+
+        composeRule.onNodeWithText("Nothing running").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `showing hidden apps keeps focus on the tile that had it`() {
+        val shown = mutableStateOf(state(desktop, steam))
+        composeRule.setContent {
+            AppsScreen(
+                state = shown.value,
+                formFactor = FormFactor.Tv,
+                snackbarHostState = SnackbarHostState(),
+                onBack = {},
+                onAppSelected = {},
+                onActions = {},
+                onActionChosen = {},
+                onActionsDismissed = {},
+                onDetailsDismissed = {},
+                onToggleShowHidden = {},
+            )
+        }
+        composeRule.waitForIdle()
+        tile("Desktop").assertIsFocused()
+
+        shown.value = state(item(9, "Aardvark", hidden = true), desktop, steam, showHidden = true)
+        composeRule.waitForIdle()
+
+        tile("Desktop").assertIsFocused()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the quit confirmation starts with focus on Cancel`() {
+        show(
+            state(
+                desktop,
+                actions = sheetFor(desktop, "Desktop", AppAction.RESUME, AppAction.QUIT),
+            ),
+            FormFactor.Tv,
+        )
+
+        composeRule.onNodeWithText("Quit Desktop").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Cancel").assertIsFocused()
     }
 
     @Test

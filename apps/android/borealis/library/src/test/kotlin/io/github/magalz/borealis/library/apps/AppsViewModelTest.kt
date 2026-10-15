@@ -76,6 +76,25 @@ class AppsViewModelTest {
     }
 
     @Test
+    fun `a running app that is hidden is named in the state though it is not listed`() = runTest {
+        val quiet = anApp(id = 5, name = "Quiet", hidden = true)
+        repository.emit(snapshot(desktop, quiet, running = quiet))
+        subscribe(viewModel.uiState)
+
+        assertThat(viewModel.uiState.value.runningAppId).isEqualTo(5)
+        assertThat(viewModel.uiState.value.runningAppName).isEqualTo("Quiet")
+        assertThat(viewModel.uiState.value.items.map { it.id }).containsExactly(1)
+    }
+
+    @Test
+    fun `no app is named when nothing runs`() = runTest {
+        repository.emit(snapshot(desktop))
+        subscribe(viewModel.uiState)
+
+        assertThat(viewModel.uiState.value.runningAppName).isNull()
+    }
+
+    @Test
     fun `the running app comes first and the others follow by name ignoring case`() = runTest {
         repository.emit(snapshot(zelda, steam, desktop, running = zelda))
         subscribe(viewModel.uiState)

@@ -56,6 +56,7 @@ class AppsScreenshotTest {
             loading = false,
             hostName = "Desk PC",
             runningAppId = 1.takeIf { runningFirst },
+            runningAppName = "Desktop".takeIf { runningFirst },
             showHidden = hiddenName != null,
             items = apps(runningFirst, hiddenName),
             actions = actions,

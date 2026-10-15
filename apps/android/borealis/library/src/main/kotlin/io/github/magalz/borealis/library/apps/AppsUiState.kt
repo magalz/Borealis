@@ -42,6 +42,8 @@ data class AppsUiState(
     val loading: Boolean = true,
     val hostName: String? = null,
     val runningAppId: Int? = null,
+    /** The name of the app that is running, also when it is hidden and not in [items]. */
+    val runningAppName: String? = null,
     val showHidden: Boolean = false,
     /** The visible apps: the running app first, then by name. */
     val items: List<AppItemUiState> = emptyList(),

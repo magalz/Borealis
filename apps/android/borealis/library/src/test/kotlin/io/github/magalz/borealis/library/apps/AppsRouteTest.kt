@@ -150,6 +150,22 @@ class AppsRouteTest {
     }
 
     @Test
+    fun `a message that is still showing does not hold back the next effect`() {
+        repository.quitResult = QuitResult.Failed("The host refused.")
+        show()
+        quitDesktop()
+        composeRule.onNodeWithText("The host refused.").assertIsDisplayed()
+        // The snackbar must still be up when the next effect arrives: stop its timeout.
+        composeRule.mainClock.autoAdvance = false
+        composeRule.onNodeWithContentDescription("Desktop").performClick()
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("The host refused.").assertIsDisplayed()
+        assertThat(streams).containsExactly(StreamRequest("host-1", 1, "Desktop", false))
+    }
+
+    @Test
     @Config(qualifiers = "w360dp-h640dp-xhdpi")
     fun `the back arrow closes the screen without a message`() {
         show()

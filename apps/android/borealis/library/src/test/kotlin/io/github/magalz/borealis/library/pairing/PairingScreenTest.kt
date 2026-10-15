@@ -208,6 +208,14 @@ class PairingScreenTest {
 
     @Test
     @Config(qualifiers = PHONE)
+    fun `paired has no back arrow to cancel with`() {
+        show(PairingUiState.Paired)
+
+        composeRule.onNodeWithContentDescription("Cancel pairing").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
     fun `expired can be cancelled`() {
         show(PairingUiState.Expired)
 

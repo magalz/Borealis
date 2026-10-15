@@ -4,3 +4,11 @@ style:
     max: 3
   MagicNumber:
     ignoreEnums: true
+naming:
+  FunctionNaming:
+    ignoreAnnotated:
+      - Composable
+complexity:
+  LongParameterList:
+    ignoreAnnotated:
+      - Composable

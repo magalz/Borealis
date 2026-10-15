@@ -31,11 +31,22 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
 
             dependencies.add("implementation", project(":borealis:diagnostics"))
             dependencies.add("implementation", project(":borealis:host"))
+            dependencies.add("implementation", project(":borealis:library"))
             dependencies.add("implementation", project(":borealis:logging"))
             dependencies.add("implementation", project(":borealis:native"))
             dependencies.add("implementation", project(":borealis:settings"))
             dependencies.add("implementation", libs.findLibrary("hilt-android").get())
             dependencies.add("ksp", libs.findLibrary("hilt-compiler").get())
+            for (name in
+                listOf(
+                    "junit",
+                    "truth",
+                    "robolectric",
+                    "androidx-test-core",
+                    "kotlinx-coroutines-test",
+                )) {
+                dependencies.add("testImplementation", libs.findLibrary(name).get())
+            }
             addInstrumentedTestDependencies()
         }
 

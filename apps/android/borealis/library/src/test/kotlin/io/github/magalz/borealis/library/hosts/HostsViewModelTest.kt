@@ -172,9 +172,22 @@ class HostsViewModelTest {
     }
 
     @Test
-    fun `selecting a host with no action says it is unavailable`() = runTest {
+    fun `selecting a host that was not polled yet says it is still being checked`() = runTest {
         subscribe(viewModel.uiState)
         repository.emit(aHost(id = "h", reachability = Reachability.UNKNOWN))
+        runCurrent()
+
+        viewModel.onHostSelected("h")
+
+        viewModel.effects.test {
+            assertThat(awaitItem()).isEqualTo(HostsEffect.ShowMessage(HostsMessage.HOST_CHECKING))
+        }
+    }
+
+    @Test
+    fun `selecting an offline host that cannot wake says it is unavailable`() = runTest {
+        subscribe(viewModel.uiState)
+        repository.emit(aHost(id = "h", reachability = Reachability.OFFLINE, canWake = false))
         runCurrent()
 
         viewModel.onHostSelected("h")

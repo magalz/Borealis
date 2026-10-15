@@ -52,6 +52,7 @@ enum class HostsMessage {
     ALREADY_ONLINE,
     NO_MAC_ADDRESS,
     WAKE_FAILED,
+    HOST_CHECKING,
 }
 
 sealed interface HostsEffect {

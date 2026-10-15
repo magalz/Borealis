@@ -342,6 +342,24 @@ class ComputerManagerConnectionTest {
         }
 
     @Test
+    fun `pinning a certificate keeps the app list that was already received`() = runTest {
+        val connection = newConnection()
+        val live = details(uuid = "a", rawAppList = APP_LIST)
+        binder.computers["a"] = live
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
+            connection.hostUpdates().collect {}
+        }
+        // The service's details lost the list to a host poll, but it was received before.
+        live.rawAppList = null
+        binder.emit(live)
+
+        connection.pinCertificate("a", testCertificate())
+
+        assertThat(connection.updates.value.getValue("a").rawAppList).isEqualTo(APP_LIST)
+        job.cancelAndJoin()
+    }
+
+    @Test
     fun `a host that the service does not know is not published when a certificate is pinned`() =
         runTest {
             val connection = newConnection()

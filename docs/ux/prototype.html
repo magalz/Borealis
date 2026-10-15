@@ -600,7 +600,7 @@ const NOTES={
     touch:'Dialog.',tv:'Focus starts on Cancel.',pad:'Focus starts on Cancel; B cancels.',today:'Sprint 2 dialog, restyled.',d:[]},
   error:{t:'Connection error',p:'Errors say what happened, what the host was doing, and offer the next step. The raw code stays visible for support.',
     touch:'Try again, the state-specific action, and Diagnostics.',tv:'Focus on Try again.',pad:'Same as TV.',today:'Generic "Connection error" dialog with a code.',d:[]},
-  stream:{t:'Stream',p:'The picture, the compact overlay and nothing else. The first time, a hint says how to open the menu on this device.',
+  stream:{t:'Stream',p:'The picture and, when the user turns it on, the overlay. Nothing else. The first time, a hint says how to open the menu on this device.',
     touch:'Pull the top handle down, or press Back, to open the menu. Three-finger tap opens the keyboard as in 12.2.',tv:'Back opens the menu instead of leaving the stream.',pad:'Hold Select + Start for the menu; every other button goes to the PC.',
     today:'Back leaves the stream at once; there is no menu.',d:['D3','D4','D5']},
   menu:{t:'In-game menu',p:'One menu for every device. Session actions at the bottom, separated by intent: Disconnect leaves the app running, Quit ends it.',
@@ -885,8 +885,8 @@ R.settings=function(){
   return phoneBar('Settings',{back:true})+'<div class="pbody a-scroll">'+body+'</div>';
 };
 R.privacy=function(){
-  const rows='<button class="row" data-f="p1" data-act="toggle" data-arg="verbose" data-auto><span class="tx"><b>Detailed logs</b><span>Adds debug lines to the local log files</span></span><span class="sw2'+(S.verbose?' on':'')+'"></span></button>'+
-    '<button class="row" data-f="p2" data-act="toggle" data-arg="mask"><span class="tx"><b>Hide addresses in logs and diagnostics</b><span>Replaces IP addresses and host names</span></span><span class="sw2'+(S.mask?' on':'')+'"></span></button>'+
+  const rows='<button class="row" data-f="p1" data-act="toggle" data-arg="verbose" data-auto><span class="tx"><b>Verbose logging</b><span>Writes debug details to the local log file while you diagnose a problem</span></span><span class="sw2'+(S.verbose?' on':'')+'"></span></button>'+
+    '<button class="row" data-f="p2" data-act="toggle" data-arg="mask"><span class="tx"><b>Mask addresses in logs and diagnostics</b><span>Replaces IP addresses and host names with placeholders</span></span><span class="sw2'+(S.mask?' on':'')+'"></span></button>'+
     '<button class="row" data-f="p3" data-act="'+(big()?'go':'toast')+'" data-arg="'+(big()?'send':'Opened the share sheet')+'">'+ic('send','s')+'<span class="tx"><b>Export diagnostic bundle</b><span>'+(big()?'Saves it to Downloads and offers Send to phone':'Logs, decoders and the audit trail, already redacted')+'</span></span>'+ic('chev','s')+'</button>'+
     '<button class="row" data-f="p4" data-act="go" data-arg="audit">'+ic('list','s')+'<span class="tx"><b>Audit trail</b><span>Pairing, certificate and session events on this device</span></span>'+ic('chev','s')+'</button>'+
     '<button class="row danger" data-f="p5" data-act="eraseask">'+ic('trash','s')+'<span class="tx"><b>Erase audit trail</b><span>Cannot be undone</span></span></button>';

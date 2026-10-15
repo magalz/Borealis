@@ -13,9 +13,9 @@ import org.robolectric.annotation.Config
 
 /**
  * Screenshots of the Apps screen and its actions sheet in the states of the Phase 2 proposal; the
- * references live in `src/test/screenshots`, named `<screen>_<device>_<state>.png`. The apps are the
- * ones of the proposal captures. The TV and handheld screens are shown without the navigation rail,
- * which the launcher adds.
+ * references live in `src/test/screenshots`, named `<screen>_<device>_<state>.png`. The apps are
+ * the ones of the proposal captures. The TV and handheld screens are shown without the navigation
+ * rail, which the launcher adds.
  */
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalRoborazziApi::class)

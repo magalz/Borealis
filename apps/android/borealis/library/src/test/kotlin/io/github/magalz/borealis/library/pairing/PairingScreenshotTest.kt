@@ -32,7 +32,8 @@ class PairingScreenshotTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun pairingPhonePaired() = shoot("pairing_phone_paired", FormFactor.Phone, PairingUiState.Paired)
+    fun pairingPhonePaired() =
+        shoot("pairing_phone_paired", FormFactor.Phone, PairingUiState.Paired)
 
     @Test
     @Config(qualifiers = PHONE)

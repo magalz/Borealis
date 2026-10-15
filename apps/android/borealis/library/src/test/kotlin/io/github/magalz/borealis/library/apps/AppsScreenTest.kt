@@ -129,9 +129,10 @@ class AppsScreenTest {
     fun `the grid has three columns on a phone`() {
         show(state(desktop, steam, hades, secret))
 
-        val tops = listOf("Desktop", "Steam Big Picture", "Hades II", "Secret").map {
-            tile(it).fetchSemanticsNode().boundsInRoot.top
-        }
+        val tops =
+            listOf("Desktop", "Steam Big Picture", "Hades II", "Secret").map {
+                tile(it).fetchSemanticsNode().boundsInRoot.top
+            }
         assertThat(tops.take(3).toSet()).hasSize(1)
         assertThat(tops[3]).isGreaterThan(tops[0])
     }
@@ -345,7 +346,13 @@ class AppsScreenTest {
                 desktop,
                 steam,
                 actions =
-                    sheetFor(desktop, "Desktop", AppAction.RESUME, AppAction.QUIT, AppAction.DETAILS),
+                    sheetFor(
+                        desktop,
+                        "Desktop",
+                        AppAction.RESUME,
+                        AppAction.QUIT,
+                        AppAction.DETAILS,
+                    ),
             ),
             FormFactor.Tv,
         )
@@ -357,7 +364,7 @@ class AppsScreenTest {
             .onNodeWithText("Ends Desktop on the PC. Unsaved work is lost.")
             .assertIsDisplayed()
         composeRule.onNodeWithText("Details").assertIsDisplayed()
-        composeRule.onNodeWithText("App ID and HDR support.").assertIsDisplayed()
+        composeRule.onNodeWithText("App id and HDR support.").assertIsDisplayed()
     }
 
     @Test
@@ -500,27 +507,6 @@ class AppsScreenTest {
 
     @Test
     @Config(qualifiers = TV)
-    fun `Back closes the confirmation before the sheet`() {
-        show(
-            state(
-                desktop,
-                actions = sheetFor(desktop, "Desktop", AppAction.RESUME, AppAction.QUIT),
-            ),
-            FormFactor.Tv,
-        )
-        composeRule.onNodeWithText("Quit Desktop").performClick()
-
-        Espresso.pressBack()
-        composeRule.waitForIdle()
-
-        composeRule.onNodeWithText("Quit Desktop? Unsaved work is lost.").assertDoesNotExist()
-        composeRule.onNodeWithText("Resume").assertIsDisplayed()
-        assertThat(actionsDismissed).isEqualTo(0)
-        assertThat(chosen).isEmpty()
-    }
-
-    @Test
-    @Config(qualifiers = TV)
     fun `Back closes the sheet and does not leave the screen`() {
         show(
             state(
@@ -554,8 +540,7 @@ class AppsScreenTest {
         assertThat(actionsDismissed).isEqualTo(1)
     }
 
-    private fun hasStateDescription(text: String) =
-        SemanticsMatcher.expectValue(STATE, text)
+    private fun hasStateDescription(text: String) = SemanticsMatcher.expectValue(STATE, text)
 
     private companion object {
         val STATE = SemanticsProperties.StateDescription

@@ -692,3 +692,43 @@ Follow-ups for the next sprint:
 - The Streamer has hardware AV1 decoders (`c2.mtk.av1.decoder.lowlatency`), but the upstream decoder selection logged "No AV1 decoder found".
 - The first HDR frame on the S22 logged `Trying to restart decoder after CodecException` before the stream settled. Handled in S3-T3: the first IDR now goes to the restarted decoder instead of being dropped.
 - The audit `SESSION_START` records the requested frame rate (60), not the negotiated one (59).
+
+## 8. Results: Sprint 3, 2026-10-15
+
+Builds: debug APKs from `a30cc3d4` (instrumented tests and the first transfer
+check) and `589b22dd` (all other rows). Host: LuminalShine 26.09.1 as before.
+On 2026-10-15 the owner enabled the host's `mouse` setting, which had been
+`disabled`; `keyboard` is still `disabled`. Both devices used ADB over Wi-Fi.
+
+| Scenario | Galaxy S22 | Google TV Streamer | Evidence and notes |
+| --- | --- | --- | --- |
+| 2 Instrumented tests | pass, 10 of 10 | pass, 10 of 10 | Direct `am instrument` at `a30cc3d4`. |
+| Touch and trackpad (Sprint 2 follow-up) | pass | not applicable | Works once the host's `mouse` setting is enabled. The Borealis input code is the same as Moonlight 12.2; see [host contract, section 13](../host-contract/luminalshine.md#13-input). The keyboard was not tested, because the host's `keyboard` is disabled. |
+| HDR start (S3-T3) | pass, 3 of 3 | not applicable | `Restarting the decoder to apply HDR metadata`, then the first output 155, 107 and 137 ms after the first video packet, with no `Requesting IDR frame on behalf of DR` and a real picture. Before the change (`fce19dc4`) the same start stalled 2.2 s, and 7 s in Sprint 2. An SDR start is unchanged: output 53 ms after the first packet, no restart. |
+| Cap FPS in the audit (S3-T2) | not run | pass | "Balanced with FPS limit" on the 60 Hz Streamer: `SESSION_START` detail `codec=HEVC hdr=false resolution=1280x720 fps=59`. |
+| Two devices, `/serverinfo` retry (S3-T2) | first device streams | partial | The Streamer opened the same app 1 s after the S22 started it. It logged `server info timed out, retrying attempt=2 max=3` and then sent `/resume` instead of failing with error 0. The host then rejected its RTSP handshake (host `Failed to verify RTSP message tag`; client `Failed to decrypt RTSP response`, RTSP error -1). With a 4 s gap, `/serverinfo` answered after 6.7 s without a retry, and the same RTSP failure followed. The conflict dialog was not reached. |
+| Send to phone (S3-T4) | pass (phone side) | pass | The S22 camera read the code. The page opened, the zip downloaded, and the Streamer showed "Downloaded". The phone's file has the same SHA-256 as the copy in the Streamer's `Download/` (72,359 bytes). Chrome's preconnect produced one 408 after the download, which is harmless. From a PC on the same network: the page answers 200 without consuming the link, a wrong token gets 404, HEAD gets 405, the zip 200, the next request 410, and then the port closes. The token never appears in logcat, and the bundle holds only redacted secret fields. The first build clipped the status line at 1080p; fixed in `f401d7b8` and checked on the device. 720p was checked only in Robolectric. |
+| AV1 (Sprint 2 follow-up) | not applicable | not applicable | No client change. Moonlight 12.2 uses AV1 only when "force AV1" is set, and the test host's GPU has no AV1 encoder (`av1_nvenc` is not supported); see [host contract, section 9](../host-contract/luminalshine.md#9-codec-advertisement). |
+
+Host findings (LuminalShine 26.09.1):
+
+- The host process crashed right after the virtual display cleanup of a
+  session that had just ended: `Fatal: CRASH: unhandled exception 0x20474343
+  ... KERNELBASE.dll`, minidump written. It restarted about 9 s later. A
+  `/resume` sent in that window got a connection reset. The two other session
+  ends in this round did not crash.
+- A second client whose `/resume` is accepted while the first client's
+  `/launch` is still setting up fails its RTSP handshake, as described in the
+  two-device row.
+- While the host builds a virtual display for one client, other HTTPS requests
+  still wait: 6.7 s and more than 7 s in this round (luminalshine#202).
+
+Follow-ups:
+
+- A second device that joins during another device's launch: after the
+  `/serverinfo` retry, the RTSP handshake fails. The host side needs an issue.
+  On the client, consider waiting until the first session is streaming before
+  `/resume`, or retrying the start once.
+- In that case the RTSP error -1 text points to firewall ports, which is
+  misleading.
+- Check the Send to phone dialog on the Streamer at 720p output.

@@ -33,7 +33,8 @@ data class HostAddress(val host: String, val port: Int = DEFAULT_PORT) {
 }
 
 sealed interface AddHostResult {
-    data class Added(val hostId: String) : AddHostResult
+    /** The host answered and was added; [name] is the name it reported (UC-008 step 5). */
+    data class Added(val hostId: String, val name: String) : AddHostResult
 
     /** The address cannot be resolved or is not a valid host. */
     data object InvalidAddress : AddHostResult

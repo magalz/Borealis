@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application>
         <activity
@@ -8,6 +9,7 @@
             android:theme="@style/Theme.Borealis"
             android:resizeableActivity="true"
             android:enableOnBackInvokedCallback="true"
+            tools:targetApi="tiramisu"
             android:configChanges="mcc|mnc|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection">
 
             <meta-data android:name="WindowManagerPreference:FreeformWindowSize" android:value="system-default" />

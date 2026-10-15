@@ -81,6 +81,26 @@ class ComputerAppRepositoryTest {
         }
 
     @Test
+    fun `the list stays once received when the host poll resets the service's details`() = runTest {
+        val live = details(rawAppList = null)
+        binder.computers["host-1"] = live
+        val (seen, job) = collect(repository())
+
+        // The app list poller stores the list in the service's details and reports them.
+        live.rawAppList = APP_LIST
+        binder.emit(live)
+        // The host poll of the service then updates the same details from a fresh poll result,
+        // which has no app list: `ComputerDetails.update` copies that null over the list.
+        live.update(details(rawAppList = null))
+        binder.emit(live)
+
+        assertThat(live.rawAppList).isNull()
+        assertThat(seen.last().loading).isFalse()
+        assertThat(seen.last().apps.map { it.name }).containsExactly("Steam", "Desktop").inOrder()
+        job.cancelAndJoin()
+    }
+
+    @Test
     fun `an app that the user hid is marked hidden`() = runTest {
         prefs.edit().putStringSet("host-1", setOf("8")).commit()
         binder.computers["host-1"] = details(rawAppList = APP_LIST)

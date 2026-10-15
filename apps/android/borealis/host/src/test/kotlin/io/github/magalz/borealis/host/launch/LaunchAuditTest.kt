@@ -205,4 +205,27 @@ class LaunchAuditTest {
 
         assertThat(audit.events).isEmpty()
     }
+
+    @Test
+    fun `a restart after RTSP failed following a resume is a retry with its reason`() {
+        LaunchAudit.resumeRestarted(host, -1, 3_000)
+
+        val event = audit.events.single()
+        assertThat(event.type).isEqualTo(AuditType.LAUNCH_RETRY)
+        assertThat(event.outcome).isEqualTo(AuditOutcome.FAILURE)
+        assertThat(event.host).isEqualTo(host)
+        assertThat(event.detail)
+            .isEqualTo("verb=resume reason=rtsp_after_resume error=-1 attempt=1/1 delay_ms=3000")
+    }
+
+    @Test
+    fun `giving up after the restart is a failed resume attempt with the RTSP error`() {
+        LaunchAudit.resumeGaveUp(host, -1)
+
+        val event = audit.events.single()
+        assertThat(event.type).isEqualTo(AuditType.LAUNCH_ATTEMPT)
+        assertThat(event.outcome).isEqualTo(AuditOutcome.FAILURE)
+        assertThat(event.host).isEqualTo(host)
+        assertThat(event.detail).isEqualTo("verb=resume result=rtsp_failed error=-1")
+    }
 }

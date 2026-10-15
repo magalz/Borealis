@@ -67,4 +67,10 @@ internal object LaunchAudit {
             "choice=$name running_app=$runningAppId",
         )
     }
+
+    /** The start is repeated once because RTSP failed right after an accepted `/resume`. */
+    fun resumeRestarted(host: String?, error: Int, delayMs: Int) = Unit
+
+    /** RTSP failed again after the restart; the start gives up. */
+    fun resumeGaveUp(host: String?, error: Int) = Unit
 }

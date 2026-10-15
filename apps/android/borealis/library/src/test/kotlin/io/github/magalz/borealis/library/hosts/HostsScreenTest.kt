@@ -275,7 +275,9 @@ class HostsScreenTest {
 
         composeRule.onNodeWithText("Looking for hosts").assertIsDisplayed()
         composeRule
-            .onNode(hasText("LuminalShine", substring = true) and hasText("network", substring = true))
+            .onNode(
+                hasText("LuminalShine", substring = true) and hasText("network", substring = true)
+            )
             .assertIsDisplayed()
         composeRule.onNodeWithText("CONTINUE").assertDoesNotExist()
 

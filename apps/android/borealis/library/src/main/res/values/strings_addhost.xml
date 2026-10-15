@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="addhost_title">Add host</string>
+    <string name="addhost_address_label">Address</string>
+    <string name="addhost_address_hint">IP address or host name, for example 192.168.1.20</string>
+    <string name="addhost_port_hint">Add :port only if you changed the LuminalShine port (default 47989).</string>
+    <string name="addhost_submit">Add host</string>
+    <string name="addhost_cancel">Cancel</string>
+    <string name="addhost_busy">Adding host</string>
+
+    <string name="addhost_error_empty">Enter an IP address or a host name.</string>
+    <string name="addhost_error_invalid">Unable to resolve this address. Check it for typos.</string>
+    <string name="addhost_error_wrong_subnet">That address is not on this network. For streaming over the Internet, use your router\'s public IP address.</string>
+    <string name="addhost_error_unreachable">Unable to connect to the specified computer. Make sure the required ports are allowed through the firewall.</string>
+</resources>

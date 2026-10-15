@@ -6,7 +6,9 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -86,7 +88,7 @@ class AddHostScreenTest {
     fun `Add host submits`() {
         show(AddHostUiState(address = "192.168.1.20"))
 
-        composeRule.onNodeWithText("Add host").performClick()
+        composeRule.onNode(hasText("Add host") and hasClickAction()).performClick()
 
         assertThat(submitted).isEqualTo(1)
     }
@@ -172,7 +174,7 @@ class AddHostScreenTest {
         composeRule
             .onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo))
             .assertIsDisplayed()
-        composeRule.onNodeWithText("Add host").assertIsNotEnabled()
+        composeRule.onNode(hasText("Add host") and hasClickAction()).assertIsNotEnabled()
         composeRule.onNodeWithText("Cancel").assertIsNotEnabled()
     }
 
@@ -184,7 +186,7 @@ class AddHostScreenTest {
         composeRule
             .onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo))
             .assertDoesNotExist()
-        composeRule.onNodeWithText("Add host").assertIsEnabled()
+        composeRule.onNode(hasText("Add host") and hasClickAction()).assertIsEnabled()
         composeRule.onNodeWithText("Cancel").assertIsEnabled()
     }
 

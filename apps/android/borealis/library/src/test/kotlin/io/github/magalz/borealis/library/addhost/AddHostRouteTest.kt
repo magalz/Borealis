@@ -1,6 +1,8 @@
 package io.github.magalz.borealis.library.addhost
 
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -45,7 +47,7 @@ class AddHostRouteTest {
         show()
 
         composeRule.onNode(hasSetTextAction()).performTextInput("192.168.1.20")
-        composeRule.onNodeWithText("Add host").performClick()
+        composeRule.onNode(hasText("Add host") and hasClickAction()).performClick()
         composeRule.waitForIdle()
 
         composeRule
@@ -62,7 +64,7 @@ class AddHostRouteTest {
     fun `an empty address shows the error and adds nothing`() {
         show()
 
-        composeRule.onNodeWithText("Add host").performClick()
+        composeRule.onNode(hasText("Add host") and hasClickAction()).performClick()
         composeRule.waitForIdle()
 
         composeRule.onNodeWithText("Enter an IP address or a host name.").assertExists()

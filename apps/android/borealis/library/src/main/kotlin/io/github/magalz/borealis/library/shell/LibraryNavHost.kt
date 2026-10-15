@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -83,61 +84,7 @@ internal fun LibraryNavHost(
     ) {
         Box {
             NavHost(navController, startDestination = Hosts) {
-                composable<Hosts> { entry ->
-                    val handle = entry.savedStateHandle
-                    val message by
-                        handle
-                            .getStateFlow<String?>(HOSTS_MESSAGE, null)
-                            .collectAsStateWithLifecycle()
-                    HostsRoute(
-                        onOpenApps = {
-                            navController.navigate(Apps(it)) { launchSingleTop = true }
-                        },
-                        onOpenPairing = { id, name ->
-                            navController.navigate(Pairing(id, name)) { launchSingleTop = true }
-                        },
-                        onOpenAddHost = {
-                            navController.navigate(AddHost) { launchSingleTop = true }
-                        },
-                        onOpenSettings = onOpenSettings,
-                        onStartStream = startStream,
-                        message = message,
-                        onMessageShown = { handle[HOSTS_MESSAGE] = null },
-                    )
-                }
-                composable<AddHost> { entry ->
-                    AddHostRoute(
-                        onClose = { navController.close(entry) },
-                        onAdded = { name ->
-                            navController.close(
-                                entry,
-                                resources.getString(R.string.shell_host_added, name),
-                            )
-                        },
-                    )
-                }
-                composable<Pairing> { entry ->
-                    val route = entry.toRoute<Pairing>()
-                    PairingRoute(
-                        hostId = route.hostId,
-                        hostName = route.hostName,
-                        // Back from Apps returns to Hosts, not to a pairing that is done.
-                        onOpenApps = { hostId ->
-                            navController.navigate(Apps(hostId)) {
-                                popUpTo<Pairing> { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        },
-                        onClose = { navController.close(entry) },
-                    )
-                }
-                composable<Apps> { entry ->
-                    AppsRoute(
-                        hostId = entry.toRoute<Apps>().hostId,
-                        onClose = { message -> navController.close(entry, message) },
-                        onStartStream = startStream,
-                    )
-                }
+                libraryGraph(navController, startStream, onOpenSettings)
             }
             SnackbarHost(
                 snackbarHostState,
@@ -146,6 +93,60 @@ internal fun LibraryNavHost(
                     .padding(SNACKBAR_PADDING),
             )
         }
+    }
+}
+
+private fun NavGraphBuilder.libraryGraph(
+    navController: NavHostController,
+    startStream: (StreamRequest) -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    composable<Hosts> { entry ->
+        val handle = entry.savedStateHandle
+        val message by
+            handle.getStateFlow<String?>(HOSTS_MESSAGE, null).collectAsStateWithLifecycle()
+        HostsRoute(
+            onOpenApps = { navController.navigate(Apps(it)) { launchSingleTop = true } },
+            onOpenPairing = { id, name ->
+                navController.navigate(Pairing(id, name)) { launchSingleTop = true }
+            },
+            onOpenAddHost = { navController.navigate(AddHost) { launchSingleTop = true } },
+            onOpenSettings = onOpenSettings,
+            onStartStream = startStream,
+            message = message,
+            onMessageShown = { handle[HOSTS_MESSAGE] = null },
+        )
+    }
+    composable<AddHost> { entry ->
+        val resources = LocalResources.current
+        AddHostRoute(
+            onClose = { navController.close(entry) },
+            onAdded = { name ->
+                navController.close(entry, resources.getString(R.string.shell_host_added, name))
+            },
+        )
+    }
+    composable<Pairing> { entry ->
+        val route = entry.toRoute<Pairing>()
+        PairingRoute(
+            hostId = route.hostId,
+            hostName = route.hostName,
+            // Back from Apps returns to Hosts, not to a pairing that is done.
+            onOpenApps = { hostId ->
+                navController.navigate(Apps(hostId)) {
+                    popUpTo<Pairing> { inclusive = true }
+                    launchSingleTop = true
+                }
+            },
+            onClose = { navController.close(entry) },
+        )
+    }
+    composable<Apps> { entry ->
+        AppsRoute(
+            hostId = entry.toRoute<Apps>().hostId,
+            onClose = { message -> navController.close(entry, message) },
+            onStartStream = startStream,
+        )
     }
 }
 

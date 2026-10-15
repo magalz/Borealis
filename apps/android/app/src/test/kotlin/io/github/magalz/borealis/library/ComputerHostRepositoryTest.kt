@@ -41,7 +41,7 @@ class ComputerHostRepositoryTest {
             context = context,
             connection = ComputerManagerConnection(FakeCmsConnector(binder), io),
             clients = clients,
-            wake = {
+            waker = {
                 wakeFailure?.let { failure -> throw failure }
                 woken += it
             },
@@ -104,6 +104,8 @@ class ComputerHostRepositoryTest {
         var manual: AddressTuple? = null
         binder.onAdd = {
             manual = it.manualAddress
+            it.uuid = "new-id"
+            it.name = "New PC"
             true
         }
 
@@ -118,6 +120,8 @@ class ComputerHostRepositoryTest {
         var manual: AddressTuple? = null
         binder.onAdd = {
             manual = it.manualAddress
+            it.uuid = "new-id"
+            it.name = "New PC"
             true
         }
 
@@ -143,6 +147,7 @@ class ComputerHostRepositoryTest {
     @Test
     fun `a host that does not answer is unreachable`() = runTest {
         val repository = repository()
+        localNetworks = listOf(LocalIpv4(InetAddress.getByName("192.168.1.20") as Inet4Address, 24))
         binder.onAdd = { false }
 
         assertThat(repository.addHost(HostAddress("192.168.1.9")))

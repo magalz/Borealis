@@ -140,6 +140,8 @@ internal class FakeCmsBinder : CmsBinder {
     override fun startPolling(listener: ComputerManagerListener) {
         log += "startPolling"
         this.listener = listener
+        // Like the service, which reports every known host when polling starts.
+        computers.values.forEach { listener.notifyComputerUpdated(it) }
     }
 
     override fun stopPolling() {

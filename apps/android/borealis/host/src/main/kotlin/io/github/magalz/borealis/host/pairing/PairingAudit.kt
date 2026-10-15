@@ -34,7 +34,9 @@ object PairingAudit {
 
     /** The PIN expired before the host accepted it. */
     @JvmStatic
-    fun expired(host: String?) {}
+    fun expired(host: String?) {
+        failure(host, "reason=pin_expired")
+    }
 
     /**
      * A pairing that ended with an exception; [decision] is null when the rules were unavailable.

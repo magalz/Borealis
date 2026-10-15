@@ -6,8 +6,8 @@ import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvApp
 
 /**
- * The part of the upstream `ComputerManagerService.ComputerManagerBinder` that the Library
- * adapters use. The seam keeps the real service out of the unit tests.
+ * The part of the upstream `ComputerManagerService.ComputerManagerBinder` that the Library adapters
+ * use. The seam keeps the real service out of the unit tests.
  */
 internal interface CmsBinder {
     val uniqueId: String

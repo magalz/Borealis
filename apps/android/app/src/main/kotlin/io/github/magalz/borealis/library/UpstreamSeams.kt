@@ -26,8 +26,9 @@ internal interface HostTexts {
 }
 
 @Singleton
-internal class ResourceHostTexts @Inject constructor(@ApplicationContext private val context: Context) :
-    HostTexts {
+internal class ResourceHostTexts
+@Inject
+constructor(@ApplicationContext private val context: Context) : HostTexts {
     override fun unknownHost(): String = context.getString(R.string.error_unknown_host)
 
     override fun notFound(): String = context.getString(R.string.error_404)
@@ -75,8 +76,9 @@ internal fun interface BoxArtCache {
 }
 
 @Singleton
-internal class DiskBoxArtCache @Inject constructor(@ApplicationContext private val context: Context) :
-    BoxArtCache {
+internal class DiskBoxArtCache
+@Inject
+constructor(@ApplicationContext private val context: Context) : BoxArtCache {
     override fun delete(hostId: String) = DiskAssetLoader(context).deleteAssetsForComputer(hostId)
 }
 

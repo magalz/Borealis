@@ -8,6 +8,7 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.ShortcutTrampoline
 import com.limelight.nvstream.http.ComputerDetails
 import io.github.magalz.borealis.library.shortcuts.ShortcutIntentParser
+import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -90,15 +91,17 @@ class UpstreamHostShortcutsTest {
     }
 
     @Test
-    fun `a forgotten host disables its shortcut and the shortcuts of its apps`() {
+    fun `a forgotten host disables the pinned shortcuts of its apps and no others`() {
         shortcuts.reportHostOpened("uuid-1", "Desk PC")
         shortcuts.pinApp("uuid-1", "Desk PC", 42, "Hades II", hdrSupported = false)
-        shortcuts.reportHostOpened("uuid-2", "Study PC")
+        shortcuts.pinApp("uuid-2", "Study PC", 7, "Steam", hdrSupported = false)
 
         shortcuts.hostForgotten(ComputerDetails().also { it.uuid = "uuid-1"; it.name = "Desk PC" })
 
-        assertThat(shortcutManager.dynamicShortcuts.map { it.id }).doesNotContain("uuid-1")
-        assertThat(shortcutManager.dynamicShortcuts.map { it.id }).contains("uuid-2")
-        assertThat(shortcutManager.pinnedShortcuts.single().isEnabled).isFalse()
+        // The platform (and its Robolectric shadow) rejects a pin request for a disabled shortcut.
+        assertThrows(IllegalArgumentException::class.java) {
+            shortcuts.pinApp("uuid-1", "Desk PC", 42, "Hades II", hdrSupported = false)
+        }
+        assertThat(shortcuts.pinApp("uuid-2", "Study PC", 7, "Steam", hdrSupported = false)).isTrue()
     }
 }

@@ -99,6 +99,7 @@ constructor(
         }
         connection.remove(details)
         hiddenApps.clear(hostId)
+        withContext(io) { shortcuts.hostForgotten(details) }
         withContext(io) { boxArt.delete(hostId) }
     }
 

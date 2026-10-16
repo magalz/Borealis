@@ -7,6 +7,10 @@
 # exactly as upstream stores them, so syncs never show line-ending churn.
 apps/android/** -text
 
+# core/third_party holds vendored moonlight-common-c (with enet and nanors); some
+# files keep CRLF line ends: store the bytes exactly as upstream does.
+core/third_party/** -text
+
 # Borealis-owned code inside the Android build is normalized again.
 apps/android/borealis/** text=auto eol=lf
 apps/android/build-logic/** text=auto eol=lf

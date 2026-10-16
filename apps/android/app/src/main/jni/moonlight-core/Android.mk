@@ -5,41 +5,45 @@ include $(call all-subdir-makefiles)
 
 LOCAL_PATH := $(MY_LOCAL_PATH)
 
+# BOREALIS: moonlight-common-c is Borealis-owned source vendored under core/third_party
+# (ADR 0054); the path is relative to LOCAL_PATH (jni/moonlight-core up to the repository root)
+COMMON_C := ../../../../../../../core/third_party/moonlight-common-c
+
 include $(CLEAR_VARS)
 LOCAL_MODULE    := moonlight-core
 
-LOCAL_SRC_FILES := moonlight-common-c/src/AudioStream.c \
-                   moonlight-common-c/src/ByteBuffer.c \
-                   moonlight-common-c/src/Connection.c \
-                   moonlight-common-c/src/ConnectionTester.c \
-                   moonlight-common-c/src/ControlStream.c \
-                   moonlight-common-c/src/FakeCallbacks.c \
-                   moonlight-common-c/src/InputStream.c \
-                   moonlight-common-c/src/LinkedBlockingQueue.c \
-                   moonlight-common-c/src/Misc.c \
-                   moonlight-common-c/src/Platform.c \
-                   moonlight-common-c/src/PlatformCrypto.c \
-                   moonlight-common-c/src/PlatformSockets.c \
-                   moonlight-common-c/src/RtpAudioQueue.c \
-                   moonlight-common-c/src/RtpVideoQueue.c \
-                   moonlight-common-c/src/RtspConnection.c \
-                   moonlight-common-c/src/RtspParser.c \
-                   moonlight-common-c/src/SdpGenerator.c \
-                   moonlight-common-c/src/SimpleStun.c \
-                   moonlight-common-c/src/VideoDepacketizer.c \
-                   moonlight-common-c/src/VideoStream.c \
-                   moonlight-common-c/nanors/deps/obl/oblas_common.c \
-                   moonlight-common-c/nanors/deps/obl/oblas_lite.c \
-                   moonlight-common-c/nanors/rs.c \
-                   moonlight-common-c/enet/callbacks.c \
-                   moonlight-common-c/enet/compress.c \
-                   moonlight-common-c/enet/host.c \
-                   moonlight-common-c/enet/list.c \
-                   moonlight-common-c/enet/packet.c \
-                   moonlight-common-c/enet/peer.c \
-                   moonlight-common-c/enet/protocol.c \
-                   moonlight-common-c/enet/unix.c \
-                   moonlight-common-c/enet/win32.c \
+LOCAL_SRC_FILES := $(COMMON_C)/src/AudioStream.c \
+                   $(COMMON_C)/src/ByteBuffer.c \
+                   $(COMMON_C)/src/Connection.c \
+                   $(COMMON_C)/src/ConnectionTester.c \
+                   $(COMMON_C)/src/ControlStream.c \
+                   $(COMMON_C)/src/FakeCallbacks.c \
+                   $(COMMON_C)/src/InputStream.c \
+                   $(COMMON_C)/src/LinkedBlockingQueue.c \
+                   $(COMMON_C)/src/Misc.c \
+                   $(COMMON_C)/src/Platform.c \
+                   $(COMMON_C)/src/PlatformCrypto.c \
+                   $(COMMON_C)/src/PlatformSockets.c \
+                   $(COMMON_C)/src/RtpAudioQueue.c \
+                   $(COMMON_C)/src/RtpVideoQueue.c \
+                   $(COMMON_C)/src/RtspConnection.c \
+                   $(COMMON_C)/src/RtspParser.c \
+                   $(COMMON_C)/src/SdpGenerator.c \
+                   $(COMMON_C)/src/SimpleStun.c \
+                   $(COMMON_C)/src/VideoDepacketizer.c \
+                   $(COMMON_C)/src/VideoStream.c \
+                   $(COMMON_C)/nanors/deps/obl/oblas_common.c \
+                   $(COMMON_C)/nanors/deps/obl/oblas_lite.c \
+                   $(COMMON_C)/nanors/rs.c \
+                   $(COMMON_C)/enet/callbacks.c \
+                   $(COMMON_C)/enet/compress.c \
+                   $(COMMON_C)/enet/host.c \
+                   $(COMMON_C)/enet/list.c \
+                   $(COMMON_C)/enet/packet.c \
+                   $(COMMON_C)/enet/peer.c \
+                   $(COMMON_C)/enet/protocol.c \
+                   $(COMMON_C)/enet/unix.c \
+                   $(COMMON_C)/enet/win32.c \
                    simplejni.c \
                    callbacks.c \
                    minisdl.c \
@@ -47,10 +51,10 @@ LOCAL_SRC_FILES := moonlight-common-c/src/AudioStream.c \
 # BOREALIS: forwards moonlight-common-c log lines to BorealisLog
 LOCAL_SRC_FILES += borealis_log.c
 
-LOCAL_C_INCLUDES := $(LOCAL_PATH)/moonlight-common-c/enet/include \
-                    $(LOCAL_PATH)/moonlight-common-c/nanors/deps/obl \
-                    $(LOCAL_PATH)/moonlight-common-c/nanors \
-                    $(LOCAL_PATH)/moonlight-common-c/src \
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/$(COMMON_C)/enet/include \
+                    $(LOCAL_PATH)/$(COMMON_C)/nanors/deps/obl \
+                    $(LOCAL_PATH)/$(COMMON_C)/nanors \
+                    $(LOCAL_PATH)/$(COMMON_C)/src \
 
 LOCAL_CFLAGS := -DHAS_SOCKLEN_T=1 -DLC_ANDROID -DHAVE_CLOCK_GETTIME=1
 

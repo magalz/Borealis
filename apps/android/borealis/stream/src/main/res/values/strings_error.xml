@@ -7,7 +7,9 @@
     <string name="stream_error_certificate_title">%1$s has a new certificate</string>
     <string name="stream_error_certificate_body">The host identity changed since pairing. Pair again to keep streaming.</string>
     <string name="stream_error_generic_title">Couldn\'t start %1$s</string>
-    <string name="stream_error_generic_body">The stream could not start or stopped.</string>
+    <string name="stream_error_generic_body">The stream could not start.</string>
+    <string name="stream_error_stopped_title">%1$s stopped</string>
+    <string name="stream_error_stopped_body">The stream ended. The PC may have quit the app, or the connection dropped.</string>
     <string name="stream_error_try_again">Try again</string>
     <string name="stream_error_wake_pc">Wake PC</string>
     <string name="stream_error_pair_again">Pair again</string>

@@ -1,10 +1,20 @@
 package io.github.magalz.borealis.stream
 
-/** Logs why a start failed; the exception text never reaches the screen. */
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogTag
+
+/**
+ * Logs why a start failed. The exception text can hold the address of the PC, so it goes to the
+ * log, which masks addresses per the privacy setting, and never to the screen.
+ */
 object StartFailureLog {
-    /** Logs the [error] of the start [step], with the addresses masked per the privacy setting. */
+    /** Logs the [error] of the start [step]. */
     @JvmStatic
     fun failed(step: String, error: Throwable) {
-        // Not written yet.
+        BorealisLog.w(
+            LogTag.LAUNCH,
+            "start failed: ${error.javaClass.simpleName}: ${error.message.orEmpty()}",
+            "step" to step,
+        )
     }
 }

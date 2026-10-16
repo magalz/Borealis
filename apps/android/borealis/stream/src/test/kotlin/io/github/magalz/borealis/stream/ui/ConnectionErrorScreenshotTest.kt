@@ -37,7 +37,7 @@ class ConnectionErrorScreenshotTest {
             FormFactor.Tv,
             "Desktop",
             "Desk PC",
-            StreamFailure(FailureKind.HOST_BUSY, "Error 503 · Desktop · HTTP 503", null),
+            StreamFailure(FailureKind.HOST_BUSY, "Error 503 · launch · HTTP 503", null),
         )
 
     @Test
@@ -48,7 +48,7 @@ class ConnectionErrorScreenshotTest {
             FormFactor.Phone,
             "Desktop",
             "Living Room PC",
-            StreamFailure(FailureKind.HOST_OFFLINE, "Error 110 · Desktop", null),
+            StreamFailure(FailureKind.HOST_OFFLINE, "Error 0 · serverinfo", null),
         )
 
     @Test
@@ -59,7 +59,11 @@ class ConnectionErrorScreenshotTest {
             FormFactor.Phone,
             "Desktop",
             "Desk PC",
-            StreamFailure(FailureKind.CERTIFICATE_CHANGED, "Error 401 · Desktop · HTTP 401", null),
+            StreamFailure(
+                FailureKind.CERTIFICATE_CHANGED,
+                "Error 401 · serverinfo · HTTP 401",
+                null,
+            ),
         )
 
     @Test
@@ -107,7 +111,11 @@ class ConnectionErrorScreenshotTest {
             FormFactor.Phone,
             "Desktop",
             "Desk PC",
-            StreamFailure(FailureKind.CERTIFICATE_CHANGED, "Error 401 · Desktop · HTTP 401", null),
+            StreamFailure(
+                FailureKind.CERTIFICATE_CHANGED,
+                "Error 401 · serverinfo · HTTP 401",
+                null,
+            ),
             fontScale = 2f,
         )
 

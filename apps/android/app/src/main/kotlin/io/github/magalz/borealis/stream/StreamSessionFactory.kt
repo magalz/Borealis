@@ -26,12 +26,13 @@ object StreamSessionFactory {
 
     /**
      * The step of the start that the connection's stage [reported] stands for. The first stage the
-     * connection reports carries the app name, and it comes before the app is requested; the stages
-     * of the stream itself (RTSP handshake, control, video, audio, input) come after it.
+     * connection reports carries the app name and only says that the start began, so Connecting
+     * stays current until the app is requested (`launchStarting`); the stages of the stream itself
+     * (RTSP handshake, control, video, audio, input) come after it.
      */
     @JvmStatic
     fun startStage(reported: String, appName: String): StartStage =
-        if (reported == appName) StartStage.STARTING_APP else StartStage.PREPARING_DISPLAY
+        if (reported == appName) StartStage.CONNECTING else StartStage.PREPARING_DISPLAY
 
     /**
      * The session of [activity]'s stream. The docked keyboard is for phones. [pcName] and [appName]

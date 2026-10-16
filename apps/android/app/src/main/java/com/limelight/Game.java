@@ -138,6 +138,10 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
     private boolean displayedFailureDialog = false;
     private boolean connecting = false;
     private boolean connected = false;
+    // BOREALIS: the first frame was on screen, so an ending stream "stopped" and did not fail to start (stream)
+    private volatile boolean firstFrameShown;
+    // BOREALIS: the last fixed text of a failed start, shown on the error screen instead of as a toast (stream)
+    private volatile String startNote;
     private boolean autoEnterPip = false;
     private boolean surfaceCreated = false;
     private boolean attemptedConnection = false;
@@ -406,6 +410,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                 glPrefs.glRenderer);
         // BOREALIS: first rendered frame ends the preparing message and the watchdog
         decoderRenderer.firstFrameSignal.setListener(() -> {
+            firstFrameShown = true; // BOREALIS
             startupGuard.onFirstFrame();
             streamSession.onFirstFrame();
         });
@@ -2359,7 +2364,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                     // BOREALIS: the chrome shows the classified failure (stream)
                     boolean portBlocked = portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0;
                     streamSession.onFailed(StreamFailures.failure(Game.this,
-                            StreamFailures.facts(stage, errorCode, portFlags, false, conn), portBlocked));
+                            StreamFailures.facts(stage, errorCode, portFlags, false, firstFrameShown, startNote, conn), portBlocked));
                 }
             }
         });
@@ -2398,7 +2403,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                         // BOREALIS: the chrome shows the classified failure (stream)
                         boolean portBlocked = portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0;
                         streamSession.onFailed(StreamFailures.failure(Game.this,
-                                StreamFailures.facts(null, errorCode, portFlags, true, conn), portBlocked));
+                                StreamFailures.facts(null, errorCode, portFlags, true, firstFrameShown, startNote, conn), portBlocked));
                     }
                     else {
                         finish();
@@ -2489,12 +2494,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
 
     @Override
     public void displayMessage(final String message) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(Game.this, message, Toast.LENGTH_LONG).show();
-            }
-        });
+        startNote = message; // BOREALIS: the error screen shows it under the raw code, not a toast over the screen
     }
 
     @Override

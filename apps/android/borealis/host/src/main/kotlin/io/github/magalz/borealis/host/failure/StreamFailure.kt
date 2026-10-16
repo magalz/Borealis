@@ -11,7 +11,10 @@ enum class CauseKind {
 
 /** The raw facts about a failed stream start or a stream that ended, for the classifier. */
 data class FailureFacts(
-    /** The connection stage that failed, as the stack reports it. */
+    /**
+     * The connection stage that failed: a [StartSteps] word for a step of the HTTP start, or the
+     * name moonlight-common-c gives to a stage of the stream.
+     */
     val stage: String?,
     val errorCode: Int,
     val portFlags: Int,
@@ -33,7 +36,7 @@ enum class FailureKind {
     CERTIFICATE_CHANGED,
     GENERIC,
 
-    /** A stream that ran and then ended with a generic failure. */
+    /** A stream that reached the first frame and then ended with a generic failure. */
     STOPPED,
 }
 

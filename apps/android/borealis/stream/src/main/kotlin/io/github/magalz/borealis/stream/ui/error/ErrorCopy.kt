@@ -12,7 +12,8 @@ internal enum class StateAction {
 
 /**
  * The words of one failure kind. The title takes the host name, or the app name for
- * [FailureKind.GENERIC]; the state action is what the user can do about this kind, if anything.
+ * [FailureKind.GENERIC] and [FailureKind.STOPPED]; the state action is what the user can do about
+ * this kind, if anything.
  */
 internal class ErrorCopy(
     @StringRes val title: Int,
@@ -36,7 +37,8 @@ internal fun errorCopy(kind: FailureKind): ErrorCopy =
                 R.string.stream_error_certificate_body,
                 StateAction.PAIR_AGAIN,
             )
-        FailureKind.GENERIC,
-        FailureKind.STOPPED ->
+        FailureKind.GENERIC ->
             ErrorCopy(R.string.stream_error_generic_title, R.string.stream_error_generic_body, null)
+        FailureKind.STOPPED ->
+            ErrorCopy(R.string.stream_error_stopped_title, R.string.stream_error_stopped_body, null)
     }

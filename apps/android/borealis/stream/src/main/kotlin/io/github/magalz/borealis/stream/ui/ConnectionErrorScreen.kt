@@ -53,8 +53,14 @@ fun ConnectionErrorScreen(
     val colors = LocalBorealisColors.current
     val gutter = LocalBorealisSpacing.current.gutter
     val copy = errorCopy(failure.kind)
-    // The title of a generic failure names the app; every other kind names the host.
-    val subject = if (failure.kind == FailureKind.GENERIC) appLabel(appName) else hostName
+    // The title of a generic failure and of a stopped stream names the app; every other kind names
+    // the host.
+    val subject =
+        when (failure.kind) {
+            FailureKind.GENERIC,
+            FailureKind.STOPPED -> appLabel(appName)
+            else -> hostName
+        }
     Box(
         Modifier.fillMaxSize()
             .background(colors.page)

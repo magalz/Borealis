@@ -17,14 +17,18 @@ import io.github.magalz.borealis.host.video.StreamErrorHints
  * The explanations the stream activity used to put in its error dialog (another device was starting
  * its stream, the network blocks Borealis, no video arrived, the LuminalShine hint) are not lost:
  * they go into the `portHint` that the error screen shows under the raw code, after the
- * classifier's own port text when it has one, separated by a blank line.
+ * classifier's own port text when it has one, separated by a blank line. The fixed texts of the
+ * start path (for example that the session was not started by this device) join them. The text of
+ * an exception never does: it goes to the log, where addresses are masked.
  */
 object StreamFailures {
     private const val SEPARATOR = "\n\n"
 
     /**
      * The facts of a failed stage ([terminated] false, [stage] set) or of a connection that ended
-     * ([terminated] true, no stage). [connection] says why a start failed; it may be missing.
+     * ([terminated] true, no stage). [streamed] says that the first frame was on screen before it
+     * ended, and [note] is the fixed text the start meant for the user. [connection] says why a
+     * start failed; it may be missing.
      */
     @JvmStatic
     fun facts(
@@ -32,6 +36,8 @@ object StreamFailures {
         errorCode: Int,
         portFlags: Int,
         terminated: Boolean,
+        streamed: Boolean,
+        note: String?,
         connection: NvConnection?,
     ): FailureFacts =
         FailureFacts(
@@ -43,22 +49,9 @@ object StreamFailures {
             httpCode = connection?.lastHttpCode()?.takeIf { it != 0 },
             resumeCollision = connection?.endedByResumeCollision() ?: false,
             retriesExhausted = connection?.launchRetriesExhausted() ?: false,
+            streamed = streamed,
+            note = note,
         )
-
-    /**
-     * The facts of a failed stage or of a connection that ended, with [streamed] (the first frame
-     * was on screen) and the fixed [note] the start path meant for the user.
-     */
-    @JvmStatic
-    fun facts(
-        stage: String?,
-        errorCode: Int,
-        portFlags: Int,
-        terminated: Boolean,
-        streamed: Boolean,
-        note: String?,
-        connection: NvConnection?,
-    ): FailureFacts = facts(stage, errorCode, portFlags, terminated, connection)
 
     /**
      * The classified failure. [portBlocked] is the result of the network test: the connection of
@@ -99,6 +92,7 @@ object StreamFailures {
                 listOfNotNull(
                         if (facts.resumeCollision) plain(HostR.string.launch_resume_collision)
                         else null,
+                        facts.note,
                         blocked,
                     )
                     .joinToString(SEPARATOR)

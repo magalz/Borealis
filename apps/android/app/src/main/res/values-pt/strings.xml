@@ -23,7 +23,6 @@
     <string name="conn_client_latency">Latência média de decodificação de quadros:</string>
     <string name="conn_client_latency_hw">latência do decodificador de hardware:</string>
     <string name="conn_error_msg">Falha ao iniciar</string>
-    <string name="conn_terminated_title">Conexão Encerrada</string>
     <string name="conn_terminated_msg">A conexão foi encerrada</string>
     <string name="perf_overlay_renderingfps">Taxa de quadros renderizando: %1$.2f FPS</string>
     <string name="perf_overlay_netdrops">Quadros dropados pela rede: %1$.2f%%</string>
@@ -105,8 +104,6 @@
     <string name="no_frame_received_error">A sua conexão de rede não está funcionando bem. Reduza a configuração da taxa de bits do vídeo ou tente uma conexão mais rápida.</string>
     <string name="check_ports_msg">Verifique o firewall e permita a(s) seguinte(s) para porta(s):</string>
     <string name="conn_hardware_latency">Latência média de decodificação de hardware:</string>
-    <string name="conn_starting">Iniciando</string>
-    <string name="conn_error_title">Erro de Conexão</string>
     <string name="yes">Sim</string>
     <string name="no">Não</string>
     <string name="help">Ajuda</string>
@@ -161,8 +158,6 @@
     <string name="error_unknown_host">Falha ao encontrar o host</string>
     <string name="title_setup_guide">Guia de configuração</string>
     <string name="title_full_range">Forçar vídeo de gama completa de cores (Experimental)</string>
-    <string name="conn_establishing_title">Estabelecendo Conexão</string>
-    <string name="conn_establishing_msg">Iniciando a conexão</string>
     <string name="summary_fps_list">Aumente para uma transmissão de vídeo mais suave. Diminua para melhor desempenho em aparelhos de baixo custo.</string>
     <string name="suffix_seekbar_deadzone">%</string>
     <string name="title_checkbox_xb1_driver">Driver de gamepad USB Xbox 360/One</string>

@@ -25,16 +25,11 @@
     <string name="message_decoding_reset">Il decodificatore video del dispositivo continua a funzionare in modo anomalo con le impostazioni di streaming selezionate. Le impostazioni di streaming sono state ripristinate ai valori predefiniti.</string>
     <string name="error_usb_prohibited">L\'accesso USB è vietato dall\'amministratore del dispositivo. Verifica le impostazioni Knox o MDM.</string>
     <!-- Start application messages -->
-    <string name="conn_establishing_title">Connessione in corso</string>
-    <string name="conn_establishing_msg">Avvio connessione</string>
     <string name="conn_metered">Attenzione: la rete attiva prevede costi aggiuntivi in base all\'utilizzo!</string>
     <string name="conn_client_latency">Latenza decodifica fotogrammi media:</string>
     <string name="conn_client_latency_hw">latenza decodificatore hardware:</string>
     <string name="conn_hardware_latency">Latenza decodificatore hardware media:</string>
-    <string name="conn_starting">Avvio in corso</string>
-    <string name="conn_error_title">Errore connessione</string>
     <string name="conn_error_msg">Avvio fallito</string>
-    <string name="conn_terminated_title">Connessione interrotta</string>
     <string name="conn_terminated_msg">La connessione è stata interrotta.</string>
     <!-- General strings -->
     <string name="yes">Sì</string>

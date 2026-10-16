@@ -11,7 +11,6 @@
     <string name="perf_overlay_renderingfps">Opptegningsbilderammetakt: %1$.2f BPS</string>
     <string name="perf_overlay_netdrops">Bilderammer droppet av din nettverkstilknytning: %1$.2f%%</string>
     <string name="perf_overlay_dectime">Gjennomsnittlig dekodingstid: %1$.2f ms</string>
-    <string name="conn_starting">Starter</string>
     <string name="conn_hardware_latency">Gjennomsnittlig latens for maskinvarerammedekoding:</string>
     <string name="conn_client_latency_hw">maskinvaredekoderlatens:</string>
     <string name="conn_client_latency">Gjennomsnittlig latens for bilderammedekoding:</string>
@@ -66,12 +65,8 @@
     <string name="no">Nei</string>
     <string name="yes">Ja</string>
     <string name="conn_terminated_msg">Tilkoblingen ble avsluttet</string>
-    <string name="conn_terminated_title">Tilkobling avsluttet</string>
     <string name="conn_error_msg">Klarte ikke å starte</string>
-    <string name="conn_error_title">Tilkoblingsfeil</string>
     <string name="conn_metered">Advarsel: Din aktive nettverkstilknytning er kvotebasert.</string>
-    <string name="conn_establishing_msg">Starter tilkobling</string>
-    <string name="conn_establishing_title">Etablerer tilkobling</string>
     <string name="wol_waking_pc">Vekker opp PC …</string>
     <string name="pair_pc_offline">Datamaskinen er frakoblet</string>
     <string name="help_loading_msg">Laster inn hjelpeside …</string>

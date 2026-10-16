@@ -2,8 +2,6 @@
 <resources>
     <string name="scut_deleted_pc">PC usunięty</string>
     <string name="check_ports_msg">Sprawdź zaporę sieciową i reguły przekierowania portów:</string>
-    <string name="conn_establishing_title">Nawiązywanie połączenia</string>
-    <string name="conn_establishing_msg">Uruchamianie połączenia</string>
     <string name="yes">Tak</string>
     <string name="title_audio_config_list">Konfiguracja dźwięku przestrzennego</string>
     <string name="summary_audio_config_list">Włączenie dźwięku przestrzennego 5.1 lub 7.1 dla systemów kina domowego</string>
@@ -152,8 +150,6 @@
     <string name="conn_client_latency_hw">opóźnienie dekodera sprzętowego:</string>
     <string name="conn_metered">Ostrzeżenie: Aktywne połączenie sieciowe jest taryfowe!</string>
     <string name="conn_hardware_latency">Średnie opóźnienie dekodowania sprzętowego:</string>
-    <string name="conn_starting">Uruchamianie</string>
-    <string name="conn_error_title">Błąd połączenia</string>
     <string name="dialog_title_reset_osc">Reset układu</string>
     <string name="dialog_text_reset_osc">Czy na pewno chcesz usunąć zapisany układ kontrolek ekranowych?</string>
     <string name="summary_checkbox_enable_pip">Umożliwia wyświetlanie strumienia (ale nie sterowanie nim) podczas pracy wielozadaniowej</string>
@@ -184,7 +180,6 @@
     <string name="frame_conversion_error">Komputer host zgłosił krytyczny błąd kodowania wideo.
 \n
 \nSpróbuj wyłączyć tryb HDR, zmienić rozdzielczość przesyłania strumieniowego lub rozdzielczość wyświetlacza komputera hosta.</string>
-    <string name="conn_terminated_title">Połączenie zakończone</string>
     <string name="applist_menu_cancel">Anuluj</string>
     <string name="category_basic_settings">Ustawienia podstawowe</string>
     <string name="text_native_res_dialog">Natywna rozdzielczość i/lub liczba klatek na sekundę mogą nie być obsługiwane przez serwer streamingu. Prawdopodobnie konieczne będzie ręczne skonfigurowanie odpowiedniego niestandardowego trybu wyświetlania dla komputera hosta.

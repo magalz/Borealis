@@ -97,13 +97,10 @@
     <string name="no">Nem</string>
     <string name="yes">Igen</string>
     <string name="conn_terminated_msg">A kapcsolat megszakadt.</string>
-    <string name="conn_terminated_title">A kapcsolat megszűnt</string>
     <string name="conn_error_msg">Nem sikerült elindítani</string>
     <string name="conn_client_latency_hw">hardveres dekóder késleltetés:</string>
     <string name="conn_client_latency">Átlagos képkocka-dekódolási késleltetés:</string>
     <string name="conn_metered">Figyelem: Az aktív hálózati kapcsolatod emelt díjas!</string>
-    <string name="conn_establishing_msg">Kapcsolódás</string>
-    <string name="conn_establishing_title">Kapcsolat létesítése</string>
     <string name="check_ports_msg">Ellenőrizd a tűzfal- és porttovábbítási beállításokat a következő port(ok) esetén:</string>
     <string name="early_termination_error">Valami rosszul sikerült a gazdagépen az adatfolyam indításakor.\n\nGyőződj meg arról, hogy a gazdagépen nincs megnyitva DRM-védett tartalom. Megpróbálhatod újraindítani a gazdagépet is.</string>
     <string name="no_frame_received_error">A hálózati kapcsolat nem működik megfelelően. Csökkentsd a videó bitrátáját, vagy próbálkozz gyorsabb kapcsolattal.</string>
@@ -115,8 +112,6 @@
     <string name="message_decoding_error">A Moonlight összeomlott az eszköz videódekóderével való inkompatibilitás miatt. Próbáld meg módosítani a streamelési beállításokat, ha az összeomlások továbbra is fennállnak.</string>
     <string name="title_decoding_error">A videó dekóder összeomlott</string>
     <string name="error_404">A GFE HTTP 404 hibát adott vissza. Győződj meg arról, hogy a számítógépen támogatott GPU fut. A távoli asztali szoftver használata szintén ezt a hibát okozhatja. Próbáld újraindítani a gépet, vagy telepítsd újra a GFE-t.</string>
-    <string name="conn_error_title">Csatlakozási hiba</string>
-    <string name="conn_starting">Indítás</string>
     <string name="conn_hardware_latency">Átlagos hardveres dekódolási késleltetés:</string>
     <string name="error_unknown_host">Nem sikerült feloldani a gazdagépet</string>
     <string name="wol_waking_pc">A számítógép felébresztése…</string>

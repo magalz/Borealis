@@ -15,16 +15,11 @@
     Remote desktop software kan soms ook voor deze fout zorgen. Probeer de computer opnieuw op te starten of GFE te herinstalleren.
   </string>
     <!-- Start application messages -->
-    <string name="conn_establishing_title">Verbinding maken</string>
-    <string name="conn_establishing_msg">Verbinding starten</string>
     <string name="conn_metered">Waarschuwing: Actieve internet verbinding bevat een datalimiet!</string>
     <string name="conn_client_latency">Gemiddelde frame decoding reactietijd:</string>
     <string name="conn_client_latency_hw">hardware decoder reactietijd:</string>
     <string name="conn_hardware_latency">Gemiddelde hardware decoding reactietijd:</string>
-    <string name="conn_starting">Starten</string>
-    <string name="conn_error_title">Verbindingsprobleem</string>
     <string name="conn_error_msg">Starten mislukt</string>
-    <string name="conn_terminated_title">Verbinding beëindigd</string>
     <string name="conn_terminated_msg">De verbinding is beëindigd.</string>
     <!-- General strings -->
     <string name="yes">Ja</string>

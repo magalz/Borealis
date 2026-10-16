@@ -5,8 +5,6 @@
     <string name="category_input_settings">Girdi Ayarları</string>
     <string name="summary_language_list">Moonlight için kullanılacak olan dil</string>
     <string name="dialog_title_osc_opacity">Saydamlığı değiştir</string>
-    <string name="conn_error_title">Bağlantı Hatası</string>
-    <string name="conn_starting">Başlatılıyor</string>
     <string name="conn_error_msg">Başlatma başarısız</string>
     <string name="summary_audio_config_list">Ev-sinema sistemleri için 5.1 yada 7.1 surround sesi etkinleştir</string>
     <string name="title_checkbox_host_audio">Sesleri bilgisayarda oynat</string>
@@ -40,8 +38,6 @@
 \n
 \nBilgisayarınızda DRM korumalı bir içeriğin açık olmadığından emin olun. Ayrıca ana bilgisayarınızı yeniden başlatmayı da deneyebilirsiniz.</string>
     <string name="check_ports_msg">Bağlantı noktaları için güvenlik duvarınızı ve bağlantı noktası yönlendirme kurallarınızı kontrol edin:</string>
-    <string name="conn_establishing_title">Bağlantı Kuruluyor</string>
-    <string name="conn_terminated_title">Bağlantı sonlandırıldı</string>
     <string name="conn_terminated_msg">Bağlantı sonlandırıldı.</string>
     <string name="yes">Evet</string>
     <string name="help">Yardım</string>
@@ -66,7 +62,6 @@
     <string name="title_fps_list">Video kare hızı</string>
     <string name="title_seekbar_bitrate">Video bit hızı</string>
     <string name="summary_checkbox_touchscreen_trackpad">Etkinleştirilirse, dokunmatik ekran bir dokunmatik fare gibi davranır. Devre dışı bırakılırsa, dokunmatik ekran doğrudan fare imlecini kontrol eder.</string>
-    <string name="conn_establishing_msg">Bağlantı başlatılıyor</string>
     <string name="conn_metered">Uyarı: Aktif ağ bağlantınız ölçülüdür!</string>
     <string name="conn_client_latency">Ortalama kare kod çözme gecikmesi:</string>
     <string name="conn_client_latency_hw">donanım kod çözücü gecikmesi:</string>

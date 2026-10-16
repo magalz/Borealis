@@ -28,16 +28,11 @@
     <string name="no_video_received_error">Kein Video vom Host empfangen.</string>
     <string name="no_frame_received_error">Deine Netzwerkverbindung funktioniert nicht gut. Reduziere die Einstellung der Videobitrate oder benutze eine schnellere Verbindung.</string>
     <!-- Start application messages -->
-    <string name="conn_establishing_title">Verbindung herstellen</string>
-    <string name="conn_establishing_msg">Verbindung starten</string>
     <string name="conn_metered">Warnung: Das Datentransfervolumen deiner Netzwerkverbindung ist limitiert!</string>
     <string name="conn_client_latency">Durchschnittliche Frame-Dekodierungslatenz:</string>
     <string name="conn_client_latency_hw">Hardware-Dekodierungslatenz:</string>
     <string name="conn_hardware_latency">Durchschnittliche Hardware-Dekodierungslatenz:</string>
-    <string name="conn_starting">Starten</string>
-    <string name="conn_error_title">Verbindungsfehler</string>
     <string name="conn_error_msg">Start fehlgeschlagen</string>
-    <string name="conn_terminated_title">Verbindung beendet</string>
     <string name="conn_terminated_msg">Die Verbindung wurde beendet.</string>
     <!-- General strings -->
     <string name="yes">Ja</string>

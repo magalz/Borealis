@@ -23,16 +23,11 @@
     <string name="message_decoding_reset">由於裝置的視訊解碼器在你選取的串流設定上持續當機，已重設你的串流設定。</string>
     <string name="error_usb_prohibited">裝置管理員已禁止 USB 訪問。請檢查您的 Knox 或 MDM 設定。</string>
     <!-- Start application messages -->
-    <string name="conn_establishing_title">正在建立連線</string>
-    <string name="conn_establishing_msg">正在啟動連線</string>
     <string name="conn_metered">警告：你正在使用行動網路連線！</string>
     <string name="conn_client_latency">平均每個影格解碼延時：</string>
     <string name="conn_client_latency_hw">硬體解碼器延時：</string>
     <string name="conn_hardware_latency">硬體解碼器平均延時：</string>
-    <string name="conn_starting">正在啟動</string>
-    <string name="conn_error_title">連線錯誤</string>
     <string name="conn_error_msg">無法啟動</string>
-    <string name="conn_terminated_title">連線已終止</string>
     <string name="conn_terminated_msg">連線已終止</string>
     <!-- General strings -->
     <string name="yes"> 確定 </string>

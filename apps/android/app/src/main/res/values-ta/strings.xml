@@ -29,16 +29,11 @@
     <string name="early_termination_error">ச்ட்ரீமைத் தொடங்கும்போது உங்கள் புரவலன் கணினியில் ஏதோ தவறு ஏற்பட்டது.\n\n உங்கள் புரவலன் கணினியில் டி.ஆர்.எம்-பாதுகாக்கப்பட்ட உள்ளடக்கம் திறக்கப்படவில்லை என்பதை உறுதிப்படுத்திக் கொள்ளுங்கள். உங்கள் புரவலன் கணினியை மறுதொடக்கம் செய்ய முயற்சி செய்யலாம்.</string>
     <string name="frame_conversion_error">புரவலன் பிசி ஒரு அபாயகரமான வீடியோ குறியாக்க பிழையை அறிவித்தது.\n\n எச்டிஆர் பயன்முறையை முடக்க முயற்சிக்கவும், ச்ட்ரீமிங் தீர்மானத்தை மாற்றவும் அல்லது உங்கள் புரவலன் கணினியின் காட்சி தெளிவுத்திறனை மாற்றவும் முயற்சிக்கவும்.</string>
     <string name="check_ports_msg">துறைமுகம் (கள்) க்கான உங்கள் ஃபயர்வால் மற்றும் துறைமுகம் பகிர்தல் விதிகளை சரிபார்க்கவும்:</string>
-    <string name="conn_establishing_title">இணைப்பை நிறுவுதல்</string>
-    <string name="conn_establishing_msg">இணைப்பு தொடக்க</string>
     <string name="conn_metered">எச்சரிக்கை: உங்கள் செயலில் உள்ள பிணைய இணைப்பு அளவிடப்படுகிறது!</string>
     <string name="conn_client_latency">சராசரி பிரேம் டிகோடிங் தாமதம்:</string>
     <string name="conn_client_latency_hw">வன்பொருள் டிகோடர் தாமதம்:</string>
     <string name="conn_hardware_latency">சராசரி வன்பொருள் டிகோடிங் தாமதம்:</string>
-    <string name="conn_starting">தொடங்குகிறது</string>
-    <string name="conn_error_title">இணைப்பு பிழை</string>
     <string name="conn_error_msg">தொடங்கத் தவறிவிட்டது</string>
-    <string name="conn_terminated_title">இணைப்பு நிறுத்தப்பட்டது</string>
     <string name="conn_terminated_msg">இணைப்பு நிறுத்தப்பட்டது.</string>
     <string name="error_code_prefix">பிழைக் குறியீடு:</string>
     <string name="yes">ஆம்</string>

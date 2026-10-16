@@ -13,8 +13,6 @@
     <string name="title_decoding_error">Срив на видео декодера</string>
     <string name="no_frame_received_error">Мрежовата връзка не работи добре. Намалете настройката за побитова скорост на видеото или опитайте с по-бърза връзка.</string>
     <string name="conn_client_latency">Средно забавяне при декодиране на кадър:</string>
-    <string name="conn_starting">Стартиране</string>
-    <string name="conn_terminated_title">Връзката е прекратена</string>
     <string name="yes">Да</string>
     <string name="summary_resolution_list">Увеличете, за да подобрите яснотата на изображението. Намалете за по-добра производителност на устройства от по-нисък клас и по-бавни мрежи.</string>
     <string name="title_fps_list">Честота на видео кадрите</string>
@@ -39,11 +37,8 @@
     <string name="title_frame_pacing">Темпо на видео кадрите</string>
     <string name="pacing_balanced">Балансирано</string>
     <string name="check_ports_msg">Проверете защитната стена и правилата за препращане на портове за следния порт или портове:</string>
-    <string name="conn_establishing_title">Установяване на връзка</string>
-    <string name="conn_establishing_msg">Стартиране на връзката</string>
     <string name="conn_error_msg">Неуспешно стартиране</string>
     <string name="conn_terminated_msg">Връзката беше прекратена.</string>
-    <string name="conn_error_title">Грешка във връзката</string>
     <string name="no">Не</string>
     <string name="help">Помощ</string>
     <string name="delete_pc_msg">Наистина ли искате да изтриете този компютър?</string>

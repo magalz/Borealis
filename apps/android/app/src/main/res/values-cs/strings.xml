@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="conn_establishing_title">Připojování</string>
     <string name="conn_metered">Varování: Vaše aktivní připojení je měřené!</string>
     <string name="conn_error_msg">Spouštění se nezdařilo</string>
     <string name="conn_client_latency_hw">zpoždění hardwarového dekodéru:</string>
-    <string name="conn_terminated_title">Spojení ukončeno</string>
     <string name="resolution_prefix_native_fullscreen">Nativní celá obrazovka</string>
     <string name="summary_checkbox_enable_audiofx">Umožňuje fungování zvukových efektů během streamování, ale může zvýšit zpoždění zvuku</string>
     <string name="early_termination_error">Na hostitelském PC se něco pokazilo při spouštění streamu.
@@ -91,9 +89,6 @@
     <string name="pair_pc_ingame">Na počítači momentálně běží hra. Před párováním musíte hru zavřít.</string>
     <string name="pair_fail">Párování selhalo</string>
     <string name="title_decoding_reset">Reset nastavení videa</string>
-    <string name="conn_establishing_msg">Připojování</string>
-    <string name="conn_starting">Spouštění</string>
-    <string name="conn_error_title">Chyba připojení</string>
     <string name="frame_conversion_error">Hostitelský počítač hlásí fatální chybu enkódování videa.
 \n
 \nZkuste vypnout HDR, změňte rozlišení streamu nebo rozlišení displeje hostitelského PC.</string>

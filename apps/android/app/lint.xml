@@ -10,9 +10,8 @@
     <issue id="IconMissingDensityFolder">
         <ignore path="src/main/res"/>
     </issue>
-    <!-- BOREALIS: the stream chrome replaced the connection spinner and dialogs (conn_establishing_msg, conn_starting, conn_error_title, conn_terminated_title) and the Library shows the host-aware hint of :borealis:host instead of this Sunshine text (pair_pairing_help); these inherited strings stay in every locale until the translation sprint. -->
+    <!-- BOREALIS: the Library shows the host-aware hint of :borealis:host instead of this Sunshine text (pair_pairing_help); the inherited string stays in every locale until the translation sprint. -->
     <issue id="UnusedResources">
         <ignore regexp="pair_pairing_help"/>
-        <ignore regexp="conn_establishing_msg|conn_starting|conn_error_title|conn_terminated_title"/>
     </issue>
 </lint>

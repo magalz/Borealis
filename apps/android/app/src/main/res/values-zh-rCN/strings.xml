@@ -23,16 +23,11 @@
     <string name="message_decoding_reset"> 由于设备的视频解码器在你选择的串流设置上持续崩溃，已重置你的串流设置。 </string>
     <string name="error_usb_prohibited"> 设备管理员已禁止USB访问。请检查您的Knox或MDM设置。 </string>
     <!-- Start application messages -->
-    <string name="conn_establishing_title"> 建立连接中 </string>
-    <string name="conn_establishing_msg"> 启动连接中 </string>
     <string name="conn_metered"> 警告：你正在使用移动网络连接！ </string>
     <string name="conn_client_latency"> 平均每帧解码延迟：</string>
     <string name="conn_client_latency_hw"> 硬件解码器延迟：</string>
     <string name="conn_hardware_latency"> 硬件解码器平均延迟：</string>
-    <string name="conn_starting">启动中</string>
-    <string name="conn_error_title"> 连接错误 </string>
     <string name="conn_error_msg"> 启动失败 </string>
-    <string name="conn_terminated_title"> 连接终结 </string>
     <string name="conn_terminated_msg">连接已被终结.</string>
     <!-- General strings -->
     <string name="yes"> 确定 </string>

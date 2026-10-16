@@ -5,9 +5,6 @@
     <string name="pair_pairing_help">Ja jūsu datorā ir uzstādīta Sunshine, dodieties uz Sunshine tīmekļa lietotāja saskarni un ievadiet PIN kodu tur.</string>
     <string name="pair_pc_offline">Dators ir izslēgts vai nav tiešsaistē</string>
     <string name="no_video_received_error">Video no datora nav saņemts.</string>
-    <string name="conn_establishing_title">Izveido savienojumu</string>
-    <string name="conn_establishing_msg">Savienojas</string>
-    <string name="conn_error_title">Savienojuma kļūda</string>
     <string name="error_code_prefix">Kļūdas kods:</string>
     <string name="no">Nē</string>
     <string name="help">Palīdzība</string>

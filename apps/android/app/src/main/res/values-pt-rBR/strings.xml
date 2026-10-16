@@ -26,8 +26,6 @@
     <string name="no_video_received_error">Nenhum vídeo recebido do host.</string>
     <string name="no_frame_received_error">Sua conexão de rede não está funcionando bem. Reduza a configuração da taxa de bits do vídeo ou tente uma conexão mais rápida.</string>
     <string name="early_termination_error">Algo deu errado no seu PC ao iniciar a transmissão.\n\nCertifique-se de não ter nenhum conteúdo protegido por DRM aberto em seu PC. Você também pode tentar reiniciar ele.</string>
-    <string name="conn_establishing_msg">Iniciando a conexão</string>
-    <string name="conn_establishing_title">Estabelecendo Conexão</string>
     <string name="resolution_360p">360p</string>
     <string name="resolution_480p">480p</string>
     <string name="resolution_720p">720p</string>
@@ -61,15 +59,12 @@
     <string name="slow_connection_msg">Conexão lenta com o PC
 \nReduza sua taxa de bits</string>
     <string name="poor_connection_msg">Conexão ruim com o PC</string>
-    <string name="conn_terminated_title">Conexão Encerrada</string>
     <string name="title_decoding_error">Decodificador de Vídeo Crashou</string>
     <string name="title_decoding_reset">Resetar Configurações de Vídeo</string>
     <string name="conn_metered">Aviso: Sua conexão de rede atual é limitada!</string>
     <string name="conn_client_latency">Latência média de decodificação de quadros:</string>
     <string name="conn_client_latency_hw">latência do decodificador de hardware:</string>
     <string name="conn_hardware_latency">Latência média de decodificação de hardware:</string>
-    <string name="conn_starting">Iniciando</string>
-    <string name="conn_error_title">Erro de Conexão</string>
     <string name="perf_overlay_decoder">Decodificador: %1$s</string>
     <string name="perf_overlay_incomingfps">Taxa de quadros recebidos pela rede:: %1$.2f FPS</string>
     <string name="perf_overlay_renderingfps">Taxa de quadros renderizando: %1$.2f FPS</string>

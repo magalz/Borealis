@@ -25,16 +25,11 @@
     <string name="message_decoding_reset">Le décodeur vidéo de votre appareil continue de planter avec les paramètres de streaming sélectionnés. Vos paramètres de streaming ont été réinitialisés à ceux par défaut.</string>
     <string name="error_usb_prohibited">L\'accès USB est interdit par l\'administrateur de votre appareil. Vérifiez vos paramètres Knox ou MDM.</string>
     <!-- Start application messages -->
-    <string name="conn_establishing_title">Établissement de la connexion</string>
-    <string name="conn_establishing_msg">Démarrage de la connection</string>
     <string name="conn_metered">Attention : Votre connexion réseau active est limitée !</string>
     <string name="conn_client_latency">Latence moyenne de décodage de trame :</string>
     <string name="conn_client_latency_hw">Latence du décodeur matériel :</string>
     <string name="conn_hardware_latency">Latence moyenne du décodage matériel :</string>
-    <string name="conn_starting">Démarrage</string>
-    <string name="conn_error_title">Erreur de connexion</string>
     <string name="conn_error_msg">Impossible de démarrer</string>
-    <string name="conn_terminated_title">Connexion interrompue</string>
     <string name="conn_terminated_msg">La connexion a été interrompue.</string>
     <!-- General strings -->
     <string name="yes">Oui</string>

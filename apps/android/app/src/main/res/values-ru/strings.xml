@@ -14,16 +14,11 @@
     <string name="error_unknown_host">Не удалось найти хост</string>
     <string name="error_404">GFE вернул ошибку HTTP 404. Убедитесь что Ваш ПК использует поддерживаемый GPU. Использование программ для удалённого доступа также может вызывать эту ошибку. Попробуйте перезагрузить компьютер или переустановить GFE.</string>
     <!-- Start application messages -->
-    <string name="conn_establishing_title">Создание соединения</string>
-    <string name="conn_establishing_msg">Подключение</string>
     <string name="conn_metered">Внимание: Происходит измерение Вашего сетевого соединения!</string>
     <string name="conn_client_latency">Средняя задержка декодирования кадра: </string>
     <string name="conn_client_latency_hw">Задержка аппаратного декодирования:</string>
     <string name="conn_hardware_latency">Средняя задержка аппаратного декодирования:</string>
-    <string name="conn_starting">Запуск</string>
-    <string name="conn_error_title">Ошибка соединения</string>
     <string name="conn_error_msg">Запуск не удался</string>
-    <string name="conn_terminated_title">Соединение разорвано</string>
     <string name="conn_terminated_msg">Подключение было прервано.</string>
     <!-- General strings -->
     <string name="yes">Да</string>

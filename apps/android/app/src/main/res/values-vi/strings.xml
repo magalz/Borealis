@@ -97,15 +97,11 @@
     <string name="delete_pc_msg">Bạn có chắc bạn muốn xoá PC này không\?</string>
     <string name="yes">Có</string>
     <string name="conn_terminated_msg">Kết nối đã bị chấm dứt</string>
-    <string name="conn_terminated_title">Kết nối bị chấm dứt</string>
     <string name="conn_error_msg">Bắt đầu thất bại</string>
-    <string name="conn_error_title">Lỗi kết nối</string>
-    <string name="conn_starting">Đang bắt đầu</string>
     <string name="conn_hardware_latency">Độ trễ giải mã phần cứng trung bình:</string>
     <string name="conn_client_latency_hw">độ trễ trình giải mã phần cứng:</string>
     <string name="conn_client_latency">Độ trễ giải mã khung hình trung bình:</string>
     <string name="conn_metered">Cảnh báo: Kết nối mạng đang hoạt động là có trả phí!</string>
-    <string name="conn_establishing_title">Đang lập kết nối</string>
     <string name="check_ports_msg">Hãy kiểm tra tường lửa và các quy tắc chuyển tiếp cổng để tìm (các) cổng:</string>
     <string name="early_termination_error">Có gì đó sai đã xảy ra trên PC chủ của bạn khi bắt đầu stream.
 \n
@@ -127,7 +123,6 @@
     <string name="category_host_settings">Cài đặt chủ</string>
     <string name="help">Trợ giúp</string>
     <string name="no">Không</string>
-    <string name="conn_establishing_msg">Đang bắt đầu kết nối</string>
     <string name="wol_waking_pc">Đang đánh thức PC…</string>
     <string name="pair_fail">Ghép đôi thất bại</string>
     <string name="pair_pc_ingame">Máy tính hiện đang trong một trò chơi. Bạn phải đóng trò chơi trước khi ghép đôi.</string>

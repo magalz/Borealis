@@ -16,16 +16,11 @@
     <string name="no_video_received_error">Ingen video har tagits emot från värden.</string>
     <string name="no_frame_received_error">Din nätverksanslutning fungerar inte bra. Minska inställningen för videobitrate eller prova en snabbare anslutning.</string>
     <string name="check_ports_msg">Kontrollera din brandvägg och dina regler för portvidarebefordran för port(er):</string>
-    <string name="conn_establishing_title">Upprättar fogning</string>
-    <string name="conn_establishing_msg">Startar fogning</string>
     <string name="conn_metered">Varning: Din aktiva nätverksfogning är mätbar!</string>
     <string name="conn_client_latency">Genomsnittlig latenstid för ramavkodning:</string>
     <string name="conn_client_latency_hw">Latency för hårdvaruavkodare:</string>
     <string name="conn_hardware_latency">Genomsnittlig latenstid för maskinvaruavkodning:</string>
-    <string name="conn_starting">Börjar</string>
-    <string name="conn_error_title">Fogningsfel</string>
     <string name="conn_error_msg">Misslyckades att börja</string>
-    <string name="conn_terminated_title">Fogning förstörd</string>
     <string name="conn_terminated_msg">Förbindelsen avbröts.</string>
     <string name="yes">Ja</string>
     <string name="no">Nej</string>

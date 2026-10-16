@@ -9,9 +9,14 @@ import com.limelight.nvstream.http.NvApp
 import com.limelight.utils.ShortcutHelper
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.magalz.borealis.library.domain.HostShortcuts
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogTag
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /** Disables the launcher shortcuts and TV channel of a host that was removed from this device. */
 internal fun interface ShortcutCleanup {
@@ -33,14 +38,31 @@ constructor(
     private val helper
         get() = ShortcutHelper(context)
 
+    private val scope = CoroutineScope(SupervisorJob() + io)
+    private val publishing = Any()
+
     override val canPinApps: Boolean
         get() =
             !context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) &&
                 context.getSystemService(ShortcutManager::class.java).isRequestPinShortcutSupported
 
+    @Suppress("TooGenericExceptionCaught") // A launcher that fails must not take the app down.
     override fun reportHostOpened(hostId: String, hostName: String) {
-        // The user opened the host: this makes room for it among the dynamic shortcuts.
-        helper.createHostShortcut(computer(hostId, hostName), true, false)
+        // ShortcutManager calls are binder calls: not on the main thread the ViewModel runs on.
+        scope.launch {
+            try {
+                synchronized(publishing) {
+                    // The user opened the host: this makes room for it among the dynamic shortcuts.
+                    helper.createHostShortcut(computer(hostId, hostName), true, false)
+                }
+            } catch (e: RuntimeException) {
+                BorealisLog.w(
+                    LogTag.HOST,
+                    "host shortcut not published",
+                    "error" to e.javaClass.simpleName,
+                )
+            }
+        }
     }
 
     override fun pinApp(

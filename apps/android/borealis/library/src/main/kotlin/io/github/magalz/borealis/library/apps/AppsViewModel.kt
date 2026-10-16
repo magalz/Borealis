@@ -41,11 +41,18 @@ constructor(
     private var closed = false
     private var hostReported = false
 
+    /**
+     * The last app list, for a launch request, which looks at every app and not at the visible
+     * ones.
+     */
+    private var latest: AppsSnapshot? = null
+
     /** Collecting it polls the app list; it stops five seconds after the last collector leaves. */
     val uiState: StateFlow<AppsUiState> =
         combine(
                 repository
                     .apps(hostId)
+                    .onEach { latest = it }
                     .onEach(::closeIfUnavailable)
                     .onEach(::reportHostOpened)
                     .onEach(::clearGoneActions),
@@ -60,21 +67,30 @@ constructor(
     val effects: Flow<AppsEffect> = effectChannel.receiveAsFlow()
 
     /**
-     * A launch request, such as a shortcut: a tap on [appId], unless the screen is closing because
-     * the host is gone, offline or not paired. The caller waits until the apps are loaded.
+     * A launch request, such as a shortcut: a tap on [appId], also when the user hid the app since,
+     * unless the screen is closing because the host is gone, offline or not paired. The caller
+     * waits until the apps are loaded.
      */
     fun onLaunchRequested(appId: Int) {
-        if (!closed) onAppSelected(appId)
+        if (closed) return
+        val snapshot = latest ?: return
+        val running = snapshot.host?.runningApp?.id
+        val app = snapshot.items(running).firstOrNull { it.id == appId } ?: return
+        select(app, running)
     }
 
     /** A tap: start or resume when that is unambiguous, otherwise open the actions. */
     fun onAppSelected(appId: Int) {
         val state = uiState.value
         val app = state.items.firstOrNull { it.id == appId } ?: return
-        if (state.runningAppId == null || app.running) {
+        select(app, state.runningAppId)
+    }
+
+    private fun select(app: AppItemUiState, runningAppId: Int?) {
+        if (runningAppId == null || app.running) {
             send(AppsEffect.StartStream(app.toRequest(hostId)))
         } else {
-            actionsAppId.value = appId
+            actionsAppId.value = app.id
         }
     }
 
@@ -175,6 +191,11 @@ constructor(
     }
 }
 
+/** Every app, hidden ones included, with the running one marked. */
+private fun AppsSnapshot.items(runningAppId: Int?) = apps.map {
+    AppItemUiState(it.id, it.name, it.id == runningAppId, it.hidden, it.hdrSupported)
+}
+
 private fun AppsSnapshot.toUiState(
     showHidden: Boolean,
     actionsAppId: Int?,
@@ -182,9 +203,7 @@ private fun AppsSnapshot.toUiState(
     canPin: Boolean,
 ): AppsUiState {
     val running = host?.runningApp
-    val all = apps.map {
-        AppItemUiState(it.id, it.name, it.id == running?.id, it.hidden, it.hdrSupported)
-    }
+    val all = items(running?.id)
     val items =
         all.filter { showHidden || !it.hidden }
             .sortedWith(

@@ -734,7 +734,9 @@ class AppsViewModelTest {
         viewModel.effects.test {
             assertThat(awaitItem())
                 .isEqualTo(
-                    AppsEffect.StartStream(StreamRequest("host-1", 4, "Secret", hdrSupported = false))
+                    AppsEffect.StartStream(
+                        StreamRequest("host-1", 4, "Secret", hdrSupported = false)
+                    )
                 )
         }
     }

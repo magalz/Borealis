@@ -22,8 +22,9 @@ internal object ShortcutIntentParser {
         val hostId =
             extras?.getString(ShortcutExtras.UUID)?.takeIf { it.isNotBlank() }
                 ?: return LibraryLaunchRequest.Hosts
+        // Int.MIN_VALUE is what a Launch request cannot carry: it reads as no app.
         val appId = extras.getString(ShortcutExtras.APP_ID)?.trim()?.toIntOrNull()
-        return if (appId == null) {
+        return if (appId == null || appId == Int.MIN_VALUE) {
             LibraryLaunchRequest.Apps(hostId)
         } else {
             LibraryLaunchRequest.Launch(hostId, appId)

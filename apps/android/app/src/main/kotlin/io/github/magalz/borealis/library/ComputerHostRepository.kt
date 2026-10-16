@@ -99,8 +99,13 @@ constructor(
         }
         connection.remove(details)
         hiddenApps.clear(hostId)
-        withContext(io) { shortcuts.hostForgotten(details) }
-        withContext(io) { boxArt.delete(hostId) }
+        withContext(io) {
+            try {
+                shortcuts.hostForgotten(details)
+            } finally {
+                boxArt.delete(hostId)
+            }
+        }
     }
 
     override suspend fun details(hostId: String): String? =

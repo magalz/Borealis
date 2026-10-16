@@ -2,7 +2,18 @@ package io.github.magalz.borealis.host.failure
 
 import io.github.magalz.borealis.host.R
 
-/** Classifies a failed stream start or an ended stream for the connection error screen. */
+/**
+ * Classifies a failed stream start or an ended stream for the connection error screen.
+ *
+ * The first rule that matches wins:
+ * - a changed certificate: CERTIFICATE_CHANGED;
+ * - another device was starting its stream, or the 409 and 503 launch retries ran out, or a read
+ *   timed out after the TCP connection was made (the exhausted `/serverinfo` retry, UC-002-T3):
+ *   HOST_BUSY;
+ * - nothing answered the TCP connection, which includes a connect timeout (see [FailureCauses.of]),
+ *   so the PC is off or asleep: HOST_OFFLINE, where the screen offers Wake PC;
+ * - anything else: GENERIC.
+ */
 object StreamFailureClassifier {
     /**
      * [text] formats a string resource with its arguments; [portFlagsText] is

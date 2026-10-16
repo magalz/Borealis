@@ -38,7 +38,7 @@ import io.github.magalz.borealis.host.launch.ConflictChoice
 import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.StreamIntents
 import io.github.magalz.borealis.stream.StreamPhase
-import io.github.magalz.borealis.stream.ui.starting.onGamepadB
+import io.github.magalz.borealis.stream.ui.common.onGamepadB
 
 /** Marks the panel of the dialog, so a test can measure it. */
 internal const val CONFLICT_PANEL_TAG = "conflict_panel"

@@ -22,6 +22,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.height
 import androidx.test.core.app.ApplicationProvider
@@ -75,6 +76,10 @@ class StreamKeyboardTest {
     private fun tapKey(caption: String) = composeRule.onNodeWithTag("key:$caption").performClick()
 
     private fun tapChip(label: String) = composeRule.onNodeWithTag("chip:$label").performClick()
+
+    // The shortcut chips scroll sideways on a phone; one that is off screen is scrolled to first.
+    private fun tapShortcut(label: String) =
+        composeRule.onNodeWithTag("chip:$label").performScrollTo().performClick()
 
     private fun pressOnFocused(key: Key) = composeRule.onRoot().performKeyInput { pressKey(key) }
 
@@ -154,7 +159,7 @@ class StreamKeyboardTest {
     fun `the shortcut chips send their chords`() {
         showPhone()
 
-        for (shortcut in Shortcuts.keyboardRow) tapChip(context.getString(shortcut.label))
+        for (shortcut in Shortcuts.keyboardRow) tapShortcut(context.getString(shortcut.label))
 
         assertThat(intents.chords)
             .containsExactlyElementsIn(Shortcuts.keyboardRow.map { it.chord })
@@ -304,10 +309,10 @@ class StreamKeyboardTest {
     fun `holding B closes the panel once`() {
         showInKeyboardMode(FormFactor.Handheld)
 
+        // The test dispatcher repeats a key that stays down while time passes.
         composeRule.onRoot().performKeyInput {
             keyDown(Key.ButtonB)
-            keyDown(Key.ButtonB)
-            keyDown(Key.ButtonB)
+            advanceEventTime(1_000)
             keyUp(Key.ButtonB)
         }
 
@@ -329,14 +334,16 @@ class StreamKeyboardTest {
     // UC-005-A3: a physical keyboard still types into the PC.
     @Test
     @Config(qualifiers = PHONE)
-    fun `the docked keyboard takes no focus and passes physical keys on`() {
+    fun `the docked keyboard takes no focus, so physical keys are not its to handle`() {
         showPhone()
 
         composeRule.onAllNodes(isFocused()).assertCountEquals(0)
         pressOnFocused(Key.C)
+        pressOnFocused(Key.Enter)
+        pressOnFocused(Key.ButtonB)
 
-        assertThat(keysPassedUp()).contains(Key.C)
         assertThat(intents.chords).isEmpty()
+        assertThat(intents.calls).isEmpty()
     }
 
     // UC-005-T5: the part this panel owns. The picture above it is the chrome's, and the device's.

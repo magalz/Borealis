@@ -60,9 +60,8 @@ says what happened and what to do next.
 ### A3: The user cancels (branches from step 2)
 
 1. The user chooses Cancel or presses Back. The system ends the pending launch
-   and closes the stream screen. The Library is shown again
-   (TODO(verify): which screen, in the device round; no cancel message is
-   shown).
+   and closes the stream screen. The Library is shown again: the app returns to
+   the Library screen it was started from (on the TV, the Apps screen).
 2. The system does not call `/cancel` for an app it did not start
    ([host contract, section 7.6](../host-contract/luminalshine.md)).
 3. The use case ends.
@@ -118,7 +117,7 @@ says what happened and what to do next.
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
-| UC-002-T1 | Given the host answers at once, when the user starts an app, then the stages appear in order and the picture is shown after the first frame. | emulator | planned (device round, Sprint 5) |
+| UC-002-T1 | Given the host answers at once, when the user starts an app, then the stages appear in order and the picture is shown after the first frame. | emulator | exists (Sprint 5, device round) |
 | UC-002-T2 | Given `/serverinfo` times out twice and then answers, when the stream starts, then a third attempt is made within 25 s and the launch continues. | unit | exists (Sprint 3, unit) |
 | UC-002-T3 | Given `/serverinfo` still times out after 3 attempts, when the budget ends, then the screen shows Host busy and no `/launch` is sent. | unit | partly exists (Sprint 5, unit) |
 | UC-002-T4 | Given the host asks for a retry, when the launch retries, then LAUNCH_RETRY is written for each retry and the screen shows the count. | unit | exists (Sprint 2, unit) |
@@ -129,15 +128,15 @@ says what happened and what to do next.
 
 Sprint 5 built the stream screens and their logic. A test marked "exists
 (Sprint 5, unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a
-Compose test that runs on Robolectric. Emulator and device tests are planned
-for the device round (S5-T14, see
-[device validation](../development/device-validation.md)).
+Compose test that runs on Robolectric. "device round" marks a check that the
+Sprint 5 device round of 2026-10-16 ran on a TV or a phone (see
+[device validation](../development/device-validation.md), section 10).
 
 Partly covered:
 
 - UC-002-T3: the classifier turns an exhausted `/serverinfo` timeout into
-  Host busy, and the screen shows it. No test checks that `/launch` is not
-  sent after that timeout (TODO(verify)).
+  Host busy, and the screen shows it. No test checks yet that `/launch` is not
+  sent after that timeout.
 - UC-002-T5: the Cancel button of the Starting screen is tested. The return to
   the Apps screen and the cancel at every stage are not tested.
 - UC-002-T6: the error screen offers Pair again, and the classifier reports a

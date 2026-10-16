@@ -37,4 +37,8 @@
     <string name="stream_menu_quit_confirm">Quit %1$s? Unsaved work is lost.</string>
     <string name="stream_menu_quit_confirm_cancel">Cancel</string>
     <string name="stream_menu_quit_confirm_quit">Quit</string>
+    <!-- What stands for the app when the name is not known, for example after a resume. -->
+    <string name="stream_app_unknown">the running app</string>
+    <!-- Shown while the host answers a quit; %1$s is the app. -->
+    <string name="stream_quitting">Quitting %1$s…</string>
 </resources>

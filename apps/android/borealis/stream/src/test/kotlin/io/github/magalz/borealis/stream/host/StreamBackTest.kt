@@ -66,6 +66,18 @@ class StreamBackTest {
     }
 
     @Test
+    fun `back leaves while a quit is under way`() {
+        stream()
+        session.quitApp()
+        session.onFailed(aFailure)
+        actions.calls.clear()
+
+        back()
+
+        assertThat(actions.calls).containsExactly("leave")
+    }
+
+    @Test
     fun `back cancels the question about the running app`() {
         session.onConflict("Steam", "Desktop", sameApp = false, answer = ConflictAnswer())
 

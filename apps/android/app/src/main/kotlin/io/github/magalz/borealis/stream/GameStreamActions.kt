@@ -179,6 +179,7 @@ internal constructor(
                     // The stream goes on, so the user can try again.
                     quitting = false
                     SessionAudit.quitFailed()
+                    onFailed()
                     toast(
                         result.message
                             ?: activity.getString(LibraryR.string.apps_message_quit_failed)

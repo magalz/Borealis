@@ -17,7 +17,7 @@ object SessionAudit {
 
     private val active = AtomicReference<Active?>(null)
 
-    // A quit ends the stream on the host, so the termination may arrive before the quit answer.
+    // A quit ends the stream on the host, so any termination may arrive before the quit answer.
     @Volatile private var quitPending = false
 
     internal var clock: () -> Long = System::currentTimeMillis
@@ -66,7 +66,8 @@ object SessionAudit {
     }
 
     /**
-     * The user asked to quit the app on the host. A graceful termination that follows is the quit.
+     * The user asked to quit the app on the host. A termination that follows, of any code, is the
+     * quit.
      */
     @JvmStatic
     fun quitRequested() {
@@ -85,12 +86,17 @@ object SessionAudit {
         end(AuditOutcome.SUCCESS) { "reason=quit duration_s=$it" }
     }
 
-    /** The connection ended; [errorCode] 0 is the host ending it gracefully. */
+    /**
+     * The connection ended; [errorCode] 0 is the host ending it gracefully. While a quit is under
+     * way the end is the quit whatever the code: LuminalShine ends the stream with -1 as soon as it
+     * gets the cancel, and answers the request seconds later.
+     */
     @JvmStatic
     fun terminated(errorCode: Int) {
-        if (errorCode == GRACEFUL_TERMINATION) {
-            val reason = if (quitPending) "quit" else "host_ended"
-            end(AuditOutcome.SUCCESS) { "reason=$reason duration_s=$it" }
+        if (quitPending) {
+            end(AuditOutcome.SUCCESS) { "reason=quit duration_s=$it" }
+        } else if (errorCode == GRACEFUL_TERMINATION) {
+            end(AuditOutcome.SUCCESS) { "reason=host_ended duration_s=$it" }
         } else {
             end(AuditOutcome.FAILURE) { "reason=error code=$errorCode duration_s=$it" }
         }

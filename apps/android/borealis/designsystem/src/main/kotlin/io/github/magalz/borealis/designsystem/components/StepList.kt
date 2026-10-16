@@ -39,6 +39,16 @@ private val STEP_GAP = 10.dp
 private val MARKER_GAP = 12.dp
 private val GLYPH_STROKE = 2.dp
 
+// The glyphs are drawn on a unit square: the check is two strokes, the cross is two diagonals.
+private const val CHECK_LEFT_X = 0.3f
+private const val CHECK_LEFT_Y = 0.52f
+private const val CHECK_BOTTOM_X = 0.44f
+private const val CHECK_BOTTOM_Y = 0.66f
+private const val CHECK_RIGHT_X = 0.72f
+private const val CHECK_RIGHT_Y = 0.36f
+private const val CROSS_NEAR = 0.35f
+private const val CROSS_FAR = 0.65f
+
 private enum class StepState {
     Done,
     Current,
@@ -155,11 +165,35 @@ private fun Glyph(color: Color, check: Boolean) {
         val stroke = GLYPH_STROKE.toPx()
         fun at(x: Float, y: Float) = Offset(size.width * x, size.height * y)
         if (check) {
-            drawLine(color, at(0.3f, 0.52f), at(0.44f, 0.66f), stroke, StrokeCap.Round)
-            drawLine(color, at(0.44f, 0.66f), at(0.72f, 0.36f), stroke, StrokeCap.Round)
+            drawLine(
+                color,
+                at(CHECK_LEFT_X, CHECK_LEFT_Y),
+                at(CHECK_BOTTOM_X, CHECK_BOTTOM_Y),
+                stroke,
+                StrokeCap.Round,
+            )
+            drawLine(
+                color,
+                at(CHECK_BOTTOM_X, CHECK_BOTTOM_Y),
+                at(CHECK_RIGHT_X, CHECK_RIGHT_Y),
+                stroke,
+                StrokeCap.Round,
+            )
         } else {
-            drawLine(color, at(0.35f, 0.35f), at(0.65f, 0.65f), stroke, StrokeCap.Round)
-            drawLine(color, at(0.65f, 0.35f), at(0.35f, 0.65f), stroke, StrokeCap.Round)
+            drawLine(
+                color,
+                at(CROSS_NEAR, CROSS_NEAR),
+                at(CROSS_FAR, CROSS_FAR),
+                stroke,
+                StrokeCap.Round,
+            )
+            drawLine(
+                color,
+                at(CROSS_FAR, CROSS_NEAR),
+                at(CROSS_NEAR, CROSS_FAR),
+                stroke,
+                StrokeCap.Round,
+            )
         }
     }
 }

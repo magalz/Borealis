@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName")
+
 package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.foundation.background

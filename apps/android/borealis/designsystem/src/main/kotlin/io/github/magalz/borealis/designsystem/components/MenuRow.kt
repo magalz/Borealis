@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName")
+
 package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.foundation.clickable
@@ -74,12 +76,10 @@ fun MenuRow(
     trailing: @Composable (() -> Unit)? = null,
     note: String? = null,
 ) {
-    val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.medium
     val minHeight =
         if (LocalFormFactor.current == FormFactor.Phone) PHONE_MIN_HEIGHT else TV_MIN_HEIGHT
     val dim = if (enabled) 1f else DISABLED_ALPHA
-    val focusManager = LocalFocusManager.current
     val rowFocus = remember { FocusRequester() }
     val trailingFocus = remember { FocusRequester() }
     Row(
@@ -93,70 +93,93 @@ fun MenuRow(
             .liftedWhenFocused()
             .borealisFocusIndication(shape)
             .clip(shape)
-            .then(
-                if (enabled) {
-                    Modifier.clickable(
-                        interactionSource = null,
-                        indication = BorealisPressIndication,
-                        role = Role.Button,
-                        onClick = onClick,
-                    )
-                } else {
-                    // A disabled clickable is not focusable, and the row must stay a focus stop.
-                    Modifier.focusable().semantics(mergeDescendants = true) {
-                        role = Role.Button
-                        disabled()
-                    }
-                }
-            )
+            .rowAction(enabled, onClick)
             .fillMaxWidth()
             .heightIn(min = minHeight)
             .padding(horizontal = PADDING_HORIZONTAL, vertical = PADDING_VERTICAL),
         horizontalArrangement = Arrangement.spacedBy(TRAILING_GAP),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1f)) {
+        RowText(title, consequence, note, style, dim, Modifier.weight(1f))
+        if (trailing != null) TrailingSlot(rowFocus, trailingFocus, dim, trailing)
+    }
+}
+
+/** A tap or OK runs [onClick]; a disabled row only stays a focus stop that is announced so. */
+private fun Modifier.rowAction(enabled: Boolean, onClick: () -> Unit): Modifier =
+    if (enabled) {
+        clickable(
+            interactionSource = null,
+            indication = BorealisPressIndication,
+            role = Role.Button,
+            onClick = onClick,
+        )
+    } else {
+        // A disabled clickable is not focusable, and the row must stay a focus stop.
+        focusable().semantics(mergeDescendants = true) {
+            role = Role.Button
+            disabled()
+        }
+    }
+
+@Composable
+private fun RowText(
+    title: String,
+    consequence: String?,
+    note: String?,
+    style: MenuRowStyle,
+    dim: Float,
+    modifier: Modifier,
+) {
+    val colors = LocalBorealisColors.current
+    Column(modifier) {
+        Text(
+            title,
+            modifier = Modifier.alpha(dim),
+            color = if (style == MenuRowStyle.Danger) colors.dangerInk else colors.ink,
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        if (consequence != null) {
             Text(
-                title,
+                consequence,
                 modifier = Modifier.alpha(dim),
-                color = if (style == MenuRowStyle.Danger) colors.dangerInk else colors.ink,
-                style = MaterialTheme.typography.bodyLarge,
+                color = colors.ink3,
+                style = MaterialTheme.typography.bodySmall,
             )
-            if (consequence != null) {
-                Text(
-                    consequence,
-                    modifier = Modifier.alpha(dim),
-                    color = colors.ink3,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            if (note != null) {
-                Text(note, color = colors.ink3, style = MaterialTheme.typography.bodySmall)
-            }
         }
-        if (trailing != null) {
-            Box(
-                Modifier.alpha(dim)
-                    .focusRequester(trailingFocus)
-                    .focusProperties {
-                        // Inherited from the row: reset, or Right would loop back to the control.
-                        end = FocusRequester.Default
-                    }
-                    .onKeyEvent { event ->
-                        // The row is an ancestor of the control, so the search never finds it to
-                        // the
-                        // left: when nothing is left of the focused segment, go back to the row.
-                        val left = event.key == Key.DirectionLeft
-                        if (left && event.type == KeyEventType.KeyDown) {
-                            if (!focusManager.moveFocus(FocusDirection.Left))
-                                rowFocus.requestFocus()
-                        }
-                        left
-                    }
-                    .focusGroup()
-            ) {
-                trailing()
-            }
+        if (note != null) {
+            Text(note, color = colors.ink3, style = MaterialTheme.typography.bodySmall)
         }
+    }
+}
+
+/**
+ * The control at the end of a row, a focus group the D-pad enters from the row and leaves to it.
+ */
+@Composable
+private fun TrailingSlot(
+    rowFocus: FocusRequester,
+    trailingFocus: FocusRequester,
+    dim: Float,
+    trailing: @Composable () -> Unit,
+) {
+    val focusManager = LocalFocusManager.current
+    Box(
+        Modifier.alpha(dim)
+            .focusRequester(trailingFocus)
+            // Inherited from the row: reset, or Right would loop back to the control.
+            .focusProperties { end = FocusRequester.Default }
+            .onKeyEvent { event ->
+                // The row is an ancestor of the control, so the search never finds it to the left:
+                // when nothing is left of the focused segment, go back to the row.
+                val left = event.key == Key.DirectionLeft
+                if (left && event.type == KeyEventType.KeyDown) {
+                    if (!focusManager.moveFocus(FocusDirection.Left)) rowFocus.requestFocus()
+                }
+                left
+            }
+            .focusGroup()
+    ) {
+        trailing()
     }
 }

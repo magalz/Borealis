@@ -94,6 +94,7 @@ object StreamSessionFactory {
         decoder: String?,
     ): SessionInfo =
         sessionInfo(prefs.width, prefs.height, frameRate, videoFormat, prefs.bitrate)
+            .copy(decoder = decoder)
 
     /**
      * A failure of the connection, unclassified for now. The raw code is the support text: the

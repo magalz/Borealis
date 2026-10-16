@@ -1,6 +1,11 @@
 package io.github.magalz.borealis.input
 
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.view.InputDevice
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.KeyEvent.KEYCODE_BUTTON_A
 import android.view.KeyEvent.KEYCODE_BUTTON_SELECT
 import android.view.KeyEvent.KEYCODE_BUTTON_START
@@ -150,6 +155,56 @@ class GamepadCaptureTest {
         rig.handler.setCaptured(true)
 
         assertThat(rig.connection.packets).hasSize(packets)
+    }
+
+    @Test
+    fun `capturing stops the gyro of a pad that was sending it`() {
+        rig.setDefaultContextField("gyroListener", object : SensorEventListener {
+                override fun onSensorChanged(event: SensorEvent) {}
+
+                override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
+            })
+        rig.connection.motion.clear()
+
+        rig.handler.setCaptured(true)
+
+        assertThat(rig.connection.motion).containsExactly("motion 0 2 0.0 0.0 0.0")
+    }
+
+    @Test
+    fun `capturing lifts the fingers off the touchpad of a pad that has one`() {
+        rig.setDefaultContextField("touchpadXRange", motionRange(MotionEvent.AXIS_X))
+        rig.setDefaultContextField("touchpadYRange", motionRange(MotionEvent.AXIS_Y))
+
+        rig.handler.setCaptured(true)
+
+        assertThat(rig.connection.touches).containsExactly("touch 0 7")
+    }
+
+    @Test
+    fun `capturing sends nothing about a touchpad to a pad without one`() {
+        rig.handler.setCaptured(true)
+
+        assertThat(rig.connection.touches).isEmpty()
+    }
+
+    @Test
+    fun `capturing sends no neutral packet to a controller number that was freed`() {
+        padOne.report(a)
+        padTwo.report(b)
+        rig.handler.deviceRemoved(padTwo)
+        val before = rig.connection.packets.size
+
+        rig.handler.setCaptured(true)
+
+        assertThat(rig.connection.packets.drop(before).map { it.controller }).containsExactly(0)
+    }
+
+    private fun motionRange(axis: Int): InputDevice.MotionRange {
+        val constructor = InputDevice.MotionRange::class.java.declaredConstructors.first { it.parameterCount == 7 }
+        constructor.isAccessible = true
+        return constructor.newInstance(axis, InputDevice.SOURCE_TOUCHPAD, 0f, 1f, 0f, 0f, 0f)
+            as InputDevice.MotionRange
     }
 
     @Test

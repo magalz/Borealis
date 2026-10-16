@@ -23,9 +23,50 @@ class GamepadMouseTest {
         padOne.report(a)
         padOne.report(0)
         padTwo.report(a)
+
+        assertThat(rig.connection.mouse.filter { it == "down 1" }).hasSize(2)
+    }
+
+    @Test
+    fun `the on-screen controller never becomes a mouse`() {
+        rig.handler.setMouseEmulation(true)
+
+        rig.handler.reportOscState(a, 0, 0, 0, 0, 0, 0)
         rig.press(KEYCODE_BUTTON_A)
 
-        assertThat(rig.connection.mouse.filter { it == "down 1" }).hasSize(3)
+        assertThat(rig.connection.mouse.none { it.startsWith("down") }).isTrue()
+        assertThat(rig.lastButtons()).isEqualTo(a)
+    }
+
+    @Test
+    fun `it reads as off before it is turned on`() {
+        assertThat(rig.handler.isMouseEmulationEnabled).isFalse()
+    }
+
+    @Test
+    fun `it reads as on after it is turned on and off after it is turned off`() {
+        rig.handler.setMouseEmulation(true)
+        assertThat(rig.handler.isMouseEmulationEnabled).isTrue()
+
+        rig.handler.setMouseEmulation(false)
+        assertThat(rig.handler.isMouseEmulationEnabled).isFalse()
+    }
+
+    @Test
+    fun `it reads as on when any pad has it on`() {
+        rig.handler.setMouseEmulation(true)
+        rig.handler.deviceRemoved(padOne)
+
+        assertThat(rig.handler.isMouseEmulationEnabled).isTrue()
+    }
+
+    @Test
+    fun `it reads as on when it was turned on before any pad connected`() {
+        val bare = ControllerHandlerRig()
+
+        bare.handler.setMouseEmulation(true)
+
+        assertThat(bare.handler.isMouseEmulationEnabled).isTrue()
     }
 
     @Test

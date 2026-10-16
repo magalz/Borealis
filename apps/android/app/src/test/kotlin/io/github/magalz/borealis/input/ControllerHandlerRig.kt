@@ -92,6 +92,32 @@ class RecordingConnection(activity: Activity) :
         supportedButtonFlags: Int,
         capabilities: Short,
     ): Int = 0
+
+    val motion = mutableListOf<String>()
+    val touches = mutableListOf<String>()
+
+    override fun sendControllerMotionEvent(
+        controllerNumber: Byte,
+        motionType: Byte,
+        x: Float,
+        y: Float,
+        z: Float,
+    ): Int {
+        motion += "motion $controllerNumber $motionType $x $y $z"
+        return 0
+    }
+
+    override fun sendControllerTouchEvent(
+        controllerNumber: Byte,
+        eventType: Byte,
+        pointerId: Int,
+        x: Float,
+        y: Float,
+        pressure: Float,
+    ): Int {
+        touches += "touch $controllerNumber $eventType"
+        return 0
+    }
 }
 
 /**
@@ -153,6 +179,16 @@ class ControllerHandlerRig(multiController: Boolean = false) {
 
     /** The last packet's buttons, or null when nothing was sent. */
     fun lastButtons(): Int? = connection.packets.lastOrNull()?.buttons
+
+    /** The handler's default context (on-screen controller and device 0), for state a test cannot reach. */
+    fun setDefaultContextField(name: String, value: Any?) {
+        val handlerField = ControllerHandler::class.java.getDeclaredField("defaultContext")
+        handlerField.isAccessible = true
+        val context = handlerField.get(handler)
+        val field = context.javaClass.getDeclaredField(name)
+        field.isAccessible = true
+        field.set(context, value)
+    }
 }
 
 /** A USB-driver pad: it reports its whole button state each time, as the driver service does. */

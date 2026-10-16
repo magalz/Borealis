@@ -1301,6 +1301,10 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         chromeKeySink = sink;
     }
 
+    public boolean isMouseEmulationEnabled() {
+        return false;
+    }
+
     @Override
     public void setCaptured(boolean captured) {
         if (captured == this.captured) {

@@ -1,4 +1,4 @@
-package io.github.magalz.borealis.stream.ui.starting
+package io.github.magalz.borealis.stream.ui.common
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key

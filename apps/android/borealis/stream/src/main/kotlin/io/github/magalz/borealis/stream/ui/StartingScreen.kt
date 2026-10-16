@@ -42,7 +42,7 @@ import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamIntents
 import io.github.magalz.borealis.stream.StreamPhase
-import io.github.magalz.borealis.stream.ui.starting.onGamepadB
+import io.github.magalz.borealis.stream.ui.common.onGamepadB
 
 /** Marks the column of the starting screen, so a test can measure it. */
 internal const val STARTING_CONTENT_TAG = "starting_content"

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- One line, the first time, saying how to open the menu on this device. -->
+    <string name="stream_hint_phone">Pull the handle down or press Back for the menu</string>
+    <string name="stream_hint_handheld">Hold Select + Start for the menu</string>
+    <string name="stream_hint_tv">Press Back for the menu</string>
+</resources>

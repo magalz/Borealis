@@ -22,14 +22,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -75,6 +70,7 @@ fun AddHostScreen(
         BackHandler(onBack = { if (!state.busy) onCancel() })
         val colors = LocalBorealisColors.current
         val addressFocus = remember { FocusRequester() }
+        val submitFocus = remember { FocusRequester() }
         Box(
             modifier
                 .fillMaxSize()
@@ -96,35 +92,23 @@ fun AddHostScreen(
                         value = state.address,
                         onValueChange = onAddressChanged,
                         label = stringResource(R.string.addhost_address_label),
+                        // Down goes to the primary button, not to whichever button is nearest the
+                        // wide field.
                         modifier =
-                            Modifier.initialFocus(addressFocus)
-                                .leftToRailWhenEmpty(empty = state.address.isEmpty()),
+                            Modifier.initialFocus(addressFocus).focusProperties {
+                                down = submitFocus
+                            },
                         error = state.error?.let { stringResource(it.textRes()) },
                         onDone = onSubmit,
                         keyboardType = KeyboardType.Uri,
+                        leaveWithDpad = true,
                     )
                     Hint(stringResource(R.string.addhost_address_hint))
                     Hint(stringResource(R.string.addhost_port_hint))
                 }
-                AddHostButtons(state.busy, onSubmit, onCancel)
+                AddHostButtons(state.busy, submitFocus, onSubmit, onCancel)
             }
         }
-    }
-}
-
-/**
- * The text field keeps Left for its cursor, so a D-pad could not leave it to the rail beside the
- * screen. While the field is [empty] there is no cursor to move: Left goes to the neighbour on the
- * left, when there is one.
- */
-@Composable
-private fun Modifier.leftToRailWhenEmpty(empty: Boolean): Modifier {
-    val focusManager = LocalFocusManager.current
-    return onPreviewKeyEvent { event ->
-        empty &&
-            event.key == Key.DirectionLeft &&
-            event.type == KeyEventType.KeyDown &&
-            focusManager.moveFocus(FocusDirection.Left)
     }
 }
 
@@ -147,12 +131,22 @@ private fun AddHostError.textRes(): Int =
     }
 
 @Composable
-private fun AddHostButtons(busy: Boolean, onSubmit: () -> Unit, onCancel: () -> Unit) {
+private fun AddHostButtons(
+    busy: Boolean,
+    submitFocus: FocusRequester,
+    onSubmit: () -> Unit,
+    onCancel: () -> Unit,
+) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BorealisButton(stringResource(R.string.addhost_submit), onSubmit, enabled = !busy)
+        BorealisButton(
+            stringResource(R.string.addhost_submit),
+            onSubmit,
+            modifier = Modifier.focusRequester(submitFocus),
+            enabled = !busy,
+        )
         BorealisButton(
             stringResource(R.string.addhost_cancel),
             onCancel,

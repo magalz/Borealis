@@ -21,7 +21,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextInputSelection
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.text.TextRange
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -223,6 +225,31 @@ class LibraryRailNavigationTest {
         composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionLeft) }
 
         composeRule.onNode(isFocused()).assert(isRailItem)
+    }
+
+    @Test
+    fun `D-pad Left from the empty Add host field focuses the Add host item`() {
+        launch()
+        composeRule.onNode(railItem("Add host")).performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNode(isFocused()).assert(isRailItem and hasText("Add host"))
+    }
+
+    @Test
+    fun `D-pad Left at the start of the Add host address focuses the Add host item`() {
+        launch()
+        composeRule.onNode(railItem("Add host")).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNode(isFocused()).performTextInput("192.168.1.20")
+        composeRule.onNode(isFocused()).performTextInputSelection(TextRange(0))
+
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNode(isFocused()).assert(isRailItem and hasText("Add host"))
+        composeRule.onNode(hasSetTextAction()).assert(hasText("192.168.1.20"))
     }
 
     @Test

@@ -150,6 +150,19 @@ class LibraryActivityTvTest {
         composeRule.onNode(isFocused()).assert(isNotRailItem)
     }
 
+    @Test
+    fun `Left from the Apps grid focuses the selected Hosts item, not the nearest one`() {
+        hosts.emit(desk)
+        apps.emit(AppsSnapshot(host = desk, apps = listOf(anApp(1, "Hades II")), loading = false))
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("host:desk").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNode(isFocused()).assert(isRailItem and hasText("Hosts"))
+    }
+
     private val isRailItem = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
     private val isNotRailItem =
         SemanticsMatcher("is not a rail item") {

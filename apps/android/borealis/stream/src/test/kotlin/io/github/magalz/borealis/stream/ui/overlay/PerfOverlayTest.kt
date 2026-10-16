@@ -72,7 +72,7 @@ class PerfOverlayTest {
         composeRule
             .onNodeWithText("Host processing 1.0 / 2.0 / 5.0 ms (min/avg/max)")
             .assertIsDisplayed()
-        composeRule.onNodeWithText("Network 12 ms ± 3 · loss 0.5 % · 18.5 Mbps").assertIsDisplayed()
+        composeRule.onNodeWithText("Network 12 ms ± 3 ms · loss 0.5 % · 18.5 Mbps").assertIsDisplayed()
         composeRule.onNodeWithText("Decode 4.0 ms").assertIsDisplayed()
         composeRule.onNodeWithText(compact).assertDoesNotExist()
     }

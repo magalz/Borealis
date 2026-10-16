@@ -58,7 +58,7 @@ class PerfFormatTest {
                 "1920×1080 · 60 fps · HEVC 10-bit HDR",
                 "Decoder c2.qti.hevc.decoder",
                 "Host processing 1.0 / 2.0 / 5.0 ms (min/avg/max)",
-                "Network 12 ms ± 3 · loss 0.5 % · 18.5 Mbps",
+                "Network 12 ms ± 3 ms · loss 0.5 % · 18.5 Mbps",
                 "Decode 4.0 ms",
             )
             .inOrder()
@@ -76,7 +76,7 @@ class PerfFormatTest {
     fun `the detailed overlay leaves out the bitrate when it is not known`() {
         val lines = PerfFormat.detailed(aPerf().copy(bitrateMbps = null), info)
 
-        assertThat(lines).contains("Network 12 ms ± 3 · loss 0.5 %")
+        assertThat(lines).contains("Network 12 ms ± 3 ms · loss 0.5 %")
     }
 
     @Test
@@ -94,7 +94,7 @@ class PerfFormatTest {
 
     @Test
     fun `the network figure gives the round trip with its variance and the loss`() {
-        assertThat(PerfFormat.network(aPerf())).isEqualTo("12 ms ± 3 · loss 0.5 %")
+        assertThat(PerfFormat.network(aPerf())).isEqualTo("12 ms ± 3 ms · loss 0.5 %")
         assertThat(PerfFormat.network(null)).isEqualTo("— ms")
     }
 

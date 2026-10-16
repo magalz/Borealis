@@ -293,7 +293,7 @@ class InGameMenuTest {
                 "Codec" to "HEVC 10-bit HDR",
                 "Decoder" to "c2.qti.hevc.decoder",
                 "Host" to "1.0 / 2.0 / 5.0 ms",
-                "Network" to "12 ms ± 3 · loss 0.5 %",
+                "Network" to "12 ms ± 3 ms · loss 0.5 %",
                 "Bitrate" to "18.5 of 20 Mbps",
             )) {
             text(label).performScrollTo().assertIsDisplayed()
@@ -417,12 +417,80 @@ class InGameMenuTest {
 
     @Test
     @Config(qualifiers = TV)
-    fun `gamepad A is left to the platform so it presses the focused row`() {
+    fun `gamepad A is not consumed, so the platform can turn it into OK`() {
         val fixture = menu(FormFactor.Tv, touchMode = null, gamepadMouse = false)
 
         composeRule.onRoot().performKeyInput { pressKey(Key.ButtonA) }
 
+        // A handler outside the menu sees it: nothing in the menu took it.
+        assertThat(fixture.keysSeenOutside).containsExactly(Key.ButtonA)
         assertThat(fixture.intents.calls).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `gamepad B is consumed by the menu`() {
+        val fixture = menu(FormFactor.Tv, touchMode = null, gamepadMouse = false)
+
+        composeRule.onRoot().performKeyInput { pressKey(Key.ButtonB) }
+
+        assertThat(fixture.keysSeenOutside).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `Refresh the picture says when to use it`() {
+        menu(FormFactor.Phone)
+
+        text("Asks the host for a keyframe when the image is smeared")
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `cancelling Quit puts the focus back on the Quit row`() {
+        menu(FormFactor.Tv, touchMode = null, gamepadMouse = false)
+        text("Quit Desktop").performScrollTo().requestFocus()
+        text("Quit Desktop").performKeyInput { pressKey(Key.DirectionCenter) }
+
+        text("Cancel").performKeyInput { pressKey(Key.DirectionCenter) }
+
+        text("Quit Desktop").assertIsFocused()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `gamepad B from the confirmation puts the focus back on the Quit row`() {
+        menu(FormFactor.Tv, touchMode = null, gamepadMouse = false)
+        text("Quit Desktop").performScrollTo().requestFocus()
+        text("Quit Desktop").performKeyInput { pressKey(Key.DirectionCenter) }
+
+        composeRule.onRoot().performKeyInput { pressKey(Key.ButtonB) }
+
+        text("Quit Desktop").assertIsFocused()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `an open Send keys stays open after Quit is cancelled`() {
+        menu(FormFactor.Phone)
+        text("Send keys").performClick()
+        text("Quit Desktop").performScrollTo().performClick()
+
+        text("Cancel").performClick()
+
+        text("Alt+Tab").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the rows are not reachable while the confirmation shows`() {
+        menu(FormFactor.Phone)
+        text("Quit Desktop").performScrollTo().performClick()
+
+        text("Back to stream").assertDoesNotExist()
+        text("Disconnect").assertDoesNotExist()
     }
 
     @Test

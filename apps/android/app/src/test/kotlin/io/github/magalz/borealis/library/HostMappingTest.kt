@@ -177,6 +177,65 @@ class HostMappingTest {
         assertThat(host.capabilities).isEmpty()
     }
 
+    @Test
+    fun `a bracketed IPv6 address is shown without the brackets`() {
+        val host =
+            details(address = null)
+                .also { it.manualAddress = AddressTuple("[fe80::1]", 47989) }
+                .toHost()
+
+        assertThat(host.address).isEqualTo("fe80::1")
+    }
+
+    @Test
+    fun `the same raw app list is parsed once across updates`() {
+        val parsed = mutableListOf<String?>()
+        val appLists = ParsedAppLists { raw -> parsed += raw; parseApps(raw) }
+        val host = details(rawAppList = APP_LIST).withInfo(caps(hevc = true))
+
+        repeat(3) { host.toHost(appLists = appLists) }
+
+        assertThat(parsed).containsExactly(APP_LIST)
+        assertThat(host.toHost(appLists = appLists).capabilities)
+            .containsExactly(HostCapability.HEVC, HostCapability.HDR)
+    }
+
+    @Test
+    fun `a changed app list is parsed again`() {
+        val parsed = mutableListOf<String?>()
+        val appLists = ParsedAppLists { raw -> parsed += raw; parseApps(raw) }
+
+        details(rawAppList = APP_LIST).withInfo(caps()).toHost(appLists = appLists)
+        details(rawAppList = APP_LIST_WITHOUT_HDR).withInfo(caps()).toHost(appLists = appLists)
+
+        assertThat(parsed).containsExactly(APP_LIST, APP_LIST_WITHOUT_HDR).inOrder()
+    }
+
+    @Test
+    fun `an unreadable app list is parsed once, not at every update`() {
+        val parsed = mutableListOf<String?>()
+        val appLists = ParsedAppLists { raw -> parsed += raw; parseApps(raw) }
+        val host = details(rawAppList = "not xml").withInfo(caps())
+
+        repeat(3) { host.toHost(appLists = appLists) }
+
+        assertThat(parsed).hasSize(1)
+    }
+
+    @Test
+    fun `an offline host neither parses its app list nor shows HDR`() {
+        val parsed = mutableListOf<String?>()
+        val appLists = ParsedAppLists { raw -> parsed += raw; parseApps(raw) }
+
+        val host =
+            details(state = ComputerDetails.State.OFFLINE, rawAppList = APP_LIST)
+                .withInfo(caps(hevc = true))
+                .toHost(appLists = appLists)
+
+        assertThat(parsed).isEmpty()
+        assertThat(host.capabilities).containsExactly(HostCapability.HEVC)
+    }
+
     private fun ComputerDetails.withInfo(caps: HostCaps) = also {
         it.borealis = BorealisHostInfo(caps, httpsPort = 47984, httpPort = 47989)
     }

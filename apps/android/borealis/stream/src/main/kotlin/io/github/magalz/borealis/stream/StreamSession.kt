@@ -79,10 +79,13 @@ class StreamSession(
         }
 
     /**
-     * A step of the start is reached; clears a retry that was showing. Stages are taken as they
-     * come, so the activity must report them in order (it posts them through `runOnUiThread`).
+     * A step of the start is reached; clears a retry that was showing. A step before the current
+     * one is ignored, so the list of steps never goes backwards whatever order the events arrive
+     * in.
      */
-    fun onStage(stage: StartStage) = whileStarting { StreamPhase.Starting(stage) }
+    fun onStage(stage: StartStage) = whileStarting {
+        if (stage < it.stage) it else StreamPhase.Starting(stage)
+    }
 
     /** The host asked for a retry of the current stage. */
     fun onLaunchRetry(retry: LaunchRetry) = whileStarting { StreamPhase.Starting(it.stage, retry) }

@@ -30,8 +30,8 @@ object StreamSessionFactory {
      * of the stream itself (RTSP handshake, control, video, audio, input) come after it.
      */
     @JvmStatic
-    @Suppress("UNUSED_PARAMETER")
-    fun startStage(reported: String, appName: String): StartStage = StartStage.PREPARING_DISPLAY
+    fun startStage(reported: String, appName: String): StartStage =
+        if (reported == appName) StartStage.STARTING_APP else StartStage.PREPARING_DISPLAY
 
     /**
      * The session of [activity]'s stream. The docked keyboard is for phones. [pcName] and [appName]

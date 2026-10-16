@@ -3,7 +3,10 @@ package io.github.magalz.borealis.stream
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.nativecore.LaunchCategory
 
-/** What the stream chrome shows: the app and the host it streams, and the phase of the session. */
+/**
+ * What the stream chrome shows: the app and the host it streams, the phase of the session and
+ * whether the activity is in picture-in-picture, which hides the chrome and leaves the phase alone.
+ */
 data class StreamUiState(
     val appName: String,
     val hostName: String,
@@ -16,14 +19,20 @@ sealed interface StreamPhase {
     /** The stream is starting; [retry] is set while the host asks Borealis to try again. */
     data class Starting(val stage: StartStage, val retry: LaunchRetry? = null) : StreamPhase
 
-    /** Another app is running on the host and the user must choose what to do. */
+    /**
+     * Another app is running on the host and the user must choose what to do. Cancelling leaves the
+     * phase here; the activity finishes itself.
+     */
     data class Conflict(
         val runningAppName: String?,
         val requestedAppName: String,
         val sameApp: Boolean,
     ) : StreamPhase
 
-    /** The stream could not start or ended with an error. */
+    /**
+     * The stream could not start or ended with an error. Final: `retry()` starts the stream again
+     * in a new activity and a new session.
+     */
     data class Failed(val failure: StreamFailure) : StreamPhase
 
     /**

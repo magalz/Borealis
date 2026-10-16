@@ -4,6 +4,7 @@ import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.host.launch.ConflictAnswer
 import io.github.magalz.borealis.host.launch.ConflictChoice
 import io.github.magalz.borealis.stream.keys.KeyChord
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,9 +21,14 @@ data class StreamDefaults(
 /**
  * The state of one stream session, for the chrome. The stream activity reports what happens with
  * the `on...` events, which are safe to call from any thread; the screens read [state] and [perf]
- * and call the [StreamIntents], which [actions] carries out on the main thread.
+ * and call the [StreamIntents].
  *
- * A failure is final: once the session is [StreamPhase.Failed], no later event changes it.
+ * Threading: the [StreamIntents] methods are called on the main thread (the gamepad menu chord
+ * fires there too) and forward to [actions] on that thread.
+ *
+ * A failure is final: once the session is [StreamPhase.Failed], no later event changes it, and
+ * `retry()` starts the stream again in a new activity and a new session. Cancelling a conflict
+ * leaves the phase at [StreamPhase.Conflict]; the activity finishes itself.
  */
 @Suppress("TooManyFunctions")
 class StreamSession(
@@ -38,23 +44,23 @@ class StreamSession(
         )
     private val mutablePerf = MutableStateFlow<PerfSnapshot?>(null)
 
-    // Not part of the phase: the first frame needs the info that the connection reported earlier,
-    // and the answer slot belongs to the connection thread that is waiting for it.
+    // Not part of the phase: the first frame and the connection report from different threads and
+    // in either order, and the answer slot belongs to the connection thread that waits for it.
     private val sessionInfo = AtomicReference<SessionInfo?>(null)
+    private val firstFrameSeen = AtomicBoolean(false)
     private val pendingAnswer = AtomicReference<ConflictAnswer?>(null)
-
-    @Volatile private var inPip = false
 
     val state: StateFlow<StreamUiState> = mutableState
 
     val perf: StateFlow<PerfSnapshot?> = mutablePerf
 
-    /** Who gets the input and what the chrome covers; readable from any thread. */
+    /** Who gets the input and what the chrome covers; one read of [state], from any thread. */
     val chromeMode: ChromeMode
         get() {
-            val phase = mutableState.value.phase
+            val current = mutableState.value
+            val phase = current.phase
             return when {
-                inPip -> ChromeMode.HIDDEN
+                current.inPip -> ChromeMode.HIDDEN
                 phase !is StreamPhase.Streaming -> ChromeMode.MODAL
                 else -> streamingChromeMode(phase)
             }
@@ -68,7 +74,10 @@ class StreamSession(
                 if (phase.overlay != OverlayMode.OFF) ChromeMode.OVERLAY else ChromeMode.IDLE
         }
 
-    /** A step of the start is reached; clears a retry that was showing. */
+    /**
+     * A step of the start is reached; clears a retry that was showing. Stages are taken as they
+     * come, so the activity must report them in order (it posts them through `runOnUiThread`).
+     */
     fun onStage(stage: StartStage) = whileStarting { StreamPhase.Starting(stage) }
 
     /** The host asked for a retry of the current stage. */
@@ -81,28 +90,49 @@ class StreamSession(
         sameApp: Boolean,
         answer: ConflictAnswer,
     ) {
-        pendingAnswer.set(answer)
-        whileStarting { StreamPhase.Conflict(runningAppName, requestedAppName, sameApp) }
+        // The slot is taken before the phase changes, so an answer never finds a Conflict without
+        // it; an event that does not enter the Conflict phase gives the slot back.
+        pendingAnswer.compareAndSet(null, answer)
+        var entered = false
+        mutableState.update {
+            entered = it.phase is StreamPhase.Starting
+            if (entered) {
+                it.copy(phase = StreamPhase.Conflict(runningAppName, requestedAppName, sameApp))
+            } else {
+                it
+            }
+        }
+        if (!entered) pendingAnswer.compareAndSet(answer, null)
     }
 
-    /** The connection is up and waits for the first frame. */
+    /**
+     * The connection is up and waits for the first frame; streams at once when the frame came
+     * first. The two events come from different threads, so each one records itself before it looks
+     * for the other: whichever runs second sees both.
+     */
     fun onConnectionStarted(info: SessionInfo) {
         sessionInfo.set(info)
-        whileStarting { StreamPhase.Starting(StartStage.FIRST_FRAME) }
+        if (firstFrameSeen.get()) {
+            startStreaming(info)
+        } else {
+            whileStarting { StreamPhase.Starting(StartStage.FIRST_FRAME) }
+        }
     }
 
-    /** The first frame is on screen. Ignored until [onConnectionStarted] reported the stream. */
+    /** The first frame is on screen; streams once [onConnectionStarted] has reported the stream. */
     fun onFirstFrame() {
-        val info = sessionInfo.get() ?: return
-        whileStarting {
-            StreamPhase.Streaming(
-                overlay = defaults.overlay,
-                touchMode = defaults.touchMode,
-                gamepadMouse = defaults.gamepadMouse,
-                info = info,
-                showMenuHint = defaults.showMenuHint,
-            )
-        }
+        firstFrameSeen.set(true)
+        sessionInfo.get()?.let(::startStreaming)
+    }
+
+    private fun startStreaming(info: SessionInfo) = whileStarting {
+        StreamPhase.Streaming(
+            overlay = defaults.overlay,
+            touchMode = defaults.touchMode,
+            gamepadMouse = defaults.gamepadMouse,
+            info = info,
+            showMenuHint = defaults.showMenuHint,
+        )
     }
 
     /** The start failed or the stream ended with an error. The first failure stays. */
@@ -114,9 +144,8 @@ class StreamSession(
         mutablePerf.value = snapshot
     }
 
-    fun onPip(inPip: Boolean) {
-        this.inPip = inPip
-    }
+    /** The activity entered or left picture-in-picture; the phase is untouched. */
+    fun onPip(inPip: Boolean) = mutableState.update { it.copy(inPip = inPip) }
 
     /** Replaces the phase while the stream is starting; later events cannot undo a later phase. */
     private inline fun whileStarting(next: (StreamPhase.Starting) -> StreamPhase) =
@@ -158,11 +187,12 @@ class StreamSession(
     }
 
     override fun answerConflict(choice: ConflictChoice) {
-        if (mutableState.value.phase !is StreamPhase.Conflict) return
+        val conflict = mutableState.value.phase as? StreamPhase.Conflict ?: return
         val answer = pendingAnswer.getAndSet(null) ?: return
-        if (!answer.choose(choice)) return
-        actions.answerConflict(choice)
-        if (choice != ConflictChoice.CANCEL) {
+        // The phase leaves the conflict before the answer unblocks the connection thread: what that
+        // thread reports next must find the session in Starting, not in the question it answered.
+        val leaves = choice != ConflictChoice.CANCEL
+        if (leaves) {
             mutableState.update {
                 if (it.phase is StreamPhase.Conflict) {
                     it.copy(phase = StreamPhase.Starting(StartStage.STARTING_APP))
@@ -171,6 +201,19 @@ class StreamSession(
                 }
             }
         }
+        if (!answer.choose(choice)) {
+            if (leaves) {
+                mutableState.update {
+                    if (it.phase == StreamPhase.Starting(StartStage.STARTING_APP)) {
+                        it.copy(phase = conflict)
+                    } else {
+                        it
+                    }
+                }
+            }
+            return
+        }
+        actions.answerConflict(choice)
     }
 
     override fun send(chord: KeyChord) = actions.send(chord)

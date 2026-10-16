@@ -1,6 +1,9 @@
 package io.github.magalz.borealis.stream.ui
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
@@ -32,7 +35,7 @@ class ConnectionErrorScreenshotTest {
             FormFactor.Tv,
             "Desktop",
             "Desk PC",
-            StreamFailure(FailureKind.HOST_BUSY, "Error 0 · /serverinfo timed out 3 times", null),
+            StreamFailure(FailureKind.HOST_BUSY, "Error 503 · Desktop · HTTP 503", null),
         )
 
     @Test
@@ -43,7 +46,7 @@ class ConnectionErrorScreenshotTest {
             FormFactor.Phone,
             "Desktop",
             "Living Room PC",
-            StreamFailure(FailureKind.HOST_OFFLINE, "Error 0 · no answer on port 47989", null),
+            StreamFailure(FailureKind.HOST_OFFLINE, "Error 110 · Desktop", null),
         )
 
     @Test
@@ -54,7 +57,7 @@ class ConnectionErrorScreenshotTest {
             FormFactor.Phone,
             "Desktop",
             "Desk PC",
-            StreamFailure(FailureKind.CERTIFICATE_CHANGED, "CERTIFICATE_CHANGED", null),
+            StreamFailure(FailureKind.CERTIFICATE_CHANGED, "Error 401 · Desktop · HTTP 401", null),
         )
 
     @Test
@@ -72,16 +75,32 @@ class ConnectionErrorScreenshotTest {
             ),
         )
 
+    @Test
+    @Config(qualifiers = "w640dp-h300dp-land-xhdpi")
+    fun errorPhoneLandscapeCertificateLargeText() =
+        shoot(
+            "error_phone-landscape_certificate-large-text",
+            FormFactor.Phone,
+            "Desktop",
+            "Desk PC",
+            StreamFailure(FailureKind.CERTIFICATE_CHANGED, "Error 401 · Desktop · HTTP 401", null),
+            fontScale = 2f,
+        )
+
     private fun shoot(
         name: String,
         formFactor: FormFactor,
         appName: String,
         hostName: String,
         failure: StreamFailure,
+        fontScale: Float = 1f,
     ) {
         composeRule.setContent {
-            BorealisTheme(formFactor) {
-                ConnectionErrorScreen(appName, hostName, failure, aSession())
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
+                BorealisTheme(formFactor) {
+                    ConnectionErrorScreen(appName, hostName, failure, aSession())
+                }
             }
         }
         composeRule.waitForIdle()

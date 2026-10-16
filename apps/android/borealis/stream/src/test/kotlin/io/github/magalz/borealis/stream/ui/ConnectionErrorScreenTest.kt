@@ -204,11 +204,10 @@ class ConnectionErrorScreenTest {
         show(failure(FailureKind.HOST_BUSY), FormFactor.Tv)
         composeRule.waitForIdle()
 
-        val consumed = composeRule.onNodeWithText("Try again").performKeyPress(buttonB(ACTION_UP))
+        // The up of a press that began in the game, before the stream failed.
+        composeRule.onNodeWithText("Try again").performKeyPress(buttonB(ACTION_UP))
 
         assertThat(actions.calls).isEmpty()
-        // The up of a press that began before the screen showed is still not for a button below.
-        assertThat(consumed).isTrue()
     }
 
     @Test

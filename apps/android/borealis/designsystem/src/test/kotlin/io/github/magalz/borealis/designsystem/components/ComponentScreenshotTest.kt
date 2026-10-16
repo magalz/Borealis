@@ -55,6 +55,9 @@ class ComponentScreenshotTest {
                     name = "Desk PC",
                     status = DotStatus.Online,
                     statusText = "Online",
+                    // The detail lines of these specimens are the prototype copy, to show the
+                    // layout:
+                    // they are not data a host reports.
                     detail = "LuminalShine 26.09.1 · 192.168.1.20",
                     runningApp = "Desktop running",
                     action = HostCardAction("Open") {},
@@ -64,6 +67,26 @@ class ComponentScreenshotTest {
         }
 
         shoot("hostcard_phone_online-paired")
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun hostCardPhoneTags() {
+        composeRule.setContent {
+            Page(FormFactor.Phone) {
+                HostCard(
+                    name = "Desk PC",
+                    status = DotStatus.Online,
+                    statusText = "Online",
+                    detail = "192.168.1.20",
+                    tags = listOf("HEVC 10-bit", "HDR", "4:4:4"),
+                    action = HostCardAction("Open") {},
+                    onClick = {},
+                )
+            }
+        }
+
+        shoot("hostcard_phone_tags")
     }
 
     @Test

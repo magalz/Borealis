@@ -113,10 +113,21 @@ Java_com_limelight_nvstream_jni_MoonBridge_sendMouseHighResHScroll(JNIEnv *env, 
 }
 
 JNIEXPORT void JNICALL
-Java_com_limelight_nvstream_jni_MoonBridge_sendUtf8Text(JNIEnv *env, jclass clazz, jstring text) {
-    const char* utf8Text = (*env)->GetStringUTFChars(env, text, NULL);
-    LiSendUtf8TextEvent(utf8Text, strlen(utf8Text));
-    (*env)->ReleaseStringUTFChars(env, text, utf8Text);
+Java_com_limelight_nvstream_jni_MoonBridge_sendUtf8Text(JNIEnv *env, jclass clazz, jbyteArray text) {
+    // BOREALIS: the caller passes standard UTF-8 bytes; GetStringUTFChars gives Java's modified UTF-8, which corrupts emoji
+    jsize length = (*env)->GetArrayLength(env, text);
+    jbyte* utf8Text = (*env)->GetByteArrayElements(env, text, NULL);
+    if (utf8Text == NULL) {
+        return;
+    }
+    LiSendUtf8TextEvent((const char*)utf8Text, (unsigned int)length);
+    (*env)->ReleaseByteArrayElements(env, text, utf8Text, JNI_ABORT);
+}
+
+// BOREALIS: asks the host for a new keyframe (the "Refresh the picture" menu item)
+JNIEXPORT void JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_requestIdrFrame(JNIEnv *env, jclass clazz) {
+    LiRequestIdrFrame();
 }
 
 JNIEXPORT void JNICALL

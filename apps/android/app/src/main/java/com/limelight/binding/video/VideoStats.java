@@ -16,6 +16,7 @@ class VideoStats {
     int totalHostProcessingLatency;
     int framesWithHostProcessingLatency;
     long measurementStartTimestamp;
+    long totalBytes; // BOREALIS: encoded bytes received, for the bitrate (stream.perf)
 
     void add(VideoStats other) {
         this.decoderTimeMs += other.decoderTimeMs;
@@ -34,6 +35,7 @@ class VideoStats {
         this.maxHostProcessingLatency = (char) Math.max(this.maxHostProcessingLatency, other.maxHostProcessingLatency);
         this.totalHostProcessingLatency += other.totalHostProcessingLatency;
         this.framesWithHostProcessingLatency += other.framesWithHostProcessingLatency;
+        this.totalBytes += other.totalBytes; // BOREALIS
 
         if (this.measurementStartTimestamp == 0) {
             this.measurementStartTimestamp = other.measurementStartTimestamp;
@@ -54,6 +56,7 @@ class VideoStats {
         this.maxHostProcessingLatency = other.maxHostProcessingLatency;
         this.totalHostProcessingLatency = other.totalHostProcessingLatency;
         this.framesWithHostProcessingLatency = other.framesWithHostProcessingLatency;
+        this.totalBytes = other.totalBytes; // BOREALIS
         this.measurementStartTimestamp = other.measurementStartTimestamp;
     }
 
@@ -69,6 +72,7 @@ class VideoStats {
         this.maxHostProcessingLatency = 0;
         this.totalHostProcessingLatency = 0;
         this.framesWithHostProcessingLatency = 0;
+        this.totalBytes = 0; // BOREALIS
         this.measurementStartTimestamp = 0;
     }
 

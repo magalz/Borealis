@@ -182,6 +182,7 @@ class HostCardTest {
                     name = "Desk PC",
                     status = DotStatus.Online,
                     statusText = "Online",
+                    // A layout specimen (a long line), not data a host reports.
                     detail = "LuminalShine 26.09.1 · 192.168.1.20",
                     tags = tags,
                     runningApp = runningApp,

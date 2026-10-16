@@ -42,8 +42,8 @@ private val CHIP_PADDING_HORIZONTAL = 8.dp
 private val CHIP_PADDING_VERTICAL = 2.dp
 
 /**
- * A host: its [name], a status dot with [statusText], a secondary [detail] line (version and
- * address), the capability [tags] below it, the app it is running if any, and at most one inline
+ * A host: its [name], a status dot with [statusText], a secondary [detail] line (an address or a
+ * short note), the capability [tags] below it, the app it is running if any, and at most one inline
  * [action]. A tap or OK runs [onClick]; every way of asking for options (long press, hold OK, X,
  * Menu) runs [onOptions], named [optionsLabel] for a screen reader. The card and the action are two
  * focus stops: the D-pad goes from the card to the action (down on a TV, towards the end on a

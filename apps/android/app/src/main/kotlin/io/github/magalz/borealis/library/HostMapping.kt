@@ -33,9 +33,27 @@ internal fun parseApps(raw: String?): List<NvApp> {
     }
 }
 
-/** Parses a raw app list. Not remembering anything yet. */
+/**
+ * Parsed app lists by their raw text. The hosts are mapped again at every poll, so a list that has
+ * not changed must not be parsed again (nor an unreadable one logged again). Holds the latest few
+ * lists, one per host.
+ */
 internal class ParsedAppLists(private val parse: (String?) -> List<NvApp> = ::parseApps) {
-    fun of(raw: String?): List<NvApp> = parse(raw)
+    private val lists =
+        object : LinkedHashMap<String, List<NvApp>>(INITIAL_CAPACITY, LOAD_FACTOR, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<NvApp>>) =
+                size > MAX_LISTS
+        }
+
+    @Synchronized
+    fun of(raw: String?): List<NvApp> =
+        if (raw.isNullOrEmpty()) emptyList() else lists.getOrPut(raw) { parse(raw) }
+
+    private companion object {
+        const val INITIAL_CAPACITY = 16
+        const val LOAD_FACTOR = 0.75f
+        const val MAX_LISTS = 32
+    }
 }
 
 internal val sharedAppLists = ParsedAppLists()
@@ -52,8 +70,9 @@ private fun unreadable(error: Exception): List<NvApp> {
  * running app; a paired host whose list does not name the running app shows it without a name.
  *
  * The capabilities come from the host info: a host without it shows none. There is no host-level
- * HDR flag, so HDR is set when any app of the list supports it. The version is not shown: Sunshine
- * and LuminalShine both report the fixed GameStream version, so it says nothing about the host.
+ * HDR flag, so HDR is set when any app of the list supports it, unless the host is offline (its
+ * card shows no tags, so the list is not parsed for it). The version is not shown: Sunshine and
+ * LuminalShine both report the fixed GameStream version, so it says nothing about the host.
  */
 internal fun ComputerDetails.toHost(
     knownApps: List<NvApp>? = null,
@@ -65,21 +84,25 @@ internal fun ComputerDetails.toHost(
             .takeIf { it != 0 && pairState == PairState.PAIRED }
             ?.let { id -> RunningApp(id, apps.firstOrNull { it.appId == id }?.appName) }
     val caps = borealis?.caps
+    val reachability =
+        when (state) {
+            ComputerDetails.State.ONLINE -> Reachability.ONLINE
+            ComputerDetails.State.OFFLINE -> Reachability.OFFLINE
+            else -> Reachability.UNKNOWN
+        }
+    val online = reachability != Reachability.OFFLINE
     return Host(
         id = uuid,
         name = name.orEmpty(),
-        reachability =
-            when (state) {
-                ComputerDetails.State.ONLINE -> Reachability.ONLINE
-                ComputerDetails.State.OFFLINE -> Reachability.OFFLINE
-                else -> Reachability.UNKNOWN
-            },
+        reachability = reachability,
         paired = pairState == PairState.PAIRED,
         runningApp = running,
         canWake = macAddress != null,
         address = (activeAddress ?: manualAddress ?: localAddress)?.address,
         capabilities =
-            caps?.let { capabilities(it, apps.any { app -> app.isHdrSupported }) }.orEmpty(),
+            caps
+                ?.let { capabilities(it, hdr = online && apps.any { app -> app.isHdrSupported }) }
+                .orEmpty(),
     )
 }
 

@@ -55,6 +55,9 @@ class ComponentScreenshotTest {
                     name = "Desk PC",
                     status = DotStatus.Online,
                     statusText = "Online",
+                    // The detail lines of these specimens are the prototype copy, to show the
+                    // layout:
+                    // they are not data a host reports.
                     detail = "LuminalShine 26.09.1 · 192.168.1.20",
                     runningApp = "Desktop running",
                     action = HostCardAction("Open") {},

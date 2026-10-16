@@ -6,11 +6,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -20,7 +24,6 @@ import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.testing.HANDHELD
-import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
 import io.github.magalz.borealis.stream.testing.TV
@@ -84,6 +87,19 @@ class StreamingScreenshotTest {
     }
 
     @Test
+    @Config(qualifiers = TV)
+    fun menuTvDisconnectQuitFocused() {
+        composeRule.setChromeInKeyboardMode(FormFactor.Tv) {
+            Stream { Layer(aStreaming(Panel.MENU, touchMode = null, gamepadMouse = false)) }
+        }
+        composeRule.onNodeWithText("Quit Desktop").performScrollTo().requestFocus()
+        // Scroll to the very end, so the padding under the last row and its outline show.
+        composeRule.onNode(hasScrollAction()).performTouchInput { swipeUp() }
+
+        shoot("menu_tv_disconnect-quit_focused")
+    }
+
+    @Test
     @Config(qualifiers = PHONE_LANDSCAPE)
     fun menuPhoneQuitConfirm() {
         composeRule.setContent { Stream(FormFactor.Phone) { Layer(aStreaming(Panel.MENU)) } }
@@ -93,7 +109,7 @@ class StreamingScreenshotTest {
     }
 
     @Test
-    @Config(qualifiers = PHONE)
+    @Config(qualifiers = PHONE_LANDSCAPE)
     fun overlayPhoneCompact() {
         composeRule.setContent {
             Stream(FormFactor.Phone) {
@@ -117,7 +133,7 @@ class StreamingScreenshotTest {
     }
 
     @Test
-    @Config(qualifiers = PHONE)
+    @Config(qualifiers = PHONE_LANDSCAPE)
     fun streamPhoneHandleHint() {
         composeRule.setContent {
             Stream(FormFactor.Phone) { Layer(aStreaming(showMenuHint = true)) }

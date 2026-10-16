@@ -46,7 +46,7 @@ class GameHostingTest {
     @Test
     fun `the input entry points ask the chrome first`() {
         for (name in listOf("handleKeyDown", "handleKeyUp", "handleKeyMultiple", "handleMotionEvent")) {
-            val start = Regex("(public|private) boolean $name\(").find(source)!!.range.first
+            val start = Regex("(public|private) boolean $name\\(").find(source)!!.range.first
             val body = source.substring(start, source.indexOf("{", start) + 200)
             assertThat(body).contains("chromeInput.toChrome(")
         }

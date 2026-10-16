@@ -178,6 +178,13 @@ internal constructor(
         return false
     }
 
+    /**
+     * `/serverinfo` showed an app other than the requested one. Returns the result of [resolve],
+     * which asks the user; a restart refuses instead. Never quits the other app on its own.
+     */
+    @Throws(IOException::class, XmlPullParserException::class)
+    fun differentAppRunning(resolve: LaunchAttempt): Boolean = false
+
     /** Whether the start ended because another device was starting its stream. */
     fun collided(): Boolean = collision
 

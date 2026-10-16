@@ -3,8 +3,6 @@ package io.github.magalz.borealis.stream
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
-import io.github.magalz.borealis.host.failure.FailureKind
-import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.nativecore.LaunchCategory
 import org.junit.Test
 
@@ -51,37 +49,52 @@ class StreamSessionFactoryTest {
         assertThat(StreamSessionFactory.defaults(prefs(), true, false).showMenuHint).isFalse()
     }
 
+    private fun sized(width: Int, height: Int, bitrate: Int) =
+        prefs().apply {
+            this.width = width
+            this.height = height
+            this.bitrate = bitrate
+        }
+
     @Test
     fun `the session info names the negotiated codec and tells HDR`() {
-        val h264 = StreamSessionFactory.sessionInfo(1920, 1080, 60, MoonBridge.VIDEO_FORMAT_H264, 20_000)
+        val h264 =
+            StreamSessionFactory.sessionInfo(sized(1920, 1080, 20_000), 60, MoonBridge.VIDEO_FORMAT_H264, null)
         val hevcHdr =
-            StreamSessionFactory.sessionInfo(3840, 2160, 120, MoonBridge.VIDEO_FORMAT_H265_MAIN10, 80_000)
-        val av1 = StreamSessionFactory.sessionInfo(1280, 720, 30, MoonBridge.VIDEO_FORMAT_AV1_MAIN8, 5_000)
+            StreamSessionFactory.sessionInfo(
+                sized(3840, 2160, 80_000),
+                120,
+                MoonBridge.VIDEO_FORMAT_H265_MAIN10,
+                null,
+            )
+        val av1 =
+            StreamSessionFactory.sessionInfo(sized(1280, 720, 5_000), 30, MoonBridge.VIDEO_FORMAT_AV1_MAIN8, null)
 
-        assertThat(h264)
-            .isEqualTo(SessionInfo(1920, 1080, 60, "H.264", hdr = false, null, 20_000))
-        assertThat(hevcHdr)
-            .isEqualTo(SessionInfo(3840, 2160, 120, "HEVC", hdr = true, null, 80_000))
+        assertThat(h264).isEqualTo(SessionInfo(1920, 1080, 60, "H.264", hdr = false, null, 20_000))
+        assertThat(hevcHdr).isEqualTo(SessionInfo(3840, 2160, 120, "HEVC", hdr = true, null, 80_000))
         assertThat(av1.codec).isEqualTo("AV1")
         assertThat(av1.hdr).isFalse()
     }
 
     @Test
-    fun `a failure carries the error code and stage as its raw code`() {
-        assertThat(StreamSessionFactory.failure("RTSP handshake", -1, null))
-            .isEqualTo(StreamFailure(FailureKind.GENERIC, "Error -1 · RTSP handshake", null))
+    fun `the session info names the decoder the renderer picked`() {
+        val info =
+            StreamSessionFactory.sessionInfo(
+                sized(1920, 1080, 20_000),
+                60,
+                MoonBridge.VIDEO_FORMAT_H265,
+                "c2.qti.hevc.decoder",
+            )
+
+        assertThat(info.decoder).isEqualTo("c2.qti.hevc.decoder")
     }
 
     @Test
-    fun `a failure without a stage has the error code only, large codes in hex`() {
-        assertThat(StreamSessionFactory.failure(null, 5, "UDP 47998").rawCode).isEqualTo("Error 5")
-        assertThat(StreamSessionFactory.failure(null, 5, "UDP 47998").portHint).isEqualTo("UDP 47998")
-        assertThat(StreamSessionFactory.failure(null, 0x4A5B, null).rawCode).isEqualTo("Error 4a5b")
-    }
+    fun `a decoder that is not known leaves the name out`() {
+        val info =
+            StreamSessionFactory.sessionInfo(sized(1920, 1080, 20_000), 60, MoonBridge.VIDEO_FORMAT_H264, null)
 
-    @Test
-    fun `an empty port text is no port hint`() {
-        assertThat(StreamSessionFactory.failure("Control", -1, "").portHint).isNull()
+        assertThat(info.decoder).isNull()
     }
 
     @Test

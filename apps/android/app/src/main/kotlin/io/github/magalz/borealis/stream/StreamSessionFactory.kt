@@ -83,6 +83,19 @@ object StreamSessionFactory {
         )
 
     /**
+     * The negotiated stream: the size and the bitrate limit from [prefs], the [frameRate] and
+     * [videoFormat] the connection agreed on, and the [decoder] the renderer picked, when it knows.
+     */
+    @JvmStatic
+    fun sessionInfo(
+        prefs: PreferenceConfiguration,
+        frameRate: Int,
+        videoFormat: Int,
+        decoder: String?,
+    ): SessionInfo =
+        sessionInfo(prefs.width, prefs.height, frameRate, videoFormat, prefs.bitrate)
+
+    /**
      * A failure of the connection, unclassified for now. The raw code is the support text: the
      * error code, large codes in hex as upstream shows them, and the [stage] when there is one.
      */

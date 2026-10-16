@@ -4,7 +4,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.width
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -35,4 +39,9 @@ internal fun ComposeContentTestRule.setChromeInKeyboardMode(
     }
     runOnIdle { assertThat(checkNotNull(manager).requestInputMode(InputMode.Keyboard)).isTrue() }
     waitForIdle()
+}
+
+/** Asserts the node is [expected] wide, give or take a dp for rounding to pixels. */
+internal fun SemanticsNodeInteraction.assertWidthNear(expected: Dp) {
+    assertThat(getBoundsInRoot().width.value).isWithin(1f).of(expected.value)
 }

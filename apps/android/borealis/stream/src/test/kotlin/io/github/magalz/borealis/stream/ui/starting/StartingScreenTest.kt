@@ -1,10 +1,12 @@
 package io.github.magalz.borealis.stream.ui.starting
 
 import android.content.Context
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -14,10 +16,12 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
@@ -27,6 +31,7 @@ import io.github.magalz.borealis.nativecore.LaunchCategory
 import io.github.magalz.borealis.stream.LaunchRetry
 import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamPhase
+import io.github.magalz.borealis.stream.ui.STARTING_CONTENT_TAG
 import io.github.magalz.borealis.stream.ui.StartingScreen
 import org.junit.Rule
 import org.junit.Test
@@ -54,6 +59,49 @@ class StartingScreenTest {
 
         composeRule.onNode(hasText("Starting Desktop") and !isStep()).assertIsDisplayed()
         composeRule.onNode(hasText("Gaming PC") and !isStep()).assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the title is a heading`() {
+        show()
+
+        composeRule
+            .onNode(
+                hasText("Starting Desktop") and
+                    SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading)
+            )
+            .assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the host busy block is a polite live region`() {
+        val retry =
+            LaunchRetry(LaunchCategory.PENDING, attempt = 1, maxAttempts = 4, delayMs = 1000)
+        show(StreamPhase.Starting(StartStage.STARTING_APP, retry))
+
+        composeRule
+            .onNode(
+                SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite)
+            )
+            .assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV the content is 440dp wide`() {
+        show(formFactor = FormFactor.Tv)
+
+        composeRule.onNodeWithTag(STARTING_CONTENT_TAG).assertWidthNear(440.dp)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `on a phone the content is 86 percent of the screen`() {
+        show()
+
+        composeRule.onNodeWithTag(STARTING_CONTENT_TAG).assertWidthNear(309.6.dp)
     }
 
     @Test
@@ -194,10 +242,16 @@ class StartingScreenTest {
         formFactor: FormFactor = FormFactor.Phone,
     ) {
         phase = start
-        composeRule.setChrome(formFactor) {
-            StartingScreen("Desktop", "Gaming PC", phase, intents)
+        // A TV or handheld is driven by a D-pad or a gamepad, which puts the window in keyboard
+        // input mode: the initial focus on Cancel is about that mode.
+        if (formFactor == FormFactor.Phone) {
+            composeRule.setChrome(formFactor) { Starting() }
+        } else {
+            composeRule.setChromeInKeyboardMode(formFactor) { Starting() }
         }
     }
+
+    @Composable private fun Starting() = StartingScreen("Desktop", "Gaming PC", phase, intents)
 
     private fun step(text: String): SemanticsNodeInteraction =
         composeRule.onNode(hasText(text) and isStep())

@@ -1,17 +1,23 @@
 package io.github.magalz.borealis.stream.ui.starting
 
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.StreamPhase
+import io.github.magalz.borealis.stream.ui.CONFLICT_PANEL_TAG
 import io.github.magalz.borealis.stream.ui.ConflictDialog
 import org.junit.Rule
 import org.junit.Test
@@ -39,7 +45,7 @@ class ConflictDialogTest {
 
         composeRule
             .onNodeWithText(
-                "Desktop is already running on the host. " +
+                "Desktop is already running on this host. " +
                     "You can join it, or quit it and start it again."
             )
             .assertIsDisplayed()
@@ -52,7 +58,7 @@ class ConflictDialogTest {
 
         composeRule
             .onNodeWithText(
-                "Desktop is already running on the host. You can join it, or quit it and start Hades II."
+                "Desktop is already running on this host. You can join it, or quit it and start Hades II."
             )
             .assertIsDisplayed()
     }
@@ -64,7 +70,7 @@ class ConflictDialogTest {
 
         composeRule
             .onNodeWithText(
-                "Another app is already running on the host. You can join it, or quit it and start Hades II."
+                "Another app is already running on this host. You can join it, or quit it and start Hades II."
             )
             .assertIsDisplayed()
     }
@@ -140,6 +146,43 @@ class ConflictDialogTest {
         assertThat(intents.calls).containsExactly("answerConflict CANCEL")
     }
 
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the title is a heading`() {
+        show(sameApp())
+
+        composeRule
+            .onNode(
+                hasText("An app is already running") and
+                    SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading)
+            )
+            .assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV the panel is 420dp wide`() {
+        show(sameApp(), FormFactor.Tv)
+
+        composeRule.onNodeWithTag(CONFLICT_PANEL_TAG).assertWidthNear(420.dp)
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun `on a handheld the panel is 420dp wide`() {
+        show(sameApp(), FormFactor.Handheld)
+
+        composeRule.onNodeWithTag(CONFLICT_PANEL_TAG).assertWidthNear(420.dp)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `on a phone the panel is 92 percent of the screen`() {
+        show(sameApp())
+
+        composeRule.onNodeWithTag(CONFLICT_PANEL_TAG).assertWidthNear(331.2.dp)
+    }
+
     private fun sameApp() =
         StreamPhase.Conflict(
             runningAppName = "Desktop",
@@ -155,6 +198,12 @@ class ConflictDialogTest {
         )
 
     private fun show(phase: StreamPhase.Conflict, formFactor: FormFactor = FormFactor.Phone) {
-        composeRule.setChrome(formFactor) { ConflictDialog(phase, intents) }
+        // A TV or handheld is driven by a D-pad or a gamepad, which puts the window in keyboard
+        // input mode: UC-003-T1 is about the focus in that mode.
+        if (formFactor == FormFactor.Phone) {
+            composeRule.setChrome(formFactor) { ConflictDialog(phase, intents) }
+        } else {
+            composeRule.setChromeInKeyboardMode(formFactor) { ConflictDialog(phase, intents) }
+        }
     }
 }

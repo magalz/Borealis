@@ -38,6 +38,16 @@ internal enum class GamepadKey {
                 else -> null
             }
 
+        /** Whether [keyCode] confirms the focused item: OK, Enter, or the gamepad A. */
+        fun isConfirm(keyCode: Int): Boolean =
+            when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER,
+                KeyEvent.KEYCODE_BUTTON_A -> true
+                else -> false
+            }
+
         /** [event] as the key OK, which is what a click listens for. */
         fun asOk(event: KeyEvent): KeyEvent =
             KeyEvent(

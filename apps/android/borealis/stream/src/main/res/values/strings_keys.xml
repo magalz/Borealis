@@ -2,6 +2,7 @@
 <resources>
     <!-- Key names are what Windows calls them, so they are not translated. -->
     <string name="key_alt_tab" translatable="false">Alt+Tab</string>
+    <string name="key_win_tab" translatable="false">Win+Tab</string>
     <string name="key_win" translatable="false">Win</string>
     <string name="key_ctrl_shift_esc" translatable="false">Ctrl+Shift+Esc</string>
     <string name="key_alt_f4" translatable="false">Alt+F4</string>

@@ -36,6 +36,7 @@ object Shortcuts {
     private const val VK_F11 = 0x7A
 
     private val altTab = NamedChord(R.string.key_alt_tab, KeyChord(VK_TAB, setOf(ALT)))
+    private val winTab = NamedChord(R.string.key_win_tab, KeyChord(VK_TAB, setOf(WIN)))
     private val win = NamedChord(R.string.key_win, KeyChord(VK_LWIN))
     private val ctrlShiftEsc =
         NamedChord(R.string.key_ctrl_shift_esc, KeyChord(VK_ESCAPE, setOf(CTRL, SHIFT)))
@@ -48,8 +49,8 @@ object Shortcuts {
 
     /** The chips of the menu's Send keys row. */
     val sendKeys: List<NamedChord> =
-        listOf(altTab, win, ctrlShiftEsc, altF4, winD, winG, esc, winAltB)
+        listOf(altTab, winTab, win, ctrlShiftEsc, altF4, winD, winG, esc, winAltB)
 
     /** The shortcut row of the in-stream keyboard. */
-    val keyboardRow: List<NamedChord> = listOf(altTab, win, ctrlShiftEsc, altF4, winD, esc, f11)
+    val keyboardRow: List<NamedChord> = listOf(altTab, winTab, win, ctrlShiftEsc, altF4, winD, esc, f11)
 }

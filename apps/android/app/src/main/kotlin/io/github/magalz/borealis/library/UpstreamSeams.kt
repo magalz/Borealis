@@ -124,9 +124,7 @@ internal class DiskAppListCache
 @Inject
 constructor(@ApplicationContext private val context: Context) : AppListCache {
     override fun read(hostId: String): String? {
-        // The id comes from the host: it must not leave the cache directory.
-        if (hostId.isEmpty() || hostId == ".." || hostId.any { it == '/' || it == '\\' })
-            return null
+        if (!isFileName(hostId)) return null
         val file = CacheHelper.openPath(false, context.cacheDir, "applist", hostId)
         if (!file.isFile) return null
         return try {
@@ -140,4 +138,8 @@ constructor(@ApplicationContext private val context: Context) : AppListCache {
             null
         }
     }
+
+    // The id comes from the host: it must not leave the cache directory.
+    private fun isFileName(id: String): Boolean =
+        id.isNotEmpty() && id != ".." && id.none { it == '/' || it == '\\' }
 }

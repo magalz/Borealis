@@ -1,0 +1,134 @@
+package io.github.magalz.borealis.stream
+
+import com.google.common.truth.Truth.assertThat
+import java.io.File
+import org.junit.Test
+
+/**
+ * The stream activity hands the stream chrome the controller, the connection and the renderer. Reads
+ * the source, so it needs no Android runtime and never initializes `Game`.
+ */
+class GameWiringTest {
+    private val source: String = File("src/main/java/com/limelight/Game.java").readText()
+    private val renderer: String =
+        File("src/main/java/com/limelight/binding/video/MediaCodecDecoderRenderer.java").readText()
+
+    private fun body(signature: String): String {
+        val start = source.indexOf(signature)
+        // A method that is not there has an empty body, so the test fails on its assertion.
+        if (start < 0) return ""
+        return source.substring(start, source.indexOf("\n    }\n", start))
+    }
+
+    @Test
+    fun `the chrome takes and gives back the gamepad`() {
+        assertThat(body("private void chromeCaptured()")).contains("controllerHandler.setCaptured(true)")
+        assertThat(body("private void chromeReleased()")).contains("controllerHandler.setCaptured(false)")
+    }
+
+    @Test
+    fun `the gamepad gives the gamepad back before the pointer is grabbed again`() {
+        val released = body("private void chromeReleased()")
+
+        assertThat(released).contains("setCaptured(false)")
+        assertThat(released.indexOf("setCaptured(false)"))
+            .isLessThan(released.indexOf("setInputGrabState(true)"))
+    }
+
+    @Test
+    fun `the menu chord opens the menu and the USB pad keys reach the chrome`() {
+        assertThat(source).contains("controllerHandler.setMenuChordListener(streamSession::openMenu)")
+        assertThat(source).contains("controllerHandler.setChromeKeySink(chromeHost::dispatchKeyEvent)")
+    }
+
+    @Test
+    fun `the menu reads the gamepad mouse and the decoder numbers follow the overlay and the menu`() {
+        assertThat(source).contains("GamepadMouseSync.bind(")
+        assertThat(source).contains("controllerHandler::isMouseEmulationEnabled")
+        assertThat(source).contains("PerfGate.bind(")
+        assertThat(source).contains("decoderRenderer::setPerfEnabled")
+        assertThat(source).contains("decoderRenderer.setPerfSink(streamSession::onPerf)")
+    }
+
+    @Test
+    fun `starting the app is a stage of its own, the display is prepared before it`() {
+        assertThat(body("public void launchStarting(")).contains("StartStage.STARTING_APP")
+        assertThat(body("public void stageStarting(")).contains("StartStage.PREPARING_DISPLAY")
+    }
+
+    @Test
+    fun `the session info names the decoder`() {
+        assertThat(source).contains("decoderRenderer.getDecoderName()")
+    }
+
+    @Test
+    fun `failures are classified from the facts of the connection`() {
+        for (name in listOf("public void stageFailed(", "public void connectionTerminated(")) {
+            val body = body(name)
+            assertThat(body).contains("StreamFailures.facts(")
+            assertThat(body).contains("StreamFailures.failure(")
+            assertThat(body).contains("streamSession.onFailed(")
+            assertThat(body).doesNotContain("StreamSessionFactory.failure(")
+        }
+    }
+
+    @Test
+    fun `the error text is built by the classifier, not by the activity`() {
+        assertThat(source).doesNotContain("conn_error_msg")
+        assertThat(source).doesNotContain("conn_terminated_msg")
+        assertThat(source).doesNotContain("StreamErrorHints")
+        assertThat(source).doesNotContain("ResumeCollisions.withHint")
+    }
+
+    @Test
+    fun `the 12 point 2 text overlay is gone`() {
+        assertThat(source).doesNotContain("performanceOverlay")
+        assertThat(source).doesNotContain("onPerfUpdate")
+        assertThat(source).doesNotContain("PerfOverlayListener")
+        assertThat(renderer).doesNotContain("perfListener")
+        assertThat(renderer).doesNotContain("perf_overlay_")
+        assertThat(File("src/main/res/layout/activity_game.xml").readText())
+            .doesNotContain("performanceOverlay")
+        assertThat(File("src/main/java/com/limelight/binding/video/PerfOverlayListener.java").exists())
+            .isFalse()
+    }
+
+    @Test
+    fun `no string of the text overlay stays in any language`() {
+        val leftovers =
+            File("src/main/res")
+                .walkTopDown()
+                .filter { it.name == "strings.xml" && it.readText().contains("perf_overlay_") }
+                .map { it.path }
+                .toList()
+
+        assertThat(leftovers).isEmpty()
+    }
+
+    @Test
+    fun `the touch mode comes from the session, not from the preference`() {
+        assertThat(source).doesNotContain("prefConfig.touchscreenTrackpad")
+        assertThat(source).contains("TouchContexts.mode(streamSession, prefConfig)")
+    }
+
+    @Test
+    fun `a touch screen that is switched off is ignored`() {
+        assertThat(source).contains("TouchMode.OFF")
+    }
+
+    @Test
+    fun `the three-finger tap toggles the Borealis keyboard, not the Android one`() {
+        val toggle = body("public void toggleKeyboard()")
+
+        assertThat(toggle).contains("StreamKeyboards.toggle(streamSession)")
+        assertThat(toggle).doesNotContain("toggleSoftInput")
+    }
+
+    @Test
+    fun `the Android keyboard keeps the D-pad, Enter and Back of a gamepad`() {
+        for (name in listOf("public boolean handleKeyDown(", "public boolean handleKeyUp(")) {
+            assertThat(body(name)).contains("imeKeys.toIme(event)")
+        }
+        assertThat(source).contains("ImeKeyGate.isImeVisible(")
+    }
+}

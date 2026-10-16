@@ -22,7 +22,8 @@ import kotlinx.coroutines.launch
 /**
  * The apps of [hostId], wired to its ViewModel. [onStartStream] gets the request to hand, with the
  * Activity, to the stream launcher. [onClose] gets the localized message to show on the previous
- * screen, or null when the user went back.
+ * screen, or null when the user went back. [launchAppId] is an app to select as a tap does once the
+ * apps are loaded, for a launch request; [onLaunchHandled] says that it was.
  */
 @Composable
 fun AppsRoute(
@@ -30,6 +31,8 @@ fun AppsRoute(
     onClose: (message: String?) -> Unit,
     onStartStream: (StreamRequest) -> Unit,
     modifier: Modifier = Modifier,
+    launchAppId: Int? = null,
+    onLaunchHandled: () -> Unit = {},
     viewModel: AppsViewModel =
         hiltViewModel<AppsViewModel, AppsViewModel.Factory> { it.create(hostId) },
 ) {
@@ -39,6 +42,13 @@ fun AppsRoute(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val handled by rememberUpdatedState(onLaunchHandled)
+    LaunchedEffect(viewModel, launchAppId, state.loading) {
+        if (launchAppId != null && !state.loading) {
+            viewModel.onLaunchRequested(launchAppId)
+            handled()
+        }
+    }
     LaunchedEffect(viewModel, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.effects.collect { effect ->
@@ -73,5 +83,6 @@ private fun AppsMessage.text(context: Context): String =
         AppsMessage.HostNotPaired -> context.getString(R.string.apps_message_host_not_paired)
         AppsMessage.HostOffline -> context.getString(R.string.apps_message_host_offline)
         AppsMessage.QuitDone -> context.getString(R.string.apps_message_quit_done)
+        AppsMessage.PinFailed -> context.getString(R.string.apps_message_pin_failed)
         is AppsMessage.QuitFailed -> message ?: context.getString(R.string.apps_message_quit_failed)
     }

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.magalz.borealis.library.domain.Host
+import io.github.magalz.borealis.library.domain.HostCapability
 import io.github.magalz.borealis.library.domain.HostRepository
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.StreamRequest
@@ -110,7 +111,41 @@ private fun List<Host>.toUiState(details: String?): HostsUiState {
 }
 
 private fun Host.toItem() =
-    HostItemUiState(id, name, reachability, paired, runningApp, primaryAction())
+    HostItemUiState(
+        id = id,
+        name = name,
+        reachability = reachability,
+        paired = paired,
+        runningApp = runningApp,
+        action = primaryAction(),
+        address = address,
+        foundOnNetwork = reachability == Reachability.ONLINE && !paired,
+        tags = tags(),
+    )
+
+/**
+ * The tags of the card, at most three, in this order: the best video codec (10-bit beats 8-bit, and
+ * AV1 shows only when there is no HEVC 10-bit), HDR, then 4:4:4. An offline host shows none: what
+ * it could do is not what it does now.
+ */
+private fun Host.tags(): List<HostCapability> =
+    if (reachability == Reachability.OFFLINE) {
+        emptyList()
+    } else {
+        listOfNotNull(
+            CODECS_BY_PREFERENCE.firstOrNull { it in capabilities },
+            HostCapability.HDR.takeIf { it in capabilities },
+            HostCapability.YUV_444.takeIf { it in capabilities },
+        )
+    }
+
+private val CODECS_BY_PREFERENCE =
+    listOf(
+        HostCapability.HEVC_10_BIT,
+        HostCapability.AV1_10_BIT,
+        HostCapability.HEVC,
+        HostCapability.AV1,
+    )
 
 private fun Host.primaryAction(): HostAction =
     when {

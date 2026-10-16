@@ -38,7 +38,7 @@ internal fun interface GlRendererProbe {
 }
 
 /**
- * [LegacyBridge] over the upstream helpers of `PcView`.
+ * [LegacyBridge] over the upstream helpers of the 12.2 host list.
  *
  * [onLauncherCreated] may be called before or after the activity sets its content: the GL renderer
  * probe is not started inside the call but posted to the main looper, so it runs after the callback
@@ -78,9 +78,9 @@ constructor(private val startup: UpstreamStartup, private val glProbe: GlRendere
     }
 }
 
-/** [UpstreamStartup] over the helpers that `PcView` calls. */
+/** [UpstreamStartup] over the helpers that the 12.2 host list called at start-up. */
 @Singleton
-internal class PcViewStartup @Inject constructor() : UpstreamStartup {
+internal class UpstreamLauncherStartup @Inject constructor() : UpstreamStartup {
     @Suppress("DEPRECATION")
     override fun setDefaultPreferences(activity: Activity) =
         PreferenceManager.setDefaultValues(activity, R.xml.preferences, false)
@@ -95,8 +95,8 @@ internal class PcViewStartup @Inject constructor() : UpstreamStartup {
 }
 
 /**
- * [GlRendererProbe] with the one-pixel `GLSurfaceView` that `PcView` renders a frame in. It lives
- * on top of the activity until the renderer name is known.
+ * [GlRendererProbe] with the one-pixel `GLSurfaceView` that the 12.2 host list rendered a frame in.
+ * It lives on top of the activity until the renderer name is known.
  */
 @Singleton
 internal class GlSurfaceRendererProbe @Inject constructor() : GlRendererProbe {

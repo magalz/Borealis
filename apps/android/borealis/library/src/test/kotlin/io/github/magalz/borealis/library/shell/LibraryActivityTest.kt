@@ -21,6 +21,7 @@ import dagger.hilt.android.testing.HiltTestApplication
 import io.github.magalz.borealis.library.domain.AppRepository
 import io.github.magalz.borealis.library.domain.AppsSnapshot
 import io.github.magalz.borealis.library.domain.HostRepository
+import io.github.magalz.borealis.library.domain.HostShortcuts
 import io.github.magalz.borealis.library.domain.LegacyBridge
 import io.github.magalz.borealis.library.domain.PairingInstructions
 import io.github.magalz.borealis.library.domain.PairingOutcome
@@ -30,6 +31,7 @@ import io.github.magalz.borealis.library.domain.StreamLauncher
 import io.github.magalz.borealis.library.domain.StreamRequest
 import io.github.magalz.borealis.library.testing.FakeAppRepository
 import io.github.magalz.borealis.library.testing.FakeHostRepository
+import io.github.magalz.borealis.library.testing.FakeHostShortcuts
 import io.github.magalz.borealis.library.testing.FakeLegacyBridge
 import io.github.magalz.borealis.library.testing.FakePairingService
 import io.github.magalz.borealis.library.testing.FakeStreamLauncher
@@ -54,6 +56,7 @@ class LibraryActivityTest {
     @get:Rule(order = 1) val composeRule = createAndroidComposeRule<LibraryActivity>()
 
     private val hosts = FakeHostRepository()
+    private val shortcuts = FakeHostShortcuts()
     private val apps = FakeAppRepository()
     private val pairing = FakePairingService()
     private val streams = FakeStreamLauncher()
@@ -64,6 +67,7 @@ class LibraryActivityTest {
     @BindValue @JvmField val pairingService: PairingService = pairing
     @BindValue @JvmField val streamLauncher: StreamLauncher = streams
     @BindValue @JvmField val legacyBridge: LegacyBridge = bridge
+    @BindValue @JvmField val hostShortcuts: HostShortcuts = shortcuts
 
     private val desk = aHost(id = "desk", name = "Desk PC")
 
@@ -75,6 +79,18 @@ class LibraryActivityTest {
         composeRule.waitForIdle()
 
         composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
+    }
+
+    @Test
+    fun `opening the apps of a host publishes its launcher shortcut`() {
+        hosts.emit(desk)
+        apps.emit(AppsSnapshot(host = desk, apps = listOf(anApp(1, "Hades II")), loading = false))
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Open", useUnmergedTree = true).performClick()
+        composeRule.waitForIdle()
+
+        assertThat(shortcuts.openedHosts).containsExactly("desk" to "Desk PC")
     }
 
     @Test

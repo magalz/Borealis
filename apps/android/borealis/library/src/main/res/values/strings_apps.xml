@@ -27,6 +27,8 @@
     <string name="apps_action_hide_consequence">You can show it again with Show hidden apps.</string>
     <string name="apps_action_unhide">Show in this list</string>
     <string name="apps_action_unhide_consequence"></string>
+    <string name="apps_action_pin">Add to home screen</string>
+    <string name="apps_action_pin_consequence">Put a shortcut to %1$s on your home screen.</string>
     <string name="apps_running_app_fallback">the running app</string>
 
     <string name="apps_confirm_quit">Quit %1$s? Unsaved work is lost.</string>
@@ -44,4 +46,5 @@
     <string name="apps_message_host_offline">This PC is offline.</string>
     <string name="apps_message_quit_done">App quit.</string>
     <string name="apps_message_quit_failed">Failed to quit.</string>
+    <string name="apps_message_pin_failed">Your launcher did not add the shortcut.</string>
 </resources>

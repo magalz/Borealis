@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="hosts_title">Hosts</string>
     <string name="hosts_add_host">Add host</string>
     <string name="hosts_settings">Settings</string>
@@ -17,6 +17,15 @@
     <string name="hosts_status_not_paired">Not paired</string>
     <string name="hosts_status_offline">Offline</string>
     <string name="hosts_status_checking">Checking…</string>
+
+    <string name="hosts_detail_found">Found on this network</string>
+
+    <string name="hosts_tag_hevc">HEVC</string>
+    <string name="hosts_tag_hevc_10_bit">HEVC 10-bit</string>
+    <string name="hosts_tag_av1" tools:ignore="Typos">AV1</string>
+    <string name="hosts_tag_av1_10_bit">AV1 10-bit</string>
+    <string name="hosts_tag_hdr">HDR</string>
+    <string name="hosts_tag_yuv_444">4:4:4</string>
 
     <string name="hosts_action_open">Open</string>
     <string name="hosts_action_pair">Pair</string>

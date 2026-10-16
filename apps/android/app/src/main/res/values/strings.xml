@@ -2,66 +2,29 @@
 <resources>
     <!-- Shortcut strings -->
     <string name="scut_deleted_pc">PC deleted</string>
-    <string name="scut_not_paired">PC not paired</string>
-    <string name="scut_pc_not_found">PC not found</string>
-    <string name="scut_invalid_uuid">Provided PC is not valid</string>
-    <string name="scut_invalid_app_id">Provided App is not valid</string>
 
     <!-- Help strings -->
     <string name="help_loading_title">Help Viewer</string>
     <string name="help_loading_msg">Loading help page…</string>
 
     <!-- PC view menu entries -->
-    <string name="pcview_menu_header_online">Online</string>
-    <string name="pcview_menu_header_offline">Offline</string>
-    <string name="pcview_menu_header_unknown">Refreshing</string>
-    <string name="pcview_menu_app_list">View All Apps</string>
-    <string name="pcview_menu_pair_pc">Pair with PC</string>
     <string name="pcview_menu_unpair_pc">Unpair</string>
-    <string name="pcview_menu_send_wol">Send Wake-On-LAN request</string>
-    <string name="pcview_menu_delete_pc">Delete PC</string>
-    <string name="pcview_menu_test_network">Test Network Connection</string>
-    <string name="pcview_menu_details">View Details</string>
-    <string name="pcview_menu_eol">NVIDIA GameStream End-of-Service</string>
 
     <!-- Network test strings -->
-    <string name="nettest_title_waiting">Testing Network Connection</string>
-    <string name="nettest_text_waiting">Borealis is testing your network connection to determine if any required ports are blocked.\n\nThis may take a few seconds…</string>
-    <string name="nettest_title_done">Network Test Complete</string>
-    <string name="nettest_text_success">Your network does not appear to be blocking Borealis. If you still have trouble connecting, check your PC\'s firewall settings.\n\nIf you are trying to stream over the Internet, install the Moonlight Internet Hosting Tool on your PC and run the included Internet Streaming Tester to check your PC\'s Internet connection.</string>
-    <string name="nettest_text_inconclusive">The network test could not be performed because none of Moonlight\'s connection testing servers were reachable. Check your Internet connection or try again later.</string>
-    <string name="nettest_text_failure">Your device\'s current network connection seems to be blocking Borealis. Streaming over the Internet may not work while connected to this network.\n\nThe following network ports were blocked:\n</string>
     <string name="nettest_text_blocked">Your device\'s current network connection is blocking Borealis. Streaming over the Internet may not work while connected to this network.</string>
 
     <!-- Pair messages -->
-    <string name="pairing">Pairing…</string>
     <string name="pair_pc_offline">Computer is offline</string>
     <string name="pair_pc_ingame">Computer is currently in a game. You must close the game before pairing.</string>
-    <string name="pair_pairing_title">Pairing</string>
-    <string name="pair_pairing_msg">Please enter the following PIN on the target PC:</string>
     <string name="pair_pairing_help">If your host PC is running Sunshine, navigate to the Sunshine web UI to enter the PIN.</string>
-    <string name="pair_incorrect_pin">Incorrect PIN</string>
     <string name="pair_fail">Pairing failed</string>
-    <string name="pair_already_in_progress">Pairing already in progress</string>
 
     <!-- WOL messages -->
-    <string name="wol_pc_online">Computer is online</string>
-    <string name="wol_no_mac">Unable to wake PC because there is no stored MAC address</string>
     <string name="wol_waking_pc">Waking PC…</string>
-    <string name="wol_waking_msg">It may take a few seconds for your PC to wake up.
-	    If it doesn\'t, make sure it\'s configured properly for Wake-On-LAN.
-    </string>
-    <string name="wol_fail">Failed to send Wake-On-LAN packets</string>
 
     <!-- Unpair messages -->
-    <string name="unpairing">Unpairing…</string>
-    <string name="unpair_success">Unpaired successfully</string>
-    <string name="unpair_fail">Failed to unpair</string>
-    <string name="unpair_error">Device was not paired</string>
 
     <!-- Errors -->
-    <string name="error_pc_offline">Computer is offline</string>
-    <string name="error_manager_not_running">The ComputerManager service is not running. Please wait a few seconds or restart the app.</string>
     <string name="error_unknown_host">Failed to resolve host</string>
     <string name="error_404">GFE returned an HTTP 404 error. Make sure your PC is running a supported GPU.
 	    Using remote desktop software can also cause this error. Try rebooting your machine or reinstalling GFE.
@@ -71,7 +34,6 @@
     <string name="title_decoding_reset">Video Settings Reset</string>
     <string name="message_decoding_reset">Your device\'s video decoder continues to crash at your selected streaming settings. Your streaming settings have been reset to default.</string>
     <string name="error_usb_prohibited">USB access is prohibited by your device administrator. Check your Knox or MDM settings.</string>
-    <string name="unable_to_pin_shortcut">Your current launcher does not allow for creating pinned shortcuts.</string>
     <string name="video_decoder_init_failed">Video decoder failed to initialize. Your device may not support the selected resolution or frame rate.</string>
     <string name="no_video_received_error">No video received from host.</string>
     <string name="no_frame_received_error">Your network connection isn\'t performing well. Reduce your video bitrate setting or try a faster connection.</string>
@@ -79,57 +41,28 @@
     <string name="frame_conversion_error">The host PC reported a fatal video encoding error.\n\nTry disabling HDR mode, changing the streaming resolution, or changing your host PC\'s display resolution.</string>
 
     <!-- Start application messages -->
-    <string name="conn_establishing_title">Establishing Connection</string>
-    <string name="conn_establishing_msg">Starting connection</string>
     <string name="conn_metered">Warning: Your active network connection is metered!</string>
     <string name="conn_client_latency">Average frame decoding latency:</string>
     <string name="conn_client_latency_hw">hardware decoder latency:</string>
     <string name="conn_hardware_latency">Average hardware decoding latency:</string>
-    <string name="conn_starting">Starting</string>
-    <string name="conn_error_title">Connection Error</string>
-    <string name="conn_terminated_title">Connection Terminated</string>
 
     <!-- General strings -->
-    <string name="ip_hint">IP address of host PC</string>
-    <string name="searching_pc">Searching for host PCs on your local network…\n\n
-        Ensure Sunshine is running on your host PC or GameStream is enabled in the GeForce Experience SHIELD settings.</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
-    <string name="lost_connection">Lost connection to PC</string>
-    <string name="title_details">Details</string>
     <string name="help">Help</string>
     <string name="delete_pc_msg">Are you sure you want to delete this PC?</string>
     <string name="slow_connection_msg">Slow connection to PC\nReduce your bitrate</string>
     <string name="poor_connection_msg">Poor connection to PC</string>
 
     <!-- AppList activity -->
-    <string name="applist_connect_msg">Connecting to PC…</string>
-    <string name="applist_menu_resume">Resume Session</string>
-    <string name="applist_menu_quit">Quit Session</string>
-    <string name="applist_menu_quit_and_start">Quit Current Game and Start</string>
     <string name="applist_menu_cancel">Cancel</string>
-    <string name="applist_menu_details">View Details</string>
-    <string name="applist_menu_scut">Create Shortcut</string>
     <string name="applist_menu_tv_channel">Add to Channel</string>
-    <string name="applist_menu_hide_app">Hide App</string>
-    <string name="applist_refresh_title">App List</string>
-    <string name="applist_refresh_msg">Refreshing apps…</string>
     <string name="applist_refresh_error_title">Error</string>
     <string name="applist_refresh_error_msg">Failed to get app list</string>
-    <string name="applist_quit_app">Quitting</string>
-    <string name="applist_quit_success">Successfully quit</string>
-    <string name="applist_quit_fail">Failed to quit</string>
     <string name="applist_quit_confirmation">Are you sure you want to quit the running app? All unsaved data will be lost.</string>
     <string name="applist_details_id">App ID:</string>
 
     <!-- Add computer manually activity -->
-    <string name="title_add_pc">Add PC Manually</string>
-    <string name="msg_add_pc">Connecting to the PC…</string>
-    <string name="addpc_fail">Unable to connect to the specified computer. Make sure the required ports are allowed through the firewall.</string>
-    <string name="addpc_success">Successfully added computer</string>
-    <string name="addpc_unknown_host">Unable to resolve PC address. Make sure you didn\'t make a typo in the address.</string>
-    <string name="addpc_enter_ip">You must enter an IP address</string>
-    <string name="addpc_wrong_sitelocal">That address doesn\'t look right. You must use your router\'s public IP address for streaming over the Internet.</string>
 
     <!-- Preferences -->
     <string name="category_basic_settings">Basic Settings</string>

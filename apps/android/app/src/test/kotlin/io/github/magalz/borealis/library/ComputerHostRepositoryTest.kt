@@ -34,6 +34,8 @@ class ComputerHostRepositoryTest {
     private val woken = mutableListOf<ComputerDetails>()
     private var wakeFailure: IOException? = null
     private val deletedBoxArt = mutableListOf<String>()
+    private val forgottenShortcuts = mutableListOf<String>()
+    private var shortcutFailure: RuntimeException? = null
     private var localNetworks = listOf<LocalIpv4>()
     private val hiddenApps = HiddenApps(context)
 
@@ -50,6 +52,10 @@ class ComputerHostRepositoryTest {
             subnet = SubnetCheck { localNetworks },
             hiddenApps = hiddenApps,
             boxArt = { deletedBoxArt += it },
+            shortcuts = {
+                shortcutFailure?.let { failure -> throw failure }
+                forgottenShortcuts += it.uuid
+            },
             io = io,
         )
     }
@@ -300,6 +306,7 @@ class ComputerHostRepositoryTest {
             assertThat(binder.removed.single().uuid).isEqualTo("a")
             assertThat(hiddenApps.read("a")).isEmpty()
             assertThat(deletedBoxArt).containsExactly("a")
+            assertThat(forgottenShortcuts).containsExactly("a")
         }
 
     @Test
@@ -335,13 +342,27 @@ class ComputerHostRepositoryTest {
 
         assertThat(clients.client.unpairs).isEqualTo(0)
         assertThat(binder.removed.map { it.uuid }).containsExactly("off", "new")
+        assertThat(forgottenShortcuts).containsExactly("off", "new")
     }
+
+    @Test
+    fun `the box art of a forgotten host is deleted even when its shortcuts cannot be disabled`() =
+        runTest {
+            val repository = repository()
+            binder.computers["a"] = details(uuid = "a")
+            shortcutFailure = IllegalStateException("launcher gone")
+
+            runCatching { repository.forget("a") }
+
+            assertThat(deletedBoxArt).containsExactly("a")
+        }
 
     @Test
     fun `forgetting an unknown host does nothing`() = runTest {
         repository().forget("nobody")
 
         assertThat(binder.removed).isEmpty()
+        assertThat(forgottenShortcuts).isEmpty()
     }
 
     @Test

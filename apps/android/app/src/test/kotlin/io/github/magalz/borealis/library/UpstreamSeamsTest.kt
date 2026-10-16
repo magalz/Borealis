@@ -58,7 +58,7 @@ class UpstreamSeamsTest {
 
     @Test
     fun `the decoder crash notice shows nothing when no crash was recorded`() {
-        PcViewStartup().showDecoderCrashDialog(activity)
+        UpstreamLauncherStartup().showDecoderCrashDialog(activity)
 
         assertThat(ShadowDialog.getLatestDialog()).isNull()
     }
@@ -82,7 +82,7 @@ class UpstreamSeamsTest {
 
     @Test
     fun `the stream settings open in the upstream settings activity`() {
-        PcViewStartup().openStreamSettings(activity)
+        UpstreamLauncherStartup().openStreamSettings(activity)
 
         val started = shadowOf(activity).nextStartedActivity
         assertThat(started.component?.className).isEqualTo(StreamSettings::class.java.name)

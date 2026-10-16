@@ -7,6 +7,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import io.github.magalz.borealis.library.domain.AppRepository
 import io.github.magalz.borealis.library.domain.HostRepository
+import io.github.magalz.borealis.library.domain.HostShortcuts
 import io.github.magalz.borealis.library.domain.LegacyBridge
 import io.github.magalz.borealis.library.domain.PairingService
 import io.github.magalz.borealis.library.domain.StreamLauncher
@@ -44,7 +45,11 @@ internal abstract class LibraryAdapterModule {
 
     @Binds abstract fun localNetworks(impl: DeviceLocalNetworks): LocalNetworks
 
-    @Binds abstract fun upstreamStartup(impl: PcViewStartup): UpstreamStartup
+    @Binds abstract fun hostShortcuts(impl: UpstreamHostShortcuts): HostShortcuts
+
+    @Binds abstract fun shortcutCleanup(impl: UpstreamHostShortcuts): ShortcutCleanup
+
+    @Binds abstract fun upstreamStartup(impl: UpstreamLauncherStartup): UpstreamStartup
 
     @Binds abstract fun glRendererProbe(impl: GlSurfaceRendererProbe): GlRendererProbe
 

@@ -108,8 +108,4 @@ class ConnectionErrorScreenshotTest {
         composeRule.waitForIdle()
         captureScreenRoboImage("src/test/screenshots/$name.png")
     }
-
-    private companion object {
-        const val TV = "w960dp-h540dp-land-television-xhdpi"
-    }
 }

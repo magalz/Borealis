@@ -167,6 +167,4 @@ class StreamingScreenshotTest {
         composeRule.waitForIdle()
         composeRule.onRoot().captureRoboImage("src/test/screenshots/$name.png")
     }
-
-    private companion object {}
 }

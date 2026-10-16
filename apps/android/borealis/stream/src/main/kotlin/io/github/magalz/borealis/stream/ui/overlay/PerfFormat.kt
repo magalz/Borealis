@@ -3,8 +3,7 @@ package io.github.magalz.borealis.stream.ui.overlay
 import android.content.res.Resources
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import io.github.magalz.borealis.stream.PerfSnapshot
 import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.SessionInfo
@@ -12,12 +11,11 @@ import java.util.Locale
 
 private const val KBPS_PER_MBPS = 1000f
 
-/** A [PerfFormat] for the language of the screen, kept until the configuration changes. */
+/** A [PerfFormat] for the language of the screen, made again when the configuration changes. */
 @Composable
 internal fun rememberPerfFormat(): PerfFormat {
-    val context = LocalContext.current
-    val configuration = LocalConfiguration.current
-    return remember(context, configuration) { PerfFormat(context.resources) }
+    val resources = LocalResources.current
+    return remember(resources) { PerfFormat(resources) }
 }
 
 /**

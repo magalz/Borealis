@@ -161,7 +161,7 @@ internal constructor(
         activity.finish()
     }
 
-    override fun quitApp() {
+    override fun quitApp(onFailed: () -> Unit) {
         if (quitting) return
         quitting = true
         // The host ends the stream with the app, possibly before the answer arrives.

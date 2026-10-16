@@ -226,7 +226,7 @@ class StreamSession(
 
     override fun disconnect() = actions.disconnect()
 
-    override fun quitApp() = actions.quitApp()
+    override fun quitApp() = actions.quitApp {}
 
     override fun leave() = actions.leave()
 

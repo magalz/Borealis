@@ -175,14 +175,25 @@ class SessionAuditTest {
     }
 
     @Test
-    fun `an error while a quit is under way is still an error`() {
+    fun `an error code while a quit is under way is the quit too`() {
+        // LuminalShine ends the stream with -1 as soon as it gets the cancel, then answers it.
         start()
         SessionAudit.quitRequested()
 
-        SessionAudit.terminated(-100)
+        SessionAudit.terminated(-1)
+
+        assertThat(audit.events.last().outcome).isEqualTo(AuditOutcome.SUCCESS)
+        assertThat(audit.events.last().detail).isEqualTo("reason=quit duration_s=0")
+    }
+
+    @Test
+    fun `an error code without a quit is still an error`() {
+        start()
+
+        SessionAudit.terminated(-1)
 
         assertThat(audit.events.last().outcome).isEqualTo(AuditOutcome.FAILURE)
-        assertThat(audit.events.last().detail).startsWith("reason=error")
+        assertThat(audit.events.last().detail).isEqualTo("reason=error code=-1 duration_s=0")
     }
 
     @Test

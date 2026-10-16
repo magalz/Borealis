@@ -30,8 +30,11 @@ interface StreamActions {
     /** Ends the connection; the app keeps running on the PC. */
     fun disconnect()
 
-    /** Ends the app on the PC and the connection. */
-    fun quitApp()
+    /**
+     * Ends the app on the PC and the connection. [onFailed] runs on the main thread when the quit
+     * did not happen.
+     */
+    fun quitApp(onFailed: () -> Unit)
 
     /** Leaves the stream screen without ending anything. */
     fun leave()

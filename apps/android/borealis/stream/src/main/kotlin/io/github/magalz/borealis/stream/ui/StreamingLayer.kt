@@ -1,10 +1,11 @@
 package io.github.magalz.borealis.stream.ui
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -23,6 +24,9 @@ import io.github.magalz.borealis.stream.ui.menu.MenuHandle
 import io.github.magalz.borealis.stream.ui.overlay.PerfOverlay
 
 private val OVERLAY_MARGIN = 10.dp
+
+// The handle is 88dp wide with the area that takes the touch, centred: 44dp each side, and 4dp.
+private val OVERLAY_HANDLE_GAP = 48.dp
 private val HINT_TOP_OFFSET = 44.dp
 
 /**
@@ -39,12 +43,14 @@ fun StreamingLayer(
     intents: StreamIntents,
 ) {
     val formFactor = LocalFormFactor.current
-    Box(Modifier.fillMaxSize()) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
         PerfOverlay(
             phase.overlay,
             perf,
             phase.info,
+            // It ends before the handle, in the middle of the top edge, and wraps inside that.
             Modifier.align(Alignment.TopStart)
+                .widthIn(max = maxWidth / 2 - OVERLAY_HANDLE_GAP)
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(OVERLAY_MARGIN),
         )

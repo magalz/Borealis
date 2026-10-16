@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.theme.BorealisFonts
@@ -55,6 +56,7 @@ internal fun PerfOverlay(
         }
     Column(
         modifier
+            .testTag(PERF_OVERLAY_TAG)
             .background(colors.page.copy(alpha = BACKGROUND_ALPHA), MaterialTheme.shapes.medium)
             .padding(PADDING_HORIZONTAL, PADDING_VERTICAL),
         verticalArrangement = Arrangement.spacedBy(LINE_GAP),

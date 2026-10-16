@@ -901,8 +901,12 @@ Follow-ups:
 - The TV's USB attach dialog has no "use by default" option (R5a). The dialog
   returns on each re-attach.
 - A system pad can leak the first of Start or Select for a few ms before the
-  chord holds it back. `TODO(verify)`: the round notes do not record this; check
-  it on a pad with the Windows game controller panel (joy.cpl) open.
+  chord holds it back, because its two key-downs arrive as separate events. The
+  review of the D17 fix found it, and the tests pin the packets. It was not seen
+  on the device.
+- On the TV the system keyboard opens when the Add host field gets focus (R1),
+  while the comment in `AddHostScreen` says it opens on OK. Align the comment or
+  the behaviour.
 - The menu's Gamepad mouse row follows the last pad that toggled the mouse
   (D18), so with two pads it shows the state of the last toggle.
 - The host items stay: the slow `/resume` after a disconnect
@@ -988,24 +992,24 @@ The `S5-T` number is given only where the round notes give it.
 
 | ID | Found | Fix | Task |
 | --- | --- | --- | --- |
-| D7 | Add host field with text and the keyboard closed: Up and Down only moved the caret, so the buttons and the rail could not be reached by remote. | Up and Down leave the field, Left at caret 0 goes to the rail, and the text is kept. | `task/s5-libfix` (239fbb5b) |
-| D8 | A stream that ran and then ended with -1 showed "Couldn't start". | Such a stream shows "`<app>` stopped" with its explanation. The audit still records `reason=error code=-1`. | `task/s5-errorfix` (0198716a) |
-| D9 | A raw Android toast with an address and the exception text showed over the error screen. | Start messages stay off the screen, and the stack trace goes to the log. | `task/s5-errorfix` (0198716a, 4929a2bb) |
+| D7 | Add host field with text and the keyboard closed: Up and Down only moved the caret, so the buttons and the rail could not be reached by remote. | Up and Down leave the field, Left at caret 0 goes to the rail, and the text is kept. | `task/s5-libfix` (239fbb5b), S5-T21 |
+| D8 | A stream that ran and then ended with -1 showed "Couldn't start". | Such a stream shows "`<app>` stopped" with its explanation. The audit still records `reason=error code=-1`. | `task/s5-errorfix` (0198716a), S5-T20 |
+| D9 | A raw Android toast with an address and the exception text showed over the error screen. | Start messages stay off the screen, and the stack trace goes to the log. | `task/s5-errorfix` (0198716a, 4929a2bb), S5-T20 |
 | D10 | With the menu open, the Select+Start chord did not close it. Start activated the focused row. | The chord toggles the menu on every pad. Start and Select never activate a row. | `task/s5-padmenu` (aa7313d6), S5-T18 |
 | D11 | Touch, Gamepad mouse and Overlay rows did nothing on OK or A. | OK or A on an option row changes its option, as a tap does. The row's click label says "Change" and the option's title. | `task/s5-menurows` (4f3fa2bc), S5-T19 |
 | D12 | USB-driver pads: A, B, Y and Start did not act in the menu, and the stick did not navigate. | Their buttons and the stick send the same keys as a system pad (`UsbChromeInput`). | `task/s5-padmenu` (aa7313d6), S5-T18 |
 | D13 | The PC's foreground window seemed to lose focus when the menu opened with joy.cpl open. | Not reproduced, and no fix. Watched in the re-checks (R4). | none |
-| D15 | Holding Start on a USB-driver pad toggled the gamepad mouse on the driver thread, and the inherited toast crashed the app. | The toggle is posted to the main thread. | `task/s5-padmenu` (bedb8a2c, d7d584dc) |
-| D17 | Holding Select+Start with mouse emulation off opened Steam on the PC and took its focus. | Start and Select are held back from the PC on every pad while the chord is pending. A quick tap is sent on release. | `task/s5-padmenu` (09ba717b) |
-| D18 | The Gamepad mouse row showed the opposite state after a Start-hold toggle. | The row follows each toggle. | `task/s5-padmenu` (09ba717b) |
+| D15 | Holding Start on a USB-driver pad toggled the gamepad mouse on the driver thread, and the inherited toast crashed the app. | The toggle is posted to the main thread. | `task/s5-padmenu` (bedb8a2c, d7d584dc), S5-T18 |
+| D17 | Holding Select+Start with mouse emulation off opened Steam on the PC and took its focus. | Start and Select are held back from the PC on every pad while the chord is pending. A quick tap is sent on release. | `task/s5-padmenu` (09ba717b), S5-T18 |
+| D18 | The Gamepad mouse row showed the opposite state after a Start-hold toggle. | The row follows each toggle. | `task/s5-padmenu` (09ba717b), S5-T18 |
 | F1 | A different app running at start could be quit without asking when the Library had not seen it. | A different app running at start always asks: Cancel, Join, and Quit and start. A restart never quits another device's app. | `task/s5-launchfix` (1510bb2a), S5-T22 |
 | F2 | By default the USB driver did not claim the Ultimate 2 dongle in XInput mode. Its keyboard interface has the same VID and PID, so it counted as native support. | Native support counts only a game controller for Android (a gamepad, or a joystick with X and Y axes) with the same VID and PID. The dongle's keyboard and mouse interfaces do not block the driver. Joystick axes were added in 93ea9331. | `task/s5-launchfix` (1510bb2a, 93ea9331), S5-T22 |
-| O3 | D-pad Left into the rail focused the nearest item (Settings, from the Apps grid or the Add host field), not the selected one. | The rail is entered on the selected item. | `task/s5-libfix` (239fbb5b, 923646fb) |
-| O4 | While `/serverinfo` retried against an unreachable host, the steps showed "Connecting" done and "Starting Desktop" current, with the 15 s note. | "Connecting" stays current until the host answers, and the 15 s note does not show during the retries. `TODO(verify)`: the commit is not named in the round notes. | `task/s5-errorfix`, `TODO(verify)` |
-| O5 | The raw line used the app name as the step ("Error 0 · Desktop"). | The raw line names the step: `serverinfo`, `launch`, `resume` or `quit`. | `task/s5-errorfix` (7b5c1390, 4929a2bb) |
-| O6 | Forget said the device would need to pair again, but LuminalShine keeps trusting it. | The Forget text says the PC may keep trusting the device until it is removed in the LuminalShine Web UI (Clients page). | `task/s5-libfix` (239fbb5b) |
-| O7 | Export diagnostics showed no progress for about 30 s before "Diagnostics saved". | A progress dialog shows "Creating the diagnostic bundle…". Back closes it, and the export goes on. | `task/s5-libfix` (239fbb5b, 923646fb) |
-| O8 | After "Downloaded", the transfer dialog kept an empty line where "Expires in" was. | The status line is shown whole. Not checked on a device (see Not run). | `task/s5-libfix` (239fbb5b) |
+| O3 | D-pad Left into the rail focused the nearest item (Settings, from the Apps grid or the Add host field), not the selected one. | The rail is entered on the selected item. | `task/s5-libfix` (239fbb5b, 923646fb), S5-T21 |
+| O4 | While `/serverinfo` retried against an unreachable host, the steps showed "Connecting" done and "Starting Desktop" current, with the 15 s note. | "Connecting" stays current until the host answers, and the 15 s note does not show during the retries. | `task/s5-errorfix` (dbdbfa8f, 0198716a), S5-T20 |
+| O5 | The raw line used the app name as the step ("Error 0 · Desktop"). | The raw line names the step: `serverinfo`, `launch`, `resume` or `quit`. | `task/s5-errorfix` (7b5c1390, 4929a2bb), S5-T20 |
+| O6 | Forget said the device would need to pair again, but LuminalShine keeps trusting it. | The Forget text says the PC may keep trusting the device until it is removed in the LuminalShine Web UI (Clients page). | `task/s5-libfix` (239fbb5b), S5-T21 |
+| O7 | Export diagnostics showed no progress for about 30 s before "Diagnostics saved". | A progress dialog shows "Creating the diagnostic bundle…". Back closes it, and the export goes on. | `task/s5-libfix` (239fbb5b, 923646fb), S5-T21 |
+| O8 | After "Downloaded", the transfer dialog kept an empty line where "Expires in" was. | The status line is shown whole. Not checked on a device (see Not run). | `task/s5-libfix` (239fbb5b), S5-T21 |
 | O9 | The keyboard always showed uppercase labels, so the case of the next letter was not visible. | Letters are lowercase unless Shift is latched. The keyboard has no Caps key. | `task/s5-menurows` (4f3fa2bc), S5-T19 |
 
 D16 is not an app defect. The S22 stayed in landscape after a stream. The cause
@@ -1024,7 +1028,7 @@ S22 over USB, TV over ADB Wi-Fi. Items R1 to R4 use this build.
 | # | Item | Device | Result | Evidence and notes |
 | --- | --- | --- | --- | --- |
 | R1 | O3 rail entry | TV | pass | Left from the Hosts cards and from the Apps grid focuses Hosts (the selected item), not Settings. |
-| R1 | D7 Add host field | TV | pass | With text and the keyboard closed, Down focuses the Add host button. Left moves the caret, and at caret 0 goes to the rail's Add host item. The text is kept. The notes say the TV keyboard opens when the field gets focus, as before; the screen's comment says it opens on OK. `TODO(verify)`: which one happens on the TV. |
+| R1 | D7 Add host field | TV | pass | With text and the keyboard closed, Down focuses the Add host button. Left moves the caret, and at caret 0 goes to the rail's Add host item. The text is kept. On the TV the system keyboard opened when the field got focus, also when focus came back to it with Up; the screen's comment says it opens on OK (see Follow-ups). |
 | R1 | O7 export progress | TV | pass | "Export diagnostics" dialog with "Creating the diagnostic bundle…". Back closes it, and the export goes on. "Diagnostics saved" appeared 34 s later. |
 | R1 | O6 Forget copy | TV | pass | The Forget text says: the PC may keep trusting this device until it is removed in the LuminalShine Web UI (Clients page). |
 | R2 | F1 different app | TV and S22 | pass | The TV launched Desktop. 1.4 s later the S22 started another app and showed "An app is already running", with Cancel, Join, and Quit and start. Cancel went back to the Library. Audit `LAUNCH_CONFLICT choice=cancel`. The TV kept streaming, and nothing was quit or started. |

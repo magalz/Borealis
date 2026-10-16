@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.components.KeyStyle
+import io.github.magalz.borealis.stream.keys.KeyChord
 import io.github.magalz.borealis.stream.keys.KeyModifier
+import io.github.magalz.borealis.stream.keys.Shortcuts
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -28,7 +30,7 @@ class KeyboardLayoutTest {
                 48 + (index + 1) % 10,
             )
             for (number in 1..10) put("F$number", 112 + number - 1)
-            put("Backspace", 8)
+            put("⌫", 8)
             put("Enter", 0x0D)
             put("Tab", 9)
             put("Space", 32)
@@ -55,7 +57,7 @@ class KeyboardLayoutTest {
         assertThat(KeyboardLayout.letterRows.rowCaptions())
             .containsExactly(
                 listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"),
-                listOf("A", "S", "D", "F", "G", "H", "J", "K", "L", "Backspace"),
+                listOf("A", "S", "D", "F", "G", "H", "J", "K", "L", "⌫"),
                 listOf("Shift", "Z", "X", "C", "V", "B", "N", "M", "Enter"),
             )
             .inOrder()
@@ -104,7 +106,7 @@ class KeyboardLayoutTest {
         val styles = everyKey.associate { it.caption() to it.style }
 
         assertThat(styles["Q"]).isEqualTo(KeyStyle.Normal)
-        assertThat(styles["Backspace"]).isEqualTo(KeyStyle.Wide)
+        assertThat(styles["⌫"]).isEqualTo(KeyStyle.Wide)
         assertThat(styles["Enter"]).isEqualTo(KeyStyle.Wide)
         assertThat(styles["Shift"]).isEqualTo(KeyStyle.Wide)
         assertThat(styles["Ctrl"]).isEqualTo(KeyStyle.Wide)
@@ -112,5 +114,22 @@ class KeyboardLayoutTest {
         assertThat(styles["Fn"]).isEqualTo(KeyStyle.Wide)
         assertThat(styles["Space"]).isEqualTo(KeyStyle.Space)
         assertThat(styles["PgDn"]).isEqualTo(KeyStyle.Wide)
+    }
+
+    @Test
+    fun `the modifier keys send the left-hand virtual-key codes of KeyboardTranslator`() {
+        val modifiers =
+            (KeyboardLayout.letterRows.flatten() + KeyboardLayout.bottomRow)
+                .filterIsInstance<ModifierKey>()
+                .associate { it.caption() to it.modifier.vk }
+
+        assertThat(modifiers).containsExactly("Shift", 0xA0, "Ctrl", 0xA2, "Alt", 0xA4, "Win", 0x5B)
+    }
+
+    @Test
+    fun `the Esc chip of the shortcut row sends the Escape code`() {
+        val esc = Shortcuts.keyboardRow.single { context.getString(it.label) == "Esc" }
+
+        assertThat(esc.chord).isEqualTo(KeyChord(27))
     }
 }

@@ -43,6 +43,19 @@ class StartFailureLogTest {
     }
 
     @Test
+    fun `the stack trace of the exception reaches the log, with the addresses masked`() {
+        BorealisLog.setMaskAddresses(true)
+
+        StartFailureLog.failed("serverinfo", refused)
+
+        val record = log.records.single()
+        assertThat(record.level).isEqualTo(LogLevel.WARN)
+        assertThat(record.stackTrace).contains("ConnectException")
+        assertThat(record.stackTrace).doesNotContain("192.168.0.7")
+        assertThat(record.stackTrace).doesNotContain("192.168.0.9")
+    }
+
+    @Test
     fun `an exception without a message is logged too`() {
         StartFailureLog.failed("launch", java.io.IOException())
 

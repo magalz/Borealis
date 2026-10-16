@@ -90,7 +90,9 @@ PINs, keys and certificates, never real ones.
 
 A screenshot test follows the same order. The test that renders a new screen
 or state is committed before the implementation. The reference image is
-recorded on Windows and committed with the implementation. Commands, the CI job and the Linux plan B are in
+recorded on Windows and committed with the implementation. The screenshot
+tests cover `:borealis:designsystem`, `:borealis:library` and `:borealis:stream`.
+Commands, the CI job and the Linux plan B are in
 [building](building.md#screenshot-tests).
 
 ## Practicalities

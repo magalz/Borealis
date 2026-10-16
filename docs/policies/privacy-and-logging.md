@@ -30,7 +30,7 @@ reported, fixtures, or screenshots, except where a row says otherwise:
 | Certificates (client and host PEM/DER) | Never logged in full. A short SHA-256 fingerprint prefix may be logged. |
 | IP addresses and host names | Logged as-is when the "Mask addresses" setting is off. When it is on, they are masked when lines are written, and again in the diagnostic bundle. Masking covers IPv4 addresses (octets of at most 255), written as `[IP]`, IPv6 addresses, also `[IP]`, and host names, written as `[HOST]`. Host names are recognised only in the host part of a URL and in the values of fields named `host`, `hostname`, `computer` or `computerName`. A host name in free text, including the upstream `LimeLog` lines, is not recognised and so is not masked. Local crash reports follow the same setting. Never sent in crash reports to a service. |
 | URL query values | Replaced by `[REDACTED]`, except for this allowlist of non-identifying GameStream parameters (compared without regard to case): `phrase`, `updateState`, `mode`, `additionalStates`, `sops`, `hdrMode`, `clientHdrCapVersion`, `clientHdrCapSupportedFlagsInUint32`, `clientHdrCapMetaDataId`, `clientHdrCapDisplayData`, `localAudioPlayMode`, `surroundAudioInfo`, `remoteControllersBitmap`, `gcmap`, `gcpersist`, `corever`, `AssetType` and `AssetIdx`. Query keys stay. `uniqueid`, `uuid`, `devicename`, `appid`, `rikey`, `rikeyid`, `salt`, `clientcert` and every pairing parameter are never in the list. Credentials in a URL (`user:password@`) are redacted too. |
-| Stream content, controller input, window titles | Never logged. |
+| Stream content, controller input, typed keys and typed text, window titles | Never logged. The keyboard and the text path of the stream write no log lines, and the audit trail holds no key or text. |
 
 Implementation requirements:
 
@@ -116,7 +116,14 @@ Events:
   is recorded as `LAUNCH_RETRY` with `reason=rtsp_after_resume`, so one tap can
   produce two `LAUNCH_ATTEMPT` entries;
 - session start (codec, resolution, fps and HDR) and session end (duration,
-  reason or error code).
+  reason or error code). The session end reason is one of:
+  - `user`: the user left the stream screen;
+  - `disconnect`: the user chose Disconnect in the in-game menu, and the app
+    keeps running on the host;
+  - `quit`: the user chose Quit in the in-game menu, and the app ended on the
+    host;
+  - `host_ended`: the host ended the stream;
+  - `error` with the error code: the connection failed.
 
 REST and token events arrive with Phase 3.
 

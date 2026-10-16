@@ -69,15 +69,26 @@ what they name; the host's response to a key is outside this use case.
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
-| UC-005-T1 | Given the keyboard is open, when the user taps Ctrl and then A, then Ctrl+A is sent once and Ctrl is cleared. | unit | planned |
-| UC-005-T2 | Given the keyboard is open, when the user taps the Alt+Tab chip, then Alt+Tab is sent once. | unit | planned |
-| UC-005-T3 | Given the TV keyboard is open, when the D-pad moves to a key and OK is pressed, then that key is typed. | UI | planned |
-| UC-005-T4 | Given the handheld keyboard is open, when Y is pressed, then Backspace is sent. | UI | planned |
-| UC-005-T5 | Given the phone keyboard is open, when the stream is shown, then the picture stays visible above the keyboard. | UI | planned |
-| UC-005-T6 | Given keys are typed, when logs and the audit trail are read, then no typed key text appears in them. | unit | planned |
+| UC-005-T1 | Given the keyboard is open, when the user taps Ctrl and then A, then Ctrl+A is sent once and Ctrl is cleared. | unit | exists (Sprint 5, UI) |
+| UC-005-T2 | Given the keyboard is open, when the user taps the Alt+Tab chip, then Alt+Tab is sent once. | unit | exists (Sprint 5, UI) |
+| UC-005-T3 | Given the TV keyboard is open, when the D-pad moves to a key and OK is pressed, then that key is typed. | UI | exists (Sprint 5, UI) |
+| UC-005-T4 | Given the handheld keyboard is open, when Y is pressed, then Backspace is sent. | UI | exists (Sprint 5, UI) |
+| UC-005-T5 | Given the phone keyboard is open, when the stream is shown, then the picture stays visible above the keyboard. | UI | partly exists (Sprint 5, UI) |
+| UC-005-T6 | Given keys are typed, when logs and the audit trail are read, then no typed key text appears in them. | unit | partly exists (Sprint 5, unit) |
 
-Planned tests cover the Phase 2 screens; tests marked as existing cover logic
-that the Phase 2 screens reuse.
+Sprint 5 built the Borealis keyboard and its logic. A test marked "exists (Sprint
+5, unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose
+test that runs on Robolectric. The emulator and device checks of the keyboard
+are part of the device round (S5-T14, see
+[device validation](../development/device-validation.md)).
+
+Partly covered:
+
+- UC-005-T5: `StreamKeyboardTest` checks that the docked keyboard fills only the
+  bottom half of the screen. It does not check that the stream stays visible
+  above it.
+- UC-005-T6: a test scans the keyboard sources and fails if they call the log
+  or `println`. The text path and the audit trail are not checked by a test.
 
 ## Host dependency
 
@@ -90,5 +101,9 @@ needs no extra host capability.
 - ADRs: [0052](../adr/0052-structure-the-phase-2-ui.md).
 - Host contract sections: [13](../host-contract/luminalshine.md#13-input).
 - Policies: [privacy and logging](../policies/privacy-and-logging.md).
-- Existing logic: Moonlight 12.2 opens the Android soft keyboard. The Phase 2
-  keyboard is planned.
+- Existing logic: Moonlight 12.2 opened the Android soft keyboard. The Borealis
+  keyboard (`StreamKeyboard`, `KeyboardLayout`, `KeyboardLatch`) is in
+  `:borealis:stream` from Sprint 5. Its System keyboard key opens the Android
+  keyboard for text in other languages; free text is sent as UTF-8.
+- Existing tests: `StreamKeyboardTest`, `KeyboardLatchTest`,
+  `KeyboardNavigationTest`, `KeyboardLayoutTest`, `ShortcutsTest`.

@@ -48,8 +48,10 @@ accident.
 ### A3: The user quits the app (branches from step 3)
 
 1. The user chooses Quit and the app name. The menu shows the consequence: the
-   app ends on the PC.
-2. The stream ends. The system writes SESSION_END with the reason.
+   app ends on the PC. The menu asks for confirmation first; Cancel has the
+   focus, and Cancel returns to the menu.
+2. The user confirms. The stream ends. The system writes SESSION_END with the
+   reason.
 3. The system returns to the Apps screen. The app is no longer running on the
    host.
 
@@ -68,16 +70,29 @@ row is disabled; it needs the Phase 3 host API and cannot be chosen.
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
-| UC-004-T1 | Given a TV stream, when the user presses Back, then the menu opens and the stream does not end. | UI | planned |
-| UC-004-T2 | Given a gamepad stream, when Select + Start is held, then the menu opens; a short press does not open it. | unit | planned |
-| UC-004-T3 | Given a phone stream, when the user pulls the top handle down, then the menu opens. | UI | planned |
-| UC-004-T4 | Given the menu is open, when the user chooses Disconnect, then the stream ends, the app keeps running on the host and SESSION_END is written. | emulator | planned |
-| UC-004-T5 | Given the menu is open, when the user chooses Quit, then the app ends on the host and SESSION_END is written. | emulator | planned |
-| UC-004-T6 | Given the Overlay row is set to Off, Compact or Detailed, when the menu closes, then the overlay shows that choice. | UI | planned |
-| UC-004-T7 | Given the menu is open, when the user reads the Display for next launch row, then the row is disabled and cannot be chosen. | UI | planned |
+| UC-004-T1 | Given a TV stream, when the user presses Back, then the menu opens and the stream does not end. | UI | exists (Sprint 5, unit) |
+| UC-004-T2 | Given a gamepad stream, when Select + Start is held, then the menu opens; a short press does not open it. | unit | exists (Sprint 5, unit) |
+| UC-004-T3 | Given a phone stream, when the user pulls the top handle down, then the menu opens. | UI | exists (Sprint 5, UI) |
+| UC-004-T4 | Given the menu is open, when the user chooses Disconnect, then the stream ends, the app keeps running on the host and SESSION_END is written. | emulator | planned (device round, Sprint 5) |
+| UC-004-T5 | Given the menu is open, when the user chooses Quit, then the app ends on the host and SESSION_END is written. | emulator | planned (device round, Sprint 5) |
+| UC-004-T6 | Given the Overlay row is set to Off, Compact or Detailed, when the menu closes, then the overlay shows that choice. | UI | partly exists (Sprint 5, UI) |
+| UC-004-T7 | Given the menu is open, when the user reads the Display for next launch row, then the row is disabled and cannot be chosen. | UI | exists (Sprint 5, UI) |
 
-Planned tests cover the Phase 2 screens; tests marked as existing cover logic
-that the Phase 2 screens reuse.
+Sprint 5 built the in-game menu and its logic. A test marked "exists (Sprint 5,
+unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose test
+that runs on Robolectric. Emulator and device tests are planned for the device
+round (S5-T14, see [device validation](../development/device-validation.md)).
+
+Partly covered:
+
+- UC-004-T1: `StreamBackTest` checks that Back opens the menu and that nothing
+  else is called (no stream end). It runs on the session logic, not on a TV
+  screen.
+- UC-004-T4 and UC-004-T5: the unit tests check the SESSION_END reason and that
+  the activity finishes. The app staying on the host, or ending on it, needs
+  the device round.
+- UC-004-T6: `InGameMenuTest` checks that the Overlay row sets the mode the user
+  picks. No test checks the overlay on the screen after the menu closes.
 
 ## Host dependency
 
@@ -93,6 +108,13 @@ Until then the row is disabled.
 - Host contract sections: [7.6](../host-contract/luminalshine.md#76-cancel),
   [17.2](../host-contract/luminalshine.md#172-endpoints-relevant-to-a-client).
 - Policies: [privacy and logging](../policies/privacy-and-logging.md#audit-trail).
-- Existing logic: none for the menu. Moonlight 12.2 leaves the stream at once on
-  Back. Disconnect and Quit end the session with SESSION_END `reason=user`;
-  a session the host ends is recorded with `reason=host_ended` (Sprint 2).
+- Existing logic: the menu, the pull handle and the first-run hint are in
+  `:borealis:stream` (Sprint 5). Moonlight 12.2 left the stream at once on
+  Back; Borealis opens the menu instead. Disconnect and Quit end the session
+  with SESSION_END `reason=disconnect` and `reason=quit`. A stop by leaving the
+  stream screen is `reason=user`, and a session the host ends is recorded with
+  `reason=host_ended`. Quit records `reason=quit` only when the host ends the
+  stream after the quit request; a failed quit keeps the stream on.
+- Existing tests: `InGameMenuTest`, `MenuHandleTest`, `MenuHintTest`,
+  `StreamBackTest`, `MenuChordTest`, `MenuChordDetectorTest`,
+  `GameStreamActionsTest`, `SessionAuditTest`.

@@ -80,8 +80,8 @@ the `clang-format` on `PATH`; without it the C/C++ Spotless tasks fail with
 
 ### Screenshot tests
 
-The Compose screens in `:borealis:designsystem` and `:borealis:library` are
-checked against reference images
+The Compose screens in `:borealis:designsystem`, `:borealis:library` and
+`:borealis:stream` are checked against reference images
 ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)). The references
 are in `src/test/screenshots/` of each module. Run these commands from
 `apps/android/`.
@@ -89,13 +89,13 @@ are in `src/test/screenshots/` of each module. Run these commands from
 Record the references on Windows, after a change that alters a screen:
 
 ```sh
-./gradlew :borealis:designsystem:recordRoborazziDebug :borealis:library:recordRoborazziDebug
+./gradlew :borealis:designsystem:recordRoborazziDebug :borealis:library:recordRoborazziDebug :borealis:stream:recordRoborazziDebug
 ```
 
 Verify the screens against the committed references:
 
 ```sh
-./gradlew :borealis:designsystem:testDebugUnitTest :borealis:library:testDebugUnitTest -Proborazzi.test.verify=true
+./gradlew :borealis:designsystem:testDebugUnitTest :borealis:library:testDebugUnitTest :borealis:stream:testDebugUnitTest -Proborazzi.test.verify=true
 ```
 
 - The "Android screenshots" job in CI (`.github/workflows/ci.yml`) runs the

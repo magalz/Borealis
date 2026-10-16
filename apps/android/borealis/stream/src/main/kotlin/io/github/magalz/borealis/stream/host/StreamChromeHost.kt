@@ -58,6 +58,7 @@ import kotlinx.coroutines.launch
  * on the Starting screen).
  */
 @SuppressLint("ViewConstructor") // Created in code by the stream activity, never inflated.
+@Suppress("TooManyFunctions") // One override per input path of the view.
 class StreamChromeHost(
     private val activity: ComponentActivity,
     private val session: StreamSession,

@@ -722,4 +722,35 @@ class AppsViewModelTest {
             assertThat(awaitItem()).isEqualTo(AppsEffect.ShowMessage(AppsMessage.PinFailed))
         }
     }
+
+    @Test
+    fun `a launch request starts an app that was hidden since the shortcut was pinned`() = runTest {
+        repository.emit(snapshot(desktop, secret))
+        subscribe(viewModel.uiState)
+        assertThat(viewModel.uiState.value.items).containsExactly(item(desktop))
+
+        viewModel.onLaunchRequested(4)
+
+        viewModel.effects.test {
+            assertThat(awaitItem())
+                .isEqualTo(
+                    AppsEffect.StartStream(StreamRequest("host-1", 4, "Secret", hdrSupported = false))
+                )
+        }
+    }
+
+    @Test
+    fun `a launch request for a hidden app while another runs opens its actions`() = runTest {
+        repository.emit(snapshot(desktop, secret, running = desktop))
+        subscribe(viewModel.uiState)
+
+        viewModel.onLaunchRequested(4)
+        runCurrent()
+
+        assertThat(viewModel.uiState.value.actions?.app?.id).isEqualTo(4)
+        assertThat(viewModel.uiState.value.actions?.choices)
+            .containsExactly(AppAction.QUIT_AND_START, AppAction.DETAILS, AppAction.UNHIDE)
+            .inOrder()
+        viewModel.effects.test { expectNoEvents() }
+    }
 }

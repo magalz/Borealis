@@ -52,6 +52,13 @@ class ShortcutIntentParserTest {
     }
 
     @Test
+    fun `an app id that the Library cannot carry falls back to the apps of the PC`() {
+        val request = ShortcutIntentParser.parse(extras("UUID" to "uuid-1", "AppId" to Int.MIN_VALUE.toString()))
+
+        assertThat(request).isEqualTo(LibraryLaunchRequest.Apps("uuid-1"))
+    }
+
+    @Test
     fun `an empty app id is a PC shortcut`() {
         val request = ShortcutIntentParser.parse(extras("UUID" to "uuid-1", "AppId" to ""))
 

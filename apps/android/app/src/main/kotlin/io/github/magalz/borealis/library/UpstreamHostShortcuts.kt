@@ -11,6 +11,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.magalz.borealis.library.domain.HostShortcuts
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
 
 /** Disables the launcher shortcuts and TV channel of a host that was removed from this device. */
 internal fun interface ShortcutCleanup {
@@ -25,7 +26,10 @@ internal fun interface ShortcutCleanup {
 @Singleton
 internal class UpstreamHostShortcuts
 @Inject
-constructor(@ApplicationContext private val context: Context) : HostShortcuts, ShortcutCleanup {
+constructor(
+    @ApplicationContext private val context: Context,
+    @IoDispatcher private val io: CoroutineDispatcher,
+) : HostShortcuts, ShortcutCleanup {
     private val helper
         get() = ShortcutHelper(context)
 

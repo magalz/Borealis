@@ -8,6 +8,9 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.ShortcutTrampoline
 import com.limelight.nvstream.http.ComputerDetails
 import io.github.magalz.borealis.library.shortcuts.ShortcutIntentParser
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
@@ -16,11 +19,12 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 
 /** The launcher shortcuts of the Library, over the upstream `ShortcutHelper`. */
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class UpstreamHostShortcutsTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val shortcutManager = context.getSystemService(ShortcutManager::class.java)
-    private val shortcuts = UpstreamHostShortcuts(context)
+    private val shortcuts = UpstreamHostShortcuts(context, UnconfinedTestDispatcher())
 
     @Before
     fun pinningIsSupported() {
@@ -37,6 +41,18 @@ class UpstreamHostShortcutsTest {
         assertThat(shortcut.intent?.component?.className).isEqualTo(ShortcutTrampoline::class.java.name)
         assertThat(ShortcutIntentParser.parse(shortcut.intent?.extras))
             .isEqualTo(LibraryLaunchRequest.Apps("uuid-1"))
+    }
+
+    @Test
+    fun `the shortcut of an opened host is published off the calling thread`() {
+        val io = StandardTestDispatcher()
+        val deferred = UpstreamHostShortcuts(context, io)
+
+        deferred.reportHostOpened("uuid-1", "Desk PC")
+        assertThat(shortcutManager.dynamicShortcuts).isEmpty()
+
+        io.scheduler.advanceUntilIdle()
+        assertThat(shortcutManager.dynamicShortcuts.map { it.id }).containsExactly("uuid-1")
     }
 
     @Test

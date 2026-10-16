@@ -60,7 +60,9 @@ private val TRAILING_GAP = 12.dp
  * title in the danger ink. A tap or OK runs [onClick].
  *
  * A disabled row is dimmed and does not react to OK, but it stays a focus stop: on a TV the user
- * can still land on it and read the [note] that says why. The note stays at full strength.
+ * can still land on it and read the [note] that says why. The note stays at full strength. The row
+ * does not dim or disable its [trailing] control: the caller passes `enabled = false` to the
+ * control itself, or leaves it out, so a control is dimmed once and by the one that owns it.
  *
  * The outline of a focused row reaches 5dp outside it, so a list of rows needs 8dp of padding
  * around it and 10dp between rows, as in the [ActionSheet].
@@ -101,7 +103,7 @@ fun MenuRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RowText(title, consequence, note, style, dim, Modifier.weight(1f))
-        if (trailing != null) TrailingSlot(rowFocus, trailingFocus, dim, trailing)
+        if (trailing != null) TrailingSlot(rowFocus, trailingFocus, trailing)
     }
 }
 
@@ -160,18 +162,17 @@ private fun RowText(
 private fun TrailingSlot(
     rowFocus: FocusRequester,
     trailingFocus: FocusRequester,
-    dim: Float,
     trailing: @Composable () -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
     Box(
-        Modifier.alpha(dim)
-            .focusRequester(trailingFocus)
+        Modifier.focusRequester(trailingFocus)
             // Inherited from the row: reset, or Right would loop back to the control.
             .focusProperties { end = FocusRequester.Default }
             .onKeyEvent { event ->
                 // The row is an ancestor of the control, so the search never finds it to the left:
-                // when nothing is left of the focused segment, go back to the row.
+                // when nothing is left of the focused segment, go back to the row. (A focus group's
+                // `exit` property does not return focus to an ancestor.)
                 val left = event.key == Key.DirectionLeft
                 if (left && event.type == KeyEventType.KeyDown) {
                     if (!focusManager.moveFocus(FocusDirection.Left)) rowFocus.requestFocus()

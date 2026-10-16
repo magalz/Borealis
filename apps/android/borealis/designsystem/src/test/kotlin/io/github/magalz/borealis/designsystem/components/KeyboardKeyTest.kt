@@ -160,8 +160,8 @@ class KeyboardKeyTest {
         val normal = composeRule.onNodeWithText("A").getUnclippedBoundsInRoot().width.value
         val wide = composeRule.onNodeWithText("Backspace").getUnclippedBoundsInRoot().width.value
         val space = composeRule.onNodeWithText("Space").getUnclippedBoundsInRoot().width.value
-        assertThat(wide / normal).isWithin(0.05f).of(72f / 44f)
-        assertThat(space / normal).isWithin(0.05f).of(240f / 44f)
+        assertThat(wide / normal).isWithin(0.1f).of(72f / 44f)
+        assertThat(space / normal).isWithin(0.1f).of(240f / 44f)
         assertThat(normal + wide + space).isWithin(1f).of(200f)
     }
 

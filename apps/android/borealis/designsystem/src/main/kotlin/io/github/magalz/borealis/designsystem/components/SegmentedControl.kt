@@ -2,6 +2,7 @@ package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -12,10 +13,16 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -36,6 +43,7 @@ private val SEGMENT_PADDING_VERTICAL = 4.dp
  * and OK selects. [label] names an option; [onSelect] gets the one the user chose. A disabled
  * control is dimmed and takes neither focus nor input.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun <T> SegmentedControl(
     options: List<T>,
@@ -46,19 +54,34 @@ fun <T> SegmentedControl(
     enabled: Boolean = true,
 ) {
     val colors = LocalBorealisColors.current
+    val selectedFocus = remember { FocusRequester() }
+    val hasSelected = selected in options
     Row(
         modifier
             .alpha(if (enabled) 1f else DISABLED_ALPHA)
             .border(1.dp, colors.lineStrong, MaterialTheme.shapes.medium)
             .padding(GROUP_PADDING)
-            .selectableGroup(),
+            .selectableGroup()
+            // Entering the control by the D-pad lands on the selected segment, not the nearest. A
+            // request for one segment (a tap, an initial focus) is not an entry and stays on it.
+            .focusProperties {
+                enter = { direction ->
+                    if (hasSelected && direction != FocusDirection.Enter) {
+                        selectedFocus
+                    } else {
+                        FocusRequester.Default
+                    }
+                }
+            }
+            .focusGroup(),
         horizontalArrangement = Arrangement.spacedBy(SEGMENT_GAP),
     ) {
         for (option in options) {
             val isSelected = option == selected
             val shape = MaterialTheme.shapes.small
             Box(
-                Modifier.liftedWhenFocused()
+                (if (isSelected) Modifier.focusRequester(selectedFocus) else Modifier)
+                    .liftedWhenFocused()
                     .borealisFocusIndication(shape)
                     .background(if (isSelected) colors.accentTint else Color.Transparent, shape)
                     .clip(shape)

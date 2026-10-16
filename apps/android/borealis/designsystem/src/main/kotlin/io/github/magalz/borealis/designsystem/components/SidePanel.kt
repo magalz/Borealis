@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -14,11 +13,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 
 private val MAX_WIDTH = 360.dp
+private val BORDER_WIDTH = 1.dp
 private const val WIDTH_FRACTION = 0.52f
 private const val SCRIM_ALPHA = 0.35f
 
@@ -29,7 +31,13 @@ private const val SCRIM_ALPHA = 0.35f
  * stays in it. Back is not handled here: the screen that hosts the panel routes it, since on the
  * stream Back must close the panel before it does anything else.
  *
- * The scrim is the page colour at 35%, lighter than the dialog scrim so the stream stays visible.
+ * The panel has a hairline on its left edge only. The scrim is the page colour at 35%, lighter than
+ * the dialog scrim so the stream stays visible.
+ *
+ * The panel clips and scrolls its content, and the focus outline of an item reaches 5dp outside it
+ * (see [io.github.magalz.borealis.designsystem.focus.borealisFocusIndication]). Put at least 8dp of
+ * horizontal padding around rows and other focusable items, and 10dp between them, or the outline
+ * is cut at the edge of the panel.
  */
 @Composable
 fun SidePanel(
@@ -50,7 +58,7 @@ fun SidePanel(
                 .fillMaxHeight()
                 .width(minOf(MAX_WIDTH, maxWidth * WIDTH_FRACTION))
                 .background(colors.surface)
-                .border(1.dp, colors.line)
+                .drawBehind { drawRect(colors.line, size = Size(BORDER_WIDTH.toPx(), size.height)) }
                 // Taps that no child took stop here, so they do not reach the scrim.
                 .pointerInput(Unit) { detectTapGestures() }
                 .verticalScroll(rememberScrollState()),

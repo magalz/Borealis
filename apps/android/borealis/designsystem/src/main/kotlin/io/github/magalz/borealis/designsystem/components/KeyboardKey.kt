@@ -31,15 +31,19 @@ import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 
 /** How wide a key of the keyboard is: a character, a modifier or an action, or the space bar. */
 enum class KeyStyle(internal val maxWidth: Dp) {
-    Normal(44.dp),
+    Normal(NORMAL_KEY_WIDTH),
     Wide(72.dp),
     Space(240.dp);
 
-    /** Stub: the weight follows its failing test. */
+    /**
+     * The share of a row that a key of this style takes when the row is too narrow for the keys at
+     * their full width: 1 for a normal key, 72/44 for a wide one and 240/44 for the space bar.
+     */
     val weight: Float
-        get() = 1f
+        get() = maxWidth / NORMAL_KEY_WIDTH
 }
 
+private val NORMAL_KEY_WIDTH = 44.dp
 private val PHONE_HEIGHT = 32.dp
 private val TV_HEIGHT = 40.dp
 
@@ -52,7 +56,8 @@ private val TV_HEIGHT = 40.dp
  * keeps its layout; the focused key is drawn over its neighbours.
  *
  * A key is as wide as its style allows. A row that has to fit a narrow screen gives each key
- * `Modifier.weight(1f, fill = false)` and the keys shrink together.
+ * `Modifier.weight(style.weight, fill = false)` (see [KeyStyle.weight]): the keys shrink together
+ * and keep their proportions, so the space bar stays wide next to the letters.
  */
 @Composable
 fun KeyboardKey(

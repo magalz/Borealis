@@ -139,6 +139,15 @@ class SegmentedControlTest {
         composeRule.onNodeWithText("60 fps").assertIsFocused()
     }
 
+    @Test
+    fun `a request for one segment stays on it and is not redirected to the selected one`() {
+        composeRule.setContentInKeyboardMode { Specimen(selected = "60") }
+
+        composeRule.onNodeWithText("120 fps").requestFocus()
+
+        composeRule.onNodeWithText("120 fps").assertIsFocused()
+    }
+
     private fun tintOverPage() =
         BorealisTokens.Color.AccentTint.compositeOver(BorealisTokens.Color.Page)
 

@@ -7,7 +7,7 @@ Definition of Done. These pages hold the details.
 | --- | --- |
 | [building.md](building.md) | Toolchain setup and build, check and test commands (Windows first, Linux notes for CI). |
 | [tdd.md](tdd.md) | Red-green-refactor, commit order, characterization tests, what counts as a behaviour test. |
-| [upstream-sync.md](upstream-sync.md) | Step-by-step procedure for syncing a Moonlight release. |
+| [upstream-sync.md](upstream-sync.md) | Upstream cherry-picks: procedure for moonlight-android and moonlight-common-c fixes (ADR 0054). |
 | [release.md](release.md) | Step-by-step procedure for cutting a release. |
 | [device-validation.md](device-validation.md) | Phase 1 and Sprints 2 to 4 runbook for the checks on a Galaxy S22 and a Google TV Streamer against LuminalShine. |
 | [orchestration.md](orchestration.md) | How AI agents are orchestrated: roles, worktrees, hand-offs. |

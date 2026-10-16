@@ -8,6 +8,7 @@ import io.github.magalz.borealis.stream.input.GamepadButtons.DPAD_DOWN
 import io.github.magalz.borealis.stream.input.GamepadButtons.DPAD_LEFT
 import io.github.magalz.borealis.stream.input.GamepadButtons.DPAD_RIGHT
 import io.github.magalz.borealis.stream.input.GamepadButtons.DPAD_UP
+import io.github.magalz.borealis.stream.input.GamepadButtons.SELECT
 import io.github.magalz.borealis.stream.input.GamepadButtons.START
 import io.github.magalz.borealis.stream.input.GamepadButtons.Y
 
@@ -25,6 +26,7 @@ object UsbChromeKeys {
             B to KeyEvent.KEYCODE_BUTTON_B,
             Y to KeyEvent.KEYCODE_BUTTON_Y,
             START to KeyEvent.KEYCODE_BUTTON_START,
+            SELECT to KeyEvent.KEYCODE_BUTTON_SELECT,
             DPAD_UP to KeyEvent.KEYCODE_DPAD_UP,
             DPAD_DOWN to KeyEvent.KEYCODE_DPAD_DOWN,
             DPAD_LEFT to KeyEvent.KEYCODE_DPAD_LEFT,

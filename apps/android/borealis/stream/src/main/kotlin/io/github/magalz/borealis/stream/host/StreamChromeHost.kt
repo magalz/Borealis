@@ -3,7 +3,9 @@ package io.github.magalz.borealis.stream.host
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Configuration
+import android.os.SystemClock
 import android.view.InputDevice
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -23,6 +25,8 @@ import io.github.magalz.borealis.stream.ChromeMode
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamSession
+import io.github.magalz.borealis.stream.input.ChromeChord
+import io.github.magalz.borealis.stream.input.MenuChordDetector
 import io.github.magalz.borealis.stream.ui.StreamChromeRoot
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -44,6 +48,9 @@ import kotlinx.coroutines.launch
  *
  * Back is routed here too, through an `OnBackPressedCallback`, so the activity must keep the
  * predictive back opt-out (the key event reaches `onBackPressed`).
+ *
+ * While MODAL the host also takes the gamepad keys itself, whatever pad they come from (see
+ * [GamepadKey]), and a hold of Select and Start for one second closes the open panel.
  */
 @SuppressLint("ViewConstructor") // Created in code by the stream activity, never inflated.
 class StreamChromeHost(
@@ -58,6 +65,11 @@ class StreamChromeHost(
     private var ownsGesture = false
     private var collecting: Job? = null
     private var composeLaidOut = false
+    private val chord = ChromeChord(::closeOpenPanel)
+    private val chordCheck = Runnable {
+        chord.check(SystemClock.uptimeMillis())
+        scheduleChordCheck()
+    }
 
     private val pipListener =
         Consumer<PictureInPictureModeChangedInfo> { session.onPip(it.isInPictureInPictureMode) }
@@ -135,6 +147,10 @@ class StreamChromeHost(
     private fun applyMode(next: ChromeMode) {
         val previous = mode
         mode = next
+        if (next != previous) {
+            chord.reset()
+            removeCallbacks(chordCheck)
+        }
         if (next == ChromeMode.MODAL) {
             descendantFocusability = FOCUS_AFTER_DESCENDANTS
             requestModalFocus()
@@ -151,6 +167,49 @@ class StreamChromeHost(
 
     private fun requestModalFocus() {
         if (mode == ChromeMode.MODAL && composeLaidOut && !hasFocus()) requestFocus()
+    }
+
+    /**
+     * While MODAL, the gamepad keys are the host's: A is OK, B is Back unless a screen takes it, Y
+     * is the screen's, and Start, Select, X, L3, R3 and Mode are used up here. None of them is left
+     * to the system, whose fallbacks would click the focused item for Start.
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val key = GamepadKey.of(event.keyCode)
+        if (key == null || session.chromeMode != ChromeMode.MODAL) {
+            return super.dispatchKeyEvent(event)
+        }
+        when (key) {
+            GamepadKey.OK -> super.dispatchKeyEvent(GamepadKey.asOk(event))
+            GamepadKey.BACK ->
+                if (
+                    !super.dispatchKeyEvent(event) &&
+                        event.action == KeyEvent.ACTION_DOWN &&
+                        event.repeatCount == 0
+                ) {
+                    activity.onBackPressedDispatcher.onBackPressed()
+                }
+            GamepadKey.SCREEN_ONLY -> super.dispatchKeyEvent(event)
+            GamepadKey.UNUSED -> {
+                chord.onKey(event)
+                scheduleChordCheck()
+            }
+        }
+        return true
+    }
+
+    private fun scheduleChordCheck() {
+        removeCallbacks(chordCheck)
+        val deadline = chord.deadline()
+        if (deadline != MenuChordDetector.NO_DEADLINE) {
+            postDelayed(chordCheck, maxOf(0L, deadline - SystemClock.uptimeMillis()))
+        }
+    }
+
+    /** The chord returns to the stream from a panel; with no panel open it does nothing. */
+    private fun closeOpenPanel() {
+        val phase = session.state.value.phase
+        if (phase is StreamPhase.Streaming && phase.panel != Panel.NONE) session.closePanel()
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean =

@@ -19,6 +19,7 @@ import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.input.MenuChordDetector
 import io.github.magalz.borealis.stream.testing.RecordingActions
 import io.github.magalz.borealis.stream.testing.TV
+import io.github.magalz.borealis.stream.testing.aFailure
 import io.github.magalz.borealis.stream.testing.aSession
 import io.github.magalz.borealis.stream.testing.aSessionInfo
 import java.time.Duration
@@ -80,8 +81,13 @@ abstract class ChromeGamepadKeysBase(private val deviceId: Int, private val sour
         idle()
     }
 
+    /** The keyboard opens from the menu, as it does on a TV. */
     private fun openKeyboard() {
+        openMenu()
         session.openKeyboard()
+        idle()
+        // Compose drops the focus when the menu rows leave; the panel gets it back from the host.
+        composeRule.runOnUiThread { host.requestFocus() }
         idle()
     }
 
@@ -193,6 +199,23 @@ abstract class ChromeGamepadKeysBase(private val deviceId: Int, private val sour
         composeRule.onNodeWithText("Quit Desktop").assertIsFocused()
         assertThat(panel).isEqualTo(Panel.MENU)
         assertThat(calls).isEmpty()
+    }
+
+    @Test
+    fun `B leaves while the app is quitting, where no screen takes it`() {
+        openMenu()
+        focusQuit()
+        tap(KeyEvent.KEYCODE_BUTTON_A)
+        tap(KeyEvent.KEYCODE_DPAD_RIGHT)
+        tap(KeyEvent.KEYCODE_BUTTON_A)
+        assertThat(calls).containsExactly("quitApp")
+        session.onFailed(aFailure)
+        idle()
+        actions.calls.clear()
+
+        tap(KeyEvent.KEYCODE_BUTTON_B)
+
+        assertThat(calls).containsExactly("leave")
     }
 
     @Test

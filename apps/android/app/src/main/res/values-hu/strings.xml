@@ -102,13 +102,6 @@
     <string name="applist_menu_cancel">Mégse</string>
     <string name="applist_menu_quit_and_start">Lépjen ki az aktuális játékból és indítsa el</string>
     <string name="applist_connect_msg">Csatlakozás a számítógéphez…</string>
-    <string name="perf_overlay_dectime">Átlagos dekódolási idő: %1$.2f ms</string>
-    <string name="perf_overlay_netlatency">Átlagos hálózati késleltetés: %1$d ms (szórás: %2$d ms)</string>
-    <string name="perf_overlay_netdrops">A hálózati kapcsolat miatt eldobott képkockák:%1$.2f%%</string>
-    <string name="perf_overlay_renderingfps">Képkockasebesség renderelése: %1$.2f FPS</string>
-    <string name="perf_overlay_incomingfps">Bejövő képkockasebesség a hálózatról: %1$.2f FPS</string>
-    <string name="perf_overlay_decoder">Dekóder:%1$s</string>
-    <string name="perf_overlay_streamdetails">Videófolyam: %1$s %2$.2f FPS</string>
     <string name="poor_connection_msg">Gyenge a kapcsolat a számítógéppel</string>
     <string name="slow_connection_msg">Lassú a kapcsolat a számítógéppel\nCsökkentsd a bitrátát</string>
     <string name="delete_pc_msg">Biztosan törlöd ezt a számítógépet?</string>
@@ -237,7 +230,6 @@
     <string name="title_setup_guide">Beállítási útmutató</string>
     <string name="title_checkbox_gamepad_touchpad_as_mouse">Az egeret mindig az érintőpaddal vezérelje</string>
     <string name="resolution_prefix_native_landscape">(Tájkép)</string>
-    <string name="perf_overlay_hostprocessinglatency">Gazdagép késleltetés feldolgozás min/max/átlag: %1$.1f/%2$.1f/%3$.1f ms</string>
     <string name="pacing_latency">A legalacsonyabb késleltetés előnyben részesítése</string>
     <string name="error_code_prefix">Hibakód:</string>
     <string name="title_seekbar_vibrate_fallback_strength">Emulált rezgés intenzitásának beállítása</string>

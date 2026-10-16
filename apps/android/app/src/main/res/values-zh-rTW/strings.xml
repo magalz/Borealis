@@ -73,11 +73,6 @@
     <string name="slow_connection_msg">與電腦連線過慢
 \n 請降低位元速率</string>
     <string name="poor_connection_msg">與電腦連線不良</string>
-    <string name="perf_overlay_decoder">解碼器：%1$s</string>
-    <string name="perf_overlay_incomingfps">網路接收影格速率：%1$.2f FPS</string>
-    <string name="perf_overlay_renderingfps">轉譯影格速率：%1$.2f FPS</string>
-    <string name="perf_overlay_netdrops">網路丟失影格：%1$.2f%%</string>
-    <string name="perf_overlay_dectime">平均解碼時間：%1$.2f ms</string>
     <!-- AppList activity -->
     <string name="applist_connect_msg">正在連線電腦…</string>
     <string name="applist_menu_resume">繼續工作階段</string>
@@ -214,8 +209,6 @@
     <string name="pcview_menu_header_unknown">正在重新整理</string>
     <string name="pcview_menu_header_offline">離線</string>
     <string name="pcview_menu_header_online">線上</string>
-    <string name="perf_overlay_netlatency">平均網路延時：%1$d ms (抖動：%2$d ms)</string>
-    <string name="perf_overlay_streamdetails">視訊串流：%1$s %2$.2f FPS</string>
     <string name="resolution_prefix_native_fullscreen">原生全螢幕</string>
     <!-- Array strings -->
     <string name="audioconf_stereo">立體聲</string>
@@ -268,7 +261,6 @@
     <string name="title_checkbox_gamepad_touchpad_as_mouse">一律使用觸摸板控制滑鼠</string>
     <string name="summary_checkbox_gamepad_motion_sensors">在使用動態感測器模擬手把時啟用支援的主機以要求動態感測器資料，若動態感測器未在遊戲中使用，停用後可能會輕微降低電力和網路使用量。</string>
     <string name="videoformat_h264always">偏好 H.264</string>
-    <string name="perf_overlay_hostprocessinglatency">主機處理延遲最小值/最大值/平均值：%1$.1f/%2$.1f/%3$.1f ms</string>
     <string name="summary_checkbox_gamepad_touchpad_as_mouse">強制手把觸摸板輸入以控制主機滑鼠，即使在使用觸摸板模擬手把時。</string>
     <string name="title_checkbox_gamepad_motion_sensors">一律使用手把動態感測器</string>
     <string name="videoformat_av1always">偏好 AV1 (實驗性)</string>

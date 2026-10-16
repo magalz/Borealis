@@ -59,9 +59,6 @@
     <string name="searching_pc">Procurando por PCs a executar o GameStream...
 \n
 \nCertifique-se de que o GameStream esteja ativado nas configurações do SHIELD do GeForce Experience.</string>
-    <string name="perf_overlay_renderingfps">Taxa de quadros renderizando: %1$.2f FPS</string>
-    <string name="perf_overlay_netdrops">Quadros dropados pela rede: %1$.2f%%</string>
-    <string name="perf_overlay_netlatency">Latência média da rede: %1$d ms (variação: %2$d ms)</string>
     <string name="applist_menu_scut">Criar Atalho</string>
     <string name="applist_refresh_msg">A recarregar apps…</string>
     <string name="applist_refresh_error_msg">Falha ao obter a lista de apps</string>
@@ -155,10 +152,6 @@
     <string name="poor_connection_msg">Conexão ruim com o PC</string>
     <string name="slow_connection_msg">Conexão lenta com o PC
 \nReduza sua taxa de bits</string>
-    <string name="perf_overlay_streamdetails">Transmissão: %1$s %2$.2f FPS</string>
-    <string name="perf_overlay_decoder">Decodificador: %1$s</string>
-    <string name="perf_overlay_incomingfps">Taxa de quadros recebidos pela rede:: %1$.2f FPS</string>
-    <string name="perf_overlay_dectime">Tempo médio de decodificação: %1$.2f ms</string>
     <string name="applist_connect_msg">Conectando ao PC…</string>
     <string name="applist_menu_resume">Retomar Sessão</string>
     <string name="applist_menu_quit">Sair da Sessão</string>

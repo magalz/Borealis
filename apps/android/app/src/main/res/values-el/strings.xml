@@ -36,7 +36,6 @@
 \n
 \nΟι ακόλουθες θύρες δικτύου αποκλείστηκαν:
 \n</string>
-    <string name="perf_overlay_netlatency">Μέσος λανθάνων χρόνος δικτύου: %1$d MS (διακύμανση: %2$d ms)</string>
     <string name="applist_menu_hide_app">Απόκρυψη εφαρμογής</string>
     <string name="applist_refresh_title">Λίστα εφαρμογών</string>
     <string name="applist_refresh_error_title">Σφάλμα</string>
@@ -65,9 +64,6 @@
     <string name="conn_terminated_msg">Η σύνδεση τερματίστηκε</string>
     <string name="ip_hint">Διεύθυνση IP του υπολογιστή GeForce</string>
     <string name="yes">Ναί</string>
-    <string name="perf_overlay_streamdetails">Ροή βίντεο: %1$s %2$.2f FPS</string>
-    <string name="perf_overlay_decoder">Αποκωδικοποιητής: %1$s</string>
-    <string name="perf_overlay_incomingfps">Ρυθμός εισερχόμενων καρέ από το δίκτυο: %1$.2f FPS</string>
     <string name="applist_menu_cancel">Ακύρωση</string>
     <string name="applist_menu_tv_channel">Προσθήκη στο κανάλι</string>
     <string name="applist_refresh_msg">Ανανέωση εφαρμογών…</string>
@@ -142,12 +138,10 @@
 \nΑν το πρόβλημα παραμένει, δοκιμάστε να επανεγκαταστήσετε τα προγράμματα οδήγησης της κάρτας γραφικών και το GeForce Experience.</string>
     <string name="conn_terminated_title">Η σύνδεση τερματίστηκε</string>
     <string name="help">Βοήθεια</string>
-    <string name="perf_overlay_netdrops">Πλαίσια που απορρίπτονται από τη σύνδεση δικτύου σας: %1$.2f%%</string>
     <string name="applist_quit_app">Εγκατάλειψη</string>
     <string name="msg_add_pc">Σύνδεση στον υπολογιστή…</string>
     <string name="error_404">Το GFE επέστρεψε ένα σφάλμα HTTP 404. Βεβαιωθείτε ότι ο υπολογιστής σας χρησιμοποιεί μια υποστηριζόμενη κάρτα γραφικών. Η χρήση λογισμικού απομακρυσμένης επιφάνειας εργασίας μπορεί επίσης να προκαλέσει αυτό το σφάλμα. Δοκιμάστε την επανεκκίνηση του υπολογιστή σας ή την επανεγκατάσταση του GFE.</string>
     <string name="video_decoder_init_failed">Απέτυχε η προετοιμασία του αποκωδικοποιητή βίντεο. Η συσκευή σας ενδέχεται να μην υποστηρίζει την επιλεγμένη ανάλυση ή ρυθμό καρέ.</string>
-    <string name="perf_overlay_dectime">Μέσος χρόνος αποκωδικοποίησης: %1$.2f ms</string>
     <string name="title_add_pc">Προσθήκη υπολογιστή χειροκίνητα</string>
     <string name="lost_connection">Χάθηκε η σύνδεση με τον υπολογιστή</string>
     <string name="title_details">Λεπτομέρειες</string>

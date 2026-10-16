@@ -162,11 +162,6 @@
 \nЗменшіть швидкість потоку</string>
     <string name="summary_unlock_fps">Трансляція зі швидкістю 90 або 120 кадрів на секунду може зменшити затримку на швидких пристроях але, може викликати затримки або збої на слабших</string>
     <string name="summary_enable_perf_overlay">Відображає статистику продуктивності під час трансляції, в режимі реального часу</string>
-    <string name="perf_overlay_decoder">Розцифрувач: %1$s</string>
-    <string name="perf_overlay_incomingfps">Вхідна частота кадрів з мережі: %1$.2f FPS</string>
-    <string name="perf_overlay_renderingfps">Частота кадрів при відтворенні: %1$.2f FPS</string>
-    <string name="perf_overlay_netdrops">Кадри втрачені вашою мережею: %1$.2f%%</string>
-    <string name="perf_overlay_dectime">Середній час розцифрування: %1$.2f мс</string>
     <string name="summary_fps_list">Збільшіть для плавнішого відео потоку. Зменшіть для кращої продуктивності на повільних пристроях.</string>
     <string name="scut_invalid_uuid">Зазначений пристрій недійсний</string>
     <string name="scut_invalid_app_id">Зазначений застосунок недійсний</string>
@@ -194,8 +189,6 @@
 \nМожливо, ваш монітор не підтримує необхідну конфігурацію дисплея. Якщо так, ви можете спробувати налаштувати віртуальний монітор. Врешті-решт, якщо ваш пристрій або хост-комп’ютер не підтримує потокове передавання з певною роздільною здатністю чи частотою оновлення, вам, на жаль, не пощастило.</string>
     <string name="title_native_res_dialog">Застереження про рідну роздільну здатність</string>
     <string name="applist_menu_hide_app">Сховати застосунок</string>
-    <string name="perf_overlay_netlatency">Середня затримка мережі: %1$d мс (розбіжність %2$d мс)</string>
-    <string name="perf_overlay_streamdetails">Відео трансл: %1$s %2$.2f FPS</string>
     <string name="check_ports_msg">Перевірте правила брандмауера та переадресації для наступних портів:</string>
     <string name="no_frame_received_error">Здається, ваше мережеве з\'єднання човпає. Спробуйте зменшити швидкість потоку (бітрейт) чи переключіть пристрій на швидшу мережу.</string>
     <string name="no_video_received_error">Не отримано відео від хоста.</string>
@@ -282,5 +275,4 @@
 \nПримітка. Якщо ввімкнути цей параметр, ваш геймпад може відображатися як контролер PlayStation на хості.</string>
     <string name="toast_controller_type_changed">Тип геймпада може бути змінений через емуляцію датчика руху</string>
     <string name="pcview_menu_eol">Закриття сервісів NVIDIA GameStream</string>
-    <string name="perf_overlay_hostprocessinglatency">Затримка обробки хостом мін./макс./середня: %1$.1f/%2$.1f/%3$.1f мс</string>
 </resources>

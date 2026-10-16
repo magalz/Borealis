@@ -117,12 +117,6 @@
     <string name="conn_hardware_latency">Latência média de decodificação de hardware:</string>
     <string name="conn_starting">Iniciando</string>
     <string name="conn_error_title">Erro de Conexão</string>
-    <string name="perf_overlay_decoder">Decodificador: %1$s</string>
-    <string name="perf_overlay_incomingfps">Taxa de quadros recebidos pela rede:: %1$.2f FPS</string>
-    <string name="perf_overlay_renderingfps">Taxa de quadros renderizando: %1$.2f FPS</string>
-    <string name="perf_overlay_streamdetails">Transmissão: %1$s %2$.2f FPS</string>
-    <string name="perf_overlay_netlatency">Latência média da rede: %1$d ms (variação: %2$d ms)</string>
-    <string name="perf_overlay_dectime">Tempo médio de decodificação: %1$.2f ms</string>
     <string name="applist_connect_msg">Conectando ao PC…</string>
     <string name="applist_menu_resume">Retornar ao Jogo</string>
     <string name="applist_menu_quit">Sair do Jogo</string>
@@ -133,7 +127,6 @@
     <string name="applist_menu_tv_channel">Adicionar ao Canal</string>
     <string name="applist_menu_hide_app">Esconder Jogo</string>
     <string name="applist_refresh_title">Lista de Aplicativos</string>
-    <string name="perf_overlay_netdrops">Quadros dropados pela rede: %1$.2f%%</string>
     <string name="applist_quit_app">Saindo</string>
     <string name="applist_quit_success">Saiu com sucesso</string>
     <string name="applist_quit_fail">Falha ao sair</string>

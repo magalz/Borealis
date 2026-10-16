@@ -87,11 +87,6 @@
     <string name="delete_pc_msg">Êtes-vous sûr de vouloir supprimer ce PC \?</string>
     <string name="slow_connection_msg">Connexion lente au PC\nRéduisez votre débit</string>
     <string name="poor_connection_msg">Mauvaise connexion au PC</string>
-    <string name="perf_overlay_decoder">Décodeur : %1$s</string>
-    <string name="perf_overlay_incomingfps">Fréquence d\'images entrantes du réseau : %1$.2f FPS</string>
-    <string name="perf_overlay_renderingfps">Fréquence d\'images de rendu : %1$.2f FPS</string>
-    <string name="perf_overlay_netdrops">Images perdues par votre connexion réseau : %1$.2f%%</string>
-    <string name="perf_overlay_dectime">Temps moyen de décodage : %1$.2f ms</string>
     <!-- AppList activity -->
     <string name="applist_connect_msg">Connexion au PC…</string>
     <string name="applist_menu_resume">Reprendre la session</string>
@@ -215,8 +210,6 @@
 \nVérifiez qu\'aucune application utilisant un DRM n\'est ouverte sur votre PC hôte. Vous pouvez aussi essayer de redémarrer votre PC hôte.</string>
     <string name="no_frame_received_error">Votre connexion réseau ne fonctionne pas bien. Baissez votre débit ou utilisez une connexion plus rapide.</string>
     <string name="resolution_prefix_native_fullscreen">Plein-écran natif</string>
-    <string name="perf_overlay_netlatency">Latence réseau moyenne : %1$d ms (variance : %2$d ms)</string>
-    <string name="perf_overlay_streamdetails">Stream vidéo : %1$s %2$.2f FPS</string>
     <!-- Array strings -->
     <string name="fps_30">30 IPS</string>
     <string name="fps_60">60 IPS</string>
@@ -263,7 +256,6 @@
     <string name="pcview_menu_eol">NVIDIA GameStream : fin de service</string>
     <string name="pair_pairing_help">Si votre PC hôte utilise Sunshine, accédez à l\'interface web de Sunshine pour saisir le code PIN.</string>
     <string name="category_gamepad_settings">Paramètres manette</string>
-    <string name="perf_overlay_hostprocessinglatency">Latence de traitement de l\'hôte min/max/moyenne : %1$.1f/%2$.1f/%3$.1f ms</string>
     <string name="fps_suffix_fps">FPS</string>
     <string name="title_native_fps_dialog">Avertissement sur le FPS natif</string>
     <string name="title_checkbox_gamepad_motion_sensors">Autoriser l\'utilisation des capteurs de mouvement de la manette</string>

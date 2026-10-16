@@ -105,11 +105,6 @@
     <string name="applist_menu_quit">Thoát phiên làm việc</string>
     <string name="applist_menu_resume">Tiếp tục phiên làm việc</string>
     <string name="applist_connect_msg">Đang kết nối đến PC…</string>
-    <string name="perf_overlay_decoder">Trình giải mã: %1$s</string>
-    <string name="perf_overlay_incomingfps">Tốc độ khung hình đang đến từ mạng: %1$.2f FPS</string>
-    <string name="perf_overlay_renderingfps">Tốc độ khung hình kết xuất: %1$.2f FPS</string>
-    <string name="perf_overlay_netdrops">Khung hình bị giảm bởi kết nối mạng: %1$.2f%%</string>
-    <string name="perf_overlay_dectime">Thời gian giải mã trung bình: %1$.2f ms</string>
     <string name="poor_connection_msg">Kết nối đến PC bị kém</string>
     <string name="slow_connection_msg">Kết nối đến PC bị chậm.
 \nHãy giảm tốc độ bit</string>
@@ -204,8 +199,6 @@
     <string name="scut_pc_not_found">Không tìm thấy PC</string>
     <string name="scut_not_paired">PC chưa được ghép đôi</string>
     <string name="scut_deleted_pc">PC đã bị xoá</string>
-    <string name="perf_overlay_netlatency">Độ trễ mạng trung bình: %1$d ms (sai số: %2$d ms)</string>
-    <string name="perf_overlay_streamdetails">Tốc độ khung hình: %1$s %2$.2f FPS</string>
     <string name="resolution_prefix_native_fullscreen">Toàn màn hình theo hệ thống</string>
     <string name="title_frame_pacing">Nhịp độ khung hình video</string>
     <string name="summary_frame_pacing">Chỉ ra cách cân bằng giữa độ trễ video và độ mượt mà</string>

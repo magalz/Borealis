@@ -88,14 +88,7 @@
     <string name="title_details">Подробности</string>
     <string name="delete_pc_msg">Наистина ли искате да изтриете този компютър?</string>
     <string name="poor_connection_msg">Слаба връзка с компютъра</string>
-    <string name="perf_overlay_streamdetails">Видео поток: %1$s %2$.2f кадъра/сек</string>
-    <string name="perf_overlay_decoder">Декодер: %1$s</string>
-    <string name="perf_overlay_netdrops">Кадри, пропуснати от мрежовата връзка: %1$.2f%%</string>
-    <string name="perf_overlay_incomingfps">Входяща честота на кадрите от мрежата: %1$.2f кадъра/сек</string>
-    <string name="perf_overlay_netlatency">Средно забавяне на мрежата: %1$d мсек (отклонение: %2$d мсек)</string>
     <string name="applist_connect_msg">Свързване с компютъра…</string>
-    <string name="perf_overlay_renderingfps">Честота на изобразяване на кадрите: %1$.2f кадъра/сек</string>
-    <string name="perf_overlay_dectime">Средно време за декодиране: %1$.2f мсек</string>
     <string name="applist_menu_quit">Прекратяване на сесията</string>
     <string name="msg_add_pc">Свързване към компютъра…</string>
     <string name="applist_menu_resume">Възобновяване на сесията</string>
@@ -161,7 +154,6 @@
     <string name="title_checkbox_mouse_emulation">Симулиране на мишка чрез контролер</string>
     <string name="pair_pairing_help">Ако на отдалечения компютър работи Sunshine, отворете уеб интерфейса на Sunshine и въведете ПИН кода.</string>
     <string name="frame_conversion_error">Отдалеченият компютър докладва критична грешка при кодиране на видеото.\n\nОпитайте да изключите режима HDR, да промените резолюцията на потока или резолюцията на екрана на отдалечения компютър.</string>
-    <string name="perf_overlay_hostprocessinglatency">Забавяне при обработката на отдалечения компютър – мин/макс/средно: %1$.1f/%2$.1f/%3$.1f мсек</string>
     <string name="category_on_screen_controls_settings">Настройки на екранните елементи за управление</string>
     <string name="summary_checkbox_show_onscreen_controls">Показване на виртуален контролер на сензорния екран</string>
     <string name="summary_checkbox_gamepad_motion_fallback">Използва вградените сензори за движение на устройството, ако сензорите на контролер не се поддържат от свързания контролер или от версията на Андроид.\nЗабележка: Включването на тази настройка може да направи така, че контролерът да се вижда като контролер за PlayStation за отдалечения компютър.</string>

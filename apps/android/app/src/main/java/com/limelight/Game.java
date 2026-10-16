@@ -7,8 +7,6 @@ import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.binding.input.capture.InputCaptureManager;
 import com.limelight.binding.input.capture.InputCaptureProvider;
-import com.limelight.binding.input.touch.AbsoluteTouchContext;
-import com.limelight.binding.input.touch.RelativeTouchContext;
 import com.limelight.binding.input.driver.UsbDriverService;
 import com.limelight.binding.input.evdev.EvdevListener;
 import com.limelight.binding.input.touch.TouchContext;
@@ -16,7 +14,6 @@ import com.limelight.binding.input.virtual_controller.VirtualController;
 import com.limelight.binding.video.CrashListener;
 import com.limelight.binding.video.MediaCodecDecoderRenderer;
 import com.limelight.binding.video.MediaCodecHelper;
-import com.limelight.binding.video.PerfOverlayListener;
 import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.NvConnectionListener;
 import com.limelight.nvstream.StreamConfiguration;
@@ -37,11 +34,17 @@ import com.limelight.utils.UiHelper;
 
 import io.github.magalz.borealis.stream.ChromeMode;
 import io.github.magalz.borealis.stream.GameStreamActions;
+import io.github.magalz.borealis.stream.GamepadMouseSync;
+import io.github.magalz.borealis.stream.ImeKeyGate;
+import io.github.magalz.borealis.stream.PerfGate;
 import io.github.magalz.borealis.stream.StartStage;
 import io.github.magalz.borealis.stream.StreamSession;
 import io.github.magalz.borealis.stream.StreamControls;
+import io.github.magalz.borealis.stream.StreamFailures;
+import io.github.magalz.borealis.stream.StreamKeyboards;
 import io.github.magalz.borealis.stream.StreamSessionFactory;
 import io.github.magalz.borealis.stream.TouchContexts;
+import io.github.magalz.borealis.stream.TouchMode;
 import io.github.magalz.borealis.stream.host.HeldKeys;
 import io.github.magalz.borealis.stream.host.InputRoute;
 import io.github.magalz.borealis.stream.host.StreamChromeHost;
@@ -49,6 +52,7 @@ import io.github.magalz.borealis.stream.host.StreamChromeHost;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import androidx.activity.ComponentActivity;
+import androidx.lifecycle.LifecycleOwnerKt;
 import android.app.PictureInPictureParams;
 import android.app.Service;
 import android.content.ComponentName;
@@ -84,7 +88,6 @@ import android.view.View.OnTouchListener;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -100,15 +103,12 @@ import java.util.Locale;
 public class Game extends ComponentActivity implements SurfaceHolder.Callback,
         OnGenericMotionListener, OnTouchListener, NvConnectionListener, EvdevListener,
         OnSystemUiVisibilityChangeListener, GameGestures, StreamView.InputCallbacks,
-        PerfOverlayListener, UsbDriverService.UsbDriverStateListener, View.OnKeyListener {
+        UsbDriverService.UsbDriverStateListener, View.OnKeyListener {
     private int lastButtonState = 0;
 
     // Only 2 touches are supported
     private final TouchContext[] touchContextMap = new TouchContext[2];
     private long threeFingerDownTime = 0;
-
-    private static final int REFERENCE_HORIZ_RES = 1280;
-    private static final int REFERENCE_VERT_RES = 720;
 
     private static final int STYLUS_DOWN_DEAD_ZONE_DELAY = 100;
     private static final int STYLUS_DOWN_DEAD_ZONE_RADIUS = 20;
@@ -133,6 +133,8 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
     private StreamChromeHost chromeHost;
     private final HeldKeys heldKeys = new HeldKeys();
     private final InputRoute chromeInput = new InputRoute(this::currentChromeMode);
+    // BOREALIS: while the Android keyboard shows, a gamepad's D-pad, Enter and Back are for it (stream)
+    private final ImeKeyGate imeKeys = new ImeKeyGate(() -> ImeKeyGate.isImeVisible(getWindow().getDecorView()));
     private boolean displayedFailureDialog = false;
     private boolean connecting = false;
     private boolean connected = false;
@@ -161,7 +163,6 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
     private boolean isHidingOverlays;
     private TextView notificationOverlayView;
     private int requestedNotificationOverlayVisibility = View.GONE;
-    private TextView performanceOverlayView;
 
     private MediaCodecDecoderRenderer decoderRenderer;
 
@@ -289,8 +290,6 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
 
         notificationOverlayView = findViewById(R.id.notificationOverlay);
 
-        performanceOverlayView = findViewById(R.id.performanceOverlay);
-
         inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this, this);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -387,11 +386,6 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
             }
         }
 
-        // Check if the user has enabled performance stats overlay
-        if (prefConfig.enablePerfOverlay) {
-            performanceOverlayView.setVisibility(View.VISIBLE);
-        }
-
         decoderRenderer = new MediaCodecDecoderRenderer(
                 this,
                 prefConfig,
@@ -409,8 +403,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                 tombstonePrefs.getInt("CrashCount", 0),
                 connMgr.isActiveNetworkMetered(),
                 willStreamHdr,
-                glPrefs.glRenderer,
-                this);
+                glPrefs.glRenderer);
         // BOREALIS: first rendered frame ends the preparing message and the watchdog
         decoderRenderer.firstFrameSignal.setListener(() -> {
             startupGuard.onFirstFrame();
@@ -518,16 +511,9 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
         inputManager.registerInputDeviceListener(keyboardTranslator, null);
 
         // Initialize touch contexts
-        for (int i = 0; i < touchContextMap.length; i++) {
-            if (!prefConfig.touchscreenTrackpad) {
-                touchContextMap[i] = new AbsoluteTouchContext(conn, i, streamView);
-            }
-            else {
-                touchContextMap[i] = new RelativeTouchContext(conn, i,
-                        REFERENCE_HORIZ_RES, REFERENCE_VERT_RES,
-                        streamView, prefConfig);
-            }
-        }
+        // BOREALIS: the contexts of the touch mode the settings start with; the menu can change it (stream)
+        System.arraycopy(TouchContexts.build(TouchContexts.initialMode(prefConfig), conn, streamView, prefConfig),
+                0, touchContextMap, 0, touchContextMap.length);
 
         if (prefConfig.onscreenController) {
             // create virtual onscreen controller
@@ -553,6 +539,12 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
         chromeHost = new StreamChromeHost(this, streamSession, streamView, this::chromeCaptured, this::chromeReleased);
         addContentView(chromeHost, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        // BOREALIS: the controller opens the menu and navigates the chrome; the decoder numbers and the gamepad mouse follow the session (stream)
+        controllerHandler.setMenuChordListener(streamSession::openMenu);
+        controllerHandler.setChromeKeySink(chromeHost::dispatchKeyEvent);
+        decoderRenderer.setPerfSink(streamSession::onPerf);
+        PerfGate.bind(LifecycleOwnerKt.getLifecycleScope(this), streamSession, decoderRenderer::setPerfEnabled);
+        GamepadMouseSync.bind(LifecycleOwnerKt.getLifecycleScope(this), streamSession, controllerHandler::isMouseEmulationEnabled);
 
         if (!decoderRenderer.isAvcSupported()) {
             // If we can't find an AVC decoder, we can't proceed
@@ -626,7 +618,6 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                     virtualController.hide();
                 }
 
-                performanceOverlayView.setVisibility(View.GONE);
                 notificationOverlayView.setVisibility(View.GONE);
 
                 // Disable sensors while in PiP mode
@@ -642,10 +633,6 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
 
                 if (virtualController != null) {
                     virtualController.show();
-                }
-
-                if (prefConfig.enablePerfOverlay) {
-                    performanceOverlayView.setVisibility(View.VISIBLE);
                 }
 
                 notificationOverlayView.setVisibility(requestedNotificationOverlayVisibility);
@@ -1190,6 +1177,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
 
     // BOREALIS: the chrome takes the input: release what is held and drop the pointer capture
     private void chromeCaptured() {
+        controllerHandler.setCaptured(true); // The gamepad is zeroed and the game gets nothing from it
         grabbedBeforeCapture = grabbedInput;
         streamActions.releaseHeldInput(lastButtonState);
         lastButtonState = 0;
@@ -1198,12 +1186,12 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
         specialKeyCode = KeyEvent.KEYCODE_UNKNOWN;
         waitingForAllModifiersUp = false;
         setInputGrabState(false);
-        // The gamepad is zeroed by GamepadChrome.setCaptured(true) on the controller handler (wired by S5-T7)
     }
 
     // BOREALIS: the chrome gives the input back: capture the pointer again once the stream is up,
     // unless the user had released it (Ctrl+Alt+Shift+Z) before the chrome took the input
     private void chromeReleased() {
+        controllerHandler.setCaptured(false);
         if (connected && grabbedBeforeCapture) {
             setInputGrabState(true);
         }
@@ -1395,6 +1383,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
     @Override
     public boolean handleKeyDown(KeyEvent event) {
         if (chromeInput.toChrome(event)) return false; // BOREALIS: the chrome takes the keys while it is modal
+        if (imeKeys.toIme(event)) return false; // BOREALIS: the Android keyboard keeps a gamepad's D-pad, Enter and Back
         // Pass-through virtual navigation keys
         if ((event.getFlags() & KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) {
             return false;
@@ -1483,6 +1472,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
     @Override
     public boolean handleKeyUp(KeyEvent event) {
         if (chromeInput.toChrome(event)) return false; // BOREALIS: the chrome takes the keys while it is modal
+        if (imeKeys.toIme(event)) return false; // BOREALIS: the Android keyboard keeps a gamepad's D-pad, Enter and Back
         // Pass-through virtual navigation keys
         if ((event.getFlags() & KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) {
             return false;
@@ -1577,8 +1567,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
     @Override
     public void toggleKeyboard() {
         LimeLog.info("Toggling keyboard overlay");
-        InputMethodManager inputManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        inputManager.toggleSoftInput(0, 0);
+        StreamKeyboards.toggle(streamSession); // BOREALIS: the Borealis keyboard; the Android one opens from it
     }
 
     private byte getLiTouchTypeFromEvent(MotionEvent event) {
@@ -2078,10 +2067,16 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                     return true;
                 }
 
+                // BOREALIS: the touch mode of the stream session; Off ignores the touch screen
+                TouchMode touchMode = TouchContexts.mode(streamSession, prefConfig);
+                if (touchMode == TouchMode.OFF) {
+                    return true;
+                }
+
                 // If this is the parent view, we'll offset our coordinates to appear as if they
                 // are relative to the StreamView like our StreamView touch events are.
                 float xOffset, yOffset;
-                if (view != streamView && !prefConfig.touchscreenTrackpad) {
+                if (view != streamView && touchMode != TouchMode.TRACKPAD) {
                     xOffset = -streamView.getX();
                     yOffset = -streamView.getY();
                 }
@@ -2113,7 +2108,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                 // TODO: Re-enable native touch when have a better solution for handling
                 // cancelled touches from Android gestures and 3 finger taps to activate
                 // the software keyboard.
-                /*if (!prefConfig.touchscreenTrackpad && trySendTouchEvent(view, event)) {
+                /*if (touchMode == TouchMode.DIRECT && trySendTouchEvent(view, event)) {
                     // If this host supports touch events and absolute touch is enabled,
                     // send it directly as a touch event.
                     return true;
@@ -2292,6 +2287,12 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
         runOnUiThread(() -> streamSession.onStage(StartStage.PREPARING_DISPLAY)); // BOREALIS: the chrome shows the stage
     }
 
+    // BOREALIS: /launch or /resume is about to be requested: the chrome shows the "starting app" stage (host.failure)
+    @Override
+    public void launchStarting(boolean resume) {
+        runOnUiThread(() -> streamSession.onStage(StartStage.STARTING_APP));
+    }
+
     @Override
     public void stageComplete(String stage) {
     }
@@ -2352,22 +2353,10 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                         Toast.makeText(Game.this, getResources().getText(R.string.video_decoder_init_failed), Toast.LENGTH_LONG).show();
                     }
 
-                    String dialogText = getResources().getString(R.string.conn_error_msg) + " " + stage +" (error "+errorCode+")";
-
-                    if (portFlags != 0) {
-                        dialogText += "\n\n" + getResources().getString(R.string.check_ports_msg) + "\n" +
-                                MoonBridge.stringifyPortFlags(portFlags, "\n");
-                    }
-                    dialogText = io.github.magalz.borealis.host.launch.ResumeCollisions.withHint(conn != null && conn.endedByResumeCollision(), dialogText, Game.this::getString); // BOREALIS: say what happened when another device was starting its stream
-
-                    if (portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0)  {
-                        dialogText += "\n\n" + getResources().getString(R.string.nettest_text_blocked);
-                    }
-
-                    // BOREALIS: the chrome shows the failure; the text stays in the log until the classifier replaces it (S5-T7)
-                    LimeLog.severe(dialogText);
-                    streamSession.onFailed(StreamSessionFactory.failure(stage, errorCode,
-                            portFlags != 0 ? MoonBridge.stringifyPortFlags(portFlags, "\n") : null));
+                    // BOREALIS: the chrome shows the classified failure (stream)
+                    boolean portBlocked = portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0;
+                    streamSession.onFailed(StreamFailures.failure(Game.this,
+                            StreamFailures.facts(stage, errorCode, portFlags, false, conn), portBlocked));
                 }
             }
         });
@@ -2403,57 +2392,10 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                     // Display the error dialog if it was an unexpected termination.
                     // Otherwise, just finish the activity immediately.
                     if (errorCode != MoonBridge.ML_ERROR_GRACEFUL_TERMINATION) {
-                        String message;
-
-                        if (portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0) {
-                            // If we got a blocked result, that supersedes any other error message
-                            message = getResources().getString(R.string.nettest_text_blocked);
-                        }
-                        else {
-                            switch (errorCode) {
-                                case MoonBridge.ML_ERROR_NO_VIDEO_TRAFFIC:
-                                    message = getResources().getString(R.string.no_video_received_error);
-                                    break;
-
-                                case MoonBridge.ML_ERROR_NO_VIDEO_FRAME:
-                                    message = getResources().getString(R.string.no_frame_received_error);
-                                    break;
-
-                                case MoonBridge.ML_ERROR_UNEXPECTED_EARLY_TERMINATION:
-                                case MoonBridge.ML_ERROR_PROTECTED_CONTENT:
-                                    message = getResources().getString(R.string.early_termination_error);
-                                    break;
-
-                                case MoonBridge.ML_ERROR_FRAME_CONVERSION:
-                                    message = getResources().getString(R.string.frame_conversion_error);
-                                    break;
-
-                                default:
-                                    String errorCodeString;
-                                    // We'll assume large errors are hex values
-                                    if (Math.abs(errorCode) > 1000) {
-                                        errorCodeString = Integer.toHexString(errorCode);
-                                    }
-                                    else {
-                                        errorCodeString = Integer.toString(errorCode);
-                                    }
-                                    message = getResources().getString(R.string.conn_terminated_msg) + "\n\n" +
-                                            getResources().getString(R.string.error_code_prefix) + " " + errorCodeString;
-                                    break;
-                            }
-                            // BOREALIS: LuminalShine hint on the no-video errors (-100, -101)
-                            message = io.github.magalz.borealis.host.video.StreamErrorHints.withHint(errorCode, message, Game.this::getString);
-                        }
-
-                        if (portFlags != 0) {
-                            message += "\n\n" + getResources().getString(R.string.check_ports_msg) + "\n" +
-                                    MoonBridge.stringifyPortFlags(portFlags, "\n");
-                        }
-
-                        // BOREALIS: the chrome shows the failure; the text stays in the log until the classifier replaces it (S5-T7)
-                        LimeLog.severe(message);
-                        streamSession.onFailed(StreamSessionFactory.failure(null, errorCode,
-                                portFlags != 0 ? MoonBridge.stringifyPortFlags(portFlags, "\n") : null));
+                        // BOREALIS: the chrome shows the classified failure (stream)
+                        boolean portBlocked = portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0;
+                        streamSession.onFailed(StreamFailures.failure(Game.this,
+                                StreamFailures.facts(null, errorCode, portFlags, true, conn), portBlocked));
                     }
                     else {
                         finish();
@@ -2503,7 +2445,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                 connected = true;
                 connecting = false;
                 updatePipAutoEnter();
-                streamSession.onConnectionStarted(StreamSessionFactory.sessionInfo(prefConfig.width, prefConfig.height, streamFrameRate, decoderRenderer.getActiveVideoFormat(), prefConfig.bitrate)); // BOREALIS: the chrome waits for the first frame
+                streamSession.onConnectionStarted(StreamSessionFactory.sessionInfo(prefConfig, streamFrameRate, decoderRenderer.getActiveVideoFormat(), decoderRenderer.getDecoderName())); // BOREALIS: the chrome waits for the first frame
                 startupGuard.onConnectionStarted(); // BOREALIS: preparing message and first-frame watchdog
                 io.github.magalz.borealis.host.launch.SessionAudit.started(pcName, Game.this.getIntent().getStringExtra(EXTRA_HOST), decoderRenderer.getActiveVideoFormat(), prefConfig.width, prefConfig.height, streamFrameRate); // BOREALIS: audit trail
 
@@ -2750,16 +2692,6 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
         else if ((visibility & View.SYSTEM_UI_FLAG_HIDE_NAVIGATION) == 0) {
             hideSystemUi(2000);
         }
-    }
-
-    @Override
-    public void onPerfUpdate(final String text) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                performanceOverlayView.setText(text);
-            }
-        });
     }
 
     @Override

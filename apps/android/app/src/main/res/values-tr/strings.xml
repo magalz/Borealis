@@ -93,12 +93,6 @@
     <string name="slow_connection_msg">Bilgisayara yavaş bağlantı
 \nBit hızınızı düşürün</string>
     <string name="poor_connection_msg">Bilgisayar ile zayıf bağlantı</string>
-    <string name="perf_overlay_streamdetails">Video akışı: %1$s %2$.2f FPS</string>
-    <string name="perf_overlay_decoder">Kod çözücü: %1$s</string>
-    <string name="perf_overlay_incomingfps">Ağdan gelen kare hızı: %1$.2f FPS</string>
-    <string name="perf_overlay_renderingfps">İşleme kare hızı: %1$.2f FPS</string>
-    <string name="perf_overlay_netdrops">Ağ bağlantınız tarafından düşen kare sayısı: %1$.2f%%</string>
-    <string name="perf_overlay_dectime">Ortalama kod çözme süresi: %1$.2f ms</string>
     <string name="applist_menu_resume">Oturumu Sürdür</string>
     <string name="applist_menu_quit">Oturumu Sonlandır</string>
     <string name="applist_menu_quit_and_start">Mevcut Oyundan Çık ve Başlat</string>
@@ -156,7 +150,6 @@
 \n Sunshine ana bilgisayarınızda çalıştığından veya GeForce Experience SHIELD ayarlarında GameStream etkinleştirildiğinden emin olun.</string>
     <string name="applist_connect_msg">Bilgisayara bağlanıyor…</string>
     <string name="no">Hayır</string>
-    <string name="perf_overlay_netlatency">Ortalama ağ gecikmesi: %1$d ms (varyans: %2$d ms)</string>
     <string name="addpc_wrong_sitelocal">Bu adres doğru görünmüyor. İnternet üzerinden akış için yönlendiricinizin genel IP adresini kullanmanız gerekir.</string>
     <string name="text_native_res_dialog">Yerel çözünürlük ve/veya FPS, akış sunucusu tarafından desteklenmeyebilir. Muhtemelen ana bilgisayar için uygun bir özel ekran kipini el ile yapılandırmanız gerekecek.
 \n
@@ -181,7 +174,6 @@
 \nHDR kipi devre dışı bırakmayı, akış çözünürlüğünü değiştirmeyi veya ana bilgisayarın ekran çözünürlüğünü değiştirmeyi deneyin.</string>
     <string name="summary_enable_hdr">Oyun ve PC GPU desteklediğinde HDR akışı gerçekleştirin. HDR, HEVC Main 10 kodlama desteğine sahip bir GPU gerektirir.</string>
     <string name="error_code_prefix">Hata kodu:</string>
-    <string name="perf_overlay_hostprocessinglatency">Ana makine işleme gecikmesi asg/azm/ortalama: %1$.1f/%2$.1f/%3$.1f ms</string>
     <string name="fps_suffix_fps">FPS</string>
     <string name="title_native_fps_dialog">Yerel FPS Uyarısı</string>
     <string name="title_checkbox_enable_audiofx">Sistem ekolayzır desteğini etkinleştir</string>

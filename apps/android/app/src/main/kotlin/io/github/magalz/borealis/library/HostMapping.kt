@@ -33,6 +33,13 @@ internal fun parseApps(raw: String?): List<NvApp> {
     }
 }
 
+/** Parses a raw app list. Not remembering anything yet. */
+internal class ParsedAppLists(private val parse: (String?) -> List<NvApp> = ::parseApps) {
+    fun of(raw: String?): List<NvApp> = parse(raw)
+}
+
+internal val sharedAppLists = ParsedAppLists()
+
 private fun unreadable(error: Exception): List<NvApp> {
     BorealisLog.w(LogTag.HOST, "app list unreadable", "error" to error.javaClass.simpleName)
     return emptyList()
@@ -48,8 +55,11 @@ private fun unreadable(error: Exception): List<NvApp> {
  * HDR flag, so HDR is set when any app of the list supports it. The version is not shown: Sunshine
  * and LuminalShine both report the fixed GameStream version, so it says nothing about the host.
  */
-internal fun ComputerDetails.toHost(knownApps: List<NvApp>? = null): Host {
-    val apps by lazy { knownApps ?: parseApps(rawAppList) }
+internal fun ComputerDetails.toHost(
+    knownApps: List<NvApp>? = null,
+    appLists: ParsedAppLists = sharedAppLists,
+): Host {
+    val apps by lazy { knownApps ?: appLists.of(rawAppList) }
     val running =
         runningGameId
             .takeIf { it != 0 && pairState == PairState.PAIRED }

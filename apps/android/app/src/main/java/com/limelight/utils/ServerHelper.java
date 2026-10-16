@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.content.Intent;
 import android.widget.Toast;
 
-import com.limelight.AppView;
 import com.limelight.Game;
 import com.limelight.R;
 import com.limelight.ShortcutTrampoline;
@@ -15,6 +14,7 @@ import com.limelight.nvstream.http.HostHttpResponseException;
 import com.limelight.nvstream.http.NvApp;
 import com.limelight.nvstream.http.NvHTTP;
 import com.limelight.nvstream.jni.MoonBridge;
+import io.github.magalz.borealis.library.shortcuts.ShortcutExtras;
 
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -35,19 +35,19 @@ public class ServerHelper {
 
     public static Intent createPcShortcutIntent(Activity parent, ComputerDetails computer) {
         Intent i = new Intent(parent, ShortcutTrampoline.class);
-        i.putExtra(AppView.NAME_EXTRA, computer.name);
-        i.putExtra(AppView.UUID_EXTRA, computer.uuid);
+        i.putExtra(ShortcutExtras.NAME, computer.name);
+        i.putExtra(ShortcutExtras.UUID, computer.uuid);
         i.setAction(Intent.ACTION_DEFAULT);
         return i;
     }
 
     public static Intent createAppShortcutIntent(Activity parent, ComputerDetails computer, NvApp app) {
         Intent i = new Intent(parent, ShortcutTrampoline.class);
-        i.putExtra(AppView.NAME_EXTRA, computer.name);
-        i.putExtra(AppView.UUID_EXTRA, computer.uuid);
-        i.putExtra(Game.EXTRA_APP_NAME, app.getAppName());
-        i.putExtra(Game.EXTRA_APP_ID, ""+app.getAppId());
-        i.putExtra(Game.EXTRA_APP_HDR, app.isHdrSupported());
+        i.putExtra(ShortcutExtras.NAME, computer.name);
+        i.putExtra(ShortcutExtras.UUID, computer.uuid);
+        i.putExtra(ShortcutExtras.APP_NAME, app.getAppName());
+        i.putExtra(ShortcutExtras.APP_ID, ""+app.getAppId());
+        i.putExtra(ShortcutExtras.APP_HDR, app.isHdrSupported());
         i.setAction(Intent.ACTION_DEFAULT);
         return i;
     }

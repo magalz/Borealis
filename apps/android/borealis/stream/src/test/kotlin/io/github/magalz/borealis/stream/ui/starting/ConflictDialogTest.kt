@@ -164,6 +164,14 @@ class ConflictDialogTest {
     }
 
     @Test
+    @Config(qualifiers = PHONE)
+    fun `the same app with an unknown name also names the third button Quit and start`() {
+        show(sameApp().copy(runningAppName = null))
+
+        composeRule.onNodeWithText("Quit and start").assertIsDisplayed()
+    }
+
+    @Test
     @Config(qualifiers = TV)
     fun `gamepad B answers cancel`() {
         show(sameApp(), FormFactor.Tv)

@@ -2,6 +2,7 @@ package io.github.magalz.borealis.library.testing
 
 import io.github.magalz.borealis.library.domain.App
 import io.github.magalz.borealis.library.domain.Host
+import io.github.magalz.borealis.library.domain.HostCapability
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.RunningApp
 
@@ -12,7 +13,9 @@ fun aHost(
     paired: Boolean = true,
     runningApp: RunningApp? = null,
     canWake: Boolean = false,
-) = Host(id, name, reachability, paired, runningApp, canWake)
+    address: String? = null,
+    capabilities: Set<HostCapability> = emptySet(),
+) = Host(id, name, reachability, paired, runningApp, canWake, address, capabilities)
 
 fun anApp(
     id: Int = 1,

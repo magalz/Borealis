@@ -52,6 +52,10 @@ class UsbAttachActivityTest {
         val noDisplay = android.util.TypedValue()
         theme.resolveAttribute(android.R.attr.windowNoDisplay, noDisplay, true)
         assertThat(noDisplay.data).isNotEqualTo(0)
+        // A translucent window keeps a running stream from being stopped under it.
+        val translucent = android.util.TypedValue()
+        theme.resolveAttribute(android.R.attr.windowIsTranslucent, translucent, true)
+        assertThat(translucent.data).isNotEqualTo(0)
     }
 
     @Test

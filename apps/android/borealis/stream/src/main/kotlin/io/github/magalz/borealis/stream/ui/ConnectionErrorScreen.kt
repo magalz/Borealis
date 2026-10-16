@@ -17,12 +17,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
@@ -35,6 +29,7 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.stream.StreamIntents
+import io.github.magalz.borealis.stream.ui.common.onGamepadB
 import io.github.magalz.borealis.stream.ui.error.ErrorActions
 import io.github.magalz.borealis.stream.ui.error.errorCopy
 
@@ -63,7 +58,7 @@ fun ConnectionErrorScreen(
         Modifier.fillMaxSize()
             .background(colors.page)
             .windowInsetsPadding(WindowInsets.safeDrawing)
-            .onPreviewKeyEvent { event -> leaveOnGamepadB(event, intents) },
+            .onGamepadB(intents::leave),
         contentAlignment = Alignment.CenterStart,
     ) {
         Column(
@@ -93,18 +88,6 @@ fun ConnectionErrorScreen(
             ErrorActions(copy.action, intents)
         }
     }
-}
-
-/**
- * Gamepad B leaves on its first key down. The down and its repeats and the up are all consumed, so
- * the up of a press that began in the game before the stream failed does nothing.
- */
-private fun leaveOnGamepadB(event: KeyEvent, intents: StreamIntents): Boolean {
-    if (event.key != Key.ButtonB) return false
-    if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0) {
-        intents.leave()
-    }
-    return true
 }
 
 /** The raw code and, when the classifier has one, the port hint, in monospace for support. */

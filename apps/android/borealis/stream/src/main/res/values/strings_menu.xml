@@ -2,4 +2,40 @@
 <resources>
     <!-- What a screen reader says for the handle at the top of the stream. -->
     <string name="stream_menu_handle">Open menu</string>
+    <!-- The header of the menu: the app, then the host it streams from. -->
+    <string name="stream_menu_header">%1$s · %2$s</string>
+    <string name="stream_menu_back_to_stream">Back to stream</string>
+    <string name="stream_menu_keyboard">Keyboard</string>
+    <string name="stream_menu_send_keys">Send keys</string>
+    <string name="stream_menu_touch">Touch</string>
+    <string name="stream_menu_touch_trackpad">Trackpad</string>
+    <string name="stream_menu_touch_direct">Direct</string>
+    <string name="stream_menu_touch_off">Off</string>
+    <string name="stream_menu_gamepad_mouse">Gamepad mouse</string>
+    <string name="stream_menu_on">On</string>
+    <string name="stream_menu_off">Off</string>
+    <string name="stream_menu_overlay">Overlay</string>
+    <string name="stream_menu_overlay_off">Off</string>
+    <string name="stream_menu_overlay_compact">Compact</string>
+    <string name="stream_menu_overlay_detailed">Detailed</string>
+    <string name="stream_menu_refresh">Refresh the picture</string>
+    <string name="stream_menu_session_info">Session info</string>
+    <string name="stream_menu_info_video">Video</string>
+    <string name="stream_menu_info_codec">Codec</string>
+    <string name="stream_menu_info_decoder">Decoder</string>
+    <string name="stream_menu_info_host">Host</string>
+    <string name="stream_menu_info_network">Network</string>
+    <string name="stream_menu_info_bitrate">Bitrate</string>
+    <string name="stream_menu_display">Display for next launch</string>
+    <string name="stream_menu_display_note">Needs the host API (Phase 3)</string>
+    <string name="stream_menu_disconnect">Disconnect</string>
+    <!-- %1$s is the app. -->
+    <string name="stream_menu_disconnect_consequence">%1$s keeps running on the PC</string>
+    <!-- %1$s is the app. -->
+    <string name="stream_menu_quit">Quit %1$s</string>
+    <string name="stream_menu_quit_consequence">Ends the app on the PC</string>
+    <!-- %1$s is the app. -->
+    <string name="stream_menu_quit_confirm">Quit %1$s? Unsaved work is lost.</string>
+    <string name="stream_menu_quit_confirm_cancel">Cancel</string>
+    <string name="stream_menu_quit_confirm_quit">Quit</string>
 </resources>

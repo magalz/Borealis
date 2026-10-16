@@ -17,6 +17,7 @@ import io.github.magalz.borealis.stream.PerfSnapshot
 import io.github.magalz.borealis.stream.StreamIntents
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.ui.hint.MenuHint
+import io.github.magalz.borealis.stream.ui.menu.InGameMenu
 import io.github.magalz.borealis.stream.ui.menu.MENU_HANDLE_TOP_OFFSET_DP
 import io.github.magalz.borealis.stream.ui.menu.MenuHandle
 import io.github.magalz.borealis.stream.ui.overlay.PerfOverlay
@@ -57,7 +58,7 @@ fun StreamingLayer(
                             .padding(top = MENU_HANDLE_TOP_OFFSET_DP.dp),
                     )
                 }
-            Panel.MENU -> Unit
+            Panel.MENU -> InGameMenu(appName, hostName, phase, perf, intents)
             Panel.KEYBOARD -> StreamKeyboard(docked = formFactor == FormFactor.Phone, intents)
         }
         MenuHint(

@@ -3,6 +3,7 @@ package io.github.magalz.borealis.stream.ui.menu
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -307,7 +308,7 @@ class InGameMenuTest {
 
         text("Decoder").assertDoesNotExist()
         text("— of 20 Mbps").performScrollTo().assertIsDisplayed()
-        text("— ms").performScrollTo().assertIsDisplayed()
+        composeRule.onAllNodesWithText("— ms").assertCountEquals(2)
     }
 
     @Test

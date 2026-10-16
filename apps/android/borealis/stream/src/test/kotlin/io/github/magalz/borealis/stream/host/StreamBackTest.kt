@@ -81,7 +81,8 @@ class StreamBackTest {
         back()
 
         assertThat(panel).isEqualTo(Panel.MENU)
-        assertThat(actions.calls).isEmpty()
+        // The menu hint was waiting: opening the menu marks it as seen, and nothing else happens.
+        assertThat(actions.calls).containsExactly("menuHintShown")
     }
 
     @Test

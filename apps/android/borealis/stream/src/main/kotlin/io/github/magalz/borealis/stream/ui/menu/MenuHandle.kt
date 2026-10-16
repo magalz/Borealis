@@ -1,6 +1,5 @@
 package io.github.magalz.borealis.stream.ui.menu
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -12,8 +11,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
@@ -38,9 +35,6 @@ private val TAB_HEIGHT = 20.dp
 private val TOUCH_WIDTH = 88.dp
 private val TOUCH_HEIGHT = 36.dp
 private const val TAB_ALPHA = 0.55f
-private val CHEVRON_WIDTH = 12.dp
-private val CHEVRON_HEIGHT = 5.dp
-private val CHEVRON_STROKE = 1.5.dp
 
 /**
  * The tab at the top of the stream on a device with a touchscreen: a tap or a downward pull on it
@@ -98,11 +92,6 @@ private fun Tab() {
             .background(colors.page.copy(alpha = TAB_ALPHA), LocalBorealisShapes.current.pill),
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(Modifier.size(CHEVRON_WIDTH, CHEVRON_HEIGHT)) {
-            val stroke = CHEVRON_STROKE.toPx()
-            val middle = Offset(size.width / 2, size.height)
-            drawLine(colors.ink, Offset.Zero, middle, stroke, StrokeCap.Round)
-            drawLine(colors.ink, Offset(size.width, 0f), middle, stroke, StrokeCap.Round)
-        }
+        Chevron(colors.ink)
     }
 }

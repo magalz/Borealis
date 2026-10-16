@@ -6,6 +6,7 @@ import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.shadows.ShadowToast
 
 /** Holding Start turns the gamepad mouse on or off, on a pad on the USB driver as on any other. */
 @RunWith(RobolectricTestRunner::class)
@@ -77,5 +78,37 @@ class UsbStartHoldTest {
         pad.report(0)
 
         assertThat(rig.handler.isMouseEmulationEnabled).isFalse()
+    }
+
+    /** The USB driver reports from its own thread, which has no looper. */
+    private fun onDriverThread(block: () -> Unit): Throwable? {
+        var failure: Throwable? = null
+        Thread {
+                try {
+                    block()
+                } catch (e: Throwable) {
+                    failure = e
+                }
+            }
+            .apply {
+                start()
+                join()
+            }
+        return failure
+    }
+
+    @Test
+    fun `the toggle from the driver thread runs on the main thread, where the notice is shown`() {
+        assertThat(onDriverThread { pad.report(PLAY_FLAG) }).isNull()
+        rig.advanceBy(800)
+
+        assertThat(onDriverThread { pad.report(0) }).isNull()
+
+        // Nothing changes until the main thread has had its turn.
+        assertThat(rig.handler.isMouseEmulationEnabled).isFalse()
+        rig.advanceBy(0)
+        assertThat(rig.handler.isMouseEmulationEnabled).isTrue()
+        assertThat(ShadowToast.shownToastCount()).isEqualTo(1)
+        assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("Mouse emulation is: ON")
     }
 }

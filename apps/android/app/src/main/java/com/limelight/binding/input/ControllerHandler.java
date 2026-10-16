@@ -3056,7 +3056,13 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         buttonFlags = context.heldSinceCapture.filter(buttonFlags, captured);
         if (context.startHold.update(buttonFlags, SystemClock.uptimeMillis()) && !captured &&
                 prefConfig.mouseEmulation && !context.menuChord.claims(ControllerPacket.PLAY_FLAG)) {
-            context.toggleMouseEmulation();
+            // The USB driver reports from a thread without a looper, and the toggle shows a notice
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                context.toggleMouseEmulation();
+            }
+            else {
+                mainThreadHandler.post(context::toggleMouseEmulation);
+            }
         }
         if (captured) {
             return;

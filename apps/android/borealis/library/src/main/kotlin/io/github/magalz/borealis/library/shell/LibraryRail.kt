@@ -34,6 +34,12 @@ internal class RailActions(
     val onSettings: () -> Unit,
 )
 
+/** The rail item that stands for the screen beside it. */
+internal enum class RailSelection {
+    Hosts,
+    AddHost,
+}
+
 /**
  * The frame of the Library screens: on a TV or handheld, [content] with the [LibraryRail] beside it
  * while [showRail] is set, which is the rail of Hosts and Apps. A phone has no rail.
@@ -45,9 +51,10 @@ internal class RailActions(
 @Composable
 internal fun LibraryScaffold(
     formFactor: FormFactor,
-    showRail: Boolean,
+    showRail: Boolean = true,
     actions: RailActions,
     modifier: Modifier = Modifier,
+    selected: RailSelection = RailSelection.Hosts,
     content: @Composable () -> Unit,
 ) {
     BorealisTheme(formFactor) {

@@ -105,3 +105,17 @@ internal class DeviceLocalNetworks @Inject constructor() : LocalNetworks {
             }
         }
 }
+
+/** The app list that the computer manager service cached on disk for a host, as raw XML. */
+internal fun interface AppListCache {
+    /** Reads from disk; null when there is no usable cache. Never call it on the main thread. */
+    fun read(hostId: String): String?
+}
+
+/** Stub: the disk read follows the failing tests. */
+@Singleton
+internal class DiskAppListCache
+@Inject
+constructor(@ApplicationContext private val context: Context) : AppListCache {
+    override fun read(hostId: String): String? = null
+}

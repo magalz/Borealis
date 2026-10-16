@@ -33,6 +33,7 @@ internal class ComputerManagerConnection
 constructor(
     private val connector: CmsConnector,
     @IoDispatcher private val io: CoroutineDispatcher,
+    private val appListCache: AppListCache = AppListCache { null },
 ) {
     private val state = MutableStateFlow<Map<String, ComputerDetails>>(emptyMap())
 

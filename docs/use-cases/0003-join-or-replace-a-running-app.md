@@ -69,15 +69,16 @@ app again, or to cancel. Every choice is explicit, and Cancel has the focus.
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
-| UC-003-T1 | Given another device runs the app, when the user starts it, then the Conflict dialog shows with Cancel focused. | UI | planned |
+| UC-003-T1 | Given another device runs the app, when the user starts it, then the Conflict dialog shows with Cancel focused. | UI | exists (Sprint 5, UI) |
 | UC-003-T2 | Given the user chooses Join, when the host accepts the resume, then the stream starts without a new app launch. | unit | exists (Sprint 2, unit) |
 | UC-003-T3 | Given the user chooses Quit and relaunch, when the quit succeeds, then the app is launched once and LAUNCH_CONFLICT records "quit". | unit | exists (Sprint 2, unit) |
 | UC-003-T4 | Given the user cancels or presses Back, when the dialog closes, then no request changes the host and LAUNCH_CONFLICT records "cancel". | unit | exists (Sprint 2, unit) |
 | UC-003-T5 | Given the user has made one choice, when the host still reports a conflict, then the dialog is not shown again and the launch fails with the error. | unit | exists (Sprint 2, unit) |
-| UC-003-T6 | Given the dialog is open, when the user reads it, then it says that quitting ends the stream on the other device. | UI | planned |
+| UC-003-T6 | Given the dialog is open, when the user reads it, then it says that quitting ends the stream on the other device. | UI | exists (Sprint 5, UI) |
 
-Planned tests cover the Phase 2 screens; tests marked as existing cover logic
-that the Phase 2 screens reuse.
+Tests marked "exists (Sprint 2, unit)" cover the launch logic. Tests marked
+"exists (Sprint 5, UI)" are Compose tests of the Conflict dialog in
+`:borealis:stream`.
 
 ## Host dependency
 
@@ -100,6 +101,8 @@ host limitation, not only a client choice.
   (400 "An app is already running on this host"),
   [7.6](../host-contract/luminalshine.md#76-cancel).
 - Policies: [privacy and logging](../policies/privacy-and-logging.md#audit-trail).
-- Existing logic: the conflict dialog and the choice logic exist from Sprint 2
-  and 3. The Phase 2 dialog is planned; it rebuilds the screen, not the logic.
-- Existing tests: `LaunchConflictsTest`.
+- Existing logic: the choice logic exists from Sprint 2 and 3
+  (`LaunchConflicts`). The Conflict dialog is the Sprint 5 screen in the stream
+  chrome, and it reads the same choices.
+- Existing tests: `LaunchConflictsTest`, `ConflictDialogTest`,
+  `StreamSessionTest`.

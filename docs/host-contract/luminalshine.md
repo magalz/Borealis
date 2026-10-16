@@ -371,6 +371,13 @@ for resume the equivalent is `resume` 1 (`src/nvhttp.cpp:3471-3486`).
   display cleanup of an ended session (`unhandled exception 0x20474343` in
   `KERNELBASE.dll`) and restarted about 9 s later. Requests in that window get a
   connection reset. Reported upstream as `NortheBridge/luminalshine#204`.
+- **Client behaviour (Sprint 5):** the Borealis error screen classifies three
+  host states: host busy (the retries of the start ran out, or the host
+  reported a launch collision), host offline, and certificate changed. The
+  client requests a keyframe (`LiRequestIdrFrame`, through
+  `MoonBridge.requestIdrFrame`) when the user chooses Refresh the picture in
+  the in-game menu. Free text typed on the on-screen keyboard is sent to the
+  host as real UTF-8 bytes, so emoji and accented letters arrive intact.
 
 ### 7.4 Mode reconciliation between `/launch` and RTSP
 

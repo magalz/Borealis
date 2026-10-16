@@ -21,11 +21,12 @@ class GuideChordTest {
     ) = GuideChord.onButtonDown(inputMap, none, hasSelect, hasMode, eventTime, lastRightBumperUp)
 
     @Test
-    fun `Start and Select on a pad with Select and no Mode button become the Guide button`() {
+    fun `Start and Select on a pad with Select and no Mode button wait for the menu chord`() {
+        // Before the menu chord they became the Guide button here, as soon as both were down. They
+        // now count down to the chord and are sent as a Guide tap on release (GuideTapTest).
         val state = down(START or SELECT, hasSelect = true)
 
-        assertThat(state.inputMap).isEqualTo(GUIDE)
-        assertThat(state.emulatingFlags).isEqualTo(GuideChord.EMULATING_SPECIAL)
+        assertThat(state).isEqualTo(ButtonState(START or SELECT, none))
     }
 
     @Test

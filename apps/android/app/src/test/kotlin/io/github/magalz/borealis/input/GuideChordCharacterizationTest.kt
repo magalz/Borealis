@@ -13,19 +13,23 @@ class GuideChordCharacterizationTest {
     private val rig = ControllerHandlerRig()
 
     @Test
-    fun `Start then Select on a pad without a Mode button sends Guide at once instead of both`() {
+    fun `Start then Select on a pad without a Mode button wait for the menu chord, not the Guide button`() {
+        // Reason for the change: they used to become the Guide button at once. They now count
+        // down to the menu chord, and a release before it is a Guide tap.
         rig.press(KeyEvent.KEYCODE_BUTTON_START, at = 1_000)
         rig.press(KeyEvent.KEYCODE_BUTTON_SELECT, at = 1_050)
 
-        assertThat(rig.lastButtons()).isEqualTo(ControllerPacket.SPECIAL_BUTTON_FLAG)
+        assertThat(rig.lastButtons()).isEqualTo(0)
     }
 
     @Test
-    fun `releasing Select ends the Guide button`() {
+    fun `releasing Select before the chord sends the Guide button as a tap that ends`() {
         rig.press(KeyEvent.KEYCODE_BUTTON_START, at = 1_000)
         rig.press(KeyEvent.KEYCODE_BUTTON_SELECT, at = 1_050)
 
         rig.release(KeyEvent.KEYCODE_BUTTON_SELECT, at = 1_400)
+        assertThat(rig.lastButtons()).isEqualTo(ControllerPacket.SPECIAL_BUTTON_FLAG)
+        rig.advanceBy(100)
 
         assertThat(rig.lastButtons()).isEqualTo(0)
     }

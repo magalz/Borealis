@@ -8,7 +8,14 @@ import io.github.magalz.borealis.stream.input.GamepadButtons.START
 /** The buttons a context holds and which of them are emulated, after a button event. */
 data class ButtonState(val inputMap: Int, val emulatingFlags: Int)
 
-/** Turns button combinations into the Guide button for pads that have no Guide button. */
+/**
+ * Makes the Guide button for pads that have none.
+ *
+ * Start and the right bumper are the Guide button on a pad without Select, as long as they are
+ * held. On a pad with Select and no Mode button, Start and Select held together first count down to
+ * the menu chord, so they become a Guide tap when released before it fires. A pad with a Mode
+ * button sends its own Guide button and its Start and Select as they are.
+ */
 object GuideChord {
     /** Set in the emulating flags while the Guide button is a combination of other buttons. */
     const val EMULATING_SPECIAL = 0x1
@@ -19,13 +26,13 @@ object GuideChord {
     private const val MAXIMUM_BUMPER_UP_DELAY_MS = 100
 
     /** Whether Start and Select stand for the Guide button on this pad. */
-    fun mapsStartSelect(hasSelect: Boolean, hasMode: Boolean): Boolean = false
+    fun mapsStartSelect(hasSelect: Boolean, hasMode: Boolean): Boolean = hasSelect && !hasMode
 
     /** Whether [update] ended a Start and Select press that is to be sent as a Guide tap. */
     fun isTap(update: MenuChordDetector.Update, hasSelect: Boolean, hasMode: Boolean): Boolean =
-        false
+        update.earlyRelease && mapsStartSelect(hasSelect, hasMode)
 
-    /** A button went down. A pad with a Mode button sends its own Guide button. */
+    /** A button went down. */
     fun onButtonDown(
         inputMap: Int,
         emulatingFlags: Int,
@@ -34,20 +41,15 @@ object GuideChord {
         eventTime: Long,
         lastRightBumperUpTime: Long,
     ): ButtonState {
-        if (hasMode) return ButtonState(inputMap, emulatingFlags)
-        // With a physical Select button Start and Select are the combination, otherwise Start and
-        // the right bumper.
+        // A pad with Select uses Start and Select, which are a tap rather than a held button.
+        if (hasMode || hasSelect) return ButtonState(inputMap, emulatingFlags)
         val combination =
-            if (hasSelect) {
-                inputMap == (START or SELECT)
-            } else {
-                inputMap == (START or RIGHT_BUMPER) ||
-                    (inputMap == START &&
-                        eventTime - lastRightBumperUpTime <= MAXIMUM_BUMPER_UP_DELAY_MS)
-            }
+            inputMap == (START or RIGHT_BUMPER) ||
+                (inputMap == START &&
+                    eventTime - lastRightBumperUpTime <= MAXIMUM_BUMPER_UP_DELAY_MS)
         if (!combination) return ButtonState(inputMap, emulatingFlags)
         return ButtonState(
-            (inputMap and (START or SELECT or RIGHT_BUMPER).inv()) or GUIDE,
+            (inputMap and (START or RIGHT_BUMPER).inv()) or GUIDE,
             emulatingFlags or EMULATING_SPECIAL,
         )
     }

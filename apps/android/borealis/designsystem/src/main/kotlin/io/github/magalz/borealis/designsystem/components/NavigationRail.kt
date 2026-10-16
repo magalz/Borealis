@@ -70,9 +70,8 @@ fun NavigationRail(
             .background(LocalBorealisColors.current.chrome)
             .padding(RAIL_PADDING)
             .selectableGroup()
-            // Entering the rail by the D-pad lands on the selected item, not the nearest. A request
-            // for
-            // one item (a tap, an initial focus) is not an entry and stays on it.
+            // Entering the rail by the D-pad lands on the selected item, not the nearest.
+            // A request for one item (a tap, an initial focus) is not an entry and stays on it.
             .focusProperties {
                 enter = { direction ->
                     if (direction != FocusDirection.Enter) selectedFocus else FocusRequester.Default

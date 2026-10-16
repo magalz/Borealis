@@ -1,5 +1,7 @@
 # R-001 Never reformat upstream files
 
+> Status: historical since [ADR 0054](../../adr/0054-declare-independence-from-moonlight.md) (2026-10-15). Inherited code is Borealis code and may be reformatted or refactored when a task needs it. Upstream fixes arrive by cherry-pick. The text below is kept as the record of the rule in force until then.
+
 `apps/android/` is a git subtree of moonlight-android. Outside the Borealis-owned paths (`apps/android/borealis/`, `apps/android/build-logic/`, `apps/android/app/src/main/kotlin/`, `apps/android/app/src/main/jni/borealis/`, `apps/android/gradle/libs.versions.toml`, `apps/android/config/`), files are upstream code.
 
 - Never reformat, reorder or restyle upstream files.

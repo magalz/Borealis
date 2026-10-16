@@ -1,10 +1,12 @@
 ---
-status: accepted
+status: "superseded by ADR-0054"
 date: 2026-10-14
 decision-makers: João Pedro Magalhães
 ---
 
 # 0048 Fork moonlight-common-c with a first-frame deadline patch
+
+> Status note (2026-10-15): superseded by [0054](0054-declare-independence-from-moonlight.md). moonlight-common-c is vendored at `core/third_party/moonlight-common-c/`, and the fork tag rule ends. The fork repository stays as an archive.
 
 ## Context and Problem Statement
 

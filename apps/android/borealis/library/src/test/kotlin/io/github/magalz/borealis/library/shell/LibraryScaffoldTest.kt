@@ -8,6 +8,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
@@ -25,7 +26,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
-/** The rail beside Hosts and Apps: Hosts is selected, and the other items call back. */
+/**
+ * The rail beside the Library screens: it selects the screen beside it, and its items call back.
+ */
 @RunWith(AndroidJUnit4::class)
 class LibraryScaffoldTest {
     @get:Rule val composeRule = createComposeRule()
@@ -36,12 +39,17 @@ class LibraryScaffoldTest {
 
     private val isRailItem = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
 
-    private fun show(formFactor: FormFactor, showRail: Boolean = true) {
+    private fun show(
+        formFactor: FormFactor,
+        showRail: Boolean = true,
+        selected: RailSelection = RailSelection.Hosts,
+    ) {
         composeRule.setContent {
             LibraryScaffold(
                 formFactor,
                 showRail,
                 RailActions({ hosts++ }, { addHost++ }, { settings++ }),
+                selected = selected,
             ) {
                 Box(Modifier.fillMaxSize().testTag("content"))
             }
@@ -56,6 +64,15 @@ class LibraryScaffoldTest {
         composeRule.onNode(isRailItem and hasText("Hosts")).assertIsSelected()
         composeRule.onNode(isRailItem and hasText("Add host")).assertIsDisplayed()
         composeRule.onNode(isRailItem and hasText("Settings")).assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the rail selects Add host when that is the screen beside it`() {
+        show(FormFactor.Tv, selected = RailSelection.AddHost)
+
+        composeRule.onNode(isRailItem and hasText("Add host")).assertIsSelected()
+        composeRule.onNode(isRailItem and hasText("Hosts")).assertIsNotSelected()
     }
 
     @Test

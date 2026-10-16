@@ -19,6 +19,9 @@ import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.PerfSnapshot
 import io.github.magalz.borealis.stream.SessionInfo
 
+/** Marks the overlay, so a test can measure it. */
+internal const val PERF_OVERLAY_TAG = "perf_overlay"
+
 private const val BACKGROUND_ALPHA = 0.74f
 private val PADDING_HORIZONTAL = 10.dp
 private val PADDING_VERTICAL = 6.dp

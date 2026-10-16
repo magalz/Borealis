@@ -6,12 +6,16 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.testing.PHONE
+import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.aPerf
 import io.github.magalz.borealis.stream.ui.LayerFixture
@@ -123,5 +127,44 @@ class PerfOverlayTest {
             .onNodeWithText(compact)
             .assertHasNoClickAction()
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Focused))
+    }
+
+    @Test
+    @Config(qualifiers = PHONE_LANDSCAPE)
+    fun `a compact overlay stays clear of the handle on a landscape phone`() {
+        val fixture = layer(FormFactor.Phone, OverlayMode.COMPACT)
+
+        assertThat(overlayBounds().overlaps(handleBounds(fixture))).isFalse()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE_LANDSCAPE)
+    fun `a detailed overlay stays clear of the handle on a landscape phone`() {
+        val fixture = layer(FormFactor.Phone, OverlayMode.DETAILED)
+
+        assertThat(overlayBounds().overlaps(handleBounds(fixture))).isFalse()
+        // Its lines wrap inside the width it has instead of being cut.
+        composeRule.onNodeWithText("Decode 4.0 ms").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE_LANDSCAPE)
+    fun `the overlay stops left of the middle of the screen`() {
+        layer(FormFactor.Phone, OverlayMode.DETAILED)
+
+        val half = composeRule.onRoot().fetchSemanticsNode().boundsInRoot.width / 2
+        val minGap = MIN_HANDLE_GAP_DP * composeRule.density.density
+
+        assertThat(overlayBounds().right).isAtMost(half - minGap)
+    }
+
+    private fun overlayBounds() =
+        composeRule.onNodeWithTag(PERF_OVERLAY_TAG).fetchSemanticsNode().boundsInRoot
+
+    private fun handleBounds(fixture: LayerFixture) =
+        checkNotNull(fixture.handleBounds.lastOrNull())
+
+    private companion object {
+        const val MIN_HANDLE_GAP_DP = 48f
     }
 }

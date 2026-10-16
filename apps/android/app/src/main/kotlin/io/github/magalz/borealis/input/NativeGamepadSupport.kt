@@ -15,7 +15,11 @@ data class InputDeviceFacts(val vendorId: Int, val productId: Int, val sources: 
 object NativeGamepadSupport {
     /** True when one of [devices] has this VID/PID and a gamepad source. */
     fun hasNativeGamepad(vendorId: Int, productId: Int, devices: List<InputDeviceFacts>): Boolean =
-        devices.any { it.vendorId == vendorId && it.productId == productId }
+        devices.any {
+            it.vendorId == vendorId &&
+                it.productId == productId &&
+                it.sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD
+        }
 
     /** The same check against the devices Android has right now. */
     @JvmStatic

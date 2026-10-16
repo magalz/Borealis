@@ -68,6 +68,15 @@ class KeyboardScreenshotTest {
 
     @Test
     @Config(qualifiers = PHONE_LANDSCAPE)
+    fun keyboardPhoneShiftLatched() {
+        composeRule.setContent { Screen(docked = true, FormFactor.Phone) }
+        composeRule.onNodeWithTag("key:Shift").performClick()
+
+        shoot("keyboard_phone_shift-latched")
+    }
+
+    @Test
+    @Config(qualifiers = PHONE_LANDSCAPE)
     fun keyboardPhoneFnLayer() {
         composeRule.setContent { Screen(docked = true, FormFactor.Phone) }
         composeRule.onNodeWithTag("key:Fn").performClick()

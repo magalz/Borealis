@@ -78,32 +78,50 @@ internal fun PointerRow(phase: StreamPhase.Streaming, intents: StreamIntents) {
     val on = stringResource(R.string.stream_menu_on)
     val off = stringResource(R.string.stream_menu_off)
     if (phone && touchMode != null) {
-        MenuRow(
+        OptionRow(
             stringResource(R.string.stream_menu_touch),
-            onClick = {},
-            trailing = {
-                SegmentedControl(
-                    options = TouchMode.entries,
-                    selected = touchMode,
-                    label = touchLabels::getValue,
-                    onSelect = intents::setTouchMode,
-                )
-            },
+            options = TouchMode.entries,
+            selected = touchMode,
+            label = touchLabels::getValue,
+            onSelect = intents::setTouchMode,
         )
     } else if (!phone && gamepadMouse != null) {
-        MenuRow(
+        OptionRow(
             stringResource(R.string.stream_menu_gamepad_mouse),
-            onClick = {},
-            trailing = {
-                SegmentedControl(
-                    options = listOf(true, false),
-                    selected = gamepadMouse,
-                    label = { if (it) on else off },
-                    onSelect = intents::setGamepadMouse,
-                )
-            },
+            options = listOf(true, false),
+            selected = gamepadMouse,
+            label = { if (it) on else off },
+            onSelect = intents::setGamepadMouse,
         )
     }
+}
+
+/**
+ * A row with a segmented control for [options]. The segments choose one; OK, A or a tap on the row
+ * itself selects the next option and wraps around, and the focus stays on the row.
+ */
+@Composable
+private fun <T> OptionRow(
+    title: String,
+    options: List<T>,
+    selected: T,
+    label: (T) -> String,
+    onSelect: (T) -> Unit,
+) {
+    MenuRow(
+        title,
+        onClick = { onSelect(options[(options.indexOf(selected) + 1) % options.size]) },
+        value = label(selected),
+        onClickLabel = stringResource(R.string.stream_menu_change_option, title),
+        trailing = {
+            SegmentedControl(
+                options = options,
+                selected = selected,
+                label = label,
+                onSelect = onSelect,
+            )
+        },
+    )
 }
 
 private fun touchLabel(mode: TouchMode) =
@@ -117,17 +135,12 @@ private fun touchLabel(mode: TouchMode) =
 @Composable
 internal fun OverlayRow(current: OverlayMode, intents: StreamIntents) {
     val labels = OverlayMode.entries.associateWith { stringResource(overlayLabel(it)) }
-    MenuRow(
+    OptionRow(
         stringResource(R.string.stream_menu_overlay),
-        onClick = {},
-        trailing = {
-            SegmentedControl(
-                options = OverlayMode.entries,
-                selected = current,
-                label = labels::getValue,
-                onSelect = intents::setOverlay,
-            )
-        },
+        options = OverlayMode.entries,
+        selected = current,
+        label = labels::getValue,
+        onSelect = intents::setOverlay,
     )
 }
 

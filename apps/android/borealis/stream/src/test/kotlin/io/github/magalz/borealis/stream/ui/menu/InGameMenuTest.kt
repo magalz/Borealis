@@ -2,11 +2,17 @@ package io.github.magalz.borealis.stream.ui.menu
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -25,6 +31,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.Panel
+import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.TouchMode
 import io.github.magalz.borealis.stream.keys.KeyChord
 import io.github.magalz.borealis.stream.keys.KeyModifier
@@ -51,10 +58,10 @@ class InGameMenuTest {
         touchMode: TouchMode? = TouchMode.TRACKPAD,
         gamepadMouse: Boolean? = null,
         withPerf: Boolean = true,
+        keyboardMode: Boolean = formFactor != FormFactor.Phone,
     ): LayerFixture {
         val phase = aStreaming(Panel.MENU, overlay, touchMode, gamepadMouse)
         val perf = if (withPerf) aPerf() else null
-        val keyboardMode = formFactor != FormFactor.Phone
         return LayerFixture(composeRule, formFactor, phase, perf, keyboardMode = keyboardMode)
             .also { it.show() }
     }
@@ -562,5 +569,122 @@ class InGameMenuTest {
         menu(FormFactor.Phone)
 
         composeRule.onNodeWithContentDescription("Open menu").assertDoesNotExist()
+    }
+
+    /** OK on the focused row of [title], as a D-pad user presses it. */
+    private fun pressOk(title: String) {
+        text(title).performScrollTo().requestFocus()
+        text(title).performKeyInput { pressKey(Key.DirectionCenter) }
+    }
+
+    /** What the session reports back after a change: the row shows the new value. */
+    private fun LayerFixture.reflect(change: (StreamPhase.Streaming) -> StreamPhase.Streaming) {
+        phase = change(phase)
+        composeRule.waitForIdle()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `OK on the Overlay row cycles Off, Compact, Detailed and back to Off`() {
+        val fixture = menu(FormFactor.Tv, touchMode = null, gamepadMouse = false)
+
+        pressOk("Overlay")
+        fixture.reflect { it.copy(overlay = OverlayMode.COMPACT) }
+        pressOk("Overlay")
+        fixture.reflect { it.copy(overlay = OverlayMode.DETAILED) }
+        pressOk("Overlay")
+
+        assertThat(fixture.intents.calls)
+            .containsExactly("setOverlay COMPACT", "setOverlay DETAILED", "setOverlay OFF")
+            .inOrder()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `OK on the Gamepad mouse row flips it`() {
+        val fixture = menu(FormFactor.Tv, touchMode = null, gamepadMouse = false)
+
+        pressOk("Gamepad mouse")
+        fixture.reflect { it.copy(gamepadMouse = true) }
+        pressOk("Gamepad mouse")
+
+        assertThat(fixture.intents.calls)
+            .containsExactly("setGamepadMouse true", "setGamepadMouse false")
+            .inOrder()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `OK on the Touch row cycles Trackpad, Direct, Off and back to Trackpad`() {
+        // A phone with a keyboard or a gamepad attached: the keys reach the row.
+        val fixture = menu(FormFactor.Phone, touchMode = TouchMode.TRACKPAD, keyboardMode = true)
+
+        pressOk("Touch")
+        fixture.reflect { it.copy(touchMode = TouchMode.DIRECT) }
+        pressOk("Touch")
+        fixture.reflect { it.copy(touchMode = TouchMode.OFF) }
+        pressOk("Touch")
+
+        assertThat(fixture.intents.calls)
+            .containsExactly("setTouchMode DIRECT", "setTouchMode OFF", "setTouchMode TRACKPAD")
+            .inOrder()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the focus stays on the option row after OK`() {
+        menu(FormFactor.Tv, touchMode = null, gamepadMouse = false)
+
+        pressOk("Overlay")
+
+        text("Overlay").assertIsFocused()
+        text("Compact").assertIsNotFocused()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a tap on the title of an option row changes the option like OK`() {
+        val fixture = menu(FormFactor.Phone, overlay = OverlayMode.COMPACT)
+
+        text("Overlay").performTouchInput { click(centerLeft + Offset(4f, 0f)) }
+
+        assertThat(fixture.intents.calls).containsExactly("setOverlay DETAILED")
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `Right from an option row still moves into the segments`() {
+        val fixture = menu(FormFactor.Tv, overlay = OverlayMode.COMPACT, touchMode = null)
+        text("Overlay").performScrollTo().requestFocus()
+
+        text("Overlay").performKeyInput { pressKey(Key.DirectionRight) }
+
+        text("Compact").assertIsFocused()
+        assertThat(fixture.intents.calls).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `an option row announces its value and that activating it changes the value`() {
+        menu(FormFactor.Tv, overlay = OverlayMode.COMPACT, touchMode = null, gamepadMouse = true)
+
+        text("Overlay")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Compact"))
+            .assert(
+                SemanticsMatcher("has the click label Change Overlay") {
+                    it.config.getOrNull(SemanticsActions.OnClick)?.label == "Change Overlay"
+                }
+            )
+        text("Gamepad mouse")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "On"))
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `a row without options has no value`() {
+        menu(FormFactor.Tv, touchMode = null, gamepadMouse = false)
+
+        text("Keyboard")
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.StateDescription))
     }
 }

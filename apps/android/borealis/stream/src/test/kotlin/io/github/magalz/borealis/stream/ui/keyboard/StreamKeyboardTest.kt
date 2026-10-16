@@ -15,6 +15,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -390,5 +391,72 @@ class StreamKeyboardTest {
             assertThat(text).doesNotContain("android.util.Log")
             assertThat(text).doesNotContain("println(")
         }
+    }
+
+    // O9: the label shows the case the next letter will have.
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `letter keys are lowercase until Shift is latched`() {
+        showPhone()
+
+        composeRule.onNodeWithTag("key:Q").assertTextEquals("q")
+        composeRule.onNodeWithTag("key:M").assertTextEquals("m")
+
+        tapKey("Shift")
+
+        composeRule.onNodeWithTag("key:Q").assertTextEquals("Q")
+        composeRule.onNodeWithTag("key:M").assertTextEquals("M")
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the letters are lowercase again after the latched letter is typed`() {
+        showPhone()
+        tapKey("Shift")
+
+        tapKey("Q")
+
+        composeRule.onNodeWithTag("key:Q").assertTextEquals("q")
+        composeRule.onNodeWithTag("key:W").assertTextEquals("w")
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `unlatching Shift or sending a shortcut makes the letters lowercase again`() {
+        showPhone()
+
+        tapKey("Shift")
+        tapKey("Shift")
+        composeRule.onNodeWithTag("key:A").assertTextEquals("a")
+
+        tapKey("Shift")
+        tapShortcut("Esc")
+        composeRule.onNodeWithTag("key:A").assertTextEquals("a")
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `Ctrl does not change the case and the keys still send the same chords`() {
+        showPhone()
+
+        tapKey("Ctrl")
+        composeRule.onNodeWithTag("key:C").assertTextEquals("c")
+        tapKey("C")
+
+        assertThat(intents.chords).containsExactly(KeyChord(0x43, setOf(CTRL)))
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the Fn layer and the named keys keep their captions whatever the latch`() {
+        showPhone()
+
+        composeRule.onNodeWithTag("key:Enter").assertTextEquals("Enter")
+        composeRule.onNodeWithTag("key:Space").assertTextEquals("Space")
+        tapKey("Shift")
+        composeRule.onNodeWithTag("key:Enter").assertTextEquals("Enter")
+        tapKey("Fn")
+        composeRule.onNodeWithTag("key:F1").assertTextEquals("F1")
+        composeRule.onNodeWithTag("key:Home").assertTextEquals("Home")
     }
 }

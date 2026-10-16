@@ -43,6 +43,7 @@ import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.StreamIntents
 import io.github.magalz.borealis.stream.keys.KeyChord
 import io.github.magalz.borealis.stream.keys.KeyModifier
+import io.github.magalz.borealis.stream.keys.KeyModifier.SHIFT
 import io.github.magalz.borealis.stream.keys.Shortcuts
 import io.github.magalz.borealis.stream.ui.common.onBackKey
 import io.github.magalz.borealis.stream.ui.common.onGamepadB
@@ -212,11 +213,12 @@ private fun KeyRow(keys: List<KeySpec>, actions: KeyActions, firstKeyFocus: Firs
         horizontalArrangement = Arrangement.spacedBy(KEY_GAP, Alignment.CenterHorizontally),
     ) {
         for ((index, key) in keys.withIndex()) {
-            val caption = key.label.resolve()
             val name = key.label.name()
+            val caption = key.label.onCap(key.label.resolve(), SHIFT in actions.latch.latched)
             var modifier = Modifier.weight(key.style.weight, fill = false).testTag("key:$name")
             // A symbol on the cap is read out as the name of the key.
-            if (name != caption) modifier = modifier.semantics { contentDescription = name }
+            if (!name.equals(caption, ignoreCase = true))
+                modifier = modifier.semantics { contentDescription = name }
             if (index == 0 && firstKeyFocus != null) {
                 modifier = modifier.initialFocus(firstKeyFocus.requester, firstKeyFocus.state)
             }

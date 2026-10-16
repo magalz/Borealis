@@ -10,12 +10,16 @@ import io.github.magalz.borealis.stream.keys.KeyModifier
 
 /**
  * What a key shows: a character that needs no translation, a named key from the resources, or a
- * [Symbol] for a key whose name would not fit its cap and so is read out as its [Symbol.name].
+ * [Symbol] for a key whose name would not fit its cap and so is read out as its [Symbol.name]. A
+ * [Letter] is named by its capital and shows it only while Shift is latched (see [onCap]).
  */
 internal sealed interface KeyLabel {
     data class Text(val value: String) : KeyLabel
 
     data class Named(@StringRes val id: Int) : KeyLabel
+
+    /** A letter of the alphabet, kept as the capital that names the key. */
+    data class Letter(val capital: Char) : KeyLabel
 
     data class Symbol(val symbol: String, @StringRes val name: Int) : KeyLabel
 
@@ -24,6 +28,7 @@ internal sealed interface KeyLabel {
     fun resolve(): String =
         when (this) {
             is Text -> value
+            is Letter -> capital.toString()
             is Named -> stringResource(id)
             is Symbol -> symbol
         }
@@ -31,9 +36,14 @@ internal sealed interface KeyLabel {
     fun resolve(context: Context): String =
         when (this) {
             is Text -> value
+            is Letter -> capital.toString()
             is Named -> context.getString(id)
             is Symbol -> symbol
         }
+
+    /** The [cap] as the user sees it: a letter is lowercase unless [shifted]. */
+    fun onCap(cap: String, shifted: Boolean): String =
+        if (this is Letter && !shifted) cap.lowercase() else cap
 
     /** What the key is called: the cap, or the name of a [Symbol]. */
     @Composable fun name(): String = if (this is Symbol) stringResource(name) else resolve()
@@ -88,7 +98,7 @@ internal object KeyboardLayout {
     private const val VK_F1 = 0x70
 
     private fun letters(chars: String) = chars.map {
-        CharKey(KeyLabel.Text(it.toString()), VK_A + (it - 'A'))
+        CharKey(KeyLabel.Letter(it), VK_A + (it - 'A'))
     }
 
     private fun named(@StringRes id: Int, vk: Int, style: KeyStyle = KeyStyle.Wide) =

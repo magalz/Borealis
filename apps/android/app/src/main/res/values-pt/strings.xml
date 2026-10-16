@@ -22,11 +22,6 @@
     <string name="conn_metered">Aviso: A sua conexão de rede atual é limitada!</string>
     <string name="conn_client_latency">Latência média de decodificação de quadros:</string>
     <string name="conn_client_latency_hw">latência do decodificador de hardware:</string>
-    <string name="conn_error_msg">Falha ao iniciar</string>
-    <string name="conn_terminated_msg">A conexão foi encerrada</string>
-    <string name="perf_overlay_renderingfps">Taxa de quadros renderizando: %1$.2f FPS</string>
-    <string name="perf_overlay_netdrops">Quadros dropados pela rede: %1$.2f%%</string>
-    <string name="perf_overlay_netlatency">Latência média da rede: %1$d ms (variação: %2$d ms)</string>
     <string name="applist_refresh_error_msg">Falha ao obter a lista de apps</string>
     <string name="text_native_res_dialog">Os modos de resolução nativa não são oficialmente suportados pelo GeForce Experience, portanto, ele não definirá a resolução da ecrã do host. Precisará configurá-lo manualmente durante o jogo.
 \n
@@ -102,7 +97,6 @@
     <string name="error_usb_prohibited">O acesso USB é proibido pelo administrador do seu aparelho. Verifique as suas configurações de Knox ou MDM.</string>
     <string name="no_video_received_error">Nenhum vídeo recebido do host.</string>
     <string name="no_frame_received_error">A sua conexão de rede não está funcionando bem. Reduza a configuração da taxa de bits do vídeo ou tente uma conexão mais rápida.</string>
-    <string name="check_ports_msg">Verifique o firewall e permita a(s) seguinte(s) para porta(s):</string>
     <string name="conn_hardware_latency">Latência média de decodificação de hardware:</string>
     <string name="yes">Sim</string>
     <string name="no">Não</string>
@@ -111,10 +105,6 @@
     <string name="poor_connection_msg">Conexão ruim com o PC</string>
     <string name="slow_connection_msg">Conexão lenta com o PC
 \nReduza sua taxa de bits</string>
-    <string name="perf_overlay_streamdetails">Transmissão: %1$s %2$.2f FPS</string>
-    <string name="perf_overlay_decoder">Decodificador: %1$s</string>
-    <string name="perf_overlay_incomingfps">Taxa de quadros recebidos pela rede:: %1$.2f FPS</string>
-    <string name="perf_overlay_dectime">Tempo médio de decodificação: %1$.2f ms</string>
     <string name="applist_menu_cancel">Cancelar</string>
     <string name="applist_menu_tv_channel">Adicionar ao Canal</string>
     <string name="applist_refresh_error_title">Erro</string>

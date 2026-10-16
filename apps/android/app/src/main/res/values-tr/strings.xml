@@ -5,7 +5,6 @@
     <string name="category_input_settings">Girdi Ayarları</string>
     <string name="summary_language_list">Moonlight için kullanılacak olan dil</string>
     <string name="dialog_title_osc_opacity">Saydamlığı değiştir</string>
-    <string name="conn_error_msg">Başlatma başarısız</string>
     <string name="summary_audio_config_list">Ev-sinema sistemleri için 5.1 yada 7.1 surround sesi etkinleştir</string>
     <string name="title_checkbox_host_audio">Sesleri bilgisayarda oynat</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
@@ -37,20 +36,12 @@
     <string name="early_termination_error">Akışı başlatırken ana bilgisayarınızda bir şeyler ters gitti.
 \n
 \nBilgisayarınızda DRM korumalı bir içeriğin açık olmadığından emin olun. Ayrıca ana bilgisayarınızı yeniden başlatmayı da deneyebilirsiniz.</string>
-    <string name="check_ports_msg">Bağlantı noktaları için güvenlik duvarınızı ve bağlantı noktası yönlendirme kurallarınızı kontrol edin:</string>
-    <string name="conn_terminated_msg">Bağlantı sonlandırıldı.</string>
     <string name="yes">Evet</string>
     <string name="help">Yardım</string>
     <string name="delete_pc_msg">Bu bilgisayarı silmek istediğinizden emin misiniz\?</string>
     <string name="slow_connection_msg">Bilgisayara yavaş bağlantı
 \nBit hızınızı düşürün</string>
     <string name="poor_connection_msg">Bilgisayar ile zayıf bağlantı</string>
-    <string name="perf_overlay_streamdetails">Video akışı: %1$s %2$.2f FPS</string>
-    <string name="perf_overlay_decoder">Kod çözücü: %1$s</string>
-    <string name="perf_overlay_incomingfps">Ağdan gelen kare hızı: %1$.2f FPS</string>
-    <string name="perf_overlay_renderingfps">İşleme kare hızı: %1$.2f FPS</string>
-    <string name="perf_overlay_netdrops">Ağ bağlantınız tarafından düşen kare sayısı: %1$.2f%%</string>
-    <string name="perf_overlay_dectime">Ortalama kod çözme süresi: %1$.2f ms</string>
     <string name="applist_menu_cancel">İptal</string>
     <string name="applist_menu_tv_channel">Kanala Ekle</string>
     <string name="applist_refresh_error_msg">Uygulama listesi alınamadı</string>
@@ -85,7 +76,6 @@
     <string name="conn_hardware_latency">Ortalama donanım kod çözme gecikmesi:</string>
     <string name="title_decoding_reset">Video Ayarlarını Sıfırla</string>
     <string name="no">Hayır</string>
-    <string name="perf_overlay_netlatency">Ortalama ağ gecikmesi: %1$d ms (varyans: %2$d ms)</string>
     <string name="text_native_res_dialog">Yerel çözünürlük ve/veya FPS, akış sunucusu tarafından desteklenmeyebilir. Muhtemelen ana bilgisayar için uygun bir özel ekran kipini el ile yapılandırmanız gerekecek.
 \n
 \nNVIDIA Kontrol Panelinde ekran ayarlarınızla eşleşmesi için özel bir çözünürlük oluşturmayı seçerseniz lütfen NVIDIA tarafından olası monitör hasarı, bilgisayar kararsızlığı ve diğer olası sorunlarla ilgili uyarısını okuyup anladığınızdan emin olun.
@@ -108,8 +98,6 @@
 \n
 \nHDR kipi devre dışı bırakmayı, akış çözünürlüğünü değiştirmeyi veya ana bilgisayarın ekran çözünürlüğünü değiştirmeyi deneyin.</string>
     <string name="summary_enable_hdr">Oyun ve PC GPU desteklediğinde HDR akışı gerçekleştirin. HDR, HEVC Main 10 kodlama desteğine sahip bir GPU gerektirir.</string>
-    <string name="error_code_prefix">Hata kodu:</string>
-    <string name="perf_overlay_hostprocessinglatency">Ana makine işleme gecikmesi asg/azm/ortalama: %1$.1f/%2$.1f/%3$.1f ms</string>
     <string name="fps_suffix_fps">FPS</string>
     <string name="title_native_fps_dialog">Yerel FPS Uyarısı</string>
     <string name="title_checkbox_enable_audiofx">Sistem ekolayzır desteğini etkinleştir</string>

@@ -2,24 +2,35 @@ package io.github.magalz.borealis.stream
 
 import android.app.Activity
 import android.content.Intent
+import android.os.Looper
 import android.view.MotionEvent
+import android.view.View
+import android.view.inputmethod.InputMethodManager
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.Game
 import com.limelight.binding.input.touch.TouchContext
 import io.github.magalz.borealis.host.launch.ConflictChoice
+import io.github.magalz.borealis.host.launch.SessionAudit
+import io.github.magalz.borealis.logging.AuditEvent
+import io.github.magalz.borealis.logging.AuditSink
+import io.github.magalz.borealis.logging.AuditType
+import io.github.magalz.borealis.logging.BorealisAudit
+import io.github.magalz.borealis.logging.Redactor
 import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.domain.WakeResult
 import io.github.magalz.borealis.library.shell.LibraryActivity
 import io.github.magalz.borealis.settings.BorealisSettingsActivity
 import io.github.magalz.borealis.stream.host.HeldKeys
+import io.github.magalz.borealis.stream.input.GamepadChrome
 import io.github.magalz.borealis.stream.keys.KeyChord
 import io.github.magalz.borealis.stream.keys.KeyModifier
 import io.github.magalz.borealis.stream.keys.Shortcuts
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,6 +64,18 @@ private class RecordingTouch : TouchContext {
     override fun isCancelled(): Boolean = false
 }
 
+private class RecordingGamepad : GamepadChrome {
+    val calls = mutableListOf<String>()
+
+    override fun setCaptured(captured: Boolean) {
+        calls += "captured $captured"
+    }
+
+    override fun setMouseEmulation(enabled: Boolean) {
+        calls += "mouse $enabled"
+    }
+}
+
 @RunWith(RobolectricTestRunner::class)
 class GameStreamActionsTest {
     private lateinit var activity: Activity
@@ -61,13 +84,32 @@ class GameStreamActionsTest {
     private val entryPoint = FakeEntryPoint()
     private val first = RecordingTouch()
     private val second = RecordingTouch()
+    private val gamepad = RecordingGamepad()
+    private val touches = arrayOf<TouchContext?>(first, second)
+    private val builtFor = mutableListOf<TouchMode>()
+    private val replacements = arrayOf<TouchContext>(RecordingTouch(), RecordingTouch())
+    private val panelEvents = mutableListOf<String>()
+    private lateinit var streamView: View
     private lateinit var actions: GameStreamActions
+    private val audit = mutableListOf<AuditEvent>()
+
+    private fun controls() =
+        StreamControls(
+            controller = gamepad,
+            touchContexts = touches,
+            streamView = streamView,
+            closePanel = { panelEvents += "close focused=${streamView.hasFocus()}" },
+            buildTouch = { mode ->
+                builtFor += mode
+                if (mode == TouchMode.OFF) null else replacements
+            },
+        )
 
     private fun actionsFor(target: Activity) =
         GameStreamActions(
             target,
             input,
-            arrayOf(first, null, second),
+            controls(),
             held,
             { entryPoint },
             CoroutineScope(Dispatchers.Unconfined),
@@ -77,7 +119,26 @@ class GameStreamActionsTest {
     fun setUp() {
         val intent = Intent().putExtra(Game.EXTRA_PC_UUID, "host-1")
         activity = Robolectric.buildActivity(Activity::class.java, intent).setup().get()
+        streamView = View(activity).apply { isFocusableInTouchMode = true }
+        activity.setContentView(streamView)
         actions = actionsFor(activity)
+        BorealisAudit.install(
+            object : AuditSink {
+                override fun write(event: AuditEvent) {
+                    audit += event
+                }
+            },
+            Redactor(),
+            "test",
+        )
+        SessionAudit.started("Den PC", "192.168.1.5", 0x0100, 1920, 1080, 60)
+        audit.clear()
+    }
+
+    @After
+    fun tearDown() {
+        SessionAudit.stopped()
+        BorealisAudit.uninstall()
     }
 
     @Test
@@ -203,6 +264,7 @@ class GameStreamActionsTest {
         assertThat(started.component?.className).isEqualTo(LibraryActivity::class.java.name)
         assertThat(LibraryLaunchRequest.fromExtras(started.extras))
             .isEqualTo(LibraryLaunchRequest.Pair("host-1"))
+        assertThat(started.flags and LIBRARY_FLAGS).isEqualTo(LIBRARY_FLAGS)
         assertThat(activity.isFinishing).isTrue()
     }
 
@@ -254,6 +316,7 @@ class GameStreamActionsTest {
         assertThat(started?.component?.className).isEqualTo(LibraryActivity::class.java.name)
         assertThat(LibraryLaunchRequest.fromExtras(started?.extras))
             .isEqualTo(LibraryLaunchRequest.Launch("host-1", 42))
+        assertThat(started?.flags?.and(LIBRARY_FLAGS)).isEqualTo(LIBRARY_FLAGS)
         assertThat(target.isFinishing).isTrue()
     }
 
@@ -311,7 +374,116 @@ class GameStreamActionsTest {
         assertThat(entryPoint.apps.quits).containsExactly("host-1", "host-1")
     }
 
+    private fun endReasons() = audit.filter { it.type == AuditType.SESSION_END }.map { it.detail }
+
+    @Test
+    fun `disconnect writes the session end with its own reason, then finishes`() {
+        actions.disconnect()
+
+        assertThat(endReasons()).containsExactly("reason=disconnect duration_s=0")
+        assertThat(activity.isFinishing).isTrue()
+    }
+
+    @Test
+    fun `a quit writes the session end with its own reason`() {
+        actions.quitApp()
+
+        assertThat(endReasons()).containsExactly("reason=quit duration_s=0")
+    }
+
+    @Test
+    fun `a quit that failed writes no session end and keeps the stream on`() {
+        entryPoint.apps.result = QuitResult.Failed(null)
+
+        actions.quitApp()
+
+        assertThat(endReasons()).isEmpty()
+    }
+
+    @Test
+    fun `the host ending the stream while the quit is under way is still the quit`() {
+        val gate = CompletableDeferred<Unit>()
+        entryPoint.apps.gate = gate
+
+        actions.quitApp()
+        SessionAudit.terminated(0)
+        gate.complete(Unit)
+
+        assertThat(endReasons()).containsExactly("reason=quit duration_s=0")
+    }
+
+    @Test
+    fun `after a failed quit the next end by the host is a host end`() {
+        entryPoint.apps.result = QuitResult.Failed(null)
+
+        actions.quitApp()
+        SessionAudit.terminated(0)
+
+        assertThat(endReasons()).containsExactly("reason=host_ended duration_s=0")
+    }
+
+    @Test
+    fun `asking for a keyframe asks the connection`() {
+        actions.requestKeyframe()
+
+        assertThat(input.events).containsExactly("keyframe")
+    }
+
+    @Test
+    fun `the gamepad as a mouse switches the gamepad handler`() {
+        actions.setGamepadMouse(true)
+        actions.setGamepadMouse(false)
+
+        assertThat(gamepad.calls).containsExactly("mouse true", "mouse false").inOrder()
+    }
+
+    @Test
+    fun `a new touch mode cancels the touches and replaces the contexts`() {
+        actions.setTouchMode(TouchMode.DIRECT)
+
+        assertThat(builtFor).containsExactly(TouchMode.DIRECT)
+        assertThat(first.cancelled).isEqualTo(1)
+        assertThat(second.cancelled).isEqualTo(1)
+        assertThat(touches[0]).isSameInstanceAs(replacements[0])
+        assertThat(touches[1]).isSameInstanceAs(replacements[1])
+    }
+
+    @Test
+    fun `switching the touchscreen off cancels the touches and keeps the contexts`() {
+        actions.setTouchMode(TouchMode.OFF)
+
+        assertThat(builtFor).containsExactly(TouchMode.OFF)
+        assertThat(first.cancelled).isEqualTo(1)
+        assertThat(second.cancelled).isEqualTo(1)
+        assertThat(touches[0]).isSameInstanceAs(first)
+        assertThat(touches[1]).isSameInstanceAs(second)
+    }
+
+    @Test
+    fun `the Android keyboard opens after the panel closes, on the focused stream view`() {
+        actions.openSystemKeyboard()
+
+        assertThat(panelEvents).containsExactly("close focused=false")
+        assertThat(streamView.hasFocus()).isTrue()
+        val ime = activity.getSystemService(InputMethodManager::class.java)
+        // Posted, so it runs after the chrome has handed the focus back.
+        assertThat(shadowOf(ime).isSoftInputVisible).isFalse()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertThat(shadowOf(ime).isSoftInputVisible).isTrue()
+    }
+
+    @Test
+    fun `the overlay needs nothing from the activity`() {
+        actions.setOverlay(OverlayMode.DETAILED)
+
+        assertThat(input.events).isEmpty()
+        assertThat(gamepad.calls).isEmpty()
+        assertThat(builtFor).isEmpty()
+    }
+
     private companion object {
+        // An open Library gets the request through onNewIntent instead of a second instance.
+        const val LIBRARY_FLAGS = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         const val VK_ESCAPE = 0x1B
         const val VK_D = 0x44
     }

@@ -8,7 +8,6 @@
     <string name="pair_pc_offline">Ο υπολογιστής είναι εκτός σύνδεσης</string>
     <string name="pair_pc_ingame">Ο υπολογιστής βρίσκεται αυτή τη στιγμή σε παιχνίδι. Πρέπει να κλείσετε το παιχνίδι πριν κάνετε σύζευξη.</string>
     <string name="wol_waking_pc">Αφύπνιση υπολογιστή…</string>
-    <string name="perf_overlay_netlatency">Μέσος λανθάνων χρόνος δικτύου: %1$d MS (διακύμανση: %2$d ms)</string>
     <string name="applist_refresh_error_title">Σφάλμα</string>
     <string name="applist_refresh_error_msg">Απέτυχε η λήψη λίστας εφαρμογών</string>
     <string name="applist_quit_confirmation">Είστε σίγουροι ότι θέλετε να τερματίσετε την τρέχουσα εφαρμογή; Όλα τα μη αποθηκευμένα δεδομένα θα χαθούν.</string>
@@ -21,16 +20,11 @@
     <string name="error_usb_prohibited">Η πρόσβαση μέσω USB απαγορεύεται από το διαχειριστή της συσκευής σας. Ελέγξτε τις ρυθμίσεις Knox ή MDM.</string>
     <string name="no_video_received_error">Δεν ελήφθη βίντεο από τον κεντρικό υπολογιστή.</string>
     <string name="no_frame_received_error">Η σύνδεσή σας στο δίκτυο δεν αποδίδει καλά. Μειώστε το bitrate ή δοκιμάστε μια ταχύτερη σύνδεση.</string>
-    <string name="check_ports_msg">Ελέγξτε το τείχος προστασίας και τους κανόνες προώθησης θυρών για τις θύρες:</string>
     <string name="conn_metered">Προειδοποίηση: Η ενεργή σύνδεσή σας στο δίκτυο έχει όριο δεδομένων!</string>
     <string name="conn_client_latency">Μέσος χρόνος αποκωδικοποίησης πλαισίων:</string>
     <string name="conn_client_latency_hw">Λανθάνων χρόνος αποκωδικοποιητή υλικού:</string>
     <string name="conn_hardware_latency">Μέση καθυστέρηση αποκωδικοποίησης υλικού:</string>
-    <string name="conn_terminated_msg">Η σύνδεση τερματίστηκε</string>
     <string name="yes">Ναί</string>
-    <string name="perf_overlay_streamdetails">Ροή βίντεο: %1$s %2$.2f FPS</string>
-    <string name="perf_overlay_decoder">Αποκωδικοποιητής: %1$s</string>
-    <string name="perf_overlay_incomingfps">Ρυθμός εισερχόμενων καρέ από το δίκτυο: %1$.2f FPS</string>
     <string name="applist_menu_cancel">Ακύρωση</string>
     <string name="applist_menu_tv_channel">Προσθήκη στο κανάλι</string>
     <string name="title_fps_list">Ρυθμός καρέ βίντεο</string>
@@ -88,11 +82,6 @@
 \n
 \nΑν το πρόβλημα παραμένει, δοκιμάστε να επανεγκαταστήσετε τα προγράμματα οδήγησης της κάρτας γραφικών και το GeForce Experience.</string>
     <string name="help">Βοήθεια</string>
-    <string name="perf_overlay_netdrops">Πλαίσια που απορρίπτονται από τη σύνδεση δικτύου σας: %1$.2f%%</string>
-    <string name="error_404">Το GFE επέστρεψε ένα σφάλμα HTTP 404. Βεβαιωθείτε ότι ο υπολογιστής σας χρησιμοποιεί μια υποστηριζόμενη κάρτα γραφικών. Η χρήση λογισμικού απομακρυσμένης επιφάνειας εργασίας μπορεί επίσης να προκαλέσει αυτό το σφάλμα. Δοκιμάστε την επανεκκίνηση του υπολογιστή σας ή την επανεγκατάσταση του GFE.</string>
-    <string name="video_decoder_init_failed">Απέτυχε η προετοιμασία του αποκωδικοποιητή βίντεο. Η συσκευή σας ενδέχεται να μην υποστηρίζει την επιλεγμένη ανάλυση ή ρυθμό καρέ.</string>
-    <string name="perf_overlay_dectime">Μέσος χρόνος αποκωδικοποίησης: %1$.2f ms</string>
-    <string name="conn_error_msg">Απέτυχε η εκκίνηση</string>
     <string name="no">Οχι</string>
     <string name="delete_pc_msg">Είστε βέβαιοι ότι θέλετε να διαγράψετε αυτόν τον υπολογιστή;</string>
     <string name="slow_connection_msg">Αργή σύνδεση με υπολογιστή
@@ -133,7 +122,6 @@
     <string name="title_video_format">Αλλαγή ρυθμίσεων HEVC</string>
     <string name="title_enable_post_stream_toast">Εμφάνιση μηνύματος λανθάνοντος χρόνου μετά τη ροή</string>
     <string name="summary_video_format">Το HEVC μειώνει τις απαιτήσεις εύρους ζώνης βίντεο, αλλά απαιτεί μια νεότερη συσκευή</string>
-    <string name="error_code_prefix">Κωδικός σφάλματος:</string>
     <string name="frame_conversion_error">Ο υπολογιστής φιλοξενίας ανέφερε ένα σφάλμα κωδικοποίησης βίντεο.
 \n
 \nΔοκιμάστε να απενεργοποιήσετε τη λειτουργία HDR, να αλλάξετε την ανάλυση ροής ή να αλλάξετε την ανάλυση οθόνης του υπολογιστή φιλοξενίας.</string>

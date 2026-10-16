@@ -18,8 +18,6 @@
     <string name="conn_client_latency">Средняя задержка декодирования кадра: </string>
     <string name="conn_client_latency_hw">Задержка аппаратного декодирования:</string>
     <string name="conn_hardware_latency">Средняя задержка аппаратного декодирования:</string>
-    <string name="conn_error_msg">Запуск не удался</string>
-    <string name="conn_terminated_msg">Подключение было прервано.</string>
     <!-- General strings -->
     <string name="yes">Да</string>
     <string name="no">Нет</string>
@@ -115,16 +113,10 @@
 \nСнизьте битрейт</string>
     <string name="summary_unlock_fps">Трансляция со скоростью 90 или 120 кадров в секунду может уменьшить задержку на устройствах высокого класса, но может вызвать задержки или сбой на устройствах без поддержки этого функционала</string>
     <string name="summary_enable_perf_overlay">Отображение оверлея на экране с информацией о производительности во время трансляции в режиме реального времени</string>
-    <string name="perf_overlay_decoder">Декодер: %1$s</string>
-    <string name="perf_overlay_incomingfps">Входящая частота кадров из сети: %1$.2f FPS</string>
-    <string name="perf_overlay_renderingfps">Частота кадров при рендеринге: %1$.2f FPS</string>
-    <string name="perf_overlay_netdrops">Кадры, пропущенные вашим сетевым подключением: %1$.2f%%</string>
-    <string name="perf_overlay_dectime">Среднее время декодирования: %1$.2f ms</string>
     <string name="summary_fps_list">Увеличение для более плавного видео потока. Уменьшите для лучшей производительности на более слабых устройствах.</string>
     <string name="suffix_osc_opacity">%</string>
     <string name="suffix_seekbar_bitrate_mbps">Мбит/с</string>
     <string name="title_osc_opacity">Изменить прозрачность экранных элементов управления</string>
-    <string name="check_ports_msg">Проверьте свой брандмауэр и правила переадресации портов для порта(ов):</string>
     <string name="early_termination_error">При запуске потока на вашем хост-компьютере что-то пошло не так.
 \n
 \nУбедитесь, что на вашем хост-ПК не открыт контент, защищенный DRM. Вы также можете попробовать перезагрузить хост-компьютер.</string>
@@ -141,9 +133,7 @@
 \nНаконец, ваше устройство или хост-ПК может не поддерживать потоковую передачу в родном разрешении. Если это не работает на вашем устройстве, к сожалению, вам просто не повезло.</string>
     <string name="title_native_res_dialog">Предупреждение о родном разрешении</string>
     <string name="video_decoder_init_failed">Видеодекодер не инициализирован. Ваше устройство может не поддерживать выбранное разрешение или частоту кадров.</string>
-    <string name="perf_overlay_streamdetails">Видеострим: %1$s %2$.2f FPS</string>
     <string name="resolution_prefix_native_fullscreen">Родной полноэкранный режим</string>
-    <string name="perf_overlay_netlatency">Средняя задержка сети: %1$d мс (дисперсия: %2$d мс)</string>
     <!-- Array strings -->
     <string name="audioconf_stereo">Стерео</string>
     <string name="audioconf_51surround">5.1 Объёмный звук</string>
@@ -197,8 +187,6 @@
     <string name="title_analog_scrolling">Использовать аналоговый джойстик для прокрутки</string>
     <string name="analogscroll_right">Правый аналоговый джойстик</string>
     <string name="pair_pairing_help">Если на вашем хост-ПК установлен Sunshine, перейдите в веб-интерфейс Sunshine и введите PIN-код.</string>
-    <string name="error_code_prefix">Код ошибки:</string>
-    <string name="perf_overlay_hostprocessinglatency">Задержка обработки хоста мин/макс/среднее: %1$.1f/%2$.1f/%3$.1f мс</string>
     <string name="summary_seekbar_vibrate_fallback_strength">Увеличьте или уменьшите интенсивность вибрации на вашем устройстве</string>
     <string name="summary_checkbox_gamepad_touchpad_as_mouse">Заставляет ввод с сенсорной панели геймпада управлять мышью хоста, даже при эмуляции геймпада с помощью тачпада.</string>
     <string name="title_checkbox_gamepad_motion_sensors">Разрешить использование датчиков движения геймпада</string>

@@ -86,23 +86,15 @@
     <string name="applist_refresh_error_title">Lỗi</string>
     <string name="applist_menu_tv_channel">Thêm vào kênh</string>
     <string name="applist_menu_cancel">Huỷ</string>
-    <string name="perf_overlay_decoder">Trình giải mã: %1$s</string>
-    <string name="perf_overlay_incomingfps">Tốc độ khung hình đang đến từ mạng: %1$.2f FPS</string>
-    <string name="perf_overlay_renderingfps">Tốc độ khung hình kết xuất: %1$.2f FPS</string>
-    <string name="perf_overlay_netdrops">Khung hình bị giảm bởi kết nối mạng: %1$.2f%%</string>
-    <string name="perf_overlay_dectime">Thời gian giải mã trung bình: %1$.2f ms</string>
     <string name="poor_connection_msg">Kết nối đến PC bị kém</string>
     <string name="slow_connection_msg">Kết nối đến PC bị chậm.
 \nHãy giảm tốc độ bit</string>
     <string name="delete_pc_msg">Bạn có chắc bạn muốn xoá PC này không\?</string>
     <string name="yes">Có</string>
-    <string name="conn_terminated_msg">Kết nối đã bị chấm dứt</string>
-    <string name="conn_error_msg">Bắt đầu thất bại</string>
     <string name="conn_hardware_latency">Độ trễ giải mã phần cứng trung bình:</string>
     <string name="conn_client_latency_hw">độ trễ trình giải mã phần cứng:</string>
     <string name="conn_client_latency">Độ trễ giải mã khung hình trung bình:</string>
     <string name="conn_metered">Cảnh báo: Kết nối mạng đang hoạt động là có trả phí!</string>
-    <string name="check_ports_msg">Hãy kiểm tra tường lửa và các quy tắc chuyển tiếp cổng để tìm (các) cổng:</string>
     <string name="early_termination_error">Có gì đó sai đã xảy ra trên PC chủ của bạn khi bắt đầu stream.
 \n
 \nHãy chắc chắn là bạn không mở bất kỳ nội dung được DRM bảo vệ nào trên PC chủ. Bạn cũng có thể thử khởi động lại PC chủ.
@@ -132,8 +124,6 @@
     <string name="help_loading_msg">Đang tải trang trợ giúp…</string>
     <string name="help_loading_title">Trình xem trợ giúp</string>
     <string name="scut_deleted_pc">PC đã bị xoá</string>
-    <string name="perf_overlay_netlatency">Độ trễ mạng trung bình: %1$d ms (sai số: %2$d ms)</string>
-    <string name="perf_overlay_streamdetails">Tốc độ khung hình: %1$s %2$.2f FPS</string>
     <string name="resolution_prefix_native_fullscreen">Toàn màn hình theo hệ thống</string>
     <string name="title_frame_pacing">Nhịp độ khung hình video</string>
     <string name="summary_frame_pacing">Chỉ ra cách cân bằng giữa độ trễ video và độ mượt mà</string>

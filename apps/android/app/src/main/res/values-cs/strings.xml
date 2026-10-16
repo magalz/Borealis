@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="conn_metered">Varování: Vaše aktivní připojení je měřené!</string>
-    <string name="conn_error_msg">Spouštění se nezdařilo</string>
     <string name="conn_client_latency_hw">zpoždění hardwarového dekodéru:</string>
     <string name="resolution_prefix_native_fullscreen">Nativní celá obrazovka</string>
     <string name="summary_checkbox_enable_audiofx">Umožňuje fungování zvukových efektů během streamování, ale může zvýšit zpoždění zvuku</string>
@@ -28,12 +27,6 @@
     <string name="title_native_res_dialog">Varování pro nativní rozlišení</string>
     <string name="title_checkbox_vibrate_fallback">Emulovat podporu vibrací</string>
     <string name="title_seekbar_deadzone">Upravit deadzone analogových páček</string>
-    <string name="check_ports_msg">Zkontrolujte svůj firewall a pravidla přesměrování pro tyto porty:</string>
-    <string name="conn_terminated_msg">Spojení bylo ukončeno</string>
-    <string name="conn_hardware_latency">Průměrné zpoždění hardwarového dekodéru:</string>
-    <string name="conn_client_latency">Průměrné zpoždění při dekódování snímků:</string>
-    <string name="perf_overlay_netlatency">Průměrné zpoždění sítě: %1$d ms (odchylka: %2$d ms)</string>
-    <string name="perf_overlay_dectime">Průměrný čas pro dekódování: %1$.2f ms</string>
     <string name="title_checkbox_touchscreen_trackpad">Použít dotykový displej jako trackpad</string>
     <string name="title_checkbox_multi_controller">Automatická detekce připojení herního ovladače</string>
     <string name="summary_checkbox_multi_controller">Odškrtnutí této možnosti vynutí, aby byl herní ovladač vždy připojen</string>
@@ -94,8 +87,6 @@
 \nZkuste vypnout HDR, změňte rozlišení streamu nebo rozlišení displeje hostitelského PC.</string>
     <string name="yes">Ano</string>
     <string name="no">Ne</string>
-    <string name="perf_overlay_renderingfps">Vykreslovací snímková frekvence: %1$.2f FPS</string>
-    <string name="perf_overlay_netdrops">Snímky zahozeny vašim připojením: %1$.2f%%</string>
     <string name="applist_refresh_error_title">Chyba</string>
     <string name="applist_refresh_error_msg">Nezdařilo se získat seznam aplikací</string>
     <string name="applist_quit_confirmation">Určitě chcete ukončit běžící aplikaci\? Neuložená data budou ztracena.</string>
@@ -136,9 +127,6 @@
     <string name="slow_connection_msg">Pomalé připojení k PC
 \nSnižte datový tok</string>
     <string name="poor_connection_msg">Špatné připojení k PC</string>
-    <string name="perf_overlay_streamdetails">Video stream: %1$s %2$.2f FPS</string>
-    <string name="perf_overlay_decoder">Dekodér: %1$s</string>
-    <string name="perf_overlay_incomingfps">Příchozí snímková frekvence po síti: %1$.2f FPS</string>
     <string name="text_native_res_dialog">GeForce Experience oficiálně nepodporuje nativní rozlišení a proto nenastaví rozlišení displeje vašeho hostitelského PC. Musíte jej nastavit ručně ve hře.
 \n
 \nPokud v NVIDIA Control Panelu vytvoříte vlastní rozlišení pro vaše zařízení, prosím ujistěte se, že jste si přečetli a že chápete varování od NVIDIE ohledně možného poškození monitoru, nestability PC a dalších možných problémů.

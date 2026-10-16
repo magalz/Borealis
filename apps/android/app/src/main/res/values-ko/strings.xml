@@ -24,8 +24,6 @@
     <string name="conn_client_latency">평균 프레임 디코딩 지연:</string>
     <string name="conn_client_latency_hw">하드웨어 디코더 지연:</string>
     <string name="conn_hardware_latency">평균 하드웨어 디코딩 지연:</string>
-    <string name="conn_error_msg">시작 실패</string>
-    <string name="conn_terminated_msg">연결이 종료되었습니다.</string>
     <!-- General strings -->
     <string name="yes">예</string>
     <string name="no">아니오</string>
@@ -89,17 +87,10 @@
 \n모니터가 필요한 디스플레이 구성을 지원하지 않을 경우 가상 모니터 설정을 시도할 수 있습니다. 장치나 호스트 PC가 특정 해상도나 새로 고침 빈도로 스트리밍을 지원하지 않을 수 있습니다.</string>
     <string name="title_native_res_dialog">네이티브 해상도 주의사항</string>
     <string name="applist_details_id">앱 ID:</string>
-    <string name="perf_overlay_dectime">평균 디코딩 시간 : %1$.2f ms</string>
-    <string name="perf_overlay_netlatency">평균 네트워크 지연 시간 : %1$d ms (편차 : %2$d ms)</string>
-    <string name="perf_overlay_netdrops">네트워크에 의해 손실 된 프레임 : %1$.2f%%</string>
-    <string name="perf_overlay_renderingfps">렌더링 프레임속도 : %1$.2f FPS</string>
-    <string name="perf_overlay_incomingfps">네트워크를 통해 받은 프레임속도: %1$.2f FPS</string>
-    <string name="perf_overlay_decoder">디코더:%1$s</string>
     <string name="poor_connection_msg">PC와의 연결이 불안정함</string>
     <string name="slow_connection_msg">PC와의 연결이 불안정합니다.
 \n비트레이트를 줄이세요</string>
     <string name="delete_pc_msg">이 PC를 삭제 하시겠습니까\?</string>
-    <string name="check_ports_msg">다음 포트의 방화벽 및 포트 포워딩 설정을 확인하십시오:</string>
     <string name="early_termination_error">스트림을 시작할 때 호스트 PC에서 문제가 발생했습니다.
 \n
 \n호스트 PC에 DRM으로 보호 된 콘텐츠가 열려 있지 않은지 확인하거나 호스트 PC를 재부팅하십시오 .</string>
@@ -145,7 +136,6 @@
     <string name="summary_checkbox_usb_bind_all">Xbox 컨트롤러를 기본으로 지원하는 경우에도 지원되는 모든 컨트롤러에 Moonlight의 USB 드라이버를 사용합니다</string>
     <string name="title_checkbox_usb_bind_all">기본 Xbox 컨트롤러 지원 무시</string>
     <string name="title_checkbox_mouse_emulation">컨트롤러를 마우스처럼 사용하기</string>
-    <string name="perf_overlay_streamdetails">비디오 스트림 : %1$s %2$.2f FPS</string>
     <string name="resolution_prefix_native_fullscreen">네이티브 (전체화면)</string>
     <!-- Array strings -->
     <string name="videoformat_auto">자동 (권장)</string>
@@ -194,7 +184,6 @@
     <string name="summary_checkbox_gamepad_motion_sensors">모션 센서가 있는 컨트롤러를 에뮬레이션할 때 지원되는 호스트가 모션 센서 데이터를 요청할 수 있습니다. 비활성화하면 게임에서 동작 센서를 사용하지 않는 경우 전원 및 네트워크 사용량이 약간 줄어들 수 있습니다.</string>
     <string name="summary_checkbox_gamepad_touchpad_as_mouse">터치패드로 컨트롤러를 에뮬레이션하는 경우에도 호스트 마우스를 제어하기 위해 컨트롤러 터치패드 입력을 강제합니다.</string>
     <string name="pair_pairing_help">호스트 PC에서 Sunshine을 실행 중인 경우 Sunshine 웹 UI로 이동하여 PIN을 입력합니다.</string>
-    <string name="perf_overlay_hostprocessinglatency">호스트 처리 대기 시간 최소/최대/평균: %1$.1f/%2$.1f/%3$.1f ms</string>
     <string name="fps_suffix_fps">FPS</string>
     <string name="title_native_fps_dialog">네이티브 FPS 주의사항</string>
     <string name="category_gamepad_settings">컨트롤러 설정</string>
@@ -205,7 +194,6 @@
     <string name="summary_checkbox_gamepad_motion_fallback">연결된 컨트롤러 또는 기기의 Android 버전에서 컨트롤러 센서가 지원되지 않는 경우 장치에 내장된 모션 센서를 사용합니다.
 \n참고: 이 옵션을 활성화하면 사용 중인 컨트롤러가 호스트에서 PlayStation 컨트롤러로 나타날 수 있습니다.</string>
     <string name="title_checkbox_gamepad_motion_fallback">컨트롤러의 모션 센서 에뮬레이션 지원</string>
-    <string name="error_code_prefix">에러 코드:</string>
     <string name="summary_seekbar_vibrate_fallback_strength">장치의 진동 강도를 증폭하거나 감소시킵니다</string>
     <string name="title_analog_scrolling">아날로그 스틱을 사용하여 스크롤</string>
     <string name="analogscroll_none">없음 (두 스틱 모두 마우스를 움직입니다)</string>

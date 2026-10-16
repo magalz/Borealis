@@ -29,8 +29,6 @@
     <string name="conn_client_latency">Latence moyenne de décodage de trame :</string>
     <string name="conn_client_latency_hw">Latence du décodeur matériel :</string>
     <string name="conn_hardware_latency">Latence moyenne du décodage matériel :</string>
-    <string name="conn_error_msg">Impossible de démarrer</string>
-    <string name="conn_terminated_msg">La connexion a été interrompue.</string>
     <!-- General strings -->
     <string name="yes">Oui</string>
     <string name="no">Non</string>
@@ -38,11 +36,6 @@
     <string name="delete_pc_msg">Êtes-vous sûr de vouloir supprimer ce PC \?</string>
     <string name="slow_connection_msg">Connexion lente au PC\nRéduisez votre débit</string>
     <string name="poor_connection_msg">Mauvaise connexion au PC</string>
-    <string name="perf_overlay_decoder">Décodeur : %1$s</string>
-    <string name="perf_overlay_incomingfps">Fréquence d\'images entrantes du réseau : %1$.2f FPS</string>
-    <string name="perf_overlay_renderingfps">Fréquence d\'images de rendu : %1$.2f FPS</string>
-    <string name="perf_overlay_netdrops">Images perdues par votre connexion réseau : %1$.2f%%</string>
-    <string name="perf_overlay_dectime">Temps moyen de décodage : %1$.2f ms</string>
     <!-- AppList activity -->
     <string name="applist_menu_cancel">Annuler</string>
     <string name="applist_menu_tv_channel">Ajouter à la liste de chaînes</string>
@@ -137,14 +130,11 @@
 \n
 \nIl se peut que votre moniteur ne prenne pas en charge la configuration d\'affichage requise. Si c\'est le cas, vous pouvez essayer de configurer un moniteur virtuel. Enfin, si votre appareil ou votre PC hôte ne prend pas en charge le streaming à une résolution ou à un taux de rafraîchissement spécifique, vous ne pourrez pas y faire grand chose malheureusement.</string>
     <string name="title_native_res_dialog">Avertissement sur la résolution native</string>
-    <string name="check_ports_msg">Vérifiez vos règles de pare-feu pour les ports suivants :</string>
     <string name="early_termination_error">Quelque chose s\'est mal passé sur votre PC hôte en démarrant le stream.
 \n
 \nVérifiez qu\'aucune application utilisant un DRM n\'est ouverte sur votre PC hôte. Vous pouvez aussi essayer de redémarrer votre PC hôte.</string>
     <string name="no_frame_received_error">Votre connexion réseau ne fonctionne pas bien. Baissez votre débit ou utilisez une connexion plus rapide.</string>
     <string name="resolution_prefix_native_fullscreen">Plein-écran natif</string>
-    <string name="perf_overlay_netlatency">Latence réseau moyenne : %1$d ms (variance : %2$d ms)</string>
-    <string name="perf_overlay_streamdetails">Stream vidéo : %1$s %2$.2f FPS</string>
     <!-- Array strings -->
     <string name="fps_30">30 IPS</string>
     <string name="fps_60">60 IPS</string>
@@ -190,7 +180,6 @@
     <string name="summary_full_range">Cela causera une perte de détails dans les zones claires et sombres si votre appareil n\'affiche pas correctement la vidéo avec une gamme de couleurs complète.</string>
     <string name="pair_pairing_help">Si votre PC hôte utilise Sunshine, accédez à l\'interface web de Sunshine pour saisir le code PIN.</string>
     <string name="category_gamepad_settings">Paramètres manette</string>
-    <string name="perf_overlay_hostprocessinglatency">Latence de traitement de l\'hôte min/max/moyenne : %1$.1f/%2$.1f/%3$.1f ms</string>
     <string name="fps_suffix_fps">FPS</string>
     <string name="title_native_fps_dialog">Avertissement sur le FPS natif</string>
     <string name="title_checkbox_gamepad_motion_sensors">Autoriser l\'utilisation des capteurs de mouvement de la manette</string>
@@ -207,7 +196,6 @@
     <string name="analogscroll_none">Aucun (les deux sticks déplacent la souris)</string>
     <string name="analogscroll_right">Stick analogique droit</string>
     <string name="analogscroll_left">Stick analogique gauche</string>
-    <string name="error_code_prefix">Code d\'erreur :</string>
     <string name="title_seekbar_vibrate_fallback_strength">Ajuster l\'intensité de la vibration émulée</string>
     <string name="summary_seekbar_vibrate_fallback_strength">Amplifie ou réduit l\'intensité de la vibration sur votre appareil</string>
     <string name="suffix_seekbar_vibrate_fallback_strength">%</string>

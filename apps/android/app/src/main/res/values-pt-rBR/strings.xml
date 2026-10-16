@@ -16,8 +16,6 @@
     <string name="summary_checkbox_touchscreen_trackpad">Se habilitado, a tela sensível ao toque funciona como um trackpad. Se desativado, a tela controla diretamente o cursor do mouse.</string>
     <string name="summary_checkbox_xb1_driver">Habilita um driver USB integrado para dispositivos sem suporte nativo aos controles Xbox</string>
     <string name="title_checkbox_mouse_nav_buttons">Habilitar os botões de voltar e avançar do mouse</string>
-    <string name="conn_error_msg">Falha ao iniciar</string>
-    <string name="check_ports_msg">Verifique o firewall e permita a(s) seguinte(s) para porta(s):</string>
     <string name="error_404">GFE retornou um erro HTTP 404. Verifique se o seu PC está executando uma GPU compatível. O uso do software de área de trabalho remota também pode causar esse erro. Tente reiniciar sua máquina ou reinstalar o GFE.</string>
     <string name="message_decoding_error">Borealis crashou devido a uma incompatibilidade com o decodificador de vídeo deste dispositivo. Tente ajustar as configurações de transmissão se as falhas continuarem.</string>
     <string name="message_decoding_reset">O decodificador de vídeo do seu dispositivo continua crashando nas configurações de transmissão selecionadas. Suas configurações de transmissão foram redefinidas para o padrão.</string>
@@ -51,7 +49,6 @@
     <string name="pair_fail">Falha no pareamento</string>
     <string name="wol_waking_pc">Acordando o PC…</string>
     <string name="error_unknown_host">Falha ao encontrar o host</string>
-    <string name="conn_terminated_msg">A conexão foi encerrada.</string>
     <string name="yes">Sim</string>
     <string name="no">Não</string>
     <string name="help">Ajuda</string>
@@ -65,15 +62,8 @@
     <string name="conn_client_latency">Latência média de decodificação de quadros:</string>
     <string name="conn_client_latency_hw">latência do decodificador de hardware:</string>
     <string name="conn_hardware_latency">Latência média de decodificação de hardware:</string>
-    <string name="perf_overlay_decoder">Decodificador: %1$s</string>
-    <string name="perf_overlay_incomingfps">Taxa de quadros recebidos pela rede:: %1$.2f FPS</string>
-    <string name="perf_overlay_renderingfps">Taxa de quadros renderizando: %1$.2f FPS</string>
-    <string name="perf_overlay_streamdetails">Transmissão: %1$s %2$.2f FPS</string>
-    <string name="perf_overlay_netlatency">Latência média da rede: %1$d ms (variação: %2$d ms)</string>
-    <string name="perf_overlay_dectime">Tempo médio de decodificação: %1$.2f ms</string>
     <string name="applist_menu_cancel">Cancelar</string>
     <string name="applist_menu_tv_channel">Adicionar ao Canal</string>
-    <string name="perf_overlay_netdrops">Quadros dropados pela rede: %1$.2f%%</string>
     <string name="applist_refresh_error_title">Erro</string>
     <string name="applist_refresh_error_msg">Falha ao obter a lista de aplicativos</string>
     <string name="applist_quit_confirmation">Tem certeza de que deseja sair do aplicativo em execução\? Todos os dados não salvos serão perdidos.</string>
@@ -178,6 +168,5 @@
     <string name="analogscroll_left">Stick analógico esquerdo</string>
     <string name="title_analog_scrolling">Usar um stick analógico para fazer scroll</string>
     <string name="summary_analog_scrolling">Selecciona um stick analógico para fazer scroll quando a emulação de rato está ativada</string>
-    <string name="error_code_prefix">Código de erro:</string>
     <string name="fps_suffix_fps">FPS</string>
 </resources>

@@ -4,15 +4,16 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.view.MotionEvent
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.core.content.edit
 import com.limelight.Game
-import com.limelight.binding.input.touch.TouchContext
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.StreamConfiguration
 import com.limelight.nvstream.input.KeyboardPacket
 import com.limelight.nvstream.input.MouseButtonPacket
 import io.github.magalz.borealis.host.launch.ConflictChoice
+import io.github.magalz.borealis.host.launch.SessionAudit
 import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.R as LibraryR
 import io.github.magalz.borealis.library.domain.QuitResult
@@ -33,6 +34,8 @@ interface InputSink {
     fun sendUtf8Text(text: String)
 
     fun sendMouseButtonUp(button: Byte)
+
+    fun requestKeyframe()
 }
 
 private class NvConnectionInput(private val connection: NvConnection) : InputSink {
@@ -42,18 +45,21 @@ private class NvConnectionInput(private val connection: NvConnection) : InputSin
     override fun sendUtf8Text(text: String) = connection.sendUtf8Text(text)
 
     override fun sendMouseButtonUp(button: Byte) = connection.sendMouseButtonUp(button)
+
+    override fun requestKeyframe() = connection.requestKeyframe()
 }
 
 /**
  * What the stream chrome asks of the stream activity ([StreamActions]). Every call arrives on the
- * main thread. Calls the chrome has no screen for yet are no-ops, marked "wired by S5-T7".
+ * main thread. The overlay needs nothing from here: the session state shows it, and `PerfGate`
+ * turns the decoder numbers on while it is visible.
  */
 @Suppress("TooManyFunctions") // One call per thing the chrome can ask of the stream.
 class GameStreamActions
 internal constructor(
     private val activity: Activity,
     private val input: InputSink,
-    private val touchContexts: Array<out TouchContext?>,
+    private val controls: StreamControls,
     private val heldKeys: HeldKeys,
     private val entryPoint: () -> StreamEntryPoint,
     private val scope: CoroutineScope,
@@ -61,12 +67,12 @@ internal constructor(
     constructor(
         activity: Activity,
         connection: NvConnection,
-        touchContexts: Array<TouchContext?>,
+        controls: StreamControls,
         heldKeys: HeldKeys,
     ) : this(
         activity,
         NvConnectionInput(connection),
-        touchContexts,
+        controls,
         heldKeys,
         { StreamEntryPoint.from(activity) },
         appScope,
@@ -99,8 +105,8 @@ internal constructor(
     /**
      * The chrome takes the input: releases every key held down, the mouse buttons in [mouseButtons]
      * (`MotionEvent.BUTTON_*`, as the activity tracks them) and the touches in progress, so the PC
-     * is not left with a stuck key or button. Gamepad zeroing is the gamepad handler's own (wired
-     * by S5-T7 through `GamepadChrome.setCaptured`).
+     * is not left with a stuck key or button. Gamepad zeroing is the gamepad handler's own
+     * (`GamepadChrome.setCaptured`, called by the activity).
      */
     fun releaseHeldInput(mouseButtons: Int) {
         heldKeys.releaseAll { vk ->
@@ -109,44 +115,70 @@ internal constructor(
         for ((androidButtons, button) in MOUSE_BUTTONS) {
             if (mouseButtons and androidButtons != 0) input.sendMouseButtonUp(button)
         }
-        touchContexts.forEach { it?.cancelTouch() }
+        controls.touchContexts.forEach { it?.cancelTouch() }
     }
 
     override fun sendText(text: String) = input.sendUtf8Text(text)
 
-    /** Wired by S5-T7. */
-    override fun openSystemKeyboard() = Unit
+    /**
+     * Closes the panel, which hands the input back, then focuses the stream view and shows the
+     * Android keyboard on it. The keyboard is shown from a posted task, after the chrome's own
+     * focus hand-off has run.
+     */
+    override fun openSystemKeyboard() {
+        controls.closePanel.run()
+        val view = controls.streamView
+        view.requestFocus()
+        view.post {
+            activity.getSystemService(InputMethodManager::class.java)?.showSoftInput(view, 0)
+        }
+    }
 
-    /** Wired by S5-T7. */
-    override fun requestKeyframe() = Unit
+    override fun requestKeyframe() = input.requestKeyframe()
 
-    /** Wired by S5-T7. */
-    override fun setTouchMode(mode: TouchMode) = Unit
+    /**
+     * Cancels the touches in progress, so no context is left with a finger down, then gives the
+     * activity the contexts of [mode]. [TouchMode.OFF] has none: the activity ignores the touch
+     * screen and keeps the contexts it has.
+     */
+    override fun setTouchMode(mode: TouchMode) {
+        val contexts = controls.touchContexts
+        contexts.forEach { it?.cancelTouch() }
+        val built = controls.buildTouch(mode) ?: return
+        for (i in contexts.indices) contexts[i] = built.getOrNull(i)
+    }
 
-    /** Wired by S5-T7. */
-    override fun setGamepadMouse(enabled: Boolean) = Unit
+    override fun setGamepadMouse(enabled: Boolean) = controls.controller.setMouseEmulation(enabled)
 
-    /** Wired by S5-T7. */
     override fun setOverlay(mode: OverlayMode) = Unit
 
     override fun menuHintShown() {
         preferences(activity).edit { putBoolean(KEY_MENU_HINT_SHOWN, true) }
     }
 
-    override fun disconnect() = activity.finish()
+    override fun disconnect() {
+        SessionAudit.disconnected()
+        activity.finish()
+    }
 
     override fun quitApp() {
         if (quitting) return
         quitting = true
+        // The host ends the stream with the app, possibly before the answer arrives.
+        SessionAudit.quitRequested()
         val id = hostId
         scope.launch {
             val result =
                 if (id == null) QuitResult.Failed(null) else entryPoint().appRepository().quit(id)
             when (result) {
-                QuitResult.Quit -> activity.finish()
+                QuitResult.Quit -> {
+                    SessionAudit.quit()
+                    activity.finish()
+                }
                 is QuitResult.Failed -> {
                     // The stream goes on, so the user can try again.
                     quitting = false
+                    SessionAudit.quitFailed()
                     toast(
                         result.message
                             ?: activity.getString(LibraryR.string.apps_message_quit_failed)
@@ -200,9 +232,12 @@ internal constructor(
         openLibrary(LibraryLaunchRequest.Pair(id))
     }
 
+    // An open Library takes the request through onNewIntent instead of a second instance.
     private fun openLibrary(request: LibraryLaunchRequest) {
         activity.startActivity(
-            Intent(activity, LibraryActivity::class.java).putExtras(request.toExtras())
+            Intent(activity, LibraryActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .putExtras(request.toExtras())
         )
         activity.finish()
     }

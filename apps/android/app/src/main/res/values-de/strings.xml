@@ -32,8 +32,6 @@
     <string name="conn_client_latency">Durchschnittliche Frame-Dekodierungslatenz:</string>
     <string name="conn_client_latency_hw">Hardware-Dekodierungslatenz:</string>
     <string name="conn_hardware_latency">Durchschnittliche Hardware-Dekodierungslatenz:</string>
-    <string name="conn_error_msg">Start fehlgeschlagen</string>
-    <string name="conn_terminated_msg">Die Verbindung wurde beendet.</string>
     <!-- General strings -->
     <string name="yes">Ja</string>
     <string name="no">Nein</string>
@@ -42,11 +40,6 @@
     <string name="slow_connection_msg">Langsame Verbindung zum Host
 \nReduziere die Bitrate</string>
     <string name="poor_connection_msg">Sehr langsame Verbindung zum Host</string>
-    <string name="perf_overlay_decoder">Decoder: %1$s</string>
-    <string name="perf_overlay_incomingfps">Bildwiederholrate der Netzwerkübertragung: %1$.2f FPS</string>
-    <string name="perf_overlay_renderingfps">Wiedergabe-Bildwiederholungsrate: %1$.2f FPS</string>
-    <string name="perf_overlay_netdrops">Wegen Netzwerkübertragung ausgelassene Frames: %1$.2f%%</string>
-    <string name="perf_overlay_dectime">Durchschnittliche Dekodierungszeit: %1$.2f ms</string>
     <!-- AppList activity -->
     <string name="applist_menu_cancel">Abbrechen</string>
     <string name="applist_menu_tv_channel">Zu Kanal hinzufügen</string>
@@ -139,7 +132,6 @@
 \n
 \nEs kann sein, dass dein Monitor eine notwendige Konfiguration nicht unterstützt. In diesem Fall, kann ein Virtuelles Display Abhilfe schaffen. Allerdings kann es sein, dass dein Gerät oder dein Host das Streaming in einer bestimmten Auflösung oder Bildwiederholrate nicht unterstützt.</string>
     <string name="title_native_res_dialog">Native Auflösungswarnung</string>
-    <string name="check_ports_msg">Überprüfe deine Firewall und Portweiterleitungsregeln für folgende(n) Port(s):</string>
     <string name="early_termination_error">Beim Starten des Streams auf deinem Host ist etwas schief gelaufen.
 \n
 \nStelle sicher, dass du keine DRM-geschützten Inhalte auf deinem Host geöffnet hast. Du kannst auch versuchen, deinen Host neu zu starten.</string>
@@ -152,7 +144,6 @@
     <string name="pacing_latency">Bevorzuge niedrigste Latenz</string>
     <string name="pacing_balanced">Ausgeglichen</string>
     <string name="pacing_smoothness">Bevorzuge flüssige Bildwiedergabe (kann die Latenzzeit deutlich erhöhen)</string>
-    <string name="perf_overlay_streamdetails">Video Stream: %1$s %2$.2f FPS</string>
     <string name="resolution_360p">360p</string>
     <string name="resolution_1080p">1080p</string>
     <string name="resolution_1440p">1440p</string>
@@ -160,7 +151,6 @@
     <string name="audioconf_stereo">Stereo</string>
     <string name="audioconf_51surround">5.1 Surround Sound</string>
     <string name="audioconf_71surround">7.1 Surround Sound</string>
-    <string name="perf_overlay_netlatency">Durchschnittliche Netzwerklatenz: %1$d ms (Abweichung: %2$d ms)</string>
     <string name="fps_30">30 FPS</string>
     <string name="resolution_480p">480p</string>
     <string name="fps_120">120 FPS</string>
@@ -195,13 +185,11 @@
     <string name="category_gamepad_settings">Gamepad Einstellungen</string>
     <string name="pair_pairing_help">Wenn dein Host PC Sunshine verwendet, navigiere zur Sunshine Web UI und gebe dort die PIN ein.</string>
     <string name="title_checkbox_gamepad_touchpad_as_mouse">Die Maus immer mit dem Touchpad steuern</string>
-    <string name="perf_overlay_hostprocessinglatency">Host Verarbeitungslatenz min/max/avg: %1$.1f/%2$.1f/%3$.1f ms</string>
     <string name="title_analog_scrolling">Verwenden Sie zum Scrollen einen Analogstick</string>
     <string name="summary_analog_scrolling">Wählen Sie einen Analogstick aus, der zum scrollen im Mausemulationsmodus verwendet werden soll</string>
     <string name="analogscroll_none">Keine (beide Sticks bewegen die Maus)</string>
     <string name="analogscroll_right">Rechter Analogstick</string>
     <string name="analogscroll_left">Linker Analogstick</string>
-    <string name="error_code_prefix">Fehlercode:</string>
     <string name="title_seekbar_vibrate_fallback_strength">Emulierte Vibrationsintensität einstellen</string>
     <string name="summary_seekbar_vibrate_fallback_strength">Verstärke oder verringere die Vibrationsintensität deines Geräts</string>
     <string name="suffix_seekbar_vibrate_fallback_strength">%</string>

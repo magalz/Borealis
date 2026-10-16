@@ -8,17 +8,23 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * Audit events of a stream session (ADR 0050): the start with what was negotiated, and exactly one
  * end however many paths report it (a stop by the user and a termination by the connection can both
- * arrive). Nothing about the stream content is recorded.
+ * arrive). The first end names the reason: `disconnect` and `quit` when the user chose them in the
+ * menu, `user` when the user left the stream screen in another way, `host_ended` and `error` when
+ * the connection ended. Nothing about the stream content is recorded.
  */
 object SessionAudit {
     private class Active(val host: String?, val startedAtMillis: Long)
 
     private val active = AtomicReference<Active?>(null)
 
+    // A quit ends the stream on the host, so the termination may arrive before the quit answer.
+    @Volatile private var quitPending = false
+
     internal var clock: () -> Long = System::currentTimeMillis
 
     internal fun reset() {
         active.set(null)
+        quitPending = false
         clock = System::currentTimeMillis
     }
 
@@ -36,6 +42,7 @@ object SessionAudit {
         fps: Int,
     ) {
         val host = BorealisAudit.hostLabel(name, address)
+        quitPending = false
         active.set(Active(host, clock()))
         val hdr = videoFormat and MASK_10BIT != 0
         BorealisAudit.record(
@@ -52,11 +59,38 @@ object SessionAudit {
         end(AuditOutcome.SUCCESS) { "reason=user duration_s=$it" }
     }
 
+    /** The user chose Disconnect in the menu: the stream ends and the app keeps running. */
+    @JvmStatic
+    fun disconnected() {
+        end(AuditOutcome.SUCCESS) { "reason=disconnect duration_s=$it" }
+    }
+
+    /**
+     * The user asked to quit the app on the host. A graceful termination that follows is the quit.
+     */
+    @JvmStatic
+    fun quitRequested() {
+        quitPending = true
+    }
+
+    /** The quit did not happen and the stream goes on. */
+    @JvmStatic
+    fun quitFailed() {
+        quitPending = false
+    }
+
+    /** The app on the host ended on the user's request, and with it the stream. */
+    @JvmStatic
+    fun quit() {
+        end(AuditOutcome.SUCCESS) { "reason=quit duration_s=$it" }
+    }
+
     /** The connection ended; [errorCode] 0 is the host ending it gracefully. */
     @JvmStatic
     fun terminated(errorCode: Int) {
         if (errorCode == GRACEFUL_TERMINATION) {
-            end(AuditOutcome.SUCCESS) { "reason=host_ended duration_s=$it" }
+            val reason = if (quitPending) "quit" else "host_ended"
+            end(AuditOutcome.SUCCESS) { "reason=$reason duration_s=$it" }
         } else {
             end(AuditOutcome.FAILURE) { "reason=error code=$errorCode duration_s=$it" }
         }

@@ -114,7 +114,7 @@ class PerfSnapshotsTest {
     }
 
     @Test
-    fun `a window without frames gives zeros and no division by zero`() {
+    fun `a window without frames gives zeros, no decode time and no division by zero`() {
         val snapshot =
             PerfSnapshots.from(
                 window(

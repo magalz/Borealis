@@ -49,9 +49,11 @@ import com.limelight.ui.GameGestures;
 import com.limelight.utils.Vector2d;
 
 import io.github.magalz.borealis.stream.input.ButtonState;
+import io.github.magalz.borealis.stream.input.CaptureEnd;
 import io.github.magalz.borealis.stream.input.ChromeKeySink;
 import io.github.magalz.borealis.stream.input.GamepadChrome;
 import io.github.magalz.borealis.stream.input.GuideChord;
+import io.github.magalz.borealis.stream.input.HeldSinceCapture;
 import io.github.magalz.borealis.stream.input.MenuChordDetector;
 import io.github.magalz.borealis.stream.input.MenuChordListener;
 import io.github.magalz.borealis.stream.input.StartHold;
@@ -142,6 +144,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
     // While the chrome owns the gamepad nothing from any pad, or the on-screen controller, may reach the PC
     private volatile boolean captured;
+    private final CaptureEnd captureEnd = new CaptureEnd();
     private boolean mouseEmulationEnabled;
     private final Object inputLock = new Object();
     private int controllersWithInput; // guarded by inputLock
@@ -1320,6 +1323,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         this.captured = captured;
         if (captured) {
             releaseAllInput();
+        }
+        else {
+            captureEnd.ended(SystemClock.uptimeMillis());
         }
     }
 
@@ -2807,6 +2813,11 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             return true;
         }
 
+        // A key that went down while the chrome had the input does nothing until it is let go
+        if (captureEnd.began(event.getDownTime())) {
+            return true;
+        }
+
         int keyCode = handleRemapping(context, event);
         if (keyCode < 0) {
             return (keyCode == REMAP_CONSUME);
@@ -3042,6 +3053,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         }
 
         context.chromeInput.report(buttonFlags, leftStickX, leftStickY);
+        buttonFlags = context.heldSinceCapture.filter(buttonFlags, captured);
         if (context.startHold.update(buttonFlags, SystemClock.uptimeMillis()) && !captured &&
                 prefConfig.mouseEmulation && !context.menuChord.claims(ControllerPacket.PLAY_FLAG)) {
             context.toggleMouseEmulation();
@@ -3191,6 +3203,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
         // The Start hold that turns the gamepad mouse on or off, for pads that give no key events
         public final StartHold startHold = new StartHold();
+
+        // The buttons held since the chrome had the input stay unseen until they are let go
+        public final HeldSinceCapture heldSinceCapture = new HeldSinceCapture();
 
         public final Runnable menuChordCheck = new Runnable() {
             @Override

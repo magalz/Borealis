@@ -7,7 +7,9 @@ import io.github.magalz.borealis.stream.input.GamepadButtons.START
 /**
  * Watches the Select and Start keys the chrome receives for the chord that closes its panel: both
  * held for one second, on the same pad. A key that went down before the chrome took the input only
- * repeats here, and does not start the chord. Call it from the main thread.
+ * repeats here, and does not start the chord. Pads are told apart by device id, and every pad on
+ * the USB driver has id 0 (its keys are made up by the gamepad handler), so their chords are
+ * counted as one pad. Call it from the main thread.
  */
 class ChromeChord(private val onChord: () -> Unit) {
     private class Pad {

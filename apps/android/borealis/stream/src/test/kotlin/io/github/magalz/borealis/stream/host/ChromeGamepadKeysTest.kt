@@ -56,6 +56,8 @@ abstract class ChromeGamepadKeysBase(private val deviceId: Int, private val sour
         composeRule.runOnUiThread {
             val activity = composeRule.activity
             // A gamepad takes the window out of touch mode, where the chrome can take the focus.
+            // ViewRootImpl.ensureTouchMode is hidden API: this relies on the SDK Robolectric runs
+            // (35, from robolectric.properties); revisit it when that changes.
             val root = activity.window.decorView.parent
             root.javaClass.getDeclaredMethod("ensureTouchMode", Boolean::class.java).run {
                 isAccessible = true

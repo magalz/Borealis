@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.library.hosts
 
+import io.github.magalz.borealis.library.domain.HostCapability
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.RunningApp
 import io.github.magalz.borealis.library.domain.StreamRequest
@@ -26,6 +27,14 @@ data class HostItemUiState(
     val paired: Boolean,
     val runningApp: RunningApp?,
     val action: HostAction,
+    /** The host software and its version, or null when unknown. */
+    val version: String? = null,
+    /** The address to show in the detail line, or null when none is known. */
+    val address: String? = null,
+    /** True for an online host that is not paired: the line says it was found on the network. */
+    val foundOnNetwork: Boolean = false,
+    /** The capability tags to show, in display order; none for an offline host. */
+    val tags: List<HostCapability> = emptyList(),
 )
 
 /** An app that is running on an online, paired host, for the Continue row. */

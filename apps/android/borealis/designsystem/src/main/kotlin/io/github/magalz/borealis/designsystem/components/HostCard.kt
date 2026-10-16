@@ -56,6 +56,7 @@ fun HostCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     detail: String? = null,
+    tags: List<String> = emptyList(),
     runningApp: String? = null,
     action: HostCardAction? = null,
     onOptions: (() -> Unit)? = null,

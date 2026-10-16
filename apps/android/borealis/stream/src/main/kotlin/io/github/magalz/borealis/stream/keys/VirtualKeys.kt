@@ -52,5 +52,6 @@ object Shortcuts {
         listOf(altTab, winTab, win, ctrlShiftEsc, altF4, winD, winG, esc, winAltB)
 
     /** The shortcut row of the in-stream keyboard. */
-    val keyboardRow: List<NamedChord> = listOf(altTab, winTab, win, ctrlShiftEsc, altF4, winD, esc, f11)
+    val keyboardRow: List<NamedChord> =
+        listOf(altTab, winTab, win, ctrlShiftEsc, altF4, winD, esc, f11)
 }

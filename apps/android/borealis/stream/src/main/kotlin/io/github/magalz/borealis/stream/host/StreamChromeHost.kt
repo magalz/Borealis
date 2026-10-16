@@ -191,8 +191,8 @@ class StreamChromeHost(
     /**
      * While MODAL, the gamepad keys are the host's: A is OK, B is Back unless a screen takes it, Y
      * is the screen's, and Start, Select, X, L3, R3 and Mode are used up here. None of them is left
-     * to the system, whose fallbacks would click the focused item for Start. Right after the
-     * window gets its focus back, the confirm keys of any source are consumed first.
+     * to the system, whose fallbacks would click the focused item for Start. Right after the window
+     * gets its focus back, the confirm keys of any source are consumed first.
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (

@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.view.MotionEvent
 import android.widget.Toast
+import androidx.core.content.edit
 import com.limelight.Game
 import com.limelight.binding.input.touch.TouchContext
 import com.limelight.nvstream.NvConnection
@@ -126,7 +127,7 @@ internal constructor(
     override fun setOverlay(mode: OverlayMode) = Unit
 
     override fun menuHintShown() {
-        preferences(activity).edit().putBoolean(KEY_MENU_HINT_SHOWN, true).apply()
+        preferences(activity).edit { putBoolean(KEY_MENU_HINT_SHOWN, true) }
     }
 
     override fun disconnect() = activity.finish()

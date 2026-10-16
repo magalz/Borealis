@@ -32,30 +32,96 @@ class MenuChordDetector {
      */
     data class Update(val fired: Boolean, val earlyRelease: Boolean, val silent: Boolean)
 
+    private var held = 0
+    private var armedAt = NOT_ARMED
+
+    /** The chord buttons that belong to a pending chord or to one that fired and is still held. */
+    private var consumed = 0
+    private var masking = false
+
     /**
      * Buttons after the latest event. [maskWhilePending] hides the chord from the PC from the
      * start.
+     *
+     * The chord starts when the buttons are exactly Select and Start and no button of an earlier
+     * chord is still held. Any other button ends it. Releasing a button before one second ends it
+     * as an early release. An event at or after the deadline completes it first.
      */
-    fun update(buttons: Int, time: Long, maskWhilePending: Boolean): Update =
-        Update(fired = false, earlyRelease = false, silent = false)
+    @Synchronized
+    fun update(buttons: Int, time: Long, maskWhilePending: Boolean): Update {
+        val previousHeld = held
+        val previousHidden = hidden()
+        held = buttons
+
+        var fired = false
+        var earlyRelease = false
+        if (armedAt != NOT_ARMED) {
+            if (time - armedAt >= HOLD_MS) {
+                fire()
+                fired = true
+            } else if (buttons != CHORD) {
+                armedAt = NOT_ARMED
+                if (buttons and CHORD.inv() != 0) {
+                    consumed = 0
+                    masking = false
+                } else {
+                    earlyRelease = true
+                }
+            }
+        }
+
+        consumed = consumed and buttons
+        if (consumed == 0) masking = false
+
+        if (buttons == CHORD && armedAt == NOT_ARMED && consumed == 0) {
+            armedAt = time
+            consumed = CHORD
+            masking = maskWhilePending
+        }
+
+        val changed = previousHeld xor buttons
+        val silent = !fired && changed != 0 && changed and previousHidden == changed
+        return Update(fired, earlyRelease, silent)
+    }
 
     /** The scheduled check at [time]; true when it completed the chord. */
-    fun check(time: Long): Boolean = false
+    @Synchronized
+    fun check(time: Long): Boolean {
+        if (armedAt == NOT_ARMED || time - armedAt < HOLD_MS) return false
+        fire()
+        return true
+    }
 
     /** The time the chord completes, or [NO_DEADLINE] when none is pending. */
-    fun deadline(): Long = NO_DEADLINE
+    @Synchronized
+    fun deadline(): Long = if (armedAt == NOT_ARMED) NO_DEADLINE else armedAt + HOLD_MS
 
     /** The buttons that must not be sent to the PC. */
-    fun hidden(): Int = 0
+    @Synchronized fun hidden(): Int = if (masking) consumed else 0
 
     /** Whether [button] belongs to a chord that is pending or still held after it fired. */
-    fun claims(button: Int): Boolean = false
+    @Synchronized fun claims(button: Int): Boolean = consumed and button != 0
 
     /** Forgets the chord, as when the pad is captured. */
-    fun reset() {}
+    @Synchronized
+    fun reset() {
+        held = 0
+        armedAt = NOT_ARMED
+        consumed = 0
+        masking = false
+    }
+
+    private fun fire() {
+        armedAt = NOT_ARMED
+        consumed = CHORD
+        masking = true
+    }
 
     companion object {
         const val HOLD_MS = 1_000L
         const val NO_DEADLINE = -1L
+
+        private const val NOT_ARMED = -1L
+        private const val CHORD = GamepadButtons.START or GamepadButtons.SELECT
     }
 }

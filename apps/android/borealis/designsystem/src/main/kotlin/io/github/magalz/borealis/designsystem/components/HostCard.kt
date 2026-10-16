@@ -152,7 +152,7 @@ private fun HostInfo(
                 detail,
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.ink3,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }

@@ -840,8 +840,9 @@ Re-check after the fixes (build `df093832`; S22 over USB, TV over ADB Wi-Fi):
 | D2 Quit | fixed | TV: "Quitting Desktop..." with a spinner for about 5 s, no error screen, then the Library. The audit has SESSION_END with reason=quit. |
 | D3 placeholder name | fixed | Resume from Continue shows "Desktop" with the PC's name in the menu on the TV and the S22, not the placeholder. |
 | D4 cold start | fixed | TV and S22 after a cold start: Continue shows "Desktop" and "Running on" the PC's name. The card shows HEVC 10-bit, HDR, 4:4:4 and the running app. |
-| D5 decode time | fixed (display) | The Detailed overlay shows "Decode — ms" on the MediaTek decoder. The decoder does not report usable timestamps. `TODO(verify)`: this is an inference from the device; the decoder code does not confirm it. |
-| O1 rail on Add host | not in the re-check | Fixed in S5-T17, after this build. The re-check notes do not cover it. `TODO(verify)`: check the rail and the cross-fade on the TV. |
+| D5 decode time | fixed (display) | The Detailed overlay shows "Decode — ms" on the MediaTek decoder. The decoder likely does not report usable timestamps. |
+| O1 rail on Add host | fixed (TV, rail-fix build) | Fixed in S5-T17. A screen recording of Hosts to Add host shows the rail fixed in place for the whole transition, with "Add host" selected. Only the content changes, about 0.6 s after OK. |
+| D6 starting steps | seen, not re-checked | Seen on the TV in a resume recording: the steps went from "Preparing the display" back to "Starting Desktop". Fixed in S5-T17 (`3173152b`). Not re-checked on a device. |
 | D6 starting steps | not in the re-check | Fixed in S5-T17 and covered by unit tests. Pending a device check. |
 
 Defects found and fixed:
@@ -872,11 +873,12 @@ Defects found and fixed:
   later, without the rail, so the movement looked truncated. Fix: the rail stays
   on Hosts, Apps, Add host and Pairing on the TV and the handheld layout. The
   content cross-fades in 150 ms instead of 700 ms (`8a17989d`, S5-T17).
-- D6: the starting steps could go backwards. Fix: the app-name stage is the
-  start of the app, and the later stream stages prepare the display.
-  `StreamSession.onStage` ignores a step before the current one (`3173152b`,
-  S5-T17). `TODO(verify)`: the notes do not record how D6 was seen or its
-  steps to reproduce. Pending a device check.
+- D6: the starting steps could go backwards. A TV recording of a resume showed
+  the steps go from "Preparing the display" back to "Starting Desktop". Cause:
+  the app stage was reported before `/launch` and mapped to the display stage.
+  Fix: the app-name stage is the start of the app, and the later stream stages
+  prepare the display. `StreamSession.onStage` ignores a step before the current
+  one (`3173152b`, S5-T17). Not re-checked on a device.
 
 Not run:
 

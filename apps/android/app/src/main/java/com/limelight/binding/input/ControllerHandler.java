@@ -54,6 +54,7 @@ import io.github.magalz.borealis.stream.input.GamepadChrome;
 import io.github.magalz.borealis.stream.input.GuideChord;
 import io.github.magalz.borealis.stream.input.MenuChordDetector;
 import io.github.magalz.borealis.stream.input.MenuChordListener;
+import io.github.magalz.borealis.stream.input.UsbChromeKeys;
 
 import org.cgutman.shieldcontrollerextensions.SceChargingState;
 import org.cgutman.shieldcontrollerextensions.SceConnectionType;
@@ -136,6 +137,12 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     private boolean hasGameController;
     private boolean stopped = false;
     private volatile MenuChordListener menuChordListener;
+    private volatile ChromeKeySink chromeKeySink;
+
+    // While the chrome owns the gamepad nothing from any pad, or the on-screen controller, may reach the PC
+    private volatile boolean captured;
+    private boolean mouseEmulationEnabled;
+    private int controllersWithInput;
 
     private final PreferenceConfiguration prefConfig;
     private short currentControllers, initialControllers;
@@ -1061,6 +1068,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
         // Otherwise create a new context
         context = createInputDeviceContextForDevice(event.getDevice());
+        if (mouseEmulationEnabled) {
+            context.setMouseEmulation(true, false);
+        }
         inputDeviceContexts.put(event.getDeviceId(), context);
 
         return context;
@@ -1224,6 +1234,10 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     }
 
     private void sendControllerInputPacket(GenericControllerContext context, long eventTime) {
+        if (captured) {
+            return;
+        }
+
         MenuChordDetector.Update chord = context.menuChord.update(context.inputMap, eventTime,
                 context.mapsStartSelectToGuide());
         scheduleMenuChordCheck(context);
@@ -1284,18 +1298,135 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     }
 
     public void setChromeKeySink(ChromeKeySink sink) {
+        chromeKeySink = sink;
     }
 
     @Override
     public void setCaptured(boolean captured) {
+        if (captured == this.captured) {
+            return;
+        }
+
+        this.captured = captured;
+        if (captured) {
+            releaseAllInput();
+        }
+    }
+
+    // Input can come from the UI thread and from the USB driver threads
+    private synchronized void markControllerHasInput(short controllerNumber) {
+        controllersWithInput |= 1 << controllerNumber;
+    }
+
+    // Leaves every pad, and the PC, with no button held and no stick moved
+    private void releaseAllInput() {
+        // The default context is the on-screen controller and devices Android reports without an id
+        releaseContextInput(defaultContext);
+        for (int i = 0; i < inputDeviceContexts.size(); i++) {
+            releaseContextInput(inputDeviceContexts.valueAt(i));
+        }
+        for (int i = 0; i < usbDeviceContexts.size(); i++) {
+            releaseContextInput(usbDeviceContexts.valueAt(i));
+        }
+
+        // One neutral packet per controller the PC has heard of
+        int sent;
+        synchronized (this) {
+            sent = controllersWithInput;
+        }
+        for (short number = 0; number < MAX_GAMEPADS; number++) {
+            if ((sent & (1 << number)) != 0) {
+                conn.sendControllerInput(number, getActiveControllerMask(),
+                        (short) 0,
+                        (byte) 0, (byte) 0,
+                        (short) 0, (short) 0,
+                        (short) 0, (short) 0);
+            }
+        }
+    }
+
+    private void releaseContextInput(GenericControllerContext context) {
+        // Mouse buttons held by a pad in mouse mode would stay down on the PC
+        if (context.mouseEmulationActive) {
+            if ((context.mouseEmulationLastInputMap & ControllerPacket.A_FLAG) != 0) {
+                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
+            }
+            if ((context.mouseEmulationLastInputMap & ControllerPacket.B_FLAG) != 0) {
+                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT);
+            }
+        }
+
+        context.inputMap = 0;
+        context.leftTrigger = 0;
+        context.rightTrigger = 0;
+        context.leftStickX = 0;
+        context.leftStickY = 0;
+        context.rightStickX = 0;
+        context.rightStickY = 0;
+        context.mouseEmulationLastInputMap = 0;
+        context.guideTapDown = false;
+        context.menuChord.reset();
+        mainThreadHandler.removeCallbacks(context.menuChordCheck);
+
+        if (context instanceof InputDeviceContext) {
+            InputDeviceContext deviceContext = (InputDeviceContext) context;
+            deviceContext.emulatingButtonFlags = 0;
+            deviceContext.pendingExit = false;
+        }
     }
 
     @Override
     public void setMouseEmulation(boolean enabled) {
+        mouseEmulationEnabled = enabled;
+
+        // One notice for the switch, however many pads it reaches
+        boolean notify = true;
+        notify = applyMouseEmulation(defaultContext, enabled, notify);
+        for (int i = 0; i < inputDeviceContexts.size(); i++) {
+            notify = applyMouseEmulation(inputDeviceContexts.valueAt(i), enabled, notify);
+        }
+        for (int i = 0; i < usbDeviceContexts.size(); i++) {
+            notify = applyMouseEmulation(usbDeviceContexts.valueAt(i), enabled, notify);
+        }
+    }
+
+    // Returns whether the next change should still show the notice
+    private boolean applyMouseEmulation(GenericControllerContext context, boolean enabled, boolean notify) {
+        if (context.mouseEmulationActive == enabled) {
+            return notify;
+        }
+
+        context.setMouseEmulation(enabled, notify);
+        return false;
+    }
+
+    // Pads on the USB driver give no key events, so the chrome gets the ones it navigates with
+    private void forwardButtonsToChrome(GenericControllerContext context, int buttonFlags) {
+        int previous = context.chromeButtons;
+        context.chromeButtons = buttonFlags;
+
+        final ChromeKeySink sink = chromeKeySink;
+        if (!captured || sink == null) {
+            return;
+        }
+
+        for (final KeyEvent key : UsbChromeKeys.INSTANCE.events(previous, buttonFlags, SystemClock.uptimeMillis())) {
+            mainThreadHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    sink.onKey(key);
+                }
+            });
+        }
     }
 
     private void transmitControllerInput(GenericControllerContext originalContext) {
+        if (captured) {
+            return;
+        }
+
         assignControllerNumberIfNeeded(originalContext);
+        markControllerHasInput(originalContext.controllerNumber);
 
         // Take the context's controller number and fuse all inputs with the same number
         short controllerNumber = originalContext.controllerNumber;
@@ -1791,6 +1922,11 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             return false;
         }
 
+        // The touchpad of a pad the chrome owns reaches neither the controller nor the mouse
+        if (captured) {
+            return true;
+        }
+
         // When we're working with a mouse source instead of a touchpad, we're quite limited in
         // what useful input we can provide via the controller API. The ABS_X/ABS_Y values are
         // screen coordinates rather than touchpad coordinates. For now, we will just support
@@ -1949,14 +2085,14 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
     private void sendEmulatedMouseMove(short x, short y) {
         Vector2d vector = convertRawStickAxisToPixelMovement(x, y);
-        if (vector.getMagnitude() >= 1) {
+        if (vector.getMagnitude() >= 1 && !captured) {
             conn.sendMouseMove((short)vector.getX(), (short)-vector.getY());
         }
     }
 
     private void sendEmulatedMouseScroll(short x, short y) {
         Vector2d vector = convertRawStickAxisToPixelMovement(x, y);
-        if (vector.getMagnitude() >= 1) {
+        if (vector.getMagnitude() >= 1 && !captured) {
             conn.sendMouseHighResScroll((short)vector.getY());
             conn.sendMouseHighResHScroll((short)vector.getX());
         }
@@ -2247,6 +2383,10 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
             @Override
             public void onSensorChanged(SensorEvent sensorEvent) {
+                if (captured) {
+                    return;
+                }
+
                 // Android will invoke our callback any time we get a new reading,
                 // even if the values are the same as last time. Don't report a
                 // duplicate set of values to save bandwidth.
@@ -2457,7 +2597,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             // any action.
             if ((context.inputMap & ControllerPacket.PLAY_FLAG) != 0 &&
                     event.getEventTime() - context.startDownTime > ControllerHandler.START_DOWN_TIME_MOUSE_MODE_MS &&
-                    prefConfig.mouseEmulation &&
+                    prefConfig.mouseEmulation && !captured &&
                     !context.menuChord.claims(ControllerPacket.PLAY_FLAG)) {
                 context.toggleMouseEmulation();
             }
@@ -2852,6 +2992,10 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                                short leftStickX, short leftStickY,
                                short rightStickX, short rightStickY,
                                byte leftTrigger, byte rightTrigger) {
+        if (captured) {
+            return;
+        }
+
         defaultContext.leftStickX = leftStickX;
         defaultContext.leftStickY = leftStickY;
 
@@ -2873,6 +3017,11 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                                       float leftTrigger, float rightTrigger) {
         GenericControllerContext context = usbDeviceContexts.get(controllerId);
         if (context == null) {
+            return;
+        }
+
+        forwardButtonsToChrome(context, buttonFlags);
+        if (captured) {
             return;
         }
 
@@ -2923,6 +3072,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         }
 
         UsbDeviceContext context = createUsbDeviceContextForDevice(controller);
+        if (mouseEmulationEnabled) {
+            context.setMouseEmulation(true, false);
+        }
         usbDeviceContexts.put(controller.getControllerId(), context);
     }
 
@@ -2980,9 +3132,16 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         };
 
         public void toggleMouseEmulation() {
+            setMouseEmulation(!mouseEmulationActive, true);
+            mouseEmulationEnabled = mouseEmulationActive;
+        }
+
+        public void setMouseEmulation(boolean enabled, boolean notify) {
             mainThreadHandler.removeCallbacks(mouseEmulationRunnable);
-            mouseEmulationActive = !mouseEmulationActive;
-            Toast.makeText(activityContext, "Mouse emulation is: " + (mouseEmulationActive ? "ON" : "OFF"), Toast.LENGTH_SHORT).show();
+            mouseEmulationActive = enabled;
+            if (notify) {
+                Toast.makeText(activityContext, "Mouse emulation is: " + (mouseEmulationActive ? "ON" : "OFF"), Toast.LENGTH_SHORT).show();
+            }
 
             if (mouseEmulationActive) {
                 mainThreadHandler.postDelayed(mouseEmulationRunnable, mouseEmulationReportPeriod);
@@ -3001,10 +3160,13 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         public final MenuChordDetector menuChord = new MenuChordDetector();
         public boolean guideTapDown;
 
+        // The buttons the pad held at its last report, to find the ones that changed
+        public int chromeButtons;
+
         public final Runnable menuChordCheck = new Runnable() {
             @Override
             public void run() {
-                if (menuChord.check(SystemClock.uptimeMillis())) {
+                if (!captured && menuChord.check(SystemClock.uptimeMillis())) {
                     transmitControllerInput(GenericControllerContext.this);
                     notifyMenuChord();
                 }

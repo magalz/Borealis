@@ -10,8 +10,9 @@
     <issue id="IconMissingDensityFolder">
         <ignore path="src/main/res"/>
     </issue>
-    <!-- BOREALIS: PcView shows the host-aware hint of :borealis:host instead of this Sunshine text; the upstream string stays so syncs do not touch every locale. -->
+    <!-- BOREALIS: the stream chrome replaced the connection spinner and dialogs (conn_establishing_msg, conn_starting, conn_error_title, conn_terminated_title) and PcView shows the host-aware hint of :borealis:host instead of this Sunshine text (pair_pairing_help); the upstream strings stay so syncs do not touch every locale. -->
     <issue id="UnusedResources">
         <ignore regexp="pair_pairing_help"/>
+        <ignore regexp="conn_establishing_msg|conn_starting|conn_error_title|conn_terminated_title"/>
     </issue>
 </lint>

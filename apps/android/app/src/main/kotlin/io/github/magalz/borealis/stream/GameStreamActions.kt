@@ -1,0 +1,256 @@
+package io.github.magalz.borealis.stream
+
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.view.MotionEvent
+import android.widget.Toast
+import androidx.core.content.edit
+import com.limelight.Game
+import com.limelight.binding.input.touch.TouchContext
+import com.limelight.nvstream.NvConnection
+import com.limelight.nvstream.StreamConfiguration
+import com.limelight.nvstream.input.KeyboardPacket
+import com.limelight.nvstream.input.MouseButtonPacket
+import io.github.magalz.borealis.host.launch.ConflictChoice
+import io.github.magalz.borealis.library.LibraryLaunchRequest
+import io.github.magalz.borealis.library.R as LibraryR
+import io.github.magalz.borealis.library.domain.QuitResult
+import io.github.magalz.borealis.library.domain.WakeResult
+import io.github.magalz.borealis.library.shell.LibraryActivity
+import io.github.magalz.borealis.settings.BorealisSettingsActivity
+import io.github.magalz.borealis.stream.host.HeldKeys
+import io.github.magalz.borealis.stream.keys.KeyChord
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+
+/** The input the stream sends to the PC. [NvConnection] backs it in the app. */
+interface InputSink {
+    fun sendKeyboardInput(keyMap: Short, direction: Byte, modifiers: Byte, flags: Byte)
+
+    fun sendUtf8Text(text: String)
+
+    fun sendMouseButtonUp(button: Byte)
+}
+
+private class NvConnectionInput(private val connection: NvConnection) : InputSink {
+    override fun sendKeyboardInput(keyMap: Short, direction: Byte, modifiers: Byte, flags: Byte) =
+        connection.sendKeyboardInput(keyMap, direction, modifiers, flags)
+
+    override fun sendUtf8Text(text: String) = connection.sendUtf8Text(text)
+
+    override fun sendMouseButtonUp(button: Byte) = connection.sendMouseButtonUp(button)
+}
+
+/**
+ * What the stream chrome asks of the stream activity ([StreamActions]). Every call arrives on the
+ * main thread. Calls the chrome has no screen for yet are no-ops, marked "wired by S5-T7".
+ */
+@Suppress("TooManyFunctions") // One call per thing the chrome can ask of the stream.
+class GameStreamActions
+internal constructor(
+    private val activity: Activity,
+    private val input: InputSink,
+    private val touchContexts: Array<out TouchContext?>,
+    private val heldKeys: HeldKeys,
+    private val entryPoint: () -> StreamEntryPoint,
+    private val scope: CoroutineScope,
+) : StreamActions {
+    constructor(
+        activity: Activity,
+        connection: NvConnection,
+        touchContexts: Array<TouchContext?>,
+        heldKeys: HeldKeys,
+    ) : this(
+        activity,
+        NvConnectionInput(connection),
+        touchContexts,
+        heldKeys,
+        { StreamEntryPoint.from(activity) },
+        appScope,
+    )
+
+    private val hostId: String? = activity.intent.getStringExtra(Game.EXTRA_PC_UUID)
+    private var retried = false
+    private var quitting = false
+
+    override fun send(chord: KeyChord) {
+        val modifiers = chord.modifiers.toList()
+        var held = 0
+        for (modifier in modifiers) {
+            held = held or modifier.flag
+            sendKey(modifier.vk, KeyboardPacket.KEY_DOWN, held)
+        }
+        sendKey(chord.vk, KeyboardPacket.KEY_DOWN, held)
+        sendKey(chord.vk, KeyboardPacket.KEY_UP, held)
+        for (modifier in modifiers.asReversed()) {
+            held = held and modifier.flag.inv()
+            sendKey(modifier.vk, KeyboardPacket.KEY_UP, held)
+        }
+    }
+
+    private fun sendKey(vk: Int, direction: Byte, modifiers: Int) {
+        if (direction == KeyboardPacket.KEY_DOWN) heldKeys.down(vk) else heldKeys.up(vk)
+        input.sendKeyboardInput((KEY_PREFIX or vk).toShort(), direction, modifiers.toByte(), 0)
+    }
+
+    /**
+     * The chrome takes the input: releases every key held down, the mouse buttons in [mouseButtons]
+     * (`MotionEvent.BUTTON_*`, as the activity tracks them) and the touches in progress, so the PC
+     * is not left with a stuck key or button. Gamepad zeroing is the gamepad handler's own (wired
+     * by S5-T7 through `GamepadChrome.setCaptured`).
+     */
+    fun releaseHeldInput(mouseButtons: Int) {
+        heldKeys.releaseAll { vk ->
+            input.sendKeyboardInput((KEY_PREFIX or vk).toShort(), KeyboardPacket.KEY_UP, 0, 0)
+        }
+        for ((androidButtons, button) in MOUSE_BUTTONS) {
+            if (mouseButtons and androidButtons != 0) input.sendMouseButtonUp(button)
+        }
+        touchContexts.forEach { it?.cancelTouch() }
+    }
+
+    override fun sendText(text: String) = input.sendUtf8Text(text)
+
+    /** Wired by S5-T7. */
+    override fun openSystemKeyboard() = Unit
+
+    /** Wired by S5-T7. */
+    override fun requestKeyframe() = Unit
+
+    /** Wired by S5-T7. */
+    override fun setTouchMode(mode: TouchMode) = Unit
+
+    /** Wired by S5-T7. */
+    override fun setGamepadMouse(enabled: Boolean) = Unit
+
+    /** Wired by S5-T7. */
+    override fun setOverlay(mode: OverlayMode) = Unit
+
+    override fun menuHintShown() {
+        preferences(activity).edit { putBoolean(KEY_MENU_HINT_SHOWN, true) }
+    }
+
+    override fun disconnect() = activity.finish()
+
+    override fun quitApp() {
+        if (quitting) return
+        quitting = true
+        val id = hostId
+        scope.launch {
+            val result =
+                if (id == null) QuitResult.Failed(null) else entryPoint().appRepository().quit(id)
+            when (result) {
+                QuitResult.Quit -> activity.finish()
+                is QuitResult.Failed -> {
+                    // The stream goes on, so the user can try again.
+                    quitting = false
+                    toast(
+                        result.message
+                            ?: activity.getString(LibraryR.string.apps_message_quit_failed)
+                    )
+                }
+            }
+        }
+    }
+
+    override fun leave() = activity.finish()
+
+    /**
+     * Opens the Library on the launch of this app and finishes while the stream is still in front,
+     * so Android does not take it for a start from the background. The Library starts the app
+     * again, through its own apps and conflict flow.
+     */
+    override fun retry() {
+        if (retried) return
+        retried = true
+        val id = hostId
+        val appId =
+            activity.intent.getIntExtra(Game.EXTRA_APP_ID, StreamConfiguration.INVALID_APP_ID)
+        openLibrary(
+            when {
+                id == null -> LibraryLaunchRequest.Hosts
+                appId == StreamConfiguration.INVALID_APP_ID -> LibraryLaunchRequest.Apps(id)
+                else -> LibraryLaunchRequest.Launch(id, appId)
+            }
+        )
+    }
+
+    override fun wakeHost() {
+        val id = hostId
+        scope.launch {
+            val result = id?.let { entryPoint().hostRepository().wake(it) } ?: WakeResult.FAILED
+            toast(
+                activity.getString(
+                    when (result) {
+                        WakeResult.SENT -> LibraryR.string.hosts_message_wake_sent
+                        WakeResult.ALREADY_ONLINE -> LibraryR.string.hosts_message_already_online
+                        WakeResult.NO_MAC_ADDRESS -> LibraryR.string.hosts_message_no_mac
+                        WakeResult.FAILED -> LibraryR.string.hosts_message_wake_failed
+                    }
+                )
+            )
+        }
+    }
+
+    override fun pairAgain() {
+        val id = hostId ?: return
+        openLibrary(LibraryLaunchRequest.Pair(id))
+    }
+
+    private fun openLibrary(request: LibraryLaunchRequest) {
+        activity.startActivity(
+            Intent(activity, LibraryActivity::class.java).putExtras(request.toExtras())
+        )
+        activity.finish()
+    }
+
+    private fun toast(text: String) =
+        Toast.makeText(activity.applicationContext, text, Toast.LENGTH_LONG).show()
+
+    /**
+     * Opens the settings. Game stops in `onStop` and ends the stream there, so the settings replace
+     * the stream; the activity finishes itself.
+     */
+    override fun openDiagnostics() =
+        activity.startActivity(Intent(activity, BorealisSettingsActivity::class.java))
+
+    /**
+     * The choice itself is audited and handed to the connection by the session. Cancelling leaves
+     * the session at the question, so the activity ends here.
+     */
+    override fun answerConflict(choice: ConflictChoice) {
+        if (choice == ConflictChoice.CANCEL) activity.finish()
+    }
+
+    companion object {
+        private const val KEY_PREFIX = 0x8000
+        private const val PREFERENCES = "BorealisStream"
+        private const val KEY_MENU_HINT_SHOWN = "menu_hint_shown"
+
+        // Outlives the activity: a quit that is under way must finish after the stream screen is
+        // gone.
+        private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+        private val MOUSE_BUTTONS =
+            listOf(
+                MotionEvent.BUTTON_PRIMARY to MouseButtonPacket.BUTTON_LEFT,
+                (MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY) to
+                    MouseButtonPacket.BUTTON_RIGHT,
+                (MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY) to
+                    MouseButtonPacket.BUTTON_MIDDLE,
+                MotionEvent.BUTTON_BACK to MouseButtonPacket.BUTTON_X1,
+                MotionEvent.BUTTON_FORWARD to MouseButtonPacket.BUTTON_X2,
+            )
+
+        private fun preferences(context: Context) =
+            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+
+        /** True until the user has seen the menu hint once. */
+        @JvmStatic
+        fun menuHintPending(context: Context): Boolean =
+            !preferences(context).getBoolean(KEY_MENU_HINT_SHOWN, false)
+    }
+}

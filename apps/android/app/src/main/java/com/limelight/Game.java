@@ -31,15 +31,22 @@ import com.limelight.preferences.GlPreferences;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.GameGestures;
 import com.limelight.ui.StreamView;
-import com.limelight.utils.Dialog;
 import com.limelight.utils.ServerHelper;
 import com.limelight.utils.ShortcutHelper;
-import com.limelight.utils.SpinnerDialog;
 import com.limelight.utils.UiHelper;
+
+import io.github.magalz.borealis.stream.ChromeMode;
+import io.github.magalz.borealis.stream.GameStreamActions;
+import io.github.magalz.borealis.stream.StartStage;
+import io.github.magalz.borealis.stream.StreamSession;
+import io.github.magalz.borealis.stream.StreamSessionFactory;
+import io.github.magalz.borealis.stream.host.HeldKeys;
+import io.github.magalz.borealis.stream.host.InputRoute;
+import io.github.magalz.borealis.stream.host.StreamChromeHost;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
-import android.app.Activity;
+import androidx.activity.ComponentActivity;
 import android.app.PictureInPictureParams;
 import android.app.Service;
 import android.content.ComponentName;
@@ -88,7 +95,7 @@ import java.security.cert.X509Certificate;
 import java.util.Locale;
 
 
-public class Game extends Activity implements SurfaceHolder.Callback,
+public class Game extends ComponentActivity implements SurfaceHolder.Callback,
         OnGenericMotionListener, OnTouchListener, NvConnectionListener, EvdevListener,
         OnSystemUiVisibilityChangeListener, GameGestures, StreamView.InputCallbacks,
         PerfOverlayListener, UsbDriverService.UsbDriverStateListener, View.OnKeyListener {
@@ -118,7 +125,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private SharedPreferences tombstonePrefs;
 
     private NvConnection conn;
-    private SpinnerDialog spinner;
+    // BOREALIS: the stream chrome (stream) shows the start, the conflict and the failures
+    private StreamSession streamSession;
+    private GameStreamActions streamActions;
+    private StreamChromeHost chromeHost;
+    private final HeldKeys heldKeys = new HeldKeys();
+    private final InputRoute chromeInput = new InputRoute(this::currentChromeMode);
     private boolean displayedFailureDialog = false;
     private boolean connecting = false;
     private boolean connected = false;
@@ -134,6 +146,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private InputCaptureProvider inputCaptureProvider;
     private int modifierFlags = 0;
     private boolean grabbedInput = true;
+    private boolean grabbedBeforeCapture = true; // BOREALIS: whether the input was grabbed when the chrome took it
     private boolean cursorVisible = false;
     private boolean waitingForAllModifiersUp = false;
     private int specialKeyCode = KeyEvent.KEYCODE_UNKNOWN;
@@ -218,10 +231,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // Inflate the content
         setContentView(R.layout.activity_game);
-
-        // Start the spinner
-        spinner = SpinnerDialog.displayDialog(this, getResources().getString(R.string.conn_establishing_title),
-                getResources().getString(R.string.conn_establishing_msg), true);
 
         // Read the stream preferences
         prefConfig = PreferenceConfiguration.readPreferences(this);
@@ -401,7 +410,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 glPrefs.glRenderer,
                 this);
         // BOREALIS: first rendered frame ends the preparing message and the watchdog
-        decoderRenderer.firstFrameSignal.setListener(startupGuard::onFirstFrame);
+        decoderRenderer.firstFrameSignal.setListener(() -> {
+            startupGuard.onFirstFrame();
+            streamSession.onFirstFrame();
+        });
 
         // Don't stream HDR if the decoder can't support it
         if (willStreamHdr && !decoderRenderer.isHevcMain10Hdr10Supported() && !decoderRenderer.isAv1Main10Supported()) {
@@ -530,15 +542,18 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     usbDriverServiceConnection, Service.BIND_AUTO_CREATE);
         }
 
-        if (!decoderRenderer.isAvcSupported()) {
-            if (spinner != null) {
-                spinner.dismiss();
-                spinner = null;
-            }
+        // BOREALIS: the stream chrome over the stream view shows the start, the conflict and the failures (stream)
+        streamActions = new GameStreamActions(this, conn, touchContextMap, heldKeys);
+        streamSession = StreamSessionFactory.create(this, prefConfig, appName, pcName, streamActions);
+        chromeHost = new StreamChromeHost(this, streamSession, streamView, this::chromeCaptured, this::chromeReleased);
+        addContentView(chromeHost, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
+        if (!decoderRenderer.isAvcSupported()) {
             // If we can't find an AVC decoder, we can't proceed
-            Dialog.displayDialog(this, getResources().getString(R.string.conn_error_title),
-                    "This device or ROM doesn't support hardware accelerated H.264 playback.", true);
+            streamSession.onFailed(new io.github.magalz.borealis.host.failure.StreamFailure(
+                    io.github.magalz.borealis.host.failure.FailureKind.GENERIC,
+                    "No hardware accelerated H.264 decoder", null));
             return;
         }
 
@@ -1092,10 +1107,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     protected void onStop() {
         super.onStop();
         startupGuard.cancel(); // BOREALIS: first-frame watchdog
-        io.github.magalz.borealis.LaunchConflictDialog.dismiss(); // BOREALIS: a pending "app already running" question is a cancel (host.launch)
-
-        SpinnerDialog.closeDialogs(this);
-        Dialog.closeDialogs();
+        // BOREALIS: a pending "app already running" question is a cancel (host.launch)
+        if (streamSession != null) {
+            streamSession.answerConflict(io.github.magalz.borealis.host.launch.ConflictChoice.CANCEL);
+        }
 
         if (virtualController != null) {
             virtualController.hide();
@@ -1163,7 +1178,38 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         finish();
     }
 
+    // BOREALIS: who gets the input, from the stream session; the stream gets it until the session exists
+    private ChromeMode currentChromeMode() {
+        return streamSession != null ? streamSession.getChromeMode() : ChromeMode.IDLE;
+    }
+
+    // BOREALIS: the chrome takes the input: release what is held and drop the pointer capture
+    private void chromeCaptured() {
+        grabbedBeforeCapture = grabbedInput;
+        streamActions.releaseHeldInput(lastButtonState);
+        lastButtonState = 0;
+        // A modifier that comes up while the chrome has the keys is never seen here
+        modifierFlags = 0;
+        specialKeyCode = KeyEvent.KEYCODE_UNKNOWN;
+        waitingForAllModifiersUp = false;
+        setInputGrabState(false);
+        // The gamepad is zeroed by GamepadChrome.setCaptured(true) on the controller handler (wired by S5-T7)
+    }
+
+    // BOREALIS: the chrome gives the input back: capture the pointer again once the stream is up,
+    // unless the user had released it (Ctrl+Alt+Shift+Z) before the chrome took the input
+    private void chromeReleased() {
+        if (connected && grabbedBeforeCapture) {
+            setInputGrabState(true);
+        }
+    }
+
     private void setInputGrabState(boolean grab) {
+        // BOREALIS: no grab while the chrome is modal
+        if (grab && currentChromeMode() == ChromeMode.MODAL) {
+            return;
+        }
+
         // Grab/ungrab the mouse cursor
         if (grab) {
             inputCaptureProvider.enableCapture();
@@ -1337,11 +1383,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (chromeInput.actsAsBack(event)) return true; // BOREALIS: the hardware Escape key acts as Back while the chrome is modal
         return handleKeyDown(event) || super.onKeyDown(keyCode, event);
     }
 
     @Override
     public boolean handleKeyDown(KeyEvent event) {
+        if (chromeInput.toChrome(event)) return false; // BOREALIS: the chrome takes the keys while it is modal
         // Pass-through virtual navigation keys
         if ((event.getFlags() & KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) {
             return false;
@@ -1412,6 +1460,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
             conn.sendKeyboardInput(translated, KeyboardPacket.KEY_DOWN, getModifierState(event),
                     keyboardTranslator.hasNormalizedMapping(event.getKeyCode(), event.getDeviceId()) ? 0 : MoonBridge.SS_KBE_FLAG_NON_NORMALIZED);
+            heldKeys.down(translated & 0xFF); // BOREALIS: keys held down are released when the chrome takes the input
         }
 
         return true;
@@ -1419,11 +1468,16 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (chromeInput.actsAsBack(event)) { // BOREALIS: the hardware Escape key acts as Back while the chrome is modal
+            getOnBackPressedDispatcher().onBackPressed();
+            return true;
+        }
         return handleKeyUp(event) || super.onKeyUp(keyCode, event);
     }
 
     @Override
     public boolean handleKeyUp(KeyEvent event) {
+        if (chromeInput.toChrome(event)) return false; // BOREALIS: the chrome takes the keys while it is modal
         // Pass-through virtual navigation keys
         if ((event.getFlags() & KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) {
             return false;
@@ -1476,6 +1530,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
             conn.sendKeyboardInput(translated, KeyboardPacket.KEY_UP, getModifierState(event),
                     keyboardTranslator.hasNormalizedMapping(event.getKeyCode(), event.getDeviceId()) ? 0 : MoonBridge.SS_KBE_FLAG_NON_NORMALIZED);
+            heldKeys.up(translated & 0xFF); // BOREALIS: keys held down are released when the chrome takes the input
         }
 
         return true;
@@ -1487,6 +1542,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     private boolean handleKeyMultiple(KeyEvent event) {
+        if (chromeInput.toChrome(event)) return false; // BOREALIS: the chrome takes the keys while it is modal
         // We can receive keys from a software keyboard that don't correspond to any existing
         // KEYCODE value. Android will give those to us as an ACTION_MULTIPLE KeyEvent.
         //
@@ -1799,6 +1855,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     // Returns true if the event was consumed
     // NB: View is only present if called from a view callback
     private boolean handleMotionEvent(View view, MotionEvent event) {
+        if (chromeInput.toChrome(event)) return false; // BOREALIS: the chrome takes the input while it is modal
         // Pass through mouse/touch/joystick input if we're not grabbing
         if (!grabbedInput) {
             return false;
@@ -2227,14 +2284,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public void stageStarting(final String stage) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (spinner != null) {
-                    spinner.setMessage(getResources().getString(R.string.conn_starting) + " " + stage);
-                }
-            }
-        });
+        runOnUiThread(() -> streamSession.onStage(StartStage.PREPARING_DISPLAY)); // BOREALIS: the chrome shows the stage
     }
 
     @Override
@@ -2244,17 +2294,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     // BOREALIS: another app is running on the host: Join, Quit and relaunch or Cancel (host.launch)
     @Override
     public void launchConflict(int runningAppId, String runningAppName, int requestedAppId, String requestedAppName, io.github.magalz.borealis.host.launch.ConflictAnswer answer) {
-        runOnUiThread(() -> io.github.magalz.borealis.LaunchConflictDialog.show(this, runningAppId, runningAppName, requestedAppId, requestedAppName, answer));
+        String requested = requestedAppName != null ? requestedAppName : (appName != null ? appName : "");
+        runOnUiThread(() -> streamSession.onConflict(runningAppName, requested, runningAppId == requestedAppId, answer));
     }
 
-    // BOREALIS: retry progress of a LuminalShine 409/503 answer on the spinner (host.launch)
+    // BOREALIS: retry progress of a LuminalShine 409/503 answer on the chrome (host.launch)
     @Override
     public void launchRetrying(int category, int attempt, int maxAttempts, int delayMs) {
-        runOnUiThread(() -> {
-            if (spinner != null) {
-                spinner.setMessage(io.github.magalz.borealis.host.launch.LaunchProgressText.format(this, category, attempt, maxAttempts, delayMs));
-            }
-        });
+        runOnUiThread(() -> streamSession.onLaunchRetry(StreamSessionFactory.launchRetry(category, attempt, maxAttempts, delayMs)));
     }
 
     private void stopConnection() {
@@ -2291,11 +2338,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (spinner != null) {
-                    spinner.dismiss();
-                    spinner = null;
-                }
-
                 if (!displayedFailureDialog) {
                     displayedFailureDialog = true;
                     LimeLog.severe(stage + " failed: " + errorCode);
@@ -2317,7 +2359,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                         dialogText += "\n\n" + getResources().getString(R.string.nettest_text_blocked);
                     }
 
-                    Dialog.displayDialog(Game.this, getResources().getString(R.string.conn_error_title), dialogText, true);
+                    // BOREALIS: the chrome shows the failure; the text stays in the log until the classifier replaces it (S5-T7)
+                    LimeLog.severe(dialogText);
+                    streamSession.onFailed(StreamSessionFactory.failure(stage, errorCode,
+                            portFlags != 0 ? MoonBridge.stringifyPortFlags(portFlags, "\n") : null));
                 }
             }
         });
@@ -2400,8 +2445,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                                     MoonBridge.stringifyPortFlags(portFlags, "\n");
                         }
 
-                        Dialog.displayDialog(Game.this, getResources().getString(R.string.conn_terminated_title),
-                                message, true);
+                        // BOREALIS: the chrome shows the failure; the text stays in the log until the classifier replaces it (S5-T7)
+                        LimeLog.severe(message);
+                        streamSession.onFailed(StreamSessionFactory.failure(null, errorCode,
+                                portFlags != 0 ? MoonBridge.stringifyPortFlags(portFlags, "\n") : null));
                     }
                     else {
                         finish();
@@ -2448,14 +2495,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (spinner != null) {
-                    spinner.dismiss();
-                    spinner = null;
-                }
-
                 connected = true;
                 connecting = false;
                 updatePipAutoEnter();
+                streamSession.onConnectionStarted(StreamSessionFactory.sessionInfo(prefConfig.width, prefConfig.height, streamFrameRate, decoderRenderer.getActiveVideoFormat(), prefConfig.bitrate)); // BOREALIS: the chrome waits for the first frame
                 startupGuard.onConnectionStarted(); // BOREALIS: preparing message and first-frame watchdog
                 io.github.magalz.borealis.host.launch.SessionAudit.started(pcName, Game.this.getIntent().getStringExtra(EXTRA_HOST), decoderRenderer.getActiveVideoFormat(), prefConfig.width, prefConfig.height, streamFrameRate); // BOREALIS: audit trail
 

@@ -52,6 +52,18 @@ object SessionAudit {
         end(AuditOutcome.SUCCESS) { "reason=user duration_s=$it" }
     }
 
+    /** The user chose Disconnect in the menu: the stream ends and the app keeps running. */
+    @JvmStatic fun disconnected() = Unit
+
+    /** The user asked to quit the app on the host. A termination that follows is the quit. */
+    @JvmStatic fun quitRequested() = Unit
+
+    /** The quit did not happen and the stream goes on. */
+    @JvmStatic fun quitFailed() = Unit
+
+    /** The app on the host ended on the user's request, and with it the stream. */
+    @JvmStatic fun quit() = Unit
+
     /** The connection ended; [errorCode] 0 is the host ending it gracefully. */
     @JvmStatic
     fun terminated(errorCode: Int) {

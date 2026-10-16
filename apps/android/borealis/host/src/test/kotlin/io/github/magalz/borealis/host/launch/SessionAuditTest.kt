@@ -123,6 +123,100 @@ class SessionAuditTest {
     }
 
     @Test
+    fun `a disconnect records the duration and its own reason`() {
+        start()
+        nowMillis = 42_000L
+
+        SessionAudit.disconnected()
+
+        val end = audit.events.last()
+        assertThat(end.type).isEqualTo(AuditType.SESSION_END)
+        assertThat(end.outcome).isEqualTo(AuditOutcome.SUCCESS)
+        assertThat(end.detail).isEqualTo("reason=disconnect duration_s=42")
+    }
+
+    @Test
+    fun `a quit records the duration and its own reason`() {
+        start()
+        nowMillis = 7_000L
+
+        SessionAudit.quit()
+
+        val end = audit.events.last()
+        assertThat(end.type).isEqualTo(AuditType.SESSION_END)
+        assertThat(end.outcome).isEqualTo(AuditOutcome.SUCCESS)
+        assertThat(end.detail).isEqualTo("reason=quit duration_s=7")
+    }
+
+    @Test
+    fun `the reason of the first end stays when the stop of the activity follows`() {
+        start()
+
+        SessionAudit.disconnected()
+        SessionAudit.stopped()
+        start()
+        SessionAudit.quit()
+        SessionAudit.stopped()
+
+        val ends = audit.events.filter { it.type == AuditType.SESSION_END }
+        assertThat(ends.map { it.detail })
+            .containsExactly("reason=disconnect duration_s=0", "reason=quit duration_s=0")
+            .inOrder()
+    }
+
+    @Test
+    fun `the host ending the stream while a quit is under way is the quit`() {
+        start()
+        SessionAudit.quitRequested()
+
+        SessionAudit.terminated(0)
+
+        assertThat(audit.events.last().detail).isEqualTo("reason=quit duration_s=0")
+    }
+
+    @Test
+    fun `an error while a quit is under way is still an error`() {
+        start()
+        SessionAudit.quitRequested()
+
+        SessionAudit.terminated(-100)
+
+        assertThat(audit.events.last().outcome).isEqualTo(AuditOutcome.FAILURE)
+        assertThat(audit.events.last().detail).startsWith("reason=error")
+    }
+
+    @Test
+    fun `a quit that failed leaves the host ending the stream as host_ended`() {
+        start()
+        SessionAudit.quitRequested()
+        SessionAudit.quitFailed()
+
+        SessionAudit.terminated(0)
+
+        assertThat(audit.events.last().detail).isEqualTo("reason=host_ended duration_s=0")
+    }
+
+    @Test
+    fun `a quit request does not carry over to the next session`() {
+        start()
+        SessionAudit.quitRequested()
+        SessionAudit.stopped()
+        start()
+
+        SessionAudit.terminated(0)
+
+        assertThat(audit.events.last().detail).isEqualTo("reason=host_ended duration_s=0")
+    }
+
+    @Test
+    fun `an end without a start records nothing for a disconnect or a quit`() {
+        SessionAudit.disconnected()
+        SessionAudit.quit()
+
+        assertThat(audit.events).isEmpty()
+    }
+
+    @Test
     fun `a host without a name is labelled by its address`() {
         start(hostName = null)
 

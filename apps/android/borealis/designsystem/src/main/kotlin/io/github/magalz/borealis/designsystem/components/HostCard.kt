@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -36,17 +37,18 @@ class HostCardAction(val label: String, val onClick: () -> Unit)
 private val CONTENT_GAP = 12.dp
 private val LINE_GAP = 4.dp
 private val DOT_GAP = 6.dp
+private val TAG_GAP = 6.dp
 private val CHIP_PADDING_HORIZONTAL = 8.dp
 private val CHIP_PADDING_VERTICAL = 2.dp
 
 /**
  * A host: its [name], a status dot with [statusText], a secondary [detail] line (version and
- * address), the app it is running if any, and at most one inline [action]. A tap or OK runs
- * [onClick]; every way of asking for options (long press, hold OK, X, Menu) runs [onOptions], named
- * [optionsLabel] for a screen reader. The card and the action are two focus stops: the D-pad goes
- * from the card to the action (down on a TV, towards the end on a phone) and back. On a phone the
- * action sits at the end of the row; on a TV or handheld it sits under the text, where a card in a
- * grid has the room.
+ * address), the capability [tags] below it, the app it is running if any, and at most one inline
+ * [action]. A tap or OK runs [onClick]; every way of asking for options (long press, hold OK, X,
+ * Menu) runs [onOptions], named [optionsLabel] for a screen reader. The card and the action are two
+ * focus stops: the D-pad goes from the card to the action (down on a TV, towards the end on a
+ * phone) and back. On a phone the action sits at the end of the row; on a TV or handheld it sits
+ * under the text, where a card in a grid has the room.
  */
 @Composable
 fun HostCard(
@@ -105,12 +107,12 @@ fun HostCard(
                 horizontalArrangement = Arrangement.spacedBy(CONTENT_GAP),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                HostInfo(name, status, statusText, detail, runningApp, Modifier.weight(1f))
+                HostInfo(name, status, statusText, detail, tags, runningApp, Modifier.weight(1f))
                 action?.let { HostActionButton(it, actionModifier) }
             }
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(CONTENT_GAP)) {
-                HostInfo(name, status, statusText, detail, runningApp, Modifier)
+                HostInfo(name, status, statusText, detail, tags, runningApp, Modifier)
                 action?.let { HostActionButton(it, actionModifier) }
             }
         }
@@ -133,6 +135,7 @@ private fun HostInfo(
     status: DotStatus,
     statusText: String,
     detail: String?,
+    tags: List<String>,
     runningApp: String?,
     modifier: Modifier,
 ) {
@@ -152,6 +155,14 @@ private fun HostInfo(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
+        if (tags.isNotEmpty()) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(TAG_GAP),
+                verticalArrangement = Arrangement.spacedBy(TAG_GAP),
+            ) {
+                tags.forEach { Tag(it) }
+            }
         }
         Row(
             horizontalArrangement = Arrangement.spacedBy(DOT_GAP),

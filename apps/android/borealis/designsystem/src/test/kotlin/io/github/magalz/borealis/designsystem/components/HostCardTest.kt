@@ -73,7 +73,11 @@ class HostCardTest {
     fun `the tags sit below the detail line`() {
         composeRule.setContent { Specimen(tags = listOf("HDR")) }
 
-        val detail = composeRule.onNodeWithText("LuminalShine 26.09.1 · 192.168.1.20")
+        val detail =
+            composeRule.onNodeWithText(
+                "LuminalShine 26.09.1 · 192.168.1.20",
+                useUnmergedTree = true,
+            )
         val tag = composeRule.onNodeWithText("HDR", useUnmergedTree = true)
         assertThat(tag.getUnclippedBoundsInRoot().top)
             .isAtLeast(detail.getUnclippedBoundsInRoot().bottom)

@@ -18,6 +18,16 @@
     <string name="hosts_status_offline">Offline</string>
     <string name="hosts_status_checking">Checking…</string>
 
+    <string name="hosts_detail_found">found on this network</string>
+    <string name="hosts_detail_pair">%1$s · %2$s</string>
+
+    <string name="hosts_tag_hevc">HEVC</string>
+    <string name="hosts_tag_hevc_10_bit">HEVC 10-bit</string>
+    <string name="hosts_tag_av1">AV1</string>
+    <string name="hosts_tag_av1_10_bit">AV1 10-bit</string>
+    <string name="hosts_tag_hdr">HDR</string>
+    <string name="hosts_tag_yuv_444">4:4:4</string>
+
     <string name="hosts_action_open">Open</string>
     <string name="hosts_action_pair">Pair</string>
     <string name="hosts_action_wake">Wake</string>

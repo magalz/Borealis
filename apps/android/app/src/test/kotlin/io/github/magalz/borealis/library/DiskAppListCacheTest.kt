@@ -34,6 +34,16 @@ class DiskAppListCacheTest {
     }
 
     @Test
+    fun `an id that leaves the cache directory reads nothing`() {
+        CacheHelper.openCacheFileForOutput(context.cacheDir, "secret").use {
+            CacheHelper.writeStringToOutputStream(it, "secret")
+        }
+
+        assertThat(cache.read("../secret")).isNull()
+        assertThat(cache.read("..")).isNull()
+    }
+
+    @Test
     fun `a host without a cache file has no list`() {
         assertThat(cache.read("never-seen")).isNull()
     }

@@ -90,19 +90,24 @@ Architecture decisions are recorded as ADRs in
 3. Open a PR with status `Proposed`. The owner moves it to `Accepted`.
 4. Never rewrite an accepted ADR. Supersede it with a new one.
 
-## Upstream rules
+## Inherited code
 
-`apps/android/` is a git subtree of
-[moonlight-android](https://github.com/moonlight-stream/moonlight-android).
+`apps/android/` started as a subtree of
+[moonlight-android](https://github.com/moonlight-stream/moonlight-android) 12.2,
+and `core/third_party/moonlight-common-c/` is a vendored copy of
+moonlight-common-c. Since [ADR 0054](docs/adr/0054-declare-independence-from-moonlight.md)
+both are Borealis code.
 
-- Do not reformat, reorganise or "clean up" upstream files. Spotless,
-  detekt and the editor config exclude them on purpose.
-- Put Borealis code in `apps/android/borealis/` (or
-  `apps/android/build-logic/`). Touch upstream files only to add a hook.
-- Mark every Borealis change inside an upstream file with `// BOREALIS:` and
-  keep it as small as possible so that syncs merge cleanly.
-- Do not move the `moonlight-common-c` submodule from its upstream path.
-- Fixes that belong upstream should also be offered upstream.
+- Do not reformat, reorganise or "clean up" inherited or vendored files.
+  Spotless, detekt and the editor config exclude them on purpose, so diffs
+  stay reviewable.
+- Put new Borealis code in `apps/android/borealis/` (or
+  `apps/android/build-logic/`). Never add Java files: keep edits to inherited
+  Java to wiring and write new logic in Kotlin.
+- Record every change to the vendored C sources in
+  [core/third_party/README.md](core/third_party/README.md).
+- Upstream fixes arrive by cherry-pick. Fixes that belong upstream should also
+  be offered upstream.
 
 See [docs/policies/upstream-sync.md](docs/policies/upstream-sync.md) and
 [docs/development/upstream-sync.md](docs/development/upstream-sync.md).

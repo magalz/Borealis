@@ -29,10 +29,8 @@ R-001 and the subtree sync rules are historical since ADR 0054.
 
 Upstream is GPL-3.0. [NOTICE](../../NOTICE) keeps the attribution for
 Moonlight, moonlight-common-c and the other reused components. It also carries
-the app-store exception note for moonlight-common-c.
-TODO(verify): NOTICE does not contain that exception note yet; add it with the
-moonlight-common-c vendoring. A harvest that changes a component's source or
-licence updates NOTICE in the same PR.
+the app-store exception note for moonlight-common-c. A harvest that changes a
+component's source or licence updates NOTICE in the same PR.
 
 ## Checks for a harvest PR
 

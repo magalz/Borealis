@@ -96,7 +96,7 @@ published to a store before it is published on GitHub Releases.
 ## Compatibility
 
 Each release notes the compatible LuminalShine version, the Moonlight version it
-is based on, the moonlight-common-c fork tag and the known host issues (see
+is based on, the moonlight-common-c base and the known host issues (see
 [upstream-sync.md](upstream-sync.md)). The text lives in
 `.github/release-compatibility.md`, which the release workflow appends to the
 generated notes.

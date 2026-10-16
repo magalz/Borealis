@@ -110,9 +110,6 @@ were and were not harvested.
    [device-validation](device-validation.md)).
 7. Update [NOTICE](../../NOTICE) and the native SBOM entry for moonlight-common-c
    if its version or licence changed.
-   TODO(verify): the SBOM entry still points at the submodule commit after
-   vendoring; confirm the entry in `apps/android/sbom/native-components.cdx.json`
-   once vendoring lands.
 
 ## Compatibility table
 

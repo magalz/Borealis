@@ -12,7 +12,7 @@ The owner performs the manual steps. AI agents never tag, approve or merge.
    version; there is no version-bump commit.
 3. Update the compatibility note, [`.github/release-compatibility.md`](../../.github/release-compatibility.md):
    the LuminalShine version tested, the Moonlight version in the tree, the
-   moonlight-common-c fork tag (`git submodule status`) and the known host
+   moonlight-common-c base and patches (`core/third_party/README.md`) and the known host
    issues. The release workflow appends this file to the release notes as it
    is, so keep it written for readers of the release page (absolute links).
 4. Update `PRIVACY.md`, `NOTICE` and the docs if anything user-visible or
@@ -112,7 +112,7 @@ replaces `publish` with a job that signs with a throwaway key.
 
 **`build`** (no secrets, read-only token):
 
-1. Checks out the tagged commit with submodules and full history, validates
+1. Checks out the tagged commit with full history, validates
    the tag and that the commit is on `main`.
 2. Installs the Android SDK packages (platform, build-tools, NDK, CMake) and
    runs `./gradlew assembleNonRootRelease :app:cyclonedxDirectBom` in
@@ -160,8 +160,8 @@ replaces `publish` with a job that signs with a throwaway key.
    components).
 
 The release notes are the git-cliff output followed by the compatibility note:
-the tested LuminalShine version, the Moonlight base, the moonlight-common-c fork
-tag and the known host issues.
+the tested LuminalShine version, the Moonlight base, the moonlight-common-c base
+and the known host issues.
 
 Do not approve if the run, the commit or the artifacts look wrong.
 

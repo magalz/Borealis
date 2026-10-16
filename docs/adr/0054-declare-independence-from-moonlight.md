@@ -137,4 +137,5 @@ The procedure is in [upstream cherry-picks](../development/upstream-sync.md). At
 * Relates to [0002](0002-base-the-app-on-vanilla-moonlight-12-2.md), [0004](0004-kotlin-for-new-android-code.md) and [0009](0009-organized-monorepo-layout.md).
 * Rule R-001 is in [rules](../policies/rules/R-001-no-upstream-reformat.md); R-002 stays in force.
 * Procedure: [upstream cherry-picks](../development/upstream-sync.md). Policy: [upstream sync](../policies/upstream-sync.md).
-* Vendored code and its README: [core/third_party/README.md](../../core/third_party/README.md) (added by the parallel vendoring task, S5-T1; TODO(verify) that it exists when this ADR is merged).
+* Vendored code and its README: [core/third_party/README.md](../../core/third_party/README.md).
+* State of upstream on 2026-10-15: moonlight-android `master` was still 12.2 (`b48494cb`), the Borealis base. moonlight-common-c `master` had 8 commits after the fork base `874ac95`; the 7 up to `5ec8397` were harvested with the vendoring, and the RTSP parser rework `aeba988` (2026-10-14) was deferred as too new.

@@ -23,6 +23,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.width
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -88,7 +89,7 @@ class HostCardTest {
 
     @Test
     fun `a long detail line wraps instead of cutting the address`() {
-        composeRule.setContent { Specimen(FormFactor.Tv, modifier = Modifier.width(220.dp)) }
+        composeRule.setContent { Specimen(FormFactor.Tv, cardWidth = 220.dp) }
 
         val layouts = mutableListOf<TextLayoutResult>()
         composeRule
@@ -173,7 +174,7 @@ class HostCardTest {
         runningApp: String? = null,
         action: HostCardAction? = null,
         tags: List<String> = emptyList(),
-        modifier: Modifier = Modifier,
+        cardWidth: Dp? = null,
     ) {
         BorealisTheme(formFactor) {
             Box(Modifier.testTag(FRAME).background(BorealisTokens.Color.Page).padding(24.dp)) {
@@ -187,7 +188,9 @@ class HostCardTest {
                     action = action,
                     onClick = { opened++ },
                     onOptions = { optionsRequested++ },
-                    modifier = modifier.testTag(CARD),
+                    modifier =
+                        Modifier.testTag(CARD)
+                            .then(cardWidth?.let { Modifier.width(it) } ?: Modifier),
                 )
             }
         }

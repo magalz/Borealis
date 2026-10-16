@@ -14,6 +14,7 @@ import io.github.magalz.borealis.stream.testing.RecordingActions
 import io.github.magalz.borealis.stream.testing.aFailure
 import io.github.magalz.borealis.stream.testing.aSession
 import io.github.magalz.borealis.stream.testing.aSessionInfo
+import java.time.Duration
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,12 +33,12 @@ class StreamBackTest {
         activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().get()
         val host = StreamChromeHost(activity, session, View(activity), {}, {})
         activity.addContentView(host, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
-        shadowOf(Looper.getMainLooper()).idle()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200))
     }
 
     private fun back() {
         activity.onBackPressedDispatcher.onBackPressed()
-        shadowOf(Looper.getMainLooper()).idle()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200))
     }
 
     private fun stream() {

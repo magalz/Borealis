@@ -14,6 +14,7 @@ import io.github.magalz.borealis.stream.ChromeMode
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.testing.aSession
 import io.github.magalz.borealis.stream.testing.aSessionInfo
+import java.time.Duration
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,8 +22,16 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 
-/** Stands in for the Compose content of the chrome: it takes every touch it is given. */
+/**
+ * Stands in for the Compose content of the chrome: it takes every touch it is given and, like a
+ * button, the focus.
+ */
 private class TouchProbe(activity: ComponentActivity) : View(activity) {
+    init {
+        isFocusable = true
+        isFocusableInTouchMode = true
+    }
+
     val touches = mutableListOf<Int>()
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -58,7 +67,7 @@ class StreamChromeHostTest {
         idle()
     }
 
-    private fun idle() = shadowOf(Looper.getMainLooper()).idle()
+    private fun idle() = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200))
 
     private fun stream() {
         session.onConnectionStarted(aSessionInfo)

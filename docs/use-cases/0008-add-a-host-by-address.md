@@ -39,6 +39,16 @@ can be paired ([UC-001](0001-pair-with-a-host.md)).
 1. The user chooses Cancel. The Hosts screen returns and nothing is added.
 2. The use case ends.
 
+### A2: The user leaves the address field with the D-pad (TV, branches from step 3)
+
+1. The field keeps the D-pad for its caret. Up and Down move the focus to the
+   item above or below. Down goes to the Add host button.
+2. Left moves the caret while the field has text. When the caret is at the start,
+   or the field is empty, Left goes to the rail. The rail is entered on its
+   selected item, which is Add host on this screen. The typed text is kept.
+3. The user goes back to the field, or continues on the rail. The flow rejoins
+   the main flow at step 3 when the user returns to the field.
+
 ### E1: The address fails the 12.2 checks (branches from step 4)
 
 1. The rules are the ones Moonlight 12.2 applies. An empty field shows "You
@@ -62,6 +72,10 @@ can be paired ([UC-001](0001-pair-with-a-host.md)).
 - On success: the host is listed on the Hosts screen with its address. It is
   not paired yet, so its action is Pair.
 - On failure or cancel: the list is unchanged. No secret is stored.
+- Forget removes the host from this device, whatever the host answers. It first
+  sends a best-effort `/unpair`. LuminalShine has no such route and answers 404,
+  so the PC may keep trusting this device. The Forget text says so, and asks the
+  user to remove the device in the LuminalShine Web UI (Clients page).
 
 ## Acceptance tests
 
@@ -72,6 +86,8 @@ can be paired ([UC-001](0001-pair-with-a-host.md)).
 | UC-008-T3 | Given an address without a port, when the host is added, then the default port 47989 is used. | unit | exists (Sprint 4, unit) |
 | UC-008-T4 | Given an address with a port, when the host is added, then that port is used. | unit | exists (Sprint 4, unit) |
 | UC-008-T5 | Given the user chooses Cancel, when the screen closes, then the Hosts list is unchanged. | UI | exists (Sprint 4, UI) |
+| UC-008-T6 | Given the address field has text on a TV, when the user presses Down, then the focus moves to Add host; when the caret is at the start, Left goes to the rail and the text is kept. | UI | exists (Sprint 5, UI; device round) |
+| UC-008-T7 | Given a host is added by address, when the user chooses Forget, then the text says that the PC may keep trusting this device until it is removed in the LuminalShine Web UI. | UI | exists (Sprint 5, UI; device round) |
 
 Planned tests cover the Phase 2 screens; tests marked as existing cover logic
 that the Phase 2 screens reuse.

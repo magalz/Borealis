@@ -483,10 +483,12 @@ session including a pending launch, terminates the running app and tears down
 the virtual display unless a deferred launch must be preserved
 (`src/nvhttp.cpp:3508-3586`, `src/rtsp.cpp:1132-1136`). If a successor
 `/launch` wins the lifecycle race the cancel cleanup is skipped
-(`src/nvhttp.cpp:3540-3550`). Moonlight Android answers a `currentgame` for a
+(`src/nvhttp.cpp:3540-3550`). Moonlight 12.2 answered a `currentgame` for a
 different app by cancelling then launching
 (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:310-314`,
-`:341-366`).
+`:341-366`). Borealis does not: it asks the user first, and never quits another
+device's app without the user's explicit choice, even when the Library has not
+seen that app (`NvConnection.resolveConflict`, section 7.5).
 
 `/cancel` ends the app of any client, not only the caller's: every Moonlight-family
 client sends the same `uniqueid`, and the host does not check an owner. `/resume`

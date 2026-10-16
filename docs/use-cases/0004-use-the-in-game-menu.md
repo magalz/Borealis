@@ -22,14 +22,16 @@ accident.
 ## Main flow
 
 1. The user opens the menu. On a TV, the user presses Back. On a gamepad, the
-   user holds Select + Start. On a phone, the user pulls the top handle down
-   or presses Back.
+   user holds Select + Start for one second. On a phone, the user pulls the top
+   handle down or presses Back.
 2. The system opens the menu over the stream. On a TV, focus starts on Back to
    stream.
 3. The user changes an item. The items are listed in
-   [the Phase 2 proposal](../ux/phase-2-proposal.md#in-game-menu-items).
-4. The user closes the menu with Back to stream, Back, B, or a tap outside the
-   panel. The stream continues.
+   [the Phase 2 proposal](../ux/phase-2-proposal.md#in-game-menu-items). Start
+   and Select never activate a row. OK or A on an option row (Touch, Gamepad
+   mouse, Overlay) changes its option; the row does not move the focus.
+4. The user closes the menu with Back to stream, Back, B, a tap outside the
+   panel, or the same Select + Start hold. The stream continues.
 
 ## Alternative flows
 
@@ -50,8 +52,9 @@ accident.
 1. The user chooses Quit and the app name. The menu shows the consequence: the
    app ends on the PC. The menu asks for confirmation first; Cancel has the
    focus, and Cancel returns to the menu.
-2. The user confirms. The stream ends. The system writes SESSION_END with the
-   reason.
+2. The user confirms. The screen shows "Quitting `<app>`…" until the host answers
+   the quit. The host may end the stream before it answers. The stream ends, and
+   the system writes SESSION_END with the reason.
 3. The system returns to the Apps screen. The app is no longer running on the
    host.
 
@@ -71,19 +74,25 @@ row is disabled; it needs the Phase 3 host API and cannot be chosen.
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
 | UC-004-T1 | Given a TV stream, when the user presses Back, then the menu opens and the stream does not end. | UI | exists (Sprint 5, unit; device round) |
-| UC-004-T2 | Given a gamepad stream, when Select + Start is held, then the menu opens; a short press does not open it. | unit | exists (Sprint 5, unit) |
+| UC-004-T2 | Given a gamepad stream, when Select + Start is held for one second, then the menu opens; a short press does not open it and reaches the PC as a short press of Back and Start. | unit | exists (Sprint 5, unit; device round) |
 | UC-004-T3 | Given a phone stream, when the user pulls the top handle down, then the menu opens. | UI | exists (Sprint 5, UI; device round) |
 | UC-004-T4 | Given the menu is open, when the user chooses Disconnect, then the stream ends, the app keeps running on the host and SESSION_END is written. | emulator | exists (Sprint 5, device round) |
 | UC-004-T5 | Given the menu is open, when the user chooses Quit, then the app ends on the host and SESSION_END is written. | emulator | exists (Sprint 5, device round) |
 | UC-004-T6 | Given the Overlay row is set to Off, Compact or Detailed, when the menu closes, then the overlay shows that choice. | UI | partly exists (Sprint 5, UI; device round) |
 | UC-004-T7 | Given the menu is open, when the user reads the Display for next launch row, then the row is disabled and cannot be chosen. | UI | exists (Sprint 5, UI) |
+| UC-004-T8 | Given the menu is open, when the user presses Start or Select, then no row is activated. | unit | exists (Sprint 5, unit; device round) |
+| UC-004-T9 | Given an option row has focus, when the user presses OK or A, then its option changes and the focus stays on the row. | UI | exists (Sprint 5, UI; device round) |
+| UC-004-T10 | Given a USB-driver pad is in use, when the menu is open, then its D-pad, left stick, A and B act as they do on a system pad, and Start holds toggle the gamepad mouse. | unit | exists (Sprint 5, unit; device round) |
+| UC-004-T11 | Given Select and Start are held, when the chord is pending, then neither reaches the PC, and a release before one second sends the PC a short press of Back and Start (a Guide tap on a pad with Select and no Guide button). | unit | exists (Sprint 5, unit; device round) |
+| UC-004-T12 | Given a system window has just closed and the stream window has its focus back, when OK, Enter, DPAD_CENTER or A is pressed within one second, then the key is ignored. | unit | exists (Sprint 5, unit; device round) |
 
 Sprint 5 built the in-game menu and its logic. A test marked "exists (Sprint 5,
 unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose test
 that runs on Robolectric. "device round" marks a check that the Sprint 5 device
 round of 2026-10-16 ran on a TV or a phone (see
 [device validation](../development/device-validation.md), section 10). The
-gamepad chord (UC-004-T2) was not run on a device.
+gamepad chord was run on a TV with both 8BitDo pads, and on a USB-driver pad
+(UC-004-T2, T8 to T11).
 
 Partly covered:
 
@@ -115,9 +124,12 @@ Until then the row is disabled.
   `:borealis:stream` (Sprint 5). Moonlight 12.2 left the stream at once on
   Back; Borealis opens the menu instead. Disconnect and Quit end the session
   with SESSION_END `reason=disconnect` and `reason=quit`. A stop by leaving the
-  stream screen is `reason=user`, and a session the host ends is recorded with
-  `reason=host_ended`. Quit records `reason=quit` only when the host ends the
-  stream after the quit request; a failed quit keeps the stream on.
+  stream screen is `reason=user`, and a session the host ends with a graceful
+  end is recorded with `reason=host_ended`. While a quit is pending, any end of
+  the stream is recorded as `reason=quit`, and the screen shows "Quitting". If
+  the quit fails after the stream has ended, the failure screen shows. If the
+  stream still runs, it stays on.
 - Existing tests: `InGameMenuTest`, `MenuHandleTest`, `MenuHintTest`,
   `StreamBackTest`, `MenuChordTest`, `MenuChordDetectorTest`,
+  `UsbMenuChordTest`, `ChromeGamepadKeysTest`, `StreamChromeHostTest`,
   `GameStreamActionsTest`, `SessionAuditTest`.

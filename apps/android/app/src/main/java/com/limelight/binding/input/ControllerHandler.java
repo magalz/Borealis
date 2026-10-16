@@ -142,7 +142,8 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     // While the chrome owns the gamepad nothing from any pad, or the on-screen controller, may reach the PC
     private volatile boolean captured;
     private boolean mouseEmulationEnabled;
-    private int controllersWithInput;
+    private final Object inputLock = new Object();
+    private int controllersWithInput; // guarded by inputLock
 
     private final PreferenceConfiguration prefConfig;
     private short currentControllers, initialControllers;
@@ -306,6 +307,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             deviceContext.destroy();
         }
 
+        // The default context is not in either list but schedules work too
+        defaultContext.destroy();
+
         deviceVibrator.cancel();
     }
 
@@ -434,6 +438,11 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         if (context.reservedControllerNumber) {
             LimeLog.info("Controller number "+context.controllerNumber+" is now available");
             currentControllers &= ~(1 << context.controllerNumber);
+
+            // The PC drops the controller with the zeroed packet below, so it has no input to release
+            synchronized (inputLock) {
+                controllersWithInput &= ~(1 << context.controllerNumber);
+            }
         }
 
         // If this device sent data as a gamepad, zero the values before removing.
@@ -1301,10 +1310,6 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         chromeKeySink = sink;
     }
 
-    public boolean isMouseEmulationEnabled() {
-        return false;
-    }
-
     @Override
     public void setCaptured(boolean captured) {
         if (captured == this.captured) {
@@ -1317,34 +1322,29 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         }
     }
 
-    // Input can come from the UI thread and from the USB driver threads
-    private synchronized void markControllerHasInput(short controllerNumber) {
-        controllersWithInput |= 1 << controllerNumber;
-    }
-
-    // Leaves every pad, and the PC, with no button held and no stick moved
+    // Leaves every pad, and the PC, with no button held and no stick moved. Input can come from
+    // the UI thread and from the USB driver threads, so this and the packet send share a lock: a
+    // packet cannot land after the neutral ones.
     private void releaseAllInput() {
-        // The default context is the on-screen controller and devices Android reports without an id
-        releaseContextInput(defaultContext);
-        for (int i = 0; i < inputDeviceContexts.size(); i++) {
-            releaseContextInput(inputDeviceContexts.valueAt(i));
-        }
-        for (int i = 0; i < usbDeviceContexts.size(); i++) {
-            releaseContextInput(usbDeviceContexts.valueAt(i));
-        }
+        synchronized (inputLock) {
+            // The default context is the on-screen controller and devices Android reports without an id
+            releaseContextInput(defaultContext);
+            for (int i = 0; i < inputDeviceContexts.size(); i++) {
+                releaseContextInput(inputDeviceContexts.valueAt(i));
+            }
+            for (int i = 0; i < usbDeviceContexts.size(); i++) {
+                releaseContextInput(usbDeviceContexts.valueAt(i));
+            }
 
-        // One neutral packet per controller the PC has heard of
-        int sent;
-        synchronized (this) {
-            sent = controllersWithInput;
-        }
-        for (short number = 0; number < MAX_GAMEPADS; number++) {
-            if ((sent & (1 << number)) != 0) {
-                conn.sendControllerInput(number, getActiveControllerMask(),
-                        (short) 0,
-                        (byte) 0, (byte) 0,
-                        (short) 0, (short) 0,
-                        (short) 0, (short) 0);
+            // One neutral packet per controller the PC has heard of
+            for (short number = 0; number < MAX_GAMEPADS; number++) {
+                if ((controllersWithInput & (1 << number)) != 0) {
+                    conn.sendControllerInput(number, getActiveControllerMask(),
+                            (short) 0,
+                            (byte) 0, (byte) 0,
+                            (short) 0, (short) 0,
+                            (short) 0, (short) 0);
+                }
             }
         }
     }
@@ -1376,6 +1376,17 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             InputDeviceContext deviceContext = (InputDeviceContext) context;
             deviceContext.emulatingButtonFlags = 0;
             deviceContext.pendingExit = false;
+
+            // A gyro that is still reporting would keep the virtual pad moving
+            if (deviceContext.gyroListener != null) {
+                conn.sendControllerMotionEvent((byte) deviceContext.controllerNumber, MoonBridge.LI_MOTION_TYPE_GYRO, 0.f, 0.f, 0.f);
+            }
+
+            // A finger on the touchpad would stay down on the PC
+            if (deviceContext.touchpadXRange != null && deviceContext.touchpadYRange != null) {
+                conn.sendControllerTouchEvent((byte) deviceContext.controllerNumber, MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
+                        0, 0, 0, 0);
+            }
         }
     }
 
@@ -1383,15 +1394,35 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     public void setMouseEmulation(boolean enabled) {
         mouseEmulationEnabled = enabled;
 
+        // The pads, not the default context: that is the on-screen controller, which stays a gamepad.
         // One notice for the switch, however many pads it reaches
         boolean notify = true;
-        notify = applyMouseEmulation(defaultContext, enabled, notify);
         for (int i = 0; i < inputDeviceContexts.size(); i++) {
             notify = applyMouseEmulation(inputDeviceContexts.valueAt(i), enabled, notify);
         }
         for (int i = 0; i < usbDeviceContexts.size(); i++) {
             notify = applyMouseEmulation(usbDeviceContexts.valueAt(i), enabled, notify);
         }
+    }
+
+    // Whether a connected pad has mouse emulation on. The Start hold can change it on one pad, and
+    // before any pad has connected it is what the next pad will start with.
+    public boolean isMouseEmulationEnabled() {
+        if (inputDeviceContexts.size() == 0 && usbDeviceContexts.size() == 0) {
+            return mouseEmulationEnabled;
+        }
+
+        for (int i = 0; i < inputDeviceContexts.size(); i++) {
+            if (inputDeviceContexts.valueAt(i).mouseEmulationActive) {
+                return true;
+            }
+        }
+        for (int i = 0; i < usbDeviceContexts.size(); i++) {
+            if (usbDeviceContexts.valueAt(i).mouseEmulationActive) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Returns whether the next change should still show the notice
@@ -1425,12 +1456,17 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     }
 
     private void transmitControllerInput(GenericControllerContext originalContext) {
-        if (captured) {
-            return;
+        // Checked inside the lock: once the capture has its neutral packets out, nothing follows them
+        synchronized (inputLock) {
+            if (!captured) {
+                transmitControllerInputLocked(originalContext);
+            }
         }
+    }
 
+    private void transmitControllerInputLocked(GenericControllerContext originalContext) {
         assignControllerNumberIfNeeded(originalContext);
-        markControllerHasInput(originalContext.controllerNumber);
+        controllersWithInput |= 1 << originalContext.controllerNumber;
 
         // Take the context's controller number and fuse all inputs with the same number
         short controllerNumber = originalContext.controllerNumber;

@@ -173,6 +173,33 @@ class MenuRowTest {
         composeRule.onNodeWithText("Low").assertIsFocused()
     }
 
+    @Test
+    fun `Left moves between the trailing segments and from the first one back to the row`() {
+        composeRule.setContentInKeyboardMode {
+            Specimen {
+                MenuRow(
+                    "Bitrate",
+                    {},
+                    trailing = {
+                        SegmentedControl(
+                            options = listOf("Low", "High"),
+                            selected = "Low",
+                            label = { it },
+                            onSelect = {},
+                        )
+                    },
+                )
+            }
+        }
+        composeRule.onNodeWithText("High").requestFocus()
+
+        composeRule.onNodeWithText("High").performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithText("Low").assertIsFocused()
+
+        composeRule.onNodeWithText("Low").performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithText("Bitrate").assertIsFocused()
+    }
+
     private fun titleColor(title: String) =
         textLayout(composeRule.onNodeWithText(title, useUnmergedTree = true))
             .layoutInput

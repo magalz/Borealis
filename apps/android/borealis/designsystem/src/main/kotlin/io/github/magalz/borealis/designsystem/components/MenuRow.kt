@@ -1,7 +1,43 @@
 package io.github.magalz.borealis.designsystem.components
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
+import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
+import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 
 /** How a row of a menu looks: danger for what loses something. */
 enum class MenuRowStyle {
@@ -9,7 +45,24 @@ enum class MenuRowStyle {
     Danger,
 }
 
-/** One row of a menu. */
+private const val DISABLED_ALPHA = 0.38f
+private val PHONE_MIN_HEIGHT = 44.dp
+private val TV_MIN_HEIGHT = 48.dp
+private val PADDING_HORIZONTAL = 16.dp
+private val PADDING_VERTICAL = 4.dp
+private val TRAILING_GAP = 12.dp
+
+/**
+ * One row of a menu: a [title], optionally what it does to the user's session or work under it as
+ * [consequence], and a [trailing] control or chevron at the end. [MenuRowStyle.Danger] sets the
+ * title in the danger ink. A tap or OK runs [onClick].
+ *
+ * A disabled row is dimmed and does not react to OK, but it stays a focus stop: on a TV the user
+ * can still land on it and read the [note] that says why. The note stays at full strength.
+ *
+ * The outline of a focused row reaches 5dp outside it, so a list of rows needs 8dp of padding
+ * around it and 10dp between rows, as in the [ActionSheet].
+ */
 @Composable
 fun MenuRow(
     title: String,
@@ -21,5 +74,89 @@ fun MenuRow(
     trailing: @Composable (() -> Unit)? = null,
     note: String? = null,
 ) {
-    // Stub: the implementation follows its failing tests.
+    val colors = LocalBorealisColors.current
+    val shape = MaterialTheme.shapes.medium
+    val minHeight =
+        if (LocalFormFactor.current == FormFactor.Phone) PHONE_MIN_HEIGHT else TV_MIN_HEIGHT
+    val dim = if (enabled) 1f else DISABLED_ALPHA
+    val focusManager = LocalFocusManager.current
+    val rowFocus = remember { FocusRequester() }
+    val trailingFocus = remember { FocusRequester() }
+    Row(
+        modifier
+            .focusRequester(rowFocus)
+            .then(
+                // The control is inside the row, so the focus search would not reach it: point at
+                // it.
+                if (trailing == null) Modifier else Modifier.focusProperties { end = trailingFocus }
+            )
+            .liftedWhenFocused()
+            .borealisFocusIndication(shape)
+            .clip(shape)
+            .then(
+                if (enabled) {
+                    Modifier.clickable(
+                        interactionSource = null,
+                        indication = BorealisPressIndication,
+                        role = Role.Button,
+                        onClick = onClick,
+                    )
+                } else {
+                    // A disabled clickable is not focusable, and the row must stay a focus stop.
+                    Modifier.focusable().semantics(mergeDescendants = true) {
+                        role = Role.Button
+                        disabled()
+                    }
+                }
+            )
+            .fillMaxWidth()
+            .heightIn(min = minHeight)
+            .padding(horizontal = PADDING_HORIZONTAL, vertical = PADDING_VERTICAL),
+        horizontalArrangement = Arrangement.spacedBy(TRAILING_GAP),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                title,
+                modifier = Modifier.alpha(dim),
+                color = if (style == MenuRowStyle.Danger) colors.dangerInk else colors.ink,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            if (consequence != null) {
+                Text(
+                    consequence,
+                    modifier = Modifier.alpha(dim),
+                    color = colors.ink3,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            if (note != null) {
+                Text(note, color = colors.ink3, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        if (trailing != null) {
+            Box(
+                Modifier.alpha(dim)
+                    .focusRequester(trailingFocus)
+                    .focusProperties {
+                        // Inherited from the row: reset, or Right would loop back to the control.
+                        end = FocusRequester.Default
+                    }
+                    .onKeyEvent { event ->
+                        // The row is an ancestor of the control, so the search never finds it to
+                        // the
+                        // left: when nothing is left of the focused segment, go back to the row.
+                        val left = event.key == Key.DirectionLeft
+                        if (left && event.type == KeyEventType.KeyDown) {
+                            if (!focusManager.moveFocus(FocusDirection.Left))
+                                rowFocus.requestFocus()
+                        }
+                        left
+                    }
+                    .focusGroup()
+            ) {
+                trailing()
+            }
+        }
+    }
 }

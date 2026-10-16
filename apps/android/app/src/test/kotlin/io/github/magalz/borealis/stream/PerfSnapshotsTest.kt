@@ -91,6 +91,21 @@ class PerfSnapshotsTest {
     }
 
     @Test
+    fun `a window with frames but no decoder time has no decode time, not zero`() {
+        // Some low-latency decoders hand the frames back without the timestamp the measure needs.
+        val snapshot = PerfSnapshots.from(window(framesReceived = 118, decoderTimeMs = 0), rtt(1, 1))
+
+        assertThat(snapshot.decodeMs).isNull()
+    }
+
+    @Test
+    fun `a window whose decoder time rounds below a tenth is still a measure`() {
+        val snapshot = PerfSnapshots.from(window(framesReceived = 100, decoderTimeMs = 3), rtt(1, 1))
+
+        assertThat(snapshot.decodeMs).isWithin(0.001f).of(0.03f)
+    }
+
+    @Test
     fun `the bitrate is the bytes in megabits over the window duration`() {
         val snapshot = PerfSnapshots.from(window(bytes = 2_500_000, elapsedMs = 2_000), rtt(1, 1))
 
@@ -121,7 +136,7 @@ class PerfSnapshotsTest {
         assertThat(snapshot.receivedFps).isEqualTo(0f)
         assertThat(snapshot.renderedFps).isEqualTo(0f)
         assertThat(snapshot.lossPercent).isEqualTo(0f)
-        assertThat(snapshot.decodeMs).isEqualTo(0f)
+        assertThat(snapshot.decodeMs).isNull()
         assertThat(snapshot.hostLatency).isNull()
         assertThat(snapshot.bitrateMbps).isEqualTo(0f)
     }

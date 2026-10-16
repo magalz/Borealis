@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Spoken state of a step in a step list. -->
+    <string name="borealis_step_done">Done</string>
+    <string name="borealis_step_in_progress">In progress</string>
+    <string name="borealis_step_failed">Failed</string>
+    <!-- Spoken state of a modifier key of the keyboard that stays pressed for the next key. -->
+    <string name="borealis_key_locked">Locked</string>
+</resources>

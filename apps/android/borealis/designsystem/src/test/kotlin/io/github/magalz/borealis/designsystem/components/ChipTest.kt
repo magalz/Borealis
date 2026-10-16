@@ -2,7 +2,9 @@ package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.compositeOver
@@ -22,13 +24,16 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.width
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.assertPixel
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
@@ -134,13 +139,24 @@ class ChipTest {
     }
 
     @Test
-    fun `a chip is padded around its text`() {
-        composeRule.setContent { Specimen { Chip("Win+D") } }
+    fun `a chip is padded 9dp by 4dp around its text`() {
+        composeRule.setContent {
+            Specimen {
+                Column {
+                    Chip("Win+D", Modifier.testTag("chip"))
+                    Text(
+                        "Win+D",
+                        Modifier.testTag("plain"),
+                        style = TextStyle(fontFamily = BorealisFonts.Mono, fontSize = 12.sp),
+                    )
+                }
+            }
+        }
 
-        // 12sp monospace text with 4dp above and below it, and 9dp each side.
-        val bounds = composeRule.onNodeWithText("Win+D").getUnclippedBoundsInRoot()
-        assertThat(bounds.height).isGreaterThan(20.dp)
-        assertThat(bounds.width).isGreaterThan(40.dp)
+        val chip = composeRule.onNodeWithTag("chip").getUnclippedBoundsInRoot()
+        val plain = composeRule.onNodeWithTag("plain").getUnclippedBoundsInRoot()
+        assertThat(chip.width - plain.width).isEqualTo(18.dp)
+        assertThat(chip.height - plain.height).isEqualTo(8.dp)
     }
 
     private fun tintOverPage() =

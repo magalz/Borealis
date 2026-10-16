@@ -5,6 +5,7 @@ import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
+import io.github.magalz.borealis.nativecore.LaunchCategory
 import org.junit.Test
 
 class StreamSessionFactoryTest {
@@ -81,5 +82,12 @@ class StreamSessionFactoryTest {
     @Test
     fun `an empty port text is no port hint`() {
         assertThat(StreamSessionFactory.failure("Control", -1, "").portHint).isNull()
+    }
+
+    @Test
+    fun `a launch retry names the category the stack reported by ordinal`() {
+        assertThat(StreamSessionFactory.launchRetry(LaunchCategory.PENDING.ordinal, 1, 3, 2000))
+            .isEqualTo(LaunchRetry(LaunchCategory.PENDING, 1, 3, 2000))
+        assertThat(StreamSessionFactory.launchRetry(99, 2, 3, 500).category).isNull()
     }
 }

@@ -44,6 +44,7 @@ import io.github.magalz.borealis.stream.StreamIntents
 import io.github.magalz.borealis.stream.keys.KeyChord
 import io.github.magalz.borealis.stream.keys.KeyModifier
 import io.github.magalz.borealis.stream.keys.Shortcuts
+import io.github.magalz.borealis.stream.ui.common.onBackKey
 import io.github.magalz.borealis.stream.ui.common.onGamepadB
 import io.github.magalz.borealis.stream.ui.keyboard.CharKey
 import io.github.magalz.borealis.stream.ui.keyboard.FnKey
@@ -142,9 +143,12 @@ fun StreamKeyboard(docked: Boolean, intents: StreamIntents) {
     }
 }
 
-/** B closes by the shared gamepad B rule and Y is Backspace; the events of both are consumed. */
+/**
+ * B closes by the shared gamepad B rule, Back closes at once (Compose would take it for a focus
+ * exit from a key) and Y is Backspace; the events of all three are consumed.
+ */
 private fun Modifier.gamepadKeys(onClose: () -> Unit, onBackspace: () -> Unit): Modifier =
-    onGamepadB(onClose).onKeyEvent { event ->
+    onGamepadB(onClose).onBackKey(onClose).onKeyEvent { event ->
         // A held Y repeats, like a held Backspace.
         val isY = event.key == Key.ButtonY
         if (isY && event.type == KeyEventType.KeyDown) onBackspace()

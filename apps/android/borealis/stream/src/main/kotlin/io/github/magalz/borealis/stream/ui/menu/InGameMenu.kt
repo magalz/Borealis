@@ -120,6 +120,7 @@ private fun MenuRows(
                 intents.requestKeyframe()
                 intents.closePanel()
             },
+            consequence = stringResource(R.string.stream_menu_refresh_note),
         )
         SessionInfoRow(phase.info, perf)
         MenuRow(

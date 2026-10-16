@@ -41,11 +41,12 @@ internal fun PerfOverlay(
     info: SessionInfo,
     modifier: Modifier = Modifier,
 ) {
+    val format = rememberPerfFormat()
     val lines =
         when (mode) {
             OverlayMode.OFF -> return
-            OverlayMode.COMPACT -> listOf(PerfFormat.compact(perf, info))
-            OverlayMode.DETAILED -> PerfFormat.detailed(perf, info)
+            OverlayMode.COMPACT -> listOf(format.compact(perf, info))
+            OverlayMode.DETAILED -> format.detailed(perf, info)
         }
     val colors = LocalBorealisColors.current
     val size =

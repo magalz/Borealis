@@ -10,15 +10,14 @@
     <string name="stream_menu_touch">Touch</string>
     <string name="stream_menu_touch_trackpad">Trackpad</string>
     <string name="stream_menu_touch_direct">Direct</string>
-    <string name="stream_menu_touch_off">Off</string>
     <string name="stream_menu_gamepad_mouse">Gamepad mouse</string>
     <string name="stream_menu_on">On</string>
     <string name="stream_menu_off">Off</string>
     <string name="stream_menu_overlay">Overlay</string>
-    <string name="stream_menu_overlay_off">Off</string>
     <string name="stream_menu_overlay_compact">Compact</string>
     <string name="stream_menu_overlay_detailed">Detailed</string>
     <string name="stream_menu_refresh">Refresh the picture</string>
+    <string name="stream_menu_refresh_note">Asks the host for a keyframe when the image is smeared</string>
     <string name="stream_menu_session_info">Session info</string>
     <string name="stream_menu_info_video">Video</string>
     <string name="stream_menu_info_codec">Codec</string>

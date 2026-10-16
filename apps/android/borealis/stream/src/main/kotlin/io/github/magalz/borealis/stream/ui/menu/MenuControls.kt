@@ -33,7 +33,7 @@ import io.github.magalz.borealis.stream.StreamIntents
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.TouchMode
 import io.github.magalz.borealis.stream.keys.Shortcuts
-import io.github.magalz.borealis.stream.ui.overlay.PerfFormat
+import io.github.magalz.borealis.stream.ui.overlay.rememberPerfFormat
 
 private val CHIPS_PADDING_HORIZONTAL = 8.dp
 private val CHIP_GAP_HORIZONTAL = 8.dp
@@ -110,7 +110,7 @@ private fun touchLabel(mode: TouchMode) =
     when (mode) {
         TouchMode.TRACKPAD -> R.string.stream_menu_touch_trackpad
         TouchMode.DIRECT -> R.string.stream_menu_touch_direct
-        TouchMode.OFF -> R.string.stream_menu_touch_off
+        TouchMode.OFF -> R.string.stream_menu_off
     }
 
 /** The performance overlay: Off, Compact or Detailed. */
@@ -133,7 +133,7 @@ internal fun OverlayRow(current: OverlayMode, intents: StreamIntents) {
 
 private fun overlayLabel(mode: OverlayMode) =
     when (mode) {
-        OverlayMode.OFF -> R.string.stream_menu_overlay_off
+        OverlayMode.OFF -> R.string.stream_menu_off
         OverlayMode.COMPACT -> R.string.stream_menu_overlay_compact
         OverlayMode.DETAILED -> R.string.stream_menu_overlay_detailed
     }
@@ -148,14 +148,15 @@ internal fun SessionInfoRow(info: SessionInfo, perf: PerfSnapshot?) {
         trailing = { Chevron(LocalBorealisColors.current.ink3, down = open) },
     )
     if (open) {
+        val format = rememberPerfFormat()
         val rows =
             listOfNotNull(
-                R.string.stream_menu_info_video to PerfFormat.video(info),
-                R.string.stream_menu_info_codec to PerfFormat.codec(info),
+                R.string.stream_menu_info_video to format.video(info),
+                R.string.stream_menu_info_codec to format.codec(info),
                 info.decoder?.let { R.string.stream_menu_info_decoder to it },
-                R.string.stream_menu_info_host to PerfFormat.hostProcessing(perf),
-                R.string.stream_menu_info_network to PerfFormat.network(perf),
-                R.string.stream_menu_info_bitrate to PerfFormat.bitrate(perf, info),
+                R.string.stream_menu_info_host to format.hostProcessing(perf),
+                R.string.stream_menu_info_network to format.network(perf),
+                R.string.stream_menu_info_bitrate to format.bitrate(perf, info),
             )
         for ((label, value) in rows) InfoLine(stringResource(label), value)
     }

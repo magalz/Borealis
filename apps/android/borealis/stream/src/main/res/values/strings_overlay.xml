@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The performance overlay and the Session info rows. Numbers are formatted before they go in,
+         with a decimal point whatever the language, and a dash stands for an unknown figure. Units
+         (fps, ms, Mbps) are the same in every language. -->
+    <!-- %1$s fps, %2$s host processing ms, %3$s network ms, %4$s the codec. -->
+    <string name="stream_overlay_compact">%1$s fps · host %2$s ms · net %3$s ms · %4$s</string>
+    <!-- %1$s is the codec, for example HEVC. -->
+    <string name="stream_overlay_codec_hdr">%1$s 10-bit HDR</string>
+    <!-- %1$s width, %2$s height, %3$s frame rate. -->
+    <string name="stream_overlay_video">%1$s×%2$s · %3$s fps</string>
+    <!-- %1$s is the video line, %2$s the codec. -->
+    <string name="stream_overlay_video_codec">%1$s · %2$s</string>
+    <string name="stream_overlay_decoder">Decoder %1$s</string>
+    <!-- %1$s is the min, avg and max in ms. -->
+    <string name="stream_overlay_host">Host processing %1$s (min/avg/max)</string>
+    <!-- Min, avg and max host processing time. -->
+    <string name="stream_overlay_host_range">%1$s / %2$s / %3$s ms</string>
+    <!-- %1$s is the round trip with its variance and the loss, then the bitrate when known. -->
+    <string name="stream_overlay_network">Network %1$s</string>
+    <!-- %1$s round trip ms, %2$s variance ms, %3$s loss percent. -->
+    <string name="stream_overlay_network_value">%1$s ms ± %2$s ms · loss %3$s %%</string>
+    <string name="stream_overlay_decode">Decode %1$s ms</string>
+    <!-- %1$s the bitrate in use, %2$s the limit, both in Mbps. -->
+    <string name="stream_overlay_bitrate">%1$s of %2$s Mbps</string>
+</resources>

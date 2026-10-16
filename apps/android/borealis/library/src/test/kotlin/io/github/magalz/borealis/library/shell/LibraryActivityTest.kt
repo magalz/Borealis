@@ -1,5 +1,8 @@
 package io.github.magalz.borealis.library.shell
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
@@ -105,6 +108,20 @@ class LibraryActivityTest {
 
         composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
         composeRule.onNodeWithText("Cancel").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a phone has no rail on Hosts or on Add host`() {
+        hosts.emit(desk)
+        composeRule.waitForIdle()
+        val isRailItem = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
+        composeRule.onNode(isRailItem).assertDoesNotExist()
+
+        composeRule.onNodeWithContentDescription("Add host").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Cancel").assertIsDisplayed()
+        composeRule.onNode(isRailItem).assertDoesNotExist()
     }
 
     @Test

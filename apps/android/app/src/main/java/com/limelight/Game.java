@@ -2287,7 +2287,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
 
     @Override
     public void stageStarting(final String stage) {
-        runOnUiThread(() -> streamSession.onStage(StartStage.PREPARING_DISPLAY)); // BOREALIS: the chrome shows the stage
+        runOnUiThread(() -> streamSession.onStage(StreamSessionFactory.startStage(stage, app.getAppName()))); // BOREALIS: the chrome shows the stage
     }
 
     // BOREALIS: /launch or /resume is about to be requested: the chrome shows the "starting app" stage (host.failure)

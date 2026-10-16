@@ -16,6 +16,7 @@ import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.shell.LibraryScaffold
 import io.github.magalz.borealis.library.shell.RailActions
+import io.github.magalz.borealis.library.shell.RailSelection
 import io.github.magalz.borealis.library.testing.HANDHELD
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.TV
@@ -100,7 +101,11 @@ class HostsScreenshotTest {
     @Composable
     private fun Screen(state: HostsUiState, formFactor: FormFactor) {
         // The shell draws the rail beside Hosts on a TV and a handheld.
-        LibraryScaffold(formFactor, showRail = true, actions = RailActions({}, {}, {})) {
+        LibraryScaffold(
+            formFactor,
+            selected = RailSelection.Hosts,
+            actions = RailActions({}, {}, {}),
+        ) {
             HostsScreen(
                 state = state,
                 formFactor = formFactor,

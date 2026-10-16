@@ -104,7 +104,7 @@ class LibraryActivityTvTest {
     }
 
     @Test
-    fun `on a TV the rail opens Add host and Settings, and Add host has no rail`() {
+    fun `on a TV the rail opens Add host and Settings, and stays beside Add host`() {
         hosts.emit(desk)
         composeRule.waitForIdle()
 
@@ -115,7 +115,7 @@ class LibraryActivityTvTest {
         composeRule.waitForIdle()
 
         composeRule.onNodeWithText("Cancel").assertIsDisplayed()
-        composeRule.onNode(railItem("Settings")).assertDoesNotExist()
+        composeRule.onNode(railItem("Settings")).assertIsDisplayed()
     }
 
     @Test

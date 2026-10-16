@@ -1,5 +1,8 @@
 package io.github.magalz.borealis.library.shell
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
@@ -43,13 +46,17 @@ private const val HOSTS_MESSAGE = "hostsMessage"
 
 private val SNACKBAR_PADDING = 16.dp
 
+/** The cross-fade between two screens, much shorter than the 700 ms default of the NavHost. */
+private const val FADE_MS = 150
+
 /**
- * The Library screens and the way between them (ADR 0052): Hosts leads to Apps, Pairing and Add
- * host, pairing replaces itself with Apps, and the screens that end say so on Hosts through its
- * saved state. [onStartStream] starts a stream and answers false when the host is no longer known,
- * which the shell says on the current screen. [onOpenSettings] opens the stream settings. A
- * [request] from outside (a launcher shortcut, the stream error screen) puts its screens on the
- * back stack; [onRequestHandled] says that it was taken, so it is not taken twice.
+ * The Library screens and the way between them (ADR 0052), inside the [LibraryScaffold]: Hosts
+ * leads to Apps, Pairing and Add host, pairing replaces itself with Apps, and the screens that end
+ * say so on Hosts through its saved state. [onStartStream] starts a stream and answers false when
+ * the host is no longer known, which the shell says on the current screen. [onOpenSettings] opens
+ * the stream settings. A [request] from outside (a launcher shortcut, the stream error screen) puts
+ * its screens on the back stack; [onRequestHandled] says that it was taken, so it is not taken
+ * twice.
  */
 @Composable
 internal fun LibraryNavHost(
@@ -82,11 +89,14 @@ internal fun LibraryNavHost(
     val rail =
         RailActions(
             onHosts = { navController.popBackStack<Hosts>(inclusive = false) },
-            // Add host closes onto Hosts, also when it opens from Apps.
+            // Add host closes onto Hosts, also when it opens from Apps. Choosing it while it shows
+            // does nothing: it would recreate the screen and lose what was typed.
             onAddHost = {
-                navController.navigate(AddHost) {
-                    popUpTo<Hosts>()
-                    launchSingleTop = true
+                if (navController.currentDestination?.hasRoute<AddHost>() != true) {
+                    navController.navigate(AddHost) {
+                        popUpTo<Hosts>()
+                        launchSingleTop = true
+                    }
                 }
             },
             onSettings = onOpenSettings,
@@ -94,12 +104,14 @@ internal fun LibraryNavHost(
 
     LibraryScaffold(
         formFactor = rememberFormFactor(),
-        showRail = destination?.let { it.hasRoute<Hosts>() || it.hasRoute<Apps>() } == true,
+        selected =
+            if (destination?.hasRoute<AddHost>() == true) RailSelection.AddHost
+            else RailSelection.Hosts,
         actions = rail,
         modifier = modifier,
     ) {
         Box {
-            NavHost(navController, startDestination = Hosts) {
+            FadingNavHost(navController) {
                 libraryGraph(
                     navController,
                     startStream,
@@ -115,6 +127,20 @@ internal fun LibraryNavHost(
             )
         }
     }
+}
+
+/** The NavHost with a quick cross-fade between screens; the rail is outside it and stays put. */
+@Composable
+private fun FadingNavHost(navController: NavHostController, graph: NavGraphBuilder.() -> Unit) {
+    NavHost(
+        navController,
+        startDestination = Hosts,
+        enterTransition = { fadeIn(tween(FADE_MS)) },
+        exitTransition = { fadeOut(tween(FADE_MS)) },
+        popEnterTransition = { fadeIn(tween(FADE_MS)) },
+        popExitTransition = { fadeOut(tween(FADE_MS)) },
+        builder = graph,
+    )
 }
 
 private fun NavGraphBuilder.libraryGraph(

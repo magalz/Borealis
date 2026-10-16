@@ -34,6 +34,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.shell.LibraryScaffold
 import io.github.magalz.borealis.library.shell.RailActions
+import io.github.magalz.borealis.library.shell.RailSelection
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.TV
 import io.github.magalz.borealis.library.testing.setContentInKeyboardMode
@@ -510,7 +511,7 @@ class HostsScreenTest {
         ) {
             LibraryScaffold(
                 formFactor,
-                showRail = true,
+                selected = RailSelection.Hosts,
                 actions = RailActions({}, { addHost++ }, { settings++ }),
             ) {
                 HostsScreen(

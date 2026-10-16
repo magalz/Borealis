@@ -25,6 +25,15 @@ object StreamSessionFactory {
         )
 
     /**
+     * The step of the start that the connection's stage [reported] stands for. The first stage the
+     * connection reports carries the app name, and it comes before the app is requested; the stages
+     * of the stream itself (RTSP handshake, control, video, audio, input) come after it.
+     */
+    @JvmStatic
+    fun startStage(reported: String, appName: String): StartStage =
+        if (reported == appName) StartStage.STARTING_APP else StartStage.PREPARING_DISPLAY
+
+    /**
      * The session of [activity]'s stream. The docked keyboard is for phones. [pcName] and [appName]
      * are what the intent carried; either can be missing, for example when a running session is
      * resumed. The placeholder name that the Library gives a resumed app it has no name for is

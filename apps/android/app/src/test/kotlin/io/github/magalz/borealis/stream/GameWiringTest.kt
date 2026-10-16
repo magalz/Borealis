@@ -51,9 +51,9 @@ class GameWiringTest {
     }
 
     @Test
-    fun `starting the app is a stage of its own, the display is prepared before it`() {
+    fun `starting the app is a stage of its own, the stage names tell it from the display`() {
         assertThat(body("public void launchStarting(")).contains("StartStage.STARTING_APP")
-        assertThat(body("public void stageStarting(")).contains("StartStage.PREPARING_DISPLAY")
+        assertThat(body("public void stageStarting(")).contains("StreamSessionFactory.startStage(")
     }
 
     @Test

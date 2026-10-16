@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The pads the USB drivers claim, by interface class (255, vendor specific), subclass and
+     protocol, so no vendor list is kept here (see Xbox360Controller, Xbox360WirelessDongle and
+     XboxOneController). -->
+<resources>
+    <!-- Xbox 360 wired pads and XInput dongles -->
+    <usb-device class="255" subclass="93" protocol="1" />
+    <!-- Xbox 360 wireless receiver -->
+    <usb-device class="255" subclass="93" protocol="129" />
+    <!-- Xbox One pads -->
+    <usb-device class="255" subclass="71" protocol="208" />
+</resources>

@@ -133,6 +133,21 @@
                 android:value="true" />
         </activity>
 
+        <!-- BOREALIS: Android offers the supported USB pads to this no-UI activity when they are attached, so the user can grant the permission once for good -->
+        <activity
+            android:name="io.github.magalz.borealis.input.UsbAttachActivity"
+            android:exported="true"
+            android:noHistory="true"
+            android:excludeFromRecents="true"
+            android:theme="@style/UsbAttachTheme">
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                android:resource="@xml/usb_device_filter" />
+        </activity>
+
         <service
             android:name=".discovery.DiscoveryService"
             android:label="mDNS PC Auto-Discovery Service" />

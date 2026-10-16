@@ -29,6 +29,9 @@ enum class AppAction {
     DETAILS,
     HIDE,
     UNHIDE,
+
+    /** Pin a shortcut that starts this app to the home screen. */
+    ADD_TO_HOME_SCREEN,
 }
 
 data class AppActionsUiState(
@@ -62,6 +65,9 @@ sealed interface AppsMessage {
     data object HostOffline : AppsMessage
 
     data object QuitDone : AppsMessage
+
+    /** The launcher did not add the shortcut. */
+    data object PinFailed : AppsMessage
 
     /** The quit failed; [message] is the localized text, or null for the generic text. */
     data class QuitFailed(val message: String?) : AppsMessage

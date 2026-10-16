@@ -207,4 +207,58 @@ class LibraryActivityRequestTest {
 
         composeRule.onNodeWithContentDescription("Hades II").assertIsDisplayed()
     }
+
+    private fun libraryOn(request: LibraryLaunchRequest) =
+        Robolectric.buildActivity(LibraryActivity::class.java, intentFor(request)).setup().also {
+            composeRule.waitForIdle()
+        }
+
+    @Test
+    fun `a Launch that reaches the Library already showing the apps of that host starts the app`() {
+        val controller = libraryOn(LibraryLaunchRequest.Apps("desk"))
+
+        controller.newIntent(intentFor(LibraryLaunchRequest.Launch("desk", 1)))
+        composeRule.waitForIdle()
+
+        assertThat(streams.requests)
+            .containsExactly(StreamRequest("desk", 1, "Hades II", hdrSupported = false))
+    }
+
+    @Test
+    fun `an Apps request for the host already showing keeps the live screen`() {
+        val controller = libraryOn(LibraryLaunchRequest.Apps("desk"))
+
+        controller.newIntent(intentFor(LibraryLaunchRequest.Apps("desk")))
+        composeRule.waitForIdle()
+
+        // A new screen would start polling the app list again.
+        assertThat(apps.requestedHostIds).containsExactly("desk")
+        composeRule.onNodeWithContentDescription("Hades II").assertIsDisplayed()
+        controller.get().onBackPressedDispatcher.onBackPressed()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a Pair request for the host already being paired keeps the live screen`() {
+        pairing.prepared += PairingInstructions("4817", "https://192.0.2.10:47990", "Galaxy S22")
+        pairing.prepared += PairingInstructions("5521", "https://192.0.2.10:47990", "Galaxy S22")
+        val controller = libraryOn(LibraryLaunchRequest.Pair("desk"))
+
+        controller.newIntent(intentFor(LibraryLaunchRequest.Pair("desk")))
+        composeRule.waitForIdle()
+
+        assertThat(pairing.prepareCalls).containsExactly("desk")
+    }
+
+    @Test
+    fun `a Launch for another host replaces the screen that is showing`() {
+        val controller = libraryOn(LibraryLaunchRequest.Apps("other"))
+
+        controller.newIntent(intentFor(LibraryLaunchRequest.Launch("desk", 1)))
+        composeRule.waitForIdle()
+
+        assertThat(streams.requests)
+            .containsExactly(StreamRequest("desk", 1, "Hades II", hdrSupported = false))
+    }
 }

@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -38,6 +39,9 @@ import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.StreamIntents
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.ui.starting.onGamepadB
+
+/** Marks the panel of the dialog, so a test can measure it. */
+internal const val CONFLICT_PANEL_TAG = "conflict_panel"
 
 private const val DIALOG_WIDTH_FRACTION = 0.92f
 private val DIALOG_MAX_WIDTH = 420.dp
@@ -69,7 +73,8 @@ fun ConflictDialog(phase: StreamPhase.Conflict, intents: StreamIntents) {
         // The padding is inside the scroll area: the area clips, and a focus outline reaches
         // outside its button.
         Column(
-            Modifier.widthIn(max = DIALOG_MAX_WIDTH)
+            Modifier.testTag(CONFLICT_PANEL_TAG)
+                .widthIn(max = DIALOG_MAX_WIDTH)
                 .fillMaxWidth(DIALOG_WIDTH_FRACTION)
                 .background(colors.surface, shape)
                 .border(1.dp, colors.line, shape)

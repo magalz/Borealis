@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
@@ -42,6 +43,9 @@ import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamIntents
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.ui.starting.onGamepadB
+
+/** Marks the column of the starting screen, so a test can measure it. */
+internal const val STARTING_CONTENT_TAG = "starting_content"
 
 private const val CONTENT_WIDTH_FRACTION = 0.86f
 private val CONTENT_MAX_WIDTH = 440.dp
@@ -70,7 +74,8 @@ fun StartingScreen(
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            Modifier.widthIn(max = CONTENT_MAX_WIDTH)
+            Modifier.testTag(STARTING_CONTENT_TAG)
+                .widthIn(max = CONTENT_MAX_WIDTH)
                 .fillMaxWidth(CONTENT_WIDTH_FRACTION)
                 .verticalScroll(rememberScrollState())
                 .padding(LocalBorealisSpacing.current.gutter),

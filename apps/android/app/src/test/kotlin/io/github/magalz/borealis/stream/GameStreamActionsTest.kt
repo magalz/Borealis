@@ -2,6 +2,7 @@ package io.github.magalz.borealis.stream
 
 import android.app.Activity
 import android.content.Intent
+import android.os.Looper
 import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.InputMethodManager
@@ -465,6 +466,9 @@ class GameStreamActionsTest {
         assertThat(panelEvents).containsExactly("close focused=false")
         assertThat(streamView.hasFocus()).isTrue()
         val ime = activity.getSystemService(InputMethodManager::class.java)
+        // Posted, so it runs after the chrome has handed the focus back.
+        assertThat(shadowOf(ime).isSoftInputVisible).isFalse()
+        shadowOf(Looper.getMainLooper()).idle()
         assertThat(shadowOf(ime).isSoftInputVisible).isTrue()
     }
 

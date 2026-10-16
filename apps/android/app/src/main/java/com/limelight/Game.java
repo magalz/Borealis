@@ -1567,7 +1567,10 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
     @Override
     public void toggleKeyboard() {
         LimeLog.info("Toggling keyboard overlay");
-        StreamKeyboards.toggle(streamSession); // BOREALIS: the Borealis keyboard; the Android one opens from it
+        // BOREALIS: hides the Android keyboard when it shows, else toggles the Borealis keyboard; the Android one opens from it
+        StreamKeyboards.toggle(streamSession,
+                () -> ImeKeyGate.isImeVisible(getWindow().getDecorView()),
+                () -> ImeKeyGate.hideIme(getWindow().getDecorView()));
     }
 
     private byte getLiTouchTypeFromEvent(MotionEvent event) {

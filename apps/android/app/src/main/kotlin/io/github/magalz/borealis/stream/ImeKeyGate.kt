@@ -35,6 +35,9 @@ class ImeKeyGate(private val imeVisible: BooleanSupplier) {
                 KeyEvent.KEYCODE_BACK,
             )
 
+        /** Hides the Android keyboard of the window of [view]. */
+        @JvmStatic fun hideIme(view: View) = Unit
+
         /** Whether the Android keyboard is showing in the window of [view]. */
         @JvmStatic
         fun isImeVisible(view: View): Boolean =

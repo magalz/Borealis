@@ -135,7 +135,8 @@ class GameWiringTest {
     fun `the three-finger tap toggles the Borealis keyboard, not the Android one`() {
         val toggle = body("public void toggleKeyboard()")
 
-        assertThat(toggle).contains("StreamKeyboards.toggle(streamSession)")
+        assertThat(toggle).contains("StreamKeyboards.toggle(streamSession,")
+        assertThat(toggle).contains("ImeKeyGate.hideIme(")
         assertThat(toggle).doesNotContain("toggleSoftInput")
     }
 

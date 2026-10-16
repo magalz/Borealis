@@ -174,10 +174,31 @@ class StreamFailuresTest {
     }
 
     @Test
-    fun `the hint does not replace the port hint of the classifier`() {
+    fun `no video with port flags shows the port text and the LuminalShine hint`() {
         val facts = FailureFacts(null, MoonBridge.ML_ERROR_NO_VIDEO_TRAFFIC, 0x8, terminated = true)
 
         val failed = failure(facts)
+
+        assertThat(failed.portHint)
+            .isEqualTo(
+                "${HostR.string.failure_port_hint}:ports8\n\n" +
+                    "${R.string.no_video_received_error}\n\n${HostR.string.stream_luminalshine_hint}"
+            )
+    }
+
+    @Test
+    fun `a blocked network is shown beside the port text, not instead of it`() {
+        val facts = FailureFacts("Control", -1, 0x8, terminated = false)
+
+        val failed = failure(facts, portBlocked = true)
+
+        assertThat(failed.portHint)
+            .isEqualTo("${HostR.string.failure_port_hint}:ports8\n\n${R.string.nettest_text_blocked}")
+    }
+
+    @Test
+    fun `the port text alone stays as it is`() {
+        val failed = failure(FailureFacts("Control", -1, 0x8, terminated = false))
 
         assertThat(failed.portHint).isEqualTo("${HostR.string.failure_port_hint}:ports8")
     }

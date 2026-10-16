@@ -26,8 +26,8 @@ object StreamSessionFactory {
 
     /**
      * The step of the start that the connection's stage [reported] stands for. The first stage the
-     * connection reports carries the app name, and it comes before the app is requested; the
-     * stages of the stream itself (RTSP handshake, control, video, audio, input) come after it.
+     * connection reports carries the app name, and it comes before the app is requested; the stages
+     * of the stream itself (RTSP handshake, control, video, audio, input) come after it.
      */
     @JvmStatic
     @Suppress("UNUSED_PARAMETER")

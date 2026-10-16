@@ -55,6 +55,28 @@ class StreamSessionTest {
     }
 
     @Test
+    fun `a stage before the current one is ignored while starting`() {
+        session.onStage(StartStage.PREPARING_DISPLAY)
+
+        session.onStage(StartStage.STARTING_APP)
+
+        assertThat(phase).isEqualTo(StreamPhase.Starting(StartStage.PREPARING_DISPLAY))
+    }
+
+    @Test
+    fun `stages that come later still apply, and the same stage clears a retry`() {
+        val retry =
+            LaunchRetry(LaunchCategory.PENDING, attempt = 1, maxAttempts = 3, delayMs = 2000)
+        session.onStage(StartStage.STARTING_APP)
+        session.onStage(StartStage.PREPARING_DISPLAY)
+        session.onLaunchRetry(retry)
+
+        session.onStage(StartStage.PREPARING_DISPLAY)
+
+        assertThat(phase).isEqualTo(StreamPhase.Starting(StartStage.PREPARING_DISPLAY))
+    }
+
+    @Test
     fun `a retry keeps the stage and shows the retry`() {
         val retry =
             LaunchRetry(LaunchCategory.PENDING, attempt = 1, maxAttempts = 3, delayMs = 2000)

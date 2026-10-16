@@ -103,4 +103,14 @@ class StreamSessionFactoryTest {
             .isEqualTo(LaunchRetry(LaunchCategory.PENDING, 1, 3, 2000))
         assertThat(StreamSessionFactory.launchRetry(99, 2, 3, 500).category).isNull()
     }
+
+    @Test
+    fun `the stage that names the app is the start of the app, the stream stages prepare the display`() {
+        assertThat(StreamSessionFactory.startStage("Desktop", "Desktop"))
+            .isEqualTo(StartStage.STARTING_APP)
+        assertThat(StreamSessionFactory.startStage("RTSP handshake", "Desktop"))
+            .isEqualTo(StartStage.PREPARING_DISPLAY)
+        assertThat(StreamSessionFactory.startStage("video stream", "Desktop"))
+            .isEqualTo(StartStage.PREPARING_DISPLAY)
+    }
 }

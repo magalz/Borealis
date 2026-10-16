@@ -49,6 +49,8 @@ import com.limelight.ui.GameGestures;
 import com.limelight.utils.Vector2d;
 
 import io.github.magalz.borealis.stream.input.ButtonState;
+import io.github.magalz.borealis.stream.input.ChromeKeySink;
+import io.github.magalz.borealis.stream.input.GamepadChrome;
 import io.github.magalz.borealis.stream.input.GuideChord;
 import io.github.magalz.borealis.stream.input.MenuChordDetector;
 import io.github.magalz.borealis.stream.input.MenuChordListener;
@@ -60,7 +62,7 @@ import org.cgutman.shieldcontrollerextensions.SceManager;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 
-public class ControllerHandler implements InputManager.InputDeviceListener, UsbDriverListener {
+public class ControllerHandler implements InputManager.InputDeviceListener, UsbDriverListener, GamepadChrome {
 
     private static final int MAXIMUM_BUMPER_UP_DELAY_MS = 100;
 
@@ -1279,6 +1281,17 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
     public void setMenuChordListener(MenuChordListener listener) {
         menuChordListener = listener;
+    }
+
+    public void setChromeKeySink(ChromeKeySink sink) {
+    }
+
+    @Override
+    public void setCaptured(boolean captured) {
+    }
+
+    @Override
+    public void setMouseEmulation(boolean enabled) {
     }
 
     private void transmitControllerInput(GenericControllerContext originalContext) {

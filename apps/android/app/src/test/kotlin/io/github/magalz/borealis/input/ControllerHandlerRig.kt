@@ -4,6 +4,8 @@ import android.app.Activity
 import android.os.SystemClock
 import android.view.KeyEvent
 import com.limelight.binding.input.ControllerHandler
+import com.limelight.binding.input.driver.AbstractController
+import com.limelight.binding.input.driver.UsbDriverListener
 import com.limelight.nvstream.NvConnection
 import com.limelight.preferences.PreferenceConfiguration
 import java.util.concurrent.TimeUnit
@@ -82,6 +84,14 @@ class RecordingConnection(activity: Activity) :
     override fun sendMouseHighResHScroll(scrollAmount: Short) {
         mouse += "hires hscroll $scrollAmount"
     }
+
+    override fun sendControllerArrivalEvent(
+        controllerNumber: Byte,
+        activeGamepadMask: Short,
+        type: Byte,
+        supportedButtonFlags: Int,
+        capabilities: Short,
+    ): Int = 0
 }
 
 /**
@@ -91,7 +101,7 @@ class RecordingConnection(activity: Activity) :
  * Events are stamped with the main looper's clock, which [advanceBy] moves, so the handler's
  * scheduled work runs when the test says time has passed.
  */
-class ControllerHandlerRig {
+class ControllerHandlerRig(multiController: Boolean = false) {
     // The SHIELD extension service does not exist here; without this the bind answers with no binder.
     private val noShieldService =
         shadowOf(RuntimeEnvironment.getApplication())
@@ -101,7 +111,11 @@ class ControllerHandlerRig {
 
     val activity: Activity = Robolectric.buildActivity(Activity::class.java).create().get()
     val connection = RecordingConnection(activity)
-    val prefs = PreferenceConfiguration().apply { mouseEmulation = true }
+    val prefs =
+        PreferenceConfiguration().apply {
+            mouseEmulation = true
+            this.multiController = multiController
+        }
     val handler = ControllerHandler(activity, connection, {}, prefs)
 
     /** How many times the menu chord was reported. */
@@ -139,4 +153,22 @@ class ControllerHandlerRig {
 
     /** The last packet's buttons, or null when nothing was sent. */
     fun lastButtons(): Int? = connection.packets.lastOrNull()?.buttons
+}
+
+/** A USB-driver pad: it reports its whole button state each time, as the driver service does. */
+class FakeUsbController(id: Int, listener: UsbDriverListener) :
+    AbstractController(id, listener, 0x045e, 0x028e) {
+    override fun start() = true
+
+    override fun stop() {}
+
+    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {}
+
+    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {}
+
+    fun report(buttons: Int, leftStickX: Float = 0f) {
+        buttonFlags = buttons
+        this.leftStickX = leftStickX
+        reportInput()
+    }
 }

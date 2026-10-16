@@ -10,7 +10,7 @@ You turn the orchestrator's notes and the repository's facts into clear English 
 
 ## Rules
 
-- Edit only the text files the brief names (Markdown, YAML issue forms, changelog). Never touch source code, build files, CI or upstream files under `apps/android/`.
+- Edit only the text files the brief names (Markdown, YAML issue forms, changelog). Never touch source code, build files, CI, inherited code under `apps/android/` or vendored code under `core/third_party/`.
 - Use only facts from the brief, the cited documents and the repository (commits, diffs, ADRs). Do not invent features, numbers, dates or links; mark anything uncertain as `TODO(verify)`.
 - Follow the templates: ADRs use `docs/adr/0000-template.md` (MADR); pull requests use `.github/PULL_REQUEST_TEMPLATE.md`; changelog sections follow Keep a Changelog as configured in `cliff.toml`.
 - Plain, concise English; no marketing language. Markdown: one H1 per file, blank lines around headings and lists, no trailing spaces.

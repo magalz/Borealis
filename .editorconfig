@@ -49,6 +49,14 @@ indent_size = unset
 insert_final_newline = unset
 trim_trailing_whitespace = unset
 
+[core/third_party/**]
+charset = unset
+end_of_line = unset
+indent_style = unset
+indent_size = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+
 [external/**]
 charset = unset
 end_of_line = unset

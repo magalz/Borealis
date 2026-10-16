@@ -89,11 +89,14 @@ internal fun LibraryNavHost(
     val rail =
         RailActions(
             onHosts = { navController.popBackStack<Hosts>(inclusive = false) },
-            // Add host closes onto Hosts, also when it opens from Apps.
+            // Add host closes onto Hosts, also when it opens from Apps. Choosing it while it shows
+            // does nothing: it would recreate the screen and lose what was typed.
             onAddHost = {
-                navController.navigate(AddHost) {
-                    popUpTo<Hosts>()
-                    launchSingleTop = true
+                if (navController.currentDestination?.hasRoute<AddHost>() != true) {
+                    navController.navigate(AddHost) {
+                        popUpTo<Hosts>()
+                        launchSingleTop = true
+                    }
                 }
             },
             onSettings = onOpenSettings,

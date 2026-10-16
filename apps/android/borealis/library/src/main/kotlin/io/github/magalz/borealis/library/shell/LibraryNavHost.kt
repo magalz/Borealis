@@ -26,6 +26,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import io.github.magalz.borealis.designsystem.adaptive.rememberFormFactor
+import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.R
 import io.github.magalz.borealis.library.addhost.AddHostRoute
 import io.github.magalz.borealis.library.apps.AppsRoute
@@ -43,13 +44,17 @@ private val SNACKBAR_PADDING = 16.dp
  * The Library screens and the way between them (ADR 0052): Hosts leads to Apps, Pairing and Add
  * host, pairing replaces itself with Apps, and the screens that end say so on Hosts through its
  * saved state. [onStartStream] starts a stream and answers false when the host is no longer known,
- * which the shell says on the current screen. [onOpenSettings] opens the stream settings.
+ * which the shell says on the current screen. [onOpenSettings] opens the stream settings. A
+ * [request] from outside (a launcher shortcut, the stream error screen) puts its screens on the back
+ * stack; [onRequestHandled] says that it was taken, so it is not taken twice.
  */
 @Composable
 internal fun LibraryNavHost(
     onStartStream: (StreamRequest) -> Boolean,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    request: LibraryLaunchRequest? = null,
+    onRequestHandled: () -> Unit = {},
     navController: NavHostController = rememberNavController(),
 ) {
     val resources = LocalResources.current

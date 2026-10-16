@@ -547,4 +547,55 @@ class AppsViewModelTest {
         runCurrent()
         assertThat(repository.activeCollectors).isEqualTo(0)
     }
+
+    @Test
+    fun `a launch request starts the app as a tap does`() = runTest {
+        repository.emit(snapshot(desktop, steam))
+        subscribe(viewModel.uiState)
+
+        viewModel.onLaunchRequested(2)
+
+        viewModel.effects.test {
+            assertThat(awaitItem())
+                .isEqualTo(
+                    AppsEffect.StartStream(StreamRequest("host-1", 2, "steam", hdrSupported = true))
+                )
+        }
+    }
+
+    @Test
+    fun `a launch request while another app runs opens the actions`() = runTest {
+        repository.emit(snapshot(desktop, steam, running = desktop))
+        subscribe(viewModel.uiState)
+
+        viewModel.onLaunchRequested(2)
+        runCurrent()
+
+        assertThat(viewModel.uiState.value.actions?.app?.id).isEqualTo(2)
+        viewModel.effects.test { expectNoEvents() }
+    }
+
+    @Test
+    fun `a launch request for an app that is not listed does nothing`() = runTest {
+        repository.emit(snapshot(desktop))
+        subscribe(viewModel.uiState)
+
+        viewModel.onLaunchRequested(99)
+        runCurrent()
+
+        viewModel.effects.test { expectNoEvents() }
+    }
+
+    @Test
+    fun `a launch request after the screen closed does not start a stream`() = runTest {
+        repository.emit(snapshot(desktop, host = aHost(reachability = Reachability.OFFLINE)))
+        subscribe(viewModel.uiState)
+
+        viewModel.onLaunchRequested(1)
+
+        viewModel.effects.test {
+            assertThat(awaitItem()).isEqualTo(AppsEffect.Close(AppsMessage.HostOffline))
+            expectNoEvents()
+        }
+    }
 }

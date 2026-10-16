@@ -1,12 +1,17 @@
 package io.github.magalz.borealis.library.shell
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import dagger.hilt.android.AndroidEntryPoint
+import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.domain.LegacyBridge
 import io.github.magalz.borealis.library.domain.StreamLauncher
 import javax.inject.Inject
@@ -21,6 +26,8 @@ class LibraryActivity : Hilt_LibraryActivity() {
     @Inject lateinit var streamLauncher: StreamLauncher
     @Inject lateinit var legacyBridge: LegacyBridge
 
+    private var request by mutableStateOf<LibraryLaunchRequest?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // The UI is dark only: light icons whatever the system theme, which uiMode changes in
@@ -33,6 +40,8 @@ class LibraryActivity : Hilt_LibraryActivity() {
             LibraryNavHost(
                 onStartStream = { streamLauncher.start(this, it) },
                 onOpenSettings = { legacyBridge.openStreamSettings(this) },
+                request = request,
+                onRequestHandled = { request = null },
             )
         }
         // After the content: the bridge posts the GL renderer probe, which must not lose its

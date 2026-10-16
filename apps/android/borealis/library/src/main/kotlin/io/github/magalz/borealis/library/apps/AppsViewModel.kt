@@ -48,6 +48,9 @@ constructor(@Assisted private val hostId: String, private val repository: AppRep
 
     val effects: Flow<AppsEffect> = effectChannel.receiveAsFlow()
 
+    /** A launch request, such as a shortcut: a tap on [appId] once the apps are loaded. */
+    fun onLaunchRequested(appId: Int) = Unit
+
     /** A tap: start or resume when that is unambiguous, otherwise open the actions. */
     fun onAppSelected(appId: Int) {
         val state = uiState.value

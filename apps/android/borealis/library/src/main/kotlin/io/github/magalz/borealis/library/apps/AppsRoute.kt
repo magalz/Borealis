@@ -22,7 +22,8 @@ import kotlinx.coroutines.launch
 /**
  * The apps of [hostId], wired to its ViewModel. [onStartStream] gets the request to hand, with the
  * Activity, to the stream launcher. [onClose] gets the localized message to show on the previous
- * screen, or null when the user went back.
+ * screen, or null when the user went back. [launchAppId] is an app to select as a tap does once the
+ * apps are loaded, for a launch request; [onLaunchHandled] says that it was.
  */
 @Composable
 fun AppsRoute(
@@ -30,6 +31,8 @@ fun AppsRoute(
     onClose: (message: String?) -> Unit,
     onStartStream: (StreamRequest) -> Unit,
     modifier: Modifier = Modifier,
+    launchAppId: Int? = null,
+    onLaunchHandled: () -> Unit = {},
     viewModel: AppsViewModel =
         hiltViewModel<AppsViewModel, AppsViewModel.Factory> { it.create(hostId) },
 ) {

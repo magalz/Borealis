@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** The apps of one host. The screen closes when the host is gone, not paired or offline. */
+@Suppress("TooManyFunctions") // One handler per event of the screen.
 @HiltViewModel(assistedFactory = AppsViewModel.Factory::class)
 class AppsViewModel
 @AssistedInject
@@ -148,8 +149,8 @@ constructor(
     /** The host is open: its launcher shortcut is published once it is paired and not offline. */
     private fun reportHostOpened(snapshot: AppsSnapshot) {
         val host = snapshot.host ?: return
-        if (closed || hostReported || !host.paired || host.reachability == Reachability.OFFLINE)
-            return
+        val usable = host.paired && host.reachability != Reachability.OFFLINE
+        if (closed || hostReported || !usable) return
         hostReported = true
         shortcuts.reportHostOpened(hostId, host.name)
     }

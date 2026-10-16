@@ -7,20 +7,14 @@ import io.github.magalz.borealis.library.R
 import io.github.magalz.borealis.library.domain.HostCapability
 
 /**
- * The version and the address, or the note that the host was found on the network instead of the
- * address; only the part that exists when the other is missing; null when neither is.
+ * The address, or the note that the host was found on the network instead of it; null when neither
+ * applies. An online host that is not paired shows the note, because the address is not what the
+ * user acts on yet.
  */
 @Composable
 internal fun HostItemUiState.detailLine(): String? {
     val found = stringResource(R.string.hosts_detail_found)
-    val place = if (foundOnNetwork) found else address
-    return when {
-        version != null && place != null ->
-            stringResource(R.string.hosts_detail_pair, version, place)
-        version != null -> version
-        foundOnNetwork -> found.replaceFirstChar { it.uppercase() }
-        else -> place
-    }
+    return if (foundOnNetwork) found else address
 }
 
 @StringRes

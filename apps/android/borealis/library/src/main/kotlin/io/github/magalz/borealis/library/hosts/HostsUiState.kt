@@ -27,8 +27,6 @@ data class HostItemUiState(
     val paired: Boolean,
     val runningApp: RunningApp?,
     val action: HostAction,
-    /** The host software and its version, or null when unknown. */
-    val version: String? = null,
     /** The address to show in the detail line, or null when none is known. */
     val address: String? = null,
     /** True for an online host that is not paired: the line says it was found on the network. */

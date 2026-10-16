@@ -118,7 +118,6 @@ private fun Host.toItem() =
         paired = paired,
         runningApp = runningApp,
         action = primaryAction(),
-        version = version,
         address = address,
         foundOnNetwork = reachability == Reachability.ONLINE && !paired,
         tags = tags(),

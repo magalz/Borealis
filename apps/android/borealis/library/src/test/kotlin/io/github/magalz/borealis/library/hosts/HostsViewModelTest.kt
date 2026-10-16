@@ -129,15 +129,13 @@ class HostsViewModelTest {
     }
 
     @Test
-    fun `the items carry the version and the address`() = runTest {
+    fun `the items carry the address`() = runTest {
         subscribe(viewModel.uiState)
 
-        repository.emit(aHost(version = "LuminalShine 26.9.1", address = "192.168.1.20"))
+        repository.emit(aHost(address = "192.168.1.20"))
         runCurrent()
 
-        val item = viewModel.uiState.value.items.single()
-        assertThat(item.version).isEqualTo("LuminalShine 26.9.1")
-        assertThat(item.address).isEqualTo("192.168.1.20")
+        assertThat(viewModel.uiState.value.items.single().address).isEqualTo("192.168.1.20")
     }
 
     @Test

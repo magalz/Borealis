@@ -75,7 +75,7 @@ class ComponentScreenshotTest {
                     name = "Desk PC",
                     status = DotStatus.Online,
                     statusText = "Online",
-                    detail = "LuminalShine 26.9.1 · 192.168.1.20",
+                    detail = "192.168.1.20",
                     tags = listOf("HEVC 10-bit", "HDR", "4:4:4"),
                     action = HostCardAction("Open") {},
                     onClick = {},

@@ -13,10 +13,9 @@ fun aHost(
     paired: Boolean = true,
     runningApp: RunningApp? = null,
     canWake: Boolean = false,
-    version: String? = null,
     address: String? = null,
     capabilities: Set<HostCapability> = emptySet(),
-) = Host(id, name, reachability, paired, runningApp, canWake, version, address, capabilities)
+) = Host(id, name, reachability, paired, runningApp, canWake, address, capabilities)
 
 fun anApp(
     id: Int = 1,

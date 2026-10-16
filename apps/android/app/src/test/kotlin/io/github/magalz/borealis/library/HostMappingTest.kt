@@ -101,31 +101,6 @@ class HostMappingTest {
     }
 
     @Test
-    fun `the version is the family name and the version without the Sunshine marker`() {
-        fun version(family: HostFamily, vararg version: Int) =
-            details()
-                .withInfo(caps(family = family, version = version.toList()))
-                .toHost()
-                .version
-
-        assertThat(version(HostFamily.SUNSHINE, 26, 9, 1, -1)).isEqualTo("LuminalShine 26.9.1")
-        assertThat(version(HostFamily.SUNSHINE, 26, 9, 0, -1)).isEqualTo("LuminalShine 26.9")
-        assertThat(version(HostFamily.GFE, 3, 28, 0, 677))
-            .isEqualTo("GeForce Experience 3.28.0.677")
-        assertThat(version(HostFamily.GFE, 3, 20, 0, 0)).isEqualTo("GeForce Experience 3.20")
-    }
-
-    @Test
-    fun `a host of an unknown family has no version`() {
-        val host =
-            details()
-                .withInfo(caps(family = HostFamily.UNKNOWN, version = listOf(0, 0, 0, 0)))
-                .toHost()
-
-        assertThat(host.version).isNull()
-    }
-
-    @Test
     fun `the address is the active one, else the manual, else the local one`() {
         fun address(active: String?, manual: String?, local: String?) =
             details(address = active)
@@ -196,10 +171,9 @@ class HostMappingTest {
     }
 
     @Test
-    fun `a host without host info has no version and no capabilities, even with an HDR app`() {
+    fun `a host without host info has no capabilities, even with an HDR app`() {
         val host = details(rawAppList = APP_LIST).toHost()
 
-        assertThat(host.version).isNull()
         assertThat(host.capabilities).isEmpty()
     }
 
@@ -209,14 +183,12 @@ class HostMappingTest {
 
     @Suppress("LongParameterList")
     private fun caps(
-        family: HostFamily = HostFamily.SUNSHINE,
-        version: List<Int> = listOf(26, 9, 1, -1),
         hevc: Boolean = false,
         hevcMain10: Boolean = false,
         av1: Boolean = false,
         av1Main10: Boolean = false,
         yuv444: Boolean = false,
-    ) = HostCaps(family, version, hevc, hevcMain10, av1, av1Main10, yuv444, emptySet())
+    ) = HostCaps(HostFamily.SUNSHINE, listOf(7, 1, 431, -1), hevc, hevcMain10, av1, av1Main10, yuv444, emptySet())
 
     private companion object {
         const val APP_LIST_WITHOUT_HDR =

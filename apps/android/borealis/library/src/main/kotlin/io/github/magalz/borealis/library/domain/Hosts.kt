@@ -13,8 +13,6 @@ data class Host(
     val runningApp: RunningApp?,
     /** True when a Wake-on-LAN packet can be sent, because a MAC address is known. */
     val canWake: Boolean,
-    /** The host software and its version, for example "LuminalShine 26.9.1"; null when unknown. */
-    val version: String?,
     /** The address the client reaches the host at, without the port; null when none is known. */
     val address: String?,
     /** What the host can stream; empty when its capabilities are unknown. */

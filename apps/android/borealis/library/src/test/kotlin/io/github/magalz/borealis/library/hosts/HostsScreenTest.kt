@@ -125,10 +125,10 @@ class HostsScreenTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `a paired host shows its version, address and tags`() {
+    fun `a paired host shows its address and tags`() {
         showPhone(withHosts)
 
-        composeRule.onNodeWithText("LuminalShine 26.9.1 · 192.168.1.20").assertIsDisplayed()
+        composeRule.onNodeWithText("192.168.1.20").assertIsDisplayed()
         composeRule.onNodeWithText("HEVC 10-bit", useUnmergedTree = true).assertIsDisplayed()
         composeRule.onNodeWithText("HDR", useUnmergedTree = true).assertIsDisplayed()
     }
@@ -138,9 +138,7 @@ class HostsScreenTest {
     fun `a host that was found on the network says so instead of showing its address`() {
         showPhone(withHosts)
 
-        composeRule
-            .onNodeWithText("LuminalShine 26.9.1 · found on this network")
-            .assertIsDisplayed()
+        composeRule.onNodeWithText("Found on this network").assertIsDisplayed()
         composeRule.onNodeWithText("192.168.1.40", substring = true).assertDoesNotExist()
     }
 
@@ -149,31 +147,19 @@ class HostsScreenTest {
     fun `an offline host keeps its detail line with the address`() {
         showPhone(withHosts)
 
-        composeRule.onNodeWithText("LuminalShine 26.9.1 · 192.168.1.31").assertIsDisplayed()
+        composeRule.onNodeWithText("192.168.1.31").assertIsDisplayed()
     }
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `the detail line shows only the part that exists`() {
-        val onlyAddress = studio.copy(id = "a", name = "A", version = null, foundOnNetwork = false)
-        val onlyVersion = studio.copy(id = "b", name = "B", address = null, foundOnNetwork = false)
-        val onlyFound = studio.copy(id = "c", name = "C", version = null)
-        val nothing =
-            studio.copy(
-                id = "d",
-                name = "D",
-                version = null,
-                address = null,
-                foundOnNetwork = false,
-            )
-        showPhone(
-            withHostsNoContinue.copy(items = listOf(onlyAddress, onlyVersion, onlyFound, nothing))
-        )
+    fun `a host without an address that was not found on the network has no detail line`() {
+        val addressed = studio.copy(id = "a", name = "A", foundOnNetwork = false)
+        val unaddressed = studio.copy(id = "b", name = "B", address = null, foundOnNetwork = false)
+        showPhone(withHostsNoContinue.copy(items = listOf(addressed, unaddressed)))
 
         composeRule.onNodeWithText("192.168.1.40").assertIsDisplayed()
-        composeRule.onNodeWithText("LuminalShine 26.9.1").assertIsDisplayed()
-        composeRule.onNodeWithText("Found on this network").assertIsDisplayed()
-        composeRule.onAllNodes(hasText("·", substring = true)).assertCountEquals(0)
+        composeRule.onAllNodes(hasText("192.168.", substring = true)).assertCountEquals(1)
+        composeRule.onNodeWithText("Found on this network").assertDoesNotExist()
     }
 
     @Test

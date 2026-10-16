@@ -13,7 +13,6 @@ internal val deskPc =
         true,
         RunningApp(1, "Desktop"),
         HostAction.OPEN,
-        version = "LuminalShine 26.9.1",
         address = "192.168.1.20",
         tags = listOf(HostCapability.HEVC_10_BIT, HostCapability.HDR),
     )
@@ -25,7 +24,6 @@ internal val livingRoomPc =
         true,
         null,
         HostAction.WAKE,
-        version = "LuminalShine 26.9.1",
         address = "192.168.1.31",
     )
 internal val studio =
@@ -36,7 +34,6 @@ internal val studio =
         false,
         null,
         HostAction.PAIR,
-        version = "LuminalShine 26.9.1",
         address = "192.168.1.40",
         foundOnNetwork = true,
     )

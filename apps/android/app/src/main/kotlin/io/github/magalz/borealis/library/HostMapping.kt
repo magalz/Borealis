@@ -11,7 +11,6 @@ import io.github.magalz.borealis.library.domain.RunningApp
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.nativecore.HostCaps
-import io.github.magalz.borealis.nativecore.HostFamily
 import java.io.IOException
 import java.io.StringReader
 import org.xmlpull.v1.XmlPullParserException
@@ -45,8 +44,9 @@ private fun unreadable(error: Exception): List<NvApp> {
  * the HDR capability worth asking. A host that is not paired has no app list, so it shows no
  * running app; a paired host whose list does not name the running app shows it without a name.
  *
- * The version and the capabilities come from the host info: a host without it shows neither. There
- * is no host-level HDR flag, so HDR is set when any app of the list supports it.
+ * The capabilities come from the host info: a host without it shows none. There is no host-level
+ * HDR flag, so HDR is set when any app of the list supports it. The version is not shown: Sunshine
+ * and LuminalShine both report the fixed GameStream version, so it says nothing about the host.
  */
 internal fun ComputerDetails.toHost(knownApps: List<NvApp>? = null): Host {
     val apps by lazy { knownApps ?: parseApps(rawAppList) }
@@ -67,7 +67,6 @@ internal fun ComputerDetails.toHost(knownApps: List<NvApp>? = null): Host {
         paired = pairState == PairState.PAIRED,
         runningApp = running,
         canWake = macAddress != null,
-        version = caps?.versionText(),
         address = (activeAddress ?: manualAddress ?: localAddress)?.address,
         capabilities =
             caps?.let { capabilities(it, apps.any { app -> app.isHdrSupported }) }.orEmpty(),
@@ -84,19 +83,3 @@ private fun capabilities(caps: HostCaps, hdr: Boolean): Set<HostCapability> =
             HostCapability.HDR.takeIf { hdr },
         )
         .toSet()
-
-/**
- * The family name and the version, or null when the family is unknown. The core keeps no text, only
- * four numbers, so the text is rebuilt: a Sunshine-family host marks itself with a negative last
- * component, which is dropped, and trailing zero components are left out.
- */
-private fun HostCaps.versionText(): String? {
-    val name =
-        when (family) {
-            HostFamily.SUNSHINE -> "LuminalShine"
-            HostFamily.GFE -> "GeForce Experience"
-            HostFamily.UNKNOWN -> return null
-        }
-    val parts = version.takeWhile { it >= 0 }.dropLastWhile { it == 0 }
-    return if (parts.isEmpty()) name else "$name ${parts.joinToString(".")}"
-}

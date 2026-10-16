@@ -18,8 +18,7 @@
     <string name="hosts_status_offline">Offline</string>
     <string name="hosts_status_checking">Checking…</string>
 
-    <string name="hosts_detail_found">found on this network</string>
-    <string name="hosts_detail_pair">%1$s · %2$s</string>
+    <string name="hosts_detail_found">Found on this network</string>
 
     <string name="hosts_tag_hevc">HEVC</string>
     <string name="hosts_tag_hevc_10_bit">HEVC 10-bit</string>

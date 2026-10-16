@@ -96,6 +96,18 @@ class SidePanelTest {
 
     @Test
     @Config(qualifiers = PHONE)
+    fun `the panel has a border on its left edge only`() {
+        composeRule.setContent { Specimen() }
+
+        // The panel is 187.2dp wide at the right of the 360dp window.
+        val frame = composeRule.onNodeWithTag(FRAME)
+        frame.assertPixel(x = 359.5f, y = 100f, BorealisTokens.Color.Surface)
+        frame.assertPixel(x = 300f, y = 0.5f, BorealisTokens.Color.Surface)
+        frame.assertPixel(x = 300f, y = 639.5f, BorealisTokens.Color.Surface)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
     fun `the content scrolls when it is taller than the panel`() {
         composeRule.setContent {
             Specimen(extra = { repeat(40) { index -> Text("Row $index", Modifier.height(40.dp)) } })

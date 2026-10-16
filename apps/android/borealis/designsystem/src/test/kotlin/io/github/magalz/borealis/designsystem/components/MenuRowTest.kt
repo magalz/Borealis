@@ -200,6 +200,43 @@ class MenuRowTest {
         composeRule.onNodeWithText("Bitrate").assertIsFocused()
     }
 
+    @Test
+    fun `Left from the first segment of each stacked row returns to its own row`() {
+        composeRule.setContentInKeyboardMode {
+            Specimen {
+                MenuRow(
+                    "Codec",
+                    {},
+                    trailing = {
+                        SegmentedControl(
+                            listOf("Auto", "Always use H.264 or HEVC"),
+                            "Auto",
+                            { it },
+                            {},
+                        )
+                    },
+                )
+                MenuRow(
+                    "Bitrate",
+                    {},
+                    trailing = {
+                        SegmentedControl(listOf("Low", "High"), "Low", { it }, {})
+                    },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Low").requestFocus()
+        composeRule.onNodeWithText("Low").performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithText("Bitrate").assertIsFocused()
+
+        composeRule.onNodeWithText("Auto").requestFocus()
+        composeRule.onNodeWithText("Auto").performKeyInput {
+            pressKey(Key.DirectionLeft)
+        }
+        composeRule.onNodeWithText("Codec").assertIsFocused()
+    }
+
     private fun titleColor(title: String) =
         textLayout(composeRule.onNodeWithText(title, useUnmergedTree = true))
             .layoutInput

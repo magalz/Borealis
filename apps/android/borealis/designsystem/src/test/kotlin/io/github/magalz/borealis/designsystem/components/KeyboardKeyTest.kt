@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
@@ -132,6 +133,36 @@ class KeyboardKeyTest {
             .isEqualTo(72.dp)
         assertThat(composeRule.onNodeWithText("Space").getUnclippedBoundsInRoot().width)
             .isEqualTo(240.dp)
+    }
+
+    @Test
+    fun `a row that must shrink keeps the 44 to 72 to 240 proportion of the key styles`() {
+        composeRule.setContent {
+            BorealisTheme(FormFactor.Tv) {
+                Row(Modifier.size(200.dp, 60.dp)) {
+                    for ((label, style) in
+                        listOf(
+                            "A" to KeyStyle.Normal,
+                            "Backspace" to KeyStyle.Wide,
+                            "Space" to KeyStyle.Space,
+                        )) {
+                        KeyboardKey(
+                            label,
+                            {},
+                            Modifier.weight(style.weight, fill = false),
+                            style = style,
+                        )
+                    }
+                }
+            }
+        }
+
+        val normal = composeRule.onNodeWithText("A").getUnclippedBoundsInRoot().width.value
+        val wide = composeRule.onNodeWithText("Backspace").getUnclippedBoundsInRoot().width.value
+        val space = composeRule.onNodeWithText("Space").getUnclippedBoundsInRoot().width.value
+        assertThat(wide / normal).isWithin(0.05f).of(72f / 44f)
+        assertThat(space / normal).isWithin(0.05f).of(240f / 44f)
+        assertThat(normal + wide + space).isWithin(1f).of(200f)
     }
 
     @Composable

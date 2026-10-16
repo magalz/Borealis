@@ -1,7 +1,9 @@
 package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -118,6 +120,23 @@ class SegmentedControlTest {
 
         // 3dp padding and the 1dp border put the first segment at 4dp from the control.
         composeRule.onNodeWithTag(FRAME).assertPixel(x = 24f + 5f, y = 24f + 5f, tintOverPage())
+    }
+
+    @Test
+    fun `D-pad entry from outside lands on the selected segment`() {
+        composeRule.setContentInKeyboardMode {
+            BorealisTheme(FormFactor.Tv) {
+                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    Chip("Back", onClick = {})
+                    SegmentedControl(OPTIONS, "60", { "$it fps" }, {})
+                }
+            }
+        }
+        composeRule.onNodeWithText("Back").requestFocus()
+
+        composeRule.onNodeWithText("Back").performKeyInput { pressKey(Key.DirectionRight) }
+
+        composeRule.onNodeWithText("60 fps").assertIsFocused()
     }
 
     private fun tintOverPage() =

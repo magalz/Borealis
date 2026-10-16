@@ -33,7 +33,11 @@ import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 enum class KeyStyle(internal val maxWidth: Dp) {
     Normal(44.dp),
     Wide(72.dp),
-    Space(240.dp),
+    Space(240.dp);
+
+    /** Stub: the weight follows its failing test. */
+    val weight: Float
+        get() = 1f
 }
 
 private val PHONE_HEIGHT = 32.dp

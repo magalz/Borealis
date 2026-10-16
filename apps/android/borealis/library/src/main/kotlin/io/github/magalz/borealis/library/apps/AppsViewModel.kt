@@ -38,16 +38,22 @@ constructor(
     private val detailsAppId = MutableStateFlow<Int?>(null)
     private val effectChannel = Channel<AppsEffect>(Channel.BUFFERED)
     private var closed = false
+    private var hostReported = false
 
     /** Collecting it polls the app list; it stops five seconds after the last collector leaves. */
     val uiState: StateFlow<AppsUiState> =
         combine(
-                repository.apps(hostId).onEach(::closeIfUnavailable).onEach(::clearGoneActions),
+                repository
+                    .apps(hostId)
+                    .onEach(::closeIfUnavailable)
+                    .onEach(::reportHostOpened)
+                    .onEach(::clearGoneActions),
                 showHidden,
                 actionsAppId,
                 detailsAppId,
-                AppsSnapshot::toUiState,
-            )
+            ) { snapshot, showHidden, actionsAppId, detailsAppId ->
+                snapshot.toUiState(showHidden, actionsAppId, detailsAppId, shortcuts.canPinApps)
+            }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), AppsUiState())
 
     val effects: Flow<AppsEffect> = effectChannel.receiveAsFlow()
@@ -92,7 +98,7 @@ constructor(
             AppAction.HIDE -> viewModelScope.launch { repository.setHidden(hostId, app.id, true) }
             AppAction.UNHIDE ->
                 viewModelScope.launch { repository.setHidden(hostId, app.id, false) }
-            AppAction.ADD_TO_HOME_SCREEN -> Unit
+            AppAction.ADD_TO_HOME_SCREEN -> pin(app)
         }
     }
 
@@ -106,6 +112,13 @@ constructor(
 
     fun onToggleShowHidden() {
         showHidden.update { !it }
+    }
+
+    private fun pin(app: AppItemUiState) {
+        val hostName = uiState.value.hostName ?: return
+        if (!shortcuts.pinApp(hostId, hostName, app.id, app.name, app.hdrSupported)) {
+            send(AppsEffect.ShowMessage(AppsMessage.PinFailed))
+        }
     }
 
     private suspend fun quitThenStart(app: AppItemUiState) {
@@ -132,6 +145,15 @@ constructor(
         }
     }
 
+    /** The host is open: its launcher shortcut is published once it is paired and not offline. */
+    private fun reportHostOpened(snapshot: AppsSnapshot) {
+        val host = snapshot.host ?: return
+        if (closed || hostReported || !host.paired || host.reachability == Reachability.OFFLINE)
+            return
+        hostReported = true
+        shortcuts.reportHostOpened(hostId, host.name)
+    }
+
     /** A sheet for an app that is gone must not reopen if the app returns. */
     private fun clearGoneActions(snapshot: AppsSnapshot) {
         val id = actionsAppId.value ?: return
@@ -156,6 +178,7 @@ private fun AppsSnapshot.toUiState(
     showHidden: Boolean,
     actionsAppId: Int?,
     detailsAppId: Int?,
+    canPin: Boolean,
 ): AppsUiState {
     val running = host?.runningApp
     val all = apps.map {
@@ -176,19 +199,25 @@ private fun AppsSnapshot.toUiState(
         actions =
             all.firstOrNull { it.id == actionsAppId }
                 ?.let {
-                    AppActionsUiState(it, running?.name, choicesFor(it, running != null))
+                    AppActionsUiState(it, running?.name, choicesFor(it, running != null, canPin))
                 },
         details = all.firstOrNull { it.id == detailsAppId },
     )
 }
 
-private fun choicesFor(app: AppItemUiState, somethingRuns: Boolean): List<AppAction> {
+private fun choicesFor(
+    app: AppItemUiState,
+    somethingRuns: Boolean,
+    canPin: Boolean,
+): List<AppAction> {
     val hide = if (app.hidden) AppAction.UNHIDE else AppAction.HIDE
-    return when {
-        app.running -> listOf(AppAction.RESUME, AppAction.QUIT, AppAction.DETAILS)
-        somethingRuns -> listOf(AppAction.QUIT_AND_START, AppAction.DETAILS, hide)
-        else -> listOf(AppAction.START, AppAction.DETAILS, hide)
-    }
+    val choices =
+        when {
+            app.running -> listOf(AppAction.RESUME, AppAction.QUIT, AppAction.DETAILS)
+            somethingRuns -> listOf(AppAction.QUIT_AND_START, AppAction.DETAILS, hide)
+            else -> listOf(AppAction.START, AppAction.DETAILS, hide)
+        }
+    return if (canPin) choices + AppAction.ADD_TO_HOME_SCREEN else choices
 }
 
 private fun AppItemUiState.toRequest(hostId: String) = StreamRequest(hostId, id, name, hdrSupported)

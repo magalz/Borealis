@@ -188,9 +188,7 @@ class AppsRouteTest {
     @Test
     fun `adding an app to the home screen pins it and says so when the launcher refuses`() {
         show(snapshot(running = false))
-        composeRule
-            .onNodeWithContentDescription("Hades II")
-            .performTouchInput { longClick() }
+        composeRule.onNodeWithContentDescription("Hades II").performTouchInput { longClick() }
         composeRule.waitForIdle()
 
         composeRule.onNodeWithText("Add to home screen").performClick()
@@ -203,9 +201,7 @@ class AppsRouteTest {
         assertThat(streams).isEmpty()
 
         shortcuts.pinResult = false
-        composeRule
-            .onNodeWithContentDescription("Hades II")
-            .performTouchInput { longClick() }
+        composeRule.onNodeWithContentDescription("Hades II").performTouchInput { longClick() }
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Add to home screen").performClick()
         composeRule.waitForIdle()

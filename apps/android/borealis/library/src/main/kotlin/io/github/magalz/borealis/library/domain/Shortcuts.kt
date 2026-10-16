@@ -5,7 +5,9 @@ package io.github.magalz.borealis.library.domain
  * or starts the app. The app module implements it over the platform shortcut manager.
  */
 interface HostShortcuts {
-    /** True when this device can pin an app to the home screen: the launcher allows it, not a TV. */
+    /**
+     * True when this device can pin an app to the home screen: the launcher allows it, not a TV.
+     */
     val canPinApps: Boolean
 
     /** The user opened [hostId]: publishes or updates its shortcut in the launcher. */

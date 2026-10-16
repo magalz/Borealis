@@ -48,8 +48,8 @@ private val SNACKBAR_PADDING = 16.dp
  * host, pairing replaces itself with Apps, and the screens that end say so on Hosts through its
  * saved state. [onStartStream] starts a stream and answers false when the host is no longer known,
  * which the shell says on the current screen. [onOpenSettings] opens the stream settings. A
- * [request] from outside (a launcher shortcut, the stream error screen) puts its screens on the back
- * stack; [onRequestHandled] says that it was taken, so it is not taken twice.
+ * [request] from outside (a launcher shortcut, the stream error screen) puts its screens on the
+ * back stack; [onRequestHandled] says that it was taken, so it is not taken twice.
  */
 @Composable
 internal fun LibraryNavHost(

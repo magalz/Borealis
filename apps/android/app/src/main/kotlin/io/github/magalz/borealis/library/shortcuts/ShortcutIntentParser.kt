@@ -13,10 +13,9 @@ internal object ShortcutExtras {
 }
 
 /**
- * Maps the extras of a shortcut to what the Library should show: the apps of the PC, a game
- * launch, or the host list when the shortcut names no PC (the name-only shortcuts of old releases).
- * The app id is a string in the extras; one that is not a number leaves the user on the apps of the
- * PC.
+ * Maps the extras of a shortcut to what the Library should show: the apps of the PC, a game launch,
+ * or the host list when the shortcut names no PC (the name-only shortcuts of old releases). The app
+ * id is a string in the extras; one that is not a number leaves the user on the apps of the PC.
  */
 internal object ShortcutIntentParser {
     fun parse(extras: Bundle?): LibraryLaunchRequest {

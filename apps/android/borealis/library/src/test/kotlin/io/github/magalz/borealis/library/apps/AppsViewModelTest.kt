@@ -25,7 +25,7 @@ class AppsViewModelTest {
     @get:Rule val mainDispatcher = MainDispatcherRule()
 
     private val repository = FakeAppRepository()
-    private val shortcuts = FakeHostShortcuts()
+    private val shortcuts = FakeHostShortcuts(canPinApps = false)
     // Lazy: a ViewModel must be created after the rule has set the main dispatcher.
     private val viewModel by lazy { AppsViewModel("host-1", repository, shortcuts) }
 
@@ -616,7 +616,9 @@ class AppsViewModelTest {
     fun `a host that is not paired or offline gets no shortcut`() = runTest {
         repository.emit(snapshot(desktop, host = aHost(id = "host-1", paired = false)))
         subscribe(viewModel.uiState)
-        repository.emit(snapshot(desktop, host = aHost(id = "host-1", reachability = Reachability.OFFLINE)))
+        repository.emit(
+            snapshot(desktop, host = aHost(id = "host-1", reachability = Reachability.OFFLINE))
+        )
         runCurrent()
         repository.emit(snapshot(desktop, host = null))
         runCurrent()
@@ -626,7 +628,12 @@ class AppsViewModelTest {
 
     @Test
     fun `a host that is paired after the screen opened gets its shortcut then`() = runTest {
-        repository.emit(snapshot(desktop, host = aHost(id = "host-1", paired = false, reachability = Reachability.UNKNOWN)))
+        repository.emit(
+            snapshot(
+                desktop,
+                host = aHost(id = "host-1", paired = false, reachability = Reachability.UNKNOWN),
+            )
+        )
         subscribe(viewModel.uiState)
         assertThat(shortcuts.openedHosts).isEmpty()
 
@@ -637,36 +644,37 @@ class AppsViewModelTest {
     }
 
     @Test
-    fun `every sheet offers to add the app to the home screen when pinning is possible`() = runTest {
-        repository.emit(snapshot(desktop, steam, running = desktop))
-        subscribe(viewModel.uiState)
+    fun `every sheet offers to add the app to the home screen when pinning is possible`() =
+        runTest {
+            shortcuts.canPinApps = true
+            repository.emit(snapshot(desktop, steam, running = desktop))
+            subscribe(viewModel.uiState)
 
-        viewModel.onActions(1)
-        runCurrent()
-        assertThat(viewModel.uiState.value.actions?.choices)
-            .containsExactly(
-                AppAction.RESUME,
-                AppAction.QUIT,
-                AppAction.DETAILS,
-                AppAction.ADD_TO_HOME_SCREEN,
-            )
-            .inOrder()
+            viewModel.onActions(1)
+            runCurrent()
+            assertThat(viewModel.uiState.value.actions?.choices)
+                .containsExactly(
+                    AppAction.RESUME,
+                    AppAction.QUIT,
+                    AppAction.DETAILS,
+                    AppAction.ADD_TO_HOME_SCREEN,
+                )
+                .inOrder()
 
-        viewModel.onActions(2)
-        runCurrent()
-        assertThat(viewModel.uiState.value.actions?.choices)
-            .containsExactly(
-                AppAction.QUIT_AND_START,
-                AppAction.DETAILS,
-                AppAction.HIDE,
-                AppAction.ADD_TO_HOME_SCREEN,
-            )
-            .inOrder()
-    }
+            viewModel.onActions(2)
+            runCurrent()
+            assertThat(viewModel.uiState.value.actions?.choices)
+                .containsExactly(
+                    AppAction.QUIT_AND_START,
+                    AppAction.DETAILS,
+                    AppAction.HIDE,
+                    AppAction.ADD_TO_HOME_SCREEN,
+                )
+                .inOrder()
+        }
 
     @Test
     fun `an app cannot be added to the home screen when the device cannot pin`() = runTest {
-        shortcuts.canPinApps = false
         repository.emit(snapshot(desktop, steam))
         subscribe(viewModel.uiState)
 
@@ -682,6 +690,7 @@ class AppsViewModelTest {
 
     @Test
     fun `adding to the home screen pins the app, closes the sheet and starts nothing`() = runTest {
+        shortcuts.canPinApps = true
         repository.emit(snapshot(desktop, steam))
         subscribe(viewModel.uiState)
         viewModel.onActions(2)
@@ -700,6 +709,7 @@ class AppsViewModelTest {
 
     @Test
     fun `a launcher that refuses the shortcut says so`() = runTest {
+        shortcuts.canPinApps = true
         shortcuts.pinResult = false
         repository.emit(snapshot(desktop))
         subscribe(viewModel.uiState)

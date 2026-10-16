@@ -35,6 +35,7 @@ constructor(
     private val subnet: SubnetCheck,
     private val hiddenApps: HiddenApps,
     private val boxArt: BoxArtCache,
+    private val shortcuts: ShortcutCleanup,
     @IoDispatcher private val io: CoroutineDispatcher,
 ) : HostRepository {
     override val hosts: Flow<List<Host>> =

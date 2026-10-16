@@ -34,6 +34,7 @@ class ComputerHostRepositoryTest {
     private val woken = mutableListOf<ComputerDetails>()
     private var wakeFailure: IOException? = null
     private val deletedBoxArt = mutableListOf<String>()
+    private val forgottenShortcuts = mutableListOf<String>()
     private var localNetworks = listOf<LocalIpv4>()
     private val hiddenApps = HiddenApps(context)
 
@@ -50,6 +51,7 @@ class ComputerHostRepositoryTest {
             subnet = SubnetCheck { localNetworks },
             hiddenApps = hiddenApps,
             boxArt = { deletedBoxArt += it },
+            shortcuts = { forgottenShortcuts += it.uuid },
             io = io,
         )
     }
@@ -300,6 +302,7 @@ class ComputerHostRepositoryTest {
             assertThat(binder.removed.single().uuid).isEqualTo("a")
             assertThat(hiddenApps.read("a")).isEmpty()
             assertThat(deletedBoxArt).containsExactly("a")
+            assertThat(forgottenShortcuts).containsExactly("a")
         }
 
     @Test
@@ -335,6 +338,7 @@ class ComputerHostRepositoryTest {
 
         assertThat(clients.client.unpairs).isEqualTo(0)
         assertThat(binder.removed.map { it.uuid }).containsExactly("off", "new")
+        assertThat(forgottenShortcuts).containsExactly("off", "new")
     }
 
     @Test
@@ -342,6 +346,7 @@ class ComputerHostRepositoryTest {
         repository().forget("nobody")
 
         assertThat(binder.removed).isEmpty()
+        assertThat(forgottenShortcuts).isEmpty()
     }
 
     @Test

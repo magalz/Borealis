@@ -1,7 +1,7 @@
 package com.limelight.utils;
 
 import android.annotation.TargetApi;
-import android.app.Activity;
+import android.content.Context;
 import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
 import android.graphics.Bitmap;
@@ -19,10 +19,10 @@ import java.util.List;
 public class ShortcutHelper {
 
     private final ShortcutManager sm;
-    private final Activity context;
+    private final Context context;
     private final TvChannelHelper tvChannelHelper;
 
-    public ShortcutHelper(Activity context) {
+    public ShortcutHelper(Context context) {
         this.context = context;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             sm = context.getSystemService(ShortcutManager.class);

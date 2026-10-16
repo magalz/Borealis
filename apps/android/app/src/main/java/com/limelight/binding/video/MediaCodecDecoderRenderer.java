@@ -38,11 +38,11 @@ import android.view.Choreographer;
 import android.view.SurfaceHolder;
 // BOREALIS: first-frame signal for the stream startup guard (host.video)
 import io.github.magalz.borealis.host.video.FirstFrameSignal;
-import io.github.magalz.borealis.stream.PerfSnapshotSink; // BOREALIS: structured performance numbers (host.failure)
-import io.github.magalz.borealis.stream.PerfSnapshots;
-import io.github.magalz.borealis.stream.PerfWindow;
 import io.github.magalz.borealis.host.video.HdrRestartReuse; // BOREALIS: keeps the first IDR across the HDR decoder restart (host.video)
 import io.github.magalz.borealis.host.video.HevcSpsMonitor; // BOREALIS: HEVC SPS diagnostics (host.video)
+import io.github.magalz.borealis.stream.PerfSnapshotSink; // BOREALIS: structured performance numbers (stream.perf)
+import io.github.magalz.borealis.stream.PerfSnapshots;
+import io.github.magalz.borealis.stream.PerfWindow;
 
 public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements Choreographer.FrameCallback {
     // BOREALIS: raised once, when the first output buffer is released for rendering
@@ -86,7 +86,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     private String glRenderer;
     private boolean foreground = true;
     private PerfOverlayListener perfListener;
-    // BOREALIS: the in-game overlay asks for structured numbers at runtime, whatever the preference says (host.failure)
+    // BOREALIS: the in-game overlay asks for structured numbers at runtime, whatever the preference says (stream.perf)
     private volatile boolean perfEnabled;
     private volatile PerfSnapshotSink perfSink;
 
@@ -453,17 +453,17 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         foreground = false;
     }
 
-    // BOREALIS: turns the per-second performance window on or off at runtime (host.failure)
+    // BOREALIS: turns the per-second performance window on or off at runtime (stream.perf)
     public void setPerfEnabled(boolean enabled) {
         this.perfEnabled = enabled;
     }
 
-    // BOREALIS: receives a PerfSnapshot about once a second while the window is on (host.failure)
+    // BOREALIS: receives a PerfSnapshot about once a second while the window is on (stream.perf)
     public void setPerfSink(PerfSnapshotSink sink) {
         this.perfSink = sink;
     }
 
-    // BOREALIS: the name of the decoder of the active video format, for Session info (host.failure)
+    // BOREALIS: the name of the decoder of the active video format, for Session info (stream.perf)
     public String getDecoderName() {
         MediaCodecInfo decoder = null;
         if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_H264) != 0) {
@@ -476,7 +476,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         return decoder != null ? decoder.getName() : null;
     }
 
-    // BOREALIS: builds the snapshot of the last two windows, the same numbers the text overlay shows (host.failure)
+    // BOREALIS: builds the snapshot of the last two windows, the same numbers the text overlay shows (stream.perf)
     private void pushPerfSnapshot() {
         PerfSnapshotSink sink = perfSink;
         if (sink == null) {
@@ -1428,11 +1428,11 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         }
 
         lastFrameNumber = frameNumber;
-        activeWindowVideoStats.totalBytes += decodeUnitLength; // BOREALIS: host.failure
+        activeWindowVideoStats.totalBytes += decodeUnitLength; // BOREALIS: stream.perf
 
         // Flip stats windows roughly every second
         if (SystemClock.uptimeMillis() >= activeWindowVideoStats.measurementStartTimestamp + 1000) {
-            if (perfEnabled) { pushPerfSnapshot(); } // BOREALIS: host.failure
+            if (perfEnabled) { pushPerfSnapshot(); } // BOREALIS: stream.perf
             if (prefs.enablePerfOverlay) {
                 VideoStats lastTwo = new VideoStats();
                 lastTwo.add(lastWindowVideoStats);

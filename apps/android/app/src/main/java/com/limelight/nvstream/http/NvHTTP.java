@@ -85,7 +85,7 @@ public class NvHTTP {
     private X509TrustManager trustManager;
     private X509KeyManager keyManager;
     private X509Certificate serverCert;
-    // BOREALIS: set when the host presented another certificate than the pinned one (host.failure)
+    // BOREALIS: set when the latest HTTPS request met another certificate than the pinned one; the HTTP fallback after it keeps the flag (host.failure)
     private volatile boolean certificateMismatch;
 
     // BOREALIS: whether this client saw the host present another certificate than the pinned one (host.failure)
@@ -448,6 +448,7 @@ public class NvHTTP {
     private ResponseBody openHttpConnection(OkHttpClient client, HttpUrl baseUrl, String path, String query) throws IOException {
         HttpUrl completeUrl = getCompleteUrl(baseUrl, path, query);
         Request request = new Request.Builder().url(completeUrl).get().build();
+        if (baseUrl.isHttps()) { certificateMismatch = false; } // BOREALIS: the flag tells about the latest HTTPS request only (host.failure)
         Response response;
         try {
             response = performAndroidTlsHack(client).newCall(request).execute();

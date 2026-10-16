@@ -16,7 +16,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
@@ -40,6 +39,8 @@ import com.limelight.nvstream.http.NvHTTP;
 import com.limelight.nvstream.http.PairingManager;
 import com.limelight.nvstream.input.MouseButtonPacket;
 import com.limelight.nvstream.jni.MoonBridge;
+// BOREALIS: standard UTF-8 for typed text (stream.keyframe)
+import io.github.magalz.borealis.stream.Utf8Text;
 // BOREALIS: typed failure causes (host.failure)
 import io.github.magalz.borealis.host.failure.CauseKind;
 import io.github.magalz.borealis.host.failure.FailureCauses;
@@ -105,7 +106,7 @@ public class NvConnection {
     }
 
     public void stop() {
-        connected = false; // BOREALIS: host.failure
+        connected = false; // BOREALIS: no new keyframe request from here on (stream.keyframe)
         // Interrupt any pending connection. This is thread-safe.
         MoonBridge.interruptConnection();
 
@@ -113,6 +114,7 @@ public class NvConnection {
         // we must not invoke that functionality in parallel.
         synchronized (MoonBridge.class) {
             MoonBridge.stopConnection();
+            connected = false; // BOREALIS: the start thread may have set it again before it saw the interrupt (stream.keyframe)
             MoonBridge.cleanupBridge();
         }
 
@@ -131,6 +133,7 @@ public class NvConnection {
     private volatile CauseKind lastFailureCause = CauseKind.NONE;
     private volatile int lastHttpCode;
     private volatile boolean launchRetried;
+    // BOREALIS: true only between a started connection and stop(); written under the MoonBridge lock (stream.keyframe)
     private volatile boolean connected;
 
     public CauseKind lastFailureCause() { return lastFailureCause; }
@@ -150,7 +153,7 @@ public class NvConnection {
         lastFailureCause = FailureCauses.of(e, httpCode);
     }
 
-    // BOREALIS: asks the host for a new keyframe; does nothing before the stream started or after it stopped (host.failure)
+    // BOREALIS: asks the host for a new keyframe; does nothing before the stream started or after it stopped (stream.keyframe)
     public void requestKeyframe() {
         if (connected) {
             MoonBridge.requestIdrFrame();
@@ -304,7 +307,14 @@ public class NvConnection {
     {
         NvHTTP h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, context.serverCert, cryptoProvider);
 
-        String serverInfo = collisions.readServerInfo(() -> h.getServerInfo(true)); // BOREALIS: retry a timed-out /serverinfo (host.launch)
+        String serverInfo;
+        try {
+            serverInfo = collisions.readServerInfo(() -> h.getServerInfo(true)); // BOREALIS: retry a timed-out /serverinfo (host.launch)
+        } catch (IOException | XmlPullParserException e) {
+            // BOREALIS: the HTTP fallback after a mismatch can fail too; the mismatch is the cause (host.failure)
+            if (h.sawCertificateMismatch()) { throw new CertificateMismatchException(e); }
+            throw e;
+        }
         if (h.sawCertificateMismatch()) { throw new CertificateMismatchException(null); } // BOREALIS: the fallback to HTTP would only say "not paired" (host.failure)
         
         context.serverAppVersion = h.getServerVersion(serverInfo);
@@ -539,7 +549,7 @@ public class NvConnection {
                             context.videoCapabilities,
                             context.streamConfig.getColorSpace(),
                             context.streamConfig.getColorRange());
-                    connected = ret == 0; // BOREALIS: host.failure
+                    connected = ret == 0; // BOREALIS: stream.keyframe
                     if (ret != 0) {
                         // LiStartConnection() failed, so the caller is not expected
                         // to stop the connection themselves. We need to release their
@@ -684,7 +694,7 @@ public class NvConnection {
 
     public void sendUtf8Text(final String text) {
         if (!isMonkey) {
-            MoonBridge.sendUtf8Text(text.getBytes(StandardCharsets.UTF_8)); // BOREALIS: JNI needs standard UTF-8, not Java's modified UTF-8
+            MoonBridge.sendUtf8Text(Utf8Text.bytes(text)); // BOREALIS: JNI needs standard UTF-8, not Java's modified UTF-8
         }
     }
 

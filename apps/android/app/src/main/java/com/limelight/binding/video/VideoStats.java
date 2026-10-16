@@ -16,7 +16,7 @@ class VideoStats {
     int totalHostProcessingLatency;
     int framesWithHostProcessingLatency;
     long measurementStartTimestamp;
-    long totalBytes; // BOREALIS: encoded bytes received, for the bitrate (host.failure)
+    long totalBytes; // BOREALIS: encoded bytes received, for the bitrate (stream.perf)
 
     void add(VideoStats other) {
         this.decoderTimeMs += other.decoderTimeMs;

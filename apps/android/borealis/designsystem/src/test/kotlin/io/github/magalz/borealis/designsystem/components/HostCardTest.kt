@@ -7,8 +7,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
@@ -48,6 +50,33 @@ class HostCardTest {
         composeRule.onNodeWithText("Online").assertIsDisplayed()
         composeRule.onNodeWithText("LuminalShine 26.09.1 · 192.168.1.20").assertIsDisplayed()
         composeRule.onNodeWithText("Desktop running").assertIsDisplayed()
+    }
+
+    @Test
+    fun `the tags are shown under the detail line as text`() {
+        composeRule.setContent { Specimen(tags = listOf("HEVC 10-bit", "HDR", "4:4:4")) }
+
+        composeRule.onNodeWithText("HEVC 10-bit", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithText("HDR", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithText("4:4:4", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(CARD).assert(hasText("HDR"))
+    }
+
+    @Test
+    fun `a card without tags shows none`() {
+        composeRule.setContent { Specimen() }
+
+        composeRule.onNodeWithText("HDR", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `the tags sit below the detail line`() {
+        composeRule.setContent { Specimen(tags = listOf("HDR")) }
+
+        val detail = composeRule.onNodeWithText("LuminalShine 26.09.1 · 192.168.1.20")
+        val tag = composeRule.onNodeWithText("HDR", useUnmergedTree = true)
+        assertThat(tag.getUnclippedBoundsInRoot().top)
+            .isAtLeast(detail.getUnclippedBoundsInRoot().bottom)
     }
 
     @Test
@@ -121,6 +150,7 @@ class HostCardTest {
         formFactor: FormFactor = FormFactor.Phone,
         runningApp: String? = null,
         action: HostCardAction? = null,
+        tags: List<String> = emptyList(),
     ) {
         BorealisTheme(formFactor) {
             Box(Modifier.testTag(FRAME).background(BorealisTokens.Color.Page).padding(24.dp)) {
@@ -129,6 +159,7 @@ class HostCardTest {
                     status = DotStatus.Online,
                     statusText = "Online",
                     detail = "LuminalShine 26.09.1 · 192.168.1.20",
+                    tags = tags,
                     runningApp = runningApp,
                     action = action,
                     onClick = { opened++ },

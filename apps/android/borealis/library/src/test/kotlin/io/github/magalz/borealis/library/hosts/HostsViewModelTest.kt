@@ -3,6 +3,7 @@ package io.github.magalz.borealis.library.hosts
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.library.domain.Host
+import io.github.magalz.borealis.library.domain.HostCapability
 import io.github.magalz.borealis.library.domain.HostRepository
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.RunningApp
@@ -125,6 +126,110 @@ class HostsViewModelTest {
                 HostItemUiState("c", "zeta", Reachability.ONLINE, true, null, HostAction.OPEN),
             )
             .inOrder()
+    }
+
+    @Test
+    fun `the items carry the version and the address`() = runTest {
+        subscribe(viewModel.uiState)
+
+        repository.emit(aHost(version = "LuminalShine 26.9.1", address = "192.168.1.20"))
+        runCurrent()
+
+        val item = viewModel.uiState.value.items.single()
+        assertThat(item.version).isEqualTo("LuminalShine 26.9.1")
+        assertThat(item.address).isEqualTo("192.168.1.20")
+    }
+
+    @Test
+    fun `only an online host that is not paired was found on the network`() = runTest {
+        subscribe(viewModel.uiState)
+
+        repository.emit(
+            aHost(id = "a", name = "A", reachability = Reachability.ONLINE, paired = false),
+            aHost(id = "b", name = "B", reachability = Reachability.ONLINE, paired = true),
+            aHost(id = "c", name = "C", reachability = Reachability.OFFLINE, paired = false),
+            aHost(id = "d", name = "D", reachability = Reachability.UNKNOWN, paired = false),
+        )
+        runCurrent()
+
+        assertThat(viewModel.uiState.value.items.map { it.foundOnNetwork })
+            .containsExactly(true, false, false, false)
+            .inOrder()
+    }
+
+    @Test
+    fun `the tags are the best codec, HDR and 4-4-4 in that order`() = runTest {
+        subscribe(viewModel.uiState)
+
+        repository.emit(
+            aHost(
+                capabilities =
+                    setOf(
+                        HostCapability.YUV_444,
+                        HostCapability.HDR,
+                        HostCapability.HEVC,
+                        HostCapability.HEVC_10_BIT,
+                    )
+            )
+        )
+        runCurrent()
+
+        assertThat(viewModel.uiState.value.items.single().tags)
+            .containsExactly(
+                HostCapability.HEVC_10_BIT,
+                HostCapability.HDR,
+                HostCapability.YUV_444,
+            )
+            .inOrder()
+    }
+
+    @Test
+    fun `a 10-bit codec beats an 8-bit one and AV1 shows only without HEVC 10-bit`() = runTest {
+        subscribe(viewModel.uiState)
+        val hevc = setOf(HostCapability.HEVC)
+        val av1 = setOf(HostCapability.AV1)
+
+        repository.emit(
+            aHost(id = "a", name = "A", capabilities = hevc + av1),
+            aHost(id = "b", name = "B", capabilities = hevc + HostCapability.AV1_10_BIT),
+            aHost(id = "c", name = "C", capabilities = setOf(HostCapability.HEVC_10_BIT) + av1),
+            aHost(id = "d", name = "D", capabilities = setOf(HostCapability.AV1_10_BIT)),
+            aHost(id = "e", name = "E", capabilities = av1),
+        )
+        runCurrent()
+
+        assertThat(viewModel.uiState.value.items.map { it.tags })
+            .containsExactly(
+                listOf(HostCapability.HEVC),
+                listOf(HostCapability.AV1_10_BIT),
+                listOf(HostCapability.HEVC_10_BIT),
+                listOf(HostCapability.AV1_10_BIT),
+                listOf(HostCapability.AV1),
+            )
+            .inOrder()
+    }
+
+    @Test
+    fun `a host without capabilities has no tags and an offline host shows none`() = runTest {
+        subscribe(viewModel.uiState)
+        val everything = HostCapability.entries.toSet()
+
+        repository.emit(
+            aHost(id = "a", name = "A", capabilities = emptySet()),
+            aHost(
+                id = "b",
+                name = "B",
+                reachability = Reachability.OFFLINE,
+                capabilities = everything,
+            ),
+            aHost(id = "c", name = "C", capabilities = everything),
+        )
+        runCurrent()
+
+        val tags = viewModel.uiState.value.items.map { it.tags }
+        assertThat(tags[0]).isEmpty()
+        assertThat(tags[1]).isEmpty()
+        assertThat(tags[2]).hasSize(3)
     }
 
     @Test

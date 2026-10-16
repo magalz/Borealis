@@ -89,7 +89,7 @@ fun ConflictDialog(phase: StreamPhase.Conflict, intents: StreamIntents) {
             )
             Text(body(phase), color = colors.ink2, style = MaterialTheme.typography.bodyMedium)
             Warning()
-            Buttons(answer)
+            Buttons(phase, answer)
         }
     }
 }
@@ -120,7 +120,7 @@ private fun Warning() {
 
 /** Three buttons do not fit side by side on a phone, so they stack there. */
 @Composable
-private fun Buttons(answer: (ConflictChoice) -> Unit) {
+private fun Buttons(phase: StreamPhase.Conflict, answer: (ConflictChoice) -> Unit) {
     val cancelFocus = remember { FocusRequester() }
     val stacked = LocalFormFactor.current == FormFactor.Phone
     val width = if (stacked) Modifier.fillMaxWidth() else Modifier
@@ -138,7 +138,14 @@ private fun Buttons(answer: (ConflictChoice) -> Unit) {
             BorealisButtonStyle.Primary,
         )
         BorealisButton(
-            stringResource(R.string.stream_conflict_quit_and_relaunch),
+            // The answer is the same; the label says what happens to the app the user chose.
+            stringResource(
+                if (phase.sameApp && phase.runningAppName != null) {
+                    R.string.stream_conflict_quit_and_relaunch
+                } else {
+                    R.string.stream_conflict_quit_and_start
+                }
+            ),
             { answer(ConflictChoice.QUIT_AND_RELAUNCH) },
             width,
             BorealisButtonStyle.Danger,

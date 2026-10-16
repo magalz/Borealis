@@ -411,7 +411,7 @@ public class NvConnection {
                         return false;
                     }
                 } else {
-                    return collisions.isRestart() ? collisions.refuseQuit() : quitAndLaunch(h, context); // BOREALIS: a restart never quits another device's app
+                    return collisions.differentAppRunning(() -> resolveConflict(h, context)); // BOREALIS: ask before quitting another device's app; a restart never quits it
                 }
             } catch (HostHttpResponseException e) {
                 if (e.getErrorCode() == 470) {

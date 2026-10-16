@@ -10,4 +10,5 @@
     <string name="stream_conflict_cancel">Cancel</string>
     <string name="stream_conflict_join">Join</string>
     <string name="stream_conflict_quit_and_relaunch">Quit and relaunch</string>
+    <string name="stream_conflict_quit_and_start">Quit and start</string>
 </resources>

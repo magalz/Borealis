@@ -51,8 +51,14 @@ import kotlinx.coroutines.launch
  *
  * While MODAL the host also takes the gamepad keys itself, whatever pad they come from (see
  * [GamepadKey]), and a hold of Select and Start for one second closes the open panel.
+ *
+ * When the window gets its focus back from a system window (a permission prompt, the notification
+ * shade, an IME), the confirm keys are consumed for [CONFIRM_GUARD_MS]: the press that answered
+ * that window, or one meant to continue, must not land on whatever the chrome has focused (Cancel
+ * on the Starting screen).
  */
 @SuppressLint("ViewConstructor") // Created in code by the stream activity, never inflated.
+@Suppress("TooManyFunctions") // One override per input path of the view.
 class StreamChromeHost(
     private val activity: ComponentActivity,
     private val session: StreamSession,
@@ -60,7 +66,11 @@ class StreamChromeHost(
     private val onCaptured: Runnable,
     private val onReleased: Runnable,
 ) : FrameLayout(activity) {
+    /** The time the guard reads, in the [SystemClock.uptimeMillis] timebase. */
+    internal var clock: () -> Long = SystemClock::uptimeMillis
     private var mode: ChromeMode? = null
+    private var windowFocusLost = false
+    private var confirmKeysIgnoredUntil = 0L
     private var menuHandleBounds: Rect? = null
     private var ownsGesture = false
     private var collecting: Job? = null
@@ -144,6 +154,16 @@ class StreamChromeHost(
         super.onDetachedFromWindow()
     }
 
+    override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
+        super.onWindowFocusChanged(hasWindowFocus)
+        if (!hasWindowFocus) {
+            windowFocusLost = true
+        } else if (windowFocusLost) {
+            windowFocusLost = false
+            confirmKeysIgnoredUntil = clock() + CONFIRM_GUARD_MS
+        }
+    }
+
     private fun applyMode(next: ChromeMode) {
         val previous = mode
         mode = next
@@ -172,9 +192,17 @@ class StreamChromeHost(
     /**
      * While MODAL, the gamepad keys are the host's: A is OK, B is Back unless a screen takes it, Y
      * is the screen's, and Start, Select, X, L3, R3 and Mode are used up here. None of them is left
-     * to the system, whose fallbacks would click the focused item for Start.
+     * to the system, whose fallbacks would click the focused item for Start. Right after the window
+     * gets its focus back, the confirm keys of any source are consumed first.
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (
+            session.chromeMode == ChromeMode.MODAL &&
+                GamepadKey.isConfirm(event.keyCode) &&
+                clock() < confirmKeysIgnoredUntil
+        ) {
+            return true
+        }
         val key = GamepadKey.of(event.keyCode)
         if (key == null || session.chromeMode != ChromeMode.MODAL) {
             return super.dispatchKeyEvent(event)
@@ -259,6 +287,9 @@ class StreamChromeHost(
     companion object {
         /** Above the on-screen controller and every other view of the stream layout. */
         private const val CHROME_Z = 1000f
+
+        /** How long the confirm keys are ignored once the window has its focus back. */
+        private const val CONFIRM_GUARD_MS = 1000L
 
         /**
          * Whether the device is a phone, where the keyboard docks under the stream instead of

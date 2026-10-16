@@ -20,10 +20,11 @@ class ShortcutsTest {
     private fun List<NamedChord>.chords() = map { it.chord }
 
     @Test
-    fun `the Send keys row offers the eight chips of the menu`() {
+    fun `the Send keys row offers the nine chips of the menu`() {
         assertThat(Shortcuts.sendKeys.labels())
             .containsExactly(
                 "Alt+Tab",
+                "Win+Tab",
                 "Win",
                 "Ctrl+Shift+Esc",
                 "Alt+F4",
@@ -40,6 +41,7 @@ class ShortcutsTest {
         assertThat(Shortcuts.sendKeys.chords())
             .containsExactly(
                 KeyChord(0x09, setOf(ALT)),
+                KeyChord(0x09, setOf(WIN)),
                 KeyChord(0x5B),
                 KeyChord(0x1B, setOf(CTRL, SHIFT)),
                 KeyChord(0x73, setOf(ALT)),
@@ -52,9 +54,18 @@ class ShortcutsTest {
     }
 
     @Test
-    fun `the keyboard row offers the seven shortcuts`() {
+    fun `the keyboard row offers the eight shortcuts`() {
         assertThat(Shortcuts.keyboardRow.labels())
-            .containsExactly("Alt+Tab", "Win", "Ctrl+Shift+Esc", "Alt+F4", "Win+D", "Esc", "F11")
+            .containsExactly(
+                "Alt+Tab",
+                "Win+Tab",
+                "Win",
+                "Ctrl+Shift+Esc",
+                "Alt+F4",
+                "Win+D",
+                "Esc",
+                "F11",
+            )
             .inOrder()
     }
 
@@ -63,6 +74,7 @@ class ShortcutsTest {
         assertThat(Shortcuts.keyboardRow.chords())
             .containsExactly(
                 KeyChord(0x09, setOf(ALT)),
+                KeyChord(0x09, setOf(WIN)),
                 KeyChord(0x5B),
                 KeyChord(0x1B, setOf(CTRL, SHIFT)),
                 KeyChord(0x73, setOf(ALT)),

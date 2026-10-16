@@ -158,6 +158,25 @@ class GameStreamActionsTest {
     }
 
     @Test
+    fun `Win+Tab from the Send keys row and from the keyboard row presses Tab with the Windows key held`() {
+        val expected =
+            listOf(
+                "down 805B mods 08 flags 0",
+                "down 8009 mods 08 flags 0",
+                "up 8009 mods 08 flags 0",
+                "up 805B mods 00 flags 0",
+            )
+
+        // The chip right after Alt+Tab in each row.
+        actions.send(Shortcuts.sendKeys[1].chord)
+        assertThat(input.events).containsExactlyElementsIn(expected).inOrder()
+
+        input.events.clear()
+        actions.send(Shortcuts.keyboardRow[1].chord)
+        assertThat(input.events).containsExactlyElementsIn(expected).inOrder()
+    }
+
+    @Test
     fun `Win+D presses D with the Windows key held`() {
         actions.send(KeyChord(VK_D, setOf(KeyModifier.WIN)))
 

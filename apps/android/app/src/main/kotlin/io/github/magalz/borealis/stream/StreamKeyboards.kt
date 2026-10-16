@@ -10,6 +10,10 @@ object StreamKeyboards {
      */
     @JvmStatic
     fun toggle(session: StreamSession, imeVisible: BooleanSupplier, hideIme: Runnable) {
+        if (imeVisible.asBoolean) {
+            hideIme.run()
+            return
+        }
         val phase = session.state.value.phase
         if (phase is StreamPhase.Streaming && phase.panel == Panel.KEYBOARD) {
             session.closePanel()

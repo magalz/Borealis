@@ -16,9 +16,8 @@ import io.github.magalz.borealis.host.video.StreamErrorHints
  *
  * The explanations the stream activity used to put in its error dialog (another device was starting
  * its stream, the network blocks Borealis, no video arrived, the LuminalShine hint) are not lost:
- * when the classified failure has no port hint of its own, that text becomes its `portHint`, which
- * the error screen shows under the raw code. A failure that has a port hint keeps it, so the
- * explanation is not shown beside it.
+ * they go into the `portHint` that the error screen shows under the raw code, after the
+ * classifier's own port text when it has one, separated by a blank line.
  */
 object StreamFailures {
     private const val SEPARATOR = "\n\n"
@@ -66,8 +65,11 @@ object StreamFailures {
         portFlagsText: (Int) -> String,
     ): StreamFailure {
         val classified = StreamFailureClassifier.classify(facts, text, portFlagsText)
-        if (classified.portHint != null) return classified
-        return classified.copy(portHint = hint(facts, portBlocked, text))
+        val portHint =
+            listOfNotNull(classified.portHint, hint(facts, portBlocked, text))
+                .joinToString(SEPARATOR)
+                .ifEmpty { null }
+        return classified.copy(portHint = portHint)
     }
 
     internal fun hint(

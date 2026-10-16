@@ -37,6 +37,7 @@ class ImeKeyGateTest {
         val manager = ApplicationProvider.getApplicationContext<Application>()
             .getSystemService(InputManager::class.java)
         shadowOf(manager).addInputDevice(device)
+        assertThat(InputDevice.getDevice(id)?.keyboardType).isEqualTo(keyboardType)
         return id
     }
 

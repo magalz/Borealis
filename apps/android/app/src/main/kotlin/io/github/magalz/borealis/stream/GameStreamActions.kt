@@ -122,13 +122,16 @@ internal constructor(
 
     /**
      * Closes the panel, which hands the input back, then focuses the stream view and shows the
-     * Android keyboard on it.
+     * Android keyboard on it. The keyboard is shown from a posted task, after the chrome's own
+     * focus hand-off has run.
      */
     override fun openSystemKeyboard() {
         controls.closePanel.run()
         val view = controls.streamView
         view.requestFocus()
-        activity.getSystemService(InputMethodManager::class.java)?.showSoftInput(view, 0)
+        view.post {
+            activity.getSystemService(InputMethodManager::class.java)?.showSoftInput(view, 0)
+        }
     }
 
     override fun requestKeyframe() = input.requestKeyframe()

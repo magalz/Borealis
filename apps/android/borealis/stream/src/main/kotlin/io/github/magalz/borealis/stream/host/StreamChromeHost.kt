@@ -3,6 +3,7 @@ package io.github.magalz.borealis.stream.host
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Configuration
+import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -183,10 +184,15 @@ class StreamChromeHost(
 
     override fun dispatchGenericMotionEvent(ev: MotionEvent): Boolean =
         when (mode) {
-            ChromeMode.MODAL -> {
-                super.dispatchGenericMotionEvent(ev)
-                true
-            }
+            // Pointer sources never reach the stream below. Joystick and hat motion is left
+            // unconsumed when Compose does not take it, so that Android turns it into a D-pad.
+            ChromeMode.MODAL ->
+                if (ev.isFromSource(InputDevice.SOURCE_CLASS_POINTER)) {
+                    super.dispatchGenericMotionEvent(ev)
+                    true
+                } else {
+                    super.dispatchGenericMotionEvent(ev)
+                }
             ChromeMode.DOCKED -> super.dispatchGenericMotionEvent(ev)
             else -> false
         }

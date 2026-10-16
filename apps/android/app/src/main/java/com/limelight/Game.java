@@ -146,6 +146,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
     private InputCaptureProvider inputCaptureProvider;
     private int modifierFlags = 0;
     private boolean grabbedInput = true;
+    private boolean grabbedBeforeCapture = true; // BOREALIS: whether the input was grabbed when the chrome took it
     private boolean cursorVisible = false;
     private boolean waitingForAllModifiersUp = false;
     private int specialKeyCode = KeyEvent.KEYCODE_UNKNOWN;
@@ -1184,15 +1185,21 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
 
     // BOREALIS: the chrome takes the input: release what is held and drop the pointer capture
     private void chromeCaptured() {
+        grabbedBeforeCapture = grabbedInput;
         streamActions.releaseHeldInput(lastButtonState);
         lastButtonState = 0;
+        // A modifier that comes up while the chrome has the keys is never seen here
+        modifierFlags = 0;
+        specialKeyCode = KeyEvent.KEYCODE_UNKNOWN;
+        waitingForAllModifiersUp = false;
         setInputGrabState(false);
         // The gamepad is zeroed by GamepadChrome.setCaptured(true) on the controller handler (wired by S5-T7)
     }
 
-    // BOREALIS: the chrome gives the input back: capture the pointer again once the stream is up
+    // BOREALIS: the chrome gives the input back: capture the pointer again once the stream is up,
+    // unless the user had released it (Ctrl+Alt+Shift+Z) before the chrome took the input
     private void chromeReleased() {
-        if (connected) {
+        if (connected && grabbedBeforeCapture) {
             setInputGrabState(true);
         }
     }
@@ -1376,6 +1383,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (chromeInput.actsAsBack(event)) return true; // BOREALIS: the hardware Escape key acts as Back while the chrome is modal
         return handleKeyDown(event) || super.onKeyDown(keyCode, event);
     }
 
@@ -1460,6 +1468,10 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
 
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (chromeInput.actsAsBack(event)) { // BOREALIS: the hardware Escape key acts as Back while the chrome is modal
+            getOnBackPressedDispatcher().onBackPressed();
+            return true;
+        }
         return handleKeyUp(event) || super.onKeyUp(keyCode, event);
     }
 

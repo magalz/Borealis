@@ -9,12 +9,14 @@ import androidx.core.content.edit
 import com.limelight.Game
 import com.limelight.binding.input.touch.TouchContext
 import com.limelight.nvstream.NvConnection
+import com.limelight.nvstream.StreamConfiguration
 import com.limelight.nvstream.input.KeyboardPacket
 import com.limelight.nvstream.input.MouseButtonPacket
 import io.github.magalz.borealis.host.launch.ConflictChoice
 import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.R as LibraryR
 import io.github.magalz.borealis.library.domain.QuitResult
+import io.github.magalz.borealis.library.domain.WakeResult
 import io.github.magalz.borealis.library.shell.LibraryActivity
 import io.github.magalz.borealis.settings.BorealisSettingsActivity
 import io.github.magalz.borealis.stream.host.HeldKeys
@@ -72,6 +74,7 @@ internal constructor(
 
     private val hostId: String? = activity.intent.getStringExtra(Game.EXTRA_PC_UUID)
     private var retried = false
+    private var quitting = false
 
     override fun send(chord: KeyChord) {
         val modifiers = chord.modifiers.toList()
@@ -133,6 +136,8 @@ internal constructor(
     override fun disconnect() = activity.finish()
 
     override fun quitApp() {
+        if (quitting) return
+        quitting = true
         val id = hostId
         scope.launch {
             val result =
@@ -140,10 +145,12 @@ internal constructor(
             when (result) {
                 QuitResult.Quit -> activity.finish()
                 is QuitResult.Failed -> {
-                    val text =
+                    // The stream goes on, so the user can try again.
+                    quitting = false
+                    toast(
                         result.message
                             ?: activity.getString(LibraryR.string.apps_message_quit_failed)
-                    Toast.makeText(activity.applicationContext, text, Toast.LENGTH_LONG).show()
+                    )
                 }
             }
         }
@@ -151,27 +158,62 @@ internal constructor(
 
     override fun leave() = activity.finish()
 
+    /**
+     * Opens the Library on the launch of this app and finishes while the stream is still in front,
+     * so Android does not take it for a start from the background. The Library starts the app
+     * again, through its own apps and conflict flow.
+     */
     override fun retry() {
         if (retried) return
         retried = true
-        StreamRelaunch.afterDestroy(activity, activity.intent)
-        activity.finish()
+        val id = hostId
+        val appId =
+            activity.intent.getIntExtra(Game.EXTRA_APP_ID, StreamConfiguration.INVALID_APP_ID)
+        openLibrary(
+            when {
+                id == null -> LibraryLaunchRequest.Hosts
+                appId == StreamConfiguration.INVALID_APP_ID -> LibraryLaunchRequest.Apps(id)
+                else -> LibraryLaunchRequest.Launch(id, appId)
+            }
+        )
     }
 
     override fun wakeHost() {
-        val id = hostId ?: return
-        scope.launch { entryPoint().hostRepository().wake(id) }
+        val id = hostId
+        scope.launch {
+            val result = id?.let { entryPoint().hostRepository().wake(it) } ?: WakeResult.FAILED
+            toast(
+                activity.getString(
+                    when (result) {
+                        WakeResult.SENT -> LibraryR.string.hosts_message_wake_sent
+                        WakeResult.ALREADY_ONLINE -> LibraryR.string.hosts_message_already_online
+                        WakeResult.NO_MAC_ADDRESS -> LibraryR.string.hosts_message_no_mac
+                        WakeResult.FAILED -> LibraryR.string.hosts_message_wake_failed
+                    }
+                )
+            )
+        }
     }
 
     override fun pairAgain() {
         val id = hostId ?: return
+        openLibrary(LibraryLaunchRequest.Pair(id))
+    }
+
+    private fun openLibrary(request: LibraryLaunchRequest) {
         activity.startActivity(
-            Intent(activity, LibraryActivity::class.java)
-                .putExtras(LibraryLaunchRequest.Pair(id).toExtras())
+            Intent(activity, LibraryActivity::class.java).putExtras(request.toExtras())
         )
         activity.finish()
     }
 
+    private fun toast(text: String) =
+        Toast.makeText(activity.applicationContext, text, Toast.LENGTH_LONG).show()
+
+    /**
+     * Opens the settings. Game stops in `onStop` and ends the stream there, so the settings replace
+     * the stream; the activity finishes itself.
+     */
     override fun openDiagnostics() =
         activity.startActivity(Intent(activity, BorealisSettingsActivity::class.java))
 

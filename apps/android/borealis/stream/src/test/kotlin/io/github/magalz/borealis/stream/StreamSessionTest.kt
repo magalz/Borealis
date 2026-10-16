@@ -358,6 +358,59 @@ class StreamSessionTest {
     }
 
     @Test
+    fun `an end of the stream while a quit is pending is quiet, not a failure`() {
+        val started = startStreaming()
+        started.quitApp()
+
+        started.onFailed(aFailure)
+
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Quitting(aFailure))
+        assertThat(started.chromeMode).isEqualTo(ChromeMode.MODAL)
+    }
+
+    @Test
+    fun `an end of the stream without a quit is still a failure`() {
+        val started = startStreaming()
+
+        started.onFailed(aFailure)
+
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Failed(aFailure))
+    }
+
+    @Test
+    fun `a quit that failed lets the next end be a failure`() {
+        val started = startStreaming()
+        started.quitApp()
+        actions.quitFailed()
+
+        started.onFailed(aFailure)
+
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Failed(aFailure))
+    }
+
+    @Test
+    fun `a quit that fails after the stream ended shows how the stream ended`() {
+        val started = startStreaming()
+        started.quitApp()
+        started.onFailed(aFailure)
+
+        actions.quitFailed()
+
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Failed(aFailure))
+    }
+
+    @Test
+    fun `a second end while quitting changes nothing`() {
+        val started = startStreaming()
+        started.quitApp()
+        started.onFailed(aFailure)
+
+        started.onFailed(StreamFailure(FailureKind.HOST_OFFLINE, "other", null))
+
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Quitting(aFailure))
+    }
+
+    @Test
     fun `every other intent is forwarded`() {
         val chord = KeyChord(0x09, setOf(KeyModifier.ALT))
 

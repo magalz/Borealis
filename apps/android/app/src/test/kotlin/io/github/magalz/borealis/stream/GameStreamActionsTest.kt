@@ -223,7 +223,7 @@ class GameStreamActionsTest {
 
     @Test
     fun `quitting ends the app on the PC of this host, then finishes`() {
-        actions.quitApp()
+        actions.quitApp {}
 
         assertThat(entryPoint.apps.quits).containsExactly("host-1")
         assertThat(activity.isFinishing).isTrue()
@@ -233,17 +233,36 @@ class GameStreamActionsTest {
     fun `a failed quit shows the failure and keeps streaming`() {
         entryPoint.apps.result = QuitResult.Failed("The host said no")
 
-        actions.quitApp()
+        actions.quitApp {}
 
         assertThat(activity.isFinishing).isFalse()
         assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("The host said no")
     }
 
     @Test
+    fun `a failed quit tells the session`() {
+        var failures = 0
+        entryPoint.apps.result = QuitResult.Failed(null)
+
+        actions.quitApp { failures++ }
+
+        assertThat(failures).isEqualTo(1)
+    }
+
+    @Test
+    fun `a quit that worked does not tell the session it failed`() {
+        var failures = 0
+
+        actions.quitApp { failures++ }
+
+        assertThat(failures).isEqualTo(0)
+    }
+
+    @Test
     fun `a failed quit without a text shows the generic one`() {
         entryPoint.apps.result = QuitResult.Failed(null)
 
-        actions.quitApp()
+        actions.quitApp {}
 
         assertThat(activity.isFinishing).isFalse()
         assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("Failed to quit.")
@@ -357,8 +376,8 @@ class GameStreamActionsTest {
         val gate = CompletableDeferred<Unit>()
         entryPoint.apps.gate = gate
 
-        actions.quitApp()
-        actions.quitApp()
+        actions.quitApp {}
+        actions.quitApp {}
         gate.complete(Unit)
 
         assertThat(entryPoint.apps.quits).containsExactly("host-1")
@@ -368,8 +387,8 @@ class GameStreamActionsTest {
     fun `a failed quit can be tried again`() {
         entryPoint.apps.result = QuitResult.Failed(null)
 
-        actions.quitApp()
-        actions.quitApp()
+        actions.quitApp {}
+        actions.quitApp {}
 
         assertThat(entryPoint.apps.quits).containsExactly("host-1", "host-1")
     }
@@ -386,7 +405,7 @@ class GameStreamActionsTest {
 
     @Test
     fun `a quit writes the session end with its own reason`() {
-        actions.quitApp()
+        actions.quitApp {}
 
         assertThat(endReasons()).containsExactly("reason=quit duration_s=0")
     }
@@ -395,7 +414,7 @@ class GameStreamActionsTest {
     fun `a quit that failed writes no session end and keeps the stream on`() {
         entryPoint.apps.result = QuitResult.Failed(null)
 
-        actions.quitApp()
+        actions.quitApp {}
 
         assertThat(endReasons()).isEmpty()
     }
@@ -405,7 +424,7 @@ class GameStreamActionsTest {
         val gate = CompletableDeferred<Unit>()
         entryPoint.apps.gate = gate
 
-        actions.quitApp()
+        actions.quitApp {}
         SessionAudit.terminated(0)
         gate.complete(Unit)
 
@@ -416,7 +435,7 @@ class GameStreamActionsTest {
     fun `after a failed quit the next end by the host is a host end`() {
         entryPoint.apps.result = QuitResult.Failed(null)
 
-        actions.quitApp()
+        actions.quitApp {}
         SessionAudit.terminated(0)
 
         assertThat(endReasons()).containsExactly("reason=host_ended duration_s=0")

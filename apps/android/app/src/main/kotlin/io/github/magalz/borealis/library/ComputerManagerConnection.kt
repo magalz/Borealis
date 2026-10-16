@@ -4,6 +4,7 @@ import com.limelight.computers.ComputerManagerListener
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.PairingManager.PairState
 import java.security.cert.X509Certificate
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,8 +34,12 @@ internal class ComputerManagerConnection
 constructor(
     private val connector: CmsConnector,
     @IoDispatcher private val io: CoroutineDispatcher,
+    private val appListCache: AppListCache = AppListCache { null },
 ) {
     private val state = MutableStateFlow<Map<String, ComputerDetails>>(emptyMap())
+
+    // The hosts whose cached app list was looked for: it is read once, however many updates follow.
+    private val cacheRead = ConcurrentHashMap.newKeySet<String>()
 
     /**
      * Runs on a polling thread of the service: stores a copy, which the service goes on mutating.
@@ -47,11 +52,23 @@ constructor(
     }
 
     /**
-     * Stores [copy] for [id], with the last app list when it has none. The update may run again
+     * Stores [copy] for [id], with the last app list when it has none; a host first seen with none
+     * at all gets the list that the service cached on disk, read once per host. This runs on a
+     * polling thread of the service or on [io], never on the main thread. The update may run again
      * when another thread changes the state first, so it only builds new values.
      */
     private fun publish(id: String, copy: ComputerDetails) {
-        state.update { known -> known + (id to copy.withListFrom(known[id])) }
+        val cached =
+            if (
+                copy.rawAppList == null && state.value[id]?.rawAppList == null && cacheRead.add(id)
+            ) {
+                appListCache.read(id)
+            } else {
+                null
+            }
+        state.update { known ->
+            known + (id to copy.withListFrom(known[id]).withListIfNone(cached))
+        }
     }
 
     // The gate, the pollers and the binder are only changed with the lock held.
@@ -138,7 +155,8 @@ constructor(
     suspend fun addComputer(details: ComputerDetails): Boolean {
         val binder = binder()
         val added = runInterruptible(io) { binder.addComputerBlocking(details) }
-        if (added) listener.notifyComputerUpdated(details)
+        // The listener may read the cached app list, which is disk I/O.
+        if (added) withContext(io) { listener.notifyComputerUpdated(details) }
         return added
     }
 
@@ -166,7 +184,7 @@ constructor(
             paired.pairState = PairState.PAIRED
             paired.state = ComputerDetails.State.UNKNOWN
             paired.serverCert = cert
-            publish(uuid, paired)
+            withContext(io) { publish(uuid, paired) }
         }
     }
 

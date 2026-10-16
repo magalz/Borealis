@@ -38,6 +38,8 @@ import io.github.magalz.borealis.stream.PerfSnapshot
 import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.StreamIntents
 import io.github.magalz.borealis.stream.StreamPhase
+import io.github.magalz.borealis.stream.ui.common.appLabel
+import io.github.magalz.borealis.stream.ui.common.onBackKey
 import io.github.magalz.borealis.stream.ui.common.onGamepadB
 
 private val HEADER_PADDING_HORIZONTAL = 16.dp
@@ -48,9 +50,12 @@ private val ROWS_PADDING = 8.dp
 private val ROWS_GAP = 10.dp
 
 /**
- * The in-game menu (UC-004): a side panel over the stream with the header "<app> · <host>" and the
- * approved rows. Back to stream has the initial focus. A tap on the scrim and the gamepad B button
- * close it; B closes the quit confirmation first. Back is handled by the stream host.
+ * The in-game menu (UC-004): a side panel over the stream with the header "<app> · <host>" (the
+ * host alone when the app is not known) and the approved rows. Back to stream has the initial
+ * focus. A tap on the scrim, the gamepad B button and Back close it, from any row or segment; B and
+ * Back close the quit confirmation first. The panel takes Back itself so that Compose does not use
+ * it to move the focus out of a segmented control; the host's back callback is for when nothing in
+ * the panel has the focus.
  *
  * Quit asks first, inside the panel, because it ends the app for everyone. Disconnect does not: the
  * app keeps running.
@@ -77,10 +82,10 @@ internal fun InGameMenu(
             backFromConfirmation = false
         }
     }
+    val back = { if (confirmingQuit) cancelQuit() else intents.closePanel() }
     SidePanel(
         onDismiss = intents::closePanel,
-        modifier =
-            Modifier.onGamepadB { if (confirmingQuit) cancelQuit() else intents.closePanel() },
+        modifier = Modifier.onGamepadB(back).onBackKey(back),
     ) {
         Column(
             Modifier.windowInsetsPadding(
@@ -88,7 +93,8 @@ internal fun InGameMenu(
             )
         ) {
             Text(
-                stringResource(R.string.stream_menu_header, appName, hostName),
+                if (appName.isBlank()) hostName
+                else stringResource(R.string.stream_menu_header, appName, hostName),
                 Modifier.padding(
                         start = HEADER_PADDING_HORIZONTAL,
                         top = HEADER_PADDING_TOP,
@@ -159,10 +165,15 @@ private fun MenuRows(
         MenuRow(
             stringResource(R.string.stream_menu_disconnect),
             intents::disconnect,
-            consequence = stringResource(R.string.stream_menu_disconnect_consequence, appName),
+            consequence =
+                if (appName.isBlank()) {
+                    stringResource(R.string.stream_menu_disconnect_consequence_unknown)
+                } else {
+                    stringResource(R.string.stream_menu_disconnect_consequence, appName)
+                },
         )
         MenuRow(
-            stringResource(R.string.stream_menu_quit, appName),
+            stringResource(R.string.stream_menu_quit, appLabel(appName)),
             onQuit,
             Modifier.focusRequester(quitFocus),
             consequence = stringResource(R.string.stream_menu_quit_consequence),

@@ -49,8 +49,12 @@ class RecordingActions : StreamActions {
         calls += "disconnect"
     }
 
-    override fun quitApp() {
+    /** Called by a test to say the quit did not happen, as the activity does. */
+    var quitFailed: () -> Unit = {}
+
+    override fun quitApp(onFailed: () -> Unit) {
         calls += "quitApp"
+        quitFailed = onFailed
     }
 
     override fun leave() {

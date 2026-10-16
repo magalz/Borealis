@@ -415,6 +415,49 @@ class InGameMenuTest {
         assertThat(fixture.intents.calls).containsExactly("closePanel")
     }
 
+    // The device round: Compose took the first Back for a focus exit out of the segmented control.
+    @Test
+    @Config(qualifiers = TV)
+    fun `Back with the focus on a segment closes the menu at once`() {
+        val fixture = menu(FormFactor.Tv, touchMode = null, gamepadMouse = false)
+        text("Detailed").performScrollTo().requestFocus()
+        text("Detailed").assertIsFocused()
+
+        composeRule.onRoot().performKeyInput { pressKey(Key.Back) }
+
+        assertThat(fixture.intents.calls).containsExactly("closePanel")
+        assertThat(fixture.keysSeenOutside).doesNotContain(Key.Back)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `Back from the confirmation closes the confirmation first and then the menu`() {
+        val fixture = menu(FormFactor.Tv, touchMode = null, gamepadMouse = false)
+        text("Quit Desktop").performScrollTo().requestFocus()
+        text("Quit Desktop").performKeyInput { pressKey(Key.DirectionCenter) }
+        text("Cancel").assertIsFocused()
+
+        composeRule.onRoot().performKeyInput { pressKey(Key.Back) }
+
+        text("Quit Desktop? Unsaved work is lost.").assertDoesNotExist()
+        text("Quit Desktop").assertIsFocused()
+        assertThat(fixture.intents.calls).isEmpty()
+
+        composeRule.onRoot().performKeyInput { pressKey(Key.Back) }
+
+        assertThat(fixture.intents.calls).containsExactly("closePanel")
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `Back with the focus on Back to stream closes the menu once`() {
+        val fixture = menu(FormFactor.Tv, touchMode = null, gamepadMouse = false)
+
+        composeRule.onRoot().performKeyInput { pressKey(Key.Back) }
+
+        assertThat(fixture.intents.calls).containsExactly("closePanel")
+    }
+
     @Test
     @Config(qualifiers = TV)
     fun `gamepad A is not consumed, so the platform can turn it into OK`() {

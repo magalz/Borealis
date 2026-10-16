@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.pm.PackageManager
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
+import io.github.magalz.borealis.library.UNKNOWN_APP_NAME
 import io.github.magalz.borealis.nativecore.LaunchCategory
 import io.github.magalz.borealis.stream.host.StreamChromeHost
 
@@ -26,7 +27,8 @@ object StreamSessionFactory {
     /**
      * The session of [activity]'s stream. The docked keyboard is for phones. [pcName] and [appName]
      * are what the intent carried; either can be missing, for example when a running session is
-     * resumed.
+     * resumed. The placeholder name that the Library gives a resumed app it has no name for is
+     * dropped here, so the screens never show it.
      */
     @JvmStatic
     fun create(
@@ -37,7 +39,7 @@ object StreamSessionFactory {
         actions: StreamActions,
     ): StreamSession =
         StreamSession(
-            appName = appName.orEmpty(),
+            appName = appName.takeUnless { it == UNKNOWN_APP_NAME }.orEmpty(),
             hostName = pcName.orEmpty(),
             defaults =
                 defaults(

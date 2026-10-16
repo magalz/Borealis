@@ -229,6 +229,7 @@ class StreamChromeHost(
 internal fun handleBack(session: StreamSession) {
     when (val phase = session.state.value.phase) {
         is StreamPhase.Starting,
+        is StreamPhase.Quitting,
         is StreamPhase.Failed -> session.leave()
         is StreamPhase.Conflict -> session.answerConflict(ConflictChoice.CANCEL)
         is StreamPhase.Streaming ->

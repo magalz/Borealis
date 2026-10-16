@@ -70,6 +70,13 @@ class PerfFormatTest {
     }
 
     @Test
+    fun `the detailed overlay shows a dash for a decode time the decoder did not report`() {
+        val lines = format.detailed(aPerf().copy(decodeMs = null), info)
+
+        assertThat(lines.last()).isEqualTo("Decode — ms")
+    }
+
+    @Test
     fun `the detailed overlay leaves out the decoder when it is not known`() {
         val lines = format.detailed(aPerf(), info.copy(decoder = null))
 

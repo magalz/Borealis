@@ -310,6 +310,17 @@ class StreamKeyboardTest {
     }
 
     @Test
+    @Config(qualifiers = TV)
+    fun `Back with the focus on a key closes the panel at once`() {
+        showInKeyboardMode(FormFactor.Tv)
+
+        pressOnFocused(Key.Back)
+
+        assertThat(intents.calls).containsExactly("closePanel")
+        assertThat(keysPassedUp()).doesNotContain(Key.Back)
+    }
+
+    @Test
     @Config(qualifiers = HANDHELD)
     fun `holding B closes the panel once`() {
         showInKeyboardMode(FormFactor.Handheld)

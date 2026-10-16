@@ -43,6 +43,8 @@ internal abstract class LibraryAdapterModule {
 
     @Binds abstract fun boxArtCache(impl: DiskBoxArtCache): BoxArtCache
 
+    @Binds abstract fun appListCache(impl: DiskAppListCache): AppListCache
+
     @Binds abstract fun localNetworks(impl: DeviceLocalNetworks): LocalNetworks
 
     @Binds abstract fun hostShortcuts(impl: UpstreamHostShortcuts): HostShortcuts

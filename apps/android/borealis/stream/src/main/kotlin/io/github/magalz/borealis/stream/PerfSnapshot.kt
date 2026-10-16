@@ -9,7 +9,8 @@ data class PerfSnapshot(
     val rttMs: Int,
     val rttVarianceMs: Int,
     val hostLatency: LatencyRange?,
-    val decodeMs: Float,
+    /** Null when the decoder reports no decode time, which some low-latency decoders do not. */
+    val decodeMs: Float?,
     val bitrateMbps: Float?,
 )
 

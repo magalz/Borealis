@@ -20,6 +20,7 @@ import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.stream.R
+import io.github.magalz.borealis.stream.ui.common.appLabel
 
 private val PADDING_HORIZONTAL = 16.dp
 private val PADDING_VERTICAL = 8.dp
@@ -37,7 +38,7 @@ internal fun QuitConfirmation(appName: String, onCancel: () -> Unit, onQuit: () 
         verticalArrangement = Arrangement.spacedBy(GAP),
     ) {
         Text(
-            stringResource(R.string.stream_menu_quit_confirm, appName),
+            stringResource(R.string.stream_menu_quit_confirm, appLabel(appName)),
             Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             color = LocalBorealisColors.current.ink2,
             style = MaterialTheme.typography.bodyMedium,

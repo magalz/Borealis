@@ -45,12 +45,7 @@ object PerfSnapshots {
             rttMs = (rttInfo shr Int.SIZE_BITS).toInt(),
             rttVarianceMs = rttInfo.toInt(),
             hostLatency = hostLatency(window),
-            decodeMs =
-                if (window.framesReceived > 0) {
-                    window.decoderTimeMs.toFloat() / window.framesReceived
-                } else {
-                    0f
-                },
+            decodeMs = decodeMs(window),
             bitrateMbps =
                 if (seconds > 0f) {
                     window.bytes * BITS_PER_BYTE / BITS_PER_MEGABIT / seconds
@@ -59,6 +54,16 @@ object PerfSnapshots {
                 },
         )
     }
+
+    // No frames, or frames without any decoder time: the decoder did not report the time (some
+    // low-latency decoders hand the frames back without the timestamp the measure needs), and a
+    // zero would pass for a decode that took no time.
+    private fun decodeMs(window: PerfWindow): Float? =
+        if (window.framesReceived > 0 && window.decoderTimeMs > 0) {
+            window.decoderTimeMs.toFloat() / window.framesReceived
+        } else {
+            null
+        }
 
     private fun hostLatency(window: PerfWindow): LatencyRange? =
         if (window.hostLatencyFrames > 0) {

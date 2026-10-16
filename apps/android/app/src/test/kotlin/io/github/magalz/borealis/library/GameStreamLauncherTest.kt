@@ -55,6 +55,24 @@ class GameStreamLauncherTest {
     }
 
     @Test
+    fun `a resume without a name takes the name from the cached app list`() = runTest {
+        val launcher = launcher(details(uuid = "a", rawAppList = APP_LIST))
+
+        launcher.start(activity, StreamRequest("a", appId = 8, appName = null, hdrSupported = false))
+
+        assertThat(binder.streams.single().second.appName).isEqualTo("Desktop")
+    }
+
+    @Test
+    fun `a resume of an app that no list names passes the placeholder`() = runTest {
+        val launcher = launcher(details(uuid = "a", rawAppList = APP_LIST))
+
+        launcher.start(activity, StreamRequest("a", appId = 99, appName = null, hdrSupported = false))
+
+        assertThat(binder.streams.single().second.appName).isEqualTo(UNKNOWN_APP_NAME)
+    }
+
+    @Test
     fun `an app that is not in the list keeps the flag of the request`() = runTest {
         val launcher = launcher(details(uuid = "a", rawAppList = APP_LIST))
 

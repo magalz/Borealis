@@ -161,7 +161,7 @@ internal constructor(
         activity.finish()
     }
 
-    override fun quitApp() {
+    override fun quitApp(onFailed: () -> Unit) {
         if (quitting) return
         quitting = true
         // The host ends the stream with the app, possibly before the answer arrives.
@@ -179,6 +179,7 @@ internal constructor(
                     // The stream goes on, so the user can try again.
                     quitting = false
                     SessionAudit.quitFailed()
+                    onFailed()
                     toast(
                         result.message
                             ?: activity.getString(LibraryR.string.apps_message_quit_failed)

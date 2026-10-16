@@ -47,6 +47,7 @@ internal class LayerFixture(
     perf: PerfSnapshot? = null,
     val intents: RecordingIntents = RecordingIntents(),
     private val keyboardMode: Boolean = false,
+    private val appName: String = "Desktop",
 ) {
     var phase by mutableStateOf(phase)
     var perf by mutableStateOf(perf)
@@ -64,7 +65,7 @@ internal class LayerFixture(
                         false
                     }
                 ) {
-                    StreamingLayer("Desktop", "Gaming PC", phase, perf, intents)
+                    StreamingLayer(appName, "Gaming PC", phase, perf, intents)
                 }
             }
         }

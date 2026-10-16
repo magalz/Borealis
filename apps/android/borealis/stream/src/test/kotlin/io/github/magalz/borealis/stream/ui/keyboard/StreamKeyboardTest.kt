@@ -165,10 +165,12 @@ class StreamKeyboardTest {
     fun `the shortcut chips send their chords`() {
         showPhone()
 
-        for (shortcut in Shortcuts.keyboardRow) tapShortcut(context.getString(shortcut.label))
+        for (shortcut in Shortcuts.keyboardRowPhone) {
+            tapShortcut(context.getString(shortcut.label))
+        }
 
         assertThat(intents.chords)
-            .containsExactlyElementsIn(Shortcuts.keyboardRow.map { it.chord })
+            .containsExactlyElementsIn(Shortcuts.keyboardRowPhone.map { it.chord })
             .inOrder()
         assertThat(intents.chords).contains(KeyChord(0x09, setOf(ALT)))
     }

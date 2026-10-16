@@ -44,6 +44,7 @@ import io.github.magalz.borealis.stream.StreamIntents
 import io.github.magalz.borealis.stream.keys.KeyChord
 import io.github.magalz.borealis.stream.keys.KeyModifier
 import io.github.magalz.borealis.stream.keys.KeyModifier.SHIFT
+import io.github.magalz.borealis.stream.keys.NamedChord
 import io.github.magalz.borealis.stream.keys.Shortcuts
 import io.github.magalz.borealis.stream.ui.common.onBackKey
 import io.github.magalz.borealis.stream.ui.common.onGamepadB
@@ -116,6 +117,7 @@ fun StreamKeyboard(docked: Boolean, intents: StreamIntents) {
             verticalArrangement = Arrangement.spacedBy(KEY_GAP),
         ) {
             ShortcutRow(
+                shortcuts = if (docked) Shortcuts.keyboardRowPhone else Shortcuts.keyboardRow,
                 onShortcut = ::sendShortcut,
                 onClose = intents::closePanel,
                 onSystemKeyboard = intents::openSystemKeyboard,
@@ -158,6 +160,7 @@ private fun Modifier.gamepadKeys(onClose: () -> Unit, onBackspace: () -> Unit): 
 
 @Composable
 private fun ShortcutRow(
+    shortcuts: List<NamedChord>,
     onShortcut: (KeyChord) -> Unit,
     onClose: () -> Unit,
     onSystemKeyboard: () -> Unit,
@@ -173,7 +176,7 @@ private fun ShortcutRow(
                 .padding(CHIP_ROW_PADDING),
             horizontalArrangement = Arrangement.spacedBy(CHIP_GAP),
         ) {
-            for (shortcut in Shortcuts.keyboardRow) {
+            for (shortcut in shortcuts) {
                 val label = stringResource(shortcut.label)
                 Chip(
                     label,

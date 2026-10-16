@@ -54,4 +54,10 @@ object Shortcuts {
     /** The shortcut row of the in-stream keyboard. */
     val keyboardRow: List<NamedChord> =
         listOf(altTab, winTab, win, ctrlShiftEsc, altF4, winD, esc, f11)
+
+    /**
+     * The shortcut row of the docked keyboard (a phone): Esc first, so the scroll never hides it.
+     */
+    val keyboardRowPhone: List<NamedChord> =
+        listOf(esc, altTab, winTab, win, ctrlShiftEsc, altF4, winD, f11)
 }

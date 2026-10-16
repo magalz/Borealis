@@ -86,6 +86,24 @@ class ShortcutsTest {
     }
 
     @Test
+    fun `the phone keyboard row starts with Esc and keeps Win+Tab next to Alt+Tab`() {
+        assertThat(Shortcuts.keyboardRowPhone.labels())
+            .containsExactly(
+                "Esc",
+                "Alt+Tab",
+                "Win+Tab",
+                "Win",
+                "Ctrl+Shift+Esc",
+                "Alt+F4",
+                "Win+D",
+                "F11",
+            )
+            .inOrder()
+        assertThat(Shortcuts.keyboardRowPhone.chords())
+            .containsExactlyElementsIn(Shortcuts.keyboardRow.chords())
+    }
+
+    @Test
     fun `the modifiers match the stream stack`() {
         // KeyboardTranslator's left Shift, Ctrl, Alt and Meta, and KeyboardPacket.MODIFIER_*.
         assertThat(KeyModifier.entries.map { Triple(it, it.vk, it.flag) })

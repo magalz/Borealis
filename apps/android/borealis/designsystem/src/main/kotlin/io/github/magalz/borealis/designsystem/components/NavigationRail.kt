@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -69,7 +70,14 @@ fun NavigationRail(
             .background(LocalBorealisColors.current.chrome)
             .padding(RAIL_PADDING)
             .selectableGroup()
-            .focusProperties { enter = { selectedFocus } }
+            // Entering the rail by the D-pad lands on the selected item, not the nearest. A request
+            // for
+            // one item (a tap, an initial focus) is not an entry and stays on it.
+            .focusProperties {
+                enter = { direction ->
+                    if (direction != FocusDirection.Enter) selectedFocus else FocusRequester.Default
+                }
+            }
             .focusGroup(),
         verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
     ) {

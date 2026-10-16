@@ -15,7 +15,7 @@ import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.StreamIntents
 
-private val BUTTON_GAP = 8.dp
+private val BUTTON_GAP = 10.dp
 
 /**
  * The buttons of the error screen: Try again (with the initial focus), the state action of the
@@ -25,7 +25,10 @@ private val BUTTON_GAP = 8.dp
 @Composable
 internal fun ErrorActions(stateAction: StateAction?, intents: StreamIntents) {
     val tryAgainFocus = remember { FocusRequester() }
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP)) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP),
+        verticalArrangement = Arrangement.spacedBy(BUTTON_GAP),
+    ) {
         BorealisButton(
             stringResource(R.string.stream_error_try_again),
             intents::retry,

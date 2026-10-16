@@ -15,7 +15,7 @@ class KeyboardLayoutTest {
 
     private fun KeySpec.caption() = label.resolve(context)
 
-    private fun List<List<KeySpec>>.captions() = map { row -> row.map { it.caption() } }
+    private fun List<List<KeySpec>>.rowCaptions() = map { row -> row.map { it.caption() } }
 
     private fun List<KeySpec>.captions() = map { it.caption() }
 
@@ -52,7 +52,7 @@ class KeyboardLayoutTest {
 
     @Test
     fun `the letter rows are Q to P, A to L with Backspace, and Shift, Z to M with Enter`() {
-        assertThat(KeyboardLayout.letterRows.captions())
+        assertThat(KeyboardLayout.letterRows.rowCaptions())
             .containsExactly(
                 listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"),
                 listOf("A", "S", "D", "F", "G", "H", "J", "K", "L", "Backspace"),
@@ -70,7 +70,7 @@ class KeyboardLayoutTest {
 
     @Test
     fun `the Fn layer has the digits, F1 to F10, and the arrows with the navigation keys`() {
-        assertThat(KeyboardLayout.functionRows.captions())
+        assertThat(KeyboardLayout.functionRows.rowCaptions())
             .containsExactly(
                 listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0"),
                 listOf("F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10"),

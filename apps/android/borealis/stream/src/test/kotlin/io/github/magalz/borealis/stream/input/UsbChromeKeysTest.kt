@@ -10,6 +10,7 @@ import io.github.magalz.borealis.stream.input.GamepadButtons.DPAD_LEFT
 import io.github.magalz.borealis.stream.input.GamepadButtons.DPAD_RIGHT
 import io.github.magalz.borealis.stream.input.GamepadButtons.DPAD_UP
 import io.github.magalz.borealis.stream.input.GamepadButtons.RIGHT_BUMPER
+import io.github.magalz.borealis.stream.input.GamepadButtons.SELECT
 import io.github.magalz.borealis.stream.input.GamepadButtons.START
 import io.github.magalz.borealis.stream.input.GamepadButtons.Y
 import org.junit.Test
@@ -39,6 +40,14 @@ class UsbChromeKeysTest {
                 KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_BUTTON_Y,
                 KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_BUTTON_START,
             )
+    }
+
+    @Test
+    fun `Select maps to its own key, which the chord that closes a panel needs`() {
+        assertThat(keys(0, SELECT))
+            .containsExactly(KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_BUTTON_SELECT)
+        assertThat(keys(SELECT, 0))
+            .containsExactly(KeyEvent.ACTION_UP to KeyEvent.KEYCODE_BUTTON_SELECT)
     }
 
     @Test

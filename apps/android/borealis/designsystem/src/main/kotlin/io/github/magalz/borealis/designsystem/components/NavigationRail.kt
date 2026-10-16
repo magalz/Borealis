@@ -3,6 +3,7 @@
 package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,9 +17,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
@@ -45,8 +51,10 @@ private val ICON_SIZE = 20.dp
 /**
  * The TV and handheld navigation rail: the chrome surface with one item per destination, an icon
  * and a label in the rail text style. The selected item has the accent tint and accent text. Every
- * item is focusable with the Borealis focus indication.
+ * item is focusable with the Borealis focus indication. A D-pad that enters the rail from the
+ * content lands on the selected item, not on the nearest one.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun NavigationRail(
     items: List<RailItem>,
@@ -54,27 +62,42 @@ fun NavigationRail(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val selectedFocus = remember { FocusRequester() }
     Column(
         modifier
             .fillMaxHeight()
             .background(LocalBorealisColors.current.chrome)
             .padding(RAIL_PADDING)
-            .selectableGroup(),
+            .selectableGroup()
+            .focusProperties { enter = { selectedFocus } }
+            .focusGroup(),
         verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
     ) {
         items.forEachIndexed { index, item ->
-            RailEntry(item, selected = index == selectedIndex, onClick = { onSelect(index) })
+            val selected = index == selectedIndex
+            RailEntry(
+                item,
+                selected = selected,
+                onClick = { onSelect(index) },
+                modifier = if (selected) Modifier.focusRequester(selectedFocus) else Modifier,
+            )
         }
     }
 }
 
 @Composable
-private fun RailEntry(item: RailItem, selected: Boolean, onClick: () -> Unit) {
+private fun RailEntry(
+    item: RailItem,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.medium
     val content = if (selected) colors.accent else colors.ink2
     Row(
-        Modifier.fillMaxWidth()
+        modifier
+            .fillMaxWidth()
             .borealisFocusIndication(shape)
             .background(if (selected) colors.accentTint else Color.Transparent, shape)
             .clip(shape)

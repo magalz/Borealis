@@ -10,6 +10,9 @@ import android.net.ConnectivityManager
 import android.net.Uri
 import android.preference.Preference
 import android.util.AttributeSet
+import android.view.Gravity
+import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -62,11 +65,13 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
     public override fun onClick() {
         if (running) return
         running = true
-        toast(R.string.borealis_export_working)
+        // A toast is easy to miss and a TV does not show it, so the wait has a dialog of its own.
+        val progress = showProgress()
         val flow = newFlow()
         scope.launch {
             val result = withContext(ioDispatcher) { flow.run() }
             running = false
+            progress?.let { runCatching { it.dismiss() } }
             if (!isGone()) {
                 // The system can refuse the share or the dialog (revoked grant, dead window); the
                 // click handler must not take the app down with it.
@@ -78,6 +83,34 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
             }
         }
     }
+
+    /**
+     * A dialog that Back and OK cannot close, so a second activation cannot start a second export.
+     * It closes when the result arrives. A window that cannot be built does not stop the export.
+     */
+    private fun showProgress(): AlertDialog? = runCatching {
+        val padding = (PADDING_DP * context.resources.displayMetrics.density).toInt()
+        val body =
+            LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(padding, padding, padding, padding)
+                addView(ProgressBar(context))
+                addView(
+                    TextView(context).apply {
+                        setText(R.string.borealis_export_working)
+                        setPadding(padding, 0, 0, 0)
+                    }
+                )
+            }
+        AlertDialog.Builder(context)
+            .setTitle(R.string.borealis_export_title)
+            .setView(body)
+            .setCancelable(false)
+            .show()
+    }
+        .onFailure { BorealisLog.e(LogTag.APP, "could not show the export progress", it) }
+        .getOrNull()
 
     private fun newFlow() =
         ExportFlow(

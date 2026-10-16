@@ -37,12 +37,12 @@
     <string name="hosts_option_wake">Wake</string>
     <string name="hosts_option_wake_consequence">Send a Wake-on-LAN packet to the PC.</string>
     <string name="hosts_option_forget">Forget</string>
-    <string name="hosts_option_forget_consequence">Remove it from this device. You will need to pair again.</string>
+    <string name="hosts_option_forget_consequence">Remove it from this device. The PC may keep trusting this device until you remove it in the LuminalShine Web UI (Clients page).</string>
 
     <string name="hosts_details_title">Host details</string>
     <string name="hosts_details_close">Close</string>
     <string name="hosts_forget_title">Forget host</string>
-    <string name="hosts_forget_message">Forget %1$s? You will need to pair again.</string>
+    <string name="hosts_forget_message">Forget %1$s on this device? The PC may keep trusting this device until you remove it in the LuminalShine Web UI (Clients page).</string>
     <string name="hosts_forget_confirm">Forget</string>
     <string name="hosts_forget_cancel">Cancel</string>
 

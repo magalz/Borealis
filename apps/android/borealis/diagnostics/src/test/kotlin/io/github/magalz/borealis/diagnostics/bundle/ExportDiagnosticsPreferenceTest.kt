@@ -174,7 +174,7 @@ class ExportDiagnosticsPreferenceTest {
         assertThat(uri.scheme).isEqualTo("content")
         assertThat(uri.authority).isEqualTo("${activity.packageName}.diagnostics.fileprovider")
         assertThat(uri.lastPathSegment).startsWith("borealis-diagnostics-")
-        assertThat(ShadowAlertDialog.getLatestAlertDialog()).isNull()
+        assertThat(ShadowAlertDialog.getLatestAlertDialog()?.isShowing ?: false).isFalse()
     }
 
     private fun savedName() =
@@ -433,6 +433,15 @@ class ExportDiagnosticsPreferenceTest {
         dismissAndIdle(transfer)
     }
 
+    private fun visibleTexts(view: View): List<String> =
+        when {
+            view.visibility != View.VISIBLE -> emptyList()
+            view is TextView -> listOf(view.text.toString())
+            view is ViewGroup ->
+                (0 until view.childCount).flatMap { visibleTexts(view.getChildAt(it)) }
+            else -> emptyList()
+        }
+
     /** Text views that are on screen with nothing in them: a line that still takes its space. */
     private fun emptyLines(view: View): List<TextView> =
         when (view) {
@@ -456,7 +465,7 @@ class ExportDiagnosticsPreferenceTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1))
 
         assertThat(texts(transfer.window!!.decorView)).contains("Downloaded")
-        assertThat(texts(transfer.window!!.decorView).filter { it.startsWith("Expires in") })
+        assertThat(visibleTexts(transfer.window!!.decorView).filter { it.startsWith("Expires in") })
             .isEmpty()
         assertThat(emptyLines(transfer.window!!.decorView)).isEmpty()
         dismissAndIdle(transfer)

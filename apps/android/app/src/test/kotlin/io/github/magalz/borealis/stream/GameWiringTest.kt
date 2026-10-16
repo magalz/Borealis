@@ -102,6 +102,18 @@ class GameWiringTest {
     }
 
     @Test
+    fun `a failed quit is the quit step, set before the quit request is sent`() {
+        val connection =
+            File("src/main/java/com/limelight/nvstream/NvConnection.java").readText()
+        val start = connection.indexOf("protected boolean quitAndLaunch(")
+        val quit = connection.substring(start, connection.indexOf("\n    }\n", start))
+
+        assertThat(quit).contains("startStep = StartSteps.QUIT")
+        assertThat(quit.indexOf("startStep = StartSteps.QUIT"))
+            .isLessThan(quit.indexOf("h.quitApp()"))
+    }
+
+    @Test
     fun `the session info names the decoder`() {
         assertThat(source).contains("decoderRenderer.getDecoderName()")
     }

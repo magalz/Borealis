@@ -11,4 +11,7 @@ object StartSteps {
     /** The `/launch` and `/resume` requests use their own verb: `launch` and `resume`. */
     const val LAUNCH = "launch"
     const val RESUME = "resume"
+
+    /** Quitting the app that another device runs, before the app is launched. */
+    const val QUIT = "quit"
 }

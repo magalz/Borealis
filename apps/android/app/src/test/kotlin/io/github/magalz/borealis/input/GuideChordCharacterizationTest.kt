@@ -35,15 +35,14 @@ class GuideChordCharacterizationTest {
     }
 
     @Test
-    fun `a pad with a Mode button sends Start and Select as they are`() {
+    fun `a pad with a Mode button holds Start and Select back from the PC while the chord is pending`() {
         rig.press(KeyEvent.KEYCODE_BUTTON_MODE, at = 500)
         rig.release(KeyEvent.KEYCODE_BUTTON_MODE, at = 600)
 
         rig.press(KeyEvent.KEYCODE_BUTTON_START, at = 1_000)
         rig.press(KeyEvent.KEYCODE_BUTTON_SELECT, at = 1_050)
 
-        assertThat(rig.lastButtons())
-            .isEqualTo(ControllerPacket.PLAY_FLAG or ControllerPacket.BACK_FLAG)
+        assertThat(rig.lastButtons()).isEqualTo(0)
     }
 
     @Test

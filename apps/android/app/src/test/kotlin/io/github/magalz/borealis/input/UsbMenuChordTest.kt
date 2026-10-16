@@ -1,7 +1,9 @@
 package io.github.magalz.borealis.input
 
 import com.google.common.truth.Truth.assertThat
+import com.limelight.nvstream.input.ControllerPacket.A_FLAG
 import com.limelight.nvstream.input.ControllerPacket.BACK_FLAG
+import com.limelight.nvstream.input.ControllerPacket.LB_FLAG
 import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,15 +27,15 @@ class UsbMenuChordTest {
     }
 
     @Test
-    fun `the PC is told that Select and Start are up and the release sends nothing more`() {
+    fun `Select and Start never reach the PC while the chord is held, or after it opened the menu`() {
         pad.report(chord)
         rig.advanceBy(1_000)
-        assertThat(rig.lastButtons()).isEqualTo(0)
         val packets = rig.connection.packets.size
 
         pad.report(PLAY_FLAG)
         pad.report(0)
 
+        assertThat(rig.buttons().filter { it != 0 }).isEmpty()
         assertThat(rig.connection.packets).hasSize(packets)
     }
 
@@ -49,20 +51,57 @@ class UsbMenuChordTest {
     }
 
     @Test
-    fun `a third button cancels the chord`() {
+    fun `a quick Start and Select reaches the PC once, as a short press on release`() {
         pad.report(chord)
-        rig.advanceBy(500)
-        pad.report(chord or com.limelight.nvstream.input.ControllerPacket.LB_FLAG)
+        rig.advanceBy(300)
+        assertThat(rig.buttons().none { it and chord != 0 }).isTrue()
 
-        rig.advanceBy(5_000)
+        pad.report(0)
+        rig.advanceBy(100)
 
+        assertThat(rig.buttons()).containsExactly(chord, 0).inOrder()
         assertThat(rig.chords).isEqualTo(0)
     }
 
     @Test
-    fun `Start and Select are sent as they are before the chord completes`() {
+    fun `a third button joining before the chord completes sends what the user pressed`() {
         pad.report(chord)
+        rig.advanceBy(500)
 
-        assertThat(rig.lastButtons()).isEqualTo(chord)
+        pad.report(chord or A_FLAG)
+
+        assertThat(rig.lastButtons()).isEqualTo(chord or A_FLAG)
+        rig.advanceBy(5_000)
+        assertThat(rig.chords).isEqualTo(0)
+    }
+
+    @Test
+    fun `Start alone reaches the PC at once, and so does Select alone`() {
+        pad.report(PLAY_FLAG)
+        assertThat(rig.lastButtons()).isEqualTo(PLAY_FLAG)
+        pad.report(0)
+
+        pad.report(BACK_FLAG)
+        assertThat(rig.lastButtons()).isEqualTo(BACK_FLAG)
+        pad.report(0)
+        assertThat(rig.lastButtons()).isEqualTo(0)
+    }
+
+    @Test
+    fun `Start with another button reaches the PC at once`() {
+        pad.report(PLAY_FLAG or A_FLAG)
+
+        assertThat(rig.lastButtons()).isEqualTo(PLAY_FLAG or A_FLAG)
+    }
+
+    @Test
+    fun `a third button cancels the chord`() {
+        pad.report(chord)
+        rig.advanceBy(500)
+        pad.report(chord or LB_FLAG)
+
+        rig.advanceBy(5_000)
+
+        assertThat(rig.chords).isEqualTo(0)
     }
 }

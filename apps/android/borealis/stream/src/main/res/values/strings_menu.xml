@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- What a screen reader says for the handle at the top of the stream. -->
+    <string name="stream_menu_handle">Open menu</string>
+    <!-- The header of the menu: the app, then the host it streams from. -->
+    <string name="stream_menu_header">%1$s · %2$s</string>
+    <string name="stream_menu_back_to_stream">Back to stream</string>
+    <string name="stream_menu_keyboard">Keyboard</string>
+    <string name="stream_menu_send_keys">Send keys</string>
+    <string name="stream_menu_touch">Touch</string>
+    <string name="stream_menu_touch_trackpad">Trackpad</string>
+    <string name="stream_menu_touch_direct">Direct</string>
+    <string name="stream_menu_gamepad_mouse">Gamepad mouse</string>
+    <string name="stream_menu_on">On</string>
+    <string name="stream_menu_off">Off</string>
+    <!-- What a screen reader says activating an option row does; %1$s is the row, for example Overlay. -->
+    <string name="stream_menu_change_option">Change %1$s</string>
+    <string name="stream_menu_overlay">Overlay</string>
+    <string name="stream_menu_overlay_compact">Compact</string>
+    <string name="stream_menu_overlay_detailed">Detailed</string>
+    <string name="stream_menu_refresh">Refresh the picture</string>
+    <string name="stream_menu_refresh_note">Asks the host for a keyframe when the image is smeared</string>
+    <string name="stream_menu_session_info">Session info</string>
+    <string name="stream_menu_info_video">Video</string>
+    <string name="stream_menu_info_codec">Codec</string>
+    <string name="stream_menu_info_decoder">Decoder</string>
+    <string name="stream_menu_info_host">Host</string>
+    <string name="stream_menu_info_network">Network</string>
+    <string name="stream_menu_info_bitrate">Bitrate</string>
+    <string name="stream_menu_display">Display for next launch</string>
+    <string name="stream_menu_display_note">Needs the host API (Phase 3)</string>
+    <string name="stream_menu_disconnect">Disconnect</string>
+    <!-- %1$s is the app. -->
+    <string name="stream_menu_disconnect_consequence">%1$s keeps running on the PC</string>
+    <!-- The same when the app is not known. -->
+    <string name="stream_menu_disconnect_consequence_unknown">The app keeps running on the PC</string>
+    <!-- %1$s is the app. -->
+    <string name="stream_menu_quit">Quit %1$s</string>
+    <string name="stream_menu_quit_consequence">Ends the app on the PC</string>
+    <!-- %1$s is the app. -->
+    <string name="stream_menu_quit_confirm">Quit %1$s? Unsaved work is lost.</string>
+    <string name="stream_menu_quit_confirm_cancel">Cancel</string>
+    <string name="stream_menu_quit_confirm_quit">Quit</string>
+    <!-- What stands for the app when the name is not known, for example after a resume. -->
+    <string name="stream_app_unknown">the running app</string>
+    <!-- Shown while the host answers a quit; %1$s is the app. -->
+    <string name="stream_quitting">Quitting %1$s…</string>
+</resources>

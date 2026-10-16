@@ -1,43 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="scut_deleted_pc">PC usunięty</string>
-    <string name="scut_pc_not_found">PC nie znaleziony</string>
-    <string name="pcview_menu_header_unknown">Odświeżanie</string>
-    <string name="scut_not_paired">PC niesparowany</string>
-    <string name="check_ports_msg">Sprawdź zaporę sieciową i reguły przekierowania portów:</string>
-    <string name="conn_establishing_title">Nawiązywanie połączenia</string>
-    <string name="conn_establishing_msg">Uruchamianie połączenia</string>
-    <string name="title_details">Szczegóły</string>
-    <string name="searching_pc">Wyszukiwanie komputerów-hostów w sieci lokalnej...
-\n
-\nUpewnij się, że aplikacja Sunshine jest uruchomiona na komputerze-hoście lub funkcja GameStream jest włączona w ustawieniach aplikacji GeForce Experience SHIELD.</string>
     <string name="yes">Tak</string>
     <string name="title_audio_config_list">Konfiguracja dźwięku przestrzennego</string>
     <string name="summary_audio_config_list">Włączenie dźwięku przestrzennego 5.1 lub 7.1 dla systemów kina domowego</string>
     <string name="summary_checkbox_mouse_emulation">Długie naciśnięcie przycisku Start spowoduje przełączenie gamepada w tryb myszy</string>
-    <string name="error_code_prefix">Kod błędu:</string>
     <string name="help">Pomoc</string>
     <string name="delete_pc_msg">Czy na pewno chcesz usunąć ten komputer?</string>
     <string name="slow_connection_msg">Wolne połączenie z komputerem
 \nZmniejsz szybkość transmisji</string>
     <string name="poor_connection_msg">Słabe połączenie z komputerem</string>
-    <string name="perf_overlay_streamdetails">Strumień wideo: %1$s %2$.2f FPS</string>
-    <string name="perf_overlay_decoder">Dekoder: %1$s</string>
-    <string name="perf_overlay_incomingfps">Przychodząca liczba klatek na sekundę z sieci: %1$.2f FPS</string>
-    <string name="applist_menu_quit_and_start">Zakończ bieżącą grę i uruchom</string>
-    <string name="applist_menu_scut">Utwórz skrót</string>
     <string name="applist_menu_tv_channel">Dodaj do kanału</string>
-    <string name="applist_refresh_title">Lista aplikacji</string>
     <string name="applist_refresh_error_msg">Nie udało się pobrać listy aplikacji</string>
-    <string name="applist_quit_app">Rezygnacja</string>
-    <string name="applist_quit_success">Zakończono z powodzeniem</string>
-    <string name="applist_quit_fail">Nie udało się zakończyć</string>
     <string name="applist_quit_confirmation">Czy na pewno chcesz zamknąć uruchomioną aplikację? Wszystkie niezapisane dane zostaną utracone.</string>
     <string name="applist_details_id">App ID:</string>
-    <string name="title_add_pc">Dodaj komputer ręcznie</string>
-    <string name="msg_add_pc">Podłączanie do komputera…</string>
-    <string name="addpc_unknown_host">Nie można określić adresu komputera. Upewnij się, że nie popełniłeś literówki w adresie.</string>
-    <string name="addpc_wrong_sitelocal">Ten adres nie wygląda prawidłowo. Do przesyłania strumieniowego przez Internet należy używać publicznego adresu IP routera.</string>
     <string name="title_resolution_list">Rozdzielczość wideo</string>
     <string name="summary_resolution_list">Zwiększ, aby poprawić klarowność obrazu. Zmniejsz, aby uzyskać lepszą wydajność na słabszych urządzeniach i wolniejszych połączeniach sieciowych.</string>
     <string name="title_native_res_dialog">Ostrzeżenie o rozdzielczości natywnej</string>
@@ -139,29 +115,10 @@
     <string name="analogscroll_none">Brak (oba drążki poruszają myszą)</string>
     <string name="analogscroll_right">Prawy drążek analogowy</string>
     <string name="analogscroll_left">Lewy drążek analogowy</string>
-    <string name="scut_invalid_app_id">Podana aplikacja jest niepoprawna</string>
-    <string name="scut_invalid_uuid">Podany PC jest niepoprawny</string>
-    <string name="pcview_menu_delete_pc">Usuń PC</string>
-    <string name="pcview_menu_test_network">Test połączenia sieciowego</string>
-    <string name="pcview_menu_details">Wyświetl szczegóły</string>
-    <string name="nettest_title_done">Test sieci zakończony</string>
-    <string name="nettest_text_failure">Bieżące połączenie sieciowe urządzenia wydaje się blokować Moonlight. Przesyłanie strumieniowe przez Internet może nie działać podczas połączenia z tą siecią.
-\n
-\nNastępujące porty sieciowe zostały zablokowane:
-\n</string>
     <string name="nettest_text_blocked">Bieżące połączenie sieciowe urządzenia blokuje Moonlight. Przesyłanie strumieniowe przez Internet może nie działać podczas połączenia z tą siecią.</string>
-    <string name="pair_pairing_title">Parowanie</string>
     <string name="pair_pc_offline">Komputer jest offline</string>
-    <string name="pair_incorrect_pin">Nieprawidłowy kod PIN</string>
     <string name="pair_fail">Parowanie nie powiodło się</string>
-    <string name="pair_already_in_progress">Parowanie jest już w toku</string>
-    <string name="wol_pc_online">Komputer jest online</string>
-    <string name="wol_no_mac">Nie można wybudzić komputera, ponieważ nie ma zapisanego adresu MAC</string>
     <string name="wol_waking_pc">Uruchamianie PC…</string>
-    <string name="wol_waking_msg">Uruchomienie komputera może potrwać kilka sekund. Jeśli tak się nie stanie, upewnij się, że jest prawidłowo skonfigurowany do Wake-On-LAN.</string>
-    <string name="unpair_fail">Rozparowanie nie powiodło się</string>
-    <string name="unpair_error">Urządzenie nie zostało sparowane</string>
-    <string name="error_pc_offline">Komputer jest offline</string>
     <string name="error_unknown_host">Nie udało się zlokalizować hosta</string>
     <string name="message_decoding_error">Moonlight uległ awarii z powodu niezgodności z dekoderem wideo tego urządzenia. Spróbuj dostosować ustawienia przesyłania strumieniowego jeśli awarie będą się powtarzać.</string>
     <string name="error_404">GFE zwrócił błąd HTTP 404. Upewnij się, że w Twoim komputerze działa obsługiwany procesor graficzny. Używanie oprogramowania pulpitu zdalnego może również powodować ten błąd. Spróbuj ponownie uruchomić komputer lub ponownie zainstalować GFE.</string>
@@ -171,33 +128,20 @@
     <string name="early_termination_error">Coś poszło nie tak na komputerze hosta podczas uruchamiania transmisji.
 \n
 \nUpewnij się, że na komputerze hosta nie masz otwartej żadnej zawartości zabezpieczonej DRM. Możesz także spróbować ponownie uruchomić komputer hosta.</string>
-    <string name="conn_error_msg">Nie udało się uruchomić</string>
-    <string name="conn_terminated_msg">Połączenie zostało przerwane.</string>
-    <string name="perf_overlay_renderingfps">Liczba klatek na sekundę renderowania: %1$.2f FPS</string>
     <string name="applist_refresh_error_title">Błąd</string>
-    <string name="applist_refresh_msg">Odświeżanie aplikacji…</string>
-    <string name="addpc_enter_ip">Należy wprowadzić adres IP</string>
     <string name="category_audio_settings">Ustawienia audio</string>
     <string name="title_frame_pacing">Tempo klatek wideo</string>
     <string name="pacing_balanced">Zrównoważone</string>
     <string name="no">Nie</string>
-    <string name="applist_menu_quit">Zakończenie sesji</string>
     <string name="title_seekbar_bitrate">Szybkość transmisji wideo</string>
     <string name="summary_checkbox_flip_face_buttons">Przełącza przyciski A/B i X/Y dla gamepadów i elementów sterujących na ekranie</string>
     <string name="category_help">Pomoc</string>
     <string name="resolution_480p">480p</string>
-    <string name="pair_pairing_msg">Wprowadź następujący kod PIN na komputerze docelowym:</string>
     <string name="pair_pairing_help">Jeśli na komputerze hosta działa Sunshine, przejdź do interfejsu użytkownika Sunshine aby wprowadzić kod PIN.</string>
-    <string name="unpairing">Rozparowywanie…</string>
-    <string name="unpair_success">Rozparowano z powodzeniem</string>
-    <string name="unable_to_pin_shortcut">Obecny program uruchamiający nie pozwala na tworzenie przypiętych skrótów.</string>
     <string name="conn_client_latency">Średnie opóźnienie dekodowania ramki:</string>
     <string name="conn_client_latency_hw">opóźnienie dekodera sprzętowego:</string>
     <string name="conn_metered">Ostrzeżenie: Aktywne połączenie sieciowe jest taryfowe!</string>
     <string name="conn_hardware_latency">Średnie opóźnienie dekodowania sprzętowego:</string>
-    <string name="conn_starting">Uruchamianie</string>
-    <string name="conn_error_title">Błąd połączenia</string>
-    <string name="lost_connection">Utrata połączenia z komputerem</string>
     <string name="dialog_title_reset_osc">Reset układu</string>
     <string name="dialog_text_reset_osc">Czy na pewno chcesz usunąć zapisany układ kontrolek ekranowych?</string>
     <string name="summary_checkbox_enable_pip">Umożliwia wyświetlanie strumienia (ale nie sterowanie nim) podczas pracy wielozadaniowej</string>
@@ -209,38 +153,14 @@
     <string name="videoformat_hevcalways">Preferowany HEVC</string>
     <string name="summary_frame_pacing">Określenie sposobu równoważenia opóźnienia i płynności wideo</string>
     <string name="pacing_latency">Preferowane najniższe opóźnienia</string>
-    <string name="perf_overlay_hostprocessinglatency">Opóźnienie przetwarzania hosta min/max/średnia: %1$.1f/%2$.1f/%3$.1f ms</string>
-    <string name="perf_overlay_netlatency">Średnie opóźnienie sieci: %1$d ms (wariancja: %2$d ms)</string>
-    <string name="applist_connect_msg">Podłączanie do komputera…</string>
-    <string name="applist_menu_resume">Wznowienie sesji</string>
-    <string name="perf_overlay_netdrops">Ramki porzucone przez połączenie sieciowe: %1$.2f%%</string>
-    <string name="perf_overlay_dectime">Średni czas dekodowania: %1$.2f ms</string>
-    <string name="addpc_success">Dodano komputer z powodzeniem</string>
     <string name="resolution_prefix_native_landscape">(Panoramiczny)</string>
     <string name="resolution_prefix_native_fullscreen">Natywny pełny ekran</string>
     <string name="resolution_prefix_native_portrait">(Portretowy)</string>
     <string name="resolution_1080p">1080p</string>
     <string name="help_loading_msg">Ładowanie strony pomocy…</string>
-    <string name="pcview_menu_header_online">Online</string>
-    <string name="pcview_menu_header_offline">Offline</string>
-    <string name="pcview_menu_app_list">Wyświetl wszystkie aplikacje</string>
     <string name="help_loading_title">Przeglądarka pomocy</string>
-    <string name="pcview_menu_pair_pc">Sparuj z PC</string>
     <string name="pcview_menu_unpair_pc">Rozparuj</string>
-    <string name="pcview_menu_send_wol">Wyślij żądanie Wake-On-LAN</string>
-    <string name="nettest_text_waiting">Moonlight testuje połączenie sieciowe w celu ustalenia, czy wymagane porty są zablokowane.
-\n
-\nMoże to potrwać kilka sekund…</string>
-    <string name="pairing">Parowanie…</string>
     <string name="pair_pc_ingame">Komputer jest obecnie w trakcie gry. Przed sparowaniem należy zamknąć grę.</string>
-    <string name="nettest_text_success">Wygląda na to, że sieć nie blokuje Moonlight. Jeśli nadal masz problemy z połączeniem, sprawdź ustawienia zapory sieciowej na swoim komputerze.
-\n
-\nJeśli próbujesz przesyłać strumieniowo przez Internet, zainstaluj narzędzie Moonlight Internet Hosting Tool na swoim komputerze i uruchom dołączony tester przesyłania strumieniowego przez Internet, aby sprawdzić połączenie internetowe komputera.</string>
-    <string name="pcview_menu_eol">Zakończenie usług NVIDIA GameStream</string>
-    <string name="nettest_text_inconclusive">Nie można było wykonać testu sieci ponieważ żaden z serwerów testujących połączenie Moonlight nie był osiągalny. Sprawdź połączenie internetowe lub spróbuj ponownie później.</string>
-    <string name="nettest_title_waiting">Testowanie połączenia sieciowego</string>
-    <string name="wol_fail">Nie udało się wysłać pakietów Wake-On-LAN</string>
-    <string name="error_manager_not_running">Usługa ComputerManager nie jest uruchomiona. Poczekaj kilka sekund lub uruchom ponownie aplikację.</string>
     <string name="title_decoding_error">Awaria dekodera wideo</string>
     <string name="message_decoding_reset">Dekoder wideo urządzenia nadal ulega awarii przy wybranych ustawieniach przesyłania strumieniowego. Ustawienia przesyłania strumieniowego zostały zresetowane do wartości domyślnych.</string>
     <string name="no_video_received_error">Brak sygnału wideo od hosta.</string>
@@ -248,12 +168,7 @@
     <string name="frame_conversion_error">Komputer host zgłosił krytyczny błąd kodowania wideo.
 \n
 \nSpróbuj wyłączyć tryb HDR, zmienić rozdzielczość przesyłania strumieniowego lub rozdzielczość wyświetlacza komputera hosta.</string>
-    <string name="conn_terminated_title">Połączenie zakończone</string>
-    <string name="ip_hint">Adres IP komputera hosta</string>
     <string name="applist_menu_cancel">Anuluj</string>
-    <string name="applist_menu_hide_app">Ukryj aplikację</string>
-    <string name="applist_menu_details">Wyświetl szczegóły</string>
-    <string name="addpc_fail">Nie można połączyć się z określonym komputerem. Upewnij się, że wymagane porty są dozwolone przez zaporę sieciową.</string>
     <string name="category_basic_settings">Ustawienia podstawowe</string>
     <string name="text_native_res_dialog">Natywna rozdzielczość i/lub liczba klatek na sekundę mogą nie być obsługiwane przez serwer streamingu. Prawdopodobnie konieczne będzie ręczne skonfigurowanie odpowiedniego niestandardowego trybu wyświetlania dla komputera hosta.
 \n

@@ -8,9 +8,14 @@ first (recommended) option. The choices are recorded in
 
 Sprint 4 implemented the Library screens in Compose: Hosts with Continue, Add
 host, Pairing, Apps and App actions. They are the launcher now, and they replace
-the 12.2 host list and app grid. The starting stream, conflict and error screens, the stream, the in-game
-menu, the keyboard, Settings and Privacy and diagnostics remain planned, for
-Sprints 5 and 6. The screens below are the approved design. Screenshots use
+the 12.2 host list and app grid.
+
+Sprint 5 implemented the stream screens (Starting stream, Conflict dialog and
+Connection error), the in-game menu, the Borealis keyboard and the Compact and
+Detailed performance overlay. Settings, Privacy and diagnostics, the audit
+trail viewer and Send to phone in Compose remain for Sprint 6. The screens
+below are the approved design; where the built screen differs, the section
+says so. Screenshots use
 Roborazzi ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)), and
 the colours and type come from the token pipeline
 ([ADR 0044](../adr/0044-design-tokens-pipeline.md)).
@@ -288,7 +293,9 @@ See [UC-003](../use-cases/0003-join-or-replace-a-running-app.md).
 ### Connection error
 
 Purpose: errors say what happened and what the host was doing, and offer the
-next step. The raw code stays visible for support.
+next step. The raw code stays visible for support. The raw code is always the
+real code of the failed start or stream (for example `Error -1 · RTSP
+handshake`); the prototype's placeholder "Error 0" is not used.
 
 States:
 
@@ -362,6 +369,10 @@ States: none.
 
 Changes from 12.2: 12.2 opens the Android soft keyboard. Android 16 keyboard
 capture stays for physical keyboards.
+
+The System keyboard key opens the Android keyboard for free text, which is
+sent to the PC as UTF-8. While the Android keyboard is open, a gamepad's D-pad,
+Enter and Back go to it, not to the PC.
 
 Decisions: none.
 
@@ -504,7 +515,9 @@ Detailed:
 - host processing time as minimum, average and maximum in ms;
 - network time in ms with the jitter, the loss in percent and the bitrate in
   Mbps;
-- decode time and render queue time in ms.
+- decode time in ms.
+
+The render queue time is not shown: it is not measured yet.
 
 The prototype's figures are examples. The overlay is off by default
 ([D5](#decisions)).
@@ -663,10 +676,12 @@ items or placeholders. The host endpoints are in
 1. Sprint 4 built the Library screens with the token pipeline
    ([ADR 0044](../adr/0044-design-tokens-pipeline.md)) and Roborazzi
    screenshots ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)).
-2. Next: the starting stream, conflict and error screens, the in-game menu,
-   the keyboard and the overlay.
-3. Then: Settings, Privacy and diagnostics, the audit trail viewer and Send to
-   phone in Compose.
+2. Sprint 5 built the starting stream, conflict and connection error screens,
+   the in-game menu, the Borealis keyboard and the overlay. The device round
+   (S5-T14, see [device validation](../development/device-validation.md)) checks
+   them on hardware. Its results are not in this document.
+3. Next, Sprint 6: Settings, Privacy and diagnostics, the audit trail viewer and
+   Send to phone in Compose.
 
 Each screen comes with the acceptance tests of its use case first
 ([TDD](../development/tdd.md)).

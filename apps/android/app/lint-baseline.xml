@@ -15,28 +15,6 @@
     <issue
         id="DefaultLocale"
         message="Implicitly using the default locale is a common source of bugs: Use `toLowerCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
-        errorLine1="                return lhs.app.getAppName().toLowerCase().compareTo(rhs.app.getAppName().toLowerCase());"
-        errorLine2="                                            ~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/grid/AppGridAdapter.java"
-            line="128"
-            column="45"/>
-    </issue>
-
-    <issue
-        id="DefaultLocale"
-        message="Implicitly using the default locale is a common source of bugs: Use `toLowerCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
-        errorLine1="                return lhs.app.getAppName().toLowerCase().compareTo(rhs.app.getAppName().toLowerCase());"
-        errorLine2="                                                                                         ~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/grid/AppGridAdapter.java"
-            line="128"
-            column="90"/>
-    </issue>
-
-    <issue
-        id="DefaultLocale"
-        message="Implicitly using the default locale is a common source of bugs: Use `toLowerCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
         errorLine1="        if (!hasJoystickAxes(dev) &amp;&amp; devName.toLowerCase().contains(&quot;remote&quot;)) {"
         errorLine2="                                             ~~~~~~~~~~~">
         <location
@@ -65,28 +43,6 @@
             file="src/main/java/com/limelight/binding/video/MediaCodecHelper.java"
             line="259"
             column="33"/>
-    </issue>
-
-    <issue
-        id="DefaultLocale"
-        message="Implicitly using the default locale is a common source of bugs: Use `toLowerCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
-        errorLine1="                return lhs.details.name.toLowerCase().compareTo(rhs.details.name.toLowerCase());"
-        errorLine2="                                        ~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/grid/PcGridAdapter.java"
-            line="42"
-            column="41"/>
-    </issue>
-
-    <issue
-        id="DefaultLocale"
-        message="Implicitly using the default locale is a common source of bugs: Use `toLowerCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
-        errorLine1="                return lhs.details.name.toLowerCase().compareTo(rhs.details.name.toLowerCase());"
-        errorLine2="                                                                                 ~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/grid/PcGridAdapter.java"
-            line="42"
-            column="82"/>
     </issue>
 
     <issue
@@ -131,39 +87,6 @@
             file="src/main/AndroidManifest.xml"
             line="58"
             column="9"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `enableOnBackInvokedCallback` is only used in API level 33 and higher (current min is 28)"
-        errorLine1="        android:enableOnBackInvokedCallback=&quot;false&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="59"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `enableOnBackInvokedCallback` is only used in API level 33 and higher (current min is 28)"
-        errorLine1="            android:enableOnBackInvokedCallback=&quot;true&quot;"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="95"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `enableOnBackInvokedCallback` is only used in API level 33 and higher (current min is 28)"
-        errorLine1="            android:enableOnBackInvokedCallback=&quot;true&quot;"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="116"
-            column="13"/>
     </issue>
 
     <issue
@@ -238,50 +161,6 @@
         errorLine1="        android:preferKeepClear=&quot;true&quot;"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/layout/activity_add_computer_manually.xml"
-            line="16"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `preferKeepClear` is only used in API level 33 and higher (current min is 28)"
-        errorLine1="        android:preferKeepClear=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_add_computer_manually.xml"
-            line="33"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `preferKeepClear` is only used in API level 33 and higher (current min is 28)"
-        errorLine1="        android:preferKeepClear=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_add_computer_manually.xml"
-            line="48"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `preferKeepClear` is only used in API level 33 and higher (current min is 28)"
-        errorLine1="        android:preferKeepClear=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_app_view.xml"
-            line="28"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `preferKeepClear` is only used in API level 33 and higher (current min is 28)"
-        errorLine1="        android:preferKeepClear=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
             file="src/main/res/layout/activity_game.xml"
             line="36"
             column="9"/>
@@ -295,39 +174,6 @@
         <location
             file="src/main/res/layout/activity_game.xml"
             line="50"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `preferKeepClear` is only used in API level 33 and higher (current min is 28)"
-        errorLine1="        android:preferKeepClear=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_pc_view.xml"
-            line="60"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `preferKeepClear` is only used in API level 33 and higher (current min is 28)"
-        errorLine1="        android:preferKeepClear=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_pc_view.xml"
-            line="73"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `preferKeepClear` is only used in API level 33 and higher (current min is 28)"
-        errorLine1="        android:preferKeepClear=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_pc_view.xml"
-            line="86"
             column="9"/>
     </issue>
 
@@ -373,39 +219,6 @@
             file="src/main/res/xml/game_mode_config.xml"
             line="7"
             column="5"/>
-    </issue>
-
-    <issue
-        id="VectorRaster"
-        message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
-        errorLine1="    android:width=&quot;256dp&quot;"
-        errorLine2="                   ~~~~~">
-        <location
-            file="src/main/res/drawable/ic_add.xml"
-            line="2"
-            column="20"/>
-    </issue>
-
-    <issue
-        id="VectorRaster"
-        message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
-        errorLine1="    android:width=&quot;512dp&quot;"
-        errorLine2="                   ~~~~~">
-        <location
-            file="src/main/res/drawable/ic_computer.xml"
-            line="2"
-            column="20"/>
-    </issue>
-
-    <issue
-        id="VectorRaster"
-        message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
-        errorLine1="    android:width=&quot;256dp&quot;"
-        errorLine2="                   ~~~~~">
-        <location
-            file="src/main/res/drawable/ic_help.xml"
-            line="2"
-            column="20"/>
     </issue>
 
     <issue
@@ -762,17 +575,6 @@
 
     <issue
         id="Typos"
-        message="&quot;bir kaç&quot; is a common misspelling; did you mean &quot;birkaç&quot;?"
-        errorLine1="\nBu bir kaç saniye sürebilir…&lt;/string>"
-        errorLine2="     ~~~~~~~">
-        <location
-            file="src/main/res/values-tr/strings.xml"
-            line="43"
-            column="6"/>
-    </issue>
-
-    <issue
-        id="Typos"
         message="&quot;video&quot; is a common misspelling; did you mean &quot;vídeo&quot;?"
         errorLine1="    &lt;string name=&quot;summary_checkbox_reduce_refresh_rate&quot;>Taxas menores de atualização do display podem gravar energia ao custo de latência de video adicional&lt;/string>"
         errorLine2="                                                                                                                                             ~~~~~">
@@ -967,17 +769,6 @@
             file="src/main/java/com/limelight/binding/input/capture/AndroidPointerIconCaptureProvider.java"
             line="21"
             column="16"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; `SDK_INT` is always >= 28"
-        errorLine1="        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/AppView.java"
-            line="419"
-            column="13"/>
     </issue>
 
     <issue
@@ -1922,17 +1713,6 @@
     </issue>
 
     <issue
-        id="StaticFieldLeak"
-        message="This `AsyncTask` class should be static or leaks might occur (com.limelight.grid.assets.CachedAppAssetLoader.LoaderTask)"
-        errorLine1="    private class LoaderTask extends AsyncTask&lt;LoaderTuple, Void, ScaledBitmap> {"
-        errorLine2="                  ~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/grid/assets/CachedAppAssetLoader.java"
-            line="145"
-            column="19"/>
-    </issue>
-
-    <issue
         id="UnusedResources"
         message="The resource `R.layout.activity_configure_virtual_controller` appears to be unused"
         errorLine1="&lt;FrameLayout xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
@@ -2210,160 +1990,6 @@
     </issue>
 
     <issue
-        id="UselessParent"
-        message="This `RelativeLayout` layout or its `RelativeLayout` parent is possibly unnecessary"
-        errorLine1="        &lt;RelativeLayout"
-        errorLine2="         ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_pc_view.xml"
-            line="20"
-            column="10"/>
-    </issue>
-
-    <issue
-        id="UselessParent"
-        message="This `RelativeLayout` layout or its `RelativeLayout` parent is possibly unnecessary"
-        errorLine1="        &lt;RelativeLayout"
-        errorLine2="         ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_pc_view.xml"
-            line="21"
-            column="10"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;searching_pc&quot;>Wyszukiwanie komputerów-hostów w sieci lokalnej..."
-        errorLine2="                                ^">
-        <location
-            file="src/main/res/values-pl/strings.xml"
-            line="11"
-            column="33"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;searching_pc&quot;>Procurando por PCs rodando o GameStream..."
-        errorLine2="                                ^">
-        <location
-            file="src/main/res/values-pt-rBR/strings.xml"
-            line="24"
-            column="33"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;searching_pc&quot;>Hledání PC, na kterých běží GameStream..."
-        errorLine2="                                ^">
-        <location
-            file="src/main/res/values-cs/strings.xml"
-            line="43"
-            column="33"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;searching_pc&quot;>Buscando anfitriones en tu red local...\n\n Asegúrate de que Sunshine se está ejecutando en el PC anfitrión o de que GameStream está activado en los ajustes de GeForce Experience SHIELD.&lt;/string>"
-        errorLine2="                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values-es/strings.xml"
-            line="51"
-            column="33"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;searching_pc&quot;>Zoeken naar host-PC\&apos;s in uw lokale netwerk...\n\nZorg ervoor dat Sunshine draait op uw host-PC of dat GameStream is ingeschakeld in de GeForce Experience SHIELD-instellingen.&lt;/string>"
-        errorLine2="                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values-nl/strings.xml"
-            line="51"
-            column="33"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;searching_pc&quot;>Procurando por PCs a executar o GameStream..."
-        errorLine2="                                ^">
-        <location
-            file="src/main/res/values-pt/strings.xml"
-            line="59"
-            column="33"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;searching_pc&quot;>Mencari host PC di jaringan lokal Anda...\n\nPastikan Sunshine berjalan di PC host Anda atau GameStream diaktifkan dalam pengaturan SHIELD Pengalaman GeForce.&lt;/string>"
-        errorLine2="                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values-in/strings.xml"
-            line="60"
-            column="33"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;searching_pc&quot;>在你的本地网络中搜索串流主机PC..."
-        errorLine2="                                ^">
-        <location
-            file="src/main/res/values-zh-rCN/strings.xml"
-            line="64"
-            column="33"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;searching_pc&quot;>מחפש מחשבים ברשת המקומית שלך..."
-        errorLine2="                                ^">
-        <location
-            file="src/main/res/values-iw/strings.xml"
-            line="109"
-            column="33"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;searching_pc&quot;>A helyi hálózaton lévő számítógépek keresése...\n\nGyőződj meg róla, hogy a Sunshine fut a gazdagépen, vagy a GameStream engedélyezve van a GeForce Experience SHIELD beállításaiban.&lt;/string>"
-        errorLine2="                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values-hu/strings.xml"
-            line="120"
-            column="33"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;searching_pc&quot;>Αναζήτηση για υπολογιστές με GameStream σε λειτουργία..."
-        errorLine2="                                ^">
-        <location
-            file="src/main/res/values-el/strings.xml"
-            line="159"
-            column="33"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;searching_pc&quot;>Söker efter värddatorer i det lokala nätverket..."
-        errorLine2="                                ^">
-        <location
-            file="src/main/res/values-sv/strings.xml"
-            line="214"
-            column="33"/>
-    </issue>
-
-    <issue
         id="IconLocation"
         message="Found bitmap drawable `res/drawable/app_icon.png` in densityless folder">
         <location
@@ -2377,17 +2003,6 @@
             file="src/main/res/mipmap-xhdpi/ic_launcher.png"/>
         <location
             file="src/main/res/drawable/app_icon.png"/>
-    </issue>
-
-    <issue
-        id="Autofill"
-        message="Missing `autofillHints` attribute"
-        errorLine1="    &lt;EditText"
-        errorLine2="     ~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_add_computer_manually.xml"
-            line="21"
-            column="6"/>
     </issue>
 
     <issue
@@ -2545,193 +2160,6 @@
     </issue>
 
     <issue
-        id="ContentDescription"
-        message="Missing `contentDescription` attribute on image"
-        errorLine1="    &lt;ImageButton"
-        errorLine2="     ~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_pc_view.xml"
-            line="46"
-            column="6"/>
-    </issue>
-
-    <issue
-        id="ContentDescription"
-        message="Missing `contentDescription` attribute on image"
-        errorLine1="    &lt;ImageButton"
-        errorLine2="     ~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_pc_view.xml"
-            line="50"
-            column="6"/>
-    </issue>
-
-    <issue
-        id="ContentDescription"
-        message="Missing `contentDescription` attribute on image"
-        errorLine1="    &lt;ImageButton"
-        errorLine2="     ~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_pc_view.xml"
-            line="59"
-            column="6"/>
-    </issue>
-
-    <issue
-        id="ContentDescription"
-        message="Missing `contentDescription` attribute on image"
-        errorLine1="    &lt;ImageButton"
-        errorLine2="     ~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_pc_view.xml"
-            line="63"
-            column="6"/>
-    </issue>
-
-    <issue
-        id="ContentDescription"
-        message="Missing `contentDescription` attribute on image"
-        errorLine1="    &lt;ImageButton"
-        errorLine2="     ~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_pc_view.xml"
-            line="72"
-            column="6"/>
-    </issue>
-
-    <issue
-        id="ContentDescription"
-        message="Missing `contentDescription` attribute on image"
-        errorLine1="    &lt;ImageButton"
-        errorLine2="     ~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_pc_view.xml"
-            line="76"
-            column="6"/>
-    </issue>
-
-    <issue
-        id="ContentDescription"
-        message="Missing `contentDescription` attribute on image"
-        errorLine1="    &lt;ImageView"
-        errorLine2="     ~~~~~~~~~">
-        <location
-            file="src/main/res/layout/app_grid_item.xml"
-            line="6"
-            column="6"/>
-    </issue>
-
-    <issue
-        id="ContentDescription"
-        message="Missing `contentDescription` attribute on image"
-        errorLine1="    &lt;ImageView"
-        errorLine2="     ~~~~~~~~~">
-        <location
-            file="src/main/res/layout/app_grid_item.xml"
-            line="13"
-            column="6"/>
-    </issue>
-
-    <issue
-        id="ContentDescription"
-        message="Missing `contentDescription` attribute on image"
-        errorLine1="    &lt;ImageView"
-        errorLine2="     ~~~~~~~~~">
-        <location
-            file="src/main/res/layout/app_grid_item_small.xml"
-            line="6"
-            column="6"/>
-    </issue>
-
-    <issue
-        id="ContentDescription"
-        message="Missing `contentDescription` attribute on image"
-        errorLine1="    &lt;ImageView"
-        errorLine2="     ~~~~~~~~~">
-        <location
-            file="src/main/res/layout/app_grid_item_small.xml"
-            line="13"
-            column="6"/>
-    </issue>
-
-    <issue
-        id="ContentDescription"
-        message="Missing `contentDescription` attribute on image"
-        errorLine1="        &lt;ImageView"
-        errorLine2="         ~~~~~~~~~">
-        <location
-            file="src/main/res/layout/pc_grid_item.xml"
-            line="10"
-            column="10"/>
-    </issue>
-
-    <issue
-        id="ContentDescription"
-        message="Missing `contentDescription` attribute on image"
-        errorLine1="        &lt;ImageView"
-        errorLine2="         ~~~~~~~~~">
-        <location
-            file="src/main/res/layout/pc_grid_item.xml"
-            line="16"
-            column="10"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_toLeftOf`; already defining `layout_toStartOf` with `targetSdkVersion` 36"
-        errorLine1="        android:layout_toLeftOf=&quot;@+id/addPcButton&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_add_computer_manually.xml"
-            line="26"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_alignParentLeft`; already defining `layout_alignParentStart` with `targetSdkVersion` 36"
-        errorLine1="        android:layout_alignParentLeft=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_add_computer_manually.xml"
-            line="29"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_alignParentRight`; already defining `layout_alignParentEnd` with `targetSdkVersion` 36"
-        errorLine1="        android:layout_alignParentRight=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_add_computer_manually.xml"
-            line="46"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_alignParentLeft`; already defining `layout_alignParentStart` with `targetSdkVersion` 36"
-        errorLine1="        android:layout_alignParentLeft=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_app_view.xml"
-            line="12"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_alignParentRight`; already defining `layout_alignParentEnd` with `targetSdkVersion` 36"
-        errorLine1="        android:layout_alignParentRight=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_app_view.xml"
-            line="14"
-            column="9"/>
-    </issue>
-
-    <issue
         id="RtlHardcoded"
         message="Redundant attribute `layout_marginLeft`; already defining `layout_marginStart` with `targetSdkVersion` 36"
         errorLine1="        android:layout_marginLeft=&quot;10dp&quot;"
@@ -2795,149 +2223,6 @@
             file="src/main/res/layout/activity_game.xml"
             line="48"
             column="26"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_alignParentLeft`; already defining `layout_alignParentStart` with `targetSdkVersion` 36"
-        errorLine1="        android:layout_alignParentLeft=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_pc_view.xml"
-            line="14"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_alignParentRight`; already defining `layout_alignParentEnd` with `targetSdkVersion` 36"
-        errorLine1="        android:layout_alignParentRight=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_pc_view.xml"
-            line="16"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_toRightOf`; already defining `layout_toEndOf` with `targetSdkVersion` 36"
-        errorLine1="        android:layout_toRightOf=&quot;@+id/settingsButton&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_pc_view.xml"
-            line="17"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_toRightOf`; already defining `layout_toEndOf` with `targetSdkVersion` 36"
-        errorLine1="                android:layout_toRightOf=&quot;@+id/pcs_loading&quot;"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_pc_view.xml"
-            line="34"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_marginLeft`; already defining `layout_marginStart` with `targetSdkVersion` 36"
-        errorLine1="                android:layout_marginLeft=&quot;10dp&quot;"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_pc_view.xml"
-            line="36"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_toRightOf`; already defining `layout_toEndOf` with `targetSdkVersion` 36"
-        errorLine1="                android:layout_toRightOf=&quot;@+id/pcs_loading&quot;"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_pc_view.xml"
-            line="38"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_marginLeft`; already defining `layout_marginStart` with `targetSdkVersion` 36"
-        errorLine1="                android:layout_marginLeft=&quot;10dp&quot;"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_pc_view.xml"
-            line="40"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_alignParentLeft`; already defining `layout_alignParentStart` with `targetSdkVersion` 36"
-        errorLine1="        android:layout_alignParentLeft=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_pc_view.xml"
-            line="54"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_alignParentLeft`; already defining `layout_alignParentStart` with `targetSdkVersion` 36"
-        errorLine1="        android:layout_alignParentLeft=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_pc_view.xml"
-            line="56"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_alignParentLeft`; already defining `layout_alignParentStart` with `targetSdkVersion` 36"
-        errorLine1="        android:layout_alignParentLeft=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_pc_view.xml"
-            line="67"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_toRightOf`; already defining `layout_toEndOf` with `targetSdkVersion` 36"
-        errorLine1="        android:layout_toRightOf=&quot;@+id/settingsButton&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_pc_view.xml"
-            line="70"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_alignParentLeft`; already defining `layout_alignParentStart` with `targetSdkVersion` 36"
-        errorLine1="        android:layout_alignParentLeft=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_pc_view.xml"
-            line="79"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="RtlHardcoded"
-        message="Redundant attribute `layout_alignParentRight`; already defining `layout_alignParentEnd` with `targetSdkVersion` 36"
-        errorLine1="        android:layout_alignParentRight=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/activity_pc_view.xml"
-            line="84"
-            column="9"/>
     </issue>
 
 </issues>

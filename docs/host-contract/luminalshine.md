@@ -371,6 +371,13 @@ for resume the equivalent is `resume` 1 (`src/nvhttp.cpp:3471-3486`).
   display cleanup of an ended session (`unhandled exception 0x20474343` in
   `KERNELBASE.dll`) and restarted about 9 s later. Requests in that window get a
   connection reset. Reported upstream as `NortheBridge/luminalshine#204`.
+- **Client behaviour (Sprint 5):** the Borealis error screen classifies three
+  host states: host busy (the retries of the start ran out, or the host
+  reported a launch collision), host offline, and certificate changed. The
+  client requests a keyframe (`LiRequestIdrFrame`, through
+  `MoonBridge.requestIdrFrame`) when the user chooses Refresh the picture in
+  the in-game menu. Free text typed on the on-screen keyboard is sent to the
+  host as real UTF-8 bytes, so emoji and accented letters arrive intact.
 
 ### 7.4 Mode reconciliation between `/launch` and RTSP
 
@@ -476,10 +483,12 @@ session including a pending launch, terminates the running app and tears down
 the virtual display unless a deferred launch must be preserved
 (`src/nvhttp.cpp:3508-3586`, `src/rtsp.cpp:1132-1136`). If a successor
 `/launch` wins the lifecycle race the cancel cleanup is skipped
-(`src/nvhttp.cpp:3540-3550`). Moonlight Android answers a `currentgame` for a
+(`src/nvhttp.cpp:3540-3550`). Moonlight 12.2 answered a `currentgame` for a
 different app by cancelling then launching
 (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:310-314`,
-`:341-366`).
+`:341-366`). Borealis does not: it asks the user first, and never quits another
+device's app without the user's explicit choice, even when the Library has not
+seen that app (`NvConnection.resolveConflict`, section 7.5).
 
 `/cancel` ends the app of any client, not only the caller's: every Moonlight-family
 client sends the same `uniqueid`, and the host does not check an owner. `/resume`

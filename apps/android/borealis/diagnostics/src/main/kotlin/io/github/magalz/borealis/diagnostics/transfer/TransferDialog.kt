@@ -7,6 +7,7 @@ import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
+import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -154,15 +155,17 @@ internal class TransferDialog(
 
     private fun render(server: OneShotFileServer, countdown: TextView, status: TextView) {
         val state = server.status
-        countdown.text =
-            if (state == TransferStatus.WAITING) {
+        // The line is gone once the transfer is over, not blank: a blank line would take space.
+        if (state == TransferStatus.WAITING) {
+            countdown.text =
                 context.getString(
                     R.string.borealis_transfer_expires,
                     formatRemaining(server.remainingMillis()),
                 )
-            } else {
-                ""
-            }
+            countdown.visibility = View.VISIBLE
+        } else {
+            countdown.visibility = View.GONE
+        }
         status.setText(
             when (state) {
                 TransferStatus.WAITING -> R.string.borealis_transfer_status_waiting

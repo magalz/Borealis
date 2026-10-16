@@ -34,6 +34,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.shell.LibraryScaffold
 import io.github.magalz.borealis.library.shell.RailActions
+import io.github.magalz.borealis.library.shell.RailSelection
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.TV
 import io.github.magalz.borealis.library.testing.setContentInKeyboardMode
@@ -121,6 +122,45 @@ class HostsScreenTest {
         composeRule.onNodeWithText("Checking…").assertIsDisplayed()
         // The host card names the running app as well as the Continue card does.
         composeRule.onAllNodes(hasText("Desktop"), useUnmergedTree = true).assertCountEquals(2)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a paired host shows its address and tags`() {
+        showPhone(withHosts)
+
+        composeRule.onNodeWithText("192.168.1.20").assertIsDisplayed()
+        composeRule.onNodeWithText("HEVC 10-bit", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithText("HDR", useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a host that was found on the network says so instead of showing its address`() {
+        showPhone(withHosts)
+
+        composeRule.onNodeWithText("Found on this network").assertIsDisplayed()
+        composeRule.onNodeWithText("192.168.1.40", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `an offline host keeps its detail line with the address`() {
+        showPhone(withHosts)
+
+        composeRule.onNodeWithText("192.168.1.31").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a host without an address that was not found on the network has no detail line`() {
+        val addressed = studio.copy(id = "a", name = "A", foundOnNetwork = false)
+        val unaddressed = studio.copy(id = "b", name = "B", address = null, foundOnNetwork = false)
+        showPhone(withHostsNoContinue.copy(items = listOf(addressed, unaddressed)))
+
+        composeRule.onNodeWithText("192.168.1.40").assertIsDisplayed()
+        composeRule.onAllNodes(hasText("192.168.", substring = true)).assertCountEquals(1)
+        composeRule.onNodeWithText("Found on this network").assertDoesNotExist()
     }
 
     @Test
@@ -232,14 +272,27 @@ class HostsScreenTest {
         composeRule.onNodeWithText("Forget").performClick()
         composeRule.waitForIdle()
 
-        composeRule
-            .onNodeWithText("Forget Desk PC? You will need to pair again.")
-            .assertIsDisplayed()
+        composeRule.onNodeWithText(FORGET_CONFIRMATION).assertIsDisplayed()
         assertThat(forgotten).isEmpty()
 
         composeRule.onNodeWithText("Forget").performClick()
 
         assertThat(forgotten).containsExactly("desk")
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the Forget option and its confirmation say what it does and do not promise a re-pair`() {
+        showPhone(withHosts)
+        composeRule.onNodeWithTag("host:desk").performTouchInput { longClick() }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText(FORGET_CONSEQUENCE).assertIsDisplayed()
+        composeRule.onNodeWithText("Forget").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText(FORGET_CONFIRMATION).assertIsDisplayed()
+        composeRule.onNodeWithText("pair again", substring = true).assertDoesNotExist()
     }
 
     @Test
@@ -255,9 +308,7 @@ class HostsScreenTest {
         composeRule.waitForIdle()
 
         assertThat(forgotten).isEmpty()
-        composeRule
-            .onNodeWithText("Forget Desk PC? You will need to pair again.")
-            .assertDoesNotExist()
+        composeRule.onNodeWithText(FORGET_CONFIRMATION).assertDoesNotExist()
     }
 
     @Test
@@ -471,7 +522,7 @@ class HostsScreenTest {
         ) {
             LibraryScaffold(
                 formFactor,
-                showRail = true,
+                selected = RailSelection.Hosts,
                 actions = RailActions({}, { addHost++ }, { settings++ }),
             ) {
                 HostsScreen(
@@ -493,5 +544,13 @@ class HostsScreenTest {
 
     private companion object {
         const val WAKE_CONSEQUENCE = "Send a Wake-on-LAN packet to the PC."
+        const val FORGET_CONSEQUENCE =
+            "Remove it from this device. " +
+                "The PC may keep trusting this device until you remove it " +
+                "in the LuminalShine Web UI (Clients page)."
+        const val FORGET_CONFIRMATION =
+            "Forget Desk PC on this device? " +
+                "The PC may keep trusting this device until you remove it " +
+                "in the LuminalShine Web UI (Clients page)."
     }
 }

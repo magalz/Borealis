@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stream_error_busy_title">%1$s is busy</string>
+    <string name="stream_error_busy_body">The host did not answer in time. It is probably building a display for another device.</string>
+    <string name="stream_error_offline_title">Can\'t reach %1$s</string>
+    <string name="stream_error_offline_body">The PC is off, asleep, or on another network.</string>
+    <string name="stream_error_certificate_title">%1$s has a new certificate</string>
+    <string name="stream_error_certificate_body">The host identity changed since pairing. Pair again to keep streaming.</string>
+    <string name="stream_error_generic_title">Couldn\'t start %1$s</string>
+    <string name="stream_error_generic_body">The stream could not start.</string>
+    <string name="stream_error_stopped_title">%1$s stopped</string>
+    <string name="stream_error_stopped_body">The stream ended. The PC may have quit the app, or the connection dropped.</string>
+    <string name="stream_error_try_again">Try again</string>
+    <string name="stream_error_wake_pc">Wake PC</string>
+    <string name="stream_error_pair_again">Pair again</string>
+    <string name="stream_error_diagnostics">Diagnostics</string>
+    <string name="stream_error_close">Close</string>
+</resources>

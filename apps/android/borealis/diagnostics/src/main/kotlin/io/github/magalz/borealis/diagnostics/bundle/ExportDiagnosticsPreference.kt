@@ -10,6 +10,9 @@ import android.net.ConnectivityManager
 import android.net.Uri
 import android.preference.Preference
 import android.util.AttributeSet
+import android.view.Gravity
+import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -58,25 +61,76 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var running = false
+    private var progress: AlertDialog? = null
 
     public override fun onClick() {
-        if (running) return
-        running = true
-        toast(R.string.borealis_export_working)
+        if (running) {
+            // Back closed the progress dialog but the export goes on: show it again, start nothing.
+            if (progress?.isShowing != true) showProgress()
+            return
+        }
+        // Built first: if it throws, nothing is left running.
         val flow = newFlow()
+        running = true
+        showProgress()
         scope.launch {
-            val result = withContext(ioDispatcher) { flow.run() }
-            running = false
-            if (!isGone()) {
-                // The system can refuse the share or the dialog (revoked grant, dead window); the
-                // click handler must not take the app down with it.
-                runCatching { present(result) }
-                    .onFailure {
-                        BorealisLog.e(LogTag.APP, "could not present the diagnostic export", it)
-                        toast(R.string.borealis_export_failed)
-                    }
+            try {
+                val result = withContext(ioDispatcher) { flow.run() }
+                closeProgress()
+                if (!isGone()) {
+                    // The system can refuse the share or the dialog (revoked grant, dead window);
+                    // the click handler must not take the app down with it.
+                    runCatching { present(result) }
+                        .onFailure {
+                            BorealisLog.e(LogTag.APP, "could not present the diagnostic export", it)
+                            toast(R.string.borealis_export_failed)
+                        }
+                }
+            } finally {
+                running = false
+                closeProgress()
             }
         }
+    }
+
+    private fun closeProgress() {
+        progress?.let { runCatching { it.dismiss() } }
+        progress = null
+    }
+
+    /**
+     * A toast is easy to miss and a TV does not show it, so the wait has a dialog of its own. Back
+     * closes it; the export goes on, and a click while it runs shows the dialog again. A window
+     * that cannot be built does not stop the export.
+     */
+    private fun showProgress() {
+        progress =
+            runCatching {
+                val padding = (PADDING_DP * context.resources.displayMetrics.density).toInt()
+                val body =
+                    LinearLayout(context).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(padding, padding, padding, padding)
+                        addView(ProgressBar(context))
+                        addView(
+                            TextView(context).apply {
+                                setText(R.string.borealis_export_working)
+                                setPadding(padding, 0, 0, 0)
+                            }
+                        )
+                    }
+                AlertDialog.Builder(context)
+                    .setTitle(R.string.borealis_export_title)
+                    .setView(body)
+                    .create()
+                    .apply {
+                        setCanceledOnTouchOutside(false)
+                        show()
+                    }
+            }
+                .onFailure { BorealisLog.e(LogTag.APP, "could not show the export progress", it) }
+                .getOrNull()
     }
 
     private fun newFlow() =

@@ -5,10 +5,14 @@ import com.limelight.R
 import com.limelight.grid.assets.DiskAssetLoader
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.wol.WakeOnLanSender
+import com.limelight.utils.CacheHelper
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.magalz.borealis.host.launch.HostError
 import io.github.magalz.borealis.host.pairing.PairingErrors
 import io.github.magalz.borealis.host.pairing.PairingFailure
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogTag
+import java.io.IOException
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import javax.inject.Inject
@@ -104,4 +108,38 @@ internal class DeviceLocalNetworks @Inject constructor() : LocalNetworks {
                 }
             }
         }
+}
+
+/** The app list that the computer manager service cached on disk for a host, as raw XML. */
+internal fun interface AppListCache {
+    /** Reads from disk; null when there is no usable cache. Never call it on the main thread. */
+    fun read(hostId: String): String?
+}
+
+/**
+ * [AppListCache] over the file that `ComputerManagerService` writes: `applist/<uuid>` in the cache.
+ */
+@Singleton
+internal class DiskAppListCache
+@Inject
+constructor(@ApplicationContext private val context: Context) : AppListCache {
+    override fun read(hostId: String): String? {
+        if (!isFileName(hostId)) return null
+        val file = CacheHelper.openPath(false, context.cacheDir, "applist", hostId)
+        if (!file.isFile) return null
+        return try {
+            file.readText(Charsets.UTF_8).ifEmpty { null }
+        } catch (e: IOException) {
+            BorealisLog.w(
+                LogTag.HOST,
+                "cached app list unreadable",
+                "error" to e.javaClass.simpleName,
+            )
+            null
+        }
+    }
+
+    // The id comes from the host: it must not leave the cache directory.
+    private fun isFileName(id: String): Boolean =
+        id.isNotEmpty() && id != ".." && id.none { it == '/' || it == '\\' }
 }

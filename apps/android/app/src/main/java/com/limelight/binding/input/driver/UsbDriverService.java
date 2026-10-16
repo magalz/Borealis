@@ -14,7 +14,6 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
-import android.view.InputDevice;
 import android.widget.Toast;
 
 import com.limelight.LimeLog;
@@ -211,22 +210,8 @@ public class UsbDriverService extends Service implements UsbDriverListener {
     }
 
     public static boolean isRecognizedInputDevice(UsbDevice device) {
-        // Determine if this VID and PID combo matches an existing input device
-        // and defer to the built-in controller support in that case.
-        for (int id : InputDevice.getDeviceIds()) {
-            InputDevice inputDev = InputDevice.getDevice(id);
-            if (inputDev == null) {
-                // Device was removed while looping
-                continue;
-            }
-
-            if (inputDev.getVendorId() == device.getVendorId() &&
-                    inputDev.getProductId() == device.getProductId()) {
-                return true;
-            }
-        }
-
-        return false;
+        // BOREALIS: only an Android gamepad with this VID and PID counts as native support (a dongle's keyboard or mouse does not)
+        return io.github.magalz.borealis.input.NativeGamepadSupport.isRecognized(device.getVendorId(), device.getProductId());
     }
 
     public static boolean kernelSupportsXboxOne() {

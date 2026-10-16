@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.library.hosts
 
+import io.github.magalz.borealis.library.domain.HostCapability
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.RunningApp
 
@@ -12,11 +13,30 @@ internal val deskPc =
         true,
         RunningApp(1, "Desktop"),
         HostAction.OPEN,
+        address = "192.168.1.20",
+        tags = listOf(HostCapability.HEVC_10_BIT, HostCapability.HDR),
     )
 internal val livingRoomPc =
-    HostItemUiState("living", "Living Room PC", Reachability.OFFLINE, true, null, HostAction.WAKE)
+    HostItemUiState(
+        "living",
+        "Living Room PC",
+        Reachability.OFFLINE,
+        true,
+        null,
+        HostAction.WAKE,
+        address = "192.168.1.31",
+    )
 internal val studio =
-    HostItemUiState("studio", "Studio", Reachability.ONLINE, false, null, HostAction.PAIR)
+    HostItemUiState(
+        "studio",
+        "Studio",
+        Reachability.ONLINE,
+        false,
+        null,
+        HostAction.PAIR,
+        address = "192.168.1.40",
+        foundOnNetwork = true,
+    )
 internal val checkingPc =
     HostItemUiState("new", "Basement", Reachability.UNKNOWN, true, null, HostAction.NONE)
 

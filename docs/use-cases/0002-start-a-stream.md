@@ -26,9 +26,11 @@ says what happened and what to do next.
 1. The user selects the host on the Hosts screen and the app on the Apps
    screen, and chooses Start.
 2. The system shows the Starting stream screen with the stages: connecting,
-   starting the app, preparing the display, waiting for the first frame.
+   starting the app, preparing the display, waiting for the first frame. The
+   connecting stage stays current until the host answers.
 3. The system reads `/serverinfo` from the host.
-4. The system sends the launch request and writes LAUNCH_ATTEMPT.
+4. The system sends the launch request. When the request ends, the system
+   writes LAUNCH_ATTEMPT with its result.
 5. The host builds the display for this device. The screen shows the stage.
    On the Sprint 2 test host this took about 14 s
    ([host contract, section 7.3](../host-contract/luminalshine.md)).
@@ -40,7 +42,8 @@ says what happened and what to do next.
    and HDR state. A hint explains how to open the menu on this device the first
    time.
 8. The session ends when the user leaves it or the host ends it. The system
-   writes SESSION_END with the duration and the reason.
+   writes SESSION_END with the duration and the reason. If the host ends a
+   stream that ran, the flow continues at E5.
 
 ## Alternative flows
 
@@ -59,7 +62,8 @@ says what happened and what to do next.
 ### A3: The user cancels (branches from step 2)
 
 1. The user chooses Cancel or presses Back. The system ends the pending launch
-   and returns to the Apps screen with the message "Start cancelled".
+   and closes the stream screen. The Library is shown again: the app returns to
+   the Library screen it was started from (on the TV, the Apps screen).
 2. The system does not call `/cancel` for an app it did not start
    ([host contract, section 7.6](../host-contract/luminalshine.md)).
 3. The use case ends.
@@ -86,9 +90,11 @@ says what happened and what to do next.
 
 1. After the retries in A1, the Connection error screen says the host is busy
    and offers Try again.
-2. No audit entry is written; the retry and the final timeout are in the log.
-   LAUNCH_ATTEMPT and LAUNCH_RETRY are written only for `/launch` and
-   `/resume`. No launch request is sent.
+2. No launch request is sent, so no audit entry is written. The retries and the
+   final timeout are in the log. LAUNCH_ATTEMPT and LAUNCH_RETRY are written
+   only for `/launch` and `/resume`. When the host busy answer comes from one of
+   those requests (a 409 or 503 that runs out of retries), the audit trail
+   records it.
 3. The use case ends.
 
 ### E4: The first frame does not arrive (branches from step 6)
@@ -96,10 +102,23 @@ says what happened and what to do next.
 1. The stream ends with error -100 or -101 from moonlight-common-c. If no
    frame has been rendered 45 s after the connection started, the Borealis
    first-frame watchdog ends the stream through the same -101 path
-   ([ADR 0048](../adr/0048-fork-moonlight-common-c.md)). The system shows the
+   ([ADR 0048](../adr/0048-fork-moonlight-common-c.md), superseded by
+   [ADR 0054](../adr/0054-declare-independence-from-moonlight.md)). The system shows the
    Connection error screen with the raw code and the LuminalShine hint.
 2. SESSION_START was written when the connection started. The system writes
    SESSION_END with outcome FAILURE and `reason=error code=<code>`.
+
+### E5: The host ends a stream that ran (branches from step 8)
+
+1. The stream ends with error -1, for example because another device quit the
+   app on the host. The Connection error screen says "`<app>` stopped" and that
+   the stream ended. It says the PC may have quit the app or the connection
+   dropped. It shows the raw code and offers Try again (focused), Diagnostics
+   and Close.
+2. The system writes SESSION_END with outcome FAILURE and `reason=error
+   code=-1`. A graceful end (code 0) is `reason=host_ended`. A quit that the
+   user chose is `reason=quit` ([UC-004](0004-use-the-in-game-menu.md)).
+3. The use case ends.
 
 ## Postconditions
 
@@ -107,22 +126,39 @@ says what happened and what to do next.
   trail.
 - On failure or cancel: no stream is running. The error code is shown. No
   secret is stored. An audit entry records a launch attempt when one was made.
+  No raw Android toast appears over the error screen, and the exception text
+  is not shown on it; the exception goes to the log.
 
 ## Acceptance tests
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
-| UC-002-T1 | Given the host answers at once, when the user starts an app, then the stages appear in order and the picture is shown after the first frame. | emulator | planned |
+| UC-002-T1 | Given the host answers at once, when the user starts an app, then the stages appear in order and the picture is shown after the first frame. | emulator | exists (Sprint 5, device round) |
 | UC-002-T2 | Given `/serverinfo` times out twice and then answers, when the stream starts, then a third attempt is made within 25 s and the launch continues. | unit | exists (Sprint 3, unit) |
-| UC-002-T3 | Given `/serverinfo` still times out after 3 attempts, when the budget ends, then the screen shows Host busy and no `/launch` is sent. | unit | planned |
+| UC-002-T3 | Given `/serverinfo` still times out after 3 attempts, when the budget ends, then the screen shows Host busy and no `/launch` is sent. | unit | partly exists (Sprint 5, unit) |
 | UC-002-T4 | Given the host asks for a retry, when the launch retries, then LAUNCH_RETRY is written for each retry and the screen shows the count. | unit | exists (Sprint 2, unit) |
-| UC-002-T5 | Given a pending launch, when the user chooses Cancel at any stage, then the Apps screen returns and no stream starts. | UI | planned |
-| UC-002-T6 | Given the host certificate changed, when the stream starts, then the error screen offers Pair again and CERTIFICATE_CHANGED is written. | unit | planned |
-| UC-002-T7 | Given the host does not answer, when the start ends, then the screen says the host is offline and offers Wake PC. | UI | planned |
+| UC-002-T5 | Given a pending launch, when the user chooses Cancel at any stage, then the Apps screen returns and no stream starts. | UI | partly exists (Sprint 5, UI; device round) |
+| UC-002-T6 | Given the host certificate changed, when the stream starts, then the error screen offers Pair again and CERTIFICATE_CHANGED is written. | unit | partly exists (Sprint 5, unit and UI) |
+| UC-002-T7 | Given the host does not answer, when the start ends, then the screen says the host is offline and offers Wake PC. | UI | exists (Sprint 5, UI; device round) |
 | UC-002-T8 | Given a picture is shown, when the session ends, then SESSION_START holds the codec, resolution, frame rate and HDR state, and SESSION_END holds the duration and the reason. | unit | exists (Sprint 3, unit) |
+| UC-002-T9 | Given a stream that ran ends with error -1 from the host, when the error screen shows, then its title is "`<app>` stopped" and SESSION_END holds `reason=error code=-1`. | unit | exists (Sprint 5, unit; device round) |
+| UC-002-T10 | Given the host does not answer `/serverinfo` yet, when the retries run, then the connecting stage stays current and the 15 s note does not show. | emulator | exists (Sprint 5, device round) |
 
-Planned tests cover the Phase 2 screens; tests marked as existing cover logic
-that the Phase 2 screens reuse.
+Sprint 5 built the stream screens and their logic. A test marked "exists
+(Sprint 5, unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a
+Compose test that runs on Robolectric. "device round" marks a check that the
+Sprint 5 device round of 2026-10-16 ran on a TV or a phone (see
+[device validation](../development/device-validation.md), section 10).
+
+Partly covered:
+
+- UC-002-T3: the classifier turns an exhausted `/serverinfo` timeout into
+  Host busy, and the screen shows it. No test checks yet that `/launch` is not
+  sent after that timeout.
+- UC-002-T5: the Cancel button of the Starting screen is tested. The return to
+  the Apps screen and the cancel at every stage are not tested.
+- UC-002-T6: the error screen offers Pair again, and the classifier reports a
+  changed certificate. No test checks the CERTIFICATE_CHANGED audit entry here.
 
 ## Host dependency
 
@@ -136,7 +172,8 @@ cannot be resolved ([section 7.3](../host-contract/luminalshine.md)).
 
 - ADRs: [0052](../adr/0052-structure-the-phase-2-ui.md),
   [0050](../adr/0050-diagnostics-audit-and-interim-settings.md),
-  [0048](../adr/0048-fork-moonlight-common-c.md) (first-frame deadline).
+  [0048](../adr/0048-fork-moonlight-common-c.md) (first-frame deadline,
+  superseded by [0054](../adr/0054-declare-independence-from-moonlight.md)).
 - Host contract sections: [6](../host-contract/luminalshine.md#6-serverinfo-fields),
   [7](../host-contract/luminalshine.md#7-launch-and-resume),
   [7.3](../host-contract/luminalshine.md#73-per-client-virtual-display),
@@ -145,7 +182,9 @@ cannot be resolved ([section 7.3](../host-contract/luminalshine.md)).
   [10](../host-contract/luminalshine.md#10-time-to-first-frame).
 - Policies: [privacy and logging](../policies/privacy-and-logging.md#audit-trail).
 - Existing logic: the launch retries, the `/serverinfo` retry at stream start
-  (3 attempts in about 25 s), and the Sprint 2 error dialog exist. The Phase 2
-  screens are planned.
+  (3 attempts in about 25 s), and the failure classifier (Host busy, Host
+  offline, Certificate changed, generic) exist. The Starting, Conflict and
+  Connection error screens exist from Sprint 5, in `:borealis:stream`.
 - Existing tests: `ServerInfoRetryTest`, `LaunchRetriesTest`,
-  `LaunchRetryRunnerTest`, `SessionAuditTest`.
+  `LaunchRetryRunnerTest`, `SessionAuditTest`, `StreamFailureClassifierTest`,
+  `StartingScreenTest`, `ConnectionErrorScreenTest`, `StreamSessionTest`.

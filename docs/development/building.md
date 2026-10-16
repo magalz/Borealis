@@ -6,7 +6,7 @@ Primary development platform is Windows. Linux notes for CI are at the end.
 
 | Tool | Version | Used for |
 | --- | --- | --- |
-| Git | recent | Source control, subtree and submodules. |
+| Git | recent | Source control and the Moonlight subtree. |
 | JDK | 17 | Gradle and Android build. |
 | Android SDK | platform `android-37.0`, build-tools `37.0.0`, platform-tools | Android client. |
 | Android NDK | `29.0.14206865` | Native code (moonlight-core). |
@@ -18,21 +18,14 @@ Primary development platform is Windows. Linux notes for CI are at the end.
 ## Clone
 
 ```sh
-git clone --recurse-submodules https://github.com/magalz/Borealis.git
+git clone https://github.com/magalz/Borealis.git
 cd Borealis
 git config core.hooksPath .githooks
 ```
 
-If you cloned without submodules:
-
-```sh
-git submodule update --init --recursive
-```
-
-The `moonlight-common-c` submodule lives at its upstream path,
-`apps/android/app/src/main/jni/moonlight-core/moonlight-common-c`, is cloned
-from the Borealis fork (`https://github.com/magalz/moonlight-common-c`, branch
-`borealis`) and is required for the native build.
+No submodules are needed. The streaming protocol library (moonlight-common-c,
+with ENet and nanors) is vendored under `core/third_party/moonlight-common-c`
+and built from there by the native build; see `core/third_party/README.md`.
 
 ## Android SDK setup
 
@@ -87,8 +80,8 @@ the `clang-format` on `PATH`; without it the C/C++ Spotless tasks fail with
 
 ### Screenshot tests
 
-The Compose screens in `:borealis:designsystem` and `:borealis:library` are
-checked against reference images
+The Compose screens in `:borealis:designsystem`, `:borealis:library` and
+`:borealis:stream` are checked against reference images
 ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)). The references
 are in `src/test/screenshots/` of each module. Run these commands from
 `apps/android/`.
@@ -96,13 +89,13 @@ are in `src/test/screenshots/` of each module. Run these commands from
 Record the references on Windows, after a change that alters a screen:
 
 ```sh
-./gradlew :borealis:designsystem:recordRoborazziDebug :borealis:library:recordRoborazziDebug
+./gradlew :borealis:designsystem:recordRoborazziDebug :borealis:library:recordRoborazziDebug :borealis:stream:recordRoborazziDebug
 ```
 
 Verify the screens against the committed references:
 
 ```sh
-./gradlew :borealis:designsystem:testDebugUnitTest :borealis:library:testDebugUnitTest -Proborazzi.test.verify=true
+./gradlew :borealis:designsystem:testDebugUnitTest :borealis:library:testDebugUnitTest :borealis:stream:testDebugUnitTest -Proborazzi.test.verify=true
 ```
 
 - The "Android screenshots" job in CI (`.github/workflows/ci.yml`) runs the
@@ -225,7 +218,8 @@ CI runs on Linux runners with the same versions:
   above, and CMake, Ninja and clang from the runner or the SDK.
 - Use `./gradlew` from `apps/android/` and the same CMake presets from
   `core/`.
-- Check out submodules (`submodules: recursive`).
+- A plain checkout is enough: there are no submodules. Fetch the full history
+  (`fetch-depth: 0`) because the version is derived from tags.
 - Shell scripts are POSIX `sh`/`bash`; paths use forward slashes.
 - Release signing happens only in the `release` environment (see
   [release.md](release.md)); pull request builds never receive secrets.
@@ -233,5 +227,5 @@ CI runs on Linux runners with the same versions:
 ## Troubleshooting
 
 - *SDK not found:* check `ANDROID_HOME` and `apps/android/local.properties`.
-- *Native build fails with missing headers:* the submodule is not initialised.
+- *Native build fails with missing headers:* check that `core/third_party/moonlight-common-c` exists (the checkout is incomplete).
 - *Wrong Java version:* Gradle needs JDK 17; check `JAVA_HOME`.

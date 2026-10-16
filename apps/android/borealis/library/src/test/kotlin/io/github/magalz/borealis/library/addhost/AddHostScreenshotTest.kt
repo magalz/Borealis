@@ -6,6 +6,9 @@ import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.library.shell.LibraryScaffold
+import io.github.magalz.borealis.library.shell.RailActions
+import io.github.magalz.borealis.library.shell.RailSelection
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.TV
 import io.github.magalz.borealis.library.testing.setContentInKeyboardMode
@@ -50,13 +53,20 @@ class AddHostScreenshotTest {
 
     @Composable
     private fun Screen(state: AddHostUiState, formFactor: FormFactor) {
-        AddHostScreen(
-            state = state,
-            formFactor = formFactor,
-            onAddressChanged = {},
-            onSubmit = {},
-            onCancel = {},
-        )
+        // The shell draws the rail beside Add host on a TV and a handheld.
+        LibraryScaffold(
+            formFactor,
+            actions = RailActions({}, {}, {}),
+            selected = RailSelection.AddHost,
+        ) {
+            AddHostScreen(
+                state = state,
+                formFactor = formFactor,
+                onAddressChanged = {},
+                onSubmit = {},
+                onCancel = {},
+            )
+        }
     }
 
     private fun shoot(name: String) {

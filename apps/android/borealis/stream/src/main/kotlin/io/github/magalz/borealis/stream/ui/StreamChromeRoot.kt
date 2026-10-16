@@ -1,0 +1,48 @@
+package io.github.magalz.borealis.stream.ui
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.geometry.Rect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.magalz.borealis.designsystem.adaptive.rememberFormFactor
+import io.github.magalz.borealis.designsystem.theme.BorealisTheme
+import io.github.magalz.borealis.stream.StreamPhase
+import io.github.magalz.borealis.stream.StreamSession
+
+/**
+ * Reports where the menu handle is, in the coordinates of the chrome root (`boundsInRoot`), or null
+ * when it is not shown. The chrome host takes a touch that starts there and lets every other touch
+ * through to the stream, so `StreamingLayer` reports the handle it draws.
+ */
+internal val LocalMenuHandleBounds = staticCompositionLocalOf<(Rect?) -> Unit> { {} }
+
+/**
+ * The chrome over the stream: the screen for the phase of [session], nothing in picture-in-picture.
+ * Every screen is inside [BorealisTheme] for the form factor of the window, so the screens read
+ * `LocalFormFactor` and never apply the theme themselves.
+ */
+@Composable fun StreamChromeRoot(session: StreamSession) = StreamChromeRoot(session) {}
+
+/** [StreamChromeRoot] for the chrome host, which learns the menu handle bounds through [report]. */
+@Composable
+internal fun StreamChromeRoot(session: StreamSession, report: (Rect?) -> Unit) {
+    val state by session.state.collectAsStateWithLifecycle()
+    val perf by session.perf.collectAsStateWithLifecycle()
+    if (state.inPip) return
+    BorealisTheme(rememberFormFactor()) {
+        CompositionLocalProvider(LocalMenuHandleBounds provides report) {
+            when (val phase = state.phase) {
+                is StreamPhase.Starting ->
+                    StartingScreen(state.appName, state.hostName, phase, session)
+                is StreamPhase.Conflict -> ConflictDialog(phase, session)
+                is StreamPhase.Failed ->
+                    ConnectionErrorScreen(state.appName, state.hostName, phase.failure, session)
+                is StreamPhase.Quitting -> QuittingScreen(state.appName)
+                is StreamPhase.Streaming ->
+                    StreamingLayer(state.appName, state.hostName, phase, perf, session)
+            }
+        }
+    }
+}

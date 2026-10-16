@@ -1,6 +1,6 @@
 # Borealis Android modules
 
-Borealis-owned Kotlin code lives here; `apps/android/app` stays the (minimally hooked) upstream Moonlight module.
+Borealis-owned Kotlin code lives here. `apps/android/app` is inherited code from moonlight-android 12.2 (see [ADR 0054](../../../docs/adr/0054-declare-independence-from-moonlight.md)). It is Borealis code now and is changed only when a task needs it.
 New code is Kotlin under the package root `io.github.magalz.borealis`.
 
 ## Build setup
@@ -10,7 +10,7 @@ New code is Kotlin under the package root `io.github.magalz.borealis`.
   - `borealis.android.library`: use it for every `:borealis:*` module (compileSdk 37, minSdk 28, NDK 29.0.14206865 like upstream, Java 17, Lint warnings are errors, JUnit 4 + Truth, AndroidX test runner for `androidTest`). It also applies Kover and licensee. Instrumented tests receive the borealis-core version from `core/CMakeLists.txt` as the instrumentation argument `expectedCoreVersion` (also set on `:app`).
   - `borealis.settings`: applies Spotless and detekt to Borealis-owned paths only: ktfmt (kotlinlang style) for Kotlin and clang-format with `core/.clang-format` for `borealis/native/src/main/cpp` and `app/src/main/jni/borealis`. `clang-format` must be on `PATH`; Spotless needs its exact version, so the build reads it from `clang-format --version`. Without it the C/C++ Spotless tasks fail with "clang-format 22.x not found on PATH". Upstream Java/Groovy/C is never formatted. It also applies Kover to the root project and merges the modules' coverage there.
 - Versions live in `../gradle/libs.versions.toml`.
-- Upstream hooks are marked `BOREALIS` in `settings.gradle`, `app/build.gradle` and `app/src/main/AndroidManifest.xml`.
+- The `BOREALIS` markers in `settings.gradle`, `app/build.gradle` and `app/src/main/AndroidManifest.xml` stay as history. New edits to inherited code do not need them (ADR 0054).
 
 ### Version
 
@@ -149,7 +149,7 @@ AGP allows one `externalNativeBuild` per module, and upstream `:app` uses ndk-bu
 2. `prefabPublishing` + `prefab { create("borealis_core") }` publish `libborealis_core.so` and `core/include` as a Prefab package. The package name is the Gradle project name, so it is `native`.
 3. `:app` has `buildFeatures.prefab = true`. The Borealis-owned `jni/borealis/Android.mk` (picked up by upstream's `include $(call all-subdir-makefiles)`, so no upstream makefile changes) builds `libborealis_bridge.so` with `LOCAL_SHARED_LIBRARIES := borealis_core` and `$(call import-module,prefab/native)`. `NativeBridge.coreVersion()` calls it, proving that moonlight-core-side ndk-build code can link the core.
 
-Upstream native code (evdev, `Application.mk`) is untouched, and moonlight-common-c differs from upstream only by the reviewed patches on the Borealis fork (`docs/development/upstream-sync.md`); the only upstream-facing native settings are `APP_STL=c++_shared` (passed from the convention plugin) and the Prefab flag.
+Upstream native code (evdev, `Application.mk`) is untouched, and moonlight-common-c is vendored in `core/third_party/`, and its changes from upstream are listed in `core/third_party/README.md`; the only upstream-facing native settings are `APP_STL=c++_shared` (passed from the convention plugin) and the Prefab flag.
 
 ### Static or shared, and the STL
 
@@ -183,11 +183,11 @@ Every LuminalShine compatibility rule on the Android side lives here (the host c
 
 LuminalShine does not route `/unpair`, and the user types the PIN and the device name in the host Web UI (contract sections 4.1 and 10.2, requirement 4).
 
-- `BestEffortUnpair.unpair(client, url)`: sends `/unpair` with `Connection: close`, because LuminalShine writes stray bytes after its response on that connection, reads at most 16 KiB of body and returns true only when the XML root has `status_code="200"`. An I/O error, a non-2xx status or an unreadable body is false instead of an exception (it blocks on the network, so call it off the main thread) and the outcome is logged on `LogTag.PAIR` without the URL. `NvHTTP.unpair()` delegates to it and returns the result; `PairingManager` ignores it, `PcView.doUnpair` shows the Web UI hint when it is false.
-- `PairingHints`: `webUiUrl(address, httpPort)` is `https://<host>:<httpPort + 1>` (IPv6 bracketed once, zone id percent-encoded per RFC 6874, null for a port outside 1..65534 or an unusable address); `suggestedDeviceName(model)` removes `xbox` and `webos` in any case and falls back to `Borealis`; `pinHint` and `unpairHint` build the texts of `strings_pairing.xml` for the PIN dialog of `PcView.doPair` and the failed unpair.
+- `BestEffortUnpair.unpair(client, url)`: sends `/unpair` with `Connection: close`, because LuminalShine writes stray bytes after its response on that connection, reads at most 16 KiB of body and returns true only when the XML root has `status_code="200"`. An I/O error, a non-2xx status or an unreadable body is false instead of an exception (it blocks on the network, so call it off the main thread) and the outcome is logged on `LogTag.PAIR` without the URL. `NvHTTP.unpair()` delegates to it and returns the result; `PairingManager` ignores it. The Library's removal of a host (`ComputerHostRepository`) calls it best effort, and the host is removed on this device either way.
+- `PairingHints`: `webUiUrl(address, httpPort)` is `https://<host>:<httpPort + 1>` (IPv6 bracketed once, zone id percent-encoded per RFC 6874, null for a port outside 1..65534 or an unusable address); `suggestedDeviceName(model)` removes `xbox` and `webos` in any case and falls back to `Borealis`. The Library pairing (`NvPairingService`) uses `webUiUrl` and `suggestedDeviceName`. `pinHint` and `unpairHint` build the texts of `strings_pairing.xml`. Follow-up: no screen calls them since `PcView` was removed, so they are dead code. Wire them into the Library or remove them.
 
 - `PairingErrors.describe(context, error, fallback, restarted)` turns the host answer behind a failed pairing step into a `PairingFailure(message, restart)`. `HostRules.classifyPairing` decides: for a session the host dropped (400 `Out of order call to getservercert`, 400 `Invalid uniqueid`, 400 `Pairing exchange invalidated`, 410 `Host pairing state was reset`) the message is "The host had an unfinished pairing attempt and has cleared it. Enter the new PIN." and `restart` is true, once: when `restarted` is already true the same error is a plain failure ("The host cleared the pairing attempt again..."). The errors of a session the host still holds (409 in progress, 409 identity mismatch which means another device is pairing, 503 too many pending) and the specific failures (403 peer mismatch, 409 superseded) get their own text and never restart. Anything else, a non-host exception and an unavailable core keep the upstream text. The log line carries the status, category and action only, never the host text or a PIN.
-- `PcView.doPair(computer, restarted)` calls it in its `catch`; when `restart` is true it runs `doPair(computer, true)` again from the UI thread, so one new PIN dialog appears. Hook lines are marked `// BOREALIS:` in `PcView`; the "Test network connection" menu entry is removed from the context menu with `menu.removeItem(TEST_NETWORK_ID)` because the connection test is disabled in the JNI layer.
+- The Library pairing (`NvPairingService` in `:app`) calls it in its failure path, with the `restarted` flag. When `restart` is true the pairing runs once more, so one new PIN prompt appears. The 12.2 `PcView.doPair` that did this before is removed with `PcView` (Sprint 5).
 - OkHttp: the pairing clients keep OkHttp's default `retryOnConnectionFailure`. The held phase 1 request has no read timeout, so a timeout cannot resend it; only a connection-level failure before the response can make OkHttp send it once more, and the host answers an identical retry by superseding the first request (409 `Pairing request superseded by retry`) instead of failing. No evidence of a problem, so it is left as it is.
 
 ### `host.launch`
@@ -209,8 +209,7 @@ Upstream hooks (each marked `// BOREALIS:`):
 | `NvConnection` (conflict) | `LaunchConflicts` field; `launchWithRetry` passes `conflicts::isOpen`; `launchNotRunningApp` calls the new `resolveConflict` on `LaunchOutcome.CONFLICT`. `resolveConflict` (about 8 lines of lambdas, no logic) hands `LaunchConflicts` the `/serverinfo` read, the app-name lookup, the listener, and the existing relaunch, `joinRunning` and `quitAndLaunch` paths; `joinRunning` is the resume with upstream's "Failed to resume existing session" message when the host answers 200 without resuming |
 | `NvConnectionListener` | `default launchRetrying(category, attempt, maxAttempts, delayMs)`; `default launchConflict(runningAppId, runningAppName, requestedAppId, requestedAppName, answer)`, which answers Cancel when there is no UI |
 | `NvHTTP.launchApp` | the `mode=` frame rate comes from `LaunchFrameRate` |
-| `Game` | `launchRetrying` sets the spinner message on the UI thread; `launchConflict` shows `LaunchConflictDialog` (Join, Quit and relaunch, Cancel; focusable buttons for a D-pad, with the safe Cancel focused first; a winning Cancel also finishes the activity, so the spinner does not stay) on the UI thread; `onStop` and `onDestroy` call `conn.cancelLaunch()`, and `onStop` also dismisses the dialog, which counts as Cancel |
-| `PcView` | `doPair(computer, restarted)` and the `PairingErrors` call in its `catch`; the restart, skipped when the activity is finishing; `menu.removeItem(TEST_NETWORK_ID)` |
+| `Game` | `launchRetrying` and `launchConflict` forward to `StreamSession` on the UI thread (Sprint 5): the retry text and the Conflict question are phases of the stream chrome, in `:borealis:stream`. `onStop` answers a pending question as Cancel, and `onStop` and `onDestroy` call `conn.cancelLaunch()` |
 
 The cancel flag never goes through `NvConnection.stop()`: `stop()` releases the static `connectionAllowed` semaphore unconditionally, and `Game` only calls it for a connection that was started. For the same reason a launch cancelled after `acquire()` releases the permit it just took before returning.
 
@@ -218,7 +217,7 @@ The cancel flag never goes through `NvConnection.stop()`: `stop()` releases the 
 
 - `HostInfoReader.read(hostId, appVersion, codecMask, httpsPort, httpPort)` builds a `BorealisHostInfo` (the `HostCaps` of `HostRules.parseCaps` plus both ports) from the raw `appversion` and `ServerCodecModeSupport` texts of `/serverinfo`. A missing or unreadable mask counts as 0 (the low 32 bits of a larger number are kept, so `0x80000000` arrives as `2147483648`), so a malformed host cannot break the poll. It returns null when the rules are unavailable or reject the version text.
 - `/serverinfo` is polled all the time, so the reader logs one INFO on `LogTag.HOST` per host, and only when the information of that host changes. `NativeHostRules.parseCaps` itself still logs a WARN on every call for an `appversion` over 64 bytes.
-- `NvHTTP.getComputerDetails` stores the result in the transient `ComputerDetails.borealis`, which `update()` copies. `HostInfoText.appendTo` appends a localized block to the PC details dialog (`PcView`): host software and version, HEVC, AV1, 10-bit and 4:4:4, the PyroWave profiles or "off", and the HTTP and HTTPS ports.
+- `NvHTTP.getComputerDetails` stores the result in the transient `ComputerDetails.borealis`, which `update()` copies. `HostInfoText.appendTo` appends a localized block to the host details text that `ComputerHostRepository.details` returns to the Library: host software and version, HEVC, AV1, 10-bit and 4:4:4, the PyroWave profiles or "off", and the HTTP and HTTPS ports.
 
 ### `host.video`
 
@@ -236,3 +235,32 @@ User-facing strings of the module stay in the module, one file per area. The app
 ### Fixtures in unit tests
 
 `borealis.android.library` gives every unit-test task of a `:borealis:*` module the system property `borealis.fixtures.dir`, the absolute path of `core/tests/fixtures` (layout, provenance and scrubbing rules in its `README.md`). The directory is a test input, so changing a fixture re-runs the tests. In `:borealis:host` the test helper `Fixtures` resolves a fixture by relative path (`Fixtures.text("luminalshine/26.09.1/serverinfo-http.xml")`) and fails with a clear message when the property or the file is missing. `FixturePolicyTest` enforces the public-repository rules on every file under `luminalshine/`: scrubbed host name, `uniqueid`, MAC and addresses, and a `device` or `source` provenance row for each file.
+
+## Library and launcher shortcuts (`:app`)
+
+- The Library is the launcher. `LibraryActivity` (`:borealis:library`) shows the Compose screens: Hosts, Add host, Pairing, Apps and App actions. Sprint 5 removed `PcView` and `AppView`, with the 12.2 grids and the code that only they used.
+- `ShortcutTrampoline` (`app/src/main/kotlin/com/limelight/ShortcutTrampoline.kt`) is the entry of every launcher shortcut. It keeps the 12.2 component name and extras (`UUID`, `Name`, `AppId`, `AppName`, `HDR`), so the shortcuts that 12.2 pinned keep working. `ShortcutIntentParser` maps the extras to a `LibraryLaunchRequest`: a PC shortcut opens the apps of that PC, an app shortcut launches that app, and a shortcut that names no PC (the name-only shortcuts of old releases) opens the host list. The trampoline starts `LibraryActivity` with clear-top and single-top, then finishes.
+- A launch request starts the app as a tap does. When another app is running, it opens the conflict sheet instead.
+- Opening a host publishes or updates its launcher shortcut (`HostShortcuts.reportHostOpened`). On a phone, "Add to home screen" on an app pins a shortcut for that app (`HostShortcuts.pinApp`). TVs do not offer it. Pinned app shortcuts use the generic PC icon.
+- Not done: the TV channel "add to home screen" prompt after pairing.
+
+## `:borealis:stream`
+
+The stream chrome: the screens and state that sit over the stream in `Game`. Package root `io.github.magalz.borealis.stream`. It holds the starting screen, the conflict dialog, the connection error screen, the in-game menu with its pull handle and first-run hint, the Borealis keyboard and the performance overlay. It depends on `:borealis:host`, `:borealis:native` and `:borealis:designsystem`, and it exposes `androidx.activity` to its callers.
+
+- Contracts: `StreamUiState` with the phases `Starting`, `Conflict`, `Failed` and `Streaming`; `StreamActions` (what the activity does for the chrome) and `StreamIntents` (what the screens call); `PerfSnapshot` and its sink. `StreamSession` implements the intents and takes events from any thread into one `StateFlow`. Once a failure is shown, late events do not change it.
+- `ui/`: `StartingScreen`, `ConflictDialog`, `ConnectionErrorScreen` (with `error/`), `menu/` (`InGameMenu`, `MenuHandle`, `QuitConfirmation`), `StreamKeyboard` with `keyboard/` (layout and latch), `overlay/` (`PerfOverlay`, `PerfFormat`) and `hint/MenuHint`. `StreamChromeRoot` draws the chrome and `StreamingLayer` draws the overlay and the handle. Strings are in `res/values/` only, in English.
+- `host/`: `StreamChromeHost` is a `ComposeView` that `Game` adds over the stream view with `addContentView`. Its modes are IDLE, OVERLAY, DOCKED, MODAL and HIDDEN. Idle takes no focus, touch or motion. Modal takes them all. Hidden (picture in picture) takes nothing. `InputRoute` decides, from the mode, whether a key or motion event goes to the chrome or to the PC, and `HeldKeys` tracks the keys sent to the PC so that they are released when the chrome takes the input.
+- `input/`: `MenuChordDetector` opens the menu when Select and Start are held for one second. `GuideChord` sends a Guide tap when Start and Select are released early on a pad without a Mode button. `ChromeKeySink` turns the buttons of a USB-driver pad into the key events the menu uses.
+- `keys/VirtualKeys`: the chords of the Send keys row and of the keyboard shortcut row, with their Windows virtual-key codes and modifiers.
+
+Input routing:
+
+- In MODAL mode the chrome takes the keys, except the volume and media keys, and the motion events. A hardware Escape acts as Back.
+- In the other modes the stream keeps the keys and the touches. A docked keyboard takes no focus, so physical keys still go to the PC.
+- While the Android keyboard is open, a gamepad's D-pad, Enter and Back go to it, not to the PC (`ImeKeyGate` in `:app`).
+- Back opens the menu while the stream runs, closes an open panel, leaves while the stream starts or after a failure, and cancels the conflict question.
+
+`Game` wiring: `Game` extends `ComponentActivity`. `StreamSessionFactory` in `:app` builds the session, and `GameStreamActions` in `:app` implements `StreamActions` on the connection. `Game` forwards the stage, retry, conflict, failure, connection and performance events to the session. The manifest opts `Game` out of predictive back, so that the Back key reaches `onBackPressed` (`BackOptOutTest`).
+
+Tests: `StreamSessionTest`, `StreamSessionChromeModeTest`, `StreamBackTest`, `StreamChromeHostTest`, `InputRouteTest`, `MenuChordDetectorTest`, `GuideChordTest`, `StreamKeyboardTest`, `KeyboardLatchTest`, `InGameMenuTest`, `MenuHandleTest`, `ConnectionErrorScreenTest`, `StartingScreenTest` and `ConflictDialogTest`. Roborazzi references are in `src/test/screenshots/` (see [building](../../../docs/development/building.md#screenshot-tests)).

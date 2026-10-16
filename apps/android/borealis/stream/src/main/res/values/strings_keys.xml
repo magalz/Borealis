@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Key names are what Windows calls them, so they are not translated. -->
+    <string name="key_alt_tab" translatable="false">Alt+Tab</string>
+    <string name="key_win_tab" translatable="false">Win+Tab</string>
+    <string name="key_win" translatable="false">Win</string>
+    <string name="key_ctrl_shift_esc" translatable="false">Ctrl+Shift+Esc</string>
+    <string name="key_alt_f4" translatable="false">Alt+F4</string>
+    <string name="key_win_d" translatable="false">Win+D</string>
+    <string name="key_win_g" translatable="false">Win+G</string>
+    <string name="key_esc" translatable="false">Esc</string>
+    <string name="key_win_alt_b" translatable="false">Win+Alt+B</string>
+    <string name="key_f11" translatable="false">F11</string>
+</resources>

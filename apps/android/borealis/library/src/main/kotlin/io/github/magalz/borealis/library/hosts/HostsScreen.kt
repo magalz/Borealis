@@ -315,6 +315,8 @@ private fun HostItem(
         statusText = stringResource(item.statusTextRes()),
         onClick = { handlers.onHostSelected(item.id) },
         modifier = modifier.testTag("host:${item.id}"),
+        detail = item.detailLine(),
+        tags = item.tags.map { stringResource(it.labelRes()) },
         runningApp = item.runningApp?.let { it.name ?: unnamedApp },
         action = action,
         onOptions = { handlers.onOptions(item.id) },

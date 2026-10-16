@@ -1,0 +1,123 @@
+package io.github.magalz.borealis.stream
+
+import io.github.magalz.borealis.host.failure.StreamFailure
+import io.github.magalz.borealis.nativecore.LaunchCategory
+
+/**
+ * What the stream chrome shows: the app and the host it streams, the phase of the session and
+ * whether the activity is in picture-in-picture, which hides the chrome and leaves the phase alone.
+ */
+data class StreamUiState(
+    val appName: String,
+    val hostName: String,
+    val phase: StreamPhase,
+    val inPip: Boolean = false,
+)
+
+/** The phase of a stream session, from the first connection step to the stream or a failure. */
+sealed interface StreamPhase {
+    /** The stream is starting; [retry] is set while the host asks Borealis to try again. */
+    data class Starting(val stage: StartStage, val retry: LaunchRetry? = null) : StreamPhase
+
+    /**
+     * Another app is running on the host and the user must choose what to do. Cancelling leaves the
+     * phase here; the activity finishes itself.
+     */
+    data class Conflict(
+        val runningAppName: String?,
+        val requestedAppName: String,
+        val sameApp: Boolean,
+    ) : StreamPhase
+
+    /**
+     * The stream could not start or ended with an error. Final: `retry()` starts the stream again
+     * in a new activity and a new session.
+     */
+    data class Failed(val failure: StreamFailure) : StreamPhase
+
+    /**
+     * The user asked to quit the app and the host ended the stream before it answered: [ended] is
+     * how the stream ended. The screen is quiet; the activity finishes when the quit answers, and a
+     * quit that fails turns this into [Failed] with [ended].
+     */
+    data class Quitting(val ended: StreamFailure) : StreamPhase
+
+    /**
+     * The first frame is on screen. [touchMode] is null when the device has no touchscreen and
+     * [gamepadMouse] is null when there is no gamepad-as-mouse choice to offer.
+     */
+    data class Streaming(
+        val panel: Panel = Panel.NONE,
+        val overlay: OverlayMode,
+        val touchMode: TouchMode?,
+        val gamepadMouse: Boolean?,
+        val info: SessionInfo,
+        val showMenuHint: Boolean,
+    ) : StreamPhase
+}
+
+/** The steps of starting a stream, in order. */
+enum class StartStage {
+    CONNECTING,
+    STARTING_APP,
+    PREPARING_DISPLAY,
+    FIRST_FRAME,
+}
+
+/** The panel open over the stream. */
+enum class Panel {
+    NONE,
+    MENU,
+    KEYBOARD,
+}
+
+/** How much the performance overlay shows. */
+enum class OverlayMode {
+    OFF,
+    COMPACT,
+    DETAILED,
+}
+
+/** How the touchscreen drives the pointer. */
+enum class TouchMode {
+    TRACKPAD,
+    DIRECT,
+    OFF,
+}
+
+/** What the chrome asks of the input layer: who gets the touches and the keys. */
+enum class ChromeMode {
+    /** Nothing is open and the overlay is off. */
+    IDLE,
+
+    /** Only the performance overlay is visible; the stream keeps the input. */
+    OVERLAY,
+
+    /** A panel is docked and the stream stays usable above it. */
+    DOCKED,
+
+    /** The chrome takes the input. */
+    MODAL,
+
+    /** The chrome is hidden, for example in picture-in-picture. */
+    HIDDEN,
+}
+
+/** A retry that Borealis performs because the host asked for it: [attempt] of [maxAttempts]. */
+data class LaunchRetry(
+    val category: LaunchCategory?,
+    val attempt: Int,
+    val maxAttempts: Int,
+    val delayMs: Int,
+)
+
+/** The negotiated stream, for the session info and the overlay. */
+data class SessionInfo(
+    val width: Int,
+    val height: Int,
+    val frameRate: Int,
+    val codec: String,
+    val hdr: Boolean,
+    val decoder: String?,
+    val bitrateLimitKbps: Int,
+)

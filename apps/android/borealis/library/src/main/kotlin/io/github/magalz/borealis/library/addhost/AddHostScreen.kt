@@ -23,6 +23,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -68,6 +70,7 @@ fun AddHostScreen(
         BackHandler(onBack = { if (!state.busy) onCancel() })
         val colors = LocalBorealisColors.current
         val addressFocus = remember { FocusRequester() }
+        val submitFocus = remember { FocusRequester() }
         Box(
             modifier
                 .fillMaxSize()
@@ -89,15 +92,21 @@ fun AddHostScreen(
                         value = state.address,
                         onValueChange = onAddressChanged,
                         label = stringResource(R.string.addhost_address_label),
-                        modifier = Modifier.initialFocus(addressFocus),
+                        // Down goes to the primary button, not to whichever button is nearest the
+                        // wide field.
+                        modifier =
+                            Modifier.initialFocus(addressFocus).focusProperties {
+                                down = submitFocus
+                            },
                         error = state.error?.let { stringResource(it.textRes()) },
                         onDone = onSubmit,
                         keyboardType = KeyboardType.Uri,
+                        leaveWithDpad = true,
                     )
                     Hint(stringResource(R.string.addhost_address_hint))
                     Hint(stringResource(R.string.addhost_port_hint))
                 }
-                AddHostButtons(state.busy, onSubmit, onCancel)
+                AddHostButtons(state.busy, submitFocus, onSubmit, onCancel)
             }
         }
     }
@@ -122,12 +131,22 @@ private fun AddHostError.textRes(): Int =
     }
 
 @Composable
-private fun AddHostButtons(busy: Boolean, onSubmit: () -> Unit, onCancel: () -> Unit) {
+private fun AddHostButtons(
+    busy: Boolean,
+    submitFocus: FocusRequester,
+    onSubmit: () -> Unit,
+    onCancel: () -> Unit,
+) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BorealisButton(stringResource(R.string.addhost_submit), onSubmit, enabled = !busy)
+        BorealisButton(
+            stringResource(R.string.addhost_submit),
+            onSubmit,
+            modifier = Modifier.focusRequester(submitFocus),
+            enabled = !busy,
+        )
         BorealisButton(
             stringResource(R.string.addhost_cancel),
             onCancel,

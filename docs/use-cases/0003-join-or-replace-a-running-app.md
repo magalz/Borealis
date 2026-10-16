@@ -26,7 +26,10 @@ app again, or to cancel. Every choice is explicit, and Cancel has the focus.
 2. The system finds a running app on the host and shows the Conflict dialog.
    The dialog says whether the running app is the same app or another one. It
    says that quitting ends the stream on the other device. Cancel has the focus.
-3. The user chooses Join (same app).
+   A different app found running at start always asks. The system does not
+   quit it on its own, even when the Library has not seen that app.
+3. The user chooses Join. The running app may be the requested app or another
+   one; Join always resumes the running app.
 4. The system resumes the running app on the host and writes LAUNCH_CONFLICT
    with the choice "join".
 5. The stream starts as in [UC-002](0002-start-a-stream.md), from its step 5.
@@ -35,7 +38,8 @@ app again, or to cancel. Every choice is explicit, and Cancel has the focus.
 
 ### A1: Quit and relaunch, or quit and start (branches from step 3)
 
-1. The user chooses Quit and relaunch (same app) or Quit and start (other app).
+1. The user chooses the third button. It says Quit and relaunch only for the
+   same app whose name is known. In every other case it says Quit and start.
 2. The system ends the running app on the host and writes LAUNCH_CONFLICT with
    the choice "quit".
 3. The system starts the chosen app once. The flow rejoins
@@ -56,6 +60,15 @@ app again, or to cancel. Every choice is explicit, and Cancel has the focus.
 2. The system writes LAUNCH_ATTEMPT with the failure outcome.
 3. The use case ends.
 
+### E2: A restart finds another app running (branches from the start)
+
+1. The system restarts a start once when the RTSP handshake fails right after a
+   same-app resume. If another app is running at that point, the restart does
+   not quit it and does not ask again.
+2. The start fails with the message for a collision between devices. The
+   other app keeps running.
+3. The use case ends.
+
 ## Postconditions
 
 - On Join: this device streams the running app. No other app was quit.
@@ -69,15 +82,24 @@ app again, or to cancel. Every choice is explicit, and Cancel has the focus.
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
-| UC-003-T1 | Given another device runs the app, when the user starts it, then the Conflict dialog shows with Cancel focused. | UI | planned |
+| UC-003-T1 | Given another device runs the app, when the user starts it, then the Conflict dialog shows with Cancel focused. | UI | exists (Sprint 5, UI) |
 | UC-003-T2 | Given the user chooses Join, when the host accepts the resume, then the stream starts without a new app launch. | unit | exists (Sprint 2, unit) |
 | UC-003-T3 | Given the user chooses Quit and relaunch, when the quit succeeds, then the app is launched once and LAUNCH_CONFLICT records "quit". | unit | exists (Sprint 2, unit) |
-| UC-003-T4 | Given the user cancels or presses Back, when the dialog closes, then no request changes the host and LAUNCH_CONFLICT records "cancel". | unit | exists (Sprint 2, unit) |
+| UC-003-T4 | Given the user cancels or presses Back, when the dialog closes, then no request changes the host and LAUNCH_CONFLICT records "cancel". | unit | exists (Sprint 2, unit; device round) |
 | UC-003-T5 | Given the user has made one choice, when the host still reports a conflict, then the dialog is not shown again and the launch fails with the error. | unit | exists (Sprint 2, unit) |
-| UC-003-T6 | Given the dialog is open, when the user reads it, then it says that quitting ends the stream on the other device. | UI | planned |
+| UC-003-T6 | Given the dialog is open, when the user reads it, then it says that quitting ends the stream on the other device. | UI | exists (Sprint 5, UI) |
+| UC-003-T7 | Given another app runs on the host when the user starts an app, when the start reads the host, then the Conflict dialog asks and nothing is quit before the user chooses. | unit | exists (Sprint 5, unit; device round) |
+| UC-003-T8 | Given the dialog is open for a different app, or for the same app whose name is unknown, when the user reads the third button, then it says Quit and start; for the same app with a known name it says Quit and relaunch. | UI | exists (Sprint 5, UI) |
 
-Planned tests cover the Phase 2 screens; tests marked as existing cover logic
-that the Phase 2 screens reuse.
+Tests marked "exists (Sprint 2, unit)" cover the launch logic. Tests marked
+"exists (Sprint 5, UI)" are Compose tests of the Conflict dialog in
+`:borealis:stream`.
+
+On LuminalShine, the race that makes a same-app `/launch` conflict is
+practically unreachable. While the host builds a display it holds
+`/serverinfo`, so a second device for the same app joins the running session
+instead (device round, 2026-10-16). The dialog for that race is covered by the
+Compose tests only (UC-003-T1).
 
 ## Host dependency
 
@@ -100,6 +122,8 @@ host limitation, not only a client choice.
   (400 "An app is already running on this host"),
   [7.6](../host-contract/luminalshine.md#76-cancel).
 - Policies: [privacy and logging](../policies/privacy-and-logging.md#audit-trail).
-- Existing logic: the conflict dialog and the choice logic exist from Sprint 2
-  and 3. The Phase 2 dialog is planned; it rebuilds the screen, not the logic.
-- Existing tests: `LaunchConflictsTest`.
+- Existing logic: the choice logic exists from Sprint 2 and 3
+  (`LaunchConflicts`). The Conflict dialog is the Sprint 5 screen in the stream
+  chrome, and it reads the same choices.
+- Existing tests: `LaunchConflictsTest`, `DifferentAppStartTest`,
+  `ConflictDialogTest`, `StreamSessionTest`.

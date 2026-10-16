@@ -6,6 +6,8 @@ decision-makers: João Pedro Magalhães
 
 # 0047 Harvest upstream code, then emancipate at a milestone
 
+> Status note (2026-10-15): the independence milestone was reached early by owner decision. See [0054](0054-declare-independence-from-moonlight.md). The body below is unchanged.
+
 ## Context and Problem Statement
 
 Moonlight Android went about two years without code changes (v12.1 in 2024-02, v12.2 in 2026-09). The owner wants Borealis to become an independently maintained project. How should Borealis use the upstream code and the upstream sync policy until it is independent, and when should it declare independence? GPL-3.0 lets Borealis reuse code from Moonlight, moonlight-common-c, Artemis (a GPL-3.0 fork of moonlight-android), and LuminalShine and Sunshine (both GPL-3.0), and from PyroWave (MIT), keeping attribution in NOTICE.

@@ -3,12 +3,16 @@ package io.github.magalz.borealis.designsystem.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
@@ -18,6 +22,8 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.width
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -48,6 +54,52 @@ class HostCardTest {
         composeRule.onNodeWithText("Online").assertIsDisplayed()
         composeRule.onNodeWithText("LuminalShine 26.09.1 · 192.168.1.20").assertIsDisplayed()
         composeRule.onNodeWithText("Desktop running").assertIsDisplayed()
+    }
+
+    @Test
+    fun `the tags are shown under the detail line as text`() {
+        composeRule.setContent { Specimen(tags = listOf("HEVC 10-bit", "HDR", "4:4:4")) }
+
+        composeRule.onNodeWithText("HEVC 10-bit", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithText("HDR", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithText("4:4:4", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(CARD).assert(hasText("HDR"))
+    }
+
+    @Test
+    fun `a card without tags shows none`() {
+        composeRule.setContent { Specimen() }
+
+        composeRule.onNodeWithText("HDR", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `the tags sit below the detail line`() {
+        composeRule.setContent { Specimen(tags = listOf("HDR")) }
+
+        val detail =
+            composeRule.onNodeWithText(
+                "LuminalShine 26.09.1 · 192.168.1.20",
+                useUnmergedTree = true,
+            )
+        val tag = composeRule.onNodeWithText("HDR", useUnmergedTree = true)
+        assertThat(tag.getUnclippedBoundsInRoot().top)
+            .isAtLeast(detail.getUnclippedBoundsInRoot().bottom)
+    }
+
+    @Test
+    fun `a long detail line wraps instead of cutting the address`() {
+        composeRule.setContent { Specimen(FormFactor.Tv, cardWidth = 220.dp) }
+
+        val layouts = mutableListOf<TextLayoutResult>()
+        composeRule
+            .onNodeWithText("LuminalShine 26.09.1 · 192.168.1.20", useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .config[SemanticsActions.GetTextLayoutResult]
+            .action!!(layouts)
+
+        assertThat(layouts.single().hasVisualOverflow).isFalse()
+        assertThat(layouts.single().lineCount).isEqualTo(2)
     }
 
     @Test
@@ -121,6 +173,8 @@ class HostCardTest {
         formFactor: FormFactor = FormFactor.Phone,
         runningApp: String? = null,
         action: HostCardAction? = null,
+        tags: List<String> = emptyList(),
+        cardWidth: Dp? = null,
     ) {
         BorealisTheme(formFactor) {
             Box(Modifier.testTag(FRAME).background(BorealisTokens.Color.Page).padding(24.dp)) {
@@ -128,12 +182,16 @@ class HostCardTest {
                     name = "Desk PC",
                     status = DotStatus.Online,
                     statusText = "Online",
+                    // A layout specimen (a long line), not data a host reports.
                     detail = "LuminalShine 26.09.1 · 192.168.1.20",
+                    tags = tags,
                     runningApp = runningApp,
                     action = action,
                     onClick = { opened++ },
                     onOptions = { optionsRequested++ },
-                    modifier = Modifier.testTag(CARD),
+                    modifier =
+                        Modifier.testTag(CARD)
+                            .then(cardWidth?.let { Modifier.width(it) } ?: Modifier),
                 )
             }
         }

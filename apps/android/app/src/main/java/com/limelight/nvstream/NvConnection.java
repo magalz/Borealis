@@ -39,6 +39,14 @@ import com.limelight.nvstream.http.NvHTTP;
 import com.limelight.nvstream.http.PairingManager;
 import com.limelight.nvstream.input.MouseButtonPacket;
 import com.limelight.nvstream.jni.MoonBridge;
+// BOREALIS: standard UTF-8 for typed text (stream.keyframe)
+import io.github.magalz.borealis.stream.StartFailureLog;
+import io.github.magalz.borealis.stream.Utf8Text;
+// BOREALIS: typed failure causes (host.failure)
+import io.github.magalz.borealis.host.failure.CauseKind;
+import io.github.magalz.borealis.host.failure.FailureCauses;
+import io.github.magalz.borealis.host.failure.StartSteps;
+import io.github.magalz.borealis.host.pairing.CertificateMismatchException;
 // BOREALIS: LuminalShine launch retries (host.launch)
 import io.github.magalz.borealis.host.launch.HostError;
 import io.github.magalz.borealis.host.launch.LaunchConflicts;
@@ -100,6 +108,7 @@ public class NvConnection {
     }
 
     public void stop() {
+        connected = false; // BOREALIS: no new keyframe request from here on (stream.keyframe)
         // Interrupt any pending connection. This is thread-safe.
         MoonBridge.interruptConnection();
 
@@ -107,6 +116,7 @@ public class NvConnection {
         // we must not invoke that functionality in parallel.
         synchronized (MoonBridge.class) {
             MoonBridge.stopConnection();
+            connected = false; // BOREALIS: the start thread may have set it again before it saw the interrupt (stream.keyframe)
             MoonBridge.cleanupBridge();
         }
 
@@ -121,12 +131,47 @@ public class NvConnection {
 
     public boolean endedByResumeCollision() { return collisions.collided(); } // BOREALIS: the start failed because another device was starting its stream (host.launch)
 
+    // BOREALIS: why the last start failed, for the connection error screen (host.failure)
+    private volatile CauseKind lastFailureCause = CauseKind.NONE;
+    private volatile int lastHttpCode;
+    private volatile boolean launchRetried;
+    // BOREALIS: the HTTP step of the start that is under way, the stage word of a failure's raw code (host.failure)
+    private volatile String startStep = StartSteps.SERVER_INFO;
+    // BOREALIS: true only between a started connection and stop(); written under the MoonBridge lock (stream.keyframe)
+    private volatile boolean connected;
+
+    public CauseKind lastFailureCause() { return lastFailureCause; }
+
+    // BOREALIS: the status of the host's answer when lastFailureCause() is HTTP, otherwise 0 (host.failure)
+    public int lastHttpCode() { return lastHttpCode; }
+
+    // BOREALIS: the host kept asking to retry /launch or /resume (409 or 503) until the client gave up (host.failure)
+    public boolean launchRetriesExhausted() {
+        return FailureCauses.retriesExhausted(launchRetried, lastFailureCause == CauseKind.HTTP ? Integer.valueOf(lastHttpCode) : null);
+    }
+
+    // BOREALIS: records why the start failed (host.failure)
+    private void recordStartFailure(Throwable e) {
+        Integer httpCode = e instanceof HostHttpResponseException ? Integer.valueOf(((HostHttpResponseException) e).getErrorCode()) : null;
+        lastHttpCode = httpCode != null ? httpCode : 0;
+        lastFailureCause = FailureCauses.of(e, httpCode);
+    }
+
+    // BOREALIS: asks the host for a new keyframe; does nothing before the stream started or after it stopped (stream.keyframe)
+    public void requestKeyframe() {
+        if (connected) {
+            MoonBridge.requestIdrFrame();
+        }
+    }
+
     // BOREALIS: /launch and /resume through the host.launch retry runner (host.launch)
     private LaunchOutcome launchWithRetry(NvHTTP h, String verb, int appId) throws IOException, XmlPullParserException {
+        startStep = verb; // BOREALIS: host.failure
+        context.connListener.launchStarting("resume".equals(verb)); // BOREALIS: host.failure
         return LaunchRetries.run(context.isNvidiaServerSoftware, verb,
                 () -> h.launchApp(context, verb, appId, context.negotiatedHdr),
                 e -> e instanceof HostHttpResponseException ? new HostError(((HostHttpResponseException) e).getErrorCode(), ((HostHttpResponseException) e).getErrorMessage()) : null,
-                () -> launchCancelled, context.connListener::launchRetrying, conflicts::isOpen, context.serverAddress.address);
+                () -> launchCancelled, (c, a, m, d) -> { launchRetried = true; context.connListener.launchRetrying(c, a, m, d); }, conflicts::isOpen, context.serverAddress.address);
     }
 
     // BOREALIS: Join: /resume of the running app, with upstream's message when the host answers 200 without resuming (host.launch)
@@ -267,7 +312,15 @@ public class NvConnection {
     {
         NvHTTP h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, context.serverCert, cryptoProvider);
 
-        String serverInfo = collisions.readServerInfo(() -> h.getServerInfo(true)); // BOREALIS: retry a timed-out /serverinfo (host.launch)
+        String serverInfo;
+        try {
+            serverInfo = collisions.readServerInfo(() -> h.getServerInfo(true)); // BOREALIS: retry a timed-out /serverinfo (host.launch)
+        } catch (IOException | XmlPullParserException e) {
+            // BOREALIS: the HTTP fallback after a mismatch can fail too; the mismatch is the cause (host.failure)
+            if (h.sawCertificateMismatch()) { throw new CertificateMismatchException(e); }
+            throw e;
+        }
+        if (h.sawCertificateMismatch()) { throw new CertificateMismatchException(null); } // BOREALIS: the fallback to HTTP would only say "not paired" (host.failure)
         
         context.serverAppVersion = h.getServerVersion(serverInfo);
         if (context.serverAppVersion == null) {
@@ -363,7 +416,7 @@ public class NvConnection {
                         return false;
                     }
                 } else {
-                    return collisions.isRestart() ? collisions.refuseQuit() : quitAndLaunch(h, context); // BOREALIS: a restart never quits another device's app
+                    return collisions.differentAppRunning(() -> resolveConflict(h, context)); // BOREALIS: ask before quitting another device's app; a restart never quits it
                 }
             } catch (HostHttpResponseException e) {
                 if (e.getErrorCode() == 470) {
@@ -395,6 +448,7 @@ public class NvConnection {
 
     protected boolean quitAndLaunch(NvHTTP h, ConnectionContext context) throws IOException,
             XmlPullParserException {
+        startStep = StartSteps.QUIT; // BOREALIS: host.failure
         try {
             if (!h.quitApp()) {
                 context.connListener.displayMessage("Failed to quit previous session! You must quit it manually");
@@ -440,25 +494,30 @@ public class NvConnection {
 
                 String appName = context.streamConfig.getApp().getAppName();
 
+                lastFailureCause = CauseKind.NONE; // BOREALIS: host.failure
+                lastHttpCode = 0; // BOREALIS
+                launchRetried = false; // BOREALIS
+                startStep = StartSteps.SERVER_INFO; // BOREALIS
+
                 context.connListener.stageStarting(appName);
 
                 try {
                     if (!startApp()) {
                         if (launchCancelled) { return; } // BOREALIS: the user left, nothing to report
-                        context.connListener.stageFailed(appName, 0, 0);
+                        context.connListener.stageFailed(startStep, 0, 0); // BOREALIS: the step, not the app name
                         return;
                     }
                     context.connListener.stageComplete(appName);
                 } catch (HostHttpResponseException e) {
-                    e.printStackTrace();
-                    context.connListener.displayMessage(e.getMessage());
-                    context.connListener.stageFailed(appName, 0, e.getErrorCode());
+                    StartFailureLog.failed(startStep, e); // BOREALIS: the log masks addresses; the screen never shows the exception text
+                    recordStartFailure(e); // BOREALIS: host.failure
+                    context.connListener.stageFailed(startStep, 0, e.getErrorCode()); // BOREALIS: the step, not the app name
                     return;
                 } catch (XmlPullParserException | IOException e) {
                     if (launchCancelled) { return; } // BOREALIS: the user left during the /serverinfo retry, nothing to report
-                    e.printStackTrace();
-                    context.connListener.displayMessage(e.getMessage());
-                    context.connListener.stageFailed(appName, MoonBridge.ML_PORT_FLAG_TCP_47984 | MoonBridge.ML_PORT_FLAG_TCP_47989, 0);
+                    StartFailureLog.failed(startStep, e); // BOREALIS: the log masks addresses; the screen never shows the exception text
+                    recordStartFailure(e); // BOREALIS: host.failure
+                    context.connListener.stageFailed(startStep, MoonBridge.ML_PORT_FLAG_TCP_47984 | MoonBridge.ML_PORT_FLAG_TCP_47989, 0); // BOREALIS: the step, not the app name
                     return;
                 }
 
@@ -472,8 +531,8 @@ public class NvConnection {
                 try {
                     connectionAllowed.acquire();
                 } catch (InterruptedException e) {
-                    context.connListener.displayMessage(e.getMessage());
-                    context.connListener.stageFailed(appName, 0, 0);
+                    StartFailureLog.failed(startStep, e); // BOREALIS: the exception text goes to the log only
+                    context.connListener.stageFailed(startStep, 0, 0); // BOREALIS: the step, not the app name
                     return;
                 }
                 if (launchCancelled) { connectionAllowed.release(); return; } // BOREALIS: left while waiting for the semaphore
@@ -495,6 +554,7 @@ public class NvConnection {
                             context.videoCapabilities,
                             context.streamConfig.getColorSpace(),
                             context.streamConfig.getColorRange());
+                    connected = ret == 0; // BOREALIS: stream.keyframe
                     if (ret != 0) {
                         // LiStartConnection() failed, so the caller is not expected
                         // to stop the connection themselves. We need to release their
@@ -639,7 +699,7 @@ public class NvConnection {
 
     public void sendUtf8Text(final String text) {
         if (!isMonkey) {
-            MoonBridge.sendUtf8Text(text);
+            MoonBridge.sendUtf8Text(Utf8Text.bytes(text)); // BOREALIS: JNI needs standard UTF-8, not Java's modified UTF-8
         }
     }
 

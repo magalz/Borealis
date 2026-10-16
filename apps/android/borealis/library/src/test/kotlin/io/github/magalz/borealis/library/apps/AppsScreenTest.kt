@@ -634,4 +634,28 @@ class AppsScreenTest {
         const val TV = "w960dp-h540dp-land-television-xhdpi"
         const val HANDHELD = "w800dp-h480dp-land-hdpi"
     }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the sheet offers Add to home screen with its consequence and reports the choice`() {
+        show(
+            state(
+                hades,
+                actions =
+                    sheetFor(
+                        hades,
+                        null,
+                        AppAction.START,
+                        AppAction.DETAILS,
+                        AppAction.ADD_TO_HOME_SCREEN,
+                    ),
+            ),
+            FormFactor.Phone,
+        )
+
+        composeRule.onNodeWithText("Put a shortcut to Hades II on your home screen.").assertExists()
+        composeRule.onNodeWithText("Add to home screen").performClick()
+
+        assertThat(chosen).containsExactly(AppAction.ADD_TO_HOME_SCREEN)
+    }
 }

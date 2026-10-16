@@ -4,7 +4,7 @@
 #
 # - Kotlin/KTS under Borealis-owned Android paths: ./gradlew spotlessCheck (apps/android)
 # - C/C++ under core/ or apps/android/app/src/main/jni/borealis/: clang-format --dry-run --Werror
-# Upstream Moonlight files are never checked or reformatted.
+# Inherited Moonlight files and the vendored core/third_party/ sources are never checked or reformatted.
 
 repo_root=$(git rev-parse --show-toplevel) || exit 1
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
@@ -22,7 +22,7 @@ if printf '%s\n' "$staged" | grep -Eq "$kotlin_re"; then
     fi
 fi
 
-cpp_files=$(printf '%s\n' "$staged" | grep -E "$cpp_re")
+cpp_files=$(printf '%s\n' "$staged" | grep -E "$cpp_re" | grep -v '^core/third_party/')
 if [ -n "$cpp_files" ]; then
     if ! command -v clang-format >/dev/null 2>&1; then
         echo "pre-commit: clang-format is required for staged C/C++ files but was not found on PATH." >&2

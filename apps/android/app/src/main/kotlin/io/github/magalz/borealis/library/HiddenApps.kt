@@ -10,8 +10,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
 /**
- * The apps the user hid, in the file and format of the 12.2 app list (`AppView`): one string set of
- * app ids per host id, so both lists agree.
+ * The apps the user hid, in the file and format of the 12.2 app list: one string set of app ids per
+ * host id, so both lists agree.
  */
 @Singleton
 internal class HiddenApps @Inject constructor(@ApplicationContext private val context: Context) {
@@ -41,7 +41,7 @@ internal class HiddenApps @Inject constructor(@ApplicationContext private val co
     }
 
     private companion object {
-        /** `AppView.HIDDEN_APPS_PREF_FILENAME`. */
+        /** The preference file of the 12.2 app list. */
         const val FILE = "HiddenApps"
     }
 }

@@ -25,6 +25,10 @@ public interface NvConnectionListener {
     default void launchRetrying(int category, int attempt, int maxAttempts, int delayMs) {
     }
 
+    // BOREALIS: /launch (or /resume when resume is true) is about to be requested (host.failure); Game shows the "starting app" stage
+    default void launchStarting(boolean resume) {
+    }
+
     // BOREALIS: another app is running on the host: the listener asks the user and sets the answer; without a UI the launch is cancelled (host.launch)
     default void launchConflict(int runningAppId, String runningAppName, int requestedAppId, String requestedAppName, io.github.magalz.borealis.host.launch.ConflictAnswer answer) {
         answer.choose(io.github.magalz.borealis.host.launch.ConflictChoice.CANCEL);

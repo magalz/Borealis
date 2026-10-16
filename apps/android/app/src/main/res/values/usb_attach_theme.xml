@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shows nothing. Translucent so that the stream under it is not stopped (Game stops its
+         connection in onStop). -->
+    <style name="UsbAttachTheme" parent="@android:style/Theme.NoDisplay">
+        <item name="android:windowIsTranslucent">true</item>
+    </style>
+</resources>

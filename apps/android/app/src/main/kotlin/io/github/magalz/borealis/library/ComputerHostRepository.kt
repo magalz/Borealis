@@ -35,6 +35,7 @@ constructor(
     private val subnet: SubnetCheck,
     private val hiddenApps: HiddenApps,
     private val boxArt: BoxArtCache,
+    private val shortcuts: ShortcutCleanup,
     @IoDispatcher private val io: CoroutineDispatcher,
 ) : HostRepository {
     override val hosts: Flow<List<Host>> =
@@ -43,7 +44,7 @@ constructor(
             .map { known -> known.values.map { it.toHost() }.sortedWith(BY_NAME) }
             .distinctUntilChanged()
 
-    /** As `AddComputerManually.doAddPc`, without its dialogs and its connection test. */
+    /** As the manual add of 12.2, without its dialogs and its connection test. */
     override suspend fun addHost(address: HostAddress): AddHostResult {
         val host = address.host.trim()
         val manual =
@@ -98,7 +99,13 @@ constructor(
         }
         connection.remove(details)
         hiddenApps.clear(hostId)
-        withContext(io) { boxArt.delete(hostId) }
+        withContext(io) {
+            try {
+                shortcuts.hostForgotten(details)
+            } finally {
+                boxArt.delete(hostId)
+            }
+        }
     }
 
     override suspend fun details(hostId: String): String? =

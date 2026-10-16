@@ -1,4 +1,0 @@
-[submodule "moonlight-common-c"]
-	path = apps/android/app/src/main/jni/moonlight-core/moonlight-common-c
-	url = https://github.com/magalz/moonlight-common-c.git
-	branch = borealis

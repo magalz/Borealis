@@ -1,7 +1,7 @@
 package com.limelight.utils;
 
 import android.annotation.TargetApi;
-import android.app.Activity;
+import android.content.Context;
 import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
 import android.graphics.Bitmap;
@@ -19,10 +19,10 @@ import java.util.List;
 public class ShortcutHelper {
 
     private final ShortcutManager sm;
-    private final Activity context;
+    private final Context context;
     private final TvChannelHelper tvChannelHelper;
 
-    public ShortcutHelper(Activity context) {
+    public ShortcutHelper(Context context) {
         this.context = context;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             sm = context.getSystemService(ShortcutManager.class);
@@ -92,7 +92,7 @@ public class ShortcutHelper {
         tvChannelHelper.addGameToChannel(computer, app);
     }
 
-    public void createAppViewShortcut(ComputerDetails computer, boolean forceAdd, boolean newlyPaired) {
+    public void createHostShortcut(ComputerDetails computer, boolean forceAdd, boolean newlyPaired) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             ShortcutInfo sinfo = new ShortcutInfo.Builder(context, computer.uuid)
                     .setIntent(ServerHelper.createPcShortcutIntent(context, computer))
@@ -135,10 +135,6 @@ public class ShortcutHelper {
             tvChannelHelper.createTvChannel(computer);
             tvChannelHelper.requestChannelOnHomeScreen(computer);
         }
-    }
-
-    public void createAppViewShortcutForOnlineHost(ComputerDetails details) {
-        createAppViewShortcut(details, false, false);
     }
 
     private String getShortcutIdForGame(ComputerDetails computer, NvApp app) {

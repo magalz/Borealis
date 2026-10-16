@@ -29,11 +29,13 @@ import dagger.hilt.android.testing.HiltTestApplication
 import io.github.magalz.borealis.library.domain.AppRepository
 import io.github.magalz.borealis.library.domain.AppsSnapshot
 import io.github.magalz.borealis.library.domain.HostRepository
+import io.github.magalz.borealis.library.domain.HostShortcuts
 import io.github.magalz.borealis.library.domain.LegacyBridge
 import io.github.magalz.borealis.library.domain.PairingService
 import io.github.magalz.borealis.library.domain.StreamLauncher
 import io.github.magalz.borealis.library.testing.FakeAppRepository
 import io.github.magalz.borealis.library.testing.FakeHostRepository
+import io.github.magalz.borealis.library.testing.FakeHostShortcuts
 import io.github.magalz.borealis.library.testing.FakeLegacyBridge
 import io.github.magalz.borealis.library.testing.FakePairingService
 import io.github.magalz.borealis.library.testing.FakeStreamLauncher
@@ -60,6 +62,7 @@ class LibraryActivityTvTest {
     @get:Rule(order = 1) val composeRule = createEmptyComposeRule()
 
     private val hosts = FakeHostRepository()
+    private val shortcuts = FakeHostShortcuts()
     private val apps = FakeAppRepository()
     private val bridge = FakeLegacyBridge()
 
@@ -68,6 +71,7 @@ class LibraryActivityTvTest {
     @BindValue @JvmField val pairingService: PairingService = FakePairingService()
     @BindValue @JvmField val streamLauncher: StreamLauncher = FakeStreamLauncher()
     @BindValue @JvmField val legacyBridge: LegacyBridge = bridge
+    @BindValue @JvmField val hostShortcuts: HostShortcuts = shortcuts
 
     private val desk = aHost(id = "desk", name = "Desk PC")
     private lateinit var scenario: ActivityScenario<LibraryActivity>
@@ -100,7 +104,7 @@ class LibraryActivityTvTest {
     }
 
     @Test
-    fun `on a TV the rail opens Add host and Settings, and Add host has no rail`() {
+    fun `on a TV the rail opens Add host and Settings, and stays beside Add host`() {
         hosts.emit(desk)
         composeRule.waitForIdle()
 
@@ -111,7 +115,7 @@ class LibraryActivityTvTest {
         composeRule.waitForIdle()
 
         composeRule.onNodeWithText("Cancel").assertIsDisplayed()
-        composeRule.onNode(railItem("Settings")).assertDoesNotExist()
+        composeRule.onNode(railItem("Settings")).assertIsDisplayed()
     }
 
     @Test
@@ -144,6 +148,19 @@ class LibraryActivityTvTest {
 
         composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.onNode(isFocused()).assert(isNotRailItem)
+    }
+
+    @Test
+    fun `Left from the Apps grid focuses the selected Hosts item, not the nearest one`() {
+        hosts.emit(desk)
+        apps.emit(AppsSnapshot(host = desk, apps = listOf(anApp(1, "Hades II")), loading = false))
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("host:desk").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNode(isFocused()).assert(isRailItem and hasText("Hosts"))
     }
 
     private val isRailItem = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)

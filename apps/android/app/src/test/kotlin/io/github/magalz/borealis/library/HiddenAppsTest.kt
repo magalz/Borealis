@@ -88,7 +88,7 @@ class HiddenAppsTest {
     }
 
     private companion object {
-        /** `AppView.HIDDEN_APPS_PREF_FILENAME`. */
+        /** The preference file of the 12.2 app list. */
         const val FILE = "HiddenApps"
     }
 }

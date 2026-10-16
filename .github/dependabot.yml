@@ -34,5 +34,5 @@ updates:
       actions:
         patterns: ['*']
 
-  # moonlight-common-c is intentionally not tracked here: the submodule points at the
-  # Borealis fork, whose patches are rebased deliberately (ADR 0048).
+  # moonlight-common-c is intentionally not tracked here: it is vendored under
+  # core/third_party and takes upstream fixes only by cherry-pick (ADR 0054).

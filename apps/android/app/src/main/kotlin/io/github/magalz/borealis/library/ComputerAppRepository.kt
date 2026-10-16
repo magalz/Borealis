@@ -68,7 +68,7 @@ constructor(
         withContext(io) { hiddenApps.set(hostId, appId, hidden) }
     }
 
-    /** As `ServerHelper.doQuit`, without its dialogs. */
+    /** As the quit of the 12.2 app list, without its dialogs. */
     override suspend fun quit(hostId: String): QuitResult {
         val details = connection.lookup(hostId) ?: return QuitResult.Failed(null)
         val uniqueId = connection.binder().uniqueId

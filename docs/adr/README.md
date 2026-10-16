@@ -75,9 +75,10 @@ Never rewrite an accepted ADR to change its decision. If a decision changes, wri
 | 0045 | [Automate store publishing with Gradle Play Publisher and an Amazon submission script](0045-store-publishing-automation.md) | proposed | 2026-10-13 |
 | 0046 | [Measure test coverage with Kover and llvm-cov, reported to a self-hosted Codecov](0046-test-coverage-with-kover-llvm-cov-and-codecov.md) | accepted | 2026-10-13 |
 | 0047 | [Harvest upstream code, then emancipate at a milestone](0047-harvest-upstream-then-emancipate.md) | accepted | 2026-10-14 |
-| 0048 | [Fork moonlight-common-c with a first-frame deadline patch](0048-fork-moonlight-common-c.md) | accepted | 2026-10-14 |
+| 0048 | [Fork moonlight-common-c with a first-frame deadline patch](0048-fork-moonlight-common-c.md) | superseded by ADR-0054 | 2026-10-14 |
 | 0049 | [Gate pull requests on 90% patch coverage and a 1% project tolerance](0049-coverage-gate.md) | accepted | 2026-10-14 |
 | 0050 | [Record diagnostics, audit trail, interim settings and the first release channel](0050-diagnostics-audit-and-interim-settings.md) | accepted | 2026-10-14 |
 | 0051 | [Send the diagnostic bundle from a TV to a phone with a QR code](0051-send-the-diagnostic-bundle-to-a-phone-with-a-qr-code.md) | accepted | 2026-10-15 |
 | 0052 | [Structure the Phase 2 UI: hosts home, a Back-opened in-game menu and a dark theme](0052-structure-the-phase-2-ui.md) | accepted | 2026-10-15 |
 | 0053 | [Use Material 3 with a Borealis focus indication on TV](0053-material-3-with-borealis-focus-on-tv.md) | accepted | 2026-10-15 |
+| 0054 | [Declare independence from Moonlight](0054-declare-independence-from-moonlight.md) | accepted | 2026-10-15 |

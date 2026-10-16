@@ -394,7 +394,11 @@ public class MoonBridge {
 
     public static native void sendMouseHighResHScroll(short scrollAmount);
 
-    public static native void sendUtf8Text(String text);
+    // BOREALIS: standard UTF-8 bytes, not a String: GetStringUTFChars gives modified UTF-8
+    public static native void sendUtf8Text(byte[] text);
+
+    // BOREALIS: asks the host for a new keyframe
+    public static native void requestIdrFrame();
 
     public static native String getStageName(int stage);
 

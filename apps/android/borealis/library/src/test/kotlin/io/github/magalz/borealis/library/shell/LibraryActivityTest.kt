@@ -1,5 +1,8 @@
 package io.github.magalz.borealis.library.shell
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
@@ -21,6 +24,7 @@ import dagger.hilt.android.testing.HiltTestApplication
 import io.github.magalz.borealis.library.domain.AppRepository
 import io.github.magalz.borealis.library.domain.AppsSnapshot
 import io.github.magalz.borealis.library.domain.HostRepository
+import io.github.magalz.borealis.library.domain.HostShortcuts
 import io.github.magalz.borealis.library.domain.LegacyBridge
 import io.github.magalz.borealis.library.domain.PairingInstructions
 import io.github.magalz.borealis.library.domain.PairingOutcome
@@ -30,6 +34,7 @@ import io.github.magalz.borealis.library.domain.StreamLauncher
 import io.github.magalz.borealis.library.domain.StreamRequest
 import io.github.magalz.borealis.library.testing.FakeAppRepository
 import io.github.magalz.borealis.library.testing.FakeHostRepository
+import io.github.magalz.borealis.library.testing.FakeHostShortcuts
 import io.github.magalz.borealis.library.testing.FakeLegacyBridge
 import io.github.magalz.borealis.library.testing.FakePairingService
 import io.github.magalz.borealis.library.testing.FakeStreamLauncher
@@ -54,6 +59,7 @@ class LibraryActivityTest {
     @get:Rule(order = 1) val composeRule = createAndroidComposeRule<LibraryActivity>()
 
     private val hosts = FakeHostRepository()
+    private val shortcuts = FakeHostShortcuts()
     private val apps = FakeAppRepository()
     private val pairing = FakePairingService()
     private val streams = FakeStreamLauncher()
@@ -64,6 +70,7 @@ class LibraryActivityTest {
     @BindValue @JvmField val pairingService: PairingService = pairing
     @BindValue @JvmField val streamLauncher: StreamLauncher = streams
     @BindValue @JvmField val legacyBridge: LegacyBridge = bridge
+    @BindValue @JvmField val hostShortcuts: HostShortcuts = shortcuts
 
     private val desk = aHost(id = "desk", name = "Desk PC")
 
@@ -78,6 +85,18 @@ class LibraryActivityTest {
     }
 
     @Test
+    fun `opening the apps of a host publishes its launcher shortcut`() {
+        hosts.emit(desk)
+        apps.emit(AppsSnapshot(host = desk, apps = listOf(anApp(1, "Hades II")), loading = false))
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Open", useUnmergedTree = true).performClick()
+        composeRule.waitForIdle()
+
+        assertThat(shortcuts.openedHosts).containsExactly("desk" to "Desk PC")
+    }
+
+    @Test
     fun `Add host then Cancel returns to Hosts`() {
         hosts.emit(desk)
         composeRule.waitForIdle()
@@ -89,6 +108,20 @@ class LibraryActivityTest {
 
         composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
         composeRule.onNodeWithText("Cancel").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a phone has no rail on Hosts or on Add host`() {
+        hosts.emit(desk)
+        composeRule.waitForIdle()
+        val isRailItem = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
+        composeRule.onNode(isRailItem).assertDoesNotExist()
+
+        composeRule.onNodeWithContentDescription("Add host").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Cancel").assertIsDisplayed()
+        composeRule.onNode(isRailItem).assertDoesNotExist()
     }
 
     @Test

@@ -2,59 +2,21 @@
 <resources>
     <!-- Shortcut strings -->
     <string name="scut_deleted_pc">Host gelöscht</string>
-    <string name="scut_not_paired">Host nicht gekoppelt</string>
-    <string name="scut_pc_not_found">Host nicht gefunden</string>
-    <string name="scut_invalid_uuid">Angegebener Host ist ungültig</string>
-    <string name="scut_invalid_app_id">Angegebene App ist unzulässig</string>
     <!-- Help strings -->
     <string name="help_loading_title">Hilfsanzeige</string>
     <string name="help_loading_msg">Hilfe wird geladen…</string>
     <!-- PC view menu entries -->
-    <string name="pcview_menu_app_list">Alle Apps anzeigen</string>
-    <string name="pcview_menu_pair_pc">Mit Host koppeln</string>
     <string name="pcview_menu_unpair_pc">Kopplung trennen</string>
-    <string name="pcview_menu_send_wol">Wake-On-LAN Anfrage senden</string>
-    <string name="pcview_menu_delete_pc">Host löschen</string>
-    <string name="pcview_menu_test_network">Netzwerkverbindung testen</string>
-    <string name="pcview_menu_details">Details anzeigen</string>
     <!-- Network test strings -->
-    <string name="nettest_title_waiting">Netzwerkverbindung wird getestet</string>
-    <string name="nettest_text_waiting">Moonlight testet Ihre Netzwerkverbindung, um festzustellen, ob benötigte Ports blockiert sind.
-\n
-\nDies kann einige Sekunden dauern…</string>
-    <string name="nettest_title_done">Netzwerktest abgeschlossen</string>
-    <string name="nettest_text_success">Dein Netzwerk scheint Moonlight nicht zu blockieren. Wenn du weiterhin Probleme mit der Verbindung hast, überprüfe die Firewall-Einstellungen deines Hosts
-\n
-\nWenn du versuchst, über das Internet zu streamen, installiere das Moonlight Internet Hosting Tool auf deinem Host und führe den mitgelieferten Internet-Streaming-Tester aus, um die Internetverbindung des Hosts zu überprüfen.</string>
-    <string name="nettest_text_inconclusive">Der Netzwerktest konnte nicht durchgeführt werden, da keiner der Verbindungstestserver von Moonlight erreichbar war. Überprüfe deine Internetverbindung oder versuche es später noch einmal.</string>
-    <string name="nettest_text_failure">Die aktuelle Netzwerkverbindung deines Geräts scheint Moonlight zu blockieren. Das Streaming über das Internet funktioniert möglicherweise nicht, während du mit diesem Netzwerk verbunden bist.
-\n
-\nFolgende Netzwerkports wurden blockiert:
-\n</string>
     <string name="nettest_text_blocked">Die aktuelle Netzwerkverbindung deines Geräts blockiert Moonlight. Das Streaming über das Internet funktioniert möglicherweise nicht, während du mit diesem Netzwerk verbunden bist.</string>
     <!-- Pair messages -->
-    <string name="pairing">Koppeln…</string>
     <string name="pair_pc_offline">Host ist offline</string>
     <string name="pair_pc_ingame">Auf dem Host ist bereits eine App aktiv. Du musst die App vor dem koppeln beenden.</string>
-    <string name="pair_pairing_title">Koppeln</string>
-    <string name="pair_pairing_msg">Bitte gebe folgenden PIN auf deinem Host ein:</string>
-    <string name="pair_incorrect_pin">PIN inkorrekt</string>
     <string name="pair_fail">Koppeln fehlgeschlagen</string>
-    <string name="pair_already_in_progress">Koppeln bereits im Gange</string>
     <!-- WOL messages -->
-    <string name="wol_pc_online">Host ist online</string>
-    <string name="wol_no_mac">Host konnte nicht aufgeweckt werden, da keine MAC-Adresse gespeichert ist</string>
     <string name="wol_waking_pc">Host wird aufgeweckt…</string>
-    <string name="wol_waking_msg">Es kann einige Momente dauern deinen Host aufzuwecken. Sollte dies fehlschlagen, stelle bitte sicher, dass Wake-On-LAN korrekt konfiguriert ist.</string>
-    <string name="wol_fail">Senden der Wake-On-LAN Pakete ist fehlgeschlagen</string>
     <!-- Unpair messages -->
-    <string name="unpairing">Trenne Kopplung…</string>
-    <string name="unpair_success">Kopplung erfolgreich getrennt</string>
-    <string name="unpair_fail">Trennung der Kopplung fehlgeschlagen</string>
-    <string name="unpair_error">Gerät wurde nicht gekoppelt</string>
     <!-- Errors -->
-    <string name="error_pc_offline">Host ist offline</string>
-    <string name="error_manager_not_running">Der ComputerManager Dienst läuft nicht. Bitte warte ein paar Sekunden oder starte die App neu.</string>
     <string name="error_unknown_host">Hostname konnte nicht aufgelöst werden</string>
     <string name="error_404">GFE ist auf einen HTTP 404 Fehler gestoßen. Stelle sicher, dass die GPU deines Hosts unterstützt wird. Die Verwendung von Remote-Desktop Software kann ebenso diesen Fehler verursachen. Starte deinen Host neu oder installiere GFE neu.</string>
     <string name="title_decoding_error">Video Dekodierer ist abgestürzt</string>
@@ -62,68 +24,30 @@
     <string name="title_decoding_reset">Video Einstellungen zurücksetzen</string>
     <string name="message_decoding_reset">Der Video Dekodierer deines Geräts ist wiederholt mit den ausgewählten Einstellungen abgestürzt. Deine Streamingeinstellungen wurden zurückgesetzt.</string>
     <string name="error_usb_prohibited">USB Zugriff ist administrativ unterbunden. Bitte überprüfen sie ihre Knox oder MDM Einstellungen.</string>
-    <string name="unable_to_pin_shortcut">Deine momentane Launcher App ünterstützt das erstellen angehefteter Shortcuts nicht.</string>
     <string name="video_decoder_init_failed">Der Video Dekodierer konnte nicht initialisiert werden. Dein Gerät unterstützt möglicherweise die gewählte Auflösung oder Framerate nicht.</string>
     <string name="no_video_received_error">Kein Video vom Host empfangen.</string>
     <string name="no_frame_received_error">Deine Netzwerkverbindung funktioniert nicht gut. Reduziere die Einstellung der Videobitrate oder benutze eine schnellere Verbindung.</string>
     <!-- Start application messages -->
-    <string name="conn_establishing_title">Verbindung herstellen</string>
-    <string name="conn_establishing_msg">Verbindung starten</string>
     <string name="conn_metered">Warnung: Das Datentransfervolumen deiner Netzwerkverbindung ist limitiert!</string>
     <string name="conn_client_latency">Durchschnittliche Frame-Dekodierungslatenz:</string>
     <string name="conn_client_latency_hw">Hardware-Dekodierungslatenz:</string>
     <string name="conn_hardware_latency">Durchschnittliche Hardware-Dekodierungslatenz:</string>
-    <string name="conn_starting">Starten</string>
-    <string name="conn_error_title">Verbindungsfehler</string>
-    <string name="conn_error_msg">Start fehlgeschlagen</string>
-    <string name="conn_terminated_title">Verbindung beendet</string>
-    <string name="conn_terminated_msg">Die Verbindung wurde beendet.</string>
     <!-- General strings -->
-    <string name="ip_hint">IP-Adresse des GeForce Hosts</string>
-    <string name="searching_pc">Suche nach Host PCs in deinem lokalen Netzwerk…
-\n
-\nStelle sicher, dass Sunshine läuft oder GameStream in den GeForce Experience SHIELD-Einstellungen aktiviert ist.</string>
     <string name="yes">Ja</string>
     <string name="no">Nein</string>
-    <string name="lost_connection">Verbindung zum Host verloren</string>
-    <string name="title_details">Details</string>
     <string name="help">Hilfe</string>
     <string name="delete_pc_msg">Bist du sicher, dass du diesen Host löschen möchtest\?</string>
     <string name="slow_connection_msg">Langsame Verbindung zum Host
 \nReduziere die Bitrate</string>
     <string name="poor_connection_msg">Sehr langsame Verbindung zum Host</string>
-    <string name="perf_overlay_decoder">Decoder: %1$s</string>
-    <string name="perf_overlay_incomingfps">Bildwiederholrate der Netzwerkübertragung: %1$.2f FPS</string>
-    <string name="perf_overlay_renderingfps">Wiedergabe-Bildwiederholungsrate: %1$.2f FPS</string>
-    <string name="perf_overlay_netdrops">Wegen Netzwerkübertragung ausgelassene Frames: %1$.2f%%</string>
-    <string name="perf_overlay_dectime">Durchschnittliche Dekodierungszeit: %1$.2f ms</string>
     <!-- AppList activity -->
-    <string name="applist_connect_msg">Verbinde mit Host…</string>
-    <string name="applist_menu_resume">Sitzung wiederherstellen</string>
-    <string name="applist_menu_quit">Sitzung beenden</string>
-    <string name="applist_menu_quit_and_start">Aktuelle App beenden und starten</string>
     <string name="applist_menu_cancel">Abbrechen</string>
-    <string name="applist_menu_details">Details anzeigen</string>
-    <string name="applist_menu_scut">Shortcut erstellen</string>
     <string name="applist_menu_tv_channel">Zu Kanal hinzufügen</string>
-    <string name="applist_menu_hide_app">App ausblenden</string>
-    <string name="applist_refresh_title">App Liste</string>
-    <string name="applist_refresh_msg">Apps aktualisieren…</string>
     <string name="applist_refresh_error_title">Fehler</string>
     <string name="applist_refresh_error_msg">Die App-Liste konnte nicht geladen werden</string>
-    <string name="applist_quit_app">Beenden</string>
-    <string name="applist_quit_success">Erfolgreich beendet</string>
-    <string name="applist_quit_fail">Beenden fehlgeschlagen</string>
     <string name="applist_quit_confirmation">Bist du sicher, dass du die laufende App schließen möchtest\? Ungespeicherte Daten gehen verloren.</string>
     <string name="applist_details_id">App ID:</string>
     <!-- Add computer manually activity -->
-    <string name="title_add_pc">Host manuell hinzufügen</string>
-    <string name="msg_add_pc">Verbinde zum Host…</string>
-    <string name="addpc_fail">Verbindung fehlgeschlagen. Stelle sicher, dass die benötigten Ports von deiner Firewall nicht gesperrt sind.</string>
-    <string name="addpc_success">Host erfolgreich hinzugefügt</string>
-    <string name="addpc_unknown_host">Auflösen der Hostadresse fehlgeschlagen. Stelle sicher, dass die Adresse keine Tippfehler beinhaltet.</string>
-    <string name="addpc_enter_ip">Du musst eine IP-Adresse eingeben</string>
-    <string name="addpc_wrong_sitelocal">Diese Adresse sieht falsch aus. Du musst die öffentliche IP-Adresse deines Routers benutzen, um übers Internet zu Streamen.</string>
     <!-- Preferences -->
     <string name="category_basic_settings">Allgemeine Einstellungen</string>
     <string name="title_resolution_list">Videoauflösung</string>
@@ -208,13 +132,9 @@
 \n
 \nEs kann sein, dass dein Monitor eine notwendige Konfiguration nicht unterstützt. In diesem Fall, kann ein Virtuelles Display Abhilfe schaffen. Allerdings kann es sein, dass dein Gerät oder dein Host das Streaming in einer bestimmten Auflösung oder Bildwiederholrate nicht unterstützt.</string>
     <string name="title_native_res_dialog">Native Auflösungswarnung</string>
-    <string name="check_ports_msg">Überprüfe deine Firewall und Portweiterleitungsregeln für folgende(n) Port(s):</string>
     <string name="early_termination_error">Beim Starten des Streams auf deinem Host ist etwas schief gelaufen.
 \n
 \nStelle sicher, dass du keine DRM-geschützten Inhalte auf deinem Host geöffnet hast. Du kannst auch versuchen, deinen Host neu zu starten.</string>
-    <string name="pcview_menu_header_unknown">Aktualisiere</string>
-    <string name="pcview_menu_header_offline">Offline</string>
-    <string name="pcview_menu_header_online">Online</string>
     <!-- Array strings -->
     <string name="videoformat_auto">Automatisch</string>
     <string name="videoformat_hevcalways">HEVC bevorzugen</string>
@@ -224,7 +144,6 @@
     <string name="pacing_latency">Bevorzuge niedrigste Latenz</string>
     <string name="pacing_balanced">Ausgeglichen</string>
     <string name="pacing_smoothness">Bevorzuge flüssige Bildwiedergabe (kann die Latenzzeit deutlich erhöhen)</string>
-    <string name="perf_overlay_streamdetails">Video Stream: %1$s %2$.2f FPS</string>
     <string name="resolution_360p">360p</string>
     <string name="resolution_1080p">1080p</string>
     <string name="resolution_1440p">1440p</string>
@@ -232,7 +151,6 @@
     <string name="audioconf_stereo">Stereo</string>
     <string name="audioconf_51surround">5.1 Surround Sound</string>
     <string name="audioconf_71surround">7.1 Surround Sound</string>
-    <string name="perf_overlay_netlatency">Durchschnittliche Netzwerklatenz: %1$d ms (Abweichung: %2$d ms)</string>
     <string name="fps_30">30 FPS</string>
     <string name="resolution_480p">480p</string>
     <string name="fps_120">120 FPS</string>
@@ -267,13 +185,11 @@
     <string name="category_gamepad_settings">Gamepad Einstellungen</string>
     <string name="pair_pairing_help">Wenn dein Host PC Sunshine verwendet, navigiere zur Sunshine Web UI und gebe dort die PIN ein.</string>
     <string name="title_checkbox_gamepad_touchpad_as_mouse">Die Maus immer mit dem Touchpad steuern</string>
-    <string name="perf_overlay_hostprocessinglatency">Host Verarbeitungslatenz min/max/avg: %1$.1f/%2$.1f/%3$.1f ms</string>
     <string name="title_analog_scrolling">Verwenden Sie zum Scrollen einen Analogstick</string>
     <string name="summary_analog_scrolling">Wählen Sie einen Analogstick aus, der zum scrollen im Mausemulationsmodus verwendet werden soll</string>
     <string name="analogscroll_none">Keine (beide Sticks bewegen die Maus)</string>
     <string name="analogscroll_right">Rechter Analogstick</string>
     <string name="analogscroll_left">Linker Analogstick</string>
-    <string name="error_code_prefix">Fehlercode:</string>
     <string name="title_seekbar_vibrate_fallback_strength">Emulierte Vibrationsintensität einstellen</string>
     <string name="summary_seekbar_vibrate_fallback_strength">Verstärke oder verringere die Vibrationsintensität deines Geräts</string>
     <string name="suffix_seekbar_vibrate_fallback_strength">%</string>
@@ -285,5 +201,4 @@
     <string name="summary_full_range">Dies führt zu Detailverlusten in hellen und dunklen Bereichen, wenn Ihr Gerät Full Range Video Inhalte nicht richtig anzeigt.</string>
     <string name="summary_checkbox_gamepad_motion_fallback">Verwendet die integrierten Bewegungssensoren Ihres Geräts, wenn Gamepad-Sensoren von Ihrem angeschlossenen Gamepad oder Ihrer Android-Version nicht unterstützt werden.
 \nHinweis: Die Aktivierung dieser Option kann dazu führen, dass Ihr Gamepad auf dem Host als PlayStation-Controller angezeigt wird.</string>
-    <string name="pcview_menu_eol">NVIDIA GameStream End-of-Service</string>
 </resources>

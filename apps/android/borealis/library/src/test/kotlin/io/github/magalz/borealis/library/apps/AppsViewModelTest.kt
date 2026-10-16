@@ -10,6 +10,7 @@ import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.RunningApp
 import io.github.magalz.borealis.library.domain.StreamRequest
 import io.github.magalz.borealis.library.testing.FakeAppRepository
+import io.github.magalz.borealis.library.testing.FakeHostShortcuts
 import io.github.magalz.borealis.library.testing.MainDispatcherRule
 import io.github.magalz.borealis.library.testing.aHost
 import io.github.magalz.borealis.library.testing.anApp
@@ -24,8 +25,9 @@ class AppsViewModelTest {
     @get:Rule val mainDispatcher = MainDispatcherRule()
 
     private val repository = FakeAppRepository()
+    private val shortcuts = FakeHostShortcuts(canPinApps = false)
     // Lazy: a ViewModel must be created after the rule has set the main dispatcher.
-    private val viewModel by lazy { AppsViewModel("host-1", repository) }
+    private val viewModel by lazy { AppsViewModel("host-1", repository, shortcuts) }
 
     private val desktop = anApp(id = 1, name = "Desktop")
     private val steam = anApp(id = 2, name = "steam", hdrSupported = true)
@@ -546,5 +548,211 @@ class AppsViewModelTest {
         advanceTimeBy(2)
         runCurrent()
         assertThat(repository.activeCollectors).isEqualTo(0)
+    }
+
+    @Test
+    fun `a launch request starts the app as a tap does`() = runTest {
+        repository.emit(snapshot(desktop, steam))
+        subscribe(viewModel.uiState)
+
+        viewModel.onLaunchRequested(2)
+
+        viewModel.effects.test {
+            assertThat(awaitItem())
+                .isEqualTo(
+                    AppsEffect.StartStream(StreamRequest("host-1", 2, "steam", hdrSupported = true))
+                )
+        }
+    }
+
+    @Test
+    fun `a launch request while another app runs opens the actions`() = runTest {
+        repository.emit(snapshot(desktop, steam, running = desktop))
+        subscribe(viewModel.uiState)
+
+        viewModel.onLaunchRequested(2)
+        runCurrent()
+
+        assertThat(viewModel.uiState.value.actions?.app?.id).isEqualTo(2)
+        viewModel.effects.test { expectNoEvents() }
+    }
+
+    @Test
+    fun `a launch request for an app that is not listed does nothing`() = runTest {
+        repository.emit(snapshot(desktop))
+        subscribe(viewModel.uiState)
+
+        viewModel.onLaunchRequested(99)
+        runCurrent()
+
+        viewModel.effects.test { expectNoEvents() }
+    }
+
+    @Test
+    fun `a launch request after the screen closed does not start a stream`() = runTest {
+        repository.emit(snapshot(desktop, host = aHost(reachability = Reachability.OFFLINE)))
+        subscribe(viewModel.uiState)
+
+        viewModel.onLaunchRequested(1)
+
+        viewModel.effects.test {
+            assertThat(awaitItem()).isEqualTo(AppsEffect.Close(AppsMessage.HostOffline))
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `opening a host publishes its shortcut once`() = runTest {
+        repository.emit(snapshot(desktop))
+        subscribe(viewModel.uiState)
+
+        repository.emit(snapshot(desktop, steam))
+        runCurrent()
+
+        assertThat(shortcuts.openedHosts).containsExactly("host-1" to "Desk PC")
+    }
+
+    @Test
+    fun `a host that is not paired or offline gets no shortcut`() = runTest {
+        repository.emit(snapshot(desktop, host = aHost(id = "host-1", paired = false)))
+        subscribe(viewModel.uiState)
+        repository.emit(
+            snapshot(desktop, host = aHost(id = "host-1", reachability = Reachability.OFFLINE))
+        )
+        runCurrent()
+        repository.emit(snapshot(desktop, host = null))
+        runCurrent()
+
+        assertThat(shortcuts.openedHosts).isEmpty()
+    }
+
+    @Test
+    fun `a host that is paired after the screen opened gets its shortcut then`() = runTest {
+        repository.emit(
+            snapshot(
+                desktop,
+                host = aHost(id = "host-1", paired = false, reachability = Reachability.UNKNOWN),
+            )
+        )
+        subscribe(viewModel.uiState)
+        assertThat(shortcuts.openedHosts).isEmpty()
+
+        repository.emit(snapshot(desktop))
+        runCurrent()
+
+        assertThat(shortcuts.openedHosts).containsExactly("host-1" to "Desk PC")
+    }
+
+    @Test
+    fun `every sheet offers to add the app to the home screen when pinning is possible`() =
+        runTest {
+            shortcuts.canPinApps = true
+            repository.emit(snapshot(desktop, steam, running = desktop))
+            subscribe(viewModel.uiState)
+
+            viewModel.onActions(1)
+            runCurrent()
+            assertThat(viewModel.uiState.value.actions?.choices)
+                .containsExactly(
+                    AppAction.RESUME,
+                    AppAction.QUIT,
+                    AppAction.DETAILS,
+                    AppAction.ADD_TO_HOME_SCREEN,
+                )
+                .inOrder()
+
+            viewModel.onActions(2)
+            runCurrent()
+            assertThat(viewModel.uiState.value.actions?.choices)
+                .containsExactly(
+                    AppAction.QUIT_AND_START,
+                    AppAction.DETAILS,
+                    AppAction.HIDE,
+                    AppAction.ADD_TO_HOME_SCREEN,
+                )
+                .inOrder()
+        }
+
+    @Test
+    fun `an app cannot be added to the home screen when the device cannot pin`() = runTest {
+        repository.emit(snapshot(desktop, steam))
+        subscribe(viewModel.uiState)
+
+        viewModel.onActions(2)
+        runCurrent()
+
+        assertThat(viewModel.uiState.value.actions?.choices)
+            .containsExactly(AppAction.START, AppAction.DETAILS, AppAction.HIDE)
+            .inOrder()
+        viewModel.onActionChosen(AppAction.ADD_TO_HOME_SCREEN)
+        assertThat(shortcuts.pinned).isEmpty()
+    }
+
+    @Test
+    fun `adding to the home screen pins the app, closes the sheet and starts nothing`() = runTest {
+        shortcuts.canPinApps = true
+        repository.emit(snapshot(desktop, steam))
+        subscribe(viewModel.uiState)
+        viewModel.onActions(2)
+        runCurrent()
+
+        viewModel.onActionChosen(AppAction.ADD_TO_HOME_SCREEN)
+        runCurrent()
+
+        assertThat(shortcuts.pinned)
+            .containsExactly(
+                FakeHostShortcuts.PinCall("host-1", "Desk PC", 2, "steam", hdrSupported = true)
+            )
+        assertThat(viewModel.uiState.value.actions).isNull()
+        viewModel.effects.test { expectNoEvents() }
+    }
+
+    @Test
+    fun `a launcher that refuses the shortcut says so`() = runTest {
+        shortcuts.canPinApps = true
+        shortcuts.pinResult = false
+        repository.emit(snapshot(desktop))
+        subscribe(viewModel.uiState)
+        viewModel.onActions(1)
+        runCurrent()
+
+        viewModel.onActionChosen(AppAction.ADD_TO_HOME_SCREEN)
+
+        viewModel.effects.test {
+            assertThat(awaitItem()).isEqualTo(AppsEffect.ShowMessage(AppsMessage.PinFailed))
+        }
+    }
+
+    @Test
+    fun `a launch request starts an app that was hidden since the shortcut was pinned`() = runTest {
+        repository.emit(snapshot(desktop, secret))
+        subscribe(viewModel.uiState)
+        assertThat(viewModel.uiState.value.items).containsExactly(item(desktop))
+
+        viewModel.onLaunchRequested(4)
+
+        viewModel.effects.test {
+            assertThat(awaitItem())
+                .isEqualTo(
+                    AppsEffect.StartStream(
+                        StreamRequest("host-1", 4, "Secret", hdrSupported = false)
+                    )
+                )
+        }
+    }
+
+    @Test
+    fun `a launch request for a hidden app while another runs opens its actions`() = runTest {
+        repository.emit(snapshot(desktop, secret, running = desktop))
+        subscribe(viewModel.uiState)
+
+        viewModel.onLaunchRequested(4)
+        runCurrent()
+
+        assertThat(viewModel.uiState.value.actions?.app?.id).isEqualTo(4)
+        assertThat(viewModel.uiState.value.actions?.choices)
+            .containsExactly(AppAction.QUIT_AND_START, AppAction.DETAILS, AppAction.UNHIDE)
+            .inOrder()
+        viewModel.effects.test { expectNoEvents() }
     }
 }

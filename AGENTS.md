@@ -11,12 +11,13 @@ Borealis is a game-streaming client built on Moonlight and tailored to the Lumin
 - Follow the [TDD rule](docs/development/tdd.md): commit the observed failing test before the implementation.
 - One phase is one integration PR, merged with **Create a merge commit** so the test-first commits stay in history.
 
-## Upstream code
+## Inherited code
 
-- `apps/android/` is a git subtree of [moonlight-android](https://github.com/moonlight-stream/moonlight-android). Never reformat upstream files and keep edits to them minimal; mark every Borealis hook inside an upstream file with a `// BOREALIS:` comment.
-- Borealis Android code lives in `apps/android/borealis/` (Kotlin modules) and `apps/android/build-logic/`. New code is Kotlin; no new Java.
+- `apps/android/` started as a subtree of [moonlight-android](https://github.com/moonlight-stream/moonlight-android) 12.2, and `core/third_party/moonlight-common-c/` is a vendored copy of moonlight-common-c. Since [ADR 0054](docs/adr/0054-declare-independence-from-moonlight.md) both are Borealis code: change them when a task needs it.
+- New code is Kotlin (C++20 in `core/`); never add Java files. Keep edits to inherited Java to wiring and put new logic in Kotlin. Do not reformat inherited or vendored files, so diffs stay reviewable.
+- Borealis Kotlin modules live in `apps/android/borealis/` and `apps/android/build-logic/`.
 - Never rename the `com.limelight` namespace or `com.limelight.nvstream.jni.MoonBridge`: the JNI symbols depend on them.
-- `moonlight-common-c` stays a submodule at its upstream path; sync procedure in [upstream sync](docs/development/upstream-sync.md).
+- Upstream fixes arrive only by cherry-pick ([upstream cherry-picks](docs/development/upstream-sync.md)). Record every change to the vendored C sources in `core/third_party/README.md`.
 - Reference sources (read-only): `D:\Repos\CandelaMoon-src\` holds `moonlight-android`, `Artemis` and `luminalshine` checkouts used during the analysis.
 
 ## Writing code
@@ -30,7 +31,7 @@ Borealis is a game-streaming client built on Moonlight and tailored to the Lumin
 Run the checks for what you touched before finishing:
 
 - Android: `./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleNonRootDebug licensee koverXmlReportBorealis` from `apps/android`.
-- Compose screens: also `./gradlew :borealis:designsystem:testDebugUnitTest :borealis:library:testDebugUnitTest -Proborazzi.test.verify=true` from `apps/android`; record references on Windows (see [building](docs/development/building.md)).
+- Compose screens: also `./gradlew :borealis:designsystem:testDebugUnitTest :borealis:library:testDebugUnitTest :borealis:stream:testDebugUnitTest -Proborazzi.test.verify=true` from `apps/android`; record references on Windows (see [building](docs/development/building.md)).
 - Core: `cmake --preset dev && cmake --build --preset dev && ctest --preset dev` from `core`, plus the format check CI runs, also from `core`: `find include src tests fuzz -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.cpp' \) -print0 | xargs -0 clang-format --dry-run --Werror`. Use clang-format 22; CI pins the exact version in `.github/workflows/ci.yml`.
 
 ## GitHub and merges

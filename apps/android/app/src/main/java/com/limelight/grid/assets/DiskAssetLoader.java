@@ -8,6 +8,8 @@ import android.graphics.ImageDecoder;
 import android.os.Build;
 
 import com.limelight.LimeLog;
+import com.limelight.nvstream.http.ComputerDetails;
+import com.limelight.nvstream.http.NvApp;
 import com.limelight.utils.CacheHelper;
 
 import java.io.File;
@@ -32,7 +34,7 @@ public class DiskAssetLoader {
                 ((ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE)).isLowRamDevice();
     }
 
-    public boolean checkCacheExists(CachedAppAssetLoader.LoaderTuple tuple) {
+    public boolean checkCacheExists(LoaderTuple tuple) {
         return CacheHelper.cacheFileExists(cacheDir, "boxart", tuple.computer.uuid, tuple.app.getAppId() + ".png");
     }
 
@@ -58,7 +60,7 @@ public class DiskAssetLoader {
         return inSampleSize;
     }
 
-    public ScaledBitmap loadBitmapFromCache(CachedAppAssetLoader.LoaderTuple tuple, int sampleSize) {
+    public ScaledBitmap loadBitmapFromCache(LoaderTuple tuple, int sampleSize) {
         File file = getFile(tuple.computer.uuid, tuple.app.getAppId());
 
         // Don't bother with anything if it doesn't exist
@@ -147,7 +149,7 @@ public class DiskAssetLoader {
         }
     }
 
-    public void populateCacheWithStream(CachedAppAssetLoader.LoaderTuple tuple, InputStream input) {
+    public void populateCacheWithStream(LoaderTuple tuple, InputStream input) {
         boolean success = false;
         try (final OutputStream out = CacheHelper.openCacheFileForOutput(
                 cacheDir, "boxart", tuple.computer.uuid, tuple.app.getAppId() + ".png")
@@ -161,6 +163,32 @@ public class DiskAssetLoader {
                 LimeLog.warning("Unable to populate cache with tuple: "+tuple);
                 CacheHelper.deleteCacheFile(cacheDir, "boxart", tuple.computer.uuid, tuple.app.getAppId() + ".png");
             }
+        }
+    }
+
+    // BOREALIS: moved here from the 12.2 asset loader that was removed with the host and app lists.
+    public static class LoaderTuple {
+        public final ComputerDetails computer;
+        public final NvApp app;
+
+        public LoaderTuple(ComputerDetails computer, NvApp app) {
+            this.computer = computer;
+            this.app = app;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof LoaderTuple)) {
+                return false;
+            }
+
+            LoaderTuple other = (LoaderTuple) o;
+            return computer.uuid.equals(other.computer.uuid) && app.getAppId() == other.app.getAppId();
+        }
+
+        @Override
+        public String toString() {
+            return "("+computer.uuid+", "+app.getAppId()+")";
         }
     }
 }

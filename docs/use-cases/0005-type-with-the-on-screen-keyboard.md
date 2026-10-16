@@ -25,12 +25,14 @@ awkward to type.
    opens the keyboard, as in Moonlight 12.2.
 2. The system shows the keyboard. On a phone it is docked at the bottom and the
    stream stays visible above it. On a TV or handheld it is shown on the stream screen.
+   On a phone the shortcut row starts with Esc.
 3. The user taps a modifier (Ctrl, Alt, Win or Shift). The modifier latches and
    shows as on.
-4. The user taps a key. The system sends the key to the PC with the latched
-   modifiers, and the latched modifiers are cleared.
-5. The user taps a shortcut chip (Alt+Tab, Win, Ctrl+Shift+Esc, Alt+F4, Win+D,
-   Esc or F11). The system sends that shortcut once.
+4. The user taps a key. Letter keys show in lowercase unless Shift is latched;
+   the keyboard has no Caps key. The system sends the key to the PC with the
+   latched modifiers, and the latched modifiers are cleared.
+5. The user taps a shortcut chip (Alt+Tab, Win+Tab, Win, Ctrl+Shift+Esc, Alt+F4,
+   Win+D, Esc or F11). The system sends that shortcut once.
 6. The user chooses Close. The system returns to the full stream.
 
 ## Alternative flows
@@ -69,15 +71,30 @@ what they name; the host's response to a key is outside this use case.
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
-| UC-005-T1 | Given the keyboard is open, when the user taps Ctrl and then A, then Ctrl+A is sent once and Ctrl is cleared. | unit | planned |
-| UC-005-T2 | Given the keyboard is open, when the user taps the Alt+Tab chip, then Alt+Tab is sent once. | unit | planned |
-| UC-005-T3 | Given the TV keyboard is open, when the D-pad moves to a key and OK is pressed, then that key is typed. | UI | planned |
-| UC-005-T4 | Given the handheld keyboard is open, when Y is pressed, then Backspace is sent. | UI | planned |
-| UC-005-T5 | Given the phone keyboard is open, when the stream is shown, then the picture stays visible above the keyboard. | UI | planned |
-| UC-005-T6 | Given keys are typed, when logs and the audit trail are read, then no typed key text appears in them. | unit | planned |
+| UC-005-T1 | Given the keyboard is open, when the user taps Ctrl and then A, then Ctrl+A is sent once and Ctrl is cleared. | unit | exists (Sprint 5, UI) |
+| UC-005-T2 | Given the keyboard is open, when the user taps the Alt+Tab chip, then Alt+Tab is sent once. | unit | exists (Sprint 5, UI) |
+| UC-005-T3 | Given the TV keyboard is open, when the D-pad moves to a key and OK is pressed, then that key is typed. | UI | exists (Sprint 5, UI; device round) |
+| UC-005-T4 | Given the handheld keyboard is open, when Y is pressed, then Backspace is sent. | UI | exists (Sprint 5, UI) |
+| UC-005-T5 | Given the phone keyboard is open, when the stream is shown, then the picture stays visible above the keyboard. | UI | partly exists (Sprint 5, UI; device round) |
+| UC-005-T6 | Given keys are typed, when logs and the audit trail are read, then no typed key text appears in them. | unit | partly exists (Sprint 5, unit) |
+| UC-005-T7 | Given the docked keyboard on a phone, when the shortcut row shows, then Esc is its first chip. | unit | exists (Sprint 5, unit) |
+| UC-005-T8 | Given Shift is not latched, when the letter keys show, then they are lowercase; with Shift latched, the next letter shows in uppercase. | UI | exists (Sprint 5, UI; device round) |
+| UC-005-T9 | Given the keyboard is open, when the user taps Win+Tab, then Win+Tab is sent once. | unit | exists (Sprint 5, unit; device round) |
 
-Planned tests cover the Phase 2 screens; tests marked as existing cover logic
-that the Phase 2 screens reuse.
+Sprint 5 built the Borealis keyboard and its logic. A test marked "exists (Sprint
+5, unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose
+test that runs on Robolectric. "device round" marks a check that the Sprint 5
+device round of 2026-10-16 ran on a TV or a phone (see
+[device validation](../development/device-validation.md), section 10). The
+round notes do not cover the key-text logs (UC-005-T6).
+
+Partly covered:
+
+- UC-005-T5: `StreamKeyboardTest` checks that the docked keyboard fills only the
+  bottom half of the screen. It does not check that the stream stays visible
+  above it. The device round checked it on the phone.
+- UC-005-T6: a test scans the keyboard sources and fails if they call the log
+  or `println`. The text path and the audit trail are not checked by a test.
 
 ## Host dependency
 
@@ -90,5 +107,9 @@ needs no extra host capability.
 - ADRs: [0052](../adr/0052-structure-the-phase-2-ui.md).
 - Host contract sections: [13](../host-contract/luminalshine.md#13-input).
 - Policies: [privacy and logging](../policies/privacy-and-logging.md).
-- Existing logic: Moonlight 12.2 opens the Android soft keyboard. The Phase 2
-  keyboard is planned.
+- Existing logic: Moonlight 12.2 opened the Android soft keyboard. The Borealis
+  keyboard (`StreamKeyboard`, `KeyboardLayout`, `KeyboardLatch`) is in
+  `:borealis:stream` from Sprint 5. Its System keyboard key opens the Android
+  keyboard for text in other languages; free text is sent as UTF-8.
+- Existing tests: `StreamKeyboardTest`, `KeyboardLatchTest`,
+  `KeyboardNavigationTest`, `KeyboardLayoutTest`, `ShortcutsTest`.

@@ -6,6 +6,7 @@ import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
+import io.github.magalz.borealis.nativecore.LaunchCategory
 import io.github.magalz.borealis.stream.host.StreamChromeHost
 import kotlin.math.abs
 
@@ -92,6 +93,11 @@ object StreamSessionFactory {
         val rawCode = if (stage == null) "Error $code" else "Error $code · $stage"
         return StreamFailure(FailureKind.GENERIC, rawCode, portHint?.takeIf { it.isNotEmpty() })
     }
+
+    /** The host asked for a retry; [category] is the ordinal of `LaunchCategory` the stack gave. */
+    @JvmStatic
+    fun launchRetry(category: Int, attempt: Int, maxAttempts: Int, delayMs: Int): LaunchRetry =
+        LaunchRetry(LaunchCategory.entries.getOrNull(category), attempt, maxAttempts, delayMs)
 
     private const val HEX_THRESHOLD = 1000
 }

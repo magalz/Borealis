@@ -6,7 +6,12 @@ import android.view.KeyEvent
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.nvstream.NvConnection
 import com.limelight.preferences.PreferenceConfiguration
+import java.util.concurrent.TimeUnit
+import android.content.ComponentName
 import org.robolectric.Robolectric
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.shadows.ShadowLooper
 
 /** One controller packet as the handler handed it to the connection. */
 data class Packet(
@@ -82,38 +87,55 @@ class RecordingConnection(activity: Activity) :
 /**
  * A real [ControllerHandler] over a [RecordingConnection]. Events carry device id 0, so they reach
  * the handler's default context, which is the one the on-screen controller also uses.
+ *
+ * Events are stamped with the main looper's clock, which [advanceBy] moves, so the handler's
+ * scheduled work runs when the test says time has passed.
  */
 class ControllerHandlerRig {
+    // The SHIELD extension service does not exist here; without this the bind answers with no binder.
+    private val noShieldService =
+        shadowOf(RuntimeEnvironment.getApplication())
+            .declareComponentUnbindable(
+                ComponentName("com.nvidia.blakepairing", "com.nvidia.blakepairing.AccessoryService")
+            )
+
     val activity: Activity = Robolectric.buildActivity(Activity::class.java).create().get()
     val connection = RecordingConnection(activity)
     val prefs = PreferenceConfiguration().apply { mouseEmulation = true }
-    val handler = ControllerHandler(activity, connection, { }, prefs)
+    val handler = ControllerHandler(activity, connection, {}, prefs)
 
-    /** The clock the events are stamped with; the main looper's clock moves it. */
-    var now: Long = SystemClock.uptimeMillis()
+    /** How many times the menu chord was reported. */
+    var chords = 0
         private set
 
     private val downTimes = mutableMapOf<Int, Long>()
 
-    /** Moves the clock and the main looper to [time], running what is due. */
-    fun advanceTo(time: Long) {
-        val delta = time - SystemClock.uptimeMillis()
-        if (delta > 0) org.robolectric.shadows.ShadowLooper.idleMainLooper(delta, java.util.concurrent.TimeUnit.MILLISECONDS)
-        now = time
+    init {
+        // Robolectric starts the clock at zero, where a lone Start looks like a Start+RB combo.
+        advanceBy(10_000)
+        handler.setMenuChordListener { chords++ }
     }
 
-    fun advanceBy(millis: Long) = advanceTo(now + millis)
+    val now: Long
+        get() = SystemClock.uptimeMillis()
+
+    /** Moves the clock and runs what the main looper has scheduled in that time. */
+    fun advanceBy(millis: Long) {
+        ShadowLooper.idleMainLooper(millis, TimeUnit.MILLISECONDS)
+    }
 
     fun press(keyCode: Int, at: Long = now) {
-        now = at
         downTimes[keyCode] = at
         handler.handleButtonDown(KeyEvent(at, at, KeyEvent.ACTION_DOWN, keyCode, 0, 0, 0, 0))
     }
 
     fun release(keyCode: Int, at: Long = now) {
-        now = at
-        handler.handleButtonUp(KeyEvent(downTimes[keyCode] ?: at, at, KeyEvent.ACTION_UP, keyCode, 0, 0, 0, 0))
+        val downTime = downTimes[keyCode] ?: at
+        handler.handleButtonUp(KeyEvent(downTime, at, KeyEvent.ACTION_UP, keyCode, 0, 0, 0, 0))
     }
+
+    /** The buttons of every packet sent so far. */
+    fun buttons(): List<Int> = connection.packets.map { it.buttons }
 
     /** The last packet's buttons, or null when nothing was sent. */
     fun lastButtons(): Int? = connection.packets.lastOrNull()?.buttons

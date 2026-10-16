@@ -49,6 +49,7 @@ import com.limelight.utils.Vector2d;
 
 import io.github.magalz.borealis.stream.input.ButtonState;
 import io.github.magalz.borealis.stream.input.GuideChord;
+import io.github.magalz.borealis.stream.input.MenuChordListener;
 
 import org.cgutman.shieldcontrollerextensions.SceChargingState;
 import org.cgutman.shieldcontrollerextensions.SceConnectionType;
@@ -216,6 +217,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
         // Register ourselves for input device notifications
         inputManager.registerInputDeviceListener(this, null);
+    }
+
+    public void setMenuChordListener(MenuChordListener listener) {
     }
 
     private static InputDevice.MotionRange getMotionRangeForJoystickAxis(InputDevice dev, int axis) {

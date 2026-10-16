@@ -18,6 +18,13 @@ object GuideChord {
      */
     private const val MAXIMUM_BUMPER_UP_DELAY_MS = 100
 
+    /** Whether Start and Select stand for the Guide button on this pad. */
+    fun mapsStartSelect(hasSelect: Boolean, hasMode: Boolean): Boolean = false
+
+    /** Whether [update] ended a Start and Select press that is to be sent as a Guide tap. */
+    fun isTap(update: MenuChordDetector.Update, hasSelect: Boolean, hasMode: Boolean): Boolean =
+        false
+
     /** A button went down. A pad with a Mode button sends its own Guide button. */
     fun onButtonDown(
         inputMap: Int,

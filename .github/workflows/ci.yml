@@ -38,7 +38,7 @@ jobs:
               - 'apps/android/**'
               - 'design/**'
               - 'core/**'
-              - '.gitmodules'
+              - 'core/third_party/**'
               - '.github/workflows/ci.yml'
             core:
               - 'core/**'
@@ -62,7 +62,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: recursive
           fetch-depth: 0 # version is derived from android-v* tags
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -129,7 +128,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: recursive
           fetch-depth: 0 # version is derived from android-v* tags
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -144,7 +142,7 @@ jobs:
             "$SDKMANAGER" --install "platforms;android-37.0" "build-tools;37.0.0" > /dev/null
           fi
       - name: Verify the screenshot tests against the committed references
-        run: ./gradlew --stacktrace :borealis:designsystem:testDebugUnitTest :borealis:library:testDebugUnitTest -Proborazzi.test.verify=true
+        run: ./gradlew --stacktrace :borealis:designsystem:testDebugUnitTest :borealis:library:testDebugUnitTest :borealis:stream:testDebugUnitTest -Proborazzi.test.verify=true
       - name: Upload screenshot differences and test reports
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

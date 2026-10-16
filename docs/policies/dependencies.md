@@ -70,8 +70,9 @@ libraries.
   it also updates the Gradle wrapper, Kotlin and dependencies declared in
   upstream files (such as `apps/android/app/build.gradle`). AGP stays ignored
   until it is declared in one place. Kotlin may lead the version bundled with
-  AGP when CI passes. The moonlight-common-c submodule (the Borealis fork, [ADR 0048](../adr/0048-fork-moonlight-common-c.md)) is not tracked by
-  Dependabot; it moves only with an upstream sync or a reviewed fork patch (see [upstream-sync.md](upstream-sync.md)).
+  AGP when CI passes. The vendored moonlight-common-c (`core/third_party/`, [ADR 0054](../adr/0054-declare-independence-from-moonlight.md)) is not
+  tracked by Dependabot; it changes only by a reviewed Borealis commit or an upstream fix cherry-picked on purpose (see
+  [core/third_party/README.md](../../core/third_party/README.md)).
 - Security updates are raised immediately.
 - Updates arrive as PRs and go through the normal CI. Group low-risk updates;
   review major updates individually.

@@ -3,7 +3,7 @@
 
 * Tested with LuminalShine 26.09.1.
 * Based on Moonlight 12.2 ([moonlight-android](https://github.com/moonlight-stream/moonlight-android)).
-* Streaming protocol library: the Borealis fork of moonlight-common-c, tag `borealis/874ac95-1` (upstream base `874ac95`).
+* Streaming protocol library: moonlight-common-c, vendored in Borealis (upstream `5ec8397` plus a Borealis patch to the video start-up wait).
 
 ### Known host issues
 

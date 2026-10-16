@@ -210,7 +210,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         // its initial InputEvent, we will move these from this set onto the
         // currentControllers set which will allow them to properly unplug
         // if they are removed.
-        initialControllers = getAttachedControllerMask(activityContext);
+        initialControllers = getAttachedControllerMask(activityContext, prefConfig);
 
         // Register ourselves for input device notifications
         inputManager.registerInputDeviceListener(this, null);
@@ -366,6 +366,10 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     }
 
     public static short getAttachedControllerMask(Context context) {
+        return getAttachedControllerMask(context, PreferenceConfiguration.readPreferences(context));
+    }
+
+    private static short getAttachedControllerMask(Context context, PreferenceConfiguration prefConfig) {
         int count = 0;
         short mask = 0;
 
@@ -384,7 +388,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         }
 
         // Count all USB devices that match our drivers
-        if (PreferenceConfiguration.readPreferences(context).usbDriver) {
+        if (prefConfig.usbDriver) {
             UsbManager usbManager = (UsbManager) context.getSystemService(Context.USB_SERVICE);
             if (usbManager != null) {
                 for (UsbDevice dev : usbManager.getDeviceList().values()) {
@@ -399,7 +403,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             }
         }
 
-        if (PreferenceConfiguration.readPreferences(context).onscreenController) {
+        if (prefConfig.onscreenController) {
             LimeLog.info("Counting OSC gamepad");
             mask |= 1;
         }

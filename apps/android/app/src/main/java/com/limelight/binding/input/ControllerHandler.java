@@ -47,6 +47,9 @@ import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.GameGestures;
 import com.limelight.utils.Vector2d;
 
+import io.github.magalz.borealis.stream.input.ButtonState;
+import io.github.magalz.borealis.stream.input.GuideChord;
+
 import org.cgutman.shieldcontrollerextensions.SceChargingState;
 import org.cgutman.shieldcontrollerextensions.SceConnectionType;
 import org.cgutman.shieldcontrollerextensions.SceManager;
@@ -62,7 +65,6 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
     private static final int MINIMUM_BUTTON_DOWN_TIME_MS = 25;
 
-    private static final int EMULATING_SPECIAL = 0x1;
     private static final int EMULATING_SELECT = 0x2;
     private static final int EMULATING_TOUCHPAD = 0x4;
 
@@ -2527,18 +2529,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         }
 
         // Check if we're emulating the special button
-        if ((context.emulatingButtonFlags & ControllerHandler.EMULATING_SPECIAL) != 0)
-        {
-            // If either start or select and RB is up, the special button comes up too
-            if ((context.inputMap & ControllerPacket.PLAY_FLAG) == 0 ||
-                ((context.inputMap & ControllerPacket.BACK_FLAG) == 0 &&
-                 (context.inputMap & ControllerPacket.RB_FLAG) == 0))
-            {
-                context.inputMap &= ~ControllerPacket.SPECIAL_BUTTON_FLAG;
-
-                context.emulatingButtonFlags &= ~ControllerHandler.EMULATING_SPECIAL;
-            }
-        }
+        ButtonState special = GuideChord.INSTANCE.onButtonUp(context.inputMap, context.emulatingButtonFlags);
+        context.inputMap = special.getInputMap();
+        context.emulatingButtonFlags = special.getEmulatingFlags();
 
         // Check if we're emulating the touchpad button
         if ((context.emulatingButtonFlags & ControllerHandler.EMULATING_TOUCHPAD) != 0)
@@ -2759,27 +2752,10 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
         // If there is a physical select button, we'll use Start+Select as the special button combo
         // otherwise we'll use Start+RB.
-        if (!context.hasMode) {
-            if (context.hasSelect) {
-                if (context.inputMap == (ControllerPacket.PLAY_FLAG | ControllerPacket.BACK_FLAG)) {
-                    context.inputMap &= ~(ControllerPacket.PLAY_FLAG | ControllerPacket.BACK_FLAG);
-                    context.inputMap |= ControllerPacket.SPECIAL_BUTTON_FLAG;
-
-                    context.emulatingButtonFlags |= ControllerHandler.EMULATING_SPECIAL;
-                }
-            }
-            else {
-                if (context.inputMap == (ControllerPacket.PLAY_FLAG | ControllerPacket.RB_FLAG) ||
-                        (context.inputMap == ControllerPacket.PLAY_FLAG &&
-                                event.getEventTime() - context.lastRbUpTime <= MAXIMUM_BUMPER_UP_DELAY_MS))
-                {
-                    context.inputMap &= ~(ControllerPacket.PLAY_FLAG | ControllerPacket.RB_FLAG);
-                    context.inputMap |= ControllerPacket.SPECIAL_BUTTON_FLAG;
-
-                    context.emulatingButtonFlags |= ControllerHandler.EMULATING_SPECIAL;
-                }
-            }
-        }
+        ButtonState special = GuideChord.INSTANCE.onButtonDown(context.inputMap, context.emulatingButtonFlags,
+                context.hasSelect, context.hasMode, event.getEventTime(), context.lastRbUpTime);
+        context.inputMap = special.getInputMap();
+        context.emulatingButtonFlags = special.getEmulatingFlags();
 
         // We don't need to send repeat key down events, but the platform
         // sends us events that claim to be repeats but they're from different

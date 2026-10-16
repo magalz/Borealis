@@ -8,6 +8,7 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.shell.LibraryScaffold
 import io.github.magalz.borealis.library.shell.RailActions
+import io.github.magalz.borealis.library.shell.RailSelection
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -65,7 +66,11 @@ class PairingScreenshotTest {
     private fun shoot(name: String, formFactor: FormFactor, state: PairingUiState) {
         composeRule.setContent {
             // The shell draws the rail beside Pairing on a TV and a handheld.
-            LibraryScaffold(formFactor, showRail = true, actions = RailActions({}, {}, {})) {
+            LibraryScaffold(
+                formFactor,
+                selected = RailSelection.Hosts,
+                actions = RailActions({}, {}, {}),
+            ) {
                 PairingScreen(
                     state = state,
                     formFactor = formFactor,

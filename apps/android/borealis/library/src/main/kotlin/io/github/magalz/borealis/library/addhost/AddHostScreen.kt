@@ -22,7 +22,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -89,7 +96,9 @@ fun AddHostScreen(
                         value = state.address,
                         onValueChange = onAddressChanged,
                         label = stringResource(R.string.addhost_address_label),
-                        modifier = Modifier.initialFocus(addressFocus),
+                        modifier =
+                            Modifier.initialFocus(addressFocus)
+                                .leftToRailWhenEmpty(empty = state.address.isEmpty()),
                         error = state.error?.let { stringResource(it.textRes()) },
                         onDone = onSubmit,
                         keyboardType = KeyboardType.Uri,
@@ -100,6 +109,22 @@ fun AddHostScreen(
                 AddHostButtons(state.busy, onSubmit, onCancel)
             }
         }
+    }
+}
+
+/**
+ * The text field keeps Left for its cursor, so a D-pad could not leave it to the rail beside the
+ * screen. While the field is [empty] there is no cursor to move: Left goes to the neighbour on the
+ * left, when there is one.
+ */
+@Composable
+private fun Modifier.leftToRailWhenEmpty(empty: Boolean): Modifier {
+    val focusManager = LocalFocusManager.current
+    return onPreviewKeyEvent { event ->
+        empty &&
+            event.key == Key.DirectionLeft &&
+            event.type == KeyEventType.KeyDown &&
+            focusManager.moveFocus(FocusDirection.Left)
     }
 }
 

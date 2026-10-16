@@ -39,17 +39,12 @@ class LibraryScaffoldTest {
 
     private val isRailItem = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
 
-    private fun show(
-        formFactor: FormFactor,
-        showRail: Boolean = true,
-        selected: RailSelection = RailSelection.Hosts,
-    ) {
+    private fun show(formFactor: FormFactor, selected: RailSelection = RailSelection.Hosts) {
         composeRule.setContent {
             LibraryScaffold(
                 formFactor,
-                showRail,
+                selected,
                 RailActions({ hosts++ }, { addHost++ }, { settings++ }),
-                selected = selected,
             ) {
                 Box(Modifier.fillMaxSize().testTag("content"))
             }
@@ -106,16 +101,6 @@ class LibraryScaffoldTest {
 
         assertThat(content.left.value).isEqualTo(RAIL_WIDTH_DP)
         assertThat((content.right - content.left).value).isEqualTo(TV_WIDTH_DP - RAIL_WIDTH_DP)
-    }
-
-    @Test
-    @Config(qualifiers = TV)
-    fun `without showRail the content has the whole width`() {
-        show(FormFactor.Tv, showRail = false)
-
-        composeRule.onNode(isRailItem).assertDoesNotExist()
-        assertThat(composeRule.onNodeWithTag("content").getUnclippedBoundsInRoot().left.value)
-            .isEqualTo(0f)
     }
 
     @Test

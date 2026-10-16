@@ -56,7 +56,6 @@ class AddHostScreenshotTest {
         // The shell draws the rail beside Add host on a TV and a handheld.
         LibraryScaffold(
             formFactor,
-            showRail = true,
             actions = RailActions({}, {}, {}),
             selected = RailSelection.AddHost,
         ) {

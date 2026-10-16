@@ -34,7 +34,7 @@ internal class RailActions(
     val onSettings: () -> Unit,
 )
 
-/** The rail item that stands for the screen beside it. */
+/** The rail item that stands for the screen beside the rail. */
 internal enum class RailSelection {
     Hosts,
     AddHost,
@@ -42,23 +42,22 @@ internal enum class RailSelection {
 
 /**
  * The frame of the Library screens: on a TV or handheld, [content] with the [LibraryRail] beside it
- * while [showRail] is set, which is the rail of Hosts and Apps. A phone has no rail.
+ * on every screen, with [selected] marked. A phone has no rail.
  *
- * The frame owns the system bar insets while the rail shows, so the rail and the screen beside it
- * start at the same edge; the screens draw their own insets otherwise. [content] stays at the same
- * place in the composition when the rail comes and goes, so a screen keeps its state.
+ * The frame owns the system bar insets where it has the rail, so the rail and the screen beside it
+ * start at the same edge and nothing moves when the screen changes; the screens of a phone draw
+ * their own insets.
  */
 @Composable
 internal fun LibraryScaffold(
     formFactor: FormFactor,
-    showRail: Boolean = true,
+    selected: RailSelection,
     actions: RailActions,
     modifier: Modifier = Modifier,
-    selected: RailSelection = RailSelection.Hosts,
     content: @Composable () -> Unit,
 ) {
     BorealisTheme(formFactor) {
-        val rail = showRail && formFactor != FormFactor.Phone
+        val rail = formFactor != FormFactor.Phone
         Row(
             modifier
                 .fillMaxSize()
@@ -67,15 +66,15 @@ internal fun LibraryScaffold(
                     if (rail) Modifier.windowInsetsPadding(WindowInsets.safeDrawing) else Modifier
                 )
         ) {
-            if (rail) LibraryRail(actions)
+            if (rail) LibraryRail(selected, actions)
             Box(Modifier.weight(1f)) { content() }
         }
     }
 }
 
-/** Hosts (always selected: Hosts and Apps are the same area), Add host and Settings. */
+/** Hosts (also for Apps and Pairing, which are part of it), Add host and Settings. */
 @Composable
-internal fun LibraryRail(actions: RailActions) {
+internal fun LibraryRail(selected: RailSelection, actions: RailActions) {
     val items =
         listOf(
             RailItem(
@@ -93,7 +92,7 @@ internal fun LibraryRail(actions: RailActions) {
         )
     NavigationRail(
         items = items,
-        selectedIndex = RAIL_HOSTS,
+        selectedIndex = if (selected == RailSelection.AddHost) RAIL_ADD_HOST else RAIL_HOSTS,
         onSelect = { index ->
             when (index) {
                 RAIL_HOSTS -> actions.onHosts()

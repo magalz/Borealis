@@ -2,7 +2,6 @@
 <resources>
     <string name="conn_establishing_title">Připojování</string>
     <string name="conn_metered">Varování: Vaše aktivní připojení je měřené!</string>
-    <string name="conn_error_msg">Spouštění se nezdařilo</string>
     <string name="conn_client_latency_hw">zpoždění hardwarového dekodéru:</string>
     <string name="conn_terminated_title">Spojení ukončeno</string>
     <string name="resolution_prefix_native_fullscreen">Nativní celá obrazovka</string>
@@ -58,8 +57,6 @@
     <string name="title_native_res_dialog">Varování pro nativní rozlišení</string>
     <string name="title_checkbox_vibrate_fallback">Emulovat podporu vibrací</string>
     <string name="title_seekbar_deadzone">Upravit deadzone analogových páček</string>
-    <string name="check_ports_msg">Zkontrolujte svůj firewall a pravidla přesměrování pro tyto porty:</string>
-    <string name="conn_terminated_msg">Spojení bylo ukončeno</string>
     <string name="ip_hint">IP adresa GeForce PC</string>
     <string name="conn_hardware_latency">Průměrné zpoždění hardwarového dekodéru:</string>
     <string name="conn_client_latency">Průměrné zpoždění při dekódování snímků:</string>

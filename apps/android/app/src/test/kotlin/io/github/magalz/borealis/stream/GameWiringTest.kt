@@ -106,6 +106,21 @@ class GameWiringTest {
     }
 
     @Test
+    fun `the strings of the old error dialogs are gone in every language`() {
+        val names = listOf("check_ports_msg", "conn_error_msg", "conn_terminated_msg", "error_code_prefix")
+        val leftovers =
+            File("src/main/res")
+                .walkTopDown()
+                .filter { file ->
+                    file.name == "strings.xml" && names.any { file.readText().contains("\"$it\"") }
+                }
+                .map { it.path }
+                .toList()
+
+        assertThat(leftovers).isEmpty()
+    }
+
+    @Test
     fun `the touch mode comes from the session, not from the preference`() {
         assertThat(source).doesNotContain("prefConfig.touchscreenTrackpad")
         assertThat(source).contains("TouchContexts.mode(streamSession, prefConfig)")

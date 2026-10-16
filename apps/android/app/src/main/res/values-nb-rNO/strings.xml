@@ -15,7 +15,6 @@
     <string name="conn_hardware_latency">Gjennomsnittlig latens for maskinvarerammedekoding:</string>
     <string name="conn_client_latency_hw">maskinvaredekoderlatens:</string>
     <string name="conn_client_latency">Gjennomsnittlig latens for bilderammedekoding:</string>
-    <string name="check_ports_msg">Sjekk om din brannmur og portvideresendingsreglene for port(ene):</string>
     <string name="early_termination_error">Noe gikk galt på din verts-PC under oppstart av strømmen.
 \n
 \nForsikre deg om at du ikke har noe DRM-beskyttet innhold åpent på din PC. Du kan også prøve å starte din verts-PC på ny.
@@ -95,9 +94,7 @@
     <string name="no">Nei</string>
     <string name="yes">Ja</string>
     <string name="ip_hint">IP-adresse for GeForce PC</string>
-    <string name="conn_terminated_msg">Tilkoblingen ble avsluttet</string>
     <string name="conn_terminated_title">Tilkobling avsluttet</string>
-    <string name="conn_error_msg">Klarte ikke å starte</string>
     <string name="conn_error_title">Tilkoblingsfeil</string>
     <string name="conn_metered">Advarsel: Din aktive nettverkstilknytning er kvotebasert.</string>
     <string name="conn_establishing_msg">Starter tilkobling</string>

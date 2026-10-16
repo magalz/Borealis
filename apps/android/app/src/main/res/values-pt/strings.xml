@@ -52,9 +52,7 @@
     <string name="conn_metered">Aviso: A sua conexão de rede atual é limitada!</string>
     <string name="conn_client_latency">Latência média de decodificação de quadros:</string>
     <string name="conn_client_latency_hw">latência do decodificador de hardware:</string>
-    <string name="conn_error_msg">Falha ao iniciar</string>
     <string name="conn_terminated_title">Conexão Encerrada</string>
-    <string name="conn_terminated_msg">A conexão foi encerrada</string>
     <string name="ip_hint">Endereço de IP do PC GeForce</string>
     <string name="searching_pc">Procurando por PCs a executar o GameStream...
 \n
@@ -139,7 +137,6 @@
     <string name="error_usb_prohibited">O acesso USB é proibido pelo administrador do seu aparelho. Verifique as suas configurações de Knox ou MDM.</string>
     <string name="no_video_received_error">Nenhum vídeo recebido do host.</string>
     <string name="no_frame_received_error">A sua conexão de rede não está funcionando bem. Reduza a configuração da taxa de bits do vídeo ou tente uma conexão mais rápida.</string>
-    <string name="check_ports_msg">Verifique o firewall e permita a(s) seguinte(s) para porta(s):</string>
     <string name="conn_hardware_latency">Latência média de decodificação de hardware:</string>
     <string name="conn_starting">Iniciando</string>
     <string name="conn_error_title">Erro de Conexão</string>

@@ -4,7 +4,6 @@
     <string name="scut_pc_not_found">PC nie znaleziony</string>
     <string name="pcview_menu_header_unknown">Odświeżanie</string>
     <string name="scut_not_paired">PC niesparowany</string>
-    <string name="check_ports_msg">Sprawdź zaporę sieciową i reguły przekierowania portów:</string>
     <string name="conn_establishing_title">Nawiązywanie połączenia</string>
     <string name="conn_establishing_msg">Uruchamianie połączenia</string>
     <string name="title_details">Szczegóły</string>
@@ -15,7 +14,6 @@
     <string name="title_audio_config_list">Konfiguracja dźwięku przestrzennego</string>
     <string name="summary_audio_config_list">Włączenie dźwięku przestrzennego 5.1 lub 7.1 dla systemów kina domowego</string>
     <string name="summary_checkbox_mouse_emulation">Długie naciśnięcie przycisku Start spowoduje przełączenie gamepada w tryb myszy</string>
-    <string name="error_code_prefix">Kod błędu:</string>
     <string name="help">Pomoc</string>
     <string name="delete_pc_msg">Czy na pewno chcesz usunąć ten komputer?</string>
     <string name="slow_connection_msg">Wolne połączenie z komputerem
@@ -168,8 +166,6 @@
     <string name="early_termination_error">Coś poszło nie tak na komputerze hosta podczas uruchamiania transmisji.
 \n
 \nUpewnij się, że na komputerze hosta nie masz otwartej żadnej zawartości zabezpieczonej DRM. Możesz także spróbować ponownie uruchomić komputer hosta.</string>
-    <string name="conn_error_msg">Nie udało się uruchomić</string>
-    <string name="conn_terminated_msg">Połączenie zostało przerwane.</string>
     <string name="applist_refresh_error_title">Błąd</string>
     <string name="applist_refresh_msg">Odświeżanie aplikacji…</string>
     <string name="addpc_enter_ip">Należy wprowadzić adres IP</string>

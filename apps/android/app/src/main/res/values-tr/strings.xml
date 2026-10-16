@@ -9,7 +9,6 @@
     <string name="dialog_title_osc_opacity">Saydamlığı değiştir</string>
     <string name="conn_error_title">Bağlantı Hatası</string>
     <string name="conn_starting">Başlatılıyor</string>
-    <string name="conn_error_msg">Başlatma başarısız</string>
     <string name="summary_audio_config_list">Ev-sinema sistemleri için 5.1 yada 7.1 surround sesi etkinleştir</string>
     <string name="title_checkbox_host_audio">Sesleri bilgisayarda oynat</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
@@ -82,10 +81,8 @@
     <string name="early_termination_error">Akışı başlatırken ana bilgisayarınızda bir şeyler ters gitti.
 \n
 \nBilgisayarınızda DRM korumalı bir içeriğin açık olmadığından emin olun. Ayrıca ana bilgisayarınızı yeniden başlatmayı da deneyebilirsiniz.</string>
-    <string name="check_ports_msg">Bağlantı noktaları için güvenlik duvarınızı ve bağlantı noktası yönlendirme kurallarınızı kontrol edin:</string>
     <string name="conn_establishing_title">Bağlantı Kuruluyor</string>
     <string name="conn_terminated_title">Bağlantı sonlandırıldı</string>
-    <string name="conn_terminated_msg">Bağlantı sonlandırıldı.</string>
     <string name="yes">Evet</string>
     <string name="lost_connection">Bilgisayar ile bağlantı kesildi</string>
     <string name="help">Yardım</string>
@@ -173,7 +170,6 @@
 \n
 \nHDR kipi devre dışı bırakmayı, akış çözünürlüğünü değiştirmeyi veya ana bilgisayarın ekran çözünürlüğünü değiştirmeyi deneyin.</string>
     <string name="summary_enable_hdr">Oyun ve PC GPU desteklediğinde HDR akışı gerçekleştirin. HDR, HEVC Main 10 kodlama desteğine sahip bir GPU gerektirir.</string>
-    <string name="error_code_prefix">Hata kodu:</string>
     <string name="fps_suffix_fps">FPS</string>
     <string name="title_native_fps_dialog">Yerel FPS Uyarısı</string>
     <string name="title_checkbox_enable_audiofx">Sistem ekolayzır desteğini etkinleştir</string>

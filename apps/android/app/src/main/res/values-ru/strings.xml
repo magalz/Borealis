@@ -48,9 +48,7 @@
     <string name="conn_hardware_latency">Средняя задержка аппаратного декодирования:</string>
     <string name="conn_starting">Запуск</string>
     <string name="conn_error_title">Ошибка соединения</string>
-    <string name="conn_error_msg">Запуск не удался</string>
     <string name="conn_terminated_title">Соединение разорвано</string>
-    <string name="conn_terminated_msg">Подключение было прервано.</string>
     <!-- General strings -->
     <string name="ip_hint">IP-адрес хост-ПК</string>
     <string name="searching_pc">Поиск хост-ПК в вашей локальной сети…
@@ -186,7 +184,6 @@
     <string name="pcview_menu_header_offline">Не в сети</string>
     <string name="pcview_menu_header_online">В сети</string>
     <string name="title_osc_opacity">Изменить прозрачность экранных элементов управления</string>
-    <string name="check_ports_msg">Проверьте свой брандмауэр и правила переадресации портов для порта(ов):</string>
     <string name="early_termination_error">При запуске потока на вашем хост-компьютере что-то пошло не так.
 \n
 \nУбедитесь, что на вашем хост-ПК не открыт контент, защищенный DRM. Вы также можете попробовать перезагрузить хост-компьютер.</string>
@@ -257,7 +254,6 @@
     <string name="title_analog_scrolling">Использовать аналоговый джойстик для прокрутки</string>
     <string name="analogscroll_right">Правый аналоговый джойстик</string>
     <string name="pair_pairing_help">Если на вашем хост-ПК установлен Sunshine, перейдите в веб-интерфейс Sunshine и введите PIN-код.</string>
-    <string name="error_code_prefix">Код ошибки:</string>
     <string name="summary_seekbar_vibrate_fallback_strength">Увеличьте или уменьшите интенсивность вибрации на вашем устройстве</string>
     <string name="summary_checkbox_gamepad_touchpad_as_mouse">Заставляет ввод с сенсорной панели геймпада управлять мышью хоста, даже при эмуляции геймпада с помощью тачпада.</string>
     <string name="title_checkbox_gamepad_motion_sensors">Разрешить использование датчиков движения геймпада</string>

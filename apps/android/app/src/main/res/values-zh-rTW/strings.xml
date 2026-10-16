@@ -56,9 +56,7 @@
     <string name="conn_hardware_latency">硬體解碼器平均延時：</string>
     <string name="conn_starting">正在啟動</string>
     <string name="conn_error_title">連線錯誤</string>
-    <string name="conn_error_msg">無法啟動</string>
     <string name="conn_terminated_title">連線已終止</string>
-    <string name="conn_terminated_msg">連線已終止</string>
     <!-- General strings -->
     <string name="ip_hint">主機電腦的 IP 位址</string>
     <string name="searching_pc">正在您的區域網路中搜尋主機電腦…
@@ -184,7 +182,6 @@
 \n您的顯示器可能不支援必要的顯示組態。如果是這樣，您可以嘗試設定虛擬監視器。最后，如果您的裝置或主機不支援以特定解析度或重新整理速率串流，只能說您運氣欠佳了。</string>
     <string name="title_native_res_dialog">原生解析度警告</string>
     <string name="applist_menu_hide_app">隱藏遊戲</string>
-    <string name="check_ports_msg">檢查您的防火牆和通訊埠轉送規則中的通訊埠：</string>
     <string name="early_termination_error">您的主機電腦在開始串流時出了點問題。
 \n
 \n請確保沒有在主機電腦上開啟任何受 DRM 保護的內容。您也可以嘗試重新開機主機電腦。</string>

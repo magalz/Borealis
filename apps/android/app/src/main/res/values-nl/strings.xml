@@ -43,9 +43,7 @@
     <string name="conn_hardware_latency">Gemiddelde hardware decoding reactietijd:</string>
     <string name="conn_starting">Starten</string>
     <string name="conn_error_title">Verbindingsprobleem</string>
-    <string name="conn_error_msg">Starten mislukt</string>
     <string name="conn_terminated_title">Verbinding beëindigd</string>
-    <string name="conn_terminated_msg">De verbinding is beëindigd.</string>
     <!-- General strings -->
     <string name="ip_hint">IP-adres van de host-PC</string>
     <string name="searching_pc">Zoeken naar host-PC\'s in uw lokale netwerk...\n\nZorg ervoor dat Sunshine draait op uw host-PC of dat GameStream is ingeschakeld in de GeForce Experience SHIELD-instellingen.</string>
@@ -138,7 +136,6 @@
     <string name="video_decoder_init_failed">Videodecoder niet gestart. Uw apparaat ondersteund mogelijk de geselecteerde resolutie of frame rate niet.</string>
     <string name="no_video_received_error">Geen video ontvangen van de host.</string>
     <string name="no_frame_received_error">De kwaliteit van uw netwerkverbinding is niet goed. Verlaag de bitrate of gebruik een snellere verbinding.</string>
-    <string name="check_ports_msg">Controleer uw firewall en port forwarding regels voor de poort(en):</string>
     <string name="slow_connection_msg">Trage verbinding met PC
 \nVerlaag uw bitrate</string>
     <string name="poor_connection_msg">Slechte verbinding met PC</string>
@@ -203,7 +200,6 @@
     <!-- Array strings -->
     <string name="videoformat_hevcalways">Voorkeur geven aan HEVC</string>
     <string name="pair_pairing_help">Als uw host-PC Sunshine draait, navigeert u naar de Sunshine-webinterface om de PIN in te voeren.</string>
-    <string name="error_code_prefix">Fout­code:</string>
     <string name="resolution_prefix_native_portrait">(portret)</string>
     <string name="suffix_seekbar_vibrate_fallback_strength">%</string>
     <string name="title_troubleshooting">Handleiding voor probleemoplossing</string>

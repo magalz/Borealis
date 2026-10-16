@@ -53,7 +53,6 @@
     <string name="error_usb_prohibited">Η πρόσβαση μέσω USB απαγορεύεται από το διαχειριστή της συσκευής σας. Ελέγξτε τις ρυθμίσεις Knox ή MDM.</string>
     <string name="no_video_received_error">Δεν ελήφθη βίντεο από τον κεντρικό υπολογιστή.</string>
     <string name="no_frame_received_error">Η σύνδεσή σας στο δίκτυο δεν αποδίδει καλά. Μειώστε το bitrate ή δοκιμάστε μια ταχύτερη σύνδεση.</string>
-    <string name="check_ports_msg">Ελέγξτε το τείχος προστασίας και τους κανόνες προώθησης θυρών για τις θύρες:</string>
     <string name="conn_establishing_title">Δημιουργία σύνδεσης</string>
     <string name="conn_establishing_msg">Έναρξη σύνδεσης</string>
     <string name="conn_metered">Προειδοποίηση: Η ενεργή σύνδεσή σας στο δίκτυο έχει όριο δεδομένων!</string>
@@ -61,7 +60,6 @@
     <string name="conn_client_latency_hw">Λανθάνων χρόνος αποκωδικοποιητή υλικού:</string>
     <string name="conn_hardware_latency">Μέση καθυστέρηση αποκωδικοποίησης υλικού:</string>
     <string name="conn_starting">Εκκίνηση</string>
-    <string name="conn_terminated_msg">Η σύνδεση τερματίστηκε</string>
     <string name="ip_hint">Διεύθυνση IP του υπολογιστή GeForce</string>
     <string name="yes">Ναί</string>
     <string name="applist_menu_cancel">Ακύρωση</string>
@@ -149,7 +147,6 @@
     <string name="applist_menu_quit">Έξοδος από τη συνεδρία</string>
     <string name="addpc_wrong_sitelocal">Αυτή η διεύθυνση δεν φαίνεται σωστή. Πρέπει να χρησιμοποιείτε τη δημόσια διεύθυνση IP του δρομολογητή σας για ροή μέσω του Διαδικτύου.</string>
     <string name="conn_error_title">Σφάλμα σύνδεσης</string>
-    <string name="conn_error_msg">Απέτυχε η εκκίνηση</string>
     <string name="searching_pc">Αναζήτηση για υπολογιστές με GameStream σε λειτουργία...
 \n
 \n Βεβαιωθείτε ότι το GameStream είναι ενεργοποιημένο στις ρυθμίσεις GeForce Experience SHIELD.</string>
@@ -200,7 +197,6 @@
     <string name="title_video_format">Αλλαγή ρυθμίσεων HEVC</string>
     <string name="title_enable_post_stream_toast">Εμφάνιση μηνύματος λανθάνοντος χρόνου μετά τη ροή</string>
     <string name="summary_video_format">Το HEVC μειώνει τις απαιτήσεις εύρους ζώνης βίντεο, αλλά απαιτεί μια νεότερη συσκευή</string>
-    <string name="error_code_prefix">Κωδικός σφάλματος:</string>
     <string name="frame_conversion_error">Ο υπολογιστής φιλοξενίας ανέφερε ένα σφάλμα κωδικοποίησης βίντεο.
 \n
 \nΔοκιμάστε να απενεργοποιήσετε τη λειτουργία HDR, να αλλάξετε την ανάλυση ροής ή να αλλάξετε την ανάλυση οθόνης του υπολογιστή φιλοξενίας.</string>

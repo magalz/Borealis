@@ -39,9 +39,7 @@
     <string name="conn_hardware_latency">Середня затримка апаратного розцифрування:</string>
     <string name="conn_starting">Запуск</string>
     <string name="conn_error_title">Помилка з\'єднання</string>
-    <string name="conn_error_msg">Запуск не вдався</string>
     <string name="conn_terminated_title">З\'єднання припинено</string>
-    <string name="conn_terminated_msg">З’єднання було розірване.</string>
     <!-- General strings -->
     <string name="ip_hint">IP-адреса головного ПК</string>
     <string name="searching_pc">Пошук головного ПК у локальній мережі…
@@ -189,7 +187,6 @@
 \nМожливо, ваш монітор не підтримує необхідну конфігурацію дисплея. Якщо так, ви можете спробувати налаштувати віртуальний монітор. Врешті-решт, якщо ваш пристрій або хост-комп’ютер не підтримує потокове передавання з певною роздільною здатністю чи частотою оновлення, вам, на жаль, не пощастило.</string>
     <string name="title_native_res_dialog">Застереження про рідну роздільну здатність</string>
     <string name="applist_menu_hide_app">Сховати застосунок</string>
-    <string name="check_ports_msg">Перевірте правила брандмауера та переадресації для наступних портів:</string>
     <string name="no_frame_received_error">Здається, ваше мережеве з\'єднання човпає. Спробуйте зменшити швидкість потоку (бітрейт) чи переключіть пристрій на швидшу мережу.</string>
     <string name="no_video_received_error">Не отримано відео від хоста.</string>
     <string name="video_decoder_init_failed">Не вдалося запустити відео розцифрувач. Ваш пристрій може не підтримувати розмір екрану чи частоту кадрів.</string>
@@ -252,7 +249,6 @@
     <string name="title_full_range">Сила повного спектру відео (експериментальна)</string>
     <string name="summary_full_range">Це може призвести до втрати деталей у світлих і темних областях, якщо пристрій не відображає належним чином весь діапазон відеоконтенту.</string>
     <string name="pair_pairing_help">Якщо на вашому комп’ютері встановлений Sunshine, перейдіть до веб-інтерфейсу користувача Sunshine, щоб ввести PIN-код.</string>
-    <string name="error_code_prefix">Код помилки:</string>
     <string name="title_seekbar_vibrate_fallback_strength">Налаштування інтенсивності вібро</string>
     <string name="summary_seekbar_vibrate_fallback_strength">Посилюйте або зменшуйте інтенсивність вібрації пристрою</string>
     <string name="title_checkbox_gamepad_motion_fallback">Емуляція підтримки датчика руху геймпада</string>

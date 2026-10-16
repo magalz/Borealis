@@ -48,7 +48,6 @@
     <string name="unable_to_pin_shortcut">Din nuvarande lanseringsprogramvara tillåter inte att du skapar genvägar som är fastlåsta.</string>
     <string name="no_video_received_error">Ingen video har tagits emot från värden.</string>
     <string name="no_frame_received_error">Din nätverksanslutning fungerar inte bra. Minska inställningen för videobitrate eller prova en snabbare anslutning.</string>
-    <string name="check_ports_msg">Kontrollera din brandvägg och dina regler för portvidarebefordran för port(er):</string>
     <string name="conn_establishing_title">Upprättar fogning</string>
     <string name="conn_establishing_msg">Startar fogning</string>
     <string name="conn_metered">Varning: Din aktiva nätverksfogning är mätbar!</string>
@@ -57,9 +56,7 @@
     <string name="conn_hardware_latency">Genomsnittlig latenstid för maskinvaruavkodning:</string>
     <string name="conn_starting">Börjar</string>
     <string name="conn_error_title">Fogningsfel</string>
-    <string name="conn_error_msg">Misslyckades att börja</string>
     <string name="conn_terminated_title">Fogning förstörd</string>
-    <string name="conn_terminated_msg">Förbindelsen avbröts.</string>
     <string name="yes">Ja</string>
     <string name="no">Nej</string>
     <string name="lost_connection">Tappade fogning till dator</string>
@@ -255,7 +252,6 @@
     <string name="summary_checkbox_gamepad_motion_fallback">Använder enhetens inbyggda rörelsesensorer om spelkontrollsensorer inte stöds av din anslutna spelkontroll eller din Android-version.
 \nObs: Om du aktiverar det här alternativet kan din spelkontroll visas som en PlayStation-kontroller på värden.</string>
     <string name="title_checkbox_gamepad_motion_fallback">Emulera spelkontroll rörelsesensor stöd</string>
-    <string name="error_code_prefix">Felkod:</string>
     <string name="summary_analog_scrolling">Välj en analog spak för att scrolla när du är i musemuleringsläge</string>
     <string name="analogscroll_none">Ingen (båda spakarna flyttar musen)</string>
     <string name="analogscroll_left">Vänster analogspak</string>

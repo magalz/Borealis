@@ -76,11 +76,8 @@
     <string name="summary_frame_pacing">Посочете как да се балансира забавянето и плавността на видеото</string>
     <string name="title_frame_pacing">Темпо на видео кадрите</string>
     <string name="pacing_balanced">Балансирано</string>
-    <string name="check_ports_msg">Проверете защитната стена и правилата за препращане на портове за следния порт или портове:</string>
     <string name="conn_establishing_title">Установяване на връзка</string>
     <string name="conn_establishing_msg">Стартиране на връзката</string>
-    <string name="conn_error_msg">Неуспешно стартиране</string>
-    <string name="conn_terminated_msg">Връзката беше прекратена.</string>
     <string name="conn_error_title">Грешка във връзката</string>
     <string name="no">Не</string>
     <string name="help">Помощ</string>
@@ -130,7 +127,6 @@
     <string name="resolution_prefix_native_fullscreen">Локална, на цял екран</string>
     <string name="summary_checkbox_mouse_emulation">Натискането и задържането на бутона Старт ще превключи контролера в режим на мишка</string>
     <string name="title_checkbox_flip_face_buttons">Размяна на бутоните вдясно</string>
-    <string name="error_code_prefix">Код на грешката:</string>
     <string name="searching_pc">Търсене на достъпни компютри в локалната мрежа…\n\n Уверете се, че Sunshine работи на отдалечения компютър, или че GameStream е включен в настройките на GeForce Experience SHIELD.</string>
     <string name="resolution_prefix_native">Локална</string>
     <string name="fps_suffix_fps">кадри/сек</string>

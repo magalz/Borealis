@@ -59,9 +59,7 @@
     <string name="conn_hardware_latency">Latența medie a decodării cadrelor (hardware):</string>
     <string name="conn_starting">Se pornește</string>
     <string name="conn_error_title">Eroare la conectare</string>
-    <string name="conn_error_msg">Pornirea a eșuat</string>
     <string name="conn_terminated_title">Conexiunea închisă</string>
-    <string name="conn_terminated_msg">Conexiunea a fost terminată</string>
     <!-- General strings -->
     <string name="ip_hint">Adresa IP a PC-ului cu GFE</string>
     <string name="searching_pc">Se caută PC-uri cu GameStream activat…\n\n

@@ -71,9 +71,7 @@
     <string name="conn_hardware_latency">Latence moyenne du décodage matériel :</string>
     <string name="conn_starting">Démarrage</string>
     <string name="conn_error_title">Erreur de connexion</string>
-    <string name="conn_error_msg">Impossible de démarrer</string>
     <string name="conn_terminated_title">Connexion interrompue</string>
-    <string name="conn_terminated_msg">La connexion a été interrompue.</string>
     <!-- General strings -->
     <string name="ip_hint">Adresse IP du PC hôte</string>
     <string name="searching_pc">Recherche de PC hôtes sur votre réseau local…
@@ -204,7 +202,6 @@
 \nIl se peut que votre moniteur ne prenne pas en charge la configuration d\'affichage requise. Si c\'est le cas, vous pouvez essayer de configurer un moniteur virtuel. Enfin, si votre appareil ou votre PC hôte ne prend pas en charge le streaming à une résolution ou à un taux de rafraîchissement spécifique, vous ne pourrez pas y faire grand chose malheureusement.</string>
     <string name="title_native_res_dialog">Avertissement sur la résolution native</string>
     <string name="applist_menu_hide_app">Cacher l\'application</string>
-    <string name="check_ports_msg">Vérifiez vos règles de pare-feu pour les ports suivants :</string>
     <string name="early_termination_error">Quelque chose s\'est mal passé sur votre PC hôte en démarrant le stream.
 \n
 \nVérifiez qu\'aucune application utilisant un DRM n\'est ouverte sur votre PC hôte. Vous pouvez aussi essayer de redémarrer votre PC hôte.</string>
@@ -272,7 +269,6 @@
     <string name="analogscroll_none">Aucun (les deux sticks déplacent la souris)</string>
     <string name="analogscroll_right">Stick analogique droit</string>
     <string name="analogscroll_left">Stick analogique gauche</string>
-    <string name="error_code_prefix">Code d\'erreur :</string>
     <string name="title_seekbar_vibrate_fallback_strength">Ajuster l\'intensité de la vibration émulée</string>
     <string name="summary_seekbar_vibrate_fallback_strength">Amplifie ou réduit l\'intensité de la vibration sur votre appareil</string>
     <string name="suffix_seekbar_vibrate_fallback_strength">%</string>

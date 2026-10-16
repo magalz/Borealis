@@ -114,9 +114,7 @@
 \n
 \nHãy chắc chắn là GameStream được bật trong cài đặt GeForce Experience SHIELD.</string>
     <string name="ip_hint">Địa chỉ IP của PC GeForce</string>
-    <string name="conn_terminated_msg">Kết nối đã bị chấm dứt</string>
     <string name="conn_terminated_title">Kết nối bị chấm dứt</string>
-    <string name="conn_error_msg">Bắt đầu thất bại</string>
     <string name="conn_error_title">Lỗi kết nối</string>
     <string name="conn_starting">Đang bắt đầu</string>
     <string name="conn_hardware_latency">Độ trễ giải mã phần cứng trung bình:</string>
@@ -124,7 +122,6 @@
     <string name="conn_client_latency">Độ trễ giải mã khung hình trung bình:</string>
     <string name="conn_metered">Cảnh báo: Kết nối mạng đang hoạt động là có trả phí!</string>
     <string name="conn_establishing_title">Đang lập kết nối</string>
-    <string name="check_ports_msg">Hãy kiểm tra tường lửa và các quy tắc chuyển tiếp cổng để tìm (các) cổng:</string>
     <string name="early_termination_error">Có gì đó sai đã xảy ra trên PC chủ của bạn khi bắt đầu stream.
 \n
 \nHãy chắc chắn là bạn không mở bất kỳ nội dung được DRM bảo vệ nào trên PC chủ. Bạn cũng có thể thử khởi động lại PC chủ.

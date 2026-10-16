@@ -77,7 +77,6 @@
     <string name="no_frame_received_error">Your network connection isn\'t performing well. Reduce your video bitrate setting or try a faster connection.</string>
     <string name="early_termination_error">Something went wrong on your host PC when starting the stream.\n\nMake sure you don\'t have any DRM-protected content open on your host PC. You can also try restarting your host PC.</string>
     <string name="frame_conversion_error">The host PC reported a fatal video encoding error.\n\nTry disabling HDR mode, changing the streaming resolution, or changing your host PC\'s display resolution.</string>
-    <string name="check_ports_msg">Check your firewall and port forwarding rules for port(s):</string>
 
     <!-- Start application messages -->
     <string name="conn_establishing_title">Establishing Connection</string>
@@ -88,10 +87,7 @@
     <string name="conn_hardware_latency">Average hardware decoding latency:</string>
     <string name="conn_starting">Starting</string>
     <string name="conn_error_title">Connection Error</string>
-    <string name="conn_error_msg">Failed to start</string>
     <string name="conn_terminated_title">Connection Terminated</string>
-    <string name="conn_terminated_msg">The connection was terminated.</string>
-    <string name="error_code_prefix">Error code:</string>
 
     <!-- General strings -->
     <string name="ip_hint">IP address of host PC</string>

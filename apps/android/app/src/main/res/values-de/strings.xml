@@ -75,9 +75,7 @@
     <string name="conn_hardware_latency">Durchschnittliche Hardware-Dekodierungslatenz:</string>
     <string name="conn_starting">Starten</string>
     <string name="conn_error_title">Verbindungsfehler</string>
-    <string name="conn_error_msg">Start fehlgeschlagen</string>
     <string name="conn_terminated_title">Verbindung beendet</string>
-    <string name="conn_terminated_msg">Die Verbindung wurde beendet.</string>
     <!-- General strings -->
     <string name="ip_hint">IP-Adresse des GeForce Hosts</string>
     <string name="searching_pc">Suche nach Host PCs in deinem lokalen Netzwerk…
@@ -203,7 +201,6 @@
 \n
 \nEs kann sein, dass dein Monitor eine notwendige Konfiguration nicht unterstützt. In diesem Fall, kann ein Virtuelles Display Abhilfe schaffen. Allerdings kann es sein, dass dein Gerät oder dein Host das Streaming in einer bestimmten Auflösung oder Bildwiederholrate nicht unterstützt.</string>
     <string name="title_native_res_dialog">Native Auflösungswarnung</string>
-    <string name="check_ports_msg">Überprüfe deine Firewall und Portweiterleitungsregeln für folgende(n) Port(s):</string>
     <string name="early_termination_error">Beim Starten des Streams auf deinem Host ist etwas schief gelaufen.
 \n
 \nStelle sicher, dass du keine DRM-geschützten Inhalte auf deinem Host geöffnet hast. Du kannst auch versuchen, deinen Host neu zu starten.</string>
@@ -265,7 +262,6 @@
     <string name="analogscroll_none">Keine (beide Sticks bewegen die Maus)</string>
     <string name="analogscroll_right">Rechter Analogstick</string>
     <string name="analogscroll_left">Linker Analogstick</string>
-    <string name="error_code_prefix">Fehlercode:</string>
     <string name="title_seekbar_vibrate_fallback_strength">Emulierte Vibrationsintensität einstellen</string>
     <string name="summary_seekbar_vibrate_fallback_strength">Verstärke oder verringere die Vibrationsintensität deines Geräts</string>
     <string name="suffix_seekbar_vibrate_fallback_strength">%</string>

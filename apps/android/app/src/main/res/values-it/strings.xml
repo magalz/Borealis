@@ -55,9 +55,7 @@
     <string name="conn_hardware_latency">Latenza decodificatore hardware media:</string>
     <string name="conn_starting">Avvio in corso</string>
     <string name="conn_error_title">Errore connessione</string>
-    <string name="conn_error_msg">Avvio fallito</string>
     <string name="conn_terminated_title">Connessione interrotta</string>
-    <string name="conn_terminated_msg">La connessione è stata interrotta.</string>
     <!-- General strings -->
     <string name="ip_hint">Indirizzo IP del PC</string>
     <string name="searching_pc">Ricerca di PC nella rete locale…
@@ -218,7 +216,6 @@
     <string name="nettest_text_blocked">L\'attuale connessione di rete del tuo dispositivo sta bloccando Moonlight. Trasmettere via Internet potrebbe non funzionare mentre sei connesso a questa rete.</string>
     <string name="unable_to_pin_shortcut">Il tuo launcher non permette la creazione di scorciatoie appuntate.</string>
     <string name="video_decoder_init_failed">Il decoder video non è riuscito ad inizializzarsi. Il tuo dispositivo potrebbe non supportare la risoluzione o il frame rate selezionati.</string>
-    <string name="check_ports_msg">Controlla il tuo firewall e le regole di inoltro delle seguenti porte:</string>
     <string name="title_enable_perf_overlay">Mostra le statistiche delle performance durante la trasmissione</string>
     <string name="title_enable_post_stream_toast">Mostra un messaggio sulla latenza dopo la trasmissione</string>
     <string name="no_frame_received_error">La tua connessione di rete non sta funzionando bene. Riduci il bitrate video o prova ad usare una connessione più veloce.</string>
@@ -271,7 +268,6 @@
     <string name="title_checkbox_gamepad_motion_fallback">Emula il supporto dei sensori giroscopici del gamepad</string>
     <string name="pair_pairing_help">Se il tuo PC host sta eseguendo Sunshine, vai nella pagina web locale di Sunshine ed inserisci il PIN.</string>
     <string name="title_checkbox_gamepad_touchpad_as_mouse">Controlla sempre il mouse col touchpad</string>
-    <string name="error_code_prefix">Codice di errore:</string>
     <string name="title_seekbar_vibrate_fallback_strength">Aggiusta l\'intensità della vibrazione emulata</string>
     <string name="summary_seekbar_vibrate_fallback_strength">Amplifica o riduci l\'intensità della vibrazione sul tuo dispositivo</string>
     <string name="suffix_seekbar_vibrate_fallback_strength">%</string>

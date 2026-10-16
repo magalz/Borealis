@@ -44,7 +44,6 @@
     <string name="error_usb_prohibited">Akses USB dilarang oleh Administrator perangkat Anda. Cek pengaturan Knox atau MDM Anda.</string>
     <string name="no_video_received_error">Tidak ada video yang diterima dari host.</string>
     <string name="no_frame_received_error">Kinerja koneksi jaringan anda tidak baik. Kurangi pengaturan bitrate video Anda atau coba koneksi yang lebih cepat.</string>
-    <string name="check_ports_msg">Cek pengaturan firewall dan port forwarding untuk port-port ini:</string>
     <string name="conn_establishing_title">Membangun koneksi</string>
     <string name="conn_establishing_msg">Memulai koneksi</string>
     <string name="conn_metered">Peringatan: Koneksi aktif Anda terbatas!</string>
@@ -53,9 +52,7 @@
     <string name="conn_hardware_latency">Rata-rata latensi dekoder perangkat keras:</string>
     <string name="conn_starting">Memulai</string>
     <string name="conn_error_title">Koneksi eror</string>
-    <string name="conn_error_msg">Gagal untuk memulai</string>
     <string name="conn_terminated_title">Koneksi dihentikan</string>
-    <string name="conn_terminated_msg">Koneksi telah terputus.</string>
     <string name="ip_hint">Alamat IP komputer host</string>
     <string name="searching_pc">Mencari host PC di jaringan lokal Anda...\n\nPastikan Sunshine berjalan di PC host Anda atau GameStream diaktifkan dalam pengaturan SHIELD Pengalaman GeForce.</string>
     <string name="yes">Ya</string>
@@ -194,7 +191,6 @@
     <string name="title_checkbox_enable_pip">Aktifkan mode pengamat Gambar-dalam-Gambar</string>
     <string name="summary_language_list">Bahasa yang digunakan untuk Moonlight</string>
     <string name="summary_checkbox_enable_sops">Izinkan GFE mengubah setelan game untuk streaming yang optimal</string>
-    <string name="error_code_prefix">Kode galat:</string>
     <string name="category_gamepad_settings">Setelan Gamepad</string>
     <string name="title_checkbox_gamepad_touchpad_as_mouse">Selalu kendalikan mouse dengan touchpad</string>
     <string name="title_checkbox_gamepad_motion_sensors">Perbolehkan penggunaan sensor motion gamepad</string>

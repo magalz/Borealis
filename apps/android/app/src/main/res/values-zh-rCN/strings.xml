@@ -56,9 +56,7 @@
     <string name="conn_hardware_latency"> 硬件解码器平均延迟：</string>
     <string name="conn_starting">启动中</string>
     <string name="conn_error_title"> 连接错误 </string>
-    <string name="conn_error_msg"> 启动失败 </string>
     <string name="conn_terminated_title"> 连接终结 </string>
-    <string name="conn_terminated_msg">连接已被终结.</string>
     <!-- General strings -->
     <string name="ip_hint">串流电脑的IP地址</string>
     <string name="searching_pc">在你的本地网络中搜索串流主机PC...
@@ -200,7 +198,6 @@
 \n您的显示器可能不支持必要的显示配置。如果是这样，您可以尝试设置虚拟显示器。最后，如果您的设备或主机不支持以特定分辨率或刷新率进行流式传输，那就很不幸了。</string>
     <string name="title_native_res_dialog">本地分辨率警告</string>
     <string name="applist_menu_hide_app">隐藏游戏</string>
-    <string name="check_ports_msg">请检查您的防火墙和端口转发规则中的端口：</string>
     <string name="early_termination_error">开始串流时您的主机电脑出了点问题。
 \n
 \n请确保没有在主机电脑上开启任何受DRM保护的内容。您也可以尝试重新启动主机电脑。</string>
@@ -267,7 +264,6 @@
     <string name="summary_checkbox_gamepad_motion_fallback">如果你连接的游戏手柄或 Android 版本不支持游戏手柄传感器，请使用设备的内置运动传感器。
 \n注意：启用此选项可能会导致您的游戏手柄在主机上被识别为 PlayStation 4控制器。</string>
     <string name="title_checkbox_gamepad_motion_fallback">模拟游戏手柄运动传感器支持</string>
-    <string name="error_code_prefix">错误代码:</string>
     <string name="title_seekbar_vibrate_fallback_strength">调整模拟震动强度</string>
     <string name="suffix_seekbar_vibrate_fallback_strength">％</string>
     <string name="title_analog_scrolling">使用摇杆控制鼠标移动</string>

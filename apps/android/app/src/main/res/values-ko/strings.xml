@@ -48,9 +48,7 @@
     <string name="conn_hardware_latency">평균 하드웨어 디코딩 지연:</string>
     <string name="conn_starting">시작 중</string>
     <string name="conn_error_title">연결 오류</string>
-    <string name="conn_error_msg">시작 실패</string>
     <string name="conn_terminated_title">연결 종료 됨</string>
-    <string name="conn_terminated_msg">연결이 종료되었습니다.</string>
     <!-- General strings -->
     <string name="ip_hint">호스트 PC의 IP 주소</string>
     <string name="searching_pc">로컬 네트워크의 호스트 PC를 검색중…
@@ -143,7 +141,6 @@
 \n비트레이트를 줄이세요</string>
     <string name="delete_pc_msg">이 PC를 삭제 하시겠습니까\?</string>
     <string name="title_details">세부정보</string>
-    <string name="check_ports_msg">다음 포트의 방화벽 및 포트 포워딩 설정을 확인하십시오:</string>
     <string name="early_termination_error">스트림을 시작할 때 호스트 PC에서 문제가 발생했습니다.
 \n
 \n호스트 PC에 DRM으로 보호 된 콘텐츠가 열려 있지 않은지 확인하거나 호스트 PC를 재부팅하십시오 .</string>
@@ -270,7 +267,6 @@
     <string name="summary_checkbox_gamepad_motion_fallback">연결된 컨트롤러 또는 기기의 Android 버전에서 컨트롤러 센서가 지원되지 않는 경우 장치에 내장된 모션 센서를 사용합니다.
 \n참고: 이 옵션을 활성화하면 사용 중인 컨트롤러가 호스트에서 PlayStation 컨트롤러로 나타날 수 있습니다.</string>
     <string name="title_checkbox_gamepad_motion_fallback">컨트롤러의 모션 센서 에뮬레이션 지원</string>
-    <string name="error_code_prefix">에러 코드:</string>
     <string name="summary_seekbar_vibrate_fallback_strength">장치의 진동 강도를 증폭하거나 감소시킵니다</string>
     <string name="title_analog_scrolling">아날로그 스틱을 사용하여 스크롤</string>
     <string name="analogscroll_none">없음 (두 스틱 모두 마우스를 움직입니다)</string>

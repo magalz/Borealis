@@ -105,9 +105,10 @@ class StreamSessionFactoryTest {
     }
 
     @Test
-    fun `the stage that names the app is the start of the app, the stream stages prepare the display`() {
+    fun `the stage that names the app is still connecting, the stream stages prepare the display`() {
+        // Starting the app is the stage of launchStarting, when /launch or /resume is sent.
         assertThat(StreamSessionFactory.startStage("Desktop", "Desktop"))
-            .isEqualTo(StartStage.STARTING_APP)
+            .isEqualTo(StartStage.CONNECTING)
         assertThat(StreamSessionFactory.startStage("RTSP handshake", "Desktop"))
             .isEqualTo(StartStage.PREPARING_DISPLAY)
         assertThat(StreamSessionFactory.startStage("video stream", "Desktop"))

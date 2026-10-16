@@ -12,6 +12,7 @@ import io.github.magalz.borealis.host.R
  *   HOST_BUSY;
  * - nothing answered the TCP connection, which includes a connect timeout (see [FailureCauses.of]),
  *   so the PC is off or asleep: HOST_OFFLINE, where the screen offers Wake PC;
+ * - a stream that reached the first frame and then ended with a generic failure: STOPPED;
  * - anything else: GENERIC.
  */
 object StreamFailureClassifier {
@@ -28,7 +29,9 @@ object StreamFailureClassifier {
         val kind = kindOf(facts)
         val showPorts =
             facts.portFlags != 0 &&
-                (kind == FailureKind.GENERIC || kind == FailureKind.HOST_OFFLINE)
+                (kind == FailureKind.GENERIC ||
+                    kind == FailureKind.STOPPED ||
+                    kind == FailureKind.HOST_OFFLINE)
         return StreamFailure(
             kind,
             rawCode(facts, text),
@@ -45,6 +48,7 @@ object StreamFailureClassifier {
             facts.resumeCollision || facts.retriesExhausted -> FailureKind.HOST_BUSY
             facts.cause == CauseKind.TIMEOUT && !facts.terminated -> FailureKind.HOST_BUSY
             facts.cause == CauseKind.UNREACHABLE -> FailureKind.HOST_OFFLINE
+            facts.terminated && facts.streamed -> FailureKind.STOPPED
             else -> FailureKind.GENERIC
         }
 

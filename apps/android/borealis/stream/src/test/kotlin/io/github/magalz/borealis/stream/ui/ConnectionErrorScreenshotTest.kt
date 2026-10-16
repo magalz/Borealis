@@ -37,7 +37,7 @@ class ConnectionErrorScreenshotTest {
             FormFactor.Tv,
             "Desktop",
             "Desk PC",
-            StreamFailure(FailureKind.HOST_BUSY, "Error 503 · Desktop · HTTP 503", null),
+            StreamFailure(FailureKind.HOST_BUSY, "Error 503 · launch · HTTP 503", null),
         )
 
     @Test
@@ -48,7 +48,7 @@ class ConnectionErrorScreenshotTest {
             FormFactor.Phone,
             "Desktop",
             "Living Room PC",
-            StreamFailure(FailureKind.HOST_OFFLINE, "Error 110 · Desktop", null),
+            StreamFailure(FailureKind.HOST_OFFLINE, "Error 0 · serverinfo", null),
         )
 
     @Test
@@ -59,7 +59,11 @@ class ConnectionErrorScreenshotTest {
             FormFactor.Phone,
             "Desktop",
             "Desk PC",
-            StreamFailure(FailureKind.CERTIFICATE_CHANGED, "Error 401 · Desktop · HTTP 401", null),
+            StreamFailure(
+                FailureKind.CERTIFICATE_CHANGED,
+                "Error 401 · serverinfo · HTTP 401",
+                null,
+            ),
         )
 
     @Test
@@ -78,6 +82,28 @@ class ConnectionErrorScreenshotTest {
         )
 
     @Test
+    @Config(qualifiers = TV)
+    fun errorTvStoppedFocused() =
+        shoot(
+            "error_tv_stopped_focused",
+            FormFactor.Tv,
+            "Desktop",
+            "Desk PC",
+            StreamFailure(FailureKind.STOPPED, "Error -1", null),
+        )
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun errorPhoneStopped() =
+        shoot(
+            "error_phone_stopped",
+            FormFactor.Phone,
+            "Desktop",
+            "Desk PC",
+            StreamFailure(FailureKind.STOPPED, "Error -1", null),
+        )
+
+    @Test
     @Config(qualifiers = "w640dp-h300dp-land-xhdpi")
     fun errorPhoneLandscapeCertificateLargeText() =
         shoot(
@@ -85,7 +111,11 @@ class ConnectionErrorScreenshotTest {
             FormFactor.Phone,
             "Desktop",
             "Desk PC",
-            StreamFailure(FailureKind.CERTIFICATE_CHANGED, "Error 401 · Desktop · HTTP 401", null),
+            StreamFailure(
+                FailureKind.CERTIFICATE_CHANGED,
+                "Error 401 · serverinfo · HTTP 401",
+                null,
+            ),
             fontScale = 2f,
         )
 

@@ -103,6 +103,57 @@ class StreamFailureClassifierTest {
         assertThat(failure.kind).isEqualTo(FailureKind.GENERIC)
     }
 
+    private fun ended(
+        errorCode: Int = -1,
+        streamed: Boolean,
+        portFlags: Int = 0,
+        cause: CauseKind = CauseKind.NONE,
+    ) =
+        FailureFacts(
+            stage = null,
+            errorCode = errorCode,
+            portFlags = portFlags,
+            terminated = true,
+            cause = cause,
+            streamed = streamed,
+        )
+
+    @Test
+    fun `a stream that ended after the first frame stopped`() {
+        val failure = classify(ended(streamed = true))
+
+        assertThat(failure.kind).isEqualTo(FailureKind.STOPPED)
+        assertThat(failure.rawCode).isEqualTo("$rawCode:-1")
+    }
+
+    @Test
+    fun `a stream that ended before the first frame did not start`() {
+        assertThat(classify(ended(streamed = false)).kind).isEqualTo(FailureKind.GENERIC)
+    }
+
+    @Test
+    fun `a failed start never stopped, even when the facts say a frame was shown`() {
+        assertThat(classify(start().copy(streamed = true)).kind).isEqualTo(FailureKind.GENERIC)
+    }
+
+    @Test
+    fun `a stopped stream names the ports that may be blocked`() {
+        val failure = classify(ended(streamed = true, portFlags = 0x100))
+
+        assertThat(failure.portHint).isEqualTo("$portHint:ports=256")
+    }
+
+    @Test
+    fun `busy, offline and a changed certificate keep their kind after a frame was shown`() {
+        val offline = classify(ended(streamed = true, cause = CauseKind.UNREACHABLE))
+        val cert = classify(ended(streamed = true, cause = CauseKind.CERT_MISMATCH))
+        val collided = classify(ended(streamed = true).copy(resumeCollision = true))
+
+        assertThat(offline.kind).isEqualTo(FailureKind.HOST_OFFLINE)
+        assertThat(cert.kind).isEqualTo(FailureKind.CERTIFICATE_CHANGED)
+        assertThat(collided.kind).isEqualTo(FailureKind.HOST_BUSY)
+    }
+
     @Test
     fun `a stage failure shows the error code and the stage`() {
         val failure =

@@ -187,14 +187,31 @@ private fun NavHostController.close(entry: NavBackStackEntry, message: String? =
 
 /**
  * Puts the screens of [request] on the back stack: always above Hosts, so Back from them leads
- * there. A Launch shows Apps; the launch itself waits there for the app list.
+ * there. A Launch shows Apps; the launch itself waits there for the app list. A request for the
+ * screen that is on top already leaves it in place: it keeps its ViewModel, which a Launch needs to
+ * take its app from the new request.
  */
 private fun NavHostController.show(request: LibraryLaunchRequest) {
+    if (showsAlready(request)) return
     popBackStack<Hosts>(inclusive = false)
     when (request) {
         LibraryLaunchRequest.Hosts -> Unit
         is LibraryLaunchRequest.Apps -> navigate(Apps(request.hostId)) { launchSingleTop = true }
         is LibraryLaunchRequest.Launch -> navigate(Apps(request.hostId)) { launchSingleTop = true }
         is LibraryLaunchRequest.Pair -> navigate(Pairing(request.hostId)) { launchSingleTop = true }
+    }
+}
+
+private fun NavHostController.showsAlready(request: LibraryLaunchRequest): Boolean {
+    val entry = currentBackStackEntry ?: return false
+    val destination = entry.destination
+    return when (request) {
+        LibraryLaunchRequest.Hosts -> false
+        is LibraryLaunchRequest.Apps ->
+            destination.hasRoute<Apps>() && entry.toRoute<Apps>().hostId == request.hostId
+        is LibraryLaunchRequest.Launch ->
+            destination.hasRoute<Apps>() && entry.toRoute<Apps>().hostId == request.hostId
+        is LibraryLaunchRequest.Pair ->
+            destination.hasRoute<Pairing>() && entry.toRoute<Pairing>().hostId == request.hostId
     }
 }

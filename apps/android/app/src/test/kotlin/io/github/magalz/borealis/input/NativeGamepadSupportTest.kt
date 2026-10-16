@@ -28,8 +28,42 @@ class NativeGamepadSupportTest {
     }
 
     @Test
-    fun `a joystick-only device does not block the driver`() {
+    fun `a joystick with X and Y axes but no gamepad source blocks the driver`() {
+        // The controller handler counts it through its joystick axes, so the driver must not too.
+        val joystick = InputDeviceFacts(vid, pid, InputDevice.SOURCE_JOYSTICK, hasJoystickXy = true)
+
+        assertThat(blocks(joystick)).isTrue()
+    }
+
+    @Test
+    fun `the measured 8BitDo XInput dongle device does not block the driver`() {
+        // Merged keyboard/mouse device: JOYSTICK source, but its X and Y belong to the mouse and
+        // its only joystick axis is GENERIC_1.
+        val dongle =
+            InputDeviceFacts(
+                vid,
+                pid,
+                InputDevice.SOURCE_KEYBOARD or
+                    InputDevice.SOURCE_DPAD or
+                    InputDevice.SOURCE_MOUSE or
+                    InputDevice.SOURCE_STYLUS or
+                    InputDevice.SOURCE_JOYSTICK,
+                hasJoystickXy = false,
+            )
+
+        assertThat(blocks(dongle)).isFalse()
+    }
+
+    @Test
+    fun `a joystick source without X and Y axes does not block the driver`() {
         assertThat(blocks(InputDeviceFacts(vid, pid, InputDevice.SOURCE_JOYSTICK))).isFalse()
+    }
+
+    @Test
+    fun `X and Y axes without a joystick source do not block the driver`() {
+        val mouse = InputDeviceFacts(vid, pid, InputDevice.SOURCE_MOUSE, hasJoystickXy = true)
+
+        assertThat(blocks(mouse)).isFalse()
     }
 
     @Test

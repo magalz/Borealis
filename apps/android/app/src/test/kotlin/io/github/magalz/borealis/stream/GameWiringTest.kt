@@ -57,6 +57,51 @@ class GameWiringTest {
     }
 
     @Test
+    fun `a message of the start is no toast, it waits for the error screen`() {
+        val message = body("public void displayMessage(")
+
+        assertThat(message).isNotEmpty()
+        assertThat(message).doesNotContain("Toast")
+    }
+
+    @Test
+    fun `warnings during the stream stay toasts`() {
+        assertThat(body("public void displayTransientMessage(")).contains("Toast.makeText")
+    }
+
+    @Test
+    fun `a failure carries whether the first frame was shown and the note of the start`() {
+        for (name in listOf("public void stageFailed(", "public void connectionTerminated(")) {
+            val body = body(name)
+            assertThat(body).contains("firstFrameShown")
+            assertThat(body).contains("startNote")
+        }
+        assertThat(source).contains("firstFrameShown = true")
+    }
+
+    @Test
+    fun `the connection never hands an exception text to the listener`() {
+        val connection =
+            File("src/main/java/com/limelight/nvstream/NvConnection.java").readText()
+
+        assertThat(connection).doesNotContain("displayMessage(e.getMessage())")
+        assertThat(connection).doesNotContain("stageFailed(appName")
+    }
+
+    @Test
+    fun `sending the launch or the resume is the step that fails after the serverinfo`() {
+        val connection =
+            File("src/main/java/com/limelight/nvstream/NvConnection.java").readText()
+        val start = connection.indexOf("private LaunchOutcome launchWithRetry(")
+        val launch = connection.substring(start, connection.indexOf("\n    }\n", start))
+
+        // The launch needs the native library, so a unit test cannot run it: read the wiring.
+        assertThat(launch).contains("startStep = verb")
+        assertThat(connection).contains("startStep = StartSteps.SERVER_INFO")
+        assertThat(connection).contains("stageFailed(startStep")
+    }
+
+    @Test
     fun `the session info names the decoder`() {
         assertThat(source).contains("decoderRenderer.getDecoderName()")
     }

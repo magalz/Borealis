@@ -78,6 +78,28 @@ class ConnectionErrorScreenshotTest {
         )
 
     @Test
+    @Config(qualifiers = TV)
+    fun errorTvStoppedFocused() =
+        shoot(
+            "error_tv_stopped_focused",
+            FormFactor.Tv,
+            "Desktop",
+            "Desk PC",
+            StreamFailure(FailureKind.STOPPED, "Error -1", null),
+        )
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun errorPhoneStopped() =
+        shoot(
+            "error_phone_stopped",
+            FormFactor.Phone,
+            "Desktop",
+            "Desk PC",
+            StreamFailure(FailureKind.STOPPED, "Error -1", null),
+        )
+
+    @Test
     @Config(qualifiers = "w640dp-h300dp-land-xhdpi")
     fun errorPhoneLandscapeCertificateLargeText() =
         shoot(

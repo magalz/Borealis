@@ -162,6 +162,18 @@ class StartingScreenTest {
 
     @Test
     @Config(qualifiers = PHONE)
+    fun `while the host asks for a retry of the server info, connecting is current and the note is hidden`() {
+        val retry = LaunchRetry(null, attempt = 1, maxAttempts = 6, delayMs = 1000)
+        show(StreamPhase.Starting(StartStage.CONNECTING, retry))
+
+        step(steps[0]).assertState("In progress").assertIsSelected()
+        step(steps[1]).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.StateDescription))
+        composeRule.onNodeWithText("HOST BUSY").assertIsDisplayed()
+        composeRule.onNodeWithText(DISPLAY_NOTE).assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
     fun `without a retry no host busy line shows`() {
         show(StreamPhase.Starting(StartStage.STARTING_APP))
 

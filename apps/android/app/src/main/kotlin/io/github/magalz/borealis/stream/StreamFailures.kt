@@ -46,6 +46,21 @@ object StreamFailures {
         )
 
     /**
+     * The facts of a failed stage or of a connection that ended, with [streamed] (the first frame
+     * was on screen) and the fixed [note] the start path meant for the user.
+     */
+    @JvmStatic
+    fun facts(
+        stage: String?,
+        errorCode: Int,
+        portFlags: Int,
+        terminated: Boolean,
+        streamed: Boolean,
+        note: String?,
+        connection: NvConnection?,
+    ): FailureFacts = facts(stage, errorCode, portFlags, terminated, connection)
+
+    /**
      * The classified failure. [portBlocked] is the result of the network test: the connection of
      * this device is blocking Borealis.
      */

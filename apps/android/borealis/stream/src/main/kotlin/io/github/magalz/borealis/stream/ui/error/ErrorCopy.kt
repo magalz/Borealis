@@ -36,6 +36,7 @@ internal fun errorCopy(kind: FailureKind): ErrorCopy =
                 R.string.stream_error_certificate_body,
                 StateAction.PAIR_AGAIN,
             )
-        FailureKind.GENERIC ->
+        FailureKind.GENERIC,
+        FailureKind.STOPPED ->
             ErrorCopy(R.string.stream_error_generic_title, R.string.stream_error_generic_body, null)
     }

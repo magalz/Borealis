@@ -55,14 +55,14 @@ private fun terminated(code: Int) = FailureFacts(null, code, 0, terminated = tru
 class StreamFailuresTest {
     @Test
     fun `a failed stage carries the stage, the code and the port flags`() {
-        val facts = StreamFailures.facts("RTSP handshake", -1, 0x8, false, FailedConnection())
+        val facts = StreamFailures.facts("RTSP handshake", -1, 0x8, false, false, null, FailedConnection())
 
         assertThat(facts).isEqualTo(FailureFacts("RTSP handshake", -1, 0x8, terminated = false))
     }
 
     @Test
     fun `a terminated connection is marked as terminated and has no stage`() {
-        val facts = StreamFailures.facts(null, -100, 0, true, FailedConnection())
+        val facts = StreamFailures.facts(null, -100, 0, true, false, null, FailedConnection())
 
         assertThat(facts).isEqualTo(FailureFacts(null, -100, 0, terminated = true))
     }
@@ -75,6 +75,8 @@ class StreamFailuresTest {
                 503,
                 0,
                 false,
+                false,
+                null,
                 FailedConnection(CauseKind.HTTP, 503, collision = true, exhausted = true),
             )
 
@@ -86,7 +88,7 @@ class StreamFailuresTest {
 
     @Test
     fun `an http status of zero is no status`() {
-        val facts = StreamFailures.facts("Launch", 1, 0, false, FailedConnection(CauseKind.TIMEOUT))
+        val facts = StreamFailures.facts("Launch", 1, 0, false, false, null, FailedConnection(CauseKind.TIMEOUT))
 
         assertThat(facts.cause).isEqualTo(CauseKind.TIMEOUT)
         assertThat(facts.httpCode).isNull()
@@ -94,9 +96,63 @@ class StreamFailuresTest {
 
     @Test
     fun `without a connection nothing is known about the cause`() {
-        val facts = StreamFailures.facts("Launch", 1, 0, false, null)
+        val facts = StreamFailures.facts("Launch", 1, 0, false, false, null, null)
 
         assertThat(facts).isEqualTo(FailureFacts("Launch", 1, 0, terminated = false))
+    }
+
+    @Test
+    fun `the facts say whether the first frame was shown and carry the note of the start`() {
+        val facts =
+            StreamFailures.facts(null, -1, 0, true, true, "Device not paired", FailedConnection())
+
+        assertThat(facts.streamed).isTrue()
+        assertThat(facts.note).isEqualTo("Device not paired")
+    }
+
+    @Test
+    fun `a stream that ran and ended is classified as stopped, one that never ran is not`() {
+        val ran = StreamFailures.facts(null, -1, 0, true, true, null, FailedConnection())
+        val neverRan = StreamFailures.facts(null, -1, 0, true, false, null, FailedConnection())
+
+        assertThat(failure(ran).kind).isEqualTo(FailureKind.STOPPED)
+        assertThat(failure(neverRan).kind).isEqualTo(FailureKind.GENERIC)
+    }
+
+    @Test
+    fun `the note of the start is the hint of a failed stage, after the collision text`() {
+        assertThat(hint(FailureFacts("launch", 470, 0, false, note = "Not yours")))
+            .isEqualTo("Not yours")
+        assertThat(
+                hint(
+                    FailureFacts(
+                        "RTSP handshake",
+                        -1,
+                        0,
+                        false,
+                        resumeCollision = true,
+                        note = "Not yours",
+                    ),
+                    portBlocked = true,
+                )
+            )
+            .isEqualTo(
+                "${HostR.string.launch_resume_collision}\n\nNot yours\n\n" +
+                    "${R.string.nettest_text_blocked}"
+            )
+    }
+
+    @Test
+    fun `the note reaches the error screen as the hint under the raw code`() {
+        val failed = failure(FailureFacts("launch", 470, 0, false, note = "Not yours"))
+
+        assertThat(failed.portHint).isEqualTo("Not yours")
+        assertThat(failed.rawCode).isEqualTo("${HostR.string.failure_raw_stage}:470,launch")
+    }
+
+    @Test
+    fun `without a note the hint is as before`() {
+        assertThat(hint(FailureFacts("launch", 470, 0, false))).isNull()
     }
 
     @Test

@@ -77,6 +77,22 @@ class StreamSessionTest {
     }
 
     @Test
+    fun `connecting stays the stage while the host asks for a retry, and sending the launch moves on`() {
+        val retry =
+            LaunchRetry(LaunchCategory.PENDING, attempt = 1, maxAttempts = 3, delayMs = 2000)
+
+        session.onStage(StartStage.CONNECTING)
+        session.onLaunchRetry(retry)
+
+        assertThat(phase).isEqualTo(StreamPhase.Starting(StartStage.CONNECTING, retry))
+
+        session.onStage(StartStage.STARTING_APP)
+        session.onStage(StartStage.CONNECTING)
+
+        assertThat(phase).isEqualTo(StreamPhase.Starting(StartStage.STARTING_APP))
+    }
+
+    @Test
     fun `a retry keeps the stage and shows the retry`() {
         val retry =
             LaunchRetry(LaunchCategory.PENDING, attempt = 1, maxAttempts = 3, delayMs = 2000)

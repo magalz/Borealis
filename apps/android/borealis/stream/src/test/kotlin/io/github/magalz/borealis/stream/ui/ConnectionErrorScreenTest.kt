@@ -113,8 +113,48 @@ class ConnectionErrorScreenTest {
         show(failure(FailureKind.GENERIC))
 
         composeRule.onNodeWithText("Couldn't start Desktop").assertIsDisplayed()
-        composeRule.onNodeWithText("The stream could not start or stopped.").assertIsDisplayed()
+        composeRule.onNodeWithText("The stream could not start.").assertIsDisplayed()
+        composeRule.onNodeWithText("stopped", substring = true).assertDoesNotExist()
         assertOnly()
+    }
+
+    @Test
+    fun `a stream that ran and ended says it stopped, names the app and offers no state action`() {
+        show(failure(FailureKind.STOPPED, "Error -1"))
+
+        composeRule.onNodeWithText("Desktop stopped").assertIsDisplayed()
+        composeRule
+            .onNodeWithText(
+                "The stream ended. The PC may have quit the app, or the connection dropped."
+            )
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("Error -1").assertIsDisplayed()
+        composeRule.onNodeWithText("Couldn't start", substring = true).assertDoesNotExist()
+        assertOnly()
+    }
+
+    @Test
+    fun `a stopped stream still offers Try again and Close`() {
+        show(failure(FailureKind.STOPPED))
+
+        composeRule.onNodeWithText("Try again").assertIsDisplayed()
+        composeRule.onNodeWithText("Close").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a fixed hint of the start shows under the raw code`() {
+        show(
+            failure(
+                FailureKind.GENERIC,
+                "Error 470 · launch · HTTP 470",
+                "This session wasn't started by this device, so it cannot be resumed.",
+            )
+        )
+
+        composeRule.onNodeWithText("Error 470 · launch · HTTP 470").assertIsDisplayed()
+        composeRule
+            .onNodeWithText("This session wasn't started by this device, so it cannot be resumed.")
+            .assertIsDisplayed()
     }
 
     @Test

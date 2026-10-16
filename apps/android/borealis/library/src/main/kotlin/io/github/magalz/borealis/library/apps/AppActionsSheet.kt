@@ -132,6 +132,7 @@ private fun sheetAction(
                 stringResource(R.string.apps_action_unhide),
                 stringResource(R.string.apps_action_unhide_consequence),
             )
+        AppAction.ADD_TO_HOME_SCREEN -> ActionSheetAction(action, "", "")
     }
 
 /** Asks before an app ends. Focus starts on Cancel, so a stray OK does not lose work. */

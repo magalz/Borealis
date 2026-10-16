@@ -83,5 +83,6 @@ private fun AppsMessage.text(context: Context): String =
         AppsMessage.HostNotPaired -> context.getString(R.string.apps_message_host_not_paired)
         AppsMessage.HostOffline -> context.getString(R.string.apps_message_host_offline)
         AppsMessage.QuitDone -> context.getString(R.string.apps_message_quit_done)
+        AppsMessage.PinFailed -> ""
         is AppsMessage.QuitFailed -> message ?: context.getString(R.string.apps_message_quit_failed)
     }

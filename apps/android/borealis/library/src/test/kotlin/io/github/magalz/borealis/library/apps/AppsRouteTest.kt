@@ -15,6 +15,7 @@ import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.RunningApp
 import io.github.magalz.borealis.library.domain.StreamRequest
 import io.github.magalz.borealis.library.testing.FakeAppRepository
+import io.github.magalz.borealis.library.testing.FakeHostShortcuts
 import io.github.magalz.borealis.library.testing.aHost
 import io.github.magalz.borealis.library.testing.anApp
 import org.junit.Rule
@@ -28,6 +29,7 @@ import org.robolectric.annotation.Config
 class AppsRouteTest {
     @get:Rule val composeRule = createComposeRule()
     private val repository = FakeAppRepository()
+    private val shortcuts = FakeHostShortcuts()
     private val streams = mutableListOf<StreamRequest>()
     private val closes = mutableListOf<String?>()
 
@@ -56,7 +58,7 @@ class AppsRouteTest {
 
     private fun show(snapshot: AppsSnapshot = snapshot()) {
         repository.emit(snapshot)
-        val viewModel = AppsViewModel("host-1", repository)
+        val viewModel = AppsViewModel("host-1", repository, shortcuts)
         composeRule.setContent {
             AppsRoute(
                 hostId = "host-1",
@@ -181,5 +183,33 @@ class AppsRouteTest {
         composeRule.onNodeWithText("Quit Desktop").performClick()
         composeRule.onNodeWithText("Quit").performClick()
         composeRule.waitForIdle()
+    }
+
+    @Test
+    fun `adding an app to the home screen pins it and says so when the launcher refuses`() {
+        show(snapshot(running = false))
+        composeRule
+            .onNodeWithContentDescription("Hades II")
+            .performTouchInput { longClick() }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Add to home screen").performClick()
+        composeRule.waitForIdle()
+
+        assertThat(shortcuts.pinned)
+            .containsExactly(
+                FakeHostShortcuts.PinCall("host-1", "Desk PC", 2, "Hades II", hdrSupported = true)
+            )
+        assertThat(streams).isEmpty()
+
+        shortcuts.pinResult = false
+        composeRule
+            .onNodeWithContentDescription("Hades II")
+            .performTouchInput { longClick() }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Add to home screen").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Your launcher did not add the shortcut.").assertIsDisplayed()
     }
 }

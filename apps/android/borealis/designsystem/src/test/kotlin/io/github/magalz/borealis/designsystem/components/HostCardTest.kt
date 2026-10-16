@@ -3,10 +3,12 @@ package io.github.magalz.borealis.designsystem.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
@@ -20,6 +22,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.width
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -81,6 +84,21 @@ class HostCardTest {
         val tag = composeRule.onNodeWithText("HDR", useUnmergedTree = true)
         assertThat(tag.getUnclippedBoundsInRoot().top)
             .isAtLeast(detail.getUnclippedBoundsInRoot().bottom)
+    }
+
+    @Test
+    fun `a long detail line wraps instead of cutting the address`() {
+        composeRule.setContent { Specimen(FormFactor.Tv, modifier = Modifier.width(220.dp)) }
+
+        val layouts = mutableListOf<TextLayoutResult>()
+        composeRule
+            .onNodeWithText("LuminalShine 26.09.1 · 192.168.1.20", useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .config[SemanticsActions.GetTextLayoutResult]
+            .action!!(layouts)
+
+        assertThat(layouts.single().hasVisualOverflow).isFalse()
+        assertThat(layouts.single().lineCount).isEqualTo(2)
     }
 
     @Test
@@ -155,6 +173,7 @@ class HostCardTest {
         runningApp: String? = null,
         action: HostCardAction? = null,
         tags: List<String> = emptyList(),
+        modifier: Modifier = Modifier,
     ) {
         BorealisTheme(formFactor) {
             Box(Modifier.testTag(FRAME).background(BorealisTokens.Color.Page).padding(24.dp)) {
@@ -168,7 +187,7 @@ class HostCardTest {
                     action = action,
                     onClick = { opened++ },
                     onOptions = { optionsRequested++ },
-                    modifier = Modifier.testTag(CARD),
+                    modifier = modifier.testTag(CARD),
                 )
             }
         }

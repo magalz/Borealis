@@ -135,12 +135,32 @@ class ConflictDialogTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `Quit and relaunch answers quit and relaunch`() {
-        show(otherApp())
+    fun `the same app names the third button Quit and relaunch and it answers quit`() {
+        show(sameApp())
 
+        composeRule.onNodeWithText("Quit and start").assertDoesNotExist()
         composeRule.onNodeWithText("Quit and relaunch").performClick()
 
         assertThat(intents.calls).containsExactly("answerConflict QUIT_AND_RELAUNCH")
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `another app names the third button Quit and start and it answers quit`() {
+        show(otherApp())
+
+        composeRule.onNodeWithText("Quit and relaunch").assertDoesNotExist()
+        composeRule.onNodeWithText("Quit and start").performClick()
+
+        assertThat(intents.calls).containsExactly("answerConflict QUIT_AND_RELAUNCH")
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `an unknown running app names the third button Quit and start`() {
+        show(otherApp(running = null))
+
+        composeRule.onNodeWithText("Quit and start").assertIsDisplayed()
     }
 
     @Test

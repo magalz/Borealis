@@ -1,13 +1,24 @@
 package io.github.magalz.borealis.stream.ui
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performKeyPress
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -27,10 +38,17 @@ class ConnectionErrorScreenTest {
     @get:Rule val composeRule = createComposeRule()
     private val actions = RecordingActions()
 
-    private fun show(failure: StreamFailure, formFactor: FormFactor = FormFactor.Phone) {
+    private fun show(
+        failure: StreamFailure,
+        formFactor: FormFactor = FormFactor.Phone,
+        fontScale: Float = 1f,
+    ) {
         composeRule.setContent {
-            BorealisTheme(formFactor) {
-                ConnectionErrorScreen("Desktop", "Desk PC", failure, aSession(actions))
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
+                BorealisTheme(formFactor) {
+                    ConnectionErrorScreen("Desktop", "Desk PC", failure, aSession(actions))
+                }
             }
         }
     }
@@ -178,5 +196,115 @@ class ConnectionErrorScreenTest {
         composeRule.onNodeWithText("Try again").performKeyInput { pressKey(Key.ButtonB) }
 
         assertThat(actions.calls).containsExactly("leave")
+    }
+
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    fun `a lone key up of gamepad B does nothing`() {
+        show(failure(FailureKind.HOST_BUSY), FormFactor.Tv)
+        composeRule.waitForIdle()
+
+        val consumed = composeRule.onNodeWithText("Try again").performKeyPress(buttonB(ACTION_UP))
+
+        assertThat(actions.calls).isEmpty()
+        // The up of a press that began before the screen showed is still not for a button below.
+        assertThat(consumed).isTrue()
+    }
+
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    fun `gamepad B leaves on the first key down only, and its key up and repeats do nothing more`() {
+        show(failure(FailureKind.HOST_BUSY), FormFactor.Tv)
+        composeRule.waitForIdle()
+        val button = composeRule.onNodeWithText("Try again")
+
+        val first = button.performKeyPress(buttonB(ACTION_DOWN))
+        assertThat(actions.calls).containsExactly("leave")
+        val repeat = button.performKeyPress(buttonB(ACTION_DOWN, repeat = 1))
+        val up = button.performKeyPress(buttonB(ACTION_UP))
+
+        assertThat(actions.calls).containsExactly("leave")
+        assertThat(listOf(first, repeat, up)).containsExactly(true, true, true)
+    }
+
+    private fun buttonB(action: Int, repeat: Int = 0) =
+        KeyEvent(
+            android.view.KeyEvent(
+                0L,
+                0L,
+                action,
+                android.view.KeyEvent.KEYCODE_BUTTON_B,
+                repeat,
+            )
+        )
+
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    fun `the buttons come in order, Try again, the state action, Diagnostics, Close`() {
+        show(failure(FailureKind.HOST_OFFLINE), FormFactor.Tv)
+
+        val lefts =
+            listOf("Try again", "Wake PC", "Diagnostics", "Close").map {
+                composeRule.onNodeWithText(it).getUnclippedBoundsInRoot().left
+            }
+
+        assertThat(lefts).isInStrictOrder()
+    }
+
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    fun `the buttons are at least 10dp apart horizontally`() {
+        show(failure(FailureKind.HOST_OFFLINE), FormFactor.Tv)
+
+        val tryAgain = composeRule.onNodeWithText("Try again").getUnclippedBoundsInRoot()
+        val wake = composeRule.onNodeWithText("Wake PC").getUnclippedBoundsInRoot()
+
+        assertThat((wake.left - tryAgain.right).value).isAtLeast(MIN_GAP)
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h640dp-xhdpi")
+    fun `wrapped rows of buttons are at least 10dp apart vertically`() {
+        // A TV-sized button row wraps on a narrow phone with Wake PC: Close drops to a second row.
+        show(failure(FailureKind.HOST_OFFLINE), FormFactor.Tv)
+
+        val tryAgain = composeRule.onNodeWithText("Try again").getUnclippedBoundsInRoot()
+        val close = composeRule.onNodeWithText("Close").getUnclippedBoundsInRoot()
+
+        assertThat((close.top - tryAgain.bottom).value).isAtLeast(MIN_GAP)
+    }
+
+    @Test
+    @Config(qualifiers = "w640dp-h240dp-land-xhdpi")
+    fun `on a short landscape phone with large text every button stays reachable`() {
+        show(
+            failure(FailureKind.CERTIFICATE_CHANGED, portHint = "Ports 47984 may be blocked"),
+            fontScale = 2f,
+        )
+
+        composeRule.onNodeWithText("Close").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun `the title is a heading and the title and body announce politely`() {
+        show(failure(FailureKind.HOST_BUSY))
+
+        composeRule
+            .onNodeWithText("Desk PC is busy")
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
+        composeRule
+            .onNode(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.LiveRegion,
+                    LiveRegionMode.Polite,
+                )
+            )
+            .assertIsDisplayed()
+    }
+
+    private companion object {
+        const val MIN_GAP = 10f
+        const val ACTION_DOWN = android.view.KeyEvent.ACTION_DOWN
+        const val ACTION_UP = android.view.KeyEvent.ACTION_UP
     }
 }

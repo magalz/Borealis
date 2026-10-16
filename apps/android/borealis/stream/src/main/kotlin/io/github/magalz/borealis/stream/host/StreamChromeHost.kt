@@ -60,6 +60,8 @@ class StreamChromeHost(
     private val onCaptured: Runnable,
     private val onReleased: Runnable,
 ) : FrameLayout(activity) {
+    /** The time the guard reads, in the [SystemClock.uptimeMillis] timebase. */
+    internal var clock: () -> Long = SystemClock::uptimeMillis
     private var mode: ChromeMode? = null
     private var menuHandleBounds: Rect? = null
     private var ownsGesture = false

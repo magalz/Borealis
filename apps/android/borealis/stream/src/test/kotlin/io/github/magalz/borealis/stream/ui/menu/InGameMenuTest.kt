@@ -160,6 +160,7 @@ class InGameMenuTest {
         for (chip in
             listOf(
                 "Alt+Tab",
+                "Win+Tab",
                 "Win",
                 "Ctrl+Shift+Esc",
                 "Alt+F4",

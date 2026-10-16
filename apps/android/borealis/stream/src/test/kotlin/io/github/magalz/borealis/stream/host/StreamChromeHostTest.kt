@@ -3,6 +3,7 @@ package io.github.magalz.borealis.stream.host
 import android.os.Looper
 import android.os.SystemClock
 import android.view.InputDevice
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -33,6 +34,12 @@ private class TouchProbe(activity: ComponentActivity) : View(activity) {
     }
 
     val touches = mutableListOf<Int>()
+    val keys = mutableListOf<Int>()
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        keys += keyCode
+        return true
+    }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         touches += event.actionMasked
@@ -208,5 +215,116 @@ class StreamChromeHostTest {
 
         assertThat(session.chromeMode).isEqualTo(ChromeMode.MODAL)
         assertThat(host.hasFocus()).isTrue()
+    }
+
+    // The confirm keys after a system window (S5-T24)
+    private var now = 10_000L
+
+    private fun keyDown(keyCode: Int): Boolean =
+        host.dispatchKeyEvent(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, keyCode, 0))
+
+    private fun keyUp(keyCode: Int): Boolean =
+        host.dispatchKeyEvent(KeyEvent(0, 0, KeyEvent.ACTION_UP, keyCode, 0))
+
+    private fun focusProbe() {
+        host.clock = { now }
+        probe.requestFocus()
+        assertThat(probe.hasFocus()).isTrue()
+    }
+
+    private fun windowFocusReturns() {
+        host.onWindowFocusChanged(false)
+        now += 3_000
+        host.onWindowFocusChanged(true)
+    }
+
+    private val confirmKeys =
+        listOf(
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER,
+            KeyEvent.KEYCODE_BUTTON_A,
+        )
+
+    @Test
+    fun `the confirm keys are consumed and do nothing for a second after the window gets its focus back`() {
+        focusProbe()
+        windowFocusReturns()
+
+        for (key in confirmKeys) {
+            now += 100
+            assertThat(keyDown(key)).isTrue()
+            assertThat(keyUp(key)).isTrue()
+        }
+
+        assertThat(probe.keys).isEmpty()
+    }
+
+    @Test
+    fun `the confirm keys work again after the second`() {
+        focusProbe()
+        windowFocusReturns()
+
+        now += 999
+        keyDown(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertThat(probe.keys).isEmpty()
+
+        now += 1
+        for (key in confirmKeys) assertThat(keyDown(key)).isTrue()
+        assertThat(probe.keys)
+            .containsExactly(
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER,
+                KeyEvent.KEYCODE_DPAD_CENTER, // gamepad A reaches the screen as OK
+            )
+            .inOrder()
+    }
+
+    @Test
+    fun `Back and B work at once after the window gets its focus back`() {
+        focusProbe()
+        windowFocusReturns()
+
+        keyDown(KeyEvent.KEYCODE_BACK)
+        keyDown(KeyEvent.KEYCODE_BUTTON_B)
+
+        assertThat(probe.keys)
+            .containsExactly(KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_BUTTON_B)
+            .inOrder()
+    }
+
+    @Test
+    fun `nothing is ignored when the window never lost its focus`() {
+        focusProbe()
+
+        host.onWindowFocusChanged(true)
+        for (key in confirmKeys) keyDown(key)
+
+        assertThat(probe.keys).hasSize(confirmKeys.size)
+    }
+
+    @Test
+    fun `a second focus gain without a loss in between ignores nothing`() {
+        focusProbe()
+
+        host.onWindowFocusChanged(false)
+        now += 3_000
+        host.onWindowFocusChanged(true)
+        now += 1_000
+        keyDown(KeyEvent.KEYCODE_ENTER)
+        host.onWindowFocusChanged(true)
+        keyDown(KeyEvent.KEYCODE_ENTER)
+
+        assertThat(probe.keys).containsExactly(KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_ENTER)
+    }
+
+    @Test
+    fun `an idle chrome leaves the confirm keys to the stream even right after a focus loss`() {
+        focusProbe()
+        stream()
+        windowFocusReturns()
+
+        assertThat(keyDown(KeyEvent.KEYCODE_ENTER)).isFalse()
     }
 }

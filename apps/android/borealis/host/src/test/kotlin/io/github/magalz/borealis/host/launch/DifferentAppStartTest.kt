@@ -20,7 +20,8 @@ class DifferentAppStartTest {
     private var cancelled = false
     private var cancelCalls = 0
 
-    private val collisions = ResumeCollisions({ cancelled }, { _, _, _, _ -> }, { host }, { now }, {})
+    private val collisions =
+        ResumeCollisions({ cancelled }, { _, _, _, _ -> }, { host }, { now }, {})
     private val conflicts =
         LaunchConflicts(
             { cancelled },
@@ -38,33 +39,32 @@ class DifferentAppStartTest {
     private val prompts = mutableListOf<Pair<Int, Int>>()
 
     /** The connection's different-app branch: the conflict flow, with the user's answer. */
-    private fun start(answer: ConflictChoice): Boolean =
-        collisions.differentAppRunning {
-            conflicts.resolve(
-                reader = { 5 },
-                names = { "Desktop" },
-                requestedAppId = 7,
-                requestedAppName = "Steam",
-                prompt = { running, _, requested, _, slot ->
-                    prompts += running to requested
-                    slot.choose(answer)
-                },
-                relaunch = {
-                    requests += "launch"
-                    true
-                },
-                join = {
-                    requests += "resume $it"
-                    LaunchOutcome.SUCCEEDED
-                },
-                quitAndRelaunch = {
-                    requests += "quit"
-                    requests += "launch"
-                    true
-                },
-                host = host,
-            )
-        }
+    private fun start(answer: ConflictChoice): Boolean = collisions.differentAppRunning {
+        conflicts.resolve(
+            reader = { 5 },
+            names = { "Desktop" },
+            requestedAppId = 7,
+            requestedAppName = "Steam",
+            prompt = { running, _, requested, _, slot ->
+                prompts += running to requested
+                slot.choose(answer)
+            },
+            relaunch = {
+                requests += "launch"
+                true
+            },
+            join = {
+                requests += "resume $it"
+                LaunchOutcome.SUCCEEDED
+            },
+            quitAndRelaunch = {
+                requests += "quit"
+                requests += "launch"
+                true
+            },
+            host = host,
+        )
+    }
 
     private val choices
         get() = audit.events.filter { it.type == AuditType.LAUNCH_CONFLICT }

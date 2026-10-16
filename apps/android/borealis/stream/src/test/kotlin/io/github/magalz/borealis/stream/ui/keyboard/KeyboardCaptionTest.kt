@@ -23,6 +23,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
+import io.github.magalz.borealis.stream.testing.RecordingIntents
 import io.github.magalz.borealis.stream.ui.StreamKeyboard
 import kotlin.math.abs
 import org.junit.Rule

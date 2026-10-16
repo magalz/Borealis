@@ -11,6 +11,8 @@ import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
+import io.github.magalz.borealis.stream.testing.PHONE
+import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.aSession
 import org.junit.Rule
 import org.junit.Test
@@ -108,7 +110,6 @@ class ConnectionErrorScreenshotTest {
     }
 
     private companion object {
-        const val PHONE = "w360dp-h640dp-xhdpi"
         const val TV = "w960dp-h540dp-land-television-xhdpi"
     }
 }

@@ -17,6 +17,13 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.StreamPhase
+import io.github.magalz.borealis.stream.testing.HANDHELD
+import io.github.magalz.borealis.stream.testing.PHONE
+import io.github.magalz.borealis.stream.testing.RecordingIntents
+import io.github.magalz.borealis.stream.testing.TV
+import io.github.magalz.borealis.stream.testing.assertWidthNear
+import io.github.magalz.borealis.stream.testing.setChrome
+import io.github.magalz.borealis.stream.testing.setChromeInKeyboardMode
 import io.github.magalz.borealis.stream.ui.CONFLICT_PANEL_TAG
 import io.github.magalz.borealis.stream.ui.ConflictDialog
 import org.junit.Rule

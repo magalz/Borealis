@@ -11,11 +11,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.Panel
+import io.github.magalz.borealis.stream.testing.HANDHELD
+import io.github.magalz.borealis.stream.testing.PHONE
+import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.ui.LayerFixture
 import io.github.magalz.borealis.stream.ui.aStreaming
-import io.github.magalz.borealis.stream.ui.starting.HANDHELD
-import io.github.magalz.borealis.stream.ui.starting.PHONE
-import io.github.magalz.borealis.stream.ui.starting.TV
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

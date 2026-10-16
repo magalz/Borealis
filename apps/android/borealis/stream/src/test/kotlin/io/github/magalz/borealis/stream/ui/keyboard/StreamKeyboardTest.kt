@@ -35,6 +35,11 @@ import io.github.magalz.borealis.stream.keys.KeyModifier.ALT
 import io.github.magalz.borealis.stream.keys.KeyModifier.CTRL
 import io.github.magalz.borealis.stream.keys.KeyModifier.SHIFT
 import io.github.magalz.borealis.stream.keys.Shortcuts
+import io.github.magalz.borealis.stream.testing.HANDHELD
+import io.github.magalz.borealis.stream.testing.PHONE
+import io.github.magalz.borealis.stream.testing.RecordingIntents
+import io.github.magalz.borealis.stream.testing.TV
+import io.github.magalz.borealis.stream.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.stream.ui.StreamKeyboard
 import java.io.File
 import org.junit.Rule

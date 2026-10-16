@@ -19,13 +19,14 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.StreamPhase
+import io.github.magalz.borealis.stream.testing.HANDHELD
+import io.github.magalz.borealis.stream.testing.PHONE
+import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
+import io.github.magalz.borealis.stream.testing.RecordingIntents
+import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.aPerf
 import io.github.magalz.borealis.stream.testing.aSessionInfo
-import io.github.magalz.borealis.stream.ui.starting.HANDHELD
-import io.github.magalz.borealis.stream.ui.starting.PHONE
-import io.github.magalz.borealis.stream.ui.starting.RecordingIntents
-import io.github.magalz.borealis.stream.ui.starting.TV
-import io.github.magalz.borealis.stream.ui.starting.setChromeInKeyboardMode
+import io.github.magalz.borealis.stream.testing.setChromeInKeyboardMode
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -151,8 +152,5 @@ class StreamingScreenshotTest {
         composeRule.onRoot().captureRoboImage("src/test/screenshots/$name.png")
     }
 
-    private companion object {
-        // The stream is landscape: a phone in portrait would give the panel 187dp.
-        const val PHONE_LANDSCAPE = "w640dp-h360dp-land-xhdpi"
-    }
+    private companion object {}
 }

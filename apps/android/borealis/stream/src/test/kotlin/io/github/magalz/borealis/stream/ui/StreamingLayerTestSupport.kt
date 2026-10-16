@@ -14,10 +14,10 @@ import io.github.magalz.borealis.stream.PerfSnapshot
 import io.github.magalz.borealis.stream.SessionInfo
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.TouchMode
+import io.github.magalz.borealis.stream.testing.RecordingIntents
 import io.github.magalz.borealis.stream.testing.aSessionInfo
-import io.github.magalz.borealis.stream.ui.starting.RecordingIntents
-import io.github.magalz.borealis.stream.ui.starting.setChrome
-import io.github.magalz.borealis.stream.ui.starting.setChromeInKeyboardMode
+import io.github.magalz.borealis.stream.testing.setChrome
+import io.github.magalz.borealis.stream.testing.setChromeInKeyboardMode
 
 /** A streaming phase with the defaults of a phone that has not shown the hint. */
 internal fun aStreaming(

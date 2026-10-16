@@ -31,6 +31,13 @@ import io.github.magalz.borealis.nativecore.LaunchCategory
 import io.github.magalz.borealis.stream.LaunchRetry
 import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamPhase
+import io.github.magalz.borealis.stream.testing.HANDHELD
+import io.github.magalz.borealis.stream.testing.PHONE
+import io.github.magalz.borealis.stream.testing.RecordingIntents
+import io.github.magalz.borealis.stream.testing.TV
+import io.github.magalz.borealis.stream.testing.assertWidthNear
+import io.github.magalz.borealis.stream.testing.setChrome
+import io.github.magalz.borealis.stream.testing.setChromeInKeyboardMode
 import io.github.magalz.borealis.stream.ui.STARTING_CONTENT_TAG
 import io.github.magalz.borealis.stream.ui.StartingScreen
 import org.junit.Rule

@@ -26,13 +26,15 @@ import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.TouchMode
+import io.github.magalz.borealis.stream.keys.KeyChord
+import io.github.magalz.borealis.stream.keys.KeyModifier
+import io.github.magalz.borealis.stream.testing.HANDHELD
+import io.github.magalz.borealis.stream.testing.PHONE
+import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.aPerf
 import io.github.magalz.borealis.stream.testing.aSessionInfo
 import io.github.magalz.borealis.stream.ui.LayerFixture
 import io.github.magalz.borealis.stream.ui.aStreaming
-import io.github.magalz.borealis.stream.ui.starting.HANDHELD
-import io.github.magalz.borealis.stream.ui.starting.PHONE
-import io.github.magalz.borealis.stream.ui.starting.TV
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -164,7 +166,10 @@ class InGameMenuTest {
         text("Win+D").performClick()
         text("Esc").performClick()
 
-        assertThat(fixture.intents.calls).containsExactly("send 68", "send 27").inOrder()
+        assertThat(fixture.intents.chords)
+            .containsExactly(KeyChord(0x44, setOf(KeyModifier.WIN)), KeyChord(0x1B))
+            .inOrder()
+        assertThat(fixture.intents.calls).isEmpty()
         text("Send keys").assertIsDisplayed()
     }
 

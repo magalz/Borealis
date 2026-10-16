@@ -20,6 +20,10 @@ import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
+import io.github.magalz.borealis.stream.testing.RecordingIntents
+import io.github.magalz.borealis.stream.testing.TV
+import io.github.magalz.borealis.stream.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.stream.ui.StreamKeyboard
 import org.junit.Rule
 import org.junit.Test
@@ -91,8 +95,5 @@ class KeyboardScreenshotTest {
         composeRule.onRoot().captureRoboImage("src/test/screenshots/$name.png")
     }
 
-    private companion object {
-        // The stream is landscape: a phone in portrait would be too narrow for the picture.
-        const val PHONE_LANDSCAPE = "w640dp-h360dp-land-xhdpi"
-    }
+    private companion object {}
 }

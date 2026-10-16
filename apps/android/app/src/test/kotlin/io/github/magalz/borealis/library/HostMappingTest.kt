@@ -2,9 +2,14 @@ package io.github.magalz.borealis.library
 
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.http.ComputerDetails
+import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import com.limelight.nvstream.http.PairingManager.PairState
+import io.github.magalz.borealis.host.caps.BorealisHostInfo
+import io.github.magalz.borealis.library.domain.HostCapability
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.RunningApp
+import io.github.magalz.borealis.nativecore.HostCaps
+import io.github.magalz.borealis.nativecore.HostFamily
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -93,5 +98,130 @@ class HostMappingTest {
         assertThat(parseApps(null)).isEmpty()
         assertThat(parseApps("")).isEmpty()
         assertThat(parseApps("<root status_code=\"401\" status_message=\"no\"></root>")).isEmpty()
+    }
+
+    @Test
+    fun `the version is the family name and the version without the Sunshine marker`() {
+        fun version(family: HostFamily, vararg version: Int) =
+            details()
+                .withInfo(caps(family = family, version = version.toList()))
+                .toHost()
+                .version
+
+        assertThat(version(HostFamily.SUNSHINE, 26, 9, 1, -1)).isEqualTo("LuminalShine 26.9.1")
+        assertThat(version(HostFamily.SUNSHINE, 26, 9, 0, -1)).isEqualTo("LuminalShine 26.9")
+        assertThat(version(HostFamily.GFE, 3, 28, 0, 677))
+            .isEqualTo("GeForce Experience 3.28.0.677")
+        assertThat(version(HostFamily.GFE, 3, 20, 0, 0)).isEqualTo("GeForce Experience 3.20")
+    }
+
+    @Test
+    fun `a host of an unknown family has no version`() {
+        val host =
+            details()
+                .withInfo(caps(family = HostFamily.UNKNOWN, version = listOf(0, 0, 0, 0)))
+                .toHost()
+
+        assertThat(host.version).isNull()
+    }
+
+    @Test
+    fun `the address is the active one, else the manual, else the local one`() {
+        fun address(active: String?, manual: String?, local: String?) =
+            details(address = active)
+                .also {
+                    it.manualAddress = manual?.let { host -> AddressTuple(host, 47989) }
+                    it.localAddress = local?.let { host -> AddressTuple(host, 47989) }
+                }
+                .toHost()
+                .address
+
+        assertThat(address("10.0.0.2", "10.0.0.3", "10.0.0.4")).isEqualTo("10.0.0.2")
+        assertThat(address(null, "10.0.0.3", "10.0.0.4")).isEqualTo("10.0.0.3")
+        assertThat(address(null, null, "10.0.0.4")).isEqualTo("10.0.0.4")
+        assertThat(address(null, null, null)).isNull()
+    }
+
+    @Test
+    fun `each capability follows its flag of the host info`() {
+        fun capabilities(caps: HostCaps) = details().withInfo(caps).toHost().capabilities
+
+        assertThat(capabilities(caps())).isEmpty()
+        assertThat(capabilities(caps(hevc = true))).containsExactly(HostCapability.HEVC)
+        assertThat(capabilities(caps(hevcMain10 = true)))
+            .containsExactly(HostCapability.HEVC_10_BIT)
+        assertThat(capabilities(caps(av1 = true))).containsExactly(HostCapability.AV1)
+        assertThat(capabilities(caps(av1Main10 = true)))
+            .containsExactly(HostCapability.AV1_10_BIT)
+        assertThat(capabilities(caps(yuv444 = true))).containsExactly(HostCapability.YUV_444)
+        assertThat(capabilities(caps(hevc = true, hevcMain10 = true, av1 = true)))
+            .containsExactly(
+                HostCapability.HEVC,
+                HostCapability.HEVC_10_BIT,
+                HostCapability.AV1,
+            )
+    }
+
+    @Test
+    fun `HDR is a capability when any app of the list supports it`() {
+        val withInfo = details(rawAppList = APP_LIST).withInfo(caps())
+
+        assertThat(withInfo.toHost().capabilities).containsExactly(HostCapability.HDR)
+        assertThat(
+                details(rawAppList = APP_LIST)
+                    .withInfo(caps(hevc = true))
+                    .toHost()
+                    .capabilities
+            )
+            .containsExactly(HostCapability.HEVC, HostCapability.HDR)
+        assertThat(
+                details(rawAppList = APP_LIST_WITHOUT_HDR)
+                    .withInfo(caps(hevc = true))
+                    .toHost()
+                    .capabilities
+            )
+            .containsExactly(HostCapability.HEVC)
+        assertThat(
+                details(rawAppList = null).withInfo(caps(hevc = true)).toHost().capabilities
+            )
+            .containsExactly(HostCapability.HEVC)
+    }
+
+    @Test
+    fun `HDR is read from an app list that was already parsed`() {
+        val host =
+            details(rawAppList = null).withInfo(caps()).toHost(parseApps(APP_LIST))
+
+        assertThat(host.capabilities).containsExactly(HostCapability.HDR)
+    }
+
+    @Test
+    fun `a host without host info has no version and no capabilities, even with an HDR app`() {
+        val host = details(rawAppList = APP_LIST).toHost()
+
+        assertThat(host.version).isNull()
+        assertThat(host.capabilities).isEmpty()
+    }
+
+    private fun ComputerDetails.withInfo(caps: HostCaps) = also {
+        it.borealis = BorealisHostInfo(caps, httpsPort = 47984, httpPort = 47989)
+    }
+
+    @Suppress("LongParameterList")
+    private fun caps(
+        family: HostFamily = HostFamily.SUNSHINE,
+        version: List<Int> = listOf(26, 9, 1, -1),
+        hevc: Boolean = false,
+        hevcMain10: Boolean = false,
+        av1: Boolean = false,
+        av1Main10: Boolean = false,
+        yuv444: Boolean = false,
+    ) = HostCaps(family, version, hevc, hevcMain10, av1, av1Main10, yuv444, emptySet())
+
+    private companion object {
+        const val APP_LIST_WITHOUT_HDR =
+            """<?xml version="1.0" encoding="utf-8"?><root status_code="200">""" +
+                """<App><IsHdrSupported>0</IsHdrSupported><AppTitle>Desktop</AppTitle><ID>8</ID></App>""" +
+                """</root>"""
     }
 }

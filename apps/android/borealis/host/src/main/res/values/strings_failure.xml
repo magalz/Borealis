@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Support text of a failed start: %1$s error code, %2$s the stage that failed. -->
-    <string name="failure_raw_stage">Error %1$s · %2$s</string>
+    <string name="failure_raw_stage" tools:ignore="MissingTranslation">Error %1$s · %2$s</string>
     <!-- Support text of a stream that ended: %1$s error code. -->
-    <string name="failure_raw_code">Error %1$s</string>
+    <string name="failure_raw_code" tools:ignore="MissingTranslation">Error %1$s</string>
     <!-- The support text followed by the host's HTTP status: %1$s the support text, %2$s the HTTP status. -->
-    <string name="failure_raw_http">%1$s · HTTP %2$s</string>
+    <string name="failure_raw_http" tools:ignore="MissingTranslation">%1$s · HTTP %2$s</string>
     <!-- Which ports to check: %1$s the ports, separated by commas. -->
-    <string name="failure_port_hint">Check your firewall and port forwarding rules for: %1$s</string>
+    <string name="failure_port_hint" tools:ignore="MissingTranslation">Check your firewall and port forwarding rules for: %1$s</string>
 </resources>

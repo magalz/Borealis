@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.stream.ui.hint
 
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -28,6 +29,14 @@ class MenuHintTest {
         composeRule.mainClock.autoAdvance = false
         return LayerFixture(composeRule, formFactor, aStreaming(showMenuHint = showHint)).also {
             it.show()
+        }
+    }
+
+    /** Opens or closes a panel; the clock is paused, so the write is applied by hand. */
+    private fun show(fixture: LayerFixture, panel: Panel) {
+        composeRule.runOnUiThread {
+            fixture.phase = aStreaming(panel, showMenuHint = true)
+            Snapshot.sendApplyNotifications()
         }
     }
 
@@ -84,7 +93,7 @@ class MenuHintTest {
     fun `opening the menu dismisses the hint at once`() {
         val fixture = layer(FormFactor.Phone)
 
-        fixture.phase = aStreaming(Panel.MENU, showMenuHint = true)
+        show(fixture, Panel.MENU)
         composeRule.mainClock.advanceTimeBy(100)
 
         assertThat(fixture.intents.calls).containsExactly("dismissMenuHint")
@@ -95,10 +104,10 @@ class MenuHintTest {
     @Config(qualifiers = PHONE)
     fun `a hint dismissed by the menu does not dismiss itself again later`() {
         val fixture = layer(FormFactor.Phone)
-        fixture.phase = aStreaming(Panel.MENU, showMenuHint = true)
+        show(fixture, Panel.MENU)
         composeRule.mainClock.advanceTimeBy(100)
 
-        fixture.phase = aStreaming(Panel.NONE, showMenuHint = true)
+        show(fixture, Panel.NONE)
         composeRule.mainClock.advanceTimeBy(10_000)
 
         assertThat(fixture.intents.calls).containsExactly("dismissMenuHint")

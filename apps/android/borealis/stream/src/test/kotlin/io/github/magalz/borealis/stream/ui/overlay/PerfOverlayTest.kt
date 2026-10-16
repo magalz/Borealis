@@ -1,8 +1,10 @@
 package io.github.magalz.borealis.stream.ui.overlay
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -117,6 +119,9 @@ class PerfOverlayTest {
     fun `the overlay takes neither a tap nor the focus`() {
         layer(FormFactor.Phone, OverlayMode.COMPACT)
 
-        composeRule.onNodeWithText(compact).assertHasNoClickAction().assertIsNotFocused()
+        composeRule
+            .onNodeWithText(compact)
+            .assertHasNoClickAction()
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Focused))
     }
 }

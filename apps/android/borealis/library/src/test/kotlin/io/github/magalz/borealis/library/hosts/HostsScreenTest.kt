@@ -272,14 +272,27 @@ class HostsScreenTest {
         composeRule.onNodeWithText("Forget").performClick()
         composeRule.waitForIdle()
 
-        composeRule
-            .onNodeWithText("Forget Desk PC? You will need to pair again.")
-            .assertIsDisplayed()
+        composeRule.onNodeWithText(FORGET_CONFIRMATION).assertIsDisplayed()
         assertThat(forgotten).isEmpty()
 
         composeRule.onNodeWithText("Forget").performClick()
 
         assertThat(forgotten).containsExactly("desk")
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the Forget option and its confirmation say what it does and do not promise a re-pair`() {
+        showPhone(withHosts)
+        composeRule.onNodeWithTag("host:desk").performTouchInput { longClick() }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText(FORGET_CONSEQUENCE).assertIsDisplayed()
+        composeRule.onNodeWithText("Forget").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText(FORGET_CONFIRMATION).assertIsDisplayed()
+        composeRule.onNodeWithText("pair again", substring = true).assertDoesNotExist()
     }
 
     @Test
@@ -295,9 +308,7 @@ class HostsScreenTest {
         composeRule.waitForIdle()
 
         assertThat(forgotten).isEmpty()
-        composeRule
-            .onNodeWithText("Forget Desk PC? You will need to pair again.")
-            .assertDoesNotExist()
+        composeRule.onNodeWithText(FORGET_CONFIRMATION).assertDoesNotExist()
     }
 
     @Test
@@ -533,5 +544,13 @@ class HostsScreenTest {
 
     private companion object {
         const val WAKE_CONSEQUENCE = "Send a Wake-on-LAN packet to the PC."
+        const val FORGET_CONSEQUENCE =
+            "Remove it from this device. " +
+                "The PC may keep trusting this device until you remove it " +
+                "in the LuminalShine Web UI (Clients page)."
+        const val FORGET_CONFIRMATION =
+            "Forget Desk PC on this device? " +
+                "The PC may keep trusting this device until you remove it " +
+                "in the LuminalShine Web UI (Clients page)."
     }
 }

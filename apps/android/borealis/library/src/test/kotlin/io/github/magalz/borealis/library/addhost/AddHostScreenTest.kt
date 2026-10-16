@@ -1,7 +1,19 @@
 package io.github.magalz.borealis.library.addhost
 
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
@@ -10,16 +22,23 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextInputSelection
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.unit.dp
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.TV
+import io.github.magalz.borealis.library.testing.setContentInKeyboardMode
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -200,6 +219,76 @@ class AddHostScreenTest {
         composeRule.onNodeWithText("Cancel").assertIsEnabled()
     }
 
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV Down from an address with text leaves the field for Add host`() {
+        showStateful("192.168.1.20")
+
+        composeRule.onNode(hasSetTextAction()).performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.onNode(hasText("Add host") and hasClickAction()).assertIsFocused()
+        composeRule.onNode(hasSetTextAction()).assert(hasText("192.168.1.20"))
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV Left at the start of the address leaves the field for the neighbour`() {
+        showStateful("192.168.1.20")
+        composeRule.onNode(hasSetTextAction()).performTextInputSelection(TextRange(0))
+
+        composeRule.onNode(hasSetTextAction()).performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNodeWithTag(NEIGHBOUR).assertIsFocused()
+        composeRule.onNode(hasSetTextAction()).assert(hasText("192.168.1.20"))
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV Left in the middle of the address moves the caret and keeps focus`() {
+        showStateful("192.168.1.20")
+        composeRule.onNode(hasSetTextAction()).performTextInputSelection(TextRange(4))
+
+        composeRule.onNode(hasSetTextAction()).performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNode(hasSetTextAction()).assertIsFocused()
+        composeRule.onNode(hasSetTextAction()).assert(hasText("192.168.1.20"))
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV the address is unchanged after leaving the field and coming back`() {
+        showStateful("192.168.1.20")
+
+        composeRule.onNode(hasSetTextAction()).performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNode(hasText("Add host") and hasClickAction()).assertIsFocused()
+        composeRule.onNode(hasText("Add host") and hasClickAction()).performKeyInput {
+            pressKey(Key.DirectionUp)
+        }
+
+        composeRule.onNode(hasSetTextAction()).assertIsFocused()
+        composeRule.onNode(hasSetTextAction()).assert(hasText("192.168.1.20"))
+    }
+
+    /**
+     * The screen with a focusable neighbour on its left, as the rail is in the Library, and an
+     * address that the test keeps, so the caret and the text behave as they do for a user.
+     */
+    private fun showStateful(initial: String) {
+        composeRule.setContentInKeyboardMode {
+            var address by remember { mutableStateOf(initial) }
+            Row {
+                Box(Modifier.size(40.dp).testTag(NEIGHBOUR).focusable())
+                AddHostScreen(
+                    state = AddHostUiState(address = address),
+                    formFactor = FormFactor.Tv,
+                    onAddressChanged = { address = it },
+                    onSubmit = { submitted++ },
+                    onCancel = { cancelled++ },
+                )
+            }
+        }
+    }
+
     private fun show(state: AddHostUiState, formFactor: FormFactor = FormFactor.Phone) {
         composeRule.setContent {
             AddHostScreen(
@@ -211,5 +300,9 @@ class AddHostScreenTest {
             )
         }
         composeRule.waitForIdle()
+    }
+
+    private companion object {
+        const val NEIGHBOUR = "neighbour"
     }
 }

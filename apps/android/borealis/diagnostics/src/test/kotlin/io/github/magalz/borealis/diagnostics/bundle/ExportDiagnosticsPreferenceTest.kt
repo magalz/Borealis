@@ -13,6 +13,7 @@ import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import com.google.common.truth.Truth.assertThat
@@ -27,7 +28,10 @@ import java.net.ConnectException
 import java.net.InetAddress
 import java.net.Socket
 import java.time.Duration
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import org.junit.After
 import org.junit.Before
@@ -427,6 +431,144 @@ class ExportDiagnosticsPreferenceTest {
 
         assertThat(texts(transfer.window!!.decorView)).contains("Expired")
         dismissAndIdle(transfer)
+    }
+
+    /** Text views that are on screen with nothing in them: a line that still takes its space. */
+    private fun emptyLines(view: View): List<TextView> =
+        when (view) {
+            is TextView ->
+                listOf(view).filter { it.visibility == View.VISIBLE && it.text.isEmpty() }
+            is ViewGroup -> (0 until view.childCount).flatMap { emptyLines(view.getChildAt(it)) }
+            else -> emptyList()
+        }
+
+    @Test
+    fun `a finished download takes no space for the expiry line`() {
+        val (_, transfer) = tvSendToPhone()
+        val url = urlIn(transfer)
+        val name = File(activity.cacheDir, "diagnostics").listFiles()!!.single().name
+
+        Socket("127.0.0.1", portOf(url)).use {
+            val path = "/${url.substringAfterLast("/")}/$name"
+            it.getOutputStream().write("GET $path HTTP/1.1\r\n\r\n".toByteArray())
+            it.getInputStream().readBytes()
+        }
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1))
+
+        assertThat(texts(transfer.window!!.decorView)).contains("Downloaded")
+        assertThat(texts(transfer.window!!.decorView).filter { it.startsWith("Expires in") })
+            .isEmpty()
+        assertThat(emptyLines(transfer.window!!.decorView)).isEmpty()
+        dismissAndIdle(transfer)
+    }
+
+    @Test
+    fun `an expired link takes no space for the expiry line`() {
+        val (_, transfer) = tvSendToPhone()
+
+        clock.addAndGet(300_001L)
+        val deadline = System.nanoTime() + 5_000_000_000L
+        while ("Expired" !in texts(transfer.window!!.decorView) && System.nanoTime() < deadline) {
+            Thread.sleep(50)
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1))
+        }
+
+        assertThat(texts(transfer.window!!.decorView)).contains("Expired")
+        assertThat(emptyLines(transfer.window!!.decorView)).isEmpty()
+        dismissAndIdle(transfer)
+    }
+
+    @Test
+    fun `while waiting the expiry line is there`() {
+        val (_, transfer) = tvSendToPhone()
+
+        assertThat(texts(transfer.window!!.decorView)).contains("Expires in 5:00")
+        assertThat(emptyLines(transfer.window!!.decorView)).isEmpty()
+        dismissAndIdle(transfer)
+    }
+
+    /** Runs the "background" work when the test says so, as a slow export does. */
+    private class HeldDispatcher : CoroutineDispatcher() {
+        private val held = ArrayDeque<Runnable>()
+        val pending: Int
+            get() = held.size
+
+        override fun dispatch(context: CoroutineContext, block: Runnable) {
+            held += block
+        }
+
+        fun finish() {
+            while (held.isNotEmpty()) held.removeFirst().run()
+        }
+    }
+
+    private fun progressDialog(): AlertDialog? =
+        ShadowAlertDialog.getLatestAlertDialog()?.takeIf { it.isShowing }
+
+    private fun hasProgressBar(view: View): Boolean =
+        view is ProgressBar ||
+            (view is ViewGroup &&
+                (0 until view.childCount).any { hasProgressBar(view.getChildAt(it)) })
+
+    @Test
+    fun `while the bundle is built a dialog with a progress bar says so`() {
+        val held = HeldDispatcher()
+
+        preference().apply { ioDispatcher = held }.onClick()
+
+        val dialog = progressDialog().also { assertThat(it).isNotNull() }!!
+        assertThat(texts(dialog.window!!.decorView)).contains("Creating the diagnostic bundle…")
+        assertThat(hasProgressBar(dialog.window!!.decorView)).isTrue()
+        held.finish()
+    }
+
+    @Test
+    fun `the progress dialog goes away with the result`() {
+        val held = HeldDispatcher()
+        preference().apply { ioDispatcher = held }.onClick()
+        val dialog = progressDialog().also { assertThat(it).isNotNull() }!!
+
+        held.finish()
+
+        assertThat(dialog.isShowing).isFalse()
+        assertThat(savedDialog()).isNotSameInstanceAs(dialog)
+        assertThat(savedDialog().isShowing).isTrue()
+    }
+
+    @Test
+    fun `the progress dialog goes away when the export fails`() {
+        File(activity.cacheDir, "diagnostics").writeText("a file, not a directory")
+        val held = HeldDispatcher()
+        preference().apply { ioDispatcher = held }.onClick()
+        val dialog = progressDialog().also { assertThat(it).isNotNull() }!!
+
+        held.finish()
+
+        assertThat(dialog.isShowing).isFalse()
+        assertThat(ShadowToast.getTextOfLatestToast())
+            .isEqualTo("Could not create the diagnostic bundle. See the log for details.")
+    }
+
+    @Test
+    fun `a second click while the bundle is built starts no second export`() {
+        val held = HeldDispatcher()
+        val exports = AtomicInteger()
+        val preference =
+            preference().apply {
+                ioDispatcher = held
+                val provider = sectionsProvider
+                sectionsProvider = {
+                    exports.incrementAndGet()
+                    provider()
+                }
+            }
+
+        preference.onClick()
+        preference.onClick()
+        held.finish()
+
+        assertThat(exports.get()).isEqualTo(1)
+        assertThat(held.pending).isEqualTo(0)
     }
 
     @Test

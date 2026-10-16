@@ -58,7 +58,8 @@ class StreamFailureClassifierTest {
 
     @Test
     fun `exhausted launch retries are a busy host`() {
-        val failure = classify(start(cause = CauseKind.HTTP, httpCode = 503, retriesExhausted = true))
+        val failure =
+            classify(start(cause = CauseKind.HTTP, httpCode = 503, retriesExhausted = true))
 
         assertThat(failure.kind).isEqualTo(FailureKind.HOST_BUSY)
     }

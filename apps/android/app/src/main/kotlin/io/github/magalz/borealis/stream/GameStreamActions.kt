@@ -33,6 +33,8 @@ interface InputSink {
     fun sendUtf8Text(text: String)
 
     fun sendMouseButtonUp(button: Byte)
+
+    fun requestKeyframe()
 }
 
 private class NvConnectionInput(private val connection: NvConnection) : InputSink {
@@ -42,6 +44,8 @@ private class NvConnectionInput(private val connection: NvConnection) : InputSin
     override fun sendUtf8Text(text: String) = connection.sendUtf8Text(text)
 
     override fun sendMouseButtonUp(button: Byte) = connection.sendMouseButtonUp(button)
+
+    override fun requestKeyframe() = connection.requestKeyframe()
 }
 
 /**
@@ -53,7 +57,7 @@ class GameStreamActions
 internal constructor(
     private val activity: Activity,
     private val input: InputSink,
-    private val touchContexts: Array<out TouchContext?>,
+    private val controls: StreamControls,
     private val heldKeys: HeldKeys,
     private val entryPoint: () -> StreamEntryPoint,
     private val scope: CoroutineScope,
@@ -61,12 +65,12 @@ internal constructor(
     constructor(
         activity: Activity,
         connection: NvConnection,
-        touchContexts: Array<TouchContext?>,
+        controls: StreamControls,
         heldKeys: HeldKeys,
     ) : this(
         activity,
         NvConnectionInput(connection),
-        touchContexts,
+        controls,
         heldKeys,
         { StreamEntryPoint.from(activity) },
         appScope,
@@ -109,7 +113,7 @@ internal constructor(
         for ((androidButtons, button) in MOUSE_BUTTONS) {
             if (mouseButtons and androidButtons != 0) input.sendMouseButtonUp(button)
         }
-        touchContexts.forEach { it?.cancelTouch() }
+        controls.touchContexts.forEach { it?.cancelTouch() }
     }
 
     override fun sendText(text: String) = input.sendUtf8Text(text)

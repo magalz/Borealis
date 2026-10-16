@@ -32,6 +32,10 @@ class RecordingInput : InputSink {
         events += "mouse up $button"
     }
 
+    override fun requestKeyframe() {
+        events += "keyframe"
+    }
+
     private companion object {
         const val DOWN: Byte = 0x03
     }

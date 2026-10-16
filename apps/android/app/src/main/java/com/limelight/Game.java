@@ -39,7 +39,9 @@ import io.github.magalz.borealis.stream.ChromeMode;
 import io.github.magalz.borealis.stream.GameStreamActions;
 import io.github.magalz.borealis.stream.StartStage;
 import io.github.magalz.borealis.stream.StreamSession;
+import io.github.magalz.borealis.stream.StreamControls;
 import io.github.magalz.borealis.stream.StreamSessionFactory;
+import io.github.magalz.borealis.stream.TouchContexts;
 import io.github.magalz.borealis.stream.host.HeldKeys;
 import io.github.magalz.borealis.stream.host.InputRoute;
 import io.github.magalz.borealis.stream.host.StreamChromeHost;
@@ -543,7 +545,10 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
         }
 
         // BOREALIS: the stream chrome over the stream view shows the start, the conflict and the failures (stream)
-        streamActions = new GameStreamActions(this, conn, touchContextMap, heldKeys);
+        streamActions = new GameStreamActions(this, conn,
+                new StreamControls(controllerHandler, touchContextMap, streamView, () -> streamSession.closePanel(),
+                        mode -> TouchContexts.build(mode, conn, streamView, prefConfig)),
+                heldKeys);
         streamSession = StreamSessionFactory.create(this, prefConfig, appName, pcName, streamActions);
         chromeHost = new StreamChromeHost(this, streamSession, streamView, this::chromeCaptured, this::chromeReleased);
         addContentView(chromeHost, new FrameLayout.LayoutParams(

@@ -27,7 +27,7 @@ private const val DISABLED_ALPHA = 0.38f
 private val GROUP_PADDING = 3.dp
 private val SEGMENT_GAP = 2.dp
 private val SEGMENT_MIN_HEIGHT = 32.dp
-private val SEGMENT_PADDING_HORIZONTAL = 12.dp
+private val SEGMENT_PADDING_HORIZONTAL = 9.dp
 private val SEGMENT_PADDING_VERTICAL = 4.dp
 
 /**

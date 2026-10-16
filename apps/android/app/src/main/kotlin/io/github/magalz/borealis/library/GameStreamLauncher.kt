@@ -21,9 +21,11 @@ constructor(private val connection: ComputerManagerConnection) : StreamLauncher 
                 ?: return false
         val cached = parseApps(computer.rawAppList).firstOrNull { it.appId == request.appId }
         val hdr = cached?.isHdrSupported ?: request.hdrSupported
+        // A resume knows no name; the cached list may still have it.
+        val name = request.appName ?: cached?.appName ?: UNKNOWN_APP_NAME
         binder.startStream(
             activity,
-            NvApp(request.appName ?: UNKNOWN_APP_NAME, request.appId, hdr),
+            NvApp(name, request.appId, hdr),
             computer,
         )
         return true

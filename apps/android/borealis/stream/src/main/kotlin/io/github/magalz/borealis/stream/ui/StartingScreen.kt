@@ -42,6 +42,7 @@ import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamIntents
 import io.github.magalz.borealis.stream.StreamPhase
+import io.github.magalz.borealis.stream.ui.common.appLabel
 import io.github.magalz.borealis.stream.ui.common.onGamepadB
 
 /** Marks the column of the starting screen, so a test can measure it. */
@@ -110,7 +111,7 @@ fun StartingScreen(
 private fun Heading(appName: String, hostName: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            stringResource(R.string.stream_starting_title, appName),
+            stringResource(R.string.stream_starting_title, appLabel(appName)),
             Modifier.semantics { heading() },
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.titleLarge,
@@ -129,7 +130,7 @@ private fun Heading(appName: String, hostName: String) {
 private fun steps(appName: String, hostName: String): List<String> =
     listOf(
         stringResource(R.string.stream_starting_step_connecting, hostName),
-        stringResource(R.string.stream_starting_step_app, appName),
+        stringResource(R.string.stream_starting_step_app, appLabel(appName)),
         stringResource(R.string.stream_starting_step_display),
         stringResource(R.string.stream_starting_step_first_frame),
     )

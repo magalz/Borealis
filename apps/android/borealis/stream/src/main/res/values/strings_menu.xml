@@ -30,6 +30,8 @@
     <string name="stream_menu_disconnect">Disconnect</string>
     <!-- %1$s is the app. -->
     <string name="stream_menu_disconnect_consequence">%1$s keeps running on the PC</string>
+    <!-- The same when the app is not known. -->
+    <string name="stream_menu_disconnect_consequence_unknown">The app keeps running on the PC</string>
     <!-- %1$s is the app. -->
     <string name="stream_menu_quit">Quit %1$s</string>
     <string name="stream_menu_quit_consequence">Ends the app on the PC</string>

@@ -29,6 +29,7 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.stream.StreamIntents
+import io.github.magalz.borealis.stream.ui.common.appLabel
 import io.github.magalz.borealis.stream.ui.common.onGamepadB
 import io.github.magalz.borealis.stream.ui.error.ErrorActions
 import io.github.magalz.borealis.stream.ui.error.errorCopy
@@ -53,7 +54,7 @@ fun ConnectionErrorScreen(
     val gutter = LocalBorealisSpacing.current.gutter
     val copy = errorCopy(failure.kind)
     // The title of a generic failure names the app; every other kind names the host.
-    val subject = if (failure.kind == FailureKind.GENERIC) appName else hostName
+    val subject = if (failure.kind == FailureKind.GENERIC) appLabel(appName) else hostName
     Box(
         Modifier.fillMaxSize()
             .background(colors.page)

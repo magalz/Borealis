@@ -8,7 +8,7 @@ class Utf8TextTest {
 
     @Test
     fun `accented letters take two bytes each`() {
-        assertThat(Utf8Text.bytes("ção")).isEqualTo(bytes(0x63, 0xC3, 0xA7, 0xC3, 0xA3, 0x6F))
+        assertThat(Utf8Text.bytes("ção")).isEqualTo(bytes(0xC3, 0xA7, 0xC3, 0xA3, 0x6F))
     }
 
     @Test
@@ -19,7 +19,7 @@ class Utf8TextTest {
     @Test
     fun `mixed text keeps every character`() {
         assertThat(Utf8Text.bytes("ção 🎮"))
-            .isEqualTo(bytes(0x63, 0xC3, 0xA7, 0xC3, 0xA3, 0x6F, 0x20, 0xF0, 0x9F, 0x8E, 0xAE))
+            .isEqualTo(bytes(0xC3, 0xA7, 0xC3, 0xA3, 0x6F, 0x20, 0xF0, 0x9F, 0x8E, 0xAE))
     }
 
     @Test

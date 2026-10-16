@@ -89,10 +89,23 @@ class StreamChromeHostTest {
     }
 
     @Test
-    fun `a modal chrome consumes every touch and motion, so none reaches the stream`() {
+    fun `a modal chrome consumes every touch and pointer motion, so none reaches the stream`() {
         assertThat(host.dispatchTouchEvent(touch(MotionEvent.ACTION_DOWN))).isTrue()
         assertThat(probe.touches).containsExactly(MotionEvent.ACTION_DOWN)
         assertThat(host.dispatchGenericMotionEvent(mouse(MotionEvent.ACTION_SCROLL))).isTrue()
+        assertThat(host.dispatchGenericMotionEvent(mouse(MotionEvent.ACTION_HOVER_MOVE))).isTrue()
+    }
+
+    @Test
+    fun `a modal chrome leaves joystick and hat motion unconsumed, so Android makes a D-pad of it`() {
+        val hat = touch(MotionEvent.ACTION_MOVE).also { it.source = InputDevice.SOURCE_JOYSTICK }
+        val gamepad =
+            touch(MotionEvent.ACTION_MOVE).also {
+                it.source = InputDevice.SOURCE_JOYSTICK or InputDevice.SOURCE_GAMEPAD
+            }
+
+        assertThat(host.dispatchGenericMotionEvent(hat)).isFalse()
+        assertThat(host.dispatchGenericMotionEvent(gamepad)).isFalse()
     }
 
     @Test

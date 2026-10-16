@@ -17,6 +17,9 @@ class InputRoute(private val mode: () -> ChromeMode) {
     @Suppress("UnusedParameter") // Overload of the key form; the mode alone decides.
     fun toChrome(event: MotionEvent): Boolean = motionToChrome(mode())
 
+    /** True when [event] is a key the modal chrome treats as Back. */
+    fun actsAsBack(event: KeyEvent): Boolean = actsAsBack(mode(), event.keyCode)
+
     companion object {
         /**
          * Only the modal chrome takes keys, all of them but the volume and the media keys, which
@@ -24,6 +27,9 @@ class InputRoute(private val mode: () -> ChromeMode) {
          */
         fun keyToChrome(mode: ChromeMode, keyCode: Int): Boolean =
             mode == ChromeMode.MODAL && keyCode !in SYSTEM_KEYS
+
+        /** Stub: the hardware Escape key is not Back yet. */
+        @Suppress("UnusedParameter") fun actsAsBack(mode: ChromeMode, keyCode: Int): Boolean = false
 
         /** Only the modal chrome takes motion: the stream keeps touches in every other mode. */
         fun motionToChrome(mode: ChromeMode): Boolean = mode == ChromeMode.MODAL

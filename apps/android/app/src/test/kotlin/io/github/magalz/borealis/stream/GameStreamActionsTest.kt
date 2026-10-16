@@ -4,17 +4,20 @@ import android.app.Activity
 import android.content.Intent
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.Game
 import com.limelight.binding.input.touch.TouchContext
 import io.github.magalz.borealis.host.launch.ConflictChoice
 import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.domain.QuitResult
+import io.github.magalz.borealis.library.domain.WakeResult
 import io.github.magalz.borealis.library.shell.LibraryActivity
 import io.github.magalz.borealis.settings.BorealisSettingsActivity
 import io.github.magalz.borealis.stream.host.HeldKeys
 import io.github.magalz.borealis.stream.keys.KeyChord
 import io.github.magalz.borealis.stream.keys.KeyModifier
 import io.github.magalz.borealis.stream.keys.Shortcuts
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import org.junit.Before
@@ -22,7 +25,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowToast
 
@@ -205,7 +207,7 @@ class GameStreamActionsTest {
     }
 
     @Test
-    fun `diagnostics open the Borealis settings and keep streaming`() {
+    fun `diagnostics open the Borealis settings and leave finishing to the activity`() {
         actions.openDiagnostics()
 
         val started = shadowOf(activity).nextStartedActivity
@@ -233,20 +235,80 @@ class GameStreamActionsTest {
         assertThat(GameStreamActions.menuHintPending(activity)).isFalse()
     }
 
+    private fun retryOf(intent: Intent): Pair<Activity, Intent?> {
+        val target = Robolectric.buildActivity(Activity::class.java, intent).setup().get()
+        val retrying = actionsFor(target)
+        retrying.retry()
+        retrying.retry()
+        val started = shadowOf(target).nextStartedActivity
+        assertThat(shadowOf(target).nextStartedActivity).isNull()
+        return target to started
+    }
+
     @Test
-    fun `retrying finishes the activity and starts the same intent once it is destroyed`() {
-        val controller = Robolectric.buildActivity(Activity::class.java, activity.intent).setup()
-        val retrying = actionsFor(controller.get())
+    fun `retrying starts the library on the launch of this app while the stream is in front`() {
+        val intent = Intent().putExtra(Game.EXTRA_PC_UUID, "host-1").putExtra(Game.EXTRA_APP_ID, 42)
 
-        retrying.retry()
-        retrying.retry()
-        assertThat(controller.get().isFinishing).isTrue()
-        controller.pause().stop().destroy()
+        val (target, started) = retryOf(intent)
 
-        val application = shadowOf(RuntimeEnvironment.getApplication())
-        val relaunched = application.nextStartedActivity
-        assertThat(relaunched.getStringExtra(Game.EXTRA_PC_UUID)).isEqualTo("host-1")
-        assertThat(application.nextStartedActivity).isNull()
+        assertThat(started?.component?.className).isEqualTo(LibraryActivity::class.java.name)
+        assertThat(LibraryLaunchRequest.fromExtras(started?.extras))
+            .isEqualTo(LibraryLaunchRequest.Launch("host-1", 42))
+        assertThat(target.isFinishing).isTrue()
+    }
+
+    @Test
+    fun `retrying without an app opens the apps of the host, without a host the hosts`() {
+        val noApp = Intent().putExtra(Game.EXTRA_PC_UUID, "host-1")
+        assertThat(LibraryLaunchRequest.fromExtras(retryOf(noApp).second?.extras))
+            .isEqualTo(LibraryLaunchRequest.Apps("host-1"))
+
+        val noHost = Intent().putExtra(Game.EXTRA_APP_ID, 42)
+        assertThat(LibraryLaunchRequest.fromExtras(retryOf(noHost).second?.extras))
+            .isEqualTo(LibraryLaunchRequest.Hosts)
+    }
+
+    @Test
+    fun `waking tells what happened`() {
+        val texts =
+            mapOf(
+                WakeResult.SENT to "Wake-up sent. The PC can take a minute to appear.",
+                WakeResult.ALREADY_ONLINE to "The PC is already on.",
+                WakeResult.NO_MAC_ADDRESS to
+                    "Borealis does not know this PC's network address yet. Pair it once while it is on.",
+                WakeResult.FAILED to "Could not send the wake-up.",
+            )
+        for ((result, text) in texts) {
+            entryPoint.hosts.result = result
+
+            actions.wakeHost()
+
+            assertWithMessage(result.name)
+                .that(ShadowToast.getTextOfLatestToast())
+                .isEqualTo(text)
+        }
+    }
+
+    @Test
+    fun `a second quit while the first is under way does nothing`() {
+        val gate = CompletableDeferred<Unit>()
+        entryPoint.apps.gate = gate
+
+        actions.quitApp()
+        actions.quitApp()
+        gate.complete(Unit)
+
+        assertThat(entryPoint.apps.quits).containsExactly("host-1")
+    }
+
+    @Test
+    fun `a failed quit can be tried again`() {
+        entryPoint.apps.result = QuitResult.Failed(null)
+
+        actions.quitApp()
+        actions.quitApp()
+
+        assertThat(entryPoint.apps.quits).containsExactly("host-1", "host-1")
     }
 
     private companion object {

@@ -8,6 +8,7 @@ import io.github.magalz.borealis.library.domain.HostAddress
 import io.github.magalz.borealis.library.domain.HostRepository
 import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.domain.WakeResult
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
@@ -37,17 +38,21 @@ class RecordingInput : InputSink {
 class FakeApps(var result: QuitResult = QuitResult.Quit) : AppRepository {
     val quits = mutableListOf<String>()
 
+    /** When set, [quit] waits for it, as a request that is still under way. */
+    var gate: CompletableDeferred<Unit>? = null
+
     override fun apps(hostId: String): Flow<AppsSnapshot> = emptyFlow()
 
     override suspend fun setHidden(hostId: String, appId: Int, hidden: Boolean) = Unit
 
     override suspend fun quit(hostId: String): QuitResult {
         quits += hostId
+        gate?.await()
         return result
     }
 }
 
-class FakeHosts : HostRepository {
+class FakeHosts(var result: WakeResult = WakeResult.SENT) : HostRepository {
     val wakes = mutableListOf<String>()
 
     override val hosts: Flow<List<Host>> = emptyFlow()
@@ -56,7 +61,7 @@ class FakeHosts : HostRepository {
 
     override suspend fun wake(hostId: String): WakeResult {
         wakes += hostId
-        return WakeResult.SENT
+        return result
     }
 
     override suspend fun forget(hostId: String) = Unit

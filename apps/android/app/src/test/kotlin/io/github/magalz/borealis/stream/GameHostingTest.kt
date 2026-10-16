@@ -51,4 +51,32 @@ class GameHostingTest {
             assertThat(body).contains("chromeInput.toChrome(")
         }
     }
+
+    private fun body(signature: String): String {
+        val start = source.indexOf(signature)
+        check(start >= 0) { "$signature not found" }
+        return source.substring(start, source.indexOf("\n    }\n", start))
+    }
+
+    @Test
+    fun `taking the input forgets the modifier state, so no key goes on with a stale Shift`() {
+        val body = body("private void chromeCaptured()")
+
+        assertThat(body).contains("modifierFlags = 0")
+        assertThat(body).contains("specialKeyCode = KeyEvent.KEYCODE_UNKNOWN")
+        assertThat(body).contains("waitingForAllModifiersUp = false")
+    }
+
+    @Test
+    fun `giving the input back grabs only when the user had it grabbed before`() {
+        assertThat(body("private void chromeCaptured()"))
+            .contains("grabbedBeforeCapture = grabbedInput")
+        assertThat(body("private void chromeReleased()")).contains("grabbedBeforeCapture")
+    }
+
+    @Test
+    fun `the hardware Escape key acts as Back while the chrome is modal`() {
+        assertThat(body("public boolean onKeyDown(")).contains("chromeInput.actsAsBack(")
+        assertThat(body("public boolean onKeyUp(")).contains("chromeInput.actsAsBack(")
+    }
 }

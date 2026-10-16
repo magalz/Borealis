@@ -76,6 +76,33 @@ class InputRouteTest {
     }
 
     @Test
+    fun `a hardware Escape acts as Back in the modal chrome only`() {
+        for (mode in ChromeMode.entries) {
+            assertWithMessage(mode.name)
+                .that(InputRoute.actsAsBack(mode, KeyEvent.KEYCODE_ESCAPE))
+                .isEqualTo(mode == ChromeMode.MODAL)
+        }
+    }
+
+    @Test
+    fun `no other key acts as Back`() {
+        for ((name, keyCode) in keys + systemKeys - "Escape") {
+            assertWithMessage(name).that(InputRoute.actsAsBack(ChromeMode.MODAL, keyCode)).isFalse()
+        }
+    }
+
+    @Test
+    fun `the route reads the mode again for the Escape key too`() {
+        var mode = ChromeMode.IDLE
+        val route = InputRoute { mode }
+        val escape = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ESCAPE)
+
+        assertThat(route.actsAsBack(escape)).isFalse()
+        mode = ChromeMode.MODAL
+        assertThat(route.actsAsBack(escape)).isTrue()
+    }
+
+    @Test
     fun `the route reads the mode again for every event`() {
         var mode = ChromeMode.IDLE
         val route = InputRoute { mode }

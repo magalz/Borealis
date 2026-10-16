@@ -70,18 +70,20 @@ row is disabled; it needs the Phase 3 host API and cannot be chosen.
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
-| UC-004-T1 | Given a TV stream, when the user presses Back, then the menu opens and the stream does not end. | UI | exists (Sprint 5, unit) |
+| UC-004-T1 | Given a TV stream, when the user presses Back, then the menu opens and the stream does not end. | UI | exists (Sprint 5, unit; device round) |
 | UC-004-T2 | Given a gamepad stream, when Select + Start is held, then the menu opens; a short press does not open it. | unit | exists (Sprint 5, unit) |
-| UC-004-T3 | Given a phone stream, when the user pulls the top handle down, then the menu opens. | UI | exists (Sprint 5, UI) |
-| UC-004-T4 | Given the menu is open, when the user chooses Disconnect, then the stream ends, the app keeps running on the host and SESSION_END is written. | emulator | planned (device round, Sprint 5) |
-| UC-004-T5 | Given the menu is open, when the user chooses Quit, then the app ends on the host and SESSION_END is written. | emulator | planned (device round, Sprint 5) |
-| UC-004-T6 | Given the Overlay row is set to Off, Compact or Detailed, when the menu closes, then the overlay shows that choice. | UI | partly exists (Sprint 5, UI) |
+| UC-004-T3 | Given a phone stream, when the user pulls the top handle down, then the menu opens. | UI | exists (Sprint 5, UI; device round) |
+| UC-004-T4 | Given the menu is open, when the user chooses Disconnect, then the stream ends, the app keeps running on the host and SESSION_END is written. | emulator | exists (Sprint 5, device round) |
+| UC-004-T5 | Given the menu is open, when the user chooses Quit, then the app ends on the host and SESSION_END is written. | emulator | exists (Sprint 5, device round) |
+| UC-004-T6 | Given the Overlay row is set to Off, Compact or Detailed, when the menu closes, then the overlay shows that choice. | UI | partly exists (Sprint 5, UI; device round) |
 | UC-004-T7 | Given the menu is open, when the user reads the Display for next launch row, then the row is disabled and cannot be chosen. | UI | exists (Sprint 5, UI) |
 
 Sprint 5 built the in-game menu and its logic. A test marked "exists (Sprint 5,
 unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose test
-that runs on Robolectric. Emulator and device tests are planned for the device
-round (S5-T14, see [device validation](../development/device-validation.md)).
+that runs on Robolectric. "device round" marks a check that the Sprint 5 device
+round of 2026-10-16 ran on a TV or a phone (see
+[device validation](../development/device-validation.md), section 10). The
+gamepad chord (UC-004-T2) was not run on a device.
 
 Partly covered:
 
@@ -89,10 +91,11 @@ Partly covered:
   else is called (no stream end). It runs on the session logic, not on a TV
   screen.
 - UC-004-T4 and UC-004-T5: the unit tests check the SESSION_END reason and that
-  the activity finishes. The app staying on the host, or ending on it, needs
-  the device round.
+  the activity finishes. The device round checked on the TV that the app stays
+  on the host (Disconnect) and ends on it (Quit).
 - UC-004-T6: `InGameMenuTest` checks that the Overlay row sets the mode the user
-  picks. No test checks the overlay on the screen after the menu closes.
+  picks. No automated test checks the overlay on the screen after the menu
+  closes. The device round checked it on the TV.
 
 ## Host dependency
 

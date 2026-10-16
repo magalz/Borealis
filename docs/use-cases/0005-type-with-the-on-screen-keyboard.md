@@ -71,22 +71,23 @@ what they name; the host's response to a key is outside this use case.
 | --- | --- | --- | --- |
 | UC-005-T1 | Given the keyboard is open, when the user taps Ctrl and then A, then Ctrl+A is sent once and Ctrl is cleared. | unit | exists (Sprint 5, UI) |
 | UC-005-T2 | Given the keyboard is open, when the user taps the Alt+Tab chip, then Alt+Tab is sent once. | unit | exists (Sprint 5, UI) |
-| UC-005-T3 | Given the TV keyboard is open, when the D-pad moves to a key and OK is pressed, then that key is typed. | UI | exists (Sprint 5, UI) |
+| UC-005-T3 | Given the TV keyboard is open, when the D-pad moves to a key and OK is pressed, then that key is typed. | UI | exists (Sprint 5, UI; device round) |
 | UC-005-T4 | Given the handheld keyboard is open, when Y is pressed, then Backspace is sent. | UI | exists (Sprint 5, UI) |
-| UC-005-T5 | Given the phone keyboard is open, when the stream is shown, then the picture stays visible above the keyboard. | UI | partly exists (Sprint 5, UI) |
+| UC-005-T5 | Given the phone keyboard is open, when the stream is shown, then the picture stays visible above the keyboard. | UI | partly exists (Sprint 5, UI; device round) |
 | UC-005-T6 | Given keys are typed, when logs and the audit trail are read, then no typed key text appears in them. | unit | partly exists (Sprint 5, unit) |
 
 Sprint 5 built the Borealis keyboard and its logic. A test marked "exists (Sprint
 5, unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose
-test that runs on Robolectric. The emulator and device checks of the keyboard
-are part of the device round (S5-T14, see
-[device validation](../development/device-validation.md)).
+test that runs on Robolectric. "device round" marks a check that the Sprint 5
+device round of 2026-10-16 ran on a TV or a phone (see
+[device validation](../development/device-validation.md), section 10). The
+round notes do not cover the key-text logs (UC-005-T6).
 
 Partly covered:
 
 - UC-005-T5: `StreamKeyboardTest` checks that the docked keyboard fills only the
   bottom half of the screen. It does not check that the stream stays visible
-  above it.
+  above it. The device round checked it on the phone.
 - UC-005-T6: a test scans the keyboard sources and fails if they call the log
   or `println`. The text path and the audit trail are not checked by a test.
 

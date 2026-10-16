@@ -1,10 +1,10 @@
 # Device validation runbook
 
-This runbook checks Borealis Phase 1 and Sprints 2 to 4 on two devices against
+This runbook checks Borealis Phase 1 and Sprints 2 to 5 on two devices against
 LuminalShine 26.09.1 running on the owner's Windows PC. It is for the owner and
 for the orchestrator who runs the checks. Run the steps in order and record the
-results as a new section with a table, like sections 7 to 9. Sections 6 to 9
-hold the results of Phase 1 and Sprints 2 to 4, in that order.
+results as a new section with a table, like sections 7 to 10. Sections 6 to 10
+hold the results of Phase 1 and Sprints 2 to 5, in that order.
 
 Sources: [host contract](../host-contract/luminalshine.md) (cited as "contract"),
 [Borealis Android README](../../apps/android/borealis/README.md),
@@ -781,9 +781,129 @@ Follow-ups:
   a device.
 - Test keyboard input in a stream, Send to phone at 720p, and a handheld
   device.
-- The launcher shortcuts still open the 12.2 `PcView` and `AppView`
-  (`ShortcutTrampoline`) until Sprint 6.
+- Done in Sprint 5: the launcher shortcuts open the Library
+  (`ShortcutTrampoline` starts `LibraryActivity`), and `PcView` and `AppView`
+  are removed.
 - The host card does not yet show the detail line (version and address) or the
   codec and HDR chips. The state does not hold them yet.
 - The app start time on the TV (about 4 s to the first frame of the activity)
   is unchanged. It is outside this sprint.
+
+## 10. Results: Sprint 5, 2026-10-16
+
+Build: the debug APK from the phase branch at `c1c4455a`, installed with
+`adb install -r` (data kept). The code is the same as `1ce73b9f`; only docs
+changed after it. The re-check ran on build `df093832`. The fixes for O1 and D6
+came later and are covered by unit tests. Host: LuminalShine 26.09.1 on the PC,
+with the `mouse` and `keyboard` settings enabled. Keyboard tests typed into a
+test file open in Notepad on the PC. The first round used ADB over Wi-Fi on both
+devices. The re-check used USB on the S22 and ADB over Wi-Fi on the TV.
+
+TV (Google TV Streamer, Android 14):
+
+| Scenario | Result | Evidence and notes |
+| --- | --- | --- |
+| Hosts cards | pass | The paired PC shows its address and the tags HEVC 10-bit and 4:4:4. An unpaired host shows "Found on this network" and Pair. |
+| Starting stream screen | pass | Four stages: "Connecting" done, "Starting Desktop" current, the 15 s note, and Cancel focused. First video packet about 1.6 s after the request. |
+| First-run hint | pass | "Press Back for the menu" appears over the stream and then goes away. |
+| Back opens the menu (UC-004-T1) | pass | Remote Back opened the side panel. The stream kept playing behind the scrim, with focus on "Back to stream". |
+| Overlay Detailed (UC-004-T6) | pass | Real figures: 1280x720, 59 fps, HEVC, decoder name, host processing min, avg and max, network RTT with variance, loss and bitrate. The overlay stays after the menu closes. Decode time read 0.0 ms on the MediaTek low-latency decoder (D5). |
+| Refresh the picture | pass | The log shows "IDR frame request sent" and the menu closes. |
+| Borealis keyboard | pass | Focus starts on Q. D-pad and OK typed letters. A latched Shift and then A typed "A". An adb-injected Y deleted a character, and an adb-injected B closed the keyboard. |
+| Disconnect (UC-004-T4) | pass | Back to the Library. Desktop still runs on the PC. The audit has SESSION_END with reason=disconnect. |
+| Quit with confirmation (UC-004-T5) | partial | The confirmation "Quit Desktop? Unsaved work is lost." opened with Cancel focused, and Quit ended the app (Library shows "Nothing running"). Defect D2: the host ends the stream with -1 right after `/cancel` and answers `/cancel` 7 s later. The error screen showed for about 7 s, and the audit read reason=error code=-1 instead of reason=quit. |
+| Gamepad menu chord (Select+Start held) | not run | adb-injected events come from a virtual device that the client does not treat as a gamepad. A real controller is needed. |
+| Resume after Disconnect | note | The next `/resume` waited about 11 s at `/serverinfo`. This is host teardown after a disconnect (NortheBridge/luminalshine#198). Back during Starting cancelled correctly. |
+| Old PC shortcut (trampoline) | pass | A launcher-style intent (NEW_TASK and CLEAR_TASK flags) with the 12.2 PC shortcut extras opened Apps for that PC. Back went to Hosts. Without the flags `am start` only brought the existing task to the front. |
+| Old game shortcut | pass | The 12.2 game shortcut extras launched Desktop through the Library (`/launch`, first video 1.6 s later). |
+
+Galaxy S22:
+
+| Scenario | Result | Evidence and notes |
+| --- | --- | --- |
+| Hosts cards | pass | Address and tags as on the TV. |
+| Continue row on a cold start | defect | The row showed "An app is running" instead of the app name, although the cached app list on disk names it (D4). |
+| Stream hint and handle | pass | "Pull the handle down or press Back for the menu". A downward drag on the handle opened the menu (UC-004-T3). |
+| Back opens the menu | pass | KEYCODE_BACK during the stream opened the side panel. |
+| Touch mode switch | pass | Direct mode was chosen in the menu. A tap moved the PC cursor to the touched point and placed the caret. |
+| Docked Borealis keyboard (UC-005-T5) | pass | Typed "hi" into the test file. The stream stayed visible above the panel. |
+| System keyboard and UTF-8 | pass | The Android keyboard opened over the stream. Accented text and an emoji typed into the test file arrived correctly on the PC. |
+| Add host, unreachable address (S4 follow-up) | pass | An address on the LAN that no device uses (`192.0.2.x` in this file) gave "Unable to connect to the specified computer. Make sure the required ports are allowed through the firewall." |
+| App actions | pass | Resume, Quit Desktop, Details and Add to home screen. Quit asked for confirmation and ended the app. Pinning the shortcut was not tried. |
+| Scenario 3.5 with the TV | pass | The S22 `/launch` took about 10 s on the host. The TV started one second later and logged `server info timed out, retrying attempt=2`, then `host busy, waiting before resume serverinfo_ms=9390 wait_ms=3000`, then `/resume`. The RTSP handshake completed and both devices showed first video. |
+
+Re-check after the fixes (build `df093832`; S22 over USB, TV over ADB Wi-Fi):
+
+| Defect | Result | Evidence and notes |
+| --- | --- | --- |
+| D1 Back in a segmented control | fixed | TV: Overlay set to Detailed, and one Back closed the menu. |
+| D2 Quit | fixed | TV: "Quitting Desktop..." with a spinner for about 5 s, no error screen, then the Library. The audit has SESSION_END with reason=quit. |
+| D3 placeholder name | fixed | Resume from Continue shows "Desktop" with the PC's name in the menu on the TV and the S22, not the placeholder. |
+| D4 cold start | fixed | TV and S22 after a cold start: Continue shows "Desktop" and "Running on" the PC's name. The card shows HEVC 10-bit, HDR, 4:4:4 and the running app. |
+| D5 decode time | fixed (display) | The Detailed overlay shows "Decode — ms" on the MediaTek decoder. The decoder likely does not report usable timestamps. |
+| O1 rail on Add host | fixed (TV, rail-fix build) | Fixed in S5-T17. A screen recording of Hosts to Add host shows the rail fixed in place for the whole transition, with "Add host" selected. Only the content changes, about 0.6 s after OK. |
+| D6 starting steps | seen, not re-checked | Seen on the TV in a resume recording: the steps went from "Preparing the display" back to "Starting Desktop". Fixed in S5-T17 (`3173152b`). Not re-checked on a device. |
+| D6 starting steps | not in the re-check | Fixed in S5-T17 and covered by unit tests. Pending a device check. |
+
+Defects found and fixed:
+
+- D1: Back with focus inside a segmented control in the menu first moved the
+  focus out of the control (Compose focus exit). A second Back closed the menu.
+  Fix: Back closes the in-game menu and the keyboard at once from any focus
+  (`e2b84755`, S5-T16).
+- D2: Quit showed the error screen for about 7 s, and the audit read
+  reason=error. The host ends the stream with -1 before it answers `/cancel`.
+  Fix: while a quit is pending, the session shows a quiet "Quitting" screen
+  and the audit records reason=quit for any termination code. A quit that then
+  fails shows the failure screen (`7ab51daa`, S5-T16).
+- D3: a resume started from the Continue row with an unknown app name showed
+  the internal placeholder in the menu header and in "Quit app". Fix: the
+  stream never shows the placeholder name of a resumed app (`dfd3f850`,
+  S5-T16).
+- D4: on a cold start the Hosts screen had no app list until the Apps screen
+  polled it. The Continue row said "An app is running", and the HDR tag was
+  missing, although the cached list on disk had the name and HDR support. Fix:
+  a host first seen without an app list is seeded from the cached list
+  (`7b0ab738`, S5-T16).
+- D5: the Detailed overlay showed "Decode 0.0 ms" on the MediaTek decoder. Fix:
+  the overlay shows a dash when the decoder reports no decode time
+  (`c01fe7cb`, S5-T16). The value is shown as "—" (see Follow-ups).
+- O1: on the TV, choosing Add host made the rail disappear first, and the
+  content re-laid out full width. The Add host screen appeared about 1.2 s
+  later, without the rail, so the movement looked truncated. Fix: the rail stays
+  on Hosts, Apps, Add host and Pairing on the TV and the handheld layout. The
+  content cross-fades in 150 ms instead of 700 ms (`8a17989d`, S5-T17).
+- D6: the starting steps could go backwards. A TV recording of a resume showed
+  the steps go from "Preparing the display" back to "Starting Desktop". Cause:
+  the app stage was reported before `/launch` and mapped to the display stage.
+  Fix: the app-name stage is the start of the app, and the later stream stages
+  prepare the display. `StreamSession.onStage` ignores a step before the current
+  one (`3173152b`, S5-T17). Not re-checked on a device.
+
+Not run:
+
+- Gamepad Select+Start chord (UC-004-T2) and USB-driver pads: no real
+  controller. adb-injected events do not count as a gamepad.
+- Picture-in-picture with the menu open, and rotation with the on-screen
+  controller: not tried.
+- Error screen states on a device (host offline, certificate changed, blocked
+  ports): not reproducible without powering off the PC or changing firewall
+  settings. They are covered by unit and screenshot tests. The Quit defect (D2)
+  showed the generic error path before its fix.
+- Full pairing and Send to phone at 720p (Sprint 4 follow-ups).
+
+Follow-ups:
+
+- The gamepad Select+Start chord and USB-driver pads: need a real controller.
+- Picture-in-picture with the menu open.
+- Rotation with the on-screen controller.
+- The error screen states on a device.
+- Full pairing and Send to phone at 720p (from Sprint 4).
+- The MediaTek decoder decode time, shown as "—".
+- The host's slow `/resume` after a disconnect (NortheBridge/luminalshine#198).
+- The host ends the stream before it answers `/cancel`. The client now shows
+  "Quitting" (D2).
+- The TV channel prompt after pairing.
+- The pinned app shortcut icon.
+- `PairingHints` dead code: `pinHint` and `unpairHint` have no caller since
+  `PcView` was removed (see the Borealis Android README).

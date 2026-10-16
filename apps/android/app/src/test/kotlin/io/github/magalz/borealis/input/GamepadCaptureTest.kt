@@ -254,6 +254,34 @@ class GamepadCaptureTest {
     }
 
     @Test
+    fun `the left stick of a USB pad moves the chrome focus only while captured`() {
+        val keys = mutableListOf<Pair<Int, Int>>()
+        rig.handler.setChromeKeySink(
+            ChromeKeySink {
+                keys += it.action to it.keyCode
+                true
+            }
+        )
+
+        padOne.report(0, leftStickY = 1f)
+        padOne.report(0)
+        rig.advanceBy(1)
+        assertThat(keys).isEmpty()
+
+        rig.handler.setCaptured(true)
+        padOne.report(0, leftStickY = 1f)
+        padOne.report(0)
+        rig.advanceBy(1)
+
+        assertThat(keys)
+            .containsExactly(
+                KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.ACTION_UP to KeyEvent.KEYCODE_DPAD_DOWN,
+            )
+            .inOrder()
+    }
+
+    @Test
     fun `a USB pad held when the capture starts does not press in the menu`() {
         val keys = mutableListOf<Int>()
         rig.handler.setChromeKeySink(

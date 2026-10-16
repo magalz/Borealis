@@ -202,9 +202,10 @@ class FakeUsbController(id: Int, listener: UsbDriverListener) :
 
     override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {}
 
-    fun report(buttons: Int, leftStickX: Float = 0f) {
+    fun report(buttons: Int, leftStickX: Float = 0f, leftStickY: Float = 0f) {
         buttonFlags = buttons
         this.leftStickX = leftStickX
+        this.leftStickY = leftStickY
         reportInput()
     }
 }

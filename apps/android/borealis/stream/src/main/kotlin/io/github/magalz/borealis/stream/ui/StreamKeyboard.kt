@@ -19,7 +19,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -28,6 +30,8 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.Chip
 import io.github.magalz.borealis.designsystem.components.KeyboardKey
@@ -89,6 +93,7 @@ fun StreamKeyboard(docked: Boolean, intents: StreamIntents) {
         intents.send(chord)
     }
 
+    val colors = LocalBorealisColors.current
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Column(
             Modifier.testTag("keyboard")
@@ -96,7 +101,8 @@ fun StreamKeyboard(docked: Boolean, intents: StreamIntents) {
                 // A tap between two keys must not reach the stream below.
                 .pointerInput(Unit) { detectTapGestures {} }
                 .gamepadKeys(onClose = intents::closePanel, onBackspace = { type(VK_BACKSPACE) })
-                .background(LocalBorealisColors.current.surface)
+                .background(colors.surface)
+                .drawBehind { drawRect(colors.lineStrong, size = Size(size.width, 1.dp.toPx())) }
                 .padding(
                     start = PANEL_PADDING_HORIZONTAL,
                     top = PANEL_PADDING_TOP,
@@ -211,7 +217,10 @@ private fun KeyRow(keys: List<KeySpec>, actions: KeyActions, firstKeyFocus: Firs
     ) {
         for ((index, key) in keys.withIndex()) {
             val caption = key.label.resolve()
-            var modifier = Modifier.weight(key.style.weight, fill = false).testTag("key:$caption")
+            val name = key.label.name()
+            var modifier = Modifier.weight(key.style.weight, fill = false).testTag("key:$name")
+            // A symbol on the cap is read out as the name of the key.
+            if (name != caption) modifier = modifier.semantics { contentDescription = name }
             if (index == 0 && firstKeyFocus != null) {
                 modifier = modifier.initialFocus(firstKeyFocus.requester, firstKeyFocus.state)
             }

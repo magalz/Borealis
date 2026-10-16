@@ -8,24 +8,35 @@ import io.github.magalz.borealis.designsystem.components.KeyStyle
 import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.keys.KeyModifier
 
-/** What a key shows: a character that needs no translation, or a named key from the resources. */
+/**
+ * What a key shows: a character that needs no translation, a named key from the resources, or a
+ * [Symbol] for a key whose name would not fit its cap and so is read out as its [Symbol.name].
+ */
 internal sealed interface KeyLabel {
     data class Text(val value: String) : KeyLabel
 
     data class Named(@StringRes val id: Int) : KeyLabel
 
+    data class Symbol(val symbol: String, @StringRes val name: Int) : KeyLabel
+
+    /** The text on the cap. */
     @Composable
     fun resolve(): String =
         when (this) {
             is Text -> value
             is Named -> stringResource(id)
+            is Symbol -> symbol
         }
 
     fun resolve(context: Context): String =
         when (this) {
             is Text -> value
             is Named -> context.getString(id)
+            is Symbol -> symbol
         }
+
+    /** What the key is called: the cap, or the name of a [Symbol]. */
+    @Composable fun name(): String = if (this is Symbol) stringResource(name) else resolve()
 }
 
 /** One key of the Borealis keyboard. */
@@ -89,11 +100,19 @@ internal object KeyboardLayout {
     private fun modifier(@StringRes id: Int, modifier: KeyModifier) =
         ModifierKey(KeyLabel.Named(id), modifier)
 
+    // The word does not fit the 72dp cap when the row shrinks or the font grows.
+    private fun backspace() =
+        CharKey(
+            KeyLabel.Symbol("⌫", R.string.stream_keyboard_backspace),
+            VK_BACKSPACE,
+            KeyStyle.Wide,
+        )
+
     /** Q to P; A to L and Backspace; Shift, Z to M and Enter. */
     val letterRows: List<List<KeySpec>> =
         listOf(
             letters("QWERTYUIOP"),
-            letters("ASDFGHJKL") + named(R.string.stream_keyboard_backspace, VK_BACKSPACE),
+            letters("ASDFGHJKL") + backspace(),
             listOf(modifier(R.string.stream_keyboard_shift, KeyModifier.SHIFT)) +
                 letters("ZXCVBNM") +
                 named(R.string.stream_keyboard_enter, VK_ENTER),

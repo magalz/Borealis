@@ -18,7 +18,7 @@ import javax.inject.Inject
 
 /**
  * The launcher activity of the Compose Library on phones, handhelds and TVs (ADR 0052). It does the
- * work the upstream `PcView` did at creation and on resume through [LegacyBridge], and hands the
+ * work the 12.2 host list did at creation and on resume through [LegacyBridge], and hands the
  * streams to the upstream stream activity through [StreamLauncher].
  */
 @AndroidEntryPoint(ComponentActivity::class)

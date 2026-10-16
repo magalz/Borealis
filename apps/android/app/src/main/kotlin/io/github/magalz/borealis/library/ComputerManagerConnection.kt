@@ -40,7 +40,7 @@ constructor(
      * Runs on a polling thread of the service: stores a copy, which the service goes on mutating.
      * The host poll of the service copies a fresh result without an app list over the list that the
      * app list poller stored (`ComputerDetails.update`), so the last list received is kept here;
-     * upstream's `AppView` ignores such a null for the same reason.
+     * the 12.2 app list ignores such a null for the same reason.
      */
     private val listener = ComputerManagerListener { details ->
         details.uuid?.let { id -> publish(id, details.snapshot()) }

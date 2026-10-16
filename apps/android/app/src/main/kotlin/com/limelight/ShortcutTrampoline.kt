@@ -9,7 +9,7 @@ import io.github.magalz.borealis.library.shortcuts.ShortcutIntentParser
 /**
  * The entry of every launcher shortcut, new and pinned by 12.2, so the pinned ones keep working. It
  * only forwards the extras to the Library as a request and finishes; the Library shows offline,
- * unpaired and Wake-on-LAN. (BOREALIS: this replaces the `PcView` and `AppView` stack it started.)
+ * unpaired and Wake-on-LAN. (BOREALIS: this replaces the 12.2 host and app screens it started.)
  */
 class ShortcutTrampoline : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {

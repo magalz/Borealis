@@ -80,31 +80,12 @@
     <string name="summary_resolution_list">Tăng để cải thiện độ rõ của hình ảnh. Giảm để có hiệu năng tốt hơn trên các thiết bị tầm thấp hơn và các mạng chậm hơn.</string>
     <string name="title_resolution_list">Độ phân giải video</string>
     <string name="category_basic_settings">Cài đặt cơ bản</string>
-    <string name="addpc_wrong_sitelocal">Địa chỉ đó trông không đúng. Bạn phải sử dụng địa chỉ IP công khai của router để stream qua Internet.</string>
-    <string name="addpc_enter_ip">Bạn phải nhập một địa chỉ IP</string>
-    <string name="addpc_unknown_host">Không thể xử lý địa chỉ PC. Hãy chắc chắn là bạn không mắc lỗi chính tả trong địa chỉ.</string>
-    <string name="addpc_success">Thêm máy tính thành công</string>
-    <string name="addpc_fail">Không thể kết nối đến máy tính được chỉ định. Hãy chắc chắn là các cổng được yêu cầu được cho phép qua tường lửa.</string>
-    <string name="msg_add_pc">Đang kết nối đến PC…</string>
-    <string name="title_add_pc">Thêm PC thủ công</string>
     <string name="applist_details_id">ID ứng dụng:</string>
     <string name="applist_quit_confirmation">Bạn có chắc bạn muốn thoát ứng dụng đang chạy không\? Tất cả dữ liệu chưa được lưu sẽ bị mất.</string>
-    <string name="applist_quit_fail">Thoát thất bại</string>
-    <string name="applist_quit_success">Thoát thành công</string>
-    <string name="applist_quit_app">Đang thoát</string>
     <string name="applist_refresh_error_msg">Lấy danh sách ứng dụng thất bại</string>
     <string name="applist_refresh_error_title">Lỗi</string>
-    <string name="applist_refresh_msg">Đang làm mới các ứng dụng…</string>
-    <string name="applist_refresh_title">Danh sách ứng dụng</string>
-    <string name="applist_menu_hide_app">Ẩn ứng dụng</string>
     <string name="applist_menu_tv_channel">Thêm vào kênh</string>
-    <string name="applist_menu_scut">Tạo lối tắt</string>
-    <string name="applist_menu_details">Xem chi tiết</string>
     <string name="applist_menu_cancel">Huỷ</string>
-    <string name="applist_menu_quit_and_start">Thoát trò chơi hiện tại và bắt đầu</string>
-    <string name="applist_menu_quit">Thoát phiên làm việc</string>
-    <string name="applist_menu_resume">Tiếp tục phiên làm việc</string>
-    <string name="applist_connect_msg">Đang kết nối đến PC…</string>
     <string name="perf_overlay_decoder">Trình giải mã: %1$s</string>
     <string name="perf_overlay_incomingfps">Tốc độ khung hình đang đến từ mạng: %1$.2f FPS</string>
     <string name="perf_overlay_renderingfps">Tốc độ khung hình kết xuất: %1$.2f FPS</string>
@@ -115,10 +96,6 @@
 \nHãy giảm tốc độ bit</string>
     <string name="delete_pc_msg">Bạn có chắc bạn muốn xoá PC này không\?</string>
     <string name="yes">Có</string>
-    <string name="searching_pc">Đang tìm các PC có GameStream đang chạy…
-\n
-\nHãy chắc chắn là GameStream được bật trong cài đặt GeForce Experience SHIELD.</string>
-    <string name="ip_hint">Địa chỉ IP của PC GeForce</string>
     <string name="conn_terminated_msg">Kết nối đã bị chấm dứt</string>
     <string name="conn_terminated_title">Kết nối bị chấm dứt</string>
     <string name="conn_error_msg">Bắt đầu thất bại</string>
@@ -138,7 +115,6 @@
     <string name="no_frame_received_error">Kết nối mạng của bạn đang không hoạt động tốt. Hãy giảm cài đặt tốc độ bit hoặc thử một kết nối nhanh hơn.</string>
     <string name="no_video_received_error">Không nhận được video từ chủ.</string>
     <string name="video_decoder_init_failed">Khởi tạo trình giải mã video thất bại. Thiết bị có thể không hỗ trợ độ phân giải hoặc tốc độ khung hình đã chọn.</string>
-    <string name="unable_to_pin_shortcut">Launcher hiện tại không hỗ trợ việc tạo các lối tắt được ghim.</string>
     <string name="error_usb_prohibited">Quyền truy cập USB bị cấm bởi quản trị viên thiết bị. Hãy kiểm tra cài đặt Knox hoặc MDM.</string>
     <string name="message_decoding_reset">Trình giải mã video của thiết bị vẫn tiếp tục dừng đột ngột tại các cài đặt stream đã chọn. Các cài đặt stream đã được đặt lại về mặc định.</string>
     <string name="title_decoding_reset">Đã đặt lại cài đặt video</string>
@@ -146,63 +122,20 @@
     <string name="title_decoding_error">Trình giải mã video bị dừng đột ngột</string>
     <string name="error_404">GFE đã trả lời bằng lỗi HTTP 404. Hãy chắc chắn rằng PC của bạn đang chạy một GPU được hỗ trợ. Việc sử dụng phần mềm máy tính từ xa cũng có thể gây ra lỗi này. Hãy thử khởi động lại máy hoặc cài đặt lại GFE.</string>
     <string name="error_unknown_host">Xử lý máy chủ thất bại</string>
-    <string name="error_manager_not_running">Dịch vụ ComputerManager đang không chạy. Vui lòng đợi một vài giây hoặc khởi động lại ứng dụng.</string>
-    <string name="error_pc_offline">Máy tính đang ngoại tuyến</string>
     <string name="summary_checkbox_enable_sops">Cho phép GFE sửa đổi cài đặt trò chơi để stream tối ưu</string>
     <string name="title_checkbox_enable_sops">Tối ưu hoá cài đặt trò chơi</string>
     <string name="category_host_settings">Cài đặt chủ</string>
     <string name="help">Trợ giúp</string>
-    <string name="title_details">Chi tiết</string>
-    <string name="lost_connection">Đã mất kết nối đến PC</string>
     <string name="no">Không</string>
     <string name="conn_establishing_msg">Đang bắt đầu kết nối</string>
-    <string name="unpair_error">Thiết bị đã không được ghép đôi</string>
-    <string name="unpair_fail">Huỷ ghép đôi thất bại</string>
-    <string name="unpair_success">Huỷ ghép đôi thành công</string>
-    <string name="unpairing">Đang huỷ ghép đôi…</string>
-    <string name="wol_fail">Gửi các gói Wake-On-LAN thất bại</string>
-    <string name="wol_waking_msg">PC của bạn có thể sẽ mất một vài giây để thức giấc. Nếu nó không thức giấc, hãy chắc chắn là nó được thiết lập đúng cho Wake-On-LAN.</string>
     <string name="wol_waking_pc">Đang đánh thức PC…</string>
-    <string name="wol_no_mac">Không thể đánh thức PC vì GFE đã không gửi một địa chỉ MAC</string>
-    <string name="wol_pc_online">Máy tính đang trực tuyến</string>
-    <string name="pair_already_in_progress">Việc ghép đôi đang được thực hiện rồi</string>
     <string name="pair_fail">Ghép đôi thất bại</string>
-    <string name="pair_incorrect_pin">PIN không chính xác</string>
-    <string name="pair_pairing_msg">Vui lòng nhập mã PIN sau trên PC mục tiêu:</string>
-    <string name="pair_pairing_title">Đang ghép đôi</string>
     <string name="pair_pc_ingame">Máy tính hiện đang trong một trò chơi. Bạn phải đóng trò chơi trước khi ghép đôi.</string>
     <string name="pair_pc_offline">Máy tính đang ngoại tuyến</string>
-    <string name="pairing">Đang ghép đôi…</string>
     <string name="nettest_text_blocked">Kết nối mạng hiện tại của thiết bị đang chặn Moonlight. Việc stream qua Internet có thể sẽ không được khi đang kết nối đến mạng này.</string>
-    <string name="nettest_text_failure">Kết nối mạng hiện tại của thiết bị có vẻ là đang chặn Moonlight. Việc stream qua Internet có thể sẽ không được khi đang kết nối đến mạng này.
-\n
-\nCác cổng mạng sau bị chặn:
-\n</string>
-    <string name="nettest_text_inconclusive">Việc thử nghiệm mạng không thể được thực hiện vì không có máy chủ thử nghiệm kết nối nào của Moonlight có thể được kết nối đến. Hãy kiểm tra kết nối Internet của bạn hoặc thử lại sau.</string>
-    <string name="nettest_text_success">Mạng của bạn có vẻ là không chặn Moonlight. Nếu bạn vẫn gặp rắc rối trong việc kết nối, hãy kiểm tra cài đặt tường lửa của PC.
-\n
-\nNếu bạn đang cố stream qua Internet, hãy cài đặt Moonlight Internet Hosting Tool trên PC và chạy Internet Streaming Tester được bao gồm trong đó để kiểm tra kết nối Internet của PC.</string>
-    <string name="nettest_title_done">Thử nghiệm mạng hoàn tất</string>
-    <string name="nettest_text_waiting">Moonlight đang thử nghiệm kết nối mạng của bạn để xác định xem NVIDIA GameStream có bị chặn không.
-\n
-\nViệc này có thể sẽ mất một vài giây…</string>
-    <string name="nettest_title_waiting">Đang thử nghiệm kết nối mạng</string>
-    <string name="pcview_menu_details">Xem chi tiết</string>
-    <string name="pcview_menu_test_network">Thử nghiệm kết nối mạng</string>
-    <string name="pcview_menu_delete_pc">Xoá PC</string>
-    <string name="pcview_menu_send_wol">Gửi yêu cầu Wake-On-LAN</string>
     <string name="pcview_menu_unpair_pc">Huỷ ghép đôi</string>
-    <string name="pcview_menu_pair_pc">Ghép đôi với PC</string>
-    <string name="pcview_menu_app_list">Xem tất cả ứng dụng</string>
-    <string name="pcview_menu_header_unknown">Đang làm mới</string>
-    <string name="pcview_menu_header_offline">Ngoại tuyến</string>
-    <string name="pcview_menu_header_online">Trực tuyến</string>
     <string name="help_loading_msg">Đang tải trang trợ giúp…</string>
     <string name="help_loading_title">Trình xem trợ giúp</string>
-    <string name="scut_invalid_app_id">Ứng dụng được cung cấp không hợp lệ</string>
-    <string name="scut_invalid_uuid">PC được cung cấp không hợp lệ</string>
-    <string name="scut_pc_not_found">Không tìm thấy PC</string>
-    <string name="scut_not_paired">PC chưa được ghép đôi</string>
     <string name="scut_deleted_pc">PC đã bị xoá</string>
     <string name="perf_overlay_netlatency">Độ trễ mạng trung bình: %1$d ms (sai số: %2$d ms)</string>
     <string name="perf_overlay_streamdetails">Tốc độ khung hình: %1$s %2$.2f FPS</string>

@@ -4,8 +4,6 @@
     <string name="title_checkbox_touchscreen_trackpad">Dokunmatik ekranı trackpad olarak kullan</string>
     <string name="category_input_settings">Girdi Ayarları</string>
     <string name="summary_language_list">Moonlight için kullanılacak olan dil</string>
-    <string name="ip_hint">Ana bilgisayarın IP adresi</string>
-    <string name="title_details">Detaylar</string>
     <string name="dialog_title_osc_opacity">Saydamlığı değiştir</string>
     <string name="conn_error_title">Bağlantı Hatası</string>
     <string name="conn_starting">Başlatılıyor</string>
@@ -13,54 +11,15 @@
     <string name="summary_audio_config_list">Ev-sinema sistemleri için 5.1 yada 7.1 surround sesi etkinleştir</string>
     <string name="title_checkbox_host_audio">Sesleri bilgisayarda oynat</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
-    <string name="error_pc_offline">Bilgisayar çevrimdışı</string>
-    <string name="unpair_success">Eşleştirme başarıyla kaldırıldı</string>
-    <string name="unpairing">Eşleştirme kaldırılıyor…</string>
     <string name="pair_fail">Eşleştirme başarısız</string>
-    <string name="pair_incorrect_pin">Yanlış PIN</string>
-    <string name="pair_pairing_title">Eşleştiriliyor</string>
     <string name="pair_pc_offline">Bilgisayar çevrimdışı</string>
-    <string name="pairing">Eşleştiriliyor…</string>
-    <string name="nettest_title_waiting">Ağ Bağlantısı Test Ediliyor</string>
-    <string name="pcview_menu_details">Ayrıntıları Görüntüle</string>
-    <string name="pcview_menu_test_network">Ağ Bağlantısını Test Et</string>
-    <string name="pcview_menu_delete_pc">PC\'yi sil</string>
     <string name="pcview_menu_unpair_pc">Eşleşmeyi kaldır</string>
-    <string name="pcview_menu_pair_pc">PC ile eşle</string>
-    <string name="pcview_menu_app_list">Bütün Uygulamaları Göster</string>
-    <string name="pcview_menu_header_unknown">Yenileniyor</string>
-    <string name="pcview_menu_header_offline">Çevrimdışı</string>
-    <string name="pcview_menu_header_online">Çevrimiçi</string>
-    <string name="scut_pc_not_found">PC bulunamadı</string>
-    <string name="scut_not_paired">PC eşleştirilmedi</string>
     <string name="scut_deleted_pc">PC silindi</string>
     <string name="help_loading_msg">Yardım sayfası yükleniyor…</string>
     <string name="help_loading_title">Yardım</string>
-    <string name="scut_invalid_app_id">Tanımlanmış uygulama geçerli değil</string>
-    <string name="scut_invalid_uuid">Tanımlanmış bilgisayar geçerli değil</string>
-    <string name="nettest_text_waiting">Moonlight, gerekli bağlantı noktalarının engellenmediğini belirlemek için ağ bağlantınızı test ediyor.
-\n
-\nBu bir kaç saniye sürebilir…</string>
-    <string name="nettest_title_done">Ağ Testi Tamamlandı</string>
-    <string name="nettest_text_inconclusive">Moonlight\'ın bağlantı testi sunucularından hiçbirine erişilemediği için ağ testi gerçekleştirilemedi. İnternet bağlantınızı kontrol edin veya daha sonra tekrar deneyin.</string>
-    <string name="nettest_text_failure">Cihazınızın mevcut ağ bağlantısı Moonlight\'ı engelliyor gibi görünüyor. Bu ağa bağlıyken İnternet üzerinden yayın akışı çalışmayabilir.
-\n
-\nAşağıdaki ağ bağlantı noktaları engellenmiş:
-\n</string>
     <string name="nettest_text_blocked">Cihazınızın mevcut ağ bağlantısı Moonlight\'ı engelliyor. Bu ağa bağlıyken internet üzerinden yayın akışı çalışmayabilir.</string>
     <string name="pair_pc_ingame">Bilgisayar şu anda bir oyunda. Eşleştirmeden önce oyunu kapatmalısınız.</string>
-    <string name="pair_pairing_msg">Lütfen hedef bilgisayarda aşağıdaki PIN kodunu girin:</string>
-    <string name="pair_already_in_progress">Eşleştirme zaten devam ediyor</string>
-    <string name="wol_pc_online">Bilgisayar çevrimiçi</string>
-    <string name="wol_no_mac">Kayıtlı bir MAC adresi olmadığından bilgisayar uyandırılamıyor</string>
     <string name="wol_waking_pc">Bilgisayar uyandırılıyor…</string>
-    <string name="wol_fail">Yerel Ağda Uyandırma paketleri gönderilemedi</string>
-    <string name="wol_waking_msg">Bilgisayarınızın uyanması birkaç saniye sürebilir. Eğer uyanmazsa, Yerel Ağda Uyandırma için doğru şekilde yapılandırıldığından emin olun.</string>
-    <string name="unpair_fail">Eşleşme kaldırılamadı</string>
-    <string name="unpair_error">Cihaz eşleştirilmedi</string>
-    <string name="nettest_text_success">Ağınız Moonlight\'ı engelliyor gibi görünmüyor. Bağlanmakta hala sorun yaşıyorsanız, bilgisayarınızın güvenlik duvarı ayarlarını kontrol edin.
-\n
-\nİnternet üzerinden yayın yapmaya çalışıyorsanız, Moonlight İnternet Barındırma Aracını bilgisayarınıza yükleyin ve bilgisayarınızın internet bağlantısını kontrol etmek için birlikte verilen İnternet Akış Test Cihazını çalıştırın.</string>
     <string name="title_checkbox_multi_controller">Oyun kumandası varlığını otomatik algıla</string>
     <string name="summary_checkbox_multi_controller">Bu seçeneğin işaretini kaldırmak, oyun kumandasının her zaman mevcut olmasını sağlar</string>
     <string name="summary_checkbox_vibrate_fallback">Oyun kumandanız desteklemiyorsa, gürültüyü taklit etmek için cihazınızı titreştirir</string>
@@ -70,12 +29,10 @@
     <string name="title_checkbox_mouse_nav_buttons">Geri ve ileri fare düğmelerini etkinleştir</string>
     <string name="category_on_screen_controls_settings">Ekran Kontrolleri Ayarları</string>
     <string name="title_checkbox_show_onscreen_controls">Ekran kontrollerini göster</string>
-    <string name="error_manager_not_running">ComputerManager hizmeti çalışmıyor. Lütfen birkaç saniye bekleyin veya uygulamayı yeniden başlatın.</string>
     <string name="error_unknown_host">Ana bilgisayar çözümlenemedi</string>
     <string name="title_decoding_error">Video Kod Çözücü Çöktü</string>
     <string name="message_decoding_reset">Cihazınızın video kod çözücüsü, seçtiğiniz akış ayarlarında çökmeye devam ediyor. Akış ayarlarınız varsayılana sıfırlandı.</string>
     <string name="error_usb_prohibited">USB erişimi cihaz yöneticiniz tarafından yasaklanmıştır. Knox veya MDM ayarlarınızı kontrol edin.</string>
-    <string name="unable_to_pin_shortcut">Mevcut başlatıcınız sabitlenmiş kısayollar oluşturmaya izin vermiyor.</string>
     <string name="video_decoder_init_failed">Video kod çözücüsü başlatılamadı. Cihazınız seçilen çözünürlüğü veya kare hızını desteklemiyor olabilir.</string>
     <string name="no_video_received_error">Ana bilgisayardan video alınmadı.</string>
     <string name="no_frame_received_error">Ağ bağlantınız iyi performans göstermiyor. Video bit hızı ayarınızı düşürün veya daha hızlı bir bağlantı deneyin.</string>
@@ -87,7 +44,6 @@
     <string name="conn_terminated_title">Bağlantı sonlandırıldı</string>
     <string name="conn_terminated_msg">Bağlantı sonlandırıldı.</string>
     <string name="yes">Evet</string>
-    <string name="lost_connection">Bilgisayar ile bağlantı kesildi</string>
     <string name="help">Yardım</string>
     <string name="delete_pc_msg">Bu bilgisayarı silmek istediğinizden emin misiniz\?</string>
     <string name="slow_connection_msg">Bilgisayara yavaş bağlantı
@@ -99,26 +55,11 @@
     <string name="perf_overlay_renderingfps">İşleme kare hızı: %1$.2f FPS</string>
     <string name="perf_overlay_netdrops">Ağ bağlantınız tarafından düşen kare sayısı: %1$.2f%%</string>
     <string name="perf_overlay_dectime">Ortalama kod çözme süresi: %1$.2f ms</string>
-    <string name="applist_menu_resume">Oturumu Sürdür</string>
-    <string name="applist_menu_quit">Oturumu Sonlandır</string>
-    <string name="applist_menu_quit_and_start">Mevcut Oyundan Çık ve Başlat</string>
     <string name="applist_menu_cancel">İptal</string>
-    <string name="applist_menu_details">Ayrıntıları Göster</string>
-    <string name="applist_menu_scut">Kısayol Oluştur</string>
     <string name="applist_menu_tv_channel">Kanala Ekle</string>
-    <string name="applist_menu_hide_app">Uygulamayı Gizle</string>
-    <string name="applist_refresh_title">Uygulama Listesi</string>
-    <string name="applist_quit_success">Başarıyla çıkıldı</string>
     <string name="applist_refresh_error_msg">Uygulama listesi alınamadı</string>
-    <string name="applist_quit_app">Çıkılıyor</string>
-    <string name="applist_quit_fail">Çıkılamadı</string>
     <string name="applist_quit_confirmation">Çalışan uygulamadan çıkmak istediğinizden emin misiniz\? Kaydedilmemiş tüm veriler kaybolacaktır.</string>
     <string name="applist_details_id">Uygulama kimliği:</string>
-    <string name="msg_add_pc">Bilgisayara bağlanıyor…</string>
-    <string name="addpc_success">Bilgisayar başarıyla eklendi</string>
-    <string name="addpc_fail">Belirtilen bilgisayara bağlanılamıyor. Gerekli bağlantı noktalarına güvenlik duvarı üzerinden izin verildiğinden emin olun.</string>
-    <string name="addpc_unknown_host">Bilgisayar adresi çözümlenemiyor. Adreste yazım hatası yapmadığınızdan emin olun.</string>
-    <string name="addpc_enter_ip">Bir IP adresi girmelisiniz</string>
     <string name="category_basic_settings">Temel Ayarlar</string>
     <string name="summary_resolution_list">Görüntü netliğini artırmak için yükseltin. Düşük güçteki cihazlarda ve daha yavaş ağlarda daha iyi performans için azaltın.</string>
     <string name="title_native_res_dialog">Yerel çözünürlük uyarısı</string>
@@ -129,10 +70,7 @@
     <string name="conn_metered">Uyarı: Aktif ağ bağlantınız ölçülüdür!</string>
     <string name="conn_client_latency">Ortalama kare kod çözme gecikmesi:</string>
     <string name="conn_client_latency_hw">donanım kod çözücü gecikmesi:</string>
-    <string name="pcview_menu_send_wol">Yerel ağdan uyandırma isteği gönder</string>
-    <string name="applist_refresh_msg">Uygulamalar yenileniyor…</string>
     <string name="applist_refresh_error_title">Hata</string>
-    <string name="title_add_pc">Bilgisayarı manuel olarak Ekle</string>
     <string name="title_resolution_list">Video çözünürlüğü</string>
     <string name="summary_fps_list">Daha akıcı bir video akışı için artırın. Düşük uçlu cihazlarda daha iyi performans için azaltın.</string>
     <string name="resolution_prefix_native">Yerel</string>
@@ -151,13 +89,8 @@
     <string name="message_decoding_error">Moonlight, bu cihazın video kod çözücüsüyle uyumsuzluk nedeniyle çöktü. Kilitlenmeler devam ederse akış ayarlarını değiştirmeyi deneyin.</string>
     <string name="conn_hardware_latency">Ortalama donanım kod çözme gecikmesi:</string>
     <string name="title_decoding_reset">Video Ayarlarını Sıfırla</string>
-    <string name="searching_pc">Yerel ağınızdaki ana bilgisayarlar aranıyor…
-\n
-\n Sunshine ana bilgisayarınızda çalıştığından veya GeForce Experience SHIELD ayarlarında GameStream etkinleştirildiğinden emin olun.</string>
-    <string name="applist_connect_msg">Bilgisayara bağlanıyor…</string>
     <string name="no">Hayır</string>
     <string name="perf_overlay_netlatency">Ortalama ağ gecikmesi: %1$d ms (varyans: %2$d ms)</string>
-    <string name="addpc_wrong_sitelocal">Bu adres doğru görünmüyor. İnternet üzerinden akış için yönlendiricinizin genel IP adresini kullanmanız gerekir.</string>
     <string name="text_native_res_dialog">Yerel çözünürlük ve/veya FPS, akış sunucusu tarafından desteklenmeyebilir. Muhtemelen ana bilgisayar için uygun bir özel ekran kipini el ile yapılandırmanız gerekecek.
 \n
 \nNVIDIA Kontrol Panelinde ekran ayarlarınızla eşleşmesi için özel bir çözünürlük oluşturmayı seçerseniz lütfen NVIDIA tarafından olası monitör hasarı, bilgisayar kararsızlığı ve diğer olası sorunlarla ilgili uyarısını okuyup anladığınızdan emin olun.
@@ -263,7 +196,6 @@
     <string name="resolution_prefix_native_portrait">(Portre)</string>
     <string name="summary_disable_frame_drop">Bazı cihazlarda mikro kekemeliği azaltabilir ancak gecikmeyi artırabilir</string>
     <string name="resolution_360p">360p</string>
-    <string name="pcview_menu_eol">NVIDIA GameStream Hizmet Şartları</string>
     <string name="resolution_720p">720p</string>
     <string name="fps_30">30 FPS</string>
     <string name="summary_checkbox_enable_audiofx">Ses efektlerinin akış sırasında çalışmasına izin verir ancak ses gecikmesini artırabilir</string>

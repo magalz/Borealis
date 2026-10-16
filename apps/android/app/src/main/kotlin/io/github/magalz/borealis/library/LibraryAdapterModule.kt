@@ -49,7 +49,7 @@ internal abstract class LibraryAdapterModule {
 
     @Binds abstract fun shortcutCleanup(impl: UpstreamHostShortcuts): ShortcutCleanup
 
-    @Binds abstract fun upstreamStartup(impl: PcViewStartup): UpstreamStartup
+    @Binds abstract fun upstreamStartup(impl: UpstreamLauncherStartup): UpstreamStartup
 
     @Binds abstract fun glRendererProbe(impl: GlSurfaceRendererProbe): GlRendererProbe
 

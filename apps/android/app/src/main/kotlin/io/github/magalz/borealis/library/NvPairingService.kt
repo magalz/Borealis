@@ -30,7 +30,10 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.xmlpull.v1.XmlPullParserException
 
-/** [PairingService] over upstream `PairingManager`, with the audit and the errors of PcView. */
+/**
+ * [PairingService] over upstream `PairingManager`, with the audit and the errors of the 12.2 host
+ * list.
+ */
 @Singleton
 internal class NvPairingService
 @Inject
@@ -98,9 +101,7 @@ constructor(
         }
     }
 
-    /**
-     * The exchange of PcView's `doPair`. Blocks; the work is cancelled together with its caller.
-     */
+    /** The exchange of the 12.2 pairing. Blocks; the work is cancelled together with its caller. */
     private suspend fun exchange(
         client: HostClient,
         details: ComputerDetails,

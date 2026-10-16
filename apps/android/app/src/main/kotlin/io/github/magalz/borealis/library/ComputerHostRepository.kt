@@ -44,7 +44,7 @@ constructor(
             .map { known -> known.values.map { it.toHost() }.sortedWith(BY_NAME) }
             .distinctUntilChanged()
 
-    /** As `AddComputerManually.doAddPc`, without its dialogs and its connection test. */
+    /** As the manual add of 12.2, without its dialogs and its connection test. */
     override suspend fun addHost(address: HostAddress): AddHostResult {
         val host = address.host.trim()
         val manual =

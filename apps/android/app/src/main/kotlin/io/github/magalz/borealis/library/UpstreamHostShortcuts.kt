@@ -3,7 +3,6 @@ package io.github.magalz.borealis.library
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.pm.ShortcutManager
-import android.os.Build
 import com.limelight.R
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvApp
@@ -19,8 +18,8 @@ internal fun interface ShortcutCleanup {
 }
 
 /**
- * [HostShortcuts] and [ShortcutCleanup] over `ShortcutHelper`, which `PcView` and `AppView` used.
- * The shortcuts keep the ids and extras of 12.2, so the ones it pinned keep working and are
+ * [HostShortcuts] and [ShortcutCleanup] over `ShortcutHelper`, which the 12.2 host and app screens
+ * used. The shortcuts keep the ids and extras of 12.2, so the ones it pinned keep working and are
  * updated, not duplicated.
  */
 @Singleton
@@ -32,13 +31,12 @@ constructor(@ApplicationContext private val context: Context) : HostShortcuts, S
 
     override val canPinApps: Boolean
         get() =
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-                !context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) &&
+            !context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) &&
                 context.getSystemService(ShortcutManager::class.java).isRequestPinShortcutSupported
 
     override fun reportHostOpened(hostId: String, hostName: String) {
         // The user opened the host: this makes room for it among the dynamic shortcuts.
-        helper.createAppViewShortcut(computer(hostId, hostName), true, false)
+        helper.createHostShortcut(computer(hostId, hostName), true, false)
     }
 
     override fun pinApp(

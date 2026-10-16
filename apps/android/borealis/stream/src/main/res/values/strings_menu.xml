@@ -13,6 +13,8 @@
     <string name="stream_menu_gamepad_mouse">Gamepad mouse</string>
     <string name="stream_menu_on">On</string>
     <string name="stream_menu_off">Off</string>
+    <!-- What a screen reader says activating an option row does; %1$s is the row, for example Overlay. -->
+    <string name="stream_menu_change_option">Change %1$s</string>
     <string name="stream_menu_overlay">Overlay</string>
     <string name="stream_menu_overlay_compact">Compact</string>
     <string name="stream_menu_overlay_detailed">Detailed</string>

@@ -34,6 +34,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
@@ -59,6 +60,9 @@ private val TRAILING_GAP = 12.dp
  * [consequence], and a [trailing] control or chevron at the end. [MenuRowStyle.Danger] sets the
  * title in the danger ink. A tap or OK runs [onClick].
  *
+ * A row that changes an option on [onClick] gives the current [value], which a screen reader says
+ * after the title, and [onClickLabel], which names what activating the row does.
+ *
  * A disabled row is dimmed and does not react to OK, but it stays a focus stop: on a TV the user
  * can still land on it and read the [note] that says why. The note stays at full strength. The row
  * does not dim or disable its [trailing] control: the caller passes `enabled = false` to the
@@ -77,6 +81,8 @@ fun MenuRow(
     enabled: Boolean = true,
     trailing: @Composable (() -> Unit)? = null,
     note: String? = null,
+    value: String? = null,
+    onClickLabel: String? = null,
 ) {
     val shape = MaterialTheme.shapes.medium
     val minHeight =
@@ -95,7 +101,8 @@ fun MenuRow(
             .liftedWhenFocused()
             .borealisFocusIndication(shape)
             .clip(shape)
-            .rowAction(enabled, onClick)
+            .then(if (value == null) Modifier else Modifier.semantics { stateDescription = value })
+            .rowAction(enabled, onClickLabel, onClick)
             .fillMaxWidth()
             .heightIn(min = minHeight)
             .padding(horizontal = PADDING_HORIZONTAL, vertical = PADDING_VERTICAL),
@@ -108,11 +115,16 @@ fun MenuRow(
 }
 
 /** A tap or OK runs [onClick]; a disabled row only stays a focus stop that is announced so. */
-private fun Modifier.rowAction(enabled: Boolean, onClick: () -> Unit): Modifier =
+private fun Modifier.rowAction(
+    enabled: Boolean,
+    onClickLabel: String?,
+    onClick: () -> Unit,
+): Modifier =
     if (enabled) {
         clickable(
             interactionSource = null,
             indication = BorealisPressIndication,
+            onClickLabel = onClickLabel,
             role = Role.Button,
             onClick = onClick,
         )

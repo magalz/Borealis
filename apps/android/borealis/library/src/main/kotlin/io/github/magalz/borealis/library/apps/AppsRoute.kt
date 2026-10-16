@@ -42,6 +42,13 @@ fun AppsRoute(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val handled by rememberUpdatedState(onLaunchHandled)
+    LaunchedEffect(viewModel, launchAppId, state.loading) {
+        if (launchAppId != null && !state.loading) {
+            viewModel.onLaunchRequested(launchAppId)
+            handled()
+        }
+    }
     LaunchedEffect(viewModel, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.effects.collect { effect ->

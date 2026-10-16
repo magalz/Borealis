@@ -30,6 +30,8 @@ class LibraryActivity : Hilt_LibraryActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // A recreated activity has already taken the request that started it: it is not replayed.
+        if (savedInstanceState == null) request = LibraryLaunchRequest.fromExtras(intent.extras)
         // The UI is dark only: light icons whatever the system theme, which uiMode changes in
         // configChanges would never re-evaluate.
         enableEdgeToEdge(
@@ -47,6 +49,12 @@ class LibraryActivity : Hilt_LibraryActivity() {
         // After the content: the bridge posts the GL renderer probe, which must not lose its
         // surface.
         legacyBridge.onLauncherCreated(this)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        request = LibraryLaunchRequest.fromExtras(intent.extras)
     }
 
     override fun onResume() {

@@ -8,7 +8,10 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -61,8 +64,16 @@ internal fun LibraryNavHost(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val destination = navController.currentBackStackEntryAsState().value?.destination
-    val startStream = { request: StreamRequest ->
-        if (!onStartStream(request)) {
+    // The app a Launch request asks for, until its Apps screen has the list and selects it.
+    val pendingLaunch = remember { mutableStateOf<LibraryLaunchRequest.Launch?>(null) }
+    LaunchedEffect(request) {
+        val incoming = request ?: return@LaunchedEffect
+        navController.show(incoming)
+        pendingLaunch.value = incoming as? LibraryLaunchRequest.Launch
+        onRequestHandled()
+    }
+    val startStream = { streamRequest: StreamRequest ->
+        if (!onStartStream(streamRequest)) {
             scope.launch {
                 snackbarHostState.showSnackbar(resources.getString(R.string.shell_host_unavailable))
             }
@@ -89,7 +100,12 @@ internal fun LibraryNavHost(
     ) {
         Box {
             NavHost(navController, startDestination = Hosts) {
-                libraryGraph(navController, startStream, onOpenSettings)
+                libraryGraph(
+                    navController,
+                    startStream,
+                    onOpenSettings,
+                    pendingLaunch,
+                )
             }
             SnackbarHost(
                 snackbarHostState,
@@ -105,6 +121,7 @@ private fun NavGraphBuilder.libraryGraph(
     navController: NavHostController,
     startStream: (StreamRequest) -> Unit,
     onOpenSettings: () -> Unit,
+    pendingLaunch: MutableState<LibraryLaunchRequest.Launch?>,
 ) {
     composable<Hosts> { entry ->
         val handle = entry.savedStateHandle
@@ -147,10 +164,13 @@ private fun NavGraphBuilder.libraryGraph(
         )
     }
     composable<Apps> { entry ->
+        val hostId = entry.toRoute<Apps>().hostId
         AppsRoute(
-            hostId = entry.toRoute<Apps>().hostId,
+            hostId = hostId,
             onClose = { message -> navController.close(entry, message) },
             onStartStream = startStream,
+            launchAppId = pendingLaunch.value?.takeIf { it.hostId == hostId }?.appId,
+            onLaunchHandled = { pendingLaunch.value = null },
         )
     }
 }
@@ -163,4 +183,18 @@ private fun NavHostController.close(entry: NavBackStackEntry, message: String? =
     if (currentBackStackEntry != entry) return
     if (message != null) previousBackStackEntry?.savedStateHandle?.set(HOSTS_MESSAGE, message)
     popBackStack()
+}
+
+/**
+ * Puts the screens of [request] on the back stack: always above Hosts, so Back from them leads
+ * there. A Launch shows Apps; the launch itself waits there for the app list.
+ */
+private fun NavHostController.show(request: LibraryLaunchRequest) {
+    popBackStack<Hosts>(inclusive = false)
+    when (request) {
+        LibraryLaunchRequest.Hosts -> Unit
+        is LibraryLaunchRequest.Apps -> navigate(Apps(request.hostId)) { launchSingleTop = true }
+        is LibraryLaunchRequest.Launch -> navigate(Apps(request.hostId)) { launchSingleTop = true }
+        is LibraryLaunchRequest.Pair -> navigate(Pairing(request.hostId)) { launchSingleTop = true }
+    }
 }

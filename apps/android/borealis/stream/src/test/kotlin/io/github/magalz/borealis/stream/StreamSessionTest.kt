@@ -105,10 +105,84 @@ class StreamSessionTest {
     }
 
     @Test
-    fun `the first frame without a connection is ignored`() {
+    fun `a first frame before the connection is reported starts streaming once it is`() {
         session.onFirstFrame()
-
         assertThat(phase).isEqualTo(StreamPhase.Starting(StartStage.CONNECTING))
+
+        session.onConnectionStarted(aSessionInfo)
+
+        assertThat(phase).isInstanceOf(StreamPhase.Streaming::class.java)
+        assertThat((phase as StreamPhase.Streaming).info).isEqualTo(aSessionInfo)
+    }
+
+    @Test
+    fun `a first frame that came early does not start streaming after a failure`() {
+        session.onFirstFrame()
+        session.onFailed(aFailure)
+
+        session.onConnectionStarted(aSessionInfo)
+
+        assertThat(phase).isEqualTo(StreamPhase.Failed(aFailure))
+    }
+
+    @Test
+    fun `picture in picture is part of the state and keeps the phase`() {
+        session.onFailed(aFailure)
+
+        session.onPip(true)
+
+        assertThat(session.state.value.inPip).isTrue()
+        assertThat(phase).isEqualTo(StreamPhase.Failed(aFailure))
+
+        session.onPip(false)
+
+        assertThat(session.state.value.inPip).isFalse()
+        assertThat(phase).isEqualTo(StreamPhase.Failed(aFailure))
+    }
+
+    @Test
+    fun `the phase has left the conflict when the choice is forwarded`() {
+        var phaseWhenForwarded: StreamPhase? = null
+        actions.whenAnswered = { phaseWhenForwarded = phase }
+        conflict()
+
+        session.answerConflict(ConflictChoice.JOIN)
+
+        assertThat(phaseWhenForwarded).isEqualTo(StreamPhase.Starting(StartStage.STARTING_APP))
+    }
+
+    @Test
+    fun `events the connection reports as soon as it is unblocked are kept`() {
+        actions.whenAnswered = { session.onStage(StartStage.PREPARING_DISPLAY) }
+        conflict()
+
+        session.answerConflict(ConflictChoice.QUIT_AND_RELAUNCH)
+
+        assertThat(phase).isEqualTo(StreamPhase.Starting(StartStage.PREPARING_DISPLAY))
+    }
+
+    @Test
+    fun `a second conflict while one is open keeps the first answer slot`() {
+        val first = conflict()
+        val second = ConflictAnswer()
+        session.onConflict("Other", "Desktop", sameApp = true, answer = second)
+
+        session.answerConflict(ConflictChoice.JOIN)
+
+        assertThat(first.choose(ConflictChoice.CANCEL)).isFalse()
+        assertThat(second.choose(ConflictChoice.CANCEL)).isTrue()
+    }
+
+    @Test
+    fun `a conflict after a failure leaves no answer behind`() {
+        session.onFailed(aFailure)
+        val answer = ConflictAnswer()
+
+        session.onConflict("Steam", "Desktop", sameApp = false, answer = answer)
+        session.answerConflict(ConflictChoice.JOIN)
+
+        assertThat(answer.choose(ConflictChoice.CANCEL)).isTrue()
+        assertThat(actions.calls).isEmpty()
     }
 
     @Test

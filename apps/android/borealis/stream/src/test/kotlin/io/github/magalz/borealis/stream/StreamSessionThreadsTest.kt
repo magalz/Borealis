@@ -14,13 +14,13 @@ import org.junit.Test
 
 /** The connection thread, the decoder and the main thread all report to the same session. */
 class StreamSessionThreadsTest {
-    /** Runs [work] with its index on [THREADS] threads that start together. */
-    private fun onManyThreads(work: (Int) -> Unit) {
-        val pool = Executors.newFixedThreadPool(THREADS)
+    /** Runs [work] with its index on [threads] threads that start together. */
+    private fun onManyThreads(threads: Int = THREADS, work: (Int) -> Unit) {
+        val pool = Executors.newFixedThreadPool(threads)
         val gate = CountDownLatch(1)
         try {
             val results =
-                (0 until THREADS).map { index ->
+                (0 until threads).map { index ->
                     pool.submit {
                         gate.await()
                         work(index)
@@ -80,6 +80,19 @@ class StreamSessionThreadsTest {
     }
 
     @Test
+    fun `the first frame and the connection report in either order end in streaming`() {
+        repeat(INTERLEAVINGS) {
+            val session = aSession()
+            onManyThreads(threads = 2) { index ->
+                if (index == 0) session.onFirstFrame()
+                else session.onConnectionStarted(aSessionInfo)
+            }
+
+            assertThat(session.state.value.phase).isInstanceOf(StreamPhase.Streaming::class.java)
+        }
+    }
+
+    @Test
     fun `perf snapshots from eight threads leave the last one written`() {
         val session = aSession()
         val snapshots = List(THREADS) { aPerf(totalFps = it.toFloat()) }
@@ -92,6 +105,7 @@ class StreamSessionThreadsTest {
     private companion object {
         const val THREADS = 8
         const val ROUNDS = 500
+        const val INTERLEAVINGS = 300
         const val TIMEOUT_SECONDS = 30L
     }
 }

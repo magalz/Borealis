@@ -10,6 +10,9 @@ import io.github.magalz.borealis.stream.keys.KeyChord
 class RecordingActions : StreamActions {
     val calls = mutableListOf<String>()
 
+    /** Runs inside [answerConflict], as the connection thread does once the answer is chosen. */
+    var whenAnswered: () -> Unit = {}
+
     override fun send(chord: KeyChord) {
         calls += "send ${chord.vk}"
     }
@@ -72,5 +75,6 @@ class RecordingActions : StreamActions {
 
     override fun answerConflict(choice: ConflictChoice) {
         calls += "answerConflict $choice"
+        whenAnswered()
     }
 }

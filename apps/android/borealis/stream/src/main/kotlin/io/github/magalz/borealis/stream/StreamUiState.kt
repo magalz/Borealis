@@ -4,7 +4,12 @@ import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.nativecore.LaunchCategory
 
 /** What the stream chrome shows: the app and the host it streams, and the phase of the session. */
-data class StreamUiState(val appName: String, val hostName: String, val phase: StreamPhase)
+data class StreamUiState(
+    val appName: String,
+    val hostName: String,
+    val phase: StreamPhase,
+    val inPip: Boolean = false,
+)
 
 /** The phase of a stream session, from the first connection step to the stream or a failure. */
 sealed interface StreamPhase {

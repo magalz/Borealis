@@ -47,8 +47,26 @@ sources contain (`.gitattributes` marks the directory `-text` so line endings ar
 
 ### Harvested
 
-Upstream commits applied after the fork base `874ac95`. None yet.
+Upstream commits applied after the fork base `874ac95`, oldest first. Each is a commit of its own
+here and its message names the upstream SHA.
+
+| Upstream commit | Subject | Touches |
+| --- | --- | --- |
+| `d85371c` | Fix RFI after a multi-block frame loss | `src/RtpVideoQueue.c` |
+| `be43885` | Fix handling of a partially dropped IDR frame | `src/VideoDepacketizer.c` |
+| `62e0663` | Don't speculatively report losses if RFI is disabled | `src/RtpVideoQueue.c` |
+| `5a26329` | Add section 7 exception for app store distribution | `LICENSE.txt` |
+| `f900dd4` | Add MODIFIER_EXTENDED flag | `src/InputStream.c`, `src/Limelight.h` |
+| `e2722dc` | Fix uninitialized stack data in the periodic ping payload | `src/ControlStream.c` |
+| `5ec8397` | Fix memory leak if duplicate RTSP options are inserted | `src/RtspParser.c` |
+
+None of them touches `src/VideoStream.c`, so they do not interact with the Borealis patch. They add
+no exported symbol to `libmoonlight-core.so`.
 
 ### Not harvested
 
-Upstream commits known and deliberately left out. None yet.
+Upstream commits known and deliberately left out.
+
+| Upstream commit | Subject | Reason |
+| --- | --- | --- |
+| `aeba988` | Rework RTSP parser to fix many spec compliance issues | Deferred by the owner until it has seen wider use. |

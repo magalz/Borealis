@@ -14,7 +14,9 @@ data class ButtonState(val inputMap: Int, val emulatingFlags: Int)
  * Start and the right bumper are the Guide button on a pad without Select, as long as they are
  * held. On a pad with Select and no Mode button, Start and Select held together first count down to
  * the menu chord, so they become a Guide tap when released before it fires. A pad with a Mode
- * button sends its own Guide button and its Start and Select as they are.
+ * button sends its own Guide button. On every pad Start and Select held together are held back from
+ * the PC while the chord counts down; released early they reach it as a short press (see
+ * [tapButtons]). Start or Select alone, or with another button, reach it at once.
  */
 object GuideChord {
     /** Set in the emulating flags while the Guide button is a combination of other buttons. */
@@ -28,9 +30,18 @@ object GuideChord {
     /** Whether Start and Select stand for the Guide button on this pad. */
     fun mapsStartSelect(hasSelect: Boolean, hasMode: Boolean): Boolean = hasSelect && !hasMode
 
-    /** Whether [update] ended a Start and Select press that is to be sent as a Guide tap. */
-    fun isTap(update: MenuChordDetector.Update, hasSelect: Boolean, hasMode: Boolean): Boolean =
-        update.earlyRelease && mapsStartSelect(hasSelect, hasMode)
+    /**
+     * The buttons to send the PC as a short press when [update] ended a Start and Select press
+     * early (both were held back while the chord was pending): the Guide button on a pad where they
+     * stand for it, Start and Select themselves on the others. None when the chord did not end
+     * early.
+     */
+    fun tapButtons(update: MenuChordDetector.Update, hasSelect: Boolean, hasMode: Boolean): Int =
+        when {
+            !update.earlyRelease -> 0
+            mapsStartSelect(hasSelect, hasMode) -> GUIDE
+            else -> START or SELECT
+        }
 
     /** A button went down. */
     fun onButtonDown(

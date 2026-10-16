@@ -59,7 +59,8 @@ class UsbMenuChordTest {
         pad.report(0)
         rig.advanceBy(100)
 
-        assertThat(rig.buttons()).containsExactly(chord, 0).inOrder()
+        // The first packet only tells the PC that the pad is neutral while the chord is held back.
+        assertThat(rig.buttons()).containsExactly(0, chord, 0).inOrder()
         assertThat(rig.chords).isEqualTo(0)
     }
 

@@ -81,10 +81,10 @@ class MenuChordTest {
     }
 
     @Test
-    fun `after the menu opens the PC is told that Select and Start are up`() {
+    fun `the PC is told that Select and Start are up while the chord is held, and after the menu opens`() {
         giveThePadAModeButton()
         holdStartAndSelect()
-        assertThat(rig.lastButtons()).isEqualTo(PLAY_FLAG or BACK_FLAG)
+        assertThat(rig.lastButtons()).isEqualTo(0)
 
         rig.advanceBy(1_000)
 

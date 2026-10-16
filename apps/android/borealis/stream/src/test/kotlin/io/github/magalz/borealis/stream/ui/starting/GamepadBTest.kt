@@ -5,6 +5,9 @@ import android.view.View
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -33,13 +36,14 @@ class GamepadBTest {
     private val focus = FocusRequester()
     private val reached = mutableListOf<String>()
     private var fired = 0
+    private var listening by mutableStateOf(true)
     private lateinit var view: View
 
     @Before
     fun show() {
         composeRule.setContent {
             view = LocalView.current
-            Box(Modifier.onGamepadB { fired++ }) {
+            Box(if (listening) Modifier.onGamepadB { fired++ } else Modifier) {
                 Box(
                     Modifier.size(10.dp).focusRequester(focus).focusable().onKeyEvent {
                         reached += it.type.toString()
@@ -85,20 +89,19 @@ class GamepadBTest {
     }
 
     @Test
-    fun `a lone key-up does nothing and is not consumed`() {
+    fun `a key-up without a key-down the screen saw does nothing and is not consumed`() {
+        // B went down before this screen was there: the window saw the key-down, the screen did
+        // not.
+        listening = false
+        composeRule.waitForIdle()
+        send(KeyEvent.ACTION_DOWN)
+        listening = true
+        composeRule.waitForIdle()
+
         send(KeyEvent.ACTION_UP)
 
         assertThat(fired).isEqualTo(0)
-        assertThat(reached).containsExactly("KeyUp")
-    }
-
-    @Test
-    fun `a key-up after the matching one is not consumed`() {
-        send(KeyEvent.ACTION_DOWN)
-        send(KeyEvent.ACTION_UP)
-        send(KeyEvent.ACTION_UP)
-
-        assertThat(reached).containsExactly("KeyUp")
+        assertThat(reached).containsExactly("KeyDown", "KeyUp").inOrder()
     }
 
     @Test

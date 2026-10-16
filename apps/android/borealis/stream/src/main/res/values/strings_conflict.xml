@@ -2,9 +2,9 @@
 <resources>
     <string name="stream_conflict_title">An app is already running</string>
     <!-- %1$s is the running app, or "Another app" when its name is unknown. -->
-    <string name="stream_conflict_body_same">%1$s is already running on the host. You can join it, or quit it and start it again.</string>
+    <string name="stream_conflict_body_same">%1$s is already running on this host. You can join it, or quit it and start it again.</string>
     <!-- %1$s is the running app and %2$s the app the user chose. -->
-    <string name="stream_conflict_body_other">%1$s is already running on the host. You can join it, or quit it and start %2$s.</string>
+    <string name="stream_conflict_body_other">%1$s is already running on this host. You can join it, or quit it and start %2$s.</string>
     <string name="stream_conflict_another_app">Another app</string>
     <string name="stream_conflict_warning">Quitting ends the stream on the other device. Unsaved work in the app is lost.</string>
     <string name="stream_conflict_cancel">Cancel</string>

@@ -3,7 +3,7 @@ package io.github.magalz.borealis.stream.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -63,7 +63,7 @@ fun ConflictDialog(phase: StreamPhase.Conflict, intents: StreamIntents) {
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.extraLarge
     val answer = { choice: ConflictChoice -> intents.answerConflict(choice) }
-    Box(
+    BoxWithConstraints(
         Modifier.fillMaxSize()
             .background(colors.scrim)
             .windowInsetsPadding(WindowInsets.safeDrawing)
@@ -74,8 +74,7 @@ fun ConflictDialog(phase: StreamPhase.Conflict, intents: StreamIntents) {
         // outside its button.
         Column(
             Modifier.testTag(CONFLICT_PANEL_TAG)
-                .widthIn(max = DIALOG_MAX_WIDTH)
-                .fillMaxWidth(DIALOG_WIDTH_FRACTION)
+                .width(minOf(maxWidth * DIALOG_WIDTH_FRACTION, DIALOG_MAX_WIDTH))
                 .background(colors.surface, shape)
                 .border(1.dp, colors.line, shape)
                 .clip(shape)

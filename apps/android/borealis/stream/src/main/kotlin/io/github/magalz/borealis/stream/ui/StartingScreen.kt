@@ -2,14 +2,14 @@ package io.github.magalz.borealis.stream.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -66,7 +66,7 @@ fun StartingScreen(
     intents: StreamIntents,
 ) {
     val cancelFocus = remember { FocusRequester() }
-    Box(
+    BoxWithConstraints(
         Modifier.fillMaxSize()
             .background(LocalBorealisColors.current.page)
             .windowInsetsPadding(WindowInsets.safeDrawing)
@@ -75,8 +75,7 @@ fun StartingScreen(
     ) {
         Column(
             Modifier.testTag(STARTING_CONTENT_TAG)
-                .widthIn(max = CONTENT_MAX_WIDTH)
-                .fillMaxWidth(CONTENT_WIDTH_FRACTION)
+                .width(minOf(maxWidth * CONTENT_WIDTH_FRACTION, CONTENT_MAX_WIDTH))
                 .verticalScroll(rememberScrollState())
                 .padding(LocalBorealisSpacing.current.gutter),
             horizontalAlignment = Alignment.CenterHorizontally,

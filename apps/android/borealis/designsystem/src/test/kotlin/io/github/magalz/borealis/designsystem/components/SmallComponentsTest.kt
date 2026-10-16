@@ -189,6 +189,15 @@ class SmallComponentsTest {
         composeRule.onNode(isFocused()).assert(hasText("Home"))
     }
 
+    @Test
+    fun `a direct focus request on a rail item is not redirected to the selected one`() {
+        composeRule.setContentInKeyboardMode { Box(Modifier.width(200.dp)) { Rail(selected = 0) } }
+
+        composeRule.onNodeWithText("Settings").requestFocus()
+
+        composeRule.onNode(isFocused()).assert(hasText("Settings"))
+    }
+
     @Composable
     private fun Rail(selected: Int, onSelect: (Int) -> Unit = {}) {
         BorealisTheme(FormFactor.Tv) {

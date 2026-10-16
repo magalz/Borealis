@@ -559,6 +559,70 @@ class ExportDiagnosticsPreferenceTest {
     }
 
     @Test
+    fun `Back closes the progress dialog but the export finishes and shows its result`() {
+        val held = HeldDispatcher()
+        preference().apply { ioDispatcher = held }.onClick()
+        val dialog = progressDialog().also { assertThat(it).isNotNull() }!!
+
+        dialog.onBackPressed()
+
+        assertThat(dialog.isShowing).isFalse()
+        held.finish()
+        assertThat(savedDialog().isShowing).isTrue()
+        assertThat(texts(savedDialog().window!!.decorView).joinToString("\n")).contains("adb pull")
+    }
+
+    @Test
+    fun `a click after Back shows the progress again and starts no second export`() {
+        val held = HeldDispatcher()
+        val exports = AtomicInteger()
+        val preference =
+            preference().apply {
+                ioDispatcher = held
+                val provider = sectionsProvider
+                sectionsProvider = {
+                    exports.incrementAndGet()
+                    provider()
+                }
+            }
+        preference.onClick()
+        progressDialog().also { assertThat(it).isNotNull() }!!.onBackPressed()
+
+        preference.onClick()
+
+        val again = progressDialog().also { assertThat(it).isNotNull() }!!
+        assertThat(texts(again.window!!.decorView)).contains("Creating the diagnostic bundle…")
+        assertThat(held.pending).isEqualTo(1)
+        held.finish()
+        assertThat(exports.get()).isEqualTo(1)
+        assertThat(again.isShowing).isFalse()
+    }
+
+    @Test
+    fun `a click outside the progress dialog does not close it`() {
+        val held = HeldDispatcher()
+        preference().apply { ioDispatcher = held }.onClick()
+        val dialog = progressDialog().also { assertThat(it).isNotNull() }!!
+
+        assertThat(shadowOf(dialog).isCancelableOnTouchOutside).isFalse()
+        held.finish()
+    }
+
+    @Test
+    fun `a flow that cannot be built leaves the export free to run again`() {
+        val failing = Robolectric.buildActivity(FailingResourcesActivity::class.java).setup().get()
+        val preference = preference(context = failing)
+        failing.failuresLeft = 1_000
+
+        runCatching { preference.onClick() }
+        failing.failuresLeft = 0
+        preference.onClick()
+
+        assertThat(savedDialog().isShowing).isTrue()
+        assertThat(texts(savedDialog().window!!.decorView).joinToString("\n")).contains("adb pull")
+    }
+
+    @Test
     fun `a second click while the bundle is built starts no second export`() {
         val held = HeldDispatcher()
         val exports = AtomicInteger()

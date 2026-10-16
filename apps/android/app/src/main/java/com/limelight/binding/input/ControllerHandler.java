@@ -145,7 +145,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     // While the chrome owns the gamepad nothing from any pad, or the on-screen controller, may reach the PC
     private volatile boolean captured;
     private final CaptureEnd captureEnd = new CaptureEnd();
-    private boolean mouseEmulationEnabled;
+    private volatile boolean mouseEmulationEnabled;
     private final Object inputLock = new Object();
     private int controllersWithInput; // guarded by inputLock
 
@@ -1251,8 +1251,8 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             return;
         }
 
-        MenuChordDetector.Update chord = context.menuChord.update(context.inputMap, eventTime,
-                context.mapsStartSelectToGuide());
+        // Start and Select are held back from the PC on every pad while the chord is pending
+        MenuChordDetector.Update chord = context.menuChord.update(context.inputMap, eventTime, true);
         scheduleMenuChordCheck(context);
 
         // Releasing a button the PC never saw changes nothing for it
@@ -1263,8 +1263,12 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         if (chord.getFired()) {
             notifyMenuChord();
         }
-        else if (context.isGuideTap(chord)) {
-            sendGuideTap(context);
+        else {
+            // A chord that ended early reaches the PC as a short press of what the user pressed
+            int tap = context.chordTapButtons(chord);
+            if (tap != 0) {
+                sendChordTap(context, tap);
+            }
         }
     }
 
@@ -1293,14 +1297,14 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         }
     }
 
-    private void sendGuideTap(final GenericControllerContext context) {
-        context.guideTapDown = true;
+    private void sendChordTap(final GenericControllerContext context, int buttons) {
+        context.tapButtons = buttons;
         transmitControllerInput(context);
 
         mainThreadHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                context.guideTapDown = false;
+                context.tapButtons = 0;
                 transmitControllerInput(context);
             }
         }, GUIDE_TAP_MS);
@@ -1375,7 +1379,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         context.rightStickX = 0;
         context.rightStickY = 0;
         context.mouseEmulationLastInputMap = 0;
-        context.guideTapDown = false;
+        context.tapButtons = 0;
         context.menuChord.reset();
         mainThreadHandler.removeCallbacks(context.menuChordCheck);
 
@@ -1412,24 +1416,11 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         }
     }
 
-    // Whether a connected pad has mouse emulation on. The Start hold can change it on one pad, and
-    // before any pad has connected it is what the next pad will start with.
+    // The mouse emulation state of the pads, as the menu and the Start hold last set it. It is the
+    // state every pad is given when it connects. Reading the contexts instead missed pads that are
+    // not in the two lists (the default context) and stayed On while one pad still emulated.
     public boolean isMouseEmulationEnabled() {
-        if (inputDeviceContexts.size() == 0 && usbDeviceContexts.size() == 0) {
-            return mouseEmulationEnabled;
-        }
-
-        for (int i = 0; i < inputDeviceContexts.size(); i++) {
-            if (inputDeviceContexts.valueAt(i).mouseEmulationActive) {
-                return true;
-            }
-        }
-        for (int i = 0; i < usbDeviceContexts.size(); i++) {
-            if (usbDeviceContexts.valueAt(i).mouseEmulationActive) {
-                return true;
-            }
-        }
-        return false;
+        return mouseEmulationEnabled;
     }
 
     // Returns whether the next change should still show the notice
@@ -3201,7 +3192,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
         // Select+Start held for a second opens the menu; the logic is in MenuChordDetector
         public final MenuChordDetector menuChord = new MenuChordDetector();
-        public boolean guideTapDown;
+        public int tapButtons;
 
         // What the pad does to the chrome while it has the input; the logic is in UsbChromeInput. It
         // has its own main-thread handler because the default context exists before mainThreadHandler
@@ -3223,18 +3214,15 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             }
         };
 
-        // The buttons the PC gets: not the ones the chord holds back, and the Guide tap if one is down
+        // The buttons the PC gets: not the ones the chord holds back, and the short press of an early chord
         public int sentInputMap() {
-            return (inputMap & ~menuChord.hidden()) | (guideTapDown ? ControllerPacket.SPECIAL_BUTTON_FLAG : 0);
+            return (inputMap & ~menuChord.hidden()) | tapButtons;
         }
 
-        // Start+Select stand for the Guide button on pads that have none. Others send them as they are.
-        public boolean mapsStartSelectToGuide() {
-            return false;
-        }
-
-        public boolean isGuideTap(MenuChordDetector.Update update) {
-            return false;
+        // What an early chord sends the PC as a short press: Guide on pads that stand in for it,
+        // Start and Select on the others. Pads that are not input devices have no Guide button.
+        public int chordTapButtons(MenuChordDetector.Update update) {
+            return GuideChord.INSTANCE.tapButtons(update, true, true);
         }
     }
 
@@ -3311,13 +3299,8 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         public long startDownTime = 0;
 
         @Override
-        public boolean mapsStartSelectToGuide() {
-            return GuideChord.INSTANCE.mapsStartSelect(hasSelect, hasMode);
-        }
-
-        @Override
-        public boolean isGuideTap(MenuChordDetector.Update update) {
-            return GuideChord.INSTANCE.isTap(update, hasSelect, hasMode);
+        public int chordTapButtons(MenuChordDetector.Update update) {
+            return GuideChord.INSTANCE.tapButtons(update, hasSelect, hasMode);
         }
 
         public final Runnable batteryStateUpdateRunnable = new Runnable() {

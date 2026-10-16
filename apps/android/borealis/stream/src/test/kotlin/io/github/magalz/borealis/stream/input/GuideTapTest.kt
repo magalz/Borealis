@@ -27,21 +27,30 @@ class GuideTapTest {
 
     @Test
     fun `releasing Start and Select early on a mapped pad is a Guide tap`() {
-        assertThat(GuideChord.isTap(early, hasSelect = true, hasMode = false)).isTrue()
+        assertThat(GuideChord.tapButtons(early, hasSelect = true, hasMode = false))
+            .isEqualTo(GamepadButtons.GUIDE)
     }
 
     @Test
-    fun `releasing Start and Select early on a pad with a Mode button is no tap`() {
-        assertThat(GuideChord.isTap(early, hasSelect = true, hasMode = true)).isFalse()
+    fun `releasing Start and Select early on a pad with a Mode button is a short press of both`() {
+        assertThat(GuideChord.tapButtons(early, hasSelect = true, hasMode = true))
+            .isEqualTo(GamepadButtons.START or GamepadButtons.SELECT)
     }
 
     @Test
-    fun `a chord that opened the menu is no tap`() {
-        assertThat(GuideChord.isTap(fired, hasSelect = true, hasMode = false)).isFalse()
+    fun `releasing Start and Select early on a pad without that information is a short press of both`() {
+        assertThat(GuideChord.tapButtons(early, hasSelect = false, hasMode = false))
+            .isEqualTo(GamepadButtons.START or GamepadButtons.SELECT)
     }
 
     @Test
-    fun `an event that did not end the chord is no tap`() {
-        assertThat(GuideChord.isTap(nothing, hasSelect = true, hasMode = false)).isFalse()
+    fun `a chord that opened the menu sends no tap`() {
+        assertThat(GuideChord.tapButtons(fired, hasSelect = true, hasMode = false)).isEqualTo(0)
+        assertThat(GuideChord.tapButtons(fired, hasSelect = true, hasMode = true)).isEqualTo(0)
+    }
+
+    @Test
+    fun `an event that did not end the chord sends no tap`() {
+        assertThat(GuideChord.tapButtons(nothing, hasSelect = true, hasMode = false)).isEqualTo(0)
     }
 }

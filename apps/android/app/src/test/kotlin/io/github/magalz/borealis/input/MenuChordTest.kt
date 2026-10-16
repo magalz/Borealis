@@ -7,6 +7,7 @@ import android.view.KeyEvent.KEYCODE_BUTTON_SELECT
 import android.view.KeyEvent.KEYCODE_BUTTON_START
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket.BACK_FLAG
+import com.limelight.nvstream.input.ControllerPacket.LB_FLAG
 import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
 import com.limelight.nvstream.input.ControllerPacket.SPECIAL_BUTTON_FLAG
 import org.junit.Test
@@ -80,10 +81,10 @@ class MenuChordTest {
     }
 
     @Test
-    fun `after the menu opens the PC is told that Select and Start are up`() {
+    fun `the PC is told that Select and Start are up while the chord is held, and after the menu opens`() {
         giveThePadAModeButton()
         holdStartAndSelect()
-        assertThat(rig.lastButtons()).isEqualTo(PLAY_FLAG or BACK_FLAG)
+        assertThat(rig.lastButtons()).isEqualTo(0)
 
         rig.advanceBy(1_000)
 
@@ -163,16 +164,74 @@ class MenuChordTest {
     }
 
     @Test
-    fun `a pad with a Mode button sends Start and Select through before the chord completes`() {
+    fun `a pad with a Mode button sends a quick Start and Select as a short press on release`() {
         giveThePadAModeButton()
         val before = rig.connection.packets.size
         holdStartAndSelect()
         rig.advanceBy(300)
 
         rig.release(KEYCODE_BUTTON_SELECT)
+        rig.advanceBy(100)
+        rig.release(KEYCODE_BUTTON_START)
 
         assertThat(rig.buttons().drop(before))
-            .containsExactly(PLAY_FLAG, PLAY_FLAG or BACK_FLAG, PLAY_FLAG)
+            .containsExactly(PLAY_FLAG, 0, PLAY_FLAG or BACK_FLAG, 0)
             .inOrder()
+        assertThat(rig.chords).isEqualTo(0)
+    }
+
+    @Test
+    fun `a pad with a Mode button never sends Start and Select together while the chord is held`() {
+        giveThePadAModeButton()
+        val before = rig.connection.packets.size
+        holdStartAndSelect()
+
+        rig.advanceBy(1_000)
+
+        assertThat(rig.chords).isEqualTo(1)
+        assertThat(rig.buttons().drop(before).none { it == PLAY_FLAG or BACK_FLAG }).isTrue()
+        assertThat(rig.lastButtons()).isEqualTo(0)
+    }
+
+    @Test
+    fun `a pad with a Mode button sends Start alone and Select alone at once`() {
+        giveThePadAModeButton()
+
+        rig.press(KEYCODE_BUTTON_START)
+        assertThat(rig.lastButtons()).isEqualTo(PLAY_FLAG)
+        rig.release(KEYCODE_BUTTON_START)
+
+        rig.press(KEYCODE_BUTTON_SELECT)
+        assertThat(rig.lastButtons()).isEqualTo(BACK_FLAG)
+    }
+
+    @Test
+    fun `a pad with a Mode button sends the third button with Start and Select`() {
+        giveThePadAModeButton()
+        holdStartAndSelect()
+        rig.advanceBy(200)
+
+        rig.press(KEYCODE_BUTTON_L1)
+
+        assertThat(rig.lastButtons()).isEqualTo(PLAY_FLAG or BACK_FLAG or LB_FLAG)
+        assertThat(rig.chords).isEqualTo(0)
+    }
+
+    @Test
+    fun `a pad with a Mode button still quits with the quit combo`() {
+        giveThePadAModeButton()
+        holdStartAndSelect()
+        rig.advanceBy(100)
+        rig.press(KEYCODE_BUTTON_L1)
+        rig.press(KEYCODE_BUTTON_R1)
+        rig.advanceBy(3_000)
+
+        rig.release(KEYCODE_BUTTON_R1)
+        rig.release(KEYCODE_BUTTON_L1)
+        rig.release(KEYCODE_BUTTON_SELECT)
+        rig.release(KEYCODE_BUTTON_START)
+
+        assertThat(rig.chords).isEqualTo(0)
+        assertThat(rig.activity.isFinishing).isTrue()
     }
 }

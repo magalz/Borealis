@@ -62,5 +62,8 @@ internal fun ComputerDetails.toHost(knownApps: List<NvApp>? = null): Host {
         paired = pairState == PairState.PAIRED,
         runningApp = running,
         canWake = macAddress != null,
+        version = null,
+        address = null,
+        capabilities = emptySet(),
     )
 }

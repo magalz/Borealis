@@ -85,6 +85,13 @@ public class NvHTTP {
     private X509TrustManager trustManager;
     private X509KeyManager keyManager;
     private X509Certificate serverCert;
+    // BOREALIS: set when the host presented another certificate than the pinned one (host.failure)
+    private volatile boolean certificateMismatch;
+
+    // BOREALIS: whether this client saw the host present another certificate than the pinned one (host.failure)
+    public boolean sawCertificateMismatch() {
+        return certificateMismatch;
+    }
 
     void setServerCert(X509Certificate serverCert) {
         this.serverCert = serverCert;
@@ -144,6 +151,7 @@ public class NvHTTP {
                     if (certs.length == 1 && NvHTTP.this.serverCert != null) {
                         if (!certs[0].equals(NvHTTP.this.serverCert)) {
                             io.github.magalz.borealis.host.pairing.TlsAudit.certificateChanged(NvHTTP.this.baseUrlHttp.host(), certs[0], NvHTTP.this.serverCert); // BOREALIS: audit trail
+                            NvHTTP.this.certificateMismatch = true; // BOREALIS
                             throw new CertificateException("Certificate mismatch");
                         }
                     }
@@ -329,6 +337,8 @@ public class NvHTTP {
                         io.github.magalz.borealis.host.pairing.TlsAudit.failure(baseUrlHttp.host(), e); // BOREALIS: audit trail
                         throw e;
                     }
+                } catch (io.github.magalz.borealis.host.pairing.CertificateMismatchException e) { // BOREALIS: the mismatch is typed now, the fallback is the same
+                    throw new HostHttpResponseException(401, "Server certificate mismatch");
                 }
 
                 // This will throw an exception if the request came back with a failure status.
@@ -438,7 +448,16 @@ public class NvHTTP {
     private ResponseBody openHttpConnection(OkHttpClient client, HttpUrl baseUrl, String path, String query) throws IOException {
         HttpUrl completeUrl = getCompleteUrl(baseUrl, path, query);
         Request request = new Request.Builder().url(completeUrl).get().build();
-        Response response = performAndroidTlsHack(client).newCall(request).execute();
+        Response response;
+        try {
+            response = performAndroidTlsHack(client).newCall(request).execute();
+        } catch (SSLHandshakeException e) {
+            // BOREALIS: surface a pinned-certificate mismatch as its own type (host.failure)
+            if (certificateMismatch && e.getCause() instanceof CertificateException) {
+                throw new io.github.magalz.borealis.host.pairing.CertificateMismatchException(e);
+            }
+            throw e;
+        }
 
         ResponseBody body = response.body();
         

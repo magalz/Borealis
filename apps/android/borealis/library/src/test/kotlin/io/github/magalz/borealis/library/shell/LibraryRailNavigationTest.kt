@@ -20,6 +20,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -222,6 +223,31 @@ class LibraryRailNavigationTest {
         composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionLeft) }
 
         composeRule.onNode(isFocused()).assert(isRailItem)
+    }
+
+    @Test
+    fun `Left inside an address that has text keeps focus in the field`() {
+        launch()
+        composeRule.onNode(railItem("Add host")).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNode(isFocused()).performTextInput("192")
+
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNode(isFocused()).assert(hasSetTextAction())
+    }
+
+    @Test
+    fun `choosing Add host on the rail while on Add host keeps the typed address`() {
+        launch()
+        composeRule.onNode(railItem("Add host")).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNode(isFocused()).performTextInput("192.168.1.20")
+
+        composeRule.onNode(railItem("Add host")).performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNode(hasSetTextAction()).assert(hasText("192.168.1.20"))
     }
 
     private companion object {

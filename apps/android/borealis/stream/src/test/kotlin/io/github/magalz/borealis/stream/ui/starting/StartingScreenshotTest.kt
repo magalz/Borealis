@@ -22,7 +22,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
-/** Screenshots of the starting screen and the conflict dialog, named `<screen>_<device>_<state>`. */
+/**
+ * Screenshots of the starting screen and the conflict dialog, named `<screen>_<device>_<state>`.
+ */
 @RunWith(AndroidJUnit4::class)
 class StartingScreenshotTest {
     @get:Rule val composeRule = createComposeRule()
@@ -52,7 +54,8 @@ class StartingScreenshotTest {
     @Test
     @Config(qualifiers = PHONE)
     fun startingPhoneRetry() {
-        val retry = LaunchRetry(LaunchCategory.PENDING, attempt = 1, maxAttempts = 6, delayMs = 3000)
+        val retry =
+            LaunchRetry(LaunchCategory.PENDING, attempt = 1, maxAttempts = 6, delayMs = 3000)
         composeRule.setChrome(FormFactor.Phone) {
             Starting(StreamPhase.Starting(StartStage.STARTING_APP, retry))
         }

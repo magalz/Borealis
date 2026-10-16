@@ -116,10 +116,12 @@ class StartingScreenTest {
     @Test
     @Config(qualifiers = PHONE)
     fun `a retry shows the host busy line with the text the spinner showed`() {
-        val retry = LaunchRetry(LaunchCategory.PENDING, attempt = 2, maxAttempts = 4, delayMs = 2500)
+        val retry =
+            LaunchRetry(LaunchCategory.PENDING, attempt = 2, maxAttempts = 4, delayMs = 2500)
         show(StreamPhase.Starting(StartStage.STARTING_APP, retry))
 
-        val expected = LaunchProgressText.format(context, LaunchCategory.PENDING.ordinal, 2, 4, 2500)
+        val expected =
+            LaunchProgressText.format(context, LaunchCategory.PENDING.ordinal, 2, 4, 2500)
         assertThat(expected).contains("Retrying in 3 s (retry 2 of 4)")
         composeRule.onNodeWithText("HOST BUSY").assertIsDisplayed()
         composeRule.onNodeWithText(expected).assertIsDisplayed()

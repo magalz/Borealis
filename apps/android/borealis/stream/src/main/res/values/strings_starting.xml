@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The title of the starting screen; %1$s is the name of the app. -->
+    <string name="stream_starting_title">Starting %1$s</string>
+    <!-- The steps of starting a stream; %1$s is the host name or the app name. -->
+    <string name="stream_starting_step_connecting">Connecting to %1$s</string>
+    <string name="stream_starting_step_app">Starting %1$s</string>
+    <string name="stream_starting_step_display">Preparing the display</string>
+    <string name="stream_starting_step_first_frame">Waiting for the first frame</string>
+    <string name="stream_starting_display_note">The host builds a display for this device. This can take up to 15 s.</string>
+    <!-- The label over the retry text while the host asks Borealis to try again. -->
+    <string name="stream_starting_host_busy">Host busy</string>
+    <string name="stream_starting_cancel">Cancel</string>
+</resources>

@@ -25,12 +25,14 @@ awkward to type.
    opens the keyboard, as in Moonlight 12.2.
 2. The system shows the keyboard. On a phone it is docked at the bottom and the
    stream stays visible above it. On a TV or handheld it is shown on the stream screen.
+   On a phone the shortcut row starts with Esc.
 3. The user taps a modifier (Ctrl, Alt, Win or Shift). The modifier latches and
    shows as on.
-4. The user taps a key. The system sends the key to the PC with the latched
-   modifiers, and the latched modifiers are cleared.
-5. The user taps a shortcut chip (Alt+Tab, Win, Ctrl+Shift+Esc, Alt+F4, Win+D,
-   Esc or F11). The system sends that shortcut once.
+4. The user taps a key. Letter keys show in lowercase unless Shift is latched;
+   the keyboard has no Caps key. The system sends the key to the PC with the
+   latched modifiers, and the latched modifiers are cleared.
+5. The user taps a shortcut chip (Alt+Tab, Win+Tab, Win, Ctrl+Shift+Esc, Alt+F4,
+   Win+D, Esc or F11). The system sends that shortcut once.
 6. The user chooses Close. The system returns to the full stream.
 
 ## Alternative flows
@@ -75,6 +77,9 @@ what they name; the host's response to a key is outside this use case.
 | UC-005-T4 | Given the handheld keyboard is open, when Y is pressed, then Backspace is sent. | UI | exists (Sprint 5, UI) |
 | UC-005-T5 | Given the phone keyboard is open, when the stream is shown, then the picture stays visible above the keyboard. | UI | partly exists (Sprint 5, UI; device round) |
 | UC-005-T6 | Given keys are typed, when logs and the audit trail are read, then no typed key text appears in them. | unit | partly exists (Sprint 5, unit) |
+| UC-005-T7 | Given the docked keyboard on a phone, when the shortcut row shows, then Esc is its first chip. | unit | exists (Sprint 5, unit) |
+| UC-005-T8 | Given Shift is not latched, when the letter keys show, then they are lowercase; with Shift latched, the next letter shows in uppercase. | UI | exists (Sprint 5, UI; device round) |
+| UC-005-T9 | Given the keyboard is open, when the user taps Win+Tab, then Win+Tab is sent once. | unit | exists (Sprint 5, unit; device round) |
 
 Sprint 5 built the Borealis keyboard and its logic. A test marked "exists (Sprint
 5, unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose

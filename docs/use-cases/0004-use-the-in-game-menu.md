@@ -105,9 +105,9 @@ row is disabled; it needs the Phase 3 host API and cannot be chosen.
 | UC-004-T13 | Given a system pad with a Select button, when Select is pressed alone, then it reaches the PC within 60 ms unless the other button arrives first. | unit | exists (Sprint 6, unit) |
 | UC-004-T14 | Given a system pad, when Select and Start arrive within 60 ms of each other, then the 1 s hold opens the menu and neither button reaches the PC. | unit | exists (Sprint 6, unit) |
 | UC-004-T15 | Given a system pad, when one button is tapped quickly on its own, then it reaches the PC as a short press. | unit | exists (Sprint 6, unit) |
-| UC-004-T16 | Given a pad on the USB driver, when Select and Start are pressed, then both arrive in one report and neither is delayed. | unit | planned (Sprint 6) |
-| UC-004-T17 | Given any pad emulates the mouse, when the menu opens, then the Gamepad mouse row shows On. | UI | planned (Sprint 6) |
-| UC-004-T18 | Given the user chooses a Gamepad mouse value in the menu, then the value applies to every pad. | unit | planned (Sprint 6) |
+| UC-004-T16 | Given a pad on the USB driver, when Select and Start are pressed, then both arrive in one report and neither is delayed. | unit | exists (Sprint 6, unit) |
+| UC-004-T17 | Given any pad emulates the mouse, when the menu opens, then the Gamepad mouse row shows On. | UI | exists (Sprint 6, unit) |
+| UC-004-T18 | Given the user chooses a Gamepad mouse value in the menu, then the value applies to every pad. | unit | exists (Sprint 6, unit) |
 
 Sprint 5 built the in-game menu and its logic. A test marked "exists (Sprint 5,
 unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose test
@@ -118,8 +118,11 @@ gamepad chord was run on a TV with both 8BitDo pads, and on a USB-driver pad
 (UC-004-T2, T8 to T11).
 
 UC-004-T13 to T15 exist (Sprint 6, unit): `MenuChordDetectorTest` and
-`GuideTapTest` check the 60 ms hold of Select and Start on a system pad. UC-004-T16
-to T18 are planned for Sprint 6. They cover the gamepad follow-ups in A4 and A5.
+`GuideTapTest` check the 60 ms hold of Select and Start on a system pad.
+UC-004-T16 to T18 exist (Sprint 6, unit): `UsbMenuChordTest` checks that a lone
+Start on the USB driver is in the packet of its own report, and
+`MouseRowFollowsStartHoldTest` and `GamepadMouseTest` check the Gamepad mouse
+row and that the menu's value reaches every pad.
 
 Partly covered:
 

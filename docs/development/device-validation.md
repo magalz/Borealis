@@ -259,9 +259,11 @@ UI.
 
 ### 3.4 PC details dialog
 
-1. With the device paired, open the PC menu and choose "View Details"
-   (`pcview_menu_details`).
-2. Read the "Host capabilities" block (`host_info_header`).
+1. The PC details dialog went away with `PcView` in Sprint 5. With the device
+   paired, read the PC's card on Hosts instead: it shows the address and the
+   codec and HDR tags (`HostInfoText`).
+2. The full capability text below is still built by `HostInfoText` and is in
+   the diagnostic bundle.
 3. Expected for the 26.09.1 capture (`serverinfo-http.xml`, codec mask
    `0x001C0301`, codec flags `0x13` in `host_caps.tsv`):
    - `Host software: Sunshine-compatible, version 7.1.431.-1`
@@ -334,7 +336,7 @@ UI.
 
 ### 3.7 Frame pacing "cap FPS" at the display rate
 
-1. In the Borealis settings, set "Video frame pacing" to "Balanced with FPS limit"
+1. In Settings, set "Frame pacing" to "Balanced with FPS limit"
    (value `cap-fps`, `pacing_balanced_alt`).
 2. Set the stream frame rate to the refresh rate of the device. Record that rate.
    The mismatch of contract 7.4 comes from a selected rate at or up to 3 Hz above
@@ -430,12 +432,6 @@ UI.
 
 ### 3.13 Settings
 
-`TODO(verify)`: at commit `5216a51b` no app code opens the Compose Settings
-screen. The gear on Hosts and the rail's Settings item still open the upstream
-stream settings, and the Diagnostics button of the connection error still opens
-the older Borealis settings screen. Check the path on the device before the
-round, and update the steps below if the wiring changes.
-
 1. Phone: on Hosts, tap the gear, then Settings. TV and handheld: in the rail,
    choose Settings. The groups are on the left and their rows on the right.
 2. Expected: the groups are Stream, Video, Input, Gamepad, On-screen controls,
@@ -486,8 +482,7 @@ for the TV. Never put a bundle from a real run into the repository.
    Downloads and offers Send to phone"). The progress dialog appears, then the
    "Diagnostics saved" dialog. It shows the file name, the location in Downloads
    and the `adb pull` command under "To copy it to a computer, run". The share
-   sheet must not open by itself. `TODO(verify)`: which button has the focus, and
-   that the D-pad scrolls the text.
+   sheet must not open by itself. Close has the focus.
 8. On the PC, run the `adb pull` command of the dialog, or:
 
    ```sh
@@ -622,12 +617,12 @@ each `fail`.
    - (a) On the TV, the Add host keyboard opens on OK, not when the field gets
      focus. The comment of `AddHostScreen` says so. Sprint 5 (section 10, R1)
      saw it open on focus. Whether `SoftwareKeyboardController.show()` opens the
-     Google TV keyboard is checked on the device. `TODO(verify)`: which behaviour
-     is wanted.
+     Google TV keyboard is checked on the device. UC-008 wants the keyboard to
+     open on OK on a TV.
    - (b) An RTSP -1 failure shows no firewall hint.
    - (d) With the USB driver setting off, the USB attach dialog does not appear.
-   - (e) The pinned app shortcut icon. The Sprint 6 note records the Borealis
-     monitor icon. `TODO(verify)`: the icon that a pinned app should show.
+   - (e) The pinned app shortcut icon: the app's box art when the PC sent it,
+     otherwise the Borealis monitor icon.
    - (f) A pinned app shows its box art.
    - (g) The performance overlay shows a decode time on the Streamer.
    - (h) An 8BitDo pad on the TV, with the Windows game controller panel (joy.cpl)
@@ -1007,8 +1002,10 @@ Follow-ups:
   host ends the stream before it answers `/cancel`, so the Quitting screen waits
   about 7 s.
 - The MediaTek decoder decode time, shown as "—" (D5).
-- The TV channel prompt after pairing.
-- The pinned app shortcut icon.
+- Done in Sprint 6: the TV channel prompt after pairing was dropped, because
+  Google TV shows no app channels (section 11).
+- Done in Sprint 6: the pinned app shortcut icon (box art, or the Borealis
+  monitor icon).
 - Done in Sprint 6: the `PairingHints` dead code. `pinHint` and `unpairHint` are
   removed, and `PairingHints` keeps `webUiUrl` and `suggestedDeviceName`, which
   the Library pairing uses (see the Borealis Android README).
@@ -1161,8 +1158,8 @@ Download folders of both devices for the owner to delete.
 ## 11. Results: Sprint 6
 
 The device round of Sprint 6 adds its results to this section. So far it
-records the TV channel spike. `TODO(verify)`: the Borealis build tested in the
-spike.
+records the TV channel spike, run with the Sprint 5 debug build that was on the
+TV (code of `09ba717b`).
 
 ### TV channel spike, 2026-10-16
 

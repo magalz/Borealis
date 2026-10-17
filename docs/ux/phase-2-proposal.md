@@ -15,10 +15,8 @@ Connection error), the in-game menu, the Borealis keyboard and the Compact and
 Detailed performance overlay.
 
 Sprint 6 implemented Settings, Privacy and diagnostics, the Audit trail viewer
-and Send to phone in Compose. `TODO(verify)`: at commit `5216a51b` the Library
-does not open these screens yet. The gear and the rail's Settings item still
-open the upstream stream settings. The device validation runbook, section 3.13,
-has the same note.
+and Send to phone in Compose. They replace the upstream stream settings and
+the interim Borealis settings screen, which are deleted (ADR 0055).
 
 The screens below are the approved design; where the built screen differs, the
 section says so. Screenshots use

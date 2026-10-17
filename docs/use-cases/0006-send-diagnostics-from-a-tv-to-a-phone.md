@@ -37,7 +37,7 @@ opens one download link that works once and closes after 5 minutes.
 6. The system closes the link after the download. The dialog shows "Downloaded.
    The link is closed."
 
-## Dialog states (Phase 2, planned)
+## Dialog states (Phase 2, Sprint 6)
 
 The Phase 2 dialog has these states. Close has the focus in each state, and
 closing stops the link.
@@ -119,8 +119,8 @@ capability.
   ("Nothing leaves unless the user exports it or opts in to crash reporting.";
   the diagnostic bundle section).
 - Existing logic: Send to phone on a TV exists from Sprint 3 (one download, 5
-  minutes). The Phase 2 dialog is planned. The prototype's "Today" note for
-  the screen says adb pull only.
+  minutes). The Phase 2 dialog in Compose exists from Sprint 6
+  (`SendToPhoneDialog`).
 - Development: [device validation](../development/device-validation.md)
   (export diagnostics on a TV).
 - Existing tests (Sprint 3): `OneShotFileServerTest`, `TransferQrTest`,

@@ -39,9 +39,9 @@ class PointerMotion {
         }
         val deflection = min(1.0, length / STICK_MAX)
         var perSecond = PEAK_PER_SECOND * deflection * deflection * deflection
-        perSecond *= speedPercent / 100.0 * sessionFactor
+        perSecond *= speedPercent / PERCENT * sessionFactor
         if (precision) perSecond *= PRECISION_FACTOR
-        val distance = perSecond * elapsedMs.coerceIn(0L, MAX_ELAPSED_MS) / 1000.0
+        val distance = perSecond * elapsedMs.coerceIn(0L, MAX_ELAPSED_MS) / MS_PER_SECOND
 
         val moveX = remainderX + distance * x / length
         val moveY = remainderY + distance * y / length
@@ -69,5 +69,7 @@ class PointerMotion {
         const val MAX_ELAPSED_MS = 100L
 
         private const val STICK_MAX = 32766.0
+        private const val MS_PER_SECOND = 1000.0
+        private const val PERCENT = 100.0
     }
 }

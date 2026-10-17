@@ -24,7 +24,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsContractTest {
     @Test
-    fun `the catalog holds the 38 ported stream settings, the gamepad mouse speed, the 2 logging switches and the overlay choice`() {
+    fun `the catalog holds the ported, logging, overlay and mouse speed settings`() {
         assertThat(Settings.all).hasSize(CATALOG_SIZE)
         assertThat(Settings.all.map { it.key }).containsNoDuplicates()
         assertThat(Settings.all).contains(Settings.RESOLUTION)

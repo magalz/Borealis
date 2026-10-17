@@ -28,7 +28,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -87,6 +88,12 @@ fun SendToPhoneDialog(
         onDispose { transfer.stop() }
     }
     val current by transfer.state.collectAsState()
+    // The window, not the dialog: a dialog window wraps its content, so it has no short side yet.
+    val window = LocalWindowInfo.current.containerSize
+    val qrSide =
+        with(LocalDensity.current) {
+            (minOf(window.width, window.height) * QR_SHARE_OF_SHORT_SIDE).toDp()
+        }
     val close = {
         transfer.stop()
         onDismiss()
@@ -97,7 +104,6 @@ fun SendToPhoneDialog(
     ) {
         val colors = LocalBorealisColors.current
         val shape = MaterialTheme.shapes.extraLarge
-        val screen = LocalConfiguration.current
         Column(
             Modifier.widthIn(max = DIALOG_WIDTH)
                 .background(colors.surface, shape)
@@ -111,38 +117,54 @@ fun SendToPhoneDialog(
                 stringResource(R.string.borealis_send_to_phone_title),
                 style = MaterialTheme.typography.titleLarge,
             )
-            when (val state = if (started) current else TransferState.Idle) {
-                is TransferState.Waiting -> {
-                    val shortSide = minOf(screen.screenWidthDp, screen.screenHeightDp)
-                    Waiting(state, (shortSide * QR_SHARE_OF_SHORT_SIDE).dp, close)
-                }
-                TransferState.Downloaded ->
-                    Outcome(stringResource(R.string.borealis_send_to_phone_downloaded), close)
-                TransferState.Expired ->
-                    Outcome(
-                        stringResource(R.string.borealis_send_to_phone_expired),
-                        close,
-                        onTryAgain = { transfer.start(bundle) },
-                        textColor = colors.warningInk,
-                    )
-                TransferState.NoNetwork ->
-                    Outcome(
-                        stringResource(R.string.borealis_send_to_phone_no_network),
-                        close,
-                        command = adbPullCommand,
-                        textColor = colors.warningInk,
-                    )
-                TransferState.Failed ->
-                    Outcome(
-                        stringResource(R.string.borealis_send_to_phone_failed),
-                        close,
-                        textColor = colors.dangerInk,
-                    )
-                TransferState.Idle,
-                TransferState.Stopped ->
-                    Outcome(stringResource(R.string.borealis_send_to_phone_starting), close)
-            }
+            TransferContent(
+                state = if (started) current else TransferState.Idle,
+                adbPullCommand = adbPullCommand,
+                qrSide = qrSide,
+                onClose = close,
+                onTryAgain = { transfer.start(bundle) },
+            )
         }
+    }
+}
+
+/** What the dialog says and offers in [state]. */
+@Composable
+private fun TransferContent(
+    state: TransferState,
+    adbPullCommand: String,
+    qrSide: Dp,
+    onClose: () -> Unit,
+    onTryAgain: () -> Unit,
+) {
+    val colors = LocalBorealisColors.current
+    when (state) {
+        is TransferState.Waiting -> Waiting(state, qrSide, onClose)
+        TransferState.Downloaded ->
+            Outcome(stringResource(R.string.borealis_send_to_phone_downloaded), onClose)
+        TransferState.Expired ->
+            Outcome(
+                stringResource(R.string.borealis_send_to_phone_expired),
+                onClose,
+                onTryAgain = onTryAgain,
+                textColor = colors.warningInk,
+            )
+        TransferState.NoNetwork ->
+            Outcome(
+                stringResource(R.string.borealis_send_to_phone_no_network),
+                onClose,
+                command = adbPullCommand,
+                textColor = colors.warningInk,
+            )
+        TransferState.Failed ->
+            Outcome(
+                stringResource(R.string.borealis_send_to_phone_failed),
+                onClose,
+                textColor = colors.dangerInk,
+            )
+        TransferState.Idle,
+        TransferState.Stopped ->
+            Outcome(stringResource(R.string.borealis_send_to_phone_starting), onClose)
     }
 }
 

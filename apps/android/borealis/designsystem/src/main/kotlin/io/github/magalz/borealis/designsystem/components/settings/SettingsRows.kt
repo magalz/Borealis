@@ -6,7 +6,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -23,6 +25,7 @@ import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.MenuRow
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
@@ -172,7 +175,14 @@ fun SettingsValueRow(
     ) {
         SettingsRowText(title, summary, disabledNote, enabled, tone, Modifier.weight(1f))
         if (value != null) ValueText(value, enabled)
-        if (tone == SettingsRowTone.Normal) Chevron()
+        if (tone == SettingsRowTone.Normal) {
+            Icon(
+                BorealisIcons.ChevronRight,
+                contentDescription = null,
+                modifier = Modifier.size(ROW_ICON_SIZE),
+                tint = LocalBorealisColors.current.ink3,
+            )
+        }
     }
 }
 

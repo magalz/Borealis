@@ -34,6 +34,7 @@ import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.Kicker
 import io.github.magalz.borealis.designsystem.components.StepList
 import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.host.launch.LaunchProgressText
@@ -49,7 +50,6 @@ import io.github.magalz.borealis.stream.ui.common.onGamepadB
 internal const val STARTING_CONTENT_TAG = "starting_content"
 
 private const val CONTENT_WIDTH_FRACTION = 0.86f
-private val CONTENT_MAX_WIDTH = 440.dp
 private val CONTENT_GAP = 16.dp
 private val TEXT_GAP = 4.dp
 
@@ -76,7 +76,7 @@ fun StartingScreen(
     ) {
         Column(
             Modifier.testTag(STARTING_CONTENT_TAG)
-                .width(minOf(maxWidth * CONTENT_WIDTH_FRACTION, CONTENT_MAX_WIDTH))
+                .width(minOf(maxWidth * CONTENT_WIDTH_FRACTION, BorealisDimens.contentMaxWidth))
                 .verticalScroll(rememberScrollState())
                 .padding(LocalBorealisSpacing.current.gutter),
             horizontalAlignment = Alignment.CenterHorizontally,

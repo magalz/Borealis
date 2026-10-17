@@ -31,9 +31,12 @@ import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
+import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
+import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import io.github.magalz.borealis.host.launch.ConflictChoice
 import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.StreamIntents
@@ -43,9 +46,6 @@ import io.github.magalz.borealis.stream.ui.common.onGamepadB
 /** Marks the panel of the dialog, so a test can measure it. */
 internal const val CONFLICT_PANEL_TAG = "conflict_panel"
 
-private const val DIALOG_WIDTH_FRACTION = 0.92f
-private val DIALOG_MAX_WIDTH = 420.dp
-private val DIALOG_PADDING = 20.dp
 private val DIALOG_GAP = 12.dp
 private val BUTTON_GAP = 12.dp
 private val WARNING_PADDING_HORIZONTAL = 12.dp
@@ -55,8 +55,8 @@ private const val WARNING_TINT = 0.1f
 /**
  * The choice for an app that is already running on the host (UC-003): Cancel, Join, or quit it and
  * start again. It is drawn inside the chrome, not in a platform dialog window, because the stream
- * host owns the input. Cancel has the initial focus so a stray OK changes nothing, and the gamepad
- * B button cancels.
+ * host owns the input; it has the surface, width and padding of a compact `BorealisDialog`. Cancel
+ * has the initial focus so a stray OK changes nothing, and the gamepad B button cancels.
  */
 @Composable
 fun ConflictDialog(phase: StreamPhase.Conflict, intents: StreamIntents) {
@@ -74,12 +74,12 @@ fun ConflictDialog(phase: StreamPhase.Conflict, intents: StreamIntents) {
         // outside its button.
         Column(
             Modifier.testTag(CONFLICT_PANEL_TAG)
-                .width(minOf(maxWidth * DIALOG_WIDTH_FRACTION, DIALOG_MAX_WIDTH))
+                .width(BorealisDimens.dialogWidth(DialogWidth.Compact, maxWidth))
                 .background(colors.surface, shape)
                 .border(1.dp, colors.line, shape)
                 .clip(shape)
                 .verticalScroll(rememberScrollState())
-                .padding(DIALOG_PADDING),
+                .padding(BorealisTokens.Space.DialogPadding),
             verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
         ) {
             Text(

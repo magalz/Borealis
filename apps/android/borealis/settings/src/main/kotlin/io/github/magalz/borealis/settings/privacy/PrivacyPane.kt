@@ -20,10 +20,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -174,6 +180,9 @@ private tailrec fun Context.findActivity(): Activity? =
 
 /**
  * The rows of the pane, its snackbar and its dialogs. Stateless: the dialog to show is in [state].
+ * When the Audit trail row had the focus as it opened the viewer, Back finds the focus on it again:
+ * the screen leaves the composition while the viewer shows, and a focus that is lost with it would
+ * land on whatever comes first.
  */
 @Composable
 internal fun PrivacyContent(
@@ -183,6 +192,7 @@ internal fun PrivacyContent(
     modifier: Modifier = Modifier,
 ) {
     val phone = LocalFormFactor.current == FormFactor.Phone
+    val auditFocus = rememberAuditRowFocus(actions.onOpenAudit)
     Box(modifier) {
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(LIST_PADDING),
@@ -204,8 +214,9 @@ internal fun PrivacyContent(
             SettingsValueRow(
                 title = stringResource(R.string.borealis_privacy_audit_title),
                 value = null,
-                onClick = actions.onOpenAudit,
+                onClick = auditFocus.onClick,
                 summary = stringResource(R.string.borealis_privacy_audit_summary),
+                modifier = auditFocus.modifier,
             )
             SettingsValueRow(
                 title = stringResource(R.string.borealis_privacy_erase_title),
@@ -229,6 +240,34 @@ internal fun PrivacyContent(
         )
     }
     PrivacyDialogs(state.dialog, actions)
+}
+
+/** The Audit trail row's [modifier] and [onClick], which keep the focus across the viewer. */
+private class AuditRowFocus(val modifier: Modifier, val onClick: () -> Unit)
+
+/**
+ * Remembers that the Audit trail row had the focus as it opened the viewer, and takes the focus
+ * back when the screen comes back. The state is saved, as the screen leaves the composition while
+ * the viewer shows.
+ */
+@Composable
+private fun rememberAuditRowFocus(onOpenAudit: () -> Unit): AuditRowFocus {
+    val row = remember { FocusRequester() }
+    var hasFocus by remember { mutableStateOf(false) }
+    var returnToRow by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (returnToRow) {
+            returnToRow = false
+            row.requestFocus()
+        }
+    }
+    return AuditRowFocus(
+        Modifier.focusRequester(row).onFocusChanged { hasFocus = it.isFocused },
+        onClick = {
+            returnToRow = hasFocus
+            onOpenAudit()
+        },
+    )
 }
 
 /**

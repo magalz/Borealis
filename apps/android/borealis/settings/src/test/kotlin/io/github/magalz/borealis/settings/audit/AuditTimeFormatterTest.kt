@@ -6,7 +6,10 @@ import java.time.ZoneId
 import java.util.Locale
 import org.junit.Test
 
-/** The times of the list: the clock, the time zone and the locale come from the device. */
+/**
+ * The times of the list: the clock and the time zone come from the device, the language is the
+ * app's.
+ */
 class AuditTimeFormatterTest {
     private val formatter = fixedFormatter()
 
@@ -33,7 +36,7 @@ class AuditTimeFormatterTest {
 
     @Test
     fun `the time zone of the device decides what today is`() {
-        val tokyo = AuditTimeFormatter({ Clock.fixed(NOW, ZoneId.of("Asia/Tokyo")) }, { Locale.US })
+        val tokyo = AuditTimeFormatter({ Clock.fixed(NOW, ZoneId.of("Asia/Tokyo")) }, Locale.US)
 
         // 20:50 UTC is 05:50 on Saturday the 17th in Tokyo, where 14:00 UTC is 23:00 on Friday.
         assertThat(tokyo.short(at("2026-10-16T14:00:00Z"))).isEqualTo("Fri 23:00")
@@ -41,11 +44,19 @@ class AuditTimeFormatterTest {
     }
 
     @Test
-    fun `the locale of the device names the weekday`() {
-        val german = AuditTimeFormatter({ Clock.fixed(NOW, ZoneId.of("UTC")) }, { Locale.GERMANY })
+    fun `the app is English, so a device in another language still gets English times`() {
+        val previous = Locale.getDefault()
+        Locale.setDefault(Locale.forLanguageTag("pt-BR"))
+        try {
+            val injected = AuditTimeFormatter()
+            val earlier = at("2026-10-12T12:00:00Z")
 
-        assertThat(german.short(at("2026-10-12T18:02:00Z"))).startsWith("Mo")
-        assertThat(german.short(at("2026-10-12T18:02:00Z"))).endsWith("18:02")
+            // The weekday shifts with the time zone of the machine, the language must not.
+            assertThat(injected.short(earlier)).matches("(Mon|Tue) [0-9][0-9]:[0-9][0-9]")
+            assertThat(injected.full(earlier)).contains("Oct")
+        } finally {
+            Locale.setDefault(previous)
+        }
     }
 
     @Test

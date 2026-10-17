@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.settings.transfer
 
 import android.graphics.Color
+import android.text.format.Formatter
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -15,6 +16,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
@@ -64,7 +66,10 @@ class SendToPhoneDialogTest {
         open(FakeTransferController(FakeTransferController.waiting(remainingMillis = 271_200)))
 
         composeRule.onNodeWithText(LINK).assertIsDisplayed()
-        composeRule.onNodeWithText("$FILE_NAME · 58 KB", substring = true).assertIsDisplayed()
+        // The size reads as it does in the Saved dialog of the same bundle.
+        val size =
+            Formatter.formatShortFileSize(ApplicationProvider.getApplicationContext(), 59_392)
+        composeRule.onNodeWithText("$FILE_NAME · $size", substring = true).assertIsDisplayed()
         composeRule.onNodeWithText("4:32", substring = true).assertIsDisplayed()
     }
 

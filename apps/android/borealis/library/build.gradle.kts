@@ -17,6 +17,8 @@ android {
 dependencies {
     implementation(project(":borealis:designsystem"))
     implementation(project(":borealis:logging"))
+    // The Settings graph (Settings, Privacy and diagnostics, Audit trail) is a Library destination.
+    implementation(project(":borealis:settings"))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

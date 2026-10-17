@@ -93,6 +93,17 @@ class SettingsComponentScreenshotTest {
     }
 
     @Test
+    @Config(qualifiers = TV)
+    fun sliderTvDisabledFocused() {
+        composeRule.setContentInKeyboardMode {
+            Page(FormFactor.Tv) { Rows(Modifier.width(560.dp)) }
+        }
+
+        composeRule.onNodeWithText("Vibration strength").requestFocus()
+        shoot("settings_slider_tv_disabled-focused")
+    }
+
+    @Test
     @Config(qualifiers = PHONE)
     fun choiceSheetPhone() {
         composeRule.setContent { Page(FormFactor.Phone) { Sheet() } }
@@ -151,7 +162,25 @@ class SettingsComponentScreenshotTest {
                 enabled = false,
                 disabledNote = "This display does not support HDR",
             )
-            SettingsSliderRow("Deadzone", 7f, 0f..20f, 1f, "7 %", {})
+            SettingsSliderRow(
+                "Deadzone",
+                7f,
+                0f..20f,
+                1f,
+                "7 %",
+                {},
+                summary = "How far the stick moves before it counts",
+            )
+            SettingsSliderRow(
+                "Vibration strength",
+                100f,
+                0f..200f,
+                10f,
+                "100 %",
+                {},
+                enabled = false,
+                disabledNote = "This device has no vibration motor",
+            )
             SettingsValueRow("Erase audit trail", null, {}, tone = SettingsRowTone.Danger)
         }
     }
@@ -185,8 +214,11 @@ class SettingsComponentScreenshotTest {
         Column(Modifier.fillMaxSize().padding(24.dp)) {
             Text("Settings", style = MaterialTheme.typography.titleLarge)
             SettingsTwoPane(
-                groups = listOf("Stream", "Video", "Input", "Audio", "About"),
-                selectedIndex = 0,
+                groups =
+                    listOf("Stream", "Video", "Input", "Audio", "About").map {
+                        SettingsGroup(it, it)
+                    },
+                selected = "Stream",
                 onSelect = {},
                 modifier = Modifier.padding(top = 12.dp),
             ) {

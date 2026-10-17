@@ -2,7 +2,7 @@ package io.github.magalz.borealis.designsystem.components.settings
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsDisplayed
@@ -27,7 +27,16 @@ import org.robolectric.annotation.Config
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class SettingsTwoPaneTest {
     @get:Rule val composeRule = createComposeRule()
-    private var selected by mutableIntStateOf(0)
+    private var selected by mutableStateOf("stream")
+    private val selections = mutableListOf<String>()
+
+    private val allGroups =
+        listOf(
+            SettingsGroup("stream", "Stream"),
+            SettingsGroup("video", "Video"),
+            SettingsGroup("audio", "Audio"),
+            SettingsGroup("about", "About"),
+        )
 
     @Test
     fun `the left list shows the groups and the pane the selected one`() {
@@ -41,14 +50,14 @@ class SettingsTwoPaneTest {
     }
 
     @Test
-    fun `moving focus down the left list selects the next group`() {
+    fun `moving focus down the left list selects the next group by its key`() {
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Stream").requestFocus()
 
         composeRule.onNodeWithText("Stream").performKeyInput { pressKey(Key.DirectionDown) }
 
         composeRule.onNodeWithText("Video").assertIsFocused()
-        assertThat(selected).isEqualTo(1)
+        assertThat(selections).containsExactly("video")
         composeRule.onNodeWithText("Codec").assertIsDisplayed()
         composeRule.onNodeWithText("Resolution").assertDoesNotExist()
     }
@@ -59,36 +68,68 @@ class SettingsTwoPaneTest {
 
         composeRule.onNodeWithText("Audio").performClick()
 
-        assertThat(selected).isEqualTo(2)
+        assertThat(selected).isEqualTo("audio")
         composeRule.onNodeWithText("Channels").assertIsDisplayed()
     }
 
     @Test
-    fun `Right from a group enters the pane`() {
+    fun `the selection is a key, so a hidden group does not shift it`() {
+        selected = "audio"
+        composeRule.setContent { Specimen(allGroups.filter { it.key != "video" }) }
+
+        composeRule.onNodeWithText("Channels").assertIsDisplayed()
+        composeRule.onNodeWithText("Codec").assertDoesNotExist()
+    }
+
+    @Test
+    fun `Right from the first group enters the pane at its first row`() {
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Stream").requestFocus()
 
         composeRule.onNodeWithText("Stream").performKeyInput { pressKey(Key.DirectionRight) }
 
         composeRule.onNodeWithText("Resolution").assertIsFocused()
-        assertThat(selected).isEqualTo(0)
+        assertThat(selected).isEqualTo("stream")
+    }
+
+    @Test
+    fun `Right from a later group enters the pane at its first row, not the nearest`() {
+        selected = "video"
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Video").requestFocus()
+
+        composeRule.onNodeWithText("Video").performKeyInput { pressKey(Key.DirectionRight) }
+
+        composeRule.onNodeWithText("Codec").assertIsFocused()
+        assertThat(selected).isEqualTo("video")
+    }
+
+    @Test
+    fun `Right from a group with a single row enters that row`() {
+        selected = "about"
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("About").requestFocus()
+
+        composeRule.onNodeWithText("About").performKeyInput { pressKey(Key.DirectionRight) }
+
+        composeRule.onNodeWithText("Licences").assertIsFocused()
     }
 
     @Test
     fun `Left from any row of the pane returns to the selected group`() {
-        selected = 1
+        selected = "video"
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("HDR").requestFocus()
 
         composeRule.onNodeWithText("HDR").performKeyInput { pressKey(Key.DirectionLeft) }
 
         composeRule.onNodeWithText("Video").assertIsFocused()
-        assertThat(selected).isEqualTo(1)
+        assertThat(selected).isEqualTo("video")
     }
 
     @Test
     fun `a slider at its lowest value passes Left on to return to the group`() {
-        selected = 2
+        selected = "audio"
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Vibration").requestFocus()
 
@@ -97,27 +138,50 @@ class SettingsTwoPaneTest {
         composeRule.onNodeWithText("Audio").assertIsFocused()
     }
 
+    @Test
+    fun `an unknown selected key falls back to the first group`() {
+        selected = "gone"
+        composeRule.setContentInKeyboardMode { Specimen() }
+
+        composeRule.onNodeWithText("Resolution").assertIsDisplayed()
+        composeRule.onNodeWithText("Resolution").requestFocus()
+        composeRule.onNodeWithText("Resolution").performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNodeWithText("Stream").assertIsFocused()
+    }
+
+    @Test
+    fun `no groups show an empty pane`() {
+        composeRule.setContent { Specimen(emptyList()) }
+
+        composeRule.onNodeWithText("Resolution").assertDoesNotExist()
+    }
+
     @Composable
-    private fun Specimen() {
+    private fun Specimen(groups: List<SettingsGroup<String>> = allGroups) {
         BorealisTheme(FormFactor.Tv) {
             SettingsTwoPane(
-                groups = listOf("Stream", "Video", "Audio"),
-                selectedIndex = selected,
-                onSelect = { selected = it },
+                groups = groups,
+                selected = selected,
+                onSelect = {
+                    selections += it
+                    selected = it
+                },
             ) { group ->
                 when (group) {
-                    0 -> {
+                    "stream" -> {
                         SettingsValueRow("Resolution", "1280 x 720", {})
                         SettingsValueRow("Frame rate", "60 fps", {})
                     }
-                    1 -> {
+                    "video" -> {
                         SettingsValueRow("Codec", "Automatic", {})
                         SettingsSwitchRow("HDR", false, {})
                     }
-                    else -> {
+                    "audio" -> {
                         SettingsValueRow("Channels", "Stereo", {})
                         SettingsSliderRow("Vibration", 0f, 0f..200f, 10f, "0 %", {})
                     }
+                    else -> SettingsValueRow("Licences", null, {})
                 }
             }
         }

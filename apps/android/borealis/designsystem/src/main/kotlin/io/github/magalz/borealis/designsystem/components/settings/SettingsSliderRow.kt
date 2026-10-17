@@ -1,3 +1,5 @@
+@file:Suppress("UNUSED_PARAMETER")
+
 package io.github.magalz.borealis.designsystem.components.settings
 
 import androidx.compose.foundation.focusable
@@ -66,7 +68,10 @@ fun SettingsSliderRow(
     valueLabel: String,
     onValueChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
+    summary: String? = null,
     enabled: Boolean = true,
+    disabledNote: String? = null,
+    keyStep: Float = step,
 ) {
     val dim = if (enabled) 1f else DISABLED_ALPHA
     val change: (Float) -> Boolean = { target ->

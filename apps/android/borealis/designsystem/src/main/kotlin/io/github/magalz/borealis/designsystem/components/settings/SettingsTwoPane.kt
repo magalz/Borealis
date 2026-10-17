@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName")
+
 package io.github.magalz.borealis.designsystem.components.settings
 
 import androidx.compose.foundation.background
@@ -63,13 +65,34 @@ private val GROUP_PADDING_VERTICAL = 10.dp
  * the pane at the row nearest to the group; Left from the pane, when no row uses the key, returns
  * to the selected group, whichever row it leaves.
  */
+@Composable
+fun <K> SettingsTwoPane(
+    groups: List<SettingsGroup<K>>,
+    selected: K,
+    onSelect: (K) -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.(K) -> Unit,
+) {
+    IndexedTwoPane(
+        groups.map { it.title },
+        groups.indexOfFirst { it.key == selected },
+        { onSelect(groups[it].key) },
+        modifier,
+    ) {
+        content(groups[it].key)
+    }
+}
+
+/** One group of a [SettingsTwoPane]: the [key] that identifies it and its [title]. */
+class SettingsGroup<out K>(val key: K, val title: String)
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun SettingsTwoPane(
+private fun IndexedTwoPane(
     groups: List<String>,
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier,
     content: @Composable ColumnScope.(Int) -> Unit,
 ) {
     val selectedGroup = remember { FocusRequester() }

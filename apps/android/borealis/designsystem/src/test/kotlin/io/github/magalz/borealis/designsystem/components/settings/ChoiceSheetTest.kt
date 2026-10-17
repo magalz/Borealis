@@ -8,6 +8,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -130,6 +131,41 @@ class ChoiceSheetTest {
 
         assertThat(dismissed).isEqualTo(1)
         assertThat(selections).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the title is a heading and names the dialog`() {
+        composeRule.setContent { Specimen(FormFactor.Tv) }
+
+        composeRule
+            .onNodeWithText("Resolution")
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
+        composeRule
+            .onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.PaneTitle))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.PaneTitle, "Resolution"))
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the options are one selectable group`() {
+        composeRule.setContent { Specimen(FormFactor.Tv) }
+
+        composeRule
+            .onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.SelectableGroup))
+            .assertExists()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the first option starts 16dp under the title so its outline has room`() {
+        composeRule.setContent { Specimen(FormFactor.Tv) }
+
+        val title = composeRule.onNodeWithText("Resolution").getUnclippedBoundsInRoot()
+        val first = composeRule.onNodeWithText("1280 x 720").getUnclippedBoundsInRoot()
+
+        // The text of the option starts 10dp inside its row, and the title has no space below.
+        assertThat((first.top - title.bottom).value).isAtLeast(16f + 10f)
     }
 
     @Composable

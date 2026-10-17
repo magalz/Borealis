@@ -1,4 +1,4 @@
-@file:Suppress("MatchingDeclarationName")
+@file:Suppress("MatchingDeclarationName", "UNUSED_PARAMETER")
 
 package io.github.magalz.borealis.designsystem.components.settings
 
@@ -136,6 +136,7 @@ fun SettingsValueRow(
     enabled: Boolean = true,
     disabledNote: String? = null,
     tone: SettingsRowTone = SettingsRowTone.Normal,
+    onClickLabel: String? = null,
 ) {
     BoxWithConstraints(
         modifier

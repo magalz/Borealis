@@ -163,20 +163,120 @@ class SettingsSliderRowTest {
         assertThat(value).isEqualTo(14f)
     }
 
+    @Test
+    fun `the D-pad moves by the key step while a touch snaps to the step`() {
+        value = 50f
+        composeRule.setContentInKeyboardMode {
+            Specimen(range = 0f..100f, step = 1f, keyStep = 10f)
+        }
+        composeRule.onNodeWithText("Deadzone").requestFocus()
+
+        composeRule.onNodeWithText("Deadzone").performKeyInput { pressKey(Key.DirectionRight) }
+        assertThat(value).isEqualTo(60f)
+        composeRule.onNodeWithText("Deadzone").performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithText("Deadzone").performKeyInput { pressKey(Key.DirectionLeft) }
+        assertThat(value).isEqualTo(40f)
+
+        composeRule.onNodeWithText("Deadzone").performSemanticsAction(
+            SemanticsActions.SetProgress
+        ) {
+            it(43.2f)
+        }
+        assertThat(value).isEqualTo(43f)
+    }
+
+    @Test
+    fun `a key step larger than what is left stops at the end of the range`() {
+        value = 95f
+        composeRule.setContentInKeyboardMode {
+            Specimen(range = 0f..100f, step = 1f, keyStep = 10f)
+        }
+        composeRule.onNodeWithText("Deadzone").requestFocus()
+
+        composeRule.onNodeWithText("Deadzone").performKeyInput { pressKey(Key.DirectionRight) }
+
+        assertThat(value).isEqualTo(100f)
+    }
+
+    @Test
+    fun `the summary shows under the title`() {
+        composeRule.setContent { Specimen(summary = "How far the stick moves before it counts") }
+
+        composeRule
+            .onNodeWithText("How far the stick moves before it counts", useUnmergedTree = true)
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `a disabled row shows its note and an enabled one does not`() {
+        composeRule.setContent {
+            Specimen(enabled = false, disabledNote = "The controller has no motors")
+        }
+
+        composeRule
+            .onNodeWithText("The controller has no motors", useUnmergedTree = true)
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `the note of an enabled row stays hidden`() {
+        composeRule.setContent { Specimen(disabledNote = "The controller has no motors") }
+
+        composeRule
+            .onNodeWithText("The controller has no motors", useUnmergedTree = true)
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun `a step that is not positive is refused`() {
+        val failure = runCatching {
+            composeRule.setContent { Specimen(step = 0f) }
+        }
+            .exceptionOrNull()
+
+        assertThat(rootCause(failure)).isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    @Test
+    fun `a key step that is not positive is refused`() {
+        val failure = runCatching {
+            composeRule.setContent { Specimen(keyStep = -1f) }
+        }
+            .exceptionOrNull()
+
+        assertThat(rootCause(failure)).isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    private fun rootCause(failure: Throwable?): Throwable? {
+        var cause = failure
+        while (cause?.cause != null) cause = cause.cause
+        return cause
+    }
+
     @Composable
-    private fun Specimen(enabled: Boolean = true, step: Float = 2f) {
+    private fun Specimen(
+        enabled: Boolean = true,
+        step: Float = 2f,
+        keyStep: Float = step,
+        range: ClosedFloatingPointRange<Float> = 0f..20f,
+        summary: String? = null,
+        disabledNote: String? = null,
+    ) {
         BorealisTheme(FormFactor.Tv) {
             SettingsSliderRow(
                 title = "Deadzone",
                 value = value,
-                valueRange = 0f..20f,
+                valueRange = range,
                 step = step,
                 valueLabel = "${value.toInt()} %",
                 onValueChange = {
                     changes += it
                     value = it
                 },
+                summary = summary,
                 enabled = enabled,
+                disabledNote = disabledNote,
+                keyStep = keyStep,
             )
         }
     }

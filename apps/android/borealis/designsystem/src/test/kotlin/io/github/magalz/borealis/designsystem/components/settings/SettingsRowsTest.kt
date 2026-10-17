@@ -8,6 +8,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -15,6 +16,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -251,6 +253,50 @@ class SettingsRowsTest {
             .onNodeWithText("STREAM")
             .assertIsDisplayed()
             .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
+    }
+
+    @Test
+    fun `a value row names what a tap does for a screen reader`() {
+        composeRule.setContent {
+            Specimen {
+                SettingsValueRow("Frame rate", "60 fps", {}, onClickLabel = "Choose the frame rate")
+            }
+        }
+
+        composeRule
+            .onNodeWithText("Frame rate")
+            .assert(
+                SemanticsMatcher("has the click label") {
+                    it.config.getOrNull(SemanticsActions.OnClick)?.label == "Choose the frame rate"
+                }
+            )
+    }
+
+    @Test
+    fun `the value sits at the end of the row, next to the chevron`() {
+        composeRule.setContent {
+            Specimen(Modifier.width(400.dp)) { SettingsValueRow("Frame rate", "60 fps", {}) }
+        }
+
+        val value = composeRule.onNodeWithText("60 fps", useUnmergedTree = true).getBoundsInRoot()
+
+        // 16dp of padding, the 12dp chevron and a 12dp gap from the end of the row.
+        assertThat(value.right.value).isWithin(1f).of(400f - 16f - 12f - 12f)
+    }
+
+    @Test
+    fun `a short value leaves most of the row to a long title`() {
+        composeRule.setContent {
+            Specimen(Modifier.width(400.dp)) {
+                SettingsValueRow("Mouse back and forward buttons", "Off", {})
+            }
+        }
+
+        val title =
+            textLayout(
+                composeRule.onNodeWithText("Mouse back and forward buttons", useUnmergedTree = true)
+            )
+        assertThat(title.lineCount).isEqualTo(1)
     }
 
     private fun toggleState(state: ToggleableState) =

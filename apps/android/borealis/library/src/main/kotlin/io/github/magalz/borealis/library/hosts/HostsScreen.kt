@@ -13,14 +13,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -41,6 +39,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.adaptive.hostGridColumns
+import io.github.magalz.borealis.designsystem.components.AuroraLoader
 import io.github.magalz.borealis.designsystem.components.ContinueCard
 import io.github.magalz.borealis.designsystem.components.DotStatus
 import io.github.magalz.borealis.designsystem.components.EmptyState
@@ -61,7 +60,7 @@ import io.github.magalz.borealis.library.domain.Reachability
 /** An outline sits 5dp outside its card, so neighbouring cards need 10dp between them. */
 private val GRID_GAP = 12.dp
 private val SECTION_PADDING = 6.dp
-private val LOADING_SIZE = 40.dp
+private val LOADING_SIZE = 64.dp
 
 /**
  * The Hosts home screen: the session to continue, then every host with its state and the one action
@@ -203,12 +202,11 @@ private fun HostsBody(
             // Nothing to press while the hosts load: an OK pressed now must not open Add host.
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 val description = stringResource(R.string.hosts_loading)
-                CircularProgressIndicator(
-                    modifier =
-                        Modifier.size(LOADING_SIZE).testTag("hosts-loading").semantics {
-                            contentDescription = description
-                        },
-                    color = LocalBorealisColors.current.accent,
+                AuroraLoader(
+                    Modifier.testTag("hosts-loading").semantics {
+                        contentDescription = description
+                    },
+                    LOADING_SIZE,
                 )
             }
         } else if (state.searching) {

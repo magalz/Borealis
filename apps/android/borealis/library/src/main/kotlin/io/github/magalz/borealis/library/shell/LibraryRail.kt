@@ -6,22 +6,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.NavigationRail
 import io.github.magalz.borealis.designsystem.components.RailItem
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.library.R
-
-private val RAIL_WIDTH = 200.dp
 
 private const val RAIL_HOSTS = 0
 private const val RAIL_ADD_HOST = 1
@@ -81,15 +76,15 @@ internal fun libraryRailItems(): List<RailItem> =
     listOf(
         RailItem(
             stringResource(R.string.hosts_title),
-            ImageVector.vectorResource(R.drawable.ic_hosts_home),
+            BorealisIcons.Hosts,
         ),
         RailItem(
             stringResource(R.string.hosts_add_host),
-            ImageVector.vectorResource(R.drawable.ic_hosts_add),
+            BorealisIcons.Add,
         ),
         RailItem(
             stringResource(R.string.hosts_settings),
-            ImageVector.vectorResource(R.drawable.ic_hosts_settings),
+            BorealisIcons.Gear,
         ),
     )
 
@@ -114,6 +109,5 @@ internal fun LibraryRail(selected: RailSelection, actions: RailActions) {
                 RAIL_SETTINGS -> actions.onSettings()
             }
         },
-        modifier = Modifier.width(RAIL_WIDTH),
     )
 }

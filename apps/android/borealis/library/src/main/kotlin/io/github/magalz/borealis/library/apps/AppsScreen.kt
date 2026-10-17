@@ -28,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -37,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.adaptive.appGridColumns
 import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
+import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.CoverTile
 import io.github.magalz.borealis.designsystem.components.DotStatus
 import io.github.magalz.borealis.designsystem.components.EmptyState
@@ -111,16 +111,13 @@ private fun PhoneBar(state: AppsUiState, onBack: () -> Unit, onToggleShowHidden:
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onBack) {
-            Icon(painterResource(R.drawable.ic_apps_back), stringResource(R.string.apps_back))
+            Icon(BorealisIcons.Back, stringResource(R.string.apps_back))
         }
         Title(state, Modifier.weight(1f))
         IconButton(onClick = onToggleShowHidden) {
             Icon(
-                painterResource(
-                    // The icon shows what the toggle does: open eye shows them, crossed eye hides.
-                    if (state.showHidden) R.drawable.ic_apps_visibility_off
-                    else R.drawable.ic_apps_visibility
-                ),
+                // The icon shows what the toggle does: open eye shows them, crossed eye hides.
+                if (state.showHidden) BorealisIcons.VisibilityOff else BorealisIcons.Visibility,
                 stringResource(toggleLabel(state)),
             )
         }

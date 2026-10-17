@@ -28,13 +28,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.AnimatedCheck
 import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
+import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.PinDisplay
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.theme.BorealisFonts
@@ -51,7 +54,7 @@ private val STEP_GAP = 14.dp
 private val STEP_NUMBER_SIZE = 24.dp
 private val NOTE_PADDING = 12.dp
 private val BUTTON_GAP = 12.dp
-private val CHECK_SIZE = 48.dp
+private val CHECK_SIZE = 64.dp
 
 /**
  * The pairing screen (UC-001). The PIN is entered on the host, in the LuminalShine Web UI, so the
@@ -72,33 +75,37 @@ fun PairingScreen(
     BorealisTheme(formFactor) {
         BackHandler(enabled = state !is PairingUiState.Paired, onBack = onCancel)
         val gutter = LocalBorealisSpacing.current.gutter
-        Column(
+        Box(
             modifier
                 .fillMaxSize()
                 .background(LocalBorealisColors.current.page)
                 .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(vertical = SECTION_GAP)
         ) {
-            Header(
-                title =
-                    if (hostName != null) {
-                        stringResource(R.string.pairing_title, hostName)
-                    } else {
-                        stringResource(R.string.pairing_title_unknown_host)
-                    },
-                showBack = formFactor == FormFactor.Phone && state !is PairingUiState.Paired,
-                onBack = onCancel,
-                modifier = Modifier.padding(horizontal = gutter),
-            )
-            Box(
-                Modifier.weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = gutter)
-                    .padding(top = SECTION_GAP)
-            ) {
-                Content(state, formFactor != FormFactor.Phone, onGetNewPin, onCancel)
+            Column(Modifier.fillMaxSize().padding(vertical = SECTION_GAP)) {
+                Header(
+                    title =
+                        if (hostName != null) {
+                            stringResource(R.string.pairing_title, hostName)
+                        } else {
+                            stringResource(R.string.pairing_title_unknown_host)
+                        },
+                    showBack = formFactor == FormFactor.Phone && state !is PairingUiState.Paired,
+                    onBack = onCancel,
+                    modifier = Modifier.padding(horizontal = gutter),
+                )
+                Box(
+                    Modifier.weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = gutter)
+                        .padding(top = SECTION_GAP)
+                ) {
+                    Content(state, formFactor != FormFactor.Phone, onGetNewPin, onCancel)
+                }
             }
+            // Paired has nothing to scroll: it is in the middle of the screen, not of what is left
+            // under the title.
+            if (state is PairingUiState.Paired) Paired(Modifier.align(Alignment.Center))
         }
     }
 }
@@ -109,7 +116,7 @@ private fun Header(title: String, showBack: Boolean, onBack: () -> Unit, modifie
         if (showBack) {
             IconButton(onClick = onBack) {
                 Icon(
-                    painterResource(R.drawable.ic_pairing_back),
+                    BorealisIcons.Back,
                     contentDescription = stringResource(R.string.pairing_back),
                 )
             }
@@ -142,7 +149,7 @@ private fun Content(
                 )
             }
         is PairingUiState.Waiting -> Waiting(state, wide, onCancel)
-        PairingUiState.Paired -> Paired()
+        PairingUiState.Paired -> Unit
         PairingUiState.Expired ->
             Outcome(stringResource(R.string.pairing_expired)) {
                 Actions(stringResource(R.string.pairing_get_new_pin), onGetNewPin, onCancel)
@@ -163,17 +170,28 @@ private fun Content(
     }
 }
 
-/** The PIN with its note and validity, and the steps with Cancel: stacked, or side by side. */
+/**
+ * The PIN with its note and validity, and the steps with Cancel. The PIN and the line under it are
+ * centred: on the screen of a phone, where they sit above the steps, and in its half of a wide
+ * screen, where the steps are beside them.
+ */
 @Composable
 private fun Waiting(state: PairingUiState.Waiting, wide: Boolean, onCancel: () -> Unit) {
-    val pin: @Composable ColumnScope.() -> Unit = {
-        if (state.restarted) Note(stringResource(R.string.pairing_restarted))
-        PinDisplay(state.pin)
-        Text(
-            stringResource(R.string.pairing_pin_valid),
-            style = MaterialTheme.typography.bodyMedium,
-            color = LocalBorealisColors.current.ink3,
-        )
+    val pin: @Composable () -> Unit = {
+        Column(
+            Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(SECTION_GAP),
+        ) {
+            if (state.restarted) Note(stringResource(R.string.pairing_restarted))
+            PinDisplay(state.pin)
+            Text(
+                stringResource(R.string.pairing_pin_valid),
+                style = MaterialTheme.typography.bodyMedium,
+                color = LocalBorealisColors.current.ink3,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
     val steps: @Composable ColumnScope.() -> Unit = {
         Steps(state)
@@ -185,7 +203,7 @@ private fun Waiting(state: PairingUiState.Waiting, wide: Boolean, onCancel: () -
     }
     if (wide) {
         Row(horizontalArrangement = Arrangement.spacedBy(WIDE_COLUMN_GAP)) {
-            Column(verticalArrangement = Arrangement.spacedBy(SECTION_GAP), content = pin)
+            Box(Modifier.weight(1f)) { pin() }
             Column(
                 Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(SECTION_GAP),
@@ -259,18 +277,15 @@ private fun Note(text: String) {
     )
 }
 
+/** The check draws itself above Paired once, and the pair stays in the middle of the screen. */
 @Composable
-private fun Paired() {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(SECTION_GAP),
-        verticalAlignment = Alignment.CenterVertically,
+private fun Paired(modifier: Modifier) {
+    Column(
+        modifier.testTag("paired"),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(SECTION_GAP),
     ) {
-        Icon(
-            painterResource(R.drawable.ic_pairing_check),
-            contentDescription = null,
-            modifier = Modifier.size(CHECK_SIZE),
-            tint = LocalBorealisColors.current.successInk,
-        )
+        AnimatedCheck(Modifier.size(CHECK_SIZE).testTag("paired-check"))
         Text(stringResource(R.string.pairing_paired), style = MaterialTheme.typography.titleLarge)
     }
 }

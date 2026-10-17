@@ -2,22 +2,17 @@
 
 package io.github.magalz.borealis.library.hosts
 
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import io.github.magalz.borealis.designsystem.components.ActionSheet
 import io.github.magalz.borealis.designsystem.components.ActionSheetAction
 import io.github.magalz.borealis.designsystem.components.ActionStyle
-import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
-import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.components.BorealisDialog
+import io.github.magalz.borealis.designsystem.components.DialogAction
+import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.library.R
 
@@ -69,13 +64,7 @@ internal fun HostsDialogs(
             )
         }
     state.details?.let { details ->
-        HostDialog(
-            title = stringResource(R.string.hosts_details_title),
-            message = details,
-            confirm =
-                DialogButton(stringResource(R.string.hosts_details_close), onDetailsDismissed),
-            onDismiss = onDetailsDismissed,
-        )
+        DetailsDialog(details, onDetailsDismissed)
     }
 }
 
@@ -114,76 +103,43 @@ private fun HostOptions(
     )
 }
 
+/** Asks before a host is forgotten. Focus starts on Cancel, so a stray OK does not forget it. */
 @Composable
 private fun ForgetDialog(hostName: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    HostDialog(
+    BorealisDialog(
         title = stringResource(R.string.hosts_forget_title),
-        message = stringResource(R.string.hosts_forget_message, hostName),
+        onDismissRequest = onDismiss,
         confirm =
-            DialogButton(
+            DialogAction(
                 stringResource(R.string.hosts_forget_confirm),
-                onConfirm,
                 BorealisButtonStyle.Danger,
+                onConfirm,
             ),
-        onDismiss = onDismiss,
-        dismiss =
-            DialogButton(
-                stringResource(R.string.hosts_forget_cancel),
-                onDismiss,
-                BorealisButtonStyle.Text,
-            ),
-    )
+        dismiss = DialogAction(stringResource(R.string.hosts_forget_cancel), onClick = onDismiss),
+        focusDismiss = true,
+    ) {
+        DialogMessage(stringResource(R.string.hosts_forget_message, hostName))
+    }
 }
 
-/** A button of a [HostDialog]: its [label], [style] and what it does. */
-internal class DialogButton(
-    val label: String,
-    val onClick: () -> Unit,
-    val style: BorealisButtonStyle = BorealisButtonStyle.Primary,
-)
-
-/**
- * A dialog in the Borealis look with a [title], a scrollable [message], a [confirm] button and
- * optionally a [dismiss] button. The [dismiss] button, when there is one, has focus when the dialog
- * opens, so a D-pad or a gamepad works at once and the safe choice is the one under OK; with only
- * [confirm], that one has focus. Back dismisses.
- */
+/** What the host reports about itself, in a dialog that Close dismisses. */
 @Composable
-internal fun HostDialog(
-    title: String,
-    message: String,
-    confirm: DialogButton,
-    onDismiss: () -> Unit,
-    dismiss: DialogButton? = null,
-) {
-    val colors = LocalBorealisColors.current
-    val focus = remember { FocusRequester() }
-    AlertDialog(
+private fun DetailsDialog(details: String, onDismiss: () -> Unit) {
+    BorealisDialog(
+        title = stringResource(R.string.hosts_details_title),
         onDismissRequest = onDismiss,
-        containerColor = colors.surface,
-        titleContentColor = colors.ink,
-        textContentColor = colors.ink2,
-        shape = MaterialTheme.shapes.extraLarge,
-        title = { Text(title) },
-        text = { Text(message, Modifier.verticalScroll(rememberScrollState())) },
-        confirmButton = {
-            BorealisButton(
-                confirm.label,
-                confirm.onClick,
-                if (dismiss == null) Modifier.initialFocus(focus) else Modifier,
-                style = confirm.style,
-            )
-        },
-        dismissButton =
-            dismiss?.let { button ->
-                {
-                    BorealisButton(
-                        button.label,
-                        button.onClick,
-                        Modifier.initialFocus(focus),
-                        style = button.style,
-                    )
-                }
-            },
+        confirm = DialogAction(stringResource(R.string.hosts_details_close), onClick = onDismiss),
+        width = DialogWidth.Standard,
+    ) {
+        DialogMessage(details)
+    }
+}
+
+@Composable
+private fun DialogMessage(message: String) {
+    Text(
+        message,
+        style = MaterialTheme.typography.bodyMedium,
+        color = LocalBorealisColors.current.ink2,
     )
 }

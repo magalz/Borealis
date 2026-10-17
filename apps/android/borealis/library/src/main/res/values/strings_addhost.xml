@@ -6,6 +6,7 @@
     <string name="addhost_port_hint">Add :port only if you changed the LuminalShine port (default 47989).</string>
     <string name="addhost_submit">Add host</string>
     <string name="addhost_cancel">Cancel</string>
+    <string name="addhost_back">Back to Hosts</string>
     <string name="addhost_busy">Adding host</string>
 
     <string name="addhost_error_empty">Enter an IP address or a host name.</string>

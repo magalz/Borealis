@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,15 +34,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
+import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.BorealisTextField
 import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
 
-private val CONTENT_MAX_WIDTH = 560.dp
 private val CONTENT_GAP = 16.dp
 private val HINT_GAP = 4.dp
 private val BUTTON_GAP = 12.dp
@@ -75,18 +78,16 @@ fun AddHostScreen(
             modifier
                 .fillMaxSize()
                 .background(colors.page)
-                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .windowInsetsPadding(WindowInsets.safeDrawing),
+            contentAlignment = Alignment.TopCenter,
         ) {
             Column(
-                Modifier.widthIn(max = CONTENT_MAX_WIDTH)
+                Modifier.widthIn(max = BorealisDimens.contentMaxWidth)
                     .fillMaxWidth()
                     .padding(LocalBorealisSpacing.current.gutter),
                 verticalArrangement = Arrangement.spacedBy(CONTENT_GAP),
             ) {
-                Text(
-                    stringResource(R.string.addhost_title),
-                    style = MaterialTheme.typography.titleLarge,
-                )
+                Header(formFactor == FormFactor.Phone, !state.busy, onCancel)
                 Column(verticalArrangement = Arrangement.spacedBy(HINT_GAP)) {
                     BorealisTextField(
                         value = state.address,
@@ -110,6 +111,19 @@ fun AddHostScreen(
                 AddHostButtons(state.busy, submitFocus, onSubmit, onCancel)
             }
         }
+    }
+}
+
+/** The title, with a back arrow to Hosts on a phone, which has no rail to go back with. */
+@Composable
+private fun Header(showBack: Boolean, backEnabled: Boolean, onBack: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (showBack) {
+            IconButton(onClick = onBack, enabled = backEnabled) {
+                Icon(BorealisIcons.Back, contentDescription = stringResource(R.string.addhost_back))
+            }
+        }
+        Text(stringResource(R.string.addhost_title), style = MaterialTheme.typography.titleLarge)
     }
 }
 

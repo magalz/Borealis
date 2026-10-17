@@ -16,9 +16,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
@@ -44,12 +44,12 @@ internal fun PhoneTopBar(onAddHost: () -> Unit, onSettings: () -> Unit) {
             style = MaterialTheme.typography.titleLarge,
         )
         IconAction(
-            ImageVector.vectorResource(R.drawable.ic_hosts_add),
+            BorealisIcons.Add,
             stringResource(R.string.hosts_add_host),
             onAddHost,
         )
         IconAction(
-            ImageVector.vectorResource(R.drawable.ic_hosts_settings),
+            BorealisIcons.Gear,
             stringResource(R.string.hosts_settings),
             onSettings,
         )

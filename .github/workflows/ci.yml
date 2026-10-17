@@ -20,7 +20,7 @@ concurrency:
 jobs:
   changes:
     name: Detect changes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       pull-requests: read
@@ -52,7 +52,7 @@ jobs:
     name: Android
     needs: changes
     if: needs.changes.outputs.android == 'true' || github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 60
     defaults:
       run:
@@ -159,7 +159,7 @@ jobs:
     # Runs on every pull request (about a minute) so each PR uploads coverage
     # and Codecov always posts the required codecov/* statuses (ADR 0049).
     needs: changes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     defaults:
       run:
@@ -227,7 +227,7 @@ jobs:
     name: Docs
     needs: changes
     if: needs.changes.outputs.docs == 'true' || github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -247,7 +247,7 @@ jobs:
     # Single required status check: passes when every job that ran succeeded or was skipped.
     if: always()
     needs: [changes, android, core, docs]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Evaluate job results
         env:

@@ -38,7 +38,7 @@ concurrency:
 jobs:
   build:
     name: Build unsigned APK
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 90
     permissions:
       contents: read
@@ -146,7 +146,7 @@ jobs:
     name: Dry run - sign with a throwaway key
     needs: build
     if: github.event_name != 'push'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     permissions:
       contents: read
@@ -200,7 +200,7 @@ jobs:
     name: Sign, attest and create the draft release
     needs: build
     if: github.event_name == 'push'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     # Manual approval is configured on this environment by the owner; the signing secrets live here.
     environment: release

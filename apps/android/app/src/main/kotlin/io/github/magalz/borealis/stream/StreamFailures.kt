@@ -54,6 +54,7 @@ object StreamFailures {
             httpCode = connection?.lastHttpCode()?.takeIf { it != 0 },
             resumeCollision = connection?.endedByResumeCollision() ?: false,
             retriesExhausted = connection?.launchRetriesExhausted() ?: false,
+            rtspReplyUnreadable = !terminated && errorCode == -1 && stage == rtspStageName(),
             streamed = streamed,
             note = note,
         )
@@ -96,6 +97,8 @@ object StreamFailures {
             !facts.terminated ->
                 listOfNotNull(
                         if (facts.resumeCollision) plain(HostR.string.launch_resume_collision)
+                        else if (facts.rtspReplyUnreadable)
+                            plain(HostR.string.failure_reply_unreadable)
                         else null,
                         facts.note,
                         blocked,

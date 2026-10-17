@@ -14,6 +14,10 @@ import io.github.magalz.borealis.host.R
  *   so the PC is off or asleep: HOST_OFFLINE, where the screen offers Wake PC;
  * - a stream that reached the first frame and then ended with a generic failure: STOPPED;
  * - anything else: GENERIC.
+ *
+ * The port hint goes with GENERIC, STOPPED and HOST_OFFLINE failures that have port flags, except
+ * when the PC answered but its reply could not be read ([FailureFacts.rtspReplyUnreadable]): the
+ * ports were open then.
  */
 object StreamFailureClassifier {
     /**
@@ -29,6 +33,7 @@ object StreamFailureClassifier {
         val kind = kindOf(facts)
         val showPorts =
             facts.portFlags != 0 &&
+                !facts.rtspReplyUnreadable &&
                 (kind == FailureKind.GENERIC ||
                     kind == FailureKind.STOPPED ||
                     kind == FailureKind.HOST_OFFLINE)

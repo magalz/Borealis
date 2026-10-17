@@ -147,6 +147,17 @@ class SettingsContractTest {
     }
 
     @Test
+    fun `fromStored skips a null value, also for a setting that has a default`() {
+        val snapshot =
+            SettingsSnapshot.fromStored(
+                mapOf(Settings.RESOLUTION to null, Settings.STRETCH_VIDEO to null)
+            )
+
+        assertThat(snapshot).isEqualTo(SettingsSnapshot.DEFAULTS)
+        assertThat(snapshot[Settings.RESOLUTION]).isEqualTo(Settings.RESOLUTION.default)
+    }
+
+    @Test
     fun `the fake repository applies set, setNow and clear to the snapshot`() = runTest {
         val repository = FakeSettingsRepository()
 

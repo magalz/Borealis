@@ -75,6 +75,7 @@ class SettingsSnapshot private constructor(private val values: Map<String, Any>)
         fun fromStored(values: Map<Setting<*>, Any?>): SettingsSnapshot {
             var snapshot = DEFAULTS
             for ((setting, value) in values) {
+                if (value == null) continue
                 require(setting.accepts(value)) { "$setting does not store $value" }
                 @Suppress("UNCHECKED_CAST")
                 snapshot = snapshot.with(setting as Setting<Any?>, value)

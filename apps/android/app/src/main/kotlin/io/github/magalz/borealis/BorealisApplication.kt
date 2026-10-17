@@ -19,12 +19,13 @@ import io.github.magalz.borealis.logging.Redactor
 import io.github.magalz.borealis.logging.RotatingFileSink
 import io.github.magalz.borealis.nativecore.BorealisCore
 import io.github.magalz.borealis.settings.LogSettings
+import io.github.magalz.borealis.settings.store.SettingsSnapshots
 import java.io.File
 import javax.inject.Inject
 
 @HiltAndroidApp
 class BorealisApplication : Application() {
-    // Kept so that the preference listener of LogSettings stays registered.
+    // Kept so that LogSettings keeps following the settings repository.
     private lateinit var logSettings: LogSettings
 
     // Kept so that the preference listener of UsbAttachGate stays registered.
@@ -49,7 +50,7 @@ class BorealisApplication : Application() {
         )
         // The audit trail shares the redactor, so "Mask addresses" applies to it as well.
         BorealisAudit.install(auditSink, redactor, BuildConfig.VERSION_NAME)
-        logSettings = LogSettings.start(this, baseLevel)
+        logSettings = LogSettings.start(SettingsSnapshots.repository(this), baseLevel)
         usbAttachGate = UsbAttachGate.start(this)
         JulBridge.install()
         CrashHandler.install(

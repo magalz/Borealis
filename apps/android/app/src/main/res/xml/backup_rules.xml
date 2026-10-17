@@ -2,4 +2,6 @@
 <full-backup-content>
     <!-- Don't sync preferences because it often contains device-specific data -->
     <exclude domain="sharedpref" path="."/>
+    <!-- The DataStore of the logging switches (borealis_settings) is settings too -->
+    <exclude domain="file" path="datastore/"/>
 </full-backup-content>

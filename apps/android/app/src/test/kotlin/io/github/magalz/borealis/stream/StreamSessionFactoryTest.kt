@@ -4,49 +4,56 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.nativecore.LaunchCategory
+import io.github.magalz.borealis.settings.catalog.Settings
 import org.junit.Test
 
 class StreamSessionFactoryTest {
     private fun prefs(
-        perfOverlay: Boolean = false,
         trackpad: Boolean = true,
         mouseEmulation: Boolean = false,
     ) =
         PreferenceConfiguration().apply {
-            enablePerfOverlay = perfOverlay
             touchscreenTrackpad = trackpad
             this.mouseEmulation = mouseEmulation
         }
 
     @Test
-    fun `the performance overlay starts detailed when the user turned it on, off otherwise`() {
-        assertThat(StreamSessionFactory.defaults(prefs(perfOverlay = true), true, true).overlay)
-            .isEqualTo(OverlayMode.DETAILED)
-        assertThat(StreamSessionFactory.defaults(prefs(perfOverlay = false), true, true).overlay)
+    fun `the performance overlay starts as the three-state setting says`() {
+        fun overlay(mode: String) =
+            StreamSessionFactory.defaults(prefs(), mode, true, true).overlay
+
+        assertThat(overlay(Settings.PERF_OVERLAY_OFF)).isEqualTo(OverlayMode.OFF)
+        assertThat(overlay(Settings.PERF_OVERLAY_COMPACT)).isEqualTo(OverlayMode.COMPACT)
+        assertThat(overlay(Settings.PERF_OVERLAY_DETAILED)).isEqualTo(OverlayMode.DETAILED)
+    }
+
+    @Test
+    fun `an unknown performance overlay value starts with the overlay off`() {
+        assertThat(StreamSessionFactory.defaults(prefs(), "loud", true, true).overlay)
             .isEqualTo(OverlayMode.OFF)
     }
 
     @Test
     fun `the touch mode follows the trackpad preference, and is absent without a touch screen`() {
-        assertThat(StreamSessionFactory.defaults(prefs(trackpad = true), true, true).touchMode)
+        assertThat(StreamSessionFactory.defaults(prefs(trackpad = true), "off", true, true).touchMode)
             .isEqualTo(TouchMode.TRACKPAD)
-        assertThat(StreamSessionFactory.defaults(prefs(trackpad = false), true, true).touchMode)
+        assertThat(StreamSessionFactory.defaults(prefs(trackpad = false), "off", true, true).touchMode)
             .isEqualTo(TouchMode.DIRECT)
-        assertThat(StreamSessionFactory.defaults(prefs(), false, true).touchMode).isNull()
+        assertThat(StreamSessionFactory.defaults(prefs(), "off", false, true).touchMode).isNull()
     }
 
     @Test
     fun `the gamepad as a mouse follows the mouse emulation preference`() {
-        assertThat(StreamSessionFactory.defaults(prefs(mouseEmulation = true), true, true).gamepadMouse)
+        assertThat(StreamSessionFactory.defaults(prefs(mouseEmulation = true), "off", true, true).gamepadMouse)
             .isTrue()
-        assertThat(StreamSessionFactory.defaults(prefs(mouseEmulation = false), true, true).gamepadMouse)
+        assertThat(StreamSessionFactory.defaults(prefs(mouseEmulation = false), "off", true, true).gamepadMouse)
             .isFalse()
     }
 
     @Test
     fun `the menu hint is what the caller says`() {
-        assertThat(StreamSessionFactory.defaults(prefs(), true, true).showMenuHint).isTrue()
-        assertThat(StreamSessionFactory.defaults(prefs(), true, false).showMenuHint).isFalse()
+        assertThat(StreamSessionFactory.defaults(prefs(), "off", true, true).showMenuHint).isTrue()
+        assertThat(StreamSessionFactory.defaults(prefs(), "off", true, false).showMenuHint).isFalse()
     }
 
     private fun sized(width: Int, height: Int, bitrate: Int) =

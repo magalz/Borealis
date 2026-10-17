@@ -23,6 +23,7 @@ import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -198,13 +199,39 @@ class SmallComponentsTest {
         composeRule.onNode(isFocused()).assert(hasText("Settings"))
     }
 
+    @Test
+    fun `the rail is 220dp wide on a TV`() {
+        composeRule.setContent { Rail(selected = 0, formFactor = FormFactor.Tv, tag = "rail") }
+
+        val rail = composeRule.onNodeWithTag("rail").getUnclippedBoundsInRoot()
+
+        assertThat(rail.right - rail.left).isEqualTo(220.dp)
+    }
+
+    @Test
+    fun `the rail is 200dp wide on a handheld`() {
+        composeRule.setContent {
+            Rail(selected = 0, formFactor = FormFactor.Handheld, tag = "rail")
+        }
+
+        val rail = composeRule.onNodeWithTag("rail").getUnclippedBoundsInRoot()
+
+        assertThat(rail.right - rail.left).isEqualTo(200.dp)
+    }
+
     @Composable
-    private fun Rail(selected: Int, onSelect: (Int) -> Unit = {}) {
-        BorealisTheme(FormFactor.Tv) {
+    private fun Rail(
+        selected: Int,
+        onSelect: (Int) -> Unit = {},
+        formFactor: FormFactor = FormFactor.Tv,
+        tag: String = "",
+    ) {
+        BorealisTheme(formFactor) {
             NavigationRail(
                 items = listOf(RailItem("Home", ICON), RailItem("Settings", ICON)),
                 selectedIndex = selected,
                 onSelect = onSelect,
+                modifier = Modifier.testTag(tag),
             )
         }
     }

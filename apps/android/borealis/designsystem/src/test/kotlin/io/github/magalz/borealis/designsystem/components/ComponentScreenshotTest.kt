@@ -290,7 +290,6 @@ class ComponentScreenshotTest {
                         items = listOf(RailItem("Home", ICON), RailItem("Settings", ICON)),
                         selectedIndex = 0,
                         onSelect = {},
-                        modifier = Modifier.width(190.dp),
                     )
                 }
             }

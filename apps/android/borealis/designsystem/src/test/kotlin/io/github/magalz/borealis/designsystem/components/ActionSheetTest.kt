@@ -61,6 +61,17 @@ class ActionSheetTest {
     }
 
     @Test
+    @Config(qualifiers = HANDHELD)
+    fun `on a handheld the sheet takes 60 percent of the window`() {
+        composeRule.setContent { Specimen(FormFactor.Handheld) }
+
+        // An action fills the dialog less the 8dp list padding on each side.
+        val action = composeRule.onNodeWithText("Resume").getUnclippedBoundsInRoot()
+
+        assertThat(action.right - action.left).isEqualTo(464.dp)
+    }
+
+    @Test
     @Config(qualifiers = PHONE)
     fun `on a phone the sheet is a bottom sheet`() {
         composeRule.setContent { Specimen(FormFactor.Phone) }
@@ -185,6 +196,7 @@ class ActionSheetTest {
     }
 
     private companion object {
+        const val HANDHELD = "w800dp-h360dp-land-xhdpi"
         const val PHONE = "w360dp-h640dp-xhdpi"
         const val SHORT_PHONE = "w360dp-h360dp-xhdpi"
         const val SHORT_TV = "w960dp-h360dp-land-television-xhdpi"

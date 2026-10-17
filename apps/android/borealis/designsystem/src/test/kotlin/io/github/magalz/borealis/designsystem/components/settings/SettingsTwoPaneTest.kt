@@ -12,12 +12,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
@@ -182,9 +184,31 @@ class SettingsTwoPaneTest {
         composeRule.onNodeWithText("Its own row").assertIsDisplayed()
     }
 
+    @Test
+    fun `on a TV the group list is 220dp wide`() {
+        composeRule.setContent { Specimen() }
+
+        // A group fills the list less the 8dp padding on each side.
+        val group = composeRule.onNodeWithText("Stream").getUnclippedBoundsInRoot()
+
+        assertThat(group.right - group.left).isEqualTo(204.dp)
+    }
+
+    @Test
+    fun `on a handheld the group list is 200dp wide, as wide as the rail`() {
+        composeRule.setContent { Specimen(formFactor = FormFactor.Handheld) }
+
+        val group = composeRule.onNodeWithText("Stream").getUnclippedBoundsInRoot()
+
+        assertThat(group.right - group.left).isEqualTo(184.dp)
+    }
+
     @Composable
-    private fun Specimen(groups: List<SettingsGroup<String>> = allGroups) {
-        BorealisTheme(FormFactor.Tv) {
+    private fun Specimen(
+        groups: List<SettingsGroup<String>> = allGroups,
+        formFactor: FormFactor = FormFactor.Tv,
+    ) {
+        BorealisTheme(formFactor) {
             SettingsTwoPane(
                 groups = groups,
                 selected = selected,

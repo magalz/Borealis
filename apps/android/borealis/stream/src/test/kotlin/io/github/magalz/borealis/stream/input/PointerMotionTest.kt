@@ -96,7 +96,7 @@ class PointerMotionTest {
 
     @Test
     fun `the factors multiply`() {
-        assertThat(step(32766, speedPercent = 50, sessionFactor = 2f, precision = true).x).isEqualTo(16)
+        assertThat(step(32766, speedPercent = 50, sessionFactor = 0.5f, precision = true).x).isEqualTo(8)
     }
 
     @Test

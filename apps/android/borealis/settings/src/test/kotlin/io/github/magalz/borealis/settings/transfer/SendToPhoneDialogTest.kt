@@ -16,7 +16,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
-import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -68,8 +67,9 @@ class SendToPhoneDialogTest {
         val close = composeRule.onNodeWithText("Close").getUnclippedBoundsInRoot()
         val frame = composeRule.dialogFrame("Send to phone").getUnclippedBoundsInRoot()
         assertThat(tryAgain.right).isAtMost(close.left)
-        assertThat(frame.right - close.right).isEqualTo(24.dp)
-        assertThat(frame.bottom - close.bottom).isEqualTo(24.dp)
+        // The frame is the content of the dialog, inside its padding.
+        assertThat(frame.right).isEqualTo(close.right)
+        assertThat(frame.bottom).isEqualTo(close.bottom)
     }
 
     @Test

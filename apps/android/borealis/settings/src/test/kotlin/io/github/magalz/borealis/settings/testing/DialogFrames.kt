@@ -15,10 +15,13 @@ import com.google.common.truth.Truth.assertThat
 fun SemanticsNodeInteractionsProvider.dialogFrame(title: String): SemanticsNodeInteraction =
     onNode(SemanticsMatcher.expectValue(SemanticsProperties.PaneTitle, title))
 
-/** Asserts the dialog [title] is [expected] dp wide, give or take a dp for rounding to pixels. */
+/**
+ * Asserts the dialog [title] is [expected] dp wide, give or take a dp for rounding to pixels. The
+ * pane title is on the content of the frame, so the 24dp padding on each side is added.
+ */
 fun SemanticsNodeInteractionsProvider.assertDialogWidth(title: String, expected: Float) {
     val bounds = dialogFrame(title).getUnclippedBoundsInRoot()
-    assertThat((bounds.right - bounds.left).value).isWithin(1f).of(expected)
+    assertThat((bounds.right - bounds.left).value + 2 * DIALOG_PADDING).isWithin(1f).of(expected)
 }
 
 /** The style the text [text] is laid out with. */
@@ -31,3 +34,5 @@ fun SemanticsNodeInteractionsProvider.textStyleOf(text: String): TextStyle {
         ?.invoke(results)
     return results.single().layoutInput.style
 }
+
+private const val DIALOG_PADDING = 24f

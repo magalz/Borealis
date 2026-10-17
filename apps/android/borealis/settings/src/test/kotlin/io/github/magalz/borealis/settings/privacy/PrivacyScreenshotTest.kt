@@ -18,6 +18,7 @@ import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.settings.testing.settleWindows
 import java.io.File
 import org.junit.Rule
 import org.junit.Test
@@ -132,6 +133,7 @@ class PrivacyScreenshotTest {
 
     private fun shoot(name: String) {
         composeRule.waitForIdle()
+        composeRule.settleWindows()
         // The whole screen, not the root node: a dialog is a window of its own.
         captureScreenRoboImage("src/test/screenshots/$name.png")
     }

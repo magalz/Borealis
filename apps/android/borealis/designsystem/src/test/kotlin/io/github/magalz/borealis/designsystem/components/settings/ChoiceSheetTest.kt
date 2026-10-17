@@ -158,14 +158,14 @@ class ChoiceSheetTest {
 
     @Test
     @Config(qualifiers = TV)
-    fun `the first option starts 16dp under the title so its outline has room`() {
+    fun `the first option row starts at least 16dp under the title so its outline has room`() {
         composeRule.setContent { Specimen(FormFactor.Tv) }
 
         val title = composeRule.onNodeWithText("Resolution").getUnclippedBoundsInRoot()
         val first = composeRule.onNodeWithText("1280 x 720").getUnclippedBoundsInRoot()
 
-        // The text of the option starts 10dp inside its row, and the title has no space below.
-        assertThat((first.top - title.bottom).value).isAtLeast(16f + 10f)
+        // The row of the option, not its text: the outline reaches 5dp above the row.
+        assertThat((first.top - title.bottom).value).isAtLeast(16f)
     }
 
     @Composable

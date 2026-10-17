@@ -1,5 +1,3 @@
-@file:Suppress("UNUSED_PARAMETER")
-
 package io.github.magalz.borealis.designsystem.components.settings
 
 import androidx.compose.foundation.focusable
@@ -36,28 +34,28 @@ import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
-import kotlin.math.ceil
-import kotlin.math.floor
 import kotlin.math.roundToInt
 
 private val CONTENT_GAP = 12.dp
 private val TRACK_AREA_HEIGHT = 32.dp
 private val TRACK_HEIGHT = 4.dp
 private val THUMB_RADIUS = 9.dp
-private const val STEP_TOLERANCE = 1e-4f
 
 /**
- * A row with a [title], the formatted value [valueLabel] and a slider under them for [value] in
- * [valueRange]. The value moves in multiples of [step] from the start of the range.
+ * A row with a [title], an optional [summary], the formatted value [valueLabel] and a slider under
+ * them for [value] in [valueRange]. The value is a multiple of [step] from the start of the range.
  *
- * With the D-pad Right and Left move the value to the next or previous step and stop at the ends of
- * the range. At an end the key is not used, so the focus goes on: Left from a slider at its lowest
- * value returns to the group list of a [SettingsTwoPane]. A touch on the track or a drag along it
- * sets the nearest step. A screen reader reads the value as progress and can set it.
+ * A touch on the track or a drag along it sets the nearest step. With the D-pad Right and Left move
+ * the value by [keyStep], which may be coarser than [step] (a bitrate that a finger sets in 0.5
+ * Mbps steps is better moved by the D-pad in larger ones), and stop at the ends of the range. At an
+ * end the key is not used, so the focus goes on: Left from a slider at its lowest value returns to
+ * the group list of a [SettingsTwoPane]. A screen reader reads the value as progress and can set
+ * it.
  *
- * A disabled row is dimmed and ignores input, but it stays a focus stop. The outline of a focused
- * row reaches 5dp outside it, so a list of rows needs 8dp of padding around it and 10dp between
- * rows.
+ * A disabled row is dimmed and ignores input, but it stays a focus stop: on a TV the user can still
+ * land on it and read [disabledNote], which says why it is disabled and shows only then. The
+ * outline of a focused row reaches 5dp outside it, so a list of rows needs 8dp of padding around it
+ * and 10dp between rows.
  */
 @Composable
 fun SettingsSliderRow(
@@ -73,6 +71,8 @@ fun SettingsSliderRow(
     disabledNote: String? = null,
     keyStep: Float = step,
 ) {
+    require(step > 0f) { "step must be positive: $step" }
+    require(keyStep > 0f) { "keyStep must be positive: $keyStep" }
     val dim = if (enabled) 1f else DISABLED_ALPHA
     val change: (Float) -> Boolean = { target ->
         val changed = target != value
@@ -84,7 +84,7 @@ fun SettingsSliderRow(
         modifier
             .settingsRowSurface()
             .onKeyEvent { event ->
-                enabled && stepOnKey(event, value, valueRange, step, change)
+                enabled && stepOnKey(event, value, valueRange, step, keyStep, change)
             }
             .focusable()
             .semantics(mergeDescendants = true) {
@@ -102,7 +102,7 @@ fun SettingsSliderRow(
             }
             .settingsRowSize()
     ) {
-        SliderHeader(title, valueLabel, dim)
+        SliderHeader(title, summary, disabledNote, valueLabel, enabled)
         SliderTrack(
             fraction = fractionOf(value, valueRange),
             enabled = enabled,
@@ -121,42 +121,50 @@ fun SettingsSliderRow(
 }
 
 @Composable
-private fun SliderHeader(title: String, valueLabel: String, dim: Float) {
-    val colors = LocalBorealisColors.current
+private fun SliderHeader(
+    title: String,
+    summary: String?,
+    disabledNote: String?,
+    valueLabel: String,
+    enabled: Boolean,
+) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(CONTENT_GAP),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
     ) {
-        Text(
+        SettingsRowText(
             title,
-            modifier = Modifier.weight(1f).alpha(dim),
-            color = colors.ink,
-            style = MaterialTheme.typography.labelLarge,
+            summary,
+            disabledNote,
+            enabled,
+            SettingsRowTone.Normal,
+            Modifier.weight(1f),
         )
         Text(
             valueLabel,
-            modifier = Modifier.alpha(dim),
-            color = colors.ink3,
+            modifier = Modifier.alpha(if (enabled) 1f else DISABLED_ALPHA),
+            color = LocalBorealisColors.current.ink3,
             style = MaterialTheme.typography.bodySmall,
         )
     }
 }
 
 /**
- * Right and Left move the value by a step; [change] says whether it did, and so whether the key was
- * used.
+ * Right and Left move the value by [keyStep] to the nearest step; [change] says whether the value
+ * moved, and so whether the key was used.
  */
 private fun stepOnKey(
     event: KeyEvent,
     value: Float,
     range: ClosedFloatingPointRange<Float>,
     step: Float,
+    keyStep: Float,
     change: (Float) -> Boolean,
 ): Boolean {
     if (event.type != KeyEventType.KeyDown) return false
     return when (event.key) {
-        Key.DirectionRight -> change(adjacentStep(value, range, step, 1))
-        Key.DirectionLeft -> change(adjacentStep(value, range, step, -1))
+        Key.DirectionRight -> change(nearestStep(value + keyStep, range, step))
+        Key.DirectionLeft -> change(nearestStep(value - keyStep, range, step))
         else -> false
     }
 }
@@ -236,22 +244,5 @@ private fun nearestStep(
     step: Float,
 ): Float {
     val index = ((target - range.start) / step).roundToInt()
-    return (range.start + index * step).coerceIn(range.start, range.endInclusive)
-}
-
-/**
- * The step above ([direction] 1) or below (-1) [value], clamped to [range]. A value between two
- * steps goes to the step in that direction, not past it.
- */
-private fun adjacentStep(
-    value: Float,
-    range: ClosedFloatingPointRange<Float>,
-    step: Float,
-    direction: Int,
-): Float {
-    val position = (value - range.start) / step
-    val index =
-        if (direction > 0) floor(position + STEP_TOLERANCE) + 1
-        else ceil(position - STEP_TOLERANCE) - 1
     return (range.start + index * step).coerceIn(range.start, range.endInclusive)
 }

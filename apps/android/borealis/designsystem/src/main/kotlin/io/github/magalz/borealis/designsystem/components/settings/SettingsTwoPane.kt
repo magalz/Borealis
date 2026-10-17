@@ -36,6 +36,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.liftedWhenFocused
@@ -44,6 +45,9 @@ import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
+
+/** One group of a [SettingsTwoPane]: the [key] that identifies it and its [title]. */
+class SettingsGroup<out K>(val key: K, val title: String)
 
 private val TV_LIST_WIDTH = 220.dp
 private val HANDHELD_LIST_WIDTH = 170.dp
@@ -56,14 +60,18 @@ private val GROUP_PADDING_VERTICAL = 10.dp
 
 /**
  * The settings of a TV or handheld in two panes: the [groups] by title in a list on the left, and
- * on the right whatever [content] shows for the group at [selectedIndex]. The pane scrolls and
+ * on the right whatever [content] shows for the group whose key is [selected]. The pane scrolls and
  * spaces its rows 10dp apart; [content] puts the rows of the group in it, with 8dp of padding
  * around them already given.
  *
- * Selection follows focus: when the D-pad moves focus to a group, [onSelect] is called with it, so
- * the pane changes as the user moves. A tap on a group selects it too. Right from the list enters
- * the pane at the row nearest to the group; Left from the pane, when no row uses the key, returns
- * to the selected group, whichever row it leaves.
+ * Groups are identified by key, not by position, so a screen can hide a group on some devices
+ * without moving the selection. A [selected] key that no group has falls back to the first group,
+ * and with no groups the pane is empty.
+ *
+ * Selection follows focus: when the D-pad moves focus to a group, [onSelect] is called with its
+ * key, so the pane changes as the user moves. A tap on a group selects it too. Right from any group
+ * enters the pane at its first row; Left from the pane, when no row uses the key, returns to the
+ * selected group, whichever row it leaves.
  */
 @Composable
 fun <K> SettingsTwoPane(
@@ -73,62 +81,15 @@ fun <K> SettingsTwoPane(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.(K) -> Unit,
 ) {
-    IndexedTwoPane(
-        groups.map { it.title },
-        groups.indexOfFirst { it.key == selected },
-        { onSelect(groups[it].key) },
-        modifier,
-    ) {
-        content(groups[it].key)
-    }
-}
-
-/** One group of a [SettingsTwoPane]: the [key] that identifies it and its [title]. */
-class SettingsGroup<out K>(val key: K, val title: String)
-
-@OptIn(ExperimentalComposeUiApi::class)
-@Composable
-private fun IndexedTwoPane(
-    groups: List<String>,
-    selectedIndex: Int,
-    onSelect: (Int) -> Unit,
-    modifier: Modifier,
-    content: @Composable ColumnScope.(Int) -> Unit,
-) {
+    val current = groups.firstOrNull { it.key == selected } ?: groups.firstOrNull()
     val selectedGroup = remember { FocusRequester() }
-    val listWidth =
-        if (LocalFormFactor.current == FormFactor.Handheld) HANDHELD_LIST_WIDTH else TV_LIST_WIDTH
+    val pane = remember { FocusRequester() }
     Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(PANE_GAP)) {
-        Column(
-            Modifier.width(listWidth)
-                .fillMaxHeight()
-                .verticalScroll(rememberScrollState())
-                .padding(AREA_PADDING)
-                .selectableGroup()
-                // Entering the list by the D-pad lands on the selected group, not the nearest. A
-                // request for one group (a tap, an initial focus) is not an entry and stays on it.
-                .focusProperties {
-                    enter = { direction ->
-                        if (direction != FocusDirection.Enter) selectedGroup
-                        else FocusRequester.Default
-                    }
-                }
-                .focusGroup(),
-            verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
-        ) {
-            groups.forEachIndexed { index, title ->
-                val selected = index == selectedIndex
-                GroupEntry(
-                    title,
-                    selected,
-                    onSelect = { onSelect(index) },
-                    modifier = if (selected) Modifier.focusRequester(selectedGroup) else Modifier,
-                )
-            }
-        }
+        GroupList(groups, current?.key, onSelect, selectedGroup, pane)
         Box(
             Modifier.weight(1f)
                 .fillMaxHeight()
+                .focusRequester(pane)
                 .onKeyEvent { event ->
                     // No row used Left: go back to the selected group.
                     val left = event.key == Key.DirectionLeft
@@ -137,12 +98,67 @@ private fun IndexedTwoPane(
                 }
                 .focusGroup()
         ) {
-            Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(AREA_PADDING),
-                verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
-            ) {
-                content(selectedIndex)
+            if (current != null) {
+                Column(
+                    Modifier.fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(AREA_PADDING),
+                    verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
+                ) {
+                    content(current.key)
+                }
             }
+        }
+    }
+}
+
+/** The groups by title. Right from any of them enters [pane] at its first row. */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun <K> GroupList(
+    groups: List<SettingsGroup<K>>,
+    selected: K?,
+    onSelect: (K) -> Unit,
+    selectedGroup: FocusRequester,
+    pane: FocusRequester,
+) {
+    val focusManager = LocalFocusManager.current
+    val width =
+        if (LocalFormFactor.current == FormFactor.Handheld) HANDHELD_LIST_WIDTH else TV_LIST_WIDTH
+    Column(
+        Modifier.width(width)
+            .fillMaxHeight()
+            .verticalScroll(rememberScrollState())
+            .padding(AREA_PADDING)
+            .selectableGroup()
+            .onKeyEvent { event ->
+                // The search for a focus target to the right would pick the row nearest to the
+                // group. With no focus to measure from, entering the pane picks its first row.
+                val right = event.key == Key.DirectionRight
+                if (right && event.type == KeyEventType.KeyDown) {
+                    focusManager.clearFocus()
+                    if (!pane.requestFocus()) selectedGroup.requestFocus()
+                }
+                right
+            }
+            // Entering the list by the D-pad lands on the selected group, not the nearest. A
+            // request for one group (a tap, an initial focus) is not an entry and stays on it.
+            .focusProperties {
+                enter = { direction ->
+                    if (direction != FocusDirection.Enter) selectedGroup else FocusRequester.Default
+                }
+            }
+            .focusGroup(),
+        verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
+    ) {
+        for (group in groups) {
+            val isSelected = group.key == selected
+            GroupEntry(
+                group.title,
+                isSelected,
+                onSelect = { onSelect(group.key) },
+                modifier = if (isSelected) Modifier.focusRequester(selectedGroup) else Modifier,
+            )
         }
     }
 }

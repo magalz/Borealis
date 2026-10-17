@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +27,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.paneTitle
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -49,6 +53,8 @@ private val CONTENT_PADDING = 20.dp
 private val LIST_PADDING = 8.dp
 /** An outline sits 5dp outside its row, so neighbouring rows need 10dp between them. */
 private val OPTION_GAP = 10.dp
+/** The first option's outline reaches 5dp above it: leave room under the title for it. */
+private val LIST_TOP_PADDING = 16.dp
 private val OPTION_PADDING_HORIZONTAL = 12.dp
 private val OPTION_PADDING_VERTICAL = 10.dp
 private val MARK_GAP = 12.dp
@@ -116,15 +122,16 @@ private fun <T> OptionList(
 ) {
     val initial = remember { FocusRequester() }
     val initialIndex = options.indexOfFirst { it.key == selected }.coerceAtLeast(0)
-    Column(Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxWidth().semantics { paneTitle = title }) {
         Text(
             title,
             modifier =
                 Modifier.padding(
-                    start = CONTENT_PADDING,
-                    top = CONTENT_PADDING,
-                    end = CONTENT_PADDING,
-                ),
+                        start = CONTENT_PADDING,
+                        top = CONTENT_PADDING,
+                        end = CONTENT_PADDING,
+                    )
+                    .semantics { heading() },
             style = MaterialTheme.typography.titleLarge,
         )
         // The padding is inside the scroll area: the area clips, and an outline reaches 5dp outside
@@ -132,9 +139,10 @@ private fun <T> OptionList(
         Column(
             Modifier.weight(1f, fill = false)
                 .verticalScroll(rememberScrollState())
+                .selectableGroup()
                 .padding(
                     start = LIST_PADDING,
-                    top = OPTION_GAP,
+                    top = LIST_TOP_PADDING,
                     end = LIST_PADDING,
                     bottom = CONTENT_PADDING,
                 ),

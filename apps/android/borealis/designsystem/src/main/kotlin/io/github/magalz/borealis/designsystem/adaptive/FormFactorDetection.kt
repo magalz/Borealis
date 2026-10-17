@@ -20,16 +20,21 @@ internal const val WIDE_WINDOW_DP = 600
  * - **TV** when the leanback feature is present or the UI mode is television. It wins over every
  *   other fact, so a TV with a touch screen or a narrow window is still a TV.
  * - **Handheld** when the window is [WIDE_WINDOW_DP] wide or more and the device reports the
- *   controls of a gamepad console: a D-pad, a trackball or a wheel as its navigation, or no touch
- *   screen at all.
+ *   controls of a gamepad console (a D-pad, a trackball or a wheel as its navigation, or no touch
+ *   screen at all) or a game controller is connected ([gamepadConnected]).
  * - **Phone** otherwise.
  *
  * Consequences, all intended:
  * - A touch tablet reports no navigation and a touch screen, so it stays a phone layout.
  * - A phone with a clip-on or paired gamepad (Backbone, Kishi) in landscape, 600dp or wider, counts
  *   as a handheld: that is the use the handheld layout is for.
- * - The result follows the window, so it flips when the phone is rotated or the gamepad is plugged
- *   in or out; the screens recompose with the other layout and keep their state.
+ * - The configuration alone misses such a pad: Android reports a D-pad navigation only for a device
+ *   with D-pad key codes, and modern pads (Xbox, DualSense, 8BitDo, Switch Pro) send the D-pad as a
+ *   hat axis, so the phone keeps reporting a touch screen and no navigation. That is why the
+ *   connected game controller is a fact of its own.
+ * - The result follows the window and the connected pads, so it flips when the phone is rotated or
+ *   a pad connects or disconnects; the screens recompose with the other layout and keep their
+ *   state.
  * - A Chromebook or other non-touch device that is 600dp wide or more counts as a handheld, because
  *   it reports no touch screen. Its layout is the TV/handheld one, which a keyboard can navigate.
  */
@@ -43,8 +48,8 @@ fun formFactorOf(
 ): FormFactor =
     when {
         isTvFeature || uiModeType == Configuration.UI_MODE_TYPE_TELEVISION -> FormFactor.Tv
-        widthDp >= WIDE_WINDOW_DP && hasGamepadControls(touchscreen, navigation) ->
-            FormFactor.Handheld
+        widthDp >= WIDE_WINDOW_DP &&
+            (hasGamepadControls(touchscreen, navigation) || gamepadConnected) -> FormFactor.Handheld
         else -> FormFactor.Phone
     }
 
@@ -64,17 +69,18 @@ fun rememberFormFactor(): FormFactor {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val windowWidthPx = LocalWindowInfo.current.containerSize.width
+    val gamepadConnected = rememberGamepadConnected()
     // On the first composition the window may not have a size yet, so the configuration backs it.
     @Suppress("ConfigurationScreenWidthHeight")
     val configurationWidthDp = configuration.screenWidthDp
-    return remember(context, configuration, density, windowWidthPx) {
+    return remember(context, configuration, density, windowWidthPx, gamepadConnected) {
         formFactorOf(
             isTvFeature = context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK),
             uiModeType = uiModeTypeOf(context),
             widthDp = windowWidthDp(windowWidthPx, density.density, configurationWidthDp),
             touchscreen = configuration.touchscreen,
             navigation = configuration.navigation,
-            gamepadConnected = false,
+            gamepadConnected = gamepadConnected,
         )
     }
 }

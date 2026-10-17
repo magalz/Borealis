@@ -13,6 +13,7 @@ import org.robolectric.util.ReflectionHelpers.ClassParameter
  * An input device as the framework reports it. A negative [id] makes it virtual. [joystickXy] gives
  * it the X and Y motion ranges of a joystick.
  */
+@Suppress("DEPRECATION") // the Robolectric helper; InputDevice.Builder is not in the public SDK
 internal fun inputDevice(id: Int, sources: Int, joystickXy: Boolean = false): InputDevice {
     val device = ShadowInputDevice.makeInputDeviceNamed("test-device-$id")
     ReflectionHelpers.setField(device, "mId", id)

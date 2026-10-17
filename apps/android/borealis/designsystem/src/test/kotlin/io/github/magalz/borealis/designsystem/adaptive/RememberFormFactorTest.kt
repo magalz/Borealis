@@ -112,6 +112,7 @@ class RememberFormFactorTest {
         assertThat(formFactor).isEqualTo(FormFactor.Phone)
 
         // The same device now reports a gamepad source, as a pad does after it finishes pairing.
+        disconnect(context, deviceId = 3)
         connect(context, inputDevice(id = 3, sources = KEYBOARD or GAMEPAD))
         notifyListeners { onInputDeviceChanged(3) }
         composeRule.waitForIdle()

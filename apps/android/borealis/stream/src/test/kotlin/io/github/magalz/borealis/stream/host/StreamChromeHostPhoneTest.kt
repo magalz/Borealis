@@ -49,6 +49,7 @@ class StreamChromeHostPhoneTest {
         assertThat(StreamChromeHost.isPhone(context)).isTrue()
     }
 
+    @Suppress("DEPRECATION") // the Robolectric helper; InputDevice.Builder is not in the public SDK
     private fun connectGamepad() {
         val device = ShadowInputDevice.makeInputDeviceNamed("test-pad")
         ReflectionHelpers.setField(device, "mId", 3)

@@ -24,7 +24,9 @@ can be paired ([UC-001](0001-pair-with-a-host.md)).
 
 1. The user chooses Add host on the Hosts screen (on a phone, the + button).
 2. The system shows the Add host screen with one Address field. The system
-   keyboard opens at once on a phone. On a TV the keyboard opens on OK.
+   keyboard opens at once on a phone. On a TV the keyboard opens on OK,
+   confirmed on the device in Sprint 6. On TV the D-pad focus lands on the field
+   first, and OK starts editing and opens the keyboard.
 3. The user types the address. The port is needed only when the LuminalShine
    port was changed from the default 47989.
 4. The user chooses Add host.

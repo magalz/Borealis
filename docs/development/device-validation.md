@@ -992,11 +992,19 @@ Follow-ups:
   chord holds it back, because its two key-downs arrive as separate events. The
   review of the D17 fix found it, and the tests pin the packets. It was not seen
   on the device.
+  Done in Sprint 6: a system pad's Select or Start waits up to 60 ms for the
+  other button, so a lone press no longer reaches the PC (section 11, C1).
 - On the TV the system keyboard opens when the Add host field gets focus (R1),
   while the comment in `AddHostScreen` says it opens on OK. Align the comment or
   the behaviour.
+  Done in Sprint 6: on the TV, OK opens the keyboard on the Add host field, and
+  focus alone does not (section 11, A12 and D1).
 - The menu's Gamepad mouse row follows the last pad that toggled the mouse
   (D18), so with two pads it shows the state of the last toggle.
+  Done in Sprint 6: the row shows On while either pad emulates the mouse
+  (section 11, C2).
+- Done in Sprint 6: with the USB driver setting off, the USB attach dialog does
+  not appear (section 11, C4).
 - The host items stay: the slow `/resume` after a disconnect
   (NortheBridge/luminalshine#198), and the `/cancel` delay after a quit. The
   host ends the stream before it answers `/cancel`, so the Quitting screen waits
@@ -1157,9 +1165,9 @@ Download folders of both devices for the owner to delete.
 
 ## 11. Results: Sprint 6
 
-The device round of Sprint 6 adds its results to this section. So far it
-records the TV channel spike, run with the Sprint 5 debug build that was on the
-TV (code of `09ba717b`).
+This section holds the Sprint 6 results. It starts with the TV channel spike,
+run with the Sprint 5 debug build that was on the TV (code of `09ba717b`). The
+device round of 2026-10-17 follows it.
 
 ### TV channel spike, 2026-10-16
 
@@ -1172,3 +1180,100 @@ Device: Google TV Streamer, Android 14, launcher `launcherx` 1.0.994451607.
   channels, have no row.
 - Decision: no channel prompt after pairing. The existing channel code stays for
   Android TV launchers that show channels.
+
+### Device round, 2026-10-17
+
+#### Setup
+
+- Builds:
+  - the debug APK from phase head `e9e66849` first;
+  - then `c02fdafb` (decode-time FIFO reverted; S22 only, `TODO(verify)`:
+    whether the TV ran this build);
+  - then `c3f1ce75` (merge of the device fixes, with the revert). The re-checks
+    ran on `c3f1ce75`.
+- Install: `install -r`, keeping data.
+- Devices:
+  - Galaxy S22: USB, phone language pt-BR.
+  - Google TV Streamer: ADB over Wi-Fi, pt-BR, Android 14, Gboard for TV.
+- Host: LuminalShine 26.09.1 on the PC.
+- Pads on the TV:
+  - 8BitDo Pro 3 in Switch mode (a system pad);
+  - 8BitDo Ultimate 2 for PC in XInput mode (the app's USB driver).
+- The Windows game controller panel (joy.cpl) was open on the PC.
+
+#### Block A (no owner action)
+
+| # | Item | Device | Result | Evidence and notes |
+| --- | --- | --- | --- | --- |
+| A1 | Upgrade: the two logging switches move to DataStore | TV | pass | Set `borealis_mask_addresses=true` in the Sprint 5 build (verbose was already on). After installing the Sprint 6 build, `files/datastore/borealis_settings.preferences_pb` holds verbose=1 and mask=1, and SharedPreferences has no `borealis_` keys left. Mask was set back off afterwards, to the owner's value. |
+| A2 | Settings opens from the rail, two panes, TV groups | TV | pass | Groups: Stream, Video, Input, Gamepad, Audio, Advanced, Privacy and diagnostics, About. No On-screen controls group, because there is no touchscreen. The motion fallback and vibration rows are hidden. |
+| A3 | Resolution list, bitrate automatic | TV | pass | 360p to 4K. The TV reports one 1920x1080 mode with no HDR, but its 4K decoder raises the limit, as in upstream. No native entries on a TV. Picking 1080p gives "Automatic (20 Mbps)" with no bitrate key stored. |
+| A4 | Frame rates and Unlock all frame rates | TV | pass | 30 and 60 fps at 60 Hz. Unlock gives 30, 60, 90 and 120. Picking 120 gives "Automatic (28 Mbps)". Turning Unlock off steps the frame rate to 60 and returns the bitrate to automatic (the review fix). |
+| A5 | HDR row | TV, S22 | pass | Hidden on the TV (`supportedHdrTypes=[]`). Shown on the S22. |
+| A6 | Phone list | S22 | pass | Complete list with headers. "Native (2259x1080)" and "Native fullscreen (2340x1080)". The On-screen controls group, vibration rows, USB rows, Privacy link row and About are shown. |
+| A7 | Frame rates on the S22 | S22 | pass | With One UI "Motion smoothness: Standard", only 30 and 60 fps. After the owner switched to Adaptive (up to 120 Hz): 30, 60, 90 and 120. Same rule as upstream. |
+| A8 | Privacy pane on TV | TV | pass | It renders inside the two panes with no crash, and the switches show the migrated values. |
+| A9 | Export on TV | TV | pass | Progress shows on the Export row (about 25 s), then "Diagnostics saved" with the file, size, location and `adb pull` command. Close has the focus, and Send to phone is offered. |
+| A10 | Export on phone | S22 | pass | The system share sheet opened with the zip, and it was cancelled. |
+| A11 | Audit trail | TV, S22 | pass | Newest first, with plain-words titles and codes. With Mask on, the host shows as `[HOST]`. With Mask off, the host name and address show. Switching re-maps without a database change. |
+| A12 | Add host keyboard on focus | TV | pass | Focusing the Address field does not open the keyboard. |
+| A13 | English UI on a pt-BR device | S22, TV | pass after D2 | All texts are English. Only the audit weekday was in Portuguese ("sex."): D2. |
+
+#### Defects found and fixed
+
+Task `s6-devfix` (S6-T23) was merged as `c3f1ce75`. D5 was a regression from
+the decode-time FIFO (S6-T7).
+
+| # | Defect | Fix | Re-check |
+| --- | --- | --- | --- |
+| D1 | TV: OK on Add host never opened the keyboard. `onStartInput` had `inputType=0`: the state-based field with `showKeyboardOnFocus=false` starts no input session, so Gboard refused (`onFailed at PHASE_IME_ON_SHOW_SOFT_INPUT_TRUE`). The first fix (`showSoftInput`) failed the same way. | On TV and handheld, the D-pad focus lands on a wrapper that draws the field. OK moves the focus into the real field, which opens the keyboard through the normal path. Done returns to the wrapper. | Pass: Gboard shows (`inputType=Uri`, `onShown`) and "abc" was typed. Back closes the keyboard, Down goes to Add host, and Up returns to the field without the keyboard. |
+| D2 | The audit weekday was in the device language. | The audit times are formatted in English, with the device time zone. | Pass: "Fri 19:33". |
+| D3 | TV: Back from the Audit trail left the focus on the rail. | The focus returns to the "Audit trail" row. | Pass. |
+| D4 | One bundle showed "196 KB" in Send to phone and "201 kB" in "Diagnostics saved". | One formatter (`Formatter.formatShortFileSize`). | Code and test, recorded. |
+| D5 regression | The decode-time FIFO (S6-T7) gave "Decode — ms" on both the TV (MediaTek) and the S22 (Qualcomm). | Reverted on the phase (`c02fdafb`). | The S22 shows a number again ("Decode 0.2 ms"). The MediaTek "—" stays a known limitation. |
+
+#### Block B (with the owner)
+
+| # | Item | Result | Evidence and notes |
+| --- | --- | --- | --- |
+| B1 | Send to phone | pass | The QR code was scanned with the S22 camera. The zip downloaded (200,866 bytes). The TV log: request 200, download 200, `stopped reason=DOWNLOADED`. "Downloaded" stayed until the owner pressed Close. |
+| B2 | A setting takes effect in a stream | pass | Codec H.264. The overlay shows "H.264" and `c2.mtk.avc.decoder.lowlatency`. |
+| B3 | Overlay Detailed | pass | TV and S22, three-state setting. |
+| B4 | Pinned app shortcut | pass | "Add to home screen" on Desktop, confirmed by the owner. The shortcut icon is a bitmap (the box art from the PC). The host shortcut uses the Borealis monitor icon (`ic_pc_scut`). |
+| B5 | Hide an app disables its shortcut | pass | Hide gives `Disabled: by app`. Show again enables it. |
+
+#### Block C (pads, joy.cpl)
+
+| # | Item | Result | Evidence and notes |
+| --- | --- | --- | --- |
+| C1 | Lone Start or Select reaches the PC; Select and Start held opens the menu, and nothing reaches the PC | pass | Pro 3 (system pad) and Ultimate 2 (USB driver), as the owner watched in joy.cpl. |
+| C2 | Mouse row with two pads | pass | The Pro 3 held Start (mouse on), and the Ultimate 2 chord opened the menu. The "Gamepad mouse" row showed On. |
+| C3 | Quit combo Start, Back, LB and RB | partial | It ends the stream on the Pro 3 (system pad). Not on the Ultimate 2 (USB driver): the combo is detected only in the system-pad key path (`pendingExit`), never in `reportControllerState`. This is upstream behaviour, not a regression. Sprint 5 C7 was on the Pro only. Follow-up for the next sprint. |
+| C4 | USB driver off: no attach dialog | pass | `UsbAttachActivity` is in disabledComponents. The owner re-plugged the dongle and no dialog appeared. The driver was set back on afterwards, and the component is enabled again. |
+| C5 | After the stream with the USB driver on, Android asked for USB access again | known | The R5a limitation: Google TV's dialog has no "use by default" option. |
+
+#### Not run
+
+- (b) The RTSP -1 hint: it needs a host failure, so only unit tests cover it.
+- Handheld: no device.
+- The Expired and No network Send to phone states on a device: only unit and
+  screenshot tests cover them.
+
+#### Follow-ups
+
+- The MediaTek decode time still shows "—" (D5). Investigate it next sprint
+  with input and output counters. The FIFO approach failed on both decoders.
+- The quit combo is not detected for USB-driver pads (`reportControllerState`).
+  This is an upstream limitation.
+- The Google TV USB dialog repeats while the USB driver is on (R5a, section 10).
+
+#### Clean-up
+
+- The round's zips on the TV were deleted.
+- The settings changed for the round were restored on the TV: 720p, codec auto,
+  overlay off, USB driver on, stretch off, unlock off.
+- The S22 overlay is set back off, and the zip the S22 downloaded is deleted,
+  once the S22 is reconnected. `TODO(verify)`: whether both were done. The
+  notes say the S22 was not connected when they were written.
+- `/sdcard/ui.xml` was deleted from the S22.
+- The local screenshots were deleted.

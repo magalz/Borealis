@@ -27,6 +27,7 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.PerfSnapshot
+import io.github.magalz.borealis.stream.PointerSpeed
 import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.SessionInfo
 import io.github.magalz.borealis.stream.StreamIntents
@@ -67,7 +68,8 @@ internal fun SendKeysRow(intents: StreamIntents) {
 
 /**
  * How the pointer is driven: Touch on a phone, Gamepad mouse on a TV or handheld, and nothing when
- * the session offers no such choice (the value is null).
+ * the session offers no such choice (the value is null). While the gamepad mouse is on, a second
+ * row sets its speed for this session.
  */
 @Composable
 internal fun PointerRow(phase: StreamPhase.Streaming, intents: StreamIntents) {
@@ -93,6 +95,16 @@ internal fun PointerRow(phase: StreamPhase.Streaming, intents: StreamIntents) {
             label = { if (it) on else off },
             onSelect = intents::setGamepadMouse,
         )
+        if (gamepadMouse) {
+            val speedLabels = PointerSpeed.entries.associateWith { stringResource(speedLabel(it)) }
+            OptionRow(
+                stringResource(R.string.stream_menu_pointer_speed),
+                options = PointerSpeed.entries,
+                selected = phase.pointerSpeed,
+                label = speedLabels::getValue,
+                onSelect = intents::setPointerSpeed,
+            )
+        }
     }
 }
 
@@ -123,6 +135,13 @@ private fun <T> OptionRow(
         },
     )
 }
+
+private fun speedLabel(speed: PointerSpeed) =
+    when (speed) {
+        PointerSpeed.SLOW -> R.string.stream_menu_pointer_speed_slow
+        PointerSpeed.NORMAL -> R.string.stream_menu_pointer_speed_normal
+        PointerSpeed.FAST -> R.string.stream_menu_pointer_speed_fast
+    }
 
 private fun touchLabel(mode: TouchMode) =
     when (mode) {

@@ -386,6 +386,37 @@ class StreamSessionTest {
     }
 
     @Test
+    fun `a stream starts at the normal pointer speed`() {
+        val started = startStreaming()
+
+        assertThat((started.state.value.phase as StreamPhase.Streaming).pointerSpeed)
+            .isEqualTo(PointerSpeed.NORMAL)
+    }
+
+    @Test
+    fun `the pointer speed updates the state and is forwarded`() {
+        val started = startStreaming()
+
+        started.setPointerSpeed(PointerSpeed.FAST)
+
+        assertThat((started.state.value.phase as StreamPhase.Streaming).pointerSpeed)
+            .isEqualTo(PointerSpeed.FAST)
+        assertThat(actions.calls).containsExactly("setPointerSpeed FAST")
+    }
+
+    @Test
+    fun `the pointer speed is kept when the gamepad mouse is turned off and on`() {
+        val started = startStreaming()
+        started.setPointerSpeed(PointerSpeed.SLOW)
+
+        started.setGamepadMouse(false)
+        started.setGamepadMouse(true)
+
+        assertThat((started.state.value.phase as StreamPhase.Streaming).pointerSpeed)
+            .isEqualTo(PointerSpeed.SLOW)
+    }
+
+    @Test
     fun `dismissing the menu hint hides it and tells the activity`() {
         val started = startStreaming()
 

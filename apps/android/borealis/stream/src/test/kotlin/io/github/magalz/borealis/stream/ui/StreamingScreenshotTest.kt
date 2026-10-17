@@ -22,6 +22,7 @@ import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.Panel
+import io.github.magalz.borealis.stream.PointerSpeed
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.testing.HANDHELD
 import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
@@ -73,6 +74,25 @@ class StreamingScreenshotTest {
         }
 
         shoot("menu_handheld")
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun menuTvGamepadMouseOn() {
+        composeRule.setChromeInKeyboardMode(FormFactor.Tv) {
+            Stream {
+                Layer(
+                    aStreaming(
+                        Panel.MENU,
+                        touchMode = null,
+                        gamepadMouse = true,
+                        pointerSpeed = PointerSpeed.FAST,
+                    )
+                )
+            }
+        }
+
+        shoot("menu_tv_gamepad-mouse-on")
     }
 
     @Test

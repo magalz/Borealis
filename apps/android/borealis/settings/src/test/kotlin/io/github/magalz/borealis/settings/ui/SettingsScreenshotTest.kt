@@ -31,6 +31,8 @@ class SettingsScreenshotTest : SettingsScreenTestBase() {
         options.frameRates = options.frameRates + FrameRateChoice(90, isNative = false)
         options.rowStates[Settings.ANALOG_SCROLLING] =
             RowState.Disabled(DisabledReason.DEPENDS_ON_SETTING, Settings.MOUSE_EMULATION)
+        options.rowStates[Settings.GAMEPAD_MOUSE_SPEED] =
+            RowState.Disabled(DisabledReason.DEPENDS_ON_SETTING, Settings.MOUSE_EMULATION)
         options.rowStates[Settings.VIBRATE_FALLBACK_STRENGTH] =
             RowState.Disabled(DisabledReason.DEPENDS_ON_SETTING, Settings.VIBRATE_FALLBACK)
         stored(

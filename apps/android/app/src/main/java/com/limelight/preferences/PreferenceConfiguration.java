@@ -34,6 +34,7 @@ public class PreferenceConfiguration {
     private static final String DISABLE_TOASTS_PREF_STRING = "checkbox_disable_warnings";
     private static final String HOST_AUDIO_PREF_STRING = "checkbox_host_audio";
     private static final String DEADZONE_PREF_STRING = "seekbar_deadzone";
+    private static final String GAMEPAD_MOUSE_SPEED_PREF_STRING = "seekbar_gamepad_mouse_speed";
     private static final String OSC_OPACITY_PREF_STRING = "seekbar_osc_opacity";
     private static final String MULTI_CONTROLLER_PREF_STRING = "checkbox_multi_controller";
     static final String AUDIO_CONFIG_PREF_STRING = "list_audio_config";
@@ -72,6 +73,7 @@ public class PreferenceConfiguration {
     private static final boolean DEFAULT_DISABLE_TOASTS = false;
     private static final boolean DEFAULT_HOST_AUDIO = false;
     private static final int DEFAULT_DEADZONE = 7;
+    private static final int DEFAULT_GAMEPAD_MOUSE_SPEED = 50;
     private static final int DEFAULT_OPACITY = 90;
     private static final boolean DEFAULT_MULTI_CONTROLLER = true;
     private static final boolean DEFAULT_USB_DRIVER = true;
@@ -120,6 +122,7 @@ public class PreferenceConfiguration {
     public int bitrate;
     public FormatOption videoFormat;
     public int deadzonePercentage;
+    public int gamepadMouseSpeed;
     public int oscOpacity;
     public boolean stretchVideo, enableSops, playHostAudio, disableWarnings;
     public boolean multiController, usbDriver, flipFaceButtons;
@@ -525,6 +528,8 @@ public class PreferenceConfiguration {
         config.analogStickForScrolling = getAnalogStickForScrollingValue(context);
 
         config.deadzonePercentage = prefs.getInt(DEADZONE_PREF_STRING, DEFAULT_DEADZONE);
+
+        config.gamepadMouseSpeed = prefs.getInt(GAMEPAD_MOUSE_SPEED_PREF_STRING, DEFAULT_GAMEPAD_MOUSE_SPEED);
 
         config.oscOpacity = prefs.getInt(OSC_OPACITY_PREF_STRING, DEFAULT_OPACITY);
 

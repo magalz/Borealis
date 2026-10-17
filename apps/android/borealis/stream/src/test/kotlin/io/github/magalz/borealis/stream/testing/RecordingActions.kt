@@ -2,6 +2,7 @@ package io.github.magalz.borealis.stream.testing
 
 import io.github.magalz.borealis.host.launch.ConflictChoice
 import io.github.magalz.borealis.stream.OverlayMode
+import io.github.magalz.borealis.stream.PointerSpeed
 import io.github.magalz.borealis.stream.StreamActions
 import io.github.magalz.borealis.stream.TouchMode
 import io.github.magalz.borealis.stream.keys.KeyChord
@@ -35,6 +36,10 @@ class RecordingActions : StreamActions {
 
     override fun setGamepadMouse(enabled: Boolean) {
         calls += "setGamepadMouse $enabled"
+    }
+
+    override fun setPointerSpeed(speed: PointerSpeed) {
+        calls += "setPointerSpeed $speed"
     }
 
     override fun setOverlay(mode: OverlayMode) {

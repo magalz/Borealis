@@ -198,6 +198,7 @@ class DefaultSettingsOptions @Inject constructor() : SettingsOptions {
                 Settings.USB_BIND_ALL to
                     Rule(hiddenOn = { !it.hasUsbHost }, dependency = Settings.USB_DRIVER),
                 Settings.ANALOG_SCROLLING to Rule(dependency = Settings.MOUSE_EMULATION),
+                Settings.GAMEPAD_MOUSE_SPEED to Rule(dependency = Settings.MOUSE_EMULATION),
                 Settings.ENABLE_PIP to
                     Rule(hiddenOn = { !it.supportsPictureInPicture || it.isFireOs }),
                 Settings.VIBRATE_FALLBACK to Rule(hiddenOn = { !it.hasVibrator }),

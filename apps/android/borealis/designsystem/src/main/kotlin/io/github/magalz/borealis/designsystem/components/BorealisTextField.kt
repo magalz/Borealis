@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.FocusInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
@@ -203,26 +204,50 @@ private fun EditOnOkField(
                 editing = false
             },
         )
-        Box(
-            Modifier.matchParentSize()
-                .focusRequester(wrapper)
-                .onFocusChanged { wrapperFocused = it.isFocused }
-                .onPreviewKeyEvent { event -> wrapperKey(event, startEditing, onDone) }
-                .focusProperties { canFocus = !editing }
-                .focusable()
-                .semantics {
-                    contentDescription = content.label
-                    role = Role.Button
-                    onClick {
-                        startEditing()
-                        true
-                    }
-                }
-                // A tap before OK starts editing; the field, which cannot have the focus yet, does
-                // not get it.
-                .pointerInput(editing) { if (!editing) detectTapGestures { startEditing() } }
+        EditWrapper(
+            content.label,
+            editing,
+            wrapper,
+            onFocusChanged = { wrapperFocused = it },
+            startEditing = startEditing,
+            onDone = onDone,
         )
     }
+}
+
+/**
+ * The wrapper laid over the field: a focus target that draws nothing, since the field draws its
+ * focused look for it. It can take the focus while the field is not being edited. OK or a tap on it
+ * starts editing, and Enter is Done.
+ */
+@Composable
+private fun BoxScope.EditWrapper(
+    label: String,
+    editing: Boolean,
+    focus: FocusRequester,
+    onFocusChanged: (Boolean) -> Unit,
+    startEditing: () -> Unit,
+    onDone: () -> Unit,
+) {
+    Box(
+        Modifier.matchParentSize()
+            .focusRequester(focus)
+            .onFocusChanged { onFocusChanged(it.isFocused) }
+            .onPreviewKeyEvent { event -> wrapperKey(event, startEditing, onDone) }
+            .focusProperties { canFocus = !editing }
+            .focusable()
+            .semantics {
+                contentDescription = label
+                role = Role.Button
+                onClick {
+                    startEditing()
+                    true
+                }
+            }
+            // A tap before OK starts editing; the field, which cannot have the focus yet, does
+            // not get it.
+            .pointerInput(editing) { if (!editing) detectTapGestures { startEditing() } }
+    )
 }
 
 /** OK starts editing; Enter, as on a hardware keyboard, is Done. Everything else is the D-pad's. */

@@ -4,9 +4,7 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.os.Build
-import android.preference.PreferenceManager
 import io.github.magalz.borealis.diagnostics.R
-import io.github.magalz.borealis.logging.LogStorage
 import io.github.magalz.borealis.logging.LogSwitches
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -65,7 +63,6 @@ object ManifestCollector {
         now: Instant = Instant.now(),
     ): BundleManifest {
         val info = runCatching { context.packageManager.getPackageInfo(context.packageName, 0) }
-        val preferences = PreferenceManager.getDefaultSharedPreferences(context)
         return BundleManifest(
             app = appInfo(context, info.getOrNull()),
             device =
@@ -79,8 +76,8 @@ object ManifestCollector {
             createdUtc = now.truncatedTo(ChronoUnit.SECONDS).toString(),
             logSettings =
                 LogSettingsInfo(
-                    verbose = preferences.getBoolean(LogStorage.VERBOSE_LOGGING_KEY, false),
-                    maskAddresses = preferences.getBoolean(LogStorage.MASK_ADDRESSES_KEY, false),
+                    verbose = switches.verboseLogging,
+                    maskAddresses = switches.maskAddresses,
                 ),
         )
     }

@@ -20,8 +20,8 @@ class PreferencesLogSwitches(private val preferences: SharedPreferences) : LogSw
     constructor(context: Context) : this(PreferenceManager.getDefaultSharedPreferences(context))
 
     override val verboseLogging: Boolean
-        get() = false
+        get() = preferences.getBoolean(LogStorage.VERBOSE_LOGGING_KEY, false)
 
     override val maskAddresses: Boolean
-        get() = false
+        get() = preferences.getBoolean(LogStorage.MASK_ADDRESSES_KEY, false)
 }

@@ -8,10 +8,12 @@ import android.preference.PreferenceManager
 
 /**
  * Keeps [UsbAttachActivity] enabled only while the USB driver setting (`checkbox_usb_driver`, on by
- * default) is on, once at startup and again on every change of that setting.
+ * default) is on and the device is not a TV, once at startup and again on every change of that
+ * setting.
  *
- * With the driver off, the system's attach dialog gives the user nothing, and on Google TV it
- * cannot remember a choice, so the component is taken out of the system's choices instead.
+ * With the driver off, the system's attach dialog gives the user nothing. On Google TV it gives
+ * nothing either way: it cannot remember a choice, so the driver's own permission dialog is the
+ * only one left. The component is taken out of the system's choices in both cases.
  */
 class UsbAttachGate
 private constructor(private val context: Context, private val preferences: SharedPreferences) {
@@ -29,7 +31,8 @@ private constructor(private val context: Context, private val preferences: Share
     private fun sync() {
         val packageManager = context.packageManager
         val component = ComponentName(context, UsbAttachActivity::class.java)
-        val wanted = preferences.getBoolean(USB_DRIVER, DEFAULT_USB_DRIVER)
+        val television = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+        val wanted = preferences.getBoolean(USB_DRIVER, DEFAULT_USB_DRIVER) && !television
         // The manifest declares the component enabled, so the default state counts as enabled.
         val current =
             when (packageManager.getComponentEnabledSetting(component)) {

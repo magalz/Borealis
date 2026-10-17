@@ -19,6 +19,7 @@ class LibraryLaunchRequestTest {
                 LibraryLaunchRequest.Apps("host-1"),
                 LibraryLaunchRequest.Launch("host-1", appId = 1_234),
                 LibraryLaunchRequest.Pair("host-1"),
+                LibraryLaunchRequest.Privacy,
             )
 
         for (request in requests) {

@@ -146,6 +146,14 @@ class SettingsTvTest : SettingsScreenTestBase() {
     }
 
     @Test
+    fun `a request for the Privacy group opens the screen on it`() {
+        show(keyboard = true, initialGroup = SettingsGroupId.PRIVACY)
+
+        composeRule.onNodeWithText("Privacy pane placeholder").assertIsDisplayed()
+        composeRule.onNodeWithText("Resolution").assertDoesNotExist()
+    }
+
+    @Test
     fun `the About group shows the version, the links and the licences`() {
         show(keyboard = true)
 

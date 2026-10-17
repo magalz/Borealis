@@ -43,7 +43,7 @@ private val BAR_GAP = 4.dp
 @Composable
 fun PrivacyScreen(
     onBack: () -> Unit,
-    onSendToPhone: (File) -> Unit,
+    onSendToPhone: (File, String) -> Unit,
     onOpenAudit: () -> Unit,
     modifier: Modifier = Modifier,
     formFactor: FormFactor = rememberFormFactor(),

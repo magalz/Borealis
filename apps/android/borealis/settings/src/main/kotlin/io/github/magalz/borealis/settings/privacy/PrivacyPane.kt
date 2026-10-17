@@ -62,7 +62,7 @@ private val SNACKBAR_PADDING = 16.dp
  */
 @Composable
 fun PrivacyPane(
-    onSendToPhone: (File) -> Unit,
+    onSendToPhone: (File, String) -> Unit,
     onOpenAudit: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PrivacyViewModel = hiltViewModel(),
@@ -87,7 +87,7 @@ internal class PrivacyBinding(
 @Composable
 internal fun rememberPrivacyBinding(
     viewModel: PrivacyViewModel,
-    onSendToPhone: (File) -> Unit,
+    onSendToPhone: (File, String) -> Unit,
     onOpenAudit: () -> Unit,
     startShare: (Intent) -> Unit,
 ): PrivacyBinding {
@@ -125,7 +125,7 @@ internal fun rememberPrivacyBinding(
                 onEraseConfirmed = viewModel::onEraseConfirmed,
                 onEraseCancelled = viewModel::onEraseCancelled,
                 onDialogDismissed = viewModel::onDialogDismissed,
-                onSendToPhone = { sendToPhone(it) },
+                onSendToPhone = { bundle, command -> sendToPhone(bundle, command) },
             )
         }
     return PrivacyBinding(state, snackbarHostState, actions)

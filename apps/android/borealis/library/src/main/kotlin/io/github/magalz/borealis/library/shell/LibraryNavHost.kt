@@ -225,6 +225,7 @@ private fun NavHostController.show(request: LibraryLaunchRequest) {
         is LibraryLaunchRequest.Apps -> navigate(Apps(request.hostId)) { launchSingleTop = true }
         is LibraryLaunchRequest.Launch -> navigate(Apps(request.hostId)) { launchSingleTop = true }
         is LibraryLaunchRequest.Pair -> navigate(Pairing(request.hostId)) { launchSingleTop = true }
+        LibraryLaunchRequest.Privacy -> Unit
     }
 }
 
@@ -239,5 +240,6 @@ private fun NavHostController.showsAlready(request: LibraryLaunchRequest): Boole
             destination.hasRoute<Apps>() && entry.toRoute<Apps>().hostId == request.hostId
         is LibraryLaunchRequest.Pair ->
             destination.hasRoute<Pairing>() && entry.toRoute<Pairing>().hostId == request.hostId
+        LibraryLaunchRequest.Privacy -> false
     }
 }

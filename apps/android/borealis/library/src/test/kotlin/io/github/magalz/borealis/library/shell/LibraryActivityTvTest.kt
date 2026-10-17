@@ -109,7 +109,8 @@ class LibraryActivityTvTest {
         composeRule.waitForIdle()
 
         composeRule.onNode(railItem("Settings")).performClick()
-        assertThat(bridge.settingsOpened).isEqualTo(1)
+        composeRule.waitForIdle()
+        assertThat(bridge.settingsOpened).isEqualTo(0)
 
         composeRule.onNode(railItem("Add host")).performClick()
         composeRule.waitForIdle()

@@ -38,7 +38,7 @@ class PrivacyContentTest {
     @get:Rule val folder = TemporaryFolder()
 
     private val calls = mutableListOf<String>()
-    private val sent = mutableListOf<File>()
+    private val sent = mutableListOf<Pair<File, String>>()
 
     private val actions =
         PrivacyActions(
@@ -50,7 +50,7 @@ class PrivacyContentTest {
             onEraseConfirmed = { calls += "erase" },
             onEraseCancelled = { calls += "cancel" },
             onDialogDismissed = { calls += "dismiss" },
-            onSendToPhone = { sent += it },
+            onSendToPhone = { bundle, command -> sent += bundle to command },
         )
 
     private val bundle by lazy { bundleFile(folder.root) }
@@ -244,7 +244,7 @@ class PrivacyContentTest {
 
         composeRule.onNodeWithText("Send to phone").performClick()
 
-        assertThat(sent).containsExactly(bundle)
+        assertThat(sent).containsExactly(bundle to "adb pull /sdcard/Download/${bundle.name}")
         assertThat(calls).isEmpty()
         composeRule.onNodeWithText("Diagnostics saved").assertIsDisplayed()
     }

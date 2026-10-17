@@ -64,13 +64,18 @@ abstract class SettingsScreenTestBase {
     protected fun viewModel(): SettingsViewModel =
         SettingsViewModel(repository, options, facts, { resets++ }, Dispatchers.Unconfined)
 
-    protected fun show(about: AboutSource? = testAbout(), keyboard: Boolean = false) {
+    protected fun show(
+        about: AboutSource? = testAbout(),
+        keyboard: Boolean = false,
+        initialGroup: SettingsGroupId = SettingsGroupId.STREAM,
+    ) {
         val viewModel = viewModel()
         val content: @Composable () -> Unit = {
             SettingsRoute(
                 onBack = { backs++ },
                 onOpenPrivacy = { privacyOpens++ },
                 privacyPane = { Text("Privacy pane placeholder") },
+                initialGroup = initialGroup,
                 about = about ?: rememberAboutSource(),
                 viewModel = viewModel,
             )

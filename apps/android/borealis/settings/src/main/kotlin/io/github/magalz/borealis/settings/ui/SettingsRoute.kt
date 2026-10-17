@@ -27,6 +27,7 @@ fun SettingsRoute(
     onOpenPrivacy: () -> Unit,
     privacyPane: @Composable () -> Unit,
     modifier: Modifier = Modifier,
+    initialGroup: SettingsGroupId = SettingsGroupId.STREAM,
     about: AboutSource = rememberAboutSource(),
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {

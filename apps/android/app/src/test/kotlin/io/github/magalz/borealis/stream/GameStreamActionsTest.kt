@@ -21,7 +21,6 @@ import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.domain.WakeResult
 import io.github.magalz.borealis.library.shell.LibraryActivity
-import io.github.magalz.borealis.settings.BorealisSettingsActivity
 import io.github.magalz.borealis.stream.host.HeldKeys
 import io.github.magalz.borealis.stream.input.GamepadChrome
 import io.github.magalz.borealis.stream.keys.KeyChord
@@ -307,13 +306,15 @@ class GameStreamActionsTest {
     }
 
     @Test
-    fun `diagnostics open the Borealis settings and leave finishing to the activity`() {
+    fun `diagnostics open the library on Privacy and diagnostics and finish`() {
         actions.openDiagnostics()
 
         val started = shadowOf(activity).nextStartedActivity
-        assertThat(started.component?.className)
-            .isEqualTo(BorealisSettingsActivity::class.java.name)
-        assertThat(activity.isFinishing).isFalse()
+        assertThat(started.component?.className).isEqualTo(LibraryActivity::class.java.name)
+        assertThat(LibraryLaunchRequest.fromExtras(started.extras))
+            .isEqualTo(LibraryLaunchRequest.Privacy)
+        assertThat(started.flags and LIBRARY_FLAGS).isEqualTo(LIBRARY_FLAGS)
+        assertThat(activity.isFinishing).isTrue()
     }
 
     @Test

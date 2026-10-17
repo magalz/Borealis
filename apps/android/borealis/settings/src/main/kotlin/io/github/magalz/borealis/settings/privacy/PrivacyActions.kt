@@ -12,5 +12,5 @@ internal class PrivacyActions(
     val onEraseConfirmed: () -> Unit,
     val onEraseCancelled: () -> Unit,
     val onDialogDismissed: () -> Unit,
-    val onSendToPhone: (File) -> Unit,
+    val onSendToPhone: (File, String) -> Unit,
 )

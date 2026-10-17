@@ -94,8 +94,9 @@ check.
 
 ## Acceptance tests
 
-UC-009-T1 to T8 exist (Sprint 6). UC-009-T9 and T10 are planned for Sprint 6;
-they need an emulator.
+UC-009-T1 to T8 exist (Sprint 6). UC-009-T9 and T10 were checked on a device in
+the Sprint 6 device round (see [device validation](../development/device-validation.md),
+section 11).
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
@@ -107,8 +108,8 @@ they need an emulator.
 | UC-009-T6 | Given the Frame rate rules (120 fps below 118 Hz, 90 fps below 88 Hz, and Unlock all frame rates), when the list is shown, then the rules hold, and turning on Unlock all frame rates updates the list at once. | unit | exists (Sprint 6, unit) |
 | UC-009-T7 | Given the On-screen controls group, when Reset layout is chosen, then the system asks first with "Cannot be undone", and Cancel leaves the layout unchanged. | UI | exists (Sprint 6, UI) |
 | UC-009-T8 | Given a TV or a handheld, when the user presses D-pad Right and Left, then focus moves into the rows and back to the groups. | UI | exists (Sprint 6, UI) |
-| UC-009-T9 | Given an app with the two logging switches stored in the SharedPreferences build, when the app is upgraded, then both switches keep their values. | emulator | planned |
-| UC-009-T10 | Given a setting is changed, when the next stream starts, then the stream uses the new value. | emulator | planned |
+| UC-009-T9 | Given an app with the two logging switches stored in the SharedPreferences build, when the app is upgraded, then both switches keep their values. | device | exists (Sprint 6, device round) |
+| UC-009-T10 | Given a setting is changed, when the next stream starts, then the stream uses the new value. | device | exists (Sprint 6, device round) |
 
 ## Host dependency
 

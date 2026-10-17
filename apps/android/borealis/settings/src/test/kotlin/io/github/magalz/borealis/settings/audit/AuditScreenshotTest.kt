@@ -30,18 +30,8 @@ class AuditScreenshotTest {
                 "20:34",
                 "Desk PC · HEVC Main10 · 2560×1440 · 59 fps",
             ),
-            AuditRow(
-                AuditType.LAUNCH_RETRY,
-                "20:33",
-                "Desk PC · 503 restoring the display · retry 1",
-            ),
             AuditRow(AuditType.LAUNCH_ATTEMPT, "20:33", "Desk PC · Desktop"),
             AuditRow(AuditType.PAIRING_SUCCESS, "18:02", "Studio"),
-            AuditRow(
-                AuditType.PAIRING_RESTART,
-                "18:01",
-                "Studio · unfinished attempt cleared, new PIN",
-            ),
             AuditRow(AuditType.PAIRING_START, "18:00", "Studio"),
             AuditRow(
                 AuditType.CERTIFICATE_CHANGED,

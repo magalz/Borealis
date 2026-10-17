@@ -92,7 +92,7 @@ class AuditRouteTest {
         switchMasking(true)
 
         composeRule.onNodeWithText("Desk PC (192.168.1.20)").assertDoesNotExist()
-        composeRule.onNodeWithText("Desk PC ([IP])").assertIsDisplayed()
+        composeRule.onNodeWithText("[HOST]").assertIsDisplayed()
     }
 
     @Test

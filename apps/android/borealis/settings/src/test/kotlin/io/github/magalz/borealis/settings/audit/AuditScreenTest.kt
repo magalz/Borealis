@@ -59,12 +59,12 @@ class AuditScreenTest {
     ) = AuditUiState(loading = loading, entries = rows.toList(), detail = detail)
 
     private fun show(state: AuditUiState, formFactor: FormFactor = FormFactor.Phone) {
-        composeRule.setContent { screen(state, formFactor) }
+        composeRule.setContent { Screen(state, formFactor) }
         composeRule.waitForIdle()
     }
 
     @Composable
-    private fun screen(state: AuditUiState, formFactor: FormFactor) =
+    private fun Screen(state: AuditUiState, formFactor: FormFactor) =
         AuditScreen(
             state = state,
             formFactor = formFactor,
@@ -324,7 +324,7 @@ class AuditScreenTest {
     @Config(qualifiers = TV)
     fun `on a TV Down moves from entry to entry and Up moves back`() {
         composeRule.setContentInKeyboardMode {
-            screen(state(sessionEnd, sessionStart, certificate), FormFactor.Tv)
+            Screen(state(sessionEnd, sessionStart, certificate), FormFactor.Tv)
         }
         entry(0).assertIsFocused()
 
@@ -340,7 +340,7 @@ class AuditScreenTest {
     @Config(qualifiers = TV)
     fun `on a TV OK on the focused entry asks to open it`() {
         composeRule.setContentInKeyboardMode {
-            screen(state(sessionEnd, sessionStart), FormFactor.Tv)
+            Screen(state(sessionEnd, sessionStart), FormFactor.Tv)
         }
 
         entry(0).performKeyInput { pressKey(Key.DirectionDown) }
@@ -353,7 +353,7 @@ class AuditScreenTest {
     @Config(qualifiers = TV)
     fun `on a TV the focus returns to the entry that was open`() {
         val state = mutableStateOf(state(sessionEnd, sessionStart, certificate))
-        composeRule.setContentInKeyboardMode { screen(state.value, FormFactor.Tv) }
+        composeRule.setContentInKeyboardMode { Screen(state.value, FormFactor.Tv) }
         entry(0).performKeyInput { pressKey(Key.DirectionDown) }
         entry(1).performKeyInput { pressKey(Key.DirectionCenter) }
 

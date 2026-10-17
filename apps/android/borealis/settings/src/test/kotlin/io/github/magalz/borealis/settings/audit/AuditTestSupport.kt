@@ -15,6 +15,7 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -58,6 +59,7 @@ class FakeAuditTrail(initial: List<AuditEntry> = emptyList()) : AuditTrail {
 }
 
 /** Runs `Dispatchers.Main`, and so `viewModelScope`, on a test dispatcher. */
+@OptIn(ExperimentalCoroutinesApi::class)
 class MainDispatcherRule : TestWatcher() {
     override fun starting(description: Description) = Dispatchers.setMain(StandardTestDispatcher())
 

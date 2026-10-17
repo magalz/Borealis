@@ -46,11 +46,11 @@ private val THUMB_RADIUS = 9.dp
  * them for [value] in [valueRange]. The value is a multiple of [step] from the start of the range.
  *
  * A touch on the track or a drag along it sets the nearest step. With the D-pad Right and Left move
- * the value by [keyStep], which may be coarser than [step] (a bitrate that a finger sets in 0.5
- * Mbps steps is better moved by the D-pad in larger ones), and stop at the ends of the range. At an
- * end the key is not used, so the focus goes on: Left from a slider at its lowest value returns to
- * the group list of a [SettingsTwoPane]. A screen reader reads the value as progress and can set
- * it.
+ * the value by [keyStep], a multiple of [step] that may be coarser (a bitrate that a finger sets in
+ * 0.5 Mbps steps is better moved by the D-pad in larger ones), and stop at the ends of the range.
+ * At an end the key is not used, so the focus goes on: Left from a slider at its lowest value
+ * returns to the group list of a [SettingsTwoPane]. A screen reader reads the value as progress and
+ * can set it.
  *
  * A disabled row is dimmed and ignores input, but it stays a focus stop: on a TV the user can still
  * land on it and read [disabledNote], which says why it is disabled and shows only then. The
@@ -72,7 +72,7 @@ fun SettingsSliderRow(
     keyStep: Float = step,
 ) {
     require(step > 0f) { "step must be positive: $step" }
-    require(keyStep > 0f) { "keyStep must be positive: $keyStep" }
+    require(keyStep >= step) { "keyStep must be at least step: $keyStep < $step" }
     val dim = if (enabled) 1f else DISABLED_ALPHA
     val change: (Float) -> Boolean = { target ->
         val changed = target != value

@@ -238,9 +238,9 @@ class SettingsSliderRowTest {
     }
 
     @Test
-    fun `a key step that is not positive is refused`() {
+    fun `a key step finer than the step is refused`() {
         val failure = runCatching {
-            composeRule.setContent { Specimen(keyStep = -1f) }
+            composeRule.setContent { Specimen(step = 2f, keyStep = 1f) }
         }
             .exceptionOrNull()
 

@@ -141,8 +141,8 @@ fun BorealisTextField(
  * does not open it on focus needs. Enter is not OK: it reaches the field and acts as Done.
  *
  * The keyboard is opened through the input method manager for the field's own input session. The
- * software keyboard controller would not do: it goes to the legacy text input service, which has
- * no session for a state-based field, so on a device it did nothing.
+ * software keyboard controller would not do: it goes to the legacy text input service, which has no
+ * session for a state-based field, so on a device it did nothing.
  */
 @Composable
 private fun Modifier.fieldKeys(

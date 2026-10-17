@@ -6,7 +6,10 @@ import java.time.ZoneId
 import java.util.Locale
 import org.junit.Test
 
-/** The times of the list: the clock and the time zone come from the device, the language is the app's. */
+/**
+ * The times of the list: the clock and the time zone come from the device, the language is the
+ * app's.
+ */
 class AuditTimeFormatterTest {
     private val formatter = fixedFormatter()
 

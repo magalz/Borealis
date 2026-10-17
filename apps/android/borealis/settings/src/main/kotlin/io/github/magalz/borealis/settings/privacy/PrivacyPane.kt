@@ -228,7 +228,9 @@ internal fun PrivacyContent(
                 },
                 summary = stringResource(R.string.borealis_privacy_audit_summary),
                 modifier =
-                    Modifier.focusRequester(auditRow).onFocusChanged { auditHasFocus = it.isFocused },
+                    Modifier.focusRequester(auditRow).onFocusChanged {
+                        auditHasFocus = it.isFocused
+                    },
             )
             SettingsValueRow(
                 title = stringResource(R.string.borealis_privacy_erase_title),

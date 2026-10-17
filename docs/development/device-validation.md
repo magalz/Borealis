@@ -1,10 +1,10 @@
 # Device validation runbook
 
-This runbook checks Borealis Phase 1 and Sprints 2 to 6 on two devices against
+This runbook checks Borealis Phase 1 and Sprints 2 to 7 on two devices against
 LuminalShine 26.09.1 running on the owner's Windows PC. It is for the owner and
 for the orchestrator who runs the checks. Run the steps in order and record the
-results as a new section with a table, like sections 7 to 10. Sections 6 to 11
-hold the results of Phase 1 and Sprints 2 to 6, in that order.
+results as a new section with a table, like sections 7 to 10. Sections 6 to 12
+hold the results of Phase 1 and Sprints 2 to 7, in that order.
 
 Sources: [host contract](../host-contract/luminalshine.md) (cited as "contract"),
 [Borealis Android README](../../apps/android/borealis/README.md),
@@ -688,16 +688,40 @@ For a system pad, turn it off. Say which kind each run used.
      `decode_avg_us`, `decode_min_us` and `decode_max_us`. Record `in`, `out`,
      `exact` and the three decode values. A decoder that echoes the timestamps
      has `exact` equal to `out`.
-5. Visual refinement (placeholder). The steps for these items are not written
-   yet. A later task fills them in from the owner's contact sheet of every
-   screen.
-   - Dialogs.
-   - Icons.
-   - Host cards.
-   - Loader.
-   - Pairing check.
-   - Error actions on the phone.
-   - TV keyboard row.
+5. Visual refinement. Run on the Google TV Streamer, and on the S22 where a
+   step says so. Record each item as `pass`, `fail` or `not applicable`.
+   - Dialogs share one frame: Compact 420 dp, Standard 560 dp and Wide 720 dp
+     on a TV. On a phone the width is the window less 16 dp on each side, when
+     that is narrower. Open Forget, Erase (in Privacy and diagnostics), Saved
+     with Send to phone, About, Host details and App details, one at a time.
+     Expected: each dialog has one of the three widths. Simple confirmations are
+     Compact, with the focus on the safe action. For Erase, the safe action is
+     Cancel, and Erase is in the danger tone.
+   - Settings gear and rail: on the TV, the Hosts rail is 220 dp wide and shows
+     the Settings gear. Expected: the gear opens Settings.
+   - Back arrows and chevrons: open a screen with a back arrow and a Settings row
+     that opens something. Expected: the back arrow and the chevron look the
+     same on every screen.
+   - Host cards: on the TV, look at a row of host cards. Expected: the cards have
+     equal height, with the action at the bottom. On the S22, the cards size to
+     their content.
+   - Aurora loader: open Hosts, Apps and Pairing while each one loads. Expected:
+     the same aurora loader on all three.
+   - Pairing check: on Pairing, the PIN is centred with its line below it. When
+     the pairing succeeds, "Paired" is centred and the check is drawn once.
+   - Error actions: force a connection error. Expected: on the S22 the actions
+     stack, in two rows. On the TV they stay in one row.
+   - TV keyboard row: open the keyboard from the Add host field. Expected: the
+     command row under the keys is centred.
+   - Held keys, on the TV. Hold OK on an app tile in Library, Apps, and keep it
+     held while the app actions sheet opens. Expected: the sheet stays open when
+     OK is let go, and nothing runs. A fresh press of OK then chooses an option.
+     Then, in a stream, open the in-game menu and hold OK in the open menu, then
+     let it go. Expected: nothing runs on the release. A fresh press of OK acts
+     on the focused row.
+   - Held keys are not consumed for the system keys (volume, media, channel,
+     mute, headset). Press one while a sheet is open. Expected: the key still
+     works.
 6. The USB dialog on the Streamer (R5a). This is an observation only; no code
    changes.
    - Clear the logcat buffer and start the capture of 1.4 on the Streamer, with
@@ -1355,3 +1379,121 @@ the decode-time FIFO (S6-T7).
 - The S22 overlay was set back off, and the zip the S22 downloaded was deleted.
 - `/sdcard/ui.xml` was deleted from the S22.
 - The local screenshots were deleted.
+
+## 12. Results: Sprint 7
+
+This section holds the Sprint 7 results: the setup, the USB spike, the decode
+check made in the middle of the sprint, and the final round. The checks follow
+the steps of [section 3.20](#320-sprint-7-checks).
+
+### Setup
+
+- Builds:
+  - `7cbc60ea`: the decode check, with verbose logging on;
+  - `903e399d`: the quit combo, checked by the owner;
+  - `60d5bfd5`: the decode fix, the held OK on an app tile, and the S22 host
+    details;
+  - `fe6273c7`: the final round. The round notes record the build gate and the
+    Roborazzi verify as green on this build.
+- Devices:
+  - Google TV Streamer: ADB over Wi-Fi, at an address that changes with DHCP.
+  - Galaxy S22: USB.
+- Host: LuminalShine on the PC. The round notes do not record the version.
+  TODO(verify).
+- Pads:
+  - 8BitDo Ultimate 2 for PC (XInput, on the app's USB driver);
+  - 8BitDo Pro 3 receiver: the spike notes its USB identity. The round notes do
+    not say that a Pro 3 was used for the checks. TODO(verify).
+  - The final pad checks do not say which pad was used. TODO(verify).
+- Screen captures: each capture was read and then deleted. Some showed part of
+  the PC screen. The host details capture showed host addresses and an ID. No
+  capture is kept in the repository.
+
+### Spike: scrolling and the USB dialog (R5a), 2026-10-17
+
+- Scrolling: right-stick scrolling works on both pads in a PC app that scrolls.
+  The owner found it good. The earlier report that scrolling did not work was
+  not a defect. The high-resolution scroll deltas are kept, and the speed
+  setting scales them.
+- USB identity: the 8BitDo Ultimate 2 receiver changes its USB identity by
+  itself. It shows as `2dc8:6013` while idle, and as `2dc8:310b` (XInput) when a
+  pad connects. Each change is a new attachment with a new device number. The
+  Pro 3 receiver does the same.
+- Dialogs: each attachment shows Android's attach dialog while the USB driver is
+  on. At 12:06 the owner declined it, because accepting looked as if it would
+  close the current app. The stream start then showed the USB permission dialog,
+  which the owner accepted. The grant lasts one attachment.
+- Stream end: the hypothesis that ending the stream makes the receiver
+  re-enumerate is not confirmed in this run. No attach or remove line appeared
+  during the stream, at its end, or in the 30 seconds after it.
+- Follow-ups are in the [roadmap](../roadmap.md#sprint-7-follow-ups-and-backlog)
+  (Sprint 7, item 3) and in the [backlog](../roadmap.md#backlog-not-scheduled).
+
+### Decode time check, 2026-10-17
+
+Before the fix (build `7cbc60ea`, verbose logging on):
+
+| Device | Decoder | Input and output | Result |
+| --- | --- | --- | --- |
+| Google TV Streamer | `c2.mtk.hevc.decoder.lowlatency`, 720p | Every window: in = out = exact. Truncated, zero, ahead, older and unmatched are all 0. | Pairing works. The overlay still showed "Decode —". |
+| Galaxy S22 | `c2.qti.hevc.decoder.low_latency` | 353 in, 353 exact, nothing else | Pairing works. Only the measure needs fixing. |
+
+Finding: the pairing of inputs and outputs is correct on both decoders. The dash
+comes from the measure. The delta is computed in whole milliseconds from a
+timestamp based on the first frame's submit time (`baseTimestampUs`). A decode
+under one millisecond, or a base that runs slightly ahead, gives a delta of 0 or
+less. That leaves the decode time at 0, and the overlay shows "—". This closes
+the MediaTek follow-up of [section 11](#11-results-sprint-6) (D5).
+
+Fix: merge `967487ea` (issue #14). Each input keeps its queue time in
+nanoseconds. The decode time is the output time less the queue time, in
+nanoseconds, and the fraction reaches the overlay in microseconds.
+
+After the fix (build `60d5bfd5`):
+
+| Device | Decoder | Input and output | Result |
+| --- | --- | --- | --- |
+| Google TV Streamer | MediaTek decoder, 720p | Every window exact. `decode_avg_us` is about 4200 in steady state. The first window is about 25 ms, at the stream start. | Pass. The overlay shows "Decode 4.2 ms". The decode is about 4 ms, not under 1 ms. |
+| Galaxy S22 | `c2.qti.hevc.decoder.low_latency`, 720p | Every window exact. `decode_avg` 4.7 to 5.4 ms. | Pass. The overlay shows "Decode 5.2 ms". The old measure showed "0.2 ms", an underestimate from the same timestamp base. |
+
+The overlay corners were captured, read and deleted. The S22 capture showed part
+of the PC screen.
+
+### Final round, build `fe6273c7`
+
+| # | Item | Device | Result | Evidence and notes |
+| --- | --- | --- | --- | --- |
+| F1 | Hosts rail at 220 dp, with the Settings gear | TV | pass | Build `fe6273c7`. |
+| F2 | Host cards of equal height, with the action at the bottom | TV | pass | Build `fe6273c7`. |
+| F3 | Settings in two panes, with the chevrons from BorealisIcons | TV | pass | Build `fe6273c7`. |
+| F4 | Erase audit trail: Compact dialog, Cancel focused, Erase in the danger tone | TV | pass | Build `fe6273c7`. Back cancelled it, and nothing was erased. |
+| F5 | Host details as the Standard dialog. The scrim dims the app content. | S22, landscape | pass | Build `60d5bfd5`. The system bar icons stay bright, as with any app dim. No undimmed strip was seen. |
+| F6 | Gamepad mouse at 50 %: smooth from the first move | TV, pad | pass | Build `fe6273c7`. The owner rated the default speed great. |
+| F7 | RB precision | TV, pad | pass | Build `fe6273c7`. The owner rated it perfect. |
+| F8 | Pointer speed row in the menu: Slow, Normal, Fast | TV, pad | pass | Build `fe6273c7`. All three speeds were good to the owner. |
+| F9 | Right-stick scrolling | TV, both pads | pass | Build `fe6273c7`. |
+| F10 | Held OK in the open in-game menu, then released | TV, remote | pass | Build `fe6273c7`. Nothing ran on the release. A fresh press worked. |
+| F11 | Held OK on the Desktop tile in Library, Apps | TV, remote | pass | Build `60d5bfd5`. The app actions sheet stayed open, and nothing ran on the release. A fresh press picked an option. |
+| F12 | Quit combo (Start, Select, LB, RB) on the USB-driver pad | TV, Ultimate 2 | pass | Build `903e399d`, checked by the owner. The stream ended. Not repeated on `fe6273c7`. |
+| F13 | Quit combo on the system pad | TV, Pro 3 | not recorded | TODO(verify). |
+| F14 | Slider at 10 % and 200 %, deadzone, slow diagonal, joy.cpl checks | TV, pad | not recorded | TODO(verify). |
+| F15 | Dialog frames for Forget, Saved with Send to phone, About, Host details and App details | TV | not recorded | Only F4 and the S22 check of F5 are in the notes. |
+| F16 | Aurora loader, PIN and "Paired", connection error actions, TV keyboard row | TV, S22 | not recorded | Not in the round notes. |
+
+### Not run
+
+- Handheld: no device.
+- Send to phone, the Expired and No network states: only unit and screenshot
+  tests cover them.
+- Items F13 to F16 and the other items of [section 3.20](#320-sprint-7-checks)
+  that are not in the table above. The round notes do not record them.
+
+### Follow-ups and backlog
+
+- Sprint 7 item 3, the USB dialog, is investigated. See the findings above.
+- Backlog, from this round: the attach activity on Google TV, the native pad
+  modes, the smoother D-pad moves in Settings on a TV, the quit warning for
+  Desktop, and the host details text. See the
+  [roadmap backlog](../roadmap.md#backlog-not-scheduled).
+- The Sprint 6 quit combo follow-up for USB-driver pads is done in `5416a79c`.
+  See the [roadmap](../roadmap.md#sprint-7-follow-ups-and-backlog), item 2.

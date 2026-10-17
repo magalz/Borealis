@@ -45,8 +45,13 @@ The work for this sprint is on the phase branch `phase/s7-followups-polish`.
 2. **The quit combo does not end the stream on pads driven by the app's USB
    driver.** Done (issue #15, merge `5416a79c`). Start, Select, LB and RB ends
    the stream on these pads too.
-3. **Investigate the repeated USB permission dialog on Google TV.** Investigation
-   only, with no code change (issue #16). The findings are in the backlog.
+3. **Investigate the repeated USB permission dialog on Google TV.**
+   Investigated (issue #16), with no code change. The 8BitDo receivers change
+   their USB identity by themselves, and each change shows Android's attach
+   dialog while the USB driver is on. If that dialog is declined, the stream start
+   asks for USB permission. The two ideas are in the backlog: drop the USB attach
+   activity on Google TV, and document the native pad modes. See the
+   [device validation runbook, section 12](development/device-validation.md#12-results-sprint-7).
 4. **Gamepad mouse: pointer speed.** Done (issue #17, merge `1d500bdb`). A speed
    setting from 10% to 200%, default 50%. A 16 ms tick with fraction
    accumulation. Holding RB gives 25% precision. A session row (Slow, Normal,
@@ -54,8 +59,22 @@ The work for this sprint is on the phase branch `phase/s7-followups-polish`.
    The owner had reported that scrolling did not seem to work; the device check
    of 2026-10-17 found that right-stick scrolling reaches the PC on both of the
    owner's pads.
-5. **Visual refinement pass.** Icons, and the sizes of dialogs and panels. The
-   owner chooses the changes from a contact sheet of every screen. Not started.
+5. **Visual refinement pass.** Done. The icons, and the sizes of dialogs and
+   panels, in the design system and in the Library, Settings, Privacy, Audit,
+   Send to phone and stream screens. Merges `2ceb5744` (design system), `e44c9893`
+   (Library), `b3e450b1` (Settings, Privacy, Audit, Send to phone and stream
+   screens) and `fe6273c7` (one window-settling helper for the dialog
+   screenshots). The TV was checked on build `fe6273c7`. The handheld was not
+   checked, because there is no device. See the
+   [device validation runbook, section 12](development/device-validation.md#12-results-sprint-7).
+6. **A held key does not act in a menu, sheet or dialog.** Done. Found by the
+   owner during the sprint. A key that is already down when the in-game menu, an
+   action sheet, a choice sheet or a dialog opens does not act in it until it is
+   let go. Its repeats and its release are consumed, and a fresh press works.
+   System keys (volume, media, channel, mute, headset) are never consumed. The
+   owner found it by holding OK on an app tile in the Library: the app actions
+   sheet opened, and the release ran its focused action. Merges `70ed3eb3` (in-game
+   menu) and `60d5bfd5` (sheets and dialogs).
 
 ### Sprint 8: tidy-up
 

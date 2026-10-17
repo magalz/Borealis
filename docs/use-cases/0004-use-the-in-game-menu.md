@@ -129,6 +129,7 @@ row is disabled; it needs the Phase 3 host API and cannot be chosen.
 | UC-004-T22 | Given a stream starts, then the pointer speed is Normal. | unit | exists (Sprint 7, unit) |
 | UC-004-T23 | Given the gamepad mouse is on and RB is held, when a stick moves the pointer, then the move is a quarter of the speed and RB does not reach the PC. | unit | exists (Sprint 7, unit) |
 | UC-004-T24 | Given a pad on the USB driver, when Start, Select, LB and RB are pressed together and then all are let go, then the stream ends, and holding Start for the combo does not turn the gamepad mouse on. | unit, device | exists (Sprint 7, unit; device round 2026-10-17) |
+| UC-004-T25 | Given a key is held when the menu opens, when the user keeps it held and then lets it go, then the key does not act in the menu; a fresh press acts. | unit, device | exists (Sprint 7, unit; device round 2026-10-17) |
 
 Sprint 5 built the in-game menu and its logic. A test marked "exists (Sprint 5,
 unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose test

@@ -34,8 +34,11 @@ interface AuditTrail {
 
 /**
  * This entry with the host and the detail redacted as the diagnostic export does it
- * ([BorealisAudit.redactForExport]), so the address is masked when "Mask addresses in logs and
- * diagnostics" is on. The viewer applies it; the setting is not read here.
+ * ([BorealisAudit.redactForExport]). Call it for every entry the viewer shows: it follows the
+ * redactor installed in [BorealisAudit], so it masks addresses only while "Mask addresses in logs
+ * and diagnostics" is on, and it always redacts secrets in the detail. [AuditTrail.observe] does
+ * not emit again when that setting changes, so a viewer that shows masked entries maps them again
+ * when the setting changes.
  */
 fun AuditEntry.masked(): AuditEntry {
     val redacted =

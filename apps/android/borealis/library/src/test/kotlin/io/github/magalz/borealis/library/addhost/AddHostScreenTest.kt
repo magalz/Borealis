@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.library.addhost
 
 import android.content.Context
+import android.view.View
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
@@ -12,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -20,9 +22,12 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.hasAnyChild
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -53,6 +58,7 @@ class AddHostScreenTest {
     @get:Rule val composeRule = createComposeRule()
 
     private val changes = mutableListOf<String>()
+    private lateinit var view: View
     private var submitted = 0
     private var cancelled = 0
 
@@ -66,10 +72,11 @@ class AddHostScreenTest {
 
     @Test
     @Config(qualifiers = TV)
-    fun `the field has focus on a TV as well`() {
+    fun `the address has the focus on a TV as well, on what wraps the field`() {
         show(AddHostUiState(), FormFactor.Tv)
 
-        composeRule.onNode(hasSetTextAction()).assertIsFocused()
+        addressWrapper().assertIsFocused()
+        composeRule.onNode(hasSetTextAction()).assertIsNotFocused()
     }
 
     @Test
@@ -227,6 +234,7 @@ class AddHostScreenTest {
     @Config(qualifiers = TV)
     fun `on a TV Down from an address with text leaves the field for Add host`() {
         showStateful("192.168.1.20")
+        startEditing()
 
         composeRule.onNode(hasSetTextAction()).performKeyInput { pressKey(Key.DirectionDown) }
 
@@ -238,6 +246,7 @@ class AddHostScreenTest {
     @Config(qualifiers = TV)
     fun `on a TV Left at the start of the address leaves the field for the neighbour`() {
         showStateful("192.168.1.20")
+        startEditing()
         composeRule.onNode(hasSetTextAction()).performTextInputSelection(TextRange(0))
 
         composeRule.onNode(hasSetTextAction()).performKeyInput { pressKey(Key.DirectionLeft) }
@@ -250,6 +259,7 @@ class AddHostScreenTest {
     @Config(qualifiers = TV)
     fun `on a TV Left in the middle of the address moves the caret and keeps focus`() {
         showStateful("192.168.1.20")
+        startEditing()
         composeRule.onNode(hasSetTextAction()).performTextInputSelection(TextRange(4))
 
         composeRule.onNode(hasSetTextAction()).performKeyInput { pressKey(Key.DirectionLeft) }
@@ -262,6 +272,7 @@ class AddHostScreenTest {
     @Config(qualifiers = TV)
     fun `on a TV the address is unchanged after leaving the field and coming back`() {
         showStateful("192.168.1.20")
+        startEditing()
 
         composeRule.onNode(hasSetTextAction()).performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.onNode(hasText("Add host") and hasClickAction()).assertIsFocused()
@@ -269,8 +280,18 @@ class AddHostScreenTest {
             pressKey(Key.DirectionUp)
         }
 
-        composeRule.onNode(hasSetTextAction()).assertIsFocused()
+        addressWrapper().assertIsFocused()
         composeRule.onNode(hasSetTextAction()).assert(hasText("192.168.1.20"))
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV Down from the address before OK goes to Add host`() {
+        showStateful("192.168.1.20")
+
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.onNode(hasText("Add host") and hasClickAction()).assertIsFocused()
     }
 
     @Test
@@ -286,30 +307,34 @@ class AddHostScreenTest {
     fun `on a TV the focus on the address does not open the keyboard`() {
         showStateful("192.168.1.20")
 
-        composeRule.onNode(hasSetTextAction()).assertIsFocused()
+        addressWrapper().assertIsFocused()
         assertThat(keyboardIsShown()).isFalse()
+        assertThat(textSessionIsOpen()).isFalse()
     }
 
     @Test
     @Config(qualifiers = TV)
     fun `on a TV coming back to the address with Up does not open the keyboard`() {
         showStateful("192.168.1.20")
-        composeRule.onNode(hasSetTextAction()).performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.onNode(hasText("Add host") and hasClickAction()).performKeyInput {
             pressKey(Key.DirectionUp)
         }
 
-        composeRule.onNode(hasSetTextAction()).assertIsFocused()
+        addressWrapper().assertIsFocused()
         assertThat(keyboardIsShown()).isFalse()
+        assertThat(textSessionIsOpen()).isFalse()
     }
 
     @Test
     @Config(qualifiers = TV)
-    fun `on a TV OK on the address opens the keyboard`() {
+    fun `on a TV OK on the address moves the focus into the field and opens the keyboard`() {
         showStateful("192.168.1.20")
 
-        composeRule.onNode(hasSetTextAction()).performKeyInput { pressKey(Key.DirectionCenter) }
+        startEditing()
 
+        composeRule.onNode(hasSetTextAction()).assertIsFocused()
+        assertThat(textSessionIsOpen()).isTrue()
         assertThat(keyboardIsShown()).isTrue()
     }
 
@@ -328,11 +353,22 @@ class AddHostScreenTest {
     fun `on a TV Enter submits and does not open the keyboard`() {
         showStateful("192.168.1.20")
 
-        composeRule.onNode(hasSetTextAction()).performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.Enter) }
 
         assertThat(submitted).isEqualTo(1)
         assertThat(keyboardIsShown()).isFalse()
     }
+
+    /** What takes the D-pad focus on a TV until OK: it holds the field. */
+    private fun addressWrapper() = composeRule.onNode(hasAnyChild(hasSetTextAction()))
+
+    /** OK on the address, as a remote opens it for typing. */
+    private fun startEditing() {
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionCenter) }
+        composeRule.waitForIdle()
+    }
+
+    private fun textSessionIsOpen() = composeRule.runOnIdle { view.onCheckIsTextEditor() }
 
     private fun keyboardIsShown(): Boolean {
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -345,6 +381,7 @@ class AddHostScreenTest {
      */
     private fun showStateful(initial: String) {
         composeRule.setContentInKeyboardMode {
+            view = LocalView.current
             var address by remember { mutableStateOf(initial) }
             Row {
                 Box(Modifier.size(40.dp).testTag(NEIGHBOUR).focusable())

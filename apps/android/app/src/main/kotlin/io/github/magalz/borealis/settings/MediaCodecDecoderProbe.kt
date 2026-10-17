@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.settings
 
 import android.content.Context
+import android.media.MediaCodecInfo
 import com.limelight.binding.video.MediaCodecHelper
 import com.limelight.preferences.GlPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -9,14 +10,31 @@ import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.settings.device.DecoderLimits
 import javax.inject.Inject
 
-/** The [DecoderProbe] of the app: the decoder that [MediaCodecHelper] would pick for a stream. */
-internal class MediaCodecDecoderProbe
-@Inject
-constructor(@ApplicationContext private val context: Context) : DecoderProbe {
-    override fun limits(mimeType: String): DecoderLimits? {
+/** Finds the decoder that the stream would use for a codec. */
+internal fun interface CodecFinder {
+    /** The probable safe decoder of [mimeType], or `null` when the device has none. */
+    fun find(mimeType: String): MediaCodecInfo?
+}
+
+/** The [CodecFinder] of the app: the choice of [MediaCodecHelper]. */
+private class MediaCodecHelperFinder(private val context: Context) : CodecFinder {
+    override fun find(mimeType: String): MediaCodecInfo? {
         // Must run before the decoder lists are read; it does nothing the second time.
         MediaCodecHelper.initialize(context, GlPreferences.readPreferences(context).glRenderer)
-        val decoder = MediaCodecHelper.findProbableSafeDecoder(mimeType, -1) ?: return null
+        return MediaCodecHelper.findProbableSafeDecoder(mimeType, -1)
+    }
+}
+
+/**
+ * The [DecoderProbe] of the app: what the decoder that [MediaCodecHelper] would pick for a stream
+ * reports. It builds the codec list on every call; [CachedDecoderProbe] keeps the answers.
+ */
+internal class MediaCodecDecoderProbe(private val finder: CodecFinder) : DecoderProbe {
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(MediaCodecHelperFinder(context))
+
+    override fun limits(mimeType: String): DecoderLimits? {
+        val decoder = finder.find(mimeType) ?: return null
         return try {
             val capabilities =
                 decoder.getCapabilitiesForType(mimeType).videoCapabilities ?: return null

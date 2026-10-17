@@ -92,8 +92,7 @@ class AndroidDeviceFactsSourceTest {
         assertThat(source.facts().cutoutSafeSize).isNull()
     }
 
-    @Test
-    fun `a display with a cutout reports the size without its insets, in landscape`() {
+    private fun withTopCutout() {
         val cutout =
             DisplayCutout(
                 Insets.of(0, 100, 0, 0),
@@ -103,6 +102,19 @@ class AndroidDeviceFactsSourceTest {
                 Rect(),
             )
         shadowOf(display).setDisplayCutout(cutout)
+    }
+
+    @Test
+    @Config(sdk = [29])
+    fun `a display with a cutout reports its cutout-safe size on Android 10`() {
+        withTopCutout()
+
+        assertThat(source.facts().cutoutSafeSize).isEqualTo(PixelSize(2300, 1080))
+    }
+
+    @Test
+    fun `a display with a cutout reports the size without its insets, in landscape`() {
+        withTopCutout()
         val metrics = context.resources.displayMetrics
 
         val size = source.facts().cutoutSafeSize
@@ -246,6 +258,22 @@ class AndroidDeviceFactsSourceTest {
     @Config(sdk = [30])
     fun `the SDK level follows the device`() {
         assertThat(source.facts().sdkInt).isEqualTo(30)
+    }
+
+    @Test
+    fun `the decoders are not probed again by a second call when the probe is cached`() {
+        var probes = 0
+        val cached = CachedDecoderProbe {
+            probes++
+            DecoderLimits(4096, 2304)
+        }
+        val source = AndroidDeviceFactsSource(context, cached)
+
+        source.facts()
+        source.facts()
+
+        // One probe for AVC and one for HEVC, not one per call.
+        assertThat(probes).isEqualTo(2)
     }
 
     @Test

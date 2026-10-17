@@ -20,10 +20,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -174,6 +180,9 @@ private tailrec fun Context.findActivity(): Activity? =
 
 /**
  * The rows of the pane, its snackbar and its dialogs. Stateless: the dialog to show is in [state].
+ * When the Audit trail row had the focus as it opened the viewer, Back finds the focus on it again:
+ * the screen leaves the composition while the viewer shows, and a focus that is lost with it would
+ * land on whatever comes first.
  */
 @Composable
 internal fun PrivacyContent(
@@ -183,6 +192,15 @@ internal fun PrivacyContent(
     modifier: Modifier = Modifier,
 ) {
     val phone = LocalFormFactor.current == FormFactor.Phone
+    val auditRow = remember { FocusRequester() }
+    var auditHasFocus by remember { mutableStateOf(false) }
+    var returnToAudit by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (returnToAudit) {
+            returnToAudit = false
+            auditRow.requestFocus()
+        }
+    }
     Box(modifier) {
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(LIST_PADDING),
@@ -204,8 +222,13 @@ internal fun PrivacyContent(
             SettingsValueRow(
                 title = stringResource(R.string.borealis_privacy_audit_title),
                 value = null,
-                onClick = actions.onOpenAudit,
+                onClick = {
+                    returnToAudit = auditHasFocus
+                    actions.onOpenAudit()
+                },
                 summary = stringResource(R.string.borealis_privacy_audit_summary),
+                modifier =
+                    Modifier.focusRequester(auditRow).onFocusChanged { auditHasFocus = it.isFocused },
             )
             SettingsValueRow(
                 title = stringResource(R.string.borealis_privacy_erase_title),

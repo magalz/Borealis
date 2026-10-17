@@ -75,29 +75,32 @@ internal fun LibraryScaffold(
     }
 }
 
+/** The items of the rail, in order: Hosts, Add host and Settings. */
+@Composable
+internal fun libraryRailItems(): List<RailItem> =
+    listOf(
+        RailItem(
+            stringResource(R.string.hosts_title),
+            ImageVector.vectorResource(R.drawable.ic_hosts_home),
+        ),
+        RailItem(
+            stringResource(R.string.hosts_add_host),
+            ImageVector.vectorResource(R.drawable.ic_hosts_add),
+        ),
+        RailItem(
+            stringResource(R.string.hosts_settings),
+            ImageVector.vectorResource(R.drawable.ic_hosts_settings),
+        ),
+    )
+
 /**
  * Hosts (also for Apps and Pairing, which are part of it), Add host and Settings (also for Privacy
  * and diagnostics and the Audit trail).
  */
 @Composable
 internal fun LibraryRail(selected: RailSelection, actions: RailActions) {
-    val items =
-        listOf(
-            RailItem(
-                stringResource(R.string.hosts_title),
-                ImageVector.vectorResource(R.drawable.ic_hosts_home),
-            ),
-            RailItem(
-                stringResource(R.string.hosts_add_host),
-                ImageVector.vectorResource(R.drawable.ic_hosts_add),
-            ),
-            RailItem(
-                stringResource(R.string.hosts_settings),
-                ImageVector.vectorResource(R.drawable.ic_hosts_settings),
-            ),
-        )
     NavigationRail(
-        items = items,
+        items = libraryRailItems(),
         selectedIndex =
             when (selected) {
                 RailSelection.Hosts -> RAIL_HOSTS

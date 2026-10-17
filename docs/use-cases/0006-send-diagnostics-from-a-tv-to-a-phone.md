@@ -98,10 +98,10 @@ closing stops the link.
 | UC-006-T5 | Given the dialog is closed before a download, when the user closes it, then the link stops and does not answer. | unit | exists (Sprint 3) |
 | UC-006-T6 | Given a phone, when the diagnostics are exported, then Send to phone is not offered. | unit | exists (Sprint 3) |
 | UC-006-T7 | Given the link is shown, when the QR code is read, then it encodes the link text. | unit | exists (Sprint 3) |
-| UC-006-T8 | Given the Waiting state, when the dialog shows, then it shows the QR code, the link text, the file name, the size and a countdown. | UI | planned (Sprint 6) |
-| UC-006-T9 | Given the link is downloaded, when the dialog updates, then it shows Downloaded and the link is closed. | UI | planned (Sprint 6) |
-| UC-006-T10 | Given the link expires, when the dialog updates, then it shows Expired. | UI | planned (Sprint 6) |
-| UC-006-T11 | Given no private IPv4 address, when the dialog shows, then it shows the No local network state with the `adb pull` command and the bundle's path. | UI | planned (Sprint 6) |
+| UC-006-T8 | Given the Waiting state, when the dialog shows, then it shows the QR code, the link text, the file name, the size and a countdown. | UI | exists (Sprint 6, UI) |
+| UC-006-T9 | Given the link is downloaded, when the dialog updates, then it shows Downloaded and the link is closed. | UI | exists (Sprint 6, UI) |
+| UC-006-T10 | Given the link expires, when the dialog updates, then it shows Expired. | UI | exists (Sprint 6, UI) |
+| UC-006-T11 | Given no private IPv4 address, when the dialog shows, then it shows the No local network state with the `adb pull` command and the bundle's path. | UI | exists (Sprint 6, UI) |
 
 Planned tests cover the Phase 2 screens; tests marked as existing cover logic
 that the Phase 2 screens reuse.

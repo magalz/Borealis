@@ -12,10 +12,16 @@ the 12.2 host list and app grid.
 
 Sprint 5 implemented the stream screens (Starting stream, Conflict dialog and
 Connection error), the in-game menu, the Borealis keyboard and the Compact and
-Detailed performance overlay. Settings, Privacy and diagnostics, the audit
-trail viewer and Send to phone in Compose remain for Sprint 6. The screens
-below are the approved design; where the built screen differs, the section
-says so. Screenshots use
+Detailed performance overlay.
+
+Sprint 6 implemented Settings, Privacy and diagnostics, the Audit trail viewer
+and Send to phone in Compose. `TODO(verify)`: at commit `5216a51b` the Library
+does not open these screens yet. The gear and the rail's Settings item still
+open the upstream stream settings. The device validation runbook, section 3.13,
+has the same note.
+
+The screens below are the approved design; where the built screen differs, the
+section says so. Screenshots use
 Roborazzi ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)), and
 the colours and type come from the token pipeline
 ([ADR 0044](../adr/0044-design-tokens-pipeline.md)).
@@ -409,7 +415,10 @@ States: none.
 
 - Touch: Export shares the bundle.
 - D-pad (TV): Export saves the bundle and offers Send to phone.
-- Gamepad: as the TV.
+- Gamepad: on a TV, as the D-pad. A handheld exports like a phone: Export shares
+  the bundle. Send to phone is TV only ([UC-006](../use-cases/0006-send-diagnostics-from-a-tv-to-a-phone.md)).
+  This corrects the earlier "as the TV" for handhelds; the prototype's split is
+  older than that decision.
 
 Changes from 12.2: a Sprint 2 interim screen.
 

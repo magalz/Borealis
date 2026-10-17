@@ -94,18 +94,19 @@ check.
 
 ## Acceptance tests
 
-All tests in this table are planned for Sprint 6.
+UC-009-T1 to T8 exist (Sprint 6). UC-009-T9 and T10 are planned for Sprint 6;
+they need an emulator.
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
-| UC-009-T1 | Given a phone, a TV or a handheld, when Settings opens, then the groups and rows listed for that device are shown, and no other row is shown. | UI | planned |
-| UC-009-T2 | Given a device without a feature, when Settings opens, then the rows that need the feature are not shown. | unit | planned |
-| UC-009-T3 | Given a row disabled by another setting, when the row is focused, then it is focusable, it cannot be changed, and its note says why it is disabled. | UI | planned |
-| UC-009-T4 | Given each control type (switch, list, slider and action), when the user changes it, then the value is stored and the row shows it. | unit | planned |
-| UC-009-T5 | Given Resolution or Frame rate is changed, when the change is stored, then Bitrate is automatic. | unit | planned |
-| UC-009-T6 | Given the Frame rate rules (120 fps below 118 Hz, 90 fps below 88 Hz, and Unlock all frame rates), when the list is shown, then the rules hold, and turning on Unlock all frame rates updates the list at once. | unit | planned |
-| UC-009-T7 | Given the On-screen controls group, when Reset layout is chosen, then the system asks first with "Cannot be undone", and Cancel leaves the layout unchanged. | UI | planned |
-| UC-009-T8 | Given a TV or a handheld, when the user presses D-pad Right and Left, then focus moves into the rows and back to the groups. | UI | planned |
+| UC-009-T1 | Given a phone, a TV or a handheld, when Settings opens, then the groups and rows listed for that device are shown, and no other row is shown. | UI | exists (Sprint 6, UI) |
+| UC-009-T2 | Given a device without a feature, when Settings opens, then the rows that need the feature are not shown. | unit | exists (Sprint 6, unit) |
+| UC-009-T3 | Given a row disabled by another setting, when the row is focused, then it is focusable, it cannot be changed, and its note says why it is disabled. | UI | exists (Sprint 6, UI) |
+| UC-009-T4 | Given each control type (switch, list, slider and action), when the user changes it, then the value is stored and the row shows it. | unit | exists (Sprint 6, unit) |
+| UC-009-T5 | Given Resolution or Frame rate is changed, when the change is stored, then Bitrate is automatic. | unit | exists (Sprint 6, unit) |
+| UC-009-T6 | Given the Frame rate rules (120 fps below 118 Hz, 90 fps below 88 Hz, and Unlock all frame rates), when the list is shown, then the rules hold, and turning on Unlock all frame rates updates the list at once. | unit | exists (Sprint 6, unit) |
+| UC-009-T7 | Given the On-screen controls group, when Reset layout is chosen, then the system asks first with "Cannot be undone", and Cancel leaves the layout unchanged. | UI | exists (Sprint 6, UI) |
+| UC-009-T8 | Given a TV or a handheld, when the user presses D-pad Right and Left, then focus moves into the rows and back to the groups. | UI | exists (Sprint 6, UI) |
 | UC-009-T9 | Given an app with the two logging switches stored in the SharedPreferences build, when the app is upgraded, then both switches keep their values. | emulator | planned |
 | UC-009-T10 | Given a setting is changed, when the next stream starts, then the stream uses the new value. | emulator | planned |
 

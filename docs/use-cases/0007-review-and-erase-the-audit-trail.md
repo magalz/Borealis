@@ -66,8 +66,8 @@ with the event code, and can erase all of it. The trail stays on the device.
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
-| UC-007-T1 | Given entries exist, when the screen opens, then they are listed newest first, each with its event code. | UI | planned |
-| UC-007-T2 | Given a CERTIFICATE_CHANGED entry, when the list is shown, then its title uses the warning text colour. | UI | planned |
+| UC-007-T1 | Given entries exist, when the screen opens, then they are listed newest first, each with its event code. | UI | exists (Sprint 6, UI) |
+| UC-007-T2 | Given a CERTIFICATE_CHANGED entry, when the list is shown, then its title uses the warning text colour. | UI | exists (Sprint 6, UI) |
 | UC-007-T3 | Given the user confirms Erase, when the erase ends, then no entries remain and "Audit trail erased" is shown. | unit | exists (Sprint 2, unit) |
 | UC-007-T4 | Given entries older than 90 days or beyond 2,000 entries, when retention runs, then the oldest entries are removed. | unit | exists (Sprint 2, unit) |
 | UC-007-T5 | Given the same host certificate change or TLS failure within 24 hours, when it is recorded, then it is stored once. | unit | exists (Sprint 2, unit) |

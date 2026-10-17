@@ -18,6 +18,7 @@ import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.PerfSnapshot
+import io.github.magalz.borealis.stream.PointerSpeed
 import io.github.magalz.borealis.stream.SessionInfo
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.TouchMode
@@ -34,7 +35,8 @@ internal fun aStreaming(
     gamepadMouse: Boolean? = null,
     info: SessionInfo = aSessionInfo,
     showMenuHint: Boolean = false,
-) = StreamPhase.Streaming(panel, overlay, touchMode, gamepadMouse, info, showMenuHint)
+    pointerSpeed: PointerSpeed = PointerSpeed.NORMAL,
+) = StreamPhase.Streaming(panel, overlay, touchMode, gamepadMouse, info, showMenuHint, pointerSpeed)
 
 /**
  * The streaming layer over a form factor, the way `StreamChromeRoot` draws it. [phase] and [perf]

@@ -149,6 +149,8 @@ internal constructor(
 
     override fun setGamepadMouse(enabled: Boolean) = controls.controller.setMouseEmulation(enabled)
 
+    override fun setPointerSpeed(speed: PointerSpeed) = Unit
+
     override fun setOverlay(mode: OverlayMode) = Unit
 
     override fun menuHintShown() {

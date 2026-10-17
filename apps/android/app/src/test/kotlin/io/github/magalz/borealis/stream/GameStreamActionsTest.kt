@@ -473,6 +473,17 @@ class GameStreamActionsTest {
     }
 
     @Test
+    fun `the pointer speed scales the gamepad mouse of the handler`() {
+        actions.setPointerSpeed(PointerSpeed.SLOW)
+        actions.setPointerSpeed(PointerSpeed.NORMAL)
+        actions.setPointerSpeed(PointerSpeed.FAST)
+
+        assertThat(gamepad.calls)
+            .containsExactly("pointerSpeed 0.5", "pointerSpeed 1.0", "pointerSpeed 2.0")
+            .inOrder()
+    }
+
+    @Test
     fun `the gamepad as a mouse switches the gamepad handler`() {
         actions.setGamepadMouse(true)
         actions.setGamepadMouse(false)

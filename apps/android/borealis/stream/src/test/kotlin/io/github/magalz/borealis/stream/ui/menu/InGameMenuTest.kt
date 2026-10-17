@@ -31,6 +31,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.Panel
+import io.github.magalz.borealis.stream.PointerSpeed
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.TouchMode
 import io.github.magalz.borealis.stream.keys.KeyChord
@@ -59,8 +60,10 @@ class InGameMenuTest {
         gamepadMouse: Boolean? = null,
         withPerf: Boolean = true,
         keyboardMode: Boolean = formFactor != FormFactor.Phone,
+        pointerSpeed: PointerSpeed = PointerSpeed.NORMAL,
     ): LayerFixture {
-        val phase = aStreaming(Panel.MENU, overlay, touchMode, gamepadMouse)
+        val phase =
+            aStreaming(Panel.MENU, overlay, touchMode, gamepadMouse, pointerSpeed = pointerSpeed)
         val perf = if (withPerf) aPerf() else null
         return LayerFixture(composeRule, formFactor, phase, perf, keyboardMode = keyboardMode)
             .also { it.show() }
@@ -238,6 +241,67 @@ class InGameMenuTest {
         text("On").assertIsSelected()
         text("Touch").assertDoesNotExist()
         assertThat(fixture.intents.calls).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `Pointer speed shows below Gamepad mouse while the gamepad mouse is on`() {
+        menu(FormFactor.Tv, touchMode = null, gamepadMouse = true)
+
+        rowsInOrder("Send keys", "Gamepad mouse", "Pointer speed", "Overlay")
+        text("Slow").assertIsDisplayed()
+        text("Normal").assertIsSelected()
+        text("Fast").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun `a handheld offers Pointer speed too`() {
+        menu(FormFactor.Handheld, touchMode = null, gamepadMouse = true)
+
+        text("Pointer speed").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `Pointer speed is hidden while the gamepad mouse is off or not offered`() {
+        menu(FormFactor.Tv, touchMode = null, gamepadMouse = false)
+        text("Gamepad mouse").assertIsDisplayed()
+        text("Pointer speed").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `Pointer speed is hidden when there is no gamepad mouse choice`() {
+        menu(FormFactor.Tv, touchMode = null, gamepadMouse = null)
+
+        text("Pointer speed").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a phone has no Pointer speed`() {
+        menu(FormFactor.Phone, gamepadMouse = true)
+
+        text("Pointer speed").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `choosing Fast sets the pointer speed to Fast`() {
+        val fixture = menu(FormFactor.Tv, touchMode = null, gamepadMouse = true)
+
+        text("Fast").performClick()
+
+        assertThat(fixture.intents.calls).containsExactly("setPointerSpeed FAST")
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `Pointer speed shows the speed of the session`() {
+        menu(FormFactor.Tv, touchMode = null, gamepadMouse = true, pointerSpeed = PointerSpeed.SLOW)
+
+        text("Slow").assertIsSelected()
     }
 
     @Test

@@ -110,6 +110,10 @@ class RecordingStreamActions : StreamActions {
         calls += "gamepadMouse $enabled"
     }
 
+    override fun setPointerSpeed(speed: PointerSpeed) {
+        calls += "pointerSpeed $speed"
+    }
+
     override fun setOverlay(mode: OverlayMode) {
         calls += "overlay $mode"
     }

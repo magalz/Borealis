@@ -211,6 +211,8 @@ class StreamSession(
         actions.setGamepadMouse(enabled)
     }
 
+    override fun setPointerSpeed(speed: PointerSpeed) {}
+
     override fun answerConflict(choice: ConflictChoice) {
         val conflict = mutableState.value.phase as? StreamPhase.Conflict ?: return
         val answer = pendingAnswer.getAndSet(null) ?: return

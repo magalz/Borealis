@@ -51,7 +51,9 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
  * keyboard and on an input method that sends Done as an Enter key.
  *
  * The caller owns the text: if [onValueChange] does not lead to a new [value], the field shows
- * [value] again.
+ * [value] again. So [value] must follow [onValueChange] before the next frame (state updated on the
+ * main thread, as a view model's state flow does); a caller that updates it later would see its
+ * text flicker back.
  */
 @Composable
 fun BorealisTextField(
@@ -70,9 +72,8 @@ fun BorealisTextField(
     val state = rememberTextFieldState(value, TextRange(value.length))
     val currentOnValueChange by rememberUpdatedState(onValueChange)
     val currentOnDone by rememberUpdatedState(onDone)
-    // The last text that went to the caller, so an edit is reported once and an edit that undoes
-    // the
-    // previous one is reported too, even before the caller's value has caught up.
+    // The last text that went to the caller, so an edit is reported once, and an edit that undoes
+    // the previous one is reported too, even before the caller's value has caught up.
     var reported by remember { mutableStateOf(value) }
     var edits by remember { mutableIntStateOf(0) }
     // The caller's text wins: after an edit and when [value] changes, a field that holds something

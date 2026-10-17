@@ -96,7 +96,8 @@ class PointerMotionTest {
 
     @Test
     fun `the factors multiply`() {
-        assertThat(step(32766, speedPercent = 50, sessionFactor = 0.5f, precision = true).x).isEqualTo(8)
+        assertThat(step(32766, speedPercent = 50, sessionFactor = 0.5f, precision = true).x)
+            .isEqualTo(8)
     }
 
     @Test
@@ -145,12 +146,18 @@ class PointerMotionTest {
             }
     }
 
-    /** The curve of the stick before this change: 64 px per tick of 50 ms at full stick, cubic, per component truncated. */
+    /**
+     * The curve of the stick before this change: 64 px per tick of 50 ms at full stick, cubic, per
+     * component truncated.
+     */
     private fun oldCurve(x: Int, y: Int): PixelDelta {
         val scale = 4.0 / 32766.0
         val vx = x * scale
         val vy = y * scale
         val magnitude = hypot(vx, vy)
-        return PixelDelta((vx * magnitude * magnitude).toInt(), (vy * magnitude * magnitude).toInt())
+        return PixelDelta(
+            (vx * magnitude * magnitude).toInt(),
+            (vy * magnitude * magnitude).toInt(),
+        )
     }
 }

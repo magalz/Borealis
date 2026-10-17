@@ -302,7 +302,10 @@ class SettingsContractTest {
     }
 
     private companion object {
-        /** 38 ported stream settings, the gamepad mouse speed, 2 logging switches and the overlay choice. */
+        /**
+         * 38 ported stream settings, the gamepad mouse speed, 2 logging switches and the overlay
+         * choice.
+         */
         const val CATALOG_SIZE = 42
     }
 }

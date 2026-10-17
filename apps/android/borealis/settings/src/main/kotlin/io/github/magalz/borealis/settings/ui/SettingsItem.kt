@@ -58,6 +58,10 @@ private const val DEADZONE_MAX = 20
 private const val VIBRATION_MAX = 200
 private const val OPACITY_MAX = 100
 private const val PERCENT_KEY_STEP = 5
+private const val MOUSE_SPEED_MIN = 10
+private const val MOUSE_SPEED_MAX = 200
+private const val MOUSE_SPEED_STEP = 5
+private const val MOUSE_SPEED_KEY_STEP = 10
 private const val VIBRATION_KEY_STEP = 10
 
 /**
@@ -176,6 +180,14 @@ enum class SettingsItem(
         Settings.ANALOG_SCROLLING,
         R.string.settings_analog_scrolling_title,
         fixedChoices = FixedChoices.ANALOG_SCROLLING,
+    ),
+    GAMEPAD_MOUSE_SPEED(
+        SettingsGroupId.INPUT,
+        SettingsItemKind.SLIDER,
+        Settings.GAMEPAD_MOUSE_SPEED,
+        R.string.settings_gamepad_mouse_speed_title,
+        slider =
+            SliderSpec(MOUSE_SPEED_MIN, MOUSE_SPEED_MAX, MOUSE_SPEED_STEP, MOUSE_SPEED_KEY_STEP),
     ),
     DEADZONE(
         SettingsGroupId.INPUT,
@@ -343,13 +355,6 @@ enum class SettingsItem(
         Settings.ENABLE_PIP,
         R.string.settings_pip_title,
         R.string.settings_pip_summary,
-    ),
-    GAMEPAD_MOUSE_SPEED(
-        SettingsGroupId.INPUT,
-        SettingsItemKind.SLIDER,
-        Settings.GAMEPAD_MOUSE_SPEED,
-        R.string.settings_gamepad_mouse_speed_title,
-        slider = SliderSpec(0, OPACITY_MAX, 1),
     );
 
     companion object {

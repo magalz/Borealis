@@ -52,7 +52,7 @@ The work for this sprint is on the phase branch `phase/s7-followups-polish`.
    The USB permission dialog is asked only once the stream shows its first frame,
    and a pad that wakes during the stream asks at once, so it shows one dialog.
    Phones are unchanged. The remaining idea, documenting the native pad modes, is
-   in the backlog. See the
+   planned for Sprint 10. See the
    [device validation runbook, section 12](development/device-validation.md#12-results-sprint-7).
 4. **Gamepad mouse: pointer speed.** Done (issue #17, merge `1d500bdb`). A speed
    setting from 10% to 200%, default 50%. A 16 ms tick with fraction
@@ -98,47 +98,15 @@ The work for this sprint is on the phase branch `phase/s7-followups-polish`.
 - The stale entries in the lint baseline, `apps/android/app/lint-baseline.xml`.
 - Upstream leftovers in `apps/android/app/build.gradle`,
   `apps/android/appveyor.yml` and `apps/android/store-assets/`.
+- **Duplicated game controller rule:** the test of what counts as a game
+  controller is duplicated between `ConnectedGamepads.kt`
+  (`borealis/designsystem`, Sprint 7 item 7) and `NativeGamepadSupport.kt`
+  (`app`). The test helper that builds input devices is also copied into the
+  stream module's tests.
+- **Phone title bars:** three near-identical phone title bars.
 
-### Sprint 9: release preparation
+### Sprint 9: UX polish and the handheld
 
-- The root and Android READMEs.
-- An install (Obtainium) and pairing guide.
-- The compatibility note.
-- [PRIVACY.md](../PRIVACY.md).
-- The release certificate fingerprint.
-- [CONTRIBUTING.md](../CONTRIBUTING.md) and the release docs.
-- Curated release notes.
-- The dry run on the tag commit, and the release smoke test. See the
-  [release procedure](development/release.md).
-
-### First release: `android-v0.1.0`
-
-The owner creates the tag. See the [release procedure](development/release.md).
-
-## Later phases
-
-- **Phase 3: LuminalShine REST features.** Several documents mark these as
-  Phase 3. See the [Phase 3 extension points](ux/phase-2-proposal.md#phase-3-extension-points).
-- **Phase 4: PyroWave.** See the [host contract](host-contract/pyrowave.md).
-- **Phase 5: stores.** Google Play and Amazon Appstore. See the
-  [release policy](policies/release.md) and
-  [ADR 0045](adr/0045-store-publishing-automation.md), which is proposed.
-
-## Backlog, not scheduled
-
-- **Animated app background.** Simple and discreet, made by the owner. It is
-  the last item, together with any visual polish that remains.
-- **Translation sprint.** The app is English only until this sprint
-  ([ADR 0055](adr/0055-settings-storage-and-the-phase-2-settings-screen.md)).
-- **Opt-in crash reporting.** Planned, not implemented. See
-  [PRIVACY.md](../PRIVACY.md) and [ADR 0022](adr/0022-crash-reporting-and-privacy.md).
-- **Deferred RTSP parser rework.** The moonlight-common-c rework `aeba988` is
-  deferred by the owner. See the [third-party notes](../core/third_party/README.md).
-- **Document the native pad modes.** Idea, not planned. The Pro 3 in Switch
-  mode and the Ultimate 2 in D-input, for the 8BitDo pads. See Sprint 7, item 3.
-  On the S22, the Ultimate 2 over Bluetooth LE shows as `2dc8:6012`, and the Pro
-  3 over classic Bluetooth as `057e:2009`. See the
-  [Bluetooth pad round](development/device-validation.md#bluetooth-pad-round-and-handheld-fix-2026-10-17).
 - **Smoother D-pad moves in Settings on a TV.** Reported by the owner on
   2026-10-17. Moving from one Settings row to the next has a small delay, while
   every other screen moves at once. Investigate where the time goes, for
@@ -154,8 +122,69 @@ The owner creates the tag. See the [release procedure](development/release.md).
   "State: OFFLINE". Show only what a user needs, in plain words.
 - **Handheld host card height.** Noticed on 2026-10-17. On the S22 as a
   handheld (360 dp tall), the host cards use the TV height of 176 dp, which
-  leaves a lot of empty space. Adapt the card height for a handheld in a later
-  refinement session.
+  leaves a lot of empty space. Adapt the card height for a handheld.
+- **The animated background:** integrated in this sprint if the owner has
+  delivered it by then; otherwise it stays in the backlog.
+- **A device round** for what Sprint 7 did not run:
+  - a dedicated Android handheld (the owner gets one);
+  - the Send to phone Expired and No network states;
+  - the Gamepad mouse speed slider at 10% and 200%;
+  - the quit combo on a USB-driver pad on the final build;
+  - the dialog frames and visual items that the Sprint 7 round did not record
+    (rows F15 and F16).
+
+  See the [device validation runbook, section 12](development/device-validation.md#12-results-sprint-7)
+  for the Sprint 7 round.
+
+### Sprint 10: release preparation
+
+- The root and Android READMEs.
+- An install (Obtainium) and pairing guide.
+- The compatibility note.
+- [PRIVACY.md](../PRIVACY.md).
+- The release certificate fingerprint.
+- [CONTRIBUTING.md](../CONTRIBUTING.md) and the release docs.
+- Curated release notes.
+- The dry run on the tag commit, and the release smoke test. See the
+  [release procedure](development/release.md).
+- **Document the native pad modes.** As part of the install and pairing guide.
+  The Pro 3 in Switch mode and the Ultimate 2 in D-input, for the 8BitDo pads.
+  See Sprint 7, item 3. On the S22, the Ultimate 2 over Bluetooth LE shows as
+  `2dc8:6012`, and the Pro 3 over classic Bluetooth as `057e:2009`. See the
+  [Bluetooth pad round](development/device-validation.md#bluetooth-pad-round-and-handheld-fix-2026-10-17).
+- **Core CI job.** Move the job back to `ubuntu-latest` after the clang-tidy
+  findings in `core/src/pair.cpp` are fixed. The job is pinned to
+  `ubuntu-24.04` in `.github/workflows/ci.yml`.
+
+### First release: `android-v0.1.0`
+
+The owner creates the tag. See the [release procedure](development/release.md).
+
+### Sprint 11: translation and opt-in crash reporting
+
+- **Translation sprint.** The app is English only until this sprint
+  ([ADR 0055](adr/0055-settings-storage-and-the-phase-2-settings-screen.md)).
+- **Opt-in crash reporting.** Planned, not implemented. See
+  [PRIVACY.md](../PRIVACY.md) and [ADR 0022](adr/0022-crash-reporting-and-privacy.md).
+
+## Later phases
+
+- **Phase 3: LuminalShine REST features.** Several documents mark these as
+  Phase 3. See the [Phase 3 extension points](ux/phase-2-proposal.md#phase-3-extension-points).
+- **Phase 4: PyroWave.** See the [host contract](host-contract/pyrowave.md).
+- **Phase 5: stores.** Google Play and Amazon Appstore. See the
+  [release policy](policies/release.md) and
+  [ADR 0045](adr/0045-store-publishing-automation.md), which is proposed.
+- **Phase 6: Windows client.** Post-MVP. Most PC handhelds run Windows. Its order
+  relative to Phases 3 to 5 is not decided.
+
+## Backlog, not scheduled
+
+- **Animated app background.** Simple and discreet, made by the owner. It is
+  the last item, together with any visual polish that remains. It is integrated
+  when delivered, in Sprint 9 if ready.
+- **Deferred RTSP parser rework.** The moonlight-common-c rework `aeba988` is
+  deferred by the owner. See the [third-party notes](../core/third_party/README.md).
 
 ## Host-side items (LuminalShine)
 

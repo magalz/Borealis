@@ -275,4 +275,35 @@ class StoreSettingsRepositoryTest {
 
             assertThat(changed[Settings.DEADZONE]).isEqualTo(12)
         }
+
+    @Test
+    fun `the publish hook sees each new snapshot before the flow shows it`() =
+        runBlocking<Unit> {
+            val inHook = CopyOnWriteArrayList<Pair<String, String>>()
+            repository.beforePublish = { next ->
+                inHook +=
+                    next[Settings.FRAME_RATE] to repository.snapshot.value[Settings.FRAME_RATE]
+            }
+
+            repository.set(Settings.FRAME_RATE, "90")
+            prefs.changeElsewhere(Settings.FRAME_RATE, "120")
+
+            assertThat(inHook).containsExactly("90" to "60", "120" to "90").inOrder()
+        }
+
+    @Test
+    fun `the publish hook is not called when nothing changes, and sees a rollback`() {
+        val inHook = CopyOnWriteArrayList<String>()
+        repository.beforePublish = { next -> inHook += next[Settings.FRAME_RATE] }
+        val gate = CompletableDeferred<Unit>()
+        prefs.gate = gate
+        prefs.failWrites = true
+
+        repository.setNow(Settings.FRAME_RATE, "60")
+        repository.setNow(Settings.FRAME_RATE, "30")
+        gate.complete(Unit)
+
+        eventually { repository.snapshot.value[Settings.FRAME_RATE] == "60" && inHook.size == 2 }
+        assertThat(inHook).containsExactly("30", "60").inOrder()
+    }
 }

@@ -144,6 +144,7 @@ class DataStoreBackingTest {
         val store = DataStoreBacking.create(preferences, scope, file)
         val reported = java.util.concurrent.CopyOnWriteArrayList<Map<Setting<*>, Any?>>()
         DataStoreBacking(store, scope).observe { reported += it }
+        eventually { reported.isNotEmpty() }
 
         runBlocking {
             store.edit { it[booleanPreferencesKey(Settings.VERBOSE_LOGGING.key)] = true }

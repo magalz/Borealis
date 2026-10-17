@@ -21,7 +21,7 @@ object StreamSessionFactory {
         showMenuHint: Boolean,
     ): StreamDefaults =
         StreamDefaults(
-            overlay = if (prefs.enablePerfOverlay) OverlayMode.DETAILED else OverlayMode.OFF,
+            overlay = overlayOf(perfOverlay),
             touchMode = if (hasTouchscreen) TouchContexts.initialMode(prefs) else null,
             gamepadMouse = prefs.mouseEmulation,
             showMenuHint = showMenuHint,
@@ -36,6 +36,14 @@ object StreamSessionFactory {
     @JvmStatic
     fun startStage(reported: String, appName: String): StartStage =
         if (reported == appName) StartStage.CONNECTING else StartStage.PREPARING_DISPLAY
+
+    /** The overlay that a stored `borealis_perf_overlay` value stands for; unknown means off. */
+    private fun overlayOf(value: String): OverlayMode =
+        when (value) {
+            Settings.PERF_OVERLAY_COMPACT -> OverlayMode.COMPACT
+            Settings.PERF_OVERLAY_DETAILED -> OverlayMode.DETAILED
+            else -> OverlayMode.OFF
+        }
 
     /**
      * The session of [activity]'s stream. The docked keyboard is for phones. [pcName] and [appName]

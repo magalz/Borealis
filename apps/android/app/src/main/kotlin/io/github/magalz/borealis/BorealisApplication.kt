@@ -25,7 +25,7 @@ import javax.inject.Inject
 
 @HiltAndroidApp
 class BorealisApplication : Application() {
-    // Kept so that the preference listener of LogSettings stays registered.
+    // Kept so that LogSettings keeps following the settings repository.
     private lateinit var logSettings: LogSettings
 
     // Kept so that the preference listener of UsbAttachGate stays registered.

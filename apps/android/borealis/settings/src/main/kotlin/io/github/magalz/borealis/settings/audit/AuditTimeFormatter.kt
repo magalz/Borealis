@@ -2,34 +2,42 @@ package io.github.magalz.borealis.settings.audit
 
 import java.time.Clock
 import java.time.Instant
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 
 /**
  * The times of the audit trail in the device's time zone and locale. [clock] and [locale] are read
- * at each call, so a change of either shows in the next list.
+ * at each call, so a change of either shows in the next list. The patterns are built once per
+ * locale: a list of 2,000 entries formats 2,000 times, from any thread.
  */
 class AuditTimeFormatter(private val clock: () -> Clock, private val locale: () -> Locale) {
     @Inject constructor() : this({ Clock.systemDefaultZone() }, { Locale.getDefault() })
+
+    private class Patterns(locale: Locale) {
+        val today: DateTimeFormatter = DateTimeFormatter.ofPattern(TODAY, locale)
+        val earlierDay: DateTimeFormatter = DateTimeFormatter.ofPattern(EARLIER_DAY, locale)
+        val full: DateTimeFormatter = DateTimeFormatter.ofPattern(FULL, locale)
+    }
+
+    private val patterns = ConcurrentHashMap<Locale, Patterns>()
+
+    private fun patterns() = patterns.getOrPut(locale()) { Patterns(locale()) }
 
     /** `HH:mm` for a time of today, and the weekday and `HH:mm` for an earlier day. */
     fun short(timestampMillis: Long): String {
         val now = clock()
         val time = Instant.ofEpochMilli(timestampMillis).atZone(now.zone)
-        val pattern =
-            if (time.toLocalDate() == now.instant().atZone(now.zone).toLocalDate()) {
-                TODAY
-            } else {
-                EARLIER_DAY
-            }
-        return DateTimeFormatter.ofPattern(pattern, locale()).format(time)
+        val patterns = patterns()
+        val sameDay = time.toLocalDate() == ZonedDateTime.now(now).toLocalDate()
+        return (if (sameDay) patterns.today else patterns.earlierDay).format(time)
     }
 
     /** The date and the time with seconds, for the detail of an entry. */
     fun full(timestampMillis: Long): String =
-        DateTimeFormatter.ofPattern(FULL, locale())
-            .format(Instant.ofEpochMilli(timestampMillis).atZone(clock().zone))
+        patterns().full.format(Instant.ofEpochMilli(timestampMillis).atZone(clock().zone))
 
     private companion object {
         const val TODAY = "HH:mm"

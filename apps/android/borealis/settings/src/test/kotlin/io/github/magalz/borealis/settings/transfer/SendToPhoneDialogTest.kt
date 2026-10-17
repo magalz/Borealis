@@ -147,10 +147,13 @@ class SendToPhoneDialogTest {
     }
 
     @Test
-    fun `Close has the focus in every state`() {
+    fun `Close has the focus in every state, also after the state changes`() {
+        val transfer = FakeTransferController(TransferState.Idle)
+        open(transfer)
+        composeRule.onNodeWithText("Close").assertIsFocused()
+
         val states =
             listOf(
-                TransferState.Idle,
                 FakeTransferController.waiting(),
                 TransferState.Downloaded,
                 TransferState.Expired,
@@ -158,12 +161,7 @@ class SendToPhoneDialogTest {
                 TransferState.Failed,
             )
         for (state in states) {
-            val transfer = FakeTransferController(state)
-            composeRule.setContent {
-                BorealisTheme(FormFactor.Tv) {
-                    SendToPhoneDialog(bundle, ADB_COMMAND, {}, transfer)
-                }
-            }
+            transfer.show(state)
             composeRule.waitForIdle()
 
             composeRule.onNodeWithText("Close").assertIsFocused()

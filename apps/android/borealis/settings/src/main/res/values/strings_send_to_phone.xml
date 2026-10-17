@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="borealis_send_to_phone_title">Send to phone</string>
+    <!-- The file name, then its size. -->
+    <string name="borealis_send_to_phone_file">%1$s · %2$s</string>
+    <string name="borealis_send_to_phone_starting">Starting the link…</string>
+    <string name="borealis_send_to_phone_instructions">Scan with your phone’s camera. Both devices must be on the same network. The link works for one download.</string>
+    <!-- %1$s is the time left, as minutes and seconds. -->
+    <string name="borealis_send_to_phone_waiting">Waiting for the phone · %1$s left</string>
+    <string name="borealis_send_to_phone_qr_description">QR code of the download link</string>
+    <string name="borealis_send_to_phone_downloaded">Downloaded. The link is closed.</string>
+    <string name="borealis_send_to_phone_expired">The link expired. Try again for a new one.</string>
+    <string name="borealis_send_to_phone_no_network">This device is not on a local network, so a phone cannot reach it. Use the adb command below instead.</string>
+    <string name="borealis_send_to_phone_failed">The link could not be started. Close this dialog and try again.</string>
+    <string name="borealis_send_to_phone_try_again">Try again</string>
+    <string name="borealis_send_to_phone_close">Close</string>
+</resources>

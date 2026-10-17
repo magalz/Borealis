@@ -192,15 +192,7 @@ internal fun PrivacyContent(
     modifier: Modifier = Modifier,
 ) {
     val phone = LocalFormFactor.current == FormFactor.Phone
-    val auditRow = remember { FocusRequester() }
-    var auditHasFocus by remember { mutableStateOf(false) }
-    var returnToAudit by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        if (returnToAudit) {
-            returnToAudit = false
-            auditRow.requestFocus()
-        }
-    }
+    val auditFocus = rememberAuditRowFocus(actions.onOpenAudit)
     Box(modifier) {
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(LIST_PADDING),
@@ -222,15 +214,9 @@ internal fun PrivacyContent(
             SettingsValueRow(
                 title = stringResource(R.string.borealis_privacy_audit_title),
                 value = null,
-                onClick = {
-                    returnToAudit = auditHasFocus
-                    actions.onOpenAudit()
-                },
+                onClick = auditFocus.onClick,
                 summary = stringResource(R.string.borealis_privacy_audit_summary),
-                modifier =
-                    Modifier.focusRequester(auditRow).onFocusChanged {
-                        auditHasFocus = it.isFocused
-                    },
+                modifier = auditFocus.modifier,
             )
             SettingsValueRow(
                 title = stringResource(R.string.borealis_privacy_erase_title),
@@ -254,6 +240,34 @@ internal fun PrivacyContent(
         )
     }
     PrivacyDialogs(state.dialog, actions)
+}
+
+/** The Audit trail row's [modifier] and [onClick], which keep the focus across the viewer. */
+private class AuditRowFocus(val modifier: Modifier, val onClick: () -> Unit)
+
+/**
+ * Remembers that the Audit trail row had the focus as it opened the viewer, and takes the focus
+ * back when the screen comes back. The state is saved, as the screen leaves the composition while
+ * the viewer shows.
+ */
+@Composable
+private fun rememberAuditRowFocus(onOpenAudit: () -> Unit): AuditRowFocus {
+    val row = remember { FocusRequester() }
+    var hasFocus by remember { mutableStateOf(false) }
+    var returnToRow by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (returnToRow) {
+            returnToRow = false
+            row.requestFocus()
+        }
+    }
+    return AuditRowFocus(
+        Modifier.focusRequester(row).onFocusChanged { hasFocus = it.isFocused },
+        onClick = {
+            returnToRow = hasFocus
+            onOpenAudit()
+        },
+    )
 }
 
 /**

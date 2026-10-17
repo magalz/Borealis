@@ -23,7 +23,6 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
@@ -115,37 +114,38 @@ fun HostCard(
                     down = FocusRequester.Default
                 }
             }
-        HostCardContent(inline, height - padding * 2, action, actionModifier) { infoModifier ->
+        HostCardContent(
+            inline = inline,
+            modifier = Modifier.heightIn(min = height - padding * 2),
+            action =
+                action?.let { { modifier -> HostActionButton(it, actionModifier.then(modifier)) } },
+        ) { infoModifier ->
             HostInfo(name, status, statusText, detail, tags, runningApp, infoModifier)
         }
     }
 }
 
 /**
- * The text and the action of a card, [minHeight] high at least. On a phone the text is at the top
- * and the action is centred at the end of the row; else the text is at the top and the action sits
- * at the bottom edge, so it is in the same place on every card.
+ * The text and the [action] of a card. On a phone the text is at the top and the action is centred
+ * at the end of the row; else the text is at the top and the action sits at the bottom edge, so it
+ * is in the same place on every card. [info] and [action] get the modifier that places them.
  */
 @Composable
 private fun HostCardContent(
     inline: Boolean,
-    minHeight: Dp,
-    action: HostCardAction?,
-    actionModifier: Modifier,
+    modifier: Modifier,
+    action: (@Composable (Modifier) -> Unit)?,
     info: @Composable (Modifier) -> Unit,
 ) {
     if (inline) {
-        Row(
-            Modifier.heightIn(min = minHeight),
-            horizontalArrangement = Arrangement.spacedBy(CONTENT_GAP),
-        ) {
+        Row(modifier, horizontalArrangement = Arrangement.spacedBy(CONTENT_GAP)) {
             info(Modifier.weight(1f))
-            action?.let { HostActionButton(it, actionModifier.align(Alignment.CenterVertically)) }
+            action?.invoke(Modifier.align(Alignment.CenterVertically))
         }
     } else {
-        Column(Modifier.heightIn(min = minHeight), verticalArrangement = Arrangement.SpaceBetween) {
+        Column(modifier, verticalArrangement = Arrangement.SpaceBetween) {
             info(if (action == null) Modifier else Modifier.padding(bottom = CONTENT_GAP))
-            action?.let { HostActionButton(it, actionModifier) }
+            action?.invoke(Modifier)
         }
     }
 }

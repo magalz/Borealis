@@ -28,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.paneTitle
@@ -41,6 +40,7 @@ import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.windowWidth
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 
 /**
@@ -86,7 +86,7 @@ fun BorealisDialog(
 ) {
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.extraLarge
-    val windowWidth = LocalConfiguration.current.screenWidthDp.dp
+    val windowWidth = windowWidth()
     val margin = BorealisTokens.Space.DialogMargin
     Dialog(
         onDismissRequest = onDismissRequest,

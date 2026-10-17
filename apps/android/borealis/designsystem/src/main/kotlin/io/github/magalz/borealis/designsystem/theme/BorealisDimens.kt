@@ -1,7 +1,8 @@
 package io.github.magalz.borealis.designsystem.theme
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
@@ -69,7 +70,13 @@ object BorealisDimens {
     }
 }
 
+/** The width of the window, in dp. */
+@Composable
+internal fun windowWidth(): Dp {
+    val density = LocalDensity.current
+    return with(density) { LocalWindowInfo.current.containerSize.width.toDp() }
+}
+
 /** The width of a choice or action sheet that is a dialog, here: [BorealisDimens.sheetWidth]. */
 @Composable
-internal fun sheetWidth(): Dp =
-    BorealisDimens.sheetWidth(LocalFormFactor.current, LocalConfiguration.current.screenWidthDp.dp)
+internal fun sheetWidth(): Dp = BorealisDimens.sheetWidth(LocalFormFactor.current, windowWidth())

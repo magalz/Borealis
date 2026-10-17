@@ -50,13 +50,9 @@ fun interface StreamLauncher {
 
 /** Upstream work that the 12.2 host list did and the new launcher must keep doing. */
 interface LegacyBridge {
-    /**
-     * Once per launcher creation: default preferences, the GL renderer probe, decoder crash notice.
-     */
+    /** Once per launcher creation: the GL renderer probe. */
     fun onLauncherCreated(activity: Activity)
 
+    /** Every resume: the decoder crash notice. */
     fun onLauncherResumed(activity: Activity)
-
-    /** Opens the upstream stream settings screen, which links to the Borealis settings. */
-    fun openStreamSettings(activity: Activity)
 }

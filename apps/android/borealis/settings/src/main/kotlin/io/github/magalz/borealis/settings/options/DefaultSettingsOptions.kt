@@ -12,11 +12,11 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * The [SettingsOptions] of the app: the rules that the inherited `StreamSettings` applied from the
- * device, in Kotlin. It holds no state: every answer comes from the arguments.
+ * The [SettingsOptions] of the app: the rules that the upstream stream settings screen applied from
+ * the device, in Kotlin. It holds no state: every answer comes from the arguments.
  *
- * Differences from `StreamSettings` that the minimum SDK of the app (28) makes safe: the branches
- * for Android below 6 (native size from the metrics), 7 (HDR) and 8 (remote desktop mouse,
+ * Differences from that screen that the minimum SDK of the app (28) makes safe: the branches for
+ * Android below 6 (native size from the metrics), 7 (HDR) and 8 (remote desktop mouse,
  * picture-in-picture and vibration strength) are gone, because they cannot run.
  */
 class DefaultSettingsOptions @Inject constructor() : SettingsOptions {

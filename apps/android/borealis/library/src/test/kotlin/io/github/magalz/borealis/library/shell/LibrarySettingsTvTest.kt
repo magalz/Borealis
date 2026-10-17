@@ -19,7 +19,6 @@ import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.google.common.truth.Truth.assertThat
 import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -140,7 +139,6 @@ class LibrarySettingsTvTest {
         composeRule.onNode(railItem("Settings")).assertIsSelected()
         composeRule.onNode(railItem("Hosts")).assertIsNotSelected()
         composeRule.onNodeWithTag("host:desk").assertDoesNotExist()
-        assertThat(bridge.settingsOpened).isEqualTo(0)
     }
 
     @Test

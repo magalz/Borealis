@@ -2,28 +2,4 @@
 <resources>
     <!-- Replaced by the app with the built commit; this default is for libraries and tests. -->
     <string name="borealis_git_sha" translatable="false">unknown</string>
-
-    <string name="borealis_settings_title">Borealis settings</string>
-    <string name="borealis_settings_summary">Logging, privacy and about</string>
-
-    <string name="borealis_category_privacy">Privacy and diagnostics</string>
-    <string name="borealis_title_verbose_logging">Verbose logging</string>
-    <string name="borealis_summary_verbose_logging">Write debug details to the local log file. Turn this on only while you diagnose a problem.</string>
-    <string name="borealis_title_mask_addresses">Mask addresses in logs and diagnostics</string>
-    <string name="borealis_summary_mask_addresses">Replace IP addresses and host names with placeholders in new log lines and in exported diagnostics.</string>
-
-    <string name="borealis_category_about">About</string>
-    <string name="borealis_title_version">Version</string>
-    <string name="borealis_summary_version">%1$s (commit %2$s)</string>
-    <string name="borealis_version_unknown">unknown</string>
-    <string name="borealis_title_source_code">Source code</string>
-    <string name="borealis_title_license">Licence: GPL-3.0</string>
-    <string name="borealis_summary_license">GNU General Public License, version 3</string>
-    <string name="borealis_title_open_source_licenses">Open-source licences</string>
-    <string name="borealis_summary_open_source_licenses">Notices and licence texts for Borealis and the components it includes</string>
-    <string name="borealis_title_privacy_policy">Privacy policy</string>
-
-    <string name="borealis_licenses_unavailable">The licence texts are not included in this build.</string>
-    <string name="borealis_link_dialog_title">No app can open this link</string>
-    <string name="borealis_close">Close</string>
 </resources>

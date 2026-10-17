@@ -1,16 +1,12 @@
 package io.github.magalz.borealis.library
 
 import android.app.Activity
-import android.content.Intent
 import android.opengl.GLSurfaceView
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.preference.PreferenceManager
 import android.view.ViewGroup
-import com.limelight.R
 import com.limelight.preferences.GlPreferences
-import com.limelight.preferences.StreamSettings
 import com.limelight.utils.UiHelper
 import io.github.magalz.borealis.library.domain.LegacyBridge
 import io.github.magalz.borealis.logging.BorealisLog
@@ -22,13 +18,7 @@ import javax.microedition.khronos.opengles.GL10
 
 /** The upstream screens' work that the new launcher has to keep doing. */
 internal interface UpstreamStartup {
-    fun setDefaultPreferences(activity: Activity)
-
-    fun applyLocale(activity: Activity)
-
     fun showDecoderCrashDialog(activity: Activity)
-
-    fun openStreamSettings(activity: Activity)
 }
 
 /** Reads the GL renderer name by drawing one frame. Decoder choices depend on it. */
@@ -51,16 +41,12 @@ internal class UpstreamLegacyBridge
 constructor(private val startup: UpstreamStartup, private val glProbe: GlRendererProbe) :
     LegacyBridge {
     override fun onLauncherCreated(activity: Activity) {
-        startup.setDefaultPreferences(activity)
-        startup.applyLocale(activity)
         Handler(Looper.getMainLooper()).post {
             if (!activity.isFinishing && !activity.isDestroyed) probeRendererIfNeeded(activity)
         }
     }
 
     override fun onLauncherResumed(activity: Activity) = startup.showDecoderCrashDialog(activity)
-
-    override fun openStreamSettings(activity: Activity) = startup.openStreamSettings(activity)
 
     /** Decoder choices for Adreno and PowerVR depend on the renderer name: keep it up to date. */
     private fun probeRendererIfNeeded(activity: Activity) {
@@ -81,17 +67,8 @@ constructor(private val startup: UpstreamStartup, private val glProbe: GlRendere
 /** [UpstreamStartup] over the helpers that the 12.2 host list called at start-up. */
 @Singleton
 internal class UpstreamLauncherStartup @Inject constructor() : UpstreamStartup {
-    @Suppress("DEPRECATION")
-    override fun setDefaultPreferences(activity: Activity) =
-        PreferenceManager.setDefaultValues(activity, R.xml.preferences, false)
-
-    override fun applyLocale(activity: Activity) = UiHelper.setLocale(activity)
-
     override fun showDecoderCrashDialog(activity: Activity) =
         UiHelper.showDecoderCrashDialog(activity)
-
-    override fun openStreamSettings(activity: Activity) =
-        activity.startActivity(Intent(activity, StreamSettings::class.java))
 }
 
 /**

@@ -213,8 +213,6 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        UiHelper.setLocale(this);
-
         // We don't want a title bar
         requestWindowFeature(Window.FEATURE_NO_TITLE);
 

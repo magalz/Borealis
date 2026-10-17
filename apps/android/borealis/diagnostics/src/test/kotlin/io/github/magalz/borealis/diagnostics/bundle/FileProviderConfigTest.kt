@@ -2,6 +2,7 @@ package io.github.magalz.borealis.diagnostics.bundle
 
 import android.content.Context
 import android.content.pm.PackageManager
+import androidx.core.content.FileProvider
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import java.io.File
@@ -32,12 +33,14 @@ class FileProviderConfigTest {
 
     // androidx FileProvider cannot map Windows paths under Robolectric, so this runs on Linux CI.
     @Test
-    fun `the default uri maps the bundle directory and refuses other files`() {
+    fun `the file provider maps the bundle directory and refuses other files`() {
         Assume.assumeFalse(System.getProperty("os.name").startsWith("Windows"))
         val dir = File(context.cacheDir, "diagnostics").apply { mkdirs() }
         val zip = File(dir, "x.zip").apply { writeText("zip") }
         val outside = File(context.cacheDir, "other.zip").apply { writeText("zip") }
-        val uriFor = ExportDiagnosticsPreference(context).uriFor
+        val uriFor = { file: File ->
+            FileProvider.getUriForFile(context, fileProviderAuthority(context.packageName), file)
+        }
 
         assertThat(uriFor(zip).toString())
             .isEqualTo(

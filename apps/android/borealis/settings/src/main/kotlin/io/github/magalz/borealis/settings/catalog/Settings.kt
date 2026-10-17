@@ -147,9 +147,9 @@ object Settings {
     val FULL_RANGE = BooleanSetting("checkbox_full_range", default = false)
 
     /**
-     * The old performance overlay switch, still read by `PreferenceConfiguration` (and so by the
-     * parity test). The Phase 2 screen and `StreamSessionFactory` use [PERF_OVERLAY]; a stored
-     * `true` here is migrated once to Detailed and the switch is never written again.
+     * The old performance overlay switch. Java no longer reads it: it stays in the catalog only for
+     * `LegacyMigrations`. The Phase 2 screen and `StreamSessionFactory` use [PERF_OVERLAY]; a
+     * stored `true` here is migrated once to Detailed and the switch is never written again.
      */
     val PERF_OVERLAY_LEGACY = BooleanSetting("checkbox_enable_perf_overlay", default = false)
 

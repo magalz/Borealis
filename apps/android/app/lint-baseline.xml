@@ -96,17 +96,6 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/AndroidManifest.xml"
-            line="124"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `enableOnBackInvokedCallback` is only used in API level 33 and higher (current min is 28)"
-        errorLine1="            android:enableOnBackInvokedCallback=&quot;true&quot;"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
             line="132"
             column="13"/>
     </issue>
@@ -560,17 +549,6 @@
             file="src/main/java/com/limelight/utils/TvChannelHelper.java"
             line="336"
             column="5"/>
-    </issue>
-
-    <issue
-        id="Typos"
-        message="Did you mean &quot;AV! &quot; instead of &quot;AV1 &quot;?"
-        errorLine1="    &lt;string name=&quot;videoformat_av1always&quot;>Prefer AV1 (Experimental)&lt;/string>"
-        errorLine2="                                                ~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="290"
-            column="49"/>
     </issue>
 
     <issue
@@ -1247,17 +1225,6 @@
     <issue
         id="ObsoleteSdkInt"
         message="Unnecessary; `SDK_INT` is always >= 28"
-        errorLine1="            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/preferences/PreferenceConfiguration.java"
-            line="331"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; `SDK_INT` is always >= 28"
         errorLine1="        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
@@ -1374,94 +1341,6 @@
             file="src/main/java/com/limelight/utils/ShortcutHelper.java"
             line="202"
             column="13"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; `SDK_INT` is always >= 28"
-        errorLine1="        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/preferences/StreamSettings.java"
-            line="48"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; `SDK_INT` is always >= 28"
-        errorLine1="        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/preferences/StreamSettings.java"
-            line="92"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; `SDK_INT` is never &lt; 28"
-        errorLine1="            if (Build.VERSION.SDK_INT &lt; Build.VERSION_CODES.O ||"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/preferences/StreamSettings.java"
-            line="289"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; `SDK_INT` is never &lt; 28"
-        errorLine1="            if (Build.VERSION.SDK_INT &lt; Build.VERSION_CODES.O ||"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/preferences/StreamSettings.java"
-            line="322"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; `SDK_INT` is never &lt; 28"
-        errorLine1="            else if (Build.VERSION.SDK_INT &lt; Build.VERSION_CODES.O ||"
-        errorLine2="                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/preferences/StreamSettings.java"
-            line="348"
-            column="22"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; `SDK_INT` is always >= 28"
-        errorLine1="            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/preferences/StreamSettings.java"
-            line="358"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; `SDK_INT` is always >= 28"
-        errorLine1="                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {"
-        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/preferences/StreamSettings.java"
-            line="364"
-            column="21"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; `SDK_INT` is never &lt; 28"
-        errorLine1="            if (Build.VERSION.SDK_INT &lt; Build.VERSION_CODES.N) {"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/preferences/StreamSettings.java"
-            line="576"
-            column="17"/>
     </issue>
 
     <issue
@@ -1643,83 +1522,6 @@
         message="The resource `R.string.app_label_root` appears to be unused">
         <location
             file="build.gradle"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.category_help` appears to be unused"
-        errorLine1="    &lt;string name=&quot;category_help&quot;>Help&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="258"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.title_setup_guide` appears to be unused"
-        errorLine1="    &lt;string name=&quot;title_setup_guide&quot;>Setup guide&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="259"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.summary_setup_guide` appears to be unused"
-        errorLine1="    &lt;string name=&quot;summary_setup_guide&quot;>View instructions on how to set up your gaming PC for streaming&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="260"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.title_troubleshooting` appears to be unused"
-        errorLine1="    &lt;string name=&quot;title_troubleshooting&quot;>Troubleshooting guide&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="261"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.summary_troubleshooting` appears to be unused"
-        errorLine1="    &lt;string name=&quot;summary_troubleshooting&quot;>View tips for diagnosing and fixing common streaming issues&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="262"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.title_privacy_policy` appears to be unused"
-        errorLine1="    &lt;string name=&quot;title_privacy_policy&quot;>Privacy policy&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="263"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.summary_privacy_policy` appears to be unused"
-        errorLine1="    &lt;string name=&quot;summary_privacy_policy&quot;>View Moonlight\&apos;s privacy policy&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="264"
-            column="13"/>
     </issue>
 
     <issue

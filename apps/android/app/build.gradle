@@ -68,16 +68,10 @@ android {
     }
 
     lint {
-        disable 'MissingTranslation'
         lintConfig file('lint.xml')
     }
 
     bundle {
-        language {
-            // Avoid splitting by language, since we allow users
-            // to manually switch language in settings.
-            enableSplit = false
-        }
         density {
             // FIXME: This should not be necessary but we get
             // weird crashes due to missing drawable resources

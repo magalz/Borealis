@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.room.Room
 import dagger.Module
 import dagger.Provides
-import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
@@ -47,11 +46,4 @@ object AuditModule {
     @Provides fun sink(store: AuditStore): AuditSink = store
 
     @Provides @IntoSet fun section(store: AuditStore): DiagnosticSection = AuditSection(store)
-}
-
-/** Lets framework classes that Hilt does not create, such as preferences, reach the store. */
-@EntryPoint
-@InstallIn(SingletonComponent::class)
-interface AuditEntryPoint {
-    fun auditStore(): AuditStore
 }

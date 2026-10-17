@@ -485,7 +485,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         lastTwo.add(activeWindowVideoStats);
         long elapsedMs = SystemClock.uptimeMillis() - lastTwo.measurementStartTimestamp;
         sink.onPerf(PerfSnapshots.from(new PerfWindow(lastTwo.totalFrames, lastTwo.totalFramesReceived,
-                lastTwo.totalFramesRendered, lastTwo.framesLost, lastTwo.decoderTimeMs,
+                lastTwo.totalFramesRendered, lastTwo.framesLost, lastTwo.decoderTimeUs, // BOREALIS: stream.perf
                 lastTwo.framesWithHostProcessingLatency, lastTwo.minHostProcessingLatency,
                 lastTwo.maxHostProcessingLatency, lastTwo.totalHostProcessingLatency,
                 lastTwo.totalBytes, elapsedMs), MoonBridge.getEstimatedRttInfo()));
@@ -1078,7 +1078,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                         int outIndex = videoDecoder.dequeueOutputBuffer(info, 50000);
                         if (outIndex >= 0) {
                             long presentationTimeUs = info.presentationTimeUs;
-                            long matchedInputUs = matchOutput(presentationTimeUs); // BOREALIS: stream.perf
+                            long matchedDecodeUs = matchOutput(presentationTimeUs); // BOREALIS: stream.perf
                             int lastIndex = outIndex;
 
                             numFramesOut++;
@@ -1093,7 +1093,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
                                     lastIndex = outIndex;
                                     presentationTimeUs = info.presentationTimeUs;
-                                    matchedInputUs = matchOutput(presentationTimeUs); // BOREALIS: stream.perf
+                                    matchedDecodeUs = matchOutput(presentationTimeUs); // BOREALIS: stream.perf
                                 }
 
                                 if (prefs.framePacing == PreferenceConfiguration.FRAME_PACING_MAX_SMOOTHNESS ||
@@ -1135,8 +1135,11 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                             }
 
                             // Add delta time to the totals (excluding probable outliers)
-                            long delta = SystemClock.uptimeMillis() - ((matchedInputUs != DecodeTimeTracker.NO_MATCH ? matchedInputUs : presentationTimeUs) / 1000); // BOREALIS: stream.perf
-                            if (delta >= 0 && delta < 1000) {
+                            // BOREALIS: stream.perf: from the queue time when the output matched an input, else from the timestamp as before
+                            long decodeUs = matchedDecodeUs != DecodeTimeTracker.NO_MATCH ? matchedDecodeUs : (SystemClock.uptimeMillis() - (presentationTimeUs / 1000)) * 1000; // BOREALIS: stream.perf
+                            if (decodeUs >= 0 && decodeUs < 1000000) { // BOREALIS: stream.perf
+                                long delta = (decodeUs + 500) / 1000; // BOREALIS: stream.perf
+                                activeWindowVideoStats.decoderTimeUs += decodeUs; // BOREALIS: stream.perf
                                 activeWindowVideoStats.decoderTimeMs += delta;
                                 if (!USE_FRAME_RENDER_TIME) {
                                     activeWindowVideoStats.totalTimeMs += delta;
@@ -1346,7 +1349,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     }
 
     private long matchOutput(long presentationTimeUs) { // BOREALIS: stream.perf
-        synchronized (decodeTimeTracker) { return decodeTimeTracker.onOutput(presentationTimeUs); } // BOREALIS: stream.perf
+        synchronized (decodeTimeTracker) { return decodeTimeTracker.onOutput(presentationTimeUs, System.nanoTime()); } // BOREALIS: stream.perf
     }
 
     private boolean queueNextInputBuffer(long timestampUs, int codecFlags) {
@@ -1354,7 +1357,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
         try {
             if ((codecFlags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) { // BOREALIS: stream.perf
-                synchronized (decodeTimeTracker) { decodeTimeTracker.onInput(timestampUs); } // BOREALIS: before the queue, so a fast output finds it (stream.perf)
+                synchronized (decodeTimeTracker) { decodeTimeTracker.onInput(timestampUs, System.nanoTime()); } // BOREALIS: before the queue, so a fast output finds it (stream.perf)
             }
             videoDecoder.queueInputBuffer(nextInputBufferIndex,
                     0, nextInputBuffer.position(),

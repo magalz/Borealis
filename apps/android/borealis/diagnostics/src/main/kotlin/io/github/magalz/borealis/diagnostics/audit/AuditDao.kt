@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
+import kotlinx.coroutines.flow.Flow
 
 /** Blocking queries: callers run them off the main thread. */
 @Dao
@@ -12,6 +13,10 @@ abstract class AuditDao {
 
     /** Oldest first. */
     @Query("SELECT * FROM audit_events ORDER BY id ASC") abstract fun all(): List<AuditEntity>
+
+    /** Newest first; emits again after every change to the table. */
+    @Query("SELECT * FROM audit_events ORDER BY id ASC")
+    abstract fun observeNewestFirst(): Flow<List<AuditEntity>>
 
     @Query("SELECT COUNT(*) FROM audit_events") abstract fun count(): Int
 

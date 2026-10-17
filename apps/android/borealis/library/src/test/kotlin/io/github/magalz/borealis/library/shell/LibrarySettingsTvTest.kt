@@ -3,11 +3,13 @@ package io.github.magalz.borealis.library.shell
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasText
@@ -16,6 +18,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -167,6 +172,23 @@ class LibrarySettingsTvTest {
 
         showsPrivacyPane()
         composeRule.onNode(railItem("Settings")).assertIsSelected()
+    }
+
+    @Test
+    fun `Back from the Audit trail puts the focus back on the Audit trail row`() {
+        launch()
+        openSettings()
+        openPrivacyGroup()
+        // A remote moves the focus to the row and opens it with OK.
+        composeRule.onNodeWithText("Audit trail").requestFocus()
+        composeRule.onNodeWithText("Audit trail").performKeyInput { pressKey(Key.DirectionCenter) }
+        composeRule.waitForIdle()
+        showsAudit()
+
+        back()
+
+        showsPrivacyPane()
+        composeRule.onNodeWithText("Audit trail").assertIsFocused()
     }
 
     @Test

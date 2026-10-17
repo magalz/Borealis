@@ -63,6 +63,22 @@ class HostCardSizeTest {
     }
 
     @Test
+    fun `the token is the height of the fullest card, which has no button to make room for`() {
+        composeRule.setContent { FullestCard(FormFactor.Tv, 260.dp) }
+        composeRule.waitForIdle()
+
+        val card = composeRule.onNodeWithTag(FULLEST).getUnclippedBoundsInRoot()
+        val runningApp =
+            composeRule
+                .onNodeWithText("Desktop running", useUnmergedTree = true)
+                .getUnclippedBoundsInRoot()
+
+        // The last line of the fullest card sits the card padding above its bottom edge.
+        assertThat(card.bottom - card.top).isEqualTo(BorealisTokens.Size.HostCard.HeightTv)
+        assertThat(card.bottom - runningApp.bottom).isEqualTo(18.dp)
+    }
+
+    @Test
     fun `on a TV the text of a card with less content stays at the top`() {
         showAll(FormFactor.Tv, 260.dp)
 
@@ -106,6 +122,26 @@ class HostCardSizeTest {
         val button =
             composeRule.onNodeWithText(action, useUnmergedTree = true).getUnclippedBoundsInRoot()
         return card.bottom - button.bottom
+    }
+
+    @Composable
+    private fun FullestCard(formFactor: FormFactor, width: Dp) {
+        BorealisTheme(formFactor) {
+            HostCard(
+                name = "Desk PC",
+                status = DotStatus.Online,
+                statusText = "Online",
+                detail = "LuminalShine 26.09.1 · 192.168.1.20",
+                tags = listOf("HEVC 10-bit", "HDR", "4:4:4"),
+                runningApp = "Desktop running",
+                onClick = {},
+                modifier = Modifier.width(width).testTag(FULLEST),
+            )
+        }
+    }
+
+    private companion object {
+        const val FULLEST = "fullest"
     }
 
     private enum class Variant {

@@ -96,6 +96,24 @@ class AccessibilityTest {
     }
 
     @Test
+    fun `the host click action says what OK does`() {
+        composeRule.setContent {
+            BorealisTheme(FormFactor.Tv) {
+                HostCard(
+                    name = "Living Room PC",
+                    status = DotStatus.Offline,
+                    statusText = "Offline",
+                    onClick = {},
+                    onClickLabel = "Wake",
+                    modifier = Modifier.testTag("card"),
+                )
+            }
+        }
+
+        assertThat(clickLabel(composeRule.onNodeWithTag("card"))).isEqualTo("Wake")
+    }
+
+    @Test
     fun `the continue options action is labelled`() {
         composeRule.setContent {
             BorealisTheme(FormFactor.Tv) {
@@ -137,6 +155,9 @@ class AccessibilityTest {
 
     private fun tile(): SemanticsNodeInteraction =
         composeRule.onNodeWithContentDescription("Desktop")
+
+    private fun clickLabel(node: SemanticsNodeInteraction): String? =
+        node.fetchSemanticsNode().config[SemanticsActions.OnClick].label
 
     private fun longClickLabel(node: SemanticsNodeInteraction): String? =
         node.fetchSemanticsNode().config[SemanticsActions.OnLongClick].label

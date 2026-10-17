@@ -71,6 +71,8 @@ fun HostCard(
     action: HostCardAction? = null,
     onOptions: (() -> Unit)? = null,
     optionsLabel: String? = null,
+    // Not used yet: the test commit adds the parameter so the label tests compile and fail.
+    onClickLabel: String? = null,
 ) {
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.large

@@ -708,7 +708,8 @@ For a system pad, turn it off. Say which kind each run used.
      to open its options. On the TV, also press X or Menu on a pad: the options
      open. Expected: each action runs as described, and the options open only
      from the hold, the long press, X or Menu. On the TV and a handheld, the cards
-     have equal height (176 dp, TODO(verify) against the token), so a row lines
+     have equal height (176 dp, `size.host-card.height-tv` in
+     `design/tokens.json`), so a row lines
      up. On the S22, the cards size to their content.
    - Aurora loader: open Hosts, Apps and Pairing while each one loads. Expected:
      the same aurora loader on all three.
@@ -1442,8 +1443,7 @@ the steps of [section 3.20](#320-sprint-7-checks).
   dialogs. At 17:08:06.588 the Ultimate 2 changed from `2dc8:6013` to
   `2dc8:310b`. At 17:08:06.673 the attach dialog (`TvUsbConfirmActivity`) came
   up. At 17:08:07.652, one second later, the USB driver service asked for
-  permission (`TvUsbPermissionActivity`). The round notes do not give the build
-  for this capture. TODO(verify).
+  permission (`TvUsbPermissionActivity`). The build was `fe6273c7`.
 - Fix: merge `0ad99565` (issue #16). On a TV the attach activity is not offered,
   because `UsbAttachGate` also requires a device that is not a leanback device.
   The USB permission dialog is held until the stream shows its first frame. A
@@ -1501,8 +1501,8 @@ of the PC screen.
 | F10 | Held OK in the open in-game menu, then released | TV, remote | pass | Build `fe6273c7`. Nothing ran on the release. A fresh press worked. |
 | F11 | Held OK on the Desktop tile in Library, Apps | TV, remote | pass | Build `60d5bfd5`. The app actions sheet stayed open, and nothing ran on the release. A fresh press picked an option. |
 | F12 | Quit combo (Start, Select, LB, RB) on the USB-driver pad | TV, Ultimate 2 | pass | Build `903e399d`, checked by the owner. The stream ended. Not repeated on `fe6273c7`. |
-| F13 | Quit combo on the system pad | TV, Pro 3 | not recorded | TODO(verify). |
-| F14 | Slider at 10 % and 200 %, deadzone, slow diagonal, joy.cpl checks | TV, pad | not recorded | TODO(verify). |
+| F13 | Quit combo on the system pad | TV, Pro 3 | not run in Sprint 7 | The system-pad path did not change; Sprint 6 (§11, C3) covered it. |
+| F14 | Movement just past the deadzone and a slow diagonal; the slider at 10 % and 200 % | TV, both pads | pass, slider extremes not run | The owner moved the stick lightly, diagonally and fully with both pads: "Tudo 10". The slider was left at its 50 % default; only the menu row's three speeds were tried. |
 | F15 | Dialog frames for Forget, Saved with Send to phone, About, Host details and App details | TV | not recorded | Only F4 and the S22 check of F5 are in the notes. |
 | F16 | Aurora loader, PIN and "Paired", connection error actions, TV keyboard row, phone host cards at their content size | TV, S22 | not recorded | Not in the round notes. |
 | F17 | Host card is one focus stop: OK opens the app list, holding OK opens only the options | TV | pass | Build `4726c010`, checked by the owner. The card has no Open button to hold. |

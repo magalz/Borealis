@@ -96,17 +96,6 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/AndroidManifest.xml"
-            line="124"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `enableOnBackInvokedCallback` is only used in API level 33 and higher (current min is 28)"
-        errorLine1="            android:enableOnBackInvokedCallback=&quot;true&quot;"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
             line="132"
             column="13"/>
     </issue>
@@ -560,17 +549,6 @@
             file="src/main/java/com/limelight/utils/TvChannelHelper.java"
             line="336"
             column="5"/>
-    </issue>
-
-    <issue
-        id="Typos"
-        message="Did you mean &quot;AV! &quot; instead of &quot;AV1 &quot;?"
-        errorLine1="    &lt;string name=&quot;videoformat_av1always&quot;>Prefer AV1 (Experimental)&lt;/string>"
-        errorLine2="                                                ~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="290"
-            column="49"/>
     </issue>
 
     <issue
@@ -1242,17 +1220,6 @@
             file="src/main/java/com/limelight/preferences/PreferenceConfiguration.java"
             line="196"
             column="13"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; `SDK_INT` is always >= 28"
-        errorLine1="            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/preferences/PreferenceConfiguration.java"
-            line="331"
-            column="17"/>
     </issue>
 
     <issue

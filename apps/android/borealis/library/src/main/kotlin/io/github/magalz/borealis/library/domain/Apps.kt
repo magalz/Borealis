@@ -50,9 +50,7 @@ fun interface StreamLauncher {
 
 /** Upstream work that the 12.2 host list did and the new launcher must keep doing. */
 interface LegacyBridge {
-    /**
-     * Once per launcher creation: the GL renderer probe.
-     */
+    /** Once per launcher creation: the GL renderer probe. */
     fun onLauncherCreated(activity: Activity)
 
     /** Every resume: the decoder crash notice. */

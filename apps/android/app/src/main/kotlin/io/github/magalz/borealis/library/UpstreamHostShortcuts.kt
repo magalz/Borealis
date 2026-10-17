@@ -17,6 +17,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Disables the launcher shortcuts and TV channel of a host that was removed from this device. */
 internal fun interface ShortcutCleanup {
@@ -34,7 +35,8 @@ internal class UpstreamHostShortcuts
 constructor(
     @ApplicationContext private val context: Context,
     @IoDispatcher private val io: CoroutineDispatcher,
-) : HostShortcuts, ShortcutCleanup {
+    private val boxArt: BoxArt,
+) : HostShortcuts, ShortcutCleanup, HiddenAppShortcuts {
     private val helper
         get() = ShortcutHelper(context)
 
@@ -65,22 +67,46 @@ constructor(
         }
     }
 
-    override fun pinApp(
+    override suspend fun pinApp(
         hostId: String,
         hostName: String,
         appId: Int,
         appName: String,
         hdrSupported: Boolean,
-    ): Boolean =
-        canPinApps &&
-            helper.createPinnedGameShortcut(
-                computer(hostId, hostName),
-                NvApp(appName, appId, hdrSupported),
-                null,
-            )
+    ): Boolean {
+        if (!canPinApps) return false
+        // The art is fetched off the main thread, and so is the drawing; without art the icon is
+        // the generic one.
+        val icon =
+            boxArt.bitmap(hostId, appId)?.let { art ->
+                withContext(io) { AdaptiveShortcutIcon.build(art) }
+            }
+        return helper.createPinnedGameShortcut(
+            computer(hostId, hostName),
+            NvApp(appName, appId, hdrSupported),
+            icon,
+        )
+    }
+
+    // Both run off the main thread: the shortcut manager and the TV provider are binder calls.
+    override fun appHidden(hostId: String, appId: Int) {
+        // This also deletes the TV program of the app.
+        helper.disableAppShortcut(
+            computer(hostId, ""),
+            app(appId),
+            context.getString(R.string.scut_hidden_app),
+        )
+    }
+
+    override fun appShown(hostId: String, appId: Int) {
+        helper.enableAppShortcut(computer(hostId, ""), app(appId))
+    }
 
     override fun hostForgotten(details: ComputerDetails) =
         helper.disableComputerShortcut(details, context.getString(R.string.scut_deleted_pc))
+
+    // The shortcut id and the TV program are found by host and app id; the name is not needed.
+    private fun app(appId: Int) = NvApp("", appId, false)
 
     private fun computer(hostId: String, hostName: String) =
         ComputerDetails().also {

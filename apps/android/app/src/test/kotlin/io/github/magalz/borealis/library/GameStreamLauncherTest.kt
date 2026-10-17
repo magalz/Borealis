@@ -17,6 +17,7 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class GameStreamLauncherTest {
     private val binder = FakeCmsBinder()
+    private val boxArt = FakeBoxArt()
     private val activity: Activity = Robolectric.buildActivity(Activity::class.java).get()
 
     /** A launcher whose connection is bound and has seen every host in [hosts]. */
@@ -25,7 +26,7 @@ class GameStreamLauncherTest {
         val connection = ComputerManagerConnection(FakeCmsConnector(binder), io)
         backgroundScope.launch(io) { connection.hostUpdates().collect {} }
         hosts.forEach { binder.emit(it) }
-        return GameStreamLauncher(connection)
+        return GameStreamLauncher(connection, boxArt)
     }
 
     @Test
@@ -93,6 +94,24 @@ class GameStreamLauncherTest {
     }
 
     @Test
+    fun `launching an app starts a prefetch of its box art for the TV channel`() = runTest {
+        val launcher = launcher(details(uuid = "a"))
+
+        launcher.start(activity, StreamRequest("a", appId = 3, appName = "Game", hdrSupported = false))
+
+        assertThat(boxArt.prefetched).containsExactly("a" to 3)
+    }
+
+    @Test
+    fun `a stream that does not start prefetches nothing`() = runTest {
+        val launcher = launcher()
+
+        launcher.start(activity, StreamRequest("nobody", appId = 3, appName = "Game", hdrSupported = false))
+
+        assertThat(boxArt.prefetched).isEmpty()
+    }
+
+    @Test
     fun `an unknown host does not start a stream`() = runTest {
         val launcher = launcher()
 
@@ -109,7 +128,7 @@ class GameStreamLauncherTest {
             ComputerManagerConnection(FakeCmsConnector(binder), UnconfinedTestDispatcher(testScheduler))
 
         val started =
-            GameStreamLauncher(connection)
+            GameStreamLauncher(connection, boxArt)
                 .start(activity, StreamRequest("a", appId = 3, appName = "Game", hdrSupported = false))
 
         assertThat(started).isFalse()

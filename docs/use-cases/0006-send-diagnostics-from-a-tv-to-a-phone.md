@@ -123,8 +123,8 @@ capability.
   (`SendToPhoneDialog`).
 - Development: [device validation](../development/device-validation.md)
   (export diagnostics on a TV).
-- Existing tests (Sprint 3): `OneShotFileServerTest`, `TransferQrTest`,
-  `LocalNetworkTest` and `ExportDiagnosticsPreferenceTest`.
+- Existing tests: `OneShotFileServerTest`, `TransferQrTest`, `LocalNetworkTest`,
+  `DiagnosticsExporterTest`, `TransferSessionTest` and `SendToPhoneDialogTest`.
 - The link is plain `http://` on the local network, protected by the
   one-time token (ADR 0051). The transfer writes no audit entry: it moves
   an already redacted bundle that the user exported on purpose.

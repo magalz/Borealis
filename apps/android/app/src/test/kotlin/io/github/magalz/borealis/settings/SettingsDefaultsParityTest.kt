@@ -5,7 +5,6 @@ import android.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.preferences.PreferenceConfiguration
-import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot
 import org.junit.Before
@@ -18,13 +17,13 @@ import org.robolectric.annotation.Config
  * The defaults of the Kotlin catalog (ADR 0055) equal what the inherited
  * `PreferenceConfiguration.readPreferences` reads from empty SharedPreferences.
  *
- * Three defaults are computed, not stored, and are tested on their own:
+ * Two defaults are computed, not stored, and are tested on their own:
  * - the bitrate: absent means automatic, so Java reads [PreferenceConfiguration.getDefaultBitrate];
- * - the motion sensors: Java writes off on Android 12 exactly, and the catalog default stays on;
- * - the performance overlay: the new [Settings.PERF_OVERLAY] has no Java reader, and the old
- *   switch that Java reads is [Settings.PERF_OVERLAY_LEGACY].
+ * - the motion sensors: Java writes off on Android 12 exactly, and the catalog default stays on.
  *
- * The language list and the small icon mode are dropped from the catalog and are not compared.
+ * Java does not read the overlay settings ([Settings.PERF_OVERLAY], [Settings.PERF_OVERLAY_LEGACY])
+ * or the two logging switches, so they are not compared. The language list and the small icon mode
+ * are dropped from the catalog.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [ShadowMoonBridge::class])
@@ -38,69 +37,6 @@ class SettingsDefaultsParityTest {
     }
 
     private fun read(): PreferenceConfiguration = PreferenceConfiguration.readPreferences(context)
-
-    /** The Java field that holds each catalog setting, as a catalog-typed value. */
-    private fun javaValues(c: PreferenceConfiguration): Map<Setting<*>, Any> =
-        mapOf(
-            Settings.RESOLUTION to "${c.width}x${c.height}",
-            Settings.FRAME_RATE to c.fps.toString(),
-            Settings.FRAME_PACING to
-                when (c.framePacing) {
-                    PreferenceConfiguration.FRAME_PACING_MIN_LATENCY -> "latency"
-                    PreferenceConfiguration.FRAME_PACING_BALANCED -> "balanced"
-                    PreferenceConfiguration.FRAME_PACING_CAP_FPS -> "cap-fps"
-                    else -> "smoothness"
-                },
-            Settings.STRETCH_VIDEO to c.stretchVideo,
-            Settings.AUDIO_CONFIG to
-                when (c.audioConfiguration.channelCount) {
-                    STEREO_CHANNELS -> "2"
-                    SURROUND_51_CHANNELS -> "51"
-                    else -> "71"
-                },
-            Settings.AUDIO_FX to c.enableAudioFx,
-            Settings.DEADZONE to c.deadzonePercentage,
-            Settings.MULTI_CONTROLLER to c.multiController,
-            Settings.USB_DRIVER to c.usbDriver,
-            Settings.USB_BIND_ALL to c.bindAllUsb,
-            Settings.MOUSE_EMULATION to c.mouseEmulation,
-            Settings.ANALOG_SCROLLING to
-                when (c.analogStickForScrolling) {
-                    PreferenceConfiguration.AnalogStickForScrolling.RIGHT -> "right"
-                    PreferenceConfiguration.AnalogStickForScrolling.LEFT -> "left"
-                    else -> "none"
-                },
-            Settings.VIBRATE_FALLBACK to c.vibrateFallbackToDevice,
-            Settings.VIBRATE_FALLBACK_STRENGTH to c.vibrateFallbackToDeviceStrength,
-            Settings.FLIP_FACE_BUTTONS to c.flipFaceButtons,
-            Settings.GAMEPAD_TOUCHPAD_AS_MOUSE to c.gamepadTouchpadAsMouse,
-            Settings.GAMEPAD_MOTION_SENSORS to c.gamepadMotionSensors,
-            Settings.GAMEPAD_MOTION_FALLBACK to c.gamepadMotionSensorsFallbackToDevice,
-            Settings.TOUCHSCREEN_TRACKPAD to c.touchscreenTrackpad,
-            Settings.MOUSE_NAV_BUTTONS to c.mouseNavButtons,
-            Settings.ABSOLUTE_MOUSE_MODE to c.absoluteMouseMode,
-            Settings.SHOW_ONSCREEN_CONTROLS to c.onscreenController,
-            Settings.VIBRATE_OSC to c.vibrateOsc,
-            Settings.ONLY_L3_R3 to c.onlyL3R3,
-            Settings.SHOW_GUIDE_BUTTON to c.showGuideButton,
-            Settings.OSC_OPACITY to c.oscOpacity,
-            Settings.ENABLE_SOPS to c.enableSops,
-            Settings.HOST_AUDIO to c.playHostAudio,
-            Settings.ENABLE_PIP to c.enablePip,
-            Settings.UNLOCK_FPS to c.unlockFps,
-            Settings.REDUCE_REFRESH_RATE to c.reduceRefreshRate,
-            Settings.DISABLE_WARNINGS to c.disableWarnings,
-            Settings.VIDEO_FORMAT to
-                when (c.videoFormat) {
-                    PreferenceConfiguration.FormatOption.AUTO -> "auto"
-                    PreferenceConfiguration.FormatOption.FORCE_AV1 -> "forceav1"
-                    PreferenceConfiguration.FormatOption.FORCE_HEVC -> "forceh265"
-                    else -> "neverh265"
-                },
-            Settings.ENABLE_HDR to c.enableHdr,
-            Settings.FULL_RANGE to c.fullRange,
-            Settings.POST_STREAM_TOAST to c.enableLatencyToast,
-        )
 
     @Test
     fun `every default of the catalog is what Java reads from empty preferences`() {
@@ -182,8 +118,6 @@ class SettingsDefaultsParityTest {
     }
 
     private companion object {
-        const val STEREO_CHANNELS = 2
-        const val SURROUND_51_CHANNELS = 6
         const val ANDROID_12 = 31
         const val ANDROID_13 = 33
 

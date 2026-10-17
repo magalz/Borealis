@@ -10,8 +10,10 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.longClick
@@ -44,7 +46,6 @@ class HostCardTest {
     @get:Rule val composeRule = createComposeRule()
     private var opened = 0
     private var optionsRequested = 0
-    private var acted = 0
 
     @Test
     fun `the card shows the name, status, detail and running app`() {
@@ -116,24 +117,24 @@ class HostCardTest {
         composeRule.onNodeWithTag(CARD).performClick()
 
         assertThat(opened).isEqualTo(1)
-        assertThat(acted).isEqualTo(0)
     }
 
     @Test
-    fun `the inline action runs the action and does not open the host`() {
-        composeRule.setContent { Specimen(action = HostCardAction("Wake") { acted++ }) }
+    fun `the card has no button of its own`() {
+        composeRule.setContent { Specimen(FormFactor.Tv) }
 
-        composeRule.onNodeWithText("Wake", useUnmergedTree = true).performClick()
-
-        assertThat(acted).isEqualTo(1)
-        assertThat(opened).isEqualTo(0)
+        composeRule.onAllNodes(hasClickAction(), useUnmergedTree = true).assertCountEquals(1)
     }
 
     @Test
-    fun `a card without an action has no button`() {
-        composeRule.setContent { Specimen(action = null) }
+    fun `OK on a focused card runs its click`() {
+        composeRule.setContentInKeyboardMode { Specimen(FormFactor.Tv) }
+        composeRule.onNodeWithTag(CARD).requestFocus()
 
-        composeRule.onNodeWithText("Wake", useUnmergedTree = true).assertDoesNotExist()
+        composeRule.onNodeWithTag(CARD).performKeyInput { pressKey(Key.DirectionCenter) }
+
+        assertThat(opened).isEqualTo(1)
+        assertThat(optionsRequested).isEqualTo(0)
     }
 
     @Test
@@ -172,7 +173,6 @@ class HostCardTest {
     private fun Specimen(
         formFactor: FormFactor = FormFactor.Phone,
         runningApp: String? = null,
-        action: HostCardAction? = null,
         tags: List<String> = emptyList(),
         cardWidth: Dp? = null,
     ) {
@@ -186,7 +186,6 @@ class HostCardTest {
                     detail = "LuminalShine 26.09.1 · 192.168.1.20",
                     tags = tags,
                     runningApp = runningApp,
-                    action = action,
                     onClick = { opened++ },
                     onOptions = { optionsRequested++ },
                     modifier =

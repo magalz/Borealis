@@ -55,21 +55,21 @@ class HostsRouteTest {
     }
 
     @Test
-    fun `Open opens the apps of the host`() {
+    fun `a tap on a paired host opens its apps`() {
         repository.emit(aHost(id = "desk", name = "Desk PC"))
         show()
 
-        composeRule.onNodeWithText("Open", useUnmergedTree = true).performClick()
+        composeRule.onNodeWithTag("host:desk").performClick()
 
         assertThat(opened).containsExactly("desk")
     }
 
     @Test
-    fun `Pair opens the pairing of the host`() {
+    fun `a tap on a host that is not paired opens its pairing`() {
         repository.emit(aHost(id = "studio", name = "Studio", paired = false))
         show()
 
-        composeRule.onNodeWithText("Pair", useUnmergedTree = true).performClick()
+        composeRule.onNodeWithTag("host:studio").performClick()
 
         assertThat(paired).containsExactly("studio" to "Studio")
     }
@@ -115,11 +115,11 @@ class HostsRouteTest {
     }
 
     @Test
-    fun `Wake sends the packet and says so in a snackbar`() {
+    fun `a tap on an offline host sends the packet and says so in a snackbar`() {
         repository.emit(offline)
         show()
 
-        composeRule.onNodeWithText("Wake", useUnmergedTree = true).performClick()
+        composeRule.onNodeWithTag("host:living").performClick()
         composeRule.waitForIdle()
 
         assertThat(repository.wokenHostIds).containsExactly("living")
@@ -134,7 +134,7 @@ class HostsRouteTest {
         repository.emit(offline)
         show()
 
-        composeRule.onNodeWithText("Wake", useUnmergedTree = true).performClick()
+        composeRule.onNodeWithTag("host:living").performClick()
         composeRule.waitForIdle()
 
         composeRule.onNodeWithText("Could not send the wake-up.").assertIsDisplayed()
@@ -172,7 +172,7 @@ class HostsRouteTest {
         repository.emit(offline)
         show()
 
-        composeRule.onNodeWithText("Wake", useUnmergedTree = true).performClick()
+        composeRule.onNodeWithTag("host:living").performClick()
         composeRule.waitForIdle()
 
         composeRule.onNodeWithText("The PC is already on.").assertIsDisplayed()
@@ -184,7 +184,7 @@ class HostsRouteTest {
         repository.emit(offline)
         show()
 
-        composeRule.onNodeWithText("Wake", useUnmergedTree = true).performClick()
+        composeRule.onNodeWithTag("host:living").performClick()
         composeRule.waitForIdle()
 
         composeRule

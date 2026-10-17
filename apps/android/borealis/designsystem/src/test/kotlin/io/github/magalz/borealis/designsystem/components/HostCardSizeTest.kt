@@ -62,6 +62,35 @@ class HostCardSizeTest {
         assertThat(online).isLessThan(BorealisTokens.Size.HostCard.HeightTv)
     }
 
+    @Test fun `the fullest card fits within the token`() = assertFullestCardFits()
+
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-land-television-tvdpi")
+    fun `the fullest card fits within the token at tvdpi`() = assertFullestCardFits()
+
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-land-television-hdpi")
+    fun `the fullest card fits within the token at hdpi`() = assertFullestCardFits()
+
+    private fun assertFullestCardFits() {
+        composeRule.setContent { FullestCard(FormFactor.Tv, 260.dp) }
+        composeRule.waitForIdle()
+
+        val card = composeRule.onNodeWithTag(FULLEST).getUnclippedBoundsInRoot()
+        val runningApp =
+            composeRule
+                .onNodeWithText("Desktop running", useUnmergedTree = true)
+                .getUnclippedBoundsInRoot()
+
+        // The card is the token high (to the pixel, under 1dp at these densities) and the text of
+        // its last line sits at least the card padding and the 2dp padding of its chip above the
+        // bottom edge, so the rounding of each line does not make it taller than its neighbours.
+        assertThat((card.bottom - card.top).value)
+            .isWithin(1f)
+            .of(BorealisTokens.Size.HostCard.HeightTv.value)
+        assertThat(card.bottom - runningApp.bottom).isAtLeast(20.dp)
+    }
+
     @Test
     fun `on a TV the text of a card with less content stays at the top`() {
         showAll(FormFactor.Tv, 260.dp)
@@ -75,22 +104,6 @@ class HostCardSizeTest {
         assertThat(name.top - card.top).isEqualTo(18.dp)
     }
 
-    @Test
-    fun `the tallest variant has room for its action above the card padding`() {
-        showAll(FormFactor.Tv, 260.dp)
-
-        assertThat(actionGap(Variant.Online, "Open")).isAtLeast(18.dp)
-    }
-
-    @Test
-    fun `on a TV the action sits at the bottom edge in every variant that has one`() {
-        showAll(FormFactor.Tv, 260.dp)
-
-        val online = actionGap(Variant.Online, "Open")
-        assertThat(actionGap(Variant.Offline, "Wake")).isEqualTo(online)
-        assertThat(actionGap(Variant.Unpaired, "Pair")).isEqualTo(online)
-    }
-
     private fun showAll(formFactor: FormFactor, width: Dp) {
         composeRule.setContent { Specimen(formFactor, width) }
         composeRule.waitForIdle()
@@ -101,11 +114,24 @@ class HostCardSizeTest {
         return card.bottom - card.top
     }
 
-    private fun actionGap(variant: Variant, action: String): Dp {
-        val card = composeRule.onNodeWithTag(variant.name).getUnclippedBoundsInRoot()
-        val button =
-            composeRule.onNodeWithText(action, useUnmergedTree = true).getUnclippedBoundsInRoot()
-        return card.bottom - button.bottom
+    @Composable
+    private fun FullestCard(formFactor: FormFactor, width: Dp) {
+        BorealisTheme(formFactor) {
+            HostCard(
+                name = "Desk PC",
+                status = DotStatus.Online,
+                statusText = "Online",
+                detail = "LuminalShine 26.09.1 · 192.168.1.20",
+                tags = listOf("HEVC 10-bit", "HDR", "4:4:4"),
+                runningApp = "Desktop running",
+                onClick = {},
+                modifier = Modifier.width(width).testTag(FULLEST),
+            )
+        }
+    }
+
+    private companion object {
+        const val FULLEST = "fullest"
     }
 
     private enum class Variant {
@@ -129,7 +155,6 @@ class HostCardSizeTest {
                     detail = "LuminalShine 26.09.1 · 192.168.1.20",
                     tags = listOf("HEVC 10-bit", "HDR", "4:4:4"),
                     runningApp = "Desktop running",
-                    action = HostCardAction("Open") {},
                     onClick = {},
                     modifier = Modifier.testTag(Variant.Online.name),
                 )
@@ -138,7 +163,6 @@ class HostCardSizeTest {
                     status = DotStatus.Offline,
                     statusText = "Offline",
                     detail = "Last seen 2 days ago · 192.168.1.31",
-                    action = HostCardAction("Wake") {},
                     onClick = {},
                     modifier = Modifier.testTag(Variant.Offline.name),
                 )
@@ -147,7 +171,6 @@ class HostCardSizeTest {
                     status = DotStatus.Attention,
                     statusText = "Not paired",
                     detail = "LuminalShine 26.09.1 · found on this network",
-                    action = HostCardAction("Pair") {},
                     onClick = {},
                     modifier = Modifier.testTag(Variant.Unpaired.name),
                 )

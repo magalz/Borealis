@@ -2,6 +2,7 @@ package io.github.magalz.borealis.settings.privacy
 
 import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,8 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -156,11 +156,21 @@ internal fun rememberShareStarter(): (Intent) -> Unit {
     return remember(context) { { chooser -> context.startShareSheet(chooser) } }
 }
 
-/** Starts [chooser]; a context that is not an activity needs a task of its own. */
+/**
+ * Starts [chooser] from the activity behind this context, if there is one; a context with no
+ * activity needs a task of its own.
+ */
 internal fun Context.startShareSheet(chooser: Intent) {
-    if (this !is Activity) chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    if (findActivity() == null) chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     startActivity(chooser)
 }
+
+private tailrec fun Context.findActivity(): Activity? =
+    when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.findActivity()
+        else -> null
+    }
 
 /**
  * The rows of the pane, its snackbar and its dialogs. Stateless: the dialog to show is in [state].
@@ -190,7 +200,7 @@ internal fun PrivacyContent(
                 onCheckedChange = actions.onMaskAddressesChange,
                 summary = stringResource(R.string.borealis_privacy_mask_summary),
             )
-            ExportRow(state.exporting, phone, actions.onExport)
+            ExportRow(state.exporting, LocalFormFactor.current == FormFactor.Tv, actions.onExport)
             SettingsValueRow(
                 title = stringResource(R.string.borealis_privacy_audit_title),
                 value = null,
@@ -221,10 +231,14 @@ internal fun PrivacyContent(
     PrivacyDialogs(state.dialog, actions)
 }
 
-/** The export row, and under it a progress bar while the bundle is being built. */
+/**
+ * The export row. While the bundle is built its summary says so and a progress bar shows under it.
+ * The row stays enabled so that it keeps the focus of a D-pad (a disabled row is a different
+ * element); the ViewModel ignores a second request. The bar is hidden from a screen reader, which
+ * reads the summary once.
+ */
 @Composable
-private fun ExportRow(exporting: Boolean, phone: Boolean, onExport: () -> Unit) {
-    val working = stringResource(R.string.borealis_privacy_export_working)
+private fun ExportRow(exporting: Boolean, television: Boolean, onExport: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(ROW_GAP)) {
         SettingsValueRow(
             title = stringResource(R.string.borealis_privacy_export_title),
@@ -232,17 +246,16 @@ private fun ExportRow(exporting: Boolean, phone: Boolean, onExport: () -> Unit) 
             onClick = onExport,
             summary =
                 stringResource(
-                    if (phone) R.string.borealis_privacy_export_summary_phone
-                    else R.string.borealis_privacy_export_summary_tv
+                    when {
+                        exporting -> R.string.borealis_privacy_export_working
+                        television -> R.string.borealis_privacy_export_summary_tv
+                        else -> R.string.borealis_privacy_export_summary_phone
+                    }
                 ),
-            enabled = !exporting,
-            disabledNote = working,
         )
         if (exporting) {
             LinearProgressIndicator(
-                Modifier.fillMaxWidth().padding(horizontal = ROW_INSET).semantics {
-                    contentDescription = working
-                },
+                Modifier.fillMaxWidth().padding(horizontal = ROW_INSET).clearAndSetSemantics {},
                 color = LocalBorealisColors.current.accent,
             )
         }

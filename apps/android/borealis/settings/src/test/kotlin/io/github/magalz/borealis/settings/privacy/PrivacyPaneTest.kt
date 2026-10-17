@@ -142,7 +142,7 @@ class PrivacyPaneTest {
         }
         composeRule.waitForIdle()
 
-        composeRule.onNodeWithContentDescription("Creating the diagnostic bundle…").assertExists()
+        composeRule.onNodeWithText("Creating the diagnostic bundle…").assertExists()
         composeRule.onNodeWithText("Export diagnostic bundle").assertIsFocused()
     }
 

@@ -64,15 +64,15 @@ private fun EraseDialog(actions: PrivacyActions) {
 }
 
 /**
- * Where the bundle was saved. A TV, or a handheld, also offers Send to phone, which leaves this
- * dialog open under the caller's own; a phone gets here only when no app can receive the share, so
- * it has nothing to offer but Close. Close has the focus.
+ * Where the bundle was saved. A TV also offers Send to phone, which leaves this dialog open under
+ * the caller's own; a phone or handheld gets here only when no app can receive the share, so it has
+ * nothing to offer but Close. Close has the focus.
  */
 @Composable
 private fun SavedDialog(dialog: PrivacyDialog.Saved, actions: PrivacyActions) {
     val size = Formatter.formatShortFileSize(LocalContext.current, dialog.sizeBytes)
     val sendToPhone =
-        if (LocalFormFactor.current == FormFactor.Phone) {
+        if (LocalFormFactor.current != FormFactor.Tv) {
             null
         } else {
             DialogButton(

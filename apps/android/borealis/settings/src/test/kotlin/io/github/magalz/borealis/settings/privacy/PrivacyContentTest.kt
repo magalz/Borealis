@@ -7,14 +7,12 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
@@ -155,11 +153,11 @@ class PrivacyContentTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `a running export shows progress and cannot be started again`() {
+    fun `a running export shows progress in the row and keeps it enabled`() {
         show(PrivacyUiState(exporting = true))
 
         composeRule.onNodeWithText("Creating the diagnostic bundle…").assertExists()
-        composeRule.onNodeWithText("Export diagnostic bundle").assertIsNotEnabled()
+        composeRule.onNodeWithText("Export diagnostic bundle").assertIsEnabled()
     }
 
     @Test
@@ -180,9 +178,7 @@ class PrivacyContentTest {
     fun `no progress shows while no export runs`() {
         show(PrivacyUiState())
 
-        composeRule
-            .onNodeWithContentDescription("Creating the diagnostic bundle…")
-            .assertDoesNotExist()
+        composeRule.onNodeWithText("Creating the diagnostic bundle…").assertDoesNotExist()
         composeRule.onNodeWithText("Export diagnostic bundle").assertIsEnabled()
     }
 

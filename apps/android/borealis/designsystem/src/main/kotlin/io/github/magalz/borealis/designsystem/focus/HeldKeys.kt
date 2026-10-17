@@ -15,7 +15,8 @@ import androidx.compose.ui.platform.InspectorInfo
  * after the surface opened works as usual, and so does a press whose first event the element saw.
  * Put it on the root of a sheet or a dialog.
  *
- * Events without a down time (synthetic ones) and the volume and media keys are never consumed.
+ * Events without a down time (synthetic ones) and the volume, media, channel and headset keys are
+ * never consumed.
  */
 fun Modifier.ignoreKeysHeldOnOpen(): Modifier = this then IgnoreKeysHeldOnOpenElement
 
@@ -60,12 +61,16 @@ private class IgnoreKeysHeldOnOpenNode : Modifier.Node(), KeyInputModifierNode {
     override fun onKeyEvent(event: KeyEvent): Boolean = false
 }
 
-/** The volume and media keys stay the system's, whatever press they belong to. */
+/** The volume, media, channel and headset keys stay the system's, whatever press they belong to. */
 private val SYSTEM_KEYS =
     setOf(
         AndroidKeyEvent.KEYCODE_VOLUME_UP,
         AndroidKeyEvent.KEYCODE_VOLUME_DOWN,
         AndroidKeyEvent.KEYCODE_VOLUME_MUTE,
+        AndroidKeyEvent.KEYCODE_MUTE,
+        AndroidKeyEvent.KEYCODE_CHANNEL_UP,
+        AndroidKeyEvent.KEYCODE_CHANNEL_DOWN,
+        AndroidKeyEvent.KEYCODE_HEADSETHOOK,
         AndroidKeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
         AndroidKeyEvent.KEYCODE_MEDIA_STOP,
         AndroidKeyEvent.KEYCODE_MEDIA_NEXT,

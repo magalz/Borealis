@@ -52,10 +52,11 @@ private val CHIP_PADDING_VERTICAL = 2.dp
  * phone) and back. On a phone the action sits at the end of the row; on a TV or handheld it sits
  * under the text, where a card in a grid has the room.
  *
- * A card is at least as high as its height token, which is the height of the fullest card (online,
- * with its tags, the app it runs and Open), so the cards of a grid are the same size whatever they
- * show. A card with less keeps its text at the top and its action at the bottom edge. A card whose
- * text needs more room (a large font) grows rather than cutting it.
+ * On a TV or handheld a card is at least as high as its height token, which is the height of the
+ * fullest card (online, with its tags, the app it runs and Open), so the cards of a grid are the
+ * same size whatever they show. A card with less keeps its text at the top and its action at the
+ * bottom edge. A card whose text needs more room (a large font) grows rather than cutting it. On a
+ * phone a card is as high as its content.
  */
 @Composable
 fun HostCard(
@@ -75,9 +76,9 @@ fun HostCard(
     val shape = MaterialTheme.shapes.large
     val inline = LocalFormFactor.current == FormFactor.Phone
     val padding = LocalBorealisSpacing.current.cardPadding
-    val height =
-        if (inline) BorealisTokens.Size.HostCard.HeightPhone
-        else BorealisTokens.Size.HostCard.HeightTv
+    // A phone has a single column of cards, so each is as high as its content; a grid on a TV or
+    // handheld has them all the same height.
+    val height = if (inline) 0.dp else BorealisTokens.Size.HostCard.HeightTv
     val cardFocus = remember { FocusRequester() }
     val actionFocus = remember { FocusRequester() }
     Box(
@@ -116,7 +117,7 @@ fun HostCard(
             }
         HostCardContent(
             inline = inline,
-            modifier = Modifier.heightIn(min = height - padding * 2),
+            modifier = Modifier.heightIn(min = (height - padding * 2).coerceAtLeast(0.dp)),
             action =
                 action?.let { { modifier -> HostActionButton(it, actionModifier.then(modifier)) } },
         ) { infoModifier ->
@@ -126,9 +127,9 @@ fun HostCard(
 }
 
 /**
- * The text and the [action] of a card. On a phone the text is at the top and the action is centred
- * at the end of the row; else the text is at the top and the action sits at the bottom edge, so it
- * is in the same place on every card. [info] and [action] get the modifier that places them.
+ * The text and the [action] of a card. On a phone both are centred in the row, with the action at
+ * its end; else the text is at the top and the action sits at the bottom edge, so it is in the same
+ * place on every card. [info] and [action] get the modifier that places them.
  */
 @Composable
 private fun HostCardContent(
@@ -138,9 +139,13 @@ private fun HostCardContent(
     info: @Composable (Modifier) -> Unit,
 ) {
     if (inline) {
-        Row(modifier, horizontalArrangement = Arrangement.spacedBy(CONTENT_GAP)) {
+        Row(
+            modifier,
+            horizontalArrangement = Arrangement.spacedBy(CONTENT_GAP),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             info(Modifier.weight(1f))
-            action?.invoke(Modifier.align(Alignment.CenterVertically))
+            action?.invoke(Modifier)
         }
     } else {
         Column(modifier, verticalArrangement = Arrangement.SpaceBetween) {

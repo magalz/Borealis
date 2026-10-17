@@ -2,7 +2,10 @@ package io.github.magalz.borealis.input
 
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket.BACK_FLAG
+import com.limelight.nvstream.input.ControllerPacket.LB_FLAG
 import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
+import com.limelight.nvstream.input.ControllerPacket.RB_FLAG
+import io.github.magalz.borealis.stream.input.StartHold
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -53,6 +56,15 @@ class UsbStartHoldTest {
         pad.report(PLAY_FLAG or BACK_FLAG)
         rig.advanceBy(1_500)
         pad.report(BACK_FLAG)
+        pad.report(0)
+
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
+    }
+
+    @Test
+    fun `the Start of the quit combo does not turn the mouse on`() {
+        pad.report(PLAY_FLAG or BACK_FLAG or LB_FLAG or RB_FLAG)
+        rig.advanceBy(StartHold.HOLD_MS + 500)
         pad.report(0)
 
         assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()

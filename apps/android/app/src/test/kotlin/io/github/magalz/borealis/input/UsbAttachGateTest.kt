@@ -10,6 +10,7 @@ import android.os.Looper
 import android.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import java.lang.ref.Reference
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -80,6 +81,7 @@ class UsbAttachGateTest {
     @Test
     fun `toggling the setting flips the component without a restart`() {
         setUsbDriver(true)
+        // SharedPreferences holds its listeners weakly: the gate must stay referenced until the end.
         val gate = UsbAttachGate.start(context)
 
         setUsbDriver(false)
@@ -87,7 +89,7 @@ class UsbAttachGateTest {
 
         setUsbDriver(true)
         assertThat(attachHandlers()).containsExactly(UsbAttachActivity::class.java.name)
-        assertThat(gate).isNotNull()
+        Reference.reachabilityFence(gate)
     }
 
     @Test
@@ -136,12 +138,13 @@ class UsbAttachGateTest {
     fun `on a TV toggling the setting leaves the activity out`() {
         asTelevision()
         setUsbDriver(false)
+        // SharedPreferences holds its listeners weakly: the gate must stay referenced until the end.
         val gate = UsbAttachGate.start(context)
 
         setUsbDriver(true)
 
         assertThat(attachHandlers()).isEmpty()
-        assertThat(gate).isNotNull()
+        Reference.reachabilityFence(gate)
     }
 
     private companion object {

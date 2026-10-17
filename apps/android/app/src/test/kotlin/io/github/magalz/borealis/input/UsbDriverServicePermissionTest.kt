@@ -49,6 +49,7 @@ class UsbDriverServicePermissionTest {
         binder.setStateListener(stateListener)
     }
 
+    // The reflection below relies on the hidden constructors of the pinned sdk=35 (Robolectric 4.17).
     // An Xbox 360 wired pad: vendor-specific interface 255/93/1 of a vendor the driver knows.
     private fun pad(name: String): UsbDevice {
         val usbInterface =

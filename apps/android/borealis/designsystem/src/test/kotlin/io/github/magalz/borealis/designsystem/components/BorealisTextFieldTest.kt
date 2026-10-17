@@ -1,5 +1,7 @@
 package io.github.magalz.borealis.designsystem.components
 
+import android.content.Context
+import android.view.inputmethod.InputMethodManager
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,16 +26,22 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-/** The D-pad behaviour of the text field, and what it does when the caller changes the text. */
+/**
+ * The D-pad behaviour of the text field, when it opens the keyboard, and what it does when the
+ * caller changes the text.
+ */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class BorealisTextFieldTest {
@@ -41,7 +49,7 @@ class BorealisTextFieldTest {
 
     private var value by mutableStateOf("192.168.1.20")
 
-    private fun show(leaveWithDpad: Boolean = true) {
+    private fun show(leaveWithDpad: Boolean = true, showKeyboardOnFocus: Boolean = true) {
         composeRule.setContentInKeyboardMode {
             BorealisTheme(FormFactor.Tv) {
                 Row {
@@ -53,6 +61,7 @@ class BorealisTextFieldTest {
                             onValueChange = { value = it },
                             label = "Address",
                             leaveWithDpad = leaveWithDpad,
+                            showKeyboardOnFocus = showKeyboardOnFocus,
                         )
                         Box(Modifier.size(40.dp).testTag(BELOW).focusable())
                     }
@@ -60,6 +69,14 @@ class BorealisTextFieldTest {
             }
         }
         composeRule.onNode(hasSetTextAction()).requestFocus()
+        composeRule.waitForIdle()
+    }
+
+    /** Whether the system keyboard is up, as the framework's input method manager has it. */
+    private fun keyboardIsShown(): Boolean {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val manager = context.getSystemService(InputMethodManager::class.java)
+        return shadowOf(manager).isSoftInputVisible
     }
 
     private fun press(key: Key) =
@@ -136,6 +153,70 @@ class BorealisTextFieldTest {
         composeRule.onNode(hasSetTextAction()).performTextInput("2")
 
         composeRule.onNode(hasSetTextAction()).assert(hasText("host.local2"))
+    }
+
+    @Test
+    fun `by default focus on the field opens the keyboard`() {
+        show()
+
+        assertThat(keyboardIsShown()).isTrue()
+    }
+
+    @Test
+    fun `without showKeyboardOnFocus focus on the field does not open the keyboard`() {
+        show(showKeyboardOnFocus = false)
+
+        assertThat(keyboardIsShown()).isFalse()
+    }
+
+    @Test
+    fun `without showKeyboardOnFocus coming back to the field does not open the keyboard`() {
+        show(showKeyboardOnFocus = false)
+        press(Key.DirectionDown)
+        composeRule.onNodeWithTag(BELOW).assertIsFocused()
+
+        composeRule.onNode(hasSetTextAction()).requestFocus()
+        composeRule.waitForIdle()
+
+        composeRule.onNode(hasSetTextAction()).assertIsFocused()
+        assertThat(keyboardIsShown()).isFalse()
+    }
+
+    @Test
+    fun `without showKeyboardOnFocus DPAD_CENTER opens the keyboard`() {
+        show(showKeyboardOnFocus = false)
+
+        press(Key.DirectionCenter)
+
+        assertThat(keyboardIsShown()).isTrue()
+    }
+
+    @Test
+    fun `without showKeyboardOnFocus Enter opens the keyboard`() {
+        show(showKeyboardOnFocus = false)
+
+        press(Key.Enter)
+
+        assertThat(keyboardIsShown()).isTrue()
+    }
+
+    @Test
+    fun `without showKeyboardOnFocus the numeric keypad Enter opens the keyboard`() {
+        show(showKeyboardOnFocus = false)
+
+        press(Key.NumPadEnter)
+
+        assertThat(keyboardIsShown()).isTrue()
+    }
+
+    @Test
+    fun `without showKeyboardOnFocus other keys do not open the keyboard`() {
+        show(showKeyboardOnFocus = false)
+
+        press(Key.DirectionRight)
+        press(Key.DirectionLeft)
+
+        assertThat(keyboardIsShown()).isFalse()
     }
 
     private companion object {

@@ -49,6 +49,7 @@ fun BorealisTextField(
     onDone: (() -> Unit)? = null,
     keyboardType: KeyboardType = KeyboardType.Text,
     leaveWithDpad: Boolean = false,
+    showKeyboardOnFocus: Boolean = true,
 ) {
     val colors = LocalBorealisColors.current
     // The caret is part of the state, so the field can tell when Left has nowhere left to go.

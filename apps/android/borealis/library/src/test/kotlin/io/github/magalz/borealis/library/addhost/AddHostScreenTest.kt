@@ -1,5 +1,7 @@
 package io.github.magalz.borealis.library.addhost
 
+import android.content.Context
+import android.view.inputmethod.InputMethodManager
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -32,6 +34,7 @@ import androidx.compose.ui.test.performTextInputSelection
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
@@ -42,6 +45,7 @@ import io.github.magalz.borealis.library.testing.setContentInKeyboardMode
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(AndroidJUnit4::class)
@@ -267,6 +271,51 @@ class AddHostScreenTest {
 
         composeRule.onNode(hasSetTextAction()).assertIsFocused()
         composeRule.onNode(hasSetTextAction()).assert(hasText("192.168.1.20"))
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `on a phone the keyboard opens with the focus`() {
+        show(AddHostUiState())
+
+        assertThat(keyboardIsShown()).isTrue()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV the focus on the address does not open the keyboard`() {
+        showStateful("192.168.1.20")
+
+        composeRule.onNode(hasSetTextAction()).assertIsFocused()
+        assertThat(keyboardIsShown()).isFalse()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV coming back to the address with Up does not open the keyboard`() {
+        showStateful("192.168.1.20")
+        composeRule.onNode(hasSetTextAction()).performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNode(hasText("Add host") and hasClickAction()).performKeyInput {
+            pressKey(Key.DirectionUp)
+        }
+
+        composeRule.onNode(hasSetTextAction()).assertIsFocused()
+        assertThat(keyboardIsShown()).isFalse()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV OK on the address opens the keyboard`() {
+        showStateful("192.168.1.20")
+
+        composeRule.onNode(hasSetTextAction()).performKeyInput { pressKey(Key.DirectionCenter) }
+
+        assertThat(keyboardIsShown()).isTrue()
+    }
+
+    private fun keyboardIsShown(): Boolean {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        return shadowOf(context.getSystemService(InputMethodManager::class.java)).isSoftInputVisible
     }
 
     /**

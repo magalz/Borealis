@@ -15,6 +15,10 @@ data class DecodeTimeCounts(
     val unmatched: Int = 0,
     val firstInputs: List<Long> = emptyList(),
     val firstOutputs: List<Long> = emptyList(),
+    val decoded: Int = 0,
+    val decodeAvgUs: Long = 0,
+    val decodeMinUs: Long = 0,
+    val decodeMaxUs: Long = 0,
 )
 
 /**
@@ -60,6 +64,12 @@ class DecodeTimeTracker {
             sampleInputs[sampleInputCount++] = timestampUs
         }
     }
+
+    /** Stub: the queue time is not used yet. */
+    fun onInput(timestampUs: Long, queueNs: Long) = onInput(timestampUs)
+
+    /** Stub: still returns the input timestamp. */
+    fun onOutput(presentationTimeUs: Long, nowNs: Long): Long = onOutput(presentationTimeUs)
 
     /**
      * Returns the input timestamp the output [presentationTimeUs] belongs to, or [NO_MATCH]. A

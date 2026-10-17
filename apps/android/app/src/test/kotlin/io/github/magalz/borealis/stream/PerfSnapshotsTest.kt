@@ -9,7 +9,7 @@ class PerfSnapshotsTest {
         framesReceived: Int = 118,
         framesRendered: Int = 116,
         framesLost: Int = 2,
-        decoderTimeMs: Long = 590,
+        decoderTimeUs: Long = 590_000,
         hostLatencyFrames: Int = 118,
         hostLatencyMinTenthsMs: Int = 20,
         hostLatencyMaxTenthsMs: Int = 80,
@@ -22,7 +22,7 @@ class PerfSnapshotsTest {
             framesReceived,
             framesRendered,
             framesLost,
-            decoderTimeMs,
+            decoderTimeUs,
             hostLatencyFrames,
             hostLatencyMinTenthsMs,
             hostLatencyMaxTenthsMs,
@@ -85,7 +85,7 @@ class PerfSnapshotsTest {
 
     @Test
     fun `the decode time is the decoder time per received frame`() {
-        val snapshot = PerfSnapshots.from(window(framesReceived = 100, decoderTimeMs = 450), rtt(1, 1))
+        val snapshot = PerfSnapshots.from(window(framesReceived = 100, decoderTimeUs = 450_000), rtt(1, 1))
 
         assertThat(snapshot.decodeMs).isWithin(0.001f).of(4.5f)
     }
@@ -93,16 +93,23 @@ class PerfSnapshotsTest {
     @Test
     fun `a window with frames but no decoder time has no decode time, not zero`() {
         // Some low-latency decoders hand the frames back without the timestamp the measure needs.
-        val snapshot = PerfSnapshots.from(window(framesReceived = 118, decoderTimeMs = 0), rtt(1, 1))
+        val snapshot = PerfSnapshots.from(window(framesReceived = 118, decoderTimeUs = 0), rtt(1, 1))
 
         assertThat(snapshot.decodeMs).isNull()
     }
 
     @Test
-    fun `a window whose decoder time rounds below a tenth is still a measure`() {
-        val snapshot = PerfSnapshots.from(window(framesReceived = 100, decoderTimeMs = 3), rtt(1, 1))
+    fun `a sub-millisecond decode shows as a fraction of a millisecond`() {
+        val snapshot = PerfSnapshots.from(window(framesReceived = 30, decoderTimeUs = 12_000), rtt(1, 1))
 
-        assertThat(snapshot.decodeMs).isWithin(0.001f).of(0.03f)
+        assertThat(snapshot.decodeMs).isWithin(0.0001f).of(0.4f)
+    }
+
+    @Test
+    fun `a window whose decoder time is a few microseconds is still a measure`() {
+        val snapshot = PerfSnapshots.from(window(framesReceived = 100, decoderTimeUs = 3), rtt(1, 1))
+
+        assertThat(snapshot.decodeMs).isWithin(0.00001f).of(0.00003f)
     }
 
     @Test
@@ -122,7 +129,7 @@ class PerfSnapshotsTest {
                     framesReceived = 0,
                     framesRendered = 0,
                     framesLost = 0,
-                    decoderTimeMs = 0,
+                    decoderTimeUs = 0,
                     hostLatencyFrames = 0,
                     hostLatencyMinTenthsMs = 0,
                     hostLatencyMaxTenthsMs = 0,

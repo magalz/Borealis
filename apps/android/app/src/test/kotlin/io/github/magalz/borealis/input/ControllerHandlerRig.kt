@@ -180,6 +180,9 @@ class ControllerHandlerRig(multiController: Boolean = false) {
     /** The last packet's buttons, or null when nothing was sent. */
     fun lastButtons(): Int? = connection.packets.lastOrNull()?.buttons
 
+    /** Makes the pad behind device 0 one that Android reports a Select button for, as a real system pad is. */
+    fun givePadASelectButton() = setDefaultContextField("hasSelect", true)
+
     /** The handler's default context (on-screen controller and device 0), for state a test cannot reach. */
     fun setDefaultContextField(name: String, value: Any?) {
         val handlerField = ControllerHandler::class.java.getDeclaredField("defaultContext")

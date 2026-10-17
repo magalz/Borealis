@@ -22,6 +22,7 @@ import org.robolectric.RobolectricTestRunner
 class MouseRowFollowsStartHoldTest {
     private val rig = ControllerHandlerRig(multiController = true)
     private val usbPad = FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) }
+    private val secondUsbPad = FakeUsbController(2, rig.handler).also { rig.handler.deviceAdded(it) }
     private val session = streamingSession(gamepadMouse = false)
     private val scope = CoroutineScope(Dispatchers.Unconfined)
 
@@ -58,6 +59,31 @@ class MouseRowFollowsStartHoldTest {
         assertThat(menuShows()).isTrue()
 
         holdStartOnUsbPad()
+        assertThat(menuShows()).isFalse()
+    }
+
+    private fun holdStartOnSecondUsbPad() {
+        secondUsbPad.report(PLAY_FLAG)
+        rig.advanceBy(800)
+        secondUsbPad.report(0)
+    }
+
+    @Test
+    fun `the row shows On while one pad emulates the mouse, though another pad switched it off`() {
+        holdStartOnUsbPad()
+        holdStartOnSecondUsbPad()
+        holdStartOnSecondUsbPad()
+
+        assertThat(menuShows()).isTrue()
+    }
+
+    @Test
+    fun `the row shows Off when no pad emulates the mouse`() {
+        holdStartOnUsbPad()
+        holdStartOnSecondUsbPad()
+        holdStartOnUsbPad()
+        holdStartOnSecondUsbPad()
+
         assertThat(menuShows()).isFalse()
     }
 

@@ -40,13 +40,21 @@ internal interface BoxArt {
  */
 @Singleton
 internal class BoxArtLoader
-@Inject
-constructor(
-    @ApplicationContext private val context: Context,
+internal constructor(
+    private val context: Context,
     private val connection: ComputerManagerConnection,
     private val clients: HostClientFactory,
-    @IoDispatcher private val io: CoroutineDispatcher,
+    private val io: CoroutineDispatcher,
+    private val fetchTimeoutMs: Long,
 ) : BoxArt {
+    @Inject
+    constructor(
+        @ApplicationContext context: Context,
+        connection: ComputerManagerConnection,
+        clients: HostClientFactory,
+        @IoDispatcher io: CoroutineDispatcher,
+    ) : this(context, connection, clients, io, FETCH_TIMEOUT_MS)
+
     private val assets by lazy { DiskAssetLoader(context) }
     private val scope = CoroutineScope(SupervisorJob() + io)
 
@@ -135,5 +143,8 @@ constructor(
         /** The size of the art that hosts serve, as in `DiskAssetLoader`. */
         const val ART_WIDTH = 300
         const val ART_HEIGHT = 400
+
+        /** How long the host has to send the art before the fetch gives up. */
+        const val FETCH_TIMEOUT_MS = 20_000L
     }
 }

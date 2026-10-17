@@ -53,7 +53,7 @@ public class PosterContentProvider extends ContentProvider {
         }
         String appId = segments.get(APP_ID_PATH_INDEX);
         String uuid = segments.get(COMPUTER_UUID_PATH_INDEX);
-        File file = mDiskAssetLoader.getFile(uuid, Integer.parseInt(appId));
+        File file = mDiskAssetLoader.getFile(uuid, io.github.magalz.borealis.library.PosterRequest.checkedAppId(uuid, appId));
         if (file.exists()) {
             return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
         }

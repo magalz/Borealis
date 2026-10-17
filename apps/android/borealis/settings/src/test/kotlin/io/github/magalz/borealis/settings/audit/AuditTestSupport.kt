@@ -31,7 +31,7 @@ const val TV = "w960dp-h540dp-land-television-xhdpi"
 val NOW: Instant = Instant.parse("2026-10-16T20:50:00Z")
 
 /** A formatter in UTC and US English, at [NOW]: nothing depends on the machine that runs it. */
-fun fixedFormatter() = AuditTimeFormatter({ Clock.fixed(NOW, ZoneOffset.UTC) }, { Locale.US })
+fun fixedFormatter() = AuditTimeFormatter({ Clock.fixed(NOW, ZoneOffset.UTC) }, Locale.US)
 
 fun at(text: String): Long = Instant.parse(text).toEpochMilli()
 

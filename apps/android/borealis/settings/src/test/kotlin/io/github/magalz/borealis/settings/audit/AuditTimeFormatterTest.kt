@@ -33,7 +33,7 @@ class AuditTimeFormatterTest {
 
     @Test
     fun `the time zone of the device decides what today is`() {
-        val tokyo = AuditTimeFormatter({ Clock.fixed(NOW, ZoneId.of("Asia/Tokyo")) }, { Locale.US })
+        val tokyo = AuditTimeFormatter({ Clock.fixed(NOW, ZoneId.of("Asia/Tokyo")) }, Locale.US)
 
         // 20:50 UTC is 05:50 on Saturday the 17th in Tokyo, where 14:00 UTC is 23:00 on Friday.
         assertThat(tokyo.short(at("2026-10-16T14:00:00Z"))).isEqualTo("Fri 23:00")

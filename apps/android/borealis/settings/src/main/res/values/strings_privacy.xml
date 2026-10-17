@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="borealis_privacy_title">Privacy and diagnostics</string>
+    <string name="borealis_privacy_back">Back</string>
+    <string name="borealis_privacy_footer">Nothing leaves this device unless you export it.</string>
+
+    <string name="borealis_privacy_verbose_title">Verbose logging</string>
+    <string name="borealis_privacy_verbose_summary">Writes debug details to the local log file while you diagnose a problem</string>
+    <string name="borealis_privacy_mask_title">Mask addresses in logs and diagnostics</string>
+    <string name="borealis_privacy_mask_summary">Replaces IP addresses and host names with placeholders</string>
+
+    <string name="borealis_privacy_export_title">Export diagnostic bundle</string>
+    <string name="borealis_privacy_export_summary_phone">Logs, decoders and the audit trail, already redacted</string>
+    <string name="borealis_privacy_export_summary_tv">Saves it to Downloads and offers Send to phone</string>
+    <string name="borealis_privacy_export_working">Creating the diagnostic bundle…</string>
+    <string name="borealis_privacy_export_failed">Could not export diagnostics</string>
+
+    <string name="borealis_privacy_saved_title">Diagnostics saved</string>
+    <string name="borealis_privacy_saved_file">File</string>
+    <string name="borealis_privacy_saved_location">Saved in</string>
+    <string name="borealis_privacy_saved_adb">To copy it to a computer, run</string>
+    <string name="borealis_privacy_saved_send_to_phone">Send to phone</string>
+    <string name="borealis_privacy_saved_close">Close</string>
+
+    <string name="borealis_privacy_audit_title">Audit trail</string>
+    <string name="borealis_privacy_audit_summary">Pairing, certificate and session events on this device</string>
+    <string name="borealis_privacy_erase_title">Erase audit trail</string>
+    <string name="borealis_privacy_erase_summary">Cannot be undone</string>
+    <string name="borealis_privacy_erase_dialog_title">Erase the audit trail?</string>
+    <string name="borealis_privacy_erase_dialog_message">This deletes every audit entry stored on this device. Diagnostic bundles that you exported before are not changed.</string>
+    <string name="borealis_privacy_erase_confirm">Erase</string>
+    <string name="borealis_privacy_erase_cancel">Cancel</string>
+    <string name="borealis_privacy_erased">Audit trail erased</string>
+    <string name="borealis_privacy_erase_failed">Could not erase the audit trail</string>
+</resources>

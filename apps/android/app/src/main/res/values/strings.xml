@@ -7,22 +7,13 @@
     <string name="help_loading_title">Help Viewer</string>
     <string name="help_loading_msg">Loading help page…</string>
 
-    <!-- PC view menu entries -->
-    <string name="pcview_menu_unpair_pc">Unpair</string>
-
     <!-- Network test strings -->
     <string name="nettest_text_blocked">Your device\'s current network connection is blocking Borealis. Streaming over the Internet may not work while connected to this network.</string>
 
     <!-- Pair messages -->
     <string name="pair_pc_offline">Computer is offline</string>
     <string name="pair_pc_ingame">Computer is currently in a game. You must close the game before pairing.</string>
-    <string name="pair_pairing_help">If your host PC is running Sunshine, navigate to the Sunshine web UI to enter the PIN.</string>
     <string name="pair_fail">Pairing failed</string>
-
-    <!-- WOL messages -->
-    <string name="wol_waking_pc">Waking PC…</string>
-
-    <!-- Unpair messages -->
 
     <!-- Errors -->
     <string name="error_unknown_host">Failed to resolve host</string>
@@ -55,12 +46,7 @@
     <string name="poor_connection_msg">Poor connection to PC</string>
 
     <!-- AppList activity -->
-    <string name="applist_menu_cancel">Cancel</string>
-    <string name="applist_menu_tv_channel">Add to Channel</string>
-    <string name="applist_refresh_error_title">Error</string>
-    <string name="applist_refresh_error_msg">Failed to get app list</string>
     <string name="applist_quit_confirmation">Are you sure you want to quit the running app? All unsaved data will be lost.</string>
-    <string name="applist_details_id">App ID:</string>
 
     <!-- Add computer manually activity -->
 
@@ -137,7 +123,6 @@
     <string name="dialog_title_reset_osc">Reset Layout</string>
     <string name="dialog_text_reset_osc">Are you sure you want to delete your saved on-screen controls layout?</string>
     <string name="toast_reset_osc_success">On-screen controls reset to default</string>
-    <string name="title_osc_opacity">Change opacity of on-screen controls</string>
     <string name="summary_osc_opacity">Make the on-screen controls more/less transparent</string>
     <string name="dialog_title_osc_opacity">Change opacity</string>
     <string name="suffix_osc_opacity">%</string>
@@ -163,8 +148,6 @@
     <string name="summary_checkbox_reduce_refresh_rate">Lower display refresh rates can save power at the expense of some additional video latency</string>
     <string name="title_checkbox_disable_warnings">Disable warning messages</string>
     <string name="summary_checkbox_disable_warnings">Disable on-screen connection warning messages while streaming</string>
-    <string name="title_disable_frame_drop">Never drop frames</string>
-    <string name="summary_disable_frame_drop">May reduce micro-stuttering on some devices, but can increase latency</string>
     <string name="title_video_format">Change codec settings</string>
     <string name="summary_video_format">Newer codecs can lower video bandwidth requirements if your device supports them. Codec selections may be ignored if not supported by the host software or GPU.</string>
     <string name="title_enable_hdr">Enable HDR (Experimental)</string>
@@ -188,7 +171,6 @@
     <string name="toast_controller_type_changed">Gamepad type may be changed due to motion sensor emulation</string>
 
     <!-- Permission justification -->
-    <string name="local_network_rationale">Borealis requires local network permissions to communicate with nearby hosts</string>
 
     <!-- Array strings -->
     <string name="resolution_360p">360p</string>

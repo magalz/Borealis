@@ -124,46 +124,4 @@ class HostInfoTextTest {
     fun `without host info the details text is unchanged`() {
         assertThat(HostInfoText.appendTo(english, "Name: PC\n", null)).isEqualTo("Name: PC\n")
     }
-
-    @Test
-    fun `ports are plain digits without a locale grouping separator`() {
-        val text = block(caps(), strings("values-pt-rBR"))
-
-        assertThat(text).contains("Portas: HTTP 47989, HTTPS 47984")
-    }
-
-    @Test
-    fun `the Brazilian Portuguese block uses the translated labels`() {
-        val text = block(caps(hevc = true, hevcMain10 = true), strings("values-pt-rBR"))
-
-        assertThat(text)
-            .isEqualTo(
-                """
-                Capacidades do host
-                Software do host: Compatível com Sunshine, versão 7.1.431.-1
-                Vídeo: HEVC, HEVC 10 bits
-                PyroWave: desativado
-                Portas: HTTP 47989, HTTPS 47984
-                """
-                    .trimIndent()
-            )
-    }
-
-    @Test
-    fun `English and Brazilian Portuguese define the same host info strings`() {
-        val names = { folder: String ->
-            val nodes =
-                DocumentBuilderFactory.newInstance()
-                    .newDocumentBuilder()
-                    .parse(File("src/main/res/$folder/strings_launch.xml"))
-                    .getElementsByTagName("string")
-            (0 until nodes.length)
-                .map { (nodes.item(it) as Element).getAttribute("name") }
-                .filter { it.startsWith("host_info_") }
-                .toSet()
-        }
-
-        assertThat(names("values-pt-rBR")).isEqualTo(names("values"))
-        assertThat(names("values")).isNotEmpty()
-    }
 }

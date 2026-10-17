@@ -73,9 +73,12 @@ class HostCardSizeTest {
                 .onNodeWithText("Desktop running", useUnmergedTree = true)
                 .getUnclippedBoundsInRoot()
 
-        // The last line of the fullest card sits the card padding above its bottom edge.
+        // The text of the last line sits the card padding and the 2dp padding of its chip above
+        // the bottom edge. The token is rounded up to a whole dp, so a card has less than 1dp of
+        // slack.
         assertThat(card.bottom - card.top).isEqualTo(BorealisTokens.Size.HostCard.HeightTv)
-        assertThat(card.bottom - runningApp.bottom).isEqualTo(18.dp)
+        assertThat(card.bottom - runningApp.bottom).isAtLeast(20.dp)
+        assertThat(card.bottom - runningApp.bottom).isLessThan(21.dp)
     }
 
     @Test
@@ -91,22 +94,6 @@ class HostCardSizeTest {
         assertThat(name.top - card.top).isEqualTo(18.dp)
     }
 
-    @Test
-    fun `the tallest variant has room for its action above the card padding`() {
-        showAll(FormFactor.Tv, 260.dp)
-
-        assertThat(actionGap(Variant.Online, "Open")).isAtLeast(18.dp)
-    }
-
-    @Test
-    fun `on a TV the action sits at the bottom edge in every variant that has one`() {
-        showAll(FormFactor.Tv, 260.dp)
-
-        val online = actionGap(Variant.Online, "Open")
-        assertThat(actionGap(Variant.Offline, "Wake")).isEqualTo(online)
-        assertThat(actionGap(Variant.Unpaired, "Pair")).isEqualTo(online)
-    }
-
     private fun showAll(formFactor: FormFactor, width: Dp) {
         composeRule.setContent { Specimen(formFactor, width) }
         composeRule.waitForIdle()
@@ -115,13 +102,6 @@ class HostCardSizeTest {
     private fun height(variant: Variant): Dp {
         val card = composeRule.onNodeWithTag(variant.name).getUnclippedBoundsInRoot()
         return card.bottom - card.top
-    }
-
-    private fun actionGap(variant: Variant, action: String): Dp {
-        val card = composeRule.onNodeWithTag(variant.name).getUnclippedBoundsInRoot()
-        val button =
-            composeRule.onNodeWithText(action, useUnmergedTree = true).getUnclippedBoundsInRoot()
-        return card.bottom - button.bottom
     }
 
     @Composable
@@ -165,7 +145,6 @@ class HostCardSizeTest {
                     detail = "LuminalShine 26.09.1 · 192.168.1.20",
                     tags = listOf("HEVC 10-bit", "HDR", "4:4:4"),
                     runningApp = "Desktop running",
-                    action = HostCardAction("Open") {},
                     onClick = {},
                     modifier = Modifier.testTag(Variant.Online.name),
                 )
@@ -174,7 +153,6 @@ class HostCardSizeTest {
                     status = DotStatus.Offline,
                     statusText = "Offline",
                     detail = "Last seen 2 days ago · 192.168.1.31",
-                    action = HostCardAction("Wake") {},
                     onClick = {},
                     modifier = Modifier.testTag(Variant.Offline.name),
                 )
@@ -183,7 +161,6 @@ class HostCardSizeTest {
                     status = DotStatus.Attention,
                     statusText = "Not paired",
                     detail = "LuminalShine 26.09.1 · found on this network",
-                    action = HostCardAction("Pair") {},
                     onClick = {},
                     modifier = Modifier.testTag(Variant.Unpaired.name),
                 )

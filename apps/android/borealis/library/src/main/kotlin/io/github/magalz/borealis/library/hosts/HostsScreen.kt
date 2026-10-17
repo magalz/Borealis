@@ -45,7 +45,6 @@ import io.github.magalz.borealis.designsystem.components.DotStatus
 import io.github.magalz.borealis.designsystem.components.EmptyState
 import io.github.magalz.borealis.designsystem.components.EmptyStateAction
 import io.github.magalz.borealis.designsystem.components.HostCard
-import io.github.magalz.borealis.designsystem.components.HostCardAction
 import io.github.magalz.borealis.designsystem.components.Kicker
 import io.github.magalz.borealis.designsystem.focus.InitialFocusState
 import io.github.magalz.borealis.designsystem.focus.initialFocus
@@ -296,27 +295,24 @@ private fun HostItem(
     unnamedApp: String,
     modifier: Modifier,
 ) {
-    // Open and Pair both select the host: the ViewModel decides between apps and pairing.
-    val action =
-        item.action.labelRes()?.let { label ->
-            HostCardAction(stringResource(label)) {
-                if (item.action == HostAction.WAKE) {
-                    handlers.onWake(item.id)
-                } else {
-                    handlers.onHostSelected(item.id)
-                }
-            }
-        }
+    // A tap or OK runs the action of the state. Open and Pair both select the host: the ViewModel
+    // decides between apps and pairing. Wake wakes it. The label tells a screen reader which.
     HostCard(
         name = item.name,
         status = item.dotStatus(),
         statusText = stringResource(item.statusTextRes()),
-        onClick = { handlers.onHostSelected(item.id) },
+        onClick = {
+            if (item.action == HostAction.WAKE) {
+                handlers.onWake(item.id)
+            } else {
+                handlers.onHostSelected(item.id)
+            }
+        },
         modifier = modifier.testTag("host:${item.id}"),
         detail = item.detailLine(),
         tags = item.tags.map { stringResource(it.labelRes()) },
         runningApp = item.runningApp?.let { it.name ?: unnamedApp },
-        action = action,
+        onClickLabel = item.action.labelRes()?.let { stringResource(it) },
         onOptions = { handlers.onOptions(item.id) },
         optionsLabel = optionsLabel,
     )

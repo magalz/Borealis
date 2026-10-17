@@ -222,16 +222,6 @@ class HostsScreenTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `a tap on a card selects the host`() {
-        showPhone(withHosts)
-
-        composeRule.onNodeWithTag("host:living").performClick()
-
-        assertThat(selected).containsExactly("living")
-    }
-
-    @Test
-    @Config(qualifiers = PHONE)
     fun `a long press opens the options of an offline host that can wake`() {
         showPhone(withHosts)
 

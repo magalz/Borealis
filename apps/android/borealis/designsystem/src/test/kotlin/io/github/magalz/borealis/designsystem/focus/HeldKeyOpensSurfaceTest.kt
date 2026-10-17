@@ -117,8 +117,11 @@ class HeldKeyOpensSurfaceTest {
         assertThat(actions).isEqualTo(1)
     }
 
+    // X opens the options on its first down, and its repeats and release then reach the sheet. X is
+    // not a click key, so these two guard the opening path (the stale events do not disturb the
+    // sheet, and a later press works); they do not reproduce the click bug of a held OK.
     @Test
-    fun `holding X that opens the action sheet leaves it open and runs nothing`() {
+    fun `X held through the opening of the action sheet leaves it open and runs nothing`() {
         composeRule.setContentInKeyboardMode { Tile { ActionSheetSpecimen() } }
 
         holdThroughOpening(Key.ButtonX, "Resume")
@@ -127,7 +130,7 @@ class HeldKeyOpensSurfaceTest {
     }
 
     @Test
-    fun `a fresh OK press after X opened the sheet runs the focused action`() {
+    fun `a fresh OK press after the X hold opened the sheet runs the focused action`() {
         composeRule.setContentInKeyboardMode { Tile { ActionSheetSpecimen() } }
         holdThroughOpening(Key.ButtonX, "Resume")
 
@@ -152,13 +155,20 @@ class HeldKeyOpensSurfaceTest {
     }
 
     @Test
-    fun `volume keys held through the opening are not consumed`() {
+    fun `system keys held through the opening are not consumed`() {
         composeRule.setContentInKeyboardMode { Tile { ActionSheetSpecimen() } }
         holdThroughOpening(Key.DirectionCenter, "Resume")
 
-        val handled = sendToSurface(Key.VolumeUp, AndroidKeyAction.Down, repeat = 1, downTime = 1)
+        val handled =
+            listOf(
+                    Key.VolumeUp,
+                    Key(android.view.KeyEvent.KEYCODE_MUTE),
+                    Key(android.view.KeyEvent.KEYCODE_CHANNEL_UP),
+                    Key(android.view.KeyEvent.KEYCODE_HEADSETHOOK),
+                )
+                .map { sendToSurface(it, AndroidKeyAction.Down, repeat = 1, downTime = 1) }
 
-        assertThat(handled).isFalse()
+        assertThat(handled).containsExactly(false, false, false, false)
     }
 
     @Test

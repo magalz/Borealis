@@ -21,7 +21,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.compose.ui.test.swipeRight
+import androidx.compose.ui.test.swipe
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
@@ -47,10 +47,8 @@ class SettingsSliderRowTest {
         composeRule.onNodeWithText("Deadzone").performKeyInput { pressKey(Key.DirectionRight) }
         assertThat(value).isEqualTo(12f)
 
-        composeRule.onNodeWithText("Deadzone").performKeyInput {
-            pressKey(Key.DirectionLeft)
-            pressKey(Key.DirectionLeft)
-        }
+        composeRule.onNodeWithText("Deadzone").performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithText("Deadzone").performKeyInput { pressKey(Key.DirectionLeft) }
         assertThat(value).isEqualTo(8f)
         assertThat(changes).containsExactly(12f, 10f, 8f).inOrder()
     }
@@ -61,10 +59,8 @@ class SettingsSliderRowTest {
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Deadzone").requestFocus()
 
-        composeRule.onNodeWithText("Deadzone").performKeyInput {
-            pressKey(Key.DirectionRight)
-            pressKey(Key.DirectionRight)
-        }
+        composeRule.onNodeWithText("Deadzone").performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithText("Deadzone").performKeyInput { pressKey(Key.DirectionRight) }
 
         assertThat(value).isEqualTo(20f)
         assertThat(changes).containsExactly(20f)
@@ -76,10 +72,8 @@ class SettingsSliderRowTest {
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Deadzone").requestFocus()
 
-        composeRule.onNodeWithText("Deadzone").performKeyInput {
-            pressKey(Key.DirectionLeft)
-            pressKey(Key.DirectionLeft)
-        }
+        composeRule.onNodeWithText("Deadzone").performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithText("Deadzone").performKeyInput { pressKey(Key.DirectionLeft) }
 
         assertThat(value).isEqualTo(0f)
         assertThat(changes).containsExactly(0f)
@@ -112,7 +106,7 @@ class SettingsSliderRowTest {
             .assert(
                 SemanticsMatcher.expectValue(
                     SemanticsProperties.ProgressBarRangeInfo,
-                    ProgressBarRangeInfo(10f, 0f..20f),
+                    ProgressBarRangeInfo(10f, 0f..20f, steps = 9),
                 )
             )
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "10 %"))
@@ -123,7 +117,7 @@ class SettingsSliderRowTest {
         composeRule.setContent { Specimen(step = 5f) }
 
         composeRule.onNodeWithText("Deadzone").performTouchInput {
-            click(Offset(width * 0.75f, height - 8f))
+            click(Offset(width * 0.75f, height * TRACK_Y))
         }
 
         assertThat(value).isEqualTo(15f)
@@ -135,7 +129,11 @@ class SettingsSliderRowTest {
         composeRule.setContent { Specimen() }
 
         composeRule.onNodeWithText("Deadzone").performTouchInput {
-            swipeRight(startX = 0f, endX = width.toFloat(), durationMillis = 200)
+            swipe(
+                start = Offset(width * 0.1f, height * TRACK_Y),
+                end = Offset(width - 1f, height * TRACK_Y),
+                durationMillis = 200,
+            )
         }
 
         assertThat(value).isEqualTo(20f)
@@ -146,7 +144,7 @@ class SettingsSliderRowTest {
         composeRule.setContent { Specimen(enabled = false) }
 
         composeRule.onNodeWithText("Deadzone").performTouchInput {
-            click(Offset(width * 0.75f, height - 8f))
+            click(Offset(width * 0.75f, height * TRACK_Y))
         }
 
         assertThat(changes).isEmpty()
@@ -181,5 +179,10 @@ class SettingsSliderRowTest {
                 enabled = enabled,
             )
         }
+    }
+
+    private companion object {
+        /** Where the track is, as a share of the height of the row: below the title. */
+        const val TRACK_Y = 0.75f
     }
 }

@@ -65,14 +65,13 @@ class SettingsTwoPaneTest {
 
     @Test
     fun `Right from a group enters the pane`() {
-        selected = 1
         composeRule.setContentInKeyboardMode { Specimen() }
-        composeRule.onNodeWithText("Video").requestFocus()
+        composeRule.onNodeWithText("Stream").requestFocus()
 
-        composeRule.onNodeWithText("Video").performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithText("Stream").performKeyInput { pressKey(Key.DirectionRight) }
 
-        composeRule.onNodeWithText("Codec").assertIsFocused()
-        assertThat(selected).isEqualTo(1)
+        composeRule.onNodeWithText("Resolution").assertIsFocused()
+        assertThat(selected).isEqualTo(0)
     }
 
     @Test

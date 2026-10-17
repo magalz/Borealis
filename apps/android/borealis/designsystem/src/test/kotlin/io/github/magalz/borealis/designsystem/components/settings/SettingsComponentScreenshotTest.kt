@@ -51,7 +51,9 @@ class SettingsComponentScreenshotTest {
     @Test
     @Config(qualifiers = TV)
     fun rowsTvFocused() {
-        composeRule.setContentInKeyboardMode { Page(FormFactor.Tv) { Rows() } }
+        composeRule.setContentInKeyboardMode {
+            Page(FormFactor.Tv) { Rows(Modifier.width(560.dp)) }
+        }
 
         composeRule.onNodeWithText("Frame rate").requestFocus()
         shoot("settings_rows_tv_focused")
@@ -60,7 +62,9 @@ class SettingsComponentScreenshotTest {
     @Test
     @Config(qualifiers = TV)
     fun rowsTvDisabledFocused() {
-        composeRule.setContentInKeyboardMode { Page(FormFactor.Tv) { Rows() } }
+        composeRule.setContentInKeyboardMode {
+            Page(FormFactor.Tv) { Rows(Modifier.width(560.dp)) }
+        }
 
         composeRule.onNodeWithText("HDR").requestFocus()
         shoot("settings_rows_tv_disabled-focused")
@@ -69,7 +73,9 @@ class SettingsComponentScreenshotTest {
     @Test
     @Config(qualifiers = TV)
     fun rowsTvDangerFocused() {
-        composeRule.setContentInKeyboardMode { Page(FormFactor.Tv) { Rows() } }
+        composeRule.setContentInKeyboardMode {
+            Page(FormFactor.Tv) { Rows(Modifier.width(560.dp)) }
+        }
 
         composeRule.onNodeWithText("Erase audit trail").requestFocus()
         shoot("settings_rows_tv_danger-focused")
@@ -78,7 +84,9 @@ class SettingsComponentScreenshotTest {
     @Test
     @Config(qualifiers = TV)
     fun sliderTvFocused() {
-        composeRule.setContentInKeyboardMode { Page(FormFactor.Tv) { Rows() } }
+        composeRule.setContentInKeyboardMode {
+            Page(FormFactor.Tv) { Rows(Modifier.width(560.dp)) }
+        }
 
         composeRule.onNodeWithText("Deadzone").requestFocus()
         shoot("settings_slider_tv_focused")
@@ -128,7 +136,7 @@ class SettingsComponentScreenshotTest {
     }
 
     @Composable
-    private fun Rows(modifier: Modifier = Modifier.width(560.dp)) {
+    private fun Rows(modifier: Modifier) {
         Column(
             modifier.padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),

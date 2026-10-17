@@ -11,7 +11,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -129,7 +128,7 @@ class LibrarySettingsTvTest {
         composeRule.onNodeWithText("Export diagnostic bundle").assertIsDisplayed()
 
     private fun showsAudit() =
-        composeRule.onNodeWithText("No events recorded yet.").assertIsDisplayed()
+        composeRule.onNodeWithText("Kept for 90 days or 2,000 entries").assertIsDisplayed()
 
     @Test
     fun `the Settings item of the rail opens Settings and is selected`() {
@@ -229,7 +228,9 @@ class LibrarySettingsTvTest {
             .assertIsDisplayed()
         composeRule.onAllNodesWithText(saved.adbPullCommand).assertCountEquals(2)
 
-        composeRule.onNode(hasText("Close") and isFocused()).performClick()
+        // The dialog of Send to phone opened last, so its Close is the last one.
+        val closes = composeRule.onAllNodesWithText("Close")
+        closes[closes.fetchSemanticsNodes().size - 1].performClick()
         composeRule.waitForIdle()
 
         composeRule.onAllNodesWithText(saved.adbPullCommand).assertCountEquals(1)

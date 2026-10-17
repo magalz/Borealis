@@ -59,6 +59,8 @@ private val TITLE_GAP = 12.dp
  * @param onOpenPrivacy opens Privacy and diagnostics from the link row of a phone.
  * @param privacyPane the rows of Privacy and diagnostics, drawn in the right pane of a TV or a
  *   handheld.
+ * @param initialGroup the group a TV or a handheld selects when the panes open; a phone shows every
+ *   group in one list.
  * @param about the version, the links and the licence texts of the About rows.
  */
 @Composable
@@ -70,6 +72,7 @@ internal fun SettingsScreen(
     onOpenPrivacy: () -> Unit,
     privacyPane: @Composable () -> Unit,
     modifier: Modifier = Modifier,
+    initialGroup: SettingsGroupId = SettingsGroupId.STREAM,
     about: AboutSource = rememberAboutSource(),
 ) {
     BorealisTheme(formFactor) {
@@ -84,7 +87,7 @@ internal fun SettingsScreen(
             if (formFactor == FormFactor.Phone) {
                 PhoneSettings(state, actions, overlays, onOpenPrivacy, about)
             } else {
-                TwoPaneSettings(state, actions, overlays, privacyPane, about)
+                TwoPaneSettings(state, actions, overlays, privacyPane, initialGroup, about)
             }
         }
         SettingsOverlayHost(overlays, state, actions)
@@ -155,6 +158,7 @@ private fun TwoPaneSettings(
     actions: SettingsActions,
     overlays: SettingsOverlays,
     privacyPane: @Composable () -> Unit,
+    initialGroup: SettingsGroupId,
     about: AboutSource,
 ) {
     val gutter = LocalBorealisSpacing.current.gutter
@@ -162,7 +166,7 @@ private fun TwoPaneSettings(
         (state.groups.map { it.group } + SettingsGroupId.PRIVACY + SettingsGroupId.ABOUT).map {
             SettingsGroup(it, stringResource(it.titleRes))
         }
-    var selected by rememberSaveable { mutableStateOf(SettingsGroupId.STREAM) }
+    var selected by rememberSaveable { mutableStateOf(initialGroup) }
     TakeInitialFocus()
     Column(Modifier.fillMaxSize().padding(gutter)) {
         ScreenTitle()
@@ -170,6 +174,8 @@ private fun TwoPaneSettings(
             groups = groups,
             selected = selected,
             onSelect = { selected = it },
+            // The Privacy pane scrolls itself and has its own snackbar.
+            selfScrolling = { it == SettingsGroupId.PRIVACY },
             modifier = Modifier.padding(top = TITLE_GAP),
         ) { group ->
             when (group) {

@@ -37,7 +37,7 @@ sealed interface LibraryLaunchRequest {
                     putString(KEY_REQUEST, PAIR)
                     putString(KEY_HOST_ID, request.hostId)
                 }
-                Privacy -> Unit
+                Privacy -> putString(KEY_REQUEST, PRIVACY)
             }
         }
 
@@ -50,6 +50,7 @@ sealed interface LibraryLaunchRequest {
         private const val APPS = "apps"
         private const val LAUNCH = "launch"
         private const val PAIR = "pair"
+        private const val PRIVACY = "privacy"
 
         /** The request in [extras], or null when there is none or it is malformed. */
         fun fromExtras(extras: Bundle?): LibraryLaunchRequest? {
@@ -59,6 +60,7 @@ sealed interface LibraryLaunchRequest {
                 HOSTS -> Hosts
                 APPS -> hostId?.let(::Apps)
                 PAIR -> hostId?.let(::Pair)
+                PRIVACY -> Privacy
                 LAUNCH -> launch(extras, hostId)
                 else -> null
             }

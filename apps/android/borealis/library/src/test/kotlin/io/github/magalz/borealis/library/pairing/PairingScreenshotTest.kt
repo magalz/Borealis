@@ -60,6 +60,10 @@ class PairingScreenshotTest {
     @Config(qualifiers = TV)
     fun pairingTvExpired() = shoot("pairing_tv_expired", FormFactor.Tv, PairingUiState.Expired)
 
+    @Test
+    @Config(qualifiers = TV)
+    fun pairingTvPaired() = shoot("pairing_tv_paired", FormFactor.Tv, PairingUiState.Paired)
+
     private fun waiting(pin: String = "4817", restarted: Boolean = false) =
         PairingUiState.Waiting(pin, "https://192.0.2.10:47990", "Galaxy S22", restarted)
 

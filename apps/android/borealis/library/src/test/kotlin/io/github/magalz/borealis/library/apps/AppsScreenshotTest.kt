@@ -117,6 +117,15 @@ class AppsScreenshotTest {
     fun appActionsTvOtherRunning() =
         shoot("appactions_tv_other-running", FormFactor.Tv, otherRunningSheet())
 
+    @Test
+    @Config(qualifiers = TV)
+    fun appActionsTvDetails() =
+        shoot(
+            "appactions_tv_details",
+            FormFactor.Tv,
+            state(runningFirst = true).copy(details = apps(runningFirst = true).first()),
+        )
+
     private fun runningSheet(): AppsUiState {
         val desktop = apps(runningFirst = true).first()
         return state(

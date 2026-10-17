@@ -8,4 +8,6 @@
     <string name="failure_raw_http" tools:ignore="MissingTranslation">%1$s · HTTP %2$s</string>
     <!-- Which ports to check: %1$s the ports, separated by commas. -->
     <string name="failure_port_hint" tools:ignore="MissingTranslation">Check your firewall and port forwarding rules for: %1$s</string>
+    <!-- The PC answered the RTSP handshake, but Borealis could not read its reply. -->
+    <string name="failure_reply_unreadable" tools:ignore="MissingTranslation">The PC answered, but its reply could not be read.</string>
 </resources>

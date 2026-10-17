@@ -18,5 +18,6 @@ class FailureFactsTest {
         assertThat(facts.httpCode).isNull()
         assertThat(facts.resumeCollision).isFalse()
         assertThat(facts.retriesExhausted).isFalse()
+        assertThat(facts.rtspReplyUnreadable).isFalse()
     }
 }

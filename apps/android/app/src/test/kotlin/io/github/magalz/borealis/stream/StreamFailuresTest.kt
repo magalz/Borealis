@@ -55,9 +55,14 @@ private fun terminated(code: Int) = FailureFacts(null, code, 0, terminated = tru
 class StreamFailuresTest {
     @Test
     fun `a failed stage carries the stage, the code and the port flags`() {
-        val facts = StreamFailures.facts("RTSP handshake", -1, 0x8, false, false, null, FailedConnection())
+        val facts = StreamFailures.facts("RTSP handshake", -1, 0x8, false, false, null, FailedConnection()) {
+                "RTSP handshake"
+            }
 
-        assertThat(facts).isEqualTo(FailureFacts("RTSP handshake", -1, 0x8, terminated = false))
+        assertThat(facts)
+            .isEqualTo(
+                FailureFacts("RTSP handshake", -1, 0x8, terminated = false, rtspReplyUnreadable = true)
+            )
     }
 
     @Test
@@ -269,5 +274,66 @@ class StreamFailuresTest {
         val failed = failure(FailureFacts("Control", -1, 0, false))
 
         assertThat(failed.rawCode).isEqualTo("${HostR.string.failure_raw_stage}:-1,Control")
+    }
+
+    private val rtsp = "RTSP handshake"
+
+    private fun facts(stage: String?, code: Int, terminated: Boolean = false) =
+        StreamFailures.facts(stage, code, 0x8, terminated, false, null, FailedConnection()) { rtsp }
+
+    @Test
+    fun `error -1 of the RTSP stage means the reply of the PC could not be read`() {
+        assertThat(facts(rtsp, -1).rtspReplyUnreadable).isTrue()
+    }
+
+    @Test
+    fun `another code of the RTSP stage, or -1 of another stage, is not an unreadable reply`() {
+        assertThat(facts(rtsp, -2).rtspReplyUnreadable).isFalse()
+        assertThat(facts("Control", -1).rtspReplyUnreadable).isFalse()
+        assertThat(facts(null, -1, terminated = true).rtspReplyUnreadable).isFalse()
+    }
+
+    @Test
+    fun `an unreadable reply has no port text and says the PC answered`() {
+        val failed = failure(facts(rtsp, -1))
+
+        assertThat(failed.kind).isEqualTo(FailureKind.GENERIC)
+        assertThat(failed.portHint).isEqualTo("${HostR.string.failure_reply_unreadable}")
+        assertThat(failed.rawCode).isEqualTo("${HostR.string.failure_raw_stage}:-1,$rtsp")
+    }
+
+    @Test
+    fun `an unreadable reply keeps the note and the blocked network after its line`() {
+        val unreadable = FailureFacts(rtsp, -1, 0x8, false, rtspReplyUnreadable = true, note = "Hi")
+
+        assertThat(failure(unreadable, portBlocked = true).portHint)
+            .isEqualTo(
+                "${HostR.string.failure_reply_unreadable}\n\nHi\n\n${R.string.nettest_text_blocked}"
+            )
+    }
+
+    @Test
+    fun `another code of the RTSP stage still shows the port text`() {
+        val failed = failure(facts(rtsp, -2))
+
+        assertThat(failed.portHint).isEqualTo("${HostR.string.failure_port_hint}:ports8")
+    }
+
+    @Test
+    fun `error -1 of another stage still shows the port text`() {
+        val failed = failure(facts("Control", -1))
+
+        assertThat(failed.portHint).isEqualTo("${HostR.string.failure_port_hint}:ports8")
+    }
+
+    @Test
+    fun `a collision keeps its own text and is not called an unreadable reply`() {
+        val collided =
+            FailureFacts(rtsp, -1, 0, false, resumeCollision = true, rtspReplyUnreadable = true)
+
+        val failed = failure(collided)
+
+        assertThat(failed.kind).isEqualTo(FailureKind.HOST_BUSY)
+        assertThat(failed.portHint).isEqualTo("${HostR.string.launch_resume_collision}")
     }
 }

@@ -181,8 +181,8 @@ The owner creates the tag. See the [release procedure](development/release.md).
 ## Backlog, not scheduled
 
 - **Animated app background.** Simple and discreet, made by the owner. It is
-  the last item, together with any visual polish that remains. It is integrated
-  when delivered, in Sprint 9 if ready.
+  integrated when delivered: in Sprint 9 if it is ready by then, otherwise in a
+  later visual polish.
 - **Deferred RTSP parser rework.** The moonlight-common-c rework `aeba988` is
   deferred by the owner. See the [third-party notes](../core/third_party/README.md).
 

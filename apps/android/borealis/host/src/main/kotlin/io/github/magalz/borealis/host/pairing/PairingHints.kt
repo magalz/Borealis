@@ -1,13 +1,8 @@
 package io.github.magalz.borealis.host.pairing
 
-import android.content.Context
-import android.os.Build
-import io.github.magalz.borealis.host.R
-
 /**
- * What the user needs to know to pair with and unpair from LuminalShine: the Web UI address, a
- * device name the host does not treat specially, and the texts that say so (host contract 4.1 and
- * 10.2).
+ * What the user needs to know to pair with and unpair from LuminalShine: the Web UI address and a
+ * device name the host does not treat specially (host contract 4.1 and 10.2).
  */
 object PairingHints {
     private const val MAX_HTTP_PORT = 65534
@@ -60,39 +55,5 @@ object PairingHints {
             name = FORBIDDEN_NAME_PARTS.replace(name, "")
         }
         return name.replace(WHITESPACE, " ").trim().ifEmpty { FALLBACK_NAME }
-    }
-
-    /** The PIN dialog hint: where to type the PIN and which device name to use. */
-    @JvmStatic
-    fun pinHint(context: Context, address: String, httpPort: Int): String =
-        pinHint(address, httpPort, Build.MODEL, contextStrings(context))
-
-    /** The message shown when the host did not confirm the unpair request. */
-    @JvmStatic
-    fun unpairHint(context: Context, address: String, httpPort: Int): String =
-        unpairHint(address, httpPort, contextStrings(context))
-
-    internal fun pinHint(
-        address: String,
-        httpPort: Int,
-        model: String?,
-        getString: (Int, List<Any>) -> String,
-    ): String =
-        getString(
-            R.string.pair_pin_hint,
-            listOf(webUi(address, httpPort, getString), suggestedDeviceName(model)),
-        )
-
-    internal fun unpairHint(
-        address: String,
-        httpPort: Int,
-        getString: (Int, List<Any>) -> String,
-    ): String = getString(R.string.unpair_webui_hint, listOf(webUi(address, httpPort, getString)))
-
-    private fun webUi(address: String, httpPort: Int, getString: (Int, List<Any>) -> String) =
-        webUiUrl(address, httpPort) ?: getString(R.string.webui_url_unknown, emptyList())
-
-    private fun contextStrings(context: Context): (Int, List<Any>) -> String = { id, args ->
-        context.getString(id, *args.toTypedArray())
     }
 }

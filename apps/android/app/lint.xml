@@ -10,8 +10,4 @@
     <issue id="IconMissingDensityFolder">
         <ignore path="src/main/res"/>
     </issue>
-    <!-- BOREALIS: the Library shows the host-aware hint of :borealis:host instead of this Sunshine text (pair_pairing_help); the inherited string stays in every locale until the translation sprint. -->
-    <issue id="UnusedResources">
-        <ignore regexp="pair_pairing_help"/>
-    </issue>
 </lint>

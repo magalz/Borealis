@@ -13,7 +13,7 @@
     <path
         android:fillColor="#FFF5F3FF"
         android:pathData="M49,70h10v7h-10zM40,77h28a2,2 0 0,1 2,2v0a2,2 0 0,1 -2,2h-28a2,2 0 0,1 -2,-2v0a2,2 0 0,1 2,-2z" />
-    <path android:pathData="M33,62 C42,50 50,58 58,47 C64,40 70,42 75,38 L75,46 C70,50 64,48 60,54 C52,64 42,56 33,66 Z">
+    <path android:pathData="M33,62 C42,50 50,58 58,47 C64,40 70,42 75,38 L75,46 C70,50 64,48 60,54 C52,64 42,56 33,64 Z">
         <aapt:attr name="android:fillColor">
             <gradient
                 android:type="linear"

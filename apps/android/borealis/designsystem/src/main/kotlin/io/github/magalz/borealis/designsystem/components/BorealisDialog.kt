@@ -1,18 +1,75 @@
 package io.github.magalz.borealis.designsystem.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.paneTitle
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 
-/** A button of a [BorealisDialog]: its [label], what it does and how it looks. */
+/**
+ * A button of a [BorealisDialog]: its [label], what it does and how it looks. A null [style] takes
+ * the default of the slot: Primary for the confirm action, Secondary for the dismiss action and
+ * Text for the extra ones.
+ */
 class DialogAction(
     val label: String,
     val style: BorealisButtonStyle? = null,
     val onClick: () -> Unit,
 )
 
-/** The one dialog frame; see the implementation commit. */
+private val TITLE_GAP = 12.dp
+private val ACTIONS_GAP = 24.dp
+private val BUTTON_GAP = 12.dp
+
+/**
+ * The one dialog frame: a surface with the sheet radius and a hairline, over the scrim, in one of
+ * the three [DialogWidth]s (on a phone the narrower of the token and the window less 16dp on each
+ * side). It has a [title] in the title style, a [content] slot and, at the foot, the [confirm]
+ * action on the right with the [dismiss] action on its left; [extraActions] sit at the start of the
+ * row. Padding is 24dp all round. The content scrolls and the title and actions stay in view when
+ * the window is too short.
+ *
+ * The confirm action has focus when the dialog opens, so a D-pad or a gamepad works at once. Set
+ * [focusDismiss] when the safe choice is the dismiss action (Cancel on an erase) and it has focus
+ * instead; without a dismiss action the confirm action keeps it. An action calls its callback and
+ * leaves the dialog open: the screen closes it. Back, or a tap on the scrim, calls
+ * [onDismissRequest]. [modifier] applies to the dialog surface.
+ */
 @Composable
 fun BorealisDialog(
     title: String,
@@ -24,4 +81,93 @@ fun BorealisDialog(
     extraActions: List<DialogAction> = emptyList(),
     focusDismiss: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
-) {}
+) {
+    val colors = LocalBorealisColors.current
+    val shape = MaterialTheme.shapes.extraLarge
+    val windowWidth = LocalConfiguration.current.screenWidthDp.dp
+    val margin = BorealisTokens.Space.DialogMargin
+    val confirmFocus = remember { FocusRequester() }
+    val dismissFocus = remember { FocusRequester() }
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        // The scrim is the theme's, not the platform's dim.
+        val view = LocalView.current
+        SideEffect {
+            (view as? DialogWindowProvider ?: view.parent as? DialogWindowProvider)
+                ?.window
+                ?.setDimAmount(0f)
+        }
+        Box(
+            Modifier.fillMaxSize()
+                .background(colors.scrim)
+                // A tap on the scrim dismisses. It is not a clickable: that would be a focus stop.
+                .pointerInput(onDismissRequest) { detectTapGestures { onDismissRequest() } }
+                .padding(vertical = margin),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                modifier
+                    .width(BorealisDimens.dialogWidth(width, windowWidth))
+                    .background(colors.surface, shape)
+                    .border(1.dp, colors.line, shape)
+                    .clip(shape)
+                    // A tap on the dialog is not a tap on the scrim.
+                    .pointerInput(Unit) { detectTapGestures {} }
+                    .padding(BorealisTokens.Space.DialogPadding)
+                    .semantics { paneTitle = title }
+            ) {
+                Text(
+                    title,
+                    modifier = Modifier.semantics { heading() },
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Spacer(Modifier.height(TITLE_GAP))
+                Column(
+                    Modifier.weight(1f, fill = false)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(TITLE_GAP),
+                    content = content,
+                )
+                Spacer(Modifier.height(ACTIONS_GAP))
+                val focusConfirm = !focusDismiss || dismiss == null
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    extraActions.forEach { ActionButton(it, BorealisButtonStyle.Text) }
+                    Spacer(Modifier.weight(1f))
+                    dismiss?.let {
+                        ActionButton(
+                            it,
+                            BorealisButtonStyle.Secondary,
+                            if (focusConfirm) Modifier else Modifier.initialFocus(dismissFocus),
+                        )
+                    }
+                    ActionButton(
+                        confirm,
+                        BorealisButtonStyle.Primary,
+                        if (focusConfirm) Modifier.initialFocus(confirmFocus) else Modifier,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionButton(
+    action: DialogAction,
+    defaultStyle: BorealisButtonStyle,
+    modifier: Modifier = Modifier,
+) {
+    BorealisButton(
+        action.label,
+        action.onClick,
+        modifier,
+        style = action.style ?: defaultStyle,
+    )
+}

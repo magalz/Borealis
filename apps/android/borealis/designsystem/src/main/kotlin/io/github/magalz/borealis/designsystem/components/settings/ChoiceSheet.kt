@@ -36,10 +36,12 @@ import androidx.compose.ui.window.DialogProperties
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisShapes
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
+import io.github.magalz.borealis.designsystem.theme.sheetWidth
 
 /**
  * One choice of a [ChoiceSheet]: the [key] it returns, its [label] and an optional [summary] under
@@ -47,7 +49,6 @@ import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
  */
 class ChoiceOption<out T>(val key: T, val label: String, val summary: String? = null)
 
-private val DIALOG_WIDTH = 420.dp
 private val CONTENT_PADDING = 20.dp
 /** The list sits 8dp from the edge, so the 12dp padding of a row puts its text at 20dp. */
 private val LIST_PADDING = 8.dp
@@ -63,7 +64,9 @@ private val MARK_GAP = 12.dp
  * A modal list of choices for one setting, such as Resolution or Frame rate: [options] under a
  * [title], with the one whose key is [selected] marked and holding the initial focus (the first
  * option when none is selected). On a phone it is a bottom sheet; on a TV or handheld a centred
- * dialog. The list scrolls and the title stays when the window is too short for all of it.
+ * dialog, 420dp wide on a TV and a fraction of the window on a handheld (see
+ * [BorealisDimens.sheetWidth]). The list scrolls and the title stays when the window is too short
+ * for all of it.
  *
  * A tap or OK on an option calls [onSelect] with its key and then [onDismiss]: the screen takes the
  * choice and closes the sheet. Back, or a tap outside the sheet, calls [onDismiss] alone, so
@@ -102,7 +105,7 @@ fun <T> ChoiceSheet(
             val colors = LocalBorealisColors.current
             val shape = MaterialTheme.shapes.extraLarge
             Column(
-                Modifier.width(DIALOG_WIDTH)
+                Modifier.width(sheetWidth())
                     .background(colors.surface, shape)
                     .border(1.dp, colors.line, shape)
                     .clip(shape)

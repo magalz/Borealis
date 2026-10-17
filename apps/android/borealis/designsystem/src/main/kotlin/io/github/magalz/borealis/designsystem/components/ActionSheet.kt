@@ -27,10 +27,12 @@ import androidx.compose.ui.window.DialogProperties
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisShapes
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
+import io.github.magalz.borealis.designsystem.theme.sheetWidth
 
 /** How an action of the sheet looks: danger for what loses something. */
 enum class ActionStyle {
@@ -49,7 +51,6 @@ class ActionSheetAction<out T>(
     val style: ActionStyle = ActionStyle.Normal,
 )
 
-private val DIALOG_WIDTH = 420.dp
 private val CONTENT_PADDING = 20.dp
 /** The list sits 8dp from the edge, so the 12dp padding of a row puts its text at 20dp. */
 private val LIST_PADDING = 8.dp
@@ -60,9 +61,10 @@ private val ACTION_PADDING_VERTICAL = 10.dp
 
 /**
  * The actions of an item with the consequence under each label. On a phone it is a bottom sheet; on
- * a TV or handheld a centred dialog whose first action has focus. Back dismisses either. Choosing
- * an action calls [onAction] and leaves the sheet open: the screen closes it. The title stays and
- * the actions scroll when the window is too short for all of them.
+ * a TV or handheld a centred dialog whose first action has focus: 420dp wide on a TV, and on a
+ * handheld a fraction of the window (see [BorealisDimens.sheetWidth]). Back dismisses either.
+ * Choosing an action calls [onAction] and leaves the sheet open: the screen closes it. The title
+ * stays and the actions scroll when the window is too short for all of them.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,7 +94,7 @@ fun <T> ActionSheet(
             val colors = LocalBorealisColors.current
             val shape = MaterialTheme.shapes.extraLarge
             Column(
-                Modifier.width(DIALOG_WIDTH)
+                Modifier.width(sheetWidth())
                     .background(colors.surface, shape)
                     .border(1.dp, colors.line, shape)
                     .clip(shape)

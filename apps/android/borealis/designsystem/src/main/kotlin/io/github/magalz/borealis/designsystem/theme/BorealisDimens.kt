@@ -1,7 +1,11 @@
 package io.github.magalz.borealis.designsystem.theme
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
+import kotlin.math.roundToInt
 
 /**
  * The width of a dialog. Every dialog takes one of these three, so dialogs line up across screens.
@@ -40,7 +44,8 @@ object BorealisDimens {
      * The width of a [width] dialog in a window [windowWidth] wide: the token, but never closer
      * than the dialog margin to either edge, so on a phone it is the window less 2 x 16dp.
      */
-    fun dialogWidth(width: DialogWidth, windowWidth: Dp): Dp = Dp.Unspecified
+    fun dialogWidth(width: DialogWidth, windowWidth: Dp): Dp =
+        minOf(width.width, windowWidth - BorealisTokens.Space.DialogMargin * 2)
 
     /**
      * The width of a choice or action sheet that is a dialog (a TV or a handheld) in a window
@@ -48,5 +53,23 @@ object BorealisDimens {
      * window, between the compact and standard dialog widths, so a small screen does not get a
      * narrow column and a large one does not get a stretched one.
      */
-    fun sheetWidth(formFactor: FormFactor, windowWidth: Dp): Dp = Dp.Unspecified
+    fun sheetWidth(formFactor: FormFactor, windowWidth: Dp): Dp {
+        val compact = DialogWidth.Compact.width
+        val width =
+            if (formFactor == FormFactor.Handheld) {
+                // Whole dp, so the sheet does not land on a fraction of a pixel.
+                (windowWidth.value * BorealisTokens.Size.Sheet.HandheldFraction)
+                    .roundToInt()
+                    .dp
+                    .coerceIn(compact, DialogWidth.Standard.width)
+            } else {
+                compact
+            }
+        return minOf(width, windowWidth - BorealisTokens.Space.DialogMargin * 2)
+    }
 }
+
+/** The width of a choice or action sheet that is a dialog, here: [BorealisDimens.sheetWidth]. */
+@Composable
+internal fun sheetWidth(): Dp =
+    BorealisDimens.sheetWidth(LocalFormFactor.current, LocalConfiguration.current.screenWidthDp.dp)

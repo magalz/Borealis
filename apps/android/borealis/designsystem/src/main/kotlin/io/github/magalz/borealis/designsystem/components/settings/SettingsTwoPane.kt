@@ -42,15 +42,13 @@ import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.liftedWhenFocused
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
-import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 
 /** One group of a [SettingsTwoPane]: the [key] that identifies it and its [title]. */
 class SettingsGroup<out K>(val key: K, val title: String)
 
-private val TV_LIST_WIDTH = 220.dp
-private val HANDHELD_LIST_WIDTH = 170.dp
 private val PANE_GAP = 12.dp
 /** An outline sits 5dp outside its item, so neighbours need 10dp between them. */
 private val ITEM_GAP = 10.dp
@@ -130,10 +128,8 @@ private fun <K> GroupList(
     pane: FocusRequester,
 ) {
     val focusManager = LocalFocusManager.current
-    val width =
-        if (LocalFormFactor.current == FormFactor.Handheld) HANDHELD_LIST_WIDTH else TV_LIST_WIDTH
     Column(
-        Modifier.width(width)
+        Modifier.width(BorealisDimens.navWidth(LocalFormFactor.current))
             .fillMaxHeight()
             .verticalScroll(rememberScrollState())
             .padding(AREA_PADDING)

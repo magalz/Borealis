@@ -17,6 +17,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -26,6 +27,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
@@ -119,6 +121,8 @@ class HostsScreenTest {
         composeRule.onNodeWithText("Online").assertIsDisplayed()
         composeRule.onNodeWithText("Not paired").assertIsDisplayed()
         composeRule.onNodeWithText("Offline").assertIsDisplayed()
+        // The cards are as high as the tallest one, so the fourth is below the fold of a phone.
+        composeRule.onNode(hasScrollAction()).performScrollToNode(hasText("Checking…"))
         composeRule.onNodeWithText("Checking…").assertIsDisplayed()
         // The host card names the running app as well as the Continue card does.
         composeRule.onAllNodes(hasText("Desktop"), useUnmergedTree = true).assertCountEquals(2)

@@ -25,6 +25,7 @@ import io.github.magalz.borealis.stream.ChromeMode
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamSession
+import io.github.magalz.borealis.stream.input.CaptureEnd
 import io.github.magalz.borealis.stream.input.ChromeChord
 import io.github.magalz.borealis.stream.input.MenuChordDetector
 import io.github.magalz.borealis.stream.ui.StreamChromeRoot
@@ -52,6 +53,10 @@ import kotlinx.coroutines.launch
  * While MODAL the host also takes the gamepad keys itself, whatever pad they come from (see
  * [GamepadKey]), and a hold of Select and Start for one second closes the open panel.
  *
+ * A key that was down when the chrome took the input (the OK held for the menu) does nothing in it
+ * until it has been let go: its repeats and its release are consumed, and a new press works at
+ * once. Otherwise the release would click the row the menu opened on.
+ *
  * When the window gets its focus back from a system window (a permission prompt, the notification
  * shade, an IME), the confirm keys are consumed for [CONFIRM_GUARD_MS]: the press that answered
  * that window, or one meant to continue, must not land on whatever the chrome has focused (Cancel
@@ -75,6 +80,7 @@ class StreamChromeHost(
     private var ownsGesture = false
     private var collecting: Job? = null
     private var composeLaidOut = false
+    private val modalSince = CaptureEnd()
     private val chord = ChromeChord(::closeOpenPanel)
     private val chordCheck = Runnable {
         chord.check(SystemClock.uptimeMillis())
@@ -174,7 +180,10 @@ class StreamChromeHost(
         if (next == ChromeMode.MODAL) {
             descendantFocusability = FOCUS_AFTER_DESCENDANTS
             requestModalFocus()
-            if (previous != ChromeMode.MODAL) onCaptured.run()
+            if (previous != ChromeMode.MODAL) {
+                modalSince.ended(SystemClock.uptimeMillis())
+                onCaptured.run()
+            }
         } else {
             descendantFocusability = FOCUS_BLOCK_DESCENDANTS
             if (previous == ChromeMode.MODAL || previous == ChromeMode.DOCKED) {
@@ -196,13 +205,7 @@ class StreamChromeHost(
      * gets its focus back, the confirm keys of any source are consumed first.
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (
-            session.chromeMode == ChromeMode.MODAL &&
-                GamepadKey.isConfirm(event.keyCode) &&
-                clock() < confirmKeysIgnoredUntil
-        ) {
-            return true
-        }
+        if (session.chromeMode == ChromeMode.MODAL && isSpent(event)) return true
         val key = GamepadKey.of(event.keyCode)
         if (key == null || session.chromeMode != ChromeMode.MODAL) {
             return super.dispatchKeyEvent(event)
@@ -225,6 +228,21 @@ class StreamChromeHost(
         }
         return true
     }
+
+    /** Whether the modal chrome consumes [event] without acting on it. */
+    private fun isSpent(event: KeyEvent): Boolean =
+        isHeldThrough(event) ||
+            (GamepadKey.isConfirm(event.keyCode) && clock() < confirmKeysIgnoredUntil)
+
+    /**
+     * Whether [event] belongs to a press that began before the chrome took the input: repeats keep
+     * the down time of the press, so it is older than the moment the mode became modal. An event
+     * built without a down time and the system keys (volume, media) belong to no such press.
+     */
+    private fun isHeldThrough(event: KeyEvent): Boolean =
+        event.downTime > 0 &&
+            InputRoute.keyToChrome(ChromeMode.MODAL, event.keyCode) &&
+            modalSince.began(event.downTime)
 
     private fun scheduleChordCheck() {
         removeCallbacks(chordCheck)

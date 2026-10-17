@@ -19,6 +19,7 @@ import androidx.core.app.PictureInPictureModeChangedInfo
 import androidx.core.util.Consumer
 import androidx.lifecycle.lifecycleScope
 import io.github.magalz.borealis.designsystem.adaptive.formFactorOf
+import io.github.magalz.borealis.designsystem.adaptive.isGamepadConnected
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.host.launch.ConflictChoice
 import io.github.magalz.borealis.stream.ChromeMode
@@ -311,7 +312,8 @@ class StreamChromeHost(
 
         /**
          * Whether the device is a phone, where the keyboard docks under the stream instead of
-         * covering it: the same rule the Library uses for its layouts.
+         * covering it: the same rule the Library uses for its layouts, so a wide phone with a game
+         * controller connected is not one.
          */
         @Suppress("ConfigurationScreenWidthHeight")
         fun isPhone(context: Context): Boolean {
@@ -325,6 +327,7 @@ class StreamChromeHost(
                 widthDp = configuration.screenWidthDp,
                 touchscreen = configuration.touchscreen,
                 navigation = configuration.navigation,
+                gamepadConnected = isGamepadConnected(),
             ) == FormFactor.Phone
         }
     }

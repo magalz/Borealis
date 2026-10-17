@@ -107,6 +107,19 @@ The owner creates the tag. See the [release procedure](development/release.md).
   permission again. See Sprint 7, item 3.
 - **Document the native pad modes.** Idea, not planned. The Pro 3 in Switch
   mode and the Ultimate 2 in D-input, for the 8BitDo pads. See Sprint 7, item 3.
+- **Smoother D-pad moves in Settings on a TV.** Reported by the owner on
+  2026-10-17. Moving from one Settings row to the next has a small delay, while
+  every other screen moves at once. Investigate where the time goes, for
+  example rows that recompose or reload their options on every focus change.
+- **The quit warning for Desktop.** Reported by the owner on 2026-10-17.
+  Quitting the stream asks "Quit Desktop? Unsaved work is lost.", but quitting
+  Desktop only ends the stream and gives the display back to the PC; nothing is
+  lost. The warning still fits a game, which the quit closes. The strings are
+  `stream_menu_quit_confirm`, `apps_confirm_quit`, `apps_action_quit_consequence`
+  and `stream_conflict_warning`.
+- **Host details text.** Noticed on 2026-10-17. The host Details dialog lists
+  raw fields inherited from Moonlight, such as "Active Address: null" and
+  "State: OFFLINE". Show only what a user needs, in plain words.
 
 ## Host-side items (LuminalShine)
 

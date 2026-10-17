@@ -1340,7 +1340,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
         try {
             if ((codecFlags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) {
-                decodeTimeFifo.push(SystemClock.uptimeMillis()); // BOREALIS: before the queue, so a fast output finds it (stream.perf)
+                decodeTimeFifo.push(timestampUs / 1000); // BOREALIS: the frame's enqueue time in uptime ms, pushed before the queue so a fast output finds it (stream.perf)
             }
             videoDecoder.queueInputBuffer(nextInputBufferIndex,
                     0, nextInputBuffer.position(),

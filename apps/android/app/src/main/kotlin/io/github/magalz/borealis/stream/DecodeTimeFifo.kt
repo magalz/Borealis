@@ -20,7 +20,10 @@ class DecodeTimeFifo {
     var dropped = 0
         private set
 
-    /** Records that a frame is about to go into the decoder at [uptimeMs]. */
+    /**
+     * Records a frame on its way into the decoder. [uptimeMs] is when the frame was enqueued for
+     * decoding, in uptime milliseconds, so the measure keeps counting the wait for an input buffer.
+     */
     @Synchronized
     fun push(uptimeMs: Long) {
         if (size == CAPACITY) {

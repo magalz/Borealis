@@ -25,6 +25,7 @@ import io.github.magalz.borealis.diagnostics.transfer.activeLocalIpv4
 import io.github.magalz.borealis.diagnostics.transfer.monotonicMillis
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogTag
+import io.github.magalz.borealis.logging.PreferencesLogSwitches
 import java.io.File
 import java.net.InetAddress
 import kotlinx.coroutines.CoroutineDispatcher
@@ -137,7 +138,12 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
         ExportFlow(
             chooserTitle = context.getString(R.string.borealis_export_chooser_title),
             buildBundle = {
-                BundleBuilder.build(context, sectionsProvider(), flushLogs = flushLogs)
+                BundleBuilder.build(
+                    context,
+                    sectionsProvider(),
+                    PreferencesLogSwitches(context),
+                    flushLogs = flushLogs,
+                )
             },
             uriFor = uriFor,
             canShare = { context.packageManager.queryIntentActivities(it, 0).isNotEmpty() },

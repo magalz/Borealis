@@ -7,6 +7,7 @@ import android.os.Build
 import android.preference.PreferenceManager
 import io.github.magalz.borealis.diagnostics.R
 import io.github.magalz.borealis.logging.LogStorage
+import io.github.magalz.borealis.logging.LogSwitches
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlinx.serialization.Serializable
@@ -58,7 +59,11 @@ object ManifestCollector {
     private const val UNKNOWN = "unknown"
 
     @Suppress("DEPRECATION")
-    fun collect(context: Context, now: Instant = Instant.now()): BundleManifest {
+    fun collect(
+        context: Context,
+        switches: LogSwitches,
+        now: Instant = Instant.now(),
+    ): BundleManifest {
         val info = runCatching { context.packageManager.getPackageInfo(context.packageName, 0) }
         val preferences = PreferenceManager.getDefaultSharedPreferences(context)
         return BundleManifest(

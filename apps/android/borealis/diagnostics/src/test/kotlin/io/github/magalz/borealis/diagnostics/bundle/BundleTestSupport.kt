@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.diagnostics.bundle
 
 import io.github.magalz.borealis.diagnostics.DiagnosticSection
+import io.github.magalz.borealis.logging.LogSwitches
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.OutputStream
@@ -42,3 +43,8 @@ internal fun unzip(bytes: ByteArray): Map<String, String> {
 }
 
 internal fun File.writeLines(vararg lines: String) = writeText(lines.joinToString("") { it + "\n" })
+
+internal class FakeLogSwitches(
+    override var verboseLogging: Boolean = false,
+    override var maskAddresses: Boolean = false,
+) : LogSwitches

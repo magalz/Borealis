@@ -21,6 +21,7 @@ import org.robolectric.util.ReflectionHelpers
 class ManifestCollectorTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val now = Instant.parse("2026-10-14T12:34:56.789Z")
+    private val switches = FakeLogSwitches()
 
     @Before
     fun setUp() {
@@ -49,7 +50,7 @@ class ManifestCollectorTest {
     fun `collects the app, device and creation time`() {
         install("1.2.3", 42L, debuggable = false)
 
-        val manifest = ManifestCollector.collect(context, now)
+        val manifest = ManifestCollector.collect(context, switches, now)
 
         assertThat(manifest.app)
             .isEqualTo(AppInfo("1.2.3", 42L, gitSha = "unknown", buildType = "release"))
@@ -66,26 +67,43 @@ class ManifestCollectorTest {
     fun `a debuggable app is a debug build`() {
         install("1.0", 1L, debuggable = true)
 
-        assertThat(ManifestCollector.collect(context, now).app.buildType).isEqualTo("debug")
+        assertThat(ManifestCollector.collect(context, switches, now).app.buildType)
+            .isEqualTo("debug")
     }
 
     @Test
     fun `a missing version name is unknown`() {
         install(null, 1L, debuggable = false)
 
-        assertThat(ManifestCollector.collect(context, now).app.versionName).isEqualTo("unknown")
+        assertThat(ManifestCollector.collect(context, switches, now).app.versionName)
+            .isEqualTo("unknown")
     }
 
     @Test
     fun `the log settings default to off`() {
         install("1.0", 1L, debuggable = false)
 
-        assertThat(ManifestCollector.collect(context, now).logSettings)
+        assertThat(ManifestCollector.collect(context, switches, now).logSettings)
             .isEqualTo(LogSettingsInfo(verbose = false, maskAddresses = false))
     }
 
     @Test
-    fun `the log settings follow the Borealis preferences`() {
+    fun `the log settings reflect the switches it is given`() {
+        install("1.0", 1L, debuggable = false)
+        switches.verboseLogging = true
+        switches.maskAddresses = true
+
+        assertThat(ManifestCollector.collect(context, switches, now).logSettings)
+            .isEqualTo(LogSettingsInfo(verbose = true, maskAddresses = true))
+
+        switches.maskAddresses = false
+
+        assertThat(ManifestCollector.collect(context, switches, now).logSettings)
+            .isEqualTo(LogSettingsInfo(verbose = true, maskAddresses = false))
+    }
+
+    @Test
+    fun `the manifest does not read the Borealis preferences itself`() {
         install("1.0", 1L, debuggable = false)
         PreferenceManager.getDefaultSharedPreferences(context)
             .edit()
@@ -93,7 +111,7 @@ class ManifestCollectorTest {
             .putBoolean("borealis_mask_addresses", true)
             .commit()
 
-        assertThat(ManifestCollector.collect(context, now).logSettings)
-            .isEqualTo(LogSettingsInfo(verbose = true, maskAddresses = true))
+        assertThat(ManifestCollector.collect(context, switches, now).logSettings)
+            .isEqualTo(LogSettingsInfo(verbose = false, maskAddresses = false))
     }
 }

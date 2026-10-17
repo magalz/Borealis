@@ -7,6 +7,7 @@ import android.net.Uri
 import io.github.magalz.borealis.diagnostics.DiagnosticSection
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogStorage
+import io.github.magalz.borealis.logging.LogSwitches
 import io.github.magalz.borealis.logging.LogTag
 import java.io.File
 import java.time.Instant
@@ -15,8 +16,14 @@ import java.time.format.DateTimeFormatter
 
 /** What the settings screen does with a finished bundle. */
 sealed interface ExportResult {
-    /** Hand [chooser] to `startActivity`. */
-    class Share(val chooser: Intent) : ExportResult
+    /**
+     * Hand [chooser] to `startActivity`. [uri] is the FileProvider address of [bundle], the zip in
+     * the app's cache.
+     */
+    class Share(val chooser: Intent, val uri: Uri, val bundle: File) : ExportResult {
+        val fileName: String = bundle.name
+        val sizeBytes: Long = bundle.length()
+    }
 
     /**
      * The zip was saved at [location] (a TV, or a phone with no receiver); show how to fetch it
@@ -27,7 +34,10 @@ sealed interface ExportResult {
         val adbPullCommand: String,
         val chooser: Intent,
         val bundle: File,
-    ) : ExportResult
+    ) : ExportResult {
+        val fileName: String = bundle.name
+        val sizeBytes: Long = bundle.length()
+    }
 
     /** The bundle could not be built or saved; the cause is in the log. */
     data object Failed : ExportResult
@@ -66,7 +76,7 @@ internal class ExportFlow(
                 .apply { clipData = ClipData.newRawUri(null, uri) }
         val chooser =
             Intent.createChooser(send, chooserTitle).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        if (!isTelevision && canShare(send)) return ExportResult.Share(chooser)
+        if (!isTelevision && canShare(send)) return ExportResult.Share(chooser, uri, zip)
         val saved = store.save(zip)
         return ExportResult.Saved(saved.location, saved.adbPullCommand, chooser, zip)
     }
@@ -113,6 +123,7 @@ internal object BundleBuilder {
     fun build(
         context: Context,
         sections: Collection<DiagnosticSection>,
+        switches: LogSwitches,
         now: Instant = Instant.now(),
         flushLogs: () -> Unit = { DiagnosticBundleWriter.flushOpenSinks() },
     ): File {
@@ -131,7 +142,7 @@ internal object BundleBuilder {
                 )
             unfinished.outputStream().buffered().use {
                 writer.write(
-                    ManifestCollector.collect(context, now),
+                    ManifestCollector.collect(context, switches, now),
                     DecoderCollector.collect(SystemDecoderSource(context)),
                     it,
                 )

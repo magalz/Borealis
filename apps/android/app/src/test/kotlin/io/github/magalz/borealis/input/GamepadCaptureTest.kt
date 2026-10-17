@@ -215,6 +215,7 @@ class GamepadCaptureTest {
         assertThat(GamepadButtons.A).isEqualTo(ControllerPacket.A_FLAG)
         assertThat(GamepadButtons.B).isEqualTo(ControllerPacket.B_FLAG)
         assertThat(GamepadButtons.Y).isEqualTo(ControllerPacket.Y_FLAG)
+        assertThat(GamepadButtons.LEFT_BUMPER).isEqualTo(ControllerPacket.LB_FLAG)
         assertThat(GamepadButtons.RIGHT_BUMPER).isEqualTo(ControllerPacket.RB_FLAG)
         assertThat(GamepadButtons.DPAD_UP).isEqualTo(ControllerPacket.UP_FLAG)
         assertThat(GamepadButtons.DPAD_DOWN).isEqualTo(ControllerPacket.DOWN_FLAG)

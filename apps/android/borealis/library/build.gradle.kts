@@ -28,6 +28,7 @@ dependencies {
     // The Hilt test components aggregate the Settings graph's modules, which reference diagnostics
     // types (the export sections), so those types must resolve on the test classpath.
     testImplementation(project(":borealis:diagnostics"))
+    testImplementation(testFixtures(project(":borealis:designsystem")))
     testImplementation(libs.hilt.android.testing)
     add("kspTest", libs.hilt.compiler)
 }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Icon
@@ -32,8 +33,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisType
+import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 
 /**
  * An item of the [NavigationRail]. The screens pass the [icon]: the design system has no icon set,
@@ -52,8 +55,9 @@ private val ICON_SIZE = 20.dp
 /**
  * The TV and handheld navigation rail: the chrome surface with one item per destination, an icon
  * and a label in the rail text style. The selected item has the accent tint and accent text. Every
- * item is focusable with the Borealis focus indication. A D-pad that enters the rail from the
- * content lands on the selected item, not on the nearest one.
+ * item is focusable with the Borealis focus indication. It is as wide as [BorealisDimens.navWidth]
+ * says, so a screen does not give it a width. A D-pad that enters the rail from the content lands
+ * on the selected item, not on the nearest one.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -66,6 +70,7 @@ fun NavigationRail(
     val selectedFocus = remember { FocusRequester() }
     Column(
         modifier
+            .width(BorealisDimens.navWidth(LocalFormFactor.current))
             .fillMaxHeight()
             .background(LocalBorealisColors.current.chrome)
             .padding(RAIL_PADDING)

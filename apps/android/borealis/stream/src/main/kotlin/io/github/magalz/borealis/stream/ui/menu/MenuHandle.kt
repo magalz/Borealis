@@ -5,6 +5,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -22,6 +23,7 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisShapes
 import io.github.magalz.borealis.stream.R
@@ -92,6 +94,11 @@ private fun Tab() {
             .background(colors.page.copy(alpha = TAB_ALPHA), LocalBorealisShapes.current.pill),
         contentAlignment = Alignment.Center,
     ) {
-        Chevron(colors.ink)
+        Icon(
+            BorealisIcons.ChevronDown,
+            contentDescription = null,
+            modifier = Modifier.size(TAB_HEIGHT),
+            tint = colors.ink,
+        )
     }
 }

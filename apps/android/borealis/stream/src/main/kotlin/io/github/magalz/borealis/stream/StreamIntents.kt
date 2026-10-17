@@ -27,6 +27,8 @@ interface StreamIntents {
 
     fun setGamepadMouse(enabled: Boolean)
 
+    fun setPointerSpeed(speed: PointerSpeed)
+
     fun setOverlay(mode: OverlayMode)
 
     fun disconnect()

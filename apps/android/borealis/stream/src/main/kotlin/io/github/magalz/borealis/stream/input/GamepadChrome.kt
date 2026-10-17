@@ -7,6 +7,9 @@ interface GamepadChrome {
 
     /** Turns the gamepad-as-mouse mode on or off. */
     fun setMouseEmulation(enabled: Boolean)
+
+    /** Scales the speed of the gamepad mouse for this session: 1 is the speed of the setting. */
+    fun setPointerSpeed(factor: Float)
 }
 
 /** Told when the gamepad chord that opens the menu (Select and Start held) is recognised. */

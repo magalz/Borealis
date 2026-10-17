@@ -105,12 +105,36 @@ class FormFactorDetectionTest {
             .isEqualTo(700)
     }
 
-    /** A plain touch phone unless a test says otherwise. */
+    @Test
+    fun `a wide touch phone with a connected gamepad is a handheld`() {
+        assertThat(detect(widthDp = 700, gamepadConnected = true)).isEqualTo(FormFactor.Handheld)
+        assertThat(detect(widthDp = 600, gamepadConnected = true)).isEqualTo(FormFactor.Handheld)
+    }
+
+    @Test
+    fun `the same wide phone without a gamepad is a phone`() {
+        assertThat(detect(widthDp = 700, gamepadConnected = false)).isEqualTo(FormFactor.Phone)
+    }
+
+    @Test
+    fun `a narrow phone with a connected gamepad stays a phone`() {
+        assertThat(detect(widthDp = 599, gamepadConnected = true)).isEqualTo(FormFactor.Phone)
+    }
+
+    @Test
+    fun `a TV with a connected gamepad is a TV`() {
+        val formFactor = detect(isTvFeature = true, widthDp = 960, gamepadConnected = true)
+
+        assertThat(formFactor).isEqualTo(FormFactor.Tv)
+    }
+
+    /** A plain touch phone, no gamepad, unless a test says otherwise. */
     private fun detect(
         isTvFeature: Boolean = false,
         uiModeType: Int = Configuration.UI_MODE_TYPE_NORMAL,
         widthDp: Int = 360,
         touchscreen: Int = Configuration.TOUCHSCREEN_FINGER,
         navigation: Int = Configuration.NAVIGATION_NONAV,
-    ) = formFactorOf(isTvFeature, uiModeType, widthDp, touchscreen, navigation)
+        gamepadConnected: Boolean = false,
+    ) = formFactorOf(isTvFeature, uiModeType, widthDp, touchscreen, navigation, gamepadConnected)
 }

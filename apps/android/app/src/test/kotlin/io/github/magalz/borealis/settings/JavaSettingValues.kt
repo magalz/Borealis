@@ -38,6 +38,7 @@ internal fun javaValues(c: PreferenceConfiguration): Map<Setting<*>, Any> =
                 PreferenceConfiguration.AnalogStickForScrolling.LEFT -> "left"
                 else -> "none"
             },
+        Settings.GAMEPAD_MOUSE_SPEED to c.gamepadMouseSpeed,
         Settings.VIBRATE_FALLBACK to c.vibrateFallbackToDevice,
         Settings.VIBRATE_FALLBACK_STRENGTH to c.vibrateFallbackToDeviceStrength,
         Settings.FLIP_FACE_BUTTONS to c.flipFaceButtons,

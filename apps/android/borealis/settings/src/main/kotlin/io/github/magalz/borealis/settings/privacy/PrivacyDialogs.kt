@@ -3,24 +3,17 @@ package io.github.magalz.borealis.settings.privacy
 import android.text.format.Formatter
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
-import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.components.BorealisDialog
+import io.github.magalz.borealis.designsystem.components.DialogAction
+import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
@@ -42,24 +35,27 @@ internal fun PrivacyDialogs(dialog: PrivacyDialog?, actions: PrivacyActions) {
 /** Cancel has the focus, so a stray OK changes nothing. */
 @Composable
 private fun EraseDialog(actions: PrivacyActions) {
-    DialogFrame(
+    BorealisDialog(
         title = stringResource(R.string.borealis_privacy_erase_dialog_title),
-        onDismiss = actions.onEraseCancelled,
+        onDismissRequest = actions.onEraseCancelled,
         confirm =
-            DialogButton(
+            DialogAction(
                 stringResource(R.string.borealis_privacy_erase_confirm),
-                actions.onEraseConfirmed,
                 BorealisButtonStyle.Danger,
+                actions.onEraseConfirmed,
             ),
+        width = DialogWidth.Compact,
         dismiss =
-            DialogButton(
+            DialogAction(
                 stringResource(R.string.borealis_privacy_erase_cancel),
-                actions.onEraseCancelled,
-                BorealisButtonStyle.Text,
+                onClick = actions.onEraseCancelled,
             ),
-        focusOnDismiss = true,
+        focusDismiss = true,
     ) {
-        Text(stringResource(R.string.borealis_privacy_erase_dialog_message))
+        Text(
+            stringResource(R.string.borealis_privacy_erase_dialog_message),
+            color = LocalBorealisColors.current.ink2,
+        )
     }
 }
 
@@ -75,22 +71,20 @@ private fun SavedDialog(dialog: PrivacyDialog.Saved, actions: PrivacyActions) {
         if (LocalFormFactor.current != FormFactor.Tv) {
             null
         } else {
-            DialogButton(
-                stringResource(R.string.borealis_privacy_saved_send_to_phone),
-                { actions.onSendToPhone(dialog.bundle, dialog.adbPullCommand) },
-                BorealisButtonStyle.Secondary,
-            )
+            DialogAction(stringResource(R.string.borealis_privacy_saved_send_to_phone)) {
+                actions.onSendToPhone(dialog.bundle, dialog.adbPullCommand)
+            }
         }
-    DialogFrame(
+    BorealisDialog(
         title = stringResource(R.string.borealis_privacy_saved_title),
-        onDismiss = actions.onDialogDismissed,
+        onDismissRequest = actions.onDialogDismissed,
         confirm =
-            DialogButton(
+            DialogAction(
                 stringResource(R.string.borealis_privacy_saved_close),
-                actions.onDialogDismissed,
+                onClick = actions.onDialogDismissed,
             ),
+        width = DialogWidth.Standard,
         dismiss = sendToPhone,
-        focusOnDismiss = false,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(FIELD_GAP)) {
             Field(
@@ -121,59 +115,4 @@ private fun Field(label: String, value: String, monospace: Boolean = false) {
             style = MaterialTheme.typography.bodyMedium,
         )
     }
-}
-
-/** A button of a [DialogFrame]. */
-private class DialogButton(
-    val label: String,
-    val onClick: () -> Unit,
-    val style: BorealisButtonStyle = BorealisButtonStyle.Primary,
-)
-
-/**
- * A dialog in the Borealis look with a [title], a scrollable body, a [confirm] button and
- * optionally a [dismiss] button. [focusOnDismiss] says which of the two has the focus when the
- * dialog opens, so a D-pad or a gamepad works at once; with no [dismiss] button, [confirm] has it.
- * Back calls [onDismiss].
- */
-@Composable
-private fun DialogFrame(
-    title: String,
-    onDismiss: () -> Unit,
-    confirm: DialogButton,
-    dismiss: DialogButton?,
-    focusOnDismiss: Boolean,
-    body: @Composable () -> Unit,
-) {
-    val colors = LocalBorealisColors.current
-    val focus = remember { FocusRequester() }
-    val confirmFocus = dismiss == null || !focusOnDismiss
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = colors.surface,
-        titleContentColor = colors.ink,
-        textContentColor = colors.ink2,
-        shape = MaterialTheme.shapes.extraLarge,
-        title = { Text(title, Modifier.semantics { heading() }) },
-        text = { Column(Modifier.verticalScroll(rememberScrollState())) { body() } },
-        confirmButton = {
-            BorealisButton(
-                confirm.label,
-                confirm.onClick,
-                if (confirmFocus) Modifier.initialFocus(focus) else Modifier,
-                style = confirm.style,
-            )
-        },
-        dismissButton =
-            dismiss?.let { button ->
-                {
-                    BorealisButton(
-                        button.label,
-                        button.onClick,
-                        if (confirmFocus) Modifier else Modifier.initialFocus(focus),
-                        style = button.style,
-                    )
-                }
-            },
-    )
 }

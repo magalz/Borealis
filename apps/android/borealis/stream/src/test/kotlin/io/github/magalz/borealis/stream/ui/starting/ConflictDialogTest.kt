@@ -5,6 +5,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -212,10 +213,24 @@ class ConflictDialogTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `on a phone the panel is 92 percent of the screen`() {
+    fun `on a phone the panel is the window less 16dp on each side`() {
         show(sameApp())
 
-        composeRule.onNodeWithTag(CONFLICT_PANEL_TAG).assertWidthNear(331.2.dp)
+        composeRule.onNodeWithTag(CONFLICT_PANEL_TAG).assertWidthNear(328.dp)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the padding is 24dp on every side, as in the other dialogs`() {
+        show(sameApp(), FormFactor.Tv)
+
+        val panel = composeRule.onNodeWithTag(CONFLICT_PANEL_TAG).getUnclippedBoundsInRoot()
+        val title =
+            composeRule.onNodeWithText("An app is already running").getUnclippedBoundsInRoot()
+        val cancel = composeRule.onNodeWithText("Cancel").getUnclippedBoundsInRoot()
+        assertThat(title.left - panel.left).isEqualTo(24.dp)
+        assertThat(title.top - panel.top).isEqualTo(24.dp)
+        assertThat(panel.bottom - cancel.bottom).isEqualTo(24.dp)
     }
 
     private fun sameApp() =

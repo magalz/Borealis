@@ -14,6 +14,7 @@ import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.host.launch.ConflictChoice
 import io.github.magalz.borealis.stream.OverlayMode
+import io.github.magalz.borealis.stream.PointerSpeed
 import io.github.magalz.borealis.stream.StreamIntents
 import io.github.magalz.borealis.stream.TouchMode
 import io.github.magalz.borealis.stream.keys.KeyChord
@@ -105,6 +106,10 @@ internal class RecordingIntents : StreamIntents {
 
     override fun setGamepadMouse(enabled: Boolean) {
         calls += "setGamepadMouse $enabled"
+    }
+
+    override fun setPointerSpeed(speed: PointerSpeed) {
+        calls += "setPointerSpeed $speed"
     }
 
     override fun setOverlay(mode: OverlayMode) {

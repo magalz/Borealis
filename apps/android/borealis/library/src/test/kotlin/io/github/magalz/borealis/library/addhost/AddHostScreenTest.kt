@@ -23,12 +23,14 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -43,6 +45,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.TV
@@ -132,6 +135,48 @@ class AddHostScreenTest {
 
         assertThat(cancelled).isEqualTo(1)
         assertThat(submitted).isEqualTo(0)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a phone has a back arrow that returns to Hosts`() {
+        show(AddHostUiState())
+
+        composeRule.onNodeWithContentDescription("Back to Hosts").performClick()
+
+        assertThat(cancelled).isEqualTo(1)
+        assertThat(submitted).isEqualTo(0)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `a TV has no back arrow because the rail leads back to Hosts`() {
+        show(AddHostUiState(), FormFactor.Tv)
+
+        composeRule.onNodeWithContentDescription("Back to Hosts").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the content is at most 560dp wide and starts at the left like the other screens`() {
+        show(AddHostUiState(), FormFactor.Tv)
+
+        val field = composeRule.onNode(hasSetTextAction()).getUnclippedBoundsInRoot()
+        val button =
+            composeRule.onNode(hasText("Add host") and hasClickAction()).getUnclippedBoundsInRoot()
+
+        assertThat(field.right.value - field.left.value)
+            .isAtMost(BorealisDimens.contentMaxWidth.value)
+        assertThat(field.left.value).isWithin(1f).of(button.left.value)
+        assertThat(field.left.value).isAtMost(MAX_GUTTER_DP)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the back arrow is disabled while busy`() {
+        show(AddHostUiState(address = "192.168.1.20", busy = true))
+
+        composeRule.onNodeWithContentDescription("Back to Hosts").assertIsNotEnabled()
     }
 
     @Test
@@ -412,5 +457,6 @@ class AddHostScreenTest {
 
     private companion object {
         const val NEIGHBOUR = "neighbour"
+        const val MAX_GUTTER_DP = 64f
     }
 }

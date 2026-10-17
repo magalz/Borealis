@@ -15,6 +15,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.unit.dp
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
@@ -168,6 +169,27 @@ class ChoiceSheetTest {
         assertThat((first.top - title.bottom).value).isAtLeast(16f)
     }
 
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun `on a handheld the sheet takes 60 percent of the window`() {
+        composeRule.setContent { Specimen(FormFactor.Handheld) }
+
+        // An option fills the dialog less the 8dp list padding on each side.
+        val option = composeRule.onNodeWithText("1280 x 720").getUnclippedBoundsInRoot()
+
+        assertThat(option.right - option.left).isEqualTo(464.dp)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV the sheet is a compact dialog`() {
+        composeRule.setContent { Specimen(FormFactor.Tv) }
+
+        val option = composeRule.onNodeWithText("1280 x 720").getUnclippedBoundsInRoot()
+
+        assertThat(option.right - option.left).isEqualTo(404.dp)
+    }
+
     @Composable
     private fun Specimen(formFactor: FormFactor, selected: String = "720p") {
         BorealisTheme(formFactor) {
@@ -182,6 +204,7 @@ class ChoiceSheetTest {
     }
 
     private companion object {
+        const val HANDHELD = "w800dp-h360dp-land-xhdpi"
         const val PHONE = "w360dp-h640dp-xhdpi"
         const val TV = "w960dp-h540dp-land-television-xhdpi"
     }

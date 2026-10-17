@@ -303,6 +303,78 @@ class ConnectionErrorScreenTest {
 
     @Test
     @Config(qualifiers = "w360dp-h640dp-xhdpi")
+    fun `on a phone Diagnostics and Close are in a row below Try again and Wake PC`() {
+        show(failure(FailureKind.HOST_OFFLINE))
+
+        val tryAgain = composeRule.onNodeWithText("Try again").getUnclippedBoundsInRoot()
+        val wake = composeRule.onNodeWithText("Wake PC").getUnclippedBoundsInRoot()
+        val diagnostics = composeRule.onNodeWithText("Diagnostics").getUnclippedBoundsInRoot()
+        val close = composeRule.onNodeWithText("Close").getUnclippedBoundsInRoot()
+
+        assertThat(wake.top).isEqualTo(tryAgain.top)
+        assertThat(diagnostics.top).isAtLeast(tryAgain.bottom)
+        assertThat(diagnostics.top).isAtLeast(wake.bottom)
+        assertThat(close.top).isEqualTo(diagnostics.top)
+        assertThat(diagnostics.left).isLessThan(close.left)
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h640dp-xhdpi")
+    fun `on a phone without a state action Diagnostics and Close are still below Try again`() {
+        show(failure(FailureKind.HOST_BUSY))
+
+        val tryAgain = composeRule.onNodeWithText("Try again").getUnclippedBoundsInRoot()
+        val diagnostics = composeRule.onNodeWithText("Diagnostics").getUnclippedBoundsInRoot()
+
+        assertThat(diagnostics.top).isAtLeast(tryAgain.bottom)
+    }
+
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    fun `on a TV all the buttons stay in one row`() {
+        show(failure(FailureKind.HOST_OFFLINE), FormFactor.Tv)
+
+        val tops =
+            listOf("Try again", "Wake PC", "Diagnostics", "Close").map {
+                composeRule.onNodeWithText(it).getUnclippedBoundsInRoot().top
+            }
+
+        assertThat(tops.toSet()).hasSize(1)
+    }
+
+    @Test
+    @Config(qualifiers = "w800dp-h480dp-land-hdpi")
+    fun `on a handheld all the buttons stay in one row`() {
+        show(failure(FailureKind.HOST_OFFLINE), FormFactor.Handheld)
+
+        val tops =
+            listOf("Try again", "Wake PC", "Diagnostics", "Close").map {
+                composeRule.onNodeWithText(it).getUnclippedBoundsInRoot().top
+            }
+
+        assertThat(tops.toSet()).hasSize(1)
+    }
+
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    fun `the content is as wide as 560dp, not less`() {
+        show(failure(FailureKind.HOST_BUSY), FormFactor.Tv)
+
+        val body =
+            composeRule
+                .onNodeWithText(
+                    "The host did not answer in time. It is probably building a display for " +
+                        "another device."
+                )
+                .getUnclippedBoundsInRoot()
+
+        // The body wraps at the content width: wider than the old 460dp cap, within the new one.
+        assertThat((body.right - body.left).value).isGreaterThan(MAX_OLD_CONTENT)
+        assertThat((body.right - body.left).value).isAtMost(MAX_CONTENT)
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h640dp-xhdpi")
     fun `wrapped rows of buttons are at least 10dp apart vertically`() {
         // A TV-sized button row wraps on a narrow phone with Wake PC: Close drops to a second row.
         show(failure(FailureKind.HOST_OFFLINE), FormFactor.Tv)
@@ -343,6 +415,8 @@ class ConnectionErrorScreenTest {
 
     private companion object {
         const val MIN_GAP = 10f
+        const val MAX_OLD_CONTENT = 460f
+        const val MAX_CONTENT = 560f
         const val ACTION_DOWN = android.view.KeyEvent.ACTION_DOWN
         const val ACTION_UP = android.view.KeyEvent.ACTION_UP
     }

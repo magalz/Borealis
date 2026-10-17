@@ -60,7 +60,6 @@ class ComponentScreenshotTest {
                     // they are not data a host reports.
                     detail = "LuminalShine 26.09.1 · 192.168.1.20",
                     runningApp = "Desktop running",
-                    action = HostCardAction("Open") {},
                     onClick = {},
                 )
             }
@@ -80,7 +79,6 @@ class ComponentScreenshotTest {
                     statusText = "Online",
                     detail = "192.168.1.20",
                     tags = listOf("HEVC 10-bit", "HDR", "4:4:4"),
-                    action = HostCardAction("Open") {},
                     onClick = {},
                 )
             }
@@ -99,7 +97,6 @@ class ComponentScreenshotTest {
                     status = DotStatus.Attention,
                     statusText = "Not paired",
                     detail = "LuminalShine 26.09.1 · found on this network",
-                    action = HostCardAction("Pair") {},
                     onClick = {},
                 )
             }
@@ -118,7 +115,6 @@ class ComponentScreenshotTest {
                     status = DotStatus.Offline,
                     statusText = "Offline",
                     detail = "Last seen 2 days ago · 192.168.1.31",
-                    action = HostCardAction("Wake") {},
                     onClick = {},
                 )
             }
@@ -147,7 +143,6 @@ class ComponentScreenshotTest {
                         status = DotStatus.Offline,
                         statusText = "Offline",
                         detail = "Last seen 2 days ago",
-                        action = HostCardAction("Wake") {},
                         onClick = {},
                         modifier = Modifier.width(220.dp),
                     )
@@ -290,7 +285,6 @@ class ComponentScreenshotTest {
                         items = listOf(RailItem("Home", ICON), RailItem("Settings", ICON)),
                         selectedIndex = 0,
                         onSelect = {},
-                        modifier = Modifier.width(190.dp),
                     )
                 }
             }

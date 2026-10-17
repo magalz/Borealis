@@ -44,7 +44,8 @@ sealed interface StreamPhase {
 
     /**
      * The first frame is on screen. [touchMode] is null when the device has no touchscreen and
-     * [gamepadMouse] is null when there is no gamepad-as-mouse choice to offer.
+     * [gamepadMouse] is null when there is no gamepad-as-mouse choice to offer. [pointerSpeed] is
+     * the speed of the gamepad mouse for this session.
      */
     data class Streaming(
         val panel: Panel = Panel.NONE,
@@ -53,6 +54,7 @@ sealed interface StreamPhase {
         val gamepadMouse: Boolean?,
         val info: SessionInfo,
         val showMenuHint: Boolean,
+        val pointerSpeed: PointerSpeed = PointerSpeed.NORMAL,
     ) : StreamPhase
 }
 
@@ -83,6 +85,16 @@ enum class TouchMode {
     TRACKPAD,
     DIRECT,
     OFF,
+}
+
+/**
+ * How fast the gamepad mouse moves in this session, as a [factor] of the speed in the settings. It
+ * is the session's own choice and does not change the setting.
+ */
+enum class PointerSpeed(val factor: Float) {
+    SLOW(0.5f),
+    NORMAL(1f),
+    FAST(2f),
 }
 
 /** What the chrome asks of the input layer: who gets the touches and the keys. */

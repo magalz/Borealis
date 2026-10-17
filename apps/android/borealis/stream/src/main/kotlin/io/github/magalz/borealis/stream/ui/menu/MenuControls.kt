@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.Chip
 import io.github.magalz.borealis.designsystem.components.MenuRow
 import io.github.magalz.borealis.designsystem.components.SegmentedControl
@@ -27,6 +30,7 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.PerfSnapshot
+import io.github.magalz.borealis.stream.PointerSpeed
 import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.SessionInfo
 import io.github.magalz.borealis.stream.StreamIntents
@@ -50,7 +54,7 @@ internal fun SendKeysRow(intents: StreamIntents) {
     MenuRow(
         stringResource(R.string.stream_menu_send_keys),
         onClick = { open = !open },
-        trailing = { Chevron(LocalBorealisColors.current.ink3, down = open) },
+        trailing = { ExpandMark(open) },
     )
     if (open) {
         FlowRow(
@@ -67,7 +71,8 @@ internal fun SendKeysRow(intents: StreamIntents) {
 
 /**
  * How the pointer is driven: Touch on a phone, Gamepad mouse on a TV or handheld, and nothing when
- * the session offers no such choice (the value is null).
+ * the session offers no such choice (the value is null). While the gamepad mouse is on, a second
+ * row sets its speed for this session.
  */
 @Composable
 internal fun PointerRow(phase: StreamPhase.Streaming, intents: StreamIntents) {
@@ -93,6 +98,16 @@ internal fun PointerRow(phase: StreamPhase.Streaming, intents: StreamIntents) {
             label = { if (it) on else off },
             onSelect = intents::setGamepadMouse,
         )
+        if (gamepadMouse) {
+            val speedLabels = PointerSpeed.entries.associateWith { stringResource(speedLabel(it)) }
+            OptionRow(
+                stringResource(R.string.stream_menu_pointer_speed),
+                options = PointerSpeed.entries,
+                selected = phase.pointerSpeed,
+                label = speedLabels::getValue,
+                onSelect = intents::setPointerSpeed,
+            )
+        }
     }
 }
 
@@ -123,6 +138,13 @@ private fun <T> OptionRow(
         },
     )
 }
+
+private fun speedLabel(speed: PointerSpeed) =
+    when (speed) {
+        PointerSpeed.SLOW -> R.string.stream_menu_pointer_speed_slow
+        PointerSpeed.NORMAL -> R.string.stream_menu_pointer_speed_normal
+        PointerSpeed.FAST -> R.string.stream_menu_pointer_speed_fast
+    }
 
 private fun touchLabel(mode: TouchMode) =
     when (mode) {
@@ -158,7 +180,7 @@ internal fun SessionInfoRow(info: SessionInfo, perf: PerfSnapshot?) {
     MenuRow(
         stringResource(R.string.stream_menu_session_info),
         onClick = { open = !open },
-        trailing = { Chevron(LocalBorealisColors.current.ink3, down = open) },
+        trailing = { ExpandMark(open) },
     )
     if (open) {
         val format = rememberPerfFormat()
@@ -195,4 +217,19 @@ private fun InfoLine(label: String, value: String) {
                 ),
         )
     }
+}
+
+private val EXPAND_MARK_SIZE = 20.dp
+
+/**
+ * The mark of a row that expands: a chevron down while it is [open], to the right while it is not.
+ */
+@Composable
+private fun ExpandMark(open: Boolean) {
+    Icon(
+        if (open) BorealisIcons.ChevronDown else BorealisIcons.ChevronRight,
+        contentDescription = null,
+        modifier = Modifier.size(EXPAND_MARK_SIZE),
+        tint = LocalBorealisColors.current.ink3,
+    )
 }

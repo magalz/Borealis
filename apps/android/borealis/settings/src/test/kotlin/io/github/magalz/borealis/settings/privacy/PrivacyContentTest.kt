@@ -24,6 +24,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.settings.testing.assertDialogWidth
 import java.io.File
 import org.junit.Rule
 import org.junit.Test
@@ -348,5 +349,29 @@ class PrivacyContentTest {
         composeRule.onNodeWithText("Cancel").performKeyInput { pressKey(Key.DirectionRight) }
 
         composeRule.onNodeWithText("Erase").assertIsFocused()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the erase confirmation is a compact dialog, 420dp wide`() {
+        show(PrivacyUiState(dialog = PrivacyDialog.EraseConfirmation), FormFactor.Tv)
+
+        composeRule.assertDialogWidth("Erase the audit trail?", 420f)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the Saved dialog is a standard dialog, 560dp wide`() {
+        show(PrivacyUiState(dialog = saved()), FormFactor.Tv)
+
+        composeRule.assertDialogWidth("Diagnostics saved", 560f)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the Saved dialog starts with focus on Close`() {
+        show(PrivacyUiState(dialog = saved()), FormFactor.Tv)
+
+        composeRule.onNodeWithText("Close").assertIsFocused()
     }
 }

@@ -11,6 +11,7 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
@@ -468,13 +469,16 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
         setProgress("Deadzone", 12f)
         setProgress("Vibration strength", 150f)
         setProgress("Opacity", 40f)
+        setProgress("Gamepad mouse speed", 160f)
 
         assertThat(snapshot[Settings.BITRATE_KBPS]).isEqualTo(20_000)
         assertThat(snapshot[Settings.DEADZONE]).isEqualTo(12)
         assertThat(snapshot[Settings.VIBRATE_FALLBACK_STRENGTH]).isEqualTo(150)
         assertThat(snapshot[Settings.OSC_OPACITY]).isEqualTo(40)
+        assertThat(snapshot[Settings.GAMEPAD_MOUSE_SPEED]).isEqualTo(160)
         composeRule.onNodeWithText("20 Mbps").assertExists()
         composeRule.onNodeWithText("12 %").assertExists()
+        composeRule.onNodeWithText("160 %").assertExists()
     }
 
     @Test
@@ -484,6 +488,14 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
         setProgress("Bitrate", 12_300f)
 
         assertThat(snapshot[Settings.BITRATE_KBPS]).isEqualTo(12_500)
+    }
+
+    @Test
+    fun `the gamepad mouse speed starts at 50 percent`() {
+        show()
+
+        row("Gamepad mouse speed").assertExists()
+        composeRule.onNodeWithText("50 %").assertExists()
     }
 
     @Test
@@ -628,5 +640,25 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
         composeRule.waitForIdle()
 
         assertThat(backs).isEqualTo(1)
+    }
+
+    @Test
+    fun `the arrow beside the title leaves the screen, as Privacy has`() {
+        show()
+
+        composeRule.onNodeWithContentDescription("Back").performClick()
+        composeRule.waitForIdle()
+
+        assertThat(backs).isEqualTo(1)
+    }
+
+    @Test
+    fun `the arrow is before the title`() {
+        show()
+
+        val arrow = composeRule.onNodeWithContentDescription("Back").getUnclippedBoundsInRoot()
+        val title = composeRule.onNodeWithText("Settings").getUnclippedBoundsInRoot()
+
+        assertThat(arrow.right).isAtMost(title.left)
     }
 }

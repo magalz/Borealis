@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import io.github.magalz.borealis.designsystem.testing.settleWindows
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
@@ -132,6 +133,7 @@ class PrivacyScreenshotTest {
 
     private fun shoot(name: String) {
         composeRule.waitForIdle()
+        composeRule.settleWindows()
         // The whole screen, not the root node: a dialog is a window of its own.
         captureScreenRoboImage("src/test/screenshots/$name.png")
     }

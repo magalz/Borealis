@@ -11,6 +11,7 @@ object GamepadButtons {
     const val DPAD_RIGHT = 0x0008
     const val START = 0x0010
     const val SELECT = 0x0020
+    const val LEFT_BUMPER = 0x0100
     const val RIGHT_BUMPER = 0x0200
     const val GUIDE = 0x0400
     const val A = 0x1000

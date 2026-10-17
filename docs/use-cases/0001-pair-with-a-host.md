@@ -24,7 +24,8 @@ host, and it is the only way a host becomes trusted.
 
 ## Main flow
 
-1. The user selects a host that shows the Pair action on the Hosts screen.
+1. The user selects a host that is not paired on the Hosts screen. On its card,
+   OK or a tap starts pairing.
 2. The system shows the Pairing screen with a four-digit PIN, for example
    `4817`, and says where to enter it: the Clients page of the LuminalShine
    Web UI, for example `https://192.168.1.20:47990`.

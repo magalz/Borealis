@@ -22,6 +22,8 @@ interface StreamActions {
 
     fun setGamepadMouse(enabled: Boolean)
 
+    fun setPointerSpeed(speed: PointerSpeed)
+
     fun setOverlay(mode: OverlayMode)
 
     /** The user has seen the menu hint, so it is not shown again. */

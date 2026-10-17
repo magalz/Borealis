@@ -585,6 +585,13 @@ class DefaultSettingsOptionsRowStateTest {
     }
 
     @Test
+    fun `gamepad mouse speed is disabled while Gamepad mouse is off`() {
+        assertThat(state(Settings.GAMEPAD_MOUSE_SPEED, defaults.off(Settings.MOUSE_EMULATION)))
+            .isEqualTo(dependsOn(Settings.MOUSE_EMULATION))
+        assertThat(state(Settings.GAMEPAD_MOUSE_SPEED)).isEqualTo(RowState.Enabled)
+    }
+
+    @Test
     fun `the answers follow the facts that are passed in, with no memory of the last ones`() {
         val withoutUsb = deviceFacts { hasUsbHost = false }
 

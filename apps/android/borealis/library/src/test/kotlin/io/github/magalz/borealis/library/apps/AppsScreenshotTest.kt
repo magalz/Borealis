@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import io.github.magalz.borealis.designsystem.testing.settleWindows
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.shell.LibraryScaffold
 import io.github.magalz.borealis.library.shell.RailActions
@@ -117,6 +118,15 @@ class AppsScreenshotTest {
     fun appActionsTvOtherRunning() =
         shoot("appactions_tv_other-running", FormFactor.Tv, otherRunningSheet())
 
+    @Test
+    @Config(qualifiers = TV)
+    fun appActionsTvDetails() =
+        shoot(
+            "appactions_tv_details",
+            FormFactor.Tv,
+            state(runningFirst = true).copy(details = apps(runningFirst = true).first()),
+        )
+
     private fun runningSheet(): AppsUiState {
         val desktop = apps(runningFirst = true).first()
         return state(
@@ -167,6 +177,7 @@ class AppsScreenshotTest {
         }
         composeRule.waitForIdle()
         // The whole screen, not the root node: the sheet is a window of its own.
+        composeRule.settleWindows()
         captureScreenRoboImage("src/test/screenshots/$name.png")
     }
 

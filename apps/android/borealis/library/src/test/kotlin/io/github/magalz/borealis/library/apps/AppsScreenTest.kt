@@ -362,15 +362,18 @@ class AppsScreenTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `a progress indicator shows while the apps load`() {
+    fun `the aurora loader shows while the apps load`() {
         show(state(loading = true))
 
         composeRule.onNodeWithContentDescription("Loading apps").assertIsDisplayed()
+        composeRule
+            .onNodeWithContentDescription("Loading apps")
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ProgressBarRangeInfo))
     }
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `no progress indicator shows once the apps are there`() {
+    fun `no loader shows once the apps are there`() {
         show(state(desktop))
 
         composeRule.onNodeWithContentDescription("Loading apps").assertDoesNotExist()

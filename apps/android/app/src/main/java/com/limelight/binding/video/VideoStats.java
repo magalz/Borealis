@@ -5,6 +5,7 @@ import android.os.SystemClock;
 class VideoStats {
 
     long decoderTimeMs;
+    long decoderTimeUs; // BOREALIS: the decode time in microseconds, for the overlay (stream.perf)
     long totalTimeMs;
     int totalFrames;
     int totalFramesReceived;
@@ -20,6 +21,7 @@ class VideoStats {
 
     void add(VideoStats other) {
         this.decoderTimeMs += other.decoderTimeMs;
+        this.decoderTimeUs += other.decoderTimeUs; // BOREALIS
         this.totalTimeMs += other.totalTimeMs;
         this.totalFrames += other.totalFrames;
         this.totalFramesReceived += other.totalFramesReceived;
@@ -46,6 +48,7 @@ class VideoStats {
 
     void copy(VideoStats other) {
         this.decoderTimeMs = other.decoderTimeMs;
+        this.decoderTimeUs = other.decoderTimeUs; // BOREALIS
         this.totalTimeMs = other.totalTimeMs;
         this.totalFrames = other.totalFrames;
         this.totalFramesReceived = other.totalFramesReceived;
@@ -62,6 +65,7 @@ class VideoStats {
 
     void clear() {
         this.decoderTimeMs = 0;
+        this.decoderTimeUs = 0; // BOREALIS
         this.totalTimeMs = 0;
         this.totalFrames = 0;
         this.totalFramesReceived = 0;

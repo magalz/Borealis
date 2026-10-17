@@ -1,10 +1,10 @@
 # Device validation runbook
 
-This runbook checks Borealis Phase 1 and Sprints 2 to 6 on two devices against
+This runbook checks Borealis Phase 1 and Sprints 2 to 7 on two devices against
 LuminalShine 26.09.1 running on the owner's Windows PC. It is for the owner and
 for the orchestrator who runs the checks. Run the steps in order and record the
-results as a new section with a table, like sections 7 to 10. Sections 6 to 11
-hold the results of Phase 1 and Sprints 2 to 6, in that order.
+results as a new section with a table, like sections 7 to 10. Sections 6 to 12
+hold the results of Phase 1 and Sprints 2 to 7, in that order.
 
 Sources: [host contract](../host-contract/luminalshine.md) (cited as "contract"),
 [Borealis Android README](../../apps/android/borealis/README.md),
@@ -636,6 +636,142 @@ each `fail`.
 The UI is in English on a phone set to Portuguese, because translations were
 removed (ADR 0055). Expected: no Portuguese text.
 
+### 3.20 Sprint 7 checks
+
+Run these with the Sprint 7 build on the S22 phone and the Google TV Streamer.
+Where a step names one device, run it there only. Record each item as `pass`,
+`fail` or `not applicable`, with a short note for each `fail`. For a
+USB-driver pad, turn USB driver for Xbox controllers on in Settings, Gamepad.
+For a system pad, turn it off. Say which kind each run used.
+
+1. Pointer speed, on the Streamer with a pad. Turn Gamepad mouse on. Keep
+   Gamepad mouse speed at 50 % for the first runs. Open the PC's Windows game
+   controller panel (joy.cpl) when a step checks that no button reaches the PC.
+   - Default: move the left stick slowly, then to full deflection. Expected: the
+     pointer moves smoothly from the first move, with no jump at the start.
+   - Deadzone: push the stick just past the deadzone and hold it. Expected: the
+     pointer moves slowly, and does not stay still.
+   - Slow diagonal: hold the stick at a slow diagonal. Expected: the pointer
+     moves on both axes and keeps the diagonal.
+   - RB precision: hold the stick at full deflection, then hold RB as well.
+     Expected: the pointer moves at about a quarter of the speed while RB is
+     held. No button press shows in joy.cpl.
+   - Slider: in Settings, Input, set Gamepad mouse speed to 10 %, then to 200 %,
+     and start a stream each time. Expected: the pointer is slow at 10 % and
+     fast at 200 %. A change made during a stream does not change that stream.
+   - Menu row: open the menu with Back. Expected: Pointer speed shows under
+     Gamepad mouse. Choose Slow, then Normal, then Fast, and move the stick at
+     each. Expected: about half, the setting, and twice the speed. Turn Gamepad
+     mouse off in the menu: the row goes. End the stream and start a new one:
+     the row shows Normal.
+2. Right-stick scrolling, with Analog scrolling at Right (the default). In a
+   PC app that scrolls, such as a browser page, hold the right stick up and
+   down. Expected: the page scrolls. Compare Slow and Fast in the menu row.
+   Expected: Fast scrolls faster than Slow, as the pointer does.
+3. The quit combo.
+   - USB-driver pad: press Start, Select, LB and RB together, then let all four
+     go. Expected: the stream ends once all four are let go. Hold Start alone
+     for the combo: the gamepad mouse must not turn on. Check on the PC that the
+     app still runs; the combo leaves the stream only.
+   - System pad: the same four buttons, then let all four go. Expected: the
+     stream ends. Then check the Start and Select taps of 3.19 (h).
+4. The decode time.
+   - On the Google TV Streamer (MediaTek decoder) and on the S22: turn the
+     Performance overlay on, in Settings or in the menu, and start a stream.
+     Expected: the decode time shows a number in milliseconds with one
+     decimal ("Decode 0.4 ms"), not "—". Record the number.
+   - Verbose logging: in Settings, Privacy and diagnostics, turn Verbose logging
+     on. Start the logcat capture of 1.4 and run a stream for about 10 seconds.
+     Expected: a `Decoder window` line at DEBUG, about once a second, with the
+     tag `Borealis.VIDEO`. Its fields are `codec`, `in`, `out`, `exact`,
+     `truncated`, `zero`, `ahead`, `older`, `unmatched`, `decoded`,
+     `decode_avg_us`, `decode_min_us` and `decode_max_us`. Record `in`, `out`,
+     `exact` and the three decode values. A decoder that echoes the timestamps
+     has `exact` equal to `out`.
+5. Visual refinement. Run on the Google TV Streamer, and on the S22 where a
+   step says so. Record each item as `pass`, `fail` or `not applicable`.
+   - Dialogs share one frame: Compact 420 dp, Standard 560 dp and Wide 720 dp
+     on a TV. On a phone the width is the window less 16 dp on each side, when
+     that is narrower. Open Forget, Erase (in Privacy and diagnostics), Saved
+     with Send to phone, About, Host details and App details, one at a time.
+     Expected: each dialog has one of the three widths. Simple confirmations are
+     Compact, with the focus on the safe action. For Erase, the safe action is
+     Cancel, and Erase is in the danger tone.
+   - Settings gear and rail: on the TV, the Hosts rail is 220 dp wide and shows
+     the Settings gear. Expected: the gear opens Settings.
+   - Back arrows and chevrons: open a screen with a back arrow and a Settings row
+     that opens something. Expected: the back arrow and the chevron look the
+     same on every screen.
+   - Host cards: a host card is one focus stop, with no action button. OK, or a
+     tap, runs its action: open when the host is online and paired, pair when it
+     is not paired, and wake when it is offline. Hold OK, or long-press the card,
+     to open its options. On the TV, also press X or Menu on a pad: the options
+     open. Expected: each action runs as described, and the options open only
+     from the hold, the long press, X or Menu. On the TV and a handheld, the cards
+     have equal height (176 dp, `size.host-card.height-tv` in
+     `design/tokens.json`), so a row lines
+     up. On the S22 without a pad, the cards size to their content. With a pad
+     connected in landscape, the S22 is a handheld (step 7).
+   - Aurora loader: open Hosts, Apps and Pairing while each one loads. Expected:
+     the same aurora loader on all three.
+   - Pairing check: on Pairing, the PIN is centred with its line below it. When
+     the pairing succeeds, "Paired" is centred and the check is drawn once.
+   - Error actions: force a connection error. Expected: on the S22 the actions
+     stack, in two rows. On the TV they stay in one row.
+   - TV keyboard row: open the keyboard from the Add host field. Expected: the
+     command row under the keys is centred.
+   - Held keys, on the TV. Hold OK on an app tile in Library, Apps, and keep it
+     held while the app actions sheet opens. Expected: the sheet stays open when
+     OK is let go, and nothing runs. A fresh press of OK then chooses an option.
+     Then, in a stream, open the in-game menu and hold OK in the open menu, then
+     let it go. Expected: nothing runs on the release. A fresh press of OK acts
+     on the focused row.
+   - Held keys on a host card: on an online, paired host card, press OK. Expected:
+     the app list opens. Then hold OK on a host card. Expected: only the host
+     options open, and the release runs nothing.
+   - Held keys are not consumed for the system keys (volume, media, channel,
+     mute, headset). Press one while a sheet is open. Expected: the key still
+     works.
+6. The USB dialog on the Streamer (R5a). Fixed in Sprint 7 (issue #16, merge
+   `0ad99565`). On a TV the attach dialog is not offered. The permission dialog
+   is asked once, only after the stream shows its first frame. Check each step
+   with the USB driver on.
+   - Clear the logcat buffer and start the capture of 1.4 on the Streamer, with
+     the USB driver on.
+   - In the Library, plug in the 8BitDo receiver, or switch the pad on and off.
+     Expected: no attach dialog appears. The receiver changes its identity by
+     itself (idle `2dc8:6013`, active `2dc8:310b` XInput). The attach lines can
+     still appear in logcat. They are logged by Android's system server with the
+     tag `UsbHostManager` ("USB device attached", "Removed device at"); it is not
+     a Borealis class.
+   - Start a stream. Expected: the USB permission dialog appears only once the
+     picture shows, not before.
+   - During the stream, switch the pad off and on. Expected: one dialog, the
+     permission dialog. Accept it. Expected: the pad works after the accept.
+   - End the stream. Expected: no attach or remove line appears at the end of the
+     stream.
+   - On a phone, the attach dialog is unchanged. Note what it shows, if it does.
+7. The handheld with a Bluetooth pad, on the S22 in landscape. A window 600 dp
+   or wider is a handheld while a game controller is connected. Use a pad that
+   has a hat D-pad, such as the 8BitDo Pro 3 or the 8BitDo Ultimate 2, paired
+   over Bluetooth. A Bluetooth pad is always a system pad: the USB driver
+   setting does not apply to it.
+   - Layout: with the pad off, open the Library. Switch the pad on. Expected:
+     the Library switches to the handheld layout, with a rail of Hosts, Add
+     host and Settings, and host cards of equal height. Switch the pad off.
+     Expected: the phone layout returns. Neither change needs the app to be
+     reopened.
+   - Stream: start a stream with the pad only, on a host card, then Desktop.
+     Expected: the stream starts. Hold Select and Start: the menu opens.
+     Expected: Gamepad mouse on shows the Pointer speed row, with Slow, Normal
+     and Fast. Move the pointer with the stick and hold RB: the pointer moves
+     at a lower speed while RB is held. Scroll with the right stick in a PC app
+     that scrolls. Expected: the page scrolls. Open the keyboard. Expected: it
+     shows over the video, not docked under it.
+   - Quit: press Start, Select, LB and RB together, then let all four go.
+     Expected: the stream ends. No capture is taken during the stream, because
+     it would show the PC screen.
+
 ## 4. Results templates
 
 Copy one table per device. Use `pass`, `fail` or `not applicable`, and add a
@@ -1265,6 +1401,7 @@ the decode-time FIFO (S6-T7).
 - The quit combo is not detected for USB-driver pads (`reportControllerState`).
   This is an upstream limitation.
 - The Google TV USB dialog repeats while the USB driver is on (R5a, section 10).
+  Fixed in Sprint 7 (merge `0ad99565`); see [section 12](#12-results-sprint-7).
 - Feature request from the owner, for the new-features phase: a setting for
   the pointer speed of the gamepad mouse. Today the pointer moves so fast that
   it jumps across the screen, and precise control needs a very light touch on
@@ -1278,3 +1415,202 @@ the decode-time FIFO (S6-T7).
 - The S22 overlay was set back off, and the zip the S22 downloaded was deleted.
 - `/sdcard/ui.xml` was deleted from the S22.
 - The local screenshots were deleted.
+
+## 12. Results: Sprint 7
+
+This section holds the Sprint 7 results: the setup, the USB spike, the decode
+check made in the middle of the sprint, the final round, and the Bluetooth pad
+round with the handheld fix. The checks follow the steps of
+[section 3.20](#320-sprint-7-checks).
+
+### Setup
+
+- Builds:
+  - `7cbc60ea`: the decode check, with verbose logging on;
+  - `903e399d`: the quit combo, checked by the owner;
+  - `60d5bfd5`: the decode fix, the held OK on an app tile, and the S22 host
+    details;
+  - `fe6273c7`: the final round, for the visual checks and the pointer. The round
+    notes record the build gate and the Roborazzi verify as green on this build.
+  - `4726c010` (the phase head, with the host card and the TV USB merges): the
+    final checks of the host card and the USB dialog.
+  - `975bee9f`: the Bluetooth pad probe, before the handheld fix.
+  - `dd3d383f`: the handheld fix for a connected game controller, merged as
+    `89b46c5b` (same tree). Checked on the S22 in landscape.
+- Devices:
+  - Google TV Streamer: ADB over Wi-Fi, at an address that changes with DHCP.
+  - Galaxy S22: USB.
+- Host: LuminalShine 26.09.1 on the PC, the same version throughout. The owner
+  did not update it during the sprint.
+- Pads:
+  - 8BitDo Pro 3, a system pad: the first pointer round.
+  - 8BitDo Ultimate 2 for PC, XInput on the app's USB driver: the second pointer
+    round, and the quit combo.
+  - 8BitDo Ultimate 2 over Bluetooth LE, and 8BitDo Pro 3 over classic
+    Bluetooth, both as system pads on the S22: the Bluetooth pad round.
+- Screen captures: each capture was read and then deleted. Some showed part of
+  the PC screen. The host details capture showed host addresses and an ID. No
+  capture is kept in the repository.
+
+### Spike: scrolling and the USB dialog (R5a), 2026-10-17
+
+- Scrolling: right-stick scrolling works on both pads in a PC app that scrolls.
+  The owner found it good. The earlier report that scrolling did not work was
+  not a defect. The high-resolution scroll deltas are kept, and the speed
+  setting scales them.
+- USB identity: the 8BitDo Ultimate 2 receiver changes its USB identity by
+  itself. It shows as `2dc8:6013` while idle, and as `2dc8:310b` (XInput) when a
+  pad connects. Each change is a new attachment with a new device number. The
+  Pro 3 receiver does the same.
+- Dialogs: each attachment shows Android's attach dialog while the USB driver is
+  on. At 12:06 the owner declined it, because accepting looked as if it would
+  close the current app. The stream start then showed the USB permission dialog,
+  which the owner accepted. The grant lasts one attachment.
+- Double dialog during a stream: a pad that woke during a stream showed two
+  dialogs. At 17:08:06.588 the Ultimate 2 changed from `2dc8:6013` to
+  `2dc8:310b`. At 17:08:06.673 the attach dialog (`TvUsbConfirmActivity`) came
+  up. At 17:08:07.652, one second later, the USB driver service asked for
+  permission (`TvUsbPermissionActivity`). The build was `fe6273c7`.
+- Fix: merge `0ad99565` (issue #16). On a TV the attach activity is not offered,
+  because `UsbAttachGate` also requires a device that is not a leanback device.
+  The USB permission dialog is held until the stream shows its first frame. A
+  pad that wakes during the stream asks at once, so it shows one dialog. Phones
+  are unchanged.
+- Stream end: the hypothesis that ending the stream makes the receiver
+  re-enumerate is not confirmed in this run. No attach or remove line appeared
+  during the stream, at its end, or in the 30 seconds after it.
+- The follow-up is closed by the fix above. See the
+  [roadmap](../roadmap.md#sprint-7-follow-ups-and-backlog) (Sprint 7, item 3).
+
+### Decode time check, 2026-10-17
+
+Before the fix (build `7cbc60ea`, verbose logging on):
+
+| Device | Decoder | Input and output | Result |
+| --- | --- | --- | --- |
+| Google TV Streamer | `c2.mtk.hevc.decoder.lowlatency`, 720p | Every window: in = out = exact. Truncated, zero, ahead, older and unmatched are all 0. | Pairing works. The overlay still showed "Decode —". |
+| Galaxy S22 | `c2.qti.hevc.decoder.low_latency` | 353 in, 353 exact, nothing else | Pairing works. Only the measure needs fixing. |
+
+Finding: the pairing of inputs and outputs is correct on both decoders. The dash
+comes from the measure. The delta is computed in whole milliseconds from a
+timestamp based on the first frame's submit time (`baseTimestampUs`). A decode
+under one millisecond, or a base that runs slightly ahead, gives a delta of 0 or
+less. That leaves the decode time at 0, and the overlay shows "—". This closes
+the MediaTek follow-up of [section 11](#11-results-sprint-6) (D5).
+
+Fix: merge `967487ea` (issue #14). Each input keeps its queue time in
+nanoseconds. The decode time is the output time less the queue time, in
+nanoseconds, and the fraction reaches the overlay in microseconds.
+
+After the fix (build `60d5bfd5`):
+
+| Device | Decoder | Input and output | Result |
+| --- | --- | --- | --- |
+| Google TV Streamer | MediaTek decoder, 720p | Every window exact. `decode_avg_us` is about 4200 in steady state. The first window is about 25 ms, at the stream start. | Pass. The overlay shows "Decode 4.2 ms". The decode is about 4 ms, not under 1 ms. |
+| Galaxy S22 | `c2.qti.hevc.decoder.low_latency`, 720p | Every window exact. `decode_avg` 4.7 to 5.4 ms. | Pass. The overlay shows "Decode 5.2 ms". The old measure showed "0.2 ms", an underestimate from the same timestamp base. |
+
+The overlay corners were captured, read and deleted. The S22 capture showed part
+of the PC screen.
+
+### Final round, builds `fe6273c7` and `4726c010`
+
+| # | Item | Device | Result | Evidence and notes |
+| --- | --- | --- | --- | --- |
+| F1 | Hosts rail at 220 dp, with the Settings gear | TV | pass | Build `fe6273c7`. |
+| F2 | Host cards of equal height | TV | pass | Build `fe6273c7`. The card's action button was removed in `4726c010`; see F17. |
+| F3 | Settings in two panes, with the chevrons from BorealisIcons | TV | pass | Build `fe6273c7`. |
+| F4 | Erase audit trail: Compact dialog, Cancel focused, Erase in the danger tone | TV | pass | Build `fe6273c7`. Back cancelled it, and nothing was erased. |
+| F5 | Host details as the Standard dialog. The scrim dims the app content. | S22, landscape | pass | Build `60d5bfd5`. The system bar icons stay bright, as with any app dim. No undimmed strip was seen. |
+| F6 | Gamepad mouse at 50 %: smooth from the first move | TV, Pro 3, then Ultimate 2 | pass | Build `fe6273c7`. The owner rated the default speed great on the first pad, and the second pad was "perfect" too. |
+| F7 | RB precision | TV, both pads | pass | Build `fe6273c7`. The owner rated it perfect on the first pad, and the second pad was perfect too. |
+| F8 | Pointer speed row in the menu: Slow, Normal, Fast | TV, Pro 3 | pass | Build `fe6273c7`. All three speeds were good to the owner. The notes do not record this row for the second pad. |
+| F9 | Right-stick scrolling | TV, both pads | pass | Build `fe6273c7`. |
+| F10 | Held OK in the open in-game menu, then released | TV, remote | pass | Build `fe6273c7`. Nothing ran on the release. A fresh press worked. |
+| F11 | Held OK on the Desktop tile in Library, Apps | TV, remote | pass | Build `60d5bfd5`. The app actions sheet stayed open, and nothing ran on the release. A fresh press picked an option. |
+| F12 | Quit combo (Start, Select, LB, RB) on the USB-driver pad | TV, Ultimate 2 | pass | Build `903e399d`, checked by the owner. The stream ended. Not repeated on `fe6273c7`. |
+| F13 | Quit combo on the system pad | TV, Pro 3 | not run in Sprint 7 | The system-pad path did not change; Sprint 6 (§11, C3) covered it. |
+| F14 | Movement just past the deadzone and a slow diagonal; the slider at 10 % and 200 % | TV, both pads | pass, slider extremes not run | The owner moved the stick lightly, diagonally and fully with both pads: "Tudo 10". The slider was left at its 50 % default; only the menu row's three speeds were tried. |
+| F15 | Dialog frames for Forget, Saved with Send to phone, About, Host details and App details | TV | not recorded | Only F4 and the S22 check of F5 are in the notes. |
+| F16 | Aurora loader, PIN and "Paired", connection error actions, TV keyboard row, phone host cards at their content size | TV, S22 | not recorded | Not in the round notes. |
+| F17 | Host card is one focus stop: OK opens the app list, holding OK opens only the options | TV | pass | Build `4726c010`, checked by the owner. The card has no Open button to hold. |
+| F18 | Ultimate 2 off and on in the Library: no USB dialog | TV | pass | Build `4726c010`, checked by the owner. `UsbAttachActivity` is disabled on the TV. |
+| F19 | Stream start: the USB permission dialog appears only once the picture shows | TV | pass | Build `4726c010`, checked by the owner. |
+| F20 | Pad off and on during the stream: one dialog (permission). The pad works after accepting. | TV | pass | Build `4726c010`, checked by the owner. |
+
+### Bluetooth pad round and handheld fix, 2026-10-17
+
+Before the fix, on the S22 in landscape (`w780dp`, build `975bee9f`), each pad
+was probed with `dumpsys input` (the device sources), `am get-config` (the
+configuration's touch and navigation) and a capture of the Library for each
+mode. Each capture was read and then deleted, because it showed host addresses.
+
+| Pad and mode | Link | ID | Android sources | Configuration | Layout |
+| --- | --- | --- | --- | --- | --- |
+| 8BitDo Ultimate 2, Start+A, B, X and Y | Bluetooth LE (HID over GATT) | `2dc8:6012` every time | KEYBOARD, GAMEPAD, JOYSTICK | finger, nonav | Phone |
+| 8BitDo Pro 3, switch on D and on S | Classic Bluetooth | `057e:2009` (Nintendo Switch Pro Controller), class EXTERNAL | KEYBOARD, GAMEPAD, JOYSTICK | finger, nonav | Phone |
+
+- On the S22, the Ultimate 2 reconnected after each combo with the same
+  identity. Its mode combos change nothing over Bluetooth there.
+- The Pro 3's kernel device has D-pad keys (`BTN_DPAD_*`), but Android's key
+  layout for it (`Vendor_057e_Product_2009.kl`) gives it no DPAD source.
+- Focus navigation with both pads worked: the hat D-pad moved the focus. Only
+  the form factor missed them.
+
+Cause: the form factor read only the configuration. Android sets
+`navigation = dpad` only for a device with the DPAD source, so a pad whose
+D-pad is a hat axis never sets it. The owner decided to fix this in Sprint 7.
+
+Fix (merge `89b46c5b`, task commits `748f688c`, the test first, and `dd3d383f`):
+
+- A window 600 dp or wider is a handheld while a game controller is connected.
+  The controller counts when it is not virtual and has the GAMEPAD source, or
+  the JOYSTICK source with X and Y axes.
+- The layout goes back to the phone layout when the controller disconnects.
+- At the stream start, the docked keyboard follows the same rule
+  (`StreamChromeHost.isPhone`).
+- Limitation: a pad claimed by the app's USB driver is no Android input device
+  while it is claimed, so the form factor cannot see it.
+
+After the fix, on build `dd3d383f` (same tree as merge `89b46c5b`), checked with
+the owner on the S22 in landscape. The steps are in
+[section 3.20, step 7](#320-sprint-7-checks).
+
+| # | Item | Device | Result | Evidence and notes |
+| --- | --- | --- | --- | --- |
+| F21 | The Library switches to the handheld layout when the pad connects, without reopening the app | S22, landscape, Pro 3 | pass | Build `dd3d383f`. Rail with Hosts, Add host and Settings, and host cards of equal height. |
+| F22 | The Library returns to the phone layout when the pad disconnects | S22, landscape, Pro 3 | pass | Build `dd3d383f`. |
+| F23 | Stream start with the pad only: a host card, then Desktop | S22, landscape, Bluetooth pad | pass | Build `dd3d383f`. The notes do not record which of the two pads was used. |
+| F24 | Menu opens by holding Select and Start | S22, landscape, Bluetooth pad | pass | Build `dd3d383f`. |
+| F25 | Pointer speed row: Slow, Normal, Fast | S22, landscape, Bluetooth pad | pass | Build `dd3d383f`. Shows with Gamepad mouse on. |
+| F26 | Pointer and RB precision | S22, landscape, Bluetooth pad | pass | Build `dd3d383f`. |
+| F27 | Right-stick scrolling | S22, landscape, Bluetooth pad | pass | Build `dd3d383f`. |
+| F28 | Keyboard shows over the video, not docked under it | S22, landscape, Bluetooth pad | pass | Build `dd3d383f`. |
+| F29 | Quit combo (Start, Select, LB, RB) on a Bluetooth pad, a system pad | S22, landscape, Bluetooth pad | pass | Build `dd3d383f`. The stream ended. The notes do not record which pad was used. |
+
+The notes do not record rows F21 and F22 for the Ultimate 2. No capture was
+taken during the stream, because it would show the PC screen.
+
+### Not run
+
+- Handheld: no dedicated handheld device. The S22 in landscape was checked as a
+  handheld with a Bluetooth pad, in rows F21 to F29 above.
+- Send to phone, the Expired and No network states: only unit and screenshot
+  tests cover them.
+- Items F13 to F16 and the other items of [section 3.20](#320-sprint-7-checks)
+  that are not in the table above. The round notes do not record them.
+
+### Follow-ups and backlog
+
+- Sprint 7 item 3, the USB dialog, is fixed in this sprint (merge `0ad99565`).
+  See the spike above.
+- Backlog, from this round: the native pad modes, the smoother D-pad moves in
+  Settings on a TV, the quit warning for Desktop, and the host details text. See
+  the [roadmap, Sprint 9](../roadmap.md#sprint-9-ux-polish-and-the-handheld). The
+  native pad modes are in Sprint 10.
+- The Sprint 6 quit combo follow-up for USB-driver pads is done in `5416a79c`.
+  See the [roadmap](../roadmap.md#sprint-7-follow-ups-and-backlog), item 2.
+- Backlog, from the Bluetooth pad round: the handheld host card height. On the
+  S22 as a handheld (360 dp tall), the equal host card height (176 dp, from the
+  TV token) leaves a lot of empty space. The owner wants the card adapted for a
+  handheld in a later refinement session. See the
+  [roadmap, Sprint 9](../roadmap.md#sprint-9-ux-polish-and-the-handheld).

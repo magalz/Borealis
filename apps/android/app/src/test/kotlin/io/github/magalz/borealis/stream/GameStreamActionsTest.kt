@@ -73,6 +73,10 @@ private class RecordingGamepad : GamepadChrome {
     override fun setMouseEmulation(enabled: Boolean) {
         calls += "mouse $enabled"
     }
+
+    override fun setPointerSpeed(factor: Float) {
+        calls += "pointerSpeed $factor"
+    }
 }
 
 @RunWith(RobolectricTestRunner::class)
@@ -466,6 +470,17 @@ class GameStreamActionsTest {
         actions.requestKeyframe()
 
         assertThat(input.events).containsExactly("keyframe")
+    }
+
+    @Test
+    fun `the pointer speed scales the gamepad mouse of the handler`() {
+        actions.setPointerSpeed(PointerSpeed.SLOW)
+        actions.setPointerSpeed(PointerSpeed.NORMAL)
+        actions.setPointerSpeed(PointerSpeed.FAST)
+
+        assertThat(gamepad.calls)
+            .containsExactly("pointerSpeed 0.5", "pointerSpeed 1.0", "pointerSpeed 2.0")
+            .inOrder()
     }
 
     @Test

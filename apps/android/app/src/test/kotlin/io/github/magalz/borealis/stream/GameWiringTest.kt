@@ -20,6 +20,39 @@ class GameWiringTest {
         return source.substring(start, source.indexOf("\n    }\n", start))
     }
 
+    // The methods of the service connection are one level deeper than the others.
+    private val nestedEnd = "\n        }\n"
+    private fun connectionBody(signature: String): String {
+        val start = source.indexOf(signature)
+        if (start < 0) return ""
+        return source.substring(start, source.indexOf(nestedEnd, start))
+    }
+
+    @Test
+    fun `the first frame tells the USB driver service that the picture is up`() {
+        val start = source.indexOf("decoderRenderer.firstFrameSignal.setListener(")
+        val listener = if (start < 0) "" else source.substring(start, source.indexOf("});", start))
+
+        assertThat(listener).contains("usbDriverBinder")
+        assertThat(listener).contains("onStreamReady()")
+    }
+
+    @Test
+    fun `a service that connects after the first frame is told at once`() {
+        val connected = connectionBody("public void onServiceConnected(")
+
+        assertThat(connected).contains("usbDriverBinder = binder")
+        assertThat(connected.indexOf("usbDriverBinder = binder"))
+            .isLessThan(connected.indexOf("if (firstFrameShown)"))
+        assertThat(connected.substringAfter("if (firstFrameShown)")).contains("binder.onStreamReady()")
+    }
+
+    @Test
+    fun `a service that goes away is forgotten`() {
+        assertThat(connectionBody("public void onServiceDisconnected("))
+            .contains("usbDriverBinder = null")
+    }
+
     @Test
     fun `the chrome takes and gives back the gamepad`() {
         assertThat(body("private void chromeCaptured()")).contains("controllerHandler.setCaptured(true)")

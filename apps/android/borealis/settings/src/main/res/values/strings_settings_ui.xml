@@ -3,6 +3,7 @@
     <string name="settings_title">Settings</string>
     <string name="settings_choose">Choose</string>
     <string name="settings_close">Close</string>
+    <string name="settings_back">Back</string>
 
     <!-- Groups -->
     <string name="settings_group_stream">Stream</string>
@@ -42,6 +43,7 @@
     <string name="settings_gamepad_mouse_title">Gamepad mouse</string>
     <string name="settings_gamepad_mouse_summary">Hold Start to turn the gamepad into a mouse.</string>
     <string name="settings_analog_scrolling_title">Analog scrolling</string>
+    <string name="settings_gamepad_mouse_speed_title">Gamepad mouse speed</string>
     <string name="settings_deadzone_title">Deadzone</string>
     <string name="settings_deadzone_summary">Some games force a larger deadzone than this.</string>
 

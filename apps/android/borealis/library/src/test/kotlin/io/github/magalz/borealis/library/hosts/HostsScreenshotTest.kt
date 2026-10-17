@@ -5,7 +5,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
@@ -13,6 +15,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import io.github.magalz.borealis.designsystem.testing.settleWindows
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.shell.LibraryScaffold
 import io.github.magalz.borealis.library.shell.RailActions
@@ -79,9 +82,11 @@ class HostsScreenshotTest {
     @Test
     @Config(qualifiers = TV)
     fun hostsTvLoading() {
-        // The indicator spins for ever: freeze the clock so the capture is the same every run.
+        // The loader fills for ever: freeze the clock, then move it to a time at which the bands
+        // are partly drawn, so the capture is the same every run.
         composeRule.mainClock.autoAdvance = false
         composeRule.setContentInKeyboardMode { Screen(loadingHosts, FormFactor.Tv) }
+        composeRule.mainClock.advanceTimeBy(LOADER_TIME_MILLIS)
 
         shoot("hosts_tv_loading")
     }
@@ -96,6 +101,20 @@ class HostsScreenshotTest {
 
         // The options are a dialog window, which the root capture does not include.
         captureScreenRoboImage("src/test/screenshots/hosts_tv_options.png")
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun hostsTvForget() {
+        composeRule.setContentInKeyboardMode { Screen(withHosts, FormFactor.Tv) }
+        composeRule.onNodeWithTag("host:living").requestFocus()
+        composeRule.onNodeWithTag("host:living").performKeyInput { pressKey(Key.ButtonX) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Forget").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.settleWindows()
+        captureScreenRoboImage("src/test/screenshots/hosts_tv_forget.png")
     }
 
     @Composable
@@ -120,6 +139,10 @@ class HostsScreenshotTest {
                 onSettings = {},
             )
         }
+    }
+
+    private companion object {
+        const val LOADER_TIME_MILLIS = 600L
     }
 
     private fun shoot(name: String) {

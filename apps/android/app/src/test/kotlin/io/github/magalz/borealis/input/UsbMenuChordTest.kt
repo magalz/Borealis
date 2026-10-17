@@ -5,6 +5,8 @@ import com.limelight.nvstream.input.ControllerPacket.A_FLAG
 import com.limelight.nvstream.input.ControllerPacket.BACK_FLAG
 import com.limelight.nvstream.input.ControllerPacket.LB_FLAG
 import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
+import com.limelight.nvstream.input.ControllerPacket.RB_FLAG
+import io.github.magalz.borealis.stream.input.StartHold
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -111,5 +113,114 @@ class UsbMenuChordTest {
         rig.advanceBy(5_000)
 
         assertThat(rig.chords).isEqualTo(0)
+    }
+
+    @Test
+    fun `Start, Select and both bumpers, then letting go, end the stream`() {
+        pad.report(PLAY_FLAG or BACK_FLAG or LB_FLAG or RB_FLAG)
+        rig.advanceBy(200)
+        assertThat(rig.activity.isFinishing).isFalse()
+
+        pad.report(0)
+        rig.advanceBy(0)
+
+        assertThat(rig.activity.isFinishing).isTrue()
+        assertThat(rig.chords).isEqualTo(0)
+    }
+
+    @Test
+    fun `the quit combo ends the stream when the pad lets go in steps`() {
+        pad.report(PLAY_FLAG or BACK_FLAG or LB_FLAG or RB_FLAG)
+        pad.report(PLAY_FLAG or BACK_FLAG)
+        pad.report(PLAY_FLAG)
+        rig.advanceBy(0)
+        assertThat(rig.activity.isFinishing).isFalse()
+
+        pad.report(0)
+        rig.advanceBy(0)
+
+        assertThat(rig.activity.isFinishing).isTrue()
+    }
+
+    @Test
+    fun `the menu chord alone does not end the stream`() {
+        pad.report(chord)
+        rig.advanceBy(1_500)
+        pad.report(0)
+        rig.advanceBy(0)
+
+        assertThat(rig.chords).isEqualTo(1)
+        assertThat(rig.activity.isFinishing).isFalse()
+    }
+
+    @Test
+    fun `three of the four buttons do not end the stream`() {
+        pad.report(PLAY_FLAG or BACK_FLAG or LB_FLAG)
+        pad.report(0)
+        rig.advanceBy(0)
+
+        assertThat(rig.activity.isFinishing).isFalse()
+    }
+
+    @Test
+    fun `the quit combo ends the stream from the driver thread, on the main thread`() {
+        var failure: Throwable? = null
+        Thread {
+                try {
+                    pad.report(PLAY_FLAG or BACK_FLAG or LB_FLAG or RB_FLAG)
+                    pad.report(0)
+                } catch (e: Throwable) {
+                    failure = e
+                }
+            }
+            .apply {
+                start()
+                join()
+            }
+        assertThat(failure).isNull()
+        assertThat(rig.activity.isFinishing).isFalse()
+
+        rig.advanceBy(0)
+
+        assertThat(rig.activity.isFinishing).isTrue()
+    }
+
+    private val quitCombo = PLAY_FLAG or BACK_FLAG or LB_FLAG or RB_FLAG
+
+    @Test
+    fun `a combo begun before the chrome took the input does not end the stream when let go`() {
+        pad.report(quitCombo)
+
+        rig.handler.setCaptured(true)
+        pad.report(0)
+        rig.handler.setCaptured(false)
+        rig.advanceBy(0)
+
+        assertThat(rig.activity.isFinishing).isFalse()
+    }
+
+    @Test
+    fun `a combo pressed while the chrome has the input does not end the stream`() {
+        rig.handler.setCaptured(true)
+        pad.report(quitCombo)
+        rig.handler.setCaptured(false)
+        pad.report(quitCombo)
+
+        pad.report(0)
+        rig.advanceBy(0)
+
+        assertThat(rig.activity.isFinishing).isFalse()
+    }
+
+    @Test
+    fun `letting go of Start first, after a long hold, still ends the stream and leaves the mouse off`() {
+        pad.report(quitCombo)
+        rig.advanceBy(StartHold.HOLD_MS + 500)
+        pad.report(BACK_FLAG or LB_FLAG or RB_FLAG)
+        pad.report(0)
+        rig.advanceBy(0)
+
+        assertThat(rig.activity.isFinishing).isTrue()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
     }
 }

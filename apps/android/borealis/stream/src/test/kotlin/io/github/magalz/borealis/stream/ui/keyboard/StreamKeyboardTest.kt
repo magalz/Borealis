@@ -377,6 +377,20 @@ class StreamKeyboardTest {
         assertThat(keyboard).isLessThan(screen / 2)
     }
 
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV the shortcut chips are centred over the keyboard, like the rows of keys`() {
+        showInKeyboardMode(FormFactor.Tv)
+
+        val keyboard = composeRule.onNodeWithTag("keyboard").getUnclippedBoundsInRoot()
+        val first = composeRule.onNodeWithTag("chip:Alt+Tab").getUnclippedBoundsInRoot()
+        val last = composeRule.onNodeWithTag("chip:Close").getUnclippedBoundsInRoot()
+
+        val chipsCentre = (first.left.value + last.right.value) / 2
+        val keyboardCentre = (keyboard.left.value + keyboard.right.value) / 2
+        assertThat(chipsCentre).isWithin(1f).of(keyboardCentre)
+    }
+
     // UC-005-T6
     @Test
     fun `the keyboard code writes no log`() {

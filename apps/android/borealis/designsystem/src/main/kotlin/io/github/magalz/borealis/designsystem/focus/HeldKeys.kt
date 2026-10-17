@@ -12,7 +12,8 @@ import androidx.compose.ui.platform.InspectorInfo
  * Consumes the key events of a press that began before the element entered the composition: a
  * surface opened by a held key (OK held on a tile, X, Menu) gets that key's repeats and its release
  * once it has the focus, and the release would click the item that has it. A press that begins
- * after the surface opened works as usual. Put it on the root of a sheet or a dialog.
+ * after the surface opened works as usual, and so does a press whose first event the element saw.
+ * Put it on the root of a sheet or a dialog.
  *
  * Events without a down time (synthetic ones) and the volume and media keys are never consumed.
  */
@@ -35,13 +36,25 @@ private object IgnoreKeysHeldOnOpenElement : ModifierNodeElement<IgnoreKeysHeldO
 private class IgnoreKeysHeldOnOpenNode : Modifier.Node(), KeyInputModifierNode {
     private var openedAt = 0L
 
+    /** The keys whose press began under this element: their repeats and release are its own. */
+    private val began = mutableSetOf<Int>()
+
     override fun onAttach() {
         openedAt = SystemClock.uptimeMillis()
     }
 
     override fun onPreKeyEvent(event: KeyEvent): Boolean {
         val native = event.nativeKeyEvent
-        return native.downTime in 1 until openedAt && native.keyCode !in SYSTEM_KEYS
+        val code = native.keyCode
+        if (code in SYSTEM_KEYS) return false
+        val ownPress =
+            when {
+                native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount == 0 ->
+                    true.also { began += code }
+                native.action == AndroidKeyEvent.ACTION_UP -> began.remove(code)
+                else -> code in began
+            }
+        return !ownPress && native.downTime in 1 until openedAt
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean = false

@@ -3,6 +3,7 @@
     <string name="settings_title">Settings</string>
     <string name="settings_choose">Choose</string>
     <string name="settings_close">Close</string>
+    <string name="settings_back">Back</string>
 
     <!-- Groups -->
     <string name="settings_group_stream">Stream</string>

@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.Chip
 import io.github.magalz.borealis.designsystem.components.MenuRow
 import io.github.magalz.borealis.designsystem.components.SegmentedControl
@@ -51,7 +54,7 @@ internal fun SendKeysRow(intents: StreamIntents) {
     MenuRow(
         stringResource(R.string.stream_menu_send_keys),
         onClick = { open = !open },
-        trailing = { Chevron(LocalBorealisColors.current.ink3, down = open) },
+        trailing = { ExpandMark(open) },
     )
     if (open) {
         FlowRow(
@@ -177,7 +180,7 @@ internal fun SessionInfoRow(info: SessionInfo, perf: PerfSnapshot?) {
     MenuRow(
         stringResource(R.string.stream_menu_session_info),
         onClick = { open = !open },
-        trailing = { Chevron(LocalBorealisColors.current.ink3, down = open) },
+        trailing = { ExpandMark(open) },
     )
     if (open) {
         val format = rememberPerfFormat()
@@ -214,4 +217,19 @@ private fun InfoLine(label: String, value: String) {
                 ),
         )
     }
+}
+
+private val EXPAND_MARK_SIZE = 20.dp
+
+/**
+ * The mark of a row that expands: a chevron down while it is [open], to the right while it is not.
+ */
+@Composable
+private fun ExpandMark(open: Boolean) {
+    Icon(
+        if (open) BorealisIcons.ChevronDown else BorealisIcons.ChevronRight,
+        contentDescription = null,
+        modifier = Modifier.size(EXPAND_MARK_SIZE),
+        tint = LocalBorealisColors.current.ink3,
+    )
 }

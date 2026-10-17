@@ -2,31 +2,20 @@ package io.github.magalz.borealis.settings.transfer
 
 import android.text.format.Formatter
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -39,13 +28,12 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
-import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.components.BorealisDialog
+import io.github.magalz.borealis.designsystem.components.DialogAction
 import io.github.magalz.borealis.designsystem.theme.BorealisFonts
+import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.diagnostics.transfer.QrMatrix
 import io.github.magalz.borealis.diagnostics.transfer.TransferState
@@ -56,9 +44,6 @@ import kotlin.math.floor
 /** The test tag of the QR code. */
 internal const val QR_TAG = "send-to-phone-qr"
 
-private val DIALOG_WIDTH = 720.dp
-private val DIALOG_PADDING = 24.dp
-private val SECTION_GAP = 16.dp
 private val COLUMN_GAP = 24.dp
 private val TEXT_GAP = 12.dp
 private const val QR_SHARE_OF_SHORT_SIDE = 0.6f
@@ -69,9 +54,10 @@ private const val SECONDS_PER_MINUTE = 60L
  * The TV's "Send to phone" dialog (UC-006, ADR 0051). Opening it starts a one-download link for
  * [bundle] on [transfer], and it shows the state of that link: the QR code, the link text and a
  * countdown while it waits, then Downloaded or Expired (with Try again), or why there is no link
- * (no local network, with [adbPullCommand]; or a failure). Close has the focus in every state;
- * closing, Back and leaving the composition stop the link, and Close and Back call [onDismiss].
- * Phones never show it: the Privacy pane offers it on a TV only. The link never reaches a log.
+ * (no local network, with [adbPullCommand]; or a failure). It is a wide [BorealisDialog], so it
+ * looks like the Saved dialog it follows. Close has the focus in every state; closing, Back and
+ * leaving the composition stop the link, and Close and Back call [onDismiss]. Phones never show it:
+ * the Privacy pane offers it on a TV only. The link never reaches a log.
  */
 @Composable
 fun SendToPhoneDialog(
@@ -98,84 +84,61 @@ fun SendToPhoneDialog(
         transfer.stop()
         onDismiss()
     }
-    Dialog(
+    val state = if (started) current else TransferState.Idle
+    BorealisDialog(
+        title = stringResource(R.string.borealis_send_to_phone_title),
         onDismissRequest = close,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        confirm =
+            DialogAction(stringResource(R.string.borealis_send_to_phone_close), onClick = close),
+        width = DialogWidth.Wide,
+        dismiss =
+            if (state == TransferState.Expired) {
+                DialogAction(
+                    stringResource(R.string.borealis_send_to_phone_try_again),
+                    BorealisButtonStyle.Secondary,
+                ) {
+                    transfer.start(bundle)
+                }
+            } else {
+                null
+            },
     ) {
-        val colors = LocalBorealisColors.current
-        val shape = MaterialTheme.shapes.extraLarge
-        Column(
-            Modifier.widthIn(max = DIALOG_WIDTH)
-                .background(colors.surface, shape)
-                .border(1.dp, colors.line, shape)
-                .clip(shape)
-                .verticalScroll(rememberScrollState())
-                .padding(DIALOG_PADDING),
-            verticalArrangement = Arrangement.spacedBy(SECTION_GAP),
-        ) {
-            Text(
-                stringResource(R.string.borealis_send_to_phone_title),
-                style = MaterialTheme.typography.titleLarge,
-            )
-            val state = if (started) current else TransferState.Idle
-            // A new kind of state brings a new set of actions, and Close takes the focus again.
-            key(state::class) {
-                TransferContent(
-                    state = state,
-                    adbPullCommand = adbPullCommand,
-                    qrSide = qrSide,
-                    onClose = close,
-                    onTryAgain = { transfer.start(bundle) },
-                )
-            }
-        }
+        TransferContent(state = state, adbPullCommand = adbPullCommand, qrSide = qrSide)
     }
 }
 
-/** What the dialog says and offers in [state]. */
+/** What the dialog says in [state]. */
 @Composable
-private fun TransferContent(
-    state: TransferState,
-    adbPullCommand: String,
-    qrSide: Dp,
-    onClose: () -> Unit,
-    onTryAgain: () -> Unit,
-) {
+private fun TransferContent(state: TransferState, adbPullCommand: String, qrSide: Dp) {
     val colors = LocalBorealisColors.current
     when (state) {
-        is TransferState.Waiting -> Waiting(state, qrSide, onClose)
+        is TransferState.Waiting -> Waiting(state, qrSide)
         TransferState.Downloaded ->
-            Outcome(stringResource(R.string.borealis_send_to_phone_downloaded), onClose)
+            Outcome(stringResource(R.string.borealis_send_to_phone_downloaded))
         TransferState.Expired ->
             Outcome(
                 stringResource(R.string.borealis_send_to_phone_expired),
-                onClose,
-                onTryAgain = onTryAgain,
                 textColor = colors.warningInk,
             )
         TransferState.NoNetwork ->
             Outcome(
                 stringResource(R.string.borealis_send_to_phone_no_network),
-                onClose,
                 command = adbPullCommand,
                 textColor = colors.warningInk,
             )
         TransferState.Failed ->
             Outcome(
                 stringResource(R.string.borealis_send_to_phone_failed),
-                onClose,
                 textColor = colors.dangerInk,
             )
-        TransferState.Idle ->
-            Outcome(stringResource(R.string.borealis_send_to_phone_starting), onClose)
-        TransferState.Stopped ->
-            Outcome(stringResource(R.string.borealis_send_to_phone_stopped), onClose)
+        TransferState.Idle -> Outcome(stringResource(R.string.borealis_send_to_phone_starting))
+        TransferState.Stopped -> Outcome(stringResource(R.string.borealis_send_to_phone_stopped))
     }
 }
 
-/** The file, then the QR code beside the instructions, the link, the countdown and Close. */
+/** The file, then the QR code beside the instructions, the link and the countdown. */
 @Composable
-private fun Waiting(state: TransferState.Waiting, qrSide: Dp, onClose: () -> Unit) {
+private fun Waiting(state: TransferState.Waiting, qrSide: Dp) {
     val colors = LocalBorealisColors.current
     Text(
         stringResource(
@@ -209,17 +172,14 @@ private fun Waiting(state: TransferState.Waiting, qrSide: Dp, onClose: () -> Uni
                 style = MaterialTheme.typography.bodyMedium,
                 color = colors.ink2,
             )
-            Actions(onClose, onTryAgain = null)
         }
     }
 }
 
-/** A line of text, the `adb pull` [command] when there is one, and the actions. */
+/** A line of text and the `adb pull` [command] when there is one. */
 @Composable
 private fun Outcome(
     text: String,
-    onClose: () -> Unit,
-    onTryAgain: (() -> Unit)? = null,
     command: String? = null,
     textColor: Color = LocalBorealisColors.current.ink,
 ) {
@@ -230,30 +190,6 @@ private fun Outcome(
             style = MaterialTheme.typography.bodySmall,
             fontFamily = BorealisFonts.Mono,
             color = LocalBorealisColors.current.ink3,
-        )
-    }
-    Actions(onClose, onTryAgain)
-}
-
-/** Try again, when offered, and Close, which has the initial focus. */
-@Composable
-private fun Actions(onClose: () -> Unit, onTryAgain: (() -> Unit)?) {
-    val closeFocus = remember { FocusRequester() }
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(TEXT_GAP, Alignment.End),
-    ) {
-        if (onTryAgain != null) {
-            BorealisButton(
-                stringResource(R.string.borealis_send_to_phone_try_again),
-                onTryAgain,
-                style = BorealisButtonStyle.Secondary,
-            )
-        }
-        BorealisButton(
-            stringResource(R.string.borealis_send_to_phone_close),
-            onClose,
-            modifier = Modifier.initialFocus(closeFocus),
         )
     }
 }

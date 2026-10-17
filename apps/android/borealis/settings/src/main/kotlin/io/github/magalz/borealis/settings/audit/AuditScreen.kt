@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,6 +25,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,24 +40,19 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.EmptyState
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -66,9 +61,6 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.settings.R
-
-/** The content is as wide as a reading column; a TV leaves the rest empty. */
-private val CONTENT_MAX_WIDTH = 720.dp
 
 /** An outline sits 5dp outside a row, so the list keeps 8dp around it and 10dp between rows. */
 private val LIST_PADDING = 8.dp
@@ -81,8 +73,6 @@ private val TV_TIME_WIDTH = 100.dp
 private val HEADER_GAP = 4.dp
 private val HEADER_PADDING = 16.dp
 private val BAR_PADDING = 4.dp
-private val ICON_SIZE = 24.dp
-private val ICON_STROKE = 2.dp
 private val CODE_GAP = 8.dp
 private val FIELD_GAP = 16.dp
 private val SUMMARY_GAP = 2.dp
@@ -146,45 +136,16 @@ fun AuditScreen(
 
 @Composable
 private fun PhoneBar(onBack: () -> Unit) {
-    val ink = LocalBorealisColors.current.ink
-    val back = stringResource(R.string.audit_ui_back)
     Row(
         Modifier.fillMaxWidth().padding(horizontal = BAR_PADDING),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onBack) {
-            Box(
-                Modifier.size(ICON_SIZE)
-                    .semantics { contentDescription = back }
-                    .drawBehind {
-                        val stroke =
-                            Stroke(
-                                ICON_STROKE.toPx(),
-                                cap = StrokeCap.Round,
-                                join = StrokeJoin.Round,
-                            )
-                        val arrow =
-                            Path().apply {
-                                moveTo(size.width * ARROW_TAIL, size.height * HALF)
-                                lineTo(size.width * ARROW_TIP, size.height * HALF)
-                                moveTo(size.width * ARROW_HEAD, size.height * ARROW_TOP)
-                                lineTo(size.width * ARROW_TIP, size.height * HALF)
-                                lineTo(size.width * ARROW_HEAD, size.height * ARROW_BOTTOM)
-                            }
-                        drawPath(arrow, ink, style = stroke)
-                    }
-            )
+            Icon(BorealisIcons.Back, stringResource(R.string.audit_ui_back))
         }
         Title(Modifier.weight(1f))
     }
 }
-
-private const val HALF = 0.5f
-private const val ARROW_TAIL = 0.79f
-private const val ARROW_TIP = 0.21f
-private const val ARROW_HEAD = 0.46f
-private const val ARROW_TOP = 0.25f
-private const val ARROW_BOTTOM = 0.75f
 
 @Composable
 private fun Header() {
@@ -232,7 +193,7 @@ private fun Entries(
         }
     }
     LazyColumn(
-        modifier = Modifier.widthIn(max = CONTENT_MAX_WIDTH).fillMaxSize(),
+        modifier = Modifier.widthIn(max = BorealisDimens.contentMaxWidth).fillMaxSize(),
         state = listState,
         contentPadding = PaddingValues(horizontal = gutter, vertical = LIST_PADDING),
         verticalArrangement = Arrangement.spacedBy(ROW_GAP),
@@ -315,7 +276,7 @@ private fun Detail(detail: AuditDetail) {
     val spacing = LocalBorealisSpacing.current
     val focusRequester = remember { FocusRequester() }
     Column(
-        Modifier.widthIn(max = CONTENT_MAX_WIDTH)
+        Modifier.widthIn(max = BorealisDimens.contentMaxWidth)
             .fillMaxWidth()
             .padding(horizontal = spacing.gutter, vertical = LIST_PADDING)
             .initialFocus(focusRequester)

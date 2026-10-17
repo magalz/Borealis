@@ -97,10 +97,10 @@ class StartingScreenTest {
 
     @Test
     @Config(qualifiers = TV)
-    fun `on a TV the content is 440dp wide`() {
+    fun `on a TV the content is 560dp wide`() {
         show(formFactor = FormFactor.Tv)
 
-        composeRule.onNodeWithTag(STARTING_CONTENT_TAG).assertWidthNear(440.dp)
+        composeRule.onNodeWithTag(STARTING_CONTENT_TAG).assertWidthNear(560.dp)
     }
 
     @Test

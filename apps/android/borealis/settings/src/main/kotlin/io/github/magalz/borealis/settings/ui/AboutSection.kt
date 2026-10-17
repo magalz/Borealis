@@ -2,6 +2,7 @@ package io.github.magalz.borealis.settings.ui
 
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +20,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -32,6 +34,7 @@ import kotlinx.coroutines.launch
 private const val SOURCE_CODE_URL = "https://github.com/magalz/Borealis"
 private const val PRIVACY_POLICY_URL = "https://github.com/magalz/Borealis/blob/main/PRIVACY.md"
 private val LICENSE_SCROLL_STEP = 96.dp
+private const val LICENSE_HEIGHT_SHARE = 0.6f
 
 /**
  * The rows of the About group: the version and commit, the source code, the open-source licences
@@ -105,6 +108,11 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
     val stepPx = with(LocalDensity.current) { LICENSE_SCROLL_STEP.toPx() }
+    // The dialog scrolls its content, so this text needs a height of its own to scroll in.
+    val maxHeight =
+        with(LocalDensity.current) {
+            (LocalWindowInfo.current.containerSize.height * LICENSE_HEIGHT_SHARE).toDp()
+        }
     SettingsDialog(
         title = stringResource(R.string.settings_about_licenses_title),
         confirm = DialogButton(stringResource(R.string.settings_close), onDismiss),
@@ -127,6 +135,7 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
                     }
                     scrolls
                 }
+                .heightIn(max = maxHeight)
                 .verticalScroll(scroll)
                 .focusable(),
             fontFamily = FontFamily.Monospace,

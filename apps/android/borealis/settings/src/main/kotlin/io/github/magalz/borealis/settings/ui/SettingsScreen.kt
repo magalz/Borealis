@@ -5,13 +5,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.input.InputMode
@@ -30,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.settings.SettingsGroup
 import io.github.magalz.borealis.designsystem.components.settings.SettingsGroupHeader
 import io.github.magalz.borealis.designsystem.components.settings.SettingsTwoPane
@@ -46,6 +52,8 @@ private val LIST_PADDING = 8.dp
 /** An outline sits 5dp outside its row, so neighbouring rows need 10dp between them. */
 private val LIST_GAP = 10.dp
 private val TITLE_GAP = 12.dp
+private val BAR_PADDING = 4.dp
+private val BAR_GAP = 4.dp
 
 /**
  * The settings screen (UC-009), stateless. A phone shows one list: the groups with their rows, a
@@ -85,7 +93,7 @@ internal fun SettingsScreen(
                 .windowInsetsPadding(WindowInsets.safeDrawing)
         ) {
             if (formFactor == FormFactor.Phone) {
-                PhoneSettings(state, actions, overlays, onOpenPrivacy, about)
+                PhoneSettings(state, actions, overlays, onBack, onOpenPrivacy, about)
             } else {
                 TwoPaneSettings(state, actions, overlays, privacyPane, initialGroup, about)
             }
@@ -103,17 +111,33 @@ private fun ScreenTitle(modifier: Modifier = Modifier) {
     )
 }
 
+/** The title of a phone, with the arrow that goes back, as the Privacy screen has. */
+@Composable
+private fun PhoneBar(onBack: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = BAR_PADDING),
+        horizontalArrangement = Arrangement.spacedBy(BAR_GAP),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onBack) {
+            Icon(BorealisIcons.Back, stringResource(R.string.settings_back))
+        }
+        ScreenTitle()
+    }
+}
+
 @Composable
 private fun PhoneSettings(
     state: SettingsUiState,
     actions: SettingsActions,
     overlays: SettingsOverlays,
+    onBack: () -> Unit,
     onOpenPrivacy: () -> Unit,
     about: AboutSource,
 ) {
     val gutter = LocalBorealisSpacing.current.gutter
     Column(Modifier.fillMaxSize()) {
-        ScreenTitle(Modifier.padding(horizontal = gutter, vertical = TITLE_GAP))
+        PhoneBar(onBack)
         Column(
             Modifier.weight(1f)
                 .verticalScroll(rememberScrollState())

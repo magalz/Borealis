@@ -13,6 +13,7 @@ import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.diagnostics.transfer.QrMatrix
 import io.github.magalz.borealis.diagnostics.transfer.TransferState
+import io.github.magalz.borealis.settings.testing.settleWindows
 import java.io.File
 import org.junit.Rule
 import org.junit.Test
@@ -53,6 +54,7 @@ class SendToPhoneScreenshotTest {
             }
         }
         composeRule.waitForIdle()
+        composeRule.settleWindows()
         captureScreenRoboImage("src/test/screenshots/sendtophone_tv_$name.png")
     }
 

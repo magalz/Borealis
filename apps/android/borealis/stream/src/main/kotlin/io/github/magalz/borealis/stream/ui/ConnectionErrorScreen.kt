@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
@@ -34,7 +35,6 @@ import io.github.magalz.borealis.stream.ui.common.onGamepadB
 import io.github.magalz.borealis.stream.ui.error.ErrorActions
 import io.github.magalz.borealis.stream.ui.error.errorCopy
 
-private val CONTENT_MAX_WIDTH = 460.dp
 private val CONTENT_GAP = 14.dp
 private val SUPPORT_LINE_GAP = 2.dp
 
@@ -72,7 +72,7 @@ fun ConnectionErrorScreen(
             // Scrolls so the buttons stay reachable on a short landscape phone with large text. The
             // gutter is inside the scrolled area, so the focus outline is not clipped.
             Modifier.verticalScroll(rememberScrollState())
-                .widthIn(max = CONTENT_MAX_WIDTH + gutter * 2)
+                .widthIn(max = BorealisDimens.contentMaxWidth + gutter * 2)
                 .padding(gutter),
             verticalArrangement = Arrangement.spacedBy(CONTENT_GAP),
         ) {

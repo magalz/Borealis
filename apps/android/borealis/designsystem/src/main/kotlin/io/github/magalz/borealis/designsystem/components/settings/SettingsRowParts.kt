@@ -1,22 +1,15 @@
 package io.github.magalz.borealis.designsystem.components.settings
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.liftedWhenFocused
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
@@ -29,8 +22,8 @@ private val PHONE_MIN_HEIGHT = 48.dp
 private val TV_MIN_HEIGHT = 52.dp
 private val PADDING_HORIZONTAL = 16.dp
 private val PADDING_VERTICAL = 6.dp
-private val GLYPH_SIZE = 12.dp
-private val GLYPH_STROKE = 1.5.dp
+/** The size of the chevron of a row and of the check mark of a choice. */
+internal val ROW_ICON_SIZE = 20.dp
 
 /** What a row of settings draws before its interaction: focus lift, outline and clipping. */
 @Composable
@@ -82,41 +75,5 @@ internal fun SettingsRowText(
         if (!enabled && note != null) {
             Text(note, color = colors.ink3, style = MaterialTheme.typography.bodySmall)
         }
-    }
-}
-
-/** The chevron at the end of a row that opens something. */
-@Composable
-internal fun Chevron(color: Color = LocalBorealisColors.current.ink3) {
-    Canvas(Modifier.size(GLYPH_SIZE)) {
-        val path =
-            Path().apply {
-                moveTo(size.width * 0.3f, size.height * 0.1f)
-                lineTo(size.width * 0.75f, size.height * 0.5f)
-                lineTo(size.width * 0.3f, size.height * 0.9f)
-            }
-        drawPath(
-            path,
-            color,
-            style = Stroke(GLYPH_STROKE.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
-        )
-    }
-}
-
-/** The mark of the selected choice of a list. */
-@Composable
-internal fun CheckMark(color: Color = LocalBorealisColors.current.accent) {
-    Canvas(Modifier.size(GLYPH_SIZE)) {
-        val path =
-            Path().apply {
-                moveTo(size.width * 0.1f, size.height * 0.55f)
-                lineTo(size.width * 0.4f, size.height * 0.85f)
-                lineTo(size.width * 0.95f, size.height * 0.2f)
-            }
-        drawPath(
-            path,
-            color,
-            style = Stroke(GLYPH_STROKE.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
-        )
     }
 }

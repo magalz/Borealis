@@ -208,16 +208,12 @@ class PrivacyContentTest {
         show(PrivacyUiState(dialog = saved()), FormFactor.Tv)
 
         composeRule.onNodeWithText("Diagnostics saved").assertIsDisplayed()
-        composeRule.onNodeWithText(bundle.name, substring = true).assertIsDisplayed()
-        composeRule
-            .onNodeWithText(
-                Formatter.formatShortFileSize(
-                    ApplicationProvider.getApplicationContext(),
-                    bundle.length(),
-                ),
-                substring = true,
+        val size =
+            Formatter.formatShortFileSize(
+                ApplicationProvider.getApplicationContext(),
+                bundle.length(),
             )
-            .assertIsDisplayed()
+        composeRule.onNodeWithText("${bundle.name} ($size)").assertIsDisplayed()
         composeRule.onNodeWithText("/sdcard/Download/${bundle.name}").assertIsDisplayed()
         composeRule.onNodeWithText("adb pull /sdcard/Download/${bundle.name}").assertIsDisplayed()
     }

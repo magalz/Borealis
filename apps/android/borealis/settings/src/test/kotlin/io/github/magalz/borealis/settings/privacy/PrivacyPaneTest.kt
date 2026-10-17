@@ -204,6 +204,7 @@ class PrivacyPaneTest {
                     onBack = { backs++ },
                     onSendToPhone = {},
                     onOpenAudit = {},
+                    formFactor = FormFactor.Phone,
                     viewModel = viewModel(),
                 )
             }
@@ -224,6 +225,7 @@ class PrivacyPaneTest {
                     onBack = { backs++ },
                     onSendToPhone = {},
                     onOpenAudit = {},
+                    formFactor = FormFactor.Phone,
                     viewModel = viewModel(),
                 )
             }

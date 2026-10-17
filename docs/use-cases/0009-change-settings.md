@@ -51,8 +51,8 @@ use.
 ### A2: A row is disabled by another setting (branches from step 3)
 
 1. The row stays focusable. It is shown disabled, with a note that says why.
-   Examples: Analog scrolling while Gamepad mouse is off, and Vibration strength
-   while Vibrate fallback is off.
+   Examples: Analog scrolling and Gamepad mouse speed while Gamepad mouse is off,
+   and Vibration strength while Vibrate fallback is off.
 2. The user cannot change a disabled row.
 
 ### A3: The native resolution is chosen (branches from step 3)

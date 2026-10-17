@@ -36,22 +36,26 @@ How the roadmap is used:
 
 The work for this sprint is on the phase branch `phase/s7-followups-polish`.
 
-1. **MediaTek decode time shows "—" in the stats overlay.** The Google TV
-   Streamer shows no decode time. The Galaxy S22 shows a number. The Sprint 6
-   FIFO attempt was reverted in `c02fdafb`. Sprint 7 matches output timestamps
-   to input timestamps, with pruning, and logs counters under verbose logging.
+1. **MediaTek decode time shows "—" in the stats overlay.** Done (issue #14,
+   merges `903e399d`, `7cbc60ea` and `967487ea`). The Google TV Streamer shows
+   no decode time. The Galaxy S22 shows a number. The Sprint 6 FIFO attempt was
+   reverted in `c02fdafb`. Sprint 7 matches output timestamps to input
+   timestamps, with pruning, measures the decode time from the queue time in
+   microseconds, and logs counters under verbose logging.
 2. **The quit combo does not end the stream on pads driven by the app's USB
-   driver.** Start, Select, LB and RB works on system pads only. The combo is
-   checked in the key path, not in the USB report path.
-3. **Investigate the repeated USB permission dialog on Google TV.** Sprint 7
-   collects logs. There is no code change yet.
-4. **Gamepad mouse: pointer speed.** A speed setting from 10% to 200%, default
-   50%. A 16 ms tick with fraction accumulation. Holding RB gives 25%
-   precision. A session row (Slow, Normal, Fast) in the in-game menu. The same
-   speed applies to right-stick scrolling. The owner reports that scrolling
-   does not seem to work today; a device check in Sprint 7 confirms this.
+   driver.** Done (issue #15, merge `5416a79c`). Start, Select, LB and RB ends
+   the stream on these pads too.
+3. **Investigate the repeated USB permission dialog on Google TV.** Investigation
+   only, with no code change (issue #16). The findings are in the backlog.
+4. **Gamepad mouse: pointer speed.** Done (issue #17, merge `1d500bdb`). A speed
+   setting from 10% to 200%, default 50%. A 16 ms tick with fraction
+   accumulation. Holding RB gives 25% precision. A session row (Slow, Normal,
+   Fast) in the in-game menu. The same speed applies to right-stick scrolling.
+   The owner had reported that scrolling did not seem to work; the device check
+   of 2026-10-17 found that right-stick scrolling reaches the PC on both of the
+   owner's pads.
 5. **Visual refinement pass.** Icons, and the sizes of dialogs and panels. The
-   owner chooses the changes from a contact sheet of every screen.
+   owner chooses the changes from a contact sheet of every screen. Not started.
 
 ### Sprint 8: tidy-up
 
@@ -96,6 +100,13 @@ The owner creates the tag. See the [release procedure](development/release.md).
   [PRIVACY.md](../PRIVACY.md) and [ADR 0022](adr/0022-crash-reporting-and-privacy.md).
 - **Deferred RTSP parser rework.** The moonlight-common-c rework `aeba988` is
   deferred by the owner. See the [third-party notes](../core/third_party/README.md).
+- **Drop the USB attach activity on Google TV.** Idea, not planned. The 8BitDo
+  receivers change their USB identity by themselves. Each change is a new
+  attachment, and it shows Android's "open with Borealis" dialog while the USB
+  driver is on. If that dialog is declined, the stream start asks for USB
+  permission again. See Sprint 7, item 3.
+- **Document the native pad modes.** Idea, not planned. The Pro 3 in Switch
+  mode and the Ultimate 2 in D-input, for the 8BitDo pads. See Sprint 7, item 3.
 
 ## Host-side items (LuminalShine)
 

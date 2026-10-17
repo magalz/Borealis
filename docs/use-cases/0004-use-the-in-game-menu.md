@@ -29,7 +29,8 @@ accident.
 3. The user changes an item. The items are listed in
    [the Phase 2 proposal](../ux/phase-2-proposal.md#in-game-menu-items). Start
    and Select never activate a row. OK or A on an option row (Touch, Gamepad
-   mouse, Overlay) changes its option; the row does not move the focus.
+   mouse, Pointer speed, Overlay) changes its option; the row does not move the
+   focus.
 4. The user closes the menu with Back to stream, Back, B, a tap outside the
    panel, or the same Select + Start hold. The stream continues.
 
@@ -58,7 +59,7 @@ accident.
 3. The system returns to the Apps screen. The app is no longer running on the
    host.
 
-### A4: Select or Start on a system pad (planned, Sprint 6; branches from step 1)
+### A4: Select or Start on a system pad (Sprint 6; branches from step 1)
 
 1. On a controller that Android sees as a system pad and that has a Select
    button, a Start or Select press alone waits up to 60 ms for the other
@@ -67,13 +68,27 @@ accident.
    and neither button reaches the PC.
 3. A quick tap of one button still reaches the PC as a short press.
 
-### A5: Gamepad mouse in the menu (planned, Sprint 6; branches from step 3)
+### A5: Gamepad mouse in the menu (Sprint 6; branches from step 3)
 
 1. The Gamepad mouse row shows On when any pad emulates the mouse.
 2. When the user chooses a value, the system applies it to every pad.
 
 A pad on the USB driver sends both buttons in one report, so nothing is delayed
 for it.
+
+### A6: The user changes the pointer speed (Sprint 7; branches from step 3)
+
+1. The Pointer speed row shows under the Gamepad mouse row, and only while the
+   gamepad mouse is on. It shows on a TV and on a handheld. A phone shows the
+   Touch row instead, and no Pointer speed row.
+2. The user chooses Slow, Normal or Fast. The row sets 0.5, 1 or 2 times the
+   [Gamepad mouse speed](../ux/phase-2-proposal.md#settings) in Settings (10 to
+   200 %, default 50 %). The speed applies to the pointer and to the scrolling
+   of the stick chosen in Analog scrolling.
+3. The choice is for this session only. It does not change the Settings value.
+   The next stream starts at Normal.
+4. While RB is held in mouse mode, the pointer moves at a quarter of the speed.
+   RB does not reach the PC.
 
 No failure flow is defined in the approved design. The Display for next launch
 row is disabled; it needs the Phase 3 host API and cannot be chosen.
@@ -108,6 +123,12 @@ row is disabled; it needs the Phase 3 host API and cannot be chosen.
 | UC-004-T16 | Given a pad on the USB driver, when Select and Start are pressed, then both arrive in one report and neither is delayed. | unit | exists (Sprint 6, unit) |
 | UC-004-T17 | Given any pad emulates the mouse, when the menu opens, then the Gamepad mouse row shows On. | UI | exists (Sprint 6, unit) |
 | UC-004-T18 | Given the user chooses a Gamepad mouse value in the menu, then the value applies to every pad. | unit | exists (Sprint 6, unit) |
+| UC-004-T19 | Given a TV or handheld stream with the gamepad mouse on, when the menu opens, then the Pointer speed row shows under the Gamepad mouse row. | UI | exists (Sprint 7, UI) |
+| UC-004-T20 | Given the gamepad mouse is off, or the device is a phone, when the menu opens, then the Pointer speed row is not shown. | UI | exists (Sprint 7, UI) |
+| UC-004-T21 | Given the user chooses Slow, Normal or Fast, when the pointer or a stick scrolls, then the move is scaled by that factor for this session only. | unit | exists (Sprint 7, unit) |
+| UC-004-T22 | Given a stream starts, then the pointer speed is Normal. | unit | exists (Sprint 7, unit) |
+| UC-004-T23 | Given the gamepad mouse is on and RB is held, when a stick moves the pointer, then the move is a quarter of the speed and RB does not reach the PC. | unit | exists (Sprint 7, unit) |
+| UC-004-T24 | Given a pad on the USB driver, when Start, Select, LB and RB are pressed together and then all are let go, then the stream ends, and holding Start for the combo does not turn the gamepad mouse on. | unit, device | exists (Sprint 7, unit; device round 2026-10-17) |
 
 Sprint 5 built the in-game menu and its logic. A test marked "exists (Sprint 5,
 unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose test
@@ -123,6 +144,13 @@ UC-004-T16 to T18 exist (Sprint 6, unit): `UsbMenuChordTest` checks that a lone
 Start on the USB driver is in the packet of its own report, and
 `MouseRowFollowsStartHoldTest` and `GamepadMouseTest` check the Gamepad mouse
 row and that the menu's value reaches every pad.
+
+UC-004-T19 to T24 are Sprint 7 rows. `InGameMenuTest` checks the Pointer speed
+row (T19, T20). `StreamSessionTest` checks the default and the session choice
+(T21, T22). `GamepadMouseSpeedTest` checks the factors, the RB precision and the
+right-stick scrolling (T21, T23). `QuitComboTest`, `UsbMenuChordTest` and
+`UsbStartHoldTest` check the quit combo on a USB-driver pad (T24). The device
+round of 2026-10-17 ran the quit combo on one pad, the 8BitDo Ultimate 2.
 
 Partly covered:
 
@@ -162,4 +190,6 @@ Until then the row is disabled.
 - Existing tests: `InGameMenuTest`, `MenuHandleTest`, `MenuHintTest`,
   `StreamBackTest`, `MenuChordTest`, `MenuChordDetectorTest`,
   `UsbMenuChordTest`, `ChromeGamepadKeysTest`, `StreamChromeHostTest`,
-  `GameStreamActionsTest`, `SessionAuditTest`.
+  `GameStreamActionsTest`, `SessionAuditTest`, `StreamSessionTest`,
+  `PointerMotionTest`, `GamepadMouseSpeedTest`, `QuitComboTest`,
+  `UsbStartHoldTest`.

@@ -21,9 +21,10 @@ import kotlin.math.min
  * The [DeviceFactsSource] of the app: it asks the Android system each time, so the facts follow the
  * display (a foldable, an external display).
  *
- * The cutout is read through `Display.getCutout`, which needs Android 11. On Android 9 and 10 the
- * cutout-safe size is `null`: the inherited screen read it from the window insets of an activity,
- * which an application context does not have.
+ * The display facts are read on each call. The decoder limits come from the [DecoderProbe], which
+ * the app caches. The cutout is read through `Display.getCutout`, which needs Android 10. On
+ * Android 9 the cutout-safe size is `null`: the inherited screen read it from the window insets of
+ * an activity, which an application context does not have.
  */
 internal class AndroidDeviceFactsSource
 @Inject
@@ -71,7 +72,7 @@ constructor(@ApplicationContext private val context: Context, private val decode
     /** The real size without the cutout insets, in landscape; `null` without a cutout. */
     @Suppress("DEPRECATION") // getRealMetrics: the inherited screen reads the same size.
     private fun cutoutSafeSize(display: Display): PixelSize? {
-        val cutout = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display.cutout else null
+        val cutout = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) display.cutout else null
         val widthInsets = (cutout?.safeInsetLeft ?: 0) + (cutout?.safeInsetRight ?: 0)
         val heightInsets = (cutout?.safeInsetBottom ?: 0) + (cutout?.safeInsetTop ?: 0)
         if (widthInsets == 0 && heightInsets == 0) return null

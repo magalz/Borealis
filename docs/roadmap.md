@@ -45,12 +45,14 @@ The work for this sprint is on the phase branch `phase/s7-followups-polish`.
 2. **The quit combo does not end the stream on pads driven by the app's USB
    driver.** Done (issue #15, merge `5416a79c`). Start, Select, LB and RB ends
    the stream on these pads too.
-3. **Investigate the repeated USB permission dialog on Google TV.**
-   Investigated (issue #16), with no code change. The 8BitDo receivers change
-   their USB identity by themselves, and each change shows Android's attach
-   dialog while the USB driver is on. If that dialog is declined, the stream start
-   asks for USB permission. The two ideas are in the backlog: drop the USB attach
-   activity on Google TV, and document the native pad modes. See the
+3. **Investigate the repeated USB permission dialog on Google TV.** Done, fixed
+   in this sprint (issue #16, merge `0ad99565`). The 8BitDo receivers change their
+   USB identity by themselves, and each change showed Android's attach dialog
+   while the USB driver was on. On a TV the attach activity is no longer offered.
+   The USB permission dialog is asked only once the stream shows its first frame,
+   and a pad that wakes during the stream asks at once, so it shows one dialog.
+   Phones are unchanged. The remaining idea, documenting the native pad modes, is
+   in the backlog. See the
    [device validation runbook, section 12](development/device-validation.md#12-results-sprint-7).
 4. **Gamepad mouse: pointer speed.** Done (issue #17, merge `1d500bdb`). A speed
    setting from 10% to 200%, default 50%. A 16 ms tick with fraction
@@ -73,8 +75,11 @@ The work for this sprint is on the phase branch `phase/s7-followups-polish`.
    let go. Its repeats and its release are consumed, and a fresh press works.
    System keys (volume, media, channel, mute, headset) are never consumed. The
    owner found it by holding OK on an app tile in the Library: the app actions
-   sheet opened, and the release ran its focused action. Merges `70ed3eb3` (in-game
-   menu) and `60d5bfd5` (sheets and dialogs).
+   sheet opened, and the release ran its focused action. The owner then found a
+   second case: holding OK on the Open button of a host card. The host card is
+   now one focus stop with no action button, so that case is gone too (merge
+   `4726c010`). Merges `70ed3eb3` (in-game menu), `60d5bfd5` (sheets and dialogs)
+   and `4726c010` (host card).
 
 ### Sprint 8: tidy-up
 
@@ -119,11 +124,6 @@ The owner creates the tag. See the [release procedure](development/release.md).
   [PRIVACY.md](../PRIVACY.md) and [ADR 0022](adr/0022-crash-reporting-and-privacy.md).
 - **Deferred RTSP parser rework.** The moonlight-common-c rework `aeba988` is
   deferred by the owner. See the [third-party notes](../core/third_party/README.md).
-- **Drop the USB attach activity on Google TV.** Idea, not planned. The 8BitDo
-  receivers change their USB identity by themselves. Each change is a new
-  attachment, and it shows Android's "open with Borealis" dialog while the USB
-  driver is on. If that dialog is declined, the stream start asks for USB
-  permission again. See Sprint 7, item 3.
 - **Document the native pad modes.** Idea, not planned. The Pro 3 in Switch
   mode and the Ultimate 2 in D-input, for the 8BitDo pads. See Sprint 7, item 3.
 - **Smoother D-pad moves in Settings on a TV.** Reported by the owner on

@@ -702,9 +702,14 @@ For a system pad, turn it off. Say which kind each run used.
    - Back arrows and chevrons: open a screen with a back arrow and a Settings row
      that opens something. Expected: the back arrow and the chevron look the
      same on every screen.
-   - Host cards: on the TV, look at a row of host cards. Expected: the cards have
-     equal height, with the action at the bottom. On the S22, the cards size to
-     their content.
+   - Host cards: a host card is one focus stop, with no action button. OK, or a
+     tap, runs its action: open when the host is online and paired, pair when it
+     is not paired, and wake when it is offline. Hold OK, or long-press the card,
+     to open its options. On the TV, also press X or Menu on a pad: the options
+     open. Expected: each action runs as described, and the options open only
+     from the hold, the long press, X or Menu. On the TV and a handheld, the cards
+     have equal height (176 dp, TODO(verify) against the token), so a row lines
+     up. On the S22, the cards size to their content.
    - Aurora loader: open Hosts, Apps and Pairing while each one loads. Expected:
      the same aurora loader on all three.
    - Pairing check: on Pairing, the PIN is centred with its line below it. When
@@ -719,23 +724,31 @@ For a system pad, turn it off. Say which kind each run used.
      Then, in a stream, open the in-game menu and hold OK in the open menu, then
      let it go. Expected: nothing runs on the release. A fresh press of OK acts
      on the focused row.
+   - Held keys on a host card: on an online, paired host card, press OK. Expected:
+     the app list opens. Then hold OK on a host card. Expected: only the host
+     options open, and the release runs nothing.
    - Held keys are not consumed for the system keys (volume, media, channel,
      mute, headset). Press one while a sheet is open. Expected: the key still
      works.
-6. The USB dialog on the Streamer (R5a). This is an observation only; no code
-   changes.
+6. The USB dialog on the Streamer (R5a). Fixed in Sprint 7 (issue #16, merge
+   `0ad99565`). On a TV the attach dialog is not offered. The permission dialog
+   is asked once, only after the stream shows its first frame. Check each step
+   with the USB driver on.
    - Clear the logcat buffer and start the capture of 1.4 on the Streamer, with
      the USB driver on.
-   - Plug in the 8BitDo receiver and note the attach lines, and the vendor and
-     product IDs that they show. The receiver changes its identity by itself
-     (idle `2dc8:6013`, active `2dc8:310b` XInput), and each change is a new
-     attachment. Note whether Android's "open with Borealis" dialog appears.
-     Android's system server logs these lines with the tag `UsbHostManager`
-     ("USB device attached", "Removed device at"); it is not a Borealis class.
-   - Decline the dialog, then start a stream. Expected: the stream start asks for
-     USB permission again.
+   - In the Library, plug in the 8BitDo receiver, or switch the pad on and off.
+     Expected: no attach dialog appears. The receiver changes its identity by
+     itself (idle `2dc8:6013`, active `2dc8:310b` XInput). The attach lines can
+     still appear in logcat. They are logged by Android's system server with the
+     tag `UsbHostManager` ("USB device attached", "Removed device at"); it is not
+     a Borealis class.
+   - Start a stream. Expected: the USB permission dialog appears only once the
+     picture shows, not before.
+   - During the stream, switch the pad off and on. Expected: one dialog, the
+     permission dialog. Accept it. Expected: the pad works after the accept.
    - End the stream. Expected: no attach or remove line appears at the end of the
      stream.
+   - On a phone, the attach dialog is unchanged. Note what it shows, if it does.
 
 ## 4. Results templates
 
@@ -1366,6 +1379,7 @@ the decode-time FIFO (S6-T7).
 - The quit combo is not detected for USB-driver pads (`reportControllerState`).
   This is an upstream limitation.
 - The Google TV USB dialog repeats while the USB driver is on (R5a, section 10).
+  Fixed in Sprint 7 (merge `0ad99565`); see [section 12](#12-results-sprint-7).
 - Feature request from the owner, for the new-features phase: a setting for
   the pointer speed of the gamepad mouse. Today the pointer moves so fast that
   it jumps across the screen, and precise control needs a very light touch on
@@ -1393,18 +1407,19 @@ the steps of [section 3.20](#320-sprint-7-checks).
   - `903e399d`: the quit combo, checked by the owner;
   - `60d5bfd5`: the decode fix, the held OK on an app tile, and the S22 host
     details;
-  - `fe6273c7`: the final round. The round notes record the build gate and the
-    Roborazzi verify as green on this build.
+  - `fe6273c7`: the final round, for the visual checks and the pointer. The round
+    notes record the build gate and the Roborazzi verify as green on this build.
+  - `4726c010` (the phase head, with the host card and the TV USB merges): the
+    final checks of the host card and the USB dialog.
 - Devices:
   - Google TV Streamer: ADB over Wi-Fi, at an address that changes with DHCP.
   - Galaxy S22: USB.
-- Host: LuminalShine on the PC. The round notes do not record the version.
-  TODO(verify).
+- Host: LuminalShine 26.09.1 on the PC, the same version throughout. The owner
+  did not update it during the sprint.
 - Pads:
-  - 8BitDo Ultimate 2 for PC (XInput, on the app's USB driver);
-  - 8BitDo Pro 3 receiver: the spike notes its USB identity. The round notes do
-    not say that a Pro 3 was used for the checks. TODO(verify).
-  - The final pad checks do not say which pad was used. TODO(verify).
+  - 8BitDo Pro 3, a system pad: the first pointer round.
+  - 8BitDo Ultimate 2 for PC, XInput on the app's USB driver: the second pointer
+    round, and the quit combo.
 - Screen captures: each capture was read and then deleted. Some showed part of
   the PC screen. The host details capture showed host addresses and an ID. No
   capture is kept in the repository.
@@ -1423,11 +1438,22 @@ the steps of [section 3.20](#320-sprint-7-checks).
   on. At 12:06 the owner declined it, because accepting looked as if it would
   close the current app. The stream start then showed the USB permission dialog,
   which the owner accepted. The grant lasts one attachment.
+- Double dialog during a stream: a pad that woke during a stream showed two
+  dialogs. At 17:08:06.588 the Ultimate 2 changed from `2dc8:6013` to
+  `2dc8:310b`. At 17:08:06.673 the attach dialog (`TvUsbConfirmActivity`) came
+  up. At 17:08:07.652, one second later, the USB driver service asked for
+  permission (`TvUsbPermissionActivity`). The round notes do not give the build
+  for this capture. TODO(verify).
+- Fix: merge `0ad99565` (issue #16). On a TV the attach activity is not offered,
+  because `UsbAttachGate` also requires a device that is not a leanback device.
+  The USB permission dialog is held until the stream shows its first frame. A
+  pad that wakes during the stream asks at once, so it shows one dialog. Phones
+  are unchanged.
 - Stream end: the hypothesis that ending the stream makes the receiver
   re-enumerate is not confirmed in this run. No attach or remove line appeared
   during the stream, at its end, or in the 30 seconds after it.
-- Follow-ups are in the [roadmap](../roadmap.md#sprint-7-follow-ups-and-backlog)
-  (Sprint 7, item 3) and in the [backlog](../roadmap.md#backlog-not-scheduled).
+- The follow-up is closed by the fix above. See the
+  [roadmap](../roadmap.md#sprint-7-follow-ups-and-backlog) (Sprint 7, item 3).
 
 ### Decode time check, 2026-10-17
 
@@ -1459,18 +1485,18 @@ After the fix (build `60d5bfd5`):
 The overlay corners were captured, read and deleted. The S22 capture showed part
 of the PC screen.
 
-### Final round, build `fe6273c7`
+### Final round, builds `fe6273c7` and `4726c010`
 
 | # | Item | Device | Result | Evidence and notes |
 | --- | --- | --- | --- | --- |
 | F1 | Hosts rail at 220 dp, with the Settings gear | TV | pass | Build `fe6273c7`. |
-| F2 | Host cards of equal height, with the action at the bottom | TV | pass | Build `fe6273c7`. |
+| F2 | Host cards of equal height | TV | pass | Build `fe6273c7`. The card's action button was removed in `4726c010`; see F17. |
 | F3 | Settings in two panes, with the chevrons from BorealisIcons | TV | pass | Build `fe6273c7`. |
 | F4 | Erase audit trail: Compact dialog, Cancel focused, Erase in the danger tone | TV | pass | Build `fe6273c7`. Back cancelled it, and nothing was erased. |
 | F5 | Host details as the Standard dialog. The scrim dims the app content. | S22, landscape | pass | Build `60d5bfd5`. The system bar icons stay bright, as with any app dim. No undimmed strip was seen. |
-| F6 | Gamepad mouse at 50 %: smooth from the first move | TV, pad | pass | Build `fe6273c7`. The owner rated the default speed great. |
-| F7 | RB precision | TV, pad | pass | Build `fe6273c7`. The owner rated it perfect. |
-| F8 | Pointer speed row in the menu: Slow, Normal, Fast | TV, pad | pass | Build `fe6273c7`. All three speeds were good to the owner. |
+| F6 | Gamepad mouse at 50 %: smooth from the first move | TV, Pro 3, then Ultimate 2 | pass | Build `fe6273c7`. The owner rated the default speed great on the first pad, and the second pad was "perfect" too. |
+| F7 | RB precision | TV, both pads | pass | Build `fe6273c7`. The owner rated it perfect on the first pad, and the second pad was perfect too. |
+| F8 | Pointer speed row in the menu: Slow, Normal, Fast | TV, Pro 3 | pass | Build `fe6273c7`. All three speeds were good to the owner. The notes do not record this row for the second pad. |
 | F9 | Right-stick scrolling | TV, both pads | pass | Build `fe6273c7`. |
 | F10 | Held OK in the open in-game menu, then released | TV, remote | pass | Build `fe6273c7`. Nothing ran on the release. A fresh press worked. |
 | F11 | Held OK on the Desktop tile in Library, Apps | TV, remote | pass | Build `60d5bfd5`. The app actions sheet stayed open, and nothing ran on the release. A fresh press picked an option. |
@@ -1478,7 +1504,11 @@ of the PC screen.
 | F13 | Quit combo on the system pad | TV, Pro 3 | not recorded | TODO(verify). |
 | F14 | Slider at 10 % and 200 %, deadzone, slow diagonal, joy.cpl checks | TV, pad | not recorded | TODO(verify). |
 | F15 | Dialog frames for Forget, Saved with Send to phone, About, Host details and App details | TV | not recorded | Only F4 and the S22 check of F5 are in the notes. |
-| F16 | Aurora loader, PIN and "Paired", connection error actions, TV keyboard row | TV, S22 | not recorded | Not in the round notes. |
+| F16 | Aurora loader, PIN and "Paired", connection error actions, TV keyboard row, phone host cards at their content size | TV, S22 | not recorded | Not in the round notes. |
+| F17 | Host card is one focus stop: OK opens the app list, holding OK opens only the options | TV | pass | Build `4726c010`, checked by the owner. The card has no Open button to hold. |
+| F18 | Ultimate 2 off and on in the Library: no USB dialog | TV | pass | Build `4726c010`, checked by the owner. `UsbAttachActivity` is disabled on the TV. |
+| F19 | Stream start: the USB permission dialog appears only once the picture shows | TV | pass | Build `4726c010`, checked by the owner. |
+| F20 | Pad off and on during the stream: one dialog (permission). The pad works after accepting. | TV | pass | Build `4726c010`, checked by the owner. |
 
 ### Not run
 
@@ -1490,10 +1520,10 @@ of the PC screen.
 
 ### Follow-ups and backlog
 
-- Sprint 7 item 3, the USB dialog, is investigated. See the findings above.
-- Backlog, from this round: the attach activity on Google TV, the native pad
-  modes, the smoother D-pad moves in Settings on a TV, the quit warning for
-  Desktop, and the host details text. See the
-  [roadmap backlog](../roadmap.md#backlog-not-scheduled).
+- Sprint 7 item 3, the USB dialog, is fixed in this sprint (merge `0ad99565`).
+  See the spike above.
+- Backlog, from this round: the native pad modes, the smoother D-pad moves in
+  Settings on a TV, the quit warning for Desktop, and the host details text. See
+  the [roadmap backlog](../roadmap.md#backlog-not-scheduled).
 - The Sprint 6 quit combo follow-up for USB-driver pads is done in `5416a79c`.
   See the [roadmap](../roadmap.md#sprint-7-follow-ups-and-backlog), item 2.

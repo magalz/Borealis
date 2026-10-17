@@ -134,12 +134,15 @@ States:
 - Loading: before the first host report arrives, the screen shows a progress
   indicator and nothing can be focused.
 
-- Touch: tap a host to see its apps. Pair and Wake are inline buttons, so no
-  long-press menus are needed.
-- D-pad (TV): left rail plus a host grid. Focus starts on Continue. OK opens
-  the host; hold OK opens the host options (details, wake, forget).
-- Gamepad: as the TV. A opens, X shows the options, B does nothing at the top
-  level.
+- Each host card is one focus stop, with no action button. Its action depends
+  on the host: open when it is online and paired, pair when it is not paired,
+  and wake when it is offline. The click action is named for screen readers.
+- Touch: a tap on a card runs its action.
+- D-pad (TV): left rail plus a host grid. Focus starts on Continue. OK runs the
+  card's action; hold OK, or a long press, opens the host options (details,
+  wake, forget).
+- Gamepad: as the TV. A runs the card's action and X shows the options. Menu
+  also shows the options. B does nothing at the top level.
 
 Changes from 12.2: 12.2 hides pairing, wake and details in a long-press
 context menu, and has no Continue row.

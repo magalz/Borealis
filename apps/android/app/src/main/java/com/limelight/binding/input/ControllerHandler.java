@@ -3169,7 +3169,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         public short leftStickY = 0x0000;
 
         public boolean mouseEmulationActive;
-        public int mouseEmulationLastInputMap;
+        public volatile int mouseEmulationLastInputMap;
         public final int mouseEmulationReportPeriod = 16;
         public long mouseEmulationLastTick;
 

@@ -78,6 +78,44 @@ class GamepadMouseSpeedTest {
     }
 
     @Test
+    fun `a USB stick held up moves the pointer up the screen`() {
+        rig.handler.setMouseEmulation(true)
+        pad.report(0, leftStickY = -1f)
+
+        rig.advanceBy(200)
+
+        val moves = rig.connection.mouse.filter { it.startsWith("move") }.map { it.split(" ") }
+        assertThat(moves).isNotEmpty()
+        assertThat(moves.all { it[1].toInt() == 0 && it[2].toInt() < 0 }).isTrue()
+    }
+
+    @Test
+    fun `a USB stick held down moves the pointer down the screen`() {
+        rig.handler.setMouseEmulation(true)
+        pad.report(0, leftStickY = 1f)
+
+        rig.advanceBy(200)
+
+        val moves = rig.connection.mouse.filter { it.startsWith("move") }.map { it.split(" ") }
+        assertThat(moves).isNotEmpty()
+        assertThat(moves.all { it[1].toInt() == 0 && it[2].toInt() > 0 }).isTrue()
+    }
+
+    @Test
+    fun `a system pad stick held up moves the pointer up the screen`() {
+        val system = rigWithSpeed100()
+        system.useSystemPad()
+        system.handler.setMouseEmulation(true)
+        system.holdSystemPadSticks(leftY = 32766)
+
+        system.advanceBy(200)
+
+        val moves = system.connection.mouse.filter { it.startsWith("move") }.map { it.split(" ") }
+        assertThat(moves).isNotEmpty()
+        assertThat(moves.all { it[1].toInt() == 0 && it[2].toInt() < 0 }).isTrue()
+    }
+
+    @Test
     fun `a stick held at a quarter still moves the pointer`() {
         rig.handler.setMouseEmulation(true)
         pad.report(0, leftStickX = 0.25f)
@@ -173,13 +211,13 @@ class GamepadMouseSpeedTest {
     @Test
     fun `scrolling follows the speed of the setting and the session factor`() {
         rig.prefs.gamepadMouseSpeed = 50
-        rig.handler.setPointerSpeed(2f)
+        rig.handler.setPointerSpeed(0.5f)
         rig.handler.setMouseEmulation(true)
         pad.report(0, rightStickY = -1f)
 
         rig.advanceBy(1_000)
 
-        assertThat(scrolled()).isWithin(20).of(1_280)
+        assertThat(scrolled()).isWithin(10).of(320)
     }
 
     @Test

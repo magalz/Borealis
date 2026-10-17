@@ -11,6 +11,7 @@ Everything is written in English. Start with the repository
 | `host-contract/` | What the client expects from the LuminalShine host (endpoints, behaviour, golden fixtures), and which parts are proposals. |
 | [development/](development/README.md) | How to build, test (TDD), sync upstream, release and orchestrate AI agents. |
 | [policies/](policies/) | Rules: [dependencies](policies/dependencies.md), [release](policies/release.md), [upstream sync](policies/upstream-sync.md), [AI-assisted development](policies/ai-assisted-development.md), [host contributions](policies/host-contributions.md), [privacy and logging](policies/privacy-and-logging.md). |
+| [roadmap.md](roadmap.md) | The order of the coming work and the backlog, with the host-side items. Planned work is marked as planned. |
 
 Top-level project files:
 

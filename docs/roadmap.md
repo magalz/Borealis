@@ -35,7 +35,6 @@ How the roadmap is used:
 ### Sprint 7: follow-ups and backlog
 
 The work for this sprint is on the phase branch `phase/s7-followups-polish`.
-In the owner's order:
 
 1. **MediaTek decode time shows "—" in the stats overlay.** The Google TV
    Streamer shows no decode time. The Galaxy S22 shows a number. The Sprint 6
@@ -105,12 +104,12 @@ without them. All of them are open as of 2026-10-17.
 
 | Item | Kind | Summary |
 | --- | --- | --- |
-| NortheBridge/luminalshine#194 | Issue | Stray bytes after a 404 response. See the [host contract](host-contract/README.md). |
-| NortheBridge/luminalshine#198 | Issue | Teardown hang after a disconnect. See the [host contract](host-contract/README.md). |
-| NortheBridge/luminalshine#199 | PR | TODO(verify): summary not found in this repository. |
-| NortheBridge/luminalshine#200 | PR | TODO(verify): summary not found in this repository. |
-| NortheBridge/luminalshine#201 | Issue | TODO(verify): summary not found in this repository. |
-| NortheBridge/luminalshine#202 | Issue | The host builds a per-client virtual display on one thread, so other requests wait. See the [host contract](host-contract/luminalshine.md). |
-| NortheBridge/luminalshine#203 | PR | Proposed fix for #202. Not merged. |
-| NortheBridge/luminalshine#204 | Issue | The host process crashes after the virtual display cleanup of an ended session. See the [host contract](host-contract/luminalshine.md). |
-| NortheBridge/luminalshine#205 | Issue | A second client's resume fails the RTSP tag check while the first client's launch is still setting up. See the [host contract](host-contract/luminalshine.md). |
+| [NortheBridge/luminalshine#194](https://github.com/NortheBridge/luminalshine/issues/194) | Issue | Stray bytes after a 404 response. See the [host contract](host-contract/README.md). |
+| [NortheBridge/luminalshine#198](https://github.com/NortheBridge/luminalshine/issues/198) | Issue | Teardown hang after a disconnect. See the [host contract](host-contract/README.md). |
+| [NortheBridge/luminalshine#199](https://github.com/NortheBridge/luminalshine/pull/199) | PR | Reports the LuminalShine release in `/serverinfo`, so the client can show the host version. |
+| [NortheBridge/luminalshine#200](https://github.com/NortheBridge/luminalshine/pull/200) | PR | Sends a single response for unknown GameStream paths. Proposed fix for #194. |
+| [NortheBridge/luminalshine#201](https://github.com/NortheBridge/luminalshine/issues/201) | Issue | A second client leaving a shared app ends the first client's session (per-client virtual display). See [UC-003](use-cases/0003-join-or-replace-a-running-app.md). |
+| [NortheBridge/luminalshine#202](https://github.com/NortheBridge/luminalshine/issues/202) | Issue | A long `/launch` blocks every other HTTPS GameStream request until it finishes. See the [host contract](host-contract/luminalshine.md). |
+| [NortheBridge/luminalshine#203](https://github.com/NortheBridge/luminalshine/pull/203) | PR | Proposed fix for #202. Not merged. |
+| [NortheBridge/luminalshine#204](https://github.com/NortheBridge/luminalshine/issues/204) | Issue | The host process crashes after the virtual display cleanup of an ended session. See the [host contract](host-contract/luminalshine.md). |
+| [NortheBridge/luminalshine#205](https://github.com/NortheBridge/luminalshine/issues/205) | Issue | A second client's resume fails the RTSP tag check while the first client's launch is still setting up. See the [host contract](host-contract/luminalshine.md). |

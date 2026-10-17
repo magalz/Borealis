@@ -22,6 +22,7 @@ import org.robolectric.shadows.ShadowDisplayManager
 
 /** What the Android system says, through the shadows, is what the facts report. */
 @RunWith(RobolectricTestRunner::class)
+@Suppress("DEPRECATION") // FEATURE_TELEVISION is what the source asks.
 @Config(qualifiers = "w360dp-h800dp-xxhdpi")
 class AndroidDeviceFactsSourceTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
@@ -175,7 +176,7 @@ class AndroidDeviceFactsSourceTest {
         feature(PackageManager.FEATURE_PICTURE_IN_PICTURE, true)
         feature(PackageManager.FEATURE_SENSOR_ACCELEROMETER, true)
         feature(PackageManager.FEATURE_SENSOR_GYROSCOPE, true)
-        feature(PackageManager.FEATURE_LEANBACK, true)
+        feature(PackageManager.FEATURE_TELEVISION, true)
         feature("com.amazon.software.fireos", true)
         feature("com.nvidia.feature.shield", true)
 
@@ -198,7 +199,7 @@ class AndroidDeviceFactsSourceTest {
         feature(PackageManager.FEATURE_PICTURE_IN_PICTURE, false)
         feature(PackageManager.FEATURE_SENSOR_ACCELEROMETER, false)
         feature(PackageManager.FEATURE_SENSOR_GYROSCOPE, false)
-        feature(PackageManager.FEATURE_LEANBACK, false)
+        feature(PackageManager.FEATURE_TELEVISION, false)
         feature("com.amazon.software.fireos", false)
         feature("com.nvidia.feature.shield", false)
 

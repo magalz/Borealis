@@ -54,10 +54,10 @@ class DefaultSettingsOptions @Inject constructor() : SettingsOptions {
         facts: DeviceFacts,
         unlockAllFrameRates: Boolean,
     ): List<FrameRateChoice> {
-        val rates = mutableListOf(30, 60)
+        val rates = mutableListOf(FPS_30, FPS_60)
         // A little room in case the display rounds its rate down.
-        if (unlockAllFrameRates || facts.maxRefreshRate >= MIN_HZ_FOR_90) rates += 90
-        if (unlockAllFrameRates || facts.maxRefreshRate >= MIN_HZ_FOR_120) rates += 120
+        if (unlockAllFrameRates || facts.maxRefreshRate >= MIN_HZ_FOR_90) rates += FPS_90
+        if (unlockAllFrameRates || facts.maxRefreshRate >= MIN_HZ_FOR_120) rates += FPS_120
         val choices = rates.map { FrameRateChoice(it, isNative = false) }.toMutableList()
         val native = Math.round(facts.maxRefreshRate)
         if (native != 0 && native !in rates) choices += FrameRateChoice(native, isNative = true)
@@ -108,6 +108,10 @@ class DefaultSettingsOptions @Inject constructor() : SettingsOptions {
         const val SLOT_4K = UHD_WIDTH
         const val SLOT_1440P = QHD_WIDTH
         const val SLOT_1080P = FHD_WIDTH
+        const val FPS_30 = 30
+        const val FPS_60 = 60
+        const val FPS_90 = 90
+        const val FPS_120 = 120
         const val MIN_HZ_FOR_90 = 88f
         const val MIN_HZ_FOR_120 = 118f
 

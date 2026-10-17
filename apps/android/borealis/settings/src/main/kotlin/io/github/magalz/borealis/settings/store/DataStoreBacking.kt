@@ -21,10 +21,13 @@ import io.github.magalz.borealis.settings.catalog.SettingStore
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.catalog.StringSetting
 import java.io.File
+import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 
 /** The `borealis_settings` DataStore file: the settings of [SettingStore.DATASTORE]. */
@@ -51,17 +54,25 @@ internal class DataStoreBacking(
         }
     }
 
+    // A read error does not end the observation: it is logged and the flow is read again after a
+    // pause. Each emission is only a signal: by the time it is handled it can be older than the
+    // stored state, so the newest state is read instead, and a stale one cannot flip a switch (and
+    // with it the redactor) back.
     override fun observe(onChanged: (Map<Setting<*>, Any?>) -> Unit) {
         scope.launch {
             dataStore.data
-                .map(::valuesOf)
-                .catch {
+                .map { valuesOf(dataStore.data.first()) }
+                .retryWhen { cause, _ ->
+                    val transient = cause is IOException
                     BorealisLog.w(
                         LogTag.APP,
                         "settings store unreadable",
-                        "error" to it.javaClass.simpleName,
+                        "error" to cause.javaClass.simpleName,
                     )
+                    if (transient) delay(retryDelayMillis)
+                    transient
                 }
+                .catch {}
                 .collect(onChanged)
         }
     }
@@ -96,7 +107,16 @@ internal class DataStoreBacking(
             file: File,
         ): DataStore<Preferences> =
             PreferenceDataStoreFactory.create(
-                corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
+                corruptionHandler =
+                    ReplaceFileCorruptionHandler {
+                        // The file is lost, and so are the switches: masking falls back to off.
+                        BorealisLog.w(
+                            LogTag.APP,
+                            "settings store replaced after corruption",
+                            "error" to it.javaClass.simpleName,
+                        )
+                        emptyPreferences()
+                    },
                 migrations = listOf(SharedPreferencesMigration({ preferences }, keysToMigrate())),
                 scope = scope,
                 produceFile = { file },

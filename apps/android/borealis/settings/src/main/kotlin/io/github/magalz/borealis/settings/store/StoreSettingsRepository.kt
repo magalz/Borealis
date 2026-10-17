@@ -126,19 +126,33 @@ internal class StoreSettingsRepository(
                     "error" to error.javaClass.simpleName,
                 )
             }
-            // A failed write leaves the key as it is stored, so read that back, away from the lock.
-            val stored = if (failed) storedValueOf(setting) else StoredValue.Known(write.value)
-            synchronized(lock) {
-                val left = pending.getValue(setting.key) - 1
-                if (left > 0) {
-                    pending[setting.key] = left
-                } else {
-                    pending.remove(setting.key)
-                    if (stored is StoredValue.Known) change { it.withStored(setting, stored.value) }
+            val settled =
+                synchronized(lock) {
+                    val left = pending.getValue(setting.key) - 1
+                    if (left > 0) pending[setting.key] = left else pending.remove(setting.key)
+                    left == 0
                 }
-            }
+            if (settled)
+                reconcile(
+                    setting,
+                    if (failed) StoredValue.Unknown else StoredValue.Known(write.value),
+                )
         } finally {
             write.done.complete(Unit)
+        }
+    }
+
+    // The last write of [setting] is done: the key takes what is stored now. That is the old value
+    // after a failed write, and the value of an outside write that landed after our commit.
+    // Outside changes apply again from here on, so the read is the newest state. A new write of the
+    // key that arrived meanwhile owns it again, and publishes when it is done. [fallback] stands in
+    // when the store cannot be read.
+    private suspend fun reconcile(setting: Setting<*>, fallback: StoredValue) {
+        val read = storedValueOf(setting)
+        val stored = if (read is StoredValue.Known) read else fallback
+        if (stored !is StoredValue.Known) return
+        synchronized(lock) {
+            if (!pending.containsKey(setting.key)) change { it.withStored(setting, stored.value) }
         }
     }
 
@@ -181,12 +195,7 @@ internal class StoreSettingsRepository(
             dataStore: SettingsBacking,
             scope: CoroutineScope,
         ): StoreSettingsRepository {
-            // fromStored refuses a null for a setting that has a default, so absent keys are left
-            // out.
-            val stored = runBlocking {
-                readOrEmpty(preferences) + readOrEmpty(dataStore)
-            }
-                .filterValues { it != null }
+            val stored = runBlocking { readOrEmpty(preferences) + readOrEmpty(dataStore) }
             return StoreSettingsRepository(
                 preferences,
                 dataStore,

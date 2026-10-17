@@ -15,6 +15,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import io.github.magalz.borealis.designsystem.testing.settleWindows
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.shell.LibraryScaffold
 import io.github.magalz.borealis.library.shell.RailActions
@@ -112,6 +113,7 @@ class HostsScreenshotTest {
         composeRule.onNodeWithText("Forget").performClick()
         composeRule.waitForIdle()
 
+        composeRule.settleWindows()
         captureScreenRoboImage("src/test/screenshots/hosts_tv_forget.png")
     }
 

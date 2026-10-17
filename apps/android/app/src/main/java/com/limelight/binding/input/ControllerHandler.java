@@ -56,6 +56,7 @@ import io.github.magalz.borealis.stream.input.GuideChord;
 import io.github.magalz.borealis.stream.input.HeldSinceCapture;
 import io.github.magalz.borealis.stream.input.MenuChordDetector;
 import io.github.magalz.borealis.stream.input.MenuChordListener;
+import io.github.magalz.borealis.stream.input.QuitCombo;
 import io.github.magalz.borealis.stream.input.StartHold;
 import io.github.magalz.borealis.stream.input.UsbChromeInput;
 
@@ -1383,6 +1384,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         context.mouseEmulationLastInputMap = 0;
         context.tapButtons = 0;
         context.menuChord.reset();
+        context.quitCombo.reset();
         mainThreadHandler.removeCallbacks(context.menuChordCheck);
 
         if (context instanceof InputDeviceContext) {
@@ -3057,7 +3059,8 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         context.chromeInput.report(buttonFlags, leftStickX, leftStickY);
         buttonFlags = context.heldSinceCapture.filter(buttonFlags, captured);
         if (context.startHold.update(buttonFlags, SystemClock.uptimeMillis()) && !captured &&
-                prefConfig.mouseEmulation && !context.menuChord.claims(ControllerPacket.PLAY_FLAG)) {
+                prefConfig.mouseEmulation && !context.menuChord.claims(ControllerPacket.PLAY_FLAG) &&
+                !context.quitCombo.pending()) {
             // The USB driver reports from a thread without a looper, and the toggle shows a notice
             if (Looper.myLooper() == Looper.getMainLooper()) {
                 context.toggleMouseEmulation();
@@ -3065,6 +3068,10 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             else {
                 mainThreadHandler.post(context::toggleMouseEmulation);
             }
+        }
+        // Fed while the chrome has the input too, so a combo begun before it is not left armed
+        if (context.quitCombo.update(buttonFlags) && !captured) {
+            mainThreadHandler.post(activityContext::finish);
         }
         if (captured) {
             return;
@@ -3211,6 +3218,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
         // The Start hold that turns the gamepad mouse on or off, for pads that give no key events
         public final StartHold startHold = new StartHold();
+
+        // The Start+Back+LB+RB quit combo of a pad that gives no key events, as pendingExit is for the others
+        public final QuitCombo quitCombo = new QuitCombo();
 
         // The buttons held since the chrome had the input stay unseen until they are let go
         public final HeldSinceCapture heldSinceCapture = new HeldSinceCapture();

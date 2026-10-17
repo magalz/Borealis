@@ -13,55 +13,61 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import io.github.magalz.borealis.diagnostics.R
-import io.github.magalz.borealis.logging.BorealisLog
-import io.github.magalz.borealis.logging.LogTag
 import java.io.File
-import java.io.IOException
 import java.net.InetAddress
 import java.util.Locale
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 /**
- * The "Send to phone" dialog: serves [bundle] once on the local network and shows the link as a QR
- * code, with a countdown and the status. Dismissing the dialog stops the server, and so does the
- * settings screen going away. [address] is the private address to bind (null when there is no local
- * network) and [clock] drives the countdown and the server's expiry.
+ * The interim "Send to phone" dialog: a [TransferSession] that serves [bundle] once on the local
+ * network, shown as the link, its QR code, a countdown and the status. Dismissing the dialog stops
+ * the transfer, and so does the settings screen going away. [address] is the private address to
+ * bind (null when there is no local network) and [clock] drives the countdown and the expiry.
  */
 internal class TransferDialog(
     private val context: Context,
     private val bundle: File,
-    private val address: () -> InetAddress?,
-    private val clock: () -> Long,
+    address: () -> InetAddress?,
+    clock: () -> Long,
     private val isGone: () -> Boolean,
 ) {
     private val handler = Handler(Looper.getMainLooper())
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val session = TransferSession(address, clock, scope)
 
     fun show() {
-        val local = address()
-        if (local == null) {
-            showMessage(R.string.borealis_transfer_no_network)
+        session.start(bundle)
+        val waiting = session.state.value as? TransferState.Waiting
+        if (waiting == null) {
+            scope.cancel()
+            showMessage(
+                if (session.state.value == TransferState.NoNetwork) {
+                    R.string.borealis_transfer_no_network
+                } else {
+                    R.string.borealis_transfer_failed
+                }
+            )
             return
         }
-        val server = OneShotFileServer(bundle, local, clock)
-        val link =
-            try {
-                server.start()
-            } catch (error: IOException) {
-                BorealisLog.e(LogTag.APP, "could not start the diagnostic transfer", error)
-                showMessage(R.string.borealis_transfer_failed)
-                return
-            }
         // The link only exists on screen once showLink returns; if building it fails, nothing could
-        // ever stop the server, so stop it here.
+        // ever stop the transfer, so stop it here.
         var shown = false
         try {
-            showLink(server, link)
+            showLink(waiting.link)
             shown = true
         } finally {
-            if (!shown) server.stop()
+            if (!shown) {
+                scope.cancel()
+                session.stop()
+            }
         }
     }
 
-    private fun showLink(server: OneShotFileServer, link: String) {
+    private fun showLink(link: String) {
         val metrics = context.resources.displayMetrics
         // A TV is wider than tall: the code goes left of the text, so the countdown and the status
         // stay in view. Stacked, they would be squeezed out of the dialog. The height is short on a
@@ -107,7 +113,7 @@ internal class TransferDialog(
                     addView(details)
                 }
             }
-        render(server, countdown, status)
+        scope.launch { session.state.collect { render(it, countdown, status) } }
         val dialog =
             AlertDialog.Builder(context)
                 .setTitle(R.string.borealis_transfer_title)
@@ -115,11 +121,12 @@ internal class TransferDialog(
                 .setPositiveButton(R.string.borealis_export_close, null)
                 .setOnDismissListener {
                     handler.removeCallbacksAndMessages(null)
-                    server.stop()
+                    scope.cancel()
+                    session.stop()
                 }
                 .show()
         focusClose(dialog)
-        tick(dialog, server, countdown, status)
+        watchScreen(dialog)
     }
 
     private fun qrView(link: String, screenFraction: Double): ImageView {
@@ -131,36 +138,27 @@ internal class TransferDialog(
         }
     }
 
-    /** Refreshes the texts once a second until the transfer is over or the screen is gone. */
-    private fun tick(
-        dialog: AlertDialog,
-        server: OneShotFileServer,
-        countdown: TextView,
-        status: TextView,
-    ) {
+    /** Closes the dialog, and so the transfer, once the screen behind it is gone. */
+    private fun watchScreen(dialog: AlertDialog) {
         handler.postDelayed(
             {
                 if (isGone()) {
                     dialog.dismiss()
-                } else {
-                    render(server, countdown, status)
-                    if (server.status == TransferStatus.WAITING) {
-                        tick(dialog, server, countdown, status)
-                    }
+                } else if (session.state.value is TransferState.Waiting) {
+                    watchScreen(dialog)
                 }
             },
             TICK_MILLIS,
         )
     }
 
-    private fun render(server: OneShotFileServer, countdown: TextView, status: TextView) {
-        val state = server.status
+    private fun render(state: TransferState, countdown: TextView, status: TextView) {
         // The line is gone once the transfer is over, not blank: a blank line would take space.
-        if (state == TransferStatus.WAITING) {
+        if (state is TransferState.Waiting) {
             countdown.text =
                 context.getString(
                     R.string.borealis_transfer_expires,
-                    formatRemaining(server.remainingMillis()),
+                    formatRemaining(state.remainingMillis),
                 )
             countdown.visibility = View.VISIBLE
         } else {
@@ -168,10 +166,13 @@ internal class TransferDialog(
         }
         status.setText(
             when (state) {
-                TransferStatus.WAITING -> R.string.borealis_transfer_status_waiting
-                TransferStatus.DOWNLOADED -> R.string.borealis_transfer_status_downloaded
-                TransferStatus.EXPIRED -> R.string.borealis_transfer_status_expired
-                TransferStatus.STOPPED -> R.string.borealis_transfer_status_stopped
+                is TransferState.Waiting -> R.string.borealis_transfer_status_waiting
+                TransferState.Downloaded -> R.string.borealis_transfer_status_downloaded
+                TransferState.Expired -> R.string.borealis_transfer_status_expired
+                TransferState.Idle,
+                TransferState.NoNetwork,
+                TransferState.Failed,
+                TransferState.Stopped -> R.string.borealis_transfer_status_stopped
             }
         )
     }

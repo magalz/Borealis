@@ -213,8 +213,6 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        UiHelper.setLocale(this);
-
         // We don't want a title bar
         requestWindowFeature(Window.FEATURE_NO_TITLE);
 
@@ -549,7 +547,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
         controllerHandler.setChromeKeySink(chromeHost::dispatchKeyEvent);
         decoderRenderer.setPerfSink(streamSession::onPerf);
         PerfGate.bind(LifecycleOwnerKt.getLifecycleScope(this), streamSession, decoderRenderer::setPerfEnabled);
-        GamepadMouseSync.bind(LifecycleOwnerKt.getLifecycleScope(this), streamSession, controllerHandler::isMouseEmulationEnabled);
+        GamepadMouseSync.bind(LifecycleOwnerKt.getLifecycleScope(this), streamSession, controllerHandler::isMouseEmulationOnAnyPad);
 
         if (!decoderRenderer.isAvcSupported()) {
             // If we can't find an AVC decoder, we can't proceed

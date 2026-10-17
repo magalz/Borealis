@@ -1,45 +1,62 @@
 package io.github.magalz.borealis.settings
 
-import android.content.Context
-import android.content.SharedPreferences
-import android.preference.PreferenceManager
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogLevel
+import io.github.magalz.borealis.settings.catalog.Settings
+import io.github.magalz.borealis.settings.repository.SettingsRepository
+import io.github.magalz.borealis.settings.repository.SettingsSnapshot
+import io.github.magalz.borealis.settings.store.StoreSettingsRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 /**
- * Applies the verbose-logging and address-masking switches of the default SharedPreferences to
- * [BorealisLog], once at startup and again on every change.
+ * Applies the verbose-logging and address-masking switches of the [SettingsRepository] to
+ * [BorealisLog], once at startup and again on every change. The audit trail shares the redactor of
+ * [BorealisLog], so address masking reaches it too.
+ *
+ * With the repository of the app the switches are applied inside its write path, before the new
+ * snapshot is published: whoever reacts to a change of "Mask addresses" already finds the redactor
+ * switched (the audit trail viewer masks its rows with it). Any other repository is followed
+ * through its snapshot flow instead.
  *
  * Verbose logging lowers the minimum level to DEBUG; without it the level is the build's
  * [baseLevel] (INFO in release builds, DEBUG in debug builds).
  */
 class LogSettings
-private constructor(private val preferences: SharedPreferences, private val baseLevel: LogLevel) {
-    // SharedPreferences keeps its listeners weakly, so this field keeps the registration alive for
-    // as long as the LogSettings object is referenced.
-    private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> apply() }
+private constructor(private val repository: SettingsRepository, private val baseLevel: LogLevel) {
+    // Unconfined, so that a change applies on the thread that made it, before that call returns.
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
 
     private fun begin() {
-        apply()
-        preferences.registerOnSharedPreferenceChangeListener(listener)
+        if (repository is StoreSettingsRepository) {
+            repository.beforePublish = ::apply
+        } else {
+            scope.launch { repository.snapshot.collect(::apply) }
+        }
+        apply(repository.snapshot.value)
     }
 
-    private fun apply() {
-        val verbose = preferences.getBoolean(SettingsKeys.VERBOSE_LOGGING, false)
+    private fun apply(snapshot: SettingsSnapshot) {
+        val verbose = snapshot[Settings.VERBOSE_LOGGING]
         BorealisLog.setMinLevel(if (verbose) minOf(baseLevel, LogLevel.DEBUG) else baseLevel)
-        BorealisLog.setMaskAddresses(preferences.getBoolean(SettingsKeys.MASK_ADDRESSES, false))
+        BorealisLog.setMaskAddresses(snapshot[Settings.MASK_ADDRESSES])
+    }
+
+    /** Stops following the repository. The last applied switches stay in force. */
+    fun stop() {
+        if (repository is StoreSettingsRepository) repository.beforePublish = null
+        scope.cancel()
     }
 
     companion object {
         /**
-         * Starts applying the settings. The caller must keep the result referenced (for example in
-         * a field of the Application).
+         * Starts applying the switches of [repository]. The caller must keep the result referenced
+         * (for example in a field of the Application).
          */
-        @Suppress("DEPRECATION")
-        fun start(context: Context, baseLevel: LogLevel): LogSettings =
-            start(PreferenceManager.getDefaultSharedPreferences(context), baseLevel)
-
-        internal fun start(preferences: SharedPreferences, baseLevel: LogLevel): LogSettings =
-            LogSettings(preferences, baseLevel).also { it.begin() }
+        fun start(repository: SettingsRepository, baseLevel: LogLevel): LogSettings =
+            LogSettings(repository, baseLevel).also { it.begin() }
     }
 }

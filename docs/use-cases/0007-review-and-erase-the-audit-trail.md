@@ -20,23 +20,27 @@ with the event code, and can erase all of it. The trail stays on the device.
 ## Main flow
 
 1. The user opens Settings, then Privacy and diagnostics, then Audit trail.
-2. The system lists the entries newest first. Each entry shows its time, a
-   title in plain words, the event code and a short detail.
-3. The user scrolls the list. On touch, the user taps an entry to see its
-   detail. On a TV, the D-pad scrolls entry by entry.
-4. The user chooses Erase audit trail. Today the row reads "Delete the local
-   record of pairing, launch and session events". The Phase 2 design adds the
-   text "Cannot be undone" to the row (planned).
-5. (planned) The system asks "Erase the audit trail?" and explains that exported
-   bundles are not changed. Cancel has the focus.
-6. (planned) The user chooses Erase. The system erases the entries and shows
-   "Audit trail erased".
+2. (exists, Sprint 6) The system lists the entries newest first. Each entry
+   shows its time, a title in plain words, the event code and a short detail.
+   The title of a CERTIFICATE_CHANGED entry uses the warning colour. When
+   "Mask addresses in logs and diagnostics" is on, host addresses are masked.
+3. (exists, Sprint 6) The user scrolls the list. On touch, the user taps an
+   entry to see its detail. On a TV, the D-pad scrolls entry by entry.
+4. The user chooses Erase audit trail. The row reads "Delete the local record of
+   pairing, launch and session events" (exists, Sprint 2). The "Cannot be
+   undone" text on the row exists (Sprint 6).
+5. The system asks "Erase the audit trail?" and explains that exported bundles
+   are not changed. The dialog has Cancel and Erase (exists, Sprint 2). Sprint 6
+   moves the dialog to Compose, with Cancel focused (exists, Sprint 6).
+6. The user chooses Erase. The system erases the entries and shows "Audit trail
+   erased" (exists, Sprint 2).
 
 ## Alternative flows
 
 ### A1: The trail is empty (branches from step 2)
 
-1. The screen says "No events recorded yet." The use case ends.
+1. (exists, Sprint 6) The screen says "No events recorded yet." The use case
+   ends.
 
 ### A2: Entries leave the trail by retention (branches from step 2)
 
@@ -47,8 +51,8 @@ with the event code, and can erase all of it. The trail stays on the device.
 ### E1: The erase fails (branches from step 6)
 
 1. The entries that were not erased stay in the list. The system shows an error.
-2. (planned) The message is "Could not erase the audit trail". No audit entry is
-   written.
+2. The message is "Could not erase the audit trail" (exists, Sprint 2). No audit
+   entry is written.
 3. The use case ends.
 
 ## Postconditions
@@ -62,8 +66,8 @@ with the event code, and can erase all of it. The trail stays on the device.
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
-| UC-007-T1 | Given entries exist, when the screen opens, then they are listed newest first, each with its event code. | UI | planned |
-| UC-007-T2 | Given a CERTIFICATE_CHANGED entry, when the list is shown, then its title uses the warning text colour. | UI | planned |
+| UC-007-T1 | Given entries exist, when the screen opens, then they are listed newest first, each with its event code. | UI | exists (Sprint 6, UI) |
+| UC-007-T2 | Given a CERTIFICATE_CHANGED entry, when the list is shown, then its title uses the warning text colour. | UI | exists (Sprint 6, UI) |
 | UC-007-T3 | Given the user confirms Erase, when the erase ends, then no entries remain and "Audit trail erased" is shown. | unit | exists (Sprint 2, unit) |
 | UC-007-T4 | Given entries older than 90 days or beyond 2,000 entries, when retention runs, then the oldest entries are removed. | unit | exists (Sprint 2, unit) |
 | UC-007-T5 | Given the same host certificate change or TLS failure within 24 hours, when it is recorded, then it is stored once. | unit | exists (Sprint 2, unit) |
@@ -80,10 +84,12 @@ None. The trail is local. REST and token events arrive with Phase 3
 ## Related
 
 - ADRs: [0021](../adr/0021-audit.md) (audit trail), [0050](../adr/0050-diagnostics-audit-and-interim-settings.md)
-  (retention and the export), [0052](../adr/0052-structure-the-phase-2-ui.md).
+  (retention and the export), [0052](../adr/0052-structure-the-phase-2-ui.md),
+  [0055](../adr/0055-settings-storage-and-the-phase-2-settings-screen.md) (the
+  Phase 2 settings screen, which holds Privacy and diagnostics).
 - Policies: [privacy and logging](../policies/privacy-and-logging.md#audit-trail).
-- Existing logic: the audit trail is kept, exported in the diagnostic bundle and
-  can be erased from the Sprint 2 and 3 interim screens. The in-app viewer is
-  planned for Phase 2.
-- Existing tests: `AuditStoreTest`, `AuditDeduplicatorTest`,
-  `EraseAuditPreferenceTest`.
+- Existing logic: the audit trail is kept, exported in the diagnostic bundle,
+  shown in the Audit trail viewer and erased from the Privacy and diagnostics
+  pane (Sprint 6).
+- Existing tests: `AuditStoreTest`, `AuditDeduplicatorTest`, `AuditTrailTest`,
+  `AuditViewModelTest`, `AuditScreenTest` and `PrivacyViewModelTest`.

@@ -16,6 +16,9 @@ sealed interface LibraryLaunchRequest {
     /** Pair with [hostId] again. */
     data class Pair(val hostId: String) : LibraryLaunchRequest
 
+    /** Privacy and diagnostics: the screen on a phone, the Settings group on a TV or handheld. */
+    data object Privacy : LibraryLaunchRequest
+
     /** Serialises the request for an intent. */
     fun toExtras(): Bundle =
         Bundle().apply {
@@ -34,6 +37,7 @@ sealed interface LibraryLaunchRequest {
                     putString(KEY_REQUEST, PAIR)
                     putString(KEY_HOST_ID, request.hostId)
                 }
+                Privacy -> putString(KEY_REQUEST, PRIVACY)
             }
         }
 
@@ -46,6 +50,7 @@ sealed interface LibraryLaunchRequest {
         private const val APPS = "apps"
         private const val LAUNCH = "launch"
         private const val PAIR = "pair"
+        private const val PRIVACY = "privacy"
 
         /** The request in [extras], or null when there is none or it is malformed. */
         fun fromExtras(extras: Bundle?): LibraryLaunchRequest? {
@@ -55,6 +60,7 @@ sealed interface LibraryLaunchRequest {
                 HOSTS -> Hosts
                 APPS -> hostId?.let(::Apps)
                 PAIR -> hostId?.let(::Pair)
+                PRIVACY -> Privacy
                 LAUNCH -> launch(extras, hostId)
                 else -> null
             }

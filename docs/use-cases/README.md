@@ -56,3 +56,4 @@ lists the tests that prove it, and those tests are written first (see
 | UC-006 | [Send diagnostics from a TV to a phone](0006-send-diagnostics-from-a-tv-to-a-phone.md) | Accepted |
 | UC-007 | [Review and erase the audit trail](0007-review-and-erase-the-audit-trail.md) | Accepted |
 | UC-008 | [Add a host by address](0008-add-a-host-by-address.md) | Accepted |
+| UC-009 | [Change settings](0009-change-settings.md) | Accepted |

@@ -14,10 +14,11 @@ interface HostShortcuts {
     fun reportHostOpened(hostId: String, hostName: String)
 
     /**
-     * Asks the launcher to pin a shortcut that starts [appId] on [hostId]. The launcher may ask the
-     * user; false means it cannot.
+     * Asks the launcher to pin a shortcut that starts [appId] on [hostId], with the box art of the
+     * app as its icon when there is some. The launcher may ask the user; false means it cannot.
+     * Fetching the art may wait for the host, so this suspends.
      */
-    fun pinApp(
+    suspend fun pinApp(
         hostId: String,
         hostName: String,
         appId: Int,

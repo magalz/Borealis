@@ -23,6 +23,11 @@ data class FailureFacts(
     val httpCode: Int? = null,
     val resumeCollision: Boolean = false,
     val retriesExhausted: Boolean = false,
+    /**
+     * The RTSP handshake failed with error -1: the PC answered, but its reply could not be
+     * decrypted or parsed. The ports are open, so the firewall is not the cause.
+     */
+    val rtspReplyUnreadable: Boolean = false,
     /** The connection reached the first frame before it ended. */
     val streamed: Boolean = false,
     /** A fixed text the start path meant for the user, for example why the host refused. */

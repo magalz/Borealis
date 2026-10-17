@@ -18,11 +18,11 @@ class UsbStartHoldTest {
     fun `holding Start for a while and letting go turns the mouse on`() {
         pad.report(PLAY_FLAG)
         rig.advanceBy(800)
-        assertThat(rig.handler.isMouseEmulationEnabled).isFalse()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
 
         pad.report(0)
 
-        assertThat(rig.handler.isMouseEmulationEnabled).isTrue()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isTrue()
     }
 
     @Test
@@ -30,13 +30,13 @@ class UsbStartHoldTest {
         pad.report(PLAY_FLAG)
         rig.advanceBy(800)
         pad.report(0)
-        assertThat(rig.handler.isMouseEmulationEnabled).isTrue()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isTrue()
 
         pad.report(PLAY_FLAG)
         rig.advanceBy(800)
         pad.report(0)
 
-        assertThat(rig.handler.isMouseEmulationEnabled).isFalse()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
     }
 
     @Test
@@ -45,7 +45,7 @@ class UsbStartHoldTest {
         rig.advanceBy(300)
         pad.report(0)
 
-        assertThat(rig.handler.isMouseEmulationEnabled).isFalse()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
     }
 
     @Test
@@ -55,7 +55,7 @@ class UsbStartHoldTest {
         pad.report(BACK_FLAG)
         pad.report(0)
 
-        assertThat(rig.handler.isMouseEmulationEnabled).isFalse()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
     }
 
     @Test
@@ -66,7 +66,7 @@ class UsbStartHoldTest {
         rig.advanceBy(800)
         pad.report(0)
 
-        assertThat(rig.handler.isMouseEmulationEnabled).isFalse()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
     }
 
     @Test
@@ -77,7 +77,7 @@ class UsbStartHoldTest {
         rig.advanceBy(800)
         pad.report(0)
 
-        assertThat(rig.handler.isMouseEmulationEnabled).isFalse()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
     }
 
     /** The USB driver reports from its own thread, which has no looper. */
@@ -105,9 +105,9 @@ class UsbStartHoldTest {
         assertThat(onDriverThread { pad.report(0) }).isNull()
 
         // Nothing changes until the main thread has had its turn.
-        assertThat(rig.handler.isMouseEmulationEnabled).isFalse()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
         rig.advanceBy(0)
-        assertThat(rig.handler.isMouseEmulationEnabled).isTrue()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isTrue()
         assertThat(ShadowToast.shownToastCount()).isEqualTo(1)
         assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("Mouse emulation is: ON")
     }

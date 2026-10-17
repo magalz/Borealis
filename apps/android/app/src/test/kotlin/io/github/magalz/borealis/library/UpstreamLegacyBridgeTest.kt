@@ -22,20 +22,8 @@ class UpstreamLegacyBridgeTest {
 
     private val startup =
         object : UpstreamStartup {
-            override fun setDefaultPreferences(activity: Activity) {
-                calls += "defaults"
-            }
-
-            override fun applyLocale(activity: Activity) {
-                calls += "locale"
-            }
-
             override fun showDecoderCrashDialog(activity: Activity) {
                 calls += "crash dialog"
-            }
-
-            override fun openStreamSettings(activity: Activity) {
-                calls += "settings"
             }
         }
 
@@ -53,13 +41,6 @@ class UpstreamLegacyBridgeTest {
     private fun create() {
         bridge.onLauncherCreated(activity)
         shadowOf(Looper.getMainLooper()).idle()
-    }
-
-    @Test
-    fun `creating the launcher sets the default preferences and the locale`() {
-        bridge.onLauncherCreated(activity)
-
-        assertThat(calls).containsExactly("defaults", "locale").inOrder()
     }
 
     @Test
@@ -148,12 +129,5 @@ class UpstreamLegacyBridgeTest {
         bridge.onLauncherResumed(activity)
 
         assertThat(calls).containsExactly("crash dialog")
-    }
-
-    @Test
-    fun `the stream settings open through the upstream screen`() {
-        bridge.openStreamSettings(activity)
-
-        assertThat(calls).containsExactly("settings")
     }
 }

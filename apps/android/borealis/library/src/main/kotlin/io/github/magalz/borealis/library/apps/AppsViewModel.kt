@@ -133,8 +133,11 @@ constructor(
 
     private fun pin(app: AppItemUiState) {
         val hostName = uiState.value.hostName ?: return
-        if (!shortcuts.pinApp(hostId, hostName, app.id, app.name, app.hdrSupported)) {
-            send(AppsEffect.ShowMessage(AppsMessage.PinFailed))
+        // The art may come from the host: the screen does not wait for it.
+        viewModelScope.launch {
+            if (!shortcuts.pinApp(hostId, hostName, app.id, app.name, app.hdrSupported)) {
+                send(AppsEffect.ShowMessage(AppsMessage.PinFailed))
+            }
         }
     }
 

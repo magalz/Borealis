@@ -1,7 +1,9 @@
 package io.github.magalz.borealis.input
 
 import android.app.Activity
+import android.hardware.input.InputManager
 import android.os.SystemClock
+import android.view.InputDevice
 import android.view.KeyEvent
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.driver.AbstractController
@@ -11,8 +13,11 @@ import com.limelight.preferences.PreferenceConfiguration
 import java.util.concurrent.TimeUnit
 import android.content.ComponentName
 import org.robolectric.Robolectric
+import org.robolectric.shadow.api.Shadow
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.shadows.ShadowInputDevice
+import org.robolectric.shadows.ShadowInputEvent
 import org.robolectric.shadows.ShadowLooper
 
 /** One controller packet as the handler handed it to the connection. */
@@ -122,7 +127,8 @@ class RecordingConnection(activity: Activity) :
 
 /**
  * A real [ControllerHandler] over a [RecordingConnection]. Events carry device id 0, so they reach
- * the handler's default context, which is the one the on-screen controller also uses.
+ * the handler's default context, which is the one the on-screen controller also uses, until
+ * [useSystemPad] connects a system pad for them.
  *
  * Events are stamped with the main looper's clock, which [advanceBy] moves, so the handler's
  * scheduled work runs when the test says time has passed.
@@ -150,6 +156,12 @@ class ControllerHandlerRig(multiController: Boolean = false) {
 
     private val downTimes = mutableMapOf<Int, Long>()
 
+    /** The device id of the events [press] and [release] send: 0, the default context, until [useSystemPad]. */
+    var padDeviceId = 0
+        private set
+
+    private var padDevice: InputDevice? = null
+
     init {
         // Robolectric starts the clock at zero, where a lone Start looks like a Start+RB combo.
         advanceBy(10_000)
@@ -166,12 +178,18 @@ class ControllerHandlerRig(multiController: Boolean = false) {
 
     fun press(keyCode: Int, at: Long = now) {
         downTimes[keyCode] = at
-        handler.handleButtonDown(KeyEvent(at, at, KeyEvent.ACTION_DOWN, keyCode, 0, 0, 0, 0))
+        handler.handleButtonDown(keyEvent(at, at, KeyEvent.ACTION_DOWN, keyCode))
     }
+
+    /** A key event from the pad of [press] and [release]; Robolectric needs its device handed over. */
+    fun keyEvent(downTime: Long, eventTime: Long, action: Int, keyCode: Int, repeat: Int = 0) =
+        KeyEvent(downTime, eventTime, action, keyCode, repeat, 0, padDeviceId, 0).also { event ->
+            padDevice?.let { Shadow.extract<ShadowInputEvent>(event).setDevice(it) }
+        }
 
     fun release(keyCode: Int, at: Long = now) {
         val downTime = downTimes[keyCode] ?: at
-        handler.handleButtonUp(KeyEvent(downTime, at, KeyEvent.ACTION_UP, keyCode, 0, 0, 0, 0))
+        handler.handleButtonUp(keyEvent(downTime, at, KeyEvent.ACTION_UP, keyCode))
     }
 
     /** The buttons of every packet sent so far. */
@@ -179,6 +197,41 @@ class ControllerHandlerRig(multiController: Boolean = false) {
 
     /** The last packet's buttons, or null when nothing was sent. */
     fun lastButtons(): Int? = connection.packets.lastOrNull()?.buttons
+
+    /**
+     * Connects a system pad, an Android input device with a context of its own in the handler, and
+     * sends the events of [press] and [release] to it from now on. The context is made here
+     * because creating one from a device reads native code that unit tests do not have.
+     */
+    fun useSystemPad(hasSelect: Boolean = true, deviceId: Int = 7) {
+        val device = ShadowInputDevice.makeInputDeviceNamed("pad")
+        InputDevice::class.java.getDeclaredField("mId").apply { isAccessible = true }.setInt(device, deviceId)
+        val inputManager = RuntimeEnvironment.getApplication().getSystemService(InputManager::class.java)
+        shadowOf(inputManager).addInputDevice(device)
+
+        val contextClass = Class.forName("com.limelight.binding.input.ControllerHandler\$InputDeviceContext")
+        val context =
+            contextClass.getDeclaredConstructor(ControllerHandler::class.java).apply { isAccessible = true }.newInstance(handler)
+        fun set(name: String, value: Any?) =
+            generateSequence(contextClass) { it.superclass }
+                .first { owner -> owner.declaredFields.any { it.name == name } }
+                .getDeclaredField(name)
+                .apply { isAccessible = true }
+                .set(context, value)
+        set("name", "pad")
+        set("hasSelect", hasSelect)
+        // As the default context has it: a controller number, so that no native arrival report is made
+        set("assignedControllerNumber", true)
+        val contexts = ControllerHandler::class.java.getDeclaredField("inputDeviceContexts").apply { isAccessible = true }
+        @Suppress("UNCHECKED_CAST")
+        (contexts.get(handler) as android.util.SparseArray<Any>).put(deviceId, context)
+
+        padDeviceId = deviceId
+        padDevice = device
+    }
+
+    /** Makes the pad behind device 0 one that Android reports a Select button for, as a real system pad is. */
+    fun givePadASelectButton() = setDefaultContextField("hasSelect", true)
 
     /** The handler's default context (on-screen controller and device 0), for state a test cannot reach. */
     fun setDefaultContextField(name: String, value: Any?) {

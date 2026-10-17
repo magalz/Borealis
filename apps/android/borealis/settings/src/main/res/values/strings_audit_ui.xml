@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audit_ui_screen_title">Audit trail</string>
+    <string name="audit_ui_retention">Kept for 90 days or 2,000 entries</string>
+    <string name="audit_ui_back">Back</string>
+    <string name="audit_ui_empty_title">No events recorded yet.</string>
+    <string name="audit_ui_empty_body">Pairing, launch and session events appear here.</string>
+    <string name="audit_ui_show_detail">Show details</string>
+
+    <string name="audit_ui_title_pairing_start">Pairing started</string>
+    <string name="audit_ui_title_pairing_success">Paired</string>
+    <string name="audit_ui_title_pairing_failure">Pairing failed</string>
+    <string name="audit_ui_title_pairing_restart">Pairing restarted</string>
+    <string name="audit_ui_title_unpair_confirmed">Unpaired</string>
+    <string name="audit_ui_title_unpair_not_confirmed">Unpair not confirmed by the host</string>
+    <string name="audit_ui_title_certificate_changed">Host certificate changed</string>
+    <string name="audit_ui_title_tls_failure">Secure connection failed</string>
+    <string name="audit_ui_title_launch_attempt">App started</string>
+    <string name="audit_ui_title_launch_retry">Host asked to retry</string>
+    <string name="audit_ui_title_launch_conflict">Another app was already running</string>
+    <string name="audit_ui_title_session_start">Stream started</string>
+    <string name="audit_ui_title_session_end">Stream ended</string>
+
+    <string name="audit_ui_label_time">Time</string>
+    <string name="audit_ui_label_event">Event code</string>
+    <string name="audit_ui_label_result">Result</string>
+    <string name="audit_ui_label_host">Host</string>
+    <string name="audit_ui_label_detail">Detail</string>
+    <string name="audit_ui_outcome_success">Succeeded</string>
+    <string name="audit_ui_outcome_failure">Failed</string>
+    <string name="audit_ui_outcome_cancelled">Cancelled</string>
+</resources>

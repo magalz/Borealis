@@ -40,16 +40,16 @@ class GamepadMouseTest {
 
     @Test
     fun `it reads as off before it is turned on`() {
-        assertThat(rig.handler.isMouseEmulationEnabled).isFalse()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
     }
 
     @Test
     fun `it reads as on after it is turned on and off after it is turned off`() {
         rig.handler.setMouseEmulation(true)
-        assertThat(rig.handler.isMouseEmulationEnabled).isTrue()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isTrue()
 
         rig.handler.setMouseEmulation(false)
-        assertThat(rig.handler.isMouseEmulationEnabled).isFalse()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
     }
 
     @Test
@@ -57,16 +57,18 @@ class GamepadMouseTest {
         rig.handler.setMouseEmulation(true)
         rig.handler.deviceRemoved(padOne)
 
-        assertThat(rig.handler.isMouseEmulationEnabled).isTrue()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isTrue()
     }
 
     @Test
-    fun `it reads as on when it was turned on before any pad connected`() {
+    fun `it reads as off with no pad connected, and as on for a pad that connects after it was turned on`() {
         val bare = ControllerHandlerRig()
 
         bare.handler.setMouseEmulation(true)
+        assertThat(bare.handler.isMouseEmulationOnAnyPad).isFalse()
 
-        assertThat(bare.handler.isMouseEmulationEnabled).isTrue()
+        FakeUsbController(5, bare.handler).also { bare.handler.deviceAdded(it) }
+        assertThat(bare.handler.isMouseEmulationOnAnyPad).isTrue()
     }
 
     @Test

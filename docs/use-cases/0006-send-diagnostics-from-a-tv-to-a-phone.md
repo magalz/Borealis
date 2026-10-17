@@ -22,9 +22,9 @@ opens one download link that works once and closes after 5 minutes.
 
 ## Main flow
 
-1. The user chooses Export diagnostic bundle. The system saves the bundle to
-   Downloads as `borealis-diagnostics-<timestamp>.zip` and offers Send to
-   phone.
+1. The user chooses Export diagnostic bundle in Privacy and diagnostics. The
+   system saves the bundle to Downloads as `borealis-diagnostics-<timestamp>.zip`.
+   The dialog shows "Diagnostics saved" and offers Send to phone.
 2. The user chooses Send to phone. The dialog shows the file name and its size.
 3. The system starts a one-download link on the TV's private IPv4 address. The
    link uses a one-time 128-bit token and expires after 5 minutes.
@@ -36,6 +36,18 @@ opens one download link that works once and closes after 5 minutes.
    does not use up the download (ADR 0051).
 6. The system closes the link after the download. The dialog shows "Downloaded.
    The link is closed."
+
+## Dialog states (Phase 2, Sprint 6)
+
+The Phase 2 dialog has these states. Close has the focus in each state, and
+closing stops the link.
+
+- **Waiting:** the QR code, the link text, the file name and size, and a
+  countdown (steps 2 to 4).
+- **Downloaded:** the file was downloaded and the link is closed (step 6).
+- **Expired:** the link expired before the download (A1).
+- **No local network:** the dialog shows the `adb pull` command with the bundle's
+  path (E2).
 
 ## Alternative flows
 
@@ -86,6 +98,10 @@ opens one download link that works once and closes after 5 minutes.
 | UC-006-T5 | Given the dialog is closed before a download, when the user closes it, then the link stops and does not answer. | unit | exists (Sprint 3) |
 | UC-006-T6 | Given a phone, when the diagnostics are exported, then Send to phone is not offered. | unit | exists (Sprint 3) |
 | UC-006-T7 | Given the link is shown, when the QR code is read, then it encodes the link text. | unit | exists (Sprint 3) |
+| UC-006-T8 | Given the Waiting state, when the dialog shows, then it shows the QR code, the link text, the file name, the size and a countdown. | UI | exists (Sprint 6, UI) |
+| UC-006-T9 | Given the link is downloaded, when the dialog updates, then it shows Downloaded and the link is closed. | UI | exists (Sprint 6, UI) |
+| UC-006-T10 | Given the link expires, when the dialog updates, then it shows Expired. | UI | exists (Sprint 6, UI) |
+| UC-006-T11 | Given no private IPv4 address, when the dialog shows, then it shows the No local network state with the `adb pull` command and the bundle's path. | UI | exists (Sprint 6, UI) |
 
 Planned tests cover the Phase 2 screens; tests marked as existing cover logic
 that the Phase 2 screens reuse.
@@ -103,12 +119,12 @@ capability.
   ("Nothing leaves unless the user exports it or opts in to crash reporting.";
   the diagnostic bundle section).
 - Existing logic: Send to phone on a TV exists from Sprint 3 (one download, 5
-  minutes). The Phase 2 dialog is planned. The prototype's "Today" note for
-  the screen says adb pull only.
+  minutes). The Phase 2 dialog in Compose exists from Sprint 6
+  (`SendToPhoneDialog`).
 - Development: [device validation](../development/device-validation.md)
   (export diagnostics on a TV).
-- Existing tests (Sprint 3): `OneShotFileServerTest`, `TransferQrTest`,
-  `LocalNetworkTest` and `ExportDiagnosticsPreferenceTest`.
+- Existing tests: `OneShotFileServerTest`, `TransferQrTest`, `LocalNetworkTest`,
+  `DiagnosticsExporterTest`, `TransferSessionTest` and `SendToPhoneDialogTest`.
 - The link is plain `http://` on the local network, protected by the
   one-time token (ADR 0051). The transfer writes no audit entry: it moves
   an already redacted bundle that the user exported on purpose.

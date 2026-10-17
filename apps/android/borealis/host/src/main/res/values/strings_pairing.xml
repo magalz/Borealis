@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="pair_pin_hint">On the host, open the LuminalShine Web UI at %1$s, enter the PIN there and name this device \"%2$s\". Names that contain \"xbox\" or \"webos\" make the host hold the stream start, so do not use them.</string>
-    <string name="unpair_webui_hint">The host did not confirm the unpair request. Open the host Web UI at %1$s and unpair this device there.</string>
-    <string name="webui_url_unknown">its HTTPS address (host HTTP port + 1)</string>
     <!-- English only for now; translations come in a later sprint. -->
     <string name="pair_restart_cleared" tools:ignore="MissingTranslation">The host had an unfinished pairing attempt and has cleared it. Enter the new PIN.</string>
     <string name="pair_restart_failed_again" tools:ignore="MissingTranslation">The host cleared the pairing attempt again. Start pairing once more; if this repeats, restart LuminalShine.</string>

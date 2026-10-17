@@ -216,4 +216,28 @@ class StreamFailureClassifierTest {
         assertThat(classify(start(cause = CauseKind.CERT_MISMATCH, portFlags = 0x3)).portHint)
             .isNull()
     }
+
+    @Test
+    fun `an unreadable RTSP reply shows no port hint, even with port flags`() {
+        val failure =
+            classify(start(portFlags = 0x3, errorCode = -1).copy(rtspReplyUnreadable = true))
+
+        assertThat(failure.kind).isEqualTo(FailureKind.GENERIC)
+        assertThat(failure.portHint).isNull()
+        assertThat(failure.rawCode).isEqualTo("$rawStage:-1|Desktop")
+    }
+
+    @Test
+    fun `the same stage with another code still shows the port hint`() {
+        val failure = classify(start(portFlags = 0x3, errorCode = -2))
+
+        assertThat(failure.portHint).isEqualTo("$portHint:ports=3")
+    }
+
+    @Test
+    fun `an error -1 without the unreadable reply fact still shows the port hint`() {
+        val failure = classify(start(portFlags = 0x3, errorCode = -1))
+
+        assertThat(failure.portHint).isEqualTo("$portHint:ports=3")
+    }
 }

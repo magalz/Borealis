@@ -38,6 +38,9 @@ internal class RailActions(
 internal enum class RailSelection {
     Hosts,
     AddHost,
+
+    /** Settings, and Privacy and diagnostics and the Audit trail that open from it. */
+    Settings,
 }
 
 /**
@@ -72,7 +75,10 @@ internal fun LibraryScaffold(
     }
 }
 
-/** Hosts (also for Apps and Pairing, which are part of it), Add host and Settings. */
+/**
+ * Hosts (also for Apps and Pairing, which are part of it), Add host and Settings (also for Privacy
+ * and diagnostics and the Audit trail).
+ */
 @Composable
 internal fun LibraryRail(selected: RailSelection, actions: RailActions) {
     val items =
@@ -92,7 +98,12 @@ internal fun LibraryRail(selected: RailSelection, actions: RailActions) {
         )
     NavigationRail(
         items = items,
-        selectedIndex = if (selected == RailSelection.AddHost) RAIL_ADD_HOST else RAIL_HOSTS,
+        selectedIndex =
+            when (selected) {
+                RailSelection.Hosts -> RAIL_HOSTS
+                RailSelection.AddHost -> RAIL_ADD_HOST
+                RailSelection.Settings -> RAIL_SETTINGS
+            },
         onSelect = { index ->
             when (index) {
                 RAIL_HOSTS -> actions.onHosts()

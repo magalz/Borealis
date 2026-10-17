@@ -89,6 +89,13 @@ class UsbMenuChordTest {
     }
 
     @Test
+    fun `Start alone is in the packet of the report that carried it, with no wait for Select`() {
+        pad.report(PLAY_FLAG)
+
+        assertThat(rig.buttons()).containsExactly(PLAY_FLAG)
+    }
+
+    @Test
     fun `Start with another button reaches the PC at once`() {
         pad.report(PLAY_FLAG or A_FLAG)
 

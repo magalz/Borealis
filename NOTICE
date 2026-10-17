@@ -103,7 +103,7 @@ Borealis Kotlin modules (apps/android/gradle/libs.versions.toml)
     License: Apache-2.0
     https://dagger.dev/hilt/
 
-  AndroidX Core and Room (and the AndroidX libraries they depend on)
+  AndroidX Core, Room and DataStore (and the AndroidX libraries they depend on)
     License: Apache-2.0
     https://developer.android.com/jetpack/androidx
 

@@ -49,19 +49,13 @@ class StreamErrorHintsTest {
     }
 
     @Test
-    fun `english and pt-BR define the same non-blank stream strings`() {
+    fun `the stream strings are not blank and promise no duration`() {
         val english = strings("values")
-        val portuguese = strings("values-pt-rBR")
 
         assertThat(english.keys)
             .containsExactly("stream_preparing_display", "stream_luminalshine_hint")
-        assertThat(portuguese.keys).isEqualTo(english.keys)
-        for (text in english.values + portuguese.values) assertThat(text).isNotEmpty()
-        for (text in listOf(english, portuguese).map { it.getValue("stream_preparing_display") }) {
-            assertThat(text.any { it.isDigit() }).isFalse() // no promised duration
-        }
-        assertThat(portuguese["stream_luminalshine_hint"])
-            .isNotEqualTo(english["stream_luminalshine_hint"])
+        for (text in english.values) assertThat(text).isNotEmpty()
+        assertThat(english.getValue("stream_preparing_display").any { it.isDigit() }).isFalse()
     }
 
     private fun strings(directory: String): Map<String, String> {

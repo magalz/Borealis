@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.library.testing
 
 import io.github.magalz.borealis.library.domain.HostShortcuts
+import kotlinx.coroutines.CompletableDeferred
 
 class FakeHostShortcuts(override var canPinApps: Boolean = true) : HostShortcuts {
     /** Each call of [reportHostOpened]: the host id and name. */
@@ -11,6 +12,9 @@ class FakeHostShortcuts(override var canPinApps: Boolean = true) : HostShortcuts
 
     /** What [pinApp] answers. */
     var pinResult = true
+
+    /** When set, [pinApp] waits for it before it answers, like a pin that waits for the box art. */
+    var pinGate: CompletableDeferred<Unit>? = null
 
     data class PinCall(
         val hostId: String,
@@ -24,7 +28,7 @@ class FakeHostShortcuts(override var canPinApps: Boolean = true) : HostShortcuts
         openedHosts += hostId to hostName
     }
 
-    override fun pinApp(
+    override suspend fun pinApp(
         hostId: String,
         hostName: String,
         appId: Int,
@@ -32,6 +36,7 @@ class FakeHostShortcuts(override var canPinApps: Boolean = true) : HostShortcuts
         hdrSupported: Boolean,
     ): Boolean {
         pinned += PinCall(hostId, hostName, appId, appName, hdrSupported)
+        pinGate?.await()
         return pinResult
     }
 }

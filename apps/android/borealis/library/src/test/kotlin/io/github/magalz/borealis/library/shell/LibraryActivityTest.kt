@@ -218,16 +218,6 @@ class LibraryActivityTest {
     }
 
     @Test
-    fun `Settings opens the stream settings`() {
-        hosts.emit(desk)
-        composeRule.waitForIdle()
-
-        composeRule.onNodeWithContentDescription("Settings").performClick()
-
-        assertThat(bridge.settingsOpened).isEqualTo(1)
-    }
-
-    @Test
     fun `the launcher work runs once after the content is set and again on every resume`() {
         composeRule.waitForIdle()
 

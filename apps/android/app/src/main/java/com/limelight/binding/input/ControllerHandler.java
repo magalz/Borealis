@@ -1251,8 +1251,10 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             return;
         }
 
-        // Start and Select are held back from the PC on every pad while the chord is pending
-        MenuChordDetector.Update chord = context.menuChord.update(context.inputMap, eventTime, true);
+        // Start and Select are held back from the PC on every pad while the chord is pending, and a
+        // lone one for 60 ms on a pad that sends them as separate key events
+        MenuChordDetector.Update chord = context.menuChord.update(context.inputMap, eventTime, true,
+                context.holdsLonePress());
         scheduleMenuChordCheck(context);
 
         // Releasing a button the PC never saw changes nothing for it
@@ -1416,11 +1418,20 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         }
     }
 
-    // The mouse emulation state of the pads, as the menu and the Start hold last set it. It is the
-    // state every pad is given when it connects. Reading the contexts instead missed pads that are
-    // not in the two lists (the default context) and stayed On while one pad still emulated.
-    public boolean isMouseEmulationEnabled() {
-        return mouseEmulationEnabled;
+    // Whether any pad emulates the mouse, which is what the menu's Gamepad mouse row shows. The
+    // pads are the ones setMouseEmulation reaches; the default context stays a gamepad.
+    public boolean isMouseEmulationOnAnyPad() {
+        for (int i = 0; i < inputDeviceContexts.size(); i++) {
+            if (inputDeviceContexts.valueAt(i).mouseEmulationActive) {
+                return true;
+            }
+        }
+        for (int i = 0; i < usbDeviceContexts.size(); i++) {
+            if (usbDeviceContexts.valueAt(i).mouseEmulationActive) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Returns whether the next change should still show the notice
@@ -3207,12 +3218,24 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         public final Runnable menuChordCheck = new Runnable() {
             @Override
             public void run() {
-                if (!captured && menuChord.check(SystemClock.uptimeMillis())) {
+                if (captured) {
+                    return;
+                }
+                MenuChordDetector.Update due = menuChord.due(SystemClock.uptimeMillis());
+                if (!due.getSilent()) {
                     transmitControllerInput(GenericControllerContext.this);
+                }
+                if (due.getFired()) {
                     notifyMenuChord();
                 }
             }
         };
+
+        // Whether a lone Start or Select waits for its partner: only on pads that send them as
+        // separate key events and have a Select button. A USB pad reports both in one report.
+        public boolean holdsLonePress() {
+            return false;
+        }
 
         // The buttons the PC gets: not the ones the chord holds back, and the short press of an early chord
         public int sentInputMap() {
@@ -3301,6 +3324,11 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         @Override
         public int chordTapButtons(MenuChordDetector.Update update) {
             return GuideChord.INSTANCE.tapButtons(update, hasSelect, hasMode);
+        }
+
+        @Override
+        public boolean holdsLonePress() {
+            return hasSelect;
         }
 
         public final Runnable batteryStateUpdateRunnable = new Runnable() {

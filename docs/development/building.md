@@ -89,13 +89,13 @@ are in `src/test/screenshots/` of each module. Run these commands from
 Record the references on Windows, after a change that alters a screen:
 
 ```sh
-./gradlew :borealis:designsystem:recordRoborazziDebug :borealis:library:recordRoborazziDebug :borealis:stream:recordRoborazziDebug
+./gradlew :borealis:designsystem:recordRoborazziDebug :borealis:library:recordRoborazziDebug :borealis:stream:recordRoborazziDebug :borealis:settings:recordRoborazziDebug
 ```
 
 Verify the screens against the committed references:
 
 ```sh
-./gradlew :borealis:designsystem:testDebugUnitTest :borealis:library:testDebugUnitTest :borealis:stream:testDebugUnitTest -Proborazzi.test.verify=true
+./gradlew :borealis:designsystem:testDebugUnitTest :borealis:library:testDebugUnitTest :borealis:stream:testDebugUnitTest :borealis:settings:testDebugUnitTest -Proborazzi.test.verify=true
 ```
 
 - The "Android screenshots" job in CI (`.github/workflows/ci.yml`) runs the

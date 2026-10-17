@@ -44,7 +44,7 @@ class GameWiringTest {
     @Test
     fun `the menu reads the gamepad mouse and the decoder numbers follow the overlay and the menu`() {
         assertThat(source).contains("GamepadMouseSync.bind(")
-        assertThat(source).contains("controllerHandler::isMouseEmulationEnabled")
+        assertThat(source).contains("controllerHandler::isMouseEmulationOnAnyPad")
         assertThat(source).contains("PerfGate.bind(")
         assertThat(source).contains("decoderRenderer::setPerfEnabled")
         assertThat(source).contains("decoderRenderer.setPerfSink(streamSession::onPerf)")

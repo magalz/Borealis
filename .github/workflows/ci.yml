@@ -142,7 +142,7 @@ jobs:
             "$SDKMANAGER" --install "platforms;android-37.0" "build-tools;37.0.0" > /dev/null
           fi
       - name: Verify the screenshot tests against the committed references
-        run: ./gradlew --stacktrace :borealis:designsystem:testDebugUnitTest :borealis:library:testDebugUnitTest :borealis:stream:testDebugUnitTest -Proborazzi.test.verify=true
+        run: ./gradlew --stacktrace :borealis:designsystem:testDebugUnitTest :borealis:library:testDebugUnitTest :borealis:stream:testDebugUnitTest :borealis:settings:testDebugUnitTest -Proborazzi.test.verify=true
       - name: Upload screenshot differences and test reports
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

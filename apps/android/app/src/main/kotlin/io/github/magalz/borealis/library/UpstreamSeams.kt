@@ -74,6 +74,16 @@ internal class UpstreamWakeSender @Inject constructor() : WakeSender {
     override fun send(details: ComputerDetails) = WakeOnLanSender.sendWolPacket(details)
 }
 
+/**
+ * Switches the launcher shortcut and the TV program of an app off when the user hides it, and the
+ * shortcut on again when the user shows it.
+ */
+internal interface HiddenAppShortcuts {
+    fun appHidden(hostId: String, appId: Int)
+
+    fun appShown(hostId: String, appId: Int)
+}
+
 /** Deletes the cached box art of a removed host. */
 internal fun interface BoxArtCache {
     fun delete(hostId: String)

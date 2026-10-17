@@ -10,9 +10,6 @@ class FakeLegacyBridge : LegacyBridge {
     var resumed = 0
         private set
 
-    var settingsOpened = 0
-        private set
-
     override fun onLauncherCreated(activity: Activity) {
         val content = activity.findViewById<ViewGroup>(android.R.id.content)
         contentSetAtCreate += content.childCount > 0
@@ -20,9 +17,5 @@ class FakeLegacyBridge : LegacyBridge {
 
     override fun onLauncherResumed(activity: Activity) {
         resumed++
-    }
-
-    override fun openStreamSettings(activity: Activity) {
-        settingsOpened++
     }
 }

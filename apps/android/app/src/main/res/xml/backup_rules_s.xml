@@ -3,8 +3,11 @@
   <!-- Don't sync preferences because it often contains device-specific data -->
   <cloud-backup disableIfNoEncryptionCapabilities="true">
     <exclude domain="sharedpref" path="."/>
+    <!-- The DataStore of the logging switches (borealis_settings) is settings too -->
+    <exclude domain="file" path="datastore/"/>
   </cloud-backup>
   <device-transfer>
     <exclude domain="sharedpref" path="."/>
+    <exclude domain="file" path="datastore/"/>
   </device-transfer>
 </data-extraction-rules>

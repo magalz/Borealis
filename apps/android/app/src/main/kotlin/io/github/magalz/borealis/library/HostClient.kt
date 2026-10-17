@@ -2,6 +2,7 @@ package io.github.magalz.borealis.library
 
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.PairingManager.PairState
+import java.io.InputStream
 import java.security.cert.X509Certificate
 
 /** The result of a pairing exchange: the state, and the host certificate to pin on success. */
@@ -22,6 +23,12 @@ internal interface HostClient {
 
     /** The GameStream `/cancel`: true when the running app was quit. */
     fun quitApp(): Boolean
+
+    /**
+     * The box art of [appId] over the pinned HTTPS connection; the caller closes the stream. A host
+     * without art answers 404, which is a `FileNotFoundException`.
+     */
+    fun boxArt(appId: Int): InputStream
 
     /** Aborts the requests in flight; they fail with an `IOException`. */
     fun cancelPendingRequests()

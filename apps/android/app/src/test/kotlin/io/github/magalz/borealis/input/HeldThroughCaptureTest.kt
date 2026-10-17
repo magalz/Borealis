@@ -18,7 +18,7 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class HeldThroughCaptureTest {
     private val rig = ControllerHandlerRig()
-    // Made on first use: a connected USB pad is what isMouseEmulationEnabled reads, not the default context
+    // Made on first use: a connected USB pad is what isMouseEmulationOnAnyPad reads, not the default context
     private val pad by lazy { FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) } }
     private val chord = PLAY_FLAG or BACK_FLAG
 
@@ -38,7 +38,7 @@ class HeldThroughCaptureTest {
         rig.advanceBy(800)
         pad.report(0)
 
-        assertThat(rig.handler.isMouseEmulationEnabled).isFalse()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
     }
 
     @Test
@@ -79,13 +79,13 @@ class HeldThroughCaptureTest {
         pad.report(PLAY_FLAG)
         rig.advanceBy(800)
         pad.report(0)
-        assertThat(rig.handler.isMouseEmulationEnabled).isTrue()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isTrue()
     }
 
     /** What the window sends for a key that went down at [downTime] and is still held. */
     private fun repeat(keyCode: Int, downTime: Long, count: Int = 1) =
         rig.handler.handleButtonDown(
-            KeyEvent(downTime, rig.now, KeyEvent.ACTION_DOWN, keyCode, count, 0, 0, 0)
+            rig.keyEvent(downTime, rig.now, KeyEvent.ACTION_DOWN, keyCode, count)
         )
 
     @Test
@@ -114,11 +114,12 @@ class HeldThroughCaptureTest {
         rig.release(KEYCODE_BUTTON_START)
 
         assertThat(rig.chords).isEqualTo(0)
-        assertThat(rig.handler.isMouseEmulationEnabled).isFalse()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
     }
 
     @Test
     fun `a system pad presses again after the release, for the chord and for the Start hold`() {
+        rig.useSystemPad()
         val downTime = rig.now
         captureWhileHolding {}
         repeat(KEYCODE_BUTTON_START, downTime)
@@ -135,6 +136,6 @@ class HeldThroughCaptureTest {
         rig.press(KEYCODE_BUTTON_START)
         rig.advanceBy(800)
         rig.release(KEYCODE_BUTTON_START)
-        assertThat(rig.handler.isMouseEmulationEnabled).isTrue()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isTrue()
     }
 }

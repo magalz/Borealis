@@ -19,7 +19,6 @@ import io.github.magalz.borealis.library.R as LibraryR
 import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.domain.WakeResult
 import io.github.magalz.borealis.library.shell.LibraryActivity
-import io.github.magalz.borealis.settings.BorealisSettingsActivity
 import io.github.magalz.borealis.stream.host.HeldKeys
 import io.github.magalz.borealis.stream.keys.KeyChord
 import kotlinx.coroutines.CoroutineScope
@@ -247,11 +246,10 @@ internal constructor(
         Toast.makeText(activity.applicationContext, text, Toast.LENGTH_LONG).show()
 
     /**
-     * Opens the settings. Game stops in `onStop` and ends the stream there, so the settings replace
-     * the stream; the activity finishes itself.
+     * Opens the Library on Privacy and diagnostics and finishes while the stream is still in front,
+     * as [retry] does.
      */
-    override fun openDiagnostics() =
-        activity.startActivity(Intent(activity, BorealisSettingsActivity::class.java))
+    override fun openDiagnostics() = openLibrary(LibraryLaunchRequest.Privacy)
 
     /**
      * The choice itself is audited and handed to the connection by the session. Cancelling leaves

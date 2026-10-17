@@ -1,10 +1,10 @@
 # Device validation runbook
 
-This runbook checks Borealis Phase 1 and Sprints 2 to 5 on two devices against
+This runbook checks Borealis Phase 1 and Sprints 2 to 6 on two devices against
 LuminalShine 26.09.1 running on the owner's Windows PC. It is for the owner and
 for the orchestrator who runs the checks. Run the steps in order and record the
-results as a new section with a table, like sections 7 to 10. Sections 6 to 10
-hold the results of Phase 1 and Sprints 2 to 5, in that order.
+results as a new section with a table, like sections 7 to 10. Sections 6 to 11
+hold the results of Phase 1 and Sprints 2 to 6, in that order.
 
 Sources: [host contract](../host-contract/luminalshine.md) (cited as "contract"),
 [Borealis Android README](../../apps/android/borealis/README.md),
@@ -174,85 +174,96 @@ Each scenario lists the steps, the expected result and the evidence to record.
 Run each one on both devices unless it says otherwise. Record the logcat capture
 of section 1.4 for each scenario.
 
-### 3.1 Pairing with the PIN hint
+### 3.1 Pairing
 
-1. On the device, open the PC list, select the PC and choose "Pair with PC"
-   (`pcview_menu_pair_pc`).
-2. Read the pairing dialog. It shows a four-digit PIN and the hint. Type the
-   PIN in step 3 and do not copy it anywhere else.
-3. On the PC, open the Web UI at the address of the hint and enter the PIN and
-   the device name in the pairing section. `TODO(verify)`: the menu name in the
-   Web UI.
-4. Expected: the hint reads "On the host, open the LuminalShine Web UI at
-   `https://<host>:47990`, enter the PIN there and name this device "`<name>`".
-   Names that contain "xbox" or "webos" make the host hold the stream start, so
-   do not use them." (`pair_pin_hint`, `strings_pairing.xml`). The URL is the
-   HTTP port plus 1 (`PairingHints.webUiUrl`). The suggested name is the device
-   model with "xbox" and "webos" removed, falling back to `Borealis`
-   (`PairingHints.suggestedDeviceName`). The name must not contain "xbox" or
-   "webos" (contract 10.2).
-5. Expected: after the PIN is accepted, the PC is shown as paired on the device
-   and the Web UI lists the device under the name that was typed (contract 4.1:
-   the host takes the name from the Web UI, not from the device).
-6. Evidence: a screenshot of the hint with the PIN cropped out, a Web UI
-   screenshot with the PIN hidden, and the logcat capture.
+Pairing runs on the Pairing screen of the Library (Compose). The 12.2 PC menu
+entry is gone.
+
+1. On the device, open Hosts and choose the PC. Its card shows "Found on this
+   network" and the Pair action. Choose Pair.
+2. Read the Pairing screen. It shows the PIN, the note "The PIN stays valid for
+   5 minutes." and four numbered steps:
+   - "Open the LuminalShine Web UI at this address." The address,
+     `https://<host>:47990`, is shown under the step. When the address is not
+     known, the step reads "Open the LuminalShine Web UI on your PC." The
+     address is the HTTP port plus 1 (`PairingHints.webUiUrl`).
+   - "Go to the Clients page."
+   - "Enter this PIN and a device name, for example "`<name>`". The suggested
+     name is the device model without "xbox" and "webos", or `Borealis`
+     (`PairingHints.suggestedDeviceName`).
+   - "Avoid "xbox" or "webos" in the name. The host treats those devices
+     differently." The name must not contain "xbox" or "webos" (contract 10.2).
+   Do not copy the PIN into any file.
+3. On the PC, open the Web UI at the address of step 2, go to the Clients page,
+   and enter the PIN and the device name. `TODO(verify)`: the Web UI page and
+   control names on the 26.09.1 build.
+4. Expected: after the PIN is accepted, the device pairs and the Apps of the PC
+   open. The Web UI lists the device under the name that was typed (contract
+   4.1: the host takes the name from the Web UI, not from the device). The
+   Sprint 5 full pairing on the S22 showed this result.
+5. Evidence: a screenshot of the Pairing screen with the PIN cropped out, a Web
+   UI screenshot with the PIN hidden, and the logcat capture.
 
 ### 3.2 Wrong PIN
 
 1. Start pairing as in 3.1 and read the PIN on the device.
 2. In the Web UI, enter a different four-digit PIN and any name.
-3. Expected: the device shows "Incorrect PIN" (`pair_incorrect_pin`). It must
-   not show the 404 text (`error_404`) or the generic "Pairing failed"
-   (`pair_fail`).
+3. Expected: the Pairing screen shows "The PIN was wrong." (the `PIN_WRONG`
+   failure). It must not show the 404 text of the host or the generic "Pairing
+   failed.".
 4. Expected in logcat: a WARN line `unpair not confirmed status=404` on
-   `Borealis.PAIR`. `PairingManager` calls the best-effort `/unpair` after a
-   wrong PIN and `BestEffortUnpair` logs the XML `status_code` that the host
-   returns (`404`, see `core/tests/fixtures/luminalshine/26.09.1/unpair-http.response`).
-   The client ignores the outcome, so the 404 does not replace "Incorrect PIN".
-5. Start pairing again as in 3.1. The host may answer 400 `Out of order call to
+   `Borealis.PAIR`. The best-effort `/unpair` after a wrong PIN ignores its
+   outcome, so the 404 does not replace "The PIN was wrong.".
+   `TODO(verify)`: that this line still appears on the Compose pairing path.
+   Expected in the audit trail (3.15): a `PAIRING_FAILURE` entry with
+   `reason=wrong_pin` (`PairingAudit`).
+5. Start pairing again as in 3.1. The PC may answer 400 `Out of order call to
    getservercert`, because it keeps the pairing session after the wrong PIN
-   (section 6). Expected: the device shows "The host had an unfinished pairing
-   attempt and has cleared it. Enter the new PIN." (`pair_restart_cleared`) and
-   opens a new PIN dialog once. Enter the new PIN in the Web UI. Expected: the
-   device pairs.
+   (section 6). Expected: the Pairing screen shows the note "The PC cleared an
+   unfinished pairing. Use this new PIN." once, with a new PIN. Enter the new
+   PIN in the Web UI. Expected: the device pairs.
 6. If the restarted attempt fails too, expected: a normal failure message and no
-   second new PIN dialog. The scenario must not loop. Record the message.
-7. If the host answers another pairing error, expected: a specific message from
-   `apps/android/borealis/host/src/main/res/values/strings_pairing.xml`, not the
-   generic "Pairing failed". Record the message.
+   second new PIN. The scenario must not loop. Record the message.
+7. If the PC answers another pairing error, expected: a specific message, not
+   the generic "Pairing failed.". Record the message.
 8. If the device is not paired at the end of the scenario, run 3.1 with the
    correct PIN.
-9. Evidence: a screenshot of each message, the logcat capture and the host log
-   line for each rejected pairing.
+9. Evidence: a screenshot of each message, the logcat capture and the audit
+   entry of each rejected pairing (scrubbed).
 
-### 3.3 Unpair from the PC menu
+### 3.3 Unpair
 
-1. Moonlight 12.2 no longer offers "Unpair" in the PC menu (long press on the
-   PC shows "Delete PC" and the other entries; checked on the Galaxy S22 on
-   2026-10-14). Unpair the device in the host Web UI instead, then use
-   "Delete PC" on the device if needed. Steps 2 to 4 apply only to builds
-   that still show the entry; the hint is also reached after a wrong PIN
-   (3.2), where `unpair not confirmed status=404` is logged.
-2. Expected: the device shows "The host did not confirm the unpair request. Open
-   the host Web UI at `https://<host>:47990` and unpair this device there."
-   (`unpair_webui_hint`). It must not show "Unpaired successfully"
-   (`unpair_success`).
-3. Expected on the host: the device is still paired. LuminalShine does not route
-   `/unpair` (contract section 3 and 18, item 4), so the unpair happens only in
-   the Web UI.
+Two places remove the pairing. The Forget action of the PC's card on the device
+removes the PC from this device. Removing the device in the LuminalShine Web UI
+(Clients page) ends the pairing on the PC. LuminalShine does not route `/unpair`
+(contract sections 3 and 18, item 4), so the device must be removed in the Web
+UI.
+
+1. Open Hosts, choose Forget on the PC's card (`TODO(verify)`: how the Forget
+   action opens on the TV) and read the dialog.
+2. Expected: the dialog reads "Forget `<name>` on this device? The PC may keep
+   trusting this device until you remove it in the LuminalShine Web UI (Clients
+   page)." Choose Forget. Expected: the PC
+   is no longer listed on this device.
+3. Expected on the PC: the device is still paired, because `/unpair` is not
+   routed. Sprint 5 (S22 full pairing) recorded the host answer 404 and the audit
+   entry `UNPAIR_NOT_CONFIRMED` with `reason=host_status_404`.
 4. Expected in logcat: a WARN line `unpair not confirmed status=404` on
-   `Borealis.PAIR`.
-5. Unpair the device in the Web UI and record whether the PC menu on the device
-   still shows the PC as paired. `TODO(verify)`: the device-side state after a
-   Web UI unpair.
-6. Evidence: a screenshot of the message, a Web UI screenshot, and the logcat
-   capture.
+   `Borealis.PAIR`. `TODO(verify)`: that the line still appears after Forget.
+5. Remove the device in the LuminalShine Web UI (Clients page). Record whether the
+   PC still shows as paired after the Web UI removal. `TODO(verify)`: the
+   device-side state after a Web UI removal. To pair again, add the PC by its
+   address (Add host). Expected: the card shows "Not paired" and the Pair action.
+6. Evidence: a screenshot of the Forget dialog, a Web UI screenshot with the
+   device list hidden, and the logcat capture.
 
 ### 3.4 PC details dialog
 
-1. With the device paired, open the PC menu and choose "View Details"
-   (`pcview_menu_details`).
-2. Read the "Host capabilities" block (`host_info_header`).
+1. The PC details dialog went away with `PcView` in Sprint 5. With the device
+   paired, read the PC's card on Hosts instead: it shows the address and the
+   codec and HDR tags (`HostInfoText`).
+2. The full capability text below is still built by `HostInfoText` and is in
+   the diagnostic bundle.
 3. Expected for the 26.09.1 capture (`serverinfo-http.xml`, codec mask
    `0x001C0301`, codec flags `0x13` in `host_caps.tsv`):
    - `Host software: Sunshine-compatible, version 7.1.431.-1`
@@ -325,7 +336,7 @@ of section 1.4 for each scenario.
 
 ### 3.7 Frame pacing "cap FPS" at the display rate
 
-1. In the Borealis settings, set "Video frame pacing" to "Balanced with FPS limit"
+1. In Settings, set "Frame pacing" to "Balanced with FPS limit"
    (value `cap-fps`, `pacing_balanced_alt`).
 2. Set the stream frame rate to the refresh rate of the device. Record that rate.
    The mismatch of contract 7.4 comes from a selected rate at or up to 3 Hz above
@@ -419,33 +430,45 @@ of section 1.4 for each scenario.
    how to check the state on the device.
 6. Evidence: the logcat lines of steps 2 to 4, a screenshot and the device model.
 
-### 3.13 Borealis settings screen
+### 3.13 Settings
 
-1. Open Settings and then "Borealis settings" (`borealis_settings_title`).
-2. Expected in the category "Privacy and diagnostics": the switches "Verbose
-   logging" and "Mask addresses in logs and diagnostics". Both are off by
-   default. With "Verbose logging" on, the new log lines include DEBUG lines in
-   the file. With "Mask addresses" on, new log lines show `[IP]` and `[HOST]` in
-   place of addresses and host names (`Redactor`, README `:borealis:logging`).
-3. Expected in the category "About":
-   - the version name with the commit;
+1. Phone: on Hosts, tap the gear, then Settings. TV and handheld: in the rail,
+   choose Settings. The groups are on the left and their rows on the right.
+2. Expected: the groups are Stream, Video, Input, Gamepad, On-screen controls,
+   Audio, Advanced, Privacy and diagnostics, and About. The On-screen controls
+   group is shown only on a phone (a device with a touchscreen). A group the
+   device does not use is not in the list. On a phone, Privacy and diagnostics
+   is a link row.
+3. Expected: each row shows its current value. A row that another setting
+   disables can be focused on a TV. It cannot be changed, and its note says why.
+4. On a TV, the D-pad Right enters the rows of the selected group and Left
+   returns to the groups. Back leaves the screen from the rows and from the
+   groups.
+5. Expected in "Privacy and diagnostics": on a TV the group shows its rows in the
+   right pane. On a phone, the link row opens the Privacy screen. Its Audit trail
+   row opens the viewer (3.15). The rows are described in 3.14.
+6. Expected in "About":
+   - the Version row shows the version name and the commit, and cannot be clicked;
    - "Source code" opens `https://github.com/magalz/Borealis`;
    - "Licence: GPL-3.0" is plain text;
-   - "Open-source licences" shows the NOTICE and LICENSE texts in a dialog;
+   - "Open-source licences" shows the NOTICE and LICENSE texts in a dialog, which
+     a D-pad can scroll;
    - "Privacy policy" opens `https://github.com/magalz/Borealis/blob/main/PRIVACY.md`.
-4. On the Streamer: every entry is reachable with the D-pad. The licences text
-   scrolls with the D-pad. A link that no browser can open shows its URL as text
-   in a dialog.
-5. Evidence: screenshots without addresses, and the version line.
+   A link that no app can open shows its address as text in a dialog.
+7. Evidence: screenshots without addresses, and the version line.
    `TODO(verify)`: the exact version text on each device.
 
 ### 3.14 Export diagnostics
 
-Steps 1 to 6 are for the phone, steps 7 and 8 for the Streamer, and steps 9 to 11
-for both. Never put a bundle from a real run into the repository.
+The screen is "Privacy and diagnostics": Settings, then the link row on a phone
+or the group on a TV, then the row "Export diagnostic bundle". Steps 1 to 6 are
+for the phone, steps 7 and 8 for the TV, steps 9 to 11 for both, and step 12
+for the TV. Never put a bundle from a real run into the repository.
 
-1. On the S22, open Settings, then "Borealis settings", then "Export diagnostics". A toast
-   "Creating the diagnostic bundle…" appears, then the share sheet.
+1. On the phone, choose "Export diagnostic bundle" (its summary reads "Logs,
+   decoders and the audit trail, already redacted"). A progress dialog
+   "Creating the diagnostic bundle…" appears, then the share sheet. Back closes
+   the progress dialog, and the export goes on.
 2. Send the zip to a test target (Files or Drive). Unzip it on the PC.
 3. Expected: the layout is `manifest.json`, `decoders.json`, `audit.jsonl` and
    `logs/*`.
@@ -455,13 +478,11 @@ for both. Never put a bundle from a real run into the repository.
    host name appears in any entry.
 6. Expected: `decoders.json` lists the H.264, HEVC and AV1 decoders with profile
    names, and the display HDR types.
-7. On the Streamer, export. A toast "Creating the diagnostic bundle…" appears, and
-   then the "Diagnostics saved" dialog, even though apps such as VLC accept shared
-   files. The share sheet must not open by itself. The dialog shows
-   `Download/borealis-diagnostics-<timestamp>.zip` and the matching `adb pull`
-   command. Expected: there is no "Share…" button, only Close, which has the focus,
-   and the D-pad scrolls the text. On a phone with no receiver the dialog does have
-   a "Share…" button.
+7. On the TV, choose "Export diagnostic bundle" (its summary reads "Saves it to
+   Downloads and offers Send to phone"). The progress dialog appears, then the
+   "Diagnostics saved" dialog. It shows the file name, the location in Downloads
+   and the `adb pull` command under "To copy it to a computer, run". The share
+   sheet must not open by itself. Close has the focus.
 8. On the PC, run the `adb pull` command of the dialog, or:
 
    ```sh
@@ -469,24 +490,32 @@ for both. Never put a bundle from a real run into the repository.
    ```
 
    Expected: the zip opens and has the layout of step 3. On Android 9 (API 28) the
-   file is in the app's files directory instead, and the dialog shows that
-   `adb pull /sdcard/Android/data/<package>/files/diagnostics/...` command. The
-   package is `io.github.magalz.borealis.debug` for debug builds and
-   `io.github.magalz.borealis` for release builds.
+   file is in the app's files directory instead, and the dialog shows the
+   matching `adb pull /sdcard/Android/data/<package>/files/...` command. Use the
+   package name of the build that you installed.
 9. Export twice. Expected: only the newest bundle remains (in `cacheDir` and in
    Downloads). Files of other apps in Downloads are not touched.
-10. Tap "Export diagnostics" twice quickly. Expected: the second tap does nothing
-    while the first bundle is built.
+10. Choose "Export diagnostic bundle" twice quickly. Expected: the second choice
+    does nothing while the first bundle is built.
 11. Leave the screen (Back) while the bundle is built. Expected: no crash in the
     logcat capture (no `FATAL EXCEPTION` line).
-12. Evidence: the unzipped layout (a listing, no contents), the logcat capture and
+12. Send to phone (TV only). In the "Diagnostics saved" dialog, choose "Send to
+    phone". Expected: a QR code and the link text, the file name and size, and a
+    countdown. Scan the QR code with the phone, and download the zip. Expected on
+    the TV: "Downloaded. The link is closed." Then check the two failure states:
+    the link expired ("The link expired. Try again for a new one.") and a device
+    that is not on a local network ("...Use the adb command below instead.").
+    The phone has no Send to phone entry: export on a phone shares the zip.
+13. Evidence: the unzipped layout (a listing, no contents), the logcat capture, and
     a screenshot of the dialog or the share sheet.
 
 ### 3.15 Audit trail
 
-1. Pair the S22 with the host (3.1), launch an app (3.9 steps 1 and 2), stream it
-   for about one minute, and then quit it from the PC's app list with "Quit
-   Session" (`applist_menu_quit`).
+The viewer is in Settings, then "Privacy and diagnostics", then "Audit trail".
+
+1. Pair the S22 with the PC (3.1), launch an app (3.9 steps 1 and 2), stream it
+   for about one minute, and then quit it from the actions of the running app in
+   Apps. Quit asks for confirmation.
 2. Export a bundle (3.14, steps 1 and 2).
 3. Expected in `audit.jsonl`: entries of the types PAIRING_*, LAUNCH_* and
    SESSION_START and SESSION_END, with the fields documented in
@@ -494,12 +523,23 @@ for both. Never put a bundle from a real run into the repository.
    trail").
 4. Expected: no PIN, token, key or certificate in any entry. With "Mask addresses"
    on, no IP address and no host name.
-5. Open "Erase audit trail" (Privacy and diagnostics). Expected: a confirmation
-   dialog with Cancel focused. Choose Cancel first: nothing is erased. Then start
-   it again and choose "Erase": the message "Audit trail erased" appears.
-6. Export a bundle. Expected: `audit.jsonl` has no entries from before the erase.
+5. Open the Audit trail on the device. Expected: the entries are listed newest
+   first. Each entry shows its time, its title in plain words, its event code and
+   a short detail. A host certificate change has its title in the warning colour.
+   An empty trail says "No events recorded yet.". On a TV, the first entry has
+   the focus, Down and Up move from entry to entry, and OK opens the entry. On a
+   phone, a tap opens the entry. The opened entry shows its time, title, code,
+   result, host and detail. Back closes the opened entry before it leaves the
+   screen.
+6. With "Mask addresses in logs and diagnostics" on, the host and the detail of
+   each entry show no full IP address.
+7. Open "Erase audit trail" (Privacy and diagnostics). Expected: a confirmation
+   "Erase the audit trail?" with Cancel focused. Choose Cancel first: nothing is
+   erased. Then open it again and choose "Erase": "Audit trail erased" appears.
+8. Export a bundle. Expected: `audit.jsonl` has no entries from before the erase.
    The bundle exported in step 2 is not changed.
-7. Evidence: the unzipped `audit.jsonl` (scrubbed), and screenshots of the dialog.
+9. Evidence: the unzipped `audit.jsonl` (scrubbed), and screenshots of the list,
+   an opened entry and the erase dialog, without addresses.
 
 ### 3.16 Stream logs
 
@@ -548,6 +588,54 @@ for both. Never put a bundle from a real run into the repository.
 6. Evidence: `adb -s <serial> shell dumpsys package io.github.magalz.borealis`
    (the `versionName` and the commit), the logcat capture and a screenshot.
 
+### 3.19 Sprint 6 checks
+
+Run these on the S22 phone and the Google TV Streamer with the Sprint 6 build.
+Record each item as `pass`, `fail` or `not applicable`, with a short note for
+each `fail`.
+
+1. Settings, every row: the D-pad two-pane layout on the TV, and the phone list.
+   - The Resolution and Frame rate lists match the device.
+   - Changing Resolution or Frame rate returns Bitrate to "Automatic".
+   - Turning Unlock all frame rates on and off changes the Frame rate list.
+   - HDR shows only on HDR displays.
+   - The On-screen controls group appears only on the phone: check Opacity, and
+     that Reset layout asks first.
+   - Codec, Flip face buttons, Deadzone and Play audio on the PC take effect in a
+     stream.
+2. Upgrade: Verbose logging and Mask addresses, switched on in the Sprint 5 build,
+   are still on after installing the Sprint 6 build.
+3. Privacy and diagnostics:
+   - phone: Export opens the share sheet;
+   - TV: Export saves, and the "Diagnostics saved" dialog shows the location and
+     the `adb pull` command;
+   - Send to phone: scan the QR code with the phone and download, and check the
+     Expired and No network states;
+   - Audit trail: lists pairing, launch and stream events, masks addresses with
+     Mask addresses on, and Erase asks first.
+4. Follow-ups:
+   - (a) On the TV, the Add host keyboard opens on OK, not when the field gets
+     focus. The comment of `AddHostScreen` says so. Sprint 5 (section 10, R1)
+     saw it open on focus. Whether `SoftwareKeyboardController.show()` opens the
+     Google TV keyboard is checked on the device. UC-008 wants the keyboard to
+     open on OK on a TV.
+   - (b) An RTSP -1 failure shows no firewall hint.
+   - (d) With the USB driver setting off, the USB attach dialog does not appear.
+   - (e) The pinned app shortcut icon: the app's box art when the PC sent it,
+     otherwise the Borealis monitor icon.
+   - (f) A pinned app shows its box art.
+   - (g) The performance overlay shows a decode time on the Streamer.
+   - (h) An 8BitDo pad on the TV, with the Windows game controller panel (joy.cpl)
+     open on the PC:
+     - Start or Select alone reaches the PC about 60 ms late;
+     - holding Select and Start opens the menu, and no stray press reaches the PC;
+     - the quit combo and the Start-hold gamepad mouse still work.
+   - (i) Two pads: the menu's Gamepad mouse row shows On when either pad emulates
+     the mouse.
+
+The UI is in English on a phone set to Portuguese, because translations were
+removed (ADR 0055). Expected: no Portuguese text.
+
 ## 4. Results templates
 
 Copy one table per device. Use `pass`, `fail` or `not applicable`, and add a
@@ -558,9 +646,9 @@ short note for each `fail`.
 | Scenario | Result | Evidence | Notes |
 | --- | --- | --- | --- |
 | 2. Instrumented tests | | Gradle result, serial | |
-| 3.1 Pairing with the PIN hint | | | |
+| 3.1 Pairing | | | |
 | 3.2 Wrong PIN | | | |
-| 3.3 Unpair from the PC menu | | | |
+| 3.3 Unpair | | | |
 | 3.4 PC details dialog | | | |
 | 3.5 Two devices launching at the same time | | | |
 | 3.6 Relaunch right after quitting | | | |
@@ -576,9 +664,9 @@ short note for each `fail`.
 | Scenario | Result | Evidence | Notes |
 | --- | --- | --- | --- |
 | 2. Instrumented tests | | Gradle result, serial | |
-| 3.1 Pairing with the PIN hint | | | |
+| 3.1 Pairing | | | |
 | 3.2 Wrong PIN | | | |
-| 3.3 Unpair from the PC menu | | | |
+| 3.3 Unpair | | | |
 | 3.4 PC details dialog | | | |
 | 3.5 Two devices launching at the same time | | | |
 | 3.6 Relaunch right after quitting | | | |
@@ -904,20 +992,31 @@ Follow-ups:
   chord holds it back, because its two key-downs arrive as separate events. The
   review of the D17 fix found it, and the tests pin the packets. It was not seen
   on the device.
+  Done in Sprint 6: a system pad's Select or Start waits up to 60 ms for the
+  other button, so a lone press no longer reaches the PC (section 11, C1).
 - On the TV the system keyboard opens when the Add host field gets focus (R1),
   while the comment in `AddHostScreen` says it opens on OK. Align the comment or
   the behaviour.
+  Done in Sprint 6: on the TV, OK opens the keyboard on the Add host field, and
+  focus alone does not (section 11, A12 and D1).
 - The menu's Gamepad mouse row follows the last pad that toggled the mouse
   (D18), so with two pads it shows the state of the last toggle.
+  Done in Sprint 6: the row shows On while either pad emulates the mouse
+  (section 11, C2).
+- Done in Sprint 6: with the USB driver setting off, the USB attach dialog does
+  not appear (section 11, C4).
 - The host items stay: the slow `/resume` after a disconnect
   (NortheBridge/luminalshine#198), and the `/cancel` delay after a quit. The
   host ends the stream before it answers `/cancel`, so the Quitting screen waits
   about 7 s.
 - The MediaTek decoder decode time, shown as "—" (D5).
-- The TV channel prompt after pairing.
-- The pinned app shortcut icon.
-- `PairingHints` dead code: `pinHint` and `unpairHint` have no caller since
-  `PcView` was removed (see the Borealis Android README).
+- Done in Sprint 6: the TV channel prompt after pairing was dropped, because
+  Google TV shows no app channels (section 11).
+- Done in Sprint 6: the pinned app shortcut icon (box art, or the Borealis
+  monitor icon).
+- Done in Sprint 6: the `PairingHints` dead code. `pinHint` and `unpairHint` are
+  removed, and `PairingHints` keeps `webUiUrl` and `suggestedDeviceName`, which
+  the Library pairing uses (see the Borealis Android README).
 
 ### Final round
 
@@ -1063,3 +1162,119 @@ S22 over USB, TV over ADB Wi-Fi. Items R1 to R4 use this build.
 
 The captures were deleted from the TV and locally. Diagnostic zips stay in the
 Download folders of both devices for the owner to delete.
+
+## 11. Results: Sprint 6
+
+This section holds the Sprint 6 results. It starts with the TV channel spike,
+run with the Sprint 5 debug build that was on the TV (code of `09ba717b`). The
+device round of 2026-10-17 follows it.
+
+### TV channel spike, 2026-10-16
+
+Device: Google TV Streamer, Android 14, launcher `launcherx` 1.0.994451607.
+
+- The launcher handles the "add channel" request (`REQUEST_CHANNEL_BROWSABLE`)
+  with its own activity.
+- No third-party preview-channel row appears on the Home or Apps tabs. Only
+  Google-curated rows and YouTube's appear. VLC and Globoplay, which publish
+  channels, have no row.
+- Decision: no channel prompt after pairing. The existing channel code stays for
+  Android TV launchers that show channels.
+
+### Device round, 2026-10-17
+
+#### Setup
+
+- Builds:
+  - the debug APK from phase head `e9e66849` first;
+  - then `c02fdafb` (decode-time FIFO reverted), on the S22 only;
+  - then `c3f1ce75` (merge of the device fixes, with the revert). The re-checks
+    ran on `c3f1ce75`, and the final keyboard check on the TV on `02f7b18b`.
+- Install: `install -r`, keeping data.
+- Devices:
+  - Galaxy S22: USB, phone language pt-BR.
+  - Google TV Streamer: ADB over Wi-Fi, pt-BR, Android 14, Gboard for TV.
+- Host: LuminalShine 26.09.1 on the PC.
+- Pads on the TV:
+  - 8BitDo Pro 3 in Switch mode (a system pad);
+  - 8BitDo Ultimate 2 for PC in XInput mode (the app's USB driver).
+- The Windows game controller panel (joy.cpl) was open on the PC.
+
+#### Block A (no owner action)
+
+| # | Item | Device | Result | Evidence and notes |
+| --- | --- | --- | --- | --- |
+| A1 | Upgrade: the two logging switches move to DataStore | TV | pass | Set `borealis_mask_addresses=true` in the Sprint 5 build (verbose was already on). After installing the Sprint 6 build, `files/datastore/borealis_settings.preferences_pb` holds verbose=1 and mask=1, and SharedPreferences has no `borealis_` keys left. Mask was set back off afterwards, to the owner's value. |
+| A2 | Settings opens from the rail, two panes, TV groups | TV | pass | Groups: Stream, Video, Input, Gamepad, Audio, Advanced, Privacy and diagnostics, About. No On-screen controls group, because there is no touchscreen. The motion fallback and vibration rows are hidden. |
+| A3 | Resolution list, bitrate automatic | TV | pass | 360p to 4K. The TV reports one 1920x1080 mode with no HDR, but its 4K decoder raises the limit, as in upstream. No native entries on a TV. Picking 1080p gives "Automatic (20 Mbps)" with no bitrate key stored. |
+| A4 | Frame rates and Unlock all frame rates | TV | pass | 30 and 60 fps at 60 Hz. Unlock gives 30, 60, 90 and 120. Picking 120 gives "Automatic (28 Mbps)". Turning Unlock off steps the frame rate to 60 and returns the bitrate to automatic (the review fix). |
+| A5 | HDR row | TV, S22 | pass | Hidden on the TV (`supportedHdrTypes=[]`). Shown on the S22. |
+| A6 | Phone list | S22 | pass | Complete list with headers. "Native (2259x1080)" and "Native fullscreen (2340x1080)". The On-screen controls group, vibration rows, USB rows, Privacy link row and About are shown. |
+| A7 | Frame rates on the S22 | S22 | pass | With One UI "Motion smoothness: Standard", only 30 and 60 fps. After the owner switched to Adaptive (up to 120 Hz): 30, 60, 90 and 120. Same rule as upstream. |
+| A8 | Privacy pane on TV | TV | pass | It renders inside the two panes with no crash, and the switches show the migrated values. |
+| A9 | Export on TV | TV | pass | Progress shows on the Export row (about 25 s), then "Diagnostics saved" with the file, size, location and `adb pull` command. Close has the focus, and Send to phone is offered. |
+| A10 | Export on phone | S22 | pass | The system share sheet opened with the zip, and it was cancelled. |
+| A11 | Audit trail | TV, S22 | pass | Newest first, with plain-words titles and codes. With Mask on, the host shows as `[HOST]`. With Mask off, the host name and address show. Switching re-maps without a database change. |
+| A12 | Add host keyboard on focus | TV | pass | Focusing the Address field does not open the keyboard. |
+| A13 | English UI on a pt-BR device | S22, TV | pass after D2 | All texts are English. Only the audit weekday was in Portuguese ("sex."): D2. |
+
+#### Defects found and fixed
+
+Task `s6-devfix` (S6-T23) was merged as `c3f1ce75`. D5 was a regression from
+the decode-time FIFO (S6-T7).
+
+| # | Defect | Fix | Re-check |
+| --- | --- | --- | --- |
+| D1 | TV: OK on Add host never opened the keyboard. `onStartInput` had `inputType=0`: the state-based field with `showKeyboardOnFocus=false` starts no input session, so Gboard refused (`onFailed at PHASE_IME_ON_SHOW_SOFT_INPUT_TRUE`). The first fix (`showSoftInput`) failed the same way. | On TV and handheld, the D-pad focus lands on a wrapper that draws the field. OK moves the focus into the real field, which opens the keyboard through the normal path. Done returns to the wrapper. | Pass: Gboard shows (`inputType=Uri`, `onShown`) and "abc" was typed. Back closes the keyboard, Down goes to Add host, and Up returns to the field without the keyboard. |
+| D2 | The audit weekday was in the device language. | The audit times are formatted in English, with the device time zone. | Pass: "Fri 19:33". |
+| D3 | TV: Back from the Audit trail left the focus on the rail. | The focus returns to the "Audit trail" row. | Pass. |
+| D4 | One bundle showed "196 KB" in Send to phone and "201 kB" in "Diagnostics saved". | One formatter (`Formatter.formatShortFileSize`). | Code and test, recorded. |
+| D5 regression | The decode-time FIFO (S6-T7) gave "Decode — ms" on both the TV (MediaTek) and the S22 (Qualcomm). | Reverted on the phase (`c02fdafb`). | The S22 shows a number again ("Decode 0.2 ms"). The MediaTek "—" stays a known limitation. |
+
+#### Block B (with the owner)
+
+| # | Item | Result | Evidence and notes |
+| --- | --- | --- | --- |
+| B1 | Send to phone | pass | The QR code was scanned with the S22 camera. The zip downloaded (200,866 bytes). The TV log: request 200, download 200, `stopped reason=DOWNLOADED`. "Downloaded" stayed until the owner pressed Close. |
+| B2 | A setting takes effect in a stream | pass | Codec H.264. The overlay shows "H.264" and `c2.mtk.avc.decoder.lowlatency`. |
+| B3 | Overlay Detailed | pass | TV and S22, three-state setting. |
+| B4 | Pinned app shortcut | pass | "Add to home screen" on Desktop, confirmed by the owner. The shortcut icon is a bitmap (the box art from the PC). The host shortcut uses the Borealis monitor icon (`ic_pc_scut`). |
+| B5 | Hide an app disables its shortcut | pass | Hide gives `Disabled: by app`. Show again enables it. |
+
+#### Block C (pads, joy.cpl)
+
+| # | Item | Result | Evidence and notes |
+| --- | --- | --- | --- |
+| C1 | Lone Start or Select reaches the PC; Select and Start held opens the menu, and nothing reaches the PC | pass | Pro 3 (system pad) and Ultimate 2 (USB driver), as the owner watched in joy.cpl. |
+| C2 | Mouse row with two pads | pass | The Pro 3 held Start (mouse on), and the Ultimate 2 chord opened the menu. The "Gamepad mouse" row showed On. |
+| C3 | Quit combo Start, Back, LB and RB | partial | It ends the stream on the Pro 3 (system pad). Not on the Ultimate 2 (USB driver): the combo is detected only in the system-pad key path (`pendingExit`), never in `reportControllerState`. This is upstream behaviour, not a regression. Sprint 5 C7 was on the Pro only. Follow-up for the next sprint. |
+| C4 | USB driver off: no attach dialog | pass | `UsbAttachActivity` is in disabledComponents. The owner re-plugged the dongle and no dialog appeared. The driver was set back on afterwards, and the component is enabled again. |
+| C5 | After the stream with the USB driver on, Android asked for USB access again | known | The R5a limitation: Google TV's dialog has no "use by default" option. |
+
+#### Not run
+
+- (b) The RTSP -1 hint: it needs a host failure, so only unit tests cover it.
+- Handheld: no device.
+- The Expired and No network Send to phone states on a device: only unit and
+  screenshot tests cover them.
+
+#### Follow-ups
+
+- The MediaTek decode time still shows "—" (D5). Investigate it next sprint
+  with input and output counters. The FIFO approach failed on both decoders.
+- The quit combo is not detected for USB-driver pads (`reportControllerState`).
+  This is an upstream limitation.
+- The Google TV USB dialog repeats while the USB driver is on (R5a, section 10).
+- Feature request from the owner, for the new-features phase: a setting for
+  the pointer speed of the gamepad mouse. Today the pointer moves so fast that
+  it jumps across the screen, and precise control needs a very light touch on
+  the stick.
+
+#### Clean-up
+
+- The round's zips on the TV were deleted.
+- The settings changed for the round were restored on the TV: 720p, codec auto,
+  overlay off, USB driver on, stretch off, unlock off.
+- The S22 overlay was set back off, and the zip the S22 downloaded was deleted.
+- `/sdcard/ui.xml` was deleted from the S22.
+- The local screenshots were deleted.

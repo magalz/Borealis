@@ -5,7 +5,6 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
-import com.limelight.preferences.StreamSettings
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
@@ -13,7 +12,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowDialog
 
 /** The thin adapters over upstream classes that need no service and no native library. */
@@ -78,13 +76,5 @@ class UpstreamSeamsTest {
         } catch (expected: IOException) {
             assertThat(expected).hasMessageThat().contains("No active address")
         }
-    }
-
-    @Test
-    fun `the stream settings open in the upstream settings activity`() {
-        UpstreamLauncherStartup().openStreamSettings(activity)
-
-        val started = shadowOf(activity).nextStartedActivity
-        assertThat(started.component?.className).isEqualTo(StreamSettings::class.java.name)
     }
 }

@@ -9,6 +9,7 @@ import io.github.magalz.borealis.host.failure.CauseKind
 import io.github.magalz.borealis.host.failure.FailureFacts
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.host.failure.StreamFailureClassifier
+import io.github.magalz.borealis.host.launch.ResumeCollisions
 import io.github.magalz.borealis.host.video.StreamErrorHints
 
 /**
@@ -31,6 +32,7 @@ object StreamFailures {
      * start failed; it may be missing.
      */
     @JvmStatic
+    @JvmOverloads
     fun facts(
         stage: String?,
         errorCode: Int,
@@ -39,6 +41,9 @@ object StreamFailures {
         streamed: Boolean,
         note: String?,
         connection: NvConnection?,
+        rtspStageName: () -> String = {
+            MoonBridge.getStageName(ResumeCollisions.STAGE_RTSP_HANDSHAKE)
+        },
     ): FailureFacts =
         FailureFacts(
             stage = stage,
@@ -49,6 +54,10 @@ object StreamFailures {
             httpCode = connection?.lastHttpCode()?.takeIf { it != 0 },
             resumeCollision = connection?.endedByResumeCollision() ?: false,
             retriesExhausted = connection?.launchRetriesExhausted() ?: false,
+            rtspReplyUnreadable =
+                !terminated &&
+                    errorCode == ResumeCollisions.RTSP_UNREADABLE_REPLY &&
+                    stage == rtspStageName(),
             streamed = streamed,
             note = note,
         )
@@ -91,6 +100,8 @@ object StreamFailures {
             !facts.terminated ->
                 listOfNotNull(
                         if (facts.resumeCollision) plain(HostR.string.launch_resume_collision)
+                        else if (facts.rtspReplyUnreadable)
+                            plain(HostR.string.failure_reply_unreadable)
                         else null,
                         facts.note,
                         blocked,

@@ -1,4 +1,4 @@
-"""Generate the Borealis launcher icon, the legacy launcher PNGs and the Google TV banner.
+"""Generate the Borealis launcher icon, the shortcut icon layers, the legacy launcher PNGs and the Google TV banner.
 
 One geometry source drives every output, so the art changes in one place. Run from the repository
 root:
@@ -30,6 +30,15 @@ RIDGE_PATH = [('M', 0, 84), ('L', 22, 74), ('L', 34, 80), ('L', 50, 66), ('L', 6
               ('L', 86, 80), ('L', 108, 74), ('L', 108, 108), ('L', 0, 108), ('Z',)]
 STARS = [(38, 27, 0.9), (70, 24, 0.7), (29, 42, 0.6), (78, 52, 0.6), (48, 46, 0.5)]
 
+# Shortcut icon: a monitor (the host PC) in the same 108 x 108 geometry, inside the 72 x 72 safe zone. Its
+# screen is a hole in the frame, so the launcher sky shows through; the aurora band sits inside it.
+MONITOR = (28, 30, 52, 40, 5)  # x, y, width, height, corner radius of the outer frame
+MONITOR_SCREEN = (33, 35, 42, 30, 2.5)
+MONITOR_NECK = (49, 70, 10, 7, 0)
+MONITOR_BASE = (38, 77, 32, 4, 2)
+MONITOR_AURORA = [('M', 33, 62), ('C', 42, 50, 50, 58, 58, 47), ('C', 64, 40, 70, 42, 75, 38), ('L', 75, 46),
+                  ('C', 70, 50, 64, 48, 60, 54), ('C', 52, 64, 42, 56, 33, 64), ('Z',)]
+
 
 def alpha(c):
     return c[3] if len(c) > 3 else 1
@@ -45,6 +54,14 @@ def path_data(path):
         k, v = seg[0], seg[1:]
         out.append(k + ' '.join(f'{v[i]:g},{v[i + 1]:g}' for i in range(0, len(v), 2)))
     return ' '.join(out)
+
+
+def rect_data(x, y, w, h, r):
+    if not r:
+        return f'M{x:g},{y:g}h{w:g}v{h:g}h{-w:g}z'
+    return (f'M{x + r:g},{y:g}h{w - 2 * r:g}a{r:g},{r:g} 0 0,1 {r:g},{r:g}v{h - 2 * r:g}'
+            f'a{r:g},{r:g} 0 0,1 {-r:g},{r:g}h{-(w - 2 * r):g}a{r:g},{r:g} 0 0,1 {-r:g},{-r:g}'
+            f'v{-(h - 2 * r):g}a{r:g},{r:g} 0 0,1 {r:g},{-r:g}z')
 
 
 def circle_data(x, y, r):
@@ -85,6 +102,11 @@ def solid(color, path):
     return f'    <path\n        android:fillColor="{color}"\n        android:pathData="{path}" />\n'
 
 
+def even_odd(color, path):
+    return (f'    <path\n        android:fillColor="{color}"\n        android:fillType="evenOdd"\n'
+            f'        android:pathData="{path}" />\n')
+
+
 def vectors(drawable_dir):
     background = HEADER.format(what='background') + (
         '    <path android:pathData="M0,0h108v108h-108z">\n'
@@ -106,9 +128,26 @@ def vectors(drawable_dir):
         + solid('#FFFFFFFF', path_data(RIDGE_PATH))
         + '</vector>\n'
     )
+    shortcut_header = HEADER.replace('Borealis launcher icon, {what} layer', 'Borealis shortcut icon, {what} layer')
+    frame = rect_data(*MONITOR) + rect_data(*MONITOR_SCREEN)
+    stand = rect_data(*MONITOR_NECK) + rect_data(*MONITOR_BASE)
+    shortcut_foreground = shortcut_header.format(what='foreground') + (
+        even_odd(argb(STAR[:3]), frame)
+        + solid(argb(STAR[:3]), stand)
+        + f'    <path android:pathData="{path_data(MONITOR_AURORA)}">\n'
+        f'{gradient(GREEN_TOP, GREEN_BOTTOM, 38, 66)}\n    </path>\n</vector>\n'
+    )
+    shortcut_monochrome = shortcut_header.format(what='monochrome') + (
+        even_odd('#FFFFFFFF', frame)
+        + solid('#FFFFFFFF', stand)
+        + solid('#99FFFFFF', path_data(MONITOR_AURORA))
+        + '</vector>\n'
+    )
     for name, body in [('borealis_launcher_background', background),
                        ('borealis_launcher_foreground', foreground),
-                       ('borealis_launcher_monochrome', monochrome)]:
+                       ('borealis_launcher_monochrome', monochrome),
+                       ('borealis_shortcut_foreground', shortcut_foreground),
+                       ('borealis_shortcut_monochrome', shortcut_monochrome)]:
         with open(os.path.join(drawable_dir, name + '.xml'), 'w', encoding='utf-8', newline='\n') as f:
             f.write(body)
 

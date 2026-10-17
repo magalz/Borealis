@@ -21,18 +21,22 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -87,7 +91,7 @@ private const val SUMMARY_MAX_LINES = 3
 /**
  * The audit trail (UC-007): [AuditUiState.entries] as a list, newest first, and in its place the
  * [AuditUiState.detail] of the entry that the user opened. A tap or OK on an entry runs
- * [onEntrySelected] with its position. Back, and the arrow of the phone bar, run
+ * [onEntrySelected] with its [AuditRow.key]. Back, and the arrow of the phone bar, run
  * [onDetailDismissed] while an entry is open and [onBack] otherwise; a TV or handheld has no arrow.
  * Provides its own theme for [formFactor].
  */
@@ -103,8 +107,10 @@ fun AuditScreen(
     BorealisTheme(formFactor) {
         val close = if (state.detail != null) onDetailDismissed else onBack
         BackHandler(onBack = close)
-        // The entry that was open takes the focus again when the list comes back.
-        var lastOpened by rememberSaveable { mutableIntStateOf(0) }
+        // The list is left while an entry is open, but its scroll position and the entry that was
+        // open stay here, so the list comes back to that entry.
+        val listState = rememberLazyListState()
+        var lastOpened by rememberSaveable { mutableStateOf<String?>(null) }
         Column(
             modifier
                 .fillMaxSize()
@@ -118,10 +124,11 @@ fun AuditScreen(
                     state.entries.isNotEmpty() ->
                         Entries(
                             state.entries,
-                            focusIndex = lastOpened.coerceIn(0, state.entries.lastIndex),
+                            listState,
+                            lastOpened,
                             onSelected = {
                                 lastOpened = it
-                                onEntrySelected(state.entries[it].key)
+                                onEntrySelected(it)
                             },
                         )
                     state.loading -> Unit
@@ -204,22 +211,39 @@ private fun Title(modifier: Modifier) {
 }
 
 @Composable
-private fun Entries(entries: List<AuditRow>, focusIndex: Int, onSelected: (Int) -> Unit) {
+private fun Entries(
+    entries: List<AuditRow>,
+    listState: LazyListState,
+    lastOpened: String?,
+    onSelected: (key: String) -> Unit,
+) {
     val gutter = LocalBorealisSpacing.current.gutter
     val focusRequester = remember { FocusRequester() }
     val focusState = rememberInitialFocusState()
+    // Focus starts on the entry that was open, or on the first one; entries that arrive later at
+    // the head leave it where it is.
+    val focusKey = remember { lastOpened?.takeIf { key -> entries.any { it.key == key } } }
+    LaunchedEffect(Unit) {
+        val index = entries.indexOfFirst { it.key == focusKey }
+        // Wait for the first layout: the state still describes the list as it was left.
+        withFrameNanos {}
+        if (index >= 0 && listState.layoutInfo.visibleItemsInfo.none { it.index == index }) {
+            listState.scrollToItem(index)
+        }
+    }
     LazyColumn(
         modifier = Modifier.widthIn(max = CONTENT_MAX_WIDTH).fillMaxSize(),
+        state = listState,
         contentPadding = PaddingValues(horizontal = gutter, vertical = LIST_PADDING),
         verticalArrangement = Arrangement.spacedBy(ROW_GAP),
     ) {
-        itemsIndexed(entries) { index, row ->
+        itemsIndexed(entries, key = { _, row -> row.key }) { index, row ->
             val tag = Modifier.testTag("audit:entry:$index")
+            val starts = if (focusKey == null) index == 0 else row.key == focusKey
             EntryRow(
                 row,
-                onClick = { onSelected(index) },
-                modifier =
-                    if (index == focusIndex) tag.initialFocus(focusRequester, focusState) else tag,
+                onClick = { onSelected(row.key) },
+                modifier = if (starts) tag.initialFocus(focusRequester, focusState) else tag,
             )
         }
     }

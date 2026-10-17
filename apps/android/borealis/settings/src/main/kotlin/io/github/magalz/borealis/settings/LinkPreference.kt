@@ -4,9 +4,9 @@ import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.preference.Preference
 import android.util.AttributeSet
+import androidx.core.net.toUri
 
 /**
  * Opens the `url` attribute in a browser. Google TV often has none, so when no app can open the
@@ -24,7 +24,7 @@ class LinkPreference @JvmOverloads constructor(context: Context, attrs: Attribut
     public override fun onClick() {
         val target = url ?: return
         try {
-            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target)))
+            context.startActivity(Intent(Intent.ACTION_VIEW, target.toUri()))
         } catch (_: ActivityNotFoundException) {
             AlertDialog.Builder(context)
                 .setTitle(R.string.borealis_link_dialog_title)

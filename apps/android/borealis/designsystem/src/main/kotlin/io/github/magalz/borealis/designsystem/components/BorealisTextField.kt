@@ -1,5 +1,7 @@
 package io.github.magalz.borealis.designsystem.components
 
+import android.view.View
+import android.view.inputmethod.InputMethodManager
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
@@ -27,7 +29,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -137,6 +139,10 @@ fun BorealisTextField(
  * without it the field keeps the key. With [keyboardOnOk] DPAD_CENTER, the remote's OK and what a
  * gamepad's A falls back to, opens the keyboard when it is released, which is what a field that
  * does not open it on focus needs. Enter is not OK: it reaches the field and acts as Done.
+ *
+ * The keyboard is opened through the input method manager for the field's own input session. The
+ * software keyboard controller would not do: it goes to the legacy text input service, which has
+ * no session for a state-based field, so on a device it did nothing.
  */
 @Composable
 private fun Modifier.fieldKeys(
@@ -145,11 +151,11 @@ private fun Modifier.fieldKeys(
     field: TextFieldState,
 ): Modifier {
     val focusManager = LocalFocusManager.current
-    val keyboard = LocalSoftwareKeyboardController.current
+    val view = LocalView.current
     return onPreviewKeyEvent { event ->
         when {
             keyboardOnOk && event.key == Key.DirectionCenter -> {
-                if (event.type == KeyEventType.KeyUp) keyboard?.show()
+                if (event.type == KeyEventType.KeyUp) view.showKeyboard()
                 true
             }
             event.type == KeyEventType.KeyDown -> {
@@ -166,4 +172,9 @@ private fun Modifier.fieldKeys(
             else -> false
         }
     }
+}
+
+/** Asks the system to show the keyboard for the input session that the focused field holds. */
+private fun View.showKeyboard() {
+    context.getSystemService(InputMethodManager::class.java)?.showSoftInput(this, 0)
 }

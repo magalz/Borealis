@@ -30,6 +30,7 @@ constructor(
     private val clients: HostClientFactory,
     private val hiddenApps: HiddenApps,
     private val texts: HostTexts,
+    private val shortcuts: HiddenAppShortcuts,
     @IoDispatcher private val io: CoroutineDispatcher,
 ) : AppRepository {
     override fun apps(hostId: String): Flow<AppsSnapshot> = flow {

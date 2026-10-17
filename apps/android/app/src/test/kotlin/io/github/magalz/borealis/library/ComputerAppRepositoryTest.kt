@@ -32,6 +32,7 @@ class ComputerAppRepositoryTest {
     private val clients = FakeHostClients(binder)
     private val prefs = context.getSharedPreferences("HiddenApps", Context.MODE_PRIVATE)
     private val hiddenApps = HiddenApps(context)
+    private val shortcuts = FakeHiddenAppShortcuts()
 
     @Before
     fun setUp() {
@@ -45,6 +46,7 @@ class ComputerAppRepositoryTest {
             clients,
             hiddenApps,
             FakeTexts(),
+            shortcuts,
             io,
         )
     }
@@ -128,6 +130,27 @@ class ComputerAppRepositoryTest {
 
         assertThat(seen.last().apps.first { it.id == 7 }.hidden).isFalse()
         job.cancelAndJoin()
+    }
+
+    @Test
+    fun `hiding an app disables its shortcut and TV program, and showing it enables the shortcut`() =
+        runTest {
+            val repository = repository()
+
+            repository.setHidden("host-1", 7, hidden = true)
+            assertThat(shortcuts.calls).containsExactly("hidden host-1 7")
+
+            repository.setHidden("host-1", 7, hidden = false)
+            assertThat(shortcuts.calls).containsExactly("hidden host-1 7", "shown host-1 7").inOrder()
+        }
+
+    @Test
+    fun `the hidden app is saved even when the launcher fails to switch its shortcut`() = runTest {
+        shortcuts.failure = IllegalStateException("launcher is gone")
+
+        repository().setHidden("host-1", 7, hidden = true)
+
+        assertThat(prefs.getStringSet("host-1", null)).containsExactly("7")
     }
 
     @Test

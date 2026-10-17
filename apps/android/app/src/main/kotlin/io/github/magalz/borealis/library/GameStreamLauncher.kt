@@ -11,7 +11,8 @@ import javax.inject.Singleton
 @Singleton
 internal class GameStreamLauncher
 @Inject
-constructor(private val connection: ComputerManagerConnection) : StreamLauncher {
+constructor(private val connection: ComputerManagerConnection, private val boxArt: BoxArt) :
+    StreamLauncher {
     override fun start(activity: Activity, request: StreamRequest): Boolean {
         val binder = connection.connectedBinder ?: return false
         // The service's own object has the pinned certificate; the last update is the fallback.

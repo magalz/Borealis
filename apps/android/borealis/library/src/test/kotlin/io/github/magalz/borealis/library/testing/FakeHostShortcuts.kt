@@ -24,7 +24,7 @@ class FakeHostShortcuts(override var canPinApps: Boolean = true) : HostShortcuts
         openedHosts += hostId to hostName
     }
 
-    override fun pinApp(
+    override suspend fun pinApp(
         hostId: String,
         hostName: String,
         appId: Int,

@@ -34,7 +34,8 @@ internal class UpstreamHostShortcuts
 constructor(
     @ApplicationContext private val context: Context,
     @IoDispatcher private val io: CoroutineDispatcher,
-) : HostShortcuts, ShortcutCleanup {
+    private val boxArt: BoxArt,
+) : HostShortcuts, ShortcutCleanup, HiddenAppShortcuts {
     private val helper
         get() = ShortcutHelper(context)
 
@@ -65,7 +66,7 @@ constructor(
         }
     }
 
-    override fun pinApp(
+    override suspend fun pinApp(
         hostId: String,
         hostName: String,
         appId: Int,
@@ -78,6 +79,10 @@ constructor(
                 NvApp(appName, appId, hdrSupported),
                 null,
             )
+
+    override fun appHidden(hostId: String, appId: Int) = Unit
+
+    override fun appShown(hostId: String, appId: Int) = Unit
 
     override fun hostForgotten(details: ComputerDetails) =
         helper.disableComputerShortcut(details, context.getString(R.string.scut_deleted_pc))

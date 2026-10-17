@@ -14,13 +14,18 @@ import io.github.magalz.borealis.logging.LogLevel
 import io.github.magalz.borealis.logging.LogRecord
 import io.github.magalz.borealis.logging.LogSink
 import io.github.magalz.borealis.logging.Redactor
+import android.graphics.Bitmap
 import java.io.ByteArrayInputStream
+import java.io.FileNotFoundException
 import java.io.IOException
+import java.io.InputStream
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
 import org.junit.rules.ExternalResource
 
 /** One valid app list: Steam (HDR) and Desktop. */
@@ -208,6 +213,10 @@ internal class FakeHostClient(private val binder: FakeCmsBinder) : HostClient {
     var pairing: (String) -> PairResult = { PairResult(PairState.PAIRED, null) }
     var unpairResult = true
     var quit: () -> Boolean = { true }
+
+    /** What the host answers for the art of an app; by default it has none (404). */
+    var boxArt: (Int) -> InputStream = { throw FileNotFoundException("404") }
+    val boxArtRequests = mutableListOf<Int>()
     val pins = mutableListOf<String>()
     var unpairs = 0
     var cancels = 0
@@ -227,6 +236,11 @@ internal class FakeHostClient(private val binder: FakeCmsBinder) : HostClient {
     }
 
     override fun quitApp(): Boolean = quit()
+
+    override fun boxArt(appId: Int): InputStream {
+        boxArtRequests += appId
+        return boxArt(appId)
+    }
 
     override fun cancelPendingRequests() {
         cancels++
@@ -273,4 +287,35 @@ internal class FakeTexts : HostTexts {
     override fun pairFailed() = "pair failed"
 
     override fun pairInGame() = "pair in game"
+}
+
+internal class FakeBoxArt : BoxArt {
+    /** The art of every app, by app id. */
+    val art = mutableMapOf<Int, Bitmap>()
+    val prefetched = mutableListOf<Pair<String, Int>>()
+
+    override suspend fun bitmap(hostId: String, appId: Int): Bitmap? = art[appId]
+
+    override fun prefetch(hostId: String, appId: Int): Job {
+        prefetched += hostId to appId
+        return CompletableDeferred(Unit)
+    }
+}
+
+internal class FakeHiddenAppShortcuts : HiddenAppShortcuts {
+    /** One entry per call, in order: "hidden host-1 7" or "shown host-1 7". */
+    val calls = mutableListOf<String>()
+
+    /** Thrown by every call after it is recorded, like a launcher that fails. */
+    var failure: RuntimeException? = null
+
+    override fun appHidden(hostId: String, appId: Int) {
+        calls += "hidden $hostId $appId"
+        failure?.let { throw it }
+    }
+
+    override fun appShown(hostId: String, appId: Int) {
+        calls += "shown $hostId $appId"
+        failure?.let { throw it }
+    }
 }

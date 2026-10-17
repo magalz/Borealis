@@ -1,50 +1,65 @@
 package io.github.magalz.borealis.settings
 
-import android.content.Context
-import android.content.SharedPreferences
-import android.preference.PreferenceManager
-import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.logging.AuditEvent
+import io.github.magalz.borealis.logging.AuditOutcome
+import io.github.magalz.borealis.logging.AuditSink
+import io.github.magalz.borealis.logging.AuditType
+import io.github.magalz.borealis.logging.BorealisAudit
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogLevel
 import io.github.magalz.borealis.logging.LogRecord
 import io.github.magalz.borealis.logging.LogSink
 import io.github.magalz.borealis.logging.LogTag
+import io.github.magalz.borealis.logging.Redactor
+import io.github.magalz.borealis.settings.catalog.BooleanSetting
+import io.github.magalz.borealis.settings.catalog.Settings
+import io.github.magalz.borealis.settings.repository.SettingsSnapshot
+import io.github.magalz.borealis.settings.testing.FakeSettingsRepository
 import java.util.concurrent.CopyOnWriteArrayList
 import org.junit.After
-import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
-@Suppress("DEPRECATION")
-@RunWith(RobolectricTestRunner::class)
+/** The logging switches of the repository are applied to the logging, now and on each change. */
 class LogSettingsTest {
-    private val context: Context = ApplicationProvider.getApplicationContext()
-    private val preferences: SharedPreferences =
-        PreferenceManager.getDefaultSharedPreferences(context)
     private val messages = CopyOnWriteArrayList<String>()
+    private val auditDetails = CopyOnWriteArrayList<String?>()
     private val sink =
         object : LogSink {
             override fun write(record: LogRecord) {
                 messages += record.message
             }
         }
-
-    @Before
-    fun setUp() {
-        preferences.edit().clear().commit()
-    }
+    private var logSettings: LogSettings? = null
 
     @After
     fun tearDown() {
+        logSettings?.stop()
         BorealisLog.shutdown()
+        BorealisAudit.uninstall()
     }
 
-    private fun startLogging(baseLevel: LogLevel) {
-        BorealisLog.initialize(listOf(sink), minLevel = baseLevel)
-        LogSettings.start(preferences, baseLevel)
+    private fun startLogging(
+        baseLevel: LogLevel,
+        repository: FakeSettingsRepository = FakeSettingsRepository(),
+    ): FakeSettingsRepository {
+        val redactor = Redactor()
+        BorealisLog.initialize(listOf(sink), minLevel = baseLevel, redactor = redactor)
+        BorealisAudit.install(
+            AuditSink { event: AuditEvent -> auditDetails += event.detail },
+            redactor,
+            "1.0",
+        )
+        logSettings = LogSettings.start(repository, baseLevel)
+        return repository
     }
+
+    private fun primed(vararg switches: Pair<BooleanSetting, Boolean>) =
+        FakeSettingsRepository(
+            switches.fold(SettingsSnapshot.DEFAULTS) { acc, (setting, value) ->
+                acc.with(setting, value)
+            }
+        )
 
     private fun logDebugAndAddress() {
         BorealisLog.d(LogTag.APP, "debug line")
@@ -62,8 +77,7 @@ class LogSettingsTest {
 
     @Test
     fun `a stored verbose switch lowers the level to debug at startup`() {
-        preferences.edit().putBoolean(SettingsKeys.VERBOSE_LOGGING, true).commit()
-        startLogging(LogLevel.INFO)
+        startLogging(LogLevel.INFO, primed(Settings.VERBOSE_LOGGING to true))
 
         logDebugAndAddress()
 
@@ -72,8 +86,7 @@ class LogSettingsTest {
 
     @Test
     fun `a stored masking switch masks addresses at startup`() {
-        preferences.edit().putBoolean(SettingsKeys.MASK_ADDRESSES, true).commit()
-        startLogging(LogLevel.INFO)
+        startLogging(LogLevel.INFO, primed(Settings.MASK_ADDRESSES to true))
 
         logDebugAndAddress()
 
@@ -82,48 +95,61 @@ class LogSettingsTest {
 
     @Test
     fun `the verbose switch takes effect while the app runs and can be turned off again`() {
-        startLogging(LogLevel.INFO)
+        val repository = startLogging(LogLevel.INFO)
 
-        preferences.edit().putBoolean(SettingsKeys.VERBOSE_LOGGING, true).commit()
+        repository.setNow(Settings.VERBOSE_LOGGING, true)
         BorealisLog.d(LogTag.APP, "while on")
-        preferences.edit().putBoolean(SettingsKeys.VERBOSE_LOGGING, false).commit()
+        repository.setNow(Settings.VERBOSE_LOGGING, false)
         BorealisLog.d(LogTag.APP, "while off")
 
         assertThat(messages).containsExactly("while on")
     }
 
     @Test
-    fun `the masking switch takes effect while the app runs and can be turned off again`() {
-        startLogging(LogLevel.INFO)
+    fun `the masking switch takes effect at once in the log and the audit trail, and can be turned off again`() {
+        val repository = startLogging(LogLevel.INFO)
 
-        preferences.edit().putBoolean(SettingsKeys.MASK_ADDRESSES, true).commit()
+        repository.setNow(Settings.MASK_ADDRESSES, true)
         BorealisLog.i(LogTag.APP, "on 10.0.0.5")
-        preferences.edit().putBoolean(SettingsKeys.MASK_ADDRESSES, false).commit()
+        BorealisAudit.record(AuditType.PAIRING_START, AuditOutcome.SUCCESS, detail = "on 10.0.0.5")
+        repository.setNow(Settings.MASK_ADDRESSES, false)
         BorealisLog.i(LogTag.APP, "off 10.0.0.5")
+        BorealisAudit.record(AuditType.PAIRING_START, AuditOutcome.SUCCESS, detail = "off 10.0.0.5")
 
         assertThat(messages).containsExactly("on [IP]", "off 10.0.0.5").inOrder()
+        assertThat(auditDetails).containsExactly("on [IP]", "off 10.0.0.5").inOrder()
     }
 
     @Test
     fun `a debug build keeps debug when the verbose switch is off`() {
-        startLogging(LogLevel.DEBUG)
+        val repository = startLogging(LogLevel.DEBUG)
 
         BorealisLog.d(LogTag.APP, "debug line")
-        preferences.edit().putBoolean(SettingsKeys.VERBOSE_LOGGING, true).commit()
-        preferences.edit().putBoolean(SettingsKeys.VERBOSE_LOGGING, false).commit()
+        repository.setNow(Settings.VERBOSE_LOGGING, true)
+        repository.setNow(Settings.VERBOSE_LOGGING, false)
         BorealisLog.d(LogTag.APP, "still debug")
 
         assertThat(messages).containsExactly("debug line", "still debug").inOrder()
     }
 
     @Test
-    fun `starting from a context reads the default preferences`() {
-        preferences.edit().putBoolean(SettingsKeys.VERBOSE_LOGGING, true).commit()
-        BorealisLog.initialize(listOf(sink), minLevel = LogLevel.INFO)
+    fun `a change of another setting leaves the logging as it is`() {
+        val repository = startLogging(LogLevel.INFO, primed(Settings.MASK_ADDRESSES to true))
 
-        LogSettings.start(context, LogLevel.INFO)
-        BorealisLog.d(LogTag.APP, "debug line")
+        repository.setNow(Settings.FRAME_RATE, "120")
+        logDebugAndAddress()
 
-        assertThat(messages).containsExactly("debug line")
+        assertThat(messages).containsExactly("to [IP]")
+    }
+
+    @Test
+    fun `after stop the switches are no longer followed`() {
+        val repository = startLogging(LogLevel.INFO)
+
+        logSettings?.stop()
+        repository.setNow(Settings.MASK_ADDRESSES, true)
+        BorealisLog.i(LogTag.APP, "to 10.0.0.5")
+
+        assertThat(messages).containsExactly("to 10.0.0.5")
     }
 }

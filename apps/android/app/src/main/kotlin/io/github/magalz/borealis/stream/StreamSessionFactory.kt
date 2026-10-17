@@ -6,6 +6,8 @@ import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.library.UNKNOWN_APP_NAME
 import io.github.magalz.borealis.nativecore.LaunchCategory
+import io.github.magalz.borealis.settings.catalog.Settings
+import io.github.magalz.borealis.settings.store.SettingsSnapshots
 import io.github.magalz.borealis.stream.host.StreamChromeHost
 
 /** Builds what `Game` gives the stream session from the stream preferences and the connection. */
@@ -14,6 +16,7 @@ object StreamSessionFactory {
     @JvmStatic
     fun defaults(
         prefs: PreferenceConfiguration,
+        perfOverlay: String,
         hasTouchscreen: Boolean,
         showMenuHint: Boolean,
     ): StreamDefaults =
@@ -54,6 +57,7 @@ object StreamSessionFactory {
             defaults =
                 defaults(
                     prefs,
+                    SettingsSnapshots.current(activity)[Settings.PERF_OVERLAY],
                     activity.packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN),
                     GameStreamActions.menuHintPending(activity),
                 ),

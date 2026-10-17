@@ -161,7 +161,10 @@ class DecodeTimeTracker {
     }
 }
 
-/** Writes what the decoder did in a window to the verbose log, for the device checks. */
+/**
+ * Writes what the decoder did in a window at DEBUG, which the verbose switch enables, for the
+ * device checks.
+ */
 object DecodeTimeLog {
     @JvmStatic
     fun window(codec: String?, counts: DecodeTimeCounts) {
@@ -182,6 +185,6 @@ object DecodeTimeLog {
         if (counts.firstOutputs.isNotEmpty()) {
             fields += "first_out" to counts.firstOutputs.joinToString(",")
         }
-        BorealisLog.v(LogTag.VIDEO, "Decoder window", *fields.toTypedArray())
+        BorealisLog.d(LogTag.VIDEO, "Decoder window", *fields.toTypedArray())
     }
 }

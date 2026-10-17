@@ -78,8 +78,7 @@ fun AddHostScreen(
             modifier
                 .fillMaxSize()
                 .background(colors.page)
-                .windowInsetsPadding(WindowInsets.safeDrawing),
-            contentAlignment = Alignment.TopCenter,
+                .windowInsetsPadding(WindowInsets.safeDrawing)
         ) {
             Column(
                 Modifier.widthIn(max = BorealisDimens.contentMaxWidth)

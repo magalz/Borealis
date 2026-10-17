@@ -61,6 +61,19 @@ class PairingScreenshotTest {
     fun pairingTvExpired() = shoot("pairing_tv_expired", FormFactor.Tv, PairingUiState.Expired)
 
     @Test
+    @Config(qualifiers = HANDHELD)
+    fun pairingHandheldWaiting() = shoot("pairing_handheld_waiting", FormFactor.Handheld, waiting())
+
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun pairingHandheldNewPin() =
+        shoot(
+            "pairing_handheld_new-pin",
+            FormFactor.Handheld,
+            waiting(pin = "2093", restarted = true),
+        )
+
+    @Test
     @Config(qualifiers = TV)
     fun pairingTvPaired() = shoot("pairing_tv_paired", FormFactor.Tv, PairingUiState.Paired)
 
@@ -91,5 +104,6 @@ class PairingScreenshotTest {
     private companion object {
         const val PHONE = "w360dp-h640dp-xhdpi"
         const val TV = "w960dp-h540dp-land-television-xhdpi"
+        const val HANDHELD = "w800dp-h480dp-land-hdpi"
     }
 }

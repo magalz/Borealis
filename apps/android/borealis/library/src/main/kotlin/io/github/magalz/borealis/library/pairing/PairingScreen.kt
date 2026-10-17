@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,11 +15,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,11 +32,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.AnimatedCheck
+import io.github.magalz.borealis.designsystem.components.AuroraLoader
 import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
@@ -55,6 +60,10 @@ private val STEP_NUMBER_SIZE = 24.dp
 private val NOTE_PADDING = 12.dp
 private val BUTTON_GAP = 12.dp
 private val CHECK_SIZE = 64.dp
+private val LOADER_SIZE = 64.dp
+
+/** The note about a restart wraps at this width, so it does not widen the PIN column. */
+private val NOTE_MAX_WIDTH = 280.dp
 
 /**
  * The pairing screen (UC-001). The PIN is entered on the host, in the LuminalShine Web UI, so the
@@ -135,10 +144,7 @@ private fun Content(
     when (state) {
         PairingUiState.Preparing -> {
             val description = stringResource(R.string.pairing_preparing)
-            CircularProgressIndicator(
-                Modifier.semantics { contentDescription = description },
-                color = LocalBorealisColors.current.accent,
-            )
+            AuroraLoader(Modifier.semantics { contentDescription = description }, LOADER_SIZE)
         }
         PairingUiState.HostUnknown ->
             Outcome(stringResource(R.string.pairing_host_unknown)) {
@@ -172,18 +178,23 @@ private fun Content(
 
 /**
  * The PIN with its note and validity, and the steps with Cancel. The PIN and the line under it are
- * centred: on the screen of a phone, where they sit above the steps, and in its half of a wide
- * screen, where the steps are beside them.
+ * centred: on the screen of a phone, where they sit above the steps, and in a column of their own
+ * width on a wide screen, where the steps take the rest beside them.
  */
 @Composable
 private fun Waiting(state: PairingUiState.Waiting, wide: Boolean, onCancel: () -> Unit) {
-    val pin: @Composable () -> Unit = {
+    val pin: @Composable (Modifier) -> Unit = { modifier ->
         Column(
-            Modifier.fillMaxWidth(),
+            modifier,
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(SECTION_GAP),
         ) {
-            if (state.restarted) Note(stringResource(R.string.pairing_restarted))
+            if (state.restarted) {
+                Note(
+                    stringResource(R.string.pairing_restarted),
+                    Modifier.widthIn(max = NOTE_MAX_WIDTH),
+                )
+            }
             PinDisplay(state.pin)
             Text(
                 stringResource(R.string.pairing_pin_valid),
@@ -203,7 +214,7 @@ private fun Waiting(state: PairingUiState.Waiting, wide: Boolean, onCancel: () -
     }
     if (wide) {
         Row(horizontalArrangement = Arrangement.spacedBy(WIDE_COLUMN_GAP)) {
-            Box(Modifier.weight(1f)) { pin() }
+            pin(Modifier.width(IntrinsicSize.Max))
             Column(
                 Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(SECTION_GAP),
@@ -212,7 +223,7 @@ private fun Waiting(state: PairingUiState.Waiting, wide: Boolean, onCancel: () -
         }
     } else {
         Column(verticalArrangement = Arrangement.spacedBy(SECTION_GAP)) {
-            pin()
+            pin(Modifier.fillMaxWidth())
             steps()
         }
     }
@@ -265,12 +276,13 @@ private fun Step(number: Int, text: String, address: String?) {
 }
 
 @Composable
-private fun Note(text: String) {
+private fun Note(text: String, modifier: Modifier = Modifier) {
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.medium
     Text(
         text,
-        Modifier.background(colors.accentTint, shape)
+        modifier
+            .background(colors.accentTint, shape)
             .border(1.dp, colors.accentLine, shape)
             .padding(NOTE_PADDING),
         style = MaterialTheme.typography.bodyMedium,
@@ -281,7 +293,7 @@ private fun Note(text: String) {
 @Composable
 private fun Paired(modifier: Modifier) {
     Column(
-        modifier.testTag("paired"),
+        modifier.testTag("paired").semantics { liveRegion = LiveRegionMode.Polite },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(SECTION_GAP),
     ) {

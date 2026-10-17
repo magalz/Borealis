@@ -15,7 +15,7 @@ abstract class AuditDao {
     @Query("SELECT * FROM audit_events ORDER BY id ASC") abstract fun all(): List<AuditEntity>
 
     /** Newest first; emits again after every change to the table. */
-    @Query("SELECT * FROM audit_events ORDER BY id ASC")
+    @Query("SELECT * FROM audit_events ORDER BY id DESC")
     abstract fun observeNewestFirst(): Flow<List<AuditEntity>>
 
     @Query("SELECT COUNT(*) FROM audit_events") abstract fun count(): Int

@@ -1,9 +1,14 @@
 package io.github.magalz.borealis.diagnostics.audit
 
+import io.github.magalz.borealis.logging.AuditEvent
 import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
+import io.github.magalz.borealis.logging.BorealisAudit
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogTag
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 
 /**
  * One entry of the audit trail as the viewer shows it. [type] is the event code. Only what the
@@ -27,12 +32,35 @@ interface AuditTrail {
     suspend fun erase(): Boolean
 }
 
-/** This entry with the host masked as the diagnostic export does it. */
-fun AuditEntry.masked(): AuditEntry = this
+/**
+ * This entry with the host and the detail redacted as the diagnostic export does it
+ * ([BorealisAudit.redactForExport]), so the address is masked when "Mask addresses in logs and
+ * diagnostics" is on. The viewer applies it; the setting is not read here.
+ */
+fun AuditEntry.masked(): AuditEntry {
+    val redacted =
+        BorealisAudit.redactForExport(
+            AuditEvent(timestampMillis, type, outcome, host, detail, appVersion = "")
+        )
+    return copy(host = redacted.host, detail = redacted.detail)
+}
 
 internal class RoomAuditTrail(private val dao: AuditDao, private val store: AuditStore) :
     AuditTrail {
-    override fun observe(): Flow<List<AuditEntry>> = flowOf(emptyList())
+    override fun observe(): Flow<List<AuditEntry>> =
+        dao.observeNewestFirst().map { rows -> rows.mapNotNull { it.toEvent()?.toEntry() } }
 
-    override suspend fun erase(): Boolean = false
+    @Suppress("TooGenericExceptionCaught")
+    override suspend fun erase(): Boolean =
+        try {
+            store.erase()
+            true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            BorealisLog.w(LogTag.APP, "audit erase failed", "error" to e.javaClass.simpleName)
+            false
+        }
+
+    private fun AuditEvent.toEntry() = AuditEntry(timestampMillis, type, outcome, host, detail)
 }

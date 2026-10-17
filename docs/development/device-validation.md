@@ -678,8 +678,8 @@ For a system pad, turn it off. Say which kind each run used.
 4. The decode time.
    - On the Google TV Streamer (MediaTek decoder) and on the S22: turn the
      Performance overlay on, in Settings or in the menu, and start a stream.
-     Expected: the decode time shows a number, not "—". Record the number.
-     `TODO(verify)`: the unit that the overlay shows.
+     Expected: the decode time shows a number in milliseconds with one
+     decimal ("Decode 0.4 ms"), not "—". Record the number.
    - Verbose logging: in Settings, Privacy and diagnostics, turn Verbose logging
      on. Start the logcat capture of 1.4 and run a stream for about 10 seconds.
      Expected: a `Decoder window` line at DEBUG, about once a second, with the
@@ -706,9 +706,8 @@ For a system pad, turn it off. Say which kind each run used.
      product IDs that they show. The receiver changes its identity by itself
      (idle `2dc8:6013`, active `2dc8:310b` XInput), and each change is a new
      attachment. Note whether Android's "open with Borealis" dialog appears.
-     `TODO(verify)`: the brief names the logcat tag `UsbHostManager` for these
-     lines, but no class of that name exists at `1d500bdb`. Find the real tag in
-     the capture before you write it down.
+     Android's system server logs these lines with the tag `UsbHostManager`
+     ("USB device attached", "Removed device at"); it is not a Borealis class.
    - Decline the dialog, then start a stream. Expected: the stream start asks for
      USB permission again.
    - End the stream. Expected: no attach or remove line appears at the end of the

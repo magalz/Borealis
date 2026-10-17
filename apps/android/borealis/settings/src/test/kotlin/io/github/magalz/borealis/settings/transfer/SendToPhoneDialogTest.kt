@@ -16,6 +16,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -23,6 +24,8 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.diagnostics.transfer.TransferState
+import io.github.magalz.borealis.settings.testing.assertDialogWidth
+import io.github.magalz.borealis.settings.testing.dialogFrame
 import io.github.magalz.borealis.settings.transfer.FakeTransferController.Companion.FILE_NAME
 import io.github.magalz.borealis.settings.transfer.FakeTransferController.Companion.LINK
 import java.io.File
@@ -48,6 +51,36 @@ class SendToPhoneDialogTest {
             }
         }
         composeRule.waitForIdle()
+    }
+
+    @Test
+    fun `the dialog is a wide one, 720dp`() {
+        open(FakeTransferController())
+
+        composeRule.assertDialogWidth("Send to phone", 720f)
+    }
+
+    @Test
+    fun `Try again is on the left of Close, in the foot of the dialog`() {
+        open(FakeTransferController(TransferState.Expired))
+
+        val tryAgain = composeRule.onNodeWithText("Try again").getUnclippedBoundsInRoot()
+        val close = composeRule.onNodeWithText("Close").getUnclippedBoundsInRoot()
+        val frame = composeRule.dialogFrame("Send to phone").getUnclippedBoundsInRoot()
+        assertThat(tryAgain.right).isAtMost(close.left)
+        assertThat(frame.right - close.right).isEqualTo(24.dp)
+        assertThat(frame.bottom - close.bottom).isEqualTo(24.dp)
+    }
+
+    @Test
+    fun `the QR code and the link are shown above the foot while waiting`() {
+        open(FakeTransferController(FakeTransferController.waiting()))
+
+        val qr = composeRule.onNodeWithTag(QR_TAG).getUnclippedBoundsInRoot()
+        val link = composeRule.onNodeWithText(LINK).getUnclippedBoundsInRoot()
+        val close = composeRule.onNodeWithText("Close").getUnclippedBoundsInRoot()
+        assertThat(qr.bottom).isAtMost(close.top)
+        assertThat(link.bottom).isAtMost(close.top)
     }
 
     @Test

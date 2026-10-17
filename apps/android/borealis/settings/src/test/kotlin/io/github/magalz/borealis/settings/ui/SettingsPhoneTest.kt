@@ -11,6 +11,7 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
@@ -639,5 +640,25 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
         composeRule.waitForIdle()
 
         assertThat(backs).isEqualTo(1)
+    }
+
+    @Test
+    fun `the arrow beside the title leaves the screen, as Privacy has`() {
+        show()
+
+        composeRule.onNodeWithContentDescription("Back").performClick()
+        composeRule.waitForIdle()
+
+        assertThat(backs).isEqualTo(1)
+    }
+
+    @Test
+    fun `the arrow is before the title`() {
+        show()
+
+        val arrow = composeRule.onNodeWithContentDescription("Back").getUnclippedBoundsInRoot()
+        val title = composeRule.onNodeWithText("Settings").getUnclippedBoundsInRoot()
+
+        assertThat(arrow.right).isAtMost(title.left)
     }
 }

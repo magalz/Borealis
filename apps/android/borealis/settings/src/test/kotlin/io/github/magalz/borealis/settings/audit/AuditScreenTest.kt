@@ -9,6 +9,7 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -301,6 +302,26 @@ class AuditScreenTest {
 
         assertThat(dismissed).isEqualTo(1)
         assertThat(backs).isEqualTo(0)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV the list is no wider than 560dp`() {
+        show(state(sessionEnd, sessionStart), FormFactor.Tv)
+
+        val bounds = composeRule.onNode(hasScrollAction()).getUnclippedBoundsInRoot()
+
+        assertThat((bounds.right - bounds.left).value).isAtMost(560f)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV an opened entry is no wider than 560dp`() {
+        show(state(sessionEnd, detail = pairingFailure), FormFactor.Tv)
+
+        val bounds = composeRule.onNode(hasScrollAction()).getUnclippedBoundsInRoot()
+
+        assertThat((bounds.right - bounds.left).value).isAtMost(560f)
     }
 
     @Test

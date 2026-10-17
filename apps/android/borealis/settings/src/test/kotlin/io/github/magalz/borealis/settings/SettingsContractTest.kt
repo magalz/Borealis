@@ -4,6 +4,8 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.settings.catalog.SettingStore
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.options.DisabledReason
+import io.github.magalz.borealis.settings.options.ResolutionChoice
+import io.github.magalz.borealis.settings.options.ResolutionKind
 import io.github.magalz.borealis.settings.options.RowState
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot
 import io.github.magalz.borealis.settings.testing.FakeDeviceFactsSource
@@ -274,6 +276,18 @@ class SettingsContractTest {
 
         assertThat(options.onScreenControlsGroupState(facts)).isEqualTo(RowState.Hidden)
         assertThat(options.resetLayoutState(facts)).isEqualTo(RowState.Hidden)
+    }
+
+    @Test
+    fun `only a standard resolution choice is not native`() {
+        val standard = ResolutionChoice("1920x1080", 1920, 1080, ResolutionKind.STANDARD)
+        val native = ResolutionChoice("2400x1080", 2400, 1080, ResolutionKind.NATIVE)
+        val fullscreen = ResolutionChoice("2520x1080", 2520, 1080, ResolutionKind.NATIVE_FULLSCREEN)
+
+        assertThat(standard.isNative).isFalse()
+        assertThat(native.isNative).isTrue()
+        assertThat(fullscreen.isNative).isTrue()
+        assertThat(standard.orientation).isNull()
     }
 
     private companion object {

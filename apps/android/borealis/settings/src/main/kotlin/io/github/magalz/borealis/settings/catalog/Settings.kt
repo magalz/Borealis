@@ -147,8 +147,9 @@ object Settings {
     val FULL_RANGE = BooleanSetting("checkbox_full_range", default = false)
 
     /**
-     * The old performance overlay switch. It is still the key that `PreferenceConfiguration` reads.
-     * The Phase 2 screen uses [PERF_OVERLAY]; a stored `true` here means Detailed.
+     * The old performance overlay switch, still read by `PreferenceConfiguration` (and so by the
+     * parity test). The Phase 2 screen and `StreamSessionFactory` use [PERF_OVERLAY]; a stored
+     * `true` here is migrated once to Detailed and the switch is never written again.
      */
     val PERF_OVERLAY_LEGACY = BooleanSetting("checkbox_enable_perf_overlay", default = false)
 
@@ -159,7 +160,9 @@ object Settings {
 
     /**
      * The performance overlay: [PERF_OVERLAY_OFF], [PERF_OVERLAY_COMPACT] or
-     * [PERF_OVERLAY_DETAILED].
+     * [PERF_OVERLAY_DETAILED]. This is the key that `StreamSessionFactory` reads. The legacy switch
+     * [PERF_OVERLAY_LEGACY] is only migrated once, by the storage task (`true` becomes Detailed),
+     * and is never written again.
      */
     val PERF_OVERLAY = StringSetting("borealis_perf_overlay", default = "off")
 

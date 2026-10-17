@@ -8,9 +8,10 @@ import io.github.magalz.borealis.settings.catalog.Settings
  * An immutable, typed view of every setting at one moment. A read is synchronous and never fails: a
  * key that is absent from the store gives the [Setting.default] of its setting.
  *
- * A snapshot does not tell a stored default from an absent key, and two snapshots are equal when
- * they give the same value for every setting. The bitrate is the one setting with no default:
- * [Settings.BITRATE_KBPS] reads as `null` while it is automatic.
+ * Two snapshots are equal when they give the same value for every setting, so for equality a value
+ * equal to its default is the same as an absent key. That rule belongs to the snapshot only: the
+ * store keeps whatever [SettingsRepository.set] wrote. The bitrate is the one setting with no
+ * default: [Settings.BITRATE_KBPS] reads as `null` while it is automatic.
  */
 class SettingsSnapshot private constructor(private val values: Map<String, Any>) {
     /** The value of [setting], or its default when the key is absent. */
@@ -32,18 +33,29 @@ class SettingsSnapshot private constructor(private val values: Map<String, Any>)
     fun without(vararg settings: Setting<*>): SettingsSnapshot =
         SettingsSnapshot(values - settings.map { it.key }.toSet())
 
-    /** Whether the bitrate is automatic: no bitrate is stored. */
+    /**
+     * Whether the bitrate is automatic: no bitrate is stored, or the stored one is 0 (the inherited
+     * code treats 0 as unset).
+     */
     val isBitrateAutomatic: Boolean
-        get() = this[Settings.BITRATE_KBPS] == null
+        get() = (this[Settings.BITRATE_KBPS] ?: 0) == 0
 
     /**
      * The bitrate that a stream would use, in kbps: the stored one, or the automatic bitrate
-     * computed from the resolution and the frame rate. Throws [NumberFormatException] when the
-     * stored resolution or frame rate is not a number, as the inherited code does.
+     * computed from the resolution and the frame rate when it is [isBitrateAutomatic]. Throws
+     * [NumberFormatException] when the stored resolution or frame rate is not a number, as the
+     * inherited code does.
+     *
+     * The legacy `seekbar_bitrate` key (in Mbps, so a value times 1000) that the inherited code
+     * still migrates is not read here. Moving it to [Settings.BITRATE_KBPS] is a migration of the
+     * storage backing.
      */
     fun effectiveBitrateKbps(): Int =
-        this[Settings.BITRATE_KBPS]
-            ?: DefaultBitrate.kbps(this[Settings.RESOLUTION], this[Settings.FRAME_RATE])
+        if (isBitrateAutomatic) {
+            DefaultBitrate.kbps(this[Settings.RESOLUTION], this[Settings.FRAME_RATE])
+        } else {
+            checkNotNull(this[Settings.BITRATE_KBPS])
+        }
 
     override fun equals(other: Any?): Boolean = other is SettingsSnapshot && values == other.values
 

@@ -45,23 +45,60 @@ interface SettingsOptions {
 }
 
 /**
- * One entry of the Resolution list.
+ * One entry of the Resolution list. The screen labels it from [kind] and [orientation] and its
+ * size, as the inherited screen did: for example "Native fullscreen portrait (1080x2400)".
  *
  * @property key the stored value, `WxH`, for example `2400x1080`.
  * @property width the width in pixels. It is smaller than [height] only for the portrait entry of a
  *   screen that is nearly square.
  * @property height the height in pixels.
- * @property isNative whether this is a native resolution of the display; choosing it shows the
- *   warning that the PC must support it.
- * @property isCutoutSafe whether this native entry is the display size without its cutout.
+ * @property kind what kind of entry this is.
+ * @property orientation [EntryOrientation.PORTRAIT] or [EntryOrientation.LANDSCAPE] for a native
+ *   entry of a screen that is nearly square (the long side is less than 1.3 times the short side,
+ *   `PreferenceConfiguration.isSquarishScreen`), where both orientations are offered; `null` for
+ *   every other entry.
  */
 data class ResolutionChoice(
     val key: String,
     val width: Int,
     val height: Int,
-    val isNative: Boolean,
-    val isCutoutSafe: Boolean,
-)
+    val kind: ResolutionKind,
+    val orientation: EntryOrientation? = null,
+) {
+    /**
+     * Whether this is a native resolution; choosing it shows the warning that the PC must support
+     * it.
+     */
+    val isNative: Boolean
+        get() = kind != ResolutionKind.STANDARD
+}
+
+/** The kind of a [ResolutionChoice]. */
+enum class ResolutionKind {
+    /** One of the standard sizes, 360p to 4K. */
+    STANDARD,
+
+    /**
+     * A native size of the display, labelled "Native". When the display has a cutout this is the
+     * size without the cutout insets, and a [NATIVE_FULLSCREEN] entry exists next to it.
+     */
+    NATIVE,
+
+    /**
+     * A native size of the display with the cutout included, labelled "Native fullscreen". It is
+     * only offered when a cutout entry ([NATIVE]) also exists.
+     */
+    NATIVE_FULLSCREEN,
+}
+
+/** The orientation of a native [ResolutionChoice] on a screen that is nearly square. */
+enum class EntryOrientation {
+    /** The height is the long side. */
+    PORTRAIT,
+
+    /** The width is the long side. */
+    LANDSCAPE,
+}
 
 /**
  * One entry of the Frame rate list.

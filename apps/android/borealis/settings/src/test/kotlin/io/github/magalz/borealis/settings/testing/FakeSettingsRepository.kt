@@ -13,8 +13,10 @@ import kotlinx.coroutines.flow.update
 
 /**
  * A [SettingsRepository] that keeps the snapshot in memory. [set], [setNow] and [clear] update
- * [snapshot] at once, with the same rules as [SettingsSnapshot.with]: a value equal to the default
- * reads as absent. Nothing is stored anywhere, and no write fails.
+ * [snapshot] at once. Nothing is stored anywhere, and no write fails or rolls back.
+ *
+ * The snapshot compares a value equal to the default as an absent key, which is only how snapshots
+ * are equal. A real store keeps the key that [set] wrote, and [writes] still records that write.
  *
  * Like the real repository it does not clear the bitrate when the resolution changes.
  */

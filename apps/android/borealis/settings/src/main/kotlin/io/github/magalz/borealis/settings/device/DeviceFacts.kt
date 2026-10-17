@@ -9,7 +9,14 @@ data class DisplayMode(val width: Int, val height: Int, val refreshRate: Float)
 /** A size in pixels. */
 data class PixelSize(val width: Int, val height: Int)
 
-/** What one decoder reports that it can decode: the largest supported width and height. */
+/**
+ * What one decoder reports that it can decode: the largest supported width and height.
+ *
+ * This approximates the inherited check, which asks whether the supported width range contains
+ * 1280, 1920 or 3840 (the lower bound at or below the width, and the upper bound at or above it).
+ * Only the upper bound is kept here, so a decoder whose lower bound is above 1280 is treated as if
+ * it supported 1280.
+ */
 data class DecoderLimits(val maxWidth: Int, val maxHeight: Int)
 
 /**

@@ -4,6 +4,7 @@ import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.device.DeviceFacts
 import io.github.magalz.borealis.settings.options.FrameRateChoice
 import io.github.magalz.borealis.settings.options.ResolutionChoice
+import io.github.magalz.borealis.settings.options.ResolutionKind
 import io.github.magalz.borealis.settings.options.RowState
 import io.github.magalz.borealis.settings.options.SettingsOptions
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot
@@ -18,7 +19,7 @@ import io.github.magalz.borealis.settings.repository.SettingsSnapshot
  */
 class FakeSettingsOptions : SettingsOptions {
     var resolutions: List<ResolutionChoice> =
-        listOf(ResolutionChoice("1280x720", 1280, 720, isNative = false, isCutoutSafe = false))
+        listOf(ResolutionChoice("1280x720", 1280, 720, ResolutionKind.STANDARD))
     var frameRates: List<FrameRateChoice> =
         listOf(FrameRateChoice(30, isNative = false), FrameRateChoice(60, isNative = false))
     var unlockedFrameRates: List<FrameRateChoice> =

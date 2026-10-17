@@ -4,6 +4,7 @@
     <!-- The file name, then its size. -->
     <string name="borealis_send_to_phone_file">%1$s · %2$s</string>
     <string name="borealis_send_to_phone_starting">Starting the link…</string>
+    <string name="borealis_send_to_phone_stopped">The link is closed.</string>
     <string name="borealis_send_to_phone_instructions">Scan with your phone’s camera. Both devices must be on the same network. The link works for one download.</string>
     <!-- %1$s is the time left, as minutes and seconds. -->
     <string name="borealis_send_to_phone_waiting">Waiting for the phone · %1$s left</string>

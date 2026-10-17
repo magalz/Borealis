@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -117,13 +118,17 @@ fun SendToPhoneDialog(
                 stringResource(R.string.borealis_send_to_phone_title),
                 style = MaterialTheme.typography.titleLarge,
             )
-            TransferContent(
-                state = if (started) current else TransferState.Idle,
-                adbPullCommand = adbPullCommand,
-                qrSide = qrSide,
-                onClose = close,
-                onTryAgain = { transfer.start(bundle) },
-            )
+            val state = if (started) current else TransferState.Idle
+            // A new kind of state brings a new set of actions, and Close takes the focus again.
+            key(state::class) {
+                TransferContent(
+                    state = state,
+                    adbPullCommand = adbPullCommand,
+                    qrSide = qrSide,
+                    onClose = close,
+                    onTryAgain = { transfer.start(bundle) },
+                )
+            }
         }
     }
 }
@@ -162,9 +167,10 @@ private fun TransferContent(
                 onClose,
                 textColor = colors.dangerInk,
             )
-        TransferState.Idle,
-        TransferState.Stopped ->
+        TransferState.Idle ->
             Outcome(stringResource(R.string.borealis_send_to_phone_starting), onClose)
+        TransferState.Stopped ->
+            Outcome(stringResource(R.string.borealis_send_to_phone_stopped), onClose)
     }
 }
 
@@ -260,14 +266,17 @@ private fun Actions(onClose: () -> Unit, onTryAgain: (() -> Unit)?) {
 private fun QrCode(qr: QrMatrix, side: Dp, description: String) {
     Canvas(Modifier.size(side).testTag(QR_TAG).semantics { contentDescription = description }) {
         drawRect(Color.White)
-        val module = floor(size.width / qr.size)
-        val origin = floor((size.width - module * qr.size) / 2)
+        // The shorter side, so the code stays square and centred if the box is ever narrower.
+        val extent = minOf(size.width, size.height)
+        val module = floor(extent / qr.size)
+        val originX = floor((size.width - module * qr.size) / 2)
+        val originY = floor((size.height - module * qr.size) / 2)
         for (y in 0 until qr.size) {
             for (x in 0 until qr.size) {
                 if (qr[x, y]) {
                     drawRect(
                         Color.Black,
-                        Offset(origin + x * module, origin + y * module),
+                        Offset(originX + x * module, originY + y * module),
                         Size(module, module),
                     )
                 }

@@ -19,7 +19,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.kotlinx.coroutines.android)
+    // The repository contract exposes Flow and StateFlow.
+    api(libs.kotlinx.coroutines.android)
     testImplementation(libs.hilt.android.testing)
+    testImplementation(libs.kotlinx.coroutines.test)
     add("kspTest", libs.hilt.compiler)
 }

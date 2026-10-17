@@ -6,15 +6,12 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -56,7 +53,6 @@ class AddHostScreenTest {
     @get:Rule val composeRule = createComposeRule()
 
     private val changes = mutableListOf<String>()
-    private val keyboard = RecordingKeyboard()
     private var submitted = 0
     private var cancelled = 0
 
@@ -314,7 +310,7 @@ class AddHostScreenTest {
 
         composeRule.onNode(hasSetTextAction()).performKeyInput { pressKey(Key.DirectionCenter) }
 
-        assertThat(keyboard.shown).isEqualTo(1)
+        assertThat(keyboardIsShown()).isTrue()
     }
 
     @Test
@@ -335,21 +331,7 @@ class AddHostScreenTest {
         composeRule.onNode(hasSetTextAction()).performKeyInput { pressKey(Key.Enter) }
 
         assertThat(submitted).isEqualTo(1)
-        assertThat(keyboard.shown).isEqualTo(0)
-    }
-
-    /**
-     * Counts what the field asks of the keyboard. Robolectric's input method manager sees the
-     * keyboard that opens on focus but not the one that [SoftwareKeyboardController] opens.
-     */
-    private class RecordingKeyboard : SoftwareKeyboardController {
-        var shown = 0
-
-        override fun show() {
-            shown++
-        }
-
-        override fun hide() = Unit
+        assertThat(keyboardIsShown()).isFalse()
     }
 
     private fun keyboardIsShown(): Boolean {
@@ -364,17 +346,15 @@ class AddHostScreenTest {
     private fun showStateful(initial: String) {
         composeRule.setContentInKeyboardMode {
             var address by remember { mutableStateOf(initial) }
-            CompositionLocalProvider(LocalSoftwareKeyboardController provides keyboard) {
-                Row {
-                    Box(Modifier.size(40.dp).testTag(NEIGHBOUR).focusable())
-                    AddHostScreen(
-                        state = AddHostUiState(address = address),
-                        formFactor = FormFactor.Tv,
-                        onAddressChanged = { address = it },
-                        onSubmit = { submitted++ },
-                        onCancel = { cancelled++ },
-                    )
-                }
+            Row {
+                Box(Modifier.size(40.dp).testTag(NEIGHBOUR).focusable())
+                AddHostScreen(
+                    state = AddHostUiState(address = address),
+                    formFactor = FormFactor.Tv,
+                    onAddressChanged = { address = it },
+                    onSubmit = { submitted++ },
+                    onCancel = { cancelled++ },
+                )
             }
         }
     }

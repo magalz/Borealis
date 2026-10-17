@@ -710,7 +710,8 @@ For a system pad, turn it off. Say which kind each run used.
      from the hold, the long press, X or Menu. On the TV and a handheld, the cards
      have equal height (176 dp, `size.host-card.height-tv` in
      `design/tokens.json`), so a row lines
-     up. On the S22, the cards size to their content.
+     up. On the S22 without a pad, the cards size to their content. With a pad
+     connected in landscape, the S22 is a handheld (step 7).
    - Aurora loader: open Hosts, Apps and Pairing while each one loads. Expected:
      the same aurora loader on all three.
    - Pairing check: on Pairing, the PIN is centred with its line below it. When
@@ -753,8 +754,8 @@ For a system pad, turn it off. Say which kind each run used.
 7. The handheld with a Bluetooth pad, on the S22 in landscape. A window 600 dp
    or wider is a handheld while a game controller is connected. Use a pad that
    has a hat D-pad, such as the 8BitDo Pro 3 or the 8BitDo Ultimate 2, paired
-   over Bluetooth. It is a system pad, so turn USB driver for Xbox controllers
-   off.
+   over Bluetooth. A Bluetooth pad is always a system pad: the USB driver
+   setting does not apply to it.
    - Layout: with the pad off, open the Library. Switch the pad on. Expected:
      the Library switches to the handheld layout, with a rail of Hosts, Add
      host and Settings, and host cards of equal height. Switch the pad off.
@@ -1419,8 +1420,8 @@ the decode-time FIFO (S6-T7).
 
 This section holds the Sprint 7 results: the setup, the USB spike, the decode
 check made in the middle of the sprint, the final round, and the Bluetooth pad
-round with the handheld fix. The checks follow
-the steps of [section 3.20](#320-sprint-7-checks).
+round with the handheld fix. The checks follow the steps of
+[section 3.20](#320-sprint-7-checks).
 
 ### Setup
 

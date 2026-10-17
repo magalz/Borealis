@@ -86,8 +86,9 @@ The work for this sprint is on the phase branch `phase/s7-followups-polish`.
    round. A window 600 dp or wider is a handheld while a game controller is
    connected, and the layout goes back to the phone layout when it disconnects.
    The docked keyboard follows the same rule at the stream start. A pad claimed
-   by the app's USB driver is no Android input device while claimed. Checked on
-   the S22 in landscape with two 8BitDo pads over Bluetooth. See the
+   by the app's USB driver is no Android input device while claimed. Both 8BitDo
+   pads were probed over Bluetooth before the fix. The fix was checked on the S22
+   in landscape with the Pro 3 over Bluetooth. See the
    [device validation runbook, section 12](development/device-validation.md#bluetooth-pad-round-and-handheld-fix-2026-10-17).
 
 ### Sprint 8: tidy-up

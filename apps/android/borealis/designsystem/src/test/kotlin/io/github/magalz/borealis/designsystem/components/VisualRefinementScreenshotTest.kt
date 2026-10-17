@@ -51,18 +51,10 @@ class VisualRefinementScreenshotTest {
     @Config(qualifiers = TV)
     fun dialogTvWide() = dialog(FormFactor.Tv, DialogWidth.Wide, "dialog_tv_wide")
 
+    // On a phone every width is the window less 16dp on each side, so one reference covers all.
     @Test
     @Config(qualifiers = PHONE)
-    fun dialogPhoneCompact() = dialog(FormFactor.Phone, DialogWidth.Compact, "dialog_phone_compact")
-
-    @Test
-    @Config(qualifiers = PHONE)
-    fun dialogPhoneStandard() =
-        dialog(FormFactor.Phone, DialogWidth.Standard, "dialog_phone_standard")
-
-    @Test
-    @Config(qualifiers = PHONE)
-    fun dialogPhoneWide() = dialog(FormFactor.Phone, DialogWidth.Wide, "dialog_phone_wide")
+    fun dialogPhone() = dialog(FormFactor.Phone, DialogWidth.Wide, "dialog_phone")
 
     @Test
     @Config(qualifiers = PHONE)

@@ -49,12 +49,30 @@ class HostCardSizeTest {
     }
 
     @Test
-    fun `on a phone every variant is as high as the token`() {
+    fun `on a phone every card is as high as its content`() {
         showAll(FormFactor.Phone, 328.dp)
 
-        Variant.entries.forEach {
-            assertThat(height(it)).isEqualTo(BorealisTokens.Size.HostCard.HeightPhone)
-        }
+        val online = height(Variant.Online)
+        val offline = height(Variant.Offline)
+        val bare = height(Variant.Bare)
+        // The fullest card is the tallest, and a card with less content is shorter, as it was
+        // before the height token.
+        assertThat(offline).isLessThan(online)
+        assertThat(bare).isLessThan(offline)
+        assertThat(online).isLessThan(BorealisTokens.Size.HostCard.HeightTv)
+    }
+
+    @Test
+    fun `on a TV the text of a card with less content stays at the top`() {
+        showAll(FormFactor.Tv, 260.dp)
+
+        val card = composeRule.onNodeWithTag(Variant.Offline.name).getUnclippedBoundsInRoot()
+        val name =
+            composeRule
+                .onNodeWithText("Living Room PC", useUnmergedTree = true)
+                .getUnclippedBoundsInRoot()
+
+        assertThat(name.top - card.top).isEqualTo(18.dp)
     }
 
     @Test
@@ -134,9 +152,9 @@ class HostCardSizeTest {
                     modifier = Modifier.testTag(Variant.Unpaired.name),
                 )
                 HostCard(
-                    name = "Studio",
+                    name = "Spare",
                     status = DotStatus.Offline,
-                    statusText = "Offline",
+                    statusText = "Unknown",
                     onClick = {},
                     modifier = Modifier.testTag(Variant.Bare.name),
                 )

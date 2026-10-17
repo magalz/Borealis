@@ -6,15 +6,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.test.espresso.Espresso
@@ -177,6 +181,31 @@ class BorealisDialogTest {
 
         assertThat(dismissRequested).isEqualTo(1)
         assertThat(confirmed).isEqualTo(0)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `a tap on the scrim asks to dismiss`() {
+        composeRule.setContent { Specimen(FormFactor.Tv) }
+        composeRule.waitForIdle()
+
+        // The dialog window is the second root; its corner is the scrim, outside the dialog.
+        composeRule.onAllNodes(isRoot())[1].performTouchInput { click(Offset(10f, 10f)) }
+        composeRule.waitForIdle()
+
+        assertThat(dismissRequested).isEqualTo(1)
+        assertThat(confirmed).isEqualTo(0)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `a tap on the dialog itself does not dismiss`() {
+        composeRule.setContent { Specimen(FormFactor.Tv) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Its pairing is removed.").performClick()
+
+        assertThat(dismissRequested).isEqualTo(0)
     }
 
     @Test

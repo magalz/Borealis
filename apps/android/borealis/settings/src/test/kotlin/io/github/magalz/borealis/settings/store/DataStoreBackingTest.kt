@@ -9,16 +9,24 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogLevel
+import io.github.magalz.borealis.logging.LogRecord
+import io.github.magalz.borealis.logging.LogSink
 import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.testing.eventually
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertThrows
@@ -167,5 +175,52 @@ class DataStoreBackingTest {
         assertThrows(IOException::class.java) {
             runBlocking { DataStoreBacking(refusing, scope).write(Settings.VERBOSE_LOGGING, true) }
         }
+    }
+
+    @Test
+    fun `a corrupt file is replaced by an empty one and logged by class only`() =
+        runBlocking<Unit> {
+            val logged = CopyOnWriteArrayList<LogRecord>()
+            BorealisLog.initialize(
+                listOf(
+                    object : LogSink {
+                        override fun write(record: LogRecord) {
+                            logged += record
+                        }
+                    }
+                ),
+                minLevel = LogLevel.DEBUG,
+            )
+            file.parentFile!!.mkdirs()
+            file.writeBytes(byteArrayOf(0x0A, 0x7F, 0x01))
+
+            val read = backing().read()
+
+            BorealisLog.shutdown()
+            assertThat(read.values.filterNotNull()).isEmpty()
+            val record = logged.single { it.level == LogLevel.WARN }
+            assertThat(record.message).contains("replaced")
+            assertThat(record.fields.map { it.first }).contains("error")
+        }
+
+    @Test
+    fun `observing survives a read error and goes on with the next read`() {
+        val scope = newScope()
+        val real = DataStoreBacking.create(preferences, scope, file)
+        var failures = 1
+        val flaky =
+            object : DataStore<Preferences> by real {
+                override val data: Flow<Preferences> = flow {
+                    if (failures-- > 0) throw IOException("transient")
+                    emitAll(real.data)
+                }
+            }
+        val reported = CopyOnWriteArrayList<Map<Setting<*>, Any?>>()
+
+        DataStoreBacking(flaky, scope, retryDelayMillis = 10).observe { reported += it }
+
+        eventually { reported.isNotEmpty() }
+        runBlocking { real.edit { it[booleanPreferencesKey(Settings.MASK_ADDRESSES.key)] = true } }
+        eventually { reported.any { it[Settings.MASK_ADDRESSES] == true } }
     }
 }

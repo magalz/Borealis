@@ -306,4 +306,53 @@ class StoreSettingsRepositoryTest {
         eventually { repository.snapshot.value[Settings.FRAME_RATE] == "60" && inHook.size == 2 }
         assertThat(inHook).containsExactly("30", "60").inOrder()
     }
+
+    @Test
+    fun `an outside write that lands right after our commit is not masked by our value`() =
+        runBlocking<Unit> {
+            prefs.onWritten = { prefs.changeElsewhere(Settings.FRAME_RATE, "120") }
+
+            repository.set(Settings.FRAME_RATE, "90")
+
+            assertThat(repository.snapshot.value[Settings.FRAME_RATE]).isEqualTo("120")
+        }
+
+    @Test
+    fun `an outside write that lands right after a setNow commit wins as well`() {
+        prefs.onWritten = { prefs.changeElsewhere(Settings.FRAME_RATE, "120") }
+
+        repository.setNow(Settings.FRAME_RATE, "90")
+
+        eventually { repository.snapshot.value[Settings.FRAME_RATE] == "120" }
+    }
+
+    @Test
+    fun `a stale emission of the DataStore cannot flip a switch while a write of it is in flight`() {
+        val gate = CompletableDeferred<Unit>()
+        dataStore.gate = gate
+        val published = CopyOnWriteArrayList<Boolean>()
+        repository.beforePublish = { published += it[Settings.MASK_ADDRESSES] }
+
+        repository.setNow(Settings.MASK_ADDRESSES, true)
+        dataStore.changeElsewhere(Settings.MASK_ADDRESSES, null)
+        dataStore.changeElsewhere(Settings.MASK_ADDRESSES, false)
+
+        assertThat(repository.snapshot.value[Settings.MASK_ADDRESSES]).isTrue()
+        gate.complete(Unit)
+        eventually { dataStore.writes.isNotEmpty() }
+        eventually { repository.snapshot.value[Settings.MASK_ADDRESSES] }
+        assertThat(published).containsExactly(true)
+    }
+
+    @Test
+    fun `a store that cannot be read at start counts as empty and is logged by class only`() {
+        prefs.failReads = true
+
+        val primed = StoreSettingsRepository.create(prefs, dataStore, scope)
+
+        assertThat(primed.snapshot.value).isEqualTo(SettingsSnapshot.DEFAULTS)
+        val record = logged.single { it.level == LogLevel.WARN }
+        assertThat(record.fields).contains("error" to "IOException")
+        assertThat(record.message + record.fields).doesNotContain("read-detail")
+    }
 }

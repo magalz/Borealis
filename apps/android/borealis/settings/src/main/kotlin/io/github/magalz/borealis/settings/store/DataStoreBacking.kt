@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 internal class DataStoreBacking(
     private val dataStore: DataStore<Preferences>,
     private val scope: CoroutineScope,
+    private val retryDelayMillis: Long = 1_000L,
 ) : SettingsBacking {
     override val store = SettingStore.DATASTORE
 

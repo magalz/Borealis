@@ -19,10 +19,17 @@ internal class FakeBacking(override val store: SettingStore = SettingStore.PREFS
     val writes = CopyOnWriteArrayList<Pair<Setting<*>, Any?>>()
 
     @Volatile var failWrites = false
+    @Volatile var failReads = false
     @Volatile var gate: CompletableDeferred<Unit>? = null
+
+    /** Runs right after a write has landed in [stored], as a write from outside could. */
+    @Volatile var onWritten: (() -> Unit)? = null
     private var listener: ((Map<Setting<*>, Any?>) -> Unit)? = null
 
-    override suspend fun read(): Map<Setting<*>, Any?> = values()
+    override suspend fun read(): Map<Setting<*>, Any?> {
+        if (failReads) throw IOException("read-detail")
+        return values()
+    }
 
     override suspend fun write(setting: Setting<*>, value: Any?) {
         gate?.await()
@@ -30,6 +37,7 @@ internal class FakeBacking(override val store: SettingStore = SettingStore.PREFS
         writes += setting to value
         if (value == null) stored.remove(setting) else stored[setting] = value
         listener?.invoke(values())
+        onWritten?.invoke()
     }
 
     override fun observe(onChanged: (Map<Setting<*>, Any?>) -> Unit) {

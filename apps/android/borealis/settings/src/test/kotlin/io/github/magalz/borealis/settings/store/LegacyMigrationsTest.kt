@@ -101,4 +101,30 @@ class LegacyMigrationsTest {
 
         assertThat(preferences.contains(Settings.BITRATE_KBPS.key)).isFalse()
     }
+
+    @Test
+    fun `the old switch is removed once it is migrated, so a cleared overlay stays off`() {
+        preferences.edit().putBoolean(Settings.PERF_OVERLAY_LEGACY.key, true).commit()
+        LegacyMigrations.run(preferences)
+        assertThat(preferences.contains(Settings.PERF_OVERLAY_LEGACY.key)).isFalse()
+
+        preferences.edit().remove(Settings.PERF_OVERLAY.key).commit()
+        LegacyMigrations.run(preferences)
+
+        assertThat(overlay()).isNull()
+    }
+
+    @Test
+    fun `the old switch is removed when the new key already exists`() {
+        preferences
+            .edit()
+            .putBoolean(Settings.PERF_OVERLAY_LEGACY.key, true)
+            .putString(Settings.PERF_OVERLAY.key, Settings.PERF_OVERLAY_COMPACT)
+            .commit()
+
+        LegacyMigrations.run(preferences)
+
+        assertThat(preferences.contains(Settings.PERF_OVERLAY_LEGACY.key)).isFalse()
+        assertThat(overlay()).isEqualTo(Settings.PERF_OVERLAY_COMPACT)
+    }
 }

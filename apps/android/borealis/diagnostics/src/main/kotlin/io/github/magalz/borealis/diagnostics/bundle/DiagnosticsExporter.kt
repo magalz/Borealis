@@ -45,14 +45,12 @@ internal constructor(
      */
     suspend fun export(): ExportResult =
         withContext(ioDispatcher) {
-            try {
-                newFlow().run()
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: RuntimeException) {
-                BorealisLog.e(LogTag.APP, "diagnostic export failed", error)
-                ExportResult.Failed
-            }
+            runCatching { newFlow().run() }
+                .getOrElse { error ->
+                    if (error is CancellationException) throw error
+                    BorealisLog.e(LogTag.APP, "diagnostic export failed", error)
+                    ExportResult.Failed
+                }
         }
 
     private fun newFlow() =

@@ -8,12 +8,12 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import io.github.magalz.borealis.designsystem.testing.settleWindows
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.diagnostics.transfer.QrMatrix
 import io.github.magalz.borealis.diagnostics.transfer.TransferState
-import io.github.magalz.borealis.settings.testing.settleWindows
 import java.io.File
 import org.junit.Rule
 import org.junit.Test

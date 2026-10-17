@@ -1,4 +1,4 @@
-package io.github.magalz.borealis.settings.testing
+package io.github.magalz.borealis.designsystem.testing
 
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import org.robolectric.shadow.api.Shadow

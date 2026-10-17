@@ -21,6 +21,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     // The repository contract exposes Flow and StateFlow.
     api(libs.kotlinx.coroutines.android)
+    testImplementation(testFixtures(project(":borealis:designsystem")))
     testImplementation(libs.hilt.android.testing)
     testImplementation(libs.kotlinx.coroutines.test)
     add("kspTest", libs.hilt.compiler)

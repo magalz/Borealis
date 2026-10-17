@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.settings.transfer
 
+import android.text.format.Formatter
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,6 +30,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
@@ -49,7 +51,6 @@ import io.github.magalz.borealis.diagnostics.transfer.QrMatrix
 import io.github.magalz.borealis.diagnostics.transfer.TransferState
 import io.github.magalz.borealis.settings.R
 import java.io.File
-import java.util.Locale
 import kotlin.math.floor
 
 /** The test tag of the QR code. */
@@ -61,8 +62,6 @@ private val SECTION_GAP = 16.dp
 private val COLUMN_GAP = 24.dp
 private val TEXT_GAP = 12.dp
 private const val QR_SHARE_OF_SHORT_SIDE = 0.6f
-private const val BYTES_PER_KB = 1024L
-private const val BYTES_PER_MB = BYTES_PER_KB * 1024
 private const val MILLIS_PER_SECOND = 1000L
 private const val SECONDS_PER_MINUTE = 60L
 
@@ -182,7 +181,8 @@ private fun Waiting(state: TransferState.Waiting, qrSide: Dp, onClose: () -> Uni
         stringResource(
             R.string.borealis_send_to_phone_file,
             state.fileName,
-            formatTransferSize(state.sizeBytes),
+            // As the Saved dialog of the same bundle shows it.
+            Formatter.formatShortFileSize(LocalContext.current, state.sizeBytes),
         ),
         style = MaterialTheme.typography.bodySmall,
         color = colors.ink3,
@@ -284,14 +284,6 @@ private fun QrCode(qr: QrMatrix, side: Dp, description: String) {
         }
     }
 }
-
-/** A file size as "512 B", "58 KB" or "1.5 MB". */
-internal fun formatTransferSize(bytes: Long): String =
-    when {
-        bytes < BYTES_PER_KB -> "$bytes B"
-        bytes < BYTES_PER_MB -> "${Math.round(bytes.toDouble() / BYTES_PER_KB)} KB"
-        else -> String.format(Locale.ROOT, "%.1f MB", bytes.toDouble() / BYTES_PER_MB)
-    }
 
 /** The time left as minutes and seconds, rounded up, so the display reaches 0:00 at expiry. */
 internal fun formatCountdown(remainingMillis: Long): String {

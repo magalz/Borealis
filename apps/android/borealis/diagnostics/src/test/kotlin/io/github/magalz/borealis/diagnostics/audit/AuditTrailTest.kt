@@ -195,7 +195,8 @@ class AuditTrailTest {
 
     @Test
     fun `an entry has only the stored fields, nothing that could hold a secret`() {
-        val fields = AuditEntry::class.java.declaredFields.filterNot { it.isSynthetic }.map { it.name }
+        val fields =
+            AuditEntry::class.java.declaredFields.filterNot { it.isSynthetic }.map { it.name }
 
         assertThat(fields).containsExactly("timestampMillis", "type", "outcome", "host", "detail")
     }

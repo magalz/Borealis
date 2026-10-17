@@ -360,7 +360,8 @@ class AddHostScreenTest {
     }
 
     /** What takes the D-pad focus on a TV until OK: it lies over the field. */
-    private fun addressWrapper() = composeRule.onNode(hasContentDescription("Address"))
+    private fun addressWrapper() =
+        composeRule.onNode(hasContentDescription("Address", substring = true))
 
     /** OK on the address, as a remote opens it for typing. */
     private fun startEditing() {

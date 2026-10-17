@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -185,6 +186,8 @@ private fun EditOnOkField(
         TextFieldBody(
             content,
             Modifier.fillMaxWidth()
+                // The wrapper is the one node that a screen reader meets until the field is edited.
+                .then(if (editing) Modifier else Modifier.semantics { hideFromAccessibility() })
                 .focusRequester(field)
                 .onFocusChanged {
                     if (it.isFocused) {
@@ -205,7 +208,7 @@ private fun EditOnOkField(
             },
         )
         EditWrapper(
-            content.label,
+            description(content.label, content.state.text),
             editing,
             wrapper,
             onFocusChanged = { wrapperFocused = it },
@@ -222,7 +225,7 @@ private fun EditOnOkField(
  */
 @Composable
 private fun BoxScope.EditWrapper(
-    label: String,
+    description: String,
     editing: Boolean,
     focus: FocusRequester,
     onFocusChanged: (Boolean) -> Unit,
@@ -237,7 +240,7 @@ private fun BoxScope.EditWrapper(
             .focusProperties { canFocus = !editing }
             .focusable()
             .semantics {
-                contentDescription = label
+                contentDescription = description
                 role = Role.Button
                 onClick {
                     startEditing()
@@ -245,10 +248,18 @@ private fun BoxScope.EditWrapper(
                 }
             }
             // A tap before OK starts editing; the field, which cannot have the focus yet, does
-            // not get it.
-            .pointerInput(editing) { if (!editing) detectTapGestures { startEditing() } }
+            // not get it. While editing the wrapper takes no pointer input, so taps, long presses
+            // and drags reach the field under it.
+            .then(
+                if (editing) Modifier
+                else Modifier.pointerInput(Unit) { detectTapGestures { startEditing() } }
+            )
     )
 }
+
+/** What the wrapper says: the label and the text, so that one node tells what the field holds. */
+private fun description(label: String, text: CharSequence): String =
+    if (text.isEmpty()) label else "$label, $text"
 
 /** OK starts editing; Enter, as on a hardware keyboard, is Done. Everything else is the D-pad's. */
 private fun wrapperKey(event: KeyEvent, startEditing: () -> Unit, onDone: () -> Unit): Boolean =

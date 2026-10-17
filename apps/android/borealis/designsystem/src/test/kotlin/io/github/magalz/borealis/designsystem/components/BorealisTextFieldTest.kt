@@ -12,13 +12,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
@@ -29,6 +33,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextInputSelection
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.text.TextRange
@@ -96,8 +101,11 @@ class BorealisTextFieldTest {
 
     private fun editable() = composeRule.onNode(hasSetTextAction())
 
+    private fun caret() =
+        editable().fetchSemanticsNode().config[SemanticsProperties.TextSelectionRange].start
+
     /** What takes the D-pad focus while the field is not being edited: it lies over the field. */
-    private fun wrapper() = composeRule.onNode(hasContentDescription("Address"))
+    private fun wrapper() = composeRule.onNode(hasContentDescription("Address", substring = true))
 
     /**
      * Whether the window has a text input session, which is what the input method needs to open a
@@ -291,6 +299,42 @@ class BorealisTextFieldTest {
         assertThat(done).isEqualTo(1)
         wrapper().assertIsFocused()
         editable().assertIsNotFocused()
+        assertThat(keyboardIsShown()).isFalse()
+    }
+
+    @Test
+    fun `without showKeyboardOnFocus a tap on the field being edited keeps it focused and moves the caret`() {
+        show(showKeyboardOnFocus = false)
+        press(Key.DirectionCenter)
+        composeRule.waitForIdle()
+        assertThat(caret()).isEqualTo(12)
+
+        editable().performTouchInput { click(Offset(48f, centerY)) }
+        composeRule.waitForIdle()
+
+        editable().assertIsFocused()
+        assertThat(caret()).isLessThan(12)
+    }
+
+    @Test
+    fun `without showKeyboardOnFocus accessibility meets one node that says the text until editing`() {
+        show(showKeyboardOnFocus = false)
+
+        composeRule.onNode(hasContentDescription("Address, 192.168.1.20")).assertExists()
+        editable().assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.HideFromAccessibility))
+
+        press(Key.DirectionCenter)
+        composeRule.waitForIdle()
+
+        editable().assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.HideFromAccessibility))
+    }
+
+    @Test
+    fun `without showKeyboardOnFocus an empty field says only its label`() {
+        value = ""
+        show(showKeyboardOnFocus = false)
+
+        composeRule.onNode(hasContentDescription("Address")).assertExists()
     }
 
     @Test

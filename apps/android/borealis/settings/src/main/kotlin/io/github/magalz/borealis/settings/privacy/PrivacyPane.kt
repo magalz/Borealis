@@ -248,7 +248,8 @@ private class AuditRowFocus(val modifier: Modifier, val onClick: () -> Unit)
 /**
  * Remembers that the Audit trail row had the focus as it opened the viewer, and takes the focus
  * back when the screen comes back. The state is saved, as the screen leaves the composition while
- * the viewer shows.
+ * the viewer shows. The focus goes back to the row also when the rail's Settings item pops the
+ * viewer, not only on Back: either way the user returns to the row that opened it.
  */
 @Composable
 private fun rememberAuditRowFocus(onOpenAudit: () -> Unit): AuditRowFocus {

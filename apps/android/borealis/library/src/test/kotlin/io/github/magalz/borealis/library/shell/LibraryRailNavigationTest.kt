@@ -214,7 +214,7 @@ class LibraryRailNavigationTest {
         composeRule.onNode(railItem("Add host")).performClick()
         composeRule.waitForIdle()
 
-        composeRule.onNode(isFocused()).assert(hasContentDescription("Address"))
+        composeRule.onNode(isFocused()).assert(hasContentDescription("Address", substring = true))
     }
 
     @Test

@@ -58,6 +58,23 @@ accident.
 3. The system returns to the Apps screen. The app is no longer running on the
    host.
 
+### A4: Select or Start on a system pad (planned, Sprint 6; branches from step 1)
+
+1. On a controller that Android sees as a system pad and that has a Select
+   button, a Start or Select press alone waits up to 60 ms for the other
+   button before it reaches the PC.
+2. If the other button arrives within the 60 ms, the 1 s hold opens the menu,
+   and neither button reaches the PC.
+3. A quick tap of one button still reaches the PC as a short press.
+
+### A5: Gamepad mouse in the menu (planned, Sprint 6; branches from step 3)
+
+1. The Gamepad mouse row shows On when any pad emulates the mouse.
+2. When the user chooses a value, the system applies it to every pad.
+
+A pad on the USB driver sends both buttons in one report, so nothing is delayed
+for it.
+
 No failure flow is defined in the approved design. The Display for next launch
 row is disabled; it needs the Phase 3 host API and cannot be chosen.
 
@@ -85,6 +102,12 @@ row is disabled; it needs the Phase 3 host API and cannot be chosen.
 | UC-004-T10 | Given a USB-driver pad is in use, when the menu is open, then its D-pad, left stick, A and B act as they do on a system pad, and Start holds toggle the gamepad mouse. | unit | exists (Sprint 5, unit; device round) |
 | UC-004-T11 | Given Select and Start are held, when the chord is pending, then neither reaches the PC, and a release before one second sends the PC a short press of Back and Start (a Guide tap on a pad with Select and no Guide button). | unit | exists (Sprint 5, unit; device round) |
 | UC-004-T12 | Given a system window has just closed and the stream window has its focus back, when OK, Enter, DPAD_CENTER or A is pressed within one second, then the key is ignored. | unit | exists (Sprint 5, unit; device round) |
+| UC-004-T13 | Given a system pad with a Select button, when Select is pressed alone, then it reaches the PC within 60 ms unless the other button arrives first. | unit | planned (Sprint 6) |
+| UC-004-T14 | Given a system pad, when Select and Start arrive within 60 ms of each other, then the 1 s hold opens the menu and neither button reaches the PC. | unit | planned (Sprint 6) |
+| UC-004-T15 | Given a system pad, when one button is tapped quickly on its own, then it reaches the PC as a short press. | unit | planned (Sprint 6) |
+| UC-004-T16 | Given a pad on the USB driver, when Select and Start are pressed, then both arrive in one report and neither is delayed. | unit | planned (Sprint 6) |
+| UC-004-T17 | Given any pad emulates the mouse, when the menu opens, then the Gamepad mouse row shows On. | UI | planned (Sprint 6) |
+| UC-004-T18 | Given the user chooses a Gamepad mouse value in the menu, then the value applies to every pad. | unit | planned (Sprint 6) |
 
 Sprint 5 built the in-game menu and its logic. A test marked "exists (Sprint 5,
 unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose test
@@ -93,6 +116,9 @@ round of 2026-10-16 ran on a TV or a phone (see
 [device validation](../development/device-validation.md), section 10). The
 gamepad chord was run on a TV with both 8BitDo pads, and on a USB-driver pad
 (UC-004-T2, T8 to T11).
+
+UC-004-T13 to T18 are planned for Sprint 6. They cover the gamepad follow-ups in
+A4 and A5.
 
 Partly covered:
 

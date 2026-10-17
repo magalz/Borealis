@@ -380,9 +380,10 @@ Decisions: none.
 
 ### Settings
 
-Purpose: global settings in five groups (Stream, Video, Input, Audio, About),
-plus a link to Privacy and diagnostics. Each row shows its current value.
-Per-host overrides come later.
+Purpose: global settings in groups (Stream, Video, Input, Gamepad, On-screen
+controls, Audio, Advanced and About), plus Privacy and diagnostics, which is a
+link row on a phone and a group on TV and handheld. Each row shows its current
+value. Per-host overrides come later.
 
 States: none.
 
@@ -524,14 +525,53 @@ The prototype's figures are examples. The overlay is off by default
 
 ### Settings groups
 
-| Group | Rows |
-| --- | --- |
-| Stream | Resolution, Frame rate, Bitrate, Frame pacing |
-| Video | Codec, HDR, Full range, Performance overlay |
-| Input | Touch, Mouse back and forward buttons, Gamepad mouse, Deadzone |
-| Audio | Channels, Play audio on the PC |
-| Privacy and diagnostics (link, not a group) | Opens the Privacy and diagnostics screen |
-| About | Borealis version and commit, Source code, Open-source licences |
+| Group | Setting | Control | Rule |
+| --- | --- | --- | --- |
+| Stream | Resolution | list | Entries filtered by the display and the decoder. The native resolution is offered, with a warning that the PC must support it. Changing it returns Bitrate to automatic. |
+| | Frame rate | list | 120 is hidden when the display is below 118 Hz, and 90 when it is below 88 Hz, unless Unlock all frame rates is on. Changing it returns Bitrate to automatic. |
+| | Bitrate | slider, 0.5–150 Mbps | "Automatic" shows the value computed from the resolution and frame rate. |
+| | Frame pacing | list | |
+| Video | Codec | list | Automatic, AV1, HEVC, H.264. |
+| | HDR | switch | Hidden without an HDR10 display. |
+| | Full range | switch | |
+| | Performance overlay | Off, Compact, Detailed | |
+| | Stretch video | switch | |
+| Input | Touch | Trackpad or Direct | |
+| | Mouse back and forward buttons | switch | |
+| | Remote desktop mouse mode | switch | Hidden on NVIDIA Shield. |
+| | Gamepad mouse | switch | |
+| | Analog scrolling | list | Disabled while Gamepad mouse is off. |
+| | Deadzone | slider, 0–20 % | |
+| Gamepad | Multiple controllers | switch | |
+| | USB driver for Xbox controllers | switch | Hidden without USB host support. Off also stops the USB attach dialog. |
+| | Use the USB driver for all controllers | switch | Hidden without USB host. Disabled while the driver is off. |
+| | Flip face buttons | switch | |
+| | Touchpad as mouse | switch | |
+| | Motion sensors | switch | Hidden below Android 12. |
+| | Motion fallback | switch | Hidden without an accelerometer and a gyroscope. |
+| | Vibrate fallback | switch | Hidden without a vibrator. |
+| | Vibration strength | slider, 0–200 % | Hidden without amplitude control. Disabled while Vibrate fallback is off. |
+| On-screen controls (hidden without a touchscreen) | Show on-screen controls | switch | |
+| | Vibrate | switch | Disabled while the controls are hidden. Hidden without a vibrator. |
+| | Only L3 and R3 | switch | Disabled while the controls are hidden. |
+| | Guide button | switch | Disabled while the controls are hidden. |
+| | Opacity | slider, 0–100 % | Disabled while the controls are hidden. |
+| | Reset layout | action | Asks first ("Cannot be undone"). |
+| Audio | Channels | 2.0, 5.1, 7.1 | |
+| | Play audio on the PC | switch | |
+| | Audio effects | switch | |
+| Advanced | Optimise game settings | switch | |
+| | Unlock all frame rates | switch | The Frame rate list updates at once. |
+| | Reduce refresh rate | switch | |
+| | Disable connection warnings | switch | |
+| | Latency summary after a stream | switch | |
+| | Picture-in-picture | switch | Hidden without picture-in-picture, and on Fire OS. |
+| Privacy and diagnostics | Verbose logging, Mask addresses in logs and diagnostics, Export diagnostic bundle, Audit trail, Erase audit trail | | On a phone it is a link row to its own screen; on TV and handheld it is a group. |
+| About | Borealis version and commit, Source code, Open-source licences, Privacy policy | | A link with no browser shows the address in a dialog. |
+
+The extra groups (Gamepad, On-screen controls and Advanced) and the dropped
+settings (Language and Small icon mode) come from
+[ADR 0055](../adr/0055-settings-storage-and-the-phase-2-settings-screen.md).
 
 The prototype fills the rows with example values, not defaults. Phase 2 keeps
 the current defaults: 1280 x 720, 60 fps, automatic bitrate, lowest-latency

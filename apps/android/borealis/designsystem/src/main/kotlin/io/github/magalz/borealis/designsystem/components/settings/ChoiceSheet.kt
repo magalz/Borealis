@@ -35,6 +35,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
+import io.github.magalz.borealis.designsystem.focus.ignoreKeysHeldOnOpen
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -125,7 +126,7 @@ private fun <T> OptionList(
 ) {
     val initial = remember { FocusRequester() }
     val initialIndex = options.indexOfFirst { it.key == selected }.coerceAtLeast(0)
-    Column(Modifier.fillMaxWidth().semantics { paneTitle = title }) {
+    Column(Modifier.fillMaxWidth().ignoreKeysHeldOnOpen().semantics { paneTitle = title }) {
         Text(
             title,
             modifier =

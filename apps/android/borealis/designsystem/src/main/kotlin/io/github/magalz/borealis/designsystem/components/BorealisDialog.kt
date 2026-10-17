@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
+import io.github.magalz.borealis.designsystem.focus.ignoreKeysHeldOnOpen
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
@@ -101,6 +102,7 @@ fun BorealisDialog(
         NoPlatformDim()
         Box(
             Modifier.fillMaxSize()
+                .ignoreKeysHeldOnOpen()
                 .background(colors.scrim)
                 // A tap on the scrim dismisses. It is not a clickable: that would be a focus stop.
                 .pointerInput(onDismissRequest) { detectTapGestures { onDismissRequest() } }

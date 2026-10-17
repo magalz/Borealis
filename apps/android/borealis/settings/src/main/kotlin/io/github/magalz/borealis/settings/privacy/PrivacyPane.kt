@@ -55,14 +55,14 @@ private val SNACKBAR_PADDING = 16.dp
 /**
  * The Privacy and diagnostics rows and their dialogs, for the "Privacy and diagnostics" group of
  * Settings on a TV or handheld. It draws in the theme it is given and keeps its own snackbar.
- * [onSendToPhone] gets the saved bundle when the user chooses Send to phone; the dialog that shows
- * the link is the caller's, and the Saved dialog stays open under it. [onOpenAudit] opens the audit
- * trail. [startShare] starts the system share sheet that a phone gets for the export; by default it
- * starts the activity from the current context.
+ * [onSendToPhone] gets the saved bundle and its `adb pull` command when the user chooses Send to
+ * phone; the dialog that shows the link is the caller's, and the Saved dialog stays open under it.
+ * [onOpenAudit] opens the audit trail. [startShare] starts the system share sheet that a phone gets
+ * for the export; by default it starts the activity from the current context.
  */
 @Composable
 fun PrivacyPane(
-    onSendToPhone: (File) -> Unit,
+    onSendToPhone: (File, String) -> Unit,
     onOpenAudit: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PrivacyViewModel = hiltViewModel(),
@@ -87,7 +87,7 @@ internal class PrivacyBinding(
 @Composable
 internal fun rememberPrivacyBinding(
     viewModel: PrivacyViewModel,
-    onSendToPhone: (File) -> Unit,
+    onSendToPhone: (File, String) -> Unit,
     onOpenAudit: () -> Unit,
     startShare: (Intent) -> Unit,
 ): PrivacyBinding {
@@ -125,7 +125,7 @@ internal fun rememberPrivacyBinding(
                 onEraseConfirmed = viewModel::onEraseConfirmed,
                 onEraseCancelled = viewModel::onEraseCancelled,
                 onDialogDismissed = viewModel::onDialogDismissed,
-                onSendToPhone = { sendToPhone(it) },
+                onSendToPhone = { bundle, command -> sendToPhone(bundle, command) },
             )
         }
     return PrivacyBinding(state, snackbarHostState, actions)

@@ -17,6 +17,7 @@ import io.github.magalz.borealis.designsystem.adaptive.rememberFormFactor
  * The settings screen wired to its [SettingsViewModel] (UC-009). [onBack] leaves the screen.
  * [onOpenPrivacy] opens Privacy and diagnostics from the link row of a phone. On a TV or a handheld
  * Privacy and diagnostics is a group of this screen, and [privacyPane] draws its rows.
+ * [initialGroup] is the group that the two panes select when they open.
  *
  * The device facts are asked again when the configuration changes, because the display can change
  * with it.
@@ -27,6 +28,7 @@ fun SettingsRoute(
     onOpenPrivacy: () -> Unit,
     privacyPane: @Composable () -> Unit,
     modifier: Modifier = Modifier,
+    initialGroup: SettingsGroupId = SettingsGroupId.STREAM,
     about: AboutSource = rememberAboutSource(),
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -55,6 +57,7 @@ fun SettingsRoute(
         onOpenPrivacy = onOpenPrivacy,
         privacyPane = privacyPane,
         modifier = modifier,
+        initialGroup = initialGroup,
         about = about,
     )
 }

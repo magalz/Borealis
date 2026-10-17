@@ -23,7 +23,7 @@ fun interface DiagnosticsExport {
 
 @Module
 @InstallIn(SingletonComponent::class)
-internal object PrivacyModule {
+object PrivacyModule {
     /**
      * Builds the exporter here, not through its own `@Inject` constructor: a Kotlin `Set` parameter
      * becomes `Set<? extends DiagnosticSection>` in Java, which Dagger does not match with the

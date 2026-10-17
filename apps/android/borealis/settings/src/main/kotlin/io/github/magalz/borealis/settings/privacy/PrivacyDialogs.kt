@@ -77,7 +77,7 @@ private fun SavedDialog(dialog: PrivacyDialog.Saved, actions: PrivacyActions) {
         } else {
             DialogButton(
                 stringResource(R.string.borealis_privacy_saved_send_to_phone),
-                { actions.onSendToPhone(dialog.bundle) },
+                { actions.onSendToPhone(dialog.bundle, dialog.adbPullCommand) },
                 BorealisButtonStyle.Secondary,
             )
         }

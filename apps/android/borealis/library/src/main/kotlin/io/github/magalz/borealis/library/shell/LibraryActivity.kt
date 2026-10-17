@@ -41,7 +41,6 @@ class LibraryActivity : Hilt_LibraryActivity() {
         setContent {
             LibraryNavHost(
                 onStartStream = { streamLauncher.start(this, it) },
-                onOpenSettings = { legacyBridge.openStreamSettings(this) },
                 request = request,
                 onRequestHandled = { request = null },
             )

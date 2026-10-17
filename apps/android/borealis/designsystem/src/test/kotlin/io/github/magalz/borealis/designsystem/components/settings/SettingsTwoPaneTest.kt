@@ -1,9 +1,14 @@
 package io.github.magalz.borealis.designsystem.components.settings
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
@@ -155,6 +160,26 @@ class SettingsTwoPaneTest {
         composeRule.setContent { Specimen(emptyList()) }
 
         composeRule.onNodeWithText("Resolution").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a group that scrolls itself fills the pane instead of nesting in its scroll`() {
+        composeRule.setContent {
+            BorealisTheme(FormFactor.Tv) {
+                SettingsTwoPane(
+                    groups = listOf(SettingsGroup("own", "Own")),
+                    selected = "own",
+                    onSelect = {},
+                    selfScrolling = { true },
+                ) {
+                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                        SettingsValueRow("Its own row", null, {})
+                    }
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Its own row").assertIsDisplayed()
     }
 
     @Composable

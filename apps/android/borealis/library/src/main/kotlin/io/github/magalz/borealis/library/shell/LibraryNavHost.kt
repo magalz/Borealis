@@ -32,6 +32,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import io.github.magalz.borealis.designsystem.adaptive.rememberFormFactor
+import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.R
 import io.github.magalz.borealis.library.addhost.AddHostRoute
@@ -39,6 +40,11 @@ import io.github.magalz.borealis.library.apps.AppsRoute
 import io.github.magalz.borealis.library.domain.StreamRequest
 import io.github.magalz.borealis.library.hosts.HostsRoute
 import io.github.magalz.borealis.library.pairing.PairingRoute
+import io.github.magalz.borealis.settings.nav.Privacy
+import io.github.magalz.borealis.settings.nav.Settings
+import io.github.magalz.borealis.settings.nav.isSettingsDestination
+import io.github.magalz.borealis.settings.nav.settingsGraph
+import io.github.magalz.borealis.settings.ui.SettingsGroupId
 import kotlinx.coroutines.launch
 
 /** The key, in the saved state of the Hosts entry, of the message the next screen leaves for it. */
@@ -53,15 +59,15 @@ private const val FADE_MS = 150
  * The Library screens and the way between them (ADR 0052), inside the [LibraryScaffold]: Hosts
  * leads to Apps, Pairing and Add host, pairing replaces itself with Apps, and the screens that end
  * say so on Hosts through its saved state. [onStartStream] starts a stream and answers false when
- * the host is no longer known, which the shell says on the current screen. [onOpenSettings] opens
- * the stream settings. A [request] from outside (a launcher shortcut, the stream error screen) puts
- * its screens on the back stack; [onRequestHandled] says that it was taken, so it is not taken
- * twice.
+ * the host is no longer known, which the shell says on the current screen. Settings, Privacy and
+ * diagnostics and the Audit trail are destinations of the same graph (UC-009): the gear of Hosts
+ * and the rail open Settings. A [request] from outside (a launcher shortcut, the stream error
+ * screen) puts its screens on the back stack; [onRequestHandled] says that it was taken, so it is
+ * not taken twice.
  */
 @Composable
 internal fun LibraryNavHost(
     onStartStream: (StreamRequest) -> Boolean,
-    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
     request: LibraryLaunchRequest? = null,
     onRequestHandled: () -> Unit = {},
@@ -71,11 +77,12 @@ internal fun LibraryNavHost(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val destination = navController.currentBackStackEntryAsState().value?.destination
+    val formFactor = rememberFormFactor()
     // The app a Launch request asks for, until its Apps screen has the list and selects it.
     val pendingLaunch = remember { mutableStateOf<LibraryLaunchRequest.Launch?>(null) }
     LaunchedEffect(request) {
         val incoming = request ?: return@LaunchedEffect
-        navController.show(incoming)
+        navController.show(incoming, phone = formFactor == FormFactor.Phone)
         pendingLaunch.value = incoming as? LibraryLaunchRequest.Launch
         onRequestHandled()
     }
@@ -99,25 +106,23 @@ internal fun LibraryNavHost(
                     }
                 }
             },
-            onSettings = onOpenSettings,
+            onSettings = { navController.openSettingsFromRail() },
         )
 
     LibraryScaffold(
-        formFactor = rememberFormFactor(),
+        formFactor = formFactor,
         selected =
-            if (destination?.hasRoute<AddHost>() == true) RailSelection.AddHost
-            else RailSelection.Hosts,
+            when {
+                destination?.hasRoute<AddHost>() == true -> RailSelection.AddHost
+                destination.isSettingsDestination() -> RailSelection.Settings
+                else -> RailSelection.Hosts
+            },
         actions = rail,
         modifier = modifier,
     ) {
         Box {
             FadingNavHost(navController) {
-                libraryGraph(
-                    navController,
-                    startStream,
-                    onOpenSettings,
-                    pendingLaunch,
-                )
+                libraryGraph(navController, startStream, pendingLaunch)
             }
             SnackbarHost(
                 snackbarHostState,
@@ -146,7 +151,6 @@ private fun FadingNavHost(navController: NavHostController, graph: NavGraphBuild
 private fun NavGraphBuilder.libraryGraph(
     navController: NavHostController,
     startStream: (StreamRequest) -> Unit,
-    onOpenSettings: () -> Unit,
     pendingLaunch: MutableState<LibraryLaunchRequest.Launch?>,
 ) {
     composable<Hosts> { entry ->
@@ -159,7 +163,7 @@ private fun NavGraphBuilder.libraryGraph(
                 navController.navigate(Pairing(id, name)) { launchSingleTop = true }
             },
             onOpenAddHost = { navController.navigate(AddHost) { launchSingleTop = true } },
-            onOpenSettings = onOpenSettings,
+            onOpenSettings = { navController.navigate(Settings()) { launchSingleTop = true } },
             onStartStream = startStream,
             message = message,
             onMessageShown = { handle[HOSTS_MESSAGE] = null },
@@ -199,6 +203,25 @@ private fun NavGraphBuilder.libraryGraph(
             onLaunchHandled = { pendingLaunch.value = null },
         )
     }
+    settingsGraph(navController)
+}
+
+/**
+ * The Settings item of the rail. It does nothing while Settings shows, so the group the user chose
+ * stays; from the Audit trail it goes back to Settings; from anywhere else it opens Settings above
+ * Hosts.
+ */
+private fun NavHostController.openSettingsFromRail() {
+    when {
+        currentDestination?.hasRoute<Settings>() == true -> Unit
+        // False when Settings is not on the back stack: then it opens above Hosts.
+        popBackStack<Settings>(inclusive = false) -> Unit
+        else ->
+            navigate(Settings()) {
+                popUpTo<Hosts>()
+                launchSingleTop = true
+            }
+    }
 }
 
 /**
@@ -217,18 +240,23 @@ private fun NavHostController.close(entry: NavBackStackEntry, message: String? =
  * screen that is on top already leaves it in place: it keeps its ViewModel, which a Launch needs to
  * take its app from the new request.
  */
-private fun NavHostController.show(request: LibraryLaunchRequest) {
-    if (showsAlready(request)) return
+private fun NavHostController.show(request: LibraryLaunchRequest, phone: Boolean) {
+    if (showsAlready(request, phone)) return
     popBackStack<Hosts>(inclusive = false)
     when (request) {
         LibraryLaunchRequest.Hosts -> Unit
         is LibraryLaunchRequest.Apps -> navigate(Apps(request.hostId)) { launchSingleTop = true }
         is LibraryLaunchRequest.Launch -> navigate(Apps(request.hostId)) { launchSingleTop = true }
         is LibraryLaunchRequest.Pair -> navigate(Pairing(request.hostId)) { launchSingleTop = true }
+        // A phone has Privacy and diagnostics as a screen, a TV or a handheld as a group of
+        // Settings.
+        LibraryLaunchRequest.Privacy ->
+            if (phone) navigate(Privacy) { launchSingleTop = true }
+            else navigate(Settings(SettingsGroupId.PRIVACY)) { launchSingleTop = true }
     }
 }
 
-private fun NavHostController.showsAlready(request: LibraryLaunchRequest): Boolean {
+private fun NavHostController.showsAlready(request: LibraryLaunchRequest, phone: Boolean): Boolean {
     val entry = currentBackStackEntry ?: return false
     val destination = entry.destination
     return when (request) {
@@ -239,5 +267,7 @@ private fun NavHostController.showsAlready(request: LibraryLaunchRequest): Boole
             destination.hasRoute<Apps>() && entry.toRoute<Apps>().hostId == request.hostId
         is LibraryLaunchRequest.Pair ->
             destination.hasRoute<Pairing>() && entry.toRoute<Pairing>().hostId == request.hostId
+        // Settings may have another group selected, so a TV opens it again on Privacy.
+        LibraryLaunchRequest.Privacy -> phone && destination.hasRoute<Privacy>()
     }
 }

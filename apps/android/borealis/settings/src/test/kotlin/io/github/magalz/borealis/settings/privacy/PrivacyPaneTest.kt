@@ -37,7 +37,7 @@ class PrivacyPaneTest {
     private val settings = FakeSettingsRepository()
     private val audit = FakeAuditTrail()
     private val shared = mutableListOf<Intent>()
-    private val sent = mutableListOf<File>()
+    private val sent = mutableListOf<Pair<File, String>>()
     private var audits = 0
     private var backs = 0
 
@@ -54,7 +54,7 @@ class PrivacyPaneTest {
         composeRule.setContentInKeyboardMode {
             BorealisTheme(formFactor) {
                 PrivacyPane(
-                    onSendToPhone = { sent += it },
+                    onSendToPhone = { bundle, command -> sent += bundle to command },
                     onOpenAudit = { audits++ },
                     viewModel = viewModel,
                     startShare = startShare,
@@ -114,7 +114,7 @@ class PrivacyPaneTest {
 
     @Test
     @Config(qualifiers = TV)
-    fun `a saved export opens the dialog and Send to phone hands over the bundle`() {
+    fun `a saved export opens the dialog and Send to phone hands over the bundle and its adb command`() {
         val bundle = bundle()
         showPane(viewModel(sampleSaved(bundle)))
 
@@ -123,7 +123,7 @@ class PrivacyPaneTest {
         composeRule.onNodeWithText("Diagnostics saved").assertIsDisplayed()
         composeRule.onNodeWithText("Send to phone").performClick()
 
-        assertThat(sent).containsExactly(bundle)
+        assertThat(sent).containsExactly(bundle to "adb pull /sdcard/Download/${bundle.name}")
         assertThat(shared).isEmpty()
         composeRule.onNodeWithText("Diagnostics saved").assertIsDisplayed()
     }
@@ -226,7 +226,7 @@ class PrivacyPaneTest {
             BorealisTheme(FormFactor.Phone) {
                 PrivacyScreen(
                     onBack = { backs++ },
-                    onSendToPhone = {},
+                    onSendToPhone = { _, _ -> },
                     onOpenAudit = {},
                     formFactor = FormFactor.Phone,
                     viewModel = viewModel(),
@@ -247,7 +247,7 @@ class PrivacyPaneTest {
             BorealisTheme(FormFactor.Phone) {
                 PrivacyScreen(
                     onBack = { backs++ },
-                    onSendToPhone = {},
+                    onSendToPhone = { _, _ -> },
                     onOpenAudit = {},
                     formFactor = FormFactor.Phone,
                     viewModel = viewModel(),

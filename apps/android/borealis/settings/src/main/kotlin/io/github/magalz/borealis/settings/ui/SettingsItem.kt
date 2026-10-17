@@ -1,13 +1,18 @@
 package io.github.magalz.borealis.settings.ui
 
+import androidx.annotation.Keep
 import androidx.annotation.StringRes
 import io.github.magalz.borealis.settings.R
 import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.catalog.StringSetting
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot
+import kotlinx.serialization.Serializable
 
 /** A group of the settings screen, in the order of UC-009. */
+// Navigation Compose serialises it as an argument of Settings; Keep stops R8 from renaming it.
+@Keep
+@Serializable
 enum class SettingsGroupId(@StringRes val titleRes: Int) {
     STREAM(R.string.settings_group_stream),
     VIDEO(R.string.settings_group_video),

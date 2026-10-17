@@ -55,10 +55,10 @@ private val SNACKBAR_PADDING = 16.dp
 /**
  * The Privacy and diagnostics rows and their dialogs, for the "Privacy and diagnostics" group of
  * Settings on a TV or handheld. It draws in the theme it is given and keeps its own snackbar.
- * [onSendToPhone] gets the saved bundle when the user chooses Send to phone; the dialog that shows
- * the link is the caller's, and the Saved dialog stays open under it. [onOpenAudit] opens the audit
- * trail. [startShare] starts the system share sheet that a phone gets for the export; by default it
- * starts the activity from the current context.
+ * [onSendToPhone] gets the saved bundle and its `adb pull` command when the user chooses Send to
+ * phone; the dialog that shows the link is the caller's, and the Saved dialog stays open under it.
+ * [onOpenAudit] opens the audit trail. [startShare] starts the system share sheet that a phone gets
+ * for the export; by default it starts the activity from the current context.
  */
 @Composable
 fun PrivacyPane(

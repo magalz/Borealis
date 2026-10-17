@@ -40,6 +40,10 @@ object AuditModule {
     fun store(db: AuditDatabase): AuditStore =
         AuditStore(db.dao(), CoroutineScope(SupervisorJob() + Dispatchers.IO), Dispatchers.IO)
 
+    @Provides
+    @Singleton
+    fun trail(db: AuditDatabase, store: AuditStore): AuditTrail = RoomAuditTrail(db.dao(), store)
+
     @Provides fun sink(store: AuditStore): AuditSink = store
 
     @Provides @IntoSet fun section(store: AuditStore): DiagnosticSection = AuditSection(store)

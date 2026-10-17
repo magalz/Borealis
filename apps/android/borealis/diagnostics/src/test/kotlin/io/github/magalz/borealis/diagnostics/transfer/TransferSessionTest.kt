@@ -13,7 +13,10 @@ import java.net.ConnectException
 import java.net.InetAddress
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -48,8 +51,10 @@ class TransferSessionTest {
         BorealisLog.shutdown()
     }
 
-    private fun TestScope.session(address: InetAddress? = loopback) =
-        TransferSession({ address }, now::get, backgroundScope).also { sessions += it }
+    private fun TestScope.session(address: InetAddress? = loopback) = session { address }
+
+    private fun TestScope.session(address: () -> InetAddress?) =
+        TransferSession(address, now::get, backgroundScope).also { sessions += it }
 
     /** One second of the session's ticker. */
     private fun TestScope.tick() {
@@ -226,6 +231,101 @@ class TransferSessionTest {
         assertRefused(portOf(first))
         assertThat(get(portOf(second), pathOf(second))!!.status).isEqualTo(200)
     }
+
+    @Test
+    fun `the waiting state does not print the link or its token`() = runTest {
+        val waiting = waiting(session())
+
+        val text = waiting.toString()
+
+        assertThat(text).doesNotContain(waiting.link)
+        assertThat(text).doesNotContain(tokenOf(waiting.link))
+        assertThat(text).contains(waiting.fileName)
+    }
+
+    @Test
+    fun `the QR matrix keeps its own copy of the modules`() {
+        val modules = BooleanArray(4) { it == 0 }
+        val qr = QrMatrix(2, modules)
+
+        modules[0] = false
+        modules[3] = true
+
+        assertThat(qr[0, 0]).isTrue()
+        assertThat(qr[1, 1]).isFalse()
+        assertThat(qr).isEqualTo(QrMatrix(2, BooleanArray(4) { it == 0 }))
+    }
+
+    @Test
+    fun `replacing a link never reports Stopped for the old one`() = runTest {
+        val session = session()
+        val seen = mutableListOf<TransferState>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            session.state.toList(seen)
+        }
+        waiting(session)
+
+        waiting(session)
+
+        assertThat(seen).doesNotContain(TransferState.Stopped)
+        assertThat(seen.last()).isInstanceOf(TransferState.Waiting::class.java)
+    }
+
+    @Test
+    fun `a new start does not show the previous final state`() = runTest {
+        var local: InetAddress? = loopback
+        var seenByLookup: TransferState? = null
+        lateinit var subject: TransferSession
+        subject = session {
+            if (local == null) seenByLookup = subject.state.value
+            local
+        }
+        val session = subject
+        val link = waiting(session).link
+        get(portOf(link), "${pathOf(link)}/${zip.name}")
+        awaitState(session, TransferState.Downloaded)
+        local = null
+
+        session.start(zip)
+
+        assertThat(seenByLookup).isEqualTo(TransferState.Idle)
+        assertThat(session.state.value).isEqualTo(TransferState.NoNetwork)
+    }
+
+    @Test
+    fun `an address lookup the system refuses is Failed and does not throw`() = runTest {
+        val session = session { throw SecurityException("no network state permission") }
+
+        val thrown = runCatching { session.start(zip) }.exceptionOrNull()
+
+        assertThat(thrown).isNull()
+        assertThat(session.state.value).isEqualTo(TransferState.Failed)
+    }
+
+    @Test
+    fun `a missing file is Failed and no link is opened`() = runTest {
+        val session = session()
+
+        session.start(File(temp.root, "missing.zip"))
+
+        assertThat(session.state.value).isEqualTo(TransferState.Failed)
+        assertThat(serverThreads()).isEqualTo(0)
+    }
+
+    @Test
+    fun `a directory is not a file to send`() = runTest {
+        val session = session()
+
+        session.start(temp.newFolder("a-directory"))
+
+        assertThat(session.state.value).isEqualTo(TransferState.Failed)
+        assertThat(serverThreads()).isEqualTo(0)
+    }
+
+    private fun serverThreads(): Int =
+        Thread.getAllStackTraces().keys.count {
+            it.name.startsWith(OneShotFileServer.THREAD_NAME) && it.isAlive
+        }
 
     private companion object {
         const val BLACK = 0xFF000000.toInt()

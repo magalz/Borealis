@@ -65,7 +65,7 @@ enum class SettingsItem(
     val kind: SettingsItemKind,
     val setting: Setting<*>?,
     @StringRes val titleRes: Int,
-    @StringRes val summaryRes: Int,
+    @StringRes val summaryRes: Int? = null,
     val slider: SliderSpec? = null,
     val fixedChoices: List<FixedChoice> = emptyList(),
 ) {
@@ -74,21 +74,18 @@ enum class SettingsItem(
         SettingsItemKind.CHOICE,
         Settings.RESOLUTION,
         R.string.settings_resolution_title,
-        R.string.settings_resolution_summary,
     ),
     FRAME_RATE(
         SettingsGroupId.STREAM,
         SettingsItemKind.CHOICE,
         Settings.FRAME_RATE,
         R.string.settings_frame_rate_title,
-        R.string.settings_frame_rate_summary,
     ),
     BITRATE(
         SettingsGroupId.STREAM,
         SettingsItemKind.SLIDER,
         Settings.BITRATE_KBPS,
         R.string.settings_bitrate_title,
-        R.string.settings_bitrate_summary,
         slider =
             SliderSpec(
                 BITRATE_MIN_KBPS,
@@ -102,7 +99,6 @@ enum class SettingsItem(
         SettingsItemKind.CHOICE,
         Settings.FRAME_PACING,
         R.string.settings_frame_pacing_title,
-        R.string.settings_frame_pacing_summary,
         fixedChoices = FixedChoices.FRAME_PACING,
     ),
     CODEC(
@@ -132,7 +128,6 @@ enum class SettingsItem(
         SettingsItemKind.CHOICE,
         Settings.PERF_OVERLAY,
         R.string.settings_perf_overlay_title,
-        R.string.settings_perf_overlay_summary,
         fixedChoices = FixedChoices.PERF_OVERLAY,
     ),
     STRETCH_VIDEO(
@@ -147,7 +142,6 @@ enum class SettingsItem(
         SettingsItemKind.CHOICE,
         Settings.TOUCHSCREEN_TRACKPAD,
         R.string.settings_touch_title,
-        R.string.settings_touch_summary,
         fixedChoices = FixedChoices.TOUCH,
     ),
     MOUSE_NAV_BUTTONS(
@@ -176,7 +170,6 @@ enum class SettingsItem(
         SettingsItemKind.CHOICE,
         Settings.ANALOG_SCROLLING,
         R.string.settings_analog_scrolling_title,
-        R.string.settings_analog_scrolling_summary,
         fixedChoices = FixedChoices.ANALOG_SCROLLING,
     ),
     DEADZONE(
@@ -241,14 +234,12 @@ enum class SettingsItem(
         SettingsItemKind.SWITCH,
         Settings.VIBRATE_FALLBACK,
         R.string.settings_vibrate_fallback_title,
-        R.string.settings_vibrate_fallback_summary,
     ),
     VIBRATION_STRENGTH(
         SettingsGroupId.GAMEPAD,
         SettingsItemKind.SLIDER,
         Settings.VIBRATE_FALLBACK_STRENGTH,
         R.string.settings_vibration_strength_title,
-        R.string.settings_vibration_strength_summary,
         slider = SliderSpec(0, VIBRATION_MAX, 1, VIBRATION_KEY_STEP),
     ),
     SHOW_ON_SCREEN_CONTROLS(
@@ -256,35 +247,30 @@ enum class SettingsItem(
         SettingsItemKind.SWITCH,
         Settings.SHOW_ONSCREEN_CONTROLS,
         R.string.settings_show_osc_title,
-        R.string.settings_show_osc_summary,
     ),
     OSC_VIBRATE(
         SettingsGroupId.ON_SCREEN_CONTROLS,
         SettingsItemKind.SWITCH,
         Settings.VIBRATE_OSC,
         R.string.settings_osc_vibrate_title,
-        R.string.settings_osc_vibrate_summary,
     ),
     ONLY_L3_R3(
         SettingsGroupId.ON_SCREEN_CONTROLS,
         SettingsItemKind.SWITCH,
         Settings.ONLY_L3_R3,
         R.string.settings_only_l3_r3_title,
-        R.string.settings_only_l3_r3_summary,
     ),
     GUIDE_BUTTON(
         SettingsGroupId.ON_SCREEN_CONTROLS,
         SettingsItemKind.SWITCH,
         Settings.SHOW_GUIDE_BUTTON,
         R.string.settings_guide_button_title,
-        R.string.settings_guide_button_summary,
     ),
     OSC_OPACITY(
         SettingsGroupId.ON_SCREEN_CONTROLS,
         SettingsItemKind.SLIDER,
         Settings.OSC_OPACITY,
         R.string.settings_osc_opacity_title,
-        R.string.settings_osc_opacity_summary,
         slider = SliderSpec(0, OPACITY_MAX, 1, PERCENT_KEY_STEP),
     ),
     RESET_LAYOUT(
@@ -292,14 +278,12 @@ enum class SettingsItem(
         SettingsItemKind.ACTION,
         null,
         R.string.settings_reset_layout_title,
-        R.string.settings_reset_layout_summary,
     ),
     AUDIO_CHANNELS(
         SettingsGroupId.AUDIO,
         SettingsItemKind.CHOICE,
         Settings.AUDIO_CONFIG,
         R.string.settings_audio_channels_title,
-        R.string.settings_audio_channels_summary,
         fixedChoices = FixedChoices.AUDIO_CHANNELS,
     ),
     HOST_AUDIO(
@@ -307,7 +291,6 @@ enum class SettingsItem(
         SettingsItemKind.SWITCH,
         Settings.HOST_AUDIO,
         R.string.settings_host_audio_title,
-        R.string.settings_host_audio_summary,
     ),
     AUDIO_EFFECTS(
         SettingsGroupId.AUDIO,
@@ -342,14 +325,12 @@ enum class SettingsItem(
         SettingsItemKind.SWITCH,
         Settings.DISABLE_WARNINGS,
         R.string.settings_disable_warnings_title,
-        R.string.settings_disable_warnings_summary,
     ),
     LATENCY_SUMMARY(
         SettingsGroupId.ADVANCED,
         SettingsItemKind.SWITCH,
         Settings.POST_STREAM_TOAST,
         R.string.settings_post_stream_toast_title,
-        R.string.settings_post_stream_toast_summary,
     ),
     PICTURE_IN_PICTURE(
         SettingsGroupId.ADVANCED,

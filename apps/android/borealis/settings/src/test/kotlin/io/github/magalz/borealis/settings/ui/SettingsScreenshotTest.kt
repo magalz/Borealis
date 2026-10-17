@@ -60,6 +60,7 @@ class SettingsScreenshotTest : SettingsScreenTestBase() {
     @Test
     @Config(qualifiers = TV)
     fun tvStreamFocused() {
+        asTelevision()
         show(keyboard = true)
 
         shoot("settingsscreen_tv_stream-focused")
@@ -68,6 +69,7 @@ class SettingsScreenshotTest : SettingsScreenTestBase() {
     @Test
     @Config(qualifiers = TV)
     fun tvInputWithDisabledRow() {
+        asTelevision()
         show(keyboard = true)
         composeRule.onNodeWithText("Input").performClick()
         composeRule.onNodeWithText("Analog scrolling").requestFocus()
@@ -78,6 +80,7 @@ class SettingsScreenshotTest : SettingsScreenTestBase() {
     @Test
     @Config(qualifiers = TV)
     fun tvChoiceSheet() {
+        asTelevision()
         show(keyboard = true)
         composeRule.onNodeWithText("Frame pacing").performClick()
         composeRule.waitForIdle()

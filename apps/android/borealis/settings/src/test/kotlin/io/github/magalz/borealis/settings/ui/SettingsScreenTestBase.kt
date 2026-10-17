@@ -1,5 +1,7 @@
 package io.github.magalz.borealis.settings.ui
 
+import android.app.Application
+import android.content.pm.PackageManager
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.Role
@@ -12,12 +14,14 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.test.core.app.ApplicationProvider
 import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot
 import io.github.magalz.borealis.settings.testing.FakeDeviceFactsSource
 import io.github.magalz.borealis.settings.testing.FakeSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import org.junit.Rule
+import org.robolectric.Shadows.shadowOf
 
 /**
  * What the screen tests share: the real ViewModel over fakes, and the route as the Library will
@@ -36,13 +40,20 @@ abstract class SettingsScreenTestBase {
     protected var browserAvailable = true
     protected var licenses: String? = "NOTICE\n\nThe licence texts of the test"
 
+    /** Makes the device a TV, as the leanback feature does on a real one. */
+    protected fun asTelevision() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        shadowOf(app.packageManager).setSystemFeature(PackageManager.FEATURE_LEANBACK, true)
+    }
+
     protected fun stored(vararg values: Pair<Setting<*>, Any?>) {
         repository = FakeSettingsRepository(SettingsSnapshot.fromStored(values.toMap()))
     }
 
     protected fun testAbout(): AboutSource =
         AboutSource(
-            versionSummary = "9.8.7 (commit abc1234)",
+            versionName = "9.8.7",
+            commit = "abc1234",
             openLink = {
                 openedLinks += it
                 browserAvailable

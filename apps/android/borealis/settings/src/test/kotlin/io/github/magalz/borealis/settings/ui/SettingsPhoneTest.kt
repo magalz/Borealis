@@ -8,7 +8,9 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
@@ -583,7 +585,9 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
         composeRule.waitForIdle()
 
         composeRule.onNodeWithText("No app can open this link").assertIsDisplayed()
-        composeRule.onNodeWithText("https://github.com/magalz/Borealis").assertIsDisplayed()
+        composeRule
+            .onNode(hasText("https://github.com/magalz/Borealis") and hasAnyAncestor(isDialog()))
+            .assertIsDisplayed()
 
         composeRule.onNodeWithText("Close").performClick()
         composeRule.waitForIdle()

@@ -16,6 +16,7 @@ import io.github.magalz.borealis.settings.testing.FakeSettingsRepository.Write
 import io.github.magalz.borealis.settings.testing.deviceFacts
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -24,6 +25,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
     @get:Rule val main = MainDispatcherRule()
 
@@ -54,87 +56,21 @@ class SettingsViewModelTest {
         groups.single { it.group == group }.items.map { it.item }
 
     @Test
-    fun `the groups and rows are those of UC-009 in its order`() = runTest {
+    fun `the groups are those of UC-009 in its order`() = runTest {
         val state = viewModel().uiState.value
 
         assertThat(state.groups.map { it.group })
-            .containsExactly(
-                SettingsGroupId.STREAM,
-                SettingsGroupId.VIDEO,
-                SettingsGroupId.INPUT,
-                SettingsGroupId.GAMEPAD,
-                SettingsGroupId.ON_SCREEN_CONTROLS,
-                SettingsGroupId.AUDIO,
-                SettingsGroupId.ADVANCED,
-            )
+            .containsExactlyElementsIn(UC_009_ROWS.keys)
             .inOrder()
-        assertThat(state.rows(SettingsGroupId.STREAM))
-            .containsExactly(
-                SettingsItem.RESOLUTION,
-                SettingsItem.FRAME_RATE,
-                SettingsItem.BITRATE,
-                SettingsItem.FRAME_PACING,
-            )
-            .inOrder()
-        assertThat(state.rows(SettingsGroupId.VIDEO))
-            .containsExactly(
-                SettingsItem.CODEC,
-                SettingsItem.HDR,
-                SettingsItem.FULL_RANGE,
-                SettingsItem.PERF_OVERLAY,
-                SettingsItem.STRETCH_VIDEO,
-            )
-            .inOrder()
-        assertThat(state.rows(SettingsGroupId.INPUT))
-            .containsExactly(
-                SettingsItem.TOUCH,
-                SettingsItem.MOUSE_NAV_BUTTONS,
-                SettingsItem.ABSOLUTE_MOUSE,
-                SettingsItem.GAMEPAD_MOUSE,
-                SettingsItem.ANALOG_SCROLLING,
-                SettingsItem.DEADZONE,
-            )
-            .inOrder()
-        assertThat(state.rows(SettingsGroupId.GAMEPAD))
-            .containsExactly(
-                SettingsItem.MULTI_CONTROLLER,
-                SettingsItem.USB_DRIVER,
-                SettingsItem.USB_BIND_ALL,
-                SettingsItem.FLIP_FACE_BUTTONS,
-                SettingsItem.TOUCHPAD_AS_MOUSE,
-                SettingsItem.MOTION_SENSORS,
-                SettingsItem.MOTION_FALLBACK,
-                SettingsItem.VIBRATE_FALLBACK,
-                SettingsItem.VIBRATION_STRENGTH,
-            )
-            .inOrder()
-        assertThat(state.rows(SettingsGroupId.ON_SCREEN_CONTROLS))
-            .containsExactly(
-                SettingsItem.SHOW_ON_SCREEN_CONTROLS,
-                SettingsItem.OSC_VIBRATE,
-                SettingsItem.ONLY_L3_R3,
-                SettingsItem.GUIDE_BUTTON,
-                SettingsItem.OSC_OPACITY,
-                SettingsItem.RESET_LAYOUT,
-            )
-            .inOrder()
-        assertThat(state.rows(SettingsGroupId.AUDIO))
-            .containsExactly(
-                SettingsItem.AUDIO_CHANNELS,
-                SettingsItem.HOST_AUDIO,
-                SettingsItem.AUDIO_EFFECTS,
-            )
-            .inOrder()
-        assertThat(state.rows(SettingsGroupId.ADVANCED))
-            .containsExactly(
-                SettingsItem.OPTIMISE_GAME_SETTINGS,
-                SettingsItem.UNLOCK_FRAME_RATES,
-                SettingsItem.REDUCE_REFRESH_RATE,
-                SettingsItem.DISABLE_WARNINGS,
-                SettingsItem.LATENCY_SUMMARY,
-                SettingsItem.PICTURE_IN_PICTURE,
-            )
-            .inOrder()
+    }
+
+    @Test
+    fun `the rows of every group are those of UC-009 in its order`() = runTest {
+        val state = viewModel().uiState.value
+
+        for ((group, rows) in UC_009_ROWS) {
+            assertThat(state.rows(group)).containsExactlyElementsIn(rows).inOrder()
+        }
     }
 
     @Test
@@ -529,3 +465,68 @@ class SettingsViewModelTest {
         assertThat(resetThread[0]?.name).startsWith("DefaultDispatcher")
     }
 }
+
+/** The groups and rows of the table in `docs/ux/phase-2-proposal.md#settings-groups`. */
+private val UC_009_ROWS =
+    linkedMapOf(
+        SettingsGroupId.STREAM to
+            listOf(
+                SettingsItem.RESOLUTION,
+                SettingsItem.FRAME_RATE,
+                SettingsItem.BITRATE,
+                SettingsItem.FRAME_PACING,
+            ),
+        SettingsGroupId.VIDEO to
+            listOf(
+                SettingsItem.CODEC,
+                SettingsItem.HDR,
+                SettingsItem.FULL_RANGE,
+                SettingsItem.PERF_OVERLAY,
+                SettingsItem.STRETCH_VIDEO,
+            ),
+        SettingsGroupId.INPUT to
+            listOf(
+                SettingsItem.TOUCH,
+                SettingsItem.MOUSE_NAV_BUTTONS,
+                SettingsItem.ABSOLUTE_MOUSE,
+                SettingsItem.GAMEPAD_MOUSE,
+                SettingsItem.ANALOG_SCROLLING,
+                SettingsItem.DEADZONE,
+            ),
+        SettingsGroupId.GAMEPAD to
+            listOf(
+                SettingsItem.MULTI_CONTROLLER,
+                SettingsItem.USB_DRIVER,
+                SettingsItem.USB_BIND_ALL,
+                SettingsItem.FLIP_FACE_BUTTONS,
+                SettingsItem.TOUCHPAD_AS_MOUSE,
+                SettingsItem.MOTION_SENSORS,
+                SettingsItem.MOTION_FALLBACK,
+                SettingsItem.VIBRATE_FALLBACK,
+                SettingsItem.VIBRATION_STRENGTH,
+            ),
+        SettingsGroupId.ON_SCREEN_CONTROLS to
+            listOf(
+                SettingsItem.SHOW_ON_SCREEN_CONTROLS,
+                SettingsItem.OSC_VIBRATE,
+                SettingsItem.ONLY_L3_R3,
+                SettingsItem.GUIDE_BUTTON,
+                SettingsItem.OSC_OPACITY,
+                SettingsItem.RESET_LAYOUT,
+            ),
+        SettingsGroupId.AUDIO to
+            listOf(
+                SettingsItem.AUDIO_CHANNELS,
+                SettingsItem.HOST_AUDIO,
+                SettingsItem.AUDIO_EFFECTS,
+            ),
+        SettingsGroupId.ADVANCED to
+            listOf(
+                SettingsItem.OPTIMISE_GAME_SETTINGS,
+                SettingsItem.UNLOCK_FRAME_RATES,
+                SettingsItem.REDUCE_REFRESH_RATE,
+                SettingsItem.DISABLE_WARNINGS,
+                SettingsItem.LATENCY_SUMMARY,
+                SettingsItem.PICTURE_IN_PICTURE,
+            ),
+    )

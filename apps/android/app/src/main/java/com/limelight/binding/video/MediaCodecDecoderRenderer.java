@@ -38,6 +38,7 @@ import android.view.SurfaceHolder;
 import io.github.magalz.borealis.host.video.FirstFrameSignal;
 import io.github.magalz.borealis.host.video.HdrRestartReuse; // BOREALIS: keeps the first IDR across the HDR decoder restart (host.video)
 import io.github.magalz.borealis.host.video.HevcSpsMonitor; // BOREALIS: HEVC SPS diagnostics (host.video)
+import io.github.magalz.borealis.stream.DecodeTimeFifo; // BOREALIS: times the decoder from the enqueue, not the output timestamp (stream.perf)
 import io.github.magalz.borealis.stream.PerfSnapshotSink; // BOREALIS: structured performance numbers (stream.perf)
 import io.github.magalz.borealis.stream.PerfSnapshots;
 import io.github.magalz.borealis.stream.PerfWindow;
@@ -126,6 +127,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
     private LinkedBlockingQueue<Integer> outputBufferQueue = new LinkedBlockingQueue<>();
     private static final int OUTPUT_BUFFER_QUEUE_LIMIT = 2;
+    private final DecodeTimeFifo decodeTimeFifo = new DecodeTimeFifo(); // BOREALIS: enqueue times of the frames in the decoder (stream.perf)
     private long lastRenderedFrameTimeNanos;
     private HandlerThread choreographerHandlerThread;
     private Handler choreographerHandler;
@@ -757,6 +759,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                 nextInputBuffer = null;
                 nextInputBufferIndex = -1;
                 outputBufferQueue.clear();
+                decodeTimeFifo.clear(); // BOREALIS: stream.perf
 
                 // If we just need a flush, do so now with all threads quiesced.
                 if (codecRecoveryType.get() == CR_RECOVERY_TYPE_FLUSH) {
@@ -1072,7 +1075,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                         // Try to output a frame
                         int outIndex = videoDecoder.dequeueOutputBuffer(info, 50000);
                         if (outIndex >= 0) {
-                            long presentationTimeUs = info.presentationTimeUs;
+                            long delta = decodeTimeFifo.pop(SystemClock.uptimeMillis()); // BOREALIS: stream.perf
                             int lastIndex = outIndex;
 
                             numFramesOut++;
@@ -1086,7 +1089,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                                     numFramesOut++;
 
                                     lastIndex = outIndex;
-                                    presentationTimeUs = info.presentationTimeUs;
+                                    delta = decodeTimeFifo.pop(SystemClock.uptimeMillis()); // BOREALIS: stream.perf
                                 }
 
                                 if (prefs.framePacing == PreferenceConfiguration.FRAME_PACING_MAX_SMOOTHNESS ||
@@ -1128,7 +1131,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                             }
 
                             // Add delta time to the totals (excluding probable outliers)
-                            long delta = SystemClock.uptimeMillis() - (presentationTimeUs / 1000);
                             if (delta >= 0 && delta < 1000) {
                                 activeWindowVideoStats.decoderTimeMs += delta;
                                 if (!USE_FRAME_RENDER_TIME) {
@@ -1337,6 +1339,9 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         boolean codecRecovered;
 
         try {
+            if ((codecFlags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) {
+                decodeTimeFifo.push(SystemClock.uptimeMillis()); // BOREALIS: before the queue, so a fast output finds it (stream.perf)
+            }
             videoDecoder.queueInputBuffer(nextInputBufferIndex,
                     0, nextInputBuffer.position(),
                     timestampUs, codecFlags);
@@ -1345,6 +1350,9 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             nextInputBufferIndex = -1;
             nextInputBuffer = null;
         } catch (IllegalStateException e) {
+            if ((codecFlags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) {
+                decodeTimeFifo.discardNewest(); // BOREALIS: stream.perf
+            }
             if (handleDecoderException(e)) {
                 // We encountered a transient error. In this case, just hold onto the buffer
                 // (to avoid leaking it), clear it, and keep it for the next frame. We'll return

@@ -2,7 +2,7 @@
 name: br-implementer
 description: Implements one Borealis task from an orchestrator brief inside the task's own git worktree, test-first where behaviour changes, and reports results. Use for any Borealis implementation or documentation task dispatched by the orchestrator.
 model: sonnet
-effort: high
+effort: xhigh
 disallowedTools: Agent, Artifact, ArtifactComments, ArtifactData, Workflow
 ---
 

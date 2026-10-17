@@ -7,8 +7,8 @@ The main Claude session orchestrates Borealis work. It delegates exploration, li
 | Orchestrator (main session) | Opus, high effort | Plans phases, writes briefs, creates worktrees, dispatches subagents, integrates, verifies, opens the phase PR, reports. |
 | `br-scout` | Haiku, medium effort | Read-only discovery: Memtrace first, then targeted reads; structured summaries. |
 | `br-scribe` | Haiku, medium effort | PR descriptions, release notes, changelog entries, issue text, ADRs from orchestrator notes, documentation copy-edits. Never code, never publishes. |
-| `br-implementer` | Sonnet, high effort | One task per worktree, test-first. |
-| `br-reviewer` | Sonnet, high effort | Independent review of each task and of the phase diff. |
+| `br-implementer` | Sonnet, extra high effort (`xhigh`) | One task per worktree, test-first. |
+| `br-reviewer` | Sonnet, extra high effort (`xhigh`) | Independent review of each task and of the phase diff. |
 | Hooks, CI and scripts | none | Formatting, lint, tests, builds, supply-chain checks. |
 
 `CLAUDE_CODE_SUBAGENT_MODEL=haiku` also applies to built-in agents that inherit the model (such as `general-purpose` and `Plan`). Pass `model: "sonnet"` (or `"opus"`) explicitly when using them for design or substantive work.

@@ -36,7 +36,7 @@ internal constructor(
     @Inject
     constructor(
         @ApplicationContext context: Context,
-        sections: Set<DiagnosticSection>,
+        sections: Set<@JvmSuppressWildcards DiagnosticSection>,
         switches: LogSwitches,
     ) : this(context, { sections }, switches)
 

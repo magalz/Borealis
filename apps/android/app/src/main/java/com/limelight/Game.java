@@ -182,6 +182,8 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
     private WifiManager.WifiLock lowLatencyWifiLock;
 
     private boolean connectedToUsbDriverService = false;
+    // BOREALIS: the driver service waits for the first frame before it shows a permission dialog
+    private volatile UsbDriverService.UsbDriverBinder usbDriverBinder;
     private ServiceConnection usbDriverServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
@@ -190,11 +192,17 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
             binder.setStateListener(Game.this);
             binder.start();
             connectedToUsbDriverService = true;
+            // BOREALIS: set the binder first, then read the flag: the first-frame listener does the reverse
+            usbDriverBinder = binder;
+            if (firstFrameShown) {
+                binder.onStreamReady();
+            }
         }
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
             connectedToUsbDriverService = false;
+            usbDriverBinder = null; // BOREALIS
         }
     };
 
@@ -409,6 +417,10 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
         // BOREALIS: first rendered frame ends the preparing message and the watchdog
         decoderRenderer.firstFrameSignal.setListener(() -> {
             firstFrameShown = true; // BOREALIS
+            UsbDriverService.UsbDriverBinder usbBinder = usbDriverBinder; // BOREALIS
+            if (usbBinder != null) {
+                usbBinder.onStreamReady();
+            }
             startupGuard.onFirstFrame();
             streamSession.onFirstFrame();
         });

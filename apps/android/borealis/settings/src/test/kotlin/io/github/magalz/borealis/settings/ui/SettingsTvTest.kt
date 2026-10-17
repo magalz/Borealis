@@ -1,9 +1,13 @@
 package io.github.magalz.borealis.settings.ui
 
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
@@ -211,6 +215,27 @@ class SettingsTvTest : SettingsScreenTestBase() {
         press("Deadzone", Key.DirectionRight)
 
         assertThat(snapshot[Settings.DEADZONE]).isEqualTo(8)
+    }
+
+    @Test
+    fun `the D-pad scrolls the licence texts`() {
+        licenses = (1..200).joinToString("\n") { "Licence line $it" }
+        show(keyboard = true)
+        selectGroup("About")
+        composeRule.onNodeWithText("Open-source licences").performClick()
+        composeRule.waitForIdle()
+        val text =
+            composeRule.onNode(
+                hasText("Licence line 1", substring = true) and hasAnyAncestor(isDialog())
+            )
+        text.requestFocus()
+
+        text.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+
+        val scrolled =
+            text.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+        assertThat(scrolled).isGreaterThan(0f)
     }
 
     @Test

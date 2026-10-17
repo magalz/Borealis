@@ -33,9 +33,9 @@ class PosterContentProviderTest {
 
     @Before
     fun providerIsRegistered() {
-        DiskAssetLoader(context).deleteAssetsForComputer("host-1")
+        DiskAssetLoader(context).deleteAssetsForComputer(HOST)
         Robolectric.setupContentProvider(PosterContentProvider::class.java, PosterContentProvider.AUTHORITY)
-        binder.computers["host-1"] = details(uuid = "host-1").also { it.serverCert = testCertificate() }
+        binder.computers[HOST] = details(uuid = HOST).also { it.serverCert = testCertificate() }
     }
 
     @Test
@@ -50,12 +50,12 @@ class PosterContentProviderTest {
         clients.client.boxArtAnswer = { ByteArrayInputStream(png) }
         val io = UnconfinedTestDispatcher(testScheduler)
         BoxArtLoader(context, ComputerManagerConnection(FakeCmsConnector(binder), io), clients, io)
-            .prefetch("host-1", 7)
+            .prefetch(HOST, 7)
             .join()
 
         val poster =
             context.contentResolver
-                .openInputStream(PosterContentProvider.createBoxArtUri("host-1", "7"))!!
+                .openInputStream(PosterContentProvider.createBoxArtUri(HOST, "7"))!!
                 .use { it.readBytes() }
 
         assertThat(poster).isEqualTo(png)
@@ -74,7 +74,7 @@ class PosterContentProviderTest {
 
     @Test
     fun `a host id that is not a plain id has no poster`() {
-        for (hostId in listOf("a/b", "a\\b", "host 1", "x".repeat(65), "..%2F..")) {
+        for (hostId in listOf("a/b", "a\\b", "host 1", "a".repeat(65), "..%2F..")) {
             assertThrows(FileNotFoundException::class.java) { open(hostId, "7") }
         }
     }
@@ -82,14 +82,19 @@ class PosterContentProviderTest {
     @Test
     fun `an app id that is not a number has no poster instead of an error`() {
         for (appId in listOf("abc", "-1", "", "99999999999", "1.5")) {
-            assertThrows(FileNotFoundException::class.java) { open("host-1", appId) }
+            assertThrows(FileNotFoundException::class.java) { open(HOST, appId) }
         }
     }
 
     @Test
     fun `an app without cached art has no poster`() {
         assertThrows(FileNotFoundException::class.java) {
-            context.contentResolver.openInputStream(PosterContentProvider.createBoxArtUri("host-1", "7"))
+            context.contentResolver.openInputStream(PosterContentProvider.createBoxArtUri(HOST, "7"))
         }
+    }
+
+    private companion object {
+        // A host id as the host sends it: hexadecimal digits and hyphens.
+        const val HOST = "0a1b2c3d-1111-2222-3333-444455556666"
     }
 }

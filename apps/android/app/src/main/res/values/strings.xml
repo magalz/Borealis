@@ -2,6 +2,7 @@
 <resources>
     <!-- Shortcut strings -->
     <string name="scut_deleted_pc">PC deleted</string>
+    <string name="scut_hidden_app">App hidden</string>
 
     <!-- Help strings -->
     <string name="help_loading_title">Help Viewer</string>

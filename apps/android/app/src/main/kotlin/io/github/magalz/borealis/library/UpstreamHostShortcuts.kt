@@ -75,9 +75,12 @@ constructor(
         hdrSupported: Boolean,
     ): Boolean {
         if (!canPinApps) return false
-        // The art is fetched and drawn off the main thread; without it the icon is the generic one.
+        // The art is fetched off the main thread, and so is the drawing; without art the icon is
+        // the generic one.
         val icon =
-            withContext(io) { boxArt.bitmap(hostId, appId)?.let(AdaptiveShortcutIcon::build) }
+            boxArt.bitmap(hostId, appId)?.let { art ->
+                withContext(io) { AdaptiveShortcutIcon.build(art) }
+            }
         return helper.createPinnedGameShortcut(
             computer(hostId, hostName),
             NvApp(appName, appId, hdrSupported),
@@ -88,7 +91,11 @@ constructor(
     // Both run off the main thread: the shortcut manager and the TV provider are binder calls.
     override fun appHidden(hostId: String, appId: Int) {
         // This also deletes the TV program of the app.
-        helper.disableAppShortcut(computer(hostId, ""), app(appId), HIDDEN_REASON)
+        helper.disableAppShortcut(
+            computer(hostId, ""),
+            app(appId),
+            context.getString(R.string.scut_hidden_app),
+        )
     }
 
     override fun appShown(hostId: String, appId: Int) {
@@ -106,8 +113,4 @@ constructor(
             it.uuid = hostId
             it.name = hostName
         }
-
-    private companion object {
-        const val HIDDEN_REASON = "App hidden"
-    }
 }

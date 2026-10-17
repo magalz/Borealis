@@ -12,13 +12,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
-import androidx.compose.ui.test.hasAnyChild
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
@@ -35,9 +36,12 @@ import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.assertPixel
+import io.github.magalz.borealis.designsystem.pixelAt
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -55,6 +59,7 @@ class BorealisTextFieldTest {
 
     private var value by mutableStateOf("192.168.1.20")
     private lateinit var view: View
+    private var accent = Color.Unspecified
     private var done = 0
     private var rejectEdits = false
     private val reported = mutableListOf<String>()
@@ -63,6 +68,7 @@ class BorealisTextFieldTest {
         composeRule.setContentInKeyboardMode {
             view = LocalView.current
             BorealisTheme(FormFactor.Tv) {
+                accent = LocalBorealisColors.current.accent
                 Row {
                     Box(Modifier.size(40.dp).testTag(LEFT).focusable())
                     Column {
@@ -90,8 +96,8 @@ class BorealisTextFieldTest {
 
     private fun editable() = composeRule.onNode(hasSetTextAction())
 
-    /** What takes the D-pad focus while the field is not being edited: it holds the field. */
-    private fun wrapper() = composeRule.onNode(hasAnyChild(hasSetTextAction()))
+    /** What takes the D-pad focus while the field is not being edited: it lies over the field. */
+    private fun wrapper() = composeRule.onNode(hasContentDescription("Address"))
 
     /**
      * Whether the window has a text input session, which is what the input method needs to open a
@@ -203,6 +209,19 @@ class BorealisTextFieldTest {
     }
 
     @Test
+    fun `without showKeyboardOnFocus the wrapper has the focused look of the field`() {
+        show(showKeyboardOnFocus = false)
+
+        wrapper().assertIsFocused()
+        // The border at the left edge, halfway down the field.
+        editable().assertPixel(1f, 32f, accent)
+        press(Key.DirectionDown)
+        composeRule.waitForIdle()
+
+        assertThat(editable().pixelAt(1f, 32f)).isNotEqualTo(accent)
+    }
+
+    @Test
     fun `without showKeyboardOnFocus OK moves the focus into the field and opens the keyboard`() {
         show(showKeyboardOnFocus = false)
 
@@ -215,14 +234,20 @@ class BorealisTextFieldTest {
     }
 
     @Test
-    fun `without showKeyboardOnFocus Down leaves the field being edited and Up comes back to its wrapper`() {
+    fun `without showKeyboardOnFocus Down leaves the field being edited and ends the editing`() {
         show(showKeyboardOnFocus = false)
         press(Key.DirectionCenter)
         composeRule.waitForIdle()
 
         press(Key.DirectionDown)
+        composeRule.waitForIdle()
+
         composeRule.onNodeWithTag(BELOW).assertIsFocused()
-        press(Key.DirectionUp)
+        editable().assertIsNotFocused()
+        assertThat(textSessionIsOpen()).isFalse()
+
+        // Back on the field, the focus is on its wrapper and the keyboard stays shut.
+        wrapper().requestFocus()
         composeRule.waitForIdle()
 
         wrapper().assertIsFocused()

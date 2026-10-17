@@ -23,8 +23,8 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
-import androidx.compose.ui.test.hasAnyChild
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
@@ -72,7 +72,7 @@ class AddHostScreenTest {
 
     @Test
     @Config(qualifiers = TV)
-    fun `the address has the focus on a TV as well, on what wraps the field`() {
+    fun `the address has the focus on a TV as well, on what lies over the field`() {
         show(AddHostUiState(), FormFactor.Tv)
 
         addressWrapper().assertIsFocused()
@@ -359,8 +359,8 @@ class AddHostScreenTest {
         assertThat(keyboardIsShown()).isFalse()
     }
 
-    /** What takes the D-pad focus on a TV until OK: it holds the field. */
-    private fun addressWrapper() = composeRule.onNode(hasAnyChild(hasSetTextAction()))
+    /** What takes the D-pad focus on a TV until OK: it lies over the field. */
+    private fun addressWrapper() = composeRule.onNode(hasContentDescription("Address"))
 
     /** OK on the address, as a remote opens it for typing. */
     private fun startEditing() {

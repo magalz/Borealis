@@ -90,7 +90,7 @@ class LibraryActivityTest {
         apps.emit(AppsSnapshot(host = desk, apps = listOf(anApp(1, "Hades II")), loading = false))
         composeRule.waitForIdle()
 
-        composeRule.onNodeWithText("Open", useUnmergedTree = true).performClick()
+        composeRule.onNodeWithTag("host:desk").performClick()
         composeRule.waitForIdle()
 
         assertThat(shortcuts.openedHosts).containsExactly("desk" to "Desk PC")
@@ -152,7 +152,7 @@ class LibraryActivityTest {
         pairing.prepared += PairingInstructions("4817", "https://192.0.2.10:47990", "Galaxy S22")
         composeRule.waitForIdle()
 
-        composeRule.onNodeWithText("Pair", useUnmergedTree = true).performClick()
+        composeRule.onNodeWithTag("host:studio").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Pair with Studio").assertIsDisplayed()
         pairing.pairCalls.single().outcome.complete(PairingOutcome.Paired)
@@ -210,7 +210,7 @@ class LibraryActivityTest {
         apps.emit(AppsSnapshot(host = null, apps = emptyList(), loading = false))
         composeRule.waitForIdle()
 
-        composeRule.onNodeWithText("Open", useUnmergedTree = true).performClick()
+        composeRule.onNodeWithTag("host:desk").performClick()
         composeRule.waitForIdle()
 
         composeRule.onNodeWithTag("host:desk").assertIsDisplayed()

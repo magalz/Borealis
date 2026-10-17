@@ -14,11 +14,14 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.widget.Toast;
 
 import com.limelight.LimeLog;
 import com.limelight.R;
 import com.limelight.preferences.PreferenceConfiguration;
+
+import io.github.magalz.borealis.input.UsbPermissionRequests;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -36,6 +39,10 @@ public class UsbDriverService extends Service implements UsbDriverListener {
     private final UsbDriverBinder binder = new UsbDriverBinder();
 
     private final ArrayList<AbstractController> controllers = new ArrayList<>();
+
+    // BOREALIS: the permission dialog waits for the first frame of the stream (see UsbPermissionRequests)
+    private final UsbPermissionRequests<UsbDevice> permissionRequests =
+            new UsbPermissionRequests<>(this::askForPermission);
 
     private UsbDriverListener listener;
     private UsbDriverStateListener stateListener;
@@ -96,6 +103,7 @@ public class UsbDriverService extends Service implements UsbDriverListener {
             // Subsequent permission dialog completion intent
             else if (action.equals(ACTION_USB_PERMISSION)) {
                 UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                permissionRequests.resolved(device.getDeviceName()); // BOREALIS
 
                 // Permission dialog is now closed
                 if (stateListener != null) {
@@ -133,6 +141,12 @@ public class UsbDriverService extends Service implements UsbDriverListener {
         public void stop() {
             UsbDriverService.this.stop();
         }
+
+        // BOREALIS: the stream shows its first frame, so the held permission dialogs may appear
+        public void onStreamReady() {
+            // The first frame is reported from the render thread; the requests live on the main one
+            new Handler(Looper.getMainLooper()).post(permissionRequests::onReady);
+        }
     }
 
     private void handleUsbDeviceState(UsbDevice device) {
@@ -140,37 +154,8 @@ public class UsbDriverService extends Service implements UsbDriverListener {
         if (shouldClaimDevice(device, prefConfig.bindAllUsb)) {
             // Do we have permission yet?
             if (!usbManager.hasPermission(device)) {
-                // Let's ask for permission
-                try {
-                    // Tell the state listener that we're about to display a permission dialog
-                    if (stateListener != null) {
-                        stateListener.onUsbPermissionPromptStarting();
-                    }
-
-                    int intentFlags = 0;
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        // This PendingIntent must be mutable to allow the framework to populate EXTRA_DEVICE and EXTRA_PERMISSION_GRANTED.
-                        intentFlags |= PendingIntent.FLAG_MUTABLE;
-                    }
-
-                    // This function is not documented as throwing any exceptions (denying access
-                    // is indicated by calling the PendingIntent with a false result). However,
-                    // Samsung Knox has some policies which block this request, but rather than
-                    // just returning a false result or returning 0 enumerated devices,
-                    // they throw an undocumented SecurityException from this call, crashing
-                    // the whole app. :(
-
-                    // Use an explicit intent to activate our unexported broadcast receiver, as required on Android 14+
-                    Intent i = new Intent(ACTION_USB_PERMISSION);
-                    i.setPackage(getPackageName());
-
-                    usbManager.requestPermission(device, PendingIntent.getBroadcast(UsbDriverService.this, 0, i, intentFlags));
-                } catch (SecurityException e) {
-                    Toast.makeText(this, this.getText(R.string.error_usb_prohibited), Toast.LENGTH_LONG).show();
-                    if (stateListener != null) {
-                        stateListener.onUsbPermissionPromptCompleted();
-                    }
-                }
+                // BOREALIS: ask once the stream shows a picture
+                permissionRequests.request(device.getDeviceName(), device);
                 return;
             }
 
@@ -206,6 +191,48 @@ public class UsbDriverService extends Service implements UsbDriverListener {
 
             // Add this controller to the list
             controllers.add(controller);
+        }
+    }
+
+    // BOREALIS: moved out of handleUsbDeviceState() so that UsbPermissionRequests can call it later
+    private void askForPermission(UsbDevice device) {
+        // A pad that went away while its request was held needs no dialog
+        if (!usbManager.getDeviceList().containsKey(device.getDeviceName())) {
+            permissionRequests.resolved(device.getDeviceName());
+            return;
+        }
+
+        // Let's ask for permission
+        try {
+            // Tell the state listener that we're about to display a permission dialog
+            if (stateListener != null) {
+                stateListener.onUsbPermissionPromptStarting();
+            }
+
+            int intentFlags = 0;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // This PendingIntent must be mutable to allow the framework to populate EXTRA_DEVICE and EXTRA_PERMISSION_GRANTED.
+                intentFlags |= PendingIntent.FLAG_MUTABLE;
+            }
+
+            // This function is not documented as throwing any exceptions (denying access
+            // is indicated by calling the PendingIntent with a false result). However,
+            // Samsung Knox has some policies which block this request, but rather than
+            // just returning a false result or returning 0 enumerated devices,
+            // they throw an undocumented SecurityException from this call, crashing
+            // the whole app. :(
+
+            // Use an explicit intent to activate our unexported broadcast receiver, as required on Android 14+
+            Intent i = new Intent(ACTION_USB_PERMISSION);
+            i.setPackage(getPackageName());
+
+            usbManager.requestPermission(device, PendingIntent.getBroadcast(UsbDriverService.this, 0, i, intentFlags));
+        } catch (SecurityException e) {
+            permissionRequests.resolved(device.getDeviceName()); // BOREALIS
+            Toast.makeText(this, this.getText(R.string.error_usb_prohibited), Toast.LENGTH_LONG).show();
+            if (stateListener != null) {
+                stateListener.onUsbPermissionPromptCompleted();
+            }
         }
     }
 
@@ -273,6 +300,7 @@ public class UsbDriverService extends Service implements UsbDriverListener {
         }
 
         started = true;
+        permissionRequests.reset(); // BOREALIS: a stream starts, its picture is not up yet
 
         // Register for USB attach broadcasts and permission completions
         IntentFilter filter = new IntentFilter();
@@ -300,6 +328,7 @@ public class UsbDriverService extends Service implements UsbDriverListener {
         }
 
         started = false;
+        permissionRequests.reset(); // BOREALIS
 
         // Stop the attachment receiver
         unregisterReceiver(receiver);

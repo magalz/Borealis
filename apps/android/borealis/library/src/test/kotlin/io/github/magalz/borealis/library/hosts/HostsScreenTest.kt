@@ -10,7 +10,9 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
@@ -29,6 +31,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -165,46 +168,57 @@ class HostsScreenTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `the inline buttons show the action of the state`() {
+    fun `a card has no button of its own`() {
         showPhone(withHosts)
 
-        composeRule.onNodeWithText("Open", useUnmergedTree = true).assertIsDisplayed()
-        composeRule.onNodeWithText("Wake", useUnmergedTree = true).assertIsDisplayed()
-        composeRule.onNodeWithText("Pair", useUnmergedTree = true).assertIsDisplayed()
-    }
-
-    @Test
-    @Config(qualifiers = PHONE)
-    fun `a host that was not polled yet has no button`() {
-        showPhone(withHosts.copy(items = listOf(checkingPc), continueItems = emptyList()))
-
-        composeRule.onNodeWithText("Checking…").assertIsDisplayed()
         composeRule.onNodeWithText("Open", useUnmergedTree = true).assertDoesNotExist()
-        composeRule.onNodeWithText("Pair", useUnmergedTree = true).assertDoesNotExist()
         composeRule.onNodeWithText("Wake", useUnmergedTree = true).assertDoesNotExist()
+        composeRule.onNodeWithText("Pair", useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `Open and Pair select the host and Wake wakes it`() {
+    fun `a card says to a screen reader what a tap does in its state`() {
+        showPhone(withHosts.copy(items = listOf(deskPc, livingRoomPc, studio, checkingPc)))
+
+        assertThat(clickLabel("host:desk")).isEqualTo("Open")
+        assertThat(clickLabel("host:living")).isEqualTo("Wake")
+        assertThat(clickLabel("host:studio")).isEqualTo("Pair")
+        assertThat(clickLabel("host:new")).isNull()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a tap on a card opens a paired host and starts pairing with one that is not paired`() {
         showPhone(withHosts)
 
-        composeRule.onNodeWithText("Open", useUnmergedTree = true).performClick()
-        composeRule.onNodeWithText("Pair", useUnmergedTree = true).performClick()
-        composeRule.onNodeWithText("Wake", useUnmergedTree = true).performClick()
+        composeRule.onNodeWithTag("host:desk").performClick()
+        composeRule.onNodeWithTag("host:studio").performClick()
 
         assertThat(selected).containsExactly("desk", "studio").inOrder()
-        assertThat(woken).containsExactly("living")
+        assertThat(woken).isEmpty()
     }
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `a tap on a card selects the host`() {
+    fun `a tap on the card of an offline host wakes it and does not select it`() {
         showPhone(withHosts)
 
         composeRule.onNodeWithTag("host:living").performClick()
 
-        assertThat(selected).containsExactly("living")
+        assertThat(woken).containsExactly("living")
+        assertThat(selected).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a tap on a card that is not polled yet selects it`() {
+        showPhone(withHosts.copy(items = listOf(checkingPc), continueItems = emptyList()))
+
+        composeRule.onNodeWithTag("host:new").performClick()
+
+        assertThat(selected).containsExactly("new")
+        assertThat(woken).isEmpty()
     }
 
     @Test
@@ -437,6 +451,77 @@ class HostsScreenTest {
 
     @Test
     @Config(qualifiers = TV)
+    fun `OK on the card of an offline host wakes it and does not select it`() {
+        showTv(withHostsNoContinue)
+        composeRule.onNodeWithTag("host:living").requestFocus()
+
+        composeRule.onNodeWithTag("host:living").performKeyInput { pressKey(Key.DirectionCenter) }
+
+        assertThat(woken).containsExactly("living")
+        assertThat(selected).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `OK on the card of a host that is not paired starts pairing`() {
+        showTv(withHostsNoContinue)
+        composeRule.onNodeWithTag("host:studio").requestFocus()
+
+        composeRule.onNodeWithTag("host:studio").performKeyInput { pressKey(Key.DirectionCenter) }
+
+        assertThat(selected).containsExactly("studio")
+        assertThat(woken).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `a host card is one focus stop so Down does not move into the card`() {
+        showTv(withHostsNoContinue)
+        composeRule.onNodeWithTag("host:desk").requestFocus()
+
+        composeRule.onNodeWithTag("host:desk").performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.onNodeWithTag("host:desk").assertIsFocused()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `holding OK on the card of an online host opens its options and runs nothing`() {
+        showTv(withHostsNoContinue)
+        composeRule.onNodeWithTag("host:desk").requestFocus()
+
+        composeRule.onNodeWithTag("host:desk").performKeyInput {
+            keyDown(Key.DirectionCenter)
+            advanceEventTime(HOLD_MILLIS)
+            keyUp(Key.DirectionCenter)
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Details").assertIsDisplayed()
+        assertThat(selected).isEmpty()
+        assertThat(woken).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `holding OK on the card of an offline host opens its options and does not wake it`() {
+        showTv(withHostsNoContinue)
+        composeRule.onNodeWithTag("host:living").requestFocus()
+
+        composeRule.onNodeWithTag("host:living").performKeyInput {
+            keyDown(Key.DirectionCenter)
+            advanceEventTime(HOLD_MILLIS)
+            keyUp(Key.DirectionCenter)
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Details").assertIsDisplayed()
+        assertThat(woken).isEmpty()
+        assertThat(selected).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
     fun `X on a focused host opens its options`() {
         showTv(withHosts)
         composeRule.onNodeWithTag("host:living").requestFocus()
@@ -446,6 +531,22 @@ class HostsScreenTest {
 
         composeRule.onNodeWithText("Details").assertIsDisplayed()
         composeRule.onNodeWithText("Forget").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `Back from the options returns the focus to the same host card`() {
+        showTv(withHostsNoContinue)
+        composeRule.onNodeWithTag("host:living").requestFocus()
+        composeRule.onNodeWithTag("host:living").performKeyInput { pressKey(Key.ButtonX) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Details").assertIsDisplayed()
+
+        Espresso.pressBack()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Details").assertDoesNotExist()
+        composeRule.onNodeWithTag("host:living").assertIsFocused()
     }
 
     @Test
@@ -529,6 +630,14 @@ class HostsScreenTest {
         composeRule.onNode(isFocused()).assertExists()
     }
 
+    private fun clickLabel(tag: String): String? =
+        composeRule
+            .onNodeWithTag(tag)
+            .fetchSemanticsNode()
+            .config
+            .getOrNull(SemanticsActions.OnClick)
+            ?.label
+
     private fun showPhone(state: HostsUiState) {
         composeRule.setContent { Screen(state, FormFactor.Phone) }
     }
@@ -569,6 +678,7 @@ class HostsScreenTest {
     }
 
     private companion object {
+        const val HOLD_MILLIS = 1_200L
         const val WAKE_CONSEQUENCE = "Send a Wake-on-LAN packet to the PC."
         const val FORGET_CONSEQUENCE =
             "Remove it from this device. " +

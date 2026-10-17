@@ -23,6 +23,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
@@ -114,35 +115,37 @@ fun HostCard(
                     down = FocusRequester.Default
                 }
             }
-        if (inline) {
-            // The text stays at the top; the action is centred on the card.
-            Row(
-                Modifier.heightIn(min = height - padding * 2),
-                horizontalArrangement = Arrangement.spacedBy(CONTENT_GAP),
-            ) {
-                HostInfo(name, status, statusText, detail, tags, runningApp, Modifier.weight(1f))
-                action?.let {
-                    HostActionButton(it, actionModifier.align(Alignment.CenterVertically))
-                }
-            }
-        } else {
-            // The text stays at the top and the action sits at the bottom edge, so it is in the
-            // same place on every card.
-            Column(
-                Modifier.heightIn(min = height - padding * 2),
-                verticalArrangement = Arrangement.SpaceBetween,
-            ) {
-                HostInfo(
-                    name,
-                    status,
-                    statusText,
-                    detail,
-                    tags,
-                    runningApp,
-                    if (action == null) Modifier else Modifier.padding(bottom = CONTENT_GAP),
-                )
-                action?.let { HostActionButton(it, actionModifier) }
-            }
+        HostCardContent(inline, height - padding * 2, action, actionModifier) { infoModifier ->
+            HostInfo(name, status, statusText, detail, tags, runningApp, infoModifier)
+        }
+    }
+}
+
+/**
+ * The text and the action of a card, [minHeight] high at least. On a phone the text is at the top
+ * and the action is centred at the end of the row; else the text is at the top and the action sits
+ * at the bottom edge, so it is in the same place on every card.
+ */
+@Composable
+private fun HostCardContent(
+    inline: Boolean,
+    minHeight: Dp,
+    action: HostCardAction?,
+    actionModifier: Modifier,
+    info: @Composable (Modifier) -> Unit,
+) {
+    if (inline) {
+        Row(
+            Modifier.heightIn(min = minHeight),
+            horizontalArrangement = Arrangement.spacedBy(CONTENT_GAP),
+        ) {
+            info(Modifier.weight(1f))
+            action?.let { HostActionButton(it, actionModifier.align(Alignment.CenterVertically)) }
+        }
+    } else {
+        Column(Modifier.heightIn(min = minHeight), verticalArrangement = Arrangement.SpaceBetween) {
+            info(if (action == null) Modifier else Modifier.padding(bottom = CONTENT_GAP))
+            action?.let { HostActionButton(it, actionModifier) }
         }
     }
 }

@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName")
+
 package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.foundation.background
@@ -86,19 +88,11 @@ fun BorealisDialog(
     val shape = MaterialTheme.shapes.extraLarge
     val windowWidth = LocalConfiguration.current.screenWidthDp.dp
     val margin = BorealisTokens.Space.DialogMargin
-    val confirmFocus = remember { FocusRequester() }
-    val dismissFocus = remember { FocusRequester() }
     Dialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        // The scrim is the theme's, not the platform's dim.
-        val view = LocalView.current
-        SideEffect {
-            (view as? DialogWindowProvider ?: view.parent as? DialogWindowProvider)
-                ?.window
-                ?.setDimAmount(0f)
-        }
+        NoPlatformDim()
         Box(
             Modifier.fillMaxSize()
                 .background(colors.scrim)
@@ -118,43 +112,71 @@ fun BorealisDialog(
                     .padding(BorealisTokens.Space.DialogPadding)
                     .semantics { paneTitle = title }
             ) {
-                Text(
-                    title,
-                    modifier = Modifier.semantics { heading() },
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                Spacer(Modifier.height(TITLE_GAP))
-                Column(
-                    Modifier.weight(1f, fill = false)
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(TITLE_GAP),
-                    content = content,
-                )
-                Spacer(Modifier.height(ACTIONS_GAP))
-                val focusConfirm = !focusDismiss || dismiss == null
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    extraActions.forEach { ActionButton(it, BorealisButtonStyle.Text) }
-                    Spacer(Modifier.weight(1f))
-                    dismiss?.let {
-                        ActionButton(
-                            it,
-                            BorealisButtonStyle.Secondary,
-                            if (focusConfirm) Modifier else Modifier.initialFocus(dismissFocus),
-                        )
-                    }
-                    ActionButton(
-                        confirm,
-                        BorealisButtonStyle.Primary,
-                        if (focusConfirm) Modifier.initialFocus(confirmFocus) else Modifier,
-                    )
-                }
+                DialogBody(title, content)
+                DialogFooter(confirm, dismiss, extraActions, focusDismiss)
             }
         }
+    }
+}
+
+/** The scrim is the theme's, so the platform's dim of the dialog window goes. */
+@Composable
+private fun NoPlatformDim() {
+    val view = LocalView.current
+    SideEffect {
+        (view as? DialogWindowProvider ?: view.parent as? DialogWindowProvider)
+            ?.window
+            ?.setDimAmount(0f)
+    }
+}
+
+/** The title, and under it the content, which scrolls when the window is too short for it. */
+@Composable
+private fun ColumnScope.DialogBody(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Text(
+        title,
+        modifier = Modifier.semantics { heading() },
+        style = MaterialTheme.typography.titleLarge,
+    )
+    Spacer(Modifier.height(TITLE_GAP))
+    Column(
+        Modifier.weight(1f, fill = false).fillMaxWidth().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(TITLE_GAP),
+        content = content,
+    )
+    Spacer(Modifier.height(ACTIONS_GAP))
+}
+
+/** The extra actions at the start, then the dismiss action and the confirm action on the right. */
+@Composable
+private fun DialogFooter(
+    confirm: DialogAction,
+    dismiss: DialogAction?,
+    extraActions: List<DialogAction>,
+    focusDismiss: Boolean,
+) {
+    val confirmFocus = remember { FocusRequester() }
+    val dismissFocus = remember { FocusRequester() }
+    val focusConfirm = !focusDismiss || dismiss == null
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        extraActions.forEach { ActionButton(it, BorealisButtonStyle.Text) }
+        Spacer(Modifier.weight(1f))
+        dismiss?.let {
+            ActionButton(
+                it,
+                BorealisButtonStyle.Secondary,
+                if (focusConfirm) Modifier else Modifier.initialFocus(dismissFocus),
+            )
+        }
+        ActionButton(
+            confirm,
+            BorealisButtonStyle.Primary,
+            if (focusConfirm) Modifier.initialFocus(confirmFocus) else Modifier,
+        )
     }
 }
 

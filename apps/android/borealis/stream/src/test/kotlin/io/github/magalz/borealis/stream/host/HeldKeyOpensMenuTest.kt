@@ -235,6 +235,64 @@ class HeldKeyOpensMenuTest {
         assertThat(panel).isEqualTo(Panel.NONE)
     }
 
+    @Test
+    fun `a system key held since before the menu opened is not consumed`() {
+        for (keyCode in listOf(KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)) {
+            val downTime = holdThroughOpening(keyCode)
+
+            assertThat(repeatsThenRelease(keyCode, downTime)).doesNotContain(true)
+
+            session.closePanel()
+            idle()
+        }
+    }
+
+    @Test
+    fun `after the menu is closed and opened again only a key held across the reopening is spent`() {
+        session.openMenu()
+        idle()
+        session.closePanel()
+        idle()
+        // Pressed and let go while the menu was closed: nothing of it is left for the next menu.
+        val pressed = SystemClock.uptimeMillis()
+        key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, pressed)
+        key(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, pressed)
+        idle(100)
+        val held = SystemClock.uptimeMillis()
+        key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, held)
+        idle(100)
+        session.openMenu()
+        idle()
+
+        repeatsThenRelease(KeyEvent.KEYCODE_DPAD_CENTER, held)
+        assertThat(panel).isEqualTo(Panel.MENU)
+
+        tap(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertThat(panel).isEqualTo(Panel.NONE)
+    }
+
+    @Test
+    fun `a quick Back that opens the menu is followed by a fresh Back that closes it`() {
+        val downTime = SystemClock.uptimeMillis()
+        key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK, downTime)
+        val taken = key(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK, downTime)
+        // The activity turns a release that nobody took into this call.
+        if (!taken) pressBack()
+        idle()
+        assertThat(panel).isEqualTo(Panel.MENU)
+
+        val fresh = SystemClock.uptimeMillis()
+        key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK, fresh)
+        if (!key(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK, fresh)) pressBack()
+        idle()
+
+        assertThat(panel).isEqualTo(Panel.NONE)
+    }
+
+    private fun pressBack() = composeRule.runOnUiThread {
+        composeRule.activity.onBackPressedDispatcher.onBackPressed()
+    }
+
     private companion object {
         const val REMOTE = 11
     }

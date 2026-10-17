@@ -92,6 +92,7 @@ class ExportDiagnosticsPreferenceTest {
     ) =
         ExportDiagnosticsPreference(context).apply {
             sectionsProvider = { sections }
+            logSwitches = { FakeLogSwitches() }
             transferAddress = { address }
             transferClock = clock::get
             // androidx FileProvider cannot map Windows paths under Robolectric; the real one is
@@ -689,7 +690,7 @@ class ExportDiagnosticsPreferenceTest {
     }
 
     @Test
-    fun `a transfer that fails to open becomes a message and does not crash`() {
+    fun `an address lookup that fails becomes a message and does not crash`() {
         RuntimeEnvironment.setQualifiers("+television")
         val tv = Robolectric.buildActivity(Activity::class.java).setup().get()
         preference(context = tv).apply { transferAddress = { error("no network stack") } }.onClick()
@@ -697,8 +698,9 @@ class ExportDiagnosticsPreferenceTest {
         savedDialog().getButton(AlertDialog.BUTTON_NEUTRAL).performClick()
         shadowOf(Looper.getMainLooper()).idle()
 
-        assertThat(ShadowToast.getTextOfLatestToast())
-            .isEqualTo("Could not start the transfer. See the log for details.")
+        val message = ShadowAlertDialog.getLatestAlertDialog()
+        assertThat(texts(message.window!!.decorView).joinToString(","))
+            .contains("Could not start the transfer. See the log for details.")
     }
 
     @Test

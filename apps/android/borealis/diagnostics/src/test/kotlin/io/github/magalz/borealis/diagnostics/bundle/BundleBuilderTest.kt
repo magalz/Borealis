@@ -47,6 +47,7 @@ class BundleBuilderTest {
             BundleBuilder.build(
                 context,
                 listOf(TextSection("audit.jsonl", "{\"detail\":\"already redacted\"}\n")),
+                FakeLogSwitches(verboseLogging = true, maskAddresses = true),
                 Instant.parse("2026-10-14T12:34:56Z"),
             )
 
@@ -63,6 +64,10 @@ class BundleBuilderTest {
             )
             .isEqualTo("2026-10-14T12:34:56Z")
         assertThat(entries.getValue("decoders.json")).contains("displayHdrTypes")
+        assertThat(
+                Json.decodeFromString<BundleManifest>(entries.getValue("manifest.json")).logSettings
+            )
+            .isEqualTo(LogSettingsInfo(verbose = true, maskAddresses = true))
     }
 
     @Test
@@ -73,7 +78,12 @@ class BundleBuilderTest {
             sink.write(LogRecord(1_700_000_000_000L, LogLevel.INFO, LogTag.APP, "queued line"))
 
             val zip =
-                BundleBuilder.build(context, emptyList(), Instant.parse("2026-10-14T12:34:56Z"))
+                BundleBuilder.build(
+                    context,
+                    emptyList(),
+                    FakeLogSwitches(),
+                    Instant.parse("2026-10-14T12:34:56Z"),
+                )
 
             assertThat(entriesOf(zip).getValue("logs/borealis.log")).contains("queued line")
         } finally {
@@ -87,6 +97,7 @@ class BundleBuilderTest {
             BundleBuilder.build(
                 context,
                 emptyList(),
+                FakeLogSwitches(),
                 Instant.parse("2026-10-14T12:34:56Z"),
                 flushLogs = {
                     logDir.mkdirs()
@@ -103,7 +114,13 @@ class BundleBuilderTest {
         File(dir, "borealis-diagnostics-20250101-000000.zip").writeText("old")
         File(dir, "borealis-diagnostics-20250101-000001.zip.part").writeText("unfinished")
 
-        val zip = BundleBuilder.build(context, emptyList(), Instant.parse("2026-10-14T12:34:56Z"))
+        val zip =
+            BundleBuilder.build(
+                context,
+                emptyList(),
+                FakeLogSwitches(),
+                Instant.parse("2026-10-14T12:34:56Z"),
+            )
 
         assertThat(dir.list()!!.toList()).containsExactly(zip.name)
     }

@@ -356,7 +356,7 @@ class HostsScreenTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `loading shows a progress indicator and not the empty state with its Add host button`() {
+    fun `loading shows the loader and not the empty state with its Add host button`() {
         showPhone(loadingHosts)
 
         composeRule.onNodeWithTag("hosts-loading").assertIsDisplayed()
@@ -381,7 +381,7 @@ class HostsScreenTest {
 
     @Test
     @Config(qualifiers = TV)
-    fun `loading on a TV shows a progress indicator and leaves the focus in the rail`() {
+    fun `loading on a TV shows the loader and leaves the focus in the rail`() {
         showTv(loadingHosts)
 
         composeRule.onNodeWithTag("hosts-loading").assertIsDisplayed()

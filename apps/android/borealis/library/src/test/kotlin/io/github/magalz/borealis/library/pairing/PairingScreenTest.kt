@@ -1,5 +1,9 @@
 package io.github.magalz.borealis.library.pairing
 
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
@@ -14,6 +18,9 @@ import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.library.shell.LibraryScaffold
+import io.github.magalz.borealis.library.shell.RailActions
+import io.github.magalz.borealis.library.shell.RailSelection
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -184,10 +191,13 @@ class PairingScreenTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `preparing shows a progress indicator`() {
+    fun `preparing shows the aurora loader`() {
         show(PairingUiState.Preparing)
 
         composeRule.onNodeWithContentDescription("Preparing the PIN").assertIsDisplayed()
+        composeRule
+            .onNodeWithContentDescription("Preparing the PIN")
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ProgressBarRangeInfo))
     }
 
     @Test
@@ -353,6 +363,43 @@ class PairingScreenTest {
     }
 
     @Test
+    @Config(qualifiers = PHONE)
+    fun `paired is announced politely when it appears`() {
+        show(PairingUiState.Paired)
+
+        composeRule
+            .onNodeWithTag("paired")
+            .assert(
+                SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite)
+            )
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun `on a handheld the PIN cells are not squeezed by the steps`() {
+        composeRule.setContent {
+            LibraryScaffold(
+                FormFactor.Handheld,
+                RailSelection.Hosts,
+                RailActions({}, {}, {}),
+            ) {
+                PairingScreen(
+                    state = waiting(),
+                    formFactor = FormFactor.Handheld,
+                    onGetNewPin = {},
+                    onCancel = {},
+                    hostName = "Studio",
+                )
+            }
+        }
+
+        val pin = bounds("4, 8, 1, 7")
+
+        // Four cells of 56dp with three gaps of 10dp.
+        assertThat(pin.right.value - pin.left.value).isAtLeast(PIN_WIDTH_DP)
+    }
+
+    @Test
     @Config(qualifiers = TV)
     fun `paired is in the middle of a TV screen too`() {
         show(PairingUiState.Paired, FormFactor.Tv)
@@ -368,5 +415,7 @@ class PairingScreenTest {
         const val WEB_UI = "https://192.0.2.10:47990"
         const val PHONE = "w360dp-h640dp-xhdpi"
         const val TV = "w960dp-h540dp-land-television-xhdpi"
+        const val HANDHELD = "w800dp-h480dp-land-hdpi"
+        const val PIN_WIDTH_DP = 254f
     }
 }

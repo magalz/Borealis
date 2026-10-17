@@ -33,7 +33,6 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
@@ -159,17 +158,25 @@ class AddHostScreenTest {
 
     @Test
     @Config(qualifiers = TV)
-    fun `the content is at most 560dp wide and centred in a wide window`() {
+    fun `the content is at most 560dp wide and starts at the left like the other screens`() {
         show(AddHostUiState(), FormFactor.Tv)
 
         val field = composeRule.onNode(hasSetTextAction()).getUnclippedBoundsInRoot()
-        val screen = composeRule.onRoot().getUnclippedBoundsInRoot()
+        val button =
+            composeRule.onNode(hasText("Add host") and hasClickAction()).getUnclippedBoundsInRoot()
 
         assertThat(field.right.value - field.left.value)
             .isAtMost(BorealisDimens.contentMaxWidth.value)
-        assertThat((field.left.value + field.right.value) / 2)
-            .isWithin(1f)
-            .of((screen.left.value + screen.right.value) / 2)
+        assertThat(field.left.value).isWithin(1f).of(button.left.value)
+        assertThat(field.left.value).isAtMost(MAX_GUTTER_DP)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the back arrow is disabled while busy`() {
+        show(AddHostUiState(address = "192.168.1.20", busy = true))
+
+        composeRule.onNodeWithContentDescription("Back to Hosts").assertIsNotEnabled()
     }
 
     @Test
@@ -450,5 +457,6 @@ class AddHostScreenTest {
 
     private companion object {
         const val NEIGHBOUR = "neighbour"
+        const val MAX_GUTTER_DP = 64f
     }
 }

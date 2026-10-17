@@ -39,6 +39,7 @@ fun formFactorOf(
     widthDp: Int,
     touchscreen: Int,
     navigation: Int,
+    gamepadConnected: Boolean,
 ): FormFactor =
     when {
         isTvFeature || uiModeType == Configuration.UI_MODE_TYPE_TELEVISION -> FormFactor.Tv
@@ -73,6 +74,7 @@ fun rememberFormFactor(): FormFactor {
             widthDp = windowWidthDp(windowWidthPx, density.density, configurationWidthDp),
             touchscreen = configuration.touchscreen,
             navigation = configuration.navigation,
+            gamepadConnected = false,
         )
     }
 }

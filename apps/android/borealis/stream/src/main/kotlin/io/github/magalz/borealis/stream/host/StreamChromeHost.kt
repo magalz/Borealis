@@ -325,6 +325,7 @@ class StreamChromeHost(
                 widthDp = configuration.screenWidthDp,
                 touchscreen = configuration.touchscreen,
                 navigation = configuration.navigation,
+                gamepadConnected = false,
             ) == FormFactor.Phone
         }
     }

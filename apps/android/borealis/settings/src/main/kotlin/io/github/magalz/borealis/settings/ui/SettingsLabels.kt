@@ -116,6 +116,7 @@ internal fun choiceValue(item: SettingsItem, state: SettingsUiState): String {
             state.frameRateChoices
                 .firstOrNull { it.fps.toString() == key }
                 ?.let { frameRateLabel(it) }
+                ?: key.toIntOrNull()?.let { frameRateLabel(FrameRateChoice(it, isNative = false)) }
         else -> item.fixedChoices.firstOrNull { it.key == key }?.let { stringResource(it.labelRes) }
     } ?: key
 }

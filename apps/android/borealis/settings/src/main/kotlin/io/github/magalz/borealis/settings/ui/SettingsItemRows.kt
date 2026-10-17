@@ -12,6 +12,7 @@ import io.github.magalz.borealis.designsystem.components.settings.SettingsValueR
 import io.github.magalz.borealis.settings.R
 import io.github.magalz.borealis.settings.catalog.BooleanSetting
 import io.github.magalz.borealis.settings.catalog.IntSetting
+import io.github.magalz.borealis.settings.options.DisabledReason
 import kotlin.math.roundToInt
 
 /** What a row can ask the screen to do besides changing a value: open its list or its question. */
@@ -35,7 +36,10 @@ internal fun SettingsItemRow(
         SettingsItemKind.SWITCH ->
             SettingsSwitchRow(
                 title = title,
-                checked = state.snapshot[item.setting as BooleanSetting],
+                // A firmware that crashes with HDR cannot use it, whatever is stored.
+                checked =
+                    state.snapshot[item.setting as BooleanSetting] &&
+                        itemState.disabled?.reason != DisabledReason.HDR_BROKEN_ON_FIRMWARE,
                 onCheckedChange = { actions.onSwitchChanged(item, it) },
                 modifier = modifier,
                 summary = summary,

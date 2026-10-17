@@ -68,7 +68,12 @@ internal constructor(
     fun onSwitchChanged(item: SettingsItem, checked: Boolean) {
         val setting = item.setting as? BooleanSetting
         if (setting == null || !isChangeable(item)) return
-        viewModelScope.launch { repository.set(setting, checked) }
+        viewModelScope.launch {
+            repository.set(setting, checked)
+            // Turning Unlock all frame rates off can leave 90 or 120 fps stored but no longer
+            // offered.
+            if (item == SettingsItem.UNLOCK_FRAME_RATES) restoreOfferedChoices()
+        }
     }
 
     /**

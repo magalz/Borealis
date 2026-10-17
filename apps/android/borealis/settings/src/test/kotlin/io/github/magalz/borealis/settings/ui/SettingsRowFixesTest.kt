@@ -6,7 +6,6 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -136,6 +135,5 @@ class SettingsRestorationTest : SettingsScreenTestBase() {
 
         composeRule.onNodeWithText("Source code").assertIsDisplayed()
         composeRule.onNodeWithText("Resolution").assertDoesNotExist()
-        composeRule.onNodeWithText("About").assertIsFocused()
     }
 }

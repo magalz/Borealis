@@ -3,7 +3,10 @@ package io.github.magalz.borealis.settings.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -29,7 +32,12 @@ fun SettingsRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val configuration = LocalConfiguration.current
-    LaunchedEffect(viewModel, configuration) { viewModel.refreshDeviceFacts() }
+    // The ViewModel asked for the facts when it was created, so the first run only notes that. A
+    // recreation restores the flag as false and asks again: the display may have changed.
+    var firstOpen by rememberSaveable { mutableStateOf(true) }
+    LaunchedEffect(viewModel, configuration) {
+        if (firstOpen) firstOpen = false else viewModel.refreshDeviceFacts()
+    }
     val actions =
         remember(viewModel) {
             SettingsActions(

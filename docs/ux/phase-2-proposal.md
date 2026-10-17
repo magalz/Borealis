@@ -548,6 +548,7 @@ The prototype's figures are examples. The overlay is off by default
 | | Remote desktop mouse mode | switch | Hidden on NVIDIA Shield. |
 | | Gamepad mouse | switch | |
 | | Analog scrolling | list | Disabled while Gamepad mouse is off. |
+| | Gamepad mouse speed | slider, 10–200 % | Disabled while Gamepad mouse is off. |
 | | Deadzone | slider, 0–20 % | |
 | Gamepad | Multiple controllers | switch | |
 | | USB driver for Xbox controllers | switch | Hidden without USB host support. Off also stops the USB attach dialog. |

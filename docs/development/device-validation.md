@@ -636,6 +636,83 @@ each `fail`.
 The UI is in English on a phone set to Portuguese, because translations were
 removed (ADR 0055). Expected: no Portuguese text.
 
+### 3.20 Sprint 7 checks
+
+Run these with the Sprint 7 build on the S22 phone and the Google TV Streamer.
+Where a step names one device, run it there only. Record each item as `pass`,
+`fail` or `not applicable`, with a short note for each `fail`. For a
+USB-driver pad, turn USB driver for Xbox controllers on in Settings, Gamepad.
+For a system pad, turn it off. Say which kind each run used.
+
+1. Pointer speed, on the Streamer with a pad. Turn Gamepad mouse on. Keep
+   Gamepad mouse speed at 50 % for the first runs. Open the PC's Windows game
+   controller panel (joy.cpl) when a step checks that no button reaches the PC.
+   - Default: move the left stick slowly, then to full deflection. Expected: the
+     pointer moves smoothly from the first move, with no jump at the start.
+   - Deadzone: push the stick just past the deadzone and hold it. Expected: the
+     pointer moves slowly, and does not stay still.
+   - Slow diagonal: hold the stick at a slow diagonal. Expected: the pointer
+     moves on both axes and keeps the diagonal.
+   - RB precision: hold the stick at full deflection, then hold RB as well.
+     Expected: the pointer moves at about a quarter of the speed while RB is
+     held. No button press shows in joy.cpl.
+   - Slider: in Settings, Input, set Gamepad mouse speed to 10 %, then to 200 %,
+     and start a stream each time. Expected: the pointer is slow at 10 % and
+     fast at 200 %. A change made during a stream does not change that stream.
+   - Menu row: open the menu with Back. Expected: Pointer speed shows under
+     Gamepad mouse. Choose Slow, then Normal, then Fast, and move the stick at
+     each. Expected: about half, the setting, and twice the speed. Turn Gamepad
+     mouse off in the menu: the row goes. End the stream and start a new one:
+     the row shows Normal.
+2. Right-stick scrolling, with Analog scrolling at Right (the default). In a
+   PC app that scrolls, such as a browser page, hold the right stick up and
+   down. Expected: the page scrolls. Compare Slow and Fast in the menu row.
+   Expected: Fast scrolls faster than Slow, as the pointer does.
+3. The quit combo.
+   - USB-driver pad: press Start, Select, LB and RB together, then let all four
+     go. Expected: the stream ends once all four are let go. Hold Start alone
+     for the combo: the gamepad mouse must not turn on. Check on the PC that the
+     app still runs; the combo leaves the stream only.
+   - System pad: the same four buttons, then let all four go. Expected: the
+     stream ends. Then check the Start and Select taps of 3.19 (h).
+4. The decode time.
+   - On the Google TV Streamer (MediaTek decoder) and on the S22: turn the
+     Performance overlay on, in Settings or in the menu, and start a stream.
+     Expected: the decode time shows a number in milliseconds with one
+     decimal ("Decode 0.4 ms"), not "—". Record the number.
+   - Verbose logging: in Settings, Privacy and diagnostics, turn Verbose logging
+     on. Start the logcat capture of 1.4 and run a stream for about 10 seconds.
+     Expected: a `Decoder window` line at DEBUG, about once a second, with the
+     tag `Borealis.VIDEO`. Its fields are `codec`, `in`, `out`, `exact`,
+     `truncated`, `zero`, `ahead`, `older`, `unmatched`, `decoded`,
+     `decode_avg_us`, `decode_min_us` and `decode_max_us`. Record `in`, `out`,
+     `exact` and the three decode values. A decoder that echoes the timestamps
+     has `exact` equal to `out`.
+5. Visual refinement (placeholder). The steps for these items are not written
+   yet. A later task fills them in from the owner's contact sheet of every
+   screen.
+   - Dialogs.
+   - Icons.
+   - Host cards.
+   - Loader.
+   - Pairing check.
+   - Error actions on the phone.
+   - TV keyboard row.
+6. The USB dialog on the Streamer (R5a). This is an observation only; no code
+   changes.
+   - Clear the logcat buffer and start the capture of 1.4 on the Streamer, with
+     the USB driver on.
+   - Plug in the 8BitDo receiver and note the attach lines, and the vendor and
+     product IDs that they show. The receiver changes its identity by itself
+     (idle `2dc8:6013`, active `2dc8:310b` XInput), and each change is a new
+     attachment. Note whether Android's "open with Borealis" dialog appears.
+     Android's system server logs these lines with the tag `UsbHostManager`
+     ("USB device attached", "Removed device at"); it is not a Borealis class.
+   - Decline the dialog, then start a stream. Expected: the stream start asks for
+     USB permission again.
+   - End the stream. Expected: no attach or remove line appears at the end of the
+     stream.
+
 ## 4. Results templates
 
 Copy one table per device. Use `pass`, `fail` or `not applicable`, and add a

@@ -28,8 +28,8 @@ data class DecoderLimits(val maxWidth: Int, val maxHeight: Int)
  * @property maxRefreshRate the highest refresh rate in Hz: the current rate, or any mode rate if
  *   higher.
  * @property cutoutSafeSize the size of the display without its cutout (notch) insets, in landscape
- *   (width at least height), or `null` when the display has no cutout or the device is below
- *   Android 9.
+ *   (width at least height), or `null` on Android 9 (it needs the insets of an activity) or when
+ *   the display has no cutout.
  * @property avcDecoder the limits of the probable safe AVC (H.264) decoder, or `null` when none was
  *   found.
  * @property hevcDecoder the limits of the probable safe HEVC decoder, or `null` when none was

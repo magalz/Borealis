@@ -11,6 +11,10 @@
     <string name="stream_menu_touch_trackpad">Trackpad</string>
     <string name="stream_menu_touch_direct">Direct</string>
     <string name="stream_menu_gamepad_mouse">Gamepad mouse</string>
+    <string name="stream_menu_pointer_speed">Pointer speed</string>
+    <string name="stream_menu_pointer_speed_slow">Slow</string>
+    <string name="stream_menu_pointer_speed_normal">Normal</string>
+    <string name="stream_menu_pointer_speed_fast">Fast</string>
     <string name="stream_menu_on">On</string>
     <string name="stream_menu_off">Off</string>
     <!-- What a screen reader says activating an option row does; %1$s is the row, for example Overlay. -->

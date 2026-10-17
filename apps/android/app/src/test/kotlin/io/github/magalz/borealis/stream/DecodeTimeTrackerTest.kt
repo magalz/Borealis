@@ -60,11 +60,12 @@ class DecodeTimeTrackerTest {
 
     @Test
     fun `an exact match wins over a 32-bit match of an older input`() {
-        val older = 5L
-        val newer = older + (1L shl 32)
-        input(older, newer)
+        val exact = 5L
+        val olderWide = exact + (1L shl 32)
+        // The wide input is older and has the same low 32 bits as the exact one.
+        input(olderWide, exact)
 
-        assertThat(tracker.onOutput(newer)).isEqualTo(newer)
+        assertThat(tracker.onOutput(exact)).isEqualTo(exact)
     }
 
     @Test
@@ -163,6 +164,25 @@ class DecodeTimeTrackerTest {
         assertThat(first.firstOutputs).isEqualTo((1..8L).map { BASE + it })
         assertThat(second.firstInputs).isEmpty()
         assertThat(second.firstOutputs).isEmpty()
+    }
+
+    @Test
+    fun `a first window with inputs only does not lose the output samples`() {
+        input(BASE + 1, BASE + 2)
+        val first = tracker.drainWindow()
+
+        tracker.onOutput(BASE + 1)
+        tracker.onInput(BASE + 3)
+        val second = tracker.drainWindow()
+        tracker.onOutput(BASE + 2)
+        val third = tracker.drainWindow()
+
+        assertThat(first.firstInputs).containsExactly(BASE + 1, BASE + 2).inOrder()
+        assertThat(first.firstOutputs).isEmpty()
+        assertThat(second.firstInputs).isEmpty()
+        assertThat(second.firstOutputs).containsExactly(BASE + 1)
+        assertThat(third.firstInputs).isEmpty()
+        assertThat(third.firstOutputs).isEmpty()
     }
 
     @Test

@@ -20,10 +20,10 @@ internal class DialogButton(
 private fun DialogButton.toAction() = DialogAction(label, style, onClick)
 
 /**
- * A [BorealisDialog] of the standard width with a [title], [content], a [confirm] button and
- * optionally a [dismiss] button. With [focusDismiss] the [dismiss] button has focus when the dialog
- * opens, so the safe choice is the one under OK; otherwise [confirm] has it. Back and a tap outside
- * call [onDismiss].
+ * A [BorealisDialog] of the [width] (standard unless it is a question) with a [title], [content], a
+ * [confirm] button and optionally a [dismiss] button. With [focusDismiss] the [dismiss] button has
+ * focus when the dialog opens, so the safe choice is the one under OK; otherwise [confirm] has it.
+ * Back and a tap outside call [onDismiss].
  */
 @Composable
 internal fun SettingsDialog(
@@ -32,13 +32,14 @@ internal fun SettingsDialog(
     onDismiss: () -> Unit,
     dismiss: DialogButton? = null,
     focusDismiss: Boolean = dismiss != null,
+    width: DialogWidth = DialogWidth.Standard,
     content: @Composable () -> Unit,
 ) {
     BorealisDialog(
         title = title,
         onDismissRequest = onDismiss,
         confirm = confirm.toAction(),
-        width = DialogWidth.Standard,
+        width = width,
         dismiss = dismiss?.toAction(),
         focusDismiss = focusDismiss,
     ) {
@@ -55,8 +56,9 @@ internal fun SettingsMessageDialog(
     onDismiss: () -> Unit,
     dismiss: DialogButton? = null,
     focusDismiss: Boolean = dismiss != null,
+    width: DialogWidth = DialogWidth.Standard,
 ) {
-    SettingsDialog(title, confirm, onDismiss, dismiss, focusDismiss) {
+    SettingsDialog(title, confirm, onDismiss, dismiss, focusDismiss, width) {
         Text(message, color = LocalBorealisColors.current.ink2)
     }
 }

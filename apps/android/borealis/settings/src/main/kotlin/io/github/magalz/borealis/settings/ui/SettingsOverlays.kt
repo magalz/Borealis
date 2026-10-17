@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.settings.ChoiceSheet
+import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.settings.R
 
 /**
@@ -91,6 +92,7 @@ private fun NativeWarning(item: SettingsItem, overlays: SettingsOverlays) {
                 BorealisButtonStyle.Text,
             ),
         focusDismiss = false,
+        width = DialogWidth.Compact,
     )
 }
 
@@ -117,5 +119,6 @@ private fun ResetLayoutQuestion(overlays: SettingsOverlays, actions: SettingsAct
                 close,
                 BorealisButtonStyle.Text,
             ),
+        width = DialogWidth.Compact,
     )
 }

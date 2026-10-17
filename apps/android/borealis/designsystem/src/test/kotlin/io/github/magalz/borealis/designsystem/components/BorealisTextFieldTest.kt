@@ -321,12 +321,12 @@ class BorealisTextFieldTest {
         show(showKeyboardOnFocus = false)
 
         composeRule.onNode(hasContentDescription("Address, 192.168.1.20")).assertExists()
-        editable().assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.InvisibleToUser))
+        editable().assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.HideFromAccessibility))
 
         press(Key.DirectionCenter)
         composeRule.waitForIdle()
 
-        editable().assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.InvisibleToUser))
+        editable().assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.HideFromAccessibility))
     }
 
     @Test

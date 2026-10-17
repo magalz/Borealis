@@ -51,10 +51,10 @@ private val PROGRESS_STROKE = 3.dp
  * The Add host screen (UC-008): one Address field, a hint and a note on the port, and Add host and
  * Cancel. It is stateless and draws itself in [BorealisTheme] for [formFactor].
  *
- * The field has focus when the screen opens. On a phone that opens the keyboard; on a TV or
- * handheld the window is in keyboard input mode, where Compose does not open the keyboard on focus,
- * so the system keyboard opens when the user presses OK on the field. Done submits. While
- * [AddHostUiState.busy] a progress indicator shows and both buttons are disabled. Back is Cancel.
+ * The field has focus when the screen opens. On a phone the keyboard opens with the focus. On a TV
+ * or handheld it does not, so a remote can move through the screen, and the user opens it with OK
+ * on the field. Done submits. While [AddHostUiState.busy] a progress indicator shows and both
+ * buttons are disabled. Back is Cancel.
  */
 @Composable
 fun AddHostScreen(
@@ -102,6 +102,7 @@ fun AddHostScreen(
                         onDone = onSubmit,
                         keyboardType = KeyboardType.Uri,
                         leaveWithDpad = true,
+                        showKeyboardOnFocus = formFactor == FormFactor.Phone,
                     )
                     Hint(stringResource(R.string.addhost_address_hint))
                     Hint(stringResource(R.string.addhost_port_hint))

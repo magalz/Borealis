@@ -1,17 +1,19 @@
 package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
@@ -21,10 +23,10 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 
 /**
@@ -38,6 +40,10 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
  * and Down move the focus to the neighbour above and below, and Left moves it to the neighbour on
  * the left while the caret is at the start (an empty field has no caret to move). Left and Right
  * otherwise move the caret, and the text is never changed.
+ *
+ * Compose opens the keyboard whenever the field gains focus. With [showKeyboardOnFocus] false it
+ * opens only when the user presses OK (a tap, Enter or DPAD_CENTER), so a remote can move through
+ * the field without the keyboard covering the screen.
  */
 @Composable
 fun BorealisTextField(
@@ -52,29 +58,37 @@ fun BorealisTextField(
     showKeyboardOnFocus: Boolean = true,
 ) {
     val colors = LocalBorealisColors.current
-    // The caret is part of the state, so the field can tell when Left has nowhere left to go.
-    var field by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
-    val shown = if (field.text == value) field else TextFieldValue(value, TextRange(value.length))
+    // The state keeps the caret, so the field can tell when Left has nowhere left to go.
+    val state = rememberTextFieldState(value, TextRange(value.length))
+    val currentValue by rememberUpdatedState(value)
+    val currentOnValueChange by rememberUpdatedState(onValueChange)
+    val currentOnDone by rememberUpdatedState(onDone)
+    // The caller's text wins: when it differs from what the field holds, the field takes it.
+    LaunchedEffect(value) {
+        if (state.text.toString() != value) state.setTextAndPlaceCursorAtEnd(value)
+    }
     OutlinedTextField(
-        value = shown,
-        onValueChange = {
-            field = it
-            if (it.text != value) onValueChange(it.text)
-        },
-        modifier = modifier.fillMaxWidth().dpadExit(leaveWithDpad, shown),
+        state = state,
+        modifier = modifier.fillMaxWidth().fieldKeys(leaveWithDpad, !showKeyboardOnFocus, state),
         label = { Text(label) },
         supportingText = error?.let { message -> { Text(message) } },
         isError = error != null,
-        singleLine = true,
+        lineLimits = TextFieldLineLimits.SingleLine,
         shape = MaterialTheme.shapes.medium,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),
-        keyboardActions =
-            KeyboardActions(
-                onDone = {
-                    onDone?.invoke()
-                    defaultKeyboardAction(ImeAction.Done)
-                }
+        inputTransformation = {
+            val text = asCharSequence().toString()
+            if (text != currentValue) currentOnValueChange(text)
+        },
+        keyboardOptions =
+            KeyboardOptions(
+                keyboardType = keyboardType,
+                imeAction = ImeAction.Done,
+                showKeyboardOnFocus = showKeyboardOnFocus,
             ),
+        onKeyboardAction = { performDefaultAction ->
+            currentOnDone?.invoke()
+            performDefaultAction()
+        },
         colors =
             OutlinedTextFieldDefaults.colors(
                 focusedTextColor = colors.ink,
@@ -97,23 +111,41 @@ fun BorealisTextField(
 }
 
 /**
- * Hands the D-pad keys that the field has no use for to the focus: when the neighbour does not
- * exist the key goes on to the field, which moves its caret.
+ * The keys that the field handles before it sees them. It would move the focus on Up, Down and Left
+ * at the start of the text by itself; [leaveWithDpad] decides who does it: with it the focus moves
+ * to the neighbour and, when there is none, the key goes on to the field, which moves its caret;
+ * without it the field keeps the key. With [keyboardOnOk] OK, Enter and DPAD_CENTER open the
+ * keyboard when they are released, which is what a field that does not open it on focus needs; the
+ * field does not see them, so Enter does not act as Done.
  */
 @Composable
-private fun Modifier.dpadExit(enabled: Boolean, field: TextFieldValue): Modifier {
+private fun Modifier.fieldKeys(
+    leaveWithDpad: Boolean,
+    keyboardOnOk: Boolean,
+    field: TextFieldState,
+): Modifier {
     val focusManager = LocalFocusManager.current
-    if (!enabled) return this
+    val keyboard = LocalSoftwareKeyboardController.current
     return onPreviewKeyEvent { event ->
-        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-        when (event.key) {
-            Key.DirectionUp -> focusManager.moveFocus(FocusDirection.Up)
-            Key.DirectionDown -> focusManager.moveFocus(FocusDirection.Down)
-            Key.DirectionLeft ->
-                field.selection.collapsed &&
-                    field.selection.start == 0 &&
-                    focusManager.moveFocus(FocusDirection.Left)
+        when {
+            keyboardOnOk && event.key in OK_KEYS -> {
+                if (event.type == KeyEventType.KeyUp) keyboard?.show()
+                true
+            }
+            event.type == KeyEventType.KeyDown -> {
+                val atStart = field.selection.collapsed && field.selection.start == 0
+                val direction =
+                    when (event.key) {
+                        Key.DirectionUp -> FocusDirection.Up
+                        Key.DirectionDown -> FocusDirection.Down
+                        Key.DirectionLeft -> FocusDirection.Left.takeIf { atStart }
+                        else -> null
+                    }
+                direction != null && (!leaveWithDpad || focusManager.moveFocus(direction))
+            }
             else -> false
         }
     }
 }
+
+private val OK_KEYS = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)

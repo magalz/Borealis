@@ -710,7 +710,8 @@ For a system pad, turn it off. Say which kind each run used.
      from the hold, the long press, X or Menu. On the TV and a handheld, the cards
      have equal height (176 dp, `size.host-card.height-tv` in
      `design/tokens.json`), so a row lines
-     up. On the S22, the cards size to their content.
+     up. On the S22 without a pad, the cards size to their content. With a pad
+     connected in landscape, the S22 is a handheld (step 7).
    - Aurora loader: open Hosts, Apps and Pairing while each one loads. Expected:
      the same aurora loader on all three.
    - Pairing check: on Pairing, the PIN is centred with its line below it. When
@@ -750,6 +751,26 @@ For a system pad, turn it off. Say which kind each run used.
    - End the stream. Expected: no attach or remove line appears at the end of the
      stream.
    - On a phone, the attach dialog is unchanged. Note what it shows, if it does.
+7. The handheld with a Bluetooth pad, on the S22 in landscape. A window 600 dp
+   or wider is a handheld while a game controller is connected. Use a pad that
+   has a hat D-pad, such as the 8BitDo Pro 3 or the 8BitDo Ultimate 2, paired
+   over Bluetooth. A Bluetooth pad is always a system pad: the USB driver
+   setting does not apply to it.
+   - Layout: with the pad off, open the Library. Switch the pad on. Expected:
+     the Library switches to the handheld layout, with a rail of Hosts, Add
+     host and Settings, and host cards of equal height. Switch the pad off.
+     Expected: the phone layout returns. Neither change needs the app to be
+     reopened.
+   - Stream: start a stream with the pad only, on a host card, then Desktop.
+     Expected: the stream starts. Hold Select and Start: the menu opens.
+     Expected: Gamepad mouse on shows the Pointer speed row, with Slow, Normal
+     and Fast. Move the pointer with the stick and hold RB: the pointer moves
+     at a lower speed while RB is held. Scroll with the right stick in a PC app
+     that scrolls. Expected: the page scrolls. Open the keyboard. Expected: it
+     shows over the video, not docked under it.
+   - Quit: press Start, Select, LB and RB together, then let all four go.
+     Expected: the stream ends. No capture is taken during the stream, because
+     it would show the PC screen.
 
 ## 4. Results templates
 
@@ -1398,8 +1419,9 @@ the decode-time FIFO (S6-T7).
 ## 12. Results: Sprint 7
 
 This section holds the Sprint 7 results: the setup, the USB spike, the decode
-check made in the middle of the sprint, and the final round. The checks follow
-the steps of [section 3.20](#320-sprint-7-checks).
+check made in the middle of the sprint, the final round, and the Bluetooth pad
+round with the handheld fix. The checks follow the steps of
+[section 3.20](#320-sprint-7-checks).
 
 ### Setup
 
@@ -1412,6 +1434,9 @@ the steps of [section 3.20](#320-sprint-7-checks).
     notes record the build gate and the Roborazzi verify as green on this build.
   - `4726c010` (the phase head, with the host card and the TV USB merges): the
     final checks of the host card and the USB dialog.
+  - `975bee9f`: the Bluetooth pad probe, before the handheld fix.
+  - `dd3d383f`: the handheld fix for a connected game controller, merged as
+    `89b46c5b` (same tree). Checked on the S22 in landscape.
 - Devices:
   - Google TV Streamer: ADB over Wi-Fi, at an address that changes with DHCP.
   - Galaxy S22: USB.
@@ -1421,6 +1446,8 @@ the steps of [section 3.20](#320-sprint-7-checks).
   - 8BitDo Pro 3, a system pad: the first pointer round.
   - 8BitDo Ultimate 2 for PC, XInput on the app's USB driver: the second pointer
     round, and the quit combo.
+  - 8BitDo Ultimate 2 over Bluetooth LE, and 8BitDo Pro 3 over classic
+    Bluetooth, both as system pads on the S22: the Bluetooth pad round.
 - Screen captures: each capture was read and then deleted. Some showed part of
   the PC screen. The host details capture showed host addresses and an ID. No
   capture is kept in the repository.
@@ -1510,9 +1537,63 @@ of the PC screen.
 | F19 | Stream start: the USB permission dialog appears only once the picture shows | TV | pass | Build `4726c010`, checked by the owner. |
 | F20 | Pad off and on during the stream: one dialog (permission). The pad works after accepting. | TV | pass | Build `4726c010`, checked by the owner. |
 
+### Bluetooth pad round and handheld fix, 2026-10-17
+
+Before the fix, on the S22 in landscape (`w780dp`, build `975bee9f`), each pad
+was probed with `dumpsys input` (the device sources), `am get-config` (the
+configuration's touch and navigation) and a capture of the Library for each
+mode. Each capture was read and then deleted, because it showed host addresses.
+
+| Pad and mode | Link | ID | Android sources | Configuration | Layout |
+| --- | --- | --- | --- | --- | --- |
+| 8BitDo Ultimate 2, Start+A, B, X and Y | Bluetooth LE (HID over GATT) | `2dc8:6012` every time | KEYBOARD, GAMEPAD, JOYSTICK | finger, nonav | Phone |
+| 8BitDo Pro 3, switch on D and on S | Classic Bluetooth | `057e:2009` (Nintendo Switch Pro Controller), class EXTERNAL | KEYBOARD, GAMEPAD, JOYSTICK | finger, nonav | Phone |
+
+- On the S22, the Ultimate 2 reconnected after each combo with the same
+  identity. Its mode combos change nothing over Bluetooth there.
+- The Pro 3's kernel device has D-pad keys (`BTN_DPAD_*`), but Android's key
+  layout for it (`Vendor_057e_Product_2009.kl`) gives it no DPAD source.
+- Focus navigation with both pads worked: the hat D-pad moved the focus. Only
+  the form factor missed them.
+
+Cause: the form factor read only the configuration. Android sets
+`navigation = dpad` only for a device with the DPAD source, so a pad whose
+D-pad is a hat axis never sets it. The owner decided to fix this in Sprint 7.
+
+Fix (merge `89b46c5b`, task commits `748f688c`, the test first, and `dd3d383f`):
+
+- A window 600 dp or wider is a handheld while a game controller is connected.
+  The controller counts when it is not virtual and has the GAMEPAD source, or
+  the JOYSTICK source with X and Y axes.
+- The layout goes back to the phone layout when the controller disconnects.
+- At the stream start, the docked keyboard follows the same rule
+  (`StreamChromeHost.isPhone`).
+- Limitation: a pad claimed by the app's USB driver is no Android input device
+  while it is claimed, so the form factor cannot see it.
+
+After the fix, on build `dd3d383f` (same tree as merge `89b46c5b`), checked with
+the owner on the S22 in landscape. The steps are in
+[section 3.20, step 7](#320-sprint-7-checks).
+
+| # | Item | Device | Result | Evidence and notes |
+| --- | --- | --- | --- | --- |
+| F21 | The Library switches to the handheld layout when the pad connects, without reopening the app | S22, landscape, Pro 3 | pass | Build `dd3d383f`. Rail with Hosts, Add host and Settings, and host cards of equal height. |
+| F22 | The Library returns to the phone layout when the pad disconnects | S22, landscape, Pro 3 | pass | Build `dd3d383f`. |
+| F23 | Stream start with the pad only: a host card, then Desktop | S22, landscape, Bluetooth pad | pass | Build `dd3d383f`. The notes do not record which of the two pads was used. |
+| F24 | Menu opens by holding Select and Start | S22, landscape, Bluetooth pad | pass | Build `dd3d383f`. |
+| F25 | Pointer speed row: Slow, Normal, Fast | S22, landscape, Bluetooth pad | pass | Build `dd3d383f`. Shows with Gamepad mouse on. |
+| F26 | Pointer and RB precision | S22, landscape, Bluetooth pad | pass | Build `dd3d383f`. |
+| F27 | Right-stick scrolling | S22, landscape, Bluetooth pad | pass | Build `dd3d383f`. |
+| F28 | Keyboard shows over the video, not docked under it | S22, landscape, Bluetooth pad | pass | Build `dd3d383f`. |
+| F29 | Quit combo (Start, Select, LB, RB) on a Bluetooth pad, a system pad | S22, landscape, Bluetooth pad | pass | Build `dd3d383f`. The stream ended. The notes do not record which pad was used. |
+
+The notes do not record rows F21 and F22 for the Ultimate 2. No capture was
+taken during the stream, because it would show the PC screen.
+
 ### Not run
 
-- Handheld: no device.
+- Handheld: no dedicated handheld device. The S22 in landscape was checked as a
+  handheld with a Bluetooth pad, in rows F21 to F29 above.
 - Send to phone, the Expired and No network states: only unit and screenshot
   tests cover them.
 - Items F13 to F16 and the other items of [section 3.20](#320-sprint-7-checks)
@@ -1527,3 +1608,8 @@ of the PC screen.
   the [roadmap backlog](../roadmap.md#backlog-not-scheduled).
 - The Sprint 6 quit combo follow-up for USB-driver pads is done in `5416a79c`.
   See the [roadmap](../roadmap.md#sprint-7-follow-ups-and-backlog), item 2.
+- Backlog, from the Bluetooth pad round: the handheld host card height. On the
+  S22 as a handheld (360 dp tall), the equal host card height (176 dp, from the
+  TV token) leaves a lot of empty space. The owner wants the card adapted for a
+  handheld in a later refinement session. See the
+  [roadmap backlog](../roadmap.md#backlog-not-scheduled).

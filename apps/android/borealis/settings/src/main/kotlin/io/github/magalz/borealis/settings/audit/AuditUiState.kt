@@ -15,7 +15,7 @@ data class AuditUiState(
 )
 
 /** One entry of the list. [time] is formatted and [summary] is redacted: host and detail. */
-data class AuditRow(val type: AuditType, val time: String, val summary: String?)
+data class AuditRow(val key: String, val type: AuditType, val time: String, val summary: String?)
 
 /** The opened entry in full. [time] has the date; [host] and [detail] are redacted. */
 data class AuditDetail(

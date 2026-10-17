@@ -24,16 +24,23 @@ class AuditScreenshotTest {
 
     private val rows =
         listOf(
-            AuditRow(AuditType.SESSION_END, "20:42", "Desk PC · Desktop · 8 min 12 s"),
             AuditRow(
+                "SESSION_END",
+                AuditType.SESSION_END,
+                "20:42",
+                "Desk PC · Desktop · 8 min 12 s",
+            ),
+            AuditRow(
+                "SESSION_START",
                 AuditType.SESSION_START,
                 "20:34",
                 "Desk PC · HEVC Main10 · 2560×1440 · 59 fps",
             ),
-            AuditRow(AuditType.LAUNCH_ATTEMPT, "20:33", "Desk PC · Desktop"),
-            AuditRow(AuditType.PAIRING_SUCCESS, "18:02", "Studio"),
-            AuditRow(AuditType.PAIRING_START, "18:00", "Studio"),
+            AuditRow("LAUNCH_ATTEMPT", AuditType.LAUNCH_ATTEMPT, "20:33", "Desk PC · Desktop"),
+            AuditRow("PAIRING_SUCCESS", AuditType.PAIRING_SUCCESS, "18:02", "Studio"),
+            AuditRow("PAIRING_START", AuditType.PAIRING_START, "18:00", "Studio"),
             AuditRow(
+                "CERTIFICATE_CHANGED",
                 AuditType.CERTIFICATE_CHANGED,
                 "Mon 17:00",
                 "Living Room PC · pair again if you did not reinstall the host",

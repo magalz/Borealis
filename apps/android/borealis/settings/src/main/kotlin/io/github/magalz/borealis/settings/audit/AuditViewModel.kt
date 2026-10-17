@@ -9,6 +9,8 @@ import io.github.magalz.borealis.diagnostics.audit.masked
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.repository.SettingsRepository
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -27,12 +29,19 @@ import kotlinx.coroutines.flow.stateIn
  */
 @HiltViewModel
 class AuditViewModel
-@Inject
-constructor(
+internal constructor(
     trail: AuditTrail,
     settings: SettingsRepository,
     private val formatter: AuditTimeFormatter,
+    @Suppress("UnusedPrivateProperty") private val mappingDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
+    @Inject
+    constructor(
+        trail: AuditTrail,
+        settings: SettingsRepository,
+        formatter: AuditTimeFormatter,
+    ) : this(trail, settings, formatter, Dispatchers.Default)
+
     private val opened = MutableStateFlow<AuditEntry?>(null)
 
     /** The entries of the last report, as stored, for [onEntrySelected]. */
@@ -47,7 +56,10 @@ constructor(
             ) { entries, _, selected ->
                 AuditUiState(
                     loading = false,
-                    entries = entries.map { it.masked().toRow() },
+                    entries =
+                        entries.mapIndexed { index, entry ->
+                            entry.masked().toRow(index.toString())
+                        },
                     detail = selected?.takeIf { it in entries }?.masked()?.toDetail(),
                 )
             }
@@ -58,8 +70,8 @@ constructor(
             )
 
     /** Opens the entry at [index] of the list; a position that is not in the list is ignored. */
-    fun onEntrySelected(index: Int) {
-        latest.getOrNull(index)?.let { opened.value = it }
+    fun onEntrySelected(key: String) {
+        key.toIntOrNull()?.let { latest.getOrNull(it) }?.let { opened.value = it }
     }
 
     /** Closes the opened entry. */
@@ -67,8 +79,9 @@ constructor(
         opened.value = null
     }
 
-    private fun AuditEntry.toRow() =
+    private fun AuditEntry.toRow(key: String) =
         AuditRow(
+            key,
             type,
             formatter.short(timestampMillis),
             listOfNotNull(host, detail)

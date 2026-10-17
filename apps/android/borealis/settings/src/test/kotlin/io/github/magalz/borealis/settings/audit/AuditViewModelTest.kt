@@ -7,9 +7,12 @@ import io.github.magalz.borealis.logging.BorealisAudit
 import io.github.magalz.borealis.logging.Redactor
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.testing.FakeSettingsRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
@@ -29,7 +32,9 @@ class AuditViewModelTest {
     private val redactor = Redactor(maskAddresses = false)
 
     // Lazy: a ViewModel must be created after the rule has set the main dispatcher.
-    private val viewModel by lazy { AuditViewModel(trail, settings, fixedFormatter()) }
+    private val viewModel by lazy {
+        AuditViewModel(trail, settings, fixedFormatter(), Dispatchers.Unconfined)
+    }
 
     @Before
     fun installRedactor() {
@@ -42,6 +47,11 @@ class AuditViewModelTest {
         backgroundScope
             .launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
             .also { runCurrent() }
+
+    private fun rows() = viewModel.uiState.value.entries
+
+    /** Opens the entry at [index] of the list the way the screen does: by its key. */
+    private fun open(index: Int) = viewModel.onEntrySelected(rows()[index].key)
 
     /** The summary of the only entry; fails with a plain message when there is not exactly one. */
     private fun summary(): String? {
@@ -95,12 +105,12 @@ class AuditViewModelTest {
         subscribe()
         runCurrent()
 
-        assertThat(viewModel.uiState.value.entries)
+        assertThat(rows().map { Triple(it.type, it.time, it.summary) })
             .containsExactly(
-                AuditRow(AuditType.SESSION_END, "20:42", "Desk PC · Desktop"),
-                AuditRow(AuditType.PAIRING_SUCCESS, "Mon 18:02", "Studio"),
-                AuditRow(AuditType.TLS_FAILURE, "Mon 18:01", "handshake"),
-                AuditRow(AuditType.PAIRING_START, "Mon 18:00", null),
+                Triple(AuditType.SESSION_END, "20:42", "Desk PC · Desktop"),
+                Triple(AuditType.PAIRING_SUCCESS, "Mon 18:02", "Studio"),
+                Triple(AuditType.TLS_FAILURE, "Mon 18:01", "handshake"),
+                Triple(AuditType.PAIRING_START, "Mon 18:00", null),
             )
             .inOrder()
     }
@@ -146,7 +156,7 @@ class AuditViewModelTest {
         trail.entries.value = listOf(entry(host = "192.168.1.20", detail = "to 10.0.0.7"))
         subscribe()
         runCurrent()
-        viewModel.onEntrySelected(0)
+        open(0)
         runCurrent()
         switchMasking(true)
         runCurrent()
@@ -205,7 +215,7 @@ class AuditViewModelTest {
         subscribe()
         runCurrent()
 
-        viewModel.onEntrySelected(1)
+        open(1)
         runCurrent()
 
         assertThat(viewModel.uiState.value.detail)
@@ -225,7 +235,7 @@ class AuditViewModelTest {
         trail.entries.value = listOf(entry())
         subscribe()
         runCurrent()
-        viewModel.onEntrySelected(0)
+        open(0)
         runCurrent()
 
         viewModel.onDetailDismissed()
@@ -235,13 +245,14 @@ class AuditViewModelTest {
     }
 
     @Test
-    fun `a position that is not in the list opens nothing`() = runTest {
+    fun `a key that is not in the list opens nothing`() = runTest {
         trail.entries.value = listOf(entry())
         subscribe()
         runCurrent()
 
-        viewModel.onEntrySelected(5)
-        viewModel.onEntrySelected(-1)
+        viewModel.onEntrySelected("5")
+        viewModel.onEntrySelected("")
+        viewModel.onEntrySelected("no-such-entry")
         runCurrent()
 
         assertThat(viewModel.uiState.value.detail).isNull()
@@ -253,7 +264,7 @@ class AuditViewModelTest {
         trail.entries.value = listOf(old)
         subscribe()
         runCurrent()
-        viewModel.onEntrySelected(0)
+        open(0)
         runCurrent()
 
         trail.entries.value = listOf(entry(AuditType.LAUNCH_ATTEMPT, "2026-10-16T20:49:00Z"), old)
@@ -267,7 +278,7 @@ class AuditViewModelTest {
         trail.entries.value = listOf(entry())
         subscribe()
         runCurrent()
-        viewModel.onEntrySelected(0)
+        open(0)
         runCurrent()
 
         trail.entries.value = emptyList()
@@ -276,4 +287,76 @@ class AuditViewModelTest {
         assertThat(viewModel.uiState.value.detail).isNull()
         assertThat(viewModel.uiState.value.entries).isEmpty()
     }
+
+    @Test
+    fun `an entry keeps its key when a newer entry arrives`() = runTest {
+        val old = entry(AuditType.SESSION_END, "2026-10-16T20:42:00Z")
+        trail.entries.value = listOf(old)
+        subscribe()
+        runCurrent()
+        val before = rows().single().key
+
+        trail.entries.value = listOf(entry(AuditType.LAUNCH_ATTEMPT, "2026-10-16T20:49:00Z"), old)
+        runCurrent()
+
+        assertThat(rows()[1].key).isEqualTo(before)
+        assertThat(rows()[0].key).isNotEqualTo(before)
+    }
+
+    @Test
+    fun `the key of an entry does not change with masking`() = runTest {
+        trail.entries.value = listOf(entry(host = "Desk PC (192.168.1.20)", detail = "to 10.0.0.7"))
+        subscribe()
+        runCurrent()
+        val before = rows().single().key
+
+        switchMasking(true)
+        runCurrent()
+
+        assertThat(rows().single().key).isEqualTo(before)
+    }
+
+    @Test
+    fun `entries that look the same have different keys`() = runTest {
+        trail.entries.value = listOf(entry(), entry(), entry(AuditType.PAIRING_START))
+        subscribe()
+        runCurrent()
+
+        assertThat(rows().map { it.key }).containsNoDuplicates()
+    }
+
+    @Test
+    fun `a key read before a newer entry arrived still opens the same entry`() = runTest {
+        val old = entry(AuditType.SESSION_END, "2026-10-16T20:42:00Z")
+        trail.entries.value = listOf(old)
+        subscribe()
+        runCurrent()
+        val key = rows().single().key
+        trail.entries.value = listOf(entry(AuditType.LAUNCH_ATTEMPT, "2026-10-16T20:49:00Z"), old)
+        runCurrent()
+
+        viewModel.onEntrySelected(key)
+        runCurrent()
+
+        assertThat(viewModel.uiState.value.detail?.type).isEqualTo(AuditType.SESSION_END)
+    }
+
+    @Test
+    fun `the entries are mapped on the dispatcher it is given, not where they are collected`() =
+        runTest {
+            val mapping = StandardTestDispatcher(TestCoroutineScheduler())
+            val viewModel = AuditViewModel(trail, settings, fixedFormatter(), mapping)
+            trail.entries.value = listOf(entry())
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.uiState.collect {}
+            }
+            runCurrent()
+
+            assertThat(viewModel.uiState.value.loading).isTrue()
+
+            mapping.scheduler.runCurrent()
+            runCurrent()
+
+            assertThat(viewModel.uiState.value.entries).hasSize(1)
+        }
 }

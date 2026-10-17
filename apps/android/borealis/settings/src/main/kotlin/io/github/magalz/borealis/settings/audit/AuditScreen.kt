@@ -95,7 +95,7 @@ private const val SUMMARY_MAX_LINES = 3
 fun AuditScreen(
     state: AuditUiState,
     formFactor: FormFactor,
-    onEntrySelected: (index: Int) -> Unit,
+    onEntrySelected: (key: String) -> Unit,
     onDetailDismissed: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -121,7 +121,7 @@ fun AuditScreen(
                             focusIndex = lastOpened.coerceIn(0, state.entries.lastIndex),
                             onSelected = {
                                 lastOpened = it
-                                onEntrySelected(it)
+                                onEntrySelected(state.entries[it].key)
                             },
                         )
                     state.loading -> Unit

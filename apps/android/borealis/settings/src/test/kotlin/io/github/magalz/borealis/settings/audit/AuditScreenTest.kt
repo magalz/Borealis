@@ -18,6 +18,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -36,13 +37,14 @@ import org.robolectric.annotation.Config
 @Config(qualifiers = PHONE)
 class AuditScreenTest {
     @get:Rule val composeRule = createComposeRule()
-    private val selected = mutableListOf<Int>()
+    private val selected = mutableListOf<String>()
     private var dismissed = 0
     private var backs = 0
 
-    private val sessionEnd = AuditRow(AuditType.SESSION_END, "20:42", "Desk PC · Desktop")
-    private val sessionStart = AuditRow(AuditType.SESSION_START, "20:34", "Desk PC · HEVC")
-    private val certificate = AuditRow(AuditType.CERTIFICATE_CHANGED, "Mon 17:00", "Living Room PC")
+    private val sessionEnd = AuditRow("end", AuditType.SESSION_END, "20:42", "Desk PC · Desktop")
+    private val sessionStart = AuditRow("start", AuditType.SESSION_START, "20:34", "Desk PC · HEVC")
+    private val certificate =
+        AuditRow("cert", AuditType.CERTIFICATE_CHANGED, "Mon 17:00", "Living Room PC")
     private val pairingFailure =
         AuditDetail(
             AuditType.PAIRING_FAILURE,
@@ -110,7 +112,7 @@ class AuditScreenTest {
     @Test
     fun `every event type has its own title and shows its code`() {
         val types = AuditType.entries
-        show(state(*types.map { AuditRow(it, "20:00", null) }.toTypedArray()))
+        show(state(*types.map { AuditRow(it.name, it, "20:00", null) }.toTypedArray()))
 
         for ((index, type) in types.withIndex()) {
             composeRule.onNode(hasScrollAction()).performScrollToIndex(index)
@@ -138,7 +140,7 @@ class AuditScreenTest {
 
     @Test
     fun `an entry without host and detail shows no detail line`() {
-        show(state(AuditRow(AuditType.PAIRING_START, "18:00", null)))
+        show(state(AuditRow("pairing", AuditType.PAIRING_START, "18:00", null)))
 
         entry(0).assertTextContains("Pairing started")
         entry(0).assertTextContains("PAIRING_START")
@@ -178,6 +180,7 @@ class AuditScreenTest {
         val rows =
             List(40) {
                 AuditRow(
+                    "e$it",
                     AuditType.LAUNCH_ATTEMPT,
                     "10:${it.toString().padStart(2, '0')}",
                     "Desk PC · $it",
@@ -197,7 +200,7 @@ class AuditScreenTest {
 
         entry(1).performClick()
 
-        assertThat(selected).containsExactly(1)
+        assertThat(selected).containsExactly("start")
     }
 
     @Test
@@ -346,7 +349,7 @@ class AuditScreenTest {
         entry(0).performKeyInput { pressKey(Key.DirectionDown) }
         entry(1).performKeyInput { pressKey(Key.DirectionCenter) }
 
-        assertThat(selected).containsExactly(1)
+        assertThat(selected).containsExactly("start")
     }
 
     @Test
@@ -363,5 +366,92 @@ class AuditScreenTest {
         composeRule.waitForIdle()
 
         entry(1).assertIsFocused()
+    }
+
+    private fun manyRows(count: Int) =
+        List(count) {
+            AuditRow("e$it", AuditType.LAUNCH_ATTEMPT, "10:00", "Desk PC · $it")
+        }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV a deep entry is shown and focused again when the list comes back`() {
+        val rows = manyRows(45).toTypedArray()
+        val state = mutableStateOf(state(*rows))
+        composeRule.setContentInKeyboardMode { Screen(state.value, FormFactor.Tv) }
+        composeRule.onNode(hasScrollAction()).performScrollToIndex(32)
+        entry(32).requestFocus()
+        entry(32).performKeyInput { pressKey(Key.DirectionCenter) }
+        assertThat(selected).containsExactly("e32")
+
+        state.value = state(*rows, detail = pairingFailure)
+        composeRule.waitForIdle()
+        state.value = state(*rows)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Desk PC · 32").assertIsDisplayed()
+        composeRule.onNodeWithText("Desk PC · 32").assertIsFocused()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV a deep entry is shown again even when newer entries arrived meanwhile`() {
+        val rows = manyRows(45)
+        val state = mutableStateOf(state(*rows.toTypedArray()))
+        composeRule.setContentInKeyboardMode { Screen(state.value, FormFactor.Tv) }
+        composeRule.onNode(hasScrollAction()).performScrollToIndex(32)
+        entry(32).requestFocus()
+        entry(32).performKeyInput { pressKey(Key.DirectionCenter) }
+        val newer = List(5) { AuditRow("n$it", AuditType.SESSION_END, "10:01", "Newer $it") }
+
+        state.value = state(*rows.toTypedArray(), detail = pairingFailure)
+        composeRule.waitForIdle()
+        state.value = state(*(newer + rows).toTypedArray())
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Desk PC · 32").assertIsDisplayed()
+        composeRule.onNodeWithText("Desk PC · 32").assertIsFocused()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV an entry that arrives at the head does not move the focus to another entry`() {
+        val first = AuditRow("a", AuditType.SESSION_END, "20:42", "summary A")
+        val second = AuditRow("b", AuditType.SESSION_START, "20:34", "summary B")
+        val third = AuditRow("c", AuditType.LAUNCH_ATTEMPT, "20:33", "summary C")
+        val state = mutableStateOf(state(first, second, third))
+        composeRule.setContentInKeyboardMode { Screen(state.value, FormFactor.Tv) }
+        entry(1).requestFocus()
+        composeRule.onNodeWithText("summary B").assertIsFocused()
+
+        state.value =
+            state(
+                AuditRow("n", AuditType.PAIRING_START, "20:50", "summary N"),
+                first,
+                second,
+                third,
+            )
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("summary B").assertIsFocused()
+    }
+
+    @Test
+    fun `a cancelled event shows its result as cancelled in the opened entry`() {
+        show(
+            state(
+                detail =
+                    AuditDetail(
+                        AuditType.PAIRING_START,
+                        "12 Oct 2026 18:00:00",
+                        AuditOutcome.CANCELLED,
+                        "Studio",
+                        null,
+                    )
+            )
+        )
+
+        composeRule.onNodeWithText("Result").assertIsDisplayed()
+        composeRule.onNodeWithText("Cancelled").assertIsDisplayed()
     }
 }

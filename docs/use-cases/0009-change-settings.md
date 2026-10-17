@@ -62,8 +62,8 @@ use.
 2. The system shows a warning that the PC must support this resolution.
 3. The user keeps the choice or changes it.
 
-TODO(verify): the notes do not say whether the client reads the PC's supported
-modes. Until that is confirmed, the warning is the only check.
+The client does not read the PC's supported modes, so the warning is the only
+check.
 
 ### A4: Bitrate returns to automatic (branches from step 3)
 
@@ -90,7 +90,7 @@ modes. Until that is confirmed, the warning is the only check.
 - On success: the changed value is stored, and it applies to the next stream.
   The current stream is not changed.
 - On failure to store a value: the previous value stays, and the row shows it.
-  TODO(verify): the notes do not define a failure message for a storage error.
+  The error is logged; no message is shown.
 
 ## Acceptance tests
 

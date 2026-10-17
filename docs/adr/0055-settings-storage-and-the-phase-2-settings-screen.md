@@ -19,15 +19,16 @@ The upstream stream settings screen holds 41 preferences. The interim Borealis s
 
 ## Considered Options
 
-* Move all settings to DataStore now, and bridge the Java readers to DataStore
 * Keep the stream keys in the default SharedPreferences file behind a Kotlin repository, and move only the two logging switches to DataStore
-* Keep the interim screen of [0050](0050-diagnostics-audit-and-interim-settings.md) and add no new settings screen until a later phase
+* Move all settings to DataStore now, and have `PreferenceConfiguration` read a snapshot
+* Keep every setting in SharedPreferences, with no DataStore, and amend [0050](0050-diagnostics-audit-and-interim-settings.md)
+* Put every setting behind the repository in SharedPreferences now, and move the two logging switches to DataStore in a later sprint
 
-The alternatives are reconstructed from the Context and the consequences of the decision. TODO(verify): the owner's record of the alternatives is not in the sprint notes.
+The owner chose among these four options on 2026-10-16.
 
 ## Decision Outcome
 
-Chosen option: "Keep the stream keys in SharedPreferences behind a repository, and move the two logging switches to DataStore", because it leaves the Java readers unchanged, it lets the two logging switches be read at start for masking, and it keeps the move of each key to DataStore a separate, small step.
+Chosen option: "Keep the stream keys in the default SharedPreferences file behind a Kotlin repository, and move only the two logging switches to DataStore", because it leaves the Java readers unchanged, it lets the two logging switches be read at start for masking, and it keeps the move of each key to DataStore a separate, small step.
 
 Decision details:
 
@@ -63,21 +64,27 @@ This ADR amends [0050](0050-diagnostics-audit-and-interim-settings.md) section 3
 
 ## Pros and Cons of the Options
 
-### Move all settings to DataStore now
-
-* Good, because there is one storage mechanism for settings.
-* Bad, because the Java readers in `Game`, `ControllerHandler`, `UsbDriverService`, the on-screen controls loader and `UiHelper` would need a bridge that blocks on DataStore.
-
-### Keep the stream keys in SharedPreferences behind a repository, and move the two switches (chosen)
+### Keep the stream keys in the default SharedPreferences file behind a Kotlin repository, and move only the two logging switches to DataStore (chosen)
 
 * Good, because the Java readers stay unchanged.
 * Good, because the two logging switches are read once at start, so masking applies from the first line.
+* Good, because each later key moves to DataStore as a separate, small step.
 * Bad, because two storage backends exist for a while.
 
-### Keep the interim screen and add no new settings screen
+### Move all settings to DataStore now, and have `PreferenceConfiguration` read a snapshot
 
-* Good, because there is no new code in Sprint 6.
-* Bad, because the Phase 2 settings screen and its groups would not exist, and the device-specific options would not be offered.
+* Good, because there is one storage mechanism for settings.
+* Bad, because the Java readers in `Game`, `ControllerHandler`, `UsbDriverService`, the on-screen controls loader and `UiHelper` change at once, and `Game` reads its settings synchronously in `onCreate`.
+
+### Keep every setting in SharedPreferences, with no DataStore, and amend 0050
+
+* Good, because it is the simplest change.
+* Bad, because it goes against [0011](0011-datastore-room-and-keystore-for-new-persistence.md) and the promise of [0050](0050-diagnostics-audit-and-interim-settings.md).
+
+### Put every setting behind the repository in SharedPreferences now, and move the two logging switches to DataStore in a later sprint
+
+* Good, because there is no migration in Sprint 6.
+* Bad, because it postpones again what [0050](0050-diagnostics-audit-and-interim-settings.md) promised for Phase 2.
 
 ## More Information
 

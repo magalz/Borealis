@@ -60,8 +60,8 @@ Implementation requirements:
   are stored in the app's private DataStore file, `borealis_settings`. The file
   is excluded from Android backup.
 - The other settings stay in the app's private SharedPreferences, as before.
-  TODO(verify): the notes do not say whether these settings follow Android
-  backup.
+  They are not backed up either: the app's backup rules exclude its
+  SharedPreferences from cloud backup and from device transfer.
 - Nothing leaves the device. Settings are never uploaded.
 
 ## Diagnostic bundle

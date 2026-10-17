@@ -38,6 +38,9 @@ import android.view.SurfaceHolder;
 import io.github.magalz.borealis.host.video.FirstFrameSignal;
 import io.github.magalz.borealis.host.video.HdrRestartReuse; // BOREALIS: keeps the first IDR across the HDR decoder restart (host.video)
 import io.github.magalz.borealis.host.video.HevcSpsMonitor; // BOREALIS: HEVC SPS diagnostics (host.video)
+import io.github.magalz.borealis.stream.DecodeTimeCounts; // BOREALIS: stream.perf
+import io.github.magalz.borealis.stream.DecodeTimeLog; // BOREALIS: logs what the decoder did per window (stream.perf)
+import io.github.magalz.borealis.stream.DecodeTimeTracker; // BOREALIS: pairs outputs with inputs by timestamp (stream.perf)
 import io.github.magalz.borealis.stream.PerfSnapshotSink; // BOREALIS: structured performance numbers (stream.perf)
 import io.github.magalz.borealis.stream.PerfSnapshots;
 import io.github.magalz.borealis.stream.PerfWindow;
@@ -126,6 +129,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
     private LinkedBlockingQueue<Integer> outputBufferQueue = new LinkedBlockingQueue<>();
     private static final int OUTPUT_BUFFER_QUEUE_LIMIT = 2;
+    private final DecodeTimeTracker decodeTimeTracker = new DecodeTimeTracker(); // BOREALIS: input timestamps of the frames in the decoder, guarded by its own monitor (stream.perf)
     private long lastRenderedFrameTimeNanos;
     private HandlerThread choreographerHandlerThread;
     private Handler choreographerHandler;
@@ -757,6 +761,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                 nextInputBuffer = null;
                 nextInputBufferIndex = -1;
                 outputBufferQueue.clear();
+                synchronized (decodeTimeTracker) { decodeTimeTracker.clear(); } // BOREALIS: stream.perf
 
                 // If we just need a flush, do so now with all threads quiesced.
                 if (codecRecoveryType.get() == CR_RECOVERY_TYPE_FLUSH) {
@@ -1073,6 +1078,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                         int outIndex = videoDecoder.dequeueOutputBuffer(info, 50000);
                         if (outIndex >= 0) {
                             long presentationTimeUs = info.presentationTimeUs;
+                            long matchedInputUs = matchOutput(presentationTimeUs); // BOREALIS: stream.perf
                             int lastIndex = outIndex;
 
                             numFramesOut++;
@@ -1087,6 +1093,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
                                     lastIndex = outIndex;
                                     presentationTimeUs = info.presentationTimeUs;
+                                    matchedInputUs = matchOutput(presentationTimeUs); // BOREALIS: stream.perf
                                 }
 
                                 if (prefs.framePacing == PreferenceConfiguration.FRAME_PACING_MAX_SMOOTHNESS ||
@@ -1128,7 +1135,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                             }
 
                             // Add delta time to the totals (excluding probable outliers)
-                            long delta = SystemClock.uptimeMillis() - (presentationTimeUs / 1000);
+                            long delta = SystemClock.uptimeMillis() - ((matchedInputUs != DecodeTimeTracker.NO_MATCH ? matchedInputUs : presentationTimeUs) / 1000); // BOREALIS: stream.perf
                             if (delta >= 0 && delta < 1000) {
                                 activeWindowVideoStats.decoderTimeMs += delta;
                                 if (!USE_FRAME_RENDER_TIME) {
@@ -1333,10 +1340,22 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         }
     }
 
+    // BOREALIS: the tracker is not thread-safe, and the input and the output run on different threads (stream.perf)
+    private DecodeTimeCounts drainDecodeWindow() { // BOREALIS: stream.perf
+        synchronized (decodeTimeTracker) { return decodeTimeTracker.drainWindow(); } // BOREALIS: stream.perf
+    }
+
+    private long matchOutput(long presentationTimeUs) { // BOREALIS: stream.perf
+        synchronized (decodeTimeTracker) { return decodeTimeTracker.onOutput(presentationTimeUs); } // BOREALIS: stream.perf
+    }
+
     private boolean queueNextInputBuffer(long timestampUs, int codecFlags) {
         boolean codecRecovered;
 
         try {
+            if ((codecFlags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) { // BOREALIS: stream.perf
+                synchronized (decodeTimeTracker) { decodeTimeTracker.onInput(timestampUs); } // BOREALIS: before the queue, so a fast output finds it (stream.perf)
+            }
             videoDecoder.queueInputBuffer(nextInputBufferIndex,
                     0, nextInputBuffer.position(),
                     timestampUs, codecFlags);
@@ -1427,6 +1446,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         // Flip stats windows roughly every second
         if (SystemClock.uptimeMillis() >= activeWindowVideoStats.measurementStartTimestamp + 1000) {
             if (perfEnabled) { pushPerfSnapshot(); } // BOREALIS: stream.perf
+            DecodeTimeLog.window(getDecoderName(), drainDecodeWindow()); // BOREALIS: stream.perf
 
             globalVideoStats.add(activeWindowVideoStats);
             lastWindowVideoStats.copy(activeWindowVideoStats);

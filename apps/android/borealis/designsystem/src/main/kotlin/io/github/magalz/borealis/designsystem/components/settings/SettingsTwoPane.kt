@@ -79,6 +79,7 @@ fun <K> SettingsTwoPane(
     selected: K,
     onSelect: (K) -> Unit,
     modifier: Modifier = Modifier,
+    selfScrolling: (K) -> Boolean = { false },
     content: @Composable ColumnScope.(K) -> Unit,
 ) {
     val current = groups.firstOrNull { it.key == selected } ?: groups.firstOrNull()

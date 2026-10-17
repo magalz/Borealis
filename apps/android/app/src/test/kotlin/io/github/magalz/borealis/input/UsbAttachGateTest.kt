@@ -17,7 +17,8 @@ import org.robolectric.Shadows.shadowOf
 
 /**
  * The attach dialog of Google TV has no "use by default", so a user who turned the USB driver off
- * gets nothing from it: the activity is offered to the system only while the driver is on.
+ * gets nothing from it, and neither does anybody on a TV: the activity is offered to the system
+ * only while the driver is on and the device is not a TV.
  */
 @RunWith(RobolectricTestRunner::class)
 class UsbAttachGateTest {
@@ -105,6 +106,42 @@ class UsbAttachGateTest {
         setUsbDriver(false)
         UsbAttachGate.start(context)
         assertThat(state()).isEqualTo(PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER)
+    }
+
+    private fun asTelevision() {
+        shadowOf(context.packageManager).setSystemFeature(PackageManager.FEATURE_LEANBACK, true)
+    }
+
+    @Test
+    fun `on a TV the attach intent resolves to no activity even with the USB driver on`() {
+        asTelevision()
+        setUsbDriver(true)
+
+        UsbAttachGate.start(context)
+
+        assertThat(state()).isEqualTo(PackageManager.COMPONENT_ENABLED_STATE_DISABLED)
+        assertThat(attachHandlers()).isEmpty()
+    }
+
+    @Test
+    fun `on a TV an absent setting does not bring the activity back`() {
+        asTelevision()
+
+        UsbAttachGate.start(context)
+
+        assertThat(attachHandlers()).isEmpty()
+    }
+
+    @Test
+    fun `on a TV toggling the setting leaves the activity out`() {
+        asTelevision()
+        setUsbDriver(false)
+        val gate = UsbAttachGate.start(context)
+
+        setUsbDriver(true)
+
+        assertThat(attachHandlers()).isEmpty()
+        assertThat(gate).isNotNull()
     }
 
     private companion object {

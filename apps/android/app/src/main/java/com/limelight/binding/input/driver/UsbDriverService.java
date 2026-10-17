@@ -133,6 +133,9 @@ public class UsbDriverService extends Service implements UsbDriverListener {
         public void stop() {
             UsbDriverService.this.stop();
         }
+
+        public void onStreamReady() {
+        }
     }
 
     private void handleUsbDeviceState(UsbDevice device) {

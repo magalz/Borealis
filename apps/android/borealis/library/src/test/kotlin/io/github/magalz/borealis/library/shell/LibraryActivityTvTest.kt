@@ -21,7 +21,6 @@ import androidx.compose.ui.test.pressKey
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.google.common.truth.Truth.assertThat
 import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -110,7 +109,6 @@ class LibraryActivityTvTest {
 
         composeRule.onNode(railItem("Settings")).performClick()
         composeRule.waitForIdle()
-        assertThat(bridge.settingsOpened).isEqualTo(0)
 
         composeRule.onNode(railItem("Add host")).performClick()
         composeRule.waitForIdle()

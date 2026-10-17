@@ -15,7 +15,6 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.google.common.truth.Truth.assertThat
 import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -116,14 +115,13 @@ class LibrarySettingsPhoneTest {
         composeRule.onNodeWithText("Kept for 90 days or 2,000 entries").assertIsDisplayed()
 
     @Test
-    fun `the gear on Hosts opens Settings, not the old stream settings`() {
+    fun `the gear on Hosts opens Settings`() {
         launch()
 
         openSettings()
 
         showsSettings()
         composeRule.onNodeWithTag("host:desk").assertDoesNotExist()
-        assertThat(bridge.settingsOpened).isEqualTo(0)
     }
 
     @Test

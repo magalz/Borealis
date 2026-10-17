@@ -10,11 +10,14 @@ import io.github.magalz.borealis.designsystem.components.DialogAction
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 
-/** A button of a [SettingsDialog]: its [label], what it does and its [style]. */
+/**
+ * A button of a [SettingsDialog]: its [label], what it does and its [style]. Without a style the
+ * button takes the default of its slot: Primary to confirm, Secondary to dismiss.
+ */
 internal class DialogButton(
     val label: String,
     val onClick: () -> Unit,
-    val style: BorealisButtonStyle = BorealisButtonStyle.Primary,
+    val style: BorealisButtonStyle? = null,
 )
 
 private fun DialogButton.toAction() = DialogAction(label, style, onClick)

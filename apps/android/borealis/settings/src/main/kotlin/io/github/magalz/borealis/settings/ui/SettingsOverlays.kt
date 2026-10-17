@@ -89,7 +89,6 @@ private fun NativeWarning(item: SettingsItem, overlays: SettingsOverlays) {
                     close()
                     overlays.choice = item
                 },
-                BorealisButtonStyle.Text,
             ),
         focusDismiss = false,
         width = DialogWidth.Compact,
@@ -117,7 +116,6 @@ private fun ResetLayoutQuestion(overlays: SettingsOverlays, actions: SettingsAct
             DialogButton(
                 stringResource(R.string.settings_cancel),
                 close,
-                BorealisButtonStyle.Text,
             ),
         width = DialogWidth.Compact,
     )

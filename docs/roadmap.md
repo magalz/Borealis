@@ -67,7 +67,8 @@ The work for this sprint is on the phase branch `phase/s7-followups-polish`.
    (Library), `b3e450b1` (Settings, Privacy, Audit, Send to phone and stream
    screens) and `fe6273c7` (one window-settling helper for the dialog
    screenshots). The TV was checked on build `fe6273c7`. The handheld was not
-   checked, because there is no device. See the
+   checked on a dedicated device. The S22 in landscape was checked as a handheld
+   after item 7, with a Bluetooth pad. See the
    [device validation runbook, section 12](development/device-validation.md#12-results-sprint-7).
 6. **A held key does not act in a menu, sheet or dialog.** Done. Found by the
    owner during the sprint. A key that is already down when the in-game menu, an
@@ -80,6 +81,14 @@ The work for this sprint is on the phase branch `phase/s7-followups-polish`.
    now one focus stop with no action button, so that case is gone too (merge
    `4726c010`). Merges `70ed3eb3` (in-game menu), `60d5bfd5` (sheets and dialogs)
    and `4726c010` (host card).
+7. **A connected game controller makes a wide window a handheld.** Done (merge
+   `89b46c5b`, task commits `748f688c` and `dd3d383f`). Found in the device
+   round. A window 600 dp or wider is a handheld while a game controller is
+   connected, and the layout goes back to the phone layout when it disconnects.
+   The docked keyboard follows the same rule at the stream start. A pad claimed
+   by the app's USB driver is no Android input device while claimed. Checked on
+   the S22 in landscape with two 8BitDo pads over Bluetooth. See the
+   [device validation runbook, section 12](development/device-validation.md#bluetooth-pad-round-and-handheld-fix-2026-10-17).
 
 ### Sprint 8: tidy-up
 
@@ -126,6 +135,9 @@ The owner creates the tag. See the [release procedure](development/release.md).
   deferred by the owner. See the [third-party notes](../core/third_party/README.md).
 - **Document the native pad modes.** Idea, not planned. The Pro 3 in Switch
   mode and the Ultimate 2 in D-input, for the 8BitDo pads. See Sprint 7, item 3.
+  On the S22, the Ultimate 2 over Bluetooth LE shows as `2dc8:6012`, and the Pro
+  3 over classic Bluetooth as `057e:2009`. See the
+  [Bluetooth pad round](development/device-validation.md#bluetooth-pad-round-and-handheld-fix-2026-10-17).
 - **Smoother D-pad moves in Settings on a TV.** Reported by the owner on
   2026-10-17. Moving from one Settings row to the next has a small delay, while
   every other screen moves at once. Investigate where the time goes, for
@@ -139,6 +151,10 @@ The owner creates the tag. See the [release procedure](development/release.md).
 - **Host details text.** Noticed on 2026-10-17. The host Details dialog lists
   raw fields inherited from Moonlight, such as "Active Address: null" and
   "State: OFFLINE". Show only what a user needs, in plain words.
+- **Handheld host card height.** Noticed on 2026-10-17. On the S22 as a
+  handheld (360 dp tall), the host cards use the TV height of 176 dp, which
+  leaves a lot of empty space. Adapt the card height for a handheld in a later
+  refinement session.
 
 ## Host-side items (LuminalShine)
 

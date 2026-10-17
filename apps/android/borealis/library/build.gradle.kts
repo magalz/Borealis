@@ -25,6 +25,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.coroutines.android)
+    // The Hilt test components aggregate the Settings graph's modules, which reference diagnostics
+    // types (the export sections), so those types must resolve on the test classpath.
+    testImplementation(project(":borealis:diagnostics"))
     testImplementation(libs.hilt.android.testing)
     add("kspTest", libs.hilt.compiler)
 }

@@ -24,6 +24,8 @@ constructor(private val connection: ComputerManagerConnection, private val boxAr
         val hdr = cached?.isHdrSupported ?: request.hdrSupported
         // A resume knows no name; the cached list may still have it.
         val name = request.appName ?: cached?.appName ?: UNKNOWN_APP_NAME
+        // Warms the cache for the TV program that the stream adds, and for a pin later.
+        boxArt.prefetch(request.hostId, request.appId)
         binder.startStream(
             activity,
             NvApp(name, request.appId, hdr),

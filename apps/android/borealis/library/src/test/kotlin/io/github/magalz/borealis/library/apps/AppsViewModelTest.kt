@@ -15,6 +15,7 @@ import io.github.magalz.borealis.library.testing.MainDispatcherRule
 import io.github.magalz.borealis.library.testing.aHost
 import io.github.magalz.borealis.library.testing.anApp
 import io.github.magalz.borealis.library.testing.subscribe
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -722,6 +723,30 @@ class AppsViewModelTest {
             assertThat(awaitItem()).isEqualTo(AppsEffect.ShowMessage(AppsMessage.PinFailed))
         }
     }
+
+    @Test
+    fun `a pin that waits for the box art does not hold the screen, and a refusal is reported after it`() =
+        runTest {
+            shortcuts.canPinApps = true
+            shortcuts.pinResult = false
+            val gate = CompletableDeferred<Unit>()
+            shortcuts.pinGate = gate
+            repository.emit(snapshot(desktop))
+            subscribe(viewModel.uiState)
+            viewModel.onActions(1)
+            runCurrent()
+
+            viewModel.onActionChosen(AppAction.ADD_TO_HOME_SCREEN)
+            runCurrent()
+
+            assertThat(shortcuts.pinned).hasSize(1)
+            assertThat(viewModel.uiState.value.actions).isNull()
+            viewModel.effects.test {
+                expectNoEvents()
+                gate.complete(Unit)
+                assertThat(awaitItem()).isEqualTo(AppsEffect.ShowMessage(AppsMessage.PinFailed))
+            }
+        }
 
     @Test
     fun `a launch request starts an app that was hidden since the shortcut was pinned`() = runTest {

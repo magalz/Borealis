@@ -3,6 +3,7 @@ package io.github.magalz.borealis.library
 import android.content.Context
 import com.limelight.binding.PlatformBinding
 import com.limelight.nvstream.http.ComputerDetails
+import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.PairingManager.PairState
 import com.limelight.utils.ServerHelper
@@ -25,7 +26,7 @@ internal class NvHostClient(private val http: NvHTTP) : HostClient {
 
     override fun quitApp(): Boolean = http.quitApp()
 
-    override fun boxArt(appId: Int): InputStream = TODO("the box art request")
+    override fun boxArt(appId: Int): InputStream = http.getBoxArt(NvApp("", appId, false))
 
     override fun cancelPendingRequests() = http.cancelPendingRequests()
 }

@@ -215,7 +215,7 @@ internal class FakeHostClient(private val binder: FakeCmsBinder) : HostClient {
     var quit: () -> Boolean = { true }
 
     /** What the host answers for the art of an app; by default it has none (404). */
-    var boxArt: (Int) -> InputStream = { throw FileNotFoundException("404") }
+    var boxArtAnswer: (Int) -> InputStream = { throw FileNotFoundException("404") }
     val boxArtRequests = mutableListOf<Int>()
     val pins = mutableListOf<String>()
     var unpairs = 0
@@ -239,7 +239,7 @@ internal class FakeHostClient(private val binder: FakeCmsBinder) : HostClient {
 
     override fun boxArt(appId: Int): InputStream {
         boxArtRequests += appId
-        return boxArt(appId)
+        return boxArtAnswer(appId)
     }
 
     override fun cancelPendingRequests() {

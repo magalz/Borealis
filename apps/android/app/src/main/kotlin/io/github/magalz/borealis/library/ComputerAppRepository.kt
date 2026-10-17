@@ -6,6 +6,8 @@ import io.github.magalz.borealis.library.domain.App
 import io.github.magalz.borealis.library.domain.AppRepository
 import io.github.magalz.borealis.library.domain.AppsSnapshot
 import io.github.magalz.borealis.library.domain.QuitResult
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogTag
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.net.UnknownHostException
@@ -66,7 +68,24 @@ constructor(
         .distinctUntilChanged()
 
     override suspend fun setHidden(hostId: String, appId: Int, hidden: Boolean) {
-        withContext(io) { hiddenApps.set(hostId, appId, hidden) }
+        withContext(io) {
+            hiddenApps.set(hostId, appId, hidden)
+            switchShortcut(hostId, appId, hidden)
+        }
+    }
+
+    // A launcher that fails must not undo the choice of the user.
+    @Suppress("TooGenericExceptionCaught")
+    private fun switchShortcut(hostId: String, appId: Int, hidden: Boolean) {
+        try {
+            if (hidden) shortcuts.appHidden(hostId, appId) else shortcuts.appShown(hostId, appId)
+        } catch (e: RuntimeException) {
+            BorealisLog.w(
+                LogTag.HOST,
+                "app shortcut not switched",
+                "error" to e.javaClass.simpleName,
+            )
+        }
     }
 
     /** As the quit of the 12.2 app list, without its dialogs. */

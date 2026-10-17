@@ -64,7 +64,7 @@ class BoxArtLoaderTest {
     fun hostIsPaired() {
         disk.deleteAssetsForComputer("host-1")
         binder.computers["host-1"] = pairedHost()
-        clients.client.boxArt = { ByteArrayInputStream(png) }
+        clients.client.boxArtAnswer = { ByteArrayInputStream(png) }
     }
 
     @After
@@ -129,7 +129,7 @@ class BoxArtLoaderTest {
 
     @Test
     fun `a host that has no art for the app gives none and nothing is cached`() = runTest {
-        clients.client.boxArt = { throw FileNotFoundException("404") }
+        clients.client.boxArtAnswer = { throw FileNotFoundException("404") }
 
         assertThat(loader().bitmap("host-1", 7)).isNull()
         assertThat(cached(7)).isFalse()
@@ -137,7 +137,7 @@ class BoxArtLoaderTest {
 
     @Test
     fun `a network failure gives no art instead of throwing`() = runTest {
-        clients.client.boxArt = { throw IOException("connection reset") }
+        clients.client.boxArtAnswer = { throw IOException("connection reset") }
 
         assertThat(loader().bitmap("host-1", 7)).isNull()
         assertThat(cached(7)).isFalse()
@@ -145,7 +145,7 @@ class BoxArtLoaderTest {
 
     @Test
     fun `a stream that breaks half way leaves no partial file`() = runTest {
-        clients.client.boxArt = {
+        clients.client.boxArtAnswer = {
             object : InputStream() {
                 private var sent = 0
 
@@ -170,20 +170,20 @@ class BoxArtLoaderTest {
 
     @Test
     fun `art that cannot be decoded gives none, and is fetched again next time`() = runTest {
-        clients.client.boxArt = { ByteArrayInputStream("this is not an image".toByteArray()) }
+        clients.client.boxArtAnswer = { ByteArrayInputStream("this is not an image".toByteArray()) }
         val loader = loader()
 
         assertThat(loader.bitmap("host-1", 7)).isNull()
         assertThat(cached(7)).isFalse()
 
-        clients.client.boxArt = { ByteArrayInputStream(png) }
+        clients.client.boxArtAnswer = { ByteArrayInputStream(png) }
         assertThat(loader.bitmap("host-1", 7)).isNotNull()
         assertThat(clients.client.boxArtRequests).hasSize(2)
     }
 
     @Test
     fun `art larger than 5 MB is rejected and not stored`() = runTest {
-        clients.client.boxArt = { ByteArrayInputStream(ByteArray(6 * 1024 * 1024)) }
+        clients.client.boxArtAnswer = { ByteArrayInputStream(ByteArray(6 * 1024 * 1024)) }
 
         assertThat(loader().bitmap("host-1", 7)).isNull()
         assertThat(cached(7)).isFalse()
@@ -192,7 +192,7 @@ class BoxArtLoaderTest {
     @Test
     fun `the request is made off the calling thread`() = runTest {
         var thread: String? = null
-        clients.client.boxArt = {
+        clients.client.boxArtAnswer = {
             thread = Thread.currentThread().name
             ByteArrayInputStream(png)
         }

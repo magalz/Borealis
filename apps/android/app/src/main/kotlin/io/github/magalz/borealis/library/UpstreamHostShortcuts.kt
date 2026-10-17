@@ -17,6 +17,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Disables the launcher shortcuts and TV channel of a host that was removed from this device. */
 internal fun interface ShortcutCleanup {
@@ -72,24 +73,41 @@ constructor(
         appId: Int,
         appName: String,
         hdrSupported: Boolean,
-    ): Boolean =
-        canPinApps &&
-            helper.createPinnedGameShortcut(
-                computer(hostId, hostName),
-                NvApp(appName, appId, hdrSupported),
-                null,
-            )
+    ): Boolean {
+        if (!canPinApps) return false
+        // The art is fetched and drawn off the main thread; without it the icon is the generic one.
+        val icon =
+            withContext(io) { boxArt.bitmap(hostId, appId)?.let(AdaptiveShortcutIcon::build) }
+        return helper.createPinnedGameShortcut(
+            computer(hostId, hostName),
+            NvApp(appName, appId, hdrSupported),
+            icon,
+        )
+    }
 
-    override fun appHidden(hostId: String, appId: Int) = Unit
+    // Both run off the main thread: the shortcut manager and the TV provider are binder calls.
+    override fun appHidden(hostId: String, appId: Int) {
+        // This also deletes the TV program of the app.
+        helper.disableAppShortcut(computer(hostId, ""), app(appId), HIDDEN_REASON)
+    }
 
-    override fun appShown(hostId: String, appId: Int) = Unit
+    override fun appShown(hostId: String, appId: Int) {
+        helper.enableAppShortcut(computer(hostId, ""), app(appId))
+    }
 
     override fun hostForgotten(details: ComputerDetails) =
         helper.disableComputerShortcut(details, context.getString(R.string.scut_deleted_pc))
+
+    // The shortcut id and the TV program are found by host and app id; the name is not needed.
+    private fun app(appId: Int) = NvApp("", appId, false)
 
     private fun computer(hostId: String, hostName: String) =
         ComputerDetails().also {
             it.uuid = hostId
             it.name = hostName
         }
+
+    private companion object {
+        const val HIDDEN_REASON = "App hidden"
+    }
 }

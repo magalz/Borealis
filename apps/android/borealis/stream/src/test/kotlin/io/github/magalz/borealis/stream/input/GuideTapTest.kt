@@ -53,4 +53,15 @@ class GuideTapTest {
     fun `an event that did not end the chord sends no tap`() {
         assertThat(GuideChord.tapButtons(nothing, hasSelect = true, hasMode = false)).isEqualTo(0)
     }
+
+    @Test
+    fun `a lone button let go while it was held back is a short press of that button`() {
+        val start = MenuChordDetector.Update(false, false, true, loneTap = GamepadButtons.START)
+        val select = MenuChordDetector.Update(false, false, true, loneTap = GamepadButtons.SELECT)
+
+        assertThat(GuideChord.tapButtons(start, hasSelect = true, hasMode = false))
+            .isEqualTo(GamepadButtons.START)
+        assertThat(GuideChord.tapButtons(select, hasSelect = true, hasMode = true))
+            .isEqualTo(GamepadButtons.SELECT)
+    }
 }

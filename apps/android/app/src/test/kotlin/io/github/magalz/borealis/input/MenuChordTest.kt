@@ -18,7 +18,7 @@ import org.robolectric.shadows.ShadowToast
 /** Holding Select and Start opens the menu, and nothing of that hold reaches the PC. */
 @RunWith(RobolectricTestRunner::class)
 class MenuChordTest {
-    private val rig = ControllerHandlerRig()
+    private val rig = ControllerHandlerRig().also { it.givePadASelectButton() }
 
     private fun holdStartAndSelect() {
         rig.press(KEYCODE_BUTTON_START)
@@ -137,7 +137,10 @@ class MenuChordTest {
         rig.advanceBy(100)
         rig.release(KEYCODE_BUTTON_START)
 
-        assertThat(rig.buttons()).containsExactly(PLAY_FLAG, 0, SPECIAL_BUTTON_FLAG, 0).inOrder()
+        // Neither Start nor Select reaches the PC before the Guide tap, and the tap is let go again
+        assertThat(rig.buttons().dropLastWhile { it == 0 }.dropWhile { it == 0 })
+            .containsExactly(SPECIAL_BUTTON_FLAG)
+        assertThat(rig.lastButtons()).isEqualTo(0)
         assertThat(rig.chords).isEqualTo(0)
     }
 
@@ -147,7 +150,7 @@ class MenuChordTest {
 
         rig.advanceBy(900)
 
-        assertThat(rig.buttons().drop(1).all { it and (PLAY_FLAG or BACK_FLAG) == 0 }).isTrue()
+        assertThat(rig.buttons().all { it and (PLAY_FLAG or BACK_FLAG) == 0 }).isTrue()
         assertThat(rig.lastButtons()).isEqualTo(0)
     }
 
@@ -159,7 +162,8 @@ class MenuChordTest {
         rig.release(KEYCODE_BUTTON_START)
 
         assertThat(rig.chords).isEqualTo(1)
-        assertThat(rig.buttons().none { it and SPECIAL_BUTTON_FLAG != 0 }).isTrue()
+        assertThat(rig.buttons().none { it and (SPECIAL_BUTTON_FLAG or PLAY_FLAG or BACK_FLAG) != 0 })
+            .isTrue()
         assertThat(rig.lastButtons()).isEqualTo(0)
     }
 
@@ -174,9 +178,10 @@ class MenuChordTest {
         rig.advanceBy(100)
         rig.release(KEYCODE_BUTTON_START)
 
-        assertThat(rig.buttons().drop(before))
-            .containsExactly(PLAY_FLAG, 0, PLAY_FLAG or BACK_FLAG, 0)
-            .inOrder()
+        // Start alone does not reach the PC before the short press of both
+        assertThat(rig.buttons().drop(before).dropLastWhile { it == 0 }.dropWhile { it == 0 })
+            .containsExactly(PLAY_FLAG or BACK_FLAG)
+        assertThat(rig.lastButtons()).isEqualTo(0)
         assertThat(rig.chords).isEqualTo(0)
     }
 
@@ -194,14 +199,16 @@ class MenuChordTest {
     }
 
     @Test
-    fun `a pad with a Mode button sends Start alone and Select alone at once`() {
+    fun `a pad with a Mode button sends Start alone and Select alone once the 60 ms are over`() {
         giveThePadAModeButton()
 
         rig.press(KEYCODE_BUTTON_START)
+        rig.advanceBy(60)
         assertThat(rig.lastButtons()).isEqualTo(PLAY_FLAG)
         rig.release(KEYCODE_BUTTON_START)
 
         rig.press(KEYCODE_BUTTON_SELECT)
+        rig.advanceBy(60)
         assertThat(rig.lastButtons()).isEqualTo(BACK_FLAG)
     }
 

@@ -49,9 +49,8 @@ class LaunchProgressTextTest {
     }
 
     @Test
-    fun `every Brazilian Portuguese string has an English one with the same placeholders`() {
+    fun `every retry category has an English string`() {
         val english = strings("values")
-        val portuguese = strings("values-pt-rBR")
 
         assertThat(english.keys)
             .containsAtLeast(
@@ -61,35 +60,20 @@ class LaunchProgressTextTest {
                 "launch_retry_capture_or_display",
                 "launch_retry_generic",
             )
-        // The app is English-only until the translation sprint: new strings need no Portuguese
-        // counterpart, but a Portuguese string never exists without its English one.
-        assertThat(english.keys).containsAtLeastElementsIn(portuguese.keys)
-        for ((name, text) in portuguese) {
-            assertThat(placeholders(text)).isEqualTo(placeholders(english.getValue(name)))
-        }
     }
 
     @Test
     fun `every retry text carries seconds, attempt and attempt limit`() {
-        for (folder in listOf("values", "values-pt-rBR")) {
-            for ((_, text) in strings(folder).filterKeys { it.startsWith("launch_retry_") }) {
-                assertThat(placeholders(text)).containsExactly("%1\$s", "%2\$s", "%3\$s")
-            }
+        for ((_, text) in strings("values").filterKeys { it.startsWith("launch_retry_") }) {
+            assertThat(placeholders(text)).containsExactly("%1\$s", "%2\$s", "%3\$s")
         }
     }
 
     @Test
     fun `the number counts retries, not attempts`() {
         // The first request is not a retry: "retry 1 of 4" is the second request.
-        val endings =
-            mapOf(
-                "values" to "(retry %2\$s of %3\$s).",
-                "values-pt-rBR" to "(nova tentativa %2\$s de %3\$s).",
-            )
-        for ((folder, ending) in endings) {
-            for ((name, text) in strings(folder).filterKeys { it.startsWith("launch_retry_") }) {
-                assertWithMessage(name).that(text).endsWith(ending)
-            }
+        for ((name, text) in strings("values").filterKeys { it.startsWith("launch_retry_") }) {
+            assertWithMessage(name).that(text).endsWith("(retry %2\$s of %3\$s).")
         }
     }
 

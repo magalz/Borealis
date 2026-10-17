@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="stream_preparing_display">O host está preparando a tela.</string>
-    <string name="stream_luminalshine_hint">O LuminalShine pode ainda estar preparando a tela ou o codificador. Tente novamente. Se continuar acontecendo, reinicie o host ou verifique as configurações da tela virtual.</string>
-</resources>

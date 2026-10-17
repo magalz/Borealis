@@ -464,6 +464,41 @@ class SettingsViewModelTest {
         assertThat(resetThread[0]).isNotSameInstanceAs(Thread.currentThread())
         assertThat(resetThread[0]?.name).startsWith("DefaultDispatcher")
     }
+
+    @Test
+    fun `turning off Unlock all frame rates steps 120 fps down and returns the bitrate to automatic`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.onSwitchChanged(SettingsItem.UNLOCK_FRAME_RATES, true)
+            advanceUntilIdle()
+            viewModel.onChoiceSelected(SettingsItem.FRAME_RATE, "120")
+            viewModel.onSliderChanged(SettingsItem.BITRATE, 30_000)
+            advanceUntilIdle()
+            assertThat(viewModel.uiState.value.snapshot[Settings.FRAME_RATE]).isEqualTo("120")
+            assertThat(viewModel.uiState.value.snapshot[Settings.BITRATE_KBPS]).isEqualTo(30_000)
+
+            viewModel.onSwitchChanged(SettingsItem.UNLOCK_FRAME_RATES, false)
+            advanceUntilIdle()
+
+            val snapshot = viewModel.uiState.value.snapshot
+            assertThat(snapshot[Settings.UNLOCK_FPS]).isFalse()
+            assertThat(snapshot[Settings.FRAME_RATE]).isEqualTo("60")
+            assertThat(snapshot[Settings.BITRATE_KBPS]).isNull()
+            assertThat(viewModel.uiState.value.bitrateAutomatic).isTrue()
+        }
+
+    @Test
+    fun `turning off Unlock all frame rates leaves an offered frame rate and the bitrate alone`() =
+        runTest {
+            stored(Settings.UNLOCK_FPS to true, Settings.BITRATE_KBPS to 30_000)
+            val viewModel = viewModel()
+
+            viewModel.onSwitchChanged(SettingsItem.UNLOCK_FRAME_RATES, false)
+            advanceUntilIdle()
+
+            assertThat(viewModel.uiState.value.snapshot[Settings.FRAME_RATE]).isEqualTo("60")
+            assertThat(viewModel.uiState.value.snapshot[Settings.BITRATE_KBPS]).isEqualTo(30_000)
+        }
 }
 
 /** The groups and rows of the table in `docs/ux/phase-2-proposal.md#settings-groups`. */

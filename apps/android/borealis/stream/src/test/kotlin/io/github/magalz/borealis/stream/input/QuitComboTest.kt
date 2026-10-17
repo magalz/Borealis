@@ -76,4 +76,15 @@ class QuitComboTest {
         assertThat(combo.pending()).isFalse()
         assertThat(combo.update(0)).isFalse()
     }
+
+    @Test
+    fun `a fifth button pressed and let go while the four stay held still arms it`() {
+        combo.update(all or A)
+        assertThat(combo.pending()).isFalse()
+
+        combo.update(all)
+
+        assertThat(combo.pending()).isTrue()
+        assertThat(combo.update(0)).isTrue()
+    }
 }

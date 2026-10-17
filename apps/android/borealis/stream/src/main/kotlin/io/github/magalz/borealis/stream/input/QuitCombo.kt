@@ -9,7 +9,8 @@ import io.github.magalz.borealis.stream.input.GamepadButtons.START
  * Recognises the quit combo on a pad that reports its whole button state each time: Start, Select
  * and both bumpers held together, with no other button, and then everything let go. This is the
  * gesture the handler's own key-event path already knows for system pads. One instance follows one
- * pad.
+ * pad. A fifth button pressed and let go while the four stay held still arms it, on purpose: it is
+ * forgiving, and only a report with the exact four ever arms it.
  */
 class QuitCombo {
     private var armed = false

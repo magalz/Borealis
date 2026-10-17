@@ -6,6 +6,7 @@ import com.limelight.nvstream.input.ControllerPacket.BACK_FLAG
 import com.limelight.nvstream.input.ControllerPacket.LB_FLAG
 import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
 import com.limelight.nvstream.input.ControllerPacket.RB_FLAG
+import io.github.magalz.borealis.stream.input.StartHold
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -182,5 +183,44 @@ class UsbMenuChordTest {
         rig.advanceBy(0)
 
         assertThat(rig.activity.isFinishing).isTrue()
+    }
+
+    private val quitCombo = PLAY_FLAG or BACK_FLAG or LB_FLAG or RB_FLAG
+
+    @Test
+    fun `a combo begun before the chrome took the input does not end the stream when let go`() {
+        pad.report(quitCombo)
+
+        rig.handler.setCaptured(true)
+        pad.report(0)
+        rig.handler.setCaptured(false)
+        rig.advanceBy(0)
+
+        assertThat(rig.activity.isFinishing).isFalse()
+    }
+
+    @Test
+    fun `a combo pressed while the chrome has the input does not end the stream`() {
+        rig.handler.setCaptured(true)
+        pad.report(quitCombo)
+        rig.handler.setCaptured(false)
+        pad.report(quitCombo)
+
+        pad.report(0)
+        rig.advanceBy(0)
+
+        assertThat(rig.activity.isFinishing).isFalse()
+    }
+
+    @Test
+    fun `letting go of Start first, after a long hold, still ends the stream and leaves the mouse off`() {
+        pad.report(quitCombo)
+        rig.advanceBy(StartHold.HOLD_MS + 500)
+        pad.report(BACK_FLAG or LB_FLAG or RB_FLAG)
+        pad.report(0)
+        rig.advanceBy(0)
+
+        assertThat(rig.activity.isFinishing).isTrue()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
     }
 }

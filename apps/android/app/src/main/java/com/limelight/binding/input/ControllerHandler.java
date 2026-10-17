@@ -3069,7 +3069,8 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                 mainThreadHandler.post(context::toggleMouseEmulation);
             }
         }
-        // Fed while the chrome has the input too, so a combo begun before it is not left armed
+        // While captured the filtered flags are 0, so this only clears an armed combo; the !captured
+        // guard keeps a finish from racing setCaptured
         if (context.quitCombo.update(buttonFlags) && !captured) {
             mainThreadHandler.post(activityContext::finish);
         }

@@ -25,18 +25,40 @@ data class DecodeTimeCounts(
  * Not thread-safe: the caller guards it, as the input and the output run on different threads.
  */
 class DecodeTimeTracker {
-    private val ring = ArrayDeque<Long>(RING_SIZE)
-    private var counts = DecodeTimeCounts()
-    private val sampleInputs = ArrayList<Long>(SAMPLE_SIZE)
-    private val sampleOutputs = ArrayList<Long>(SAMPLE_SIZE)
-    private var sampled = false
+    private val ring = LongArray(RING_SIZE)
+    private var head = 0 // index of the oldest entry
+    private var size = 0
+
+    private var inputs = 0
+    private var outputs = 0
+    private var exact = 0
+    private var truncated = 0
+    private var zero = 0
+    private var ahead = 0
+    private var older = 0
+    private var unmatched = 0
+
+    // The raw timestamps of the first frames of a decoder. A list is reported once, in the first
+    // window that has any of it, so a first window with no outputs yet keeps the output samples.
+    private val sampleInputs = LongArray(SAMPLE_SIZE)
+    private var sampleInputCount = 0
+    private var inputsReported = false
+    private val sampleOutputs = LongArray(SAMPLE_SIZE)
+    private var sampleOutputCount = 0
+    private var outputsReported = false
 
     /** Records the input timestamp of a frame (not codec config); the oldest entry goes at 128. */
     fun onInput(timestampUs: Long) {
-        if (ring.size == RING_SIZE) ring.removeFirst()
-        ring.addLast(timestampUs)
-        counts = counts.copy(inputs = counts.inputs + 1)
-        if (!sampled && sampleInputs.size < SAMPLE_SIZE) sampleInputs += timestampUs
+        if (size == RING_SIZE) {
+            head = (head + 1) % RING_SIZE
+            size--
+        }
+        ring[(head + size) % RING_SIZE] = timestampUs
+        size++
+        inputs++
+        if (!inputsReported && sampleInputCount < SAMPLE_SIZE) {
+            sampleInputs[sampleInputCount++] = timestampUs
+        }
     }
 
     /**
@@ -45,60 +67,87 @@ class DecodeTimeTracker {
      * pairing. Without a match the ring is left alone.
      */
     fun onOutput(presentationTimeUs: Long): Long {
-        if (!sampled && sampleOutputs.size < SAMPLE_SIZE) sampleOutputs += presentationTimeUs
-        counts = counts.copy(outputs = counts.outputs + 1)
+        outputs++
+        if (!outputsReported && sampleOutputCount < SAMPLE_SIZE) {
+            sampleOutputs[sampleOutputCount++] = presentationTimeUs
+        }
 
-        var index = ring.indexOf(presentationTimeUs)
+        var index = indexOf { it == presentationTimeUs }
         if (index >= 0) {
-            counts = counts.copy(exact = counts.exact + 1)
+            exact++
         } else {
-            index = ring.indexOfFirst { (it and LOW_32_BITS) == presentationTimeUs }
-            if (index >= 0) counts = counts.copy(truncated = counts.truncated + 1)
+            index = indexOf { (it and LOW_32_BITS) == presentationTimeUs }
+            if (index >= 0) truncated++
         }
         if (index < 0) {
             classifyMiss(presentationTimeUs)
             return NO_MATCH
         }
-        val matched = ring[index]
-        repeat(index + 1) { ring.removeFirst() }
+        val matched = at(index)
+        head = (head + index + 1) % RING_SIZE
+        size -= index + 1
         return matched
     }
 
+    private fun at(index: Int) = ring[(head + index) % RING_SIZE]
+
+    private inline fun indexOf(predicate: (Long) -> Boolean): Int {
+        for (i in 0 until size) if (predicate(at(i))) return i
+        return -1
+    }
+
     private fun classifyMiss(presentationTimeUs: Long) {
-        counts =
-            when {
-                presentationTimeUs == 0L -> counts.copy(zero = counts.zero + 1)
-                ring.isEmpty() -> counts.copy(unmatched = counts.unmatched + 1)
-                presentationTimeUs > ring.last() -> counts.copy(ahead = counts.ahead + 1)
-                presentationTimeUs < ring.first() -> counts.copy(older = counts.older + 1)
-                else -> counts.copy(unmatched = counts.unmatched + 1)
-            }
+        when {
+            presentationTimeUs == 0L -> zero++
+            size == 0 -> unmatched++
+            presentationTimeUs > at(size - 1) -> ahead++
+            presentationTimeUs < at(0) -> older++
+            else -> unmatched++
+        }
     }
 
     /** Forgets the frames in the decoder, and starts the samples of the next decoder. */
     fun clear() {
-        ring.clear()
-        sampleInputs.clear()
-        sampleOutputs.clear()
-        sampled = false
+        head = 0
+        size = 0
+        sampleInputCount = 0
+        inputsReported = false
+        sampleOutputCount = 0
+        outputsReported = false
     }
 
     /**
-     * The counts since the last drain, which are reset. The first drain that has any raw timestamps
-     * of a decoder carries them (8 of each at most), later ones none.
+     * The counts since the last drain, which are reset. The raw timestamps of the first frames (8
+     * at most) of each kind ride on the first drain that has any of that kind, later ones carry
+     * none.
      */
     fun drainWindow(): DecodeTimeCounts {
+        val firstInputs = if (inputsReported) emptyList() else sampleInputs.take(sampleInputCount)
+        val firstOutputs =
+            if (outputsReported) emptyList() else sampleOutputs.take(sampleOutputCount)
+        if (firstInputs.isNotEmpty()) inputsReported = true
+        if (firstOutputs.isNotEmpty()) outputsReported = true
         val drained =
-            if (!sampled && (sampleInputs.isNotEmpty() || sampleOutputs.isNotEmpty())) {
-                sampled = true
-                counts.copy(
-                    firstInputs = sampleInputs.toList(),
-                    firstOutputs = sampleOutputs.toList(),
-                )
-            } else {
-                counts
-            }
-        counts = DecodeTimeCounts()
+            DecodeTimeCounts(
+                inputs,
+                outputs,
+                exact,
+                truncated,
+                zero,
+                ahead,
+                older,
+                unmatched,
+                firstInputs,
+                firstOutputs,
+            )
+        inputs = 0
+        outputs = 0
+        exact = 0
+        truncated = 0
+        zero = 0
+        ahead = 0
+        older = 0
+        unmatched = 0
         return drained
     }
 
@@ -128,8 +177,9 @@ object DecodeTimeLog {
                 "older" to counts.older,
                 "unmatched" to counts.unmatched,
             )
-        if (counts.firstInputs.isNotEmpty() || counts.firstOutputs.isNotEmpty()) {
+        if (counts.firstInputs.isNotEmpty())
             fields += "first_in" to counts.firstInputs.joinToString(",")
+        if (counts.firstOutputs.isNotEmpty()) {
             fields += "first_out" to counts.firstOutputs.joinToString(",")
         }
         BorealisLog.v(LogTag.VIDEO, "Decoder window", *fields.toTypedArray())

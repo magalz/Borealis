@@ -38,8 +38,8 @@ import android.view.SurfaceHolder;
 import io.github.magalz.borealis.host.video.FirstFrameSignal;
 import io.github.magalz.borealis.host.video.HdrRestartReuse; // BOREALIS: keeps the first IDR across the HDR decoder restart (host.video)
 import io.github.magalz.borealis.host.video.HevcSpsMonitor; // BOREALIS: HEVC SPS diagnostics (host.video)
-import io.github.magalz.borealis.stream.DecodeTimeLog; // BOREALIS: logs what the decoder did per window (stream.perf)
 import io.github.magalz.borealis.stream.DecodeTimeCounts; // BOREALIS: stream.perf
+import io.github.magalz.borealis.stream.DecodeTimeLog; // BOREALIS: logs what the decoder did per window (stream.perf)
 import io.github.magalz.borealis.stream.DecodeTimeTracker; // BOREALIS: pairs outputs with inputs by timestamp (stream.perf)
 import io.github.magalz.borealis.stream.PerfSnapshotSink; // BOREALIS: structured performance numbers (stream.perf)
 import io.github.magalz.borealis.stream.PerfSnapshots;

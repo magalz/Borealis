@@ -216,7 +216,7 @@ class DecodeTimeTrackerTest {
 
     @Test
     fun `the window line names the codec and the counts`() {
-        BorealisLog.initialize(listOf(Recorder(records)), minLevel = LogLevel.VERBOSE)
+        BorealisLog.initialize(listOf(Recorder(records)), minLevel = LogLevel.DEBUG)
         input(BASE + 1, BASE + 2)
         tracker.onOutput(BASE + 1)
         tracker.onOutput(0)
@@ -225,7 +225,7 @@ class DecodeTimeTrackerTest {
 
         assertThat(records).hasSize(1)
         val record = records.single()
-        assertThat(record.level).isEqualTo(LogLevel.VERBOSE)
+        assertThat(record.level).isEqualTo(LogLevel.DEBUG)
         assertThat(record.tag).isEqualTo(LogTag.VIDEO)
         val fields = record.fields.toMap()
         assertThat(fields["codec"]).isEqualTo("c2.mtk.avc.decoder")
@@ -239,7 +239,7 @@ class DecodeTimeTrackerTest {
 
     @Test
     fun `later window lines carry no timestamp samples`() {
-        BorealisLog.initialize(listOf(Recorder(records)), minLevel = LogLevel.VERBOSE)
+        BorealisLog.initialize(listOf(Recorder(records)), minLevel = LogLevel.DEBUG)
         input(BASE + 1)
         DecodeTimeLog.window("dec", tracker.drainWindow())
 

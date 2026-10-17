@@ -12,6 +12,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
@@ -207,13 +208,13 @@ class LibraryRailNavigationTest {
     }
 
     @Test
-    fun `Add host opens with the address field focused`() {
+    fun `Add host opens with the address focused, on what lies over the field`() {
         launch()
 
         composeRule.onNode(railItem("Add host")).performClick()
         composeRule.waitForIdle()
 
-        composeRule.onNode(isFocused()).assert(hasSetTextAction())
+        composeRule.onNode(isFocused()).assert(hasContentDescription("Address"))
     }
 
     @Test
@@ -243,6 +244,7 @@ class LibraryRailNavigationTest {
         launch()
         composeRule.onNode(railItem("Add host")).performClick()
         composeRule.waitForIdle()
+        pressOkOnAddress()
         composeRule.onNode(isFocused()).performTextInput("192.168.1.20")
         composeRule.onNode(isFocused()).performTextInputSelection(TextRange(0))
 
@@ -257,6 +259,7 @@ class LibraryRailNavigationTest {
         launch()
         composeRule.onNode(railItem("Add host")).performClick()
         composeRule.waitForIdle()
+        pressOkOnAddress()
         composeRule.onNode(isFocused()).performTextInput("192")
 
         composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionLeft) }
@@ -269,12 +272,19 @@ class LibraryRailNavigationTest {
         launch()
         composeRule.onNode(railItem("Add host")).performClick()
         composeRule.waitForIdle()
+        pressOkOnAddress()
         composeRule.onNode(isFocused()).performTextInput("192.168.1.20")
 
         composeRule.onNode(railItem("Add host")).performClick()
         composeRule.waitForIdle()
 
         composeRule.onNode(hasSetTextAction()).assert(hasText("192.168.1.20"))
+    }
+
+    /** OK on the address, which opens it for typing on a TV. */
+    private fun pressOkOnAddress() {
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionCenter) }
+        composeRule.waitForIdle()
     }
 
     private companion object {

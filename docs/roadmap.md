@@ -171,6 +171,16 @@ The owner creates the tag. See the [release procedure](development/release.md).
 
 - **Phase 3: LuminalShine REST features.** Several documents mark these as
   Phase 3. See the [Phase 3 extension points](ux/phase-2-proposal.md#phase-3-extension-points).
+  The phase starts with a survey of what is unique to LuminalShine and could
+  become a Borealis feature, ranked by value.
+  - **Why:** the [host contract](host-contract/luminalshine.md) maps LuminalShine
+    for compatibility, that is, what the client must do. It does not cover new
+    features.
+  - **Sources:** the REST API, the per-client settings, the per-client virtual
+    display, the session monitor, the codec options, and what changed after the
+    analysed release.
+  - **Result:** the survey sets the scope of Phase 3 before any code is written.
+    Owner's decision of 2026-10-17.
 - **Phase 4: PyroWave.** See the [host contract](host-contract/pyrowave.md).
 - **Phase 5: stores.** Google Play and Amazon Appstore. See the
   [release policy](policies/release.md) and

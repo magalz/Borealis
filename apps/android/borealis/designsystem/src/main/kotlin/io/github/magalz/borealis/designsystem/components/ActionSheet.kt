@@ -26,6 +26,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
+import io.github.magalz.borealis.designsystem.focus.ignoreKeysHeldOnOpen
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -113,7 +114,7 @@ private fun <T> ActionList(
     focusFirst: Boolean,
 ) {
     val firstAction = remember { FocusRequester() }
-    Column(Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxWidth().ignoreKeysHeldOnOpen()) {
         Text(
             title,
             modifier =

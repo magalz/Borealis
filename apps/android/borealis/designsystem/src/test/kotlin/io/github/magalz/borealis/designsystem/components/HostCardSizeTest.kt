@@ -82,11 +82,12 @@ class HostCardSizeTest {
                 .onNodeWithText("Desktop running", useUnmergedTree = true)
                 .getUnclippedBoundsInRoot()
 
-        // The card is the token high, not taller, and the text of its last line sits at least the
-        // card padding and the 2dp padding of its chip above the bottom edge: the rounding of each
-        // line at a TV density does not make it taller than its neighbours. The slack is the margin
-        // of the token.
-        assertThat(card.bottom - card.top).isEqualTo(BorealisTokens.Size.HostCard.HeightTv)
+        // The card is the token high (to the pixel, under 1dp at these densities) and the text of
+        // its last line sits at least the card padding and the 2dp padding of its chip above the
+        // bottom edge, so the rounding of each line does not make it taller than its neighbours.
+        assertThat((card.bottom - card.top).value)
+            .isWithin(1f)
+            .of(BorealisTokens.Size.HostCard.HeightTv.value)
         assertThat(card.bottom - runningApp.bottom).isAtLeast(20.dp)
     }
 

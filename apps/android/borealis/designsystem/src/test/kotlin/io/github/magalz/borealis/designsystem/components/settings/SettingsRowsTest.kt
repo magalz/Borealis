@@ -280,8 +280,8 @@ class SettingsRowsTest {
 
         val value = composeRule.onNodeWithText("60 fps", useUnmergedTree = true).getBoundsInRoot()
 
-        // 16dp of padding, the 12dp chevron and a 12dp gap from the end of the row.
-        assertThat(value.right.value).isWithin(1f).of(400f - 16f - 12f - 12f)
+        // 16dp of padding, the 20dp chevron icon and a 12dp gap from the end of the row.
+        assertThat(value.right.value).isWithin(1f).of(400f - 16f - 20f - 12f)
     }
 
     @Test

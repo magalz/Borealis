@@ -106,6 +106,14 @@ class SettingsContractTest {
     }
 
     @Test
+    fun `a stored bitrate of 0 is automatic, as the inherited code reads it`() {
+        val zero = SettingsSnapshot.DEFAULTS.with(Settings.BITRATE_KBPS, 0)
+
+        assertThat(zero.isBitrateAutomatic).isTrue()
+        assertThat(zero.effectiveBitrateKbps()).isEqualTo(10_000)
+    }
+
+    @Test
     fun `the effective bitrate of an automatic bitrate follows the resolution and the frame rate`() {
         val defaults = SettingsSnapshot.DEFAULTS
         val fullHd120 =

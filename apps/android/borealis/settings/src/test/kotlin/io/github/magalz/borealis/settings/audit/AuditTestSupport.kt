@@ -1,0 +1,99 @@
+package io.github.magalz.borealis.settings.audit
+
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.test.junit4.ComposeContentTestRule
+import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.diagnostics.audit.AuditEntry
+import io.github.magalz.borealis.diagnostics.audit.AuditTrail
+import io.github.magalz.borealis.logging.AuditOutcome
+import io.github.magalz.borealis.logging.AuditType
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
+import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.rules.TestWatcher
+import org.junit.runner.Description
+
+const val PHONE = "w360dp-h640dp-xhdpi"
+const val TV = "w960dp-h540dp-land-television-xhdpi"
+
+/** 2026-10-16 20:50 UTC, the moment of every test. */
+val NOW: Instant = Instant.parse("2026-10-16T20:50:00Z")
+
+/** A formatter in UTC and US English, at [NOW]: nothing depends on the machine that runs it. */
+fun fixedFormatter() = AuditTimeFormatter({ Clock.fixed(NOW, ZoneOffset.UTC) }, { Locale.US })
+
+fun at(text: String): Long = Instant.parse(text).toEpochMilli()
+
+fun entry(
+    type: AuditType = AuditType.SESSION_END,
+    time: String = "2026-10-16T20:42:00Z",
+    host: String? = "Desk PC",
+    detail: String? = "Desktop",
+    outcome: AuditOutcome = AuditOutcome.SUCCESS,
+) = AuditEntry(at(time), type, outcome, host, detail)
+
+/** An [AuditTrail] that holds its entries in memory; [entries] is what [observe] emits. */
+class FakeAuditTrail(initial: List<AuditEntry> = emptyList()) : AuditTrail {
+    val entries = MutableStateFlow(initial)
+    var erased = 0
+        private set
+
+    override fun observe(): Flow<List<AuditEntry>> = entries
+
+    override suspend fun erase(): Boolean {
+        erased++
+        entries.value = emptyList()
+        return true
+    }
+}
+
+/** Runs `Dispatchers.Main`, and so `viewModelScope`, on a test dispatcher. */
+@OptIn(ExperimentalCoroutinesApi::class)
+class MainDispatcherRule : TestWatcher() {
+    override fun starting(description: Description) = Dispatchers.setMain(StandardTestDispatcher())
+
+    override fun finished(description: Description) = Dispatchers.resetMain()
+}
+
+/**
+ * Sets [content] and switches the window to the keyboard input mode, the way a D-pad key does on a
+ * device. Clickables are focusable in this mode only, and the focus outline shows only in it.
+ */
+fun ComposeContentTestRule.setContentInKeyboardMode(content: @Composable () -> Unit) {
+    var manager: InputModeManager? = null
+    setContent {
+        manager = LocalInputModeManager.current
+        content()
+    }
+    runOnIdle { assertThat(checkNotNull(manager).requestInputMode(InputMode.Keyboard)).isTrue() }
+    waitForIdle()
+}
+
+/** Every event type with the title of the Phase 2 proposal, for the tests that look at all. */
+val TITLES: Map<AuditType, String> =
+    mapOf(
+        AuditType.PAIRING_START to "Pairing started",
+        AuditType.PAIRING_SUCCESS to "Paired",
+        AuditType.PAIRING_FAILURE to "Pairing failed",
+        AuditType.PAIRING_RESTART to "Pairing restarted",
+        AuditType.UNPAIR_CONFIRMED to "Unpaired",
+        AuditType.UNPAIR_NOT_CONFIRMED to "Unpair not confirmed by the host",
+        AuditType.CERTIFICATE_CHANGED to "Host certificate changed",
+        AuditType.TLS_FAILURE to "Secure connection failed",
+        AuditType.LAUNCH_ATTEMPT to "App started",
+        AuditType.LAUNCH_RETRY to "Host asked to retry",
+        AuditType.LAUNCH_CONFLICT to "Another app was already running",
+        AuditType.SESSION_START to "Stream started",
+        AuditType.SESSION_END to "Stream ended",
+    )

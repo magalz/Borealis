@@ -96,11 +96,11 @@ The local audit trail and the diagnostic bundle (ADR 0050). Package `io.github.m
 - `AuditStore` queues each event, and one writer coroutine stores them in a Room database at `noBackupFilesDir/audit.db` (table `audit_events`). The queue holds 256 events and drops the oldest one when it is full.
 - Retention keeps the newest 2,000 entries and nothing older than 90 days. Deduplication applies only to `CERTIFICATE_CHANGED` and `TLS_FAILURE`, within 24 hours (`AuditDeduplicator`).
 - `AuditSection` writes the trail to `audit.jsonl` in the bundle: one JSON object per line, oldest first, UTC timestamps. It redacts each entry again with the current "Mask addresses" setting.
-- `EraseAuditPreference` is the "Erase audit trail" row. It asks for confirmation, with Cancel focused first, and deletes the stored entries. Bundles that were exported before are not changed.
+- `AuditStore.erase()` deletes the stored entries; the Privacy pane asks for confirmation first. Bundles that were exported before are not changed.
 
 ### Diagnostic bundle
 
-- `ExportDiagnosticsPreference` runs `ExportFlow`, which builds the zip in `cacheDir/diagnostics`. The file name is `borealis-diagnostics-<timestamp>.zip`. A second tap while the bundle is being built does nothing, and only the newest bundle is kept.
+- `DiagnosticsExporter` runs `ExportFlow`, which builds the zip in `cacheDir/diagnostics`. The file name is `borealis-diagnostics-<timestamp>.zip`. Only the newest bundle is kept.
 - Layout: `manifest.json`, `decoders.json`, one file per section (`audit.jsonl`) and the log files under `logs/`.
 - The uncompressed content stays within 16 MiB. Sections are written first. The log files get the rest, newest first. The first file that does not fit keeps its newest lines, and the older files are dropped. `manifest.json` lists what was cut.
 - Each section redacts its own content, so a JSON line is not redacted twice. The log lines are re-redacted line by line with the current setting, so "Mask addresses" also applies to lines written before it was turned on.
@@ -111,7 +111,6 @@ The local audit trail and the diagnostic bundle (ADR 0050). Package `io.github.m
 ### Hilt
 
 - `BundleModule` declares `@Multibinds Set<DiagnosticSection>`, so the bundle works with no contributor. A module adds a section with `@Provides @IntoSet` or `@Binds @IntoSet` (`AuditModule` uses `@Provides @IntoSet` for `AuditSection`).
-- `DiagnosticsEntryPoint` gives the set to classes that Hilt does not create, such as the preferences.
 
 ## `:borealis:native`
 

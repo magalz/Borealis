@@ -9,7 +9,7 @@ import io.github.magalz.borealis.settings.repository.SettingsSnapshot
  * frame rates to offer, and which rows to show, enable or hide. Every answer is a pure function of
  * the [DeviceFacts] and the [SettingsSnapshot] that the caller passes in.
  *
- * The rules are those of UC-009 and of the inherited `StreamSettings` screen. The real
+ * The rules are those of UC-009 and of the upstream stream settings screen. The real
  * implementation is separate from this contract.
  */
 interface SettingsOptions {

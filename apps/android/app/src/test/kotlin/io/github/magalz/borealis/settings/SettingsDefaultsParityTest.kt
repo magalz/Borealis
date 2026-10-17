@@ -99,7 +99,6 @@ class SettingsDefaultsParityTest {
                 },
             Settings.ENABLE_HDR to c.enableHdr,
             Settings.FULL_RANGE to c.fullRange,
-            Settings.PERF_OVERLAY_LEGACY to c.enablePerfOverlay,
             Settings.POST_STREAM_TOAST to c.enableLatencyToast,
         )
 
@@ -122,6 +121,7 @@ class SettingsDefaultsParityTest {
             .containsExactly(
                 Settings.BITRATE_KBPS,
                 Settings.PERF_OVERLAY,
+                Settings.PERF_OVERLAY_LEGACY,
                 Settings.VERBOSE_LOGGING,
                 Settings.MASK_ADDRESSES,
             )
@@ -162,9 +162,8 @@ class SettingsDefaultsParityTest {
     }
 
     @Test
-    fun `the new performance overlay has no Java reader and starts off`() {
+    fun `the new performance overlay starts off`() {
         assertThat(Settings.PERF_OVERLAY.default).isEqualTo(Settings.PERF_OVERLAY_OFF)
-        assertThat(read().enablePerfOverlay).isFalse()
     }
 
     @Test

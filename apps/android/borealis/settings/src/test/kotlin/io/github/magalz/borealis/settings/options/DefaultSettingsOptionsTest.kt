@@ -13,7 +13,7 @@ import io.github.magalz.borealis.settings.testing.DeviceFactsBuilder
 import io.github.magalz.borealis.settings.testing.deviceFacts
 import org.junit.Test
 
-/** The Resolution list of the inherited `StreamSettings`, now in Kotlin. */
+/** The Resolution list of the upstream stream settings screen, now in Kotlin. */
 class DefaultSettingsOptionsResolutionTest {
     private val options = DefaultSettingsOptions()
 

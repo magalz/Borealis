@@ -54,6 +54,16 @@ Implementation requirements:
   frame-loss lines cannot evict pairing and launch history.
 - Logs are not uploaded automatically.
 
+## Settings storage
+
+- The "Verbose logging" and "Mask addresses in logs and diagnostics" switches
+  are stored in the app's private DataStore file, `borealis_settings`. The file
+  is excluded from Android backup.
+- The other settings stay in the app's private SharedPreferences, as before.
+  They are not backed up either: the app's backup rules exclude its
+  SharedPreferences from cloud backup and from device transfer.
+- Nothing leaves the device. Settings are never uploaded.
+
 ## Diagnostic bundle
 
 - Created only on user request, from the Borealis settings screen.

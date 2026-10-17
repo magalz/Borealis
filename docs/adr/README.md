@@ -82,3 +82,4 @@ Never rewrite an accepted ADR to change its decision. If a decision changes, wri
 | 0052 | [Structure the Phase 2 UI: hosts home, a Back-opened in-game menu and a dark theme](0052-structure-the-phase-2-ui.md) | accepted | 2026-10-15 |
 | 0053 | [Use Material 3 with a Borealis focus indication on TV](0053-material-3-with-borealis-focus-on-tv.md) | accepted | 2026-10-15 |
 | 0054 | [Declare independence from Moonlight](0054-declare-independence-from-moonlight.md) | accepted | 2026-10-15 |
+| 0055 | [Store settings through one repository and build the Phase 2 settings screen](0055-settings-storage-and-the-phase-2-settings-screen.md) | accepted | 2026-10-16 |

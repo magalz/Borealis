@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
@@ -166,6 +168,47 @@ class SendToPhoneDialogTest {
 
             composeRule.onNodeWithText("Close").assertIsFocused()
         }
+    }
+
+    @Test
+    fun `Close regains the focus when Try again ends in a failure`() {
+        assertCloseFocusedAfterTryAgainEndsIn(TransferState.Failed)
+    }
+
+    @Test
+    fun `Close regains the focus when Try again ends without a network`() {
+        assertCloseFocusedAfterTryAgainEndsIn(TransferState.NoNetwork)
+    }
+
+    private fun assertCloseFocusedAfterTryAgainEndsIn(next: TransferState) {
+        val transfer = FakeTransferController(TransferState.Expired)
+        open(transfer)
+        composeRule
+            .onNodeWithText("Try again")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithText("Try again").assertIsFocused()
+
+        composeRule.onNodeWithText("Try again").performClick()
+        transfer.show(next)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Try again").assertDoesNotExist()
+        composeRule.onNodeWithText("Close").assertIsFocused()
+    }
+
+    @Test
+    fun `a stopped link says it is closed, not that it is starting`() {
+        open(FakeTransferController(TransferState.Stopped))
+
+        composeRule.onNodeWithText("The link is closed.").assertIsDisplayed()
+        composeRule.onNodeWithText("Starting the link", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `an idle transfer says it is starting`() {
+        open(FakeTransferController(TransferState.Idle))
+
+        composeRule.onNodeWithText("Starting the link…").assertIsDisplayed()
     }
 
     @Test

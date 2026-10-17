@@ -2,10 +2,14 @@ package io.github.magalz.borealis.library.pairing
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.DpRect
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
@@ -290,6 +294,74 @@ class PairingScreenTest {
         composeRule.onNodeWithText("Close").performClick()
 
         assertThat(cancels).isEqualTo(1)
+    }
+
+    private fun DpRect.centreX() = (left.value + right.value) / 2
+
+    private fun DpRect.centreY() = (top.value + bottom.value) / 2
+
+    private fun bounds(description: String) =
+        composeRule.onNodeWithContentDescription(description).getUnclippedBoundsInRoot()
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `on a phone the PIN is centred on the screen with its line right below it`() {
+        show(waiting())
+
+        val pin = bounds("4, 8, 1, 7")
+        val line = composeRule.onNodeWithText("The PIN stays valid for 5 minutes.")
+        val screen = composeRule.onRoot().getUnclippedBoundsInRoot()
+
+        assertThat(pin.centreX()).isWithin(1f).of(screen.centreX())
+        val lineBounds = line.getUnclippedBoundsInRoot()
+        assertThat(lineBounds.centreX()).isWithin(1f).of(pin.centreX())
+        assertThat(lineBounds.top.value - pin.bottom.value).isAtLeast(0f)
+        assertThat(lineBounds.top.value - pin.bottom.value).isAtMost(24f)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV the line under the PIN is centred on it`() {
+        show(waiting(), FormFactor.Tv)
+
+        val pin = bounds("4, 8, 1, 7")
+        val line =
+            composeRule
+                .onNodeWithText("The PIN stays valid for 5 minutes.")
+                .getUnclippedBoundsInRoot()
+
+        assertThat(line.centreX()).isWithin(1f).of(pin.centreX())
+        assertThat(line.top.value - pin.bottom.value).isAtLeast(0f)
+        assertThat(line.top.value - pin.bottom.value).isAtMost(24f)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `paired is in the middle of the screen with the check above it`() {
+        show(PairingUiState.Paired)
+
+        val screen = composeRule.onRoot().getUnclippedBoundsInRoot()
+        val paired = composeRule.onNodeWithTag("paired").getUnclippedBoundsInRoot()
+        val text = composeRule.onNodeWithText("Paired").getUnclippedBoundsInRoot()
+        val check = composeRule.onNodeWithTag("paired-check").getUnclippedBoundsInRoot()
+
+        assertThat(paired.centreX()).isWithin(1f).of(screen.centreX())
+        assertThat(paired.centreY()).isWithin(1f).of(screen.centreY())
+        assertThat(text.centreX()).isWithin(1f).of(screen.centreX())
+        assertThat(check.centreX()).isWithin(1f).of(screen.centreX())
+        assertThat(check.bottom.value).isAtMost(text.top.value)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `paired is in the middle of a TV screen too`() {
+        show(PairingUiState.Paired, FormFactor.Tv)
+
+        val screen = composeRule.onRoot().getUnclippedBoundsInRoot()
+        val paired = composeRule.onNodeWithTag("paired").getUnclippedBoundsInRoot()
+
+        assertThat(paired.centreX()).isWithin(1f).of(screen.centreX())
+        assertThat(paired.centreY()).isWithin(1f).of(screen.centreY())
     }
 
     private companion object {

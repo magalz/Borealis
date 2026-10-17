@@ -23,14 +23,17 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
@@ -43,6 +46,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.TV
@@ -132,6 +136,40 @@ class AddHostScreenTest {
 
         assertThat(cancelled).isEqualTo(1)
         assertThat(submitted).isEqualTo(0)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a phone has a back arrow that returns to Hosts`() {
+        show(AddHostUiState())
+
+        composeRule.onNodeWithContentDescription("Back to Hosts").performClick()
+
+        assertThat(cancelled).isEqualTo(1)
+        assertThat(submitted).isEqualTo(0)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `a TV has no back arrow because the rail leads back to Hosts`() {
+        show(AddHostUiState(), FormFactor.Tv)
+
+        composeRule.onNodeWithContentDescription("Back to Hosts").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the content is at most 560dp wide and centred in a wide window`() {
+        show(AddHostUiState(), FormFactor.Tv)
+
+        val field = composeRule.onNode(hasSetTextAction()).getUnclippedBoundsInRoot()
+        val screen = composeRule.onRoot().getUnclippedBoundsInRoot()
+
+        assertThat(field.right.value - field.left.value)
+            .isAtMost(BorealisDimens.contentMaxWidth.value)
+        assertThat((field.left.value + field.right.value) / 2)
+            .isWithin(1f)
+            .of((screen.left.value + screen.right.value) / 2)
     }
 
     @Test

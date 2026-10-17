@@ -17,6 +17,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.components.BorealisIcons
+import io.github.magalz.borealis.designsystem.components.RailItem
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.testing.HANDHELD
 import io.github.magalz.borealis.library.testing.PHONE
@@ -94,13 +96,38 @@ class LibraryScaffoldTest {
 
     @Test
     @Config(qualifiers = TV)
-    fun `the content takes the width the rail leaves`() {
+    fun `the TV rail is 220dp wide and the content takes the width it leaves`() {
         show(FormFactor.Tv)
 
         val content = composeRule.onNodeWithTag("content").getUnclippedBoundsInRoot()
 
         assertThat(content.left.value).isEqualTo(RAIL_WIDTH_DP)
         assertThat((content.right - content.left).value).isEqualTo(TV_WIDTH_DP - RAIL_WIDTH_DP)
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun `the rail of a handheld is 200dp wide`() {
+        show(FormFactor.Handheld)
+
+        val content = composeRule.onNodeWithTag("content").getUnclippedBoundsInRoot()
+
+        assertThat(content.left.value).isEqualTo(HANDHELD_RAIL_WIDTH_DP)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the rail icons are the Borealis ones and Settings is the gear`() {
+        var items = emptyList<RailItem>()
+        composeRule.setContent { items = libraryRailItems() }
+        composeRule.waitForIdle()
+
+        assertThat(items.map { it.label })
+            .containsExactly("Hosts", "Add host", "Settings")
+            .inOrder()
+        assertThat(items.map { it.icon })
+            .containsExactly(BorealisIcons.Hosts, BorealisIcons.Add, BorealisIcons.Gear)
+            .inOrder()
     }
 
     @Test
@@ -112,7 +139,8 @@ class LibraryScaffoldTest {
     }
 
     private companion object {
-        const val RAIL_WIDTH_DP = 200f
+        const val RAIL_WIDTH_DP = 220f
+        const val HANDHELD_RAIL_WIDTH_DP = 200f
         const val TV_WIDTH_DP = 960f
     }
 }

@@ -10,6 +10,8 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -156,8 +158,21 @@ class PrivacyContentTest {
     fun `a running export shows progress and cannot be started again`() {
         show(PrivacyUiState(exporting = true))
 
-        composeRule.onNodeWithContentDescription("Creating the diagnostic bundle…").assertExists()
+        composeRule.onNodeWithText("Creating the diagnostic bundle…").assertExists()
         composeRule.onNodeWithText("Export diagnostic bundle").assertIsNotEnabled()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a screen reader meets the progress message once`() {
+        show(PrivacyUiState(exporting = true))
+
+        composeRule
+            .onAllNodes(
+                hasText("Creating the diagnostic bundle…") or
+                    hasContentDescription("Creating the diagnostic bundle…")
+            )
+            .assertCountEquals(1)
     }
 
     @Test
@@ -268,6 +283,27 @@ class PrivacyContentTest {
         composeRule.onNodeWithText("Diagnostics saved").assertIsDisplayed()
         composeRule.onAllNodesWithText("Send to phone").assertCountEquals(0)
         composeRule.onNodeWithText("Close").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun `the Saved dialog on a handheld does not offer Send to phone`() {
+        show(PrivacyUiState(dialog = saved()), FormFactor.Handheld)
+
+        composeRule.onNodeWithText("Diagnostics saved").assertIsDisplayed()
+        composeRule.onNodeWithText("adb pull /sdcard/Download/${bundle.name}").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Send to phone").assertCountEquals(0)
+        composeRule.onNodeWithText("Close").assertIsFocused()
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun `the export row says what it does on a handheld as on a phone`() {
+        show(PrivacyUiState(), FormFactor.Handheld)
+
+        composeRule
+            .onNodeWithText("Logs, decoders and the audit trail, already redacted")
+            .assertIsDisplayed()
     }
 
     @Test

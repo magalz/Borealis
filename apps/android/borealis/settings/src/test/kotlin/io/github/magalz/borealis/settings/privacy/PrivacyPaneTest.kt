@@ -1,12 +1,17 @@
 package io.github.magalz.borealis.settings.privacy
 
 import android.content.Intent
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
@@ -16,6 +21,7 @@ import io.github.magalz.borealis.diagnostics.bundle.ExportResult
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.testing.FakeSettingsRepository
 import java.io.File
+import kotlinx.coroutines.CompletableDeferred
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -120,6 +126,24 @@ class PrivacyPaneTest {
         assertThat(sent).containsExactly(bundle)
         assertThat(shared).isEmpty()
         composeRule.onNodeWithText("Diagnostics saved").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `Export keeps the focus while the bundle is built`() {
+        val gate = CompletableDeferred<Unit>()
+        showPane(
+            PrivacyViewModel(settings, FakeDiagnosticsExport(sampleSaved(bundle()), gate), audit)
+        )
+        composeRule.onNodeWithText("Export diagnostic bundle").requestFocus()
+
+        composeRule.onNodeWithText("Export diagnostic bundle").performKeyInput {
+            pressKey(Key.DirectionCenter)
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithContentDescription("Creating the diagnostic bundle…").assertExists()
+        composeRule.onNodeWithText("Export diagnostic bundle").assertIsFocused()
     }
 
     @Test

@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.settings.privacy
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -148,16 +149,17 @@ private fun PrivacyMessage.text(): Int =
         PrivacyMessage.EraseFailed -> R.string.borealis_privacy_erase_failed
     }
 
-/** Starts an activity from the current context; a context that is not an activity needs a task. */
+/** Starts the share sheet from the current context. */
 @Composable
 internal fun rememberShareStarter(): (Intent) -> Unit {
     val context = LocalContext.current
-    return remember(context) {
-        { chooser ->
-            if (context !is Activity) chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(chooser)
-        }
-    }
+    return remember(context) { { chooser -> context.startShareSheet(chooser) } }
+}
+
+/** Starts [chooser]; a context that is not an activity needs a task of its own. */
+internal fun Context.startShareSheet(chooser: Intent) {
+    if (this !is Activity) chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    startActivity(chooser)
 }
 
 /**

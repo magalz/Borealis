@@ -29,6 +29,7 @@ import org.junit.runner.Description
 
 const val PHONE = "w360dp-h640dp-xhdpi"
 const val TV = "w960dp-h540dp-land-television-xhdpi"
+const val HANDHELD = "w800dp-h480dp-land-hdpi"
 
 /** Runs `Dispatchers.Main` (and so `viewModelScope`) on a test dispatcher, so time is virtual. */
 class MainDispatcherRule(private val dispatcher: TestDispatcher = StandardTestDispatcher()) :

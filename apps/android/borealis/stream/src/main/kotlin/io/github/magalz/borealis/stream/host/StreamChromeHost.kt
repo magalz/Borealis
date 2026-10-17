@@ -205,14 +205,7 @@ class StreamChromeHost(
      * gets its focus back, the confirm keys of any source are consumed first.
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (session.chromeMode == ChromeMode.MODAL && isHeldThrough(event)) return true
-        if (
-            session.chromeMode == ChromeMode.MODAL &&
-                GamepadKey.isConfirm(event.keyCode) &&
-                clock() < confirmKeysIgnoredUntil
-        ) {
-            return true
-        }
+        if (session.chromeMode == ChromeMode.MODAL && isSpent(event)) return true
         val key = GamepadKey.of(event.keyCode)
         if (key == null || session.chromeMode != ChromeMode.MODAL) {
             return super.dispatchKeyEvent(event)
@@ -235,6 +228,11 @@ class StreamChromeHost(
         }
         return true
     }
+
+    /** Whether the modal chrome consumes [event] without acting on it. */
+    private fun isSpent(event: KeyEvent): Boolean =
+        isHeldThrough(event) ||
+            (GamepadKey.isConfirm(event.keyCode) && clock() < confirmKeysIgnoredUntil)
 
     /**
      * Whether [event] belongs to a press that began before the chrome took the input: repeats keep

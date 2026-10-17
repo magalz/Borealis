@@ -62,6 +62,9 @@ object Settings {
      */
     val ANALOG_SCROLLING = StringSetting("analog_scrolling", default = "right")
 
+    /** Speed of the pointer of the gamepad mouse, 10 to 200 percent. Depends on [MOUSE_EMULATION]. */
+    val GAMEPAD_MOUSE_SPEED = IntSetting("seekbar_gamepad_mouse_speed", default = 50)
+
     /** Vibrate the device when the controller cannot. */
     val VIBRATE_FALLBACK = BooleanSetting("checkbox_vibrate_fallback", default = false)
 
@@ -199,6 +202,7 @@ object Settings {
             USB_BIND_ALL,
             MOUSE_EMULATION,
             ANALOG_SCROLLING,
+            GAMEPAD_MOUSE_SPEED,
             VIBRATE_FALLBACK,
             VIBRATE_FALLBACK_STRENGTH,
             FLIP_FACE_BUTTONS,

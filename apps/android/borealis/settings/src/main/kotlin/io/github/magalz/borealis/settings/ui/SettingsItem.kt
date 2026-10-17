@@ -343,6 +343,13 @@ enum class SettingsItem(
         Settings.ENABLE_PIP,
         R.string.settings_pip_title,
         R.string.settings_pip_summary,
+    ),
+    GAMEPAD_MOUSE_SPEED(
+        SettingsGroupId.INPUT,
+        SettingsItemKind.SLIDER,
+        Settings.GAMEPAD_MOUSE_SPEED,
+        R.string.settings_gamepad_mouse_speed_title,
+        slider = SliderSpec(0, OPACITY_MAX, 1),
     );
 
     companion object {

@@ -265,6 +265,7 @@ class SettingsViewModelTest {
         viewModel.onSliderChanged(SettingsItem.DEADZONE, 12)
         viewModel.onSliderChanged(SettingsItem.VIBRATION_STRENGTH, 150)
         viewModel.onSliderChanged(SettingsItem.OSC_OPACITY, 40)
+        viewModel.onSliderChanged(SettingsItem.GAMEPAD_MOUSE_SPEED, 150)
         advanceUntilIdle()
 
         assertThat(repository.writes)
@@ -273,6 +274,7 @@ class SettingsViewModelTest {
                 Write(Settings.DEADZONE, 12),
                 Write(Settings.VIBRATE_FALLBACK_STRENGTH, 150),
                 Write(Settings.OSC_OPACITY, 40),
+                Write(Settings.GAMEPAD_MOUSE_SPEED, 150),
             )
             .inOrder()
     }
@@ -284,6 +286,8 @@ class SettingsViewModelTest {
         viewModel.onSliderChanged(SettingsItem.DEADZONE, 99)
         viewModel.onSliderChanged(SettingsItem.DEADZONE, -3)
         viewModel.onSliderChanged(SettingsItem.BITRATE, 200_000)
+        viewModel.onSliderChanged(SettingsItem.GAMEPAD_MOUSE_SPEED, 999)
+        viewModel.onSliderChanged(SettingsItem.GAMEPAD_MOUSE_SPEED, 3)
         advanceUntilIdle()
 
         assertThat(repository.writes)
@@ -291,6 +295,8 @@ class SettingsViewModelTest {
                 Write(Settings.DEADZONE, 20),
                 Write(Settings.DEADZONE, 0),
                 Write(Settings.BITRATE_KBPS, 150_000),
+                Write(Settings.GAMEPAD_MOUSE_SPEED, 200),
+                Write(Settings.GAMEPAD_MOUSE_SPEED, 10),
             )
             .inOrder()
     }
@@ -526,6 +532,7 @@ private val UC_009_ROWS =
                 SettingsItem.ABSOLUTE_MOUSE,
                 SettingsItem.GAMEPAD_MOUSE,
                 SettingsItem.ANALOG_SCROLLING,
+                SettingsItem.GAMEPAD_MOUSE_SPEED,
                 SettingsItem.DEADZONE,
             ),
         SettingsGroupId.GAMEPAD to

@@ -120,6 +120,7 @@ public class PreferenceConfiguration {
     public int bitrate;
     public FormatOption videoFormat;
     public int deadzonePercentage;
+    public int gamepadMouseSpeed;
     public int oscOpacity;
     public boolean stretchVideo, enableSops, playHostAudio, disableWarnings;
     public boolean multiController, usbDriver, flipFaceButtons;

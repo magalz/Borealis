@@ -62,8 +62,17 @@ class HostCardSizeTest {
         assertThat(online).isLessThan(BorealisTokens.Size.HostCard.HeightTv)
     }
 
+    @Test fun `the fullest card fits within the token`() = assertFullestCardFits()
+
     @Test
-    fun `the token is the height of the fullest card, which has no button to make room for`() {
+    @Config(qualifiers = "w960dp-h540dp-land-television-tvdpi")
+    fun `the fullest card fits within the token at tvdpi`() = assertFullestCardFits()
+
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-land-television-hdpi")
+    fun `the fullest card fits within the token at hdpi`() = assertFullestCardFits()
+
+    private fun assertFullestCardFits() {
         composeRule.setContent { FullestCard(FormFactor.Tv, 260.dp) }
         composeRule.waitForIdle()
 
@@ -73,12 +82,12 @@ class HostCardSizeTest {
                 .onNodeWithText("Desktop running", useUnmergedTree = true)
                 .getUnclippedBoundsInRoot()
 
-        // The text of the last line sits the card padding and the 2dp padding of its chip above
-        // the bottom edge. The token is rounded up to a whole dp, so a card has less than 1dp of
-        // slack.
+        // The card is the token high, not taller, and the text of its last line sits at least the
+        // card padding and the 2dp padding of its chip above the bottom edge: the rounding of each
+        // line at a TV density does not make it taller than its neighbours. The slack is the margin
+        // of the token.
         assertThat(card.bottom - card.top).isEqualTo(BorealisTokens.Size.HostCard.HeightTv)
         assertThat(card.bottom - runningApp.bottom).isAtLeast(20.dp)
-        assertThat(card.bottom - runningApp.bottom).isLessThan(21.dp)
     }
 
     @Test

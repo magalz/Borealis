@@ -31,6 +31,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -530,6 +531,22 @@ class HostsScreenTest {
 
         composeRule.onNodeWithText("Details").assertIsDisplayed()
         composeRule.onNodeWithText("Forget").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `Back from the options returns the focus to the same host card`() {
+        showTv(withHostsNoContinue)
+        composeRule.onNodeWithTag("host:living").requestFocus()
+        composeRule.onNodeWithTag("host:living").performKeyInput { pressKey(Key.ButtonX) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Details").assertIsDisplayed()
+
+        Espresso.pressBack()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Details").assertDoesNotExist()
+        composeRule.onNodeWithTag("host:living").assertIsFocused()
     }
 
     @Test

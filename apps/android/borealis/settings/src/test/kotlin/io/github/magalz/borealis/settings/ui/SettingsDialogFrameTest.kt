@@ -7,6 +7,8 @@ import androidx.compose.ui.test.performClick
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.settings.options.ResolutionChoice
+import io.github.magalz.borealis.settings.options.ResolutionKind
 import io.github.magalz.borealis.settings.testing.assertDialogWidth
 import io.github.magalz.borealis.settings.testing.dialogFrame
 import org.junit.Before
@@ -60,13 +62,38 @@ class SettingsDialogFrameTest : SettingsScreenTestBase() {
     }
 
     @Test
-    fun `Reset layout asks in a standard dialog with Cancel focused`() {
+    fun `Reset layout asks in a compact dialog with Cancel focused`() {
         show(keyboard = true)
         composeRule.onNodeWithText("On-screen controls").performClick()
         composeRule.onNodeWithText("Reset layout").performClick()
         composeRule.waitForIdle()
 
-        composeRule.assertDialogWidth("Reset the layout?", 560f)
+        composeRule.assertDialogWidth("Reset the layout?", 420f)
         composeRule.onNodeWithText("Cancel").assertIsFocused()
+    }
+
+    @Test
+    fun `the native resolution warning is a compact dialog`() {
+        options.resolutions =
+            STANDARD_RESOLUTIONS.take(1) +
+                ResolutionChoice("2400x1080", 2400, 1080, ResolutionKind.NATIVE)
+        show(keyboard = true)
+        composeRule.onNodeWithText("Resolution").performClick()
+        composeRule.waitForIdle()
+        sheetOption("Native (2400x1080)").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.assertDialogWidth("Native resolution", 420f)
+    }
+
+    @Test
+    fun `the link dialog of About stays a standard dialog`() {
+        browserAvailable = false
+        show(keyboard = true)
+        composeRule.onNodeWithText("About").performClick()
+        composeRule.onNodeWithText("Source code").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.assertDialogWidth("No app can open this link", 560f)
     }
 }

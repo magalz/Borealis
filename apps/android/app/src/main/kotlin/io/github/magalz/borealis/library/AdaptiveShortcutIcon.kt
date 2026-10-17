@@ -6,6 +6,7 @@ import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Shader
+import androidx.core.graphics.createBitmap
 
 /**
  * The foreground of an adaptive shortcut icon built from the box art of an app. The launcher masks
@@ -28,7 +29,7 @@ internal object AdaptiveShortcutIcon {
         val source =
             if (art.config == Bitmap.Config.HARDWARE) art.copy(Bitmap.Config.ARGB_8888, false)
             else art
-        val icon = Bitmap.createBitmap(SIZE_PX, SIZE_PX, Bitmap.Config.ARGB_8888)
+        val icon = createBitmap(SIZE_PX, SIZE_PX)
         val canvas = Canvas(icon)
         val sky =
             Paint().apply {

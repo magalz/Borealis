@@ -137,6 +137,21 @@ class HeldKeyOpensSurfaceTest {
     }
 
     @Test
+    fun `a press that begins in the sheet works whatever clock its down time is on`() {
+        composeRule.setContentInKeyboardMode { Tile { ActionSheetSpecimen() } }
+        open = true
+        composeRule.waitForIdle()
+        surfaceText = "Resume"
+
+        // The Compose test injector stamps its events with its own clock, which is far behind.
+        sendToSurface(Key.DirectionCenter, AndroidKeyAction.Down, repeat = 0, downTime = 16)
+        sendToSurface(Key.DirectionCenter, AndroidKeyAction.Up, repeat = 0, downTime = 16)
+        composeRule.waitForIdle()
+
+        assertThat(actions).isEqualTo(1)
+    }
+
+    @Test
     fun `volume keys held through the opening are not consumed`() {
         composeRule.setContentInKeyboardMode { Tile { ActionSheetSpecimen() } }
         holdThroughOpening(Key.DirectionCenter, "Resume")

@@ -62,7 +62,9 @@ private val GROUP_PADDING_VERTICAL = 10.dp
  * The settings of a TV or handheld in two panes: the [groups] by title in a list on the left, and
  * on the right whatever [content] shows for the group whose key is [selected]. The pane scrolls and
  * spaces its rows 10dp apart; [content] puts the rows of the group in it, with 8dp of padding
- * around them already given.
+ * around them already given. A group for which [selfScrolling] is true brings its own scroll and
+ * padding: its [content] fills the pane, which does not wrap it in a scroll that would give it an
+ * unbounded height.
  *
  * Groups are identified by key, not by position, so a screen can hide a group on some devices
  * without moving the selection. A [selected] key that no group has falls back to the first group,
@@ -100,13 +102,17 @@ fun <K> SettingsTwoPane(
                 .focusGroup()
         ) {
             if (current != null) {
-                Column(
-                    Modifier.fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(AREA_PADDING),
-                    verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
-                ) {
-                    content(current.key)
+                if (selfScrolling(current.key)) {
+                    Column(Modifier.fillMaxSize()) { content(current.key) }
+                } else {
+                    Column(
+                        Modifier.fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(AREA_PADDING),
+                        verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
+                    ) {
+                        content(current.key)
+                    }
                 }
             }
         }

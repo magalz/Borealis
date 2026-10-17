@@ -27,7 +27,7 @@ class MouseRowFollowsStartHoldTest {
     private val scope = CoroutineScope(Dispatchers.Unconfined)
 
     init {
-        GamepadMouseSync.bind(scope, session, rig.handler::isMouseEmulationEnabled)
+        GamepadMouseSync.bind(scope, session, rig.handler::isMouseEmulationOnAnyPad)
     }
 
     @After fun tearDown() = scope.cancel()
@@ -89,6 +89,7 @@ class MouseRowFollowsStartHoldTest {
 
     @Test
     fun `the row shows On after a system pad switched the mouse on, and Off after it switched it off`() {
+        rig.useSystemPad()
         holdStartOnSystemPad()
         assertThat(menuShows()).isTrue()
 

@@ -143,4 +143,25 @@ class LonePressHoldTest {
 
         assertThat(sent(PLAY_FLAG)).isFalse()
     }
+
+    @Test
+    fun `a system pad with a Select button holds a lone Start back`() {
+        rig.useSystemPad(hasSelect = true)
+
+        rig.press(KEYCODE_BUTTON_START)
+        rig.advanceBy(59)
+        assertThat(sent(PLAY_FLAG)).isFalse()
+
+        rig.advanceBy(1)
+        assertThat(rig.lastButtons()).isEqualTo(PLAY_FLAG)
+    }
+
+    @Test
+    fun `a system pad without a Select button sends Start at once`() {
+        rig.useSystemPad(hasSelect = false)
+
+        rig.press(KEYCODE_BUTTON_START)
+
+        assertThat(rig.lastButtons()).isEqualTo(PLAY_FLAG)
+    }
 }

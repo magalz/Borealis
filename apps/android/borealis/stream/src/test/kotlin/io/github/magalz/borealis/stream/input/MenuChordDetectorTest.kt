@@ -243,4 +243,130 @@ class MenuChordDetectorTest {
         assertThat(detector.check(5_000)).isFalse()
         assertThat(detector.hidden()).isEqualTo(0)
     }
+
+    private fun feedLone(buttons: Int, time: Long) =
+        detector.update(buttons, time, true, holdLone = true)
+
+    @Test
+    fun `a lone Start is hidden from the PC for 60 ms, then the check lets it through`() {
+        val pressed = feedLone(START, 100)
+
+        assertThat(pressed.silent).isFalse()
+        assertThat(detector.hidden()).isEqualTo(START)
+        assertThat(detector.deadline()).isEqualTo(160)
+        assertThat(detector.due(159).silent).isTrue()
+        assertThat(detector.hidden()).isEqualTo(START)
+
+        val due = detector.due(160)
+
+        assertThat(due.silent).isFalse()
+        assertThat(due.fired).isFalse()
+        assertThat(detector.hidden()).isEqualTo(0)
+        assertThat(detector.deadline()).isEqualTo(MenuChordDetector.NO_DEADLINE)
+    }
+
+    @Test
+    fun `a lone Select is held back the same way`() {
+        feedLone(SELECT, 0)
+
+        assertThat(detector.hidden()).isEqualTo(SELECT)
+        assertThat(detector.due(60).silent).isFalse()
+        assertThat(detector.hidden()).isEqualTo(0)
+    }
+
+    @Test
+    fun `the partner within 60 ms starts the chord and nothing was shown to the PC`() {
+        feedLone(START, 0)
+
+        val update = feedLone(chord, 59)
+
+        assertThat(update.loneTap).isEqualTo(0)
+        assertThat(detector.hidden()).isEqualTo(chord)
+        assertThat(detector.deadline()).isEqualTo(1_059)
+        assertThat(detector.due(60).silent).isTrue()
+        assertThat(detector.check(1_059)).isTrue()
+    }
+
+    @Test
+    fun `another button sends the held back button at once`() {
+        feedLone(START, 0)
+
+        val update = feedLone(START or A, 20)
+
+        assertThat(update.silent).isFalse()
+        assertThat(update.loneTap).isEqualTo(0)
+        assertThat(detector.hidden()).isEqualTo(0)
+        assertThat(detector.deadline()).isEqualTo(MenuChordDetector.NO_DEADLINE)
+    }
+
+    @Test
+    fun `letting the button go within 60 ms is a short press of it`() {
+        feedLone(START, 0)
+
+        val update = feedLone(0, 30)
+
+        assertThat(update.loneTap).isEqualTo(START)
+        assertThat(update.silent).isTrue()
+        assertThat(detector.hidden()).isEqualTo(0)
+        assertThat(detector.deadline()).isEqualTo(MenuChordDetector.NO_DEADLINE)
+    }
+
+    @Test
+    fun `a button that went down after the wait is not held back again by a later event`() {
+        feedLone(START, 0)
+        detector.due(60)
+
+        feedLone(START, 100)
+
+        assertThat(detector.hidden()).isEqualTo(0)
+        assertThat(detector.deadline()).isEqualTo(MenuChordDetector.NO_DEADLINE)
+    }
+
+    @Test
+    fun `the partner after the wait still starts a chord`() {
+        feedLone(START, 0)
+        detector.due(60)
+
+        feedLone(chord, 200)
+
+        assertThat(detector.hidden()).isEqualTo(chord)
+        assertThat(detector.check(1_200)).isTrue()
+    }
+
+    @Test
+    fun `a button held when another one goes down is not a lone press`() {
+        feedLone(A, 0)
+
+        feedLone(A or START, 10)
+
+        assertThat(detector.hidden()).isEqualTo(0)
+    }
+
+    @Test
+    fun `without holdLone a lone Start is sent at once`() {
+        feed(START, 0, mask = true)
+
+        assertThat(detector.hidden()).isEqualTo(0)
+        assertThat(detector.deadline()).isEqualTo(MenuChordDetector.NO_DEADLINE)
+    }
+
+    @Test
+    fun `the quit combo built on a held back Start still reaches the PC`() {
+        feedLone(START, 0)
+        feedLone(chord, 30)
+        feedLone(chord or leftBumper, 100)
+
+        assertThat(detector.hidden()).isEqualTo(0)
+        assertThat(detector.check(5_000)).isFalse()
+    }
+
+    @Test
+    fun `reset forgets a held back button`() {
+        feedLone(START, 0)
+
+        detector.reset()
+
+        assertThat(detector.hidden()).isEqualTo(0)
+        assertThat(detector.deadline()).isEqualTo(MenuChordDetector.NO_DEADLINE)
+    }
 }

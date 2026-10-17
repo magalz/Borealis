@@ -549,7 +549,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
         controllerHandler.setChromeKeySink(chromeHost::dispatchKeyEvent);
         decoderRenderer.setPerfSink(streamSession::onPerf);
         PerfGate.bind(LifecycleOwnerKt.getLifecycleScope(this), streamSession, decoderRenderer::setPerfEnabled);
-        GamepadMouseSync.bind(LifecycleOwnerKt.getLifecycleScope(this), streamSession, controllerHandler::isMouseEmulationEnabled);
+        GamepadMouseSync.bind(LifecycleOwnerKt.getLifecycleScope(this), streamSession, controllerHandler::isMouseEmulationOnAnyPad);
 
         if (!decoderRenderer.isAvcSupported()) {
             // If we can't find an AVC decoder, we can't proceed

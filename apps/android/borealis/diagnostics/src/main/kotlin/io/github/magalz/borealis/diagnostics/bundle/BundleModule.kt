@@ -16,7 +16,8 @@ import javax.inject.Singleton
 /**
  * Declares the set of [DiagnosticSection]s, so the bundle works when no module contributes one.
  * Modules add theirs with `@Binds @IntoSet`. It also provides the [LogSwitches] the bundle manifest
- * reads; the module that stores the switches elsewhere replaces this binding.
+ * reads from SharedPreferences. Hilt has no override: the change that binds the DataStore-backed
+ * [LogSwitches] (ADR 0055) must DELETE this `@Provides`, or the graph has two bindings.
  */
 @Module
 @InstallIn(SingletonComponent::class)

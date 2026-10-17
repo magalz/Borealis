@@ -2,13 +2,11 @@ package io.github.magalz.borealis.diagnostics.transfer
 
 import android.content.Context
 import android.net.ConnectivityManager
-import com.google.zxing.WriterException
 import com.google.zxing.common.BitMatrix
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogTag
 import java.io.File
-import java.io.IOException
 import java.net.InetAddress
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,7 +20,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 /** The QR code of the link: [size] by [size] modules, quiet margin included; true is dark. */
-class QrMatrix(val size: Int, private val modules: BooleanArray) {
+class QrMatrix internal constructor(val size: Int, modules: BooleanArray) {
+    private val modules = modules.copyOf()
+
     operator fun get(x: Int, y: Int): Boolean = modules[y * size + x]
 
     override fun equals(other: Any?): Boolean =
@@ -52,7 +52,11 @@ sealed interface TransferState {
         val fileName: String,
         val sizeBytes: Long,
         val remainingMillis: Long,
-    ) : TransferState
+    ) : TransferState {
+        /** Without the link: it holds the one-time token, which must not reach a log. */
+        override fun toString(): String =
+            "Waiting(fileName=$fileName, sizeBytes=$sizeBytes, remainingMillis=$remainingMillis)"
+    }
 
     /** The file was downloaded and the link is closed. */
     data object Downloaded : TransferState
@@ -100,39 +104,38 @@ internal constructor(
     val state: StateFlow<TransferState>
         get() = mutableState
 
-    /** Closes the earlier link, if any, and opens a new one that serves [file] once. */
+    /**
+     * Closes the earlier link, if any, and opens a new one that serves [file] once. The state goes
+     * from the old one through [TransferState.Idle] to [TransferState.Waiting],
+     * [TransferState.NoNetwork] or [TransferState.Failed]; the closed link is not reported as
+     * stopped, and its final state is not shown again.
+     */
     fun start(file: File) {
-        stop()
-        val local = address()
-        if (local == null) {
-            mutableState.value = TransferState.NoNetwork
-            return
-        }
-        val opened = OneShotFileServer(file, local, clock)
-        val waiting =
-            try {
-                open(opened, file)
-            } catch (error: IOException) {
-                BorealisLog.e(LogTag.APP, "could not start the diagnostic transfer", error)
-                null
-            } catch (error: WriterException) {
-                BorealisLog.e(LogTag.APP, "could not draw the diagnostic transfer code", error)
-                null
-            }
-        if (waiting == null) {
-            opened.stop()
-            mutableState.value = TransferState.Failed
-            return
-        }
-        synchronized(lock) {
-            server = opened
-            ticker = scope.launch { tick(opened, waiting) }
-        }
-        mutableState.value = waiting
+        closeCurrent()
+        mutableState.value = TransferState.Idle
+        mutableState.value =
+            runCatching { open(file) }
+                .getOrElse { error ->
+                    BorealisLog.e(LogTag.APP, "could not start the diagnostic transfer", error)
+                    TransferState.Failed
+                }
     }
 
     /** Closes the link at once. A download or expiry that already happened stays as it is. */
     fun stop() {
+        val closing = detach()
+        if (closing != null) {
+            closing.stop()
+            mutableState.value = finished(closing.status)
+        }
+    }
+
+    private fun closeCurrent() {
+        detach()?.stop()
+    }
+
+    /** Takes the current server and its ticker away from the session; the caller closes it. */
+    private fun detach(): OneShotFileServer? {
         val closing: OneShotFileServer?
         val job: Job?
         synchronized(lock) {
@@ -142,21 +145,35 @@ internal constructor(
             ticker = null
         }
         job?.cancel()
-        if (closing != null) {
-            closing.stop()
-            mutableState.value = finished(closing.status)
-        }
+        return closing
     }
 
-    private fun open(opened: OneShotFileServer, file: File): TransferState.Waiting {
-        val link = opened.start()
-        return TransferState.Waiting(
-            link = link,
-            qr = TransferQr.encode(link).toQrMatrix(),
-            fileName = file.name,
-            sizeBytes = file.length(),
-            remainingMillis = opened.remainingMillis(),
-        )
+    /** The state for [file]; throws when the link cannot be started. */
+    private fun open(file: File): TransferState {
+        if (!file.isFile || !file.canRead()) error("The bundle cannot be read")
+        val local = address() ?: return TransferState.NoNetwork
+        val opened = OneShotFileServer(file, local, clock)
+        var handedOver = false
+        try {
+            val link = opened.start()
+            val waiting =
+                TransferState.Waiting(
+                    link = link,
+                    qr = TransferQr.encode(link).toQrMatrix(),
+                    fileName = file.name,
+                    sizeBytes = file.length(),
+                    remainingMillis = opened.remainingMillis(),
+                )
+            synchronized(lock) {
+                server = opened
+                mutableState.value = waiting
+                ticker = scope.launch { tick(opened, waiting) }
+                handedOver = true
+            }
+            return waiting
+        } finally {
+            if (!handedOver) opened.stop()
+        }
     }
 
     /** Refreshes the countdown, and the final state, once a second until the transfer is over. */

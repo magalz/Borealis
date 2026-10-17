@@ -1,45 +1,24 @@
 package io.github.magalz.borealis.library.apps
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import io.github.magalz.borealis.designsystem.components.ActionSheet
 import io.github.magalz.borealis.designsystem.components.ActionSheetAction
 import io.github.magalz.borealis.designsystem.components.ActionStyle
-import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
-import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.components.BorealisDialog
+import io.github.magalz.borealis.designsystem.components.DialogAction
 import io.github.magalz.borealis.designsystem.theme.BorealisFonts
+import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.library.R
-
-private val DIALOG_MAX_WIDTH = 420.dp
-private val DIALOG_MARGIN = 16.dp
-private val DIALOG_PADDING = 20.dp
-private val DIALOG_GAP = 16.dp
-private val BUTTON_GAP = 12.dp
 
 /** The actions that end an app: they ask first, because unsaved work in it is lost. */
 private fun AppAction.losesWork() = this == AppAction.QUIT || this == AppAction.QUIT_AND_START
@@ -143,35 +122,29 @@ private fun sheetAction(
 /** Asks before an app ends. Focus starts on Cancel, so a stray OK does not lose work. */
 @Composable
 private fun ConfirmQuitDialog(appName: String, onConfirm: () -> Unit, onCancel: () -> Unit) {
-    AppsDialog(onDismiss = onCancel) {
-        Text(
-            stringResource(R.string.apps_confirm_quit, appName),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP, Alignment.End),
-        ) {
-            BorealisButton(
-                stringResource(R.string.apps_confirm_cancel),
-                onCancel,
-                modifier = Modifier.initialFocus(remember { FocusRequester() }),
-                style = BorealisButtonStyle.Secondary,
-            )
-            BorealisButton(
+    BorealisDialog(
+        title = stringResource(R.string.apps_confirm_quit, appName),
+        onDismissRequest = onCancel,
+        confirm =
+            DialogAction(
                 stringResource(R.string.apps_confirm_quit_button),
+                BorealisButtonStyle.Danger,
                 onConfirm,
-                style = BorealisButtonStyle.Danger,
-            )
-        }
-    }
+            ),
+        dismiss = DialogAction(stringResource(R.string.apps_confirm_cancel), onClick = onCancel),
+        focusDismiss = true,
+    ) {}
 }
 
 /** The app id and whether the app supports HDR. */
 @Composable
 internal fun AppDetailsDialog(app: AppItemUiState, onDismiss: () -> Unit) {
-    AppsDialog(onDismiss = onDismiss) {
-        Text(app.name, style = MaterialTheme.typography.titleLarge)
+    BorealisDialog(
+        title = app.name,
+        onDismissRequest = onDismiss,
+        confirm = DialogAction(stringResource(R.string.apps_details_close), onClick = onDismiss),
+        width = DialogWidth.Standard,
+    ) {
         Detail(stringResource(R.string.apps_details_id), app.id.toString(), mono = true)
         Detail(
             stringResource(R.string.apps_details_hdr),
@@ -183,14 +156,6 @@ internal fun AppDetailsDialog(app: AppItemUiState, onDismiss: () -> Unit) {
                 }
             ),
         )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            BorealisButton(
-                stringResource(R.string.apps_details_close),
-                onDismiss,
-                modifier = Modifier.initialFocus(remember { FocusRequester() }),
-                style = BorealisButtonStyle.Secondary,
-            )
-        }
     }
 }
 
@@ -203,29 +168,6 @@ private fun Detail(label: String, value: String, mono: Boolean = false) {
             value,
             style = MaterialTheme.typography.bodyLarge,
             fontFamily = if (mono) BorealisFonts.Mono else null,
-        )
-    }
-}
-
-/** A dialog in the Borealis look: a surface with a hairline, as wide as the content needs. */
-@Composable
-private fun AppsDialog(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    val colors = LocalBorealisColors.current
-    val shape = MaterialTheme.shapes.extraLarge
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        Column(
-            Modifier.padding(horizontal = DIALOG_MARGIN)
-                .widthIn(max = DIALOG_MAX_WIDTH)
-                .fillMaxWidth()
-                .background(colors.surface, shape)
-                .border(1.dp, colors.line, shape)
-                .clip(shape)
-                .padding(DIALOG_PADDING),
-            verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
-            content = content,
         )
     }
 }

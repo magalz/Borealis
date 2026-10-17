@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -28,15 +27,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.adaptive.appGridColumns
+import io.github.magalz.borealis.designsystem.components.AuroraLoader
 import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
+import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.CoverTile
 import io.github.magalz.borealis.designsystem.components.DotStatus
 import io.github.magalz.borealis.designsystem.components.EmptyState
@@ -55,6 +55,7 @@ private val GRID_VERTICAL_PADDING = 12.dp
 private val HEADER_GAP = 4.dp
 private val STATUS_GAP = 6.dp
 private val SNACKBAR_PADDING = 16.dp
+private val LOADER_SIZE = 64.dp
 
 /**
  * The apps of one host as a grid of covers: [AppsUiState.items] in order, the running app first. A
@@ -111,16 +112,13 @@ private fun PhoneBar(state: AppsUiState, onBack: () -> Unit, onToggleShowHidden:
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onBack) {
-            Icon(painterResource(R.drawable.ic_apps_back), stringResource(R.string.apps_back))
+            Icon(BorealisIcons.Back, stringResource(R.string.apps_back))
         }
         Title(state, Modifier.weight(1f))
         IconButton(onClick = onToggleShowHidden) {
             Icon(
-                painterResource(
-                    // The icon shows what the toggle does: open eye shows them, crossed eye hides.
-                    if (state.showHidden) R.drawable.ic_apps_visibility_off
-                    else R.drawable.ic_apps_visibility
-                ),
+                // The icon shows what the toggle does: open eye shows them, crossed eye hides.
+                if (state.showHidden) BorealisIcons.VisibilityOff else BorealisIcons.Visibility,
                 stringResource(toggleLabel(state)),
             )
         }
@@ -196,9 +194,9 @@ private fun Content(
                 )
             state.loading -> {
                 val description = stringResource(R.string.apps_loading)
-                CircularProgressIndicator(
+                AuroraLoader(
                     Modifier.align(Alignment.Center).semantics { contentDescription = description },
-                    color = LocalBorealisColors.current.accent,
+                    LOADER_SIZE,
                 )
             }
             else ->

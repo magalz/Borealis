@@ -281,6 +281,20 @@ class HostsScreenTest {
     }
 
     @Test
+    @Config(qualifiers = TV)
+    fun `the Forget confirmation opens with the focus on Cancel`() {
+        showTv(withHosts)
+        composeRule.onNodeWithTag("host:desk").requestFocus()
+        composeRule.onNodeWithTag("host:desk").performKeyInput { pressKey(Key.ButtonX) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Forget").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText(FORGET_CONFIRMATION).assertIsDisplayed()
+        composeRule.onNodeWithText("Cancel").assertIsFocused()
+    }
+
+    @Test
     @Config(qualifiers = PHONE)
     fun `the Forget option and its confirmation say what it does and do not promise a re-pair`() {
         showPhone(withHosts)
@@ -342,7 +356,7 @@ class HostsScreenTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `loading shows a progress indicator and not the empty state with its Add host button`() {
+    fun `loading shows the loader and not the empty state with its Add host button`() {
         showPhone(loadingHosts)
 
         composeRule.onNodeWithTag("hosts-loading").assertIsDisplayed()
@@ -354,8 +368,20 @@ class HostsScreenTest {
     }
 
     @Test
+    @Config(qualifiers = PHONE)
+    fun `loading shows the aurora loader, not a progress bar`() {
+        showPhone(loadingHosts)
+
+        composeRule.onNodeWithTag("hosts-loading").assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("hosts-loading")
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ProgressBarRangeInfo))
+        composeRule.onNodeWithContentDescription("Loading hosts").assertIsDisplayed()
+    }
+
+    @Test
     @Config(qualifiers = TV)
-    fun `loading on a TV shows a progress indicator and leaves the focus in the rail`() {
+    fun `loading on a TV shows the loader and leaves the focus in the rail`() {
         showTv(loadingHosts)
 
         composeRule.onNodeWithTag("hosts-loading").assertIsDisplayed()

@@ -6,22 +6,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.NavigationRail
 import io.github.magalz.borealis.designsystem.components.RailItem
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.library.R
-
-private val RAIL_WIDTH = 200.dp
 
 private const val RAIL_HOSTS = 0
 private const val RAIL_ADD_HOST = 1
@@ -75,29 +70,32 @@ internal fun LibraryScaffold(
     }
 }
 
+/** The items of the rail, in order: Hosts, Add host and Settings. */
+@Composable
+internal fun libraryRailItems(): List<RailItem> =
+    listOf(
+        RailItem(
+            stringResource(R.string.hosts_title),
+            BorealisIcons.Hosts,
+        ),
+        RailItem(
+            stringResource(R.string.hosts_add_host),
+            BorealisIcons.Add,
+        ),
+        RailItem(
+            stringResource(R.string.hosts_settings),
+            BorealisIcons.Gear,
+        ),
+    )
+
 /**
  * Hosts (also for Apps and Pairing, which are part of it), Add host and Settings (also for Privacy
  * and diagnostics and the Audit trail).
  */
 @Composable
 internal fun LibraryRail(selected: RailSelection, actions: RailActions) {
-    val items =
-        listOf(
-            RailItem(
-                stringResource(R.string.hosts_title),
-                ImageVector.vectorResource(R.drawable.ic_hosts_home),
-            ),
-            RailItem(
-                stringResource(R.string.hosts_add_host),
-                ImageVector.vectorResource(R.drawable.ic_hosts_add),
-            ),
-            RailItem(
-                stringResource(R.string.hosts_settings),
-                ImageVector.vectorResource(R.drawable.ic_hosts_settings),
-            ),
-        )
     NavigationRail(
-        items = items,
+        items = libraryRailItems(),
         selectedIndex =
             when (selected) {
                 RailSelection.Hosts -> RAIL_HOSTS
@@ -111,6 +109,5 @@ internal fun LibraryRail(selected: RailSelection, actions: RailActions) {
                 RAIL_SETTINGS -> actions.onSettings()
             }
         },
-        modifier = Modifier.width(RAIL_WIDTH),
     )
 }

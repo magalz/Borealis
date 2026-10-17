@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">Settings</string>
+    <string name="settings_choose">Choose</string>
+    <string name="settings_close">Close</string>
+
+    <!-- Groups -->
+    <string name="settings_group_stream">Stream</string>
+    <string name="settings_group_video">Video</string>
+    <string name="settings_group_input">Input</string>
+    <string name="settings_group_gamepad">Gamepad</string>
+    <string name="settings_group_on_screen_controls">On-screen controls</string>
+    <string name="settings_group_audio">Audio</string>
+    <string name="settings_group_advanced">Advanced</string>
+    <string name="settings_group_privacy">Privacy and diagnostics</string>
+    <string name="settings_group_about">About</string>
+    <string name="settings_privacy_link_summary">Logs, diagnostic bundle, audit trail</string>
+
+    <!-- Rows: Stream -->
+    <string name="settings_resolution_title">Resolution</string>
+    <string name="settings_resolution_summary">A higher resolution is sharper and needs a faster device and network.</string>
+    <string name="settings_frame_rate_title">Frame rate</string>
+    <string name="settings_frame_rate_summary">A higher rate is smoother and needs a faster device and network.</string>
+    <string name="settings_bitrate_title">Bitrate</string>
+    <string name="settings_bitrate_summary">Changing Resolution or Frame rate sets it back to automatic.</string>
+    <string name="settings_frame_pacing_title">Frame pacing</string>
+    <string name="settings_frame_pacing_summary">Balance latency against smoothness.</string>
+
+    <!-- Rows: Video -->
+    <string name="settings_codec_title">Codec</string>
+    <string name="settings_codec_summary">Newer codecs can lower the bandwidth. The PC or its GPU may not support the one you choose.</string>
+    <string name="settings_hdr_title">HDR</string>
+    <string name="settings_hdr_summary">Needs an HDR display and a PC GPU that encodes HEVC Main 10.</string>
+    <string name="settings_full_range_title">Full range</string>
+    <string name="settings_full_range_summary">Can lose detail in light and dark areas if the display does not show full range video.</string>
+    <string name="settings_perf_overlay_title">Performance overlay</string>
+    <string name="settings_perf_overlay_summary">Shows stream statistics while you play.</string>
+    <string name="settings_stretch_video_title">Stretch video</string>
+    <string name="settings_stretch_video_summary">Fill the screen even when the aspect ratio is different.</string>
+
+    <!-- Rows: Input -->
+    <string name="settings_touch_title">Touch</string>
+    <string name="settings_touch_summary">How the touchscreen controls the mouse.</string>
+    <string name="settings_mouse_nav_buttons_title">Mouse back and forward buttons</string>
+    <string name="settings_mouse_nav_buttons_summary">Can break right click on some devices.</string>
+    <string name="settings_absolute_mouse_title">Remote desktop mouse mode</string>
+    <string name="settings_absolute_mouse_summary">Mouse acceleration feels more natural on a remote desktop. Many games do not work with it.</string>
+    <string name="settings_gamepad_mouse_title">Gamepad mouse</string>
+    <string name="settings_gamepad_mouse_summary">Hold Start to turn the gamepad into a mouse.</string>
+    <string name="settings_analog_scrolling_title">Analog scrolling</string>
+    <string name="settings_analog_scrolling_summary">The stick that scrolls while the gamepad is a mouse.</string>
+    <string name="settings_deadzone_title">Deadzone</string>
+    <string name="settings_deadzone_summary">Some games force a larger deadzone than this.</string>
+
+    <!-- Rows: Gamepad -->
+    <string name="settings_multi_controller_title">Multiple controllers</string>
+    <string name="settings_multi_controller_summary">Turn off to make a gamepad always present.</string>
+    <string name="settings_usb_driver_title">USB driver for Xbox controllers</string>
+    <string name="settings_usb_driver_summary">A built-in driver for Xbox 360 and Xbox One controllers. Off also stops the USB attach dialog.</string>
+    <string name="settings_usb_bind_all_title">Use the USB driver for all controllers</string>
+    <string name="settings_usb_bind_all_summary">Use the driver even where the device supports a controller natively.</string>
+    <string name="settings_flip_face_buttons_title">Flip face buttons</string>
+    <string name="settings_flip_face_buttons_summary">Swap A and B, and X and Y, on gamepads and on-screen controls.</string>
+    <string name="settings_touchpad_as_mouse_title">Touchpad as mouse</string>
+    <string name="settings_touchpad_as_mouse_summary">The gamepad touchpad always moves the mouse of the PC.</string>
+    <string name="settings_motion_sensors_title">Motion sensors</string>
+    <string name="settings_motion_sensors_summary">Let the PC read the motion sensors of the gamepad.</string>
+    <string name="settings_motion_fallback_title">Motion fallback</string>
+    <string name="settings_motion_fallback_summary">Use the sensors of this device when the gamepad has none. The gamepad can appear as a PlayStation controller on the PC.</string>
+    <string name="settings_vibrate_fallback_title">Vibrate fallback</string>
+    <string name="settings_vibrate_fallback_summary">Vibrate this device when the gamepad cannot rumble.</string>
+    <string name="settings_vibration_strength_title">Vibration strength</string>
+    <string name="settings_vibration_strength_summary">How strong that vibration is.</string>
+
+    <!-- Rows: On-screen controls -->
+    <string name="settings_show_osc_title">Show on-screen controls</string>
+    <string name="settings_show_osc_summary">Draw a gamepad on the touchscreen.</string>
+    <string name="settings_osc_vibrate_title">Vibrate</string>
+    <string name="settings_osc_vibrate_summary">Vibrate with the on-screen controls.</string>
+    <string name="settings_only_l3_r3_title">Only L3 and R3</string>
+    <string name="settings_only_l3_r3_summary">Hide every button except L3 and R3.</string>
+    <string name="settings_guide_button_title">Guide button</string>
+    <string name="settings_guide_button_summary">Show the Guide button.</string>
+    <string name="settings_osc_opacity_title">Opacity</string>
+    <string name="settings_osc_opacity_summary">A lower value makes the controls more transparent.</string>
+    <string name="settings_reset_layout_title">Reset layout</string>
+    <string name="settings_reset_layout_summary">Return the on-screen controls to their default size and position.</string>
+    <string name="settings_reset_layout_dialog_title">Reset the layout?</string>
+    <string name="settings_reset_layout_dialog_message">The on-screen controls go back to their default size and position. Cannot be undone.</string>
+    <string name="settings_reset_layout_confirm">Reset</string>
+    <string name="settings_cancel">Cancel</string>
+
+    <!-- Rows: Audio -->
+    <string name="settings_audio_channels_title">Channels</string>
+    <string name="settings_audio_channels_summary">Use 5.1 or 7.1 for a home theatre system.</string>
+    <string name="settings_host_audio_title">Play audio on the PC</string>
+    <string name="settings_host_audio_summary">Also play the sound on the PC.</string>
+    <string name="settings_audio_fx_title">Audio effects</string>
+    <string name="settings_audio_fx_summary">Let system audio effects work while you stream. This can add latency.</string>
+
+    <!-- Rows: Advanced -->
+    <string name="settings_sops_title">Optimise game settings</string>
+    <string name="settings_sops_summary">Let the PC change game settings for streaming.</string>
+    <string name="settings_unlock_fps_title">Unlock all frame rates</string>
+    <string name="settings_unlock_fps_summary">Offer 90 and 120 fps whatever the display. This can cause lag on devices that cannot keep up.</string>
+    <string name="settings_reduce_refresh_rate_title">Reduce refresh rate</string>
+    <string name="settings_reduce_refresh_rate_summary">Saves power at the cost of some latency.</string>
+    <string name="settings_disable_warnings_title">Disable connection warnings</string>
+    <string name="settings_disable_warnings_summary">Hide the connection warnings during a stream.</string>
+    <string name="settings_post_stream_toast_title">Latency summary after a stream</string>
+    <string name="settings_post_stream_toast_summary">Show a latency summary when a stream ends.</string>
+    <string name="settings_pip_title">Picture-in-picture</string>
+    <string name="settings_pip_summary">Watch the stream, without controlling it, while you use other apps.</string>
+
+    <!-- Disabled notes -->
+    <string name="settings_note_turn_on_first">Turn on %1$s first</string>
+    <string name="settings_note_hdr_firmware">HDR crashes on the firmware of this device. Update the firmware to use it.</string>
+
+    <!-- Values -->
+    <string name="settings_value_frame_rate">%1$d fps</string>
+    <string name="settings_value_frame_rate_native">Native (%1$d fps)</string>
+    <string name="settings_value_bitrate">%1$s Mbps</string>
+    <string name="settings_value_bitrate_automatic">Automatic (%1$s Mbps)</string>
+    <string name="settings_value_percent">%1$d %%</string>
+    <string name="settings_value_resolution_standard">%1$s (%2$dx%3$d)</string>
+    <string name="settings_resolution_name_p">%1$dp</string>
+    <string name="settings_resolution_name_4k">4K</string>
+    <string name="settings_value_resolution_native">Native (%1$dx%2$d)</string>
+    <string name="settings_value_resolution_native_portrait">Native (portrait) (%1$dx%2$d)</string>
+    <string name="settings_value_resolution_native_landscape">Native (landscape) (%1$dx%2$d)</string>
+    <string name="settings_value_resolution_fullscreen">Native fullscreen (%1$dx%2$d)</string>
+    <string name="settings_value_resolution_fullscreen_portrait">Native fullscreen (portrait) (%1$dx%2$d)</string>
+    <string name="settings_value_resolution_fullscreen_landscape">Native fullscreen (landscape) (%1$dx%2$d)</string>
+
+    <!-- Fixed choices -->
+    <string name="settings_choice_pacing_latency">Lowest latency</string>
+    <string name="settings_choice_pacing_balanced">Balanced</string>
+    <string name="settings_choice_pacing_balanced_cap">Balanced with fps limit</string>
+    <string name="settings_choice_pacing_smoothness">Smoothest video</string>
+    <string name="settings_choice_pacing_smoothness_summary">May add a lot of latency</string>
+    <string name="settings_choice_codec_auto">Automatic</string>
+    <string name="settings_choice_codec_auto_summary">Recommended</string>
+    <string name="settings_choice_codec_av1">AV1</string>
+    <string name="settings_choice_codec_av1_summary">Experimental</string>
+    <string name="settings_choice_codec_hevc">HEVC</string>
+    <string name="settings_choice_codec_h264">H.264</string>
+    <string name="settings_choice_overlay_off">Off</string>
+    <string name="settings_choice_overlay_compact">Compact</string>
+    <string name="settings_choice_overlay_detailed">Detailed</string>
+    <string name="settings_choice_touch_trackpad">Trackpad</string>
+    <string name="settings_choice_touch_direct">Direct</string>
+    <string name="settings_choice_scroll_none">None</string>
+    <string name="settings_choice_scroll_none_summary">Both sticks move the mouse</string>
+    <string name="settings_choice_scroll_right">Right stick</string>
+    <string name="settings_choice_scroll_left">Left stick</string>
+    <string name="settings_choice_audio_stereo">Stereo (2.0)</string>
+    <string name="settings_choice_audio_51">5.1 surround</string>
+    <string name="settings_choice_audio_71">7.1 surround</string>
+
+    <!-- Native warnings -->
+    <string name="settings_native_resolution_title">Native resolution</string>
+    <string name="settings_native_frame_rate_title">Native frame rate</string>
+    <string name="settings_native_warning_message">The PC must support this mode. Borealis cannot read the modes of the PC, so it cannot check. If the PC does not support it, the stream can fail to start or look wrong. You may need to add a matching custom display mode on the PC.</string>
+    <string name="settings_native_keep">Keep</string>
+    <string name="settings_native_change">Change</string>
+
+    <!-- About -->
+    <string name="settings_about_version_title">Version</string>
+    <string name="settings_about_version_summary">%1$s (commit %2$s)</string>
+    <string name="settings_about_version_unknown">unknown</string>
+    <string name="settings_about_source_code_title">Source code</string>
+    <string name="settings_about_licenses_title">Open-source licences</string>
+    <string name="settings_about_licenses_summary">Notices and licence texts for Borealis and the components it includes</string>
+    <string name="settings_about_licenses_unavailable">The licence texts are not included in this build.</string>
+    <string name="settings_about_privacy_policy_title">Privacy policy</string>
+    <string name="settings_about_link_dialog_title">No app can open this link</string>
+</resources>

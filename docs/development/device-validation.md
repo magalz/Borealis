@@ -1187,10 +1187,9 @@ Device: Google TV Streamer, Android 14, launcher `launcherx` 1.0.994451607.
 
 - Builds:
   - the debug APK from phase head `e9e66849` first;
-  - then `c02fdafb` (decode-time FIFO reverted; S22 only, `TODO(verify)`:
-    whether the TV ran this build);
+  - then `c02fdafb` (decode-time FIFO reverted), on the S22 only;
   - then `c3f1ce75` (merge of the device fixes, with the revert). The re-checks
-    ran on `c3f1ce75`.
+    ran on `c3f1ce75`, and the final keyboard check on the TV on `02f7b18b`.
 - Install: `install -r`, keeping data.
 - Devices:
   - Galaxy S22: USB, phone language pt-BR.
@@ -1266,14 +1265,16 @@ the decode-time FIFO (S6-T7).
 - The quit combo is not detected for USB-driver pads (`reportControllerState`).
   This is an upstream limitation.
 - The Google TV USB dialog repeats while the USB driver is on (R5a, section 10).
+- Feature request from the owner, for the new-features phase: a setting for
+  the pointer speed of the gamepad mouse. Today the pointer moves so fast that
+  it jumps across the screen, and precise control needs a very light touch on
+  the stick.
 
 #### Clean-up
 
 - The round's zips on the TV were deleted.
 - The settings changed for the round were restored on the TV: 720p, codec auto,
   overlay off, USB driver on, stretch off, unlock off.
-- The S22 overlay is set back off, and the zip the S22 downloaded is deleted,
-  once the S22 is reconnected. `TODO(verify)`: whether both were done. The
-  notes say the S22 was not connected when they were written.
+- The S22 overlay was set back off, and the zip the S22 downloaded was deleted.
 - `/sdcard/ui.xml` was deleted from the S22.
 - The local screenshots were deleted.

@@ -83,7 +83,7 @@ can be paired ([UC-001](0001-pair-with-a-host.md)).
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
-| UC-008-T1 | Given the Add host screen is opened, when it appears, then the Address field has focus and the keyboard opens. | UI | exists (Sprint 4, UI) |
+| UC-008-T1 | Given the Add host screen is opened, when it appears, then the Address field has focus. On a phone the keyboard opens; on a TV or handheld it opens on OK. | UI | exists (Sprint 4, UI; TV keyboard on OK, Sprint 6 device round) |
 | UC-008-T2 | Given the address `192.168.1.20`, when the user chooses Add host, then the host appears on the Hosts screen with Pair as its action. | unit | planned |
 | UC-008-T3 | Given an address without a port, when the host is added, then the default port 47989 is used. | unit | exists (Sprint 4, unit) |
 | UC-008-T4 | Given an address with a port, when the host is added, then that port is used. | unit | exists (Sprint 4, unit) |

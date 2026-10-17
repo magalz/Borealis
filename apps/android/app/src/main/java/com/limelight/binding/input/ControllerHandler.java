@@ -1420,6 +1420,10 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         }
     }
 
+    @Override
+    public void setPointerSpeed(float factor) {
+    }
+
     // Whether any pad emulates the mouse, which is what the menu's Gamepad mouse row shows. The
     // pads are the ones setMouseEmulation reaches; the default context stays a gamepad.
     public boolean isMouseEmulationOnAnyPad() {

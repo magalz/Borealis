@@ -230,6 +230,26 @@ class ControllerHandlerRig(multiController: Boolean = false) {
         padDevice = device
     }
 
+    /**
+     * Holds the sticks of the system pad of [useSystemPad] where they are, in the handler's own
+     * range (up and right are positive), as the axis events of a real pad would leave them.
+     */
+    fun holdSystemPadSticks(leftX: Int = 0, leftY: Int = 0, rightX: Int = 0, rightY: Int = 0) {
+        val contexts = ControllerHandler::class.java.getDeclaredField("inputDeviceContexts").apply { isAccessible = true }
+        @Suppress("UNCHECKED_CAST")
+        val context = (contexts.get(handler) as android.util.SparseArray<Any>).get(padDeviceId)
+        fun set(name: String, value: Int) =
+            generateSequence(context.javaClass as Class<*>) { it.superclass }
+                .first { owner -> owner.declaredFields.any { it.name == name } }
+                .getDeclaredField(name)
+                .apply { isAccessible = true }
+                .setShort(context, value.toShort())
+        set("leftStickX", leftX)
+        set("leftStickY", leftY)
+        set("rightStickX", rightX)
+        set("rightStickY", rightY)
+    }
+
     /** Makes the pad behind device 0 one that Android reports a Select button for, as a real system pad is. */
     fun givePadASelectButton() = setDefaultContextField("hasSelect", true)
 
@@ -255,10 +275,18 @@ class FakeUsbController(id: Int, listener: UsbDriverListener) :
 
     override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {}
 
-    fun report(buttons: Int, leftStickX: Float = 0f, leftStickY: Float = 0f) {
+    fun report(
+        buttons: Int,
+        leftStickX: Float = 0f,
+        leftStickY: Float = 0f,
+        rightStickX: Float = 0f,
+        rightStickY: Float = 0f,
+    ) {
         buttonFlags = buttons
         this.leftStickX = leftStickX
         this.leftStickY = leftStickY
+        this.rightStickX = rightStickX
+        this.rightStickY = rightStickY
         reportInput()
     }
 }

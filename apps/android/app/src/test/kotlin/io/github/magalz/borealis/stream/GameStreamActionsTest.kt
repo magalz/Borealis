@@ -73,6 +73,10 @@ private class RecordingGamepad : GamepadChrome {
     override fun setMouseEmulation(enabled: Boolean) {
         calls += "mouse $enabled"
     }
+
+    override fun setPointerSpeed(factor: Float) {
+        calls += "pointerSpeed $factor"
+    }
 }
 
 @RunWith(RobolectricTestRunner::class)

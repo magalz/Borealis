@@ -5,6 +5,7 @@ import android.os.Build
 import com.limelight.BuildConfig
 import com.limelight.R
 import dagger.hilt.android.HiltAndroidApp
+import io.github.magalz.borealis.input.UsbAttachGate
 import io.github.magalz.borealis.logging.AuditSink
 import io.github.magalz.borealis.logging.BorealisAudit
 import io.github.magalz.borealis.logging.BorealisLog
@@ -26,6 +27,9 @@ class BorealisApplication : Application() {
     // Kept so that the preference listener of LogSettings stays registered.
     private lateinit var logSettings: LogSettings
 
+    // Kept so that the preference listener of UsbAttachGate stays registered.
+    private lateinit var usbAttachGate: UsbAttachGate
+
     // The Room-backed audit trail (:borealis:diagnostics); injected by Hilt in super.onCreate().
     @Inject lateinit var auditSink: AuditSink
 
@@ -46,6 +50,7 @@ class BorealisApplication : Application() {
         // The audit trail shares the redactor, so "Mask addresses" applies to it as well.
         BorealisAudit.install(auditSink, redactor, BuildConfig.VERSION_NAME)
         logSettings = LogSettings.start(this, baseLevel)
+        usbAttachGate = UsbAttachGate.start(this)
         JulBridge.install()
         CrashHandler.install(
             logDir,

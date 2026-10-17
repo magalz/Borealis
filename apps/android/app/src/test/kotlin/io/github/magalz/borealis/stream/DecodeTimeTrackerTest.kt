@@ -19,43 +19,70 @@ class DecodeTimeTrackerTest {
         BorealisLog.shutdown()
     }
 
-    private fun input(vararg timestamps: Long) = timestamps.forEach(tracker::onInput)
+    // The queue time of an input is its timestamp in nanoseconds, so a test says how long a frame
+    // took with [out] and does not repeat the queue time.
+    private fun input(vararg timestamps: Long) = timestamps.forEach { tracker.onInput(it, it * 1000) }
+
+    private fun out(timestampUs: Long, decodeUs: Long = 0, outputUs: Long = timestampUs) =
+        tracker.onOutput(outputUs, timestampUs * 1000 + decodeUs * 1000)
 
     @Test
-    fun `outputs that echo the input timestamps match in order`() {
+    fun `an output that echoes its input returns the decode time in microseconds`() {
         input(BASE + 1, BASE + 2, BASE + 3)
 
-        assertThat(tracker.onOutput(BASE + 1)).isEqualTo(BASE + 1)
-        assertThat(tracker.onOutput(BASE + 2)).isEqualTo(BASE + 2)
-        assertThat(tracker.onOutput(BASE + 3)).isEqualTo(BASE + 3)
+        assertThat(out(BASE + 1, decodeUs = 400)).isEqualTo(400)
+        assertThat(out(BASE + 2, decodeUs = 3_000)).isEqualTo(3_000)
+        assertThat(out(BASE + 3, decodeUs = 0)).isEqualTo(0)
+    }
+
+    @Test
+    fun `the decode time is the nanoseconds since the queue, cut to microseconds`() {
+        tracker.onInput(BASE, 7_000_000_000L)
+
+        assertThat(tracker.onOutput(BASE, 7_000_000_000L + 3_999)).isEqualTo(3)
+    }
+
+    @Test
+    fun `a decoder that echoes the timestamps reads a 3 ms decode as 3000 microseconds`() {
+        // The queue time, not the timestamp, is the start: the timestamp is fixed by the first
+        // frame and can be ahead of the real submit time of a later one.
+        for (frame in 1..3L) {
+            val timestampUs = BASE + frame * 16_667
+            val queueNs = 50_000_000_000L + frame * 16_667_000
+            tracker.onInput(timestampUs, queueNs)
+
+            val decodeUs = tracker.onOutput(timestampUs, queueNs + 3_000_000)
+
+            assertThat(decodeUs).isEqualTo(3_000)
+        }
     }
 
     @Test
     fun `a dropped frame does not shift the matches after it`() {
         input(BASE + 1, BASE + 2, BASE + 3, BASE + 4)
 
-        assertThat(tracker.onOutput(BASE + 1)).isEqualTo(BASE + 1)
+        assertThat(out(BASE + 1, decodeUs = 100)).isEqualTo(100)
         // BASE + 2 never comes out.
-        assertThat(tracker.onOutput(BASE + 3)).isEqualTo(BASE + 3)
-        assertThat(tracker.onOutput(BASE + 4)).isEqualTo(BASE + 4)
+        assertThat(out(BASE + 3, decodeUs = 300)).isEqualTo(300)
+        assertThat(out(BASE + 4, decodeUs = 400)).isEqualTo(400)
     }
 
     @Test
     fun `a matched output prunes the older inputs, so the late one finds nothing`() {
         input(BASE + 1, BASE + 2, BASE + 3)
 
-        assertThat(tracker.onOutput(BASE + 2)).isEqualTo(BASE + 2)
+        assertThat(out(BASE + 2, decodeUs = 200)).isEqualTo(200)
         // Reordered by one: BASE + 1 was pruned together with BASE + 2.
-        assertThat(tracker.onOutput(BASE + 1)).isEqualTo(DecodeTimeTracker.NO_MATCH)
-        assertThat(tracker.onOutput(BASE + 3)).isEqualTo(BASE + 3)
+        assertThat(out(BASE + 1, decodeUs = 100)).isEqualTo(DecodeTimeTracker.NO_MATCH)
+        assertThat(out(BASE + 3, decodeUs = 300)).isEqualTo(300)
     }
 
     @Test
-    fun `a timestamp cut to 32 bits matches and returns the full input timestamp`() {
+    fun `a timestamp cut to 32 bits matches and returns the decode time of its own input`() {
         val wide = BASE + 0x1_2345_6789L
         input(wide)
 
-        assertThat(tracker.onOutput(wide and LOW_32_BITS)).isEqualTo(wide)
+        assertThat(out(wide, decodeUs = 2_500, outputUs = wide and LOW_32_BITS)).isEqualTo(2_500)
     }
 
     @Test
@@ -63,18 +90,20 @@ class DecodeTimeTrackerTest {
         val exact = 5L
         val olderWide = exact + (1L shl 32)
         // The wide input is older and has the same low 32 bits as the exact one.
-        input(olderWide, exact)
+        tracker.onInput(olderWide, 9_000_000_000L)
+        tracker.onInput(exact, 1_000_000_000L)
 
-        assertThat(tracker.onOutput(exact)).isEqualTo(exact)
+        // Measured from the exact input's queue time, not from the older one's.
+        assertThat(tracker.onOutput(exact, 1_000_000_000L + 700_000)).isEqualTo(700)
     }
 
     @Test
     fun `an unknown timestamp inside the range returns NO_MATCH and keeps the ring`() {
         input(BASE + 1, BASE + 3)
 
-        assertThat(tracker.onOutput(BASE + 2)).isEqualTo(DecodeTimeTracker.NO_MATCH)
-        assertThat(tracker.onOutput(BASE + 1)).isEqualTo(BASE + 1)
-        assertThat(tracker.onOutput(BASE + 3)).isEqualTo(BASE + 3)
+        assertThat(out(BASE + 2)).isEqualTo(DecodeTimeTracker.NO_MATCH)
+        assertThat(out(BASE + 1, decodeUs = 100)).isEqualTo(100)
+        assertThat(out(BASE + 3, decodeUs = 300)).isEqualTo(300)
         assertThat(tracker.drainWindow().unmatched).isEqualTo(1)
     }
 
@@ -82,12 +111,12 @@ class DecodeTimeTrackerTest {
     fun `every output lands in exactly one class`() {
         input(BASE + 1, BASE + 2, BASE + 3, BASE + 4)
 
-        tracker.onOutput(BASE + 1) // exact
-        tracker.onOutput((BASE + 2) and LOW_32_BITS) // truncated
-        tracker.onOutput(0) // zero
-        tracker.onOutput(BASE + 99) // ahead of every input
-        tracker.onOutput(BASE - 5) // older than every input
-        tracker.onOutput(BASE + 4) // exact again
+        out(BASE + 1) // exact
+        out(BASE + 2, outputUs = (BASE + 2) and LOW_32_BITS) // truncated
+        tracker.onOutput(0, 0) // zero
+        tracker.onOutput(BASE + 99, 0) // ahead of every input
+        tracker.onOutput(BASE - 5, 0) // older than every input
+        out(BASE + 4) // exact again
         val counts = tracker.drainWindow()
 
         assertThat(counts.inputs).isEqualTo(4)
@@ -104,14 +133,14 @@ class DecodeTimeTrackerTest {
     fun `an output between two inputs that matches neither is counted as no match`() {
         input(BASE + 1, BASE + 5)
 
-        tracker.onOutput(BASE + 3)
+        out(BASE + 3)
 
         assertThat(tracker.drainWindow().unmatched).isEqualTo(1)
     }
 
     @Test
     fun `an output with nothing in the ring is not matched`() {
-        assertThat(tracker.onOutput(BASE)).isEqualTo(DecodeTimeTracker.NO_MATCH)
+        assertThat(out(BASE)).isEqualTo(DecodeTimeTracker.NO_MATCH)
         assertThat(tracker.drainWindow().outputs).isEqualTo(1)
     }
 
@@ -121,23 +150,23 @@ class DecodeTimeTrackerTest {
 
         tracker.clear()
 
-        assertThat(tracker.onOutput(BASE + 1)).isEqualTo(DecodeTimeTracker.NO_MATCH)
+        assertThat(out(BASE + 1)).isEqualTo(DecodeTimeTracker.NO_MATCH)
     }
 
     @Test
     fun `the ring holds 128 inputs and drops the oldest`() {
-        for (i in 1..130L) tracker.onInput(BASE + i)
+        input(*LongArray(130) { BASE + it + 1L })
 
-        assertThat(tracker.onOutput(BASE + 1)).isEqualTo(DecodeTimeTracker.NO_MATCH)
-        assertThat(tracker.onOutput(BASE + 2)).isEqualTo(DecodeTimeTracker.NO_MATCH)
-        assertThat(tracker.onOutput(BASE + 3)).isEqualTo(BASE + 3)
-        assertThat(tracker.onOutput(BASE + 130)).isEqualTo(BASE + 130)
+        assertThat(out(BASE + 1)).isEqualTo(DecodeTimeTracker.NO_MATCH)
+        assertThat(out(BASE + 2)).isEqualTo(DecodeTimeTracker.NO_MATCH)
+        assertThat(out(BASE + 3, decodeUs = 30)).isEqualTo(30)
+        assertThat(out(BASE + 130, decodeUs = 1_300)).isEqualTo(1_300)
     }
 
     @Test
     fun `drainWindow returns the counts since the last drain and resets them`() {
         input(BASE + 1, BASE + 2)
-        tracker.onOutput(BASE + 1)
+        out(BASE + 1, decodeUs = 500)
 
         val first = tracker.drainWindow()
         val second = tracker.drainWindow()
@@ -145,19 +174,80 @@ class DecodeTimeTrackerTest {
         assertThat(first.inputs).isEqualTo(2)
         assertThat(first.outputs).isEqualTo(1)
         assertThat(first.exact).isEqualTo(1)
+        assertThat(first.decoded).isEqualTo(1)
         assertThat(second.inputs).isEqualTo(0)
         assertThat(second.outputs).isEqualTo(0)
         assertThat(second.exact).isEqualTo(0)
+        assertThat(second.decoded).isEqualTo(0)
+        assertThat(second.decodeMaxUs).isEqualTo(0)
+    }
+
+    @Test
+    fun `the window counts the matched frames and their average, minimum and maximum in microseconds`() {
+        input(BASE + 1, BASE + 2, BASE + 3, BASE + 4)
+
+        out(BASE + 1, decodeUs = 400)
+        out(BASE + 2, decodeUs = 1_200)
+        out(BASE + 3, decodeUs = 800)
+        val counts = tracker.drainWindow()
+
+        assertThat(counts.decoded).isEqualTo(3)
+        assertThat(counts.decodeAvgUs).isEqualTo(800)
+        assertThat(counts.decodeMinUs).isEqualTo(400)
+        assertThat(counts.decodeMaxUs).isEqualTo(1_200)
+    }
+
+    @Test
+    fun `the decode statistics start again in each window`() {
+        input(BASE + 1, BASE + 2)
+        out(BASE + 1, decodeUs = 9_000)
+        tracker.drainWindow()
+
+        out(BASE + 2, decodeUs = 100)
+        val counts = tracker.drainWindow()
+
+        assertThat(counts.decoded).isEqualTo(1)
+        assertThat(counts.decodeMinUs).isEqualTo(100)
+        assertThat(counts.decodeMaxUs).isEqualTo(100)
+    }
+
+    @Test
+    fun `a negative or one second decode time is matched but not counted as decoded`() {
+        input(BASE + 1, BASE + 2, BASE + 3, BASE + 4)
+
+        assertThat(out(BASE + 1, decodeUs = -5)).isEqualTo(-5)
+        assertThat(out(BASE + 2, decodeUs = 1_000_000)).isEqualTo(1_000_000)
+        assertThat(out(BASE + 3, decodeUs = 999_999)).isEqualTo(999_999)
+        assertThat(out(BASE + 4, decodeUs = 0)).isEqualTo(0)
+        val counts = tracker.drainWindow()
+
+        assertThat(counts.exact).isEqualTo(4)
+        assertThat(counts.decoded).isEqualTo(2)
+        assertThat(counts.decodeMinUs).isEqualTo(0)
+        assertThat(counts.decodeMaxUs).isEqualTo(999_999)
+    }
+
+    @Test
+    fun `a window without a decode time reports zeros`() {
+        input(BASE + 1)
+        out(BASE + 1, decodeUs = -1)
+
+        val counts = tracker.drainWindow()
+
+        assertThat(counts.decoded).isEqualTo(0)
+        assertThat(counts.decodeAvgUs).isEqualTo(0)
+        assertThat(counts.decodeMinUs).isEqualTo(0)
+        assertThat(counts.decodeMaxUs).isEqualTo(0)
     }
 
     @Test
     fun `the first window carries up to 8 raw timestamps in and out, later windows none`() {
-        for (i in 1..10L) tracker.onInput(BASE + i)
-        for (i in 1..10L) tracker.onOutput(BASE + i)
+        for (i in 1..10L) input(BASE + i)
+        for (i in 1..10L) out(BASE + i)
 
         val first = tracker.drainWindow()
-        tracker.onInput(BASE + 11)
-        tracker.onOutput(BASE + 11)
+        input(BASE + 11)
+        out(BASE + 11)
         val second = tracker.drainWindow()
 
         assertThat(first.firstInputs).isEqualTo((1..8L).map { BASE + it })
@@ -171,10 +261,10 @@ class DecodeTimeTrackerTest {
         input(BASE + 1, BASE + 2)
         val first = tracker.drainWindow()
 
-        tracker.onOutput(BASE + 1)
-        tracker.onInput(BASE + 3)
+        out(BASE + 1)
+        input(BASE + 3)
         val second = tracker.drainWindow()
-        tracker.onOutput(BASE + 2)
+        out(BASE + 2)
         val third = tracker.drainWindow()
 
         assertThat(first.firstInputs).containsExactly(BASE + 1, BASE + 2).inOrder()
@@ -192,7 +282,7 @@ class DecodeTimeTrackerTest {
 
         tracker.clear()
         input(BASE + 2)
-        tracker.onOutput(BASE + 2)
+        out(BASE + 2)
         val counts = tracker.drainWindow()
 
         assertThat(counts.firstInputs).containsExactly(BASE + 2)
@@ -200,26 +290,11 @@ class DecodeTimeTrackerTest {
     }
 
     @Test
-    fun `a decoder that echoes the timestamps reports the delta of the output timestamp`() {
-        // Today the delta is uptime - presentationTimeUs / 1000. With echoed timestamps the matched
-        // input timestamp is the output timestamp, so the delta does not change.
-        val uptimeMs = 123_456L
-        for (offsetUs in listOf(2_000L, 5_500L, 9_000L)) {
-            val timestampUs = uptimeMs * 1000 - offsetUs
-            tracker.onInput(timestampUs)
-
-            val matched = tracker.onOutput(timestampUs)
-
-            assertThat(uptimeMs - matched / 1000).isEqualTo(uptimeMs - timestampUs / 1000)
-        }
-    }
-
-    @Test
     fun `the window line names the codec and the counts`() {
         BorealisLog.initialize(listOf(Recorder(records)), minLevel = LogLevel.DEBUG)
         input(BASE + 1, BASE + 2)
-        tracker.onOutput(BASE + 1)
-        tracker.onOutput(0)
+        out(BASE + 1, decodeUs = 400)
+        tracker.onOutput(0, 0)
 
         DecodeTimeLog.window("c2.mtk.avc.decoder", tracker.drainWindow())
 
@@ -233,6 +308,10 @@ class DecodeTimeTrackerTest {
         assertThat(fields["out"]).isEqualTo("2")
         assertThat(fields["exact"]).isEqualTo("1")
         assertThat(fields["zero"]).isEqualTo("1")
+        assertThat(fields["decoded"]).isEqualTo("1")
+        assertThat(fields["decode_avg_us"]).isEqualTo("400")
+        assertThat(fields["decode_min_us"]).isEqualTo("400")
+        assertThat(fields["decode_max_us"]).isEqualTo("400")
         assertThat(fields["first_in"]).isEqualTo("${BASE + 1},${BASE + 2}")
         assertThat(fields["first_out"]).isEqualTo("${BASE + 1},0")
     }

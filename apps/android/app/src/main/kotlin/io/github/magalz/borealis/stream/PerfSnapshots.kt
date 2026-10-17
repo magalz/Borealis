@@ -9,7 +9,7 @@ data class PerfWindow(
     val framesReceived: Int,
     val framesRendered: Int,
     val framesLost: Int,
-    val decoderTimeMs: Long,
+    val decoderTimeUs: Long,
     val hostLatencyFrames: Int,
     val hostLatencyMinTenthsMs: Int,
     val hostLatencyMaxTenthsMs: Int,
@@ -21,6 +21,7 @@ data class PerfWindow(
 /** Builds the [PerfSnapshot] the overlay shows from a stats window. */
 object PerfSnapshots {
     private const val MILLIS_PER_SECOND = 1000f
+    private const val MICROS_PER_MS = 1000f
     private const val TENTHS_PER_MS = 10f
     private const val BITS_PER_BYTE = 8
     private const val BITS_PER_MEGABIT = 1_000_000f
@@ -55,12 +56,12 @@ object PerfSnapshots {
         )
     }
 
-    // No frames, or frames without any decoder time: the decoder did not report the time (some
-    // low-latency decoders hand the frames back without the timestamp the measure needs), and a
-    // zero would pass for a decode that took no time.
+    // No frames, or frames without any decoder time: nothing was measured, and a zero would pass
+    // for a decode that took no time. The time is in microseconds, so a decode under a millisecond
+    // still shows.
     private fun decodeMs(window: PerfWindow): Float? =
-        if (window.framesReceived > 0 && window.decoderTimeMs > 0) {
-            window.decoderTimeMs.toFloat() / window.framesReceived
+        if (window.framesReceived > 0 && window.decoderTimeUs > 0) {
+            window.decoderTimeUs / MICROS_PER_MS / window.framesReceived
         } else {
             null
         }

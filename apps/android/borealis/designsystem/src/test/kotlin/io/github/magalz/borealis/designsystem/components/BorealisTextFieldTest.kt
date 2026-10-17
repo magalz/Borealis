@@ -25,6 +25,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextInputSelection
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.text.TextRange
@@ -52,6 +53,9 @@ class BorealisTextFieldTest {
 
     private var value by mutableStateOf("192.168.1.20")
     private val keyboard = RecordingKeyboard()
+    private var done = 0
+    private var rejectEdits = false
+    private val reported = mutableListOf<String>()
 
     private fun show(leaveWithDpad: Boolean = true, showKeyboardOnFocus: Boolean = true) {
         composeRule.setContentInKeyboardMode {
@@ -63,7 +67,11 @@ class BorealisTextFieldTest {
                             Box(Modifier.size(40.dp).testTag(ABOVE).focusable())
                             BorealisTextField(
                                 value = value,
-                                onValueChange = { value = it },
+                                onValueChange = {
+                                    reported += it
+                                    if (!rejectEdits) value = it
+                                },
+                                onDone = { done++ },
                                 label = "Address",
                                 leaveWithDpad = leaveWithDpad,
                                 showKeyboardOnFocus = showKeyboardOnFocus,
@@ -198,21 +206,62 @@ class BorealisTextFieldTest {
     }
 
     @Test
-    fun `without showKeyboardOnFocus Enter opens the keyboard`() {
+    fun `without showKeyboardOnFocus Enter is Done, not OK`() {
         show(showKeyboardOnFocus = false)
 
         press(Key.Enter)
 
-        assertThat(keyboard.shown).isEqualTo(1)
+        assertThat(done).isEqualTo(1)
+        assertThat(keyboard.shown).isEqualTo(0)
     }
 
     @Test
-    fun `without showKeyboardOnFocus the numeric keypad Enter opens the keyboard`() {
+    fun `without showKeyboardOnFocus the numeric keypad Enter is Done, not OK`() {
         show(showKeyboardOnFocus = false)
 
         press(Key.NumPadEnter)
 
-        assertThat(keyboard.shown).isEqualTo(1)
+        assertThat(done).isEqualTo(1)
+        assertThat(keyboard.shown).isEqualTo(0)
+    }
+
+    @Test
+    fun `by default Enter is Done`() {
+        show()
+
+        press(Key.Enter)
+
+        assertThat(done).isEqualTo(1)
+    }
+
+    @Test
+    fun `an edit that the caller rejects is undone`() {
+        show()
+        rejectEdits = true
+
+        composeRule.onNode(hasSetTextAction()).performTextInput("5")
+        composeRule.waitForIdle()
+
+        assertThat(reported).containsExactly("192.168.1.205")
+        composeRule.onNode(hasSetTextAction()).assert(hasText("192.168.1.20"))
+        composeRule.onNode(hasSetTextAction()).performTextInput("7")
+        composeRule.waitForIdle()
+        composeRule.onNode(hasSetTextAction()).assert(hasText("192.168.1.20"))
+        assertThat(reported).containsExactly("192.168.1.205", "192.168.1.207").inOrder()
+    }
+
+    @Test
+    fun `an edit that undoes the last one before the caller catches up is reported`() {
+        show()
+        composeRule.mainClock.autoAdvance = false
+
+        composeRule.onNode(hasSetTextAction()).performTextInput("5")
+        composeRule.onNode(hasSetTextAction()).performTextReplacement("192.168.1.20")
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+
+        assertThat(reported).containsExactly("192.168.1.205", "192.168.1.20").inOrder()
+        composeRule.onNode(hasSetTextAction()).assert(hasText("192.168.1.20"))
     }
 
     @Test

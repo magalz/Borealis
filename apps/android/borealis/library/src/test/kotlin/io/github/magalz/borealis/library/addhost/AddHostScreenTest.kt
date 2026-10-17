@@ -317,6 +317,27 @@ class AddHostScreenTest {
         assertThat(keyboard.shown).isEqualTo(1)
     }
 
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `on a phone a hardware Enter submits`() {
+        show(AddHostUiState(address = "192.168.1.20"))
+
+        composeRule.onNode(hasSetTextAction()).performKeyInput { pressKey(Key.Enter) }
+
+        assertThat(submitted).isEqualTo(1)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV Enter submits and does not open the keyboard`() {
+        showStateful("192.168.1.20")
+
+        composeRule.onNode(hasSetTextAction()).performKeyInput { pressKey(Key.Enter) }
+
+        assertThat(submitted).isEqualTo(1)
+        assertThat(keyboard.shown).isEqualTo(0)
+    }
+
     /**
      * Counts what the field asks of the keyboard. Robolectric's input method manager sees the
      * keyboard that opens on focus but not the one that [SoftwareKeyboardController] opens.

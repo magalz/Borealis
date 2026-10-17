@@ -92,6 +92,7 @@ class ExportDiagnosticsPreferenceTest {
     ) =
         ExportDiagnosticsPreference(context).apply {
             sectionsProvider = { sections }
+            logSwitches = { FakeLogSwitches() }
             transferAddress = { address }
             transferClock = clock::get
             // androidx FileProvider cannot map Windows paths under Robolectric; the real one is

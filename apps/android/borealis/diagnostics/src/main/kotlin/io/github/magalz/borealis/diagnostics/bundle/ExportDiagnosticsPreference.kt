@@ -24,8 +24,8 @@ import io.github.magalz.borealis.diagnostics.transfer.TransferDialog
 import io.github.magalz.borealis.diagnostics.transfer.activeLocalIpv4
 import io.github.magalz.borealis.diagnostics.transfer.monotonicMillis
 import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogSwitches
 import io.github.magalz.borealis.logging.LogTag
-import io.github.magalz.borealis.logging.PreferencesLogSwitches
 import java.io.File
 import java.net.InetAddress
 import kotlinx.coroutines.CoroutineDispatcher
@@ -33,7 +33,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * Settings entry that builds the diagnostic bundle and shares it, or saves it where a TV user can
@@ -53,6 +52,13 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
     internal var uriFor: (File) -> Uri = {
         FileProvider.getUriForFile(context, fileProviderAuthority(context.packageName), it)
     }
+    internal var logSwitches: () -> LogSwitches = {
+        EntryPointAccessors.fromApplication(
+                context.applicationContext,
+                DiagnosticsEntryPoint::class.java,
+            )
+            .logSwitches()
+    }
     internal var flushLogs: () -> Unit = { DiagnosticBundleWriter.flushOpenSinks() }
     internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     internal var transferAddress: () -> InetAddress? = {
@@ -71,12 +77,12 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
             return
         }
         // Built first: if it throws, nothing is left running.
-        val flow = newFlow()
+        val exporter = newExporter()
         running = true
         showProgress()
         scope.launch {
             try {
-                val result = withContext(ioDispatcher) { flow.run() }
+                val result = exporter.export()
                 closeProgress()
                 if (!isGone()) {
                     // The system can refuse the share or the dialog (revoked grant, dead window);
@@ -134,21 +140,14 @@ constructor(context: Context, attrs: AttributeSet? = null) : Preference(context,
                 .getOrNull()
     }
 
-    private fun newFlow() =
-        ExportFlow(
-            chooserTitle = context.getString(R.string.borealis_export_chooser_title),
-            buildBundle = {
-                BundleBuilder.build(
-                    context,
-                    sectionsProvider(),
-                    PreferencesLogSwitches(context),
-                    flushLogs = flushLogs,
-                )
-            },
+    private fun newExporter() =
+        DiagnosticsExporter(
+            context = context,
+            sections = sectionsProvider,
+            switches = logSwitches(),
+            ioDispatcher = ioDispatcher,
             uriFor = uriFor,
-            canShare = { context.packageManager.queryIntentActivities(it, 0).isNotEmpty() },
-            isTelevision = isTelevision(context),
-            store = defaultBundleStore(context),
+            flushLogs = flushLogs,
         )
 
     /** The settings screen may have been closed while the bundle was being built. */

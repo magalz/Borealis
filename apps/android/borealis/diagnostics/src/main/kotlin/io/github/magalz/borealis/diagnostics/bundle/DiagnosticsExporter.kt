@@ -3,13 +3,25 @@ package io.github.magalz.borealis.diagnostics.bundle
 import android.content.Context
 import android.net.Uri
 import androidx.core.content.FileProvider
+import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.magalz.borealis.diagnostics.DiagnosticSection
+import io.github.magalz.borealis.diagnostics.R
+import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogSwitches
+import io.github.magalz.borealis.logging.LogTag
 import java.io.File
+import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-/** Skeleton: the behaviour follows in the next commit. */
+/**
+ * Exports the diagnostic bundle for a screen that has no framework dialogs of its own. A phone gets
+ * a file it can share ([ExportResult.Share]); a TV, or a phone with no receiver, gets it saved to
+ * Downloads ([ExportResult.Saved], with the `adb pull` command). The content is the redacted bundle
+ * of ADR 0050; this class only decides what to do with it.
+ */
 class DiagnosticsExporter
 internal constructor(
     private val context: Context,
@@ -21,5 +33,37 @@ internal constructor(
     },
     private val flushLogs: () -> Unit = { DiagnosticBundleWriter.flushOpenSinks() },
 ) {
-    suspend fun export(): ExportResult = ExportResult.Failed
+    @Inject
+    constructor(
+        @ApplicationContext context: Context,
+        sections: Set<DiagnosticSection>,
+        switches: LogSwitches,
+    ) : this(context, { sections }, switches)
+
+    /**
+     * Builds and delivers the bundle off the main thread; never throws, apart from cancellation.
+     */
+    suspend fun export(): ExportResult =
+        withContext(ioDispatcher) {
+            try {
+                newFlow().run()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: RuntimeException) {
+                BorealisLog.e(LogTag.APP, "diagnostic export failed", error)
+                ExportResult.Failed
+            }
+        }
+
+    private fun newFlow() =
+        ExportFlow(
+            chooserTitle = context.getString(R.string.borealis_export_chooser_title),
+            buildBundle = {
+                BundleBuilder.build(context, sections(), switches, flushLogs = flushLogs)
+            },
+            uriFor = uriFor,
+            canShare = { context.packageManager.queryIntentActivities(it, 0).isNotEmpty() },
+            isTelevision = isTelevision(context),
+            store = defaultBundleStore(context),
+        )
 }

@@ -150,15 +150,15 @@ the plain task on `build-logic`. One module alone: `./gradlew :borealis:host:det
   line is gone. Move a baseline away for one run to see what it hides. Do not
   regenerate it with `detektBaselineMain` or `detektBaselineTest`: both write
   the module's one file, so the last one wins.
-- **On Windows,** run the analysis in a worker process. By default it runs in the
-  Gradle daemon, which then keeps the jars of the module's compile classpath
-  (`R.jar`, `classes.jar`) open, and the next build that regenerates one of
-  them fails with "Couldn't delete ... R.jar" or "file is in use by another
-  process" until the daemon stops. Set `detekt.use.worker.api=true` in
-  `%USERPROFILE%\.gradle\gradle.properties` (or pass
-  `-Pdetekt.use.worker.api=true`); the worker ends with the build, and the
-  analysis is slower on a warm daemon because nothing is reused between tasks.
-  `./gradlew --stop` also releases the files.
+- **The analysis runs in a worker process** (`detekt.use.worker.api=true` in
+  `apps/android/gradle.properties`). In the Gradle daemon it once kept the jars
+  of a module's compile classpath (`R.jar`, `classes.jar`) open on Windows,
+  while several builds ran at once, and the next build that regenerated one
+  failed with "Couldn't delete ... R.jar". The worker ends with the build. A
+  warm local run takes about 30 s more; CI, which starts cold, is unchanged.
+- **Two rules are off in test sources:** `InjectDispatcher` and
+  `LongParameterList` (see `config/detekt/detekt.yml`). The Java to Kotlin
+  migration turns them back on and standardizes the tests.
 
 ### Screenshot tests
 

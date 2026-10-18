@@ -18,3 +18,11 @@ complexity:
   LongParameterList:
     ignoreAnnotated:
       - Composable
+    # Test builders and fixtures take many values on purpose. Off in test sources until the Java to
+    # Kotlin migration standardizes them (owner decision, 2026-10-18).
+    excludes: ['**/test/**', '**/androidTest/**', '**/testFixtures/**']
+coroutines:
+  # Tests use Dispatchers.Unconfined and IO directly. Off in test sources until the Java to Kotlin
+  # migration injects dispatchers there too (owner decision, 2026-10-18).
+  InjectDispatcher:
+    excludes: ['**/test/**', '**/androidTest/**', '**/testFixtures/**']

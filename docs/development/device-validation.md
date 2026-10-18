@@ -12,10 +12,13 @@ Sources: [host contract](../host-contract/luminalshine.md) (cited as "contract")
 that the repository does not confirm is marked `TODO(verify)`; check it on the
 device before relying on it.
 
-Placeholders: `<host>` is the LAN address of the PC, `<serial-s22>` is the ADB
-serial of the S22, `<serial-tv>` is `<ip>:<port>` of the Google TV Streamer and
-`<apk>` is the debug APK. Never type real addresses, PINs, certificates or
-pairing codes into this file or into any capture that is committed.
+Placeholders: `<host>` is the LAN address of the PC, `<host-id>` is the unique
+ID of a host (section 3.21 step 7), `<serial-s22>` is the ADB serial of the S22,
+`<serial-tv>` is the serial that `adb devices` shows for the Google TV Streamer
+(`<ip>:<port>` or an mDNS name), `<serial>` is the serial of whichever of the
+two devices a command runs on, and `<apk>` is the debug APK. Never type real
+addresses, PINs, certificates or pairing codes into this file or into any
+capture that is committed.
 
 ## 1. Prerequisites
 
@@ -26,7 +29,10 @@ pairing codes into this file or into any capture that is committed.
    depend on the One UI version.
 2. On the S22, open Developer options and turn on USB debugging. Connect the
    phone with a USB cable and accept the debugging prompt on the phone.
-3. On the PC, run `adb devices` and note the S22 serial as `<serial-s22>`.
+3. On the PC, run `adb devices` and note the S22 serial as `<serial-s22>`. The
+   S22 can use Wireless debugging instead of USB, as the Streamer does in steps
+   5 to 9. Its serial is then `<ip>:<port>` or an mDNS name, as for the
+   Streamer.
 4. On the Google TV Streamer, connect it to the same LAN as the PC. Open
    Settings, System, About and select Android TV OS build seven times to enable
    Developer options. `TODO(verify)`: menu names depend on the Google TV version.
@@ -36,8 +42,16 @@ pairing codes into this file or into any capture that is committed.
    PC, run `adb pair <ip>:<pairing-port>` and type the code when asked.
 7. Back on the Wireless debugging screen, read the connect port. It differs
    from the pairing port. On the PC, run `adb connect <ip>:<connect-port>`.
-8. Run `adb devices` and note the Streamer as `<serial-tv>`, which is
-   `<ip>:<connect-port>`.
+8. Run `adb devices` and note the Streamer as `<serial-tv>`, the serial that
+   `adb devices` shows: `<ip>:<connect-port>`, or an mDNS name such as
+   `adb-<id>._adb-tls-connect._tcp`. Pass it to `-s` exactly as shown.
+9. Reconnect after the Streamer sleeps or reboots, or after Wireless debugging
+   is switched off and on. The connect port changes each time, and a plain
+   `adb connect <ip>:5555` no longer answers (as of 2026-10-18). Run
+   `adb mdns services`: it lists the Streamer with its current address and
+   connect port. Connect to that address, or use the mDNS serial that
+   `adb devices` shows, and note `<serial-tv>` again. If the list is empty,
+   read the new connect port on the Wireless debugging screen, as in step 7.
 
 ### 1.2 Build and install the debug APK
 
@@ -81,7 +95,7 @@ pairing codes into this file or into any capture that is committed.
    PyroWave off (default configuration, see its `PROVENANCE.md`).
 2. Record the LuminalShine release from the host installation. `TODO(verify)`:
    `/serverinfo` does not carry the release version (contract section 1 and
-   proposal P1), so the version in the PC details dialog is the protocol
+   proposal P1), so the version in the Host details dialog is the protocol
    version `7.1.431.-1`, not `26.09.1`.
 3. Open `https://<host>:47990` (the Web UI) in a browser on the PC and check
    that it loads. Accept a self-signed certificate warning if the browser shows
@@ -96,7 +110,7 @@ pairing codes into this file or into any capture that is committed.
 5. Keep the host log open. Its location is the owner's choice; this runbook
    refers to it as "the host log" only.
 6. At the start of each scenario, no app runs on the host unless the scenario
-   says so. Use the Web UI or the app list to quit a running app.
+   says so. Use the Web UI or Apps to quit a running app.
 
 ### 1.4 Logcat capture
 
@@ -142,27 +156,37 @@ through JNI and check the golden vectors of `core/tests/fixtures/vectors/`.
 3. AGP honours `ANDROID_SERIAL`: the connected tasks run only on that device
    (checked 2026-10-14). In PowerShell, set it with
    `$env:ANDROID_SERIAL = "<serial>"`. On Windows, a device connected over
-   ADB Wi-Fi has an `<ip>:<port>` serial, and the connected task then reports
-   `There were failing tests` even when every test passed (it cannot write
-   the result file named after that serial). For such a device, install the
+   ADB Wi-Fi with an `<ip>:<port>` serial reports `There were failing tests`
+   from the connected task even when every test passed (it cannot write the
+   result file named after that serial). `TODO(verify)`: whether the task
+   passes for an mDNS serial, which has no port. For such a device, install the
    test APKs and run the instrumentation directly, then check that every test
    reports `INSTRUMENTATION_STATUS_CODE: 0` and the run ends with
-   `INSTRUMENTATION_CODE: -1`:
+   `INSTRUMENTATION_CODE: -1`. The connected task of step 1 builds the test
+   APKs. From the repository root, they are (the app tests also need the debug
+   APK of 1.2 on the device):
+   - native module:
+     `apps/android/borealis/native/build/outputs/apk/androidTest/debug/native-debug-androidTest.apk`
+   - app:
+     `apps/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk`
 
    ```sh
+   adb -s <serial-tv> install -r apps/android/borealis/native/build/outputs/apk/androidTest/debug/native-debug-androidTest.apk
+   adb -s <serial-tv> install -r apps/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
    adb -s <serial-tv> shell am instrument -r -w -e expectedCoreVersion 0.1.0 io.github.magalz.borealis.nativecore.test/androidx.test.runner.AndroidJUnitRunner
    adb -s <serial-tv> shell am instrument -r -w -e expectedCoreVersion 0.1.0 io.github.magalz.borealis.debug.test/androidx.test.runner.AndroidJUnitRunner
    ```
 
-4. Expected: all tests pass. They are:
+4. Expected: all 10 tests pass. They are:
    - `BorealisCoreInstrumentedTest.versionIsTheCoreProjectVersion`: the core
      version equals the one in `core/CMakeLists.txt` (`0.1.0` at this revision).
    - `GoldenVectorsInstrumentedTest`: `hostCapsVectorsMatch`,
-     `launchDecisionVectorsMatch` and `launchFpsVectorsMatch` replay
-     `host_caps.tsv`, `launch_decide.tsv` and `launch_fps.tsv` through
-     `NativeHostRules`.
-   - `JniGuardsInstrumentedTest`: `parseCapsRejectsAnAppVersionOver64Bytes`
-     and `decideLaunchRejectsAMessageOver256Bytes` (the JNI length guards).
+     `launchDecisionVectorsMatch`, `pairClassifyVectorsMatch` and
+     `launchFpsVectorsMatch` replay `host_caps.tsv`, `launch_decide.tsv`,
+     `pair_classify.tsv` and `launch_fps.tsv` through `NativeHostRules`.
+   - `JniGuardsInstrumentedTest`: `parseCapsRejectsAnAppVersionOver64Bytes`,
+     `decideLaunchRejectsAMessageOver256Bytes` and
+     `classifyPairingRejectsAMessageOver256Bytes` (the JNI length guards).
    - `NativeBridgeInstrumentedTest` in `:app`:
      `ndkBuildBridgeSeesTheCoreProjectVersion` and `bridgeAndModuleApiAgree`.
 5. Record the Gradle result and the serial. If a test fails, stop the scenarios
@@ -201,8 +225,9 @@ entry is gone.
    open. The Web UI lists the device under the name that was typed (contract
    4.1: the host takes the name from the Web UI, not from the device). The
    Sprint 5 full pairing on the S22 showed this result.
-5. Evidence: a screenshot of the Pairing screen with the PIN cropped out, a Web
-   UI screenshot with the PIN hidden, and the logcat capture.
+5. Evidence: a screenshot of the Pairing screen with the PIN and the Web UI
+   address cropped out (the screen shows both), a Web UI screenshot with the PIN
+   and the address hidden, and the logcat capture.
 
 ### 3.2 Wrong PIN
 
@@ -233,14 +258,15 @@ entry is gone.
 
 ### 3.3 Unpair
 
-Two places remove the pairing. The Forget action of the PC's card on the device
-removes the PC from this device. Removing the device in the LuminalShine Web UI
-(Clients page) ends the pairing on the PC. LuminalShine does not route `/unpair`
-(contract sections 3 and 18, item 4), so the device must be removed in the Web
-UI.
+Two places remove the pairing. The Forget option in the host Options of the PC
+on the device removes the PC from this device. Removing the device in the
+LuminalShine Web UI (Clients page) ends the pairing on the PC. LuminalShine does
+not route `/unpair` (contract sections 3 and 18, item 4), so the device must be
+removed in the Web UI.
 
-1. Open Hosts, choose Forget on the PC's card (`TODO(verify)`: how the Forget
-   action opens on the TV) and read the dialog.
+1. Open Hosts and open the host Options of the PC: long-press its card on a
+   phone; on a TV, hold OK, or press X or Menu on a pad. Choose Forget and read
+   the dialog.
 2. Expected: the dialog reads "Forget `<name>` on this device? The PC may keep
    trusting this device until you remove it in the LuminalShine Web UI (Clients
    page)." Choose Forget. Expected: the PC
@@ -259,13 +285,18 @@ UI.
 
 ### 3.4 PC details dialog
 
-1. The PC details dialog went away with `PcView` in Sprint 5. With the device
-   paired, read the PC's card on Hosts instead: it shows the address and the
-   codec and HDR tags (`HostInfoText`).
-2. The full capability text below is still built by `HostInfoText` and is in
-   the diagnostic bundle.
+1. The PC details dialog went away with `PcView` in Sprint 5. Its content is
+   back in the Host details dialog. With the device paired, open Hosts, open
+   the host Options of the PC (long-press its card on a phone; on a TV, hold OK,
+   or press X or Menu on a pad) and choose Details. The card itself shows the
+   address and the codec and HDR tags.
+2. The dialog holds the host details of `ComputerDetails` (the name, the state,
+   the addresses, the UUID, the MAC address and more) and the capability block
+   below, which `HostInfoText` builds. The diagnostic bundle does not hold the
+   block: it has only the `host capabilities` log line of step 4.
 3. Expected for the 26.09.1 capture (`serverinfo-http.xml`, codec mask
-   `0x001C0301`, codec flags `0x13` in `host_caps.tsv`):
+   `0x001C0301`, codec flags `0x13` in `host_caps.tsv`), in the block of the
+   dialog:
    - `Host software: Sunshine-compatible, version 7.1.431.-1`
      (`host_info_software_version`; the version is the `appversion` of
      `/serverinfo`, not the LuminalShine release)
@@ -274,14 +305,18 @@ UI.
    - `Ports: HTTP 47989, HTTPS 47984` (`host_info_ports`; the HTTP port is the
      one the client stores, the HTTPS port comes from `HttpsPort`)
 4. Expected in logcat: one INFO line `host capabilities` on `Borealis.HOST` with
-   a `family` field (`HostInfoReader`). `TODO(verify)`: the full field list in
-   `HostInfoReader.kt`.
-5. Evidence: a screenshot of the dialog and the logcat capture.
+   the fields `family`, `version`, `hevc`, `hevc_main10`, `av1`, `av1_main10`,
+   `yuv444`, `pyrowave`, `http_port` and `https_port` (`HostInfoReader.log`).
+   The reader runs on every `/serverinfo` poll and logs a host only when its
+   information changes, so the line does not repeat while nothing changes.
+5. Evidence: a screenshot of the dialog and the logcat capture. The dialog
+   shows the addresses, the UUID and the MAC address of the PC: hide them
+   (section 5).
 
 ### 3.5 Two devices launching at the same time
 
 1. Pair both devices with the host (3.1). Make sure no app runs on the host.
-2. Start the same app on the S22 from its app list.
+2. Start the same app on the S22 from Apps.
 3. Within about 2 s, start the same app on the Streamer. The host holds a pending
    launch until it is claimed by RTSP or until `ping_timeout` (10 s by default,
    contract 7.5), so the second request must arrive inside that window to get
@@ -299,14 +334,14 @@ UI.
    result on the Streamer, section 6): Borealis re-reads `/serverinfo` for up to
    3 s. If no app runs any more, it launches again. Otherwise it shows the dialog
    "An app is already running" with the buttons Join, Quit and relaunch, and
-   Cancel (`apps/android/app/src/main/res/values/strings_borealis_conflict.xml`).
+   Cancel (`apps/android/borealis/stream/src/main/res/values/strings_conflict.xml`).
    Focus starts on Cancel. The text warns that quitting ends the session on the
    other device.
 7. Run the three answers, each in a new attempt. Start the same app on the
    Streamer while the S22 runs it, and answer the dialog as follows:
    - Join: the device joins the running session and streams.
    - Quit and relaunch: the S22 session ends and the app starts on the Streamer.
-   - Cancel: the device returns to the app list with no error dialog.
+   - Cancel: the device returns to Apps with no error dialog.
 8. Expected: the client sends no `/cancel` request during the retries. The retry
    code never calls it (README, `host.launch`). `TODO(verify)`: the host log line
    that a `/cancel` request writes, so that the owner can check for it.
@@ -320,9 +355,13 @@ UI.
 ### 3.6 Relaunch right after quitting
 
 1. Stream an app on the device (3.9 steps 1 and 2 apply).
-2. In the app list of the PC, choose "Quit Session" (`applist_menu_quit`) and
-   wait for "Successfully quit" (`applist_quit_success`).
-3. Immediately launch the same app again from the PC's app list.
+2. Quit the app on the PC, in one of two ways:
+   - in the in-game menu, choose "Quit `<app>`" (`stream_menu_quit`) and
+     confirm; the screen shows "Quitting `<app>`…" until the host answers;
+   - or leave the stream, open Apps, open the actions of the running app, choose
+     "Quit `<app>`" (`apps_action_quit`), confirm, and wait for the message "App
+     quit." (`apps_message_quit_done`).
+3. Immediately launch the same app again from Apps.
 4. Expected: either the launch succeeds at once, or the device shows "The host is
    still restoring the display after the previous stream. Retrying in N s (retry
    M of K)." (`launch_retry_restoring_display`) and then streams. The host answers
@@ -332,12 +371,13 @@ UI.
    quit and the launch and mark the scenario "not reproduced". This is not a
    failure.
 6. Evidence: the logcat line `host asked to retry category=RESTORING_DISPLAY ...`,
-   the time between quit and launch, and a screenshot.
+   the time between quit and launch, and a screenshot of the retry text on the
+   Starting screen (no stream picture, section 5).
 
 ### 3.7 Frame pacing "cap FPS" at the display rate
 
-1. In Settings, set "Frame pacing" to "Balanced with FPS limit"
-   (value `cap-fps`, `pacing_balanced_alt`).
+1. In Settings, set "Frame pacing" to "Balanced with fps limit"
+   (value `cap-fps`, `settings_choice_pacing_balanced_cap`).
 2. Set the stream frame rate to the refresh rate of the device. Record that rate.
    The mismatch of contract 7.4 comes from a selected rate at or up to 3 Hz above
    the refresh rate.
@@ -354,18 +394,22 @@ UI.
 
 ### 3.8 Cancel during a launch retry with Back, then launch again
 
-1. Produce a retry as in 3.5 or 3.6, so that the spinner shows the retry text.
-2. Press Back while the spinner is shown.
+1. Produce a retry as in 3.5 or 3.6, so that the Starting screen shows the retry
+   text. The screen shows the four steps of the start, a "Host busy" line (shown
+   in capitals, "HOST BUSY") with the retry text, and Cancel with the focus.
+2. Press Back while the Starting screen is shown.
 3. Expected: the launch ends without a stream. No further `host asked to retry`
    line appears in logcat after Back. The client sends no `/cancel`, as in 3.5
    step 6. `Game` calls `cancelLaunch()` from `onStop` and `onDestroy`
    (`Game.java`, README `host.launch`).
-4. Launch the same app again from the PC's app list when the host is free.
+4. Launch the same app again from Apps when the host is free.
 5. Expected: the second launch proceeds and reaches the first frame (3.9). A
-   launch that hangs on the spinner with no retry line and no stream is a
-   failure. It would point to a permit that was not released.
-6. Evidence: the logcat capture across both launches and a screenshot of the
-   first frame.
+   launch that hangs on the Starting screen with no retry line and no stream is
+   a failure. It would point to a permit that was not released.
+6. Evidence: the logcat capture across both launches, with the first-frame line
+   of 3.9 for the second one, and a screenshot of the Starting screen with the
+   "HOST BUSY" line. Take no screenshot of the first frame: it shows the PC
+   screen (section 5).
 
 ### 3.9 First frame
 
@@ -383,39 +427,49 @@ UI.
    preparing its display or encoder. Try again. If it keeps happening, restart
    the host or check its virtual display settings." (`stream_luminalshine_hint`).
 5. Evidence: the N value, the wall-clock time to the picture, a screenshot of the
-   overlay and the logcat capture.
+   overlay cropped to the overlay text (not of the stream, section 5) and the
+   logcat capture.
 
 ### 3.10 Stream end and reconnect
 
 1. Stream an app for about one minute.
-2. End the stream from the device. `TODO(verify)`: the in-stream menu item.
-3. Wait until the PC list is shown, then launch the same app again.
+2. End the stream from the device: open the in-game menu and choose "Disconnect"
+   (`stream_menu_disconnect`). The app keeps running on the PC.
+3. Wait until the Library is shown, then launch the same app again.
 4. Expected: the app still runs on the host, so the client resumes it (`/resume`)
    and the stream starts. If the host answers "No running app to resume" (503),
    the client falls back to `/launch` (contract 7.5, `FALLBACK_TO_LAUNCH`).
-5. Evidence: the logcat capture, the first-frame line of 3.9 and a screenshot.
+5. Evidence: the logcat capture and the first-frame line of 3.9. Take no
+   screenshot of the stream (section 5).
 
 ### 3.11 H.264 and HEVC
 
-1. Set the video format to "Prefer H.264" (`neverh265`) and stream for one minute.
-   Then set "Prefer HEVC" (`forceh265`) and stream for one minute. Use the same
-   app. "Automatic (Recommended)" is the default (`auto`).
+1. In Settings, Video, set the row "Codec" to "H.264" (`neverh265`) and stream
+   for one minute. Then set "HEVC" (`forceh265`) and stream for one minute. Use
+   the same app. The choices are "Automatic" (summary "Recommended", the default,
+   `auto`), "AV1" (summary "Experimental", `forceav1`), "HEVC" and "H.264".
 2. Expected for H.264: the stream plays. Logcat has no `HEVC SPS` line.
 3. Expected for HEVC: the stream plays. Logcat has one line in the form
    `HEVC SPS: profile=<name> chroma=<name> depth=<luma>/<chroma>` on
    `Borealis.VIDEO` (`HevcSpsInfo.describe` and `HevcSpsMonitor`). For an 8-bit SDR
    stream the line is `HEVC SPS: profile=Main chroma=4:2:0 depth=8/8`.
 4. AV1: not applicable to this host. The 26.09.1 capture does not advertise AV1
-   (codec mask `0x001C0301` has no AV1 bits, and the PC details dialog has no AV1
-   entry). Do not test "Prefer AV1 (Experimental)" against this host and record
-   it as "not applicable".
-5. Evidence: the logcat lines of step 3 and the screenshot.
+   (codec mask `0x001C0301` has no AV1 bits, and the Host details dialog has no
+   AV1 entry). Do not test the Codec choice "AV1" ("Experimental") against this
+   host and record it as "not applicable".
+5. Evidence: the logcat lines of step 3. Take no screenshot of the playing stream
+   (section 5); a crop of the performance overlay or of the in-game menu is
+   enough if you want one.
 
 ### 3.12 HDR and HEVC Main10
 
-1. Enable "Enable HDR (Experimental)" (`title_enable_hdr`) and set the video format
-   to "Prefer HEVC". Stream an HDR-capable app. `TODO(verify)`: the app and the
-   HDR-capable display of each device. The 26.09.1 capture advertises HEVC Main10
+S22 only. The "HDR" row is hidden on a display that does not report HDR10, as on
+the TV attached to the Streamer (section 11, item A5). Record the Streamer as
+"not applicable" unless its row shows.
+
+1. In Settings, Video, turn on "HDR" (`settings_hdr_title`) and set Codec to
+   "HEVC". Stream an HDR-capable app. `TODO(verify)`: the app and the
+   HDR-capable display of the S22. The 26.09.1 capture advertises HEVC Main10
    (codec flag `0x02`).
 2. Expected: a line `HEVC SPS: profile=Main10 chroma=4:2:0 depth=10/10` on
    `Borealis.VIDEO` (or the chroma name that the host sends).
@@ -428,7 +482,8 @@ UI.
 5. Check the colours on screen. Borealis logs do not show the HDR state from the
    host (contract 9.3 says to trust control message `0x010e`). `TODO(verify)`:
    how to check the state on the device.
-6. Evidence: the logcat lines of steps 2 to 4, a screenshot and the device model.
+6. Evidence: the logcat lines of steps 2 to 4 and the device model. Take no
+   screenshot of the stream (section 5).
 
 ### 3.13 Settings
 
@@ -450,7 +505,6 @@ UI.
 6. Expected in "About":
    - the Version row shows the version name and the commit, and cannot be clicked;
    - "Source code" opens `https://github.com/magalz/Borealis`;
-   - "Licence: GPL-3.0" is plain text;
    - "Open-source licences" shows the NOTICE and LICENSE texts in a dialog, which
      a D-pad can scroll;
    - "Privacy policy" opens `https://github.com/magalz/Borealis/blob/main/PRIVACY.md`.
@@ -474,8 +528,12 @@ for the TV. Never put a bundle from a real run into the repository.
    `logs/*`.
 4. Expected: no PIN, token or key appears in any entry. Search for the PIN of 3.1
    and for any `token`, `key` or `cert` value.
-5. Expected with "Mask addresses in logs and diagnostics" on: no IP address and no
-   host name appears in any entry.
+5. Expected with "Mask addresses in logs and diagnostics" on: no IP address
+   appears in any entry. Host names are masked only in the host part of a URL and
+   in the fields `host`, `hostname`, `computer` and `computerName`
+   ([privacy-and-logging.md](../policies/privacy-and-logging.md)), so the PC's
+   host name can still appear in free text, such as an upstream `LimeLog` line.
+   Search for it and record where it appears.
 6. Expected: `decoders.json` lists the H.264, HEVC and AV1 decoders with profile
    names, and the display HDR types.
 7. On the TV, choose "Export diagnostic bundle" (its summary reads "Saves it to
@@ -553,13 +611,14 @@ The viewer is in Settings, then "Privacy and diagnostics", then "Audit trail".
 
 ### 3.17 Network privacy
 
-1. Start the logcat capture of 1.4. Add the PC by its address (`TODO(verify)`:
-   the menu entry for this). Let the add finish or fail.
+1. Start the logcat capture of 1.4. Choose Add host and enter the address of the
+   PC. Let the add finish or fail.
 2. Expected: no "blocked ports" connection test result and no delay beyond the
    normal timeout. The lookup of an external address and the connection test
    return at once, because their JNI entry points are disabled
    (`simplejni.c`, README `:borealis:settings`).
-3. Expected: the PC menu has no "Test network connection" entry.
+3. Expected: the host Options of the PC are Details, Wake (for an offline host)
+   and Forget, with no "Test network connection" entry.
 4. Connect to a PC that is off or blocked. Expected: the normal error message, with
    no "blocked ports" result.
 5. `TODO(verify)`: how the owner can confirm on the PC that no DNS or HTTP request
@@ -586,7 +645,8 @@ The viewer is in Settings, then "Privacy and diagnostics", then "Audit trail".
    Expected: each step works as in the debug build.
 5. `TODO(verify)`: whether this smoke test runs on both devices.
 6. Evidence: `adb -s <serial> shell dumpsys package io.github.magalz.borealis`
-   (the `versionName` and the commit), the logcat capture and a screenshot.
+   (the `versionName` and the commit), the logcat capture and a screenshot (see
+   section 5).
 
 ### 3.19 Sprint 6 checks
 
@@ -793,15 +853,38 @@ only.
    pointer is captured and moves the PC pointer. End the stream. Expected: the
    pointer is released. Only the native pointer capture provider remains.
 5. On-screen keyboard. In a stream, open the Borealis keyboard from the in-game
-   menu, and type a few keys. Expected: the keys reach the PC.
+   menu, and type a few keys. Type only into a test file on the PC, for example
+   an open Notepad file (section 5). Expected: the keys reach the PC.
 6. Decode overlay. Turn the Performance overlay on, start a stream, and read the
    decode time. Expected: a number in milliseconds, as in 3.20 step 4.
 7. TV channel and box art (Streamer only). The Apps screen shows initials until
-   Phase 3, so check the posters through the provider: run
-   `adb shell content read --uri content://poster.<package>/boxart/<host>/<app>`
-   for a cached app. Expected: the PNG of the cache file, byte for byte, and a
-   `FileNotFoundException` for an app ID that is not a number. If the Google
-   TV home screen shows a Borealis channel, its posters load too.
+   Phase 3, so check the posters through the provider. `<host-id>` below is the
+   unique ID of the host, not its address (`<host>` is the address), and
+   `<app-id>` is the number of an app. The debug build has the package
+   `io.github.magalz.borealis.debug`.
+   - Find the IDs of the cached posters. The first command lists the host IDs,
+     the second lists the files `<app-id>.png` of one host:
+
+     ```sh
+     adb -s <serial-tv> shell run-as io.github.magalz.borealis.debug ls cache/boxart
+     adb -s <serial-tv> shell run-as io.github.magalz.borealis.debug ls cache/boxart/<host-id>
+     ```
+
+   - Read the poster of a cached app through the provider. Expected: the PNG of
+     the cache file, byte for byte. Check it by comparing the md5 of what
+     `content read` returns with the md5 of the cache file read through
+     `run-as`. The two sums must be equal:
+
+     ```sh
+     adb -s <serial-tv> shell "content read --uri content://poster.io.github.magalz.borealis.debug/boxart/<host-id>/<app-id> | md5sum"
+     adb -s <serial-tv> shell run-as io.github.magalz.borealis.debug md5sum cache/boxart/<host-id>/<app-id>.png
+     ```
+
+   - Expected: a `FileNotFoundException` for an app ID that is not a number.
+   - Google TV home screen: section 11 found that it shows no third-party
+     channels, so no Borealis channel is expected there. If one shows, its
+     posters load too.
+
    `PosterContentProvider` and `DiskAssetLoader` changed in Sprint 8.
 8. Decoder crash notice. There is no safe way to make the decoder crash on
    purpose, so this step runs only if the notice appears by itself. Expected: it
@@ -812,14 +895,17 @@ only.
    install succeeds, the package is `io.github.magalz.borealis.debug`, and the
    launcher label is `Borealis Debug`, as in 1.2 step 4.
 10. Evidence: for each item, the note above. A screenshot is taken only where
-    it shows no address, host name or PIN, and the logcat capture of 1.4.
+    it shows no address, host name, PIN or PC screen (section 5), and the logcat
+    capture of 1.4.
 
 ## 4. Results templates
 
 Copy one table per device. Use `pass`, `fail` or `not applicable`, and add a
-short note for each `fail`.
+short note for each `fail`. The tables list sections 2 to 3.12. Add a row for
+every scenario you ran, such as 3.13 to 3.21 (one row per item for the sprint
+checks 3.19 to 3.21).
 
-### 4.1 Samsung Galaxy S22 (USB ADB)
+### 4.1 Samsung Galaxy S22 (USB or wireless ADB)
 
 | Scenario | Result | Evidence | Notes |
 | --- | --- | --- | --- |
@@ -858,12 +944,16 @@ short note for each `fail`.
 ### 4.3 Compatibility row
 
 Copy this row into the compatibility table of
-[upstream-sync.md](upstream-sync.md) after the run. The Moonlight Android and
-moonlight-common-c values are those of the existing row of that table.
+[upstream-sync.md](upstream-sync.md) after the run. The Moonlight Android value
+is that of the existing row of that table. The moonlight-common-c value is the
+vendored source commit, as the table of that file asks from 2026-10-15: the
+revision that [core/third_party/README.md](../../core/third_party/README.md)
+records for `moonlight-common-c/` (`591bddf` at this revision), not the fork
+tag.
 
 | Borealis tree | Moonlight Android | moonlight-common-c | LuminalShine versions tested | Notes |
 | --- | --- | --- | --- | --- |
-| `<commit tested>` | 12.2 | fork `magalz/moonlight-common-c` `borealis`, upstream base `874ac95` plus the first full frame deadline patch (tag `borealis/874ac95-1`) | 26.09.1 | Samsung Galaxy S22 (USB ADB) and Google TV Streamer (ADB over Wi-Fi) on `<date>`; instrumented tests `<pass/fail>`; scenarios `<n pass, n fail, n not applicable>`; see the results of this runbook. |
+| `<commit tested>` | 12.2 | `<vendored source commit>` | 26.09.1 | Samsung Galaxy S22 (USB or wireless ADB) and Google TV Streamer (ADB over Wi-Fi) on `<date>`; instrumented tests `<pass/fail>`; scenarios `<n pass, n fail, n not applicable>`; see the results of this runbook. |
 
 ## 5. Data hygiene
 
@@ -879,6 +969,12 @@ moonlight-common-c values are those of the existing row of that table.
    URLs. Crop them out of screenshots.
 4. Keep raw captures outside the repository. Commit only scrubbed excerpts and
    the filled templates.
+5. A capture must not keep the PC screen. Capture only the overlay or the menu
+   of the app, crop or shrink the image so that nothing on the PC is readable,
+   and delete it after you have read it. Take no screenshot of a playing stream:
+   the logcat lines and the notes are the evidence.
+6. Type only into a test file on the PC, for example a Notepad file, so that a
+   test never sends keys to another window.
 
 ## 6. Results: Phase 1, 2026-10-14
 
@@ -1689,10 +1785,10 @@ This section holds the Sprint 8 results. The checks follow the steps of
 | 2 | Start and end a stream | TV, S22 | pass | Desktop started on the TV (first video packet after 1.4 s) and on the S22. Quit Desktop from the menu: `/cancel` 200, back to the Library with "Nothing running". |
 | 3 | System pad and USB-driver pad: quit combo | TV, S22 | pass | TV: the 8BitDo Ultimate 2 in four set-ups, below. The combo ended the stream in every set-up where the pad works. S22: the Ultimate 2 over Bluetooth, twice; the combo ended the stream both times. Once, Steam opened on the PC as the stream ended (see the follow-ups). The S22 has no USB-driver case, because its port held the ADB cable. |
 | 4 | Mouse capture | TV, S22 | pass | Logi M650 L over Bluetooth. During the stream `dumpsys input` showed "Pointer Capture: Enabled" for the stream window, and the owner moved and clicked on the PC. The S22 released the capture while the menu was open and took it back after. After the stream, on both devices: "Pointer Capture: Disabled", no window holding it, and the mouse worked in the Library. |
-| 5 | On-screen keyboard | TV, S22 | pass | It opens from the menu on both devices; docked under the stream on the phone. The owner typed on both devices and the keys reached the PC. It has no way to type digits (see the follow-ups). |
+| 5 | On-screen keyboard | TV, S22 | pass | It opens from the menu on both devices; docked under the stream on the phone. The owner typed on both devices and the keys reached the PC. The digits are on the Fn layer of the keyboard and the owner did not find them, so they are hard to discover (see the follow-ups). |
 | 6 | Decode overlay | TV, S22 | pass | "Decode 4.5 ms" on the TV (`c2.mtk.hevc.decoder.lowlatency`) and "Decode 5.5 ms" on the S22 (`c2.qti.hevc.decoder.low_latency`). Log windows with `unmatched=0`. The overlay was set back to Off. |
 | 7 | TV channel and box art | TV | pass | Checked through the provider. `content read` on `content://poster.io.github.magalz.borealis.debug/boxart/<host>/<app>` returned both cached PNGs, byte for byte equal to the cache files. These requests failed with `FileNotFoundException` and returned 0 bytes: the app IDs `abc`, `-1` and `..%2F..%2Fshared_prefs`, a malformed host ID, a missing app and an extra path segment. The Google TV home screen was not checked. The Apps screen shows initials until Phase 3, as designed. |
-| 8 | Decoder crash notice has no Help button | — | not run | It cannot be triggered safely; `UpstreamSeamsTest` covers it. |
+| 8 | Decoder crash notice has no Help button | — | not applicable | It cannot be triggered safely; `UpstreamSeamsTest` covers it. |
 | 9 | Debug APK: same ID and label | TV, S22 | pass | Installed over the previous build on both devices: same package, label and version (`0.0.0-dev`). |
 
 No crash or ANR appeared in logcat in any part.
@@ -1716,8 +1812,11 @@ No crash or ANR appeared in logcat in any part.
 
 ### Follow-ups
 
-- **Digits on the Borealis keyboard.** Reported by the owner: the on-screen
-  keyboard has no way to type numbers. Added to Sprint 9.
+- **Digits on the Borealis keyboard are hard to discover.** The owner did not
+  find them in the round. They are behind the Fn key, on the Fn layer: 1 to 0,
+  F1 to F10, the arrows, and Home, End, PgUp, PgDn and Del (`KeyboardLayout`,
+  `functionRows`; the layer exists since Sprint 5). The problem is
+  discoverability, not a missing feature. Added to Sprint 9.
 - **Keyboards that count as game controllers.** The AULA F75Max keyboard
   reports a JOYSTICK source with X and Y axes (on the S22, through a "System
   Multi Axis" part; it also uses Apple's vendor ID, `05ac:024f`). The Sprint 7

@@ -18,7 +18,7 @@ object TokenGenerator {
         "Generated from design/tokens.json by BorealisTokensTask (ADR 0044). Do not edit."
     private const val COLOR_GROUP = "color"
 
-    /** The longest line of the generated Kotlin: detekt's `MaxLineLength` reads the file too. */
+    /** The longest line of the generated Kotlin: the `.editorconfig` limit for `.kt` files. */
     private const val MAX_LINE_LENGTH = 100
 
     /** `font.weight` is generated as `FontWeight`; the `font` group adds no object of its own. */

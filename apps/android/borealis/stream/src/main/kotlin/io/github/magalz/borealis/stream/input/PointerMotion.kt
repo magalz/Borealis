@@ -10,6 +10,12 @@ import kotlin.math.min
 data class PixelDelta(val x: Int, val y: Int)
 
 /**
+ * What scales the speed of the pointer on top of the deflection of the stick: the user's [percent]
+ * setting, the [sessionFactor] of the stream and the [precision] button, while held.
+ */
+data class PointerSpeed(val percent: Int, val sessionFactor: Float, val precision: Boolean)
+
+/**
  * Turns a stick into the moves of the gamepad mouse. One instance follows one stick use: the
  * pointer or the scroll of one pad. The distance per tick is a speed times the time since the
  * previous tick, so the motion is the same at any tick rate; the part of a pixel that a tick cannot
@@ -22,16 +28,10 @@ class PointerMotion {
     /**
      * The whole-pixel move to send for a stick at ([x], [y]) that was held for [elapsedMs] since
      * the previous tick. The speed is [PEAK_PER_SECOND] at full deflection, scaled by
-     * [speedPercent], [sessionFactor] and, while [precision] is held, [PRECISION_FACTOR].
+     * [PointerSpeed.percent], [PointerSpeed.sessionFactor] and, while [PointerSpeed.precision] is
+     * held, [PRECISION_FACTOR].
      */
-    fun step(
-        x: Short,
-        y: Short,
-        elapsedMs: Long,
-        speedPercent: Int,
-        sessionFactor: Float,
-        precision: Boolean,
-    ): PixelDelta {
+    fun step(x: Short, y: Short, elapsedMs: Long, speed: PointerSpeed): PixelDelta {
         val length = hypot(x.toDouble(), y.toDouble())
         if (length == 0.0) {
             reset()
@@ -39,8 +39,8 @@ class PointerMotion {
         }
         val deflection = min(1.0, length / STICK_MAX)
         var perSecond = PEAK_PER_SECOND * deflection * deflection * deflection
-        perSecond *= speedPercent / PERCENT * sessionFactor
-        if (precision) perSecond *= PRECISION_FACTOR
+        perSecond *= speed.percent / PERCENT * speed.sessionFactor
+        if (speed.precision) perSecond *= PRECISION_FACTOR
         val distance = perSecond * elapsedMs.coerceIn(0L, MAX_ELAPSED_MS) / MS_PER_SECOND
 
         val moveX = remainderX + distance * x / length

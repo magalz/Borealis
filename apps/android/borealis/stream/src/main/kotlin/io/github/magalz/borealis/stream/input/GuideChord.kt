@@ -45,25 +45,25 @@ object GuideChord {
             else -> START or SELECT
         }
 
-    /** A button went down. */
+    /** A button went down. [state] is what the context held before the event. */
     fun onButtonDown(
-        inputMap: Int,
-        emulatingFlags: Int,
+        state: ButtonState,
         hasSelect: Boolean,
         hasMode: Boolean,
         eventTime: Long,
         lastRightBumperUpTime: Long,
     ): ButtonState {
         // A pad with Select uses Start and Select, which are a tap rather than a held button.
-        if (hasMode || hasSelect) return ButtonState(inputMap, emulatingFlags)
+        if (hasMode || hasSelect) return state
+        val inputMap = state.inputMap
         val combination =
             inputMap == (START or RIGHT_BUMPER) ||
                 (inputMap == START &&
                     eventTime - lastRightBumperUpTime <= MAXIMUM_BUMPER_UP_DELAY_MS)
-        if (!combination) return ButtonState(inputMap, emulatingFlags)
+        if (!combination) return state
         return ButtonState(
             (inputMap and (START or RIGHT_BUMPER).inv()) or GUIDE,
-            emulatingFlags or EMULATING_SPECIAL,
+            state.emulatingFlags or EMULATING_SPECIAL,
         )
     }
 

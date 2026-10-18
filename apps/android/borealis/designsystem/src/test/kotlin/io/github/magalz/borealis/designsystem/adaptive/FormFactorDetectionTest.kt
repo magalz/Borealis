@@ -136,5 +136,15 @@ class FormFactorDetectionTest {
         touchscreen: Int = Configuration.TOUCHSCREEN_FINGER,
         navigation: Int = Configuration.NAVIGATION_NONAV,
         gamepadConnected: Boolean = false,
-    ) = formFactorOf(isTvFeature, uiModeType, widthDp, touchscreen, navigation, gamepadConnected)
+    ) =
+        formFactorOf(
+            FormFactorFacts(
+                isTvFeature,
+                uiModeType,
+                widthDp,
+                touchscreen,
+                navigation,
+                gamepadConnected,
+            )
+        )
 }

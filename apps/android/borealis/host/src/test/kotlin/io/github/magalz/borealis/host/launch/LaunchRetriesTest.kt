@@ -27,23 +27,16 @@ class LaunchRetriesTest {
         return LaunchAttempt { queue.removeFirstOrNull()?.let { throw it } ?: true }
     }
 
+    private fun hooks(cancelled: BooleanSupplier = notCancelled) =
+        LaunchHooks(extractor, cancelled, onProgress, conflictOpen)
+
     private fun run(
         isGfe: Boolean,
         verb: String,
         attempt: LaunchAttempt,
         cancelled: BooleanSupplier = notCancelled,
         with: LaunchRetryRunner = runner,
-    ) =
-        LaunchRetries.run(
-            with,
-            isGfe,
-            verb,
-            attempt,
-            extractor,
-            cancelled,
-            onProgress,
-            conflictOpen,
-        )
+    ) = LaunchRetries.run(with, LaunchRequest(isGfe, verb), attempt, hooks(cancelled))
 
     @Test
     fun `a GFE host bypasses the runner and its errors propagate unchanged`() {
@@ -108,15 +101,7 @@ class LaunchRetriesTest {
 
         val thrown =
             assertThrows(HostAnswer::class.java) {
-                LaunchRetries.run(
-                    false,
-                    "launch",
-                    raising(failure),
-                    extractor,
-                    notCancelled,
-                    onProgress,
-                    conflictOpen,
-                )
+                LaunchRetries.run(LaunchRequest(false, "launch"), raising(failure), hooks())
             }
 
         assertThat(thrown).isSameInstanceAs(failure)
@@ -126,16 +111,7 @@ class LaunchRetriesTest {
 
     @Test
     fun `the public entry point bypasses the runner for GFE`() {
-        val outcome =
-            LaunchRetries.run(
-                true,
-                "launch",
-                { true },
-                extractor,
-                notCancelled,
-                onProgress,
-                conflictOpen,
-            )
+        val outcome = LaunchRetries.run(LaunchRequest(true, "launch"), { true }, hooks())
 
         assertThat(outcome).isEqualTo(LaunchOutcome.SUCCEEDED)
     }

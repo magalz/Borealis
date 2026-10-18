@@ -58,27 +58,28 @@ class LaunchConflictsTest {
         conflicts.resolve(
             reader,
             names,
-            requestedAppId = 7,
-            requestedAppName = "Steam",
-            prompt = { running, name, requested, _, answer ->
-                prompts += Prompt(running, name, requested)
-                answerWith?.let(answer::choose)
-            },
-            relaunch =
-                LaunchAttempt {
-                    calls += "relaunch"
-                    relaunchResult
+            RequestedApp(7, "Steam"),
+            ConflictActions(
+                prompt = { running, name, requested, _, answer ->
+                    prompts += Prompt(running, name, requested)
+                    answerWith?.let(answer::choose)
                 },
-            join =
-                ConflictJoin {
-                    calls += "join $it"
-                    joinOutcome
-                },
-            quitAndRelaunch =
-                LaunchAttempt {
-                    calls += "quit"
-                    quitResult
-                },
+                relaunch =
+                    LaunchAttempt {
+                        calls += "relaunch"
+                        relaunchResult
+                    },
+                join =
+                    ConflictJoin {
+                        calls += "join $it"
+                        joinOutcome
+                    },
+                quitAndRelaunch =
+                    LaunchAttempt {
+                        calls += "quit"
+                        quitResult
+                    },
+            ),
         )
 
     @Test
@@ -248,12 +249,13 @@ class LaunchConflictsTest {
             conflicts.resolve(
                 reader(5),
                 AppNameLookup { null },
-                7,
-                null,
-                { _, _, _, _, a -> answer = a },
-                { true },
-                { LaunchOutcome.SUCCEEDED },
-                { true },
+                RequestedApp(7, null),
+                ConflictActions(
+                    { _, _, _, _, a -> answer = a },
+                    { true },
+                    { LaunchOutcome.SUCCEEDED },
+                    { true },
+                ),
             )
 
         assertThat(result).isTrue()
@@ -284,12 +286,13 @@ class LaunchConflictsTest {
                 interrupting.resolve(
                     reader(5),
                     AppNameLookup { null },
-                    7,
-                    null,
-                    { _, _, _, _, _ -> },
-                    { true },
-                    { LaunchOutcome.SUCCEEDED },
-                    { true },
+                    RequestedApp(7, null),
+                    ConflictActions(
+                        { _, _, _, _, _ -> },
+                        { true },
+                        { LaunchOutcome.SUCCEEDED },
+                        { true },
+                    ),
                 )
 
             assertThat(result).isFalse()
@@ -360,12 +363,13 @@ class LaunchConflictsTest {
             real.resolve(
                 RunningAppReader { 0 },
                 AppNameLookup { null },
-                7,
-                null,
-                { _, _, _, _, _ -> },
-                { true },
-                { LaunchOutcome.SUCCEEDED },
-                { true },
+                RequestedApp(7, null),
+                ConflictActions(
+                    { _, _, _, _, _ -> },
+                    { true },
+                    { LaunchOutcome.SUCCEEDED },
+                    { true },
+                ),
             )
 
         assertThat(result).isTrue()

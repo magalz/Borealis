@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>AbstractClassCanBeInterface:LibraryAdapterModule.kt:LibraryAdapterModule$LibraryAdapterModule</ID>
+    <ID>AbstractClassCanBeInterface:SettingsAdapterModule.kt:SettingsAdapterModule$SettingsAdapterModule</ID>
+    <ID>CyclomaticComplexMethod:JavaSettingValues.kt:internal fun javaValues: Map&lt;Setting&lt;*>, Any></ID>
+    <ID>EmptyFunctionBlock:ControllerHandlerRig.kt:FakeUsbController${}</ID>
+    <ID>EmptyFunctionBlock:GamepadCaptureTest.kt:GamepadCaptureTest.&lt;no name provided>${}</ID>
+    <ID>ImplicitDefaultLocale:Fakes.kt:RecordingInput$"$action $key mods %02X flags %d".format(modifiers.toInt(), flags.toInt())</ID>
+    <ID>ImplicitDefaultLocale:Fakes.kt:RecordingInput$"%04X".format(keyMap.toInt() and 0xFFFF)</ID>
+    <ID>InjectDispatcher:GameStreamActionsTest.kt:GameStreamActionsTest$Unconfined</ID>
+    <ID>InjectDispatcher:GamepadMouseSyncTest.kt:GamepadMouseSyncTest$Unconfined</ID>
+    <ID>InjectDispatcher:LibraryAdapterModule.kt:LibraryAdapterModule.Companion$IO</ID>
+    <ID>InjectDispatcher:MouseRowFollowsStartHoldTest.kt:MouseRowFollowsStartHoldTest$Unconfined</ID>
+    <ID>InjectDispatcher:NvPairingServiceTest.kt:NvPairingServiceTest$Default</ID>
+    <ID>InjectDispatcher:NvPairingServiceTest.kt:NvPairingServiceTest$IO</ID>
+    <ID>InjectDispatcher:PerfGateTest.kt:PerfGateTest$Unconfined</ID>
+    <ID>InjectDispatcher:ServiceCmsBinderTest.kt:ServiceCmsBinderTest$Default</ID>
+    <ID>InjectDispatcher:ServiceCmsBinderTest.kt:ServiceCmsBinderTest$IO</ID>
+    <ID>InjectDispatcher:ServiceCmsConnectorTest.kt:ServiceCmsConnectorTest$Default</ID>
+    <ID>InjectDispatcher:ServiceCmsConnectorTest.kt:ServiceCmsConnectorTest$IO</ID>
+    <ID>InjectDispatcher:UpstreamSeamsTest.kt:UpstreamSeamsTest$IO</ID>
+    <ID>LongMethod:JavaSettingValues.kt:internal fun javaValues: Map&lt;Setting&lt;*>, Any></ID>
+    <ID>LongMethod:UsbDriverServicePermissionTest.kt:UsbDriverServicePermissionTest$private fun pad: UsbDevice</ID>
+    <ID>LongParameterList:PerfSnapshotsTest.kt:PerfSnapshotsTest$private fun window</ID>
+    <ID>LongParameterList:StreamFailures.kt:StreamFailures$@JvmStatic @JvmOverloads fun facts: FailureFacts</ID>
+    <ID>MaxLineLength:ComputerHostRepositoryTest.kt:ComputerHostRepositoryTest$private</ID>
+    <ID>MaxLineLength:ControllerHandlerRig.kt:ControllerHandlerRig$contextClass.getDeclaredConstructor(ControllerHandler::class.java).apply { isAccessible = true }.newInstance(handler)</ID>
+    <ID>MaxLineLength:ControllerHandlerRig.kt:ControllerHandlerRig$val contexts = ControllerHandler::class.java.getDeclaredField("inputDeviceContexts").apply { isAccessible = true }</ID>
+    <ID>ObjectLiteralToLambda:ComputerHostRepositoryTest.kt:ComputerHostRepositoryTest$object : CmsConnector { override suspend fun connect(): CmsBinder { gate.await() return binder } }</ID>
+    <ID>ObjectLiteralToLambda:GameStreamActionsTest.kt:GameStreamActionsTest$object : AuditSink { override fun write(event: AuditEvent) { audit += event } }</ID>
+    <ID>SleepInsteadOfDelay:BoxArtLoaderTest.kt:BoxArtLoaderTest$sleep(10)</ID>
+    <ID>SpreadOperator:DecodeTimeTracker.kt:DecodeTimeLog$(LogTag.VIDEO, "Decoder window", *fields.toTypedArray())</ID>
+    <ID>SpreadOperator:StreamFailures.kt:StreamFailures$(id, *args)</ID>
+    <ID>SwallowedException:NvHostClientTest.kt:FakeHostServer$e: IOException</ID>
+    <ID>UnusedParameter:StartFailureTest.kt:StartFailureTest$httpsPort: Int</ID>
+    <ID>UnusedPrivateProperty:ControllerHandlerRig.kt:ControllerHandlerRig$// The SHIELD extension service does not exist here; without this the bind answers with no binder. private val noShieldService = shadowOf(RuntimeEnvironment.getApplication()) .declareComponentUnbindable( ComponentName("com.nvidia.blakepairing", "com.nvidia.blakepairing.AccessoryService") )</ID>
+    <ID>UnusedPrivateProperty:UpstreamHostShortcutsTest.kt:UpstreamHostShortcutsTest$private val Icon.resId: Int get() = Icon::class.java.getMethod("getResId").invoke(this) as Int</ID>
+    <ID>UnusedPrivateProperty:UpstreamHostShortcutsTest.kt:UpstreamHostShortcutsTest$private val Icon.type: Int get() = Icon::class.java.getMethod("getType").invoke(this) as Int</ID>
+    <ID>UtilityClassWithPublicConstructor:ShadowMoonBridge.kt:ShadowMoonBridge</ID>
+  </CurrentIssues>
+</SmellBaseline>

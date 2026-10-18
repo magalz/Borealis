@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ImplicitDefaultLocale:HevcSpsMonitor.kt:HevcSpsMonitor$"%02x".format(nal[offset + it])</ID>
+    <ID>ImplicitDefaultLocale:HostInfoTextTest.kt:HostInfoTextTest$byId.getValue(id).format(*args.toTypedArray())</ID>
+    <ID>ImplicitDefaultLocale:PairingHints.kt:PairingHints$"%%%02X".format(byte)</ID>
+    <ID>ImplicitDefaultLocale:TlsAudit.kt:TlsAudit$"%02x".format(it)</ID>
+    <ID>ImplicitDefaultLocale:TlsAuditTest.kt:TlsAuditTest$"%02x".format(it)</ID>
+    <ID>LongParameterList:HostInfoTextTest.kt:HostInfoTextTest$private fun caps</ID>
+    <ID>LongParameterList:PairingErrors.kt:PairingErrors$internal fun describe: PairingFailure</ID>
+    <ID>LongParameterList:SessionAudit.kt:SessionAudit$@JvmStatic fun started</ID>
+    <ID>LongParameterList:StreamFailureClassifierTest.kt:StreamFailureClassifierTest$private fun start</ID>
+    <ID>SpreadOperator:HostInfoText.kt:HostInfoText$(id, *args.toTypedArray())</ID>
+    <ID>SpreadOperator:LaunchProgressText.kt:LaunchProgressText$(id, *args.toTypedArray())</ID>
+    <ID>UnsafeCallOnNullableType:HevcSpsMonitor.kt:HevcSpsMonitor.Companion$levels!!</ID>
+    <ID>UnusedVariable:HevcSps.kt:HevcSps$i</ID>
+    <ID>UnusedVariable:HevcSpsBuilder.kt:HevcSpsBuilder$i</ID>
+  </CurrentIssues>
+</SmellBaseline>

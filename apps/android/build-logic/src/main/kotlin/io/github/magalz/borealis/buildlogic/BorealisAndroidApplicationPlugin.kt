@@ -20,6 +20,7 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             pluginManager.apply("com.google.dagger.hilt.android")
             with(BorealisCoverage) { configureCoverage() }
             with(BorealisLicenses) { configureLicensee() }
+            with(BorealisDetekt) { configureDetekt() }
 
             val components = extensions.getByType<ApplicationAndroidComponentsExtension>()
             val version = BorealisVersion.fromGitDescribe(gitDescribe())

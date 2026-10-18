@@ -7,7 +7,9 @@ style client and what it requires from one. It was verified against
 the compatibility table. PyroWave is covered separately in
 [pyrowave.md](pyrowave.md).
 
-Everything here comes from static reading of the host source. Statements about
+Everything here comes from static reading of the host source, except the items
+marked **Observed** (runtime observations from the Sprint 2 and 3 device rounds)
+and the recorded `/unpair` response in section 18, item 4. Statements about
 runtime behaviour that the source alone cannot establish are marked
 **Unverified**.
 
@@ -28,7 +30,7 @@ runtime behaviour that the source alone cannot establish are marked
 - `/serverinfo` reports `state` as `SUNSHINE_SERVER_BUSY` while an app is
   running and `SUNSHINE_SERVER_FREE` otherwise, and `currentgame` as the running
   app id (`src/nvhttp.cpp:2578-2581`). Moonlight therefore classifies the host
-  as non-NVIDIA (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:386-387`).
+  as non-NVIDIA (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:399-400`).
 - The host project lists Twilight (LG webOS) as its first-party client, and its
   documentation states that any Moonlight client works
   (`docs/system_requirements.md:70-76`, `gh-pages-template/clients.html:86-96`).
@@ -68,7 +70,7 @@ arrives over a real IPv6 address, so a client must not overwrite its stored LAN
 IPv4 address with it (`src/nvhttp.cpp:2525-2538`, the branch at `2534-2535` is not
 conditional on the scheme;
 Moonlight already skips `127.` addresses in
-`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/ComputerDetails.java:119`).
+`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/ComputerDetails.java:119-120`).
 
 ## 3. GameStream HTTP(S) endpoints
 
@@ -121,7 +123,7 @@ then `pairchallenge` over HTTPS): `src/nvhttp.cpp:1941-2106`, dispatched at
 - The HTTP request for phase 1 (`phrase=getservercert`) is held open until the
   user submits the PIN. Moonlight Android already uses a client with no read
   timeout for exactly this request
-  (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/PairingManager.java:204-209`).
+  (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/PairingManager.java:205-209`).
   Any other client must do the same.
 - A host that has the PIN-on-stdin flag set reads the PIN from standard input
   instead (`src/nvhttp.cpp:2280-2282`). This is a host operator mode; it is not
@@ -276,7 +278,7 @@ resettable fields back.
 Absent, in contrast with Apollo-derived hosts: `Permission`, `ServerCommand` and
 `VirtualDisplayCapable` (searched `src/nvhttp.cpp`: no occurrences).
 `ExternalIP` is not sent either; Moonlight Android treats it as optional
-(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:381`).
+(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:394`).
 `VirtualDisplayDriverReady` appears only in the `/launch` and `/resume`
 responses (`src/nvhttp.cpp:3144-3148`, `src/nvhttp.cpp:3482-3486`).
 
@@ -411,22 +413,31 @@ width, height and frame rate in `/launch` `mode=` and in the ANNOUNCE attributes
 Moonlight Android 12.2 can produce exactly this mismatch. It builds the
 `/launch` mode from the user's selected frame rate
 (`setLaunchRefreshRate(prefConfig.fps)`,
-`borealis:apps/android/app/src/main/java/com/limelight/Game.java:467`,
-`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:762-763,781-783`)
+`borealis:apps/android/app/src/main/java/com/limelight/Game.java:491`, and the
+`fps` of the `mode=` parameter in `launchApp`,
+`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:816`)
 but streams at `chosenFrameRate` (`setRefreshRate(chosenFrameRate)`,
-`borealis:apps/android/app/src/main/java/com/limelight/Game.java:468`).
+`borealis:apps/android/app/src/main/java/com/limelight/Game.java:492`).
 With frame pacing "cap FPS", a selected rate that is equal to or at most 3 Hz
 above the display refresh rate, and a refresh rate above 49 Hz,
 `chosenFrameRate` becomes the rounded refresh rate minus 1, for example 59 for
 a 60 Hz selection
-(`borealis:apps/android/app/src/main/java/com/limelight/Game.java:446-461`).
+(`borealis:apps/android/app/src/main/java/com/limelight/Game.java:469-484`).
 A host with the default per-client virtual display then rebuilds the monitor
 on every such launch. This is confirmed: the Android client passes
 `getRefreshRate()` (the `chosenFrameRate`) to the native library
-(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:432`),
+(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:536`),
 and upstream moonlight-common-c writes `StreamConfig.fps` into
-`x-nv-video[0].maxFPS` (`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/SdpGenerator.c:320-321`, upstream 874ac95; this is
+`x-nv-video[0].maxFPS` (`borealis:core/third_party/moonlight-common-c/src/SdpGenerator.c:320-321`, upstream 874ac95; this is
 not the Aurora fork).
+
+Borealis no longer produces this mismatch against a host that is not GFE:
+`launchApp` takes the `mode=` frame rate from `LaunchFrameRate.forLaunch`, which
+returns the stream frame rate for such a host
+(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:795-797`).
+In the Sprint 2 round with frame pacing "cap FPS" the `/launch` mode was
+`1280x720x59` and the host logged `HTTP and RTSP agree` (row 3.7 of
+[device-validation.md section 7](../development/device-validation.md#7-results-sprint-2-2026-10-14)).
 
 When a per-client `display_mode` override is configured on the host, the host's
 mode wins and no reconciliation happens. **Unverified:** what the stream looks
@@ -437,7 +448,7 @@ like when the announced RTSP mode then differs from the overridden monitor mode
 
 Status is carried in the XML `status_code` attribute of the response (HTTP
 status is 200 in all of these); Moonlight raises it as `HostHttpResponseException`
-(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:284-298`).
+(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:294-308`).
 The "recommended client behaviour" column is a Borealis recommendation, not a
 host guarantee. `ping_timeout` is 10 s by default (`src/config.cpp:844`).
 
@@ -445,7 +456,7 @@ host guarantee. `ping_timeout` is 10 s by default (`src/config.cpp:844`).
 | --- | --- | --- | --- | --- |
 | 400 | `Missing a required launch parameter` | launch `src/nvhttp.cpp:2805` | A required query parameter is missing | No retry; client bug |
 | 400 | `Missing a required resume parameter` | resume `src/nvhttp.cpp:3256` | As above | No retry; client bug |
-| 400 | `An app is already running on this host` | launch `src/nvhttp.cpp:2816` | `/launch` was called while an app runs | No retry of `/launch`. Moonlight's `startApp` already resumes or quits first when `/serverinfo` shows a running app (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:310-340`); the 400 arrives when another device's launch started after that read. Borealis then re-reads `/serverinfo` for up to 3 s: `currentgame` 0 launches again once, otherwise the user chooses Join (`/resume`), Quit and relaunch (`/cancel`, then `/launch`) or Cancel. `/cancel` is never called without that choice (section 7.6) |
+| 400 | `An app is already running on this host` | launch `src/nvhttp.cpp:2816` | `/launch` was called while an app runs | No retry of `/launch`. Moonlight's `startApp` already resumes or quits first when `/serverinfo` shows a running app (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:395-430`; Borealis turned the quit into a user choice, section 7.6); the 400 arrives when another device's launch started after that read. Borealis then re-reads `/serverinfo` for up to 3 s: `currentgame` 0 launches again once, otherwise the user chooses Join (`/resume`), Quit and relaunch (`/cancel`, then `/launch`) or Cancel. `/cancel` is never called without that choice (section 7.6) |
 | 409 | `Another client launch is already pending; retry the connection.` | launch `src/nvhttp.cpp:2831-2832`, `2853-2854`, `3157-3158`; resume `3265-3266`, `3281-3282`, `3495-3496` | A previous `/launch` or `/resume` has not been claimed by an RTSP connection yet; the pending launch expires after `ping_timeout` (`src/rtsp.cpp:606`) | Retry with backoff for up to about 12 s in total (for example 1, 2, 3, 5 s), then show the host message. Do not call `/cancel`: it would also cancel another client's pending launch (`src/rtsp.cpp:1132-1136`) |
 | 503 | `The previous stream is still restoring the display; retry the connection.` | launch `src/nvhttp.cpp:2845-2846`; resume `3274-3275` | The host waited 8 s (`acquire_launch(8s)`, `src/nvhttp.cpp:2841`, `3270`) for the previous session's cleanup and gave up | Retry, 2 to 3 attempts with 2 to 5 s delays (each attempt can itself take 8 s), then show the message |
 | 503 | `GPU/display stack is not ready; retry after recovery or reboot the host.` | launch `src/nvhttp.cpp:2968-2969`; resume `3331-3332` | The D3D11 health probe failed | Limited retries (for example 2 with 5 s delay), then tell the user to restart the host or its GPU driver |
@@ -473,8 +484,12 @@ Notes on the table:
   interactive session: the app launch is deferred until sign-in and `execute`
   returns 0 (`src/process.cpp:1382-1386`). **Unverified:** what the client
   observes in that case.
-- The Moonlight Android client does not retry. It shows the message and fails
-  (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:396-404`).
+- The Moonlight Android 12.2 client does not retry. It shows the message and
+  fails. Borealis replaced that block of the start thread: `launchWithRetry`
+  runs the retry policy
+  (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:171-179`),
+  and a failure goes to the error screen, which never shows the exception text
+  (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:492-510`).
 
 ### 7.6 Cancel
 
@@ -485,8 +500,9 @@ the virtual display unless a deferred launch must be preserved
 `/launch` wins the lifecycle race the cancel cleanup is skipped
 (`src/nvhttp.cpp:3540-3550`). Moonlight 12.2 answered a `currentgame` for a
 different app by cancelling then launching
-(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:310-314`,
-`:341-366`). Borealis does not: it asks the user first, and never quits another
+(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:395-399`,
+`:437-458`; the `else` branch at `:406-407` called `quitAndLaunch` directly in
+12.2). Borealis does not: it asks the user first, and never quits another
 device's app without the user's explicit choice, even when the Library has not
 seen that app (`NvConnection.resolveConflict`, section 7.5).
 
@@ -545,10 +561,10 @@ and `x-nv-video[0].maxNumReferenceFrames`. All other attributes the host reads
 have defaults (`src/rtsp.cpp:1496-1510`).
 
 Upstream moonlight-common-c also announces `x-ml-general.featureFlags` with a
-frame-FEC-status bit to Sunshine hosts (`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/SdpGenerator.c:270-275`,
+frame-FEC-status bit to Sunshine hosts (`borealis:core/third_party/moonlight-common-c/src/SdpGenerator.c:270-274`,
 upstream 874ac95) and, when video encryption is enabled, subtracts the 32-byte
-`ENC_VIDEO_HEADER` from the announced `packetSize` (`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/SdpGenerator.c:322-330`,
-`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/Video.h:15-19`).
+`ENC_VIDEO_HEADER` from the announced `packetSize` (`borealis:core/third_party/moonlight-common-c/src/SdpGenerator.c:323-330`,
+`borealis:core/third_party/moonlight-common-c/src/Video.h:15-19`).
 
 Responses to ANNOUNCE:
 
@@ -580,18 +596,18 @@ configuration (`src/nvhttp.cpp:2542-2576`):
 - PyroWave bits are added by `pyrowave::server_codec_mask` when PyroWave is
   enabled and available (`src/nvhttp.cpp:2573-2575`); see
   [pyrowave.md](pyrowave.md) for the bit values.
-- AV1 needs an AV1 encoder on the host. On the Sprint 2 and 3 test host (an
-  RTX 3080 Ti) the host logs `Encoder [av1_nvenc] is not supported on this GPU`
+- AV1 needs an AV1 encoder on the host. **Observed** on the Sprint 2 and 3 test
+  host (an RTX 3080 Ti): the host logs `Encoder [av1_nvenc] is not supported on this GPU`
   and advertises no AV1. Moonlight 12.2, and Borealis with it, selects an AV1
   decoder only when the user forces AV1.
 
 The legacy bit values come from upstream moonlight-common-c at 874ac95 (not the
 Aurora fork), which the Moonlight Android client uses: `SCM_H264` `0x1`,
 `SCM_HEVC` `0x100`, `SCM_HEVC_MAIN10` `0x200`, `SCM_AV1_MAIN8` `0x10000` and
-`SCM_AV1_MAIN10` `0x20000` (`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/Limelight.h:506-510`). The Android client tests
-`0x200` and `0x20000` for HDR
-(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:248`,
-`:259`). The 4:4:4 bits (`SCM_H264_HIGH8_444` and following) are defined
+`SCM_AV1_MAIN10` `0x20000` (`borealis:core/third_party/moonlight-common-c/src/Limelight.h:506-510`). The Android client tests
+`0x20200` (`0x200` or `0x20000`) for HDR
+(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:333`)
+and `0x200` for resolutions above 4K (`:344`). The 4:4:4 bits (`SCM_H264_HIGH8_444` and following) are defined
 immediately after them in the same header; they were not needed here.
 
 The client selects a format with `x-nv-vqos[0].bitStreamFormat` (0 H.264, 1 HEVC,
@@ -754,8 +770,8 @@ discriminate by direction, not by type.
   `mouse = disabled` the host drops every relative and absolute mouse, button,
   scroll, touch and pen packet (`src/input.cpp:452-983`); with
   `keyboard = disabled` it drops keys (`src/input.cpp:771-772`, `:872-873`). The
-  host does not advertise either setting, so a client cannot tell. Observed in
-  Sprint 2: touch "did not work" on the Galaxy S22 because the test host had
+  host does not advertise either setting, so a client cannot tell. **Observed**
+  in Sprint 2: touch "did not work" on the Galaxy S22 because the test host had
   `mouse = disabled`.
 
 ## 14. Audio
@@ -877,8 +893,10 @@ Moonlight Android 12.2 client already does the right thing the item says so.
    messages, and do not retry 400, 403, 404 or 410.
 4. **Do not rely on `GET /unpair`.** It is not routed and returns 404. Moonlight
    Android calls it on every pairing failure path and for the in-app unpair
-   (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/PairingManager.java:219-289`,
-   `borealis:apps/android/app/src/main/java/com/limelight/PcView.java:554`).
+   (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/PairingManager.java:219-289`;
+   the 12.2 `PcView` that made the in-app call is gone, and the Library's
+   `ComputerHostRepository.forget` makes it now,
+   `borealis:apps/android/app/src/main/kotlin/io/github/magalz/borealis/library/ComputerHostRepository.kt:93-99,117-126`).
    Borealis must treat that call as best-effort, and must explain that removing a
    host on the phone does not unpair it on the host (unpair through the Web UI or
    `POST /api/clients/unpair`). **Verified against LuminalShine 26.09.1
@@ -912,7 +930,7 @@ Moonlight Android 12.2 client already does the right thing the item says so.
    must equal `clientViewportWd`, `clientViewportHt` and `maxFPS`, otherwise
    the host rebuilds the virtual display (section 7.4). Moonlight Android sets
    `clientRefreshRateX100` from the display refresh rate
-   (`borealis:apps/android/app/src/main/java/com/limelight/Game.java:477`); the
+   (`borealis:apps/android/app/src/main/java/com/limelight/Game.java:501`); the
    host ignores it when it disagrees with `maxFPS`, so that attribute is
    harmless. The launch rate and the stream rate are the ones that must match;
    Moonlight Android can make them differ (end of section 7.4), so Borealis must
@@ -935,7 +953,7 @@ Moonlight Android 12.2 client already does the right thing the item says so.
     treat a 403 on launch or ANNOUNCE as a hard protocol error (section 15).
     `corever` is required only when the encryption policy is mandatory
     (`src/nvhttp.cpp:3096`, `src/rtsp.cpp:1748`); upstream moonlight-common-c
-    always sends `&corever=1` (`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/Connection.c:553`, upstream 874ac95), so
+    always sends `&corever=1` (`borealis:core/third_party/moonlight-common-c/src/Connection.c:553`, upstream 874ac95), so
     Moonlight Android already complies.
 15. **Do not offer microphone passthrough, clipboard sync, server commands,
     OTP pairing or a virtual-display toggle that depends on host support**
@@ -960,7 +978,7 @@ does not provide:
 | `virtualDisplay=`, `scaleFactor=`, `appuuid=`, `gcpersist=` launch parameters | Ignored | `artemis:app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:878-892` |
 | `Permission` in `/serverinfo` | Not sent | `artemis:app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:412-419` |
 | `ServerCommand` list in `/serverinfo` | Not sent | `artemis:app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:437`, `:568-570` |
-| `GET /unpair` | 404 | `borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:717-719` |
+| `GET /unpair` | 404 | `borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:745-749` |
 
 The virtual-display gap is the one most likely to mislead: Artemis concludes the
 host has no virtual display and refuses to offer it

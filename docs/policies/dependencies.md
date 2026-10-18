@@ -67,8 +67,8 @@ libraries.
 
 - Dependabot is enabled weekly for Borealis-owned Gradle dependencies and GitHub
   Actions. Until the independence milestone ([ADR 0047](../adr/0047-harvest-upstream-then-emancipate.md)),
-  it also updates the Gradle wrapper, Kotlin and dependencies declared in
-  upstream files (such as `apps/android/app/build.gradle`). AGP stays ignored
+  it also updates the Gradle wrapper, Kotlin and the dependencies inherited from
+  upstream, which the version catalog declares since Sprint 8. AGP stays ignored
   until it is declared in one place. Kotlin may lead the version bundled with
   AGP when CI passes. The vendored moonlight-common-c (`core/third_party/`, [ADR 0054](../adr/0054-declare-independence-from-moonlight.md)) is not
   tracked by Dependabot; it changes only by a reviewed Borealis commit or an upstream fix cherry-picked on purpose (see
@@ -91,8 +91,9 @@ adding one.
 
 Dependencies imported with the Moonlight subtree are listed in
 [NOTICE](../../NOTICE). Version bumps that come with an upstream sync follow
-[upstream-sync.md](upstream-sync.md). Dependencies declared by upstream (in
-`apps/android/app/build.gradle`, the root `build.gradle` and the jni libraries)
+[upstream-sync.md](upstream-sync.md). Dependencies that came with upstream (in
+the version catalog `apps/android/gradle/libs.versions.toml`, the root
+`build.gradle` and the jni libraries)
 are updated by Dependabot as described under Updates, per
 [ADR 0047](../adr/0047-harvest-upstream-then-emancipate.md). Upstream syncs
 resolve conflicts with a later update by taking the newer version.

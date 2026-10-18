@@ -14,8 +14,8 @@ Moonlight Android (moonlight-stream/moonlight-android), version 12.2
   Copyright (C) Cameron Gutman and the Moonlight contributors
   License: GPL-3.0
   https://github.com/moonlight-stream/moonlight-android
-  Included as a git subtree under apps/android/, including its evdev_reader
-  native code and its Lua packet-analysis scripts.
+  Included as a git subtree under apps/android/. Its evdev_reader native code
+  and its Lua packet-analysis scripts were removed in Sprint 8.
 
 moonlight-common-c (moonlight-stream/moonlight-common-c)
   Copyright (C) Cameron Gutman and the Moonlight contributors
@@ -71,7 +71,7 @@ Native libraries inside moonlight-common-c
     License: MIT
     https://github.com/sleepybishop/nanors
 
-Java and Kotlin libraries (apps/android/app/build.gradle)
+Java and Kotlin libraries (apps/android/gradle/libs.versions.toml)
 
   Bouncy Castle (bcprov-jdk18on, bcpkix-jdk18on)
     License: Bouncy Castle Licence (MIT-style)

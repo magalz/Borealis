@@ -206,7 +206,7 @@ class BorealisLogTest {
     fun `a failing sink does not affect the caller or the other sinks`() {
         val broken =
             object : LogSink {
-                override fun write(record: LogRecord) = throw IllegalStateException("disk full")
+                override fun write(record: LogRecord) = error("disk full")
             }
         BorealisLog.initialize(listOf(broken, sink))
 

@@ -45,6 +45,7 @@
     <!-- BOREALIS: Hilt application class (BorealisLog init, LimeLog bridge, crash handler) -->
     <application
         android:name="io.github.magalz.borealis.BorealisApplication"
+        android:label="@string/app_label"
         android:allowBackup="true"
         android:fullBackupContent="@xml/backup_rules"
         android:dataExtractionRules="@xml/backup_rules_s"

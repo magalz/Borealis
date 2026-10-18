@@ -13,7 +13,7 @@ internal object BorealisSbom {
     const val PLUGIN_ID = "org.cyclonedx.bom"
 
     /** The variant that is released; test and debug classpaths are not part of the SBOM. */
-    private const val RELEASE_CLASSPATH = "nonRootReleaseRuntimeClasspath"
+    private const val RELEASE_CLASSPATH = "releaseRuntimeClasspath"
 
     /** Written by `./gradlew :app:cyclonedxDirectBom`, relative to the `:app` build directory. */
     const val OUTPUT = "reports/sbom/borealis-android.cdx.json"

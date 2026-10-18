@@ -83,7 +83,7 @@ jobs:
             exit 1
           fi
       - name: Format, static analysis, licences, unit tests, coverage and build
-        run: ./gradlew --stacktrace spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleNonRootDebug licensee koverXmlReportBorealis
+        run: ./gradlew --stacktrace spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleDebug licensee koverXmlReportBorealis
       - name: Upload Android coverage to Codecov
         if: env.HAS_CODECOV_TOKEN == 'true'
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
@@ -99,7 +99,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: borealis-android-debug
-          path: apps/android/app/build/outputs/apk/nonRoot/debug/*.apk
+          path: apps/android/app/build/outputs/apk/debug/*.apk
           retention-days: 14
       - name: Upload reports
         if: always()

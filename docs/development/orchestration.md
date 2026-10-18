@@ -15,7 +15,7 @@ The main Claude session orchestrates Borealis work. It delegates exploration, li
 
 Memtrace holds the graph of the orchestrator's checkout, which stays on the phase branch while a phase runs (integration happens there; the phase branch is not checked out in another worktree). The orchestrator indexes it incrementally with `branch: "main"` and re-runs that incremental index after each merge wave. It does not call `watch_directory`: it labels changes with the checked-out branch, which would split the labels again. `memtrace start` arms its own watcher under the checked-out branch, so answers for `branch: "main"` reflect the last incremental index of the checkout, not live edits. The label is only a name: treat answers as phase-branch state and read the file in your own worktree before editing it. Graph and quality queries always pass `branch: "main"`: Memtrace (v1.2.8) reuses unchanged nodes across branch labels, its quality tools match the exact label, and indexing a worktree once overwrote the repository record's branch. A task's own changes are an overlay with its task branch: the orchestrator indexes the task worktree and subagents pass `worktree` to `find_code` (see `AGENTS.md`).
 
-The graph leaves some files out. The tracked `.memtraceignore` keeps Gradle scripts, the design tokens and the prebuilt OpenSSL and Opus headers out of it, and Memtrace's default exclusions drop `**/third_party/**`, so `core/third_party/` is not in the graph: use Grep and ranged reads there. Only `br-scout`, `br-implementer` and `br-reviewer` have Memtrace tools; `br-scribe` has none.
+The graph leaves some files out. The tracked `.memtraceignore` keeps Gradle Kotlin DSL scripts (`**/*.gradle.kts`), the design tokens and the prebuilt OpenSSL and Opus headers out of it, and Memtrace's default exclusions drop `**/third_party/**`, so `core/third_party/` is not in the graph: use Grep and ranged reads there. Only `br-scout`, `br-implementer` and `br-reviewer` have Memtrace tools; `br-scribe` has none.
 
 The impact tools (`get_impact`, `preflight_check`, `detect_changes`) are the main use of Memtrace. Its dead-code and duplicate-code results are leads, not evidence: a deletion needs a manual check for callable references (`::f`), Compose, JNI, the manifest, reflection and Hilt.
 
@@ -25,7 +25,7 @@ The impact tools (`get_impact`, `preflight_check`, `detect_changes`) are the mai
 - **`br-scout`**: answers "where, what calls, what breaks" questions with references and short summaries; never edits.
 - **`br-scribe`**: writes text from the orchestrator's notes and repository facts; edits only the text files its brief names.
 - **`br-implementer`**: implements exactly one brief inside its worktree, test-first per the [TDD rule](tdd.md), and returns a report. It never pushes, opens PRs, or touches files it does not own; if the brief is wrong it stops and reports.
-- **`br-reviewer`**: given the same brief, independently checks the branch for correctness, scope, upstream rules, and test-before-implementation commit order. It reports findings but does not fix them.
+- **`br-reviewer`**: given the same brief, independently checks the branch for correctness, scope, inherited-code rules, and test-before-implementation commit order. It reports findings but does not fix them.
 
 ## Task lifecycle
 

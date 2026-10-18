@@ -25,7 +25,7 @@ What not to touch or decide.
 
 ## Verification
 Exact commands to run (for example `./gradlew testDebugUnitTest` from `apps/android`, or `ctest --preset dev` from `core`).
-Inherited-code rule: the implementer lists every inherited file it touched and confirms the edits are wiring only, new logic is in Kotlin and nothing was reformatted wholesale; the reviewer re-checks this.
+Inherited-code rule: the implementer lists every inherited file it touched and confirms the edits to inherited Java are wiring only, new logic is in Kotlin (migrating an area to Kotlin is allowed when the brief says so) and nothing was reformatted wholesale. Vendored files under `core/third_party/` change only when the brief says so, and each change is recorded in `core/third_party/README.md` as that README describes. The reviewer re-checks this.
 
 ## Notes
 Known pitfalls, related files, and the order of commits when it matters.

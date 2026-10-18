@@ -30,7 +30,8 @@ git cliff --unreleased --tag android-v0.3.0
 ```
 
 Check that the sections (Added, Changed, Fixed, Security, Performance,
-Documentation, Upstream) read well.
+Documentation, Upstream) read well. The "Upstream" section stays empty:
+harvest commits are not `sync:` commits.
 
 **First release.** The upstream Moonlight history is in this repository (the
 subtree is not squashed), so the first changelog must start after the import.

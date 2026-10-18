@@ -59,9 +59,10 @@ Kotlin code. See the [roadmap](../roadmap.md#sprint-12-onward-java-to-kotlin-mig
      `apps/android/build-logic`.
    - NDK: `ndkVersion` in `apps/android/app/build.gradle`, `NDK_VERSION` in
      `BorealisBuild` in `apps/android/build-logic`, and the `ndk;<version>`
-     package in `.github/workflows/ci.yml` and `.github/workflows/release.yml`.
-     If it changes, update the SDK install command in [building](building.md)
-     too.
+     package in `.github/workflows/ci.yml` and `.github/workflows/release.yml`,
+     and the `libc++_shared` entry of `apps/android/sbom/native-components.cdx.json`,
+     which carries the NDK version. If it changes, update the SDK install
+     command in [building](building.md) too.
 5. If new upstream code adds Android Lint warnings, fix them. The lint baseline
    follows the one rule in [building](building.md#lint-baseline).
 6. Run the checks from `apps/android/` (see [building](building.md)):

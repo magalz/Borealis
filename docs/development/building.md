@@ -303,10 +303,11 @@ Coverage (clang and llvm-cov; the report is `core/build/coverage/coverage.lcov`)
 sh scripts/coverage.sh
 ```
 
-The "Core (C++)" job in CI also runs clang-tidy, the ASan/UBSan build, the
-libFuzzer targets (Linux with clang only) and this coverage report. See
-[core/README.md](../../core/README.md) for clang-tidy, the fuzzers and the
-environment variables of the coverage script.
+The "Core (C++)" job in CI also runs clang-tidy, the ASan/UBSan build and this
+coverage report. It runs the libFuzzer targets (Linux with clang only) when
+`core/` or `.github/workflows/ci.yml` changed in the pull request, and on every
+run that is not a pull request. See [core/README.md](../../core/README.md) for
+clang-tidy, the fuzzers and the environment variables of the coverage script.
 
 Formatting follows LuminalShine's LLVM-based `.clang-format`. Parsers get
 libFuzzer targets in addition to unit tests.

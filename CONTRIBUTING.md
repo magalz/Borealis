@@ -36,7 +36,7 @@ TDD is the development paradigm here. For every behaviour change:
 3. Refactor with the tests green.
 
 Exempt: pure documentation, deletions, and mechanical build fixes. Before
-changing untested upstream code, add characterization tests first. Details:
+changing untested inherited code, add characterization tests first. Details:
 [docs/development/tdd.md](docs/development/tdd.md).
 
 ## Commit messages
@@ -77,8 +77,12 @@ A pull request is ready when all of these hold:
       certificate changes, TLS failures, launches, sessions, REST actions),
       with redaction per [docs/policies/privacy-and-logging.md](docs/policies/privacy-and-logging.md).
 - [ ] The inherited files the change touches are listed in the PR. Edits to
-      inherited code are wiring only, new logic is in Kotlin, and no inherited
-      file is reformatted wholesale.
+      inherited Java are wiring only, new logic is in Kotlin (migrating an area
+      to Kotlin is allowed when a task needs it), and nothing is reformatted
+      wholesale. Vendored files under `core/third_party/` change only as the
+      task needs, and each change is recorded in
+      [core/third_party/README.md](core/third_party/README.md) as that README
+      describes (it has its own marker rule for vendored C).
 - [ ] New dependencies are justified in the PR and pass the licence policy
       ([docs/policies/dependencies.md](docs/policies/dependencies.md)).
 - [ ] No secrets, tokens, keys or real PINs in code, tests, fixtures or logs.

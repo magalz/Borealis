@@ -24,7 +24,8 @@ the rules. The working details (roles, task briefs, hand-offs) are in
 2. **AI agents never merge.** Only the owner merges, after CI is green.
 3. **Same bar as human work.** TDD (failing test committed first), the
    Definition of Done in [CONTRIBUTING.md](../../CONTRIBUTING.md), green CI,
-   and the upstream rules apply without exception.
+   the inherited-code rules and
+   [R-002](rules/R-002-keep-limelight-namespace.md) apply without exception.
 4. **Attribution.** Commits made with AI assistance carry a
    `Co-Authored-By:` trailer naming the assistant.
 5. **Scope.** One task per worktree and branch. An agent edits only the files

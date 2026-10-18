@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.stream.input
 
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.stream.input.GamepadButtons.A
 import io.github.magalz.borealis.stream.input.GamepadButtons.RIGHT_BUMPER
 import io.github.magalz.borealis.stream.input.GamepadButtons.SELECT
@@ -368,5 +369,152 @@ class MenuChordDetectorTest {
 
         assertThat(detector.hidden()).isEqualTo(0)
         assertThat(detector.deadline()).isEqualTo(MenuChordDetector.NO_DEADLINE)
+    }
+
+    /** Start, then Select, then both bumpers, as the quit combo is pressed on a system pad. */
+    private fun pressTheQuitCombo() {
+        feedLone(START, 0)
+        feedLone(chord, 30)
+        feedLone(chord or leftBumper, 100)
+        feedLone(chord or leftBumper or RIGHT_BUMPER, 150)
+    }
+
+    @Test
+    fun `Start and Select left held when the bumpers go up do not arm the chord again`() {
+        pressTheQuitCombo()
+
+        feedLone(chord or RIGHT_BUMPER, 1_000)
+        val rejoined = feedLone(chord, 1_100)
+
+        assertThat(rejoined.fired).isFalse()
+        assertThat(detector.deadline()).isEqualTo(MenuChordDetector.NO_DEADLINE)
+        assertThat(detector.claims(START)).isFalse()
+        assertThat(detector.hidden()).isEqualTo(0)
+    }
+
+    @Test
+    fun `letting go of Start after the quit combo is no early release and reaches the PC`() {
+        pressTheQuitCombo()
+        feedLone(chord or RIGHT_BUMPER, 1_000)
+        feedLone(chord, 1_100)
+
+        val update = feedLone(SELECT, 1_300)
+
+        assertThat(update.earlyRelease).isFalse()
+        assertThat(update.fired).isFalse()
+        assertThat(update.silent).isFalse()
+        assertThat(update.loneTap).isEqualTo(0)
+        assertThat(detector.hidden()).isEqualTo(0)
+    }
+
+    @Test
+    fun `the other bumper going up last leaves Start and Select unarmed too`() {
+        pressTheQuitCombo()
+        feedLone(chord or leftBumper, 1_000)
+        feedLone(chord, 1_100)
+
+        val update = feedLone(START, 1_300)
+
+        assertThat(update.earlyRelease).isFalse()
+        assertThat(update.silent).isFalse()
+        assertThat(detector.deadline()).isEqualTo(MenuChordDetector.NO_DEADLINE)
+        assertThat(detector.hidden()).isEqualTo(0)
+    }
+
+    @Test
+    fun `Start and Select held on for a second after the quit combo do not open the menu`() {
+        pressTheQuitCombo()
+        feedLone(chord or RIGHT_BUMPER, 1_000)
+        feedLone(chord, 1_100)
+
+        assertThat(detector.check(2_100)).isFalse()
+        assertThat(feedLone(chord, 2_100).fired).isFalse()
+        assertThat(detector.check(9_000)).isFalse()
+        assertThat(detector.hidden()).isEqualTo(0)
+    }
+
+    @Test
+    fun `bumpers pressed first and let go last leave Start and Select unarmed`() {
+        feedLone(leftBumper, 0)
+        feedLone(leftBumper or RIGHT_BUMPER, 20)
+        feedLone(leftBumper or RIGHT_BUMPER or START, 40)
+        feedLone(leftBumper or RIGHT_BUMPER or chord, 60)
+
+        feedLone(RIGHT_BUMPER or chord, 200)
+        feedLone(chord, 300)
+        val update = feedLone(START, 500)
+
+        assertThat(update.earlyRelease).isFalse()
+        assertThat(detector.deadline()).isEqualTo(MenuChordDetector.NO_DEADLINE)
+        assertThat(detector.hidden()).isEqualTo(0)
+    }
+
+    @Test
+    fun `no order of letting go of the quit combo arms the chord`() {
+        val buttons = listOf(START, SELECT, leftBumper, RIGHT_BUMPER)
+        val orders = buttons.permutations()
+
+        for (order in orders) {
+            detector.reset()
+            pressTheQuitCombo()
+            var held = chord or leftBumper or RIGHT_BUMPER
+            var time = 1_000L
+            for (button in order) {
+                held = held and button.inv()
+                val update = feedLone(held, time)
+                assertWithMessage("order $order after $button")
+                    .that(update.earlyRelease || update.fired || update.silent)
+                    .isFalse()
+                assertWithMessage("order $order after $button").that(detector.hidden()).isEqualTo(0)
+                assertWithMessage("order $order after $button")
+                    .that(detector.deadline())
+                    .isEqualTo(MenuChordDetector.NO_DEADLINE)
+                time += 100
+            }
+        }
+    }
+
+    private fun <T> List<T>.permutations(): List<List<T>> =
+        if (size <= 1) listOf(this)
+        else flatMap { head -> (this - head).permutations().map { listOf(head) + it } }
+
+    @Test
+    fun `a button held with Start and Select keeps the chord from arming once it is let go`() {
+        feedLone(A, 0)
+        feedLone(A or START, 20)
+        feedLone(A or chord, 40)
+
+        feedLone(chord, 200)
+
+        assertThat(detector.deadline()).isEqualTo(MenuChordDetector.NO_DEADLINE)
+        assertThat(detector.hidden()).isEqualTo(0)
+    }
+
+    @Test
+    fun `after every button was released Start and Select arm the chord again`() {
+        pressTheQuitCombo()
+        feedLone(chord or RIGHT_BUMPER, 1_000)
+        feedLone(chord, 1_100)
+        feedLone(0, 1_200)
+
+        feedLone(START, 2_000)
+        feedLone(chord, 2_030)
+
+        assertThat(detector.hidden()).isEqualTo(chord)
+        assertThat(detector.deadline()).isEqualTo(3_030)
+        assertThat(detector.check(3_030)).isTrue()
+    }
+
+    @Test
+    fun `after the quit combo is released a lone Start is held back again`() {
+        pressTheQuitCombo()
+        feedLone(chord or RIGHT_BUMPER, 1_000)
+        feedLone(chord, 1_100)
+        feedLone(0, 1_200)
+
+        feedLone(START, 2_000)
+
+        assertThat(detector.hidden()).isEqualTo(START)
+        assertThat(detector.deadline()).isEqualTo(2_060)
     }
 }

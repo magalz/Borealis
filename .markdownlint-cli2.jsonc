@@ -4,7 +4,6 @@
   "ignores": [
     "apps/android/app/**",
     "apps/android/*.md",
-    "apps/android/.github/**",
     "external/**",
     "core/third_party/moonlight-common-c/**",
     "CHANGELOG.md",

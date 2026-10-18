@@ -37,11 +37,13 @@ import io.github.magalz.borealis.designsystem.components.AuroraLoader
 import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
+import io.github.magalz.borealis.designsystem.components.BorealisPhoneBar
 import io.github.magalz.borealis.designsystem.components.CoverTile
 import io.github.magalz.borealis.designsystem.components.DotStatus
 import io.github.magalz.borealis.designsystem.components.EmptyState
 import io.github.magalz.borealis.designsystem.components.StatusDot
 import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
@@ -52,7 +54,6 @@ import io.github.magalz.borealis.library.R
 private val TILE_GAP = 12.dp
 private val ROW_GAP = 16.dp
 private val GRID_VERTICAL_PADDING = 12.dp
-private val HEADER_GAP = 4.dp
 private val STATUS_GAP = 6.dp
 private val SNACKBAR_PADDING = 16.dp
 private val LOADER_SIZE = 64.dp
@@ -89,7 +90,13 @@ fun AppsScreen(
         ) {
             Column(Modifier.fillMaxSize()) {
                 if (formFactor == FormFactor.Phone) {
-                    PhoneBar(state, onBack, onToggleShowHidden)
+                    BorealisPhoneBar(
+                        onBack,
+                        stringResource(R.string.apps_back),
+                        actions = { ShowHiddenToggle(state, onToggleShowHidden) },
+                    ) {
+                        Title(state)
+                    }
                 } else {
                     Header(state, onToggleShowHidden)
                 }
@@ -105,23 +112,15 @@ fun AppsScreen(
     }
 }
 
+/** The toggle of the phone bar, as an icon: a TV or handheld has a button in [Header]. */
 @Composable
-private fun PhoneBar(state: AppsUiState, onBack: () -> Unit, onToggleShowHidden: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = onBack) {
-            Icon(BorealisIcons.Back, stringResource(R.string.apps_back))
-        }
-        Title(state, Modifier.weight(1f))
-        IconButton(onClick = onToggleShowHidden) {
-            Icon(
-                // The icon shows what the toggle does: open eye shows them, crossed eye hides.
-                if (state.showHidden) BorealisIcons.VisibilityOff else BorealisIcons.Visibility,
-                stringResource(toggleLabel(state)),
-            )
-        }
+private fun ShowHiddenToggle(state: AppsUiState, onToggleShowHidden: () -> Unit) {
+    IconButton(onClick = onToggleShowHidden) {
+        Icon(
+            // The icon shows what the toggle does: open eye shows them, crossed eye hides.
+            if (state.showHidden) BorealisIcons.VisibilityOff else BorealisIcons.Visibility,
+            stringResource(toggleLabel(state)),
+        )
     }
 }
 
@@ -146,10 +145,10 @@ private fun toggleLabel(state: AppsUiState) =
 
 /** The host name with what runs on it. */
 @Composable
-private fun Title(state: AppsUiState, modifier: Modifier) {
+private fun Title(state: AppsUiState, modifier: Modifier = Modifier) {
     val colors = LocalBorealisColors.current
     val running = state.runningAppId != null
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(HEADER_GAP)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(BorealisDimens.stackedTextGap)) {
         Text(
             state.hostName.orEmpty(),
             style = MaterialTheme.typography.titleLarge,

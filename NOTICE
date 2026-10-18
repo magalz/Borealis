@@ -60,7 +60,15 @@ Native libraries (apps/android/app/src/main/jni)
     License: Zlib
     https://www.libsdl.org/
 
-Native libraries inside moonlight-common-c
+Native libraries from the Android NDK
+
+  libc++_shared.so (LLVM libc++, Android NDK 29.0.14206865)
+    License: Apache-2.0 WITH LLVM-exception
+    https://developer.android.com/ndk/guides/cpp-support
+    Packaged next to the Borealis native libraries (APP_STL=c++_shared).
+
+Native libraries inside moonlight-common-c (core/third_party/moonlight-common-c,
+compiled into the app)
 
   ENet
     Copyright (C) Lee Salzman

@@ -10,4 +10,7 @@
     <issue id="IconMissingDensityFolder">
         <ignore path="src/main/res"/>
     </issue>
+    <issue id="IconXmlAndPng">
+        <ignore path="src/main/res/mipmap-*/ic_launcher.png"/>
+    </issue>
 </lint>

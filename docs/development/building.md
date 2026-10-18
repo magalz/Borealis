@@ -97,7 +97,6 @@ What stays, and why:
 | `AndroidGradlePluginVersion`, `OldTargetApi` | Versions. A newer AGP and a `targetSdk` of 37 are dependency and platform updates, decided on their own and not in a lint sweep. |
 | `NotShrinkingResources` | Release builds minify without `shrinkResources`. Turning it on changes the release package, so it is a release decision. |
 | `DefaultLocale`, `ApplySharedPref`, `SourceLockedOrientationActivity`, `VectorRaster` | Inherited code that does what it should. `toLowerCase()` runs on device and GPU names. `commit()` is deliberate: the crash listener must persist the crash count before the process dies. The stream locks the orientation on purpose. `ic_settings.xml` is a large vector. |
-| `ObsoleteSdkInt` (one entry) | The `mipmap-anydpi-v26` folder. Merging it into `mipmap-anydpi` makes `IconXmlAndPng` fire against the legacy launcher PNGs that `design/icon/generate.py` produces on purpose, and that finding carries a machine-specific path, so it cannot be baselined. It needs an ignore in `app/lint.xml` first. |
 
 Security findings, each reviewed on 2026-10-17:
 

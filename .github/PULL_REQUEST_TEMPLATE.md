@@ -15,12 +15,13 @@
 
 <!-- Describe what the tests cover. -->
 
-## Upstream files
+## Inherited files
 
-- [ ] This PR does not touch files under `apps/android/` that come from Moonlight
-- [ ] It touches upstream files; every change there is a minimal hook marked `// BOREALIS:` and no upstream file was reformatted
+- [ ] This PR does not touch inherited files (files under `apps/android/` that come from Moonlight, or vendored files under `core/third_party/`)
+- [ ] It touches inherited files; edits to inherited Java are wiring only, new logic is in Kotlin, and nothing was reformatted wholesale
+- [ ] It touches vendored files under `core/third_party/`; each change is recorded in `core/third_party/README.md` as that README describes
 
-<!-- List the upstream files touched and why. -->
+<!-- List the inherited files touched and why. -->
 
 ## Definition of Done
 

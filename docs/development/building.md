@@ -6,7 +6,7 @@ Primary development platform is Windows. Linux notes for CI are at the end.
 
 | Tool | Version | Used for |
 | --- | --- | --- |
-| Git | recent | Source control and the Moonlight subtree. |
+| Git | recent | Source control. The inherited Moonlight code and the vendored moonlight-common-c are in this repository ([ADR 0054](../adr/0054-declare-independence-from-moonlight.md)). |
 | JDK | 17 | Gradle and Android build. |
 | Android SDK | platform `android-37.0`, build-tools `37.0.0`, platform-tools | Android client. |
 | Android NDK | `29.0.14206865` | Native code (moonlight-core). |
@@ -61,6 +61,8 @@ cd apps/android
 ./gradlew assembleDebug
 ```
 
+The debug APK is `apps/android/app/build/outputs/apk/debug/app-debug.apk`.
+
 Checks (format, static analysis, lint and JVM unit tests):
 
 ```sh
@@ -87,7 +89,8 @@ resources and the dependencies declared outside the version catalog were fixed
 in the Sprint 8 sweep. Lint reports a baseline entry that no longer matches as
 fixed, so regenerate the file with `./gradlew :app:updateLintBaseline` in the
 commit that fixes the code, and check that it has no absolute or Windows path
-(CI fails on that).
+(CI fails on that). This is the rule for the file in every case, also when a
+cherry-pick from upstream brings new findings.
 
 What stays, and why:
 
@@ -97,6 +100,16 @@ What stays, and why:
 | `AndroidGradlePluginVersion`, `OldTargetApi` | Versions. A newer AGP and a `targetSdk` of 37 are dependency and platform updates, decided on their own and not in a lint sweep. |
 | `NotShrinkingResources` | Release builds minify without `shrinkResources`. Turning it on changes the release package, so it is a release decision. |
 | `DefaultLocale`, `ApplySharedPref`, `SourceLockedOrientationActivity`, `VectorRaster` | Inherited code that does what it should. `toLowerCase()` runs on device and GPU names. `commit()` is deliberate: the crash listener must persist the crash count before the process dies. The stream locks the orientation on purpose. `ic_settings.xml` is a large vector. |
+
+`apps/android/app/lint.xml` holds four more ignores, by path, beside the
+baseline:
+
+| Lint id and path | Why |
+| --- | --- |
+| `InvalidPackage` in `**/bcpkix-jdk15on-*.jar` | Inherited from upstream. It names the old Bouncy Castle jar; the app uses `bcpkix-jdk18on` now, so the pattern matches nothing. |
+| `TrustAllX509TrustManager` in `**/bcpkix-jdk18on-*.jar` | The finding is in the Bouncy Castle jar, not in Borealis code. A baseline entry would hold the absolute path of the jar in the Gradle cache, which differs between machines. |
+| `IconMissingDensityFolder` in `src/main/res` | The message holds the resource folder as a machine-specific path (a Windows path on the development machine), so a baseline entry does not match on Linux CI. |
+| `IconXmlAndPng` in `src/main/res/mipmap-*/ic_launcher.png` | The legacy launcher PNGs next to the adaptive icon are deliberate; see [design/icon/README.md](../../design/icon/README.md). |
 
 Security findings, each reviewed on 2026-10-17:
 
@@ -139,13 +152,21 @@ the plain task on `build-logic`. One module alone: `./gradlew :borealis:host:det
   The typed task compiles the module first, as the unit tests do, so it costs
   more than the plain one did.
 - **One config:** `apps/android/config/detekt/detekt.yml`, on top of detekt's
-  defaults, for all modules.
+  defaults, for all modules. Its overrides:
+  - `MatchingDeclarationName` is off for all sources. A Compose file is named
+    after its composable and keeps one small helper type beside it, which the
+    rule reads as a mismatch, and detekt has no option for that.
+  - `FunctionNaming` and `LongParameterList` ignore functions annotated
+    `@Composable`: composables are named in PascalCase and take their state and
+    callbacks as parameters.
+  - `ReturnCount` allows 3 returns, and `MagicNumber` ignores enums.
 - **`build-logic` stays plain:** the analysis does not apply the compiler
   plugins of the Kotlin DSL and would read its Gradle code as unresolved.
 - **No baseline:** every finding fails the build. Fix it, or, when a rule does
   not fit the code (a framework constraint, a Java caller), suppress it on the
   narrowest element with the reason on the same line. Sprint 8 fixed the 116
-  findings the typed analysis first found and removed the temporary baselines.
+  findings the typed analysis first found, except that two rules are no longer
+  reported in test sources (below), and removed the temporary baselines.
 - **The analysis runs in a worker process** (`detekt.use.worker.api=true` in
   `apps/android/gradle.properties`). In the Gradle daemon it once kept the jars
   of a module's compile classpath (`R.jar`, `classes.jar`) open on Windows,
@@ -158,8 +179,8 @@ the plain task on `build-logic`. One module alone: `./gradlew :borealis:host:det
 
 ### Screenshot tests
 
-The Compose screens in `:borealis:designsystem`, `:borealis:library` and
-`:borealis:stream` are checked against reference images
+The Compose screens in `:borealis:designsystem`, `:borealis:library`,
+`:borealis:stream` and `:borealis:settings` are checked against reference images
 ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)). The references
 are in `src/test/screenshots/` of each module. Run these commands from
 `apps/android/`.
@@ -246,13 +267,13 @@ release checks and signing, run `.github/scripts/check-apk.sh` and
 keystore created outside the repository, or start the dry run on GitHub
 (`gh workflow run release.yml --ref <branch>`).
 
-Other test levels (as they land): Robolectric and Compose UI tests run with
-the unit tests; emulator tests use Gradle Managed Devices; screenshot tests
-use Roborazzi.
+Other test levels: Robolectric and Compose UI tests run with the unit tests,
+and screenshot tests use Roborazzi (see above). Emulator tests with Gradle
+Managed Devices are planned and not set up.
 
 ## borealis-core (C++)
 
-Run from `core/`. Presets: `dev`, `asan`, `release`.
+Run from `core/`. Presets: `dev`, `asan`, `release` and `coverage`.
 
 ```sh
 cd core
@@ -275,6 +296,18 @@ cmake --preset asan
 cmake --build --preset asan
 ctest --preset asan
 ```
+
+Coverage (clang and llvm-cov; the report is `core/build/coverage/coverage.lcov`):
+
+```sh
+sh scripts/coverage.sh
+```
+
+The "Core (C++)" job in CI also runs clang-tidy, the ASan/UBSan build and this
+coverage report. It runs the libFuzzer targets (Linux with clang only) when
+`core/` or `.github/workflows/ci.yml` changed in the pull request, and on every
+run that is not a pull request. See [core/README.md](../../core/README.md) for
+clang-tidy, the fuzzers and the environment variables of the coverage script.
 
 Formatting follows LuminalShine's LLVM-based `.clang-format`. Parsers get
 libFuzzer targets in addition to unit tests.

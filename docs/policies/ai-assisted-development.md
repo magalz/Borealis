@@ -9,19 +9,23 @@ the rules. The working details (roles, task briefs, hand-offs) are in
 
 | Role | Responsibility |
 | --- | --- |
-| Owner ([@magalz](https://github.com/magalz)) | Decides direction, accepts ADRs, opens and owns every PR (for AI-assisted work), and is the only one who merges. |
-| Orchestrator | Plans work, splits it into small tasks with briefs, assigns file ownership, integrates results, and reports to the owner. Writes the agent-facing process files. |
-| Implementer | Does exactly one task in its own git worktree and branch, following the brief and TDD. Does not touch files it does not own. |
-| Reviewer | Reviews a branch independently of the implementer against the brief, the Definition of Done and the policies, and reports findings. Does not merge. |
+| Owner ([@magalz](https://github.com/magalz)) | Decides direction, accepts ADRs, owns every PR (for AI-assisted work, opened with the owner's account), and is the only one who merges. |
+| Orchestrator | Plans work, splits it into small tasks with briefs, assigns file ownership, integrates results, pushes the task and phase branches, opens the phase PR with the owner's account, and reports to the owner. Writes the agent-facing process files. |
+| Scout (`br-scout`) | Read-only discovery: finds code, callers and impact and returns a structured summary. Never edits. |
+| Scribe (`br-scribe`) | Writes text from the orchestrator's notes: PR descriptions, release notes, changelog entries, issue text, ADRs and documentation copy-edits. Edits only the text files its brief names; never writes code and never publishes. |
+| Implementer (`br-implementer`) | Does exactly one task in its own git worktree and branch, following the brief and TDD. Does not touch files it does not own. |
+| Reviewer (`br-reviewer`) | Reviews a branch independently of the implementer against the brief, the Definition of Done and the policies, and reports findings. Does not merge. |
 
 ## Rules
 
-1. **PRs are opened under the owner's account.** Agents never push, open PRs,
-   or use GitHub credentials. The owner pushes and opens the PR.
+1. **PRs are opened under the owner's account.** Subagents never push, open
+   PRs, or use GitHub credentials. The orchestrator pushes the task and phase
+   branches and opens the phase PR with the owner's account.
 2. **AI agents never merge.** Only the owner merges, after CI is green.
 3. **Same bar as human work.** TDD (failing test committed first), the
    Definition of Done in [CONTRIBUTING.md](../../CONTRIBUTING.md), green CI,
-   and the upstream rules apply without exception.
+   the inherited-code rules and
+   [R-002](rules/R-002-keep-limelight-namespace.md) apply without exception.
 4. **Attribution.** Commits made with AI assistance carry a
    `Co-Authored-By:` trailer naming the assistant.
 5. **Scope.** One task per worktree and branch. An agent edits only the files

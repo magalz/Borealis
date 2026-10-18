@@ -13,8 +13,10 @@ issues.
 Borealis uses GitHub Flow with merge commits.
 
 1. Open or pick an issue. Discuss the approach there before large work.
-2. Branch from `main`: `feat/<topic>`, `fix/<topic>`, `docs/<topic>`,
-   `chore/<topic>`, `task/<topic>` or `sync/moonlight-<version>`.
+2. Branch from `main`: `feat/<topic>`, `fix/<topic>`, `docs/<topic>` or
+   `chore/<topic>`. A sprint runs on a `phase/s<n>-<name>` branch cut from `main`
+   (for example `phase/s8-tidy-up`), and each task in it is a `task/<topic>`
+   branch cut from the phase branch.
 3. Write the failing test first and commit it, then implement (see below).
 4. Open a pull request using the template. Link the issue or ADR.
 5. CI must be green. Every change goes through a PR; nothing is pushed to
@@ -34,7 +36,7 @@ TDD is the development paradigm here. For every behaviour change:
 3. Refactor with the tests green.
 
 Exempt: pure documentation, deletions, and mechanical build fixes. Before
-changing untested upstream code, add characterization tests first. Details:
+changing untested inherited code, add characterization tests first. Details:
 [docs/development/tdd.md](docs/development/tdd.md).
 
 ## Commit messages
@@ -50,11 +52,14 @@ changing untested upstream code, add characterization tests first. Details:
 ```
 
 Types: `feat`, `fix`, `security`, `docs`, `test`, `refactor`, `perf`,
-`build`, `ci`, `chore`, `style`, `revert`, and `sync` for upstream Moonlight
-syncs. `test`, `build`, `ci`, `chore` and `style` commits are left out of the
-changelog. Mark breaking
+`build`, `ci`, `chore`, `style` and `revert`. `test`, `build`, `ci`, `chore` and
+`style` commits are left out of the changelog. Mark breaking
 changes with `!` or a `BREAKING CHANGE:` footer. The changelog is generated
 from these messages by git-cliff (see [cliff.toml](cliff.toml)).
+
+Commits harvested from upstream keep the upstream subject, so they carry no
+type and no `sync:` prefix. The record of harvests is
+[core/third_party/README.md](core/third_party/README.md).
 
 Commits written with AI assistance carry a `Co-Authored-By:` trailer.
 
@@ -71,9 +76,13 @@ A pull request is ready when all of these hold:
 - [ ] Log and audit-trail entries are added where applicable (pairing,
       certificate changes, TLS failures, launches, sessions, REST actions),
       with redaction per [docs/policies/privacy-and-logging.md](docs/policies/privacy-and-logging.md).
-- [ ] No upstream file is reformatted.
-- [ ] Every hook inside an upstream file is marked `// BOREALIS:` and kept
-      minimal.
+- [ ] The inherited files the change touches are listed in the PR. Edits to
+      inherited Java are wiring only, new logic is in Kotlin (migrating an area
+      to Kotlin is allowed when a task needs it), and nothing is reformatted
+      wholesale. Vendored files under `core/third_party/` change only as the
+      task needs, and each change is recorded in
+      [core/third_party/README.md](core/third_party/README.md) as that README
+      describes (it has its own marker rule for vendored C).
 - [ ] New dependencies are justified in the PR and pass the licence policy
       ([docs/policies/dependencies.md](docs/policies/dependencies.md)).
 - [ ] No secrets, tokens, keys or real PINs in code, tests, fixtures or logs.

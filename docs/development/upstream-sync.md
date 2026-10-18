@@ -57,16 +57,18 @@ Kotlin code. See the [roadmap](../roadmap.md#sprint-12-onward-java-to-kotlin-mig
      `apps/android/gradle/libs.versions.toml`.
    - `compileSdk`: `apps/android/app/build.gradle` and `BorealisBuild` in
      `apps/android/build-logic`.
-   - NDK: `ndkVersion` in `apps/android/app/build.gradle`. If it changes, update
-     the SDK install command in [building](building.md).
-5. If new upstream code adds Android Lint warnings, fix them. Regenerate the
-   baseline only for upstream findings, with `./gradlew :app:updateLintBaseline`,
-   and commit the baseline in its own commit. Check that the baseline has no
-   machine-specific paths.
+   - NDK: `ndkVersion` in `apps/android/app/build.gradle`, `NDK_VERSION` in
+     `BorealisBuild` in `apps/android/build-logic`, and the `ndk;<version>`
+     package in `.github/workflows/ci.yml` and `.github/workflows/release.yml`,
+     and the `libc++_shared` entry of `apps/android/sbom/native-components.cdx.json`,
+     which carries the NDK version. If it changes, update the SDK install
+     command in [building](building.md) too.
+5. If new upstream code adds Android Lint warnings, fix them. The lint baseline
+   follows the one rule in [building](building.md#lint-baseline).
 6. Run the checks from `apps/android/` (see [building](building.md)):
 
    ```sh
-   ./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleDebug licensee
+   ./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleDebug licensee koverXmlReportBorealis
    ```
 
 7. Open one PR per harvest. The description lists the upstream commits, what
@@ -96,23 +98,29 @@ were and were not harvested.
    git format-patch -o <patch-dir> <base>..<sha>
    ```
 
-3. Apply the patches into the vendored path:
+3. Apply the patches into the vendored path. This gives one commit per upstream
+   commit, with the upstream author and subject kept (no `sync:` prefix):
 
    ```sh
    git am --directory=core/third_party/moonlight-common-c <patch-dir>/*.patch
    ```
 
-4. Update `core/third_party/README.md`: the harvested commits, the source commit
-   and the licence lines if they changed.
-5. Build and test `borealis-core` from `core/`:
+4. Append `Harvested from moonlight-stream/moonlight-common-c@<full sha>.` to the
+   message of each commit, so that every commit names its upstream SHA.
+5. Compare the exported symbols of `libmoonlight-core.so` before and after the
+   harvest (`llvm-nm -D --defined-only`) and explain every difference in the
+   commit that causes it.
+6. Update `core/third_party/README.md`, which is the record of harvests: the
+   harvested commits, the source commit and the licence lines if they changed.
+7. Build and test `borealis-core` from `core/`:
 
    ```sh
    cmake --preset dev && cmake --build --preset dev && ctest --preset dev
    ```
 
-6. Check the stream path on a device, if the change touches it (see
+8. Check the stream path on a device, if the change touches it (see
    [device-validation](device-validation.md)).
-7. Update [NOTICE](../../NOTICE) and the native SBOM entry for moonlight-common-c
+9. Update [NOTICE](../../NOTICE) and the native SBOM entry for moonlight-common-c
    if its version or licence changed.
 
 ## Compatibility table

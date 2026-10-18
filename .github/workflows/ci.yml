@@ -79,7 +79,7 @@ jobs:
         run: |
           test -f app/lint-baseline.xml || { echo "::error::apps/android/app/lint-baseline.xml is missing"; exit 1; }
           if grep -nE 'file="([A-Za-z]:)?/|local\.properties|`src\\' app/lint-baseline.xml; then
-            echo "::error file=apps/android/app/lint-baseline.xml::The lint baseline contains machine-specific entries (absolute paths, local.properties or Windows paths). See docs/development/upstream-sync.md."
+            echo "::error file=apps/android/app/lint-baseline.xml::The lint baseline contains machine-specific entries (absolute paths, local.properties or Windows paths). See docs/development/building.md#lint-baseline."
             exit 1
           fi
       - name: Format, static analysis, licences, unit tests, coverage and build

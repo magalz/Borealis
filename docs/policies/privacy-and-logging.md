@@ -111,7 +111,9 @@ Implementation requirements:
 
 A local, in-app record of security-relevant events. Users can export it in the
 diagnostic bundle and erase it from the Borealis settings screen. The in-app
-viewer arrives with the Phase 2 UI.
+viewer, opened from Settings, Privacy and diagnostics, Audit trail
+([UC-007](../use-cases/0007-review-and-erase-the-audit-trail.md)), exists since
+Sprint 6.
 
 Storage: a Room database at `noBackupFilesDir/audit.db`. It is excluded from
 Android backup and is never uploaded.

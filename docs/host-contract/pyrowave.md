@@ -377,7 +377,7 @@ comment at `src/stream.cpp:1322-1324`). Upstream moonlight-common-c at 874ac95
 hosts: the struct is `SS_FRAME_FEC_STATUS` with big-endian fields and type
 `0x5502` (`borealis:core/third_party/moonlight-common-c/src/Video.h:56-70`), it is filled in
 `borealis:core/third_party/moonlight-common-c/src/RtpVideoQueue.c:93-109`, sent at `borealis:core/third_party/moonlight-common-c/src/RtpVideoQueue.c:346`, `598` and
-`644`, enabled by the client feature flag announced at
+`644` (vendored copy), enabled by the client feature flag announced at
 `borealis:core/third_party/moonlight-common-c/src/SdpGenerator.c:270-274`, and transmitted unreliably on the control stream
 (`borealis:core/third_party/moonlight-common-c/src/ControlStream.c:1401-1415`). The Aurora fork was not examined; whether it
 differs from upstream here is **Unverified**.

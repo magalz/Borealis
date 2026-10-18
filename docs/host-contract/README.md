@@ -26,8 +26,9 @@ instead of re-reading the host source.
 | Lineage | Sunshine, then Vibeshine, then LuminalShine; not derived from Apollo (`gh-pages-template/compare.html:66-82`) |
 
 The host source tree is the only authority for the host side. The Moonlight
-client facts were checked against the Moonlight Android 12.2 subtree in this
-repository (`apps/android`). Comparisons with Artemis were checked against
+client facts were checked against the Moonlight Android 12.2 code in this
+repository (`apps/android`, Borealis code since ADR 0054) at the commit named
+under "Reference conventions" below. Comparisons with Artemis were checked against
 Artemis at commit `c5cf27f4` (2026-09-09).
 
 ## Reference conventions

@@ -352,7 +352,7 @@ for resume the equivalent is `resume` 1 (`src/nvhttp.cpp:3471-3486`).
   virtual display for one client's `/launch` (about 14 s on the Sprint 2 test
   host), it answers no other HTTPS request, because the server has a single io
   thread (upstream issue `NortheBridge/luminalshine#202`; the proposed fix,
-  PR #203, is not merged). A second client's `GET /serverinfo` then runs into the
+  PR #203, is not merged as of 2026-10-17). A second client's `GET /serverinfo` then runs into the
   client's 7 s read timeout. Borealis retries a `/serverinfo` read timeout at
   stream start, up to 3 attempts within about 25 s and until the launch is
   cancelled, and then reports the timeout as before. Only `/serverinfo` is
@@ -435,8 +435,8 @@ Borealis no longer produces this mismatch against a host that is not GFE:
 `launchApp` takes the `mode=` frame rate from `LaunchFrameRate.forLaunch`, which
 returns the stream frame rate for such a host
 (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:795-797`).
-In the Sprint 2 round with frame pacing "cap FPS" the `/launch` mode was
-`1280x720x59` and the host logged `HTTP and RTSP agree` (row 3.7 of
+**Observed** in the Sprint 2 round (Streamer), with frame pacing "cap FPS": the
+`/launch` mode was `1280x720x59` and the host logged `HTTP and RTSP agree` (row 3.7 of
 [device-validation.md section 7](../development/device-validation.md#7-results-sprint-2-2026-10-14)).
 
 When a per-client `display_mode` override is configured on the host, the host's
@@ -485,10 +485,11 @@ Notes on the table:
   returns 0 (`src/process.cpp:1382-1386`). **Unverified:** what the client
   observes in that case.
 - The Moonlight Android 12.2 client does not retry. It shows the message and
-  fails. Borealis replaced that block of the start thread: `launchWithRetry`
-  runs the retry policy
-  (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:171-179`),
-  and a failure goes to the error screen, which never shows the exception text
+  fails. Borealis added `launchWithRetry`, which runs the retry policy and which
+  `startApp` calls for `/resume` and, through `launchNotRunningApp`, for `/launch`
+  (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:171-179`).
+  It also changed the catch blocks of the start thread, so a failure goes to the
+  error screen, which never shows the exception text
   (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:492-510`).
 
 ### 7.6 Cancel
@@ -607,7 +608,9 @@ Aurora fork), which the Moonlight Android client uses: `SCM_H264` `0x1`,
 `SCM_AV1_MAIN10` `0x20000` (`borealis:core/third_party/moonlight-common-c/src/Limelight.h:506-510`). The Android client tests
 `0x20200` (`0x200` or `0x20000`) for HDR
 (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:333`)
-and `0x200` for resolutions above 4K (`:344`). The 4:4:4 bits (`SCM_H264_HIGH8_444` and following) are defined
+and `0x200` for resolutions above 4K (`:343-344`), a check that applies only to
+a GFE host (`context.isNvidiaServerSoftware`) and never to LuminalShine. The
+4:4:4 bits (`SCM_H264_HIGH8_444` and following) are defined
 immediately after them in the same header; they were not needed here.
 
 The client selects a format with `x-nv-vqos[0].bitStreamFormat` (0 H.264, 1 HEVC,

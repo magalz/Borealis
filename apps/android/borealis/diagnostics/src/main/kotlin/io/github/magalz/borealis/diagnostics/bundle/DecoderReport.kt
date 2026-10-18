@@ -78,7 +78,6 @@ object DecoderCollector {
     private val PROFILE_NAMES =
         mapOf(AVC to AVC_PROFILES, HEVC to HEVC_PROFILES, AV1 to AV1_PROFILES)
 
-    @Suppress("DEPRECATION")
     private val HDR_NAMES =
         mapOf(
             Hdr.HDR_TYPE_DOLBY_VISION to "Dolby Vision",

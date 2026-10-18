@@ -148,7 +148,6 @@ internal constructor(
      * decodes into hardware memory, which the icon cannot draw from. Art that declares more than 16
      * megapixels or a side over 8192 px is not decoded.
      */
-    @Suppress("TooGenericExceptionCaught") // OutOfMemoryError: art is a nicety, not worth a crash.
     private suspend fun decode(tuple: LoaderTuple): Bitmap? {
         val file = assets.getFile(tuple.computer.uuid, tuple.app.appId)
         // The file is at most 5 MB. Decoding from memory leaves no handle on it, so it can be
@@ -164,6 +163,7 @@ internal constructor(
             try {
                 decodeSized(bytes)
             } catch (e: OutOfMemoryError) {
+                // Art is a nicety, not worth a crash.
                 unavailable(RuntimeException(e))
                 null
             }

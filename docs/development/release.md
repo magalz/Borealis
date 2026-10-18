@@ -29,8 +29,8 @@ The owner performs the manual steps. AI agents never tag, approve or merge.
 git cliff --unreleased --tag android-v0.3.0
 ```
 
-Check that the sections (Added, Changed, Fixed, Security, Documentation,
-Upstream) read well.
+Check that the sections (Added, Changed, Fixed, Security, Performance,
+Documentation, Upstream) read well.
 
 **First release.** The upstream Moonlight history is in this repository (the
 subtree is not squashed), so the first changelog must start after the import.
@@ -45,12 +45,15 @@ the last upstream commit is `b48494cb`, "Version 12.2". To preview it:
 git cliff f397cda5.. --tag android-v0.1.0
 ```
 
-**Upstream commits.** Commits that arrive through upstream syncs are parsed
-like any other. Most Moonlight commits are not Conventional Commits and are
-filtered out (`filter_unconventional` and `filter_commits` in `cliff.toml`),
+**Upstream commits.** Harvested upstream commits keep their upstream subject
+and have no `sync:` prefix, so the "Upstream" group stays empty. They are parsed
+like any other commit. Most Moonlight commits are not Conventional Commits and
+are filtered out (`filter_unconventional` and `filter_commits` in `cliff.toml`),
 but upstream commits that happen to start with `feat` or `fix` can appear. Read
-the generated notes before publishing and treat the "Upstream" group (the
-`sync:` commits) as the reliable record of what came from Moonlight.
+the generated notes before publishing. The record of what came from upstream is
+[core/third_party/README.md](../../core/third_party/README.md) for
+moonlight-common-c, and the compatibility table in
+[upstream-sync.md](upstream-sync.md).
 
 Fix poor commit messages by editing PR titles before the merge, not by
 rewriting history. The workflow generates the release notes from the same
@@ -76,9 +79,11 @@ It needs no secrets and does not use the `release` environment. What it does:
 2. Builds the release APK with R8 and the Gradle SBOM, as the release does.
 3. Checks the APK (`.github/scripts/check-apk.sh`): package
    `io.github.magalz.borealis` (no `.unofficial` suffix), label `Borealis`,
-   versionName and versionCode as above, not debuggable, and the JNI entry
+   versionName and versionCode as above, not debuggable, the JNI entry
    classes `com.limelight.nvstream.jni.MoonBridge` and
-   `io.github.magalz.borealis.nativecore.CoreJni` still in the dex.
+   `io.github.magalz.borealis.nativecore.CoreJni` still in the dex, and
+   `libmoonlight-core.so` present for all four ABIs (the universal APK must
+   carry every one).
 4. Generates the release notes (git-cliff) and appends the compatibility note.
 5. Creates a throwaway keystore with `keytool` and signs the APK with the same
    script the `publish` job uses (`.github/scripts/sign-apk.sh`): zipalign

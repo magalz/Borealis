@@ -143,10 +143,9 @@ internal constructor(
     }
 
     /**
-     * The cached file as a software bitmap of about the standard art size. Not
-     * `DiskAssetLoader.loadBitmapFromCache`: its `ImageDecoder` squeezes any art to 300x400 and
-     * decodes into hardware memory, which the icon cannot draw from. Art that declares more than 16
-     * megapixels or a side over 8192 px is not decoded.
+     * The cached file as a software bitmap of about the standard art size, which the icon can draw
+     * from (a hardware bitmap it cannot). Art that declares more than 16 megapixels or a side over
+     * 8192 px is not decoded.
      */
     @Suppress("TooGenericExceptionCaught") // OutOfMemoryError: art is a nicety, not worth a crash.
     private suspend fun decode(tuple: LoaderTuple): Bitmap? {

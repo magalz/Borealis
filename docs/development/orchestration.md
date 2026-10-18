@@ -13,7 +13,9 @@ The main Claude session orchestrates Borealis work. It delegates exploration, li
 
 `CLAUDE_CODE_SUBAGENT_MODEL=haiku` also applies to built-in agents that inherit the model (such as `general-purpose` and `Plan`). Pass `model: "sonnet"` (or `"opus"`) explicitly when using them for design or substantive work.
 
-Memtrace indexes the orchestrator's checkout, so it stays on the phase branch while a phase runs (integration happens there; the phase branch is not checked out in another worktree). Treat its answers as phase-branch state and read the file in your own worktree before editing it. For a task's own changes the orchestrator indexes the task worktree as a Memtrace overlay and subagents pass `worktree` to `find_code` (see `AGENTS.md`).
+Memtrace holds the graph of the orchestrator's checkout, which stays on the phase branch while a phase runs (integration happens there; the phase branch is not checked out in another worktree). The orchestrator indexes it incrementally with `branch: "main"` and keeps it current with a persistent `watch_directory` that also uses `branch: "main"`. The label is only a name: treat answers as phase-branch state and read the file in your own worktree before editing it. Graph and quality queries always pass `branch: "main"`: Memtrace (v1.2.8) reuses unchanged nodes across branch labels, its quality tools match the exact label, and indexing a worktree once overwrote the repository record's branch. A task's own changes are an overlay with its task branch: the orchestrator indexes the task worktree and subagents pass `worktree` to `find_code` (see `AGENTS.md`).
+
+The impact tools (`get_impact`, `preflight_check`, `detect_changes`) are the main use of Memtrace. Its dead-code and duplicate-code results are leads, not evidence: a deletion needs a manual check for callable references (`::f`), Compose, JNI, the manifest, reflection and Hilt.
 
 ## Roles
 
@@ -27,7 +29,7 @@ Memtrace indexes the orchestrator's checkout, so it stays on the phase branch wh
 
 1. Brief: goal, owned files, consumed contracts, acceptance, verification.
 2. Worktree at `D:\Repos\Borealis-worktrees\<phase>-<task>` and branch `task/<phase>-<task>` created from the phase branch `phase/<n>-<name>`.
-3. The orchestrator indexes the worktree as a Memtrace overlay when the task needs code discovery.
+3. The orchestrator indexes the worktree as a Memtrace overlay with the task branch when the task needs code discovery; graph and quality queries stay on `branch: "main"`.
 4. `br-implementer` works test-first and runs the checks from the brief.
 5. `br-reviewer` reviews. Blocking findings go back to the implementer for at most two fix rounds; then the orchestrator decides, or escalates to the owner.
 6. The orchestrator merges the task branch into the phase branch with `--no-ff`.

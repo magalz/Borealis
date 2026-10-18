@@ -1,0 +1,7 @@
+# Files Memtrace leaves out of the code graph (gitignore syntax).
+
+# Gradle Kotlin DSL scripts are build configuration, and their lambdas flood the dead-code report.
+**/*.gradle.kts
+
+# Design tokens become hundreds of config-key nodes.
+design/tokens.json

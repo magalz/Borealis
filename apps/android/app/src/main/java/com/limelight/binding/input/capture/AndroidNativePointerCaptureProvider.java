@@ -21,10 +21,6 @@ public class AndroidNativePointerCaptureProvider extends AndroidPointerIconCaptu
         this.targetView = targetView;
     }
 
-    public static boolean isCaptureProviderSupported() {
-        return true;
-    }
-
     // We only capture the pointer if we have a compatible InputDevice
     // present. This is a workaround for an Android 12 regression causing
     // incorrect mouse input when using the SPen.

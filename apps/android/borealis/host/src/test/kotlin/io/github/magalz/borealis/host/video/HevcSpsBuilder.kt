@@ -97,7 +97,7 @@ object HevcSpsBuilder {
             w.bit(subLayerLevelPresent.getOrElse(i) { false })
         }
         if (maxSubLayersMinus1 > 0) {
-            for (i in maxSubLayersMinus1 until 8) w.bits(0, 2) // reserved_zero_2bits
+            repeat(8 - maxSubLayersMinus1) { w.bits(0, 2) } // reserved_zero_2bits
         }
         for (i in 0 until maxSubLayersMinus1) {
             if (subLayerProfilePresent.getOrElse(i) { false }) w.profileFields(profileIdc, -1)

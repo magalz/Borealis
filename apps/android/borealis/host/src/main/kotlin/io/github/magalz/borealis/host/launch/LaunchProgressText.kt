@@ -2,6 +2,7 @@ package io.github.magalz.borealis.host.launch
 
 import android.content.Context
 import io.github.magalz.borealis.host.R
+import io.github.magalz.borealis.host.getFormattedString
 import io.github.magalz.borealis.nativecore.LaunchCategory
 
 /** The spinner message while the client waits to repeat a `/launch` or `/resume` request. */
@@ -21,7 +22,7 @@ object LaunchProgressText {
         delayMs: Int,
     ): String =
         format(
-            { id, args -> context.getString(id, *args.toTypedArray()) },
+            context::getFormattedString,
             category,
             attempt,
             maxAttempts,

@@ -23,7 +23,13 @@ class PairingErrorsTest {
         message: String?,
         restarted: Boolean = false,
         fallback: String? = "upstream text",
-    ) = PairingErrors.describe(rules, HostError(code, message), fallback, restarted, fake)
+    ) =
+        PairingErrors.describe(
+            PairingEnvironment(rules, fake),
+            HostError(code, message),
+            fallback,
+            restarted,
+        )
 
     private fun text(id: Int) = "string:$id"
 
@@ -98,7 +104,8 @@ class PairingErrorsTest {
 
     @Test
     fun `an exception that is not a host answer keeps the upstream text without asking the rules`() {
-        val failure = PairingErrors.describe(rules, null, "upstream text", false, fake)
+        val failure =
+            PairingErrors.describe(PairingEnvironment(rules, fake), null, "upstream text", false)
 
         assertThat(failure).isEqualTo(PairingFailure("upstream text", false))
         assertThat(rules.pairCalls).isEmpty()
@@ -110,11 +117,10 @@ class PairingErrorsTest {
 
         val failure =
             PairingErrors.describe(
-                unavailable,
+                PairingEnvironment(unavailable, fake),
                 HostError(400, "Invalid uniqueid"),
                 "upstream text",
                 false,
-                fake,
             )
 
         assertThat(failure).isEqualTo(PairingFailure("upstream text", false))

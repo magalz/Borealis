@@ -6,6 +6,7 @@ import io.github.magalz.borealis.nativecore.HostCaps
 import io.github.magalz.borealis.nativecore.HostFamily
 import io.github.magalz.borealis.nativecore.PyroWaveProfile
 import java.io.File
+import java.util.Locale
 import javax.xml.parsers.DocumentBuilderFactory
 import org.junit.Test
 import org.w3c.dom.Element
@@ -26,7 +27,7 @@ class HostInfoTextTest {
                 R.string::class.java.getField(element.getAttribute("name")).getInt(null) to
                     element.textContent
             }
-        return { id, args -> byId.getValue(id).format(*args.toTypedArray()) }
+        return { id, args -> byId.getValue(id).format(Locale.ROOT, *args.toTypedArray()) }
     }
 
     private val english = strings("values")

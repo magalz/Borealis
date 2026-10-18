@@ -3,6 +3,7 @@ package io.github.magalz.borealis.host.video
 import android.media.MediaCodecInfo
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogTag
+import java.util.Locale
 
 /**
  * Logs what the HEVC SPS of a stream says, once per change, and warns when the stream needs a
@@ -81,7 +82,7 @@ class HevcSpsMonitor(
     private fun dump(nal: ByteArray, offset: Int, length: Int) {
         if (offset < 0 || length < 0 || offset.toLong() + length > nal.size) return
         val count = minOf(length, MAX_DUMP_BYTES)
-        val hex = (0 until count).joinToString(" ") { "%02x".format(nal[offset + it]) }
+        val hex = (0 until count).joinToString(" ") { "%02x".format(Locale.ROOT, nal[offset + it]) }
         BorealisLog.d(LogTag.VIDEO, "first HEVC SPS hex=$hex")
     }
 
@@ -106,8 +107,9 @@ class HevcSpsMonitor(
             HevcSpsMonitor(requestedHdr, { declaresMain10(hevcProfiles(decoder)) }, debugBuild)
 
         private fun hevcProfiles(decoder: MediaCodecInfo?): IntArray {
-            val levels = decoder?.getCapabilitiesForType("video/hevc")?.profileLevels
-            return IntArray(levels?.size ?: 0) { levels!![it].profile }
+            val levels =
+                decoder?.getCapabilitiesForType("video/hevc")?.profileLevels ?: return IntArray(0)
+            return IntArray(levels.size) { levels[it].profile }
         }
     }
 }

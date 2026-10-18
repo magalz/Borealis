@@ -7,6 +7,7 @@ import io.github.magalz.borealis.logging.AuditType
 import java.security.PublicKey
 import java.security.cert.Certificate
 import java.security.cert.CertificateEncodingException
+import java.util.Locale
 import javax.net.ssl.SSLHandshakeException
 import org.junit.Rule
 import org.junit.Test
@@ -82,5 +83,5 @@ class TlsAuditTest {
         java.security.MessageDigest.getInstance("SHA-256")
             .digest(text.toByteArray())
             .take(8)
-            .joinToString("") { "%02x".format(it) }
+            .joinToString("") { "%02x".format(Locale.ROOT, it) }
 }

@@ -1,7 +1,7 @@
 # HEVC SPS fixtures
 
 Raw HEVC sequence parameter set NAL units (type 33), each with its Annex-B start code
-(`00 00 00 01`), as emitted by x265. They are inputs of `HevcSpsTest` and `HevcSpsMonitorTest`.
+(`00 00 00 01`), as emitted by x265. They are inputs of `HevcSpsTest`; `HevcSpsMonitorTest` builds its SPS with `HevcSpsBuilder` and does not read them.
 The files are marked `binary` in `.gitattributes`. They are synthetic test-pattern streams: no
 captured or personal data.
 

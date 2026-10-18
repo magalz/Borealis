@@ -93,17 +93,39 @@ The work for this sprint is on the phase branch `phase/s7-followups-polish`.
 
 ### Sprint 8: tidy-up
 
-- Dead code, complexity hotspots and duplicated code. Found with Memtrace and
-  checked by hand.
-- The stale entries in the lint baseline, `apps/android/app/lint-baseline.xml`.
-- Upstream leftovers in `apps/android/app/build.gradle`,
-  `apps/android/appveyor.yml` and `apps/android/store-assets/`.
-- **Duplicated game controller rule:** the test of what counts as a game
-  controller is duplicated between `ConnectedGamepads.kt`
-  (`borealis/designsystem`, Sprint 7 item 7) and `NativeGamepadSupport.kt`
-  (`app`). The test helper that builds input devices is also copied into the
-  stream module's tests.
-- **Phone title bars:** three near-identical phone title bars.
+The work for this sprint is on the phase branch `phase/s8-tidy-up`. The device
+smoke round of [section 3.21](development/device-validation.md#321-sprint-8-checks)
+has not run yet. Its results go in [section 13](development/device-validation.md#13-results-sprint-8).
+
+1. **Dead code, complexity hotspots and duplicated code.** Found with Memtrace
+   and checked by hand. The merges below carry the work.
+   TODO(verify): which findings of this item remain open.
+2. **Root flavor.** Done (merge `48927cca`). The root flavor, its variants and
+   the APK paths are removed. The tasks are `assembleDebug` and `assembleRelease`.
+3. **Upstream leftovers.** Done (merges `599fed98` and `51a04274`). Removed:
+   `appveyor.yml`, `store-assets`, the LuaScripts, fastlane and
+   `apps/android/.github`. The decoder errata moved to the docs.
+4. **Lint baseline.** Done (merge `cbded86b`). The baseline went from 159 to 43
+   entries. The dead SDK branches (84 findings) are removed and the security
+   entries are reviewed. `HelpActivity`, the Help button and its WebView are
+   removed by the owner's decision, because they linked to Moonlight's wiki.
+5. **Duplicated game controller rule.** Done (merge `e81583be`). The test of
+   what counts as a game controller is one rule. Unifying it with
+   `ControllerHandler.isGameControllerDevice` is open; see Sprint 12.
+6. **Host parameter objects.** Done (merge `d9865d61`).
+7. **Phone title bars.** Done (merge `8a6acbad`). The three phone title bars
+   share one phone bar and one back button. The gap below the arrow still
+   differs; see Sprint 9.
+8. **Kotlin suppressions.** Done (merge `543896a9`).
+9. **Detekt type analysis.** Done (merge `65f6b3a9`, fixes `933f368f`,
+   `67cef8eb` and `b72163d3`, baselines removed in `50854eda`). Every Android
+   module runs detekt with type analysis. The 116 findings are fixed. Two rules
+   stay off in test sources only: `InjectDispatcher` and `LongParameterList`
+   (see Sprint 12). `MatchingDeclarationName` is off, because Compose files are
+   named after the composable. `detekt.use.worker.api=true` is set.
+10. **Memtrace rule.** Done (merges `599fed98` and `7f7b7721`). The index and the
+    queries use the branch `main`. There is no watcher, because it ignores the
+    branch parameter. The index is refreshed after each merge wave.
 
 ### Sprint 9: UX polish and the handheld
 
@@ -123,6 +145,9 @@ The work for this sprint is on the phase branch `phase/s7-followups-polish`.
 - **Handheld host card height.** Noticed on 2026-10-17. On the S22 as a
   handheld (360 dp tall), the host cards use the TV height of 176 dp, which
   leaves a lot of empty space. Adapt the card height for a handheld.
+- **Phone bar gap.** Found in Sprint 8. Settings and Privacy have 4 dp between
+  the back arrow and the title, and Apps and Audit have none. Unifying the gap
+  needs re-recorded screenshot references.
 - **The animated background:** integrated in this sprint if the owner has
   delivered it by then; otherwise it stays in the backlog.
 - **A device round** for what Sprint 7 did not run:
@@ -166,6 +191,34 @@ The owner creates the tag. See the [release procedure](development/release.md).
   ([ADR 0055](adr/0055-settings-storage-and-the-phase-2-settings-screen.md)).
 - **Opt-in crash reporting.** Planned, not implemented. See
   [PRIVACY.md](../PRIVACY.md) and [ADR 0022](adr/0022-crash-reporting-and-privacy.md).
+
+### Sprint 12 onward: Java to Kotlin migration
+
+Owner decisions of 2026-10-17 and 2026-10-18. The migration moves the inherited
+Java to Kotlin, one area at a time.
+
+- **Why:** one language, null safety, and the static analysis covering all of
+  the code.
+- **Method:** one area at a time. Write characterization tests before the
+  conversion of each area, and run device rounds for it.
+- **Order:**
+  1. HTTP and computers. Phase 3 uses them.
+  2. Input and video. This comes before Phase 4 (PyroWave).
+  3. `MoonBridge`, last.
+- **Size:** about 85 Java files and 22k lines in the stream core.
+  TODO(verify): the figure is the owner's. A count of the tracked `.java` files
+  in `core/` and `apps/android/` on 2026-10-18 gives 80 files.
+- **Upstream cherry-picks:** an area that is converted no longer takes upstream
+  cherry-picks directly. Its fixes are ported by hand. See
+  [upstream cherry-picks](development/upstream-sync.md).
+- **Detekt tests:** turn the detekt rules `InjectDispatcher` and
+  `LongParameterList` back on in test sources, and standardize the tests. Inject
+  the dispatchers in the tests and reduce the test builders. This is an explicit
+  owner request.
+- **Game controller rule:** unify the game controller rule with
+  `ControllerHandler.isGameControllerDevice`, possibly in a neutral input module.
+  Today `:app` depends on `:borealis:designsystem` for it. `ControllerHandlerRig`
+  can then use the shared `InputDevices` fixture.
 
 ## Later phases
 

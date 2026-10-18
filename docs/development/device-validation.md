@@ -1,10 +1,10 @@
 # Device validation runbook
 
-This runbook checks Borealis Phase 1 and Sprints 2 to 7 on two devices against
+This runbook checks Borealis Phase 1 and Sprints 2 to 8 on two devices against
 LuminalShine 26.09.1 running on the owner's Windows PC. It is for the owner and
 for the orchestrator who runs the checks. Run the steps in order and record the
-results as a new section with a table, like sections 7 to 10. Sections 6 to 12
-hold the results of Phase 1 and Sprints 2 to 7, in that order.
+results as a new section with a table, like sections 7 to 10. Sections 6 to 13
+hold the results of Phase 1 and Sprints 2 to 8, in that order.
 
 Sources: [host contract](../host-contract/luminalshine.md) (cited as "contract"),
 [Borealis Android README](../../apps/android/borealis/README.md),
@@ -771,6 +771,44 @@ For a system pad, turn it off. Say which kind each run used.
    - Quit: press Start, Select, LB and RB together, then let all four go.
      Expected: the stream ends. No capture is taken during the stream, because
      it would show the PC screen.
+
+### 3.21 Sprint 8 checks
+
+Run these with the Sprint 8 build on the S22 phone and the Google TV Streamer.
+Sprint 8 removed and reworked code that these paths use, so this is a smoke
+round, not a full pass. Record each item as `pass`, `fail` or `not applicable`,
+with a short note for each `fail`. Where a step names one device, run it there
+only.
+
+1. Library. Open Hosts and Apps on each device. Expected: both screens load,
+   and the host cards and app tiles respond as they did in Sprint 7.
+2. Start and end a stream. Start an app from the Library, wait for the first
+   frame, then end the stream from the in-game menu. Expected: the stream starts
+   and ends as in 3.9 and 3.10.
+3. Pads. Stream with a system pad, then with a USB-driver pad (turn USB driver
+   for Xbox controllers on in Settings, Gamepad). Press Start, Select, LB and RB
+   together, then let all four go. Expected: the stream ends for both pads, as
+   in 3.20 step 3.
+4. Mouse capture. On a stream with a mouse, move the pointer. Expected: the
+   pointer is captured and moves the PC pointer. Release the capture with the
+   key that the stream uses for it. `TODO(verify)`: that key on each device.
+   Only the native pointer capture provider remains.
+5. On-screen keyboard. In a stream, open the Borealis keyboard from the in-game
+   menu, and type a few keys. Expected: the keys reach the PC.
+6. Decode overlay. Turn the Performance overlay on, start a stream, and read the
+   decode time. Expected: a number in milliseconds, as in 3.20 step 4.
+7. TV channel and box art (Streamer only). Expected: the box art of the apps
+   loads in the Library and in the TV channel rows. `PosterContentProvider` and
+   `DiskAssetLoader` changed in Sprint 8. `TODO(verify)`: how the TV channel is
+   added on the Google TV version.
+8. Decoder crash notice. If the notice appears, expected: it has no Help button.
+   `TODO(verify)`: how to trigger the notice on the device without a fault.
+9. Debug APK. Install the debug APK over the installed build with
+   `adb -s <serial> install -r <apk>`, without uninstalling. Expected: the
+   install succeeds, the package is `io.github.magalz.borealis.debug`, and the
+   launcher label is `Borealis Debug`, as in 1.2 step 4.
+10. Evidence: for each item, the note above. A screenshot is taken only where
+    it shows no address, host name or PIN, and the logcat capture of 1.4.
 
 ## 4. Results templates
 
@@ -1614,3 +1652,24 @@ taken during the stream, because it would show the PC screen.
   TV token) leaves a lot of empty space. The owner wants the card adapted for a
   handheld in a later refinement session. See the
   [roadmap, Sprint 9](../roadmap.md#sprint-9-ux-polish-and-the-handheld).
+
+## 13. Results: Sprint 8
+
+This section holds the Sprint 8 results. The checks follow the steps of
+[section 3.21](#321-sprint-8-checks). The orchestrator fills it in after the
+round.
+
+Setup: builds `<commit tested>`, LuminalShine 26.09.1, the Galaxy S22 (USB ADB)
+and the Google TV Streamer (ADB over Wi-Fi).
+
+| # | Item | Device | Result | Evidence and notes |
+| --- | --- | --- | --- | --- |
+| 1 | Library | | | |
+| 2 | Start and end a stream | | | |
+| 3 | System pad and USB-driver pad: quit combo | | | |
+| 4 | Mouse capture | | | |
+| 5 | On-screen keyboard | | | |
+| 6 | Decode overlay | | | |
+| 7 | TV channel and box art | | | |
+| 8 | Decoder crash notice has no Help button | | | |
+| 9 | Debug APK: same ID and label | | | |

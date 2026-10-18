@@ -28,9 +28,7 @@ import kotlinx.coroutines.launch
 class LogSettings
 private constructor(private val repository: SettingsRepository, private val baseLevel: LogLevel) {
     // Unconfined, so that a change applies on the thread that made it, before that call returns.
-    // That is part of the contract, not a choice a test replaces, so the dispatcher is not
-    // injected.
-    @Suppress("InjectDispatcher")
+    @Suppress("InjectDispatcher") // That is the contract, not a seam a test replaces.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
 
     private fun begin() {

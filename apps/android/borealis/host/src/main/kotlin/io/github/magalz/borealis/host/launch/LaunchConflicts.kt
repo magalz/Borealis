@@ -63,9 +63,9 @@ fun interface ConflictJoin {
 data class RequestedApp(val id: Int, val name: String?)
 
 /**
- * How the connection answers a conflict: [prompt] asks the user, then [relaunch] launches the
- * requested app again, [join] resumes the running one and [quitAndRelaunch] ends it and launches
- * the requested one.
+ * How the connection answers a conflict: [prompt] asks the user; [relaunch] launches the requested
+ * app again (when nothing runs any more, or a resume found nothing to resume); [join] resumes the
+ * running app; [quitAndRelaunch] ends it and launches the requested one.
  */
 class ConflictActions(
     val prompt: ConflictPrompt,

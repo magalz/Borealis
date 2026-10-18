@@ -790,19 +790,20 @@ only.
    together, then let all four go. Expected: the stream ends for both pads, as
    in 3.20 step 3.
 4. Mouse capture. On a stream with a mouse, move the pointer. Expected: the
-   pointer is captured and moves the PC pointer. Release the capture with the
-   key that the stream uses for it. `TODO(verify)`: that key on each device.
-   Only the native pointer capture provider remains.
+   pointer is captured and moves the PC pointer. End the stream. Expected: the
+   pointer is released. Only the native pointer capture provider remains.
 5. On-screen keyboard. In a stream, open the Borealis keyboard from the in-game
    menu, and type a few keys. Expected: the keys reach the PC.
 6. Decode overlay. Turn the Performance overlay on, start a stream, and read the
    decode time. Expected: a number in milliseconds, as in 3.20 step 4.
-7. TV channel and box art (Streamer only). Expected: the box art of the apps
-   loads in the Library and in the TV channel rows. `PosterContentProvider` and
-   `DiskAssetLoader` changed in Sprint 8. `TODO(verify)`: how the TV channel is
-   added on the Google TV version.
-8. Decoder crash notice. If the notice appears, expected: it has no Help button.
-   `TODO(verify)`: how to trigger the notice on the device without a fault.
+7. TV channel and box art (Streamer only). Open Apps. Expected: the box art of
+   the apps loads. If the Google TV home screen shows a Borealis channel, its
+   posters load too. `PosterContentProvider` and `DiskAssetLoader` changed in
+   Sprint 8.
+8. Decoder crash notice. There is no safe way to make the decoder crash on
+   purpose, so this step runs only if the notice appears by itself. Expected: it
+   has an OK button and no Help button. `UpstreamSeamsTest` covers it in the
+   unit tests.
 9. Debug APK. Install the debug APK over the installed build with
    `adb -s <serial> install -r <apk>`, without uninstalling. Expected: the
    install succeeds, the package is `io.github.magalz.borealis.debug`, and the

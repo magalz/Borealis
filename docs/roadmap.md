@@ -98,8 +98,11 @@ smoke round of [section 3.21](development/device-validation.md#321-sprint-8-chec
 has not run yet. Its results go in [section 13](development/device-validation.md#13-results-sprint-8).
 
 1. **Dead code, complexity hotspots and duplicated code.** Found with Memtrace
-   and checked by hand. The merges below carry the work.
-   TODO(verify): which findings of this item remain open.
+   and checked by hand. In Kotlin every Memtrace candidate had a caller and no
+   exact duplicate was found. The dead code removed is the root flavor, the 84
+   dead SDK branches, the capture providers minSdk 28 made unreachable,
+   `HelpActivity`, unused box art and dialog code, and what the typed detekt
+   analysis found. A full sweep of the Java methods moves to the migration.
 2. **Root flavor.** Done (merge `48927cca`). The root flavor, its variants and
    the APK paths are removed. The tasks are `assembleDebug` and `assembleRelease`.
 3. **Upstream leftovers.** Done (merges `599fed98` and `51a04274`). Removed:
@@ -205,9 +208,9 @@ Java to Kotlin, one area at a time.
   1. HTTP and computers. Phase 3 uses them.
   2. Input and video. This comes before Phase 4 (PyroWave).
   3. `MoonBridge`, last.
-- **Size:** about 85 Java files and 22k lines in the stream core.
-  TODO(verify): the figure is the owner's. A count of the tracked `.java` files
-  in `core/` and `apps/android/` on 2026-10-18 gives 80 files.
+- **Size:** 80 Java files and about 21,600 lines under
+  `apps/android/app/src/main/java` on 2026-10-18, almost all of it the stream
+  core.
 - **Upstream cherry-picks:** an area that is converted no longer takes upstream
   cherry-picks directly. Its fixes are ported by hand. See
   [upstream cherry-picks](development/upstream-sync.md).

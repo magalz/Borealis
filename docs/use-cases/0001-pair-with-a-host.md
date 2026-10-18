@@ -90,9 +90,6 @@ host, and it is the only way a host becomes trusted.
 | UC-001-T5 | Given the pairing screen is open, when the user reads the steps, then the screen tells the user to avoid `xbox` and `webos` in the device name. | UI | exists (Sprint 4, UI) |
 | UC-001-T6 | Given the user chooses Cancel, when the screen closes, then no pairing is stored. | UI | exists (Sprint 4, UI) |
 
-Planned tests cover the Phase 2 screens; tests marked as existing cover logic
-that the Phase 2 screens reuse.
-
 ## Host dependency
 
 The pairing needs the LuminalShine pairing exchange and the Web UI, which
@@ -115,5 +112,5 @@ does not need any capability beyond the standard pairing exchange.
 - Existing tests: `PairingAuditTest`, `PairingErrorsTest`, and the core
   `borealis_pair_classify` vectors (`core/tests/pair_classify_test.cpp`).
 - Existing logic: the pairing restart and the host pairing errors exist from
-  Sprint 2 and 3. The Phase 2 screen is planned; it rebuilds the screen, not the
+  Sprint 2 and 3. The Phase 2 screen (Sprint 4) rebuilt the screen, not the
   logic.

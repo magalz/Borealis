@@ -51,22 +51,23 @@ can be paired ([UC-001](0001-pair-with-a-host.md)).
 3. The user goes back to the field, or continues on the rail. The flow rejoins
    the main flow at step 3 when the user returns to the field.
 
-### E1: The address fails the 12.2 checks (branches from step 4)
+### E1: The address fails a check (branches from step 4)
 
-1. The rules are the ones Moonlight 12.2 applies. An empty field shows "You
-   must enter an IP address". A name that does not resolve shows "Unable to
-   resolve PC address". A private (site-local) IPv4 address that is not on any
-   of the device's own subnets fires the 12.2 subnet check
-   (`AddComputerManually.isWrongSubnetSiteLocalAddress`) and shows
-   `addpc_wrong_sitelocal` ("That address doesn't look right...").
+1. The rules follow the Moonlight 12.2 field. The error shows under the Address
+   field. An empty field shows "Enter an IP address or a host name." An address
+   that cannot be a host shows "Unable to resolve this address. Check it for
+   typos." A private (site-local) IPv4 address that does not answer and is not
+   on any of the device's own subnets fails the subnet check
+   (`SubnetCheck.isWrongSiteLocalAddress`) and shows "That address is not on
+   this network. For streaming over the Internet, use your router's public IP
+   address."
 2. The host is not added.
 3. The use case ends.
 
 ### E2: The host does not answer (branches from step 4)
 
-1. The host is not added, as in Moonlight 12.2 only. A dialog shows "Unable to
-   connect to the specified computer. Make sure the required ports are allowed
-   through the firewall."
+1. The host is not added. The field shows "Unable to connect to the specified
+   computer. Make sure the required ports are allowed through the firewall."
 2. The use case ends.
 
 ## Postconditions
@@ -84,15 +85,12 @@ can be paired ([UC-001](0001-pair-with-a-host.md)).
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
 | UC-008-T1 | Given the Add host screen is opened, when it appears, then the Address field has focus. On a phone the keyboard opens; on a TV or handheld it opens on OK. | UI | exists (Sprint 4, UI; TV keyboard on OK, Sprint 6 device round) |
-| UC-008-T2 | Given the address `192.168.1.20`, when the user chooses Add host, then the host appears on the Hosts screen with Pair as its action. | unit | planned |
+| UC-008-T2 | Given the address `192.168.1.20`, when the user chooses Add host, then the host appears on the Hosts screen with Pair as its action. | UI | exists (Sprint 4, UI; the Pair action is in `HostsScreenTest`) |
 | UC-008-T3 | Given an address without a port, when the host is added, then the default port 47989 is used. | unit | exists (Sprint 4, unit) |
 | UC-008-T4 | Given an address with a port, when the host is added, then that port is used. | unit | exists (Sprint 4, unit) |
 | UC-008-T5 | Given the user chooses Cancel, when the screen closes, then the Hosts list is unchanged. | UI | exists (Sprint 4, UI) |
 | UC-008-T6 | Given the address field has text on a TV, when the user presses Down, then the focus moves to Add host; when the caret is at the start, Left goes to the rail and the text is kept. | UI | exists (Sprint 5, UI; device round) |
 | UC-008-T7 | Given a host is added by address, when the user chooses Forget, then the text says that the PC may keep trusting this device until it is removed in the LuminalShine Web UI. | UI | exists (Sprint 5, UI; device round) |
-
-Planned tests cover the Phase 2 screens; tests marked as existing cover logic
-that the Phase 2 screens reuse.
 
 ## Host dependency
 
@@ -108,5 +106,10 @@ is the only way to reach a host that discovery does not find.
 - Policies: [privacy and logging](../policies/privacy-and-logging.md) (host
   addresses are masked in logs when "Mask addresses in logs and diagnostics"
   is on).
-- Existing logic: the manual add of Moonlight 12.2 (`AddComputerManually`),
-  unchanged in Sprints 1 to 3. The Phase 2 screen is planned.
+- Existing logic: the Add host screen (`AddHostScreen`, `AddHostViewModel`) is in
+  `:borealis:library` from Sprint 4. `ComputerHostRepository.addHost` adds the
+  host over the Moonlight 12.2 services, and `SubnetCheck` runs the subnet
+  check. Sprint 5 removed `AddComputerManually`, the 12.2 manual add screen.
+- Existing tests: `AddHostRouteTest`, `AddHostScreenTest`, `AddHostViewModelTest`,
+  `HostAddressParserTest`, `ComputerHostRepositoryTest`, `SubnetCheckTest`,
+  `LibraryActivityTest` and `HostsScreenTest`.

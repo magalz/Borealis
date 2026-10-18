@@ -240,7 +240,6 @@ class HostMappingTest {
         it.borealis = BorealisHostInfo(caps, httpsPort = 47984, httpPort = 47989)
     }
 
-    @Suppress("LongParameterList")
     private fun caps(
         hevc: Boolean = false,
         hevcMain10: Boolean = false,

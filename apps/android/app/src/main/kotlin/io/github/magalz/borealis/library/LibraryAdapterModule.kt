@@ -60,7 +60,7 @@ internal interface LibraryAdapterModule {
     @Binds fun glRendererProbe(impl: GlSurfaceRendererProbe): GlRendererProbe
 
     companion object {
-        @Suppress("InjectDispatcher") // The one place that names it; the rest inject it.
+        @Suppress("InjectDispatcher") // The one place in :app that names it; the rest inject it.
         @Provides
         @IoDispatcher
         fun ioDispatcher(): CoroutineDispatcher = Dispatchers.IO

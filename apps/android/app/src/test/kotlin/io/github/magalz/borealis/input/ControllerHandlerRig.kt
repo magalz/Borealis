@@ -253,7 +253,7 @@ class ControllerHandlerRig(multiController: Boolean = false) {
     }
 
     /** The handler's contexts by device id, for the ones a test adds or reads. */
-    @Suppress("UNCHECKED_CAST")
+    @Suppress("UNCHECKED_CAST") // The field holds the handler's contexts by construction.
     private fun inputDeviceContexts(): android.util.SparseArray<Any> =
         ControllerHandler::class
             .java

@@ -41,3 +41,5 @@ Chosen option: "Vanilla Moonlight 12.2 with upstream history preserved", because
 ## More Information
 
 See [0001](0001-name-the-product-borealis.md), [0005](0005-ui-toolkit-and-visual-style.md) and [0008](0008-shared-core-language-and-scope.md).
+
+Amended by [0054](0054-declare-independence-from-moonlight.md): upstream merges no longer remain possible. The code under `apps/android/` is Borealis code, and upstream fixes arrive only by cherry-pick.

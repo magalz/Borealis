@@ -87,3 +87,5 @@ Note: common-c (C) and PyroWave (C++20) stay C/C++ regardless, to keep merging w
 ## More Information
 
 See [0003](0003-native-apps-per-platform-with-shared-core.md), [0010](0010-prefab-for-android-native-build.md), [0016](0016-testing-strategy-and-tdd.md) and [0043](0043-thin-c-api-with-hand-written-jni.md).
+
+Amended by [0054](0054-declare-independence-from-moonlight.md): moonlight-common-c is no longer a fork. It is vendored in `core/third_party/moonlight-common-c/` as Borealis code, and its upstream fixes arrive only by cherry-pick.

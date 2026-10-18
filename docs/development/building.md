@@ -78,6 +78,58 @@ report it; never reformat upstream code. Spotless formats Borealis C/C++ with
 the `clang-format` on `PATH`; without it the C/C++ Spotless tasks fail with
 "clang-format 22.x not found on PATH" while the rest of the build keeps working.
 
+### Lint baseline
+
+`apps/android/app/lint-baseline.xml` hides the Android Lint findings that
+Borealis accepts; every other finding fails the `lint` task. It holds no
+finding that the code can satisfy: the dead SDK-version checks, the unused
+resources and the dependencies declared outside the version catalog were fixed
+in the Sprint 8 sweep. Lint reports a baseline entry that no longer matches as
+fixed, so regenerate the file with `./gradlew :app:updateLintBaseline` in the
+commit that fixes the code, and check that it has no absolute or Windows path
+(CI fails on that).
+
+What stays, and why:
+
+| Lint ids | Why they stay |
+| --- | --- |
+| `UnusedAttribute`, `RtlHardcoded`, `ViewConstructor`, `UseRequiresApi` | Cosmetic. The attributes apply from API 30 or 33 and older versions ignore them. The gravity in `activity_game.xml` is the stream notification overlay. The seven virtual-controller views are built in code only. The `@TargetApi` annotations are for API 30 and later; the ones for API 28 and below went with the dead checks. |
+| `AndroidGradlePluginVersion`, `OldTargetApi` | Versions. A newer AGP and a `targetSdk` of 37 are dependency and platform updates, decided on their own and not in a lint sweep. |
+| `NotShrinkingResources` | Release builds minify without `shrinkResources`. Turning it on changes the release package, so it is a release decision. |
+| `DefaultLocale`, `ApplySharedPref`, `SourceLockedOrientationActivity`, `VectorRaster` | Inherited code that does what it should. `toLowerCase()` runs on device and GPU names. `commit()` is deliberate: the crash listener must persist the crash count before the process dies. The stream locks the orientation on purpose. `ic_settings.xml` is a large vector. |
+| `ObsoleteSdkInt` (one entry) | The `mipmap-anydpi-v26` folder. Merging it into `mipmap-anydpi` makes `IconXmlAndPng` fire against the legacy launcher PNGs that `design/icon/generate.py` produces on purpose, and that finding carries a machine-specific path, so it cannot be baselined. It needs an ignore in `app/lint.xml` first. |
+
+Security findings, each reviewed on 2026-10-17:
+
+- **`SetJavaScriptEnabled`** (`HelpActivity`). The WebView opens one fixed URL,
+  Moonlight's troubleshooting wiki
+  (`https://github.com/moonlight-stream/moonlight-docs/wiki/Troubleshooting`,
+  `HelpLauncher.launchTroubleshooting`). It is reached from the Help button of
+  the decoder-crash dialog, and only on Android TV or when no browser takes the
+  intent. The activity is not exported and registers no JavaScript interface.
+  Whether it keeps pointing at Moonlight's site is the owner's decision.
+- **`ExportedContentProvider`** (`PosterContentProvider`). The Android TV home
+  screen reads the poster URIs of the TV channel from another process, so the
+  provider must stay exported. It is read-only (`insert`, `update`, `delete`
+  and `query` throw, and any mode but `r` is refused) and serves only
+  `cache/boxart/<host id>/<app id>.png`: `PosterRequest` accepts a host id of
+  hexadecimal digits and hyphens and a non-negative number as app id, and
+  `PosterContentProviderTest` covers the traversal attempts.
+- **`InsecureBaseConfiguration`** (`network_security_config.xml`). GameStream
+  speaks plain HTTP to the host the user typed, by address or by name:
+  `/serverinfo` (the first call and the fallback) and the pairing handshake go
+  to `http://<host>:47989`, and the other requests use HTTPS pinned to the
+  certificate stored at pairing. A `domain-config` cannot name an arbitrary
+  address, so limiting cleartext would break hosts typed by IP. The base config
+  trusts the system CAs only.
+- **`CustomX509TrustManager`** (`NvHTTP`). It asks the platform trust manager
+  first and only then accepts the one certificate pinned at pairing, so it does
+  not trust everything.
+- **`MissingLeanbackLauncher`.** A false positive: lint reads the `:app`
+  manifest, while the launcher entry, `LibraryActivity`, is declared in
+  `:borealis:library` with the `LEANBACK_LAUNCHER` filter, and
+  `LauncherEntryTest` checks it in the merged manifest.
+
 ### Screenshot tests
 
 The Compose screens in `:borealis:designsystem`, `:borealis:library` and

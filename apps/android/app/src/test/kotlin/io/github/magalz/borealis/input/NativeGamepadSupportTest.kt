@@ -82,6 +82,14 @@ class NativeGamepadSupportTest {
     }
 
     @Test
+    fun `a virtual device with the same VID and PID does not block the driver`() {
+        // The virtual keyboard stands in for system-level input, never for a pad.
+        val virtual = InputDeviceFacts(vid, pid, InputDevice.SOURCE_GAMEPAD, isVirtual = true)
+
+        assertThat(blocks(virtual)).isFalse()
+    }
+
+    @Test
     fun `no input device at all does not block the driver`() {
         assertThat(blocks()).isFalse()
     }

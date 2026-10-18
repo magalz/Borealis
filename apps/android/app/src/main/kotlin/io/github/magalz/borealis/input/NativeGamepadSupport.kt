@@ -13,6 +13,7 @@ data class InputDeviceFacts(
     val productId: Int,
     val sources: Int,
     val hasJoystickXy: Boolean = false,
+    val isVirtual: Boolean = false,
 )
 
 /**

@@ -53,12 +53,12 @@ used with `--sdk`); any location works as long as `ANDROID_HOME` and
 
 ## Android client
 
-Run from `apps/android/`. Only the `nonRoot` flavor is built; the upstream
-`root` flavor is disabled.
+Run from `apps/android/`. The app has one variant per build type, `debug` and
+`release`.
 
 ```sh
 cd apps/android
-./gradlew assembleNonRootDebug
+./gradlew assembleDebug
 ```
 
 Checks (format, static analysis, lint and JVM unit tests):
@@ -117,7 +117,7 @@ Verify the screens against the committed references:
 
 - **Coverage** (Kover, [ADR 0046](../adr/0046-test-coverage-with-kover-llvm-cov-and-codecov.md)):
   the root project merges the debug unit-test coverage of `:borealis:*` and of
-  the Borealis Kotlin in `:app` (`nonRootDebug`). Upstream `com.limelight.*`
+  the Borealis Kotlin in `:app`. Upstream `com.limelight.*`
   classes and generated Hilt/Dagger, `BuildConfig`, `R` and Compose singleton
   classes are excluded. Output: `apps/android/build/reports/kover/coverage.xml`
   (JaCoCo format, uploaded to Codecov) and
@@ -137,7 +137,7 @@ Verify the screens against the committed references:
 - **SBOM** ([ADR 0042](../adr/0042-sbom-with-cyclonedx.md)):
   `:app:cyclonedxDirectBom` writes
   `apps/android/app/build/reports/sbom/borealis-android.cdx.json`
-  (CycloneDX 1.6) for the `nonRootRelease` runtime classpath. Native components
+  (CycloneDX 1.6) for the `release` runtime classpath. Native components
   that Gradle cannot see are listed by hand in
   `apps/android/sbom/native-components.cdx.json`; update it as described in
   [upstream-sync.md](upstream-sync.md). Both files are attached to every
@@ -146,7 +146,7 @@ Verify the screens against the committed references:
 The checks a CI run should execute are:
 
 ```sh
-./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleNonRootDebug licensee koverXmlReportBorealis
+./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleDebug licensee koverXmlReportBorealis
 ```
 
 ### Release build (dry run)
@@ -158,8 +158,8 @@ when the four `BOREALIS_*` values from the
 the release workflow never does: it signs the unsigned artifacts afterwards.
 
 ```sh
-./gradlew assembleNonRootRelease
-# apps/android/app/build/outputs/apk/nonRoot/release/app-nonRoot-release-unsigned.apk
+./gradlew assembleRelease
+# apps/android/app/build/outputs/apk/release/app-release-unsigned.apk
 ```
 
 There is no AAB until Phase 5 (see [release.md](release.md)). To try the

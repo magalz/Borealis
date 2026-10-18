@@ -30,7 +30,7 @@ Borealis is a game-streaming client built on Moonlight and tailored to the Lumin
 
 Run the checks for what you touched before finishing:
 
-- Android: `./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleNonRootDebug licensee koverXmlReportBorealis` from `apps/android`.
+- Android: `./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleDebug licensee koverXmlReportBorealis` from `apps/android`.
 - Compose screens: also `./gradlew :borealis:designsystem:testDebugUnitTest :borealis:library:testDebugUnitTest :borealis:stream:testDebugUnitTest :borealis:settings:testDebugUnitTest -Proborazzi.test.verify=true` from `apps/android`; record references on Windows (see [building](docs/development/building.md)).
 - Core: `cmake --preset dev && cmake --build --preset dev && ctest --preset dev` from `core`, plus the format check CI runs, also from `core`: `find include src tests fuzz -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.cpp' \) -print0 | xargs -0 clang-format --dry-run --Werror`. Use clang-format 22; CI pins the exact version in `.github/workflows/ci.yml`.
 

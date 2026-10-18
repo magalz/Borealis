@@ -7,7 +7,7 @@ Host responses and golden vectors shared by the borealis-core tests and the Andr
 | Path | Content |
 | --- | --- |
 | `luminalshine/<host version>/` | Responses of one LuminalShine release, named after the endpoint (`serverinfo-http.xml` is `/serverinfo` over HTTP). |
-| `vectors/*.tsv` | Golden input/output vectors for the core host rules, read by the GoogleTest suite and, once the Android JNI instrumented test exists (task T4), by that test. |
+| `vectors/*.tsv` | Golden input/output vectors for the core host rules, read by the GoogleTest suite and by the Android instrumented test `GoldenVectorsInstrumentedTest`. |
 | `redaction/secret-canaries.tsv` | Synthetic secrets and the text the log redactor must produce for them, read by the redaction tests of `:borealis:logging` and `:borealis:diagnostics`. |
 
 Each host version folder has a `PROVENANCE.md` with one row per file.
@@ -33,7 +33,7 @@ Never commit certificates, keys, pairing secrets, `rikey` values or session URLs
 
 ## Golden vectors
 
-`vectors/*.tsv` pin the behaviour of the core host functions. The GoogleTest suite (`tests/vectors_test.cpp`) replays them through the C ABI today. The Android JNI instrumented test (task T4) will replay the same files through the Kotlin binding, so a rule cannot drift between platforms.
+`vectors/*.tsv` pin the behaviour of the core host functions. The GoogleTest suite (`tests/vectors_test.cpp`) replays them through the C ABI. The Android instrumented test `GoldenVectorsInstrumentedTest` (`:borealis:native`) replays the same files through the Kotlin binding, so a rule cannot drift between platforms.
 
 Common format:
 

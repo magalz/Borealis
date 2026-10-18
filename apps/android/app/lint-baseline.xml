@@ -1504,27 +1504,6 @@
     </issue>
 
     <issue
-        id="UnusedResources"
-        message="The resource `R.string.app_label_root` appears to be unused">
-        <location
-            file="build.gradle"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.app_label_root` appears to be unused">
-        <location
-            file="build.gradle"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.app_label_root` appears to be unused">
-        <location
-            file="build.gradle"/>
-    </issue>
-
-    <issue
         id="NotShrinkingResources"
         message="If enabling minification, also set shrinkResources = true"
         errorLine1="            minifyEnabled true"

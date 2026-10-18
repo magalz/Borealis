@@ -1,9 +1,6 @@
 # Don't obfuscate code
 -dontobfuscate
 
-# Our code
--keep class com.limelight.binding.input.evdev.* {*;}
-
 # Moonlight common
 -keep class com.limelight.nvstream.jni.* {*;}
 

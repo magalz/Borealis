@@ -7,7 +7,9 @@ verified against `NortheBridge/luminalshine@5afdbdc6`; see [README.md](README.md
 for the reference conventions and [luminalshine.md](luminalshine.md) for the
 surrounding GameStream contract.
 
-Everything here comes from static source reading. The host's own documentation
+Everything here comes from static source reading. No item in this document is a
+runtime observation; the items marked **Observed** are in
+[luminalshine.md](luminalshine.md). The host's own documentation
 states that no live remote client session has been certified
 (`docs/pyrowave.md:146-147`). Hardware acceptance is defined against the pinned
 Aurora client, and the host's own GPU test decodes with the pinned Aurora decoder
@@ -147,15 +149,15 @@ fit. The table below is derived from those formulas for the default
 | --- | --- | --- |
 | 256 | 392064 | 224 |
 | 1024 | 2749056 | 32 |
-| 1392 (Moonlight Android's LAN value, `borealis:apps/android/app/src/main/java/com/limelight/Game.java:473`) | 3878448 | 23 |
+| 1392 (Moonlight Android's LAN value, `borealis:apps/android/app/src/main/java/com/limelight/Game.java:497`) | 3878448 | 23 |
 | 1500 | 4209900 | 21 |
 | 2048 | 5891712 | 15 |
 
 Moonlight Android negotiates 1024 instead of 1392 on connections it classifies
-as remote (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:285-287`,
-passed to the native library at `:433`), which raises the minimum to 32 fps at
+as remote (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:370-372`,
+passed to the native library at `:537`), which raises the minimum to 32 fps at
 700 Mbps. When video encryption is enabled, upstream moonlight-common-c announces
-`packetSize` minus 32 bytes (`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/SdpGenerator.c:322-330`), which raises the
+`packetSize` minus 32 bytes (`borealis:core/third_party/moonlight-common-c/src/SdpGenerator.c:323-330`), which raises the
 minimums slightly (about 24 fps at 1392 - 32 and about 34 fps at 1024 - 32,
 derived).
 
@@ -182,7 +184,7 @@ bytes: the host uses that value as the PyroWave payload size and as the divisor
 for `lastPayloadLen` (`src/pyrowave/backend.cpp:527`,
 `src/stream.cpp:1986-1988`). `NV_VIDEO_PACKET` is 16 bytes (4 + 4 + 1 + 1 + 1 +
 1 + 4) in upstream moonlight-common-c at 874ac95
-(`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/Video.h:27-35`; not the Aurora fork), so this document writes the
+(`borealis:core/third_party/moonlight-common-c/src/Video.h:27-35`; not the Aurora fork), so this document writes the
 payload size as `packetSize - 16`.
 
 Each encoded frame is one self-delimiting blob
@@ -373,11 +375,11 @@ The client sends one such report for each completed FEC block (per the host
 comment at `src/stream.cpp:1322-1324`). Upstream moonlight-common-c at 874ac95
 (not the Aurora fork) sends this message in exactly this layout to Sunshine
 hosts: the struct is `SS_FRAME_FEC_STATUS` with big-endian fields and type
-`0x5502` (`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/Video.h:56-70`), it is filled in
-`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/RtpVideoQueue.c:93-109`, sent at `borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/RtpVideoQueue.c:346`, `598` and
-`642`, enabled by the client feature flag announced at
-`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/SdpGenerator.c:270-275`, and transmitted unreliably on the control stream
-(`borealis:apps/android/app/src/main/jni/moonlight-core/moonlight-common-c/src/ControlStream.c:1401-1415`). The Aurora fork was not examined; whether it
+`0x5502` (`borealis:core/third_party/moonlight-common-c/src/Video.h:56-70`), it is filled in
+`borealis:core/third_party/moonlight-common-c/src/RtpVideoQueue.c:93-109`, sent at `borealis:core/third_party/moonlight-common-c/src/RtpVideoQueue.c:346`, `598` and
+`644` (vendored copy), enabled by the client feature flag announced at
+`borealis:core/third_party/moonlight-common-c/src/SdpGenerator.c:270-274`, and transmitted unreliably on the control stream
+(`borealis:core/third_party/moonlight-common-c/src/ControlStream.c:1401-1415`). The Aurora fork was not examined; whether it
 differs from upstream here is **Unverified**.
 
 ### 6.3 Host reaction
@@ -501,9 +503,9 @@ selects fp16 or fp32 wavelet precision
 - **No stock PyroWave support in the client stack.** The stock Moonlight client
   negotiates a regular codec (`docs/pyrowave.md:28-29`). Moonlight Android decodes
   with `MediaCodec` through a renderer typed `MediaCodecDecoderRenderer`
-  (`borealis:apps/android/app/src/main/java/com/limelight/Game.java:150`) and its
+  (`borealis:apps/android/app/src/main/java/com/limelight/Game.java:169`) and its
   native library registers decoder callbacks in
-  `borealis:apps/android/app/src/main/jni/moonlight-core/callbacks.c:399-405`.
+  `borealis:apps/android/app/src/main/jni/moonlight-core/callbacks.c:404-410`.
   PyroWave needs a new Vulkan decode and present path and the format-3 and
   profile-bit handling, which come from the pinned `moonlight-common-c` fork;
   upstream moonlight-common-c at 874ac95 contains no PyroWave support (a search of

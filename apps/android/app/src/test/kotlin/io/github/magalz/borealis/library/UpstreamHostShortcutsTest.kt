@@ -39,12 +39,6 @@ class UpstreamHostShortcutsTest {
     private fun iconOf(shortcut: ShortcutInfo): Icon =
         ShortcutInfo::class.java.getMethod("getIcon").invoke(shortcut) as Icon
 
-    private val Icon.type: Int
-        get() = Icon::class.java.getMethod("getType").invoke(this) as Int
-
-    private val Icon.resId: Int
-        get() = Icon::class.java.getMethod("getResId").invoke(this) as Int
-
     private val Icon.bitmap: Bitmap
         get() = Icon::class.java.getMethod("getBitmap").invoke(this) as Bitmap
 

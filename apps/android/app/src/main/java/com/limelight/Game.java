@@ -2308,7 +2308,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                     // BOREALIS: the chrome shows the classified failure (stream)
                     boolean portBlocked = portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0;
                     streamSession.onFailed(StreamFailures.failure(Game.this,
-                            StreamFailures.facts(stage, errorCode, portFlags, false, firstFrameShown, startNote, conn), portBlocked));
+                            StreamFailures.facts(stage, errorCode, portFlags, new StreamFailures.SessionState(firstFrameShown, startNote, conn)), portBlocked));
                 }
             }
         });
@@ -2347,7 +2347,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                         // BOREALIS: the chrome shows the classified failure (stream)
                         boolean portBlocked = portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0;
                         streamSession.onFailed(StreamFailures.failure(Game.this,
-                                StreamFailures.facts(null, errorCode, portFlags, true, firstFrameShown, startNote, conn), portBlocked));
+                                StreamFailures.facts(null, errorCode, portFlags, new StreamFailures.SessionState(firstFrameShown, startNote, conn)), portBlocked));
                     }
                     else {
                         finish();

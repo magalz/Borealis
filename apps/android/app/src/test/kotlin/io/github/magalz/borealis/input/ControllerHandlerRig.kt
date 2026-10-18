@@ -134,12 +134,14 @@ class RecordingConnection(activity: Activity) :
  * scheduled work runs when the test says time has passed.
  */
 class ControllerHandlerRig(multiController: Boolean = false) {
-    // The SHIELD extension service does not exist here; without this the bind answers with no binder.
-    private val noShieldService =
+    init {
+        // The SHIELD extension service does not exist here; without this the bind answers with no
+        // binder.
         shadowOf(RuntimeEnvironment.getApplication())
             .declareComponentUnbindable(
                 ComponentName("com.nvidia.blakepairing", "com.nvidia.blakepairing.AccessoryService")
             )
+    }
 
     val activity: Activity = Robolectric.buildActivity(Activity::class.java).create().get()
     val connection = RecordingConnection(activity)
@@ -209,9 +211,13 @@ class ControllerHandlerRig(multiController: Boolean = false) {
         val inputManager = RuntimeEnvironment.getApplication().getSystemService(InputManager::class.java)
         shadowOf(inputManager).addInputDevice(device)
 
-        val contextClass = Class.forName("com.limelight.binding.input.ControllerHandler\$InputDeviceContext")
+        val contextClass =
+            Class.forName("com.limelight.binding.input.ControllerHandler\$InputDeviceContext")
         val context =
-            contextClass.getDeclaredConstructor(ControllerHandler::class.java).apply { isAccessible = true }.newInstance(handler)
+            contextClass
+                .getDeclaredConstructor(ControllerHandler::class.java)
+                .apply { isAccessible = true }
+                .newInstance(handler)
         fun set(name: String, value: Any?) =
             generateSequence(contextClass) { it.superclass }
                 .first { owner -> owner.declaredFields.any { it.name == name } }
@@ -222,9 +228,7 @@ class ControllerHandlerRig(multiController: Boolean = false) {
         set("hasSelect", hasSelect)
         // As the default context has it: a controller number, so that no native arrival report is made
         set("assignedControllerNumber", true)
-        val contexts = ControllerHandler::class.java.getDeclaredField("inputDeviceContexts").apply { isAccessible = true }
-        @Suppress("UNCHECKED_CAST")
-        (contexts.get(handler) as android.util.SparseArray<Any>).put(deviceId, context)
+        inputDeviceContexts().put(deviceId, context)
 
         padDeviceId = deviceId
         padDevice = device
@@ -235,9 +239,7 @@ class ControllerHandlerRig(multiController: Boolean = false) {
      * range (up and right are positive), as the axis events of a real pad would leave them.
      */
     fun holdSystemPadSticks(leftX: Int = 0, leftY: Int = 0, rightX: Int = 0, rightY: Int = 0) {
-        val contexts = ControllerHandler::class.java.getDeclaredField("inputDeviceContexts").apply { isAccessible = true }
-        @Suppress("UNCHECKED_CAST")
-        val context = (contexts.get(handler) as android.util.SparseArray<Any>).get(padDeviceId)
+        val context = inputDeviceContexts().get(padDeviceId)
         fun set(name: String, value: Int) =
             generateSequence(context.javaClass as Class<*>) { it.superclass }
                 .first { owner -> owner.declaredFields.any { it.name == name } }
@@ -249,6 +251,15 @@ class ControllerHandlerRig(multiController: Boolean = false) {
         set("rightStickX", rightX)
         set("rightStickY", rightY)
     }
+
+    /** The handler's contexts by device id, for the ones a test adds or reads. */
+    @Suppress("UNCHECKED_CAST") // The field holds the handler's contexts by construction.
+    private fun inputDeviceContexts(): android.util.SparseArray<Any> =
+        ControllerHandler::class
+            .java
+            .getDeclaredField("inputDeviceContexts")
+            .apply { isAccessible = true }
+            .get(handler) as android.util.SparseArray<Any>
 
     /** Makes the pad behind device 0 one that Android reports a Select button for, as a real system pad is. */
     fun givePadASelectButton() = setDefaultContextField("hasSelect", true)
@@ -269,11 +280,17 @@ class FakeUsbController(id: Int, listener: UsbDriverListener) :
     AbstractController(id, listener, 0x045e, 0x028e) {
     override fun start() = true
 
-    override fun stop() {}
+    override fun stop() {
+        // Nothing is held open.
+    }
 
-    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {}
+    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {
+        // The fake has no motors.
+    }
 
-    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {}
+    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
+        // The fake has no motors.
+    }
 
     fun report(
         buttons: Int,

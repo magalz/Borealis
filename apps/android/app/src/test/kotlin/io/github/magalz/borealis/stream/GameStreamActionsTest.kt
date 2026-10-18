@@ -125,15 +125,7 @@ class GameStreamActionsTest {
         streamView = View(activity).apply { isFocusableInTouchMode = true }
         activity.setContentView(streamView)
         actions = actionsFor(activity)
-        BorealisAudit.install(
-            object : AuditSink {
-                override fun write(event: AuditEvent) {
-                    audit += event
-                }
-            },
-            Redactor(),
-            "test",
-        )
+        BorealisAudit.install(AuditSink { audit += it }, Redactor(), "test")
         SessionAudit.started("Den PC", "192.168.1.5", 0x0100, 1920, 1080, 60)
         audit.clear()
     }

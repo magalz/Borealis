@@ -173,7 +173,7 @@ class StartFailureTest {
 
     private fun refusedPort(): Int = ServerSocket(0).use { it.localPort }
 
-    private fun serverInfo(paired: Boolean, httpsPort: Int) =
+    private fun serverInfo(paired: Boolean) =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
             "<root status_code=\"200\"><hostname>Desk PC</hostname>" +
             "<appversion>7.1.431.0</appversion><uniqueid>ABC</uniqueid>" +
@@ -183,7 +183,7 @@ class StartFailureTest {
     private fun serve(paired: Boolean): Int {
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/serverinfo") { exchange ->
-            val body = serverInfo(paired, server.address.port).toByteArray()
+            val body = serverInfo(paired).toByteArray()
             exchange.sendResponseHeaders(200, body.size.toLong())
             exchange.responseBody.use { it.write(body) }
         }

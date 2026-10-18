@@ -26,10 +26,14 @@ object StreamFailures {
     private const val SEPARATOR = "\n\n"
 
     /**
-     * The facts of a failed stage ([terminated] false, [stage] set) or of a connection that ended
-     * ([terminated] true, no stage). [streamed] says that the first frame was on screen before it
-     * ended, and [note] is the fixed text the start meant for the user. [connection] says why a
-     * start failed; it may be missing.
+     * What the activity knows of its session when the connection fails or ends. [streamed] says
+     * that the first frame was on screen before it ended, and [note] is the fixed text the start
+     * meant for the user. [connection] says why a start failed; it may be missing.
+     */
+    class SessionState(val streamed: Boolean, val note: String?, val connection: NvConnection?)
+
+    /**
+     * The facts of a failed [stage], or of a connection that ended (no stage: it is terminated).
      */
     @JvmStatic
     @JvmOverloads
@@ -37,15 +41,14 @@ object StreamFailures {
         stage: String?,
         errorCode: Int,
         portFlags: Int,
-        terminated: Boolean,
-        streamed: Boolean,
-        note: String?,
-        connection: NvConnection?,
+        session: SessionState,
         rtspStageName: () -> String = {
             MoonBridge.getStageName(ResumeCollisions.STAGE_RTSP_HANDSHAKE)
         },
-    ): FailureFacts =
-        FailureFacts(
+    ): FailureFacts {
+        val terminated = stage == null
+        val connection = session.connection
+        return FailureFacts(
             stage = stage,
             errorCode = errorCode,
             portFlags = portFlags,
@@ -58,15 +61,17 @@ object StreamFailures {
                 !terminated &&
                     errorCode == ResumeCollisions.RTSP_UNREADABLE_REPLY &&
                     stage == rtspStageName(),
-            streamed = streamed,
-            note = note,
+            streamed = session.streamed,
+            note = session.note,
         )
+    }
 
     /**
      * The classified failure. [portBlocked] is the result of the network test: the connection of
      * this device is blocking Borealis.
      */
     @JvmStatic
+    @Suppress("SpreadOperator") // Kotlin copies the array to pass it to Java's getString varargs.
     fun failure(context: Context, facts: FailureFacts, portBlocked: Boolean): StreamFailure =
         failure(
             facts,

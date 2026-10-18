@@ -51,11 +51,17 @@ private fun hint(facts: FailureFacts, portBlocked: Boolean = false) =
 
 private fun terminated(code: Int) = FailureFacts(null, code, 0, terminated = true)
 
+private fun session(
+    connection: NvConnection? = FailedConnection(),
+    streamed: Boolean = false,
+    note: String? = null,
+) = StreamFailures.SessionState(streamed, note, connection)
+
 @RunWith(RobolectricTestRunner::class)
 class StreamFailuresTest {
     @Test
     fun `a failed stage carries the stage, the code and the port flags`() {
-        val facts = StreamFailures.facts("RTSP handshake", -1, 0x8, false, false, null, FailedConnection()) {
+        val facts = StreamFailures.facts("RTSP handshake", -1, 0x8, session()) {
                 "RTSP handshake"
             }
 
@@ -67,7 +73,7 @@ class StreamFailuresTest {
 
     @Test
     fun `a terminated connection is marked as terminated and has no stage`() {
-        val facts = StreamFailures.facts(null, -100, 0, true, false, null, FailedConnection())
+        val facts = StreamFailures.facts(null, -100, 0, session())
 
         assertThat(facts).isEqualTo(FailureFacts(null, -100, 0, terminated = true))
     }
@@ -79,10 +85,7 @@ class StreamFailuresTest {
                 "Launch",
                 503,
                 0,
-                false,
-                false,
-                null,
-                FailedConnection(CauseKind.HTTP, 503, collision = true, exhausted = true),
+                session(FailedConnection(CauseKind.HTTP, 503, collision = true, exhausted = true)),
             )
 
         assertThat(facts.cause).isEqualTo(CauseKind.HTTP)
@@ -93,7 +96,7 @@ class StreamFailuresTest {
 
     @Test
     fun `an http status of zero is no status`() {
-        val facts = StreamFailures.facts("Launch", 1, 0, false, false, null, FailedConnection(CauseKind.TIMEOUT))
+        val facts = StreamFailures.facts("Launch", 1, 0, session(FailedConnection(CauseKind.TIMEOUT)))
 
         assertThat(facts.cause).isEqualTo(CauseKind.TIMEOUT)
         assertThat(facts.httpCode).isNull()
@@ -101,7 +104,7 @@ class StreamFailuresTest {
 
     @Test
     fun `without a connection nothing is known about the cause`() {
-        val facts = StreamFailures.facts("Launch", 1, 0, false, false, null, null)
+        val facts = StreamFailures.facts("Launch", 1, 0, session(connection = null))
 
         assertThat(facts).isEqualTo(FailureFacts("Launch", 1, 0, terminated = false))
     }
@@ -109,7 +112,12 @@ class StreamFailuresTest {
     @Test
     fun `the facts say whether the first frame was shown and carry the note of the start`() {
         val facts =
-            StreamFailures.facts(null, -1, 0, true, true, "Device not paired", FailedConnection())
+            StreamFailures.facts(
+                null,
+                -1,
+                0,
+                session(streamed = true, note = "Device not paired"),
+            )
 
         assertThat(facts.streamed).isTrue()
         assertThat(facts.note).isEqualTo("Device not paired")
@@ -117,8 +125,8 @@ class StreamFailuresTest {
 
     @Test
     fun `a stream that ran and ended is classified as stopped, one that never ran is not`() {
-        val ran = StreamFailures.facts(null, -1, 0, true, true, null, FailedConnection())
-        val neverRan = StreamFailures.facts(null, -1, 0, true, false, null, FailedConnection())
+        val ran = StreamFailures.facts(null, -1, 0, session(streamed = true))
+        val neverRan = StreamFailures.facts(null, -1, 0, session())
 
         assertThat(failure(ran).kind).isEqualTo(FailureKind.STOPPED)
         assertThat(failure(neverRan).kind).isEqualTo(FailureKind.GENERIC)
@@ -278,8 +286,8 @@ class StreamFailuresTest {
 
     private val rtsp = "RTSP handshake"
 
-    private fun facts(stage: String?, code: Int, terminated: Boolean = false) =
-        StreamFailures.facts(stage, code, 0x8, terminated, false, null, FailedConnection()) { rtsp }
+    private fun facts(stage: String?, code: Int) =
+        StreamFailures.facts(stage, code, 0x8, session()) { rtsp }
 
     @Test
     fun `error -1 of the RTSP stage means the reply of the PC could not be read`() {
@@ -290,7 +298,7 @@ class StreamFailuresTest {
     fun `another code of the RTSP stage, or -1 of another stage, is not an unreadable reply`() {
         assertThat(facts(rtsp, -2).rtspReplyUnreadable).isFalse()
         assertThat(facts("Control", -1).rtspReplyUnreadable).isFalse()
-        assertThat(facts(null, -1, terminated = true).rtspReplyUnreadable).isFalse()
+        assertThat(facts(null, -1).rtspReplyUnreadable).isFalse()
     }
 
     @Test

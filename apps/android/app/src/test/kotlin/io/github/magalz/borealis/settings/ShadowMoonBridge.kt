@@ -14,19 +14,17 @@ import org.robolectric.util.ReflectionHelpers
  * Use it with `@Config(shadows = [ShadowMoonBridge::class])`.
  */
 @Implements(MoonBridge::class)
-class ShadowMoonBridge {
-    companion object {
-        @Suppress("unused")
-        @Implementation
-        @JvmStatic
-        fun __staticInitializer__() {
-            set("AUDIO_CONFIGURATION_STEREO", MoonBridge.AudioConfiguration(2, 0x3))
-            set("AUDIO_CONFIGURATION_51_SURROUND", MoonBridge.AudioConfiguration(6, 0x3F))
-            set("AUDIO_CONFIGURATION_71_SURROUND", MoonBridge.AudioConfiguration(8, 0x63F))
-        }
+object ShadowMoonBridge {
+    @Suppress("unused")
+    @Implementation
+    @JvmStatic
+    fun __staticInitializer__() {
+        set("AUDIO_CONFIGURATION_STEREO", MoonBridge.AudioConfiguration(2, 0x3))
+        set("AUDIO_CONFIGURATION_51_SURROUND", MoonBridge.AudioConfiguration(6, 0x3F))
+        set("AUDIO_CONFIGURATION_71_SURROUND", MoonBridge.AudioConfiguration(8, 0x63F))
+    }
 
-        private fun set(name: String, value: MoonBridge.AudioConfiguration) {
-            ReflectionHelpers.setStaticField(MoonBridge::class.java, name, value)
-        }
+    private fun set(name: String, value: MoonBridge.AudioConfiguration) {
+        ReflectionHelpers.setStaticField(MoonBridge::class.java, name, value)
     }
 }

@@ -19,7 +19,9 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.async
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -307,7 +309,7 @@ class BoxArtLoaderTest {
         val second = async(dispatcher) { loader.bitmap("host-1", 7) }
         try {
             // A bounded wait for the second caller to act: it must not finish before the download.
-            repeat(15) { if (!second.isCompleted) Thread.sleep(10) }
+            repeat(15) { if (!second.isCompleted) withContext(dispatcher) { delay(10) } }
             assertThat(second.isCompleted).isFalse()
         } finally {
             release.countDown()

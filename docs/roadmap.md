@@ -15,7 +15,7 @@ How the roadmap is used:
 
 - **Phase 1, Sprint 1 (PR #8):** the foundation and LuminalShine protocol
   compatibility.
-- **Phase 2, Sprints 2 to 6 (PRs #9 to #13):**
+- **Phase 2, Sprints 2 to 7 (PRs #9 to #13 and #19):**
   - Sprint 2 (PR #9): observability, the audit trail, Phase 1 follow-ups and
     release preparation.
   - Sprint 3 (PR #10): Sprint 2 follow-ups and the Phase 2 UX proposal
@@ -29,12 +29,13 @@ How the roadmap is used:
   - Sprint 6 (PR #13): Settings, Privacy and diagnostics, the audit trail
     viewer and Send to phone, in Compose
     ([ADR 0055](adr/0055-settings-storage-and-the-phase-2-settings-screen.md)).
-
-## Next
+  - Sprint 7 (PR #19): follow-ups and backlog, the gamepad mouse pointer speed
+    and the visual refinement pass. See the
+    [Sprint 7 items](#sprint-7-follow-ups-and-backlog).
 
 ### Sprint 7: follow-ups and backlog
 
-The work for this sprint is on the phase branch `phase/s7-followups-polish`.
+Merged as PR #19 (`f3d88540`).
 
 1. **MediaTek decode time shows "—" in the stats overlay.** Done (issue #14,
    merges `903e399d`, `7cbc60ea` and `967487ea`). The Google TV Streamer shows
@@ -91,6 +92,11 @@ The work for this sprint is on the phase branch `phase/s7-followups-polish`.
    in landscape with the Pro 3 over Bluetooth. See the
    [device validation runbook, section 12](development/device-validation.md#bluetooth-pad-round-and-handheld-fix-2026-10-17).
 
+## Next
+
+Sprints 7 to 10 close Phase 2, because the 0.1.0 release stays at the end of
+Phase 2 ([ADR 0054](adr/0054-declare-independence-from-moonlight.md)).
+
 ### Sprint 8: tidy-up
 
 The work for this sprint is on the phase branch `phase/s8-tidy-up`. The device
@@ -107,7 +113,7 @@ crash notice, which cannot be triggered. The results are in
    analysis found. A full sweep of the Java methods moves to the migration.
 2. **Root flavor.** Done (merge `48927cca`). The root flavor, its variants and
    the APK paths are removed. The tasks are `assembleDebug` and `assembleRelease`.
-3. **Upstream leftovers.** Done (merges `599fed98` and `51a04274`). Removed:
+3. **Upstream leftovers.** Done (merge `599fed98` and commit `51a04274`). Removed:
    `appveyor.yml`, `store-assets`, the LuaScripts, fastlane and
    `apps/android/.github`. The decoder errata moved to the docs.
 4. **Lint baseline.** Done (merge `cbded86b`). The baseline went from 159 to 43
@@ -118,19 +124,23 @@ crash notice, which cannot be triggered. The results are in
    what counts as a game controller is one rule. Unifying it with
    `ControllerHandler.isGameControllerDevice` is open; see Sprint 12.
 6. **Host parameter objects.** Done (merge `d9865d61`).
-7. **Phone title bars.** Done (merge `8a6acbad`). The three phone title bars
-   share one phone bar and one back button. The gap below the arrow still
-   differs; see Sprint 9.
+7. **Phone title bars.** Done (merge `8a6acbad`). The four phone title bars
+   (Apps, Audit, Settings and Privacy) share one phone bar and one back button.
+   The back arrows of Add host and Pairing use the same button. The gap below
+   the arrow still differs; see Sprint 9.
 8. **Kotlin suppressions.** Done (merge `543896a9`).
-9. **Detekt type analysis.** Done (merge `65f6b3a9`, fixes `933f368f`,
-   `67cef8eb` and `b72163d3`, baselines removed in `50854eda`). Every Android
-   module runs detekt with type analysis. The 116 findings are fixed. Two rules
-   stay off in test sources only: `InjectDispatcher` and `LongParameterList`
-   (see Sprint 12). `MatchingDeclarationName` is off, because Compose files are
-   named after the composable. `detekt.use.worker.api=true` is set.
-10. **Memtrace rule.** Done (merges `599fed98` and `7f7b7721`). The index and the
-    queries use the branch `main`. There is no watcher, because it ignores the
-    branch parameter. The index is refreshed after each merge wave.
+9. **Detekt type analysis.** Done (merge `65f6b3a9`, fix merges `933f368f`,
+   `67cef8eb` and `b72163d3`, baselines removed in commit `50854eda`). Every
+   Android module runs detekt with type analysis. The 116 findings are fixed,
+   except that `InjectDispatcher` and `LongParameterList` are no longer reported
+   in test sources (see Sprint 12). `MatchingDeclarationName` is off, because
+   Compose files are named after the composable. `detekt.use.worker.api=true` is
+   set.
+10. **Memtrace rule.** Done (merge `599fed98` and commit `7f7b7721`). The index
+    and the queries use the branch `main`. We do not call `watch_directory`,
+    because it labels changes with the checked-out branch. `memtrace start` runs
+    its own watcher under that branch, so the `main` label is refreshed by the
+    incremental index after each merge wave.
 
 ### Sprint 9: UX polish and the handheld
 
@@ -153,8 +163,10 @@ crash notice, which cannot be triggered. The results are in
 - **Phone bar gap.** Found in Sprint 8. Settings and Privacy have 4 dp between
   the back arrow and the title, and Apps and Audit have none. Unifying the gap
   needs re-recorded screenshot references.
-- **Digits on the Borealis keyboard.** Reported by the owner on 2026-10-18. The
-  on-screen keyboard of the stream has no way to type numbers.
+- **Make the digits on the Borealis keyboard easier to discover.** Reported by
+  the owner on 2026-10-18. The on-screen keyboard of the stream has an Fn layer
+  with the digits 1 to 0, F1 to F10, the arrows, Home, End, PgUp, PgDn and Del,
+  since Sprint 5. The owner did not find the digits in the Sprint 8 round.
 - **Keyboards that count as game controllers.** Found in the Sprint 8 round. A
   Bluetooth keyboard (AULA F75Max) reports a JOYSTICK source with X and Y axes,
   so the controller rule of Sprint 7 counts it as a game controller. On the S22
@@ -200,6 +212,13 @@ crash notice, which cannot be triggered. The results are in
 - **Core CI job.** Move the job back to `ubuntu-latest` after the clang-tidy
   findings in `core/src/pair.cpp` are fixed. The job is pinned to
   `ubuntu-24.04` in `.github/workflows/ci.yml`.
+- **Use cases for behaviour that has none.** Owner decision of 2026-10-18. Write
+  use cases for:
+  - wake and forget a host;
+  - pinned host and app shortcuts;
+  - the gamepad mouse;
+  - the quit combo;
+  - the handheld layout.
 
 ### First release: `android-v0.1.0`
 
@@ -221,10 +240,13 @@ Java to Kotlin, one area at a time.
   the code.
 - **Method:** one area at a time. Write characterization tests before the
   conversion of each area, and run device rounds for it.
+- **Start:** after `android-v0.1.0`.
 - **Order:**
-  1. HTTP and computers. Phase 3 uses them.
-  2. Input and video. This comes before Phase 4 (PyroWave).
-  3. `MoonBridge`, last.
+  1. HTTP and computers come first, because Phase 3 uses them.
+  2. Input and video come before Phase 4 (PyroWave).
+  3. `MoonBridge` comes last.
+- **Dead code:** a full sweep of the Java methods for dead code happens during
+  the migration. Sprint 8, item 1 hands it over.
 - **Size:** 80 Java files and about 21,600 lines under
   `apps/android/app/src/main/java` on 2026-10-18, almost all of it the stream
   core.
@@ -254,6 +276,9 @@ Java to Kotlin, one area at a time.
     analysed release.
   - **Result:** the survey sets the scope of Phase 3 before any code is written.
     Owner's decision of 2026-10-17.
+  - **Box art:** the Library screens load no box art until Phase 3. The Apps
+    screen shows the initials of each app. App covers are one of the
+    [Phase 3 extension points](ux/phase-2-proposal.md#phase-3-extension-points).
 - **Phase 4: PyroWave.** See the [host contract](host-contract/pyrowave.md).
 - **Phase 5: stores.** Google Play and Amazon Appstore. See the
   [release policy](policies/release.md) and

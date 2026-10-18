@@ -7,8 +7,7 @@ import org.gradle.kotlin.dsl.configure
 
 /**
  * Kover coverage conventions (ADR 0046). Every Borealis module contributes the same custom variant,
- * so the root report can merge modules whose Android variants are named differently (`debug` in
- * libraries, `nonRootDebug` in `:app`).
+ * built from its `debug` Android variant, so the root report can merge them all.
  */
 internal object BorealisCoverage {
     const val PLUGIN_ID = "org.jetbrains.kotlinx.kover"
@@ -60,11 +59,11 @@ internal object BorealisCoverage {
         }
     }
 
-    /** Applies Kover to a Borealis module and publishes its [androidVariant] as [VARIANT]. */
-    fun Project.configureCoverage(androidVariant: String) {
+    /** Applies Kover to a Borealis module and publishes its `debug` variant as [VARIANT]. */
+    fun Project.configureCoverage() {
         pluginManager.apply(PLUGIN_ID)
         extensions.configure<KoverProjectExtension> {
-            currentProject { createVariant(VARIANT) { add(androidVariant) } }
+            currentProject { createVariant(VARIANT) { add("debug") } }
             reports { filters { borealisFilters() } }
         }
     }

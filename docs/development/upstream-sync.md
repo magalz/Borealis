@@ -62,7 +62,7 @@ protocol library under `core/third_party/moonlight-common-c/`).
 6. Run the checks from `apps/android/` (see [building](building.md)):
 
    ```sh
-   ./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleNonRootDebug licensee
+   ./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleDebug licensee
    ```
 
 7. Open one PR per harvest. The description lists the upstream commits, what

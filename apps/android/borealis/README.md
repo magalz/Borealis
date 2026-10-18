@@ -6,7 +6,7 @@ New code is Kotlin under the package root `io.github.magalz.borealis`.
 ## Build setup
 
 - `../build-logic` is an included build (registered with `pluginManagement { includeBuild }` in `settings.gradle`) with the convention plugins:
-  - `borealis.android.application`: applied by `app/build.gradle`. Through the AGP variant API it sets the application id (`io.github.magalz.borealis`, `.debug` suffix for debug), the labels (`Borealis` / `Borealis Debug`), minSdk 28, disables the upstream `root` flavor, derives the version from git, configures release signing, the Android Lint baseline and Hilt/KSP, and applies Kover, licensee and the CycloneDX SBOM. For the native chain it also enables Prefab, passes `APP_STL=c++_shared` to ndk-build, depends on `:borealis:native` and orders that module's CMake build before the ndk-build configure step (ndk-build checks that the Prefab library file exists).
+  - `borealis.android.application`: applied by `app/build.gradle`. Through the AGP variant API it sets the application id (`io.github.magalz.borealis`, `.debug` suffix for debug), the labels (`Borealis` / `Borealis Debug`), minSdk 28, derives the version from git, configures release signing, the Android Lint baseline and Hilt/KSP, and applies Kover, licensee and the CycloneDX SBOM. For the native chain it also enables Prefab, passes `APP_STL=c++_shared` to ndk-build, depends on `:borealis:native` and orders that module's CMake build before the ndk-build configure step (ndk-build checks that the Prefab library file exists).
   - `borealis.android.library`: use it for every `:borealis:*` module (compileSdk 37, minSdk 28, NDK 29.0.14206865 like upstream, Java 17, Lint warnings are errors, JUnit 4 + Truth, AndroidX test runner for `androidTest`). It also applies Kover and licensee. Instrumented tests receive the borealis-core version from `core/CMakeLists.txt` as the instrumentation argument `expectedCoreVersion` (also set on `:app`).
   - `borealis.settings`: applies Spotless and detekt to Borealis-owned paths only: ktfmt (kotlinlang style) for Kotlin and clang-format with `core/.clang-format` for `borealis/native/src/main/cpp` and `app/src/main/jni/borealis`. `clang-format` must be on `PATH`; Spotless needs its exact version, so the build reads it from `clang-format --version`. Without it the C/C++ Spotless tasks fail with "clang-format 22.x not found on PATH". Upstream Java/Groovy/C is never formatted. It also applies Kover to the root project and merges the modules' coverage there.
 - Versions live in `../gradle/libs.versions.toml`.
@@ -30,7 +30,7 @@ Release stays unsigned unless all four values are present, either in `apps/andro
 ### Checks (from `apps/android`)
 
 ```sh
-./gradlew spotlessCheck detekt lint testDebugUnitTest assembleNonRootDebug licensee
+./gradlew spotlessCheck detekt lint testDebugUnitTest assembleDebug licensee
 ./gradlew :build-logic:test        # build-logic unit tests
 ./gradlew spotlessApply            # format Borealis-owned Kotlin
 ./gradlew :app:updateLintBaseline  # only when deliberately accepting upstream lint findings
@@ -49,7 +49,7 @@ All three come from the convention plugins (`BorealisCoverage`, `BorealisLicense
 ./gradlew :app:cyclonedxDirectBom                         # app/build/reports/sbom/borealis-android.cdx.json
 ```
 
-- Kover merges the debug unit-test coverage (`debug` in `:borealis:*`, `nonRootDebug` in `:app`) into one report at the root. Upstream `com.limelight.*` and generated Hilt/Dagger/`BuildConfig`/`R`/Compose singleton classes are excluded.
+- Kover merges the debug unit-test coverage (the `debug` variant in `:borealis:*` and in `:app`) into one report at the root. Upstream `com.limelight.*` and generated Hilt/Dagger/`BuildConfig`/`R`/Compose singleton classes are excluded.
 - licensee allows Apache-2.0, MIT, BSD-2/3-Clause, ISC and Zlib plus URL-only licences of Bouncy Castle and JCodec, each with a justification in `BorealisLicenses.kt`.
 - `../sbom/native-components.cdx.json` is the hand-maintained SBOM of the native components in the APK; update it with every upstream sync (`docs/development/upstream-sync.md`).
 
@@ -146,7 +146,7 @@ AGP allows one `externalNativeBuild` per module, and upstream `:app` uses ndk-bu
 2. `prefabPublishing` + `prefab { create("borealis_core") }` publish `libborealis_core.so` and `core/include` as a Prefab package. The package name is the Gradle project name, so it is `native`.
 3. `:app` has `buildFeatures.prefab = true`. The Borealis-owned `jni/borealis/Android.mk` (picked up by upstream's `include $(call all-subdir-makefiles)`, so no upstream makefile changes) builds `libborealis_bridge.so` with `LOCAL_SHARED_LIBRARIES := borealis_core` and `$(call import-module,prefab/native)`. `NativeBridge.coreVersion()` calls it, proving that moonlight-core-side ndk-build code can link the core.
 
-Upstream native code (evdev, `Application.mk`) is untouched, and moonlight-common-c is vendored in `core/third_party/`, and its changes from upstream are listed in `core/third_party/README.md`; the only upstream-facing native settings are `APP_STL=c++_shared` (passed from the convention plugin) and the Prefab flag.
+Upstream native code (`Application.mk`) is untouched, and moonlight-common-c is vendored in `core/third_party/`, and its changes from upstream are listed in `core/third_party/README.md`; the only upstream-facing native settings are `APP_STL=c++_shared` (passed from the convention plugin) and the Prefab flag.
 
 ### Static or shared, and the STL
 
@@ -160,10 +160,10 @@ The core is published as a shared library (`BUILD_SHARED_LIBS=ON` inside the mod
 ### Verifying without a device
 
 ```sh
-./gradlew assembleNonRootDebug :borealis:native:assembleDebugAndroidTest :app:assembleNonRootDebugAndroidTest
+./gradlew assembleDebug :borealis:native:assembleDebugAndroidTest :app:assembleDebugAndroidTest
 ```
 
-The APK has `lib/<abi>/libborealis_core.so`, `libborealis_jni.so`, `libborealis_bridge.so` and `libc++_shared.so` for armeabi-v7a, arm64-v8a, x86 and x86_64. `llvm-nm -D` shows `borealis_core_version` defined in the core library and undefined (imported) in the JNI and bridge libraries. On a device or emulator run `./gradlew :borealis:native:connectedDebugAndroidTest :app:connectedNonRootDebugAndroidTest`; both assert that the packaged libraries report the version declared in `core/CMakeLists.txt`.
+The APK has `lib/<abi>/libborealis_core.so`, `libborealis_jni.so`, `libborealis_bridge.so` and `libc++_shared.so` for armeabi-v7a, arm64-v8a, x86 and x86_64. `llvm-nm -D` shows `borealis_core_version` defined in the core library and undefined (imported) in the JNI and bridge libraries. On a device or emulator run `./gradlew :borealis:native:connectedDebugAndroidTest :app:connectedDebugAndroidTest`; both assert that the packaged libraries report the version declared in `core/CMakeLists.txt`.
 
 ## `:borealis:host`
 

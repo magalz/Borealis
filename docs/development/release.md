@@ -115,9 +115,9 @@ replaces `publish` with a job that signs with a throwaway key.
 1. Checks out the tagged commit with full history, validates
    the tag and that the commit is on `main`.
 2. Installs the Android SDK packages (platform, build-tools, NDK, CMake) and
-   runs `./gradlew assembleNonRootRelease :app:cyclonedxDirectBom` in
+   runs `./gradlew assembleRelease :app:cyclonedxDirectBom` in
    `apps/android` (JDK 17, Gradle build cache disabled). The APK is a
-   universal, **unsigned** `nonRoot` release build; its version must equal the
+   universal, **unsigned** release build; its version must equal the
    tag. No AAB is built (see "Distribution").
 3. Checks the APK identity and the R8 result with `.github/scripts/check-apk.sh`
    (the checks listed in section 3).

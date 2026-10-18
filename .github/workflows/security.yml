@@ -58,7 +58,7 @@ jobs:
       - name: Build Android app (Java/Kotlin and JNI sources)
         if: matrix.language == 'java-kotlin' || matrix.language == 'c-cpp'
         working-directory: apps/android
-        run: ./gradlew --no-daemon --no-build-cache assembleNonRootDebug
+        run: ./gradlew --no-daemon --no-build-cache assembleDebug
       - name: Build borealis-core
         if: matrix.language == 'c-cpp'
         working-directory: core

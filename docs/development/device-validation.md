@@ -47,12 +47,12 @@ pairing codes into this file or into any capture that is committed.
 
    ```sh
    cd apps/android
-   ./gradlew assembleNonRootDebug
+   ./gradlew assembleDebug
    ```
 
 3. The debug APK is
-   `apps/android/app/build/outputs/apk/nonRoot/debug/app-nonRoot-debug.apk`
-   (checked on the 2026-10-14 phase branch build); it is `<apk>` below.
+   `apps/android/app/build/outputs/apk/debug/app-debug.apk`
+   (checked on the 2026-10-17 Sprint 8 branch build); it is `<apk>` below.
 4. The debug build has the application id `io.github.magalz.borealis.debug` and
    the label `Borealis Debug` (`build-logic`, `BorealisAndroidApplicationPlugin`).
 5. Install on the S22:
@@ -135,7 +135,7 @@ through JNI and check the golden vectors of `core/tests/fixtures/vectors/`.
 
    ```sh
    cd apps/android
-   ANDROID_SERIAL=<serial-s22> ./gradlew :borealis:native:connectedDebugAndroidTest :app:connectedNonRootDebugAndroidTest
+   ANDROID_SERIAL=<serial-s22> ./gradlew :borealis:native:connectedDebugAndroidTest :app:connectedDebugAndroidTest
    ```
 
 2. Run the same command with `ANDROID_SERIAL=<serial-tv>`.

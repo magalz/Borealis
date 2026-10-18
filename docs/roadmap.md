@@ -94,8 +94,9 @@ Merged as PR #19 (`f3d88540`).
 
 ## Next
 
-Sprints 7 to 10 close Phase 2, because the 0.1.0 release stays at the end of
-Phase 2 ([ADR 0054](adr/0054-declare-independence-from-moonlight.md)).
+The 0.1.0 release comes after Sprint 10 and stays at the end of Phase 2
+([ADR 0054](adr/0054-declare-independence-from-moonlight.md)), so Sprints 7 to
+10 close Phase 2.
 
 ### Sprint 8: tidy-up
 
@@ -137,7 +138,7 @@ crash notice, which cannot be triggered. The results are in
    Compose files are named after the composable. `detekt.use.worker.api=true` is
    set.
 10. **Memtrace rule.** Done (merge `599fed98` and commit `7f7b7721`). The index
-    and the queries use the branch `main`. We do not call `watch_directory`,
+    and the queries use the branch `main`. `watch_directory` is not used,
     because it labels changes with the checked-out branch. `memtrace start` runs
     its own watcher under that branch, so the `main` label is refreshed by the
     incremental index after each merge wave.
@@ -276,8 +277,9 @@ Java to Kotlin, one area at a time.
     analysed release.
   - **Result:** the survey sets the scope of Phase 3 before any code is written.
     Owner's decision of 2026-10-17.
-  - **Box art:** the Library screens load no box art until Phase 3. The Apps
-    screen shows the initials of each app. App covers are one of the
+  - **Box art:** the Library screens show no box art until Phase 3, although
+    the app already caches it for pinned shortcut icons and the TV channel. The
+    Apps screen shows the initials of each app. App covers are one of the
     [Phase 3 extension points](ux/phase-2-proposal.md#phase-3-extension-points).
 - **Phase 4: PyroWave.** See the [host contract](host-contract/pyrowave.md).
 - **Phase 5: stores.** Google Play and Amazon Appstore. See the

@@ -779,4 +779,5 @@ The prototype uses example data only: host names, addresses, apps and session
 figures are illustrative.
 
 The prototype loads IBM Plex from Google Fonts, so opening it contacts Google's
-font servers. The app itself will bundle its fonts.
+font servers. The app itself bundles its fonts (IBM Plex Sans and Mono, in
+`design/fonts/ibm-plex`).

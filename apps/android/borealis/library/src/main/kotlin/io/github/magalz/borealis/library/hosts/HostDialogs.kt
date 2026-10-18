@@ -1,5 +1,3 @@
-@file:Suppress("MatchingDeclarationName")
-
 package io.github.magalz.borealis.library.hosts
 
 import androidx.compose.material3.MaterialTheme

@@ -89,15 +89,13 @@ public class UiHelper {
         // Set GameState.MODE_NONE initially for all activities
         setGameModeStatus(activity, false, false);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            // Allow this non-streaming activity to layout under notches.
-            //
-            // We should NOT do this for the Game activity unless
-            // the user specifically opts in, because it can obscure
-            // parts of the streaming surface.
-            activity.getWindow().getAttributes().layoutInDisplayCutoutMode =
-                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
-        }
+        // Allow this non-streaming activity to layout under notches.
+        //
+        // We should NOT do this for the Game activity unless
+        // the user specifically opts in, because it can obscure
+        // parts of the streaming surface.
+        activity.getWindow().getAttributes().layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
 
         if (modeMgr.getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION) {
             // Increase view padding on TVs

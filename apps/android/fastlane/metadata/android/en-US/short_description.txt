@@ -1,1 +1,0 @@
-Game streaming client based on Moonlight, tuned for LuminalShine

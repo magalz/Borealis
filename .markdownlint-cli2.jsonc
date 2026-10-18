@@ -4,9 +4,7 @@
   "ignores": [
     "apps/android/app/**",
     "apps/android/*.md",
-    "apps/android/fastlane/**",
     "apps/android/.github/**",
-    "apps/android/LuaScripts/**",
     "external/**",
     "core/third_party/moonlight-common-c/**",
     "CHANGELOG.md",

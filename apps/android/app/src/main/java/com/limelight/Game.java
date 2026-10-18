@@ -811,7 +811,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
         WindowManager.LayoutParams windowLayoutParams = getWindow().getAttributes();
         float displayRefreshRate;
 
-        // On M, we can explicitly set the optimal display mode
+        // Pick the optimal display mode explicitly
         Display.Mode bestMode = display.getMode();
         boolean isNativeResolutionStream = PreferenceConfiguration.isNativeResolution(prefConfig.width, prefConfig.height);
         boolean refreshRateIsGood = isRefreshRateGoodMatch(bestMode.getRefreshRate());

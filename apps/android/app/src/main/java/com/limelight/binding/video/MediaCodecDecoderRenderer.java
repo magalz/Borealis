@@ -1459,8 +1459,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                     sps.numRefFrames = 1;
                 }
 
-                // Some older devices used to choke on a bitstream restrictions, so we won't provide them
-                // unless explicitly whitelisted. For newer devices, leave the bitstream restrictions present.
                 // The SPS that comes in the current H264 bytestream doesn't set bitstream_restriction_flag
                 // or max_dec_frame_buffering which increases decoding latency on Tegra.
 

@@ -32,11 +32,10 @@ fun isGameController(
         (sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
             isJoystickController(sources, hasJoystickXy, keyboardType))
 
-private fun isJoystickController(
-    sources: Int,
-    hasJoystickXy: Boolean,
-    @Suppress("UNUSED_PARAMETER") keyboardType: Int,
-): Boolean = sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK && hasJoystickXy
+private fun isJoystickController(sources: Int, hasJoystickXy: Boolean, keyboardType: Int): Boolean =
+    sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK &&
+        hasJoystickXy &&
+        keyboardType != InputDevice.KEYBOARD_TYPE_ALPHABETIC
 
 /**
  * Whether this device has the X and Y motion ranges of a joystick, for the JOYSTICK source or else

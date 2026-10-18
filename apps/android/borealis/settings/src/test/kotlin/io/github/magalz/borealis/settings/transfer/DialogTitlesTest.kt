@@ -8,8 +8,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
-import io.github.magalz.borealis.settings.privacy.PrivacyActions
 import io.github.magalz.borealis.settings.privacy.PrivacyDialog
+import io.github.magalz.borealis.settings.privacy.PrivacyDialogActions
 import io.github.magalz.borealis.settings.privacy.PrivacyDialogs
 import io.github.magalz.borealis.settings.testing.textStyleOf
 import java.io.File
@@ -29,7 +29,7 @@ class DialogTitlesTest {
 
     @Test
     fun `Saved and Send to phone have the same title style`() {
-        val actions = PrivacyActions({}, {}, {}, {}, {}, {}, {}, {}, { _, _ -> })
+        val actions = PrivacyDialogActions({}, {}, {}, { _, _ -> })
         val saved =
             PrivacyDialog.Saved(
                 location = "/sdcard/Download/${bundle.name}",

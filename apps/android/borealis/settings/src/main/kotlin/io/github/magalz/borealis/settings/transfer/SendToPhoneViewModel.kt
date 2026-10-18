@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** Gives the dialog the app's one [TransferSession] as a [TransferController]. */
 @HiltViewModel
-class SendToPhoneViewModel @Inject constructor(private val session: TransferSession) : ViewModel() {
+class SendToPhoneViewModel @Inject constructor(session: TransferSession) : ViewModel() {
     val transfer: TransferController =
         object : TransferController {
             override val state: StateFlow<TransferState>

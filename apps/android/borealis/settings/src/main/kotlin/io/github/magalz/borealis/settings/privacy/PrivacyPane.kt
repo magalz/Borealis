@@ -129,10 +129,13 @@ internal fun rememberPrivacyBinding(
                 onExport = viewModel::onExport,
                 onOpenAudit = { openAudit() },
                 onEraseRequested = viewModel::onEraseRequested,
-                onEraseConfirmed = viewModel::onEraseConfirmed,
-                onEraseCancelled = viewModel::onEraseCancelled,
-                onDialogDismissed = viewModel::onDialogDismissed,
-                onSendToPhone = { bundle, command -> sendToPhone(bundle, command) },
+                dialogs =
+                    PrivacyDialogActions(
+                        onEraseConfirmed = viewModel::onEraseConfirmed,
+                        onEraseCancelled = viewModel::onEraseCancelled,
+                        onDialogDismissed = viewModel::onDialogDismissed,
+                        onSendToPhone = { bundle, command -> sendToPhone(bundle, command) },
+                    ),
             )
         }
     return PrivacyBinding(state, snackbarHostState, actions)
@@ -245,7 +248,7 @@ internal fun PrivacyContent(
             Modifier.align(Alignment.BottomCenter).padding(SNACKBAR_PADDING),
         )
     }
-    PrivacyDialogs(state.dialog, actions)
+    PrivacyDialogs(state.dialog, actions.dialogs)
 }
 
 /** The Audit trail row's [modifier] and [onClick], which keep the focus across the viewer. */

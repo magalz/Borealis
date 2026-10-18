@@ -56,7 +56,8 @@ object SettingsSnapshots {
     private fun build(application: Context): Holder {
         val preferences = PreferenceManager.getDefaultSharedPreferences(application)
         LegacyMigrations.run(preferences)
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        // The process-wide holder is where the production dispatcher is chosen; nothing injects it.
+        @Suppress("InjectDispatcher") val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val dataStore =
             DataStoreBacking.create(
                 preferences,

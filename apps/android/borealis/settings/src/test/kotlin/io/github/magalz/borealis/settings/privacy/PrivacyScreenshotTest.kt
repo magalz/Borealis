@@ -36,7 +36,15 @@ class PrivacyScreenshotTest {
     @get:Rule val composeRule = createComposeRule()
     @get:Rule val folder = TemporaryFolder()
 
-    private val actions = PrivacyActions({}, {}, {}, {}, {}, {}, {}, {}, { _: File, _: String -> })
+    private val actions =
+        PrivacyActions(
+            {},
+            {},
+            {},
+            {},
+            {},
+            PrivacyDialogActions({}, {}, {}, { _: File, _: String -> }),
+        )
 
     private fun saved(): PrivacyDialog.Saved {
         val bundle = bundleFile(folder.root)

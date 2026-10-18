@@ -24,7 +24,7 @@ private val LABEL_GAP = 2.dp
 
 /** The dialog that [dialog] names, if any. Back and the Close or Cancel button dismiss it. */
 @Composable
-internal fun PrivacyDialogs(dialog: PrivacyDialog?, actions: PrivacyActions) {
+internal fun PrivacyDialogs(dialog: PrivacyDialog?, actions: PrivacyDialogActions) {
     when (dialog) {
         null -> Unit
         PrivacyDialog.EraseConfirmation -> EraseDialog(actions)
@@ -34,7 +34,7 @@ internal fun PrivacyDialogs(dialog: PrivacyDialog?, actions: PrivacyActions) {
 
 /** Cancel has the focus, so a stray OK changes nothing. */
 @Composable
-private fun EraseDialog(actions: PrivacyActions) {
+private fun EraseDialog(actions: PrivacyDialogActions) {
     BorealisDialog(
         title = stringResource(R.string.borealis_privacy_erase_dialog_title),
         onDismissRequest = actions.onEraseCancelled,
@@ -65,7 +65,7 @@ private fun EraseDialog(actions: PrivacyActions) {
  * nothing to offer but Close. Close has the focus.
  */
 @Composable
-private fun SavedDialog(dialog: PrivacyDialog.Saved, actions: PrivacyActions) {
+private fun SavedDialog(dialog: PrivacyDialog.Saved, actions: PrivacyDialogActions) {
     val size = Formatter.formatShortFileSize(LocalContext.current, dialog.sizeBytes)
     val sendToPhone =
         if (LocalFormFactor.current != FormFactor.Tv) {

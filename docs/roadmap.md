@@ -95,7 +95,9 @@ The work for this sprint is on the phase branch `phase/s7-followups-polish`.
 
 The work for this sprint is on the phase branch `phase/s8-tidy-up`. The device
 smoke round of [section 3.21](development/device-validation.md#321-sprint-8-checks)
-has not run yet. Its results go in [section 13](development/device-validation.md#13-results-sprint-8).
+ran on 2026-10-18 on the TV and the S22. Every item passed except the decoder
+crash notice, which cannot be triggered. The results are in
+[section 13](development/device-validation.md#13-results-sprint-8).
 
 1. **Dead code, complexity hotspots and duplicated code.** Found with Memtrace
    and checked by hand. In Kotlin every Memtrace candidate had a caller and no
@@ -151,13 +153,28 @@ has not run yet. Its results go in [section 13](development/device-validation.md
 - **Phone bar gap.** Found in Sprint 8. Settings and Privacy have 4 dp between
   the back arrow and the title, and Apps and Audit have none. Unifying the gap
   needs re-recorded screenshot references.
+- **Digits on the Borealis keyboard.** Reported by the owner on 2026-10-18. The
+  on-screen keyboard of the stream has no way to type numbers.
+- **Keyboards that count as game controllers.** Found in the Sprint 8 round. A
+  Bluetooth keyboard (AULA F75Max) reports a JOYSTICK source with X and Y axes,
+  so the controller rule of Sprint 7 counts it as a game controller. On the S22
+  in landscape, the keyboard alone switches the Library to the handheld layout.
+  In the stream, the inherited controller code also creates a controller context
+  for it. Tighten the rule, with a test first.
+- **Steam opens after a quit combo.** Found in the Sprint 8 round, on the S22.
+  Released in some orders, the quit combo leaves Start and Select held alone,
+  which starts the menu chord of Sprint 5 again; releasing them early sends a
+  Guide tap to the PC, and Steam opens. One way out: count the Start and Select
+  hold only when it starts from no buttons held. Test first. See the
+  [Sprint 8 results](development/device-validation.md#13-results-sprint-8).
 - **The animated background:** integrated in this sprint if the owner has
   delivered it by then; otherwise it stays in the backlog.
 - **A device round** for what Sprint 7 did not run:
   - a dedicated Android handheld (the owner gets one);
   - the Send to phone Expired and No network states;
   - the Gamepad mouse speed slider at 10% and 200%;
-  - the quit combo on a USB-driver pad on the final build;
+  - the quit combo on a USB-driver pad on the final build (done in the Sprint 8
+    round, on the Sprint 8 build);
   - the dialog frames and visual items that the Sprint 7 round did not record
     (rows F15 and F16).
 

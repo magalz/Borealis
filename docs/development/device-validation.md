@@ -796,10 +796,13 @@ only.
    menu, and type a few keys. Expected: the keys reach the PC.
 6. Decode overlay. Turn the Performance overlay on, start a stream, and read the
    decode time. Expected: a number in milliseconds, as in 3.20 step 4.
-7. TV channel and box art (Streamer only). Open Apps. Expected: the box art of
-   the apps loads. If the Google TV home screen shows a Borealis channel, its
-   posters load too. `PosterContentProvider` and `DiskAssetLoader` changed in
-   Sprint 8.
+7. TV channel and box art (Streamer only). The Apps screen shows initials until
+   Phase 3, so check the posters through the provider: run
+   `adb shell content read --uri content://poster.<package>/boxart/<host>/<app>`
+   for a cached app. Expected: the PNG of the cache file, byte for byte, and a
+   `FileNotFoundException` for an app ID that is not a number. If the Google
+   TV home screen shows a Borealis channel, its posters load too.
+   `PosterContentProvider` and `DiskAssetLoader` changed in Sprint 8.
 8. Decoder crash notice. There is no safe way to make the decoder crash on
    purpose, so this step runs only if the notice appears by itself. Expected: it
    has an OK button and no Help button. `UpstreamSeamsTest` covers it in the
@@ -1657,20 +1660,78 @@ taken during the stream, because it would show the PC screen.
 ## 13. Results: Sprint 8
 
 This section holds the Sprint 8 results. The checks follow the steps of
-[section 3.21](#321-sprint-8-checks). The orchestrator fills it in after the
-round.
+[section 3.21](#321-sprint-8-checks).
 
-Setup: builds `<commit tested>`, LuminalShine 26.09.1, the Galaxy S22 (USB ADB)
-and the Google TV Streamer (ADB over Wi-Fi).
+### Setup
+
+- Build: the phase debug APK built from `50854eda`. The later phase commits
+  change only docs and the Memtrace ignore file. It was installed over the
+  previous build with `adb install -r`, without uninstalling.
+- Host: LuminalShine 26.09.1.
+- Devices: the Google TV Streamer over wireless ADB, and the Galaxy S22 over
+  wireless ADB in part 1b and over USB in part 3.
+- Rounds, all on 2026-10-18:
+  - **Part 1:** the TV, without a controller, while the owner was away. Only
+    steps that send nothing to the PC's foreground app.
+  - **Part 1b:** the S22, without a controller.
+  - **Part 2:** the TV, with the owner, for the pads, the mouse and typing.
+  - **Part 3:** the S22, with the owner, for a Bluetooth pad, the mouse and a
+    Bluetooth keyboard.
+- Evidence: logcat and `dumpsys input` over ADB. Captures were cropped to the
+  menu or overlay, or reduced to unreadable thumbnails, so the PC screen was not
+  kept. All captures were deleted after use.
+
+### Results
 
 | # | Item | Device | Result | Evidence and notes |
 | --- | --- | --- | --- | --- |
-| 1 | Library | | | |
-| 2 | Start and end a stream | | | |
-| 3 | System pad and USB-driver pad: quit combo | | | |
-| 4 | Mouse capture | | | |
-| 5 | On-screen keyboard | | | |
-| 6 | Decode overlay | | | |
-| 7 | TV channel and box art | | | |
-| 8 | Decoder crash notice has no Help button | | | |
-| 9 | Debug APK: same ID and label | | | |
+| 1 | Library | TV, S22 | pass | Rail, two host cards and the online host on the TV. The phone layout on the S22, where Apps uses the shared phone bar (back, title, eye). |
+| 2 | Start and end a stream | TV, S22 | pass | Desktop started on the TV (first video packet after 1.4 s) and on the S22. Quit Desktop from the menu: `/cancel` 200, back to the Library with "Nothing running". |
+| 3 | System pad and USB-driver pad: quit combo | TV, S22 | pass | TV: the 8BitDo Ultimate 2 in four set-ups, below. The combo ended the stream in every set-up where the pad works. S22: the Ultimate 2 over Bluetooth, twice; the combo ended the stream both times. Once, Steam opened on the PC as the stream ended (see the follow-ups). The S22 has no USB-driver case, because its port held the ADB cable. |
+| 4 | Mouse capture | TV, S22 | pass | Logi M650 L over Bluetooth. During the stream `dumpsys input` showed "Pointer Capture: Enabled" for the stream window, and the owner moved and clicked on the PC. The S22 released the capture while the menu was open and took it back after. After the stream, on both devices: "Pointer Capture: Disabled", no window holding it, and the mouse worked in the Library. |
+| 5 | On-screen keyboard | TV, S22 | pass | It opens from the menu on both devices; docked under the stream on the phone. The owner typed on both devices and the keys reached the PC. It has no way to type digits (see the follow-ups). |
+| 6 | Decode overlay | TV, S22 | pass | "Decode 4.5 ms" on the TV (`c2.mtk.hevc.decoder.lowlatency`) and "Decode 5.5 ms" on the S22 (`c2.qti.hevc.decoder.low_latency`). Log windows with `unmatched=0`. The overlay was set back to Off. |
+| 7 | TV channel and box art | TV | pass | Checked through the provider. `content read` on `content://poster.io.github.magalz.borealis.debug/boxart/<host>/<app>` returned both cached PNGs, byte for byte equal to the cache files. These requests failed with `FileNotFoundException` and returned 0 bytes: the app IDs `abc`, `-1` and `..%2F..%2Fshared_prefs`, a malformed host ID, a missing app and an extra path segment. The Google TV home screen was not checked. The Apps screen shows initials until Phase 3, as designed. |
+| 8 | Decoder crash notice has no Help button | — | not run | It cannot be triggered safely; `UpstreamSeamsTest` covers it. |
+| 9 | Debug APK: same ID and label | TV, S22 | pass | Installed over the previous build on both devices: same package, label and version (`0.0.0-dev`). |
+
+No crash or ANR appeared in logcat in any part.
+
+### Item 3: the pad set-ups
+
+| Case | Link and mode | USB driver | Android sees | Result |
+| --- | --- | --- | --- | --- |
+| A | Receiver, XInput (`2dc8:310b`) | on | Nothing. The USB driver holds the pad. | pass. The combo ended the stream from the client; Desktop kept running. |
+| B | Receiver, XInput (`2dc8:310b`) | off | Only the receiver's HID "Keyboard" and "Mouse" (KEYBOARD, DPAD, STYLUS, JOYSTICK; no GAMEPAD). | Not applicable, as expected. The pad does nothing in the stream, because Android on the Streamer has no driver for this XInput device. |
+| C | Receiver, the other mode (`2dc8:6012`) | on | A system pad (GAMEPAD, JOYSTICK). The USB driver leaves it alone. | pass. |
+| D | Bluetooth LE ("8BitDo Ultimate 2 Wireless"), receiver idle (`2dc8:6013`) | on | A system pad (GAMEPAD, JOYSTICK, battery). | pass. |
+
+- The USB permission prompt appeared once, after the first frame, and the owner
+  accepted it. The next stream on the same attachment did not ask again: the
+  grant lasts one attachment, as in Sprint 7.
+- Each combo exit logged a harmless `Duplicate finish request` for the stream
+  activity in `ActivityTaskManager`.
+- A Bluetooth keyboard (AULA F75Max-2) moves the Library focus with its arrow
+  keys.
+
+### Follow-ups
+
+- **Digits on the Borealis keyboard.** Reported by the owner: the on-screen
+  keyboard has no way to type numbers. Added to Sprint 9.
+- **Keyboards that count as game controllers.** The AULA F75Max keyboard
+  reports a JOYSTICK source with X and Y axes (on the S22, through a "System
+  Multi Axis" part; it also uses Apple's vendor ID, `05ac:024f`). The Sprint 7
+  controller rule (GAMEPAD, or JOYSTICK with X and Y) therefore counts it as a
+  game controller. Confirmed on the S22 in landscape: with only the keyboard
+  connected, the Library switches to the handheld layout, and it switches back
+  when the keyboard disconnects. In the stream, the inherited controller code
+  created a controller context for the keyboard on each device change, but gave
+  it no controller number, so the PC saw no extra pad. Added to Sprint 9.
+- **Steam opened after a quit combo.** On the S22, once in two tries, Steam
+  opened on the PC as the combo ended the stream. The likely cause is the menu
+  chord of Sprint 5. When LB and RB are released before Start and Select, Start
+  and Select alone start the one-second chord again. Released early, they reach
+  the PC as a Guide tap on a pad with Select and no Mode button, and Steam opens
+  on the Guide button. Released together, the order of the events decides, which
+  is why it happens only sometimes. Not a Sprint 8 change. The owner chose to
+  fix it in Sprint 9, test first.

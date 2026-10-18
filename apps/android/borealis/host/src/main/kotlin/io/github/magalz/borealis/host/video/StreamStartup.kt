@@ -26,7 +26,7 @@ object StreamStartup {
      */
     @JvmStatic
     @JvmOverloads
-    @Suppress("LongParameterList")
+    @Suppress("LongParameterList") // One lambda per screen capability, plain plumbing from Game.
     fun create(
         runOnUi: Consumer<Runnable>,
         setOverlayText: IntConsumer,

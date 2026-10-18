@@ -57,7 +57,7 @@ class LaunchRetryRunner(
      * number of the retry that is about to start, the retries allowed and the wait in milliseconds.
      * It blocks while waiting, so the main thread must not call it.
      */
-    @Suppress("LongParameterList")
+    @Suppress("LongParameterList") // The six seams of one run: verb, four callbacks, attempt.
     fun run(
         verb: LaunchVerb,
         isCancelled: () -> Boolean,
@@ -86,7 +86,7 @@ class LaunchRetryRunner(
         private val retries = EnumMap<LaunchCategory, Int>(LaunchCategory::class.java)
 
         /** Makes one attempt; null means that a retry wait went by and the next attempt is due. */
-        @Suppress("TooGenericExceptionCaught")
+        @Suppress("TooGenericExceptionCaught") // The rule table has to see every throwable.
         fun next(attempt: () -> Boolean): LaunchOutcome? {
             if (isCancelled()) return LaunchOutcome.CANCELLED
             val failure =

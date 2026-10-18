@@ -21,7 +21,6 @@ class HostInfoReader(private val rules: HostRules) {
      * a host with malformed values cannot break the poll. Null when the rules are unavailable or
      * reject [appVersion].
      */
-    @Suppress("LongParameterList")
     fun read(
         hostId: String?,
         appVersion: String?,

@@ -13,6 +13,7 @@ import java.net.SocketTimeoutException
 import java.net.URLEncoder
 import java.security.MessageDigest
 import java.security.SecureRandom
+import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -256,14 +257,15 @@ internal class OneShotFileServer(
         private const val DRAIN_MILLIS = 500
         private const val JOIN_MILLIS = 2_000L
         private const val TOKEN_BYTES = 16
-        private const val NANOS_PER_MILLI = 1_000_000L
         private const val MILLIS_PER_SECOND = 1_000L
 
         private val RANDOM = SecureRandom()
 
         /** 128 random bits as lowercase hex: URL-safe without any encoding. */
         private fun newToken(): String =
-            ByteArray(TOKEN_BYTES).also(RANDOM::nextBytes).joinToString("") { "%02x".format(it) }
+            ByteArray(TOKEN_BYTES).also(RANDOM::nextBytes).joinToString("") {
+                "%02x".format(Locale.ROOT, it)
+            }
     }
 }
 

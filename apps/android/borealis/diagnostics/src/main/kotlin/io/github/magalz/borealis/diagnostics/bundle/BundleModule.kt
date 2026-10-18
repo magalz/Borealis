@@ -15,6 +15,6 @@ import io.github.magalz.borealis.logging.LogSwitches
  */
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class BundleModule {
-    @Multibinds abstract fun diagnosticSections(): Set<DiagnosticSection>
+interface BundleModule {
+    @Multibinds fun diagnosticSections(): Set<DiagnosticSection>
 }

@@ -39,7 +39,9 @@ class ComputerHostRepositoryTest {
     private var localNetworks = listOf<LocalIpv4>()
     private val hiddenApps = HiddenApps(context)
 
-    private fun TestScope.repository(connector: CmsConnector = this@ComputerHostRepositoryTest.connector): ComputerHostRepository {
+    private fun TestScope.repository(
+        connector: CmsConnector = this@ComputerHostRepositoryTest.connector
+    ): ComputerHostRepository {
         val io = UnconfinedTestDispatcher(testScheduler)
         return ComputerHostRepository(
             context = context,
@@ -87,11 +89,9 @@ class ComputerHostRepositoryTest {
         val gate = CompletableDeferred<Unit>()
         val repository =
             repository(
-                object : CmsConnector {
-                    override suspend fun connect(): CmsBinder {
-                        gate.await()
-                        return binder
-                    }
+                CmsConnector {
+                    gate.await()
+                    binder
                 }
             )
 

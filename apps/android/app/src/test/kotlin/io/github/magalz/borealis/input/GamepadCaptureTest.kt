@@ -160,9 +160,13 @@ class GamepadCaptureTest {
     @Test
     fun `capturing stops the gyro of a pad that was sending it`() {
         rig.setDefaultContextField("gyroListener", object : SensorEventListener {
-                override fun onSensorChanged(event: SensorEvent) {}
+                override fun onSensorChanged(event: SensorEvent) {
+                    // Only the registration matters here: no sensor event is ever delivered.
+                }
 
-                override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
+                override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
+                    // Only the registration matters here: no sensor event is ever delivered.
+                }
             })
         rig.connection.motion.clear()
 

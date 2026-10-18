@@ -28,7 +28,7 @@ private class FakeHostServer(private val answers: Map<String, String>) : Closeab
             while (!server.isClosed) {
                 try {
                     server.accept().use { respond(it) }
-                } catch (e: IOException) {
+                } catch (ignored: IOException) {
                     // The server was closed, or the client went away.
                     if (server.isClosed) break
                 }

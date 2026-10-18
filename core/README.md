@@ -40,7 +40,8 @@ core/
   tests/                GoogleTest unit tests (fetched with a pinned URL + SHA256)
   tests/fixtures/       host responses and golden vectors (see fixtures/README.md)
   fuzz/                 libFuzzer targets (see fuzz/README.md)
-  third_party/          vendored moonlight-common-c with ENet and nanors; the Android build compiles it, borealis_core does not (see third_party/README.md)
+  third_party/          vendored moonlight-common-c (ENet, nanors), compiled by the Android app only
+                        (see third_party/README.md)
   .clang-format         copied from LuminalShine
   .clang-tidy
 ```

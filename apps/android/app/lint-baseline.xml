@@ -135,17 +135,6 @@
 
     <issue
         id="UnusedAttribute"
-        message="Attribute `enableOnBackInvokedCallback` is only used in API level 33 and higher (current min is 28)"
-        errorLine1="            android:enableOnBackInvokedCallback=&quot;true&quot;"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="156"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
         message="Attribute `preferKeepClear` is only used in API level 33 and higher (current min is 28)"
         errorLine1="        android:preferKeepClear=&quot;true&quot;"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
@@ -329,17 +318,6 @@
             file="src/main/java/com/limelight/nvstream/mdns/NsdManagerDiscoveryAgent.java"
             line="20"
             column="1"/>
-    </issue>
-
-    <issue
-        id="SetJavaScriptEnabled"
-        message="Using `setJavaScriptEnabled` can introduce XSS vulnerabilities into your application, review carefully"
-        errorLine1="        webView.getSettings().setJavaScriptEnabled(true);"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/HelpActivity.java"
-            line="51"
-            column="9"/>
     </issue>
 
     <issue

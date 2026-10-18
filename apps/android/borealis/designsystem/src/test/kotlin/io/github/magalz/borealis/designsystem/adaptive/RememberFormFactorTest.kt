@@ -13,6 +13,10 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.connect
+import io.github.magalz.borealis.designsystem.testing.disconnect
+import io.github.magalz.borealis.designsystem.testing.inputDevice
+import io.github.magalz.borealis.designsystem.testing.inputDeviceListeners
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
 import org.junit.Test

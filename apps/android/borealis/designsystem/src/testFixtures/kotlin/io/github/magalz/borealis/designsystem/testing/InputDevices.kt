@@ -1,5 +1,6 @@
-package io.github.magalz.borealis.designsystem.adaptive
+package io.github.magalz.borealis.designsystem.testing
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.hardware.input.InputManager
 import android.view.InputDevice
@@ -14,7 +15,7 @@ import org.robolectric.util.ReflectionHelpers.ClassParameter
  * it the X and Y motion ranges of a joystick.
  */
 @Suppress("DEPRECATION") // the Robolectric helper; InputDevice.Builder is not in the public SDK
-internal fun inputDevice(id: Int, sources: Int, joystickXy: Boolean = false): InputDevice {
+fun inputDevice(id: Int, sources: Int, joystickXy: Boolean = false): InputDevice {
     val device = ShadowInputDevice.makeInputDeviceNamed("test-device-$id")
     ReflectionHelpers.setField(device, "mId", id)
     ReflectionHelpers.setField(device, "mSources", sources)
@@ -37,11 +38,11 @@ internal fun inputDevice(id: Int, sources: Int, joystickXy: Boolean = false): In
 }
 
 /** Makes [device] one of the devices Android has. It fires no listener. */
-internal fun connect(context: Context, device: InputDevice) {
+fun connect(context: Context, device: InputDevice) {
     shadowOf(context.getSystemService(InputManager::class.java)).addInputDevice(device)
 }
 
-internal fun disconnect(context: Context, deviceId: Int) {
+fun disconnect(context: Context, deviceId: Int) {
     shadowOf(context.getSystemService(InputManager::class.java)).removeInputDevice(deviceId)
 }
 
@@ -49,7 +50,9 @@ internal fun disconnect(context: Context, deviceId: Int) {
  * The listeners registered with the framework's input manager. Robolectric's shadow adds and
  * removes devices without telling them, so a test reads them from the framework and calls them.
  */
-internal fun inputDeviceListeners(): List<InputManager.InputDeviceListener> {
+// Robolectric only, never a device: the test fixtures are not packaged into an APK.
+@SuppressLint("PrivateApi")
+fun inputDeviceListeners(): List<InputManager.InputDeviceListener> {
     val global =
         ReflectionHelpers.callStaticMethod<Any>(
             Class.forName("android.hardware.input.InputManagerGlobal"),

@@ -1,16 +1,14 @@
 package io.github.magalz.borealis.stream.host
 
-import android.hardware.input.InputManager
 import android.view.InputDevice
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.connect
+import io.github.magalz.borealis.designsystem.testing.inputDevice
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowInputDevice
-import org.robolectric.util.ReflectionHelpers
 
 @RunWith(RobolectricTestRunner::class)
 class StreamChromeHostPhoneTest {
@@ -49,17 +47,9 @@ class StreamChromeHostPhoneTest {
         assertThat(StreamChromeHost.isPhone(context)).isTrue()
     }
 
-    @Suppress("DEPRECATION") // the Robolectric helper; InputDevice.Builder is not in the public SDK
     private fun connectGamepad() {
-        val device = ShadowInputDevice.makeInputDeviceNamed("test-pad")
-        ReflectionHelpers.setField(device, "mId", 3)
-        ReflectionHelpers.setField(
-            device,
-            "mSources",
-            InputDevice.SOURCE_KEYBOARD or
-                InputDevice.SOURCE_GAMEPAD or
-                InputDevice.SOURCE_JOYSTICK,
-        )
-        shadowOf(context.getSystemService(InputManager::class.java)).addInputDevice(device)
+        val sources =
+            InputDevice.SOURCE_KEYBOARD or InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_JOYSTICK
+        connect(context, inputDevice(id = 3, sources = sources))
     }
 }

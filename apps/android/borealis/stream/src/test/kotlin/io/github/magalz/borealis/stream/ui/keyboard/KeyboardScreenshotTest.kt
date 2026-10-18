@@ -67,6 +67,16 @@ class KeyboardScreenshotTest {
     }
 
     @Test
+    @Config(qualifiers = TV)
+    fun keyboardTvFnLayer() {
+        composeRule.setContentInKeyboardMode { Screen(docked = false, FormFactor.Tv) }
+        composeRule.onNodeWithTag("key:Fn 123").requestFocus()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+
+        shoot("keyboard_tv_fn-layer")
+    }
+
+    @Test
     @Config(qualifiers = PHONE_LANDSCAPE)
     fun keyboardPhoneShiftLatched() {
         composeRule.setContent { Screen(docked = true, FormFactor.Phone) }
@@ -79,7 +89,7 @@ class KeyboardScreenshotTest {
     @Config(qualifiers = PHONE_LANDSCAPE)
     fun keyboardPhoneFnLayer() {
         composeRule.setContent { Screen(docked = true, FormFactor.Phone) }
-        composeRule.onNodeWithTag("key:Fn").performClick()
+        composeRule.onNodeWithTag("key:Fn 123").performClick()
 
         shoot("keyboard_phone_fn-layer")
     }

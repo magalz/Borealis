@@ -85,15 +85,17 @@ class KeyboardNavigationTest {
             visited += focused()
         }
 
-        assertThat(visited).containsExactly("Ctrl", "Win", "Alt", "Space", "Tab", "Fn").inOrder()
+        assertThat(visited)
+            .containsExactly("Ctrl", "Win", "Alt", "Space", "Tab", "Fn 123")
+            .inOrder()
     }
 
     @Test
-    fun `the D-pad walks up the Fn layer from Fn to the digits and back down`() {
+    fun `the D-pad walks up the Fn layer from Fn 123 to the digits and back down`() {
         show()
-        composeRule.onNodeWithTag("key:Fn").requestFocus()
+        composeRule.onNodeWithTag("key:Fn 123").requestFocus()
         press(Key.DirectionCenter)
-        assertThat(focused()).isEqualTo("Fn")
+        assertThat(focused()).isEqualTo("Fn 123")
         composeRule.onNodeWithTag("key:F1").assertExists()
 
         val up = mutableListOf<String>()
@@ -108,13 +110,13 @@ class KeyboardNavigationTest {
         }
 
         assertThat(up).containsExactly("Del", "F10", "0").inOrder()
-        assertThat(down).containsExactly("F10", "Del", "Fn").inOrder()
+        assertThat(down).containsExactly("F10", "Del", "Fn 123").inOrder()
     }
 
     @Test
     fun `the D-pad moves along the arrows of the Fn layer`() {
         show()
-        composeRule.onNodeWithTag("key:Fn").requestFocus()
+        composeRule.onNodeWithTag("key:Fn 123").requestFocus()
         press(Key.DirectionCenter)
         composeRule.onNodeWithTag("key:←").requestFocus()
 

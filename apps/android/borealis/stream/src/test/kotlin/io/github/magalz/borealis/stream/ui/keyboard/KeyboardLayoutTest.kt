@@ -64,9 +64,9 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `the bottom row is Ctrl, Win, Alt, Space, Tab and Fn`() {
+    fun `the bottom row is Ctrl, Win, Alt, Space, Tab and Fn 123`() {
         assertThat(KeyboardLayout.bottomRow.captions())
-            .containsExactly("Ctrl", "Win", "Alt", "Space", "Tab", "Fn")
+            .containsExactly("Ctrl", "Win", "Alt", "Space", "Tab", "Fn 123")
             .inOrder()
     }
 
@@ -111,7 +111,7 @@ class KeyboardLayoutTest {
         assertThat(styles["Shift"]).isEqualTo(KeyStyle.Wide)
         assertThat(styles["Ctrl"]).isEqualTo(KeyStyle.Wide)
         assertThat(styles["Tab"]).isEqualTo(KeyStyle.Wide)
-        assertThat(styles["Fn"]).isEqualTo(KeyStyle.Wide)
+        assertThat(styles["Fn 123"]).isEqualTo(KeyStyle.Wide)
         assertThat(styles["Space"]).isEqualTo(KeyStyle.Space)
         assertThat(styles["PgDn"]).isEqualTo(KeyStyle.Wide)
     }

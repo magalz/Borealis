@@ -11,10 +11,11 @@ import androidx.compose.ui.platform.LocalContext
 
 /**
  * Whether an input device with these facts is a game controller: not virtual, and either a gamepad,
- * or a joystick with the X and Y axes ([hasJoystickXy]). This is the test the stream's controller
- * handler uses to count a pad, kept in one place for the form factor and the USB driver. The source
- * masks are compared whole, because the class bits overlap with the keyboard's: an 8BitDo pad
- * reports `KEYBOARD | GAMEPAD | JOYSTICK`, and a remote `KEYBOARD | DPAD`.
+ * or a joystick with the X and Y axes ([hasJoystickXy]). It matches the gamepad-buttons and
+ * joystick-axes part of `ControllerHandler.isGameControllerDevice`, which also has its own
+ * exceptions, and is kept in one place for the form factor and the USB driver. The source masks are
+ * compared whole, because the class bits overlap with the keyboard's: an 8BitDo pad reports
+ * `KEYBOARD | GAMEPAD | JOYSTICK`, and a remote `KEYBOARD | DPAD`.
  */
 fun isGameController(sources: Int, isVirtual: Boolean, hasJoystickXy: Boolean): Boolean =
     !isVirtual &&

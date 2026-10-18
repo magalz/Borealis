@@ -28,10 +28,10 @@ data class InputDeviceFacts(
  */
 object NativeGamepadSupport {
     /**
-     * True when one of [devices] has this VID/PID and is a game controller for Android. That is the
-     * test the form factor counts a pad by, and the one `ControllerHandler` counts a device by:
-     * gamepad buttons, or joystick axes. A device that passes it is already a pad for the stream,
-     * so the driver must not claim it too.
+     * True when one of [devices] has this VID/PID and is a game controller for Android, by the rule
+     * the form factor uses ([isGameController]): gamepad buttons, or joystick axes, on a device
+     * that is not virtual. A device that passes it is already a pad for the stream, so the driver
+     * must not claim it too.
      */
     fun hasNativeGamepad(vendorId: Int, productId: Int, devices: List<InputDeviceFacts>): Boolean =
         devices.any {
@@ -53,8 +53,8 @@ object NativeGamepadSupport {
                         it.vendorId,
                         it.productId,
                         it.sources,
-                        it.hasJoystickXy(),
-                        it.isVirtual,
+                        hasJoystickXy = it.hasJoystickXy(),
+                        isVirtual = it.isVirtual,
                     )
                 }
             },

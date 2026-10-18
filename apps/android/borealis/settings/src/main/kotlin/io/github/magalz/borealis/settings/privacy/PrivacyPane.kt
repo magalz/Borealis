@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.settings.privacy
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
@@ -137,13 +138,18 @@ internal fun rememberPrivacyBinding(
     return PrivacyBinding(state, snackbarHostState, actions)
 }
 
-/** False when the system refused the share sheet. */
-@Suppress("TooGenericExceptionCaught")
+/**
+ * False when the system refused the share sheet: nothing handles the chooser, or the system does
+ * not allow it. Any other failure is a bug and is not hidden.
+ */
 internal fun tryShare(startShare: (Intent) -> Unit, chooser: Intent): Boolean =
     try {
         startShare(chooser)
         true
-    } catch (e: RuntimeException) {
+    } catch (e: ActivityNotFoundException) {
+        BorealisLog.e(LogTag.APP, "could not start the diagnostic share", e)
+        false
+    } catch (e: SecurityException) {
         BorealisLog.e(LogTag.APP, "could not start the diagnostic share", e)
         false
     }

@@ -100,13 +100,10 @@ What stays, and why:
 
 Security findings, each reviewed on 2026-10-17:
 
-- **`SetJavaScriptEnabled`** (`HelpActivity`). The WebView opens one fixed URL,
-  Moonlight's troubleshooting wiki
-  (`https://github.com/moonlight-stream/moonlight-docs/wiki/Troubleshooting`,
-  `HelpLauncher.launchTroubleshooting`). It is reached from the Help button of
-  the decoder-crash dialog, and only on Android TV or when no browser takes the
-  intent. The activity is not exported and registers no JavaScript interface.
-  Whether it keeps pointing at Moonlight's site is the owner's decision.
+- **`SetJavaScriptEnabled`.** Removed by the owner's decision. `HelpActivity`
+  was a WebView on Moonlight's troubleshooting wiki, reached only from the Help
+  button of the decoder-crash dialog. The activity, `HelpLauncher` and the
+  button are gone, so the app no longer has a WebView.
 - **`ExportedContentProvider`** (`PosterContentProvider`). The Android TV home
   screen reads the poster URIs of the TV channel from another process, so the
   provider must stay exported. It is read-only (`insert`, `update`, `delete`

@@ -78,6 +78,40 @@ report it; never reformat upstream code. Spotless formats Borealis C/C++ with
 the `clang-format` on `PATH`; without it the C/C++ Spotless tasks fail with
 "clang-format 22.x not found on PATH" while the rest of the build keeps working.
 
+### Static analysis (detekt)
+
+`./gradlew detekt` is the one entry point. In every Android module (`:app` and
+`:borealis:*`) it runs detekt with type resolution on the `debug` sources, the
+unit tests, the instrumented tests and the test fixtures; from the root it runs
+the plain task on `build-logic`. One module alone: `./gradlew :borealis:host:detekt`.
+
+- **Why typed:** the plain task skips every rule that needs the compiler's
+  analysis, about 40 of the active ones: unused private members, unreachable
+  code, `!!` and unsafe casts, platform types, long parameter lists and more.
+  The typed task compiles the module first, as the unit tests do, so it costs
+  more than the plain one did.
+- **One config:** `apps/android/config/detekt/detekt.yml`, on top of detekt's
+  defaults, for all modules.
+- **`build-logic` stays plain:** the analysis does not apply the compiler
+  plugins of the Kotlin DSL and would read its Gradle code as unresolved.
+- **Baselines (temporary):** `apps/android/config/detekt/baseline-<module>.xml`
+  (`app`, `borealis-host`, ...) hold the findings that the typed analysis
+  uncovered, so that the gate is green while Sprint 8 fixes them. A finding that
+  is not in a baseline fails the build, and nobody adds an entry. To fix one,
+  change the code and delete its `<ID>` line; delete the file when the last
+  line is gone. Move a baseline away for one run to see what it hides. Do not
+  regenerate it with `detektBaselineMain` or `detektBaselineTest`: both write
+  the module's one file, so the last one wins.
+- **On Windows,** run the analysis in a worker process. By default it runs in the
+  Gradle daemon, which then keeps the jars of the module's compile classpath
+  (`R.jar`, `classes.jar`) open, and the next build that regenerates one of
+  them fails with "Couldn't delete ... R.jar" or "file is in use by another
+  process" until the daemon stops. Set `detekt.use.worker.api=true` in
+  `%USERPROFILE%\.gradle\gradle.properties` (or pass
+  `-Pdetekt.use.worker.api=true`); the worker ends with the build, and the
+  analysis is slower on a warm daemon because nothing is reused between tasks.
+  `./gradlew --stop` also releases the files.
+
 ### Screenshot tests
 
 The Compose screens in `:borealis:designsystem`, `:borealis:library` and

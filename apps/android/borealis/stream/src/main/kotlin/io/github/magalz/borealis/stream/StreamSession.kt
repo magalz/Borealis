@@ -31,7 +31,7 @@ data class StreamDefaults(
  * leaves the phase at [StreamPhase.Conflict]; the activity finishes itself. When the host ends the
  * stream while a quit is pending, the phase is [StreamPhase.Quitting] until the quit answers.
  */
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions") // One method per stream event and per StreamIntents call.
 class StreamSession(
     appName: String,
     hostName: String,

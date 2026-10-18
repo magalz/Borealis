@@ -181,6 +181,7 @@ internal class StoreSettingsRepository(
         }
     }
 
+    // Each stored value was read by the type of its setting; the star hides that type.
     @Suppress("UNCHECKED_CAST")
     private fun SettingsSnapshot.withStored(setting: Setting<*>, value: Any?): SettingsSnapshot =
         with(setting as Setting<Any?>, value)

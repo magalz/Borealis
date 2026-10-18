@@ -41,7 +41,7 @@ data class DecoderEntry(
 data class DecodersReport(val decoders: List<DecoderEntry>, val displayHdrTypes: List<String>)
 
 /** Builds [DecodersReport]: H.264, HEVC and AV1 decoders with named profiles, and display HDR. */
-@SuppressLint("InlinedApi")
+@SuppressLint("InlinedApi") // Newer profile constants are inlined ints.
 object DecoderCollector {
     private const val AVC = "video/avc"
     private const val HEVC = "video/hevc"

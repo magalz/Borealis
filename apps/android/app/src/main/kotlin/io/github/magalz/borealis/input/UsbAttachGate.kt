@@ -61,7 +61,7 @@ private constructor(private val context: Context, private val preferences: Share
          * Starts keeping the component in step with the setting. The caller must keep the result
          * referenced (for example in a field of the Application).
          */
-        @Suppress("DEPRECATION")
+        @Suppress("DEPRECATION") // The inherited setting lives in the default preferences.
         fun start(context: Context): UsbAttachGate =
             UsbAttachGate(context, PreferenceManager.getDefaultSharedPreferences(context)).also {
                 it.begin()

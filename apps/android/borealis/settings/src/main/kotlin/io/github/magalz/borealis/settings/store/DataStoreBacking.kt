@@ -48,6 +48,7 @@ internal class DataStoreBacking(
             if (value == null) {
                 preferences.remove(key)
             } else {
+                // The key is of the setting's type, and so is the value.
                 @Suppress("UNCHECKED_CAST")
                 preferences[key as Preferences.Key<Any>] = value
             }

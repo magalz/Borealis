@@ -10,7 +10,7 @@ lists the tests that prove it, and those tests are written first (see
 - Identifier: `UC-NNN`, three digits, assigned in order and never reused (for
   example `UC-001`).
 - File name: `NNNN-short-title.md` with a four-digit prefix and a lowercase,
-  hyphenated title, for example `0001-pair-with-host.md`. The file `0000-template.md` is
+  hyphenated title, for example `0001-pair-with-a-host.md`. The file `0000-template.md` is
   the template and is not a use case.
 - The H1 of the file is `UC-NNN: Title`.
 - A withdrawn use case keeps its number and is marked `Status: Withdrawn`.

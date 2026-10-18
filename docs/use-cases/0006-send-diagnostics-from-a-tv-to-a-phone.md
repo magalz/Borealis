@@ -103,9 +103,6 @@ closing stops the link.
 | UC-006-T10 | Given the link expires, when the dialog updates, then it shows Expired. | UI | exists (Sprint 6, UI) |
 | UC-006-T11 | Given no private IPv4 address, when the dialog shows, then it shows the No local network state with the `adb pull` command and the bundle's path. | UI | exists (Sprint 6, UI) |
 
-Planned tests cover the Phase 2 screens; tests marked as existing cover logic
-that the Phase 2 screens reuse.
-
 ## Host dependency
 
 None. The transfer runs on the TV and the phone. It needs no LuminalShine

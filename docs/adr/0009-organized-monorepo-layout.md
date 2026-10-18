@@ -60,3 +60,5 @@ Detail: the moonlight-common-c submodule stays at its upstream path (`apps/andro
 ## More Information
 
 See [0003](0003-native-apps-per-platform-with-shared-core.md), [0008](0008-shared-core-language-and-scope.md) and [0010](0010-prefab-for-android-native-build.md).
+
+Amended by [0054](0054-declare-independence-from-moonlight.md): the moonlight-common-c submodule and the root `.gitmodules` are gone. The code is vendored in `core/third_party/moonlight-common-c/`, and the `git subtree pull` sync ended. Upstream fixes arrive only by cherry-pick.

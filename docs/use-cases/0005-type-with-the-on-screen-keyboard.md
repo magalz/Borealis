@@ -56,6 +56,15 @@ awkward to type.
    three-finger tap. Both keyboards can be used at the same time; the
    on-screen modifiers latch only for keys typed on screen.
 
+### A4: The user types digits, function keys or arrows (branches from step 4)
+
+1. The user taps Fn. The three letter rows give way to the digits 1 to 0, the
+   keys F1 to F10, and the arrows with Home, End, PgUp, PgDn and Del. The bottom
+   row stays, and Fn shows as on.
+2. A modifier that was latched stays latched, and the next key is sent with it.
+3. The user taps Fn again to return to the letters. Rejoins the main flow at
+   step 5.
+
 No failure flow is defined in the approved design. Shortcut chips and keys send
 what they name; the host's response to a key is outside this use case.
 
@@ -80,6 +89,7 @@ what they name; the host's response to a key is outside this use case.
 | UC-005-T7 | Given the docked keyboard on a phone, when the shortcut row shows, then Esc is its first chip. | unit | exists (Sprint 5, unit) |
 | UC-005-T8 | Given Shift is not latched, when the letter keys show, then they are lowercase; with Shift latched, the next letter shows in uppercase. | UI | exists (Sprint 5, UI; device round) |
 | UC-005-T9 | Given the keyboard is open, when the user taps Win+Tab, then Win+Tab is sent once. | unit | exists (Sprint 5, unit; device round) |
+| UC-005-T10 | Given the keyboard is open, when the user taps Fn, then the digits, F1 to F10 and the arrows show instead of the letters, and Fn again shows the letters. A latched modifier stays latched across the switch. | UI | exists (Sprint 5, UI) |
 
 Sprint 5 built the Borealis keyboard and its logic. A test marked "exists (Sprint
 5, unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose

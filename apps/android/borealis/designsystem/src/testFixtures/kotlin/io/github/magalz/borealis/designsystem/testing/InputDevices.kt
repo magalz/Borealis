@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.designsystem.testing
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.hardware.input.InputManager
 import android.view.InputDevice
@@ -49,6 +50,8 @@ fun disconnect(context: Context, deviceId: Int) {
  * The listeners registered with the framework's input manager. Robolectric's shadow adds and
  * removes devices without telling them, so a test reads them from the framework and calls them.
  */
+// Robolectric only, never a device: the test fixtures are not packaged into an APK.
+@SuppressLint("PrivateApi")
 fun inputDeviceListeners(): List<InputManager.InputDeviceListener> {
     val global =
         ReflectionHelpers.callStaticMethod<Any>(

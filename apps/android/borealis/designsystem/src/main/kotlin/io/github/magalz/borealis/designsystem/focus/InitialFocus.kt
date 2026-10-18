@@ -1,5 +1,3 @@
-@file:Suppress("MatchingDeclarationName")
-
 package io.github.magalz.borealis.designsystem.focus
 
 import androidx.compose.runtime.Composable

@@ -315,7 +315,6 @@ class StreamChromeHost(
          * covering it: the same rule the Library uses for its layouts, so a wide phone with a game
          * controller connected is not one.
          */
-        @Suppress("ConfigurationScreenWidthHeight")
         fun isPhone(context: Context): Boolean {
             val configuration = context.resources.configuration
             return formFactorOf(

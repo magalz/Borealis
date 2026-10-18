@@ -1,13 +1,10 @@
 package io.github.magalz.borealis.logging
 
 import java.time.Instant
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
 /** Turns records into single-line text. */
 object LogFormatter {
-    private val TIMESTAMP =
-        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
+    private val TIMESTAMP = utcFormatter("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
 
     /** ISO-8601 UTC timestamp with milliseconds, e.g. `2023-11-14T22:13:20.123Z`. */
     fun formatTimestamp(epochMillis: Long): String =

@@ -54,6 +54,7 @@ class AuditStore(
     /** The stored events, oldest first. Blocks on the database: call it off the main thread. */
     fun entries(): List<AuditEvent> = synchronized(lock) { dao.all() }.mapNotNull { it.toEvent() }
 
+    // Room can throw several unrelated types, and the audit trail must never crash the app.
     @Suppress("TooGenericExceptionCaught")
     private fun store(event: AuditEvent) {
         try {

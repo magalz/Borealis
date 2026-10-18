@@ -8,6 +8,12 @@ naming:
   FunctionNaming:
     ignoreAnnotated:
       - Composable
+  # A Compose file is named after its composable and keeps beside it the one small type that the
+  # composable takes (an enum, a state or an action class). The rule sees only that class and asks
+  # for a rename or a file of its own. No option fits: mustBeFirst skips a file only when a function
+  # comes first, and ignoreAnnotated does not reach a file's composables.
+  MatchingDeclarationName:
+    active: false
 complexity:
   LongParameterList:
     ignoreAnnotated:

@@ -12,8 +12,8 @@ import kotlin.math.sqrt
  * the first and last factor outside them, and with the frame rate, which is scaled by the square
  * root of its ratio to 60 above 60 fps.
  */
-@Suppress("MagicNumber")
 object DefaultBitrate {
+    private const val KBPS_PER_MBPS = 1000
     private val PIXELS =
         intArrayOf(640 * 360, 854 * 480, 1280 * 720, 1920 * 1080, 2560 * 1440, 3840 * 2160)
     private val FACTORS = intArrayOf(1, 2, 5, 10, 20, 40)
@@ -36,7 +36,8 @@ object DefaultBitrate {
         // Do not scale the bitrate linearly beyond 60 fps.
         val frameRateFactor =
             (if (fps <= 60) fps.toDouble() else sqrt((fps / 60f).toDouble()) * 60.0) / 30.0
-        return Math.round(resolutionFactor(width * height) * frameRateFactor).toInt() * 1000
+        val mbps = Math.round(resolutionFactor(width * height) * frameRateFactor).toInt()
+        return mbps * KBPS_PER_MBPS
     }
 
     /** Linear interpolation of the factor table; the arithmetic is in Float, as in the Java. */

@@ -1,5 +1,3 @@
-@file:Suppress("MatchingDeclarationName")
-
 package io.github.magalz.borealis.designsystem.components.settings
 
 import androidx.compose.foundation.clickable

@@ -45,7 +45,6 @@ fun interface AppNameLookup {
 
 /** Shows the choice to the user and puts the answer into [ConflictAnswer]. */
 fun interface ConflictPrompt {
-    @Suppress("LongParameterList")
     fun ask(
         runningAppId: Int,
         runningAppName: String?,
@@ -59,6 +58,21 @@ fun interface ConflictPrompt {
 fun interface ConflictJoin {
     @Throws(IOException::class, XmlPullParserException::class) fun join(appId: Int): LaunchOutcome
 }
+
+/** The app the refused `/launch` asked for: its id and name, or null when the name is unknown. */
+data class RequestedApp(val id: Int, val name: String?)
+
+/**
+ * How the connection answers a conflict: [prompt] asks the user; [relaunch] launches the requested
+ * app again (when nothing runs any more, or a resume found nothing to resume); [join] resumes the
+ * running app; [quitAndRelaunch] ends it and launches the requested one.
+ */
+class ConflictActions(
+    val prompt: ConflictPrompt,
+    val relaunch: LaunchAttempt,
+    val join: ConflictJoin,
+    val quitAndRelaunch: LaunchAttempt,
+)
 
 /**
  * Resolves, with the user, a `/launch` that the host refused because an app is already running
@@ -95,31 +109,26 @@ internal constructor(
      * Runs the resolution and returns whether the launch went through; false also means that the
      * user cancelled (the connection then ends quietly). Blocks, so call it off the main thread.
      */
-    @Suppress("LongParameterList")
     @Throws(IOException::class, XmlPullParserException::class)
     fun resolve(
         reader: RunningAppReader,
         names: AppNameLookup,
-        requestedAppId: Int,
-        requestedAppName: String?,
-        prompt: ConflictPrompt,
-        relaunch: LaunchAttempt,
-        join: ConflictJoin,
-        quitAndRelaunch: LaunchAttempt,
+        requested: RequestedApp,
+        actions: ConflictActions,
         host: String? = null,
     ): Boolean {
         used.set(true)
         return when (val seen = pollRunningApp(reader)) {
             Seen.Cancelled -> false
-            Seen.Nothing -> relaunch.run()
+            Seen.Nothing -> actions.relaunch.run()
             is Seen.App -> {
                 val name = nameOrNull(names, seen.id)
-                val choice = ask(prompt, seen.id, name, requestedAppId, requestedAppName)
+                val choice = ask(actions.prompt, seen.id, name, requested.id, requested.name)
                 BorealisLog.i(LogTag.LAUNCH, "running app conflict answered", "choice" to choice)
                 LaunchAudit.conflict(host, choice, seen.id)
                 when (choice) {
-                    ConflictChoice.JOIN -> afterJoin(join.join(seen.id), relaunch)
-                    ConflictChoice.QUIT_AND_RELAUNCH -> quitAndRelaunch.run()
+                    ConflictChoice.JOIN -> afterJoin(actions.join.join(seen.id), actions.relaunch)
+                    ConflictChoice.QUIT_AND_RELAUNCH -> actions.quitAndRelaunch.run()
                     ConflictChoice.CANCEL -> {
                         cancel.run()
                         false

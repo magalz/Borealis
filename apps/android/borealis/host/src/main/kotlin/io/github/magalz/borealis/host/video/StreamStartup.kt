@@ -26,7 +26,7 @@ object StreamStartup {
      */
     @JvmStatic
     @JvmOverloads
-    @Suppress("LongParameterList")
+    @Suppress("LongParameterList") // Six screen-capability lambdas and the scheduler, from Game.
     fun create(
         runOnUi: Consumer<Runnable>,
         setOverlayText: IntConsumer,

@@ -48,10 +48,14 @@ import io.github.magalz.borealis.host.failure.FailureCauses;
 import io.github.magalz.borealis.host.failure.StartSteps;
 import io.github.magalz.borealis.host.pairing.CertificateMismatchException;
 // BOREALIS: LuminalShine launch retries (host.launch)
+import io.github.magalz.borealis.host.launch.ConflictActions;
 import io.github.magalz.borealis.host.launch.HostError;
 import io.github.magalz.borealis.host.launch.LaunchConflicts;
+import io.github.magalz.borealis.host.launch.LaunchHooks;
 import io.github.magalz.borealis.host.launch.LaunchOutcome;
+import io.github.magalz.borealis.host.launch.LaunchRequest;
 import io.github.magalz.borealis.host.launch.LaunchRetries;
+import io.github.magalz.borealis.host.launch.RequestedApp;
 import io.github.magalz.borealis.host.launch.ResumeCollisions;
 import io.github.magalz.borealis.host.launch.ServerInfoRetry;
 
@@ -168,10 +172,11 @@ public class NvConnection {
     private LaunchOutcome launchWithRetry(NvHTTP h, String verb, int appId) throws IOException, XmlPullParserException {
         startStep = verb; // BOREALIS: host.failure
         context.connListener.launchStarting("resume".equals(verb)); // BOREALIS: host.failure
-        return LaunchRetries.run(context.isNvidiaServerSoftware, verb,
+        return LaunchRetries.run(new LaunchRequest(context.isNvidiaServerSoftware, verb, context.serverAddress.address),
                 () -> h.launchApp(context, verb, appId, context.negotiatedHdr),
-                e -> e instanceof HostHttpResponseException ? new HostError(((HostHttpResponseException) e).getErrorCode(), ((HostHttpResponseException) e).getErrorMessage()) : null,
-                () -> launchCancelled, (c, a, m, d) -> { launchRetried = true; context.connListener.launchRetrying(c, a, m, d); }, conflicts::isOpen, context.serverAddress.address);
+                new LaunchHooks(
+                        e -> e instanceof HostHttpResponseException ? new HostError(((HostHttpResponseException) e).getErrorCode(), ((HostHttpResponseException) e).getErrorMessage()) : null,
+                        () -> launchCancelled, (c, a, m, d) -> { launchRetried = true; context.connListener.launchRetrying(c, a, m, d); }, conflicts::isOpen));
     }
 
     // BOREALIS: Join: /resume of the running app, with upstream's message when the host answers 200 without resuming (host.launch)
@@ -186,8 +191,10 @@ public class NvConnection {
         NvApp app = context.streamConfig.getApp();
         return conflicts.resolve(() -> h.getCurrentGame(h.getServerInfo(true)),
                 id -> { NvApp running = h.getAppById(id); return running != null ? running.getAppName() : null; },
-                app.getAppId(), app.getAppName(), context.connListener::launchConflict,
-                () -> launchNotRunningApp(h, context), id -> joinRunning(h, context, id), () -> quitAndLaunch(h, context), context.serverAddress.address);
+                new RequestedApp(app.getAppId(), app.getAppName()),
+                new ConflictActions(context.connListener::launchConflict,
+                        () -> launchNotRunningApp(h, context), id -> joinRunning(h, context, id), () -> quitAndLaunch(h, context)),
+                context.serverAddress.address);
     }
 
     private InetAddress resolveServerAddress() throws IOException {

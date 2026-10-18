@@ -33,14 +33,9 @@ class LaunchAuditTest {
     ) =
         LaunchRetries.run(
             runner,
-            isGfe,
-            verb,
+            LaunchRequest(isGfe, verb, host),
             attempt,
-            extractor,
-            cancelled,
-            { _, _, _, _ -> },
-            { conflictOpen },
-            host,
+            LaunchHooks(extractor, cancelled, { _, _, _, _ -> }, { conflictOpen }),
         )
 
     private fun answer(code: Int, message: String? = null) = HostAnswer(HostError(code, message))
@@ -161,12 +156,13 @@ class LaunchAuditTest {
         return conflicts.resolve(
             { running },
             { null },
-            requestedAppId = 7,
-            requestedAppName = "Steam",
-            prompt = { _, _, _, _, answer -> answer.choose(choice) },
-            relaunch = { true },
-            join = { LaunchOutcome.SUCCEEDED },
-            quitAndRelaunch = { true },
+            RequestedApp(7, "Steam"),
+            ConflictActions(
+                prompt = { _, _, _, _, answer -> answer.choose(choice) },
+                relaunch = { true },
+                join = { LaunchOutcome.SUCCEEDED },
+                quitAndRelaunch = { true },
+            ),
             host = host,
         )
     }

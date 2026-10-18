@@ -142,14 +142,10 @@ the plain task on `build-logic`. One module alone: `./gradlew :borealis:host:det
   defaults, for all modules.
 - **`build-logic` stays plain:** the analysis does not apply the compiler
   plugins of the Kotlin DSL and would read its Gradle code as unresolved.
-- **Baselines (temporary):** `apps/android/config/detekt/baseline-<module>.xml`
-  (`app`, `borealis-host`, ...) hold the findings that the typed analysis
-  uncovered, so that the gate is green while Sprint 8 fixes them. A finding that
-  is not in a baseline fails the build, and nobody adds an entry. To fix one,
-  change the code and delete its `<ID>` line; delete the file when the last
-  line is gone. Move a baseline away for one run to see what it hides. Do not
-  regenerate it with `detektBaselineMain` or `detektBaselineTest`: both write
-  the module's one file, so the last one wins.
+- **No baseline:** every finding fails the build. Fix it, or, when a rule does
+  not fit the code (a framework constraint, a Java caller), suppress it on the
+  narrowest element with the reason on the same line. Sprint 8 fixed the 116
+  findings the typed analysis first found and removed the temporary baselines.
 - **The analysis runs in a worker process** (`detekt.use.worker.api=true` in
   `apps/android/gradle.properties`). In the Gradle daemon it once kept the jars
   of a module's compile classpath (`R.jar`, `classes.jar`) open on Windows,

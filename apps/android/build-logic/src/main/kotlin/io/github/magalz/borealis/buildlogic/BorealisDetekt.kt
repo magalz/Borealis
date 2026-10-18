@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.buildlogic
 
 import dev.detekt.gradle.Detekt
-import dev.detekt.gradle.DetektCreateBaselineTask
 import dev.detekt.gradle.extensions.DetektExtension
 import dev.detekt.gradle.plugin.DetektPlugin
 import org.gradle.api.Project
@@ -14,8 +13,8 @@ import org.gradle.kotlin.dsl.named
  * runs the rules that need the compiler's analysis (unused private members, unsafe casts, platform
  * types and about 40 others), so every module analyses its `debug` sources, unit tests,
  * instrumented tests and test fixtures against the compile classpath. The module's `detekt` task is
- * the entry point for all of them. There is one config for every module, and a baseline per module
- * while the findings that predate the analysis are fixed (docs/development/building.md).
+ * the entry point for all of them. There is one config for every module and no baseline: a finding
+ * is fixed, or suppressed with a reason (docs/development/building.md).
  */
 internal object BorealisDetekt {
     /** The one config, relative to the Gradle root. */
@@ -23,9 +22,6 @@ internal object BorealisDetekt {
 
     /** The build type that is not analysed: `debug` has the same sources. */
     private const val SKIPPED_BUILD_TYPE = "release"
-
-    /** `app`, `borealis-host`, ...: the project path without its leading colon. */
-    fun baselineName(projectPath: String): String = projectPath.removePrefix(":").replace(':', '-')
 
     fun Project.configureDetekt() {
         pluginManager.apply(DetektPlugin::class.java)
@@ -37,7 +33,6 @@ internal object BorealisDetekt {
             ignoredBuildTypes.add(SKIPPED_BUILD_TYPE)
             // The plain `detekt` task has nothing left to do: it is the entry point below.
             source.setFrom()
-            baseline.set(rootDir.resolve("config/detekt/baseline-${baselineName(path)}.xml"))
         }
 
         // The Kotlin compilation does not see the module's own Java: classes that Hilt generates
@@ -50,9 +45,6 @@ internal object BorealisDetekt {
                     it.destinationDirectory
                 }
             tasks.named<Detekt>("detektDebug") { classpath.from(javaClasses) }
-            tasks.named<DetektCreateBaselineTask>("detektBaselineDebug") {
-                classpath.from(javaClasses)
-            }
         }
 
         tasks.named("detekt") { dependsOn("detektMain", "detektTest") }

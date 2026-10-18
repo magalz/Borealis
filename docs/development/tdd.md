@@ -39,19 +39,19 @@ Test-first is not required for:
 Say in the PR which exemption applies. Everything else is not exempt, including
 "small" changes.
 
-## Characterization tests for upstream code
+## Characterization tests for inherited code
 
-Upstream Moonlight code mostly has no tests. Before changing it:
+Inherited Moonlight code mostly has no tests. Before changing it:
 
 1. Write a **characterization test** that pins the current behaviour, and
    commit it as `test: characterize <behaviour>`.
-2. Make your change (usually a small `// BOREALIS:` hook) with a new failing
+2. Make your change (wiring only; new logic goes in Kotlin) with a new failing
    test for the new behaviour first.
-3. Keep the characterization tests: they protect against regressions on the
-   next upstream sync.
+3. Keep the characterization tests: they protect against regressions when an
+   upstream fix is cherry-picked.
 
 Prefer adding Borealis code in `apps/android/borealis/` behind a small seam, so
-that the new behaviour is tested without touching upstream internals.
+that the new behaviour is tested without touching inherited internals.
 
 ## What counts as a behaviour test
 

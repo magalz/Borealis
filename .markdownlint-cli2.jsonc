@@ -1,10 +1,9 @@
 {
   // markdownlint-cli2 settings. Rule configuration lives in .markdownlint.jsonc.
-  // Upstream (Moonlight subtree), forks and generated files are not linted.
+  // Inherited Moonlight files, the vendored moonlight-common-c and generated files are not linted.
   "ignores": [
     "apps/android/app/**",
     "apps/android/*.md",
-    "external/**",
     "core/third_party/moonlight-common-c/**",
     "CHANGELOG.md",
     "**/build/**"

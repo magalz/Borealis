@@ -14,7 +14,8 @@ Borealis uses GitHub Flow with merge commits.
 
 1. Open or pick an issue. Discuss the approach there before large work.
 2. Branch from `main`: `feat/<topic>`, `fix/<topic>`, `docs/<topic>`,
-   `chore/<topic>`, `task/<topic>` or `sync/moonlight-<version>`.
+   `chore/<topic>`, `task/<topic>` or `phase/s<n>-<name>` (for example
+   `phase/s8-tidy-up`).
 3. Write the failing test first and commit it, then implement (see below).
 4. Open a pull request using the template. Link the issue or ADR.
 5. CI must be green. Every change goes through a PR; nothing is pushed to
@@ -50,11 +51,14 @@ changing untested upstream code, add characterization tests first. Details:
 ```
 
 Types: `feat`, `fix`, `security`, `docs`, `test`, `refactor`, `perf`,
-`build`, `ci`, `chore`, `style`, `revert`, and `sync` for upstream Moonlight
-syncs. `test`, `build`, `ci`, `chore` and `style` commits are left out of the
-changelog. Mark breaking
+`build`, `ci`, `chore`, `style` and `revert`. `test`, `build`, `ci`, `chore` and
+`style` commits are left out of the changelog. Mark breaking
 changes with `!` or a `BREAKING CHANGE:` footer. The changelog is generated
 from these messages by git-cliff (see [cliff.toml](cliff.toml)).
+
+Commits harvested from upstream keep the upstream subject, so they carry no
+type and no `sync:` prefix. The record of harvests is
+[core/third_party/README.md](core/third_party/README.md).
 
 Commits written with AI assistance carry a `Co-Authored-By:` trailer.
 
@@ -71,9 +75,9 @@ A pull request is ready when all of these hold:
 - [ ] Log and audit-trail entries are added where applicable (pairing,
       certificate changes, TLS failures, launches, sessions, REST actions),
       with redaction per [docs/policies/privacy-and-logging.md](docs/policies/privacy-and-logging.md).
-- [ ] No upstream file is reformatted.
-- [ ] Every hook inside an upstream file is marked `// BOREALIS:` and kept
-      minimal.
+- [ ] The inherited files the change touches are listed in the PR. Edits to
+      inherited code are wiring only, new logic is in Kotlin, and no inherited
+      file is reformatted wholesale.
 - [ ] New dependencies are justified in the PR and pass the licence policy
       ([docs/policies/dependencies.md](docs/policies/dependencies.md)).
 - [ ] No secrets, tokens, keys or real PINs in code, tests, fixtures or logs.

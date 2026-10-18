@@ -14,7 +14,13 @@ class PointerMotionTest {
         speedPercent: Int = 100,
         sessionFactor: Float = 1f,
         precision: Boolean = false,
-    ) = motion.step(x.toShort(), y.toShort(), elapsedMs, speedPercent, sessionFactor, precision)
+    ) =
+        motion.step(
+            x.toShort(),
+            y.toShort(),
+            elapsedMs,
+            PointerSpeed(speedPercent, sessionFactor, precision),
+        )
 
     /** The pixels moved in one second of ticks of [tickMs] with the stick held. */
     private fun movedInOneSecond(x: Int, y: Int = 0, tickMs: Long = 100): Pair<Int, Int> {
@@ -140,7 +146,7 @@ class PointerMotionTest {
                 val fresh = PointerMotion()
                 val expected = oldCurve(x, y)
 
-                val delta = fresh.step(x.toShort(), y.toShort(), 50, 100, 1f, false)
+                val delta = fresh.step(x.toShort(), y.toShort(), 50, PointerSpeed(100, 1f, false))
 
                 assertThat(delta).isEqualTo(expected)
             }

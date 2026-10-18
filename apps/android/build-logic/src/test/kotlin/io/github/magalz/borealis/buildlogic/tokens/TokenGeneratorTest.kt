@@ -129,6 +129,95 @@ class TokenGeneratorTest {
     }
 
     @Test
+    fun `a description that does not fit on one line is wrapped into a multi line kdoc`() {
+        val description =
+            "Height of a host card on a TV or handheld, whatever its content: the fullest card " +
+                "(one row of tags, a running app) plus a few dp of margin for density rounding; " +
+                "a card whose tags wrap or whose font is large grows past it"
+
+        val kotlin =
+            TokenGenerator.generate(
+                    tokens(
+                        """{"size": {"~type": "dimension",
+                       "card": {"~value": "96dp", "~description": "$description"}}}"""
+                    )
+                )
+                .kotlin
+
+        val lines = kotlin.lines()
+        val declaration = lines.indexOf("        val Card = 96.dp")
+        assertThat(declaration).isGreaterThan(0)
+        assertThat(lines[declaration - 1]).isEqualTo("         */")
+        val open = lines.subList(0, declaration).lastIndexOf("        /**")
+        val body = lines.subList(open + 1, declaration - 1)
+        assertThat(body.size).isAtLeast(2)
+        assertThat(body.all { it.startsWith("         * ") }).isTrue()
+        assertThat(body.joinToString(" ") { it.removePrefix("         * ") }).isEqualTo(description)
+    }
+
+    @Test
+    fun `no line of the generated kotlin is longer than 100 characters`() {
+        val kotlin = TokenGenerator.generate(realTokens()).kotlin
+
+        val longest = kotlin.lines().maxOf { it.length }
+
+        assertThat(longest).isAtMost(100)
+    }
+
+    @Test
+    fun `a description that fits on one line stays a one line kdoc`() {
+        val generated =
+            TokenGenerator.generate(
+                tokens(
+                    """{"size": {"~type": "dimension",
+                       "gutter": {"~value": "16dp", "~description": "Screen edge padding"}}}"""
+                )
+            )
+
+        val lines = generated.kotlin.lines()
+        val declaration = lines.indexOf("        val Gutter = 16.dp")
+        assertThat(declaration).isGreaterThan(0)
+        assertThat(lines[declaration - 1]).isEqualTo("        /** Screen edge padding */")
+    }
+
+    @Test
+    fun `a number token is a compile time constant`() {
+        val generated =
+            TokenGenerator.generate(
+                tokens("""{"focus": {"~type": "number", "tile-scale": {"~value": 1.04}}}""")
+            )
+
+        assertThat(generated.kotlin).contains("    const val TileScale = 1.04f")
+    }
+
+    @Test
+    fun `a whole number token keeps its float suffix as a constant`() {
+        val generated =
+            TokenGenerator.generate(
+                tokens("""{"focus": {"~type": "number", "steps": {"~value": 3}}}""")
+            )
+
+        assertThat(generated.kotlin).contains("    const val Steps = 3.0f")
+    }
+
+    @Test
+    fun `colours dimensions and font weights stay plain values`() {
+        val generated =
+            TokenGenerator.generate(
+                tokens(
+                    """{"color": {"~type": "color", "page": {"~value": "#0E1013"}},
+                       "space": {"~type": "dimension", "gutter": {"~value": "16dp"}},
+                       "font": {"weight": {"~type": "fontWeight", "bold": {"~value": 700}}}}"""
+                )
+            )
+
+        assertThat(generated.kotlin).doesNotContain("const val Page")
+        assertThat(generated.kotlin).doesNotContain("const val Gutter")
+        assertThat(generated.kotlin).doesNotContain("const val Bold")
+        assertThat(generated.kotlin).contains("val Page = Color(0xFF0E1013)")
+    }
+
+    @Test
     fun `an unknown type names the token path`() {
         val error =
             assertThrows(IllegalArgumentException::class.java) {

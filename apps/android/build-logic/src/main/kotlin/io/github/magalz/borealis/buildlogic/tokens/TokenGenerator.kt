@@ -18,6 +18,9 @@ object TokenGenerator {
         "Generated from design/tokens.json by BorealisTokensTask (ADR 0044). Do not edit."
     private const val COLOR_GROUP = "color"
 
+    /** The longest line of the generated Kotlin: the `.editorconfig` limit for `.kt` files. */
+    private const val MAX_LINE_LENGTH = 100
+
     /** `font.weight` is generated as `FontWeight`; the `font` group adds no object of its own. */
     private const val FONT_GROUP = "font"
     private const val FONT_FAMILY = "fontFamily"
@@ -158,11 +161,38 @@ object TokenGenerator {
                     out.append("$indent}\n")
                 }
                 is Token -> {
-                    member.description?.let { out.append("$indent/** $it */\n") }
-                    out.append("${indent}val $name = ${member.expression}\n")
+                    member.description?.let { kdoc(indent, it, out) }
+                    // Only a number is a Kotlin constant; `16.dp`, `Color(..)` and `FontWeight(..)`
+                    // are calls.
+                    val modifier = if (member.type == "number") "const " else ""
+                    out.append("$indent${modifier}val $name = ${member.expression}\n")
                 }
             }
         }
+    }
+
+    /** One line when it fits, otherwise a block with the words wrapped at [MAX_LINE_LENGTH]. */
+    private fun kdoc(indent: String, text: String, out: StringBuilder) {
+        val oneLine = "$indent/** $text */"
+        if (oneLine.length <= MAX_LINE_LENGTH) {
+            out.append(oneLine).append('\n')
+            return
+        }
+        val prefix = "$indent * "
+        out.append("$indent/**\n")
+        val line = StringBuilder()
+        for (word in text.split(' ').filter(String::isNotEmpty)) {
+            if (
+                line.isNotEmpty() && prefix.length + line.length + 1 + word.length > MAX_LINE_LENGTH
+            ) {
+                out.append(prefix).append(line).append('\n')
+                line.clear()
+            }
+            if (line.isNotEmpty()) line.append(' ')
+            line.append(word)
+        }
+        out.append(prefix).append(line).append('\n')
+        out.append("$indent */\n")
     }
 
     private fun colorsXml(tokens: List<Token>): String {

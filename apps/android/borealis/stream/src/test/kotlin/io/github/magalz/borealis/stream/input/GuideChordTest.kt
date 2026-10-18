@@ -18,7 +18,14 @@ class GuideChordTest {
         hasMode: Boolean = false,
         eventTime: Long = 10_000,
         lastRightBumperUp: Long = 0,
-    ) = GuideChord.onButtonDown(inputMap, none, hasSelect, hasMode, eventTime, lastRightBumperUp)
+    ) =
+        GuideChord.onButtonDown(
+            ButtonState(inputMap, none),
+            hasSelect,
+            hasMode,
+            eventTime,
+            lastRightBumperUp,
+        )
 
     @Test
     fun `Start and Select on a pad with Select and no Mode button wait for the menu chord`() {

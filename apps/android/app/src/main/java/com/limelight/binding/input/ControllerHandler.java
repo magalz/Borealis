@@ -58,6 +58,7 @@ import io.github.magalz.borealis.stream.input.MenuChordDetector;
 import io.github.magalz.borealis.stream.input.MenuChordListener;
 import io.github.magalz.borealis.stream.input.PixelDelta;
 import io.github.magalz.borealis.stream.input.PointerMotion;
+import io.github.magalz.borealis.stream.input.PointerSpeed;
 import io.github.magalz.borealis.stream.input.QuitCombo;
 import io.github.magalz.borealis.stream.input.StartHold;
 import io.github.magalz.borealis.stream.input.UsbChromeInput;
@@ -2106,7 +2107,8 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             motion.reset();
             return null;
         }
-        return motion.step(x, y, elapsedMs, prefConfig.gamepadMouseSpeed, pointerSpeedFactor, precision);
+        return motion.step(x, y, elapsedMs,
+                new PointerSpeed(prefConfig.gamepadMouseSpeed, pointerSpeedFactor, precision));
     }
 
     private void sendEmulatedMouseMove(PointerMotion motion, short x, short y, long elapsedMs, boolean precision) {
@@ -3010,7 +3012,8 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
         // If there is a physical select button, we'll use Start+Select as the special button combo
         // otherwise we'll use Start+RB.
-        ButtonState special = GuideChord.INSTANCE.onButtonDown(context.inputMap, context.emulatingButtonFlags,
+        ButtonState special = GuideChord.INSTANCE.onButtonDown(
+                new ButtonState(context.inputMap, context.emulatingButtonFlags),
                 context.hasSelect, context.hasMode, event.getEventTime(), context.lastRbUpTime);
         context.inputMap = special.getInputMap();
         context.emulatingButtonFlags = special.getEmulatingFlags();

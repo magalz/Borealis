@@ -79,12 +79,15 @@ fun SettingsSliderRow(
         if (changed) onValueChange(target)
         changed
     }
+    val moveBy: (Float) -> Boolean = { delta ->
+        change(nearestStep(value + delta, valueRange, step))
+    }
     val steps = (((valueRange.endInclusive - valueRange.start) / step).roundToInt() - 1)
     Column(
         modifier
             .settingsRowSurface()
             .onKeyEvent { event ->
-                enabled && stepOnKey(event, value, valueRange, step, keyStep, change)
+                enabled && stepOnKey(event, keyStep, moveBy)
             }
             .focusable()
             .semantics(mergeDescendants = true) {
@@ -150,21 +153,14 @@ private fun SliderHeader(
 }
 
 /**
- * Right and Left move the value by [keyStep] to the nearest step; [change] says whether the value
- * moved, and so whether the key was used.
+ * Right and Left move the value by [keyStep] through [moveBy]; it says whether the value moved, and
+ * so whether the key was used.
  */
-private fun stepOnKey(
-    event: KeyEvent,
-    value: Float,
-    range: ClosedFloatingPointRange<Float>,
-    step: Float,
-    keyStep: Float,
-    change: (Float) -> Boolean,
-): Boolean {
+private fun stepOnKey(event: KeyEvent, keyStep: Float, moveBy: (Float) -> Boolean): Boolean {
     if (event.type != KeyEventType.KeyDown) return false
     return when (event.key) {
-        Key.DirectionRight -> change(nearestStep(value + keyStep, range, step))
-        Key.DirectionLeft -> change(nearestStep(value - keyStep, range, step))
+        Key.DirectionRight -> moveBy(keyStep)
+        Key.DirectionLeft -> moveBy(-keyStep)
         else -> false
     }
 }

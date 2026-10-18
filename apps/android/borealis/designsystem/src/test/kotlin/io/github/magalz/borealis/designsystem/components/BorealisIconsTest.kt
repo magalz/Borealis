@@ -37,7 +37,7 @@ class BorealisIconsTest {
 
     @Test
     fun `every icon is drawn with strokes of 2 with round caps and joins`() {
-        icons.forEach { (name, icon) ->
+        icons.values.forEach { icon ->
             val paths = icon.paths()
             assertThat(paths).isNotEmpty()
             paths.forEach {

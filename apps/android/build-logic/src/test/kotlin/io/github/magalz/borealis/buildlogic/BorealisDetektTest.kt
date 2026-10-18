@@ -21,12 +21,6 @@ class BorealisDetektTest {
     }
 
     @Test
-    fun `a module is named by its project path`() {
-        assertThat(BorealisDetekt.baselineName(":app")).isEqualTo("app")
-        assertThat(BorealisDetekt.baselineName(":borealis:host")).isEqualTo("borealis-host")
-    }
-
-    @Test
     fun `the detekt task of a module waits for the typed analysis of its sources and tests`() {
         val detekt = module().tasks.getByName("detekt")
 
@@ -51,11 +45,10 @@ class BorealisDetektTest {
     }
 
     @Test
-    fun `every module has a baseline of its own next to the config`() {
-        val project = module()
-        val extension = project.extensions.getByType(DetektExtension::class.java)
+    fun `no module hides findings behind a baseline`() {
+        val extension = module().extensions.getByType(DetektExtension::class.java)
 
-        assertThat(extension.baseline.get().asFile)
-            .isEqualTo(project.rootDir.resolve("config/detekt/baseline-borealis-host.xml"))
+        assertThat(extension.baseline.orNull?.asFile?.exists() ?: false).isFalse()
+        assertThat(extension.baseline.orNull?.asFile?.path.orEmpty()).doesNotContain("config")
     }
 }

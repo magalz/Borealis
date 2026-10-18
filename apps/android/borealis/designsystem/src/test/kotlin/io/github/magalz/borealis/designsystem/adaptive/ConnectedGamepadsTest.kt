@@ -14,35 +14,72 @@ import org.junit.runner.RunWith
 class ConnectedGamepadsTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
+    private fun counts(
+        sources: Int,
+        isVirtual: Boolean = false,
+        hasJoystickXy: Boolean = false,
+        keyboardType: Int = NO_KEYBOARD,
+    ) = isGameController(sources, isVirtual, hasJoystickXy, keyboardType)
+
     @Test
     fun `the gamepad source alone counts, as the 8BitDo pads report it`() {
-        val sources = KEYBOARD or GAMEPAD or JOYSTICK
-
-        assertThat(isGameController(sources, isVirtual = false, hasJoystickXy = false)).isTrue()
+        assertThat(counts(KEYBOARD or GAMEPAD or JOYSTICK)).isTrue()
     }
 
     @Test
     fun `a joystick with X and Y counts`() {
-        assertThat(isGameController(JOYSTICK, isVirtual = false, hasJoystickXy = true)).isTrue()
+        assertThat(counts(JOYSTICK, hasJoystickXy = true)).isTrue()
     }
 
     @Test
     fun `a joystick without X and Y does not count`() {
-        assertThat(isGameController(JOYSTICK, isVirtual = false, hasJoystickXy = false)).isFalse()
+        assertThat(counts(JOYSTICK)).isFalse()
     }
 
     @Test
     fun `a virtual device does not count, even with a D-pad`() {
-        assertThat(isGameController(KEYBOARD or DPAD, isVirtual = true, hasJoystickXy = false))
-            .isFalse()
-        assertThat(isGameController(GAMEPAD, isVirtual = true, hasJoystickXy = true)).isFalse()
+        assertThat(counts(KEYBOARD or DPAD, isVirtual = true)).isFalse()
+        assertThat(counts(GAMEPAD, isVirtual = true, hasJoystickXy = true)).isFalse()
     }
 
     @Test
     fun `a keyboard does not count, and neither does a remote`() {
-        assertThat(isGameController(KEYBOARD, isVirtual = false, hasJoystickXy = false)).isFalse()
-        assertThat(isGameController(KEYBOARD or DPAD, isVirtual = false, hasJoystickXy = false))
+        assertThat(counts(KEYBOARD)).isFalse()
+        assertThat(counts(KEYBOARD or DPAD)).isFalse()
+        assertThat(counts(KEYBOARD or DPAD, keyboardType = NON_ALPHABETIC)).isFalse()
+    }
+
+    @Test
+    fun `an alphabetic keyboard with joystick X and Y is no game controller`() {
+        // The AULA F75Max Bluetooth keyboard reports a JOYSTICK source with X and Y.
+        assertThat(counts(KEYBOARD or JOYSTICK, hasJoystickXy = true, keyboardType = ALPHABETIC))
             .isFalse()
+        assertThat(counts(JOYSTICK, hasJoystickXy = true, keyboardType = ALPHABETIC)).isFalse()
+    }
+
+    @Test
+    fun `a pad that reports a non-alphabetic keyboard counts, as the 8BitDo Ultimate 2 does`() {
+        assertThat(
+                counts(
+                    KEYBOARD or GAMEPAD or JOYSTICK,
+                    hasJoystickXy = true,
+                    keyboardType = NON_ALPHABETIC,
+                )
+            )
+            .isTrue()
+    }
+
+    @Test
+    fun `a gamepad source counts whatever the keyboard type, as the Switch Pro pad`() {
+        assertThat(counts(GAMEPAD)).isTrue()
+        assertThat(counts(GAMEPAD, keyboardType = NON_ALPHABETIC)).isTrue()
+        assertThat(counts(GAMEPAD or JOYSTICK, keyboardType = ALPHABETIC)).isTrue()
+    }
+
+    @Test
+    fun `a joystick that is no alphabetic keyboard counts, such as a flight stick`() {
+        assertThat(counts(JOYSTICK, hasJoystickXy = true, keyboardType = NON_ALPHABETIC)).isTrue()
+        assertThat(counts(JOYSTICK, hasJoystickXy = true, keyboardType = NO_KEYBOARD)).isTrue()
     }
 
     @Test
@@ -74,10 +111,73 @@ class ConnectedGamepadsTest {
         assertThat(isGamepadConnected()).isTrue()
     }
 
+    @Test
+    fun `an alphabetic keyboard with joystick axes is not a connected gamepad`() {
+        connect(
+            context,
+            inputDevice(
+                id = 3,
+                sources = KEYBOARD or JOYSTICK,
+                joystickXy = true,
+                keyboardType = ALPHABETIC,
+            ),
+        )
+
+        assertThat(isGamepadConnected()).isFalse()
+    }
+
+    @Test
+    fun `a pad is still found next to an alphabetic keyboard with joystick axes`() {
+        connect(
+            context,
+            inputDevice(
+                id = 3,
+                sources = KEYBOARD or JOYSTICK,
+                joystickXy = true,
+                keyboardType = ALPHABETIC,
+            ),
+        )
+        connect(
+            context,
+            inputDevice(
+                id = 4,
+                sources = KEYBOARD or GAMEPAD or JOYSTICK,
+                joystickXy = true,
+                keyboardType = NON_ALPHABETIC,
+            ),
+        )
+
+        assertThat(isGamepadConnected()).isTrue()
+    }
+
+    @Test
+    fun `the controller joystick axes need the joystick source and X and Y`() {
+        val axes = inputDevice(id = 3, sources = JOYSTICK, joystickXy = true)
+        val noAxes = inputDevice(id = 4, sources = JOYSTICK)
+        val noJoystickSource = inputDevice(id = 5, sources = KEYBOARD, joystickXy = true)
+
+        assertThat(axes.hasControllerJoystickAxes()).isTrue()
+        assertThat(noAxes.hasControllerJoystickAxes()).isFalse()
+        assertThat(noJoystickSource.hasControllerJoystickAxes()).isFalse()
+    }
+
+    @Test
+    fun `the controller joystick axes are not those of an alphabetic keyboard`() {
+        fun joystick(id: Int, keyboardType: Int) =
+            inputDevice(id, sources = JOYSTICK, joystickXy = true, keyboardType = keyboardType)
+
+        assertThat(joystick(3, ALPHABETIC).hasControllerJoystickAxes()).isFalse()
+        assertThat(joystick(4, NON_ALPHABETIC).hasControllerJoystickAxes()).isTrue()
+        assertThat(joystick(5, NO_KEYBOARD).hasControllerJoystickAxes()).isTrue()
+    }
+
     private companion object {
         const val KEYBOARD = InputDevice.SOURCE_KEYBOARD
         const val DPAD = InputDevice.SOURCE_DPAD
         const val GAMEPAD = InputDevice.SOURCE_GAMEPAD
         const val JOYSTICK = InputDevice.SOURCE_JOYSTICK
+        const val NO_KEYBOARD = InputDevice.KEYBOARD_TYPE_NONE
+        const val NON_ALPHABETIC = InputDevice.KEYBOARD_TYPE_NON_ALPHABETIC
+        const val ALPHABETIC = InputDevice.KEYBOARD_TYPE_ALPHABETIC
     }
 }

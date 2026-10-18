@@ -11,6 +11,10 @@ Upstream fixes arrive only by cherry-pick. There are two parts: moonlight-androi
 (the Android app under `apps/android/`) and moonlight-common-c (the native
 protocol library under `core/third_party/moonlight-common-c/`).
 
+An area that the Java to Kotlin migration has converted no longer takes
+upstream cherry-picks directly. Its upstream fixes are ported by hand into the
+Kotlin code. See the [roadmap](../roadmap.md#sprint-12-onward-java-to-kotlin-migration).
+
 ## 1. Prepare
 
 1. Make sure `main` is up to date and your working tree is clean.

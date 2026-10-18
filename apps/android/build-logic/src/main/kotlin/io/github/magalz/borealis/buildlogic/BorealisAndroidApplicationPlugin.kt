@@ -29,6 +29,7 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             configureVariants(components, version, gitSha())
             buildNativeCoreBeforeNdkBuild()
 
+            dependencies.add("implementation", project(":borealis:designsystem"))
             dependencies.add("implementation", project(":borealis:diagnostics"))
             dependencies.add("implementation", project(":borealis:host"))
             dependencies.add("implementation", project(":borealis:library"))

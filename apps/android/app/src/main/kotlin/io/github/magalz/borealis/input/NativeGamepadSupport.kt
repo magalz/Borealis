@@ -1,12 +1,14 @@
 package io.github.magalz.borealis.input
 
 import android.view.InputDevice
-import android.view.MotionEvent
+import io.github.magalz.borealis.designsystem.adaptive.hasJoystickXy
+import io.github.magalz.borealis.designsystem.adaptive.isGameController
 
 /**
  * What the USB driver needs to know about one Android input device. [hasJoystickXy] is true when
  * the device has the X and Y motion ranges of a joystick (for the JOYSTICK source, or else for the
- * GAMEPAD source), the way `ControllerHandler` looks them up.
+ * GAMEPAD source), the way `ControllerHandler` looks them up. [isVirtual] marks the system's
+ * virtual devices, which are no pad.
  */
 data class InputDeviceFacts(
     val vendorId: Int,
@@ -25,20 +27,18 @@ data class InputDeviceFacts(
  * claim it.
  */
 object NativeGamepadSupport {
-    /** True when one of [devices] has this VID/PID and is a game controller for Android. */
+    /**
+     * True when one of [devices] has this VID/PID and is a game controller for Android. That is the
+     * test the form factor counts a pad by, and the one `ControllerHandler` counts a device by:
+     * gamepad buttons, or joystick axes. A device that passes it is already a pad for the stream,
+     * so the driver must not claim it too.
+     */
     fun hasNativeGamepad(vendorId: Int, productId: Int, devices: List<InputDeviceFacts>): Boolean =
         devices.any {
-            it.vendorId == vendorId && it.productId == productId && isGameController(it)
+            it.vendorId == vendorId &&
+                it.productId == productId &&
+                isGameController(it.sources, it.isVirtual, it.hasJoystickXy)
         }
-
-    /**
-     * The test `ControllerHandler` counts a device by: gamepad buttons, or joystick axes. A device
-     * that passes it is already a pad for the stream, so the driver must not claim it too.
-     */
-    private fun isGameController(device: InputDeviceFacts): Boolean =
-        device.sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
-            (device.sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK &&
-                device.hasJoystickXy)
 
     /** The same check against the devices Android has right now. */
     @JvmStatic
@@ -49,14 +49,14 @@ object NativeGamepadSupport {
             InputDevice.getDeviceIds().asList().mapNotNull { id ->
                 // A device removed while looping is null.
                 InputDevice.getDevice(id)?.let {
-                    InputDeviceFacts(it.vendorId, it.productId, it.sources, joystickXy(it))
+                    InputDeviceFacts(
+                        it.vendorId,
+                        it.productId,
+                        it.sources,
+                        it.hasJoystickXy(),
+                        it.isVirtual,
+                    )
                 }
             },
         )
-
-    private fun joystickXy(device: InputDevice): Boolean =
-        listOf(MotionEvent.AXIS_X, MotionEvent.AXIS_Y).all { axis ->
-            device.getMotionRange(axis, InputDevice.SOURCE_JOYSTICK) != null ||
-                device.getMotionRange(axis, InputDevice.SOURCE_GAMEPAD) != null
-        }
 }

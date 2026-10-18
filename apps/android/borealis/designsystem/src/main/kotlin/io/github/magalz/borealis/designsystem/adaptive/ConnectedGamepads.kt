@@ -11,25 +11,29 @@ import androidx.compose.ui.platform.LocalContext
 
 /**
  * Whether an input device with these facts is a game controller: not virtual, and either a gamepad,
- * or a joystick with the X and Y axes. This is the test the stream's controller handler and the USB
- * driver use to count a pad. The source masks are compared whole, because the class bits overlap
- * with the keyboard's: an 8BitDo pad reports `KEYBOARD | GAMEPAD | JOYSTICK`, and a remote
- * `KEYBOARD | DPAD`.
+ * or a joystick with the X and Y axes ([hasJoystickXy]). This is the test the stream's controller
+ * handler uses to count a pad, kept in one place for the form factor and the USB driver. The source
+ * masks are compared whole, because the class bits overlap with the keyboard's: an 8BitDo pad
+ * reports `KEYBOARD | GAMEPAD | JOYSTICK`, and a remote `KEYBOARD | DPAD`.
  */
-internal fun isGameController(sources: Int, isVirtual: Boolean, hasJoystickXy: Boolean): Boolean =
+fun isGameController(sources: Int, isVirtual: Boolean, hasJoystickXy: Boolean): Boolean =
     !isVirtual &&
         (sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
             (sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK &&
                 hasJoystickXy))
 
-private fun InputDevice.isGameController(): Boolean =
-    isGameController(sources, isVirtual, hasJoystickXy())
-
-private fun InputDevice.hasJoystickXy(): Boolean =
+/**
+ * Whether this device has the X and Y motion ranges of a joystick, for the JOYSTICK source or else
+ * for the GAMEPAD source, the way the stream's controller handler looks them up.
+ */
+fun InputDevice.hasJoystickXy(): Boolean =
     listOf(MotionEvent.AXIS_X, MotionEvent.AXIS_Y).all { axis ->
         getMotionRange(axis, InputDevice.SOURCE_JOYSTICK) != null ||
             getMotionRange(axis, InputDevice.SOURCE_GAMEPAD) != null
     }
+
+private fun InputDevice.isGameController(): Boolean =
+    isGameController(sources, isVirtual, hasJoystickXy())
 
 /**
  * Whether a game controller is connected to Android right now. A pad that the app's USB driver has

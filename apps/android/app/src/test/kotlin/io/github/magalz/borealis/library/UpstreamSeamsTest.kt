@@ -1,7 +1,9 @@
 package io.github.magalz.borealis.library
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.app.Application
+import android.view.View
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
@@ -59,6 +61,18 @@ class UpstreamSeamsTest {
         UpstreamLauncherStartup().showDecoderCrashDialog(activity)
 
         assertThat(ShadowDialog.getLatestDialog()).isNull()
+    }
+
+    @Test
+    fun `the decoder crash notice has an OK button and no Help button`() {
+        activity.getSharedPreferences("DecoderTombstone", 0).edit().putInt("CrashCount", 1).commit()
+
+        UpstreamLauncherStartup().showDecoderCrashDialog(activity)
+
+        val dialog = ShadowDialog.getLatestDialog() as AlertDialog
+        assertThat(dialog.getButton(AlertDialog.BUTTON_POSITIVE).visibility).isEqualTo(View.VISIBLE)
+        assertThat(dialog.getButton(AlertDialog.BUTTON_NEUTRAL).visibility).isEqualTo(View.GONE)
+        assertThat(dialog.getButton(AlertDialog.BUTTON_NEGATIVE).visibility).isEqualTo(View.GONE)
     }
 
     @Test

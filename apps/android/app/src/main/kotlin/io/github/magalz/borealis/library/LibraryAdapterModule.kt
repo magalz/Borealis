@@ -18,48 +18,51 @@ import kotlinx.coroutines.Dispatchers
 @Suppress("TooManyFunctions") // One declarative binding per interface.
 @Module
 @InstallIn(SingletonComponent::class)
-internal abstract class LibraryAdapterModule {
-    @Binds abstract fun hostRepository(impl: ComputerHostRepository): HostRepository
+internal interface LibraryAdapterModule {
+    @Binds fun hostRepository(impl: ComputerHostRepository): HostRepository
 
-    @Binds abstract fun pairingService(impl: NvPairingService): PairingService
+    @Binds fun pairingService(impl: NvPairingService): PairingService
 
-    @Binds abstract fun appRepository(impl: ComputerAppRepository): AppRepository
+    @Binds fun appRepository(impl: ComputerAppRepository): AppRepository
 
-    @Binds abstract fun streamLauncher(impl: GameStreamLauncher): StreamLauncher
+    @Binds fun streamLauncher(impl: GameStreamLauncher): StreamLauncher
 
-    @Binds abstract fun legacyBridge(impl: UpstreamLegacyBridge): LegacyBridge
+    @Binds fun legacyBridge(impl: UpstreamLegacyBridge): LegacyBridge
 
-    @Binds abstract fun cmsConnector(impl: ServiceCmsConnector): CmsConnector
+    @Binds fun cmsConnector(impl: ServiceCmsConnector): CmsConnector
 
-    @Binds abstract fun cryptoWarmUp(impl: AndroidCryptoWarmUp): CryptoWarmUp
+    @Binds fun cryptoWarmUp(impl: AndroidCryptoWarmUp): CryptoWarmUp
 
-    @Binds abstract fun hostClientFactory(impl: NvHostClientFactory): HostClientFactory
+    @Binds fun hostClientFactory(impl: NvHostClientFactory): HostClientFactory
 
-    @Binds abstract fun hostTexts(impl: ResourceHostTexts): HostTexts
+    @Binds fun hostTexts(impl: ResourceHostTexts): HostTexts
 
-    @Binds abstract fun pairingErrorMapper(impl: UpstreamPairingErrorMapper): PairingErrorMapper
+    @Binds fun pairingErrorMapper(impl: UpstreamPairingErrorMapper): PairingErrorMapper
 
-    @Binds abstract fun wakeSender(impl: UpstreamWakeSender): WakeSender
+    @Binds fun wakeSender(impl: UpstreamWakeSender): WakeSender
 
-    @Binds abstract fun boxArtCache(impl: DiskBoxArtCache): BoxArtCache
+    @Binds fun boxArtCache(impl: DiskBoxArtCache): BoxArtCache
 
-    @Binds abstract fun appListCache(impl: DiskAppListCache): AppListCache
+    @Binds fun appListCache(impl: DiskAppListCache): AppListCache
 
-    @Binds abstract fun localNetworks(impl: DeviceLocalNetworks): LocalNetworks
+    @Binds fun localNetworks(impl: DeviceLocalNetworks): LocalNetworks
 
-    @Binds abstract fun hostShortcuts(impl: UpstreamHostShortcuts): HostShortcuts
+    @Binds fun hostShortcuts(impl: UpstreamHostShortcuts): HostShortcuts
 
-    @Binds abstract fun shortcutCleanup(impl: UpstreamHostShortcuts): ShortcutCleanup
+    @Binds fun shortcutCleanup(impl: UpstreamHostShortcuts): ShortcutCleanup
 
-    @Binds abstract fun hiddenAppShortcuts(impl: UpstreamHostShortcuts): HiddenAppShortcuts
+    @Binds fun hiddenAppShortcuts(impl: UpstreamHostShortcuts): HiddenAppShortcuts
 
-    @Binds abstract fun boxArt(impl: BoxArtLoader): BoxArt
+    @Binds fun boxArt(impl: BoxArtLoader): BoxArt
 
-    @Binds abstract fun upstreamStartup(impl: UpstreamLauncherStartup): UpstreamStartup
+    @Binds fun upstreamStartup(impl: UpstreamLauncherStartup): UpstreamStartup
 
-    @Binds abstract fun glRendererProbe(impl: GlSurfaceRendererProbe): GlRendererProbe
+    @Binds fun glRendererProbe(impl: GlSurfaceRendererProbe): GlRendererProbe
 
     companion object {
-        @Provides @IoDispatcher fun ioDispatcher(): CoroutineDispatcher = Dispatchers.IO
+        @Suppress("InjectDispatcher") // The one place in :app that names it; the rest inject it.
+        @Provides
+        @IoDispatcher
+        fun ioDispatcher(): CoroutineDispatcher = Dispatchers.IO
     }
 }

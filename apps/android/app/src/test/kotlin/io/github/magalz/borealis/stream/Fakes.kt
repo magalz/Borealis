@@ -10,6 +10,7 @@ import io.github.magalz.borealis.library.domain.HostRepository
 import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.domain.WakeResult
 import io.github.magalz.borealis.stream.keys.KeyChord
+import java.util.Locale
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -19,9 +20,10 @@ class RecordingInput : InputSink {
     val events = mutableListOf<String>()
 
     override fun sendKeyboardInput(keyMap: Short, direction: Byte, modifiers: Byte, flags: Byte) {
-        val key = "%04X".format(keyMap.toInt() and 0xFFFF)
+        val key = "%04X".format(Locale.ROOT, keyMap.toInt() and 0xFFFF)
         val action = if (direction == DOWN) "down" else "up"
-        events += "$action $key mods %02X flags %d".format(modifiers.toInt(), flags.toInt())
+        events +=
+            "$action $key mods %02X flags %d".format(Locale.ROOT, modifiers.toInt(), flags.toInt())
     }
 
     override fun sendUtf8Text(text: String) {

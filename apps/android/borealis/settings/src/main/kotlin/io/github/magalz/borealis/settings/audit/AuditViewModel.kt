@@ -96,7 +96,8 @@ internal constructor(
         return entries.map { entry ->
             val content = Objects.hash(entry.outcome, entry.host, entry.detail)
             val base = "${entry.timestampMillis}:${entry.type.name}:$content"
-            val before = seen.merge(base, 1, Int::plus)!! - 1
+            val before = seen[base] ?: 0
+            seen[base] = before + 1
             "$base:$before"
         }
     }

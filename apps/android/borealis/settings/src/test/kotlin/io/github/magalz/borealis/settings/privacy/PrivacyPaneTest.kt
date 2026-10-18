@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.settings.privacy
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsDisplayed
@@ -101,9 +102,22 @@ class PrivacyPaneTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `a share the system refuses says the export failed`() {
+    fun `a share that no activity handles says the export failed`() {
         showPane(viewModel(sampleShare(bundle())), FormFactor.Phone) {
-            throw IllegalStateException("no activity")
+            throw ActivityNotFoundException("no activity")
+        }
+
+        composeRule.onNodeWithText("Export diagnostic bundle").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Could not export diagnostics").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a share the system refuses to start says the export failed`() {
+        showPane(viewModel(sampleShare(bundle())), FormFactor.Phone) {
+            throw SecurityException("not allowed")
         }
 
         composeRule.onNodeWithText("Export diagnostic bundle").performClick()

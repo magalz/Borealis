@@ -80,8 +80,8 @@ Out of scope here:
 
 - The release signing key is held by the owner only. It is never stored in the
   repository or in CI logs. Release signing happens in the GitHub Environment
-  `release`, which requires manual approval. A separate upload key is used for
-  Google Play.
+  `release`, which requires manual approval. A separate upload key is planned
+  for Google Play, which comes in Phase 5.
 - Secrets are never committed. If you find a leaked secret in the repository
   history, report it as a vulnerability so that it can be rotated.
 - Release artifacts come with SHA-256 checksums, a CycloneDX SBOM and GitHub

@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.stream
 
 import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogLevel
 import io.github.magalz.borealis.logging.LogTag
 
 /**
@@ -224,6 +225,6 @@ object DecodeTimeLog {
         if (counts.firstOutputs.isNotEmpty()) {
             fields += "first_out" to counts.firstOutputs.joinToString(",")
         }
-        BorealisLog.d(LogTag.VIDEO, "Decoder window", *fields.toTypedArray())
+        BorealisLog.log(LogLevel.DEBUG, LogTag.VIDEO, "Decoder window", fields)
     }
 }

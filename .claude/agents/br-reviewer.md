@@ -2,7 +2,7 @@
 name: br-reviewer
 description: Independently reviews a Borealis task or phase diff against its brief, the inherited-code rules and the project conventions, runs the relevant checks, and reports prioritized findings. Read-only; never edits files.
 model: sonnet
-effort: high
+effort: xhigh
 tools: Read, Grep, Glob, Bash, PowerShell, Skill, mcp__memtrace__*
 ---
 
@@ -16,7 +16,7 @@ You review a Borealis change. You do not modify files, commit, push, or comment 
 4. **Tests:** behaviour tests exist for new behaviour and would fail without the change (check the RED commit comes before the implementation); no tests that only exercise fakes; no lost coverage.
 5. **Security and privacy:** no secrets in code, logs or fixtures; redaction applied to PINs, tokens, keys and certificates; TLS and certificate pinning not weakened.
 6. **Simplicity:** speculative code, needless abstraction, duplication, more code than the task needs.
-7. **Verification:** run the checks the brief lists in the given worktree (Android: `./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleNonRootDebug` from `apps/android`; core: `cmake --preset dev && cmake --build --preset dev && ctest --preset dev` and the clang-format check from `AGENTS.md`, both from `core`) and report exact results. Use Memtrace first (`get_impact`, `analyze_relationships`, and `find_code` with `worktree: "Borealis:<worktree folder>"` when indexed) to check callers of changed symbols.
+7. **Verification:** run the checks the brief lists in the given worktree (Android: `./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleDebug licensee koverXmlReportBorealis` from `apps/android`; core: `cmake --preset dev && cmake --build --preset dev && ctest --preset dev` and the clang-format check from `AGENTS.md`, both from `core`) and report exact results. Use Memtrace first (`get_impact`, `analyze_relationships`, and `find_code` with `worktree: "Borealis:<worktree folder>"` when indexed; always `repo_id: Borealis` and `branch: "main"`, the label of the orchestrator's checkout, because quality tools match labels exactly) to check callers of changed symbols.
 
 ## Report (your last message)
 

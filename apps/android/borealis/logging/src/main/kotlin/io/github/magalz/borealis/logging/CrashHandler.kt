@@ -2,8 +2,6 @@ package io.github.magalz.borealis.logging
 
 import java.io.File
 import java.time.Instant
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
 /**
  * Uncaught-exception handler that writes a redacted `crash-<timestamp>.txt` report into [directory]
@@ -68,8 +66,7 @@ class CrashReportHandler(
         const val MAX_REPORTS = 10
         const val FLUSH_TIMEOUT_MILLIS = 1_000L
         const val CRASH_MAX_LENGTH = 256 * 1024
-        val FILE_TIMESTAMP: DateTimeFormatter =
-            DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS").withZone(ZoneOffset.UTC)
+        val FILE_TIMESTAMP = utcFormatter("yyyyMMdd-HHmmss-SSS")
     }
 }
 

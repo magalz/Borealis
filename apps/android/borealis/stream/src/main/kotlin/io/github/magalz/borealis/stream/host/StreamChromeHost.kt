@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.core.app.PictureInPictureModeChangedInfo
 import androidx.core.util.Consumer
 import androidx.lifecycle.lifecycleScope
+import io.github.magalz.borealis.designsystem.adaptive.FormFactorFacts
 import io.github.magalz.borealis.designsystem.adaptive.formFactorOf
 import io.github.magalz.borealis.designsystem.adaptive.isGamepadConnected
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -315,19 +316,20 @@ class StreamChromeHost(
          * covering it: the same rule the Library uses for its layouts, so a wide phone with a game
          * controller connected is not one.
          */
-        @Suppress("ConfigurationScreenWidthHeight")
         fun isPhone(context: Context): Boolean {
             val configuration = context.resources.configuration
             return formFactorOf(
-                isTvFeature =
-                    context.packageManager.hasSystemFeature(
-                        android.content.pm.PackageManager.FEATURE_LEANBACK
-                    ),
-                uiModeType = configuration.uiMode and Configuration.UI_MODE_TYPE_MASK,
-                widthDp = configuration.screenWidthDp,
-                touchscreen = configuration.touchscreen,
-                navigation = configuration.navigation,
-                gamepadConnected = isGamepadConnected(),
+                FormFactorFacts(
+                    isTvFeature =
+                        context.packageManager.hasSystemFeature(
+                            android.content.pm.PackageManager.FEATURE_LEANBACK
+                        ),
+                    uiModeType = configuration.uiMode and Configuration.UI_MODE_TYPE_MASK,
+                    widthDp = configuration.screenWidthDp,
+                    touchscreen = configuration.touchscreen,
+                    navigation = configuration.navigation,
+                    gamepadConnected = isGamepadConnected(),
+                )
             ) == FormFactor.Phone
         }
     }

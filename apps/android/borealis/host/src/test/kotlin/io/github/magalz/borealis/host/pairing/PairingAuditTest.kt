@@ -19,7 +19,14 @@ class PairingAuditTest {
         error: HostError?,
         restarted: Boolean = false,
         fallback: String? = "upstream text",
-    ) = PairingErrors.describe(rules, error, fallback, restarted, { "text" }, host)
+    ) =
+        PairingErrors.describe(
+            PairingEnvironment(rules) { "text" },
+            error,
+            fallback,
+            restarted,
+            host,
+        )
 
     @Test
     fun `starting a pairing is recorded with the attempt number`() {

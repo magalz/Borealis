@@ -188,14 +188,8 @@ public class PreferenceConfiguration {
     public static boolean isSquarishScreen(Display display) {
         int width, height;
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            width = display.getMode().getPhysicalWidth();
-            height = display.getMode().getPhysicalHeight();
-        }
-        else {
-            width = display.getWidth();
-            height = display.getHeight();
-        }
+        width = display.getMode().getPhysicalWidth();
+        height = display.getMode().getPhysicalHeight();
 
         return isSquarishScreen(width, height);
     }

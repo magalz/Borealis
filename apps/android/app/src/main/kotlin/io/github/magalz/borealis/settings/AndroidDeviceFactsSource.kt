@@ -83,7 +83,8 @@ constructor(@ApplicationContext private val context: Context, private val decode
         return PixelSize(max(width, height), min(width, height))
     }
 
-    // getHdrCapabilities returns null on some devices, for example the Lenovo Mirage Solo.
+    // getHdrCapabilities is deprecated from API 34 but is all that older versions offer; it
+    // returns null on some devices, for example the Lenovo Mirage Solo.
     @Suppress("DEPRECATION")
     private fun supportsHdr10(display: Display): Boolean =
         display.hdrCapabilities

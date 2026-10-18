@@ -6,7 +6,7 @@ Primary development platform is Windows. Linux notes for CI are at the end.
 
 | Tool | Version | Used for |
 | --- | --- | --- |
-| Git | recent | Source control and the Moonlight subtree. |
+| Git | recent | Source control. The inherited Moonlight code and the vendored moonlight-common-c are in this repository ([ADR 0054](../adr/0054-declare-independence-from-moonlight.md)). |
 | JDK | 17 | Gradle and Android build. |
 | Android SDK | platform `android-37.0`, build-tools `37.0.0`, platform-tools | Android client. |
 | Android NDK | `29.0.14206865` | Native code (moonlight-core). |
@@ -53,13 +53,15 @@ used with `--sdk`); any location works as long as `ANDROID_HOME` and
 
 ## Android client
 
-Run from `apps/android/`. Only the `nonRoot` flavor is built; the upstream
-`root` flavor is disabled.
+Run from `apps/android/`. The app has one variant per build type, `debug` and
+`release`.
 
 ```sh
 cd apps/android
-./gradlew assembleNonRootDebug
+./gradlew assembleDebug
 ```
+
+The debug APK is `apps/android/app/build/outputs/apk/debug/app-debug.apk`.
 
 Checks (format, static analysis, lint and JVM unit tests):
 
@@ -78,10 +80,107 @@ report it; never reformat upstream code. Spotless formats Borealis C/C++ with
 the `clang-format` on `PATH`; without it the C/C++ Spotless tasks fail with
 "clang-format 22.x not found on PATH" while the rest of the build keeps working.
 
+### Lint baseline
+
+`apps/android/app/lint-baseline.xml` hides the Android Lint findings that
+Borealis accepts; every other finding fails the `lint` task. It holds no
+finding that the code can satisfy: the dead SDK-version checks, the unused
+resources and the dependencies declared outside the version catalog were fixed
+in the Sprint 8 sweep. Lint reports a baseline entry that no longer matches as
+fixed, so regenerate the file with `./gradlew :app:updateLintBaseline` in the
+commit that fixes the code, and check that it has no absolute or Windows path
+(CI fails on that). This is the rule for the file in every case, also when a
+cherry-pick from upstream brings new findings.
+
+What stays, and why:
+
+| Lint ids | Why they stay |
+| --- | --- |
+| `UnusedAttribute`, `RtlHardcoded`, `ViewConstructor`, `UseRequiresApi` | Cosmetic. The attributes apply from API 30 or 33 and older versions ignore them. The gravity in `activity_game.xml` is the stream notification overlay. The seven virtual-controller views are built in code only. The `@TargetApi` annotations are for API 30 and later; the ones for API 28 and below went with the dead checks. |
+| `AndroidGradlePluginVersion`, `OldTargetApi` | Versions. A newer AGP and a `targetSdk` of 37 are dependency and platform updates, decided on their own and not in a lint sweep. |
+| `NotShrinkingResources` | Release builds minify without `shrinkResources`. Turning it on changes the release package, so it is a release decision. |
+| `DefaultLocale`, `ApplySharedPref`, `SourceLockedOrientationActivity`, `VectorRaster` | Inherited code that does what it should. `toLowerCase()` runs on device and GPU names. `commit()` is deliberate: the crash listener must persist the crash count before the process dies. The stream locks the orientation on purpose. `ic_settings.xml` is a large vector. |
+
+`apps/android/app/lint.xml` holds four more ignores, by path, beside the
+baseline:
+
+| Lint id and path | Why |
+| --- | --- |
+| `InvalidPackage` in `**/bcpkix-jdk15on-*.jar` | Inherited from upstream. It names the old Bouncy Castle jar; the app uses `bcpkix-jdk18on` now, so the pattern matches nothing. |
+| `TrustAllX509TrustManager` in `**/bcpkix-jdk18on-*.jar` | The finding is in the Bouncy Castle jar, not in Borealis code. A baseline entry would hold the absolute path of the jar in the Gradle cache, which differs between machines. |
+| `IconMissingDensityFolder` in `src/main/res` | The message holds the resource folder as a machine-specific path (a Windows path on the development machine), so a baseline entry does not match on Linux CI. |
+| `IconXmlAndPng` in `src/main/res/mipmap-*/ic_launcher.png` | The legacy launcher PNGs next to the adaptive icon are deliberate; see [design/icon/README.md](../../design/icon/README.md). |
+
+Security findings, each reviewed on 2026-10-17:
+
+- **`SetJavaScriptEnabled`.** Removed by the owner's decision. `HelpActivity`
+  was a WebView on Moonlight's troubleshooting wiki, reached only from the Help
+  button of the decoder-crash dialog. The activity, `HelpLauncher` and the
+  button are gone, so the app no longer has a WebView.
+- **`ExportedContentProvider`** (`PosterContentProvider`). The Android TV home
+  screen reads the poster URIs of the TV channel from another process, so the
+  provider must stay exported. It is read-only (`insert`, `update`, `delete`
+  and `query` throw, and any mode but `r` is refused) and serves only
+  `cache/boxart/<host id>/<app id>.png`: `PosterRequest` accepts a host id of
+  hexadecimal digits and hyphens and a non-negative number as app id, and
+  `PosterContentProviderTest` covers the traversal attempts.
+- **`InsecureBaseConfiguration`** (`network_security_config.xml`). GameStream
+  speaks plain HTTP to the host the user typed, by address or by name:
+  `/serverinfo` (the first call and the fallback) and the pairing handshake go
+  to `http://<host>:47989`, and the other requests use HTTPS pinned to the
+  certificate stored at pairing. A `domain-config` cannot name an arbitrary
+  address, so limiting cleartext would break hosts typed by IP. The base config
+  trusts the system CAs only.
+- **`CustomX509TrustManager`** (`NvHTTP`). It asks the platform trust manager
+  first and only then accepts the one certificate pinned at pairing, so it does
+  not trust everything.
+- **`MissingLeanbackLauncher`.** A false positive: lint reads the `:app`
+  manifest, while the launcher entry, `LibraryActivity`, is declared in
+  `:borealis:library` with the `LEANBACK_LAUNCHER` filter, and
+  `LauncherEntryTest` checks it in the merged manifest.
+
+### Static analysis (detekt)
+
+`./gradlew detekt` is the one entry point. In every Android module (`:app` and
+`:borealis:*`) it runs detekt with type resolution on the `debug` sources, the
+unit tests, the instrumented tests and the test fixtures; from the root it runs
+the plain task on `build-logic`. One module alone: `./gradlew :borealis:host:detekt`.
+
+- **Why typed:** the plain task skips every rule that needs the compiler's
+  analysis, about 40 of the active ones: unused private members, unreachable
+  code, `!!` and unsafe casts, platform types, long parameter lists and more.
+  The typed task compiles the module first, as the unit tests do, so it costs
+  more than the plain one did.
+- **One config:** `apps/android/config/detekt/detekt.yml`, on top of detekt's
+  defaults, for all modules. Its overrides:
+  - `MatchingDeclarationName` is off for all sources. A Compose file is named
+    after its composable and keeps one small helper type beside it, which the
+    rule reads as a mismatch, and detekt has no option for that.
+  - `FunctionNaming` and `LongParameterList` ignore functions annotated
+    `@Composable`: composables are named in PascalCase and take their state and
+    callbacks as parameters.
+  - `ReturnCount` allows 3 returns, and `MagicNumber` ignores enums.
+- **`build-logic` stays plain:** the analysis does not apply the compiler
+  plugins of the Kotlin DSL and would read its Gradle code as unresolved.
+- **No baseline:** every finding fails the build. Fix it, or, when a rule does
+  not fit the code (a framework constraint, a Java caller), suppress it on the
+  narrowest element with the reason on the same line. Sprint 8 fixed the 116
+  findings the typed analysis first found, except that two rules are no longer
+  reported in test sources (below), and removed the temporary baselines.
+- **The analysis runs in a worker process** (`detekt.use.worker.api=true` in
+  `apps/android/gradle.properties`). In the Gradle daemon it once kept the jars
+  of a module's compile classpath (`R.jar`, `classes.jar`) open on Windows,
+  while several builds ran at once, and the next build that regenerated one
+  failed with "Couldn't delete ... R.jar". The worker ends with the build. A
+  warm local run takes about 30 s more; CI, which starts cold, is unchanged.
+- **Two rules are off in test sources:** `InjectDispatcher` and
+  `LongParameterList` (see `config/detekt/detekt.yml`). The Java to Kotlin
+  migration turns them back on and standardizes the tests.
+
 ### Screenshot tests
 
-The Compose screens in `:borealis:designsystem`, `:borealis:library` and
-`:borealis:stream` are checked against reference images
+The Compose screens in `:borealis:designsystem`, `:borealis:library`,
+`:borealis:stream` and `:borealis:settings` are checked against reference images
 ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)). The references
 are in `src/test/screenshots/` of each module. Run these commands from
 `apps/android/`.
@@ -117,7 +216,7 @@ Verify the screens against the committed references:
 
 - **Coverage** (Kover, [ADR 0046](../adr/0046-test-coverage-with-kover-llvm-cov-and-codecov.md)):
   the root project merges the debug unit-test coverage of `:borealis:*` and of
-  the Borealis Kotlin in `:app` (`nonRootDebug`). Upstream `com.limelight.*`
+  the Borealis Kotlin in `:app`. Upstream `com.limelight.*`
   classes and generated Hilt/Dagger, `BuildConfig`, `R` and Compose singleton
   classes are excluded. Output: `apps/android/build/reports/kover/coverage.xml`
   (JaCoCo format, uploaded to Codecov) and
@@ -137,7 +236,7 @@ Verify the screens against the committed references:
 - **SBOM** ([ADR 0042](../adr/0042-sbom-with-cyclonedx.md)):
   `:app:cyclonedxDirectBom` writes
   `apps/android/app/build/reports/sbom/borealis-android.cdx.json`
-  (CycloneDX 1.6) for the `nonRootRelease` runtime classpath. Native components
+  (CycloneDX 1.6) for the `release` runtime classpath. Native components
   that Gradle cannot see are listed by hand in
   `apps/android/sbom/native-components.cdx.json`; update it as described in
   [upstream-sync.md](upstream-sync.md). Both files are attached to every
@@ -146,7 +245,7 @@ Verify the screens against the committed references:
 The checks a CI run should execute are:
 
 ```sh
-./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleNonRootDebug licensee koverXmlReportBorealis
+./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleDebug licensee koverXmlReportBorealis
 ```
 
 ### Release build (dry run)
@@ -158,8 +257,8 @@ when the four `BOREALIS_*` values from the
 the release workflow never does: it signs the unsigned artifacts afterwards.
 
 ```sh
-./gradlew assembleNonRootRelease
-# apps/android/app/build/outputs/apk/nonRoot/release/app-nonRoot-release-unsigned.apk
+./gradlew assembleRelease
+# apps/android/app/build/outputs/apk/release/app-release-unsigned.apk
 ```
 
 There is no AAB until Phase 5 (see [release.md](release.md)). To try the
@@ -168,13 +267,13 @@ release checks and signing, run `.github/scripts/check-apk.sh` and
 keystore created outside the repository, or start the dry run on GitHub
 (`gh workflow run release.yml --ref <branch>`).
 
-Other test levels (as they land): Robolectric and Compose UI tests run with
-the unit tests; emulator tests use Gradle Managed Devices; screenshot tests
-use Roborazzi.
+Other test levels: Robolectric and Compose UI tests run with the unit tests,
+and screenshot tests use Roborazzi (see above). Emulator tests with Gradle
+Managed Devices are planned and not set up.
 
 ## borealis-core (C++)
 
-Run from `core/`. Presets: `dev`, `asan`, `release`.
+Run from `core/`. Presets: `dev`, `asan`, `release` and `coverage`.
 
 ```sh
 cd core
@@ -197,6 +296,18 @@ cmake --preset asan
 cmake --build --preset asan
 ctest --preset asan
 ```
+
+Coverage (clang and llvm-cov; the report is `core/build/coverage/coverage.lcov`):
+
+```sh
+sh scripts/coverage.sh
+```
+
+The "Core (C++)" job in CI also runs clang-tidy, the ASan/UBSan build and this
+coverage report. It runs the libFuzzer targets (Linux with clang only) when
+`core/` or `.github/workflows/ci.yml` changed in the pull request, and on every
+run that is not a pull request. See [core/README.md](../../core/README.md) for
+clang-tidy, the fuzzers and the environment variables of the coverage script.
 
 Formatting follows LuminalShine's LLVM-based `.clang-format`. Parsers get
 libFuzzer targets in addition to unit tests.

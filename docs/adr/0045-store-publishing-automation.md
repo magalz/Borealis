@@ -52,3 +52,5 @@ Chosen option: "Gradle Play Publisher for Play + Amazon App Submission API scrip
 ## More Information
 
 See [0023](0023-distribution-channels.md) and [0026](0026-signing-keys.md).
+
+Amended in Sprint 8 (see the [roadmap](../roadmap.md#sprint-8-tidy-up), item 3): the upstream `fastlane/` metadata was removed.

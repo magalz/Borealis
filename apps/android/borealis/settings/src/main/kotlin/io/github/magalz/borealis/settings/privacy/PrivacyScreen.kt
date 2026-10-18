@@ -2,38 +2,28 @@ package io.github.magalz.borealis.settings.privacy
 
 import android.content.Intent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import io.github.magalz.borealis.designsystem.adaptive.rememberFormFactor
-import io.github.magalz.borealis.designsystem.components.BorealisIcons
+import io.github.magalz.borealis.designsystem.components.BorealisPhoneBar
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.settings.R
 import java.io.File
-
-private val BAR_PADDING = 4.dp
-private val BAR_GAP = 4.dp
 
 /**
  * Privacy and diagnostics as a screen of its own, for a phone: a top bar with Back, then the rows.
@@ -77,17 +67,11 @@ internal fun PrivacyScreenContent(
             .background(LocalBorealisColors.current.page)
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = BAR_PADDING),
-            horizontalArrangement = Arrangement.spacedBy(BAR_GAP),
-            verticalAlignment = Alignment.CenterVertically,
+        BorealisPhoneBar(
+            onBack,
+            stringResource(R.string.borealis_privacy_back),
+            gap = BorealisDimens.phoneBarGap,
         ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    BorealisIcons.Back,
-                    stringResource(R.string.borealis_privacy_back),
-                )
-            }
             Text(
                 stringResource(R.string.borealis_privacy_title),
                 Modifier.semantics { heading() },

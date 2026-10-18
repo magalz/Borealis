@@ -92,8 +92,8 @@ jobs:
         env:
           VERSION: ${{ steps.tag.outputs.version || steps.dry-run-tag.outputs.version }}
         run: |
-          ./gradlew --stacktrace assembleNonRootRelease :app:cyclonedxDirectBom
-          built=$(jq -r '.elements[0].versionName' app/build/outputs/apk/nonRoot/release/output-metadata.json)
+          ./gradlew --stacktrace assembleRelease :app:cyclonedxDirectBom
+          built=$(jq -r '.elements[0].versionName' app/build/outputs/apk/release/output-metadata.json)
           if [ "$built" != "$VERSION" ]; then
             echo "::error::The APK reports version '$built' but the tag is '$VERSION'."
             exit 1
@@ -101,13 +101,13 @@ jobs:
       - name: Check the APK identity and the R8 result
         env:
           VERSION: ${{ steps.tag.outputs.version || steps.dry-run-tag.outputs.version }}
-        run: bash .github/scripts/check-apk.sh apps/android/app/build/outputs/apk/nonRoot/release/app-nonRoot-release-unsigned.apk "$VERSION"
+        run: bash .github/scripts/check-apk.sh apps/android/app/build/outputs/apk/release/app-release-unsigned.apk "$VERSION"
       - name: Collect artifacts
         env:
           VERSION: ${{ steps.tag.outputs.version || steps.dry-run-tag.outputs.version }}
         run: |
           mkdir -p dist
-          cp apps/android/app/build/outputs/apk/nonRoot/release/app-nonRoot-release-unsigned.apk "dist/borealis-android-${VERSION}-unsigned.apk"
+          cp apps/android/app/build/outputs/apk/release/app-release-unsigned.apk "dist/borealis-android-${VERSION}-unsigned.apk"
           cp apps/android/app/build/reports/sbom/borealis-android.cdx.json "dist/borealis-android-${VERSION}.cdx.json"
           cp apps/android/sbom/native-components.cdx.json "dist/borealis-android-native-${VERSION}.cdx.json"
       - name: Select the changelog range

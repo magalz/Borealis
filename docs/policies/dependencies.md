@@ -29,10 +29,17 @@ Development-only tools that are not shipped (formatters, linters, test
 libraries) are not subject to the allowlist but must not be incompatible with
 running in CI.
 
-The licence check (licensee, `./gradlew licensee`, also part of `check`) runs in CI and compares the detected
-licences against this allowlist. The generated third-party list and the
-CycloneDX SBOM are the authoritative inventory; [NOTICE](../../NOTICE) is a
-summary.
+The licence check (licensee, `./gradlew licensee`, also part of `check`) runs in
+CI. It enforces a stricter subset of this allowlist, set in
+`apps/android/build-logic/src/main/kotlin/io/github/magalz/borealis/buildlogic/BorealisLicenses.kt`:
+Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause, ISC and Zlib, plus two licences
+that a POM names only by URL and that are allowed by URL with a reason each:
+JCodec (BSD-2-Clause) and Bouncy Castle (MIT). A Gradle dependency whose licence
+is in the table above but not in that subset (OFL-1.1, GPL-3.0, LGPL, MPL-2.0,
+GPL-2.0 with Classpath Exception) fails the build until the subset is widened.
+Widening it needs a build change in `BorealisLicenses.kt`. The generated
+third-party list and the CycloneDX SBOM are the authoritative inventory;
+[NOTICE](../../NOTICE) is a summary.
 
 ## Adding a dependency
 
@@ -67,8 +74,8 @@ libraries.
 
 - Dependabot is enabled weekly for Borealis-owned Gradle dependencies and GitHub
   Actions. Until the independence milestone ([ADR 0047](../adr/0047-harvest-upstream-then-emancipate.md)),
-  it also updates the Gradle wrapper, Kotlin and dependencies declared in
-  upstream files (such as `apps/android/app/build.gradle`). AGP stays ignored
+  it also updates the Gradle wrapper, Kotlin and the dependencies inherited from
+  upstream, which the version catalog declares since Sprint 8. AGP stays ignored
   until it is declared in one place. Kotlin may lead the version bundled with
   AGP when CI passes. The vendored moonlight-common-c (`core/third_party/`, [ADR 0054](../adr/0054-declare-independence-from-moonlight.md)) is not
   tracked by Dependabot; it changes only by a reviewed Borealis commit or an upstream fix cherry-picked on purpose (see
@@ -76,8 +83,10 @@ libraries.
 - Security updates are raised immediately.
 - Updates arrive as PRs and go through the normal CI. Group low-risk updates;
   review major updates individually.
-- The dependency review check blocks PRs that introduce a known-vulnerable or
-  disallowed-licence dependency.
+- The dependency review check (`.github/workflows/security.yml`) blocks PRs
+  that introduce a dependency with a known vulnerability of moderate severity or
+  higher. It has no licence list; the licence check is `licensee` in the build
+  (see the allowlist above).
 - CodeQL runs in CI, and the CycloneDX SBOM (Gradle `:app:cyclonedxDirectBom` plus the hand-maintained `apps/android/sbom/native-components.cdx.json`) is
   regenerated on every release.
 
@@ -91,8 +100,9 @@ adding one.
 
 Dependencies imported with the Moonlight subtree are listed in
 [NOTICE](../../NOTICE). Version bumps that come with an upstream sync follow
-[upstream-sync.md](upstream-sync.md). Dependencies declared by upstream (in
-`apps/android/app/build.gradle`, the root `build.gradle` and the jni libraries)
+[upstream-sync.md](upstream-sync.md). Dependencies that came with upstream (in
+the version catalog `apps/android/gradle/libs.versions.toml`, the root
+`build.gradle` and the jni libraries)
 are updated by Dependabot as described under Updates, per
 [ADR 0047](../adr/0047-harvest-upstream-then-emancipate.md). Upstream syncs
 resolve conflicts with a later update by taking the newer version.

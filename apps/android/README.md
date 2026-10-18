@@ -1,7 +1,10 @@
 # Moonlight Android
 
-[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/232a8tadrrn8jv0k/branch/master?svg=true)](https://ci.appveyor.com/project/cgutman/moonlight-android/branch/master)
-[![Translation Status](https://hosted.weblate.org/widgets/moonlight/-/moonlight-android/svg-badge.svg)](https://hosted.weblate.org/projects/moonlight/moonlight-android/)
+> This folder is the Android client of Borealis. It started as a subtree of
+> [moonlight-android](https://github.com/moonlight-stream/moonlight-android) 12.2 and has been Borealis code since
+> [ADR 0054](../../docs/adr/0054-declare-independence-from-moonlight.md). The text below is the upstream introduction, kept
+> for the credit to Moonlight until Sprint 10 rewrites this file. The Borealis modules and the build logic are described in
+> [borealis/README.md](borealis/README.md).
 
 [Moonlight for Android](https://moonlight-stream.org) is an open source client for NVIDIA GameStream and [Sunshine](https://github.com/LizardByte/Sunshine).
 
@@ -10,19 +13,12 @@ whether in your own home or over the internet.
 
 Moonlight also has a [PC client](https://github.com/moonlight-stream/moonlight-qt) and [iOS/tvOS client](https://github.com/moonlight-stream/moonlight-ios).
 
-You can follow development on our [Discord server](https://moonlight-stream.org/discord) and help translate Moonlight into your language on [Weblate](https://hosted.weblate.org/projects/moonlight/moonlight-android/).
-
-## Downloads
-* [Google Play Store](https://play.google.com/store/apps/details?id=com.limelight)
-* [Amazon App Store](https://www.amazon.com/gp/product/B00JK4MFN2)
-* [F-Droid](https://f-droid.org/packages/com.limelight)
-* [APK](https://github.com/moonlight-stream/moonlight-android/releases)
+You can follow the development of Moonlight on its [Discord server](https://moonlight-stream.org/discord).
 
 ## Building
-* Install Android Studio and the Android NDK
-* Run ‘git submodule update --init --recursive’ from within moonlight-android/
-* In moonlight-android/, create a file called ‘local.properties’. Add an ‘ndk.dir=’ property to the local.properties file and set it equal to your NDK directory.
-* Build the APK using Android Studio or gradle
+
+The tools, the Android SDK and NDK setup and the build and check commands are in
+[docs/development/building.md](../../docs/development/building.md). The NDK version is pinned in `app/build.gradle`.
 
 ## Authors
 

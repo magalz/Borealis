@@ -60,3 +60,5 @@ Lifecycle: brief, then a worktree at `D:\Repos\Borealis-worktrees\<phase>-<task>
 ## More Information
 
 See [0013](0013-github-flow-with-merge-commits.md), [0025](0025-review-and-ai-assisted-development-policy.md) and [0019](0019-decision-and-change-records.md).
+
+Amended by an owner decision of 2026-10-17: `br-implementer` and `br-reviewer` run at extra high effort (`xhigh`), not high. See [orchestration](../development/orchestration.md) and the agent files in `.claude/agents/`.

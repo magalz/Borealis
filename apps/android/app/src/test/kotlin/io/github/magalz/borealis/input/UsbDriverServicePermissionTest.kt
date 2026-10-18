@@ -52,44 +52,9 @@ class UsbDriverServicePermissionTest {
     // The reflection below relies on the hidden constructors of the pinned sdk=35 (Robolectric 4.17).
     // An Xbox 360 wired pad: vendor-specific interface 255/93/1 of a vendor the driver knows.
     private fun pad(name: String): UsbDevice {
-        val usbInterface =
-            ReflectionHelpers.callConstructor(
-                android.hardware.usb.UsbInterface::class.java,
-                ClassParameter.from(Int::class.javaPrimitiveType, 0),
-                ClassParameter.from(Int::class.javaPrimitiveType, 0),
-                ClassParameter.from(String::class.java, "pad"),
-                ClassParameter.from(Int::class.javaPrimitiveType, UsbConstants.USB_CLASS_VENDOR_SPEC),
-                ClassParameter.from(Int::class.javaPrimitiveType, 93),
-                ClassParameter.from(Int::class.javaPrimitiveType, 1),
-            )
-        // No endpoints: a claimed pad stops at "missing endpoint" instead of starting a thread.
-        ReflectionHelpers.callInstanceMethod<Unit>(
-            usbInterface,
-            "setEndpoints",
-            ClassParameter.from(
-                Array<android.os.Parcelable>::class.java,
-                emptyArray<android.os.Parcelable>(),
-            ),
-        )
-        val configuration =
-            ReflectionHelpers.callConstructor(
-                android.hardware.usb.UsbConfiguration::class.java,
-                ClassParameter.from(Int::class.javaPrimitiveType, 1),
-                ClassParameter.from(String::class.java, "pad"),
-                ClassParameter.from(Int::class.javaPrimitiveType, 0),
-                ClassParameter.from(Int::class.javaPrimitiveType, 0),
-            )
-        ReflectionHelpers.callInstanceMethod<Unit>(
-            configuration,
-            "setInterfaces",
-            ClassParameter.from(
-                Array<android.os.Parcelable>::class.java,
-                arrayOf<android.os.Parcelable>(usbInterface),
-            ),
-        )
         val configurations =
             java.lang.reflect.Array.newInstance(android.hardware.usb.UsbConfiguration::class.java, 1)
-        java.lang.reflect.Array.set(configurations, 0, configuration)
+        java.lang.reflect.Array.set(configurations, 0, padConfiguration(padInterface()))
         val builder =
             ReflectionHelpers.callConstructor(
                 Class.forName("android.hardware.usb.UsbDevice\$Builder"),
@@ -124,6 +89,51 @@ class UsbDriverServicePermissionTest {
             "build",
             ClassParameter.from(readerType, reader),
         )
+    }
+
+    private fun padInterface(): android.hardware.usb.UsbInterface {
+        val usbInterface =
+            ReflectionHelpers.callConstructor(
+                android.hardware.usb.UsbInterface::class.java,
+                ClassParameter.from(Int::class.javaPrimitiveType, 0),
+                ClassParameter.from(Int::class.javaPrimitiveType, 0),
+                ClassParameter.from(String::class.java, "pad"),
+                ClassParameter.from(Int::class.javaPrimitiveType, UsbConstants.USB_CLASS_VENDOR_SPEC),
+                ClassParameter.from(Int::class.javaPrimitiveType, 93),
+                ClassParameter.from(Int::class.javaPrimitiveType, 1),
+            )
+        // No endpoints: a claimed pad stops at "missing endpoint" instead of starting a thread.
+        ReflectionHelpers.callInstanceMethod<Unit>(
+            usbInterface,
+            "setEndpoints",
+            ClassParameter.from(
+                Array<android.os.Parcelable>::class.java,
+                emptyArray<android.os.Parcelable>(),
+            ),
+        )
+        return usbInterface
+    }
+
+    private fun padConfiguration(
+        usbInterface: android.hardware.usb.UsbInterface
+    ): android.hardware.usb.UsbConfiguration {
+        val configuration =
+            ReflectionHelpers.callConstructor(
+                android.hardware.usb.UsbConfiguration::class.java,
+                ClassParameter.from(Int::class.javaPrimitiveType, 1),
+                ClassParameter.from(String::class.java, "pad"),
+                ClassParameter.from(Int::class.javaPrimitiveType, 0),
+                ClassParameter.from(Int::class.javaPrimitiveType, 0),
+            )
+        ReflectionHelpers.callInstanceMethod<Unit>(
+            configuration,
+            "setInterfaces",
+            ClassParameter.from(
+                Array<android.os.Parcelable>::class.java,
+                arrayOf<android.os.Parcelable>(usbInterface),
+            ),
+        )
+        return configuration
     }
 
     private fun attach(device: UsbDevice) {

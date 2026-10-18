@@ -37,7 +37,13 @@ import org.robolectric.annotation.Config
  */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = TV)
-abstract class ChromeGamepadKeysBase(private val deviceId: Int, private val sources: Int) {
+abstract class ChromeGamepadKeysBase {
+    /** The device of the key events: a system pad has its own, a USB-driver pad has 0. */
+    protected abstract val deviceId: Int
+
+    /** The input sources of the key events. */
+    protected abstract val sources: Int
+
     @get:Rule val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     private val actions = RecordingActions()
@@ -305,8 +311,13 @@ abstract class ChromeGamepadKeysBase(private val deviceId: Int, private val sour
 }
 
 /** A pad Android knows. */
-class ChromeGamepadKeysSystemPadTest :
-    ChromeGamepadKeysBase(7, InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_JOYSTICK)
+class ChromeGamepadKeysSystemPadTest : ChromeGamepadKeysBase() {
+    override val deviceId = 7
+    override val sources = InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_JOYSTICK
+}
 
 /** A pad on the USB driver: the gamepad handler makes its keys up, with device 0. */
-class ChromeGamepadKeysUsbPadTest : ChromeGamepadKeysBase(0, InputDevice.SOURCE_GAMEPAD)
+class ChromeGamepadKeysUsbPadTest : ChromeGamepadKeysBase() {
+    override val deviceId = 0
+    override val sources = InputDevice.SOURCE_GAMEPAD
+}

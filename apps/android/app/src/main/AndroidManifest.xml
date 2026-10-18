@@ -45,6 +45,7 @@
     <!-- BOREALIS: Hilt application class (BorealisLog init, LimeLog bridge, crash handler) -->
     <application
         android:name="io.github.magalz.borealis.BorealisApplication"
+        android:label="@string/app_label"
         android:allowBackup="true"
         android:fullBackupContent="@xml/backup_rules"
         android:dataExtractionRules="@xml/backup_rules_s"
@@ -148,15 +149,6 @@
         <service
             android:name=".binding.input.driver.UsbDriverService"
             android:label="Usb Driver Service" />
-
-        <activity
-            android:name=".HelpActivity"
-            android:resizeableActivity="true"
-            android:enableOnBackInvokedCallback="true"
-            android:configChanges="mcc|mnc|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection">
-            <meta-data android:name="WindowManagerPreference:FreeformWindowSize" android:value="system-default" />
-            <meta-data android:name="WindowManagerPreference:FreeformWindowOrientation" android:value="landscape" />
-        </activity>
     </application>
 
 </manifest>

@@ -5,6 +5,8 @@ import android.view.InputDevice
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.connect
+import io.github.magalz.borealis.designsystem.testing.inputDevice
 import org.junit.Test
 import org.junit.runner.RunWith
 

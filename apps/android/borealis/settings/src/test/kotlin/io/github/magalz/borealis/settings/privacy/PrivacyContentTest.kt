@@ -48,10 +48,13 @@ class PrivacyContentTest {
             onExport = { calls += "export" },
             onOpenAudit = { calls += "audit" },
             onEraseRequested = { calls += "erase?" },
-            onEraseConfirmed = { calls += "erase" },
-            onEraseCancelled = { calls += "cancel" },
-            onDialogDismissed = { calls += "dismiss" },
-            onSendToPhone = { bundle, command -> sent += bundle to command },
+            dialogs =
+                PrivacyDialogActions(
+                    onEraseConfirmed = { calls += "erase" },
+                    onEraseCancelled = { calls += "cancel" },
+                    onDialogDismissed = { calls += "dismiss" },
+                    onSendToPhone = { bundle, command -> sent += bundle to command },
+                ),
         )
 
     private val bundle by lazy { bundleFile(folder.root) }

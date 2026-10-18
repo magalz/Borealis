@@ -15,7 +15,7 @@ How the roadmap is used:
 
 - **Phase 1, Sprint 1 (PR #8):** the foundation and LuminalShine protocol
   compatibility.
-- **Phase 2, Sprints 2 to 6 (PRs #9 to #13):**
+- **Phase 2, Sprints 2 to 7 (PRs #9 to #13 and #19):**
   - Sprint 2 (PR #9): observability, the audit trail, Phase 1 follow-ups and
     release preparation.
   - Sprint 3 (PR #10): Sprint 2 follow-ups and the Phase 2 UX proposal
@@ -29,12 +29,13 @@ How the roadmap is used:
   - Sprint 6 (PR #13): Settings, Privacy and diagnostics, the audit trail
     viewer and Send to phone, in Compose
     ([ADR 0055](adr/0055-settings-storage-and-the-phase-2-settings-screen.md)).
-
-## Next
+  - Sprint 7 (PR #19): follow-ups and backlog, the gamepad mouse pointer speed
+    and the visual refinement pass. See the
+    [Sprint 7 items](#sprint-7-follow-ups-and-backlog).
 
 ### Sprint 7: follow-ups and backlog
 
-The work for this sprint is on the phase branch `phase/s7-followups-polish`.
+Merged as PR #19 (`f3d88540`).
 
 1. **MediaTek decode time shows "—" in the stats overlay.** Done (issue #14,
    merges `903e399d`, `7cbc60ea` and `967487ea`). The Google TV Streamer shows
@@ -91,19 +92,56 @@ The work for this sprint is on the phase branch `phase/s7-followups-polish`.
    in landscape with the Pro 3 over Bluetooth. See the
    [device validation runbook, section 12](development/device-validation.md#bluetooth-pad-round-and-handheld-fix-2026-10-17).
 
+## Next
+
+The 0.1.0 release comes after Sprint 10 and stays at the end of Phase 2
+([ADR 0054](adr/0054-declare-independence-from-moonlight.md)), so Sprints 7 to
+10 close Phase 2.
+
 ### Sprint 8: tidy-up
 
-- Dead code, complexity hotspots and duplicated code. Found with Memtrace and
-  checked by hand.
-- The stale entries in the lint baseline, `apps/android/app/lint-baseline.xml`.
-- Upstream leftovers in `apps/android/app/build.gradle`,
-  `apps/android/appveyor.yml` and `apps/android/store-assets/`.
-- **Duplicated game controller rule:** the test of what counts as a game
-  controller is duplicated between `ConnectedGamepads.kt`
-  (`borealis/designsystem`, Sprint 7 item 7) and `NativeGamepadSupport.kt`
-  (`app`). The test helper that builds input devices is also copied into the
-  stream module's tests.
-- **Phone title bars:** three near-identical phone title bars.
+The work for this sprint is on the phase branch `phase/s8-tidy-up`. The device
+smoke round of [section 3.21](development/device-validation.md#321-sprint-8-checks)
+ran on 2026-10-18 on the TV and the S22. Every item passed except the decoder
+crash notice, which cannot be triggered. The results are in
+[section 13](development/device-validation.md#13-results-sprint-8).
+
+1. **Dead code, complexity hotspots and duplicated code.** Found with Memtrace
+   and checked by hand. In Kotlin every Memtrace candidate had a caller and no
+   exact duplicate was found. The dead code removed is the root flavor, the 84
+   dead SDK branches, the capture providers minSdk 28 made unreachable,
+   `HelpActivity`, unused box art and dialog code, and what the typed detekt
+   analysis found. A full sweep of the Java methods moves to the migration.
+2. **Root flavor.** Done (merge `48927cca`). The root flavor, its variants and
+   the APK paths are removed. The tasks are `assembleDebug` and `assembleRelease`.
+3. **Upstream leftovers.** Done (merge `599fed98` and commit `51a04274`). Removed:
+   `appveyor.yml`, `store-assets`, the LuaScripts, fastlane and
+   `apps/android/.github`. The decoder errata moved to the docs.
+4. **Lint baseline.** Done (merge `cbded86b`). The baseline went from 159 to 43
+   entries. The dead SDK branches (84 findings) are removed and the security
+   entries are reviewed. `HelpActivity`, the Help button and its WebView are
+   removed by the owner's decision, because they linked to Moonlight's wiki.
+5. **Duplicated game controller rule.** Done (merge `e81583be`). The test of
+   what counts as a game controller is one rule. Unifying it with
+   `ControllerHandler.isGameControllerDevice` is open; see Sprint 12.
+6. **Host parameter objects.** Done (merge `d9865d61`).
+7. **Phone title bars.** Done (merge `8a6acbad`). The four phone title bars
+   (Apps, Audit, Settings and Privacy) share one phone bar and one back button.
+   The back arrows of Add host and Pairing use the same button. The gap below
+   the arrow still differs; see Sprint 9.
+8. **Kotlin suppressions.** Done (merge `543896a9`).
+9. **Detekt type analysis.** Done (merge `65f6b3a9`, fix merges `933f368f`,
+   `67cef8eb` and `b72163d3`, baselines removed in commit `50854eda`). Every
+   Android module runs detekt with type analysis. The 116 findings are fixed,
+   except that `InjectDispatcher` and `LongParameterList` are no longer reported
+   in test sources (see Sprint 12). `MatchingDeclarationName` is off, because
+   Compose files are named after the composable. `detekt.use.worker.api=true` is
+   set.
+10. **Memtrace rule.** Done (merge `599fed98` and commit `7f7b7721`). The index
+    and the queries use the branch `main`. `watch_directory` is not used,
+    because it labels changes with the checked-out branch. `memtrace start` runs
+    its own watcher under that branch, so the `main` label is refreshed by the
+    incremental index after each merge wave.
 
 ### Sprint 9: UX polish and the handheld
 
@@ -123,13 +161,33 @@ The work for this sprint is on the phase branch `phase/s7-followups-polish`.
 - **Handheld host card height.** Noticed on 2026-10-17. On the S22 as a
   handheld (360 dp tall), the host cards use the TV height of 176 dp, which
   leaves a lot of empty space. Adapt the card height for a handheld.
+- **Phone bar gap.** Found in Sprint 8. Settings and Privacy have 4 dp between
+  the back arrow and the title, and Apps and Audit have none. Unifying the gap
+  needs re-recorded screenshot references.
+- **Make the digits on the Borealis keyboard easier to discover.** Reported by
+  the owner on 2026-10-18. The on-screen keyboard of the stream has an Fn layer
+  with the digits 1 to 0, F1 to F10, the arrows, Home, End, PgUp, PgDn and Del,
+  since Sprint 5. The owner did not find the digits in the Sprint 8 round.
+- **Keyboards that count as game controllers.** Found in the Sprint 8 round. A
+  Bluetooth keyboard (AULA F75Max) reports a JOYSTICK source with X and Y axes,
+  so the controller rule of Sprint 7 counts it as a game controller. On the S22
+  in landscape, the keyboard alone switches the Library to the handheld layout.
+  In the stream, the inherited controller code also creates a controller context
+  for it. Tighten the rule, with a test first.
+- **Steam opens after a quit combo.** Found in the Sprint 8 round, on the S22.
+  Released in some orders, the quit combo leaves Start and Select held alone,
+  which starts the menu chord of Sprint 5 again; releasing them early sends a
+  Guide tap to the PC, and Steam opens. One way out: count the Start and Select
+  hold only when it starts from no buttons held. Test first. See the
+  [Sprint 8 results](development/device-validation.md#13-results-sprint-8).
 - **The animated background:** integrated in this sprint if the owner has
   delivered it by then; otherwise it stays in the backlog.
 - **A device round** for what Sprint 7 did not run:
   - a dedicated Android handheld (the owner gets one);
   - the Send to phone Expired and No network states;
   - the Gamepad mouse speed slider at 10% and 200%;
-  - the quit combo on a USB-driver pad on the final build;
+  - the quit combo on a USB-driver pad on the final build (done in the Sprint 8
+    round, on the Sprint 8 build);
   - the dialog frames and visual items that the Sprint 7 round did not record
     (rows F15 and F16).
 
@@ -155,6 +213,13 @@ The work for this sprint is on the phase branch `phase/s7-followups-polish`.
 - **Core CI job.** Move the job back to `ubuntu-latest` after the clang-tidy
   findings in `core/src/pair.cpp` are fixed. The job is pinned to
   `ubuntu-24.04` in `.github/workflows/ci.yml`.
+- **Use cases for behaviour that has none.** Owner decision of 2026-10-18. Write
+  use cases for:
+  - wake and forget a host;
+  - pinned host and app shortcuts;
+  - the gamepad mouse;
+  - the quit combo;
+  - the handheld layout.
 
 ### First release: `android-v0.1.0`
 
@@ -166,6 +231,37 @@ The owner creates the tag. See the [release procedure](development/release.md).
   ([ADR 0055](adr/0055-settings-storage-and-the-phase-2-settings-screen.md)).
 - **Opt-in crash reporting.** Planned, not implemented. See
   [PRIVACY.md](../PRIVACY.md) and [ADR 0022](adr/0022-crash-reporting-and-privacy.md).
+
+### Sprint 12 onward: Java to Kotlin migration
+
+Owner decisions of 2026-10-17 and 2026-10-18. The migration moves the inherited
+Java to Kotlin, one area at a time.
+
+- **Why:** one language, null safety, and the static analysis covering all of
+  the code.
+- **Method:** one area at a time. Write characterization tests before the
+  conversion of each area, and run device rounds for it.
+- **Start:** after `android-v0.1.0`.
+- **Order:**
+  1. HTTP and computers come first, because Phase 3 uses them.
+  2. Input and video come before Phase 4 (PyroWave).
+  3. `MoonBridge` comes last.
+- **Dead code:** a full sweep of the Java methods for dead code happens during
+  the migration. Sprint 8, item 1 hands it over.
+- **Size:** 80 Java files and about 21,600 lines under
+  `apps/android/app/src/main/java` on 2026-10-18, almost all of it the stream
+  core.
+- **Upstream cherry-picks:** an area that is converted no longer takes upstream
+  cherry-picks directly. Its fixes are ported by hand. See
+  [upstream cherry-picks](development/upstream-sync.md).
+- **Detekt tests:** turn the detekt rules `InjectDispatcher` and
+  `LongParameterList` back on in test sources, and standardize the tests. Inject
+  the dispatchers in the tests and reduce the test builders. This is an explicit
+  owner request.
+- **Game controller rule:** unify the game controller rule with
+  `ControllerHandler.isGameControllerDevice`, possibly in a neutral input module.
+  Today `:app` depends on `:borealis:designsystem` for it. `ControllerHandlerRig`
+  can then use the shared `InputDevices` fixture.
 
 ## Later phases
 
@@ -181,6 +277,10 @@ The owner creates the tag. See the [release procedure](development/release.md).
     analysed release.
   - **Result:** the survey sets the scope of Phase 3 before any code is written.
     Owner's decision of 2026-10-17.
+  - **Box art:** the Library screens show no box art until Phase 3, although
+    the app already caches it for pinned shortcut icons and the TV channel. The
+    Apps screen shows the initials of each app. App covers are one of the
+    [Phase 3 extension points](ux/phase-2-proposal.md#phase-3-extension-points).
 - **Phase 4: PyroWave.** See the [host contract](host-contract/pyrowave.md).
 - **Phase 5: stores.** Google Play and Amazon Appstore. See the
   [release policy](policies/release.md) and

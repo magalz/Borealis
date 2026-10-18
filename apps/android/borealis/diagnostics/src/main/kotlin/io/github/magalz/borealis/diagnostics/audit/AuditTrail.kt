@@ -53,6 +53,7 @@ internal class RoomAuditTrail(private val dao: AuditDao, private val store: Audi
     override fun observe(): Flow<List<AuditEntry>> =
         dao.observeNewestFirst().map { rows -> rows.mapNotNull { it.toEvent()?.toEntry() } }
 
+    // Room can throw several unrelated types, and the audit trail must never crash the app.
     @Suppress("TooGenericExceptionCaught")
     override suspend fun erase(): Boolean =
         try {

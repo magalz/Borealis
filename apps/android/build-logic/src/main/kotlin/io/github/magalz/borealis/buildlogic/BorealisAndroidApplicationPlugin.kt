@@ -18,8 +18,9 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             pluginManager.apply("com.android.application")
             pluginManager.apply("com.google.devtools.ksp")
             pluginManager.apply("com.google.dagger.hilt.android")
-            with(BorealisCoverage) { configureCoverage(androidVariant = "nonRootDebug") }
+            with(BorealisCoverage) { configureCoverage() }
             with(BorealisLicenses) { configureLicensee() }
+            with(BorealisDetekt) { configureDetekt() }
 
             val components = extensions.getByType<ApplicationAndroidComponentsExtension>()
             val version = BorealisVersion.fromGitDescribe(gitDescribe())
@@ -29,6 +30,7 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             configureVariants(components, version, gitSha())
             buildNativeCoreBeforeNdkBuild()
 
+            dependencies.add("implementation", project(":borealis:designsystem"))
             dependencies.add("implementation", project(":borealis:diagnostics"))
             dependencies.add("implementation", project(":borealis:host"))
             dependencies.add("implementation", project(":borealis:library"))
@@ -100,11 +102,6 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
                 // The repository root is two levels above the Gradle root.
                 sources.from(LegalAssetsTask.FILES.map { rootDir.resolve("../../$it") })
             }
-        // minSdk 28 makes upstream's `root` flavor (maxSdk 25) empty: disable, do not delete.
-        components.beforeVariants(components.selector().withFlavor("root" to "root")) {
-            it.enable = false
-        }
-
         components.onVariants { variant ->
             val debug = variant.buildType == "debug"
             variant.applicationId.set(
@@ -112,10 +109,6 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             )
             val label = if (debug) "Borealis Debug" else "Borealis"
             variant.resValues.put(variant.makeResValueKey("string", "app_label"), ResValue(label))
-            variant.resValues.put(
-                variant.makeResValueKey("string", "app_label_root"),
-                ResValue(label),
-            )
             // Overrides the "unknown" default that Borealis library modules declare.
             variant.resValues.put(
                 variant.makeResValueKey("string", "borealis_git_sha"),

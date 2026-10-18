@@ -7,8 +7,9 @@ plugins {
 android {
     namespace = "io.github.magalz.borealis.designsystem"
 
-    // Test-only helpers shared by the screenshot tests of designsystem, library and settings. A
-    // test fixtures artifact is never packaged into an APK, unlike a main source set.
+    // Test-only helpers shared by the tests of designsystem, library, settings and stream: window
+    // settling for the screenshot tests, and fake input devices. A test fixtures artifact is never
+    // packaged into an APK, unlike a main source set.
     testFixtures { enable = true }
 
     sourceSets {
@@ -19,7 +20,7 @@ android {
 }
 
 dependencies {
-    // The shared window-settling helper extends the Compose test rule and drives Robolectric.
+    // The shared helpers extend the Compose test rule and drive Robolectric.
     testFixturesApi(platform(libs.androidx.compose.bom))
     testFixturesApi(libs.androidx.compose.ui.test.junit4)
     testFixturesImplementation(libs.robolectric)

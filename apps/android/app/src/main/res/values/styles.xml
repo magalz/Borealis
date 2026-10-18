@@ -2,17 +2,12 @@
 <resources>
 
     <!--
-        Base application theme, dependent on API level. This theme is replaced
-        by AppBaseTheme from res/values-vXX/styles.xml on newer devices.
-
+        Base application theme. This theme is replaced by AppBaseTheme from
+        res/values-v29/styles.xml on API 29 and later.
     -->
-    <style name="AppBaseTheme" parent="android:Theme">
-        <!--
-            Theme customizations available in newer API levels can go in
-            res/values-vXX/styles.xml, while customizations related to
-            backward-compatibility can go here.
-
-        -->
+    <style name="AppBaseTheme" parent="android:Theme.Material">
+        <item name="android:statusBarColor">#212121</item>
+        <item name="android:navigationBarColor">#212121</item>
     </style>
 
     <!-- Application theme. -->
@@ -23,8 +18,12 @@
     </style>
 
     <style name="StreamBaseTheme" parent="AppBaseTheme">
-        <!-- Transparent streaming background to avoid extra overdraw -->
-        <item name="android:windowBackground">@android:color/transparent</item>
+        <!--
+            Use a black background to avoid the transparent background when switching apps.
+            android:windowBackgroundFallback is supposed to do this, but it wasn't working for
+            me as of Android 7.1
+        -->
+        <item name="android:windowBackground">@android:color/black</item>
     </style>
 
     <!-- Stream activity theme -->

@@ -35,7 +35,7 @@ internal object LaunchAudit {
     }
 
     /** The host asked the client to try again. */
-    @Suppress("LongParameterList")
+    @Suppress("LongParameterList") // The six values of one audit line.
     fun retry(
         host: String?,
         verb: String,

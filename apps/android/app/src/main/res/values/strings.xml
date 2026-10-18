@@ -4,10 +4,6 @@
     <string name="scut_deleted_pc">PC deleted</string>
     <string name="scut_hidden_app">App hidden</string>
 
-    <!-- Help strings -->
-    <string name="help_loading_title">Help Viewer</string>
-    <string name="help_loading_msg">Loading help page…</string>
-
     <!-- Network test strings -->
     <string name="nettest_text_blocked">Your device\'s current network connection is blocking Borealis. Streaming over the Internet may not work while connected to this network.</string>
 
@@ -41,7 +37,6 @@
     <!-- General strings -->
     <string name="yes">Yes</string>
     <string name="no">No</string>
-    <string name="help">Help</string>
     <string name="delete_pc_msg">Are you sure you want to delete this PC?</string>
     <string name="slow_connection_msg">Slow connection to PC\nReduce your bitrate</string>
     <string name="poor_connection_msg">Poor connection to PC</string>

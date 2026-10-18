@@ -56,7 +56,6 @@ data class TruncatedEntry(
 object ManifestCollector {
     private const val UNKNOWN = "unknown"
 
-    @Suppress("DEPRECATION")
     fun collect(
         context: Context,
         switches: LogSwitches,

@@ -16,10 +16,10 @@ import javax.inject.Singleton
  */
 @Module
 @InstallIn(SingletonComponent::class)
-internal abstract class SettingsAdapterModule {
-    @Binds abstract fun deviceFactsSource(impl: AndroidDeviceFactsSource): DeviceFactsSource
+internal interface SettingsAdapterModule {
+    @Binds fun deviceFactsSource(impl: AndroidDeviceFactsSource): DeviceFactsSource
 
-    @Binds abstract fun oscLayoutReset(impl: AndroidOscLayoutReset): OscLayoutReset
+    @Binds fun oscLayoutReset(impl: AndroidOscLayoutReset): OscLayoutReset
 
     companion object {
         @Provides

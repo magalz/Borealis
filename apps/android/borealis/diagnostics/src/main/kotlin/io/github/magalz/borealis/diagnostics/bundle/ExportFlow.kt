@@ -9,10 +9,9 @@ import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogStorage
 import io.github.magalz.borealis.logging.LogSwitches
 import io.github.magalz.borealis.logging.LogTag
+import io.github.magalz.borealis.logging.utcFormatter
 import java.io.File
 import java.time.Instant
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
 /** What the settings screen does with a finished bundle. */
 sealed interface ExportResult {
@@ -99,8 +98,7 @@ internal object BundleFiles {
     const val PREFIX = "borealis-diagnostics-"
     private const val SUFFIX = ".zip"
     private const val UNFINISHED_SUFFIX = ".zip.part"
-    private val TIMESTAMP: DateTimeFormatter =
-        DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(ZoneOffset.UTC)
+    private val TIMESTAMP = utcFormatter("yyyyMMdd-HHmmss")
 
     fun newName(now: Instant): String = PREFIX + TIMESTAMP.format(now) + SUFFIX
 

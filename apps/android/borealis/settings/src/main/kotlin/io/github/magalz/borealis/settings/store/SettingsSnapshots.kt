@@ -51,10 +51,12 @@ object SettingsSnapshots {
         }
     }
 
+    // PreferenceManager is deprecated; its default file is where the inherited settings live.
     @Suppress("DEPRECATION")
     private fun build(application: Context): Holder {
         val preferences = PreferenceManager.getDefaultSharedPreferences(application)
         LegacyMigrations.run(preferences)
+        @Suppress("InjectDispatcher") // The holder is where the production dispatcher is chosen.
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val dataStore =
             DataStoreBacking.create(

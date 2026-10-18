@@ -21,8 +21,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,9 +38,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.AnimatedCheck
 import io.github.magalz.borealis.designsystem.components.AuroraLoader
+import io.github.magalz.borealis.designsystem.components.BorealisBackButton
 import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
-import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.PinDisplay
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.theme.BorealisFonts
@@ -122,14 +120,7 @@ fun PairingScreen(
 @Composable
 private fun Header(title: String, showBack: Boolean, onBack: () -> Unit, modifier: Modifier) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        if (showBack) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    BorealisIcons.Back,
-                    contentDescription = stringResource(R.string.pairing_back),
-                )
-            }
-        }
+        if (showBack) BorealisBackButton(onBack, stringResource(R.string.pairing_back))
         Text(title, style = MaterialTheme.typography.titleLarge)
     }
 }

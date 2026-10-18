@@ -37,6 +37,11 @@ component's source or licence updates NOTICE in the same PR.
 * Full CI is green.
 * Each harvested change is traceable to an upstream commit in the PR
   description.
+* Each harvested moonlight-common-c commit keeps the upstream subject and ends
+  with `Harvested from moonlight-stream/moonlight-common-c@<full sha>.`. It is
+  listed in [core/third_party/README.md](../../core/third_party/README.md), which
+  is the record of harvests (see the
+  [procedure](../development/upstream-sync.md#3-moonlight-common-c)).
 * Tests for touched behaviour pass.
 * Dependency and licence changes pass the
   [dependency policy](dependencies.md) and `licensee`.

@@ -12,9 +12,6 @@ import io.github.magalz.borealis.diagnostics.DiagnosticSection
 import io.github.magalz.borealis.logging.AuditSink
 import java.io.File
 import javax.inject.Singleton
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 
 /**
  * Provides the audit trail (ADR 0050). The set of [DiagnosticSection]s is declared by the bundle;
@@ -34,10 +31,7 @@ object AuditModule {
             )
             .build()
 
-    @Provides
-    @Singleton
-    fun store(db: AuditDatabase): AuditStore =
-        AuditStore(db.dao(), CoroutineScope(SupervisorJob() + Dispatchers.IO), Dispatchers.IO)
+    @Provides @Singleton fun store(db: AuditDatabase): AuditStore = AuditStore(db.dao())
 
     @Provides
     @Singleton

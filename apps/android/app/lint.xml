@@ -10,4 +10,8 @@
     <issue id="IconMissingDensityFolder">
         <ignore path="src/main/res"/>
     </issue>
+    <!-- BOREALIS: the legacy launcher PNGs next to the adaptive icon are deliberate (design/icon/README.md). -->
+    <issue id="IconXmlAndPng">
+        <ignore path="src/main/res/mipmap-*/ic_launcher.png"/>
+    </issue>
 </lint>

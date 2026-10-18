@@ -11,8 +11,9 @@ class BorealisAndroidLibraryPlugin : Plugin<Project> {
     override fun apply(target: Project): Unit =
         with(target) {
             pluginManager.apply("com.android.library")
-            with(BorealisCoverage) { configureCoverage(androidVariant = "debug") }
+            with(BorealisCoverage) { configureCoverage() }
             with(BorealisLicenses) { configureLicensee() }
+            with(BorealisDetekt) { configureDetekt() }
             configureFixtures()
 
             extensions.configure<LibraryExtension> {

@@ -52,7 +52,6 @@ fun testCertificate(): X509Certificate =
         .generateCertificate(ByteArrayInputStream(TEST_CERTIFICATE.toByteArray()))
         as X509Certificate
 
-@Suppress("LongParameterList")
 fun details(
     uuid: String = "host-1",
     name: String = "Den PC",

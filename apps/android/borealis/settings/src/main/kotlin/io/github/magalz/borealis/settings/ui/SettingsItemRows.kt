@@ -1,5 +1,3 @@
-@file:Suppress("MatchingDeclarationName")
-
 package io.github.magalz.borealis.settings.ui
 
 import androidx.compose.runtime.Composable
@@ -84,7 +82,7 @@ private fun SliderItemRow(
     enabled: Boolean,
     note: String?,
 ) {
-    val spec = requireNotNull(item.slider) { "$item has no slider" }
+    val spec = requireNotNull(item.input.slider) { "$item has no slider" }
     val isBitrate = item == SettingsItem.BITRATE
     val value = if (isBitrate) state.bitrateKbps else state.snapshot[item.setting as IntSetting]
     val label =

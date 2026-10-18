@@ -18,6 +18,14 @@ Sprint 6 implemented Settings, Privacy and diagnostics, the Audit trail viewer
 and Send to phone in Compose. They replace the upstream stream settings and
 the interim Borealis settings screen, which are deleted (ADR 0055).
 
+Sprint 7 refined the visuals: the icons, and the sizes of dialogs and panels. It
+added the Pointer speed row to the in-game menu, and a window 600 dp or wider
+became a handheld while a game controller is connected.
+
+Sprint 8 was a tidy-up of the code. On screen, the four phone title bars (Apps,
+Audit, Settings and Privacy) now share one phone bar and one back button, and the
+Help button is gone.
+
 The screens below are the approved design; where the built screen differs, the
 section says so. Screenshots use
 Roborazzi ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)), and
@@ -33,7 +41,7 @@ Sources of this document:
 
 ## Scope and out of scope
 
-In scope for Phase 2 (planned):
+In scope for Phase 2:
 
 - the screens and states in the sections below, for phones, TVs and
   handhelds;
@@ -484,31 +492,38 @@ disabled are marked.
 
 1. Back to stream. Closes the menu.
 2. Keyboard. Opens the [keyboard](#keyboard).
-3. Send keys. Expands a row of chips: Alt+Tab, Win, Ctrl+Shift+Esc, Alt+F4,
-   Win+D, Win+G, Esc, Win+Alt+B.
+3. Send keys. Expands a row of chips: Alt+Tab, Win+Tab, Win, Ctrl+Shift+Esc,
+   Alt+F4, Win+D, Win+G, Esc, Win+Alt+B.
 4. Touch (phone) or Gamepad mouse (TV and handheld). On a phone the choices
    are Trackpad, Direct and Off. On a TV or handheld the choices are On and
    Off.
-5. Overlay: Off, Compact or Detailed. The approved default is Off
+5. Pointer speed (TV and handheld). Shown under Gamepad mouse, and only while
+   the gamepad mouse is on. The choices are Slow, Normal and Fast, for this
+   session. See [UC-004](../use-cases/0004-use-the-in-game-menu.md).
+6. Overlay: Off, Compact or Detailed. The approved default is Off
    ([D5](#decisions)).
-6. Refresh the picture. Asks the host for a keyframe when the image is
+7. Refresh the picture. Asks the host for a keyframe when the image is
    smeared.
-7. Session info. Expands to the video, codec, decoder, host and network
+8. Session info. Expands to the video, codec, decoder, host and network
    figures, and the bitrate against its limit.
-8. Display for next launch. Disabled: it needs the host API (Phase 3).
-9. Disconnect. Describes the consequence: the app keeps running on the PC.
-10. Quit and the app name. Ends the app on the PC. This row is shown in the
+9. Display for next launch. Disabled: it needs the host API (Phase 3).
+10. Disconnect. Describes the consequence: the app keeps running on the PC.
+11. Quit and the app name. Ends the app on the PC. This row is shown in the
     danger style.
 
 ### In-stream keyboard
 
-- A shortcut row: Alt+Tab, Win, Ctrl+Shift+Esc, Alt+F4, Win+D, Esc, F11 and
-  Close.
+- A shortcut row: Alt+Tab, Win+Tab, Win, Ctrl+Shift+Esc, Alt+F4, Win+D, Esc,
+  F11 and Close.
 - Three letter rows. The first is Q to P. The second is A to L and ends with
   Backspace. The third starts with Shift, has Z to M, and ends with Enter.
 - A bottom row: Ctrl, Win, Alt, Space, Tab and Fn.
+- Fn switches the three letter rows to the Fn layer, and Fn again switches back.
+  The layer has three rows: the digits 1 to 0; F1 to F10; and the four arrows
+  with Home, End, PgUp, PgDn and Del. The bottom row stays, and Fn shows as on
+  while the layer is open.
 - Ctrl, Alt, Win and Shift latch. The next typed key is sent with them, and
-  the latch is cleared.
+  the latch is cleared. A latch stays on across the switch to the Fn layer.
 
 ### Overlay contents
 
@@ -728,11 +743,18 @@ items or placeholders. The host endpoints are in
    ([ADR 0044](../adr/0044-design-tokens-pipeline.md)) and Roborazzi
    screenshots ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)).
 2. Sprint 5 built the starting stream, conflict and connection error screens,
-   the in-game menu, the Borealis keyboard and the overlay. The device round
-   (S5-T14, see [device validation](../development/device-validation.md)) checks
-   them on hardware. Its results are not in this document.
-3. Next, Sprint 6: Settings, Privacy and diagnostics, the audit trail viewer and
-   Send to phone in Compose.
+   the in-game menu, the Borealis keyboard and the overlay. The device round of
+   2026-10-16 (S5-T14) checked them on hardware. Its results are in
+   [device validation](../development/device-validation.md), section 10, not in
+   this document.
+3. Sprint 6 built Settings, Privacy and diagnostics, the audit trail viewer and
+   Send to phone in Compose
+   ([ADR 0055](../adr/0055-settings-storage-and-the-phase-2-settings-screen.md)).
+4. Sprint 7 refined the visuals and added the Pointer speed row to the in-game
+   menu.
+5. Sprint 8 tidied the code and gave the phone title bars one shared bar.
+6. Next, Sprint 9: UX polish and the handheld. See the
+   [roadmap](../roadmap.md#sprint-9-ux-polish-and-the-handheld).
 
 Each screen comes with the acceptance tests of its use case first
 ([TDD](../development/tdd.md)).
@@ -757,4 +779,5 @@ The prototype uses example data only: host names, addresses, apps and session
 figures are illustrative.
 
 The prototype loads IBM Plex from Google Fonts, so opening it contacts Google's
-font servers. The app itself will bundle its fonts.
+font servers. The app itself bundles its fonts (IBM Plex Sans and Mono, in
+`design/fonts/ibm-plex`).

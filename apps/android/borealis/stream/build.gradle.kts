@@ -16,4 +16,7 @@ dependencies {
     implementation(project(":borealis:logging"))
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.kotlinx.coroutines.android)
+
+    // The input device helpers of the gamepad tests.
+    testImplementation(testFixtures(project(":borealis:designsystem")))
 }

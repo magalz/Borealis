@@ -15,7 +15,7 @@ import io.github.magalz.borealis.settings.catalog.Settings
  */
 class SettingsSnapshot private constructor(private val values: Map<String, Any>) {
     /** The value of [setting], or its default when the key is absent. */
-    @Suppress("UNCHECKED_CAST")
+    @Suppress("UNCHECKED_CAST") // with() stores a T under the key of its own setting.
     operator fun <T> get(setting: Setting<T>): T = (values[setting.key] as T?) ?: setting.default
 
     /**
@@ -77,6 +77,7 @@ class SettingsSnapshot private constructor(private val values: Map<String, Any>)
             for ((setting, value) in values) {
                 if (value == null) continue
                 require(setting.accepts(value)) { "$setting does not store $value" }
+                // accepts() just checked the value against the type that the star hides.
                 @Suppress("UNCHECKED_CAST")
                 snapshot = snapshot.with(setting as Setting<Any?>, value)
             }

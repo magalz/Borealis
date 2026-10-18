@@ -1,9 +1,10 @@
 # borealis-core
 
-`borealis-core` is the C++20 library shared by all Borealis clients. It will hold the pure,
-deterministic LuminalShine host rules: capability parsing, launch retry policy and display-mode
-rules. It exposes `borealis_core_version()` and, in `include/borealis/host.h`, the LuminalShine host
-rules described below.
+`borealis-core` is the C++20 library shared by all Borealis clients. It holds the pure,
+deterministic LuminalShine host rules: capability parsing (`borealis_host_parse_caps`), the launch and
+resume retry decision (`borealis_launch_decide`), the classification of pairing errors
+(`borealis_pair_classify`) and the `/launch` frame rate (`borealis_launch_fps`). It exposes
+`borealis_core_version()` and, in `include/borealis/host.h`, the host rules described below.
 
 ## Scope and non-goals
 
@@ -39,6 +40,8 @@ core/
   tests/                GoogleTest unit tests (fetched with a pinned URL + SHA256)
   tests/fixtures/       host responses and golden vectors (see fixtures/README.md)
   fuzz/                 libFuzzer targets (see fuzz/README.md)
+  third_party/          vendored moonlight-common-c (ENet, nanors), compiled by the Android app only
+                        (see third_party/README.md)
   .clang-format         copied from LuminalShine
   .clang-tidy
 ```
@@ -94,8 +97,9 @@ below `max_attempts` and `FAIL` afterwards. The caller also owns the overall tim
 | anything else | `UNKNOWN` | `FAIL` |
 
 The rules come from `docs/host-contract/luminalshine.md` (sections 4.2, 4.3, 6, 7.4 and 7.5) and
-`docs/host-contract/pyrowave.md` (section 3.1). Golden vectors for the three decision functions live in
-`tests/fixtures/vectors/` and are replayed by the unit tests; the Android JNI instrumented test (task T4) will replay the same files.
+`docs/host-contract/pyrowave.md` (section 3.1). Golden vectors for the four rules live in
+`tests/fixtures/vectors/` and are replayed by the unit tests and by the Android JNI instrumented test
+(`GoldenVectorsInstrumentedTest`).
 
 ## Build and test
 
@@ -159,7 +163,7 @@ On Windows the script runs under Git Bash with llvm-mingw (clang, `llvm-profdata
 ## Formatting and static analysis
 
 ```sh
-clang-format --dry-run --Werror include/borealis/*.h src/*.cpp tests/*.cpp fuzz/*.cpp
+find include src tests fuzz -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.cpp' \) -print0 | xargs -0 clang-format --dry-run --Werror
 clang-tidy -p build/dev src/*.cpp
 ```
 

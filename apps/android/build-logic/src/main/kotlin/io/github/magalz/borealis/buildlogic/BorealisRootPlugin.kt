@@ -11,7 +11,8 @@ import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
 
 /**
- * Formatting and static analysis for Borealis-owned paths only; upstream files are never touched.
+ * Formatting for Borealis-owned paths only (upstream files are never touched), detekt for the build
+ * logic, and the merged coverage report.
  */
 internal class BorealisRootPlugin : Plugin<Project> {
     override fun apply(target: Project): Unit =
@@ -54,14 +55,17 @@ internal class BorealisRootPlugin : Plugin<Project> {
                 }
             }
 
+            // The Android modules run detekt with type resolution themselves (BorealisDetekt). The
+            // plain task keeps the Gradle code of build-logic: the analysis cannot read it, because
+            // it does not apply the compiler plugins of the kotlin-dsl (sam-with-receiver).
             extensions.configure<DetektExtension> {
                 source.setFrom(
                     fileTree(layout.projectDirectory) {
-                        include(kotlinTargets)
+                        include("build-logic/**/*.kt")
                         exclude(excluded)
                     }
                 )
-                config.setFrom(layout.projectDirectory.file("config/detekt/detekt.yml"))
+                config.setFrom(layout.projectDirectory.file(BorealisDetekt.CONFIG))
                 buildUponDefaultConfig.set(true)
             }
         }

@@ -1,7 +1,7 @@
 version: 2
 updates:
-  # Gradle dependencies, including the Gradle wrapper and libraries declared in upstream
-  # Moonlight files: while harvesting upstream, build tooling may move ahead of it when CI
+  # Gradle dependencies, including the Gradle wrapper and the libraries inherited from
+  # Moonlight (in the version catalog): while harvesting upstream, build tooling may move ahead of it when CI
   # passes (ADR 0047). AGP is declared twice (apps/android/build.gradle and the version
   # catalog), so it stays ignored until it has a single source.
   - package-ecosystem: gradle

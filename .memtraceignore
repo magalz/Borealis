@@ -1,0 +1,12 @@
+# Files Memtrace leaves out of the code graph (gitignore syntax).
+
+# Gradle Kotlin DSL scripts are build configuration, and their lambdas flood the dead-code report.
+**/*.gradle.kts
+
+# Design tokens become hundreds of config-key nodes.
+design/tokens.json
+
+# Prebuilt headers of vendored libraries: about 22,000 C macros and declarations that are not
+# Borealis code, which drown the graph's communities and its test-reachability figure.
+apps/android/app/src/main/jni/moonlight-core/openssl/
+apps/android/app/src/main/jni/moonlight-core/opus/

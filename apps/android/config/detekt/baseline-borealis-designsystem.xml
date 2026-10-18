@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>LongParameterList:BorealisThemeCompositionTest.kt:BorealisThemeCompositionTest.Seen</ID>
+    <ID>LongParameterList:FormFactorDetection.kt:fun formFactorOf: FormFactor</ID>
+    <ID>LongParameterList:FormFactorDetectionTest.kt:FormFactorDetectionTest$private fun detect</ID>
+    <ID>LongParameterList:HeldKeyOpensSurfaceTest.kt:HeldKeyOpensSurfaceTest$@OptIn(InternalTestApi::class, ExperimentalTestApi::class) private fun send: Boolean</ID>
+    <ID>LongParameterList:SettingsSliderRow.kt:private fun stepOnKey: Boolean</ID>
+    <ID>MaxLineLength:BorealisTokens.kt:BorealisTokens.Color$/** Hints and kickers. Mission Control uses #6F757C, raised to pass 4.5:1 on page and surface; use ink-3 on surface-raised */</ID>
+    <ID>MaxLineLength:BorealisTokens.kt:BorealisTokens.Size.HostCard$/** Height of a host card on a TV or handheld, whatever its content: the fullest card (one row of tags, a running app) plus a few dp of margin for density rounding; a card whose tags wrap or whose font is large grows past it; a phone card is as high as its content */</ID>
+    <ID>MaxLineLength:BorealisTokens.kt:BorealisTokens.Size.Sheet$/** Width of a choice or action sheet on a handheld, as a fraction of the window, kept between the compact and standard dialog widths */</ID>
+    <ID>MayBeConstant:BorealisTokens.kt:BorealisTokens.Focus$/** Scale of a focused cover tile */ val TileScale = 1.04f</ID>
+    <ID>MayBeConstant:BorealisTokens.kt:BorealisTokens.Size.Sheet$/** Width of a choice or action sheet on a handheld, as a fraction of the window, kept between the compact and standard dialog widths */ val HandheldFraction = 0.6f</ID>
+    <ID>UnusedVariable:BorealisIconsTest.kt:BorealisIconsTest$name</ID>
+  </CurrentIssues>
+</SmellBaseline>

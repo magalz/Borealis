@@ -19,8 +19,8 @@ import io.github.magalz.borealis.designsystem.theme.BorealisDimens
  * title takes the width that the arrow and the actions leave, so a long title is shortened by its
  * own text and the actions stay in view. The bar is as wide as its parent, with
  * [BorealisDimens.phoneBarPadding] at each side, so the arrow lines up with the gutter. [gap] is
- * the space between the arrow, the title and the actions; the screens that set one pass
- * [BorealisDimens.phoneBarGap].
+ * the space between the arrow, the title and the actions, none by default; the standard spacing
+ * is [BorealisDimens.phoneBarGap].
  */
 @Composable
 fun BorealisPhoneBar(

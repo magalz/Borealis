@@ -1,5 +1,7 @@
 package io.github.magalz.borealis.host.pairing
 
+import java.util.Locale
+
 /**
  * What the user needs to know to pair with and unpair from LuminalShine: the Web UI address and a
  * device name the host does not treat specially (host contract 4.1 and 10.2).
@@ -37,7 +39,7 @@ object PairingHints {
     private fun encodeZone(zone: String): String =
         zone.toByteArray(Charsets.UTF_8).joinToString("") { byte ->
             val char = (byte.toInt() and 0xFF).toChar()
-            if (isUnreserved(char)) char.toString() else "%%%02X".format(byte)
+            if (isUnreserved(char)) char.toString() else "%%%02X".format(Locale.ROOT, byte)
         }
 
     private fun isUnreserved(char: Char): Boolean =

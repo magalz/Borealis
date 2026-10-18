@@ -6,6 +6,8 @@ import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogTag
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
@@ -13,16 +15,14 @@ import kotlinx.coroutines.withContext
 
 /**
  * The Room-backed audit trail. [write] only queues the event: one writer coroutine on [io] stores
- * the events in order, applies the deduplication window and the retention (the newest [maxEntries],
- * nothing older than [maxAgeMillis]). The queue is bounded and drops its oldest event when it
- * overflows, so a burst can never block or grow the caller.
+ * the events in order, applies the deduplication window and the retention (the newest
+ * [MAX_ENTRIES], nothing older than [MAX_AGE_MILLIS]). The queue is bounded and drops its oldest
+ * event when it overflows, so a burst can never block or grow the caller.
  */
 class AuditStore(
     private val dao: AuditDao,
-    scope: CoroutineScope,
-    private val io: CoroutineDispatcher,
-    private val maxEntries: Int = MAX_ENTRIES,
-    private val maxAgeMillis: Long = MAX_AGE_MILLIS,
+    scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+    private val io: CoroutineDispatcher = Dispatchers.IO,
     private val dedup: AuditDeduplicator = AuditDeduplicator(),
     private val clock: () -> Long = System::currentTimeMillis,
 ) : AuditSink {
@@ -65,8 +65,8 @@ class AuditStore(
                     val now = minOf(event.timestampMillis, clock())
                     dao.insertAndPrune(
                         AuditEntity.of(event),
-                        cutoff = now - maxAgeMillis,
-                        keep = maxEntries,
+                        cutoff = now - MAX_AGE_MILLIS,
+                        keep = MAX_ENTRIES,
                     )
                     // Only now: a failed insert above must not suppress the repeat.
                     dedup.markStored(event)

@@ -8,6 +8,6 @@ import dagger.hilt.components.SingletonComponent
 /** Binds the device-specific options of the settings screen. */
 @Module
 @InstallIn(SingletonComponent::class)
-internal abstract class SettingsOptionsModule {
-    @Binds abstract fun settingsOptions(impl: DefaultSettingsOptions): SettingsOptions
+internal interface SettingsOptionsModule {
+    @Binds fun settingsOptions(impl: DefaultSettingsOptions): SettingsOptions
 }

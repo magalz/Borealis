@@ -8,7 +8,7 @@ import org.junit.Test
 class BorealisAuditTest {
     private val events = CopyOnWriteArrayList<AuditEvent>()
     private val redactor = Redactor()
-    private var now = 1_700_000_000_000L
+    private val now = 1_700_000_000_000L
 
     private fun install(sink: AuditSink = AuditSink { events += it }) =
         BorealisAudit.install(sink, redactor, "1.2.3", clock = { now })

@@ -50,6 +50,12 @@ enum class SettingsItemKind {
  */
 class SliderSpec(val min: Int, val max: Int, val step: Int, val keyStep: Int = step)
 
+/**
+ * How a row lets the user pick a value, beyond what its [Setting] implies: a [slider], a list of
+ * [fixedChoices], or neither.
+ */
+class ItemInput(val slider: SliderSpec? = null, val fixedChoices: List<FixedChoice> = emptyList())
+
 private const val BITRATE_MIN_KBPS = 500
 private const val BITRATE_MAX_KBPS = 150_000
 private const val BITRATE_STEP_KBPS = 500
@@ -75,8 +81,7 @@ enum class SettingsItem(
     val setting: Setting<*>?,
     @StringRes val titleRes: Int,
     @StringRes val summaryRes: Int? = null,
-    val slider: SliderSpec? = null,
-    val fixedChoices: List<FixedChoice> = emptyList(),
+    val input: ItemInput = ItemInput(),
 ) {
     RESOLUTION(
         SettingsGroupId.STREAM,
@@ -95,12 +100,15 @@ enum class SettingsItem(
         SettingsItemKind.SLIDER,
         Settings.BITRATE_KBPS,
         R.string.settings_bitrate_title,
-        slider =
-            SliderSpec(
-                BITRATE_MIN_KBPS,
-                BITRATE_MAX_KBPS,
-                BITRATE_STEP_KBPS,
-                BITRATE_KEY_STEP_KBPS,
+        input =
+            ItemInput(
+                slider =
+                    SliderSpec(
+                        BITRATE_MIN_KBPS,
+                        BITRATE_MAX_KBPS,
+                        BITRATE_STEP_KBPS,
+                        BITRATE_KEY_STEP_KBPS,
+                    )
             ),
     ),
     FRAME_PACING(
@@ -108,7 +116,7 @@ enum class SettingsItem(
         SettingsItemKind.CHOICE,
         Settings.FRAME_PACING,
         R.string.settings_frame_pacing_title,
-        fixedChoices = FixedChoices.FRAME_PACING,
+        input = ItemInput(fixedChoices = FixedChoices.FRAME_PACING),
     ),
     CODEC(
         SettingsGroupId.VIDEO,
@@ -116,7 +124,7 @@ enum class SettingsItem(
         Settings.VIDEO_FORMAT,
         R.string.settings_codec_title,
         R.string.settings_codec_summary,
-        fixedChoices = FixedChoices.CODEC,
+        input = ItemInput(fixedChoices = FixedChoices.CODEC),
     ),
     HDR(
         SettingsGroupId.VIDEO,
@@ -137,7 +145,7 @@ enum class SettingsItem(
         SettingsItemKind.CHOICE,
         Settings.PERF_OVERLAY,
         R.string.settings_perf_overlay_title,
-        fixedChoices = FixedChoices.PERF_OVERLAY,
+        input = ItemInput(fixedChoices = FixedChoices.PERF_OVERLAY),
     ),
     STRETCH_VIDEO(
         SettingsGroupId.VIDEO,
@@ -151,7 +159,7 @@ enum class SettingsItem(
         SettingsItemKind.CHOICE,
         Settings.TOUCHSCREEN_TRACKPAD,
         R.string.settings_touch_title,
-        fixedChoices = FixedChoices.TOUCH,
+        input = ItemInput(fixedChoices = FixedChoices.TOUCH),
     ),
     MOUSE_NAV_BUTTONS(
         SettingsGroupId.INPUT,
@@ -179,15 +187,23 @@ enum class SettingsItem(
         SettingsItemKind.CHOICE,
         Settings.ANALOG_SCROLLING,
         R.string.settings_analog_scrolling_title,
-        fixedChoices = FixedChoices.ANALOG_SCROLLING,
+        input = ItemInput(fixedChoices = FixedChoices.ANALOG_SCROLLING),
     ),
     GAMEPAD_MOUSE_SPEED(
         SettingsGroupId.INPUT,
         SettingsItemKind.SLIDER,
         Settings.GAMEPAD_MOUSE_SPEED,
         R.string.settings_gamepad_mouse_speed_title,
-        slider =
-            SliderSpec(MOUSE_SPEED_MIN, MOUSE_SPEED_MAX, MOUSE_SPEED_STEP, MOUSE_SPEED_KEY_STEP),
+        input =
+            ItemInput(
+                slider =
+                    SliderSpec(
+                        MOUSE_SPEED_MIN,
+                        MOUSE_SPEED_MAX,
+                        MOUSE_SPEED_STEP,
+                        MOUSE_SPEED_KEY_STEP,
+                    )
+            ),
     ),
     DEADZONE(
         SettingsGroupId.INPUT,
@@ -195,7 +211,7 @@ enum class SettingsItem(
         Settings.DEADZONE,
         R.string.settings_deadzone_title,
         R.string.settings_deadzone_summary,
-        slider = SliderSpec(0, DEADZONE_MAX, 1),
+        input = ItemInput(slider = SliderSpec(0, DEADZONE_MAX, 1)),
     ),
     MULTI_CONTROLLER(
         SettingsGroupId.GAMEPAD,
@@ -257,7 +273,7 @@ enum class SettingsItem(
         SettingsItemKind.SLIDER,
         Settings.VIBRATE_FALLBACK_STRENGTH,
         R.string.settings_vibration_strength_title,
-        slider = SliderSpec(0, VIBRATION_MAX, 1, VIBRATION_KEY_STEP),
+        input = ItemInput(slider = SliderSpec(0, VIBRATION_MAX, 1, VIBRATION_KEY_STEP)),
     ),
     SHOW_ON_SCREEN_CONTROLS(
         SettingsGroupId.ON_SCREEN_CONTROLS,
@@ -288,7 +304,7 @@ enum class SettingsItem(
         SettingsItemKind.SLIDER,
         Settings.OSC_OPACITY,
         R.string.settings_osc_opacity_title,
-        slider = SliderSpec(0, OPACITY_MAX, 1, PERCENT_KEY_STEP),
+        input = ItemInput(slider = SliderSpec(0, OPACITY_MAX, 1, PERCENT_KEY_STEP)),
     ),
     RESET_LAYOUT(
         SettingsGroupId.ON_SCREEN_CONTROLS,
@@ -301,7 +317,7 @@ enum class SettingsItem(
         SettingsItemKind.CHOICE,
         Settings.AUDIO_CONFIG,
         R.string.settings_audio_channels_title,
-        fixedChoices = FixedChoices.AUDIO_CHANNELS,
+        input = ItemInput(fixedChoices = FixedChoices.AUDIO_CHANNELS),
     ),
     HOST_AUDIO(
         SettingsGroupId.AUDIO,

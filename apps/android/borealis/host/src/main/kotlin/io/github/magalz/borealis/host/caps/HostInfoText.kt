@@ -2,6 +2,7 @@ package io.github.magalz.borealis.host.caps
 
 import android.content.Context
 import io.github.magalz.borealis.host.R
+import io.github.magalz.borealis.host.getFormattedString
 import io.github.magalz.borealis.nativecore.HostCaps
 import io.github.magalz.borealis.nativecore.HostFamily
 import io.github.magalz.borealis.nativecore.PyroWaveProfile
@@ -11,7 +12,7 @@ object HostInfoText {
     /** [details] followed by a blank line and the block; [details] itself when [info] is null. */
     @JvmStatic
     fun appendTo(context: Context, details: String, info: BorealisHostInfo?): String =
-        appendTo({ id, args -> context.getString(id, *args.toTypedArray()) }, details, info)
+        appendTo(context::getFormattedString, details, info)
 
     internal fun appendTo(
         getString: (Int, List<Any>) -> String,

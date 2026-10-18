@@ -35,7 +35,7 @@ import kotlinx.coroutines.withContext
 class SettingsViewModel
 internal constructor(
     private val repository: SettingsRepository,
-    private val options: SettingsOptions,
+    options: SettingsOptions,
     private val deviceFactsSource: DeviceFactsSource,
     private val oscLayoutReset: OscLayoutReset,
     private val io: CoroutineDispatcher,
@@ -105,7 +105,7 @@ internal constructor(
      * slider is kept in it.
      */
     fun onSliderChanged(item: SettingsItem, value: Int) {
-        val spec = item.slider
+        val spec = item.input.slider
         if (spec == null || !isChangeable(item)) return
         val inRange = value.coerceIn(spec.min, spec.max)
         viewModelScope.launch {
@@ -141,7 +141,7 @@ internal constructor(
         when (item) {
             SettingsItem.RESOLUTION -> uiState.value.resolutionChoices.map { it.key }
             SettingsItem.FRAME_RATE -> uiState.value.frameRateChoices.map { it.fps.toString() }
-            else -> item.fixedChoices.map { it.key }
+            else -> item.input.fixedChoices.map { it.key }
         }
 
     /**

@@ -9,6 +9,11 @@ internal class PrivacyActions(
     val onExport: () -> Unit,
     val onOpenAudit: () -> Unit,
     val onEraseRequested: () -> Unit,
+    val dialogs: PrivacyDialogActions,
+)
+
+/** What the dialogs over the pane ask of its caller. */
+internal class PrivacyDialogActions(
     val onEraseConfirmed: () -> Unit,
     val onEraseCancelled: () -> Unit,
     val onDialogDismissed: () -> Unit,

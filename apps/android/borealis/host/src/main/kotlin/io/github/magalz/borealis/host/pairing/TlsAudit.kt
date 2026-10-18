@@ -5,6 +5,7 @@ import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.logging.BorealisAudit
 import java.security.MessageDigest
 import java.security.cert.Certificate
+import java.util.Locale
 
 /**
  * Audit events of TLS and pinning failures (ADR 0050). A certificate is recorded only as a short
@@ -41,7 +42,7 @@ object TlsAudit {
         MessageDigest.getInstance("SHA-256")
             .digest(certificate.encoded)
             .take(FINGERPRINT_BYTES)
-            .joinToString("") { "%02x".format(it) }
+            .joinToString("") { "%02x".format(Locale.ROOT, it) }
     }
         .getOrDefault(UNAVAILABLE)
 }

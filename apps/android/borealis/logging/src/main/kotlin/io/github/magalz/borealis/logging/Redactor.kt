@@ -61,21 +61,21 @@ class Redactor(maskAddresses: Boolean = false) {
     /** Masks a host value up to its closing quote, or to the next separator when unquoted. */
     private fun maskHostValue(match: MatchResult): String {
         val groups = match.groups
-        val open = groups[2]?.value ?: groups[4]?.value ?: ""
-        val close = groups[3]?.value ?: groups[5]?.value ?: ""
-        return groups[1]!!.value + open + HOST_MASK + close
+        val open = (groups[2]?.value ?: groups[4]?.value).orEmpty()
+        val close = (groups[3]?.value ?: groups[5]?.value).orEmpty()
+        return match.groupValues[1] + open + HOST_MASK + close
     }
 
     private fun redactUrl(match: MatchResult, masking: Boolean): String {
         val groups = match.groups
         val credentials = if (groups[2] != null) "$REDACTED@" else ""
-        val host = if (masking) HOST_MASK else groups[3]!!.value
+        val host = if (masking) HOST_MASK else match.groupValues[3]
         val query =
-            QUERY_PARAM.replace(groups[4]!!.value) { param ->
+            QUERY_PARAM.replace(match.groupValues[4]) { param ->
                 val key = param.groupValues[1]
                 if (key.lowercase() in ALLOWED_QUERY_KEYS) param.value else "$key=$REDACTED"
             }
-        return groups[1]!!.value + credentials + host + query
+        return match.groupValues[1] + credentials + host + query
     }
 
     companion object {

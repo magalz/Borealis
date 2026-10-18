@@ -13,6 +13,11 @@ import io.github.magalz.borealis.nativecore.PairCategory
 /** What `doPair` shows after a failed pairing step and whether it pairs again. */
 data class PairingFailure(val message: String?, val restart: Boolean)
 
+/**
+ * What [PairingErrors.describe] takes from its surroundings: the host rules and the app strings.
+ */
+internal class PairingEnvironment(val rules: HostRules, val getString: (Int) -> String)
+
 /** The host's pairing errors as the user should see them (host contract 4.2 and 4.3). */
 object PairingErrors {
     /**
@@ -28,17 +33,22 @@ object PairingErrors {
         restarted: Boolean,
         host: String?,
     ): PairingFailure =
-        describe(NativeHostRules, error, fallback, restarted, { context.getString(it) }, host)
+        describe(
+            PairingEnvironment(NativeHostRules) { context.getString(it) },
+            error,
+            fallback,
+            restarted,
+            host,
+        )
 
     internal fun describe(
-        rules: HostRules,
+        environment: PairingEnvironment,
         error: HostError?,
         fallback: String?,
         restarted: Boolean,
-        getString: (Int) -> String,
         host: String? = null,
     ): PairingFailure {
-        val decision = error?.let { rules.classifyPairing(it.code, it.message) }
+        val decision = error?.let { environment.rules.classifyPairing(it.code, it.message) }
         val text = decision?.let { textFor(it.category, restarted) }
         if (error == null || decision == null || text == null) {
             PairingAudit.failed(host, error?.code, decision, restarted)
@@ -56,7 +66,7 @@ object PairingErrors {
         val restart = decision.action == PairAction.RESTART_ONCE && !restarted
         PairingAudit.failed(host, error.code, decision, restarted)
         if (restart) PairingAudit.restarting(host, decision)
-        return PairingFailure(getString(text), restart)
+        return PairingFailure(environment.getString(text), restart)
     }
 
     /** The message of [category]; null keeps the upstream text. */

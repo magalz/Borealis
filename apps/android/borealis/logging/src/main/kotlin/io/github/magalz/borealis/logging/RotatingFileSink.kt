@@ -28,7 +28,7 @@ import kotlin.concurrent.withLock
  * [writeGate] runs on the writer thread before every record and exists for tests only.
  */
 class RotatingFileSink(
-    private val directory: File,
+    directory: File,
     private val maxFiles: Int = DEFAULT_MAX_FILES,
     private val maxFileBytes: Long = DEFAULT_MAX_FILE_BYTES,
     queueCapacity: Int = DEFAULT_QUEUE_CAPACITY,

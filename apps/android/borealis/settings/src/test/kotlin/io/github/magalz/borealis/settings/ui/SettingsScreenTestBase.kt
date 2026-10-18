@@ -27,7 +27,7 @@ import org.robolectric.Shadows.shadowOf
  * What the screen tests share: the real ViewModel over fakes, and the route as the Library will
  * host it, with the placeholders and the recorded callbacks of a test.
  */
-abstract class SettingsScreenTestBase {
+open class SettingsScreenTestBase {
     @get:Rule val composeRule = createComposeRule()
 
     protected var repository = FakeSettingsRepository()

@@ -117,7 +117,7 @@ object HevcSps {
     private fun skipSubLayers(bits: BitReader, maxSubLayersMinus1: Int) {
         var profilePresent = 0
         var levelPresent = 0
-        for (i in 0 until maxSubLayersMinus1) {
+        repeat(maxSubLayersMinus1) {
             profilePresent += bits.read(1)
             levelPresent += bits.read(1)
         }

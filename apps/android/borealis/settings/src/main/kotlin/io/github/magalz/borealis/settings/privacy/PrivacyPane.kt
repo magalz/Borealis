@@ -139,7 +139,7 @@ internal fun rememberPrivacyBinding(
 
 /** False when the system refused the share sheet. */
 @Suppress("TooGenericExceptionCaught")
-private fun tryShare(startShare: (Intent) -> Unit, chooser: Intent): Boolean =
+internal fun tryShare(startShare: (Intent) -> Unit, chooser: Intent): Boolean =
     try {
         startShare(chooser)
         true

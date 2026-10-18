@@ -34,10 +34,6 @@ public class CacheHelper {
         return openPath(false, root, path).length();
     }
 
-    public static boolean deleteCacheFile(File root, String... path) {
-        return openPath(false, root, path).delete();
-    }
-
     public static boolean cacheFileExists(File root, String... path) {
         return openPath(false, root, path).exists();
     }

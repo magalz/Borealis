@@ -95,7 +95,7 @@ capture that is committed.
    PyroWave off (default configuration, see its `PROVENANCE.md`).
 2. Record the LuminalShine release from the host installation. `TODO(verify)`:
    `/serverinfo` does not carry the release version (contract section 1 and
-   proposal P1), so the version in the PC details dialog is the protocol
+   proposal P1), so the version in the Host details dialog is the protocol
    version `7.1.431.-1`, not `26.09.1`.
 3. Open `https://<host>:47990` (the Web UI) in a browser on the PC and check
    that it loads. Accept a self-signed certificate warning if the browser shows
@@ -110,7 +110,7 @@ capture that is committed.
 5. Keep the host log open. Its location is the owner's choice; this runbook
    refers to it as "the host log" only.
 6. At the start of each scenario, no app runs on the host unless the scenario
-   says so. Use the Web UI or the app list to quit a running app.
+   says so. Use the Web UI or Apps to quit a running app.
 
 ### 1.4 Logcat capture
 
@@ -259,13 +259,14 @@ entry is gone.
 ### 3.3 Unpair
 
 Two places remove the pairing. The Forget option in the host Options of the PC
-on the device removes the PC from this device. Removing the device in the LuminalShine Web UI
-(Clients page) ends the pairing on the PC. LuminalShine does not route `/unpair`
-(contract sections 3 and 18, item 4), so the device must be removed in the Web
-UI.
+on the device removes the PC from this device. Removing the device in the
+LuminalShine Web UI (Clients page) ends the pairing on the PC. LuminalShine does
+not route `/unpair` (contract sections 3 and 18, item 4), so the device must be
+removed in the Web UI.
 
 1. Open Hosts and open the host Options of the PC: long-press its card on a
-   phone, or hold OK, X or Menu on a TV. Choose Forget and read the dialog.
+   phone; on a TV, hold OK, or press X or Menu on a pad. Choose Forget and read
+   the dialog.
 2. Expected: the dialog reads "Forget `<name>` on this device? The PC may keep
    trusting this device until you remove it in the LuminalShine Web UI (Clients
    page)." Choose Forget. Expected: the PC
@@ -286,12 +287,13 @@ UI.
 
 1. The PC details dialog went away with `PcView` in Sprint 5. Its content is
    back in the Host details dialog. With the device paired, open Hosts, open
-   the host Options of the PC (long-press its card on a phone; hold OK, X or
-   Menu on a TV) and choose Details. The card itself shows the address and the
-   codec and HDR tags.
-2. The dialog holds the name, the addresses and the capability block below,
-   which `HostInfoText` builds. The diagnostic bundle does not hold the block:
-   it has only the `host capabilities` log line of step 4.
+   the host Options of the PC (long-press its card on a phone; on a TV, hold OK,
+   or press X or Menu on a pad) and choose Details. The card itself shows the
+   address and the codec and HDR tags.
+2. The dialog holds the host details of `ComputerDetails` (the name, the state,
+   the addresses, the UUID, the MAC address and more) and the capability block
+   below, which `HostInfoText` builds. The diagnostic bundle does not hold the
+   block: it has only the `host capabilities` log line of step 4.
 3. Expected for the 26.09.1 capture (`serverinfo-http.xml`, codec mask
    `0x001C0301`, codec flags `0x13` in `host_caps.tsv`), in the block of the
    dialog:
@@ -314,7 +316,7 @@ UI.
 ### 3.5 Two devices launching at the same time
 
 1. Pair both devices with the host (3.1). Make sure no app runs on the host.
-2. Start the same app on the S22 from its app list.
+2. Start the same app on the S22 from Apps.
 3. Within about 2 s, start the same app on the Streamer. The host holds a pending
    launch until it is claimed by RTSP or until `ping_timeout` (10 s by default,
    contract 7.5), so the second request must arrive inside that window to get
@@ -339,7 +341,7 @@ UI.
    Streamer while the S22 runs it, and answer the dialog as follows:
    - Join: the device joins the running session and streams.
    - Quit and relaunch: the S22 session ends and the app starts on the Streamer.
-   - Cancel: the device returns to the app list with no error dialog.
+   - Cancel: the device returns to Apps with no error dialog.
 8. Expected: the client sends no `/cancel` request during the retries. The retry
    code never calls it (README, `host.launch`). `TODO(verify)`: the host log line
    that a `/cancel` request writes, so that the owner can check for it.
@@ -393,8 +395,8 @@ UI.
 ### 3.8 Cancel during a launch retry with Back, then launch again
 
 1. Produce a retry as in 3.5 or 3.6, so that the Starting screen shows the retry
-   text. The screen shows the four steps of the start, a "Host busy" line with
-   the retry text, and Cancel with the focus.
+   text. The screen shows the four steps of the start, a "Host busy" line (shown
+   in capitals, "HOST BUSY") with the retry text, and Cancel with the focus.
 2. Press Back while the Starting screen is shown.
 3. Expected: the launch ends without a stream. No further `host asked to retry`
    line appears in logcat after Back. The client sends no `/cancel`, as in 3.5
@@ -406,7 +408,7 @@ UI.
    a failure. It would point to a permit that was not released.
 6. Evidence: the logcat capture across both launches, with the first-frame line
    of 3.9 for the second one, and a screenshot of the Starting screen with the
-   "Host busy" line. Take no screenshot of the first frame: it shows the PC
+   "HOST BUSY" line. Take no screenshot of the first frame: it shows the PC
    screen (section 5).
 
 ### 3.9 First frame
@@ -461,7 +463,7 @@ UI.
 
 ### 3.12 HDR and HEVC Main10
 
-S22 only. The "HDR" row is hidden on a display that reports no HDR types, as on
+S22 only. The "HDR" row is hidden on a display that does not report HDR10, as on
 the TV attached to the Streamer (section 11, item A5). Record the Streamer as
 "not applicable" unless its row shows.
 
@@ -643,7 +645,8 @@ The viewer is in Settings, then "Privacy and diagnostics", then "Audit trail".
    Expected: each step works as in the debug build.
 5. `TODO(verify)`: whether this smoke test runs on both devices.
 6. Evidence: `adb -s <serial> shell dumpsys package io.github.magalz.borealis`
-   (the `versionName` and the commit), the logcat capture and a screenshot.
+   (the `versionName` and the commit), the logcat capture and a screenshot (see
+   section 5).
 
 ### 3.19 Sprint 6 checks
 

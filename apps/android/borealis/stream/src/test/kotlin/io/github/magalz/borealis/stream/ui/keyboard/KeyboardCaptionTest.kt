@@ -111,7 +111,7 @@ class KeyboardCaptionTest {
     @Config(qualifiers = "w568dp-h320dp-land-xhdpi", fontScale = 1.3f)
     fun `no key of the Fn layer is clipped on a narrow landscape phone at font scale 1_3`() {
         show()
-        composeRule.onNodeWithTag("key:Fn").performClick()
+        composeRule.onNodeWithTag("key:Fn 123").performClick()
 
         assertThat(clippedKeys()).isEmpty()
     }

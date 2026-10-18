@@ -207,17 +207,31 @@ class StreamKeyboardTest {
     fun `Fn shows the digits, the function keys and the arrows, and Fn again the letters`() {
         showPhone()
 
-        tapKey("Fn")
+        tapKey("Fn 123")
 
         composeRule.onNodeWithTag("key:F1").assertExists()
         composeRule.onNodeWithTag("key:1").assertExists()
         composeRule.onNodeWithTag("key:Home").assertExists()
         composeRule.onNodeWithTag("key:Q").assertDoesNotExist()
 
-        tapKey("Fn")
+        tapKey("Fn 123")
 
         composeRule.onNodeWithTag("key:Q").assertExists()
         composeRule.onNodeWithTag("key:F1").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the Fn key says that the digits are behind it and keeps its caption on the layer`() {
+        showPhone()
+
+        composeRule.onNodeWithTag("key:Fn 123").assertTextEquals("Fn 123")
+        tapKey("Fn 123")
+
+        composeRule
+            .onNodeWithTag("key:Fn 123")
+            .assertTextEquals("Fn 123")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Locked"))
     }
 
     @Test
@@ -226,7 +240,7 @@ class StreamKeyboardTest {
         showPhone()
 
         tapKey("Shift")
-        tapKey("Fn")
+        tapKey("Fn 123")
         tapKey("→")
         tapKey("F5")
 
@@ -471,7 +485,7 @@ class StreamKeyboardTest {
         composeRule.onNodeWithTag("key:Space").assertTextEquals("Space")
         tapKey("Shift")
         composeRule.onNodeWithTag("key:Enter").assertTextEquals("Enter")
-        tapKey("Fn")
+        tapKey("Fn 123")
         composeRule.onNodeWithTag("key:F1").assertTextEquals("F1")
         composeRule.onNodeWithTag("key:Home").assertTextEquals("Home")
     }

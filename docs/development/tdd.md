@@ -75,9 +75,9 @@ Not enough:
 
 | Area | Tools |
 | --- | --- |
-| Kotlin unit | JUnit 4, MockK, Turbine (flows), Truth. |
+| Kotlin unit | JUnit 4, Turbine (flows), Truth. MockK is planned and not used yet; the tests use fakes. |
 | Android UI | Robolectric, Compose UI tests. |
-| Emulator | Gradle Managed Devices. |
+| Emulator | Gradle Managed Devices, planned and not set up. |
 | Screenshots | Roborazzi. |
 | core (C++) | GoogleTest, ASan/UBSan, libFuzzer for parsers. |
 | Host contract | Golden fixtures with contract tests. |
@@ -91,8 +91,8 @@ PINs, keys and certificates, never real ones.
 A screenshot test follows the same order. The test that renders a new screen
 or state is committed before the implementation. The reference image is
 recorded on Windows and committed with the implementation. The screenshot
-tests cover `:borealis:designsystem`, `:borealis:library` and `:borealis:stream`.
-Commands, the CI job and the Linux plan B are in
+tests cover `:borealis:designsystem`, `:borealis:library`, `:borealis:stream`
+and `:borealis:settings`. Commands, the CI job and the Linux plan B are in
 [building](building.md#screenshot-tests).
 
 ## Practicalities

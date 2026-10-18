@@ -12,6 +12,7 @@ Definition of Done. These pages hold the details.
 | [device-validation.md](device-validation.md) | Phase 1 and Sprints 2 to 5 runbook for the checks on a Galaxy S22 and a Google TV Streamer against LuminalShine. Section 10 records the Sprint 5 device round. |
 | [orchestration.md](orchestration.md) | How AI agents are orchestrated: roles, worktrees, hand-offs. |
 | [task-brief.md](task-brief.md) | Template for briefing an implementer on one task. |
+| [decoder-errata.md](decoder-errata.md) | Known MediaCodec hardware decoder quirks, inherited from Moonlight. |
 
 Policies behind these procedures are in [../policies/](../policies/):
 [dependencies](../policies/dependencies.md),

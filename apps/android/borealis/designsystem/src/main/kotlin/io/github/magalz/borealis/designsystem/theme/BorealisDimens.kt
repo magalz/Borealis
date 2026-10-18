@@ -31,6 +31,21 @@ object BorealisDimens {
     val contentMaxWidth: Dp = BorealisTokens.Size.ContentMax
 
     /**
+     * The padding at each side of a phone bar: 4dp. The back arrow is a 24dp icon in a 48dp touch
+     * target, so with this padding the arrow lines up with the 16dp gutter of a phone.
+     */
+    val phoneBarPadding: Dp = 4.dp
+
+    /** The space between the back arrow and the title of a phone bar that sets one: 4dp. */
+    val phoneBarGap: Dp = 4.dp
+
+    /**
+     * The space between two lines of text that belong together, a title and the line under it or a
+     * label and its value: 4dp.
+     */
+    val stackedTextGap: Dp = 4.dp
+
+    /**
      * The width of the navigation rail and of the settings group list: 220dp on a TV, 200dp on a
      * handheld. A phone has no rail; it gets the handheld value, for a layout that borrows it.
      */

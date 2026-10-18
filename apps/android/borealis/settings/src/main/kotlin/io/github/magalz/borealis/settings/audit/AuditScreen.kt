@@ -25,8 +25,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,7 +45,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import io.github.magalz.borealis.designsystem.components.BorealisIcons
+import io.github.magalz.borealis.designsystem.components.BorealisPhoneBar
 import io.github.magalz.borealis.designsystem.components.EmptyState
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.initialFocus
@@ -70,9 +68,7 @@ private val ROW_PADDING_VERTICAL = 10.dp
 private val COLUMN_GAP = 12.dp
 private val PHONE_TIME_WIDTH = 72.dp
 private val TV_TIME_WIDTH = 100.dp
-private val HEADER_GAP = 4.dp
 private val HEADER_PADDING = 16.dp
-private val BAR_PADDING = 4.dp
 private val CODE_GAP = 8.dp
 private val FIELD_GAP = 16.dp
 private val SUMMARY_GAP = 2.dp
@@ -107,7 +103,11 @@ fun AuditScreen(
                 .background(LocalBorealisColors.current.page)
                 .windowInsetsPadding(WindowInsets.safeDrawing)
         ) {
-            if (formFactor == FormFactor.Phone) PhoneBar(close) else Header()
+            if (formFactor == FormFactor.Phone) {
+                BorealisPhoneBar(close, stringResource(R.string.audit_ui_back)) { Title() }
+            } else {
+                Header()
+            }
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 when {
                     state.detail != null -> Detail(state.detail)
@@ -135,19 +135,6 @@ fun AuditScreen(
 }
 
 @Composable
-private fun PhoneBar(onBack: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = BAR_PADDING),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = onBack) {
-            Icon(BorealisIcons.Back, stringResource(R.string.audit_ui_back))
-        }
-        Title(Modifier.weight(1f))
-    }
-}
-
-@Composable
 private fun Header() {
     val gutter = LocalBorealisSpacing.current.gutter
     Title(Modifier.fillMaxWidth().padding(horizontal = gutter, vertical = HEADER_PADDING))
@@ -155,8 +142,8 @@ private fun Header() {
 
 /** The name of the screen with how long the entries are kept. */
 @Composable
-private fun Title(modifier: Modifier) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(HEADER_GAP)) {
+private fun Title(modifier: Modifier = Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(BorealisDimens.stackedTextGap)) {
         Text(
             stringResource(R.string.audit_ui_screen_title),
             style = MaterialTheme.typography.titleLarge,
@@ -305,7 +292,7 @@ private fun Detail(detail: AuditDetail) {
 private fun Field(@StringRes label: Int, value: String, mono: Boolean = false) {
     val colors = LocalBorealisColors.current
     val body = MaterialTheme.typography.bodyMedium
-    Column(verticalArrangement = Arrangement.spacedBy(HEADER_GAP)) {
+    Column(verticalArrangement = Arrangement.spacedBy(BorealisDimens.stackedTextGap)) {
         Text(stringResource(label), color = colors.ink3, style = MaterialTheme.typography.bodySmall)
         Text(
             value,

@@ -67,7 +67,7 @@ Kotlin code. See the [roadmap](../roadmap.md#sprint-12-onward-java-to-kotlin-mig
 6. Run the checks from `apps/android/` (see [building](building.md)):
 
    ```sh
-   ./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleDebug licensee
+   ./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleDebug licensee koverXmlReportBorealis
    ```
 
 7. Open one PR per harvest. The description lists the upstream commits, what

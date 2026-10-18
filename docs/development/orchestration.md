@@ -21,7 +21,7 @@ The impact tools (`get_impact`, `preflight_check`, `detect_changes`) are the mai
 
 ## Roles
 
-- **Orchestrator**: plans phases, writes one [brief](task-brief.md) per task, creates worktrees, dispatches subagents, integrates reviewed work, runs phase checks, pushes the task and phase branches, opens the phase PR under the owner's account, and reports to the owner. It owns shared files (Gradle settings and version catalog, CI workflows, `.gitmodules`, `AGENTS.md`) and decides conflicts. It sends discovery to `br-scout` instead of reading broadly itself.
+- **Orchestrator**: plans phases, writes one [brief](task-brief.md) per task, creates worktrees, dispatches subagents, integrates reviewed work, runs phase checks, pushes the task and phase branches, opens the phase PR under the owner's account, and reports to the owner. It owns shared files (Gradle settings and version catalog, CI workflows, `AGENTS.md`) and decides conflicts. It sends discovery to `br-scout` instead of reading broadly itself.
 - **`br-scout`**: answers "where, what calls, what breaks" questions with references and short summaries; never edits.
 - **`br-scribe`**: writes text from the orchestrator's notes and repository facts; edits only the text files its brief names.
 - **`br-implementer`**: implements exactly one brief inside its worktree, test-first per the [TDD rule](tdd.md), and returns a report. It never pushes, opens PRs, or touches files it does not own; if the brief is wrong it stops and reports.
@@ -46,7 +46,7 @@ The impact tools (`get_impact`, `preflight_check`, `detect_changes`) are the mai
 
 ## Parallel waves
 
-Tasks without shared files and with satisfied dependencies run in parallel in one wave. Shared declarations (Gradle settings, version catalog, CI, `.gitmodules`, upstream hook points) have exactly one owner per wave; a task needing such a file it does not own stops and reports. A later wave starts only after its dependencies are merged into the phase branch, or when it depends only on a frozen contract document.
+Tasks without shared files and with satisfied dependencies run in parallel in one wave. Shared declarations (Gradle settings, version catalog, CI, the wiring in inherited files) have exactly one owner per wave; a task needing such a file it does not own stops and reports. A later wave starts only after its dependencies are merged into the phase branch, or when it depends only on a frozen contract document.
 
 ## Reporting to the owner
 

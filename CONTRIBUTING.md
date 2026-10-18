@@ -13,9 +13,10 @@ issues.
 Borealis uses GitHub Flow with merge commits.
 
 1. Open or pick an issue. Discuss the approach there before large work.
-2. Branch from `main`: `feat/<topic>`, `fix/<topic>`, `docs/<topic>`,
-   `chore/<topic>`, `task/<topic>` or `phase/s<n>-<name>` (for example
-   `phase/s8-tidy-up`).
+2. Branch from `main`: `feat/<topic>`, `fix/<topic>`, `docs/<topic>` or
+   `chore/<topic>`. A sprint runs on a `phase/s<n>-<name>` branch cut from `main`
+   (for example `phase/s8-tidy-up`), and each task in it is a `task/<topic>`
+   branch cut from the phase branch.
 3. Write the failing test first and commit it, then implement (see below).
 4. Open a pull request using the template. Link the issue or ADR.
 5. CI must be green. Every change goes through a PR; nothing is pushed to

@@ -83,8 +83,10 @@ libraries.
 - Security updates are raised immediately.
 - Updates arrive as PRs and go through the normal CI. Group low-risk updates;
   review major updates individually.
-- The dependency review check blocks PRs that introduce a known-vulnerable or
-  disallowed-licence dependency.
+- The dependency review check (`.github/workflows/security.yml`) blocks PRs
+  that introduce a dependency with a known vulnerability of moderate severity or
+  higher. It has no licence list; the licence check is `licensee` in the build
+  (see the allowlist above).
 - CodeQL runs in CI, and the CycloneDX SBOM (Gradle `:app:cyclonedxDirectBom` plus the hand-maintained `apps/android/sbom/native-components.cdx.json`) is
   regenerated on every release.
 

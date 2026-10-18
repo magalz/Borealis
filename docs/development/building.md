@@ -6,7 +6,7 @@ Primary development platform is Windows. Linux notes for CI are at the end.
 
 | Tool | Version | Used for |
 | --- | --- | --- |
-| Git | recent | Source control and the Moonlight subtree. |
+| Git | recent | Source control. The inherited Moonlight code and the vendored moonlight-common-c are in this repository ([ADR 0054](../adr/0054-declare-independence-from-moonlight.md)). |
 | JDK | 17 | Gradle and Android build. |
 | Android SDK | platform `android-37.0`, build-tools `37.0.0`, platform-tools | Android client. |
 | Android NDK | `29.0.14206865` | Native code (moonlight-core). |

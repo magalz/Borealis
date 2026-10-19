@@ -12,7 +12,7 @@ F = int(sys.argv[3]) if len(sys.argv) > 3 else 24
 START = int(sys.argv[4]) if len(sys.argv) > 4 else 0  # first source frame to use
 END = int(sys.argv[5]) if len(sys.argv) > 5 else 0  # source frames to drop at the end
 # No B-frames and a steady quality: smooth gradients otherwise pulse every few frames.
-ENC = ["-crf", "23", "-bf", "0", "-tune", "grain"]
+ENC = ["-crf", "23", "-bf", "0", "-refs", "4", "-level", "4.1", "-tune", "grain"]
 probe = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v", "-count_frames",
                         "-show_entries", "stream=width,height,r_frame_rate,nb_read_frames",
                         "-of", "csv=p=0", src], capture_output=True, text=True).stdout.strip().split(",")

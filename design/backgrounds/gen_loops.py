@@ -33,7 +33,7 @@ def ffmpeg(path):
             "ffmpeg", "-y", "-loglevel", "error",
             "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS),
             "-i", "-",
-            "-c:v", "libx264", "-preset", "slow", "-crf", "23", "-bf", "0", "-tune", "grain",
+            "-c:v", "libx264", "-preset", "slow", "-crf", "23", "-bf", "0", "-refs", "4", "-level", "4.1", "-tune", "grain",
             "-pix_fmt", "yuv420p", "-movflags", "+faststart", path,
         ],
         stdin=subprocess.PIPE,

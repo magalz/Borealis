@@ -3,6 +3,7 @@ package io.github.magalz.borealis.library
 import android.content.Context
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
+import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.PairingManager.PairState
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.magalz.borealis.host.caps.HostDetailsFacts
@@ -149,12 +150,19 @@ private fun ComputerDetails.toDetailsFacts() =
                 ComputerDetails.State.OFFLINE -> HostState.OFFLINE
                 else -> HostState.UNKNOWN
             },
-        address = activeAddress?.toString(),
+        address = activeAddress?.shown(),
         otherAddresses =
             listOfNotNull(localAddress, remoteAddress, manualAddress, ipv6Address).map {
-                it.toString()
+                it.shown()
             },
         paired = pairState?.let { it == PairState.PAIRED },
         macAddress = macAddress,
         runningApp = toHost().runningApp?.name,
     )
+
+/**
+ * The address as the dialog shows it: the host alone on the default HTTP port, else `host:port` (an
+ * IPv6 address in brackets then).
+ */
+private fun AddressTuple.shown(): String =
+    if (port == NvHTTP.DEFAULT_HTTP_PORT) address else toString()

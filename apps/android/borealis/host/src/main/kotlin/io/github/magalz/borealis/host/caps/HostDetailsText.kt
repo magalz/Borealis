@@ -12,8 +12,8 @@ enum class HostState {
 }
 
 /**
- * What the host details dialog says about a host, as plain values. An address is the text to show,
- * port included; a null or blank value is unknown and leaves its line out.
+ * What the host details dialog says about a host, as plain values. An address is the text to show;
+ * a null or blank value is unknown and leaves its line out.
  */
 data class HostDetailsFacts(
     val name: String?,

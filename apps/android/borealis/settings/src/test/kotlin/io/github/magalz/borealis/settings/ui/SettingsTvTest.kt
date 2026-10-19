@@ -1,14 +1,20 @@
 package io.github.magalz.borealis.settings.ui
 
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
@@ -25,6 +31,54 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
+/** The groups of the settings screen, in the order of the list. */
+private val GROUP_TITLES =
+    listOf(
+        "Stream",
+        "Video",
+        "Input",
+        "Gamepad",
+        "On-screen controls",
+        "Audio",
+        "Advanced",
+        "Appearance",
+        "Privacy and diagnostics",
+        "About",
+    )
+
+/** The entry of the group list with [title], and not a row of a pane that has the same words. */
+private fun SettingsScreenTestBase.group(title: String): SemanticsNodeInteraction =
+    composeRule.onNode(
+        hasText(title) and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
+    )
+
+/**
+ * The [entry] is whole inside the window: the list does not cut it, and none of it is outside the
+ * screen, where only a scroll would bring it.
+ */
+private fun SettingsScreenTestBase.assertWholeInWindow(entry: SemanticsNodeInteraction) {
+    val window = composeRule.onRoot().getUnclippedBoundsInRoot()
+    val whole = entry.getUnclippedBoundsInRoot()
+    assertThat(entry.getBoundsInRoot()).isEqualTo(whole)
+    assertThat(whole.top.value).isAtLeast(window.top.value)
+    assertThat(whole.bottom.value).isAtMost(window.bottom.value)
+    assertThat(whole.left.value).isAtLeast(window.left.value)
+    assertThat(whole.right.value).isAtMost(window.right.value)
+}
+
+/** Walks Down from Stream to About: each group takes focus in turn, whole inside the window. */
+private fun SettingsScreenTestBase.walkDownTheGroups() {
+    group(GROUP_TITLES.first()).assertIsFocused()
+    assertWholeInWindow(group(GROUP_TITLES.first()))
+    GROUP_TITLES.zipWithNext().forEach { (from, to) ->
+        group(from).performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+
+        group(to).assertIsFocused()
+        assertWholeInWindow(group(to))
+    }
+}
+
 /** The settings screen on a TV: the groups on the left and the rows of one group on the right. */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = TV)
@@ -36,9 +90,8 @@ class SettingsTvTest : SettingsScreenTestBase() {
         composeRule.waitForIdle()
     }
 
-    // The ten groups are taller than a TV window, so the list scrolls to the one that is chosen.
     private fun selectGroup(title: String) {
-        composeRule.onNodeWithText(title).performScrollTo().performClick()
+        composeRule.onNodeWithText(title).performClick()
         composeRule.waitForIdle()
     }
 
@@ -46,19 +99,21 @@ class SettingsTvTest : SettingsScreenTestBase() {
     fun `the groups are on the left, Privacy and diagnostics and About among them`() {
         show(keyboard = true)
 
-        listOf(
-                "Stream",
-                "Video",
-                "Input",
-                "Gamepad",
-                "On-screen controls",
-                "Audio",
-                "Advanced",
-                "Appearance",
-                "Privacy and diagnostics",
-                "About",
-            )
-            .forEach { composeRule.onNodeWithText(it).performScrollTo().assertIsDisplayed() }
+        // At rest, with no scroll: the ten groups are not too tall for the window.
+        GROUP_TITLES.forEach {
+            group(it).assertIsDisplayed()
+            assertWholeInWindow(group(it))
+        }
+    }
+
+    @Test
+    fun `Down from Stream to About focuses each group in turn, and the list never scrolls`() {
+        show(keyboard = true)
+        val top = group("Stream").getUnclippedBoundsInRoot().top
+
+        walkDownTheGroups()
+
+        assertThat(group("Stream").getUnclippedBoundsInRoot().top).isEqualTo(top)
     }
 
     @Test
@@ -317,6 +372,13 @@ class SettingsHandheldTest : SettingsScreenTestBase() {
         composeRule.onNodeWithText("Stream").assertIsDisplayed()
         composeRule.onNodeWithText("Privacy and diagnostics").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Resolution").assertIsDisplayed()
+    }
+
+    @Test
+    fun `Down from Stream to About focuses each group in turn, whole inside the window`() {
+        show(keyboard = true)
+
+        walkDownTheGroups()
     }
 
     @Test

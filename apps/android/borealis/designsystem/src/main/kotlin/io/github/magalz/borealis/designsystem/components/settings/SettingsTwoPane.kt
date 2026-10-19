@@ -25,7 +25,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
@@ -54,7 +53,6 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 /** One group of a [SettingsTwoPane]: the [key] that identifies it and its [title]. */
 class SettingsGroup<out K>(val key: K, val title: String)
@@ -85,9 +83,11 @@ internal const val GROUP_SELECT_DELAY_MILLIS = 150L
  * the pane, which costs more than a frame to build on a TV, changes and [onSelect] is called with
  * the key only after focus has stayed on the group for [GROUP_SELECT_DELAY_MILLIS], so moving over
  * several groups quickly selects the last one only. A tap or OK on a group selects it at once.
- * Right from any group selects it if the pane has not followed yet, and enters the pane at its
- * first row; Left from the pane, when no row uses the key, returns to the selected group, whichever
- * row it leaves.
+ * Focus that leaves the list for the pane drops a selection that was still waiting, so the pane
+ * never changes under a focused row. Right from any group selects it if the pane has not followed
+ * yet, and enters the pane at its first row once the group has arrived, however late [onSelect]
+ * brings it; another key cancels that entry. Left from the pane, when no row uses the key, returns
+ * to the selected group, whichever row it leaves.
  */
 @Composable
 fun <K> SettingsTwoPane(
@@ -102,14 +102,16 @@ fun <K> SettingsTwoPane(
     val selectedGroup = remember { FocusRequester() }
     val pane = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
-    val scope = rememberCoroutineScope()
     val currentKey by rememberUpdatedState(current?.key)
     val select by rememberUpdatedState(onSelect)
     // The group that D-pad focus moved to and the pane has not followed yet.
     val resting = remember { mutableStateOf<K?>(null) }
+    // The group whose pane Right asked to enter, while [onSelect] has yet to bring it.
+    val entering = remember { mutableStateOf<K?>(null) }
 
     fun selectNow(key: K) {
         resting.value = null
+        entering.value = null
         if (key != currentKey) select(key)
     }
 
@@ -131,17 +133,29 @@ fun <K> SettingsTwoPane(
         if (!pane.requestFocus()) selectedGroup.requestFocus()
     }
 
+    // Focus enters the pane once its group has arrived, whenever the caller applies the selection.
+    // A cancel of the entry, even during the frame, drops it.
+    LaunchedEffect(Unit) {
+        snapshotFlow { entering.value != null && entering.value == currentKey }
+            .collectLatest { arrived ->
+                if (arrived) {
+                    // The rows are composed by now; the next frame has them placed.
+                    withFrameNanos {}
+                    entering.value = null
+                    focusPane()
+                }
+            }
+    }
+
     fun enterPane() {
         val group = resting.value
-        if (group == null) {
-            focusPane()
-        } else {
-            selectNow(group)
-            // The rows of the group are composed in the next frame and placed by the one after.
-            scope.launch {
-                repeat(2) { withFrameNanos {} }
-                focusPane()
+        when {
+            group != null -> {
+                selectNow(group)
+                entering.value = group
             }
+            // Right again, as a held key repeats it, while the group has yet to arrive.
+            entering.value == null -> focusPane()
         }
     }
 
@@ -150,9 +164,17 @@ fun <K> SettingsTwoPane(
             groups,
             current?.key,
             resting,
-            onRest = { resting.value = if (it == currentKey) null else it },
+            onRest = {
+                resting.value = if (it == currentKey) null else it
+                entering.value = null
+            },
             onSelect = ::selectNow,
             onEnterPane = ::enterPane,
+            onOtherKey = { entering.value = null },
+            onLeave = {
+                resting.value = null
+                entering.value = null
+            },
             selectedGroup = selectedGroup,
         )
         Box(
@@ -193,8 +215,9 @@ fun <K> SettingsTwoPane(
 /**
  * The groups by title. The group that has focus and that the pane has not followed yet, [resting],
  * looks selected in place of [selected]. [onRest] is told when focus lands on a group, [onSelect]
- * when a tap or OK selects one, and Right calls [onEnterPane]. [selectedGroup] is where an entry of
- * the list by the D-pad lands.
+ * when a tap or OK selects one, [onEnterPane] when Right is pressed, [onOtherKey] on any other key,
+ * and [onLeave] when focus leaves the list. [selectedGroup] is where an entry of the list by the
+ * D-pad lands.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -205,6 +228,8 @@ private fun <K> GroupList(
     onRest: (K) -> Unit,
     onSelect: (K) -> Unit,
     onEnterPane: () -> Unit,
+    onOtherKey: () -> Unit,
+    onLeave: () -> Unit,
     selectedGroup: FocusRequester,
 ) {
     // Read here, so that a focus move recomposes the list and not the pane.
@@ -217,7 +242,9 @@ private fun <K> GroupList(
             .selectableGroup()
             .onKeyEvent { event ->
                 val right = event.key == Key.DirectionRight
-                if (right && event.type == KeyEventType.KeyDown) onEnterPane()
+                if (event.type == KeyEventType.KeyDown) {
+                    if (right) onEnterPane() else onOtherKey()
+                }
                 right
             }
             // Entering the list by the D-pad lands on the selected group, not the nearest. A
@@ -227,6 +254,7 @@ private fun <K> GroupList(
                     if (direction != FocusDirection.Enter) selectedGroup else FocusRequester.Default
                 }
             }
+            .onFocusChanged { if (!it.hasFocus) onLeave() }
             .focusGroup(),
         verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
     ) {

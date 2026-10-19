@@ -134,7 +134,7 @@ private fun DetailsDialog(details: String, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun DialogMessage(message: String) {
+internal fun DialogMessage(message: String) {
     Text(
         message,
         style = MaterialTheme.typography.bodyMedium,

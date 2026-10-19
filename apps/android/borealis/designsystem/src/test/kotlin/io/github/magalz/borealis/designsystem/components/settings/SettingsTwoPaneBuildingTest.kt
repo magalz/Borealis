@@ -37,7 +37,8 @@ class SettingsTwoPaneBuildingTest {
     /** The groups whose row was composed from nothing, in that order. */
     private val built = mutableListOf<String>()
 
-    private val groups = listOf("g1", "g2", "g3", "g4", "own").map { SettingsGroup(it, "Group $it") }
+    private val groups =
+        listOf("g1", "g2", "g3", "g4", "own").map { SettingsGroup(it, "Group $it") }
 
     @Test
     fun `the selected group is composed at once and the others in the frames after the first`() {

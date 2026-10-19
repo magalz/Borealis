@@ -1,6 +1,5 @@
 package io.github.magalz.borealis.designsystem.components.settings
 
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -20,13 +19,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -62,8 +59,8 @@ class SettingsGroup<out K>(val key: K, val title: String)
 
 private val PANE_GAP = 12.dp
 /** An outline sits 5dp outside its item, so neighbours need 10dp between them. */
-private val ITEM_GAP = 10.dp
-private val AREA_PADDING = 8.dp
+internal val ITEM_GAP = 10.dp
+internal val AREA_PADDING = 8.dp
 private val GROUP_PADDING_HORIZONTAL = 12.dp
 private val GROUP_PADDING_VERTICAL = 10.dp
 
@@ -76,8 +73,15 @@ internal const val GROUP_SELECT_DELAY_MILLIS = 150L
  * spaces its rows 10dp apart; [content] puts the rows of the group in it, with 8dp of padding
  * around them already given. A group for which [selfScrolling] is true brings its own scroll and
  * padding: its [content] fills the pane, which does not wrap it in a scroll that would give it an
- * unbounded height. When the group changes, the rows are updated in place, not composed again, and
- * the pane opens the new group at its top.
+ * unbounded height.
+ *
+ * Every group has a pane of its own, composed once and kept, so that moving to a group costs a
+ * layout and a draw and no composition. The pane of the selected group is composed at once, those
+ * of the others after the first frame, one in each frame, and a pane that is not shown is neither
+ * measured nor placed, takes no focus and is left out of the semantics tree. A group for which
+ * [selfScrolling] is true brings content and work of its own (the screen of Privacy, say), so its
+ * pane is composed only when the group is first selected. A pane opens at its top whenever it is
+ * shown.
  *
  * Groups are identified by key, not by position, so a screen can hide a group on some devices
  * without moving the selection. A [selected] key that no group has falls back to the first group,
@@ -106,9 +110,14 @@ fun <K> SettingsTwoPane(
     val selectedGroup = remember { FocusRequester() }
     val pane = remember { FocusRequester() }
     val navigation = rememberGroupNavigation(current?.key, onSelect, pane, selectedGroup)
+    val composed = rememberComposedGroups(groups, current?.key, selfScrolling)
     Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(PANE_GAP)) {
         GroupList(groups, current?.key, navigation, selectedGroup)
-        Box(
+        GroupPanes(
+            groups,
+            composed,
+            current?.key,
+            selfScrolling,
             Modifier.weight(1f)
                 .fillMaxHeight()
                 .focusRequester(pane)
@@ -118,30 +127,9 @@ fun <K> SettingsTwoPane(
                     if (left && event.type == KeyEventType.KeyDown) selectedGroup.requestFocus()
                     left
                 }
-                .focusGroup()
-        ) {
-            if (current != null) {
-                // The rows are updated in place when the group changes: composing them again
-                // costs about twice as much on a TV. Each group has its own scroll, so that it
-                // opens at its top, and its switches are made again (see LocalSettingsGroup).
-                CompositionLocalProvider(LocalSettingsGroup provides current.key) {
-                    if (selfScrolling(current.key)) {
-                        Column(Modifier.fillMaxSize()) { content(current.key) }
-                    } else {
-                        val scroll =
-                            rememberSaveable(current.key, saver = ScrollState.Saver) {
-                                ScrollState(0)
-                            }
-                        Column(
-                            Modifier.fillMaxSize().verticalScroll(scroll).padding(AREA_PADDING),
-                            verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
-                        ) {
-                            content(current.key)
-                        }
-                    }
-                }
-            }
-        }
+                .focusGroup(),
+            content,
+        )
     }
 }
 

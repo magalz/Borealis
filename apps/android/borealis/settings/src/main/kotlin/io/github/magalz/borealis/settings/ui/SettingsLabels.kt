@@ -105,15 +105,15 @@ internal fun disabledNote(disabled: RowState.Disabled?): String? =
                 }
     }
 
-/** What the row of the list [item] shows as its value, for [state]. */
+/** What the row of the list [item] shows as its value, for its [value]. */
 @Composable
-internal fun choiceValue(item: SettingsItem, state: SettingsUiState): String {
-    val key = item.selectedChoiceKey(state.snapshot)
+internal fun choiceValue(item: SettingsItem, value: RowValue): String {
+    val key = value.choiceKey
     return when (item) {
         SettingsItem.RESOLUTION ->
-            state.resolutionChoices.firstOrNull { it.key == key }?.let { resolutionLabel(it) }
+            value.resolutionChoices.firstOrNull { it.key == key }?.let { resolutionLabel(it) }
         SettingsItem.FRAME_RATE ->
-            state.frameRateChoices
+            value.frameRateChoices
                 .firstOrNull { it.fps.toString() == key }
                 ?.let { frameRateLabel(it) }
                 ?: key.toIntOrNull()?.let { frameRateLabel(FrameRateChoice(it, isNative = false)) }

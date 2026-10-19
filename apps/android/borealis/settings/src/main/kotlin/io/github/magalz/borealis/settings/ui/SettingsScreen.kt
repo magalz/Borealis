@@ -132,7 +132,7 @@ private fun PhoneSettings(
             for (group in state.groups) {
                 SettingsGroupHeader(stringResource(group.group.titleRes))
                 for (item in group.items) {
-                    SettingsItemRow(item, state, actions, overlays.requests)
+                    SettingsItemRow(item, state.rowValue(item.item), actions, overlays.requests)
                 }
             }
             SettingsValueRow(
@@ -194,7 +194,9 @@ private fun TwoPaneSettings(
                     state.groups
                         .firstOrNull { it.group == group }
                         ?.items
-                        ?.forEach { SettingsItemRow(it, state, actions, overlays.requests) }
+                        ?.forEach {
+                            SettingsItemRow(it, state.rowValue(it.item), actions, overlays.requests)
+                        }
             }
         }
     }

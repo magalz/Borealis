@@ -170,7 +170,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
 
     // BOREALIS: first-frame watchdog (host.video)
     private final io.github.magalz.borealis.host.video.StreamStartupGuard startupGuard =
-            io.github.magalz.borealis.host.video.StreamStartup.create(
+            new io.github.magalz.borealis.host.video.StreamStartupGuard(
                     () -> connectionTerminated(MoonBridge.ML_ERROR_NO_VIDEO_FRAME));
     private boolean reportedCrash;
 

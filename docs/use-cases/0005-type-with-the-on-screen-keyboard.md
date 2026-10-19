@@ -58,7 +58,7 @@ awkward to type.
 
 ### A4: The user types digits, function keys or arrows (branches from step 4)
 
-1. The user taps Fn 123. The key says "123" because the digits are behind it. The
+1. The user taps the key that reads "Fn 123"; the digits are behind it. The
    three letter rows give way to the digits 1 to 0, the keys F1 to F10, and the
    arrows with Home, End, PgUp, PgDn and Del. The bottom row stays, and Fn 123
    shows as on.

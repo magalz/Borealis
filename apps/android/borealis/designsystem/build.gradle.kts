@@ -7,9 +7,9 @@ plugins {
 android {
     namespace = "io.github.magalz.borealis.designsystem"
 
-    // Test-only helpers shared by the tests of designsystem, library, settings and stream: window
-    // settling for the screenshot tests, and fake input devices. A test fixtures artifact is never
-    // packaged into an APK, unlike a main source set.
+    // Test-only helpers shared by the tests of designsystem, library, settings, stream and app:
+    // window settling for the screenshot tests, and fake input devices. A test fixtures artifact is
+    // never packaged into an APK, unlike a main source set.
     testFixtures { enable = true }
 
     sourceSets {

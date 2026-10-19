@@ -50,6 +50,11 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
                 )) {
                 dependencies.add("testImplementation", libs.findLibrary(name).get())
             }
+            // The input device helpers of the controller tests.
+            dependencies.add(
+                "testImplementation",
+                dependencies.testFixtures(project(":borealis:designsystem")),
+            )
             addInstrumentedTestDependencies()
         }
 

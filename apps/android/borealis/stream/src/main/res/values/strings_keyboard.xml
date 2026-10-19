@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Key names are what Windows calls them, so they are not translated. -->
+    <!-- Key names are what Windows calls them, except "Fn 123" (see below). No key name is translated. -->
     <string name="stream_keyboard_shift" translatable="false">Shift</string>
     <string name="stream_keyboard_ctrl" translatable="false">Ctrl</string>
     <string name="stream_keyboard_alt" translatable="false">Alt</string>

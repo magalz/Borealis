@@ -381,6 +381,37 @@ Java to Kotlin, one area at a time.
 - **Deferred RTSP parser rework.** The moonlight-common-c rework `aeba988` is
   deferred by the owner. See the [third-party notes](../core/third_party/README.md).
 
+From the Sprint 9 quality review. None of these changes behaviour, and none is
+scheduled yet.
+
+- **Quit wording in three places.** The choice between the Desktop text and the
+  game text is made in the Library action sheet (`AppActionsSheet.kt`), the
+  stream menu (`QuitConfirmation.kt`) and the conflict dialog
+  (`ConflictDialog.kt`). The strings repeat across `strings_apps.xml`,
+  `strings_menu.xml` and `strings_conflict.xml`, and the Library stores a flag
+  while the stream decides from the name of the app.
+- **`MenuChordDetector.update`** (`borealis/stream/.../input/MenuChordDetector.kt`).
+  Cyclomatic complexity 13 and cognitive complexity 18, seven mutable fields, a
+  repeated expression, and an order dependency with no comment.
+- **Host details.** `ComputerDetails.toDetailsFacts` in `ComputerHostRepository.kt` (in `:app`) maps the
+  whole `Host` with `toHost()` to read one name, the running app. It holds a
+  third copy of the online, offline and unknown mapping, and the code has three
+  definitions of "no MAC address".
+- **Deprecated `FocusProperties.enter`.** The Settings group list
+  (`SettingsTwoPane.kt`), `NavigationRail.kt` and `SegmentedControl.kt` in
+  `:borealis:designsystem` still use it.
+- **Copied spacing constants.** "5 dp outline, 8 dp padding, 10 dp gap" sits in
+  about eight places, for example `ActionSheet.kt`, `ChoiceSheet.kt`,
+  `NavigationRail.kt`, `AuditScreen.kt` and `PrivacyPane.kt`. They belong in
+  `BorealisDimens`.
+- **Test size and duplication.** The Sprint 9 tests run about 1,160 lines
+  against about 590 lines of implementation, with repeated group lists and
+  helpers. They belong in shared test support (the `testFixtures` of
+  `:borealis:designsystem`).
+- **Two background defaults for one concept.** `LibraryNavHost` defaults to
+  `BackgroundStyle.Default` and `LibraryScaffold` (in `LibraryRail.kt`) defaults
+  to `BackgroundStyle.Off`.
+
 ## Host-side items (LuminalShine)
 
 These are proposals and known issues in the LuminalShine host. The client works

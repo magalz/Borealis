@@ -9,14 +9,14 @@ import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.repository.SettingsRepository
 
 /** A background style and the stable id that stores it. */
-class BackgroundChoice(val id: String, val style: BackgroundStyle)
+internal class BackgroundChoice(val id: String, val style: BackgroundStyle)
 
 /**
  * The background styles that the Appearance setting offers, and how [Settings.BACKGROUND] stores
  * them: by a stable string id, never by the ordinal of the [BackgroundStyle], so that reordering or
  * adding a style cannot change what a user chose.
  */
-object BackgroundChoices {
+internal object BackgroundChoices {
     /** Every style, in the order of the Background row. The first is the default. */
     val all: List<BackgroundChoice> =
         listOf(

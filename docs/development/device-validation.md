@@ -1,10 +1,10 @@
 # Device validation runbook
 
-This runbook checks Borealis Phase 1 and Sprints 2 to 8 on two devices against
+This runbook checks Borealis Phase 1 and Sprints 2 to 9 on two devices against
 LuminalShine 26.09.1 running on the owner's Windows PC. It is for the owner and
 for the orchestrator who runs the checks. Run the steps in order and record the
-results as a new section with a table, like sections 7 to 10. Sections 6 to 13
-hold the results of Phase 1 and Sprints 2 to 8, in that order.
+results as a new section with a table, like sections 7 to 10. Sections 6 to 14
+hold the results of Phase 1 and Sprints 2 to 9, in that order.
 
 Sources: [host contract](../host-contract/luminalshine.md) (cited as "contract"),
 [Borealis Android README](../../apps/android/borealis/README.md),
@@ -290,10 +290,14 @@ removed in the Web UI.
    the host Options of the PC (long-press its card on a phone; on a TV, hold OK,
    or press X or Menu on a pad) and choose Details. The card itself shows the
    address and the codec and HDR tags.
-2. The dialog holds the host details of `ComputerDetails` (the name, the state,
-   the addresses, the UUID, the MAC address and more) and the capability block
-   below, which `HostInfoText` builds. The diagnostic bundle does not hold the
-   block: it has only the `host capabilities` log line of step 4.
+2. The dialog starts with plain lines that `HostDetailsText` builds: Name,
+   Status, Address, Other addresses, Paired, MAC address (for wake) and Running.
+   A line whose value is not known is left out, except Status, which reads
+   "Checking…" until the host has answered. An address shows its port only when
+   it is not the default HTTP port. The lines hold no UUID and no HTTPS port. The
+   capability block, which `HostInfoText` builds, follows after a blank line. The
+   diagnostic bundle does not hold either: it has only the `host capabilities`
+   log line of step 4.
 3. Expected for the 26.09.1 capture (`serverinfo-http.xml`, codec mask
    `0x001C0301`, codec flags `0x13` in `host_caps.tsv`), in the block of the
    dialog:
@@ -310,7 +314,7 @@ removed in the Web UI.
    The reader runs on every `/serverinfo` poll and logs a host only when its
    information changes, so the line does not repeat while nothing changes.
 5. Evidence: a screenshot of the dialog and the logcat capture. The dialog
-   shows the addresses, the UUID and the MAC address of the PC: hide them
+   shows the name, the addresses and the MAC address of the PC: hide them
    (section 5).
 
 ### 3.5 Two devices launching at the same time
@@ -414,9 +418,12 @@ removed in the Web UI.
 ### 3.9 First frame
 
 1. Start a stream from a host with no app running. Note the start time.
-2. Expected: the overlay shows "The host is preparing the display."
-   (`stream_preparing_display`) from the start until the first video frame
-   (`PreparingMessage`), then the overlay hides.
+2. Expected: the Starting screen covers the stream from the start until the
+   first video frame. Its steps say where the start is, and its step "Preparing
+   the display" (`stream_starting_step_display`) is the only place that says so.
+   No overlay text "The host is preparing the display." shows at any time:
+   Sprint 9 removed it (issue #31), because it was never visible under the
+   Starting screen.
 3. Expected in logcat: one line `Received first video packet after N ms` with
    tag `Borealis.COMMONC` (`VideoStream.c`, the `Limelog` call). Note the N.
    `N` is measured inside moonlight-common-c, so it is not the same as the
@@ -427,8 +434,7 @@ removed in the Web UI.
    preparing its display or encoder. Try again. If it keeps happening, restart
    the host or check its virtual display settings." (`stream_luminalshine_hint`).
 5. Evidence: the N value, the wall-clock time to the picture, a screenshot of the
-   overlay cropped to the overlay text (not of the stream, section 5) and the
-   logcat capture.
+   Starting screen (not of the stream, section 5) and the logcat capture.
 
 ### 3.10 Stream end and reconnect
 
@@ -490,7 +496,8 @@ the TV attached to the Streamer (section 11, item A5). Record the Streamer as
 1. Phone: on Hosts, tap the gear, then Settings. TV and handheld: in the rail,
    choose Settings. The groups are on the left and their rows on the right.
 2. Expected: the groups are Stream, Video, Input, Gamepad, On-screen controls,
-   Audio, Advanced, Privacy and diagnostics, and About. The On-screen controls
+   Audio, Advanced, Appearance, Privacy and diagnostics, and About. The Appearance
+   group holds the Background row (3.22). The On-screen controls
    group is shown only on a phone (a device with a touchscreen). A group the
    device does not use is not in the list. On a phone, Privacy and diagnostics
    is a link row.
@@ -767,11 +774,11 @@ For a system pad, turn it off. Say which kind each run used.
      is not paired, and wake when it is offline. Hold OK, or long-press the card,
      to open its options. On the TV, also press X or Menu on a pad: the options
      open. Expected: each action runs as described, and the options open only
-     from the hold, the long press, X or Menu. On the TV and a handheld, the cards
-     have equal height (176 dp, `size.host-card.height-tv` in
-     `design/tokens.json`), so a row lines
-     up. On the S22 without a pad, the cards size to their content. With a pad
-     connected in landscape, the S22 is a handheld (step 7).
+     from the hold, the long press, X or Menu. On the TV, the cards have equal height
+     (at least 176 dp, `size.host-card.height-tv` in `design/tokens.json`), so a
+     row lines up. On a handheld and on a phone, the cards size to their content
+     (Sprint 9, issue #25; checked in 3.22 step 10). With a pad connected in
+     landscape, the S22 is a handheld (step 7).
    - Aurora loader: open Hosts, Apps and Pairing while each one loads. Expected:
      the same aurora loader on all three.
    - Pairing check: on Pairing, the PIN is centred with its line below it. When
@@ -818,7 +825,8 @@ For a system pad, turn it off. Say which kind each run used.
    setting does not apply to it.
    - Layout: with the pad off, open the Library. Switch the pad on. Expected:
      the Library switches to the handheld layout, with a rail of Hosts, Add
-     host and Settings, and host cards of equal height. Switch the pad off.
+     host and Settings, and host cards that size to their content (Sprint 9).
+     Switch the pad off.
      Expected: the phone layout returns. Neither change needs the app to be
      reopened.
    - Stream: start a stream with the pad only, on a host card, then Desktop.
@@ -898,12 +906,191 @@ only.
     it shows no address, host name, PIN or PC screen (section 5), and the logcat
     capture of 1.4.
 
+### 3.22 Sprint 9 checks
+
+Run these with the Sprint 9 build on the Google TV Streamer and on the S22 in
+landscape with a pad. The S22 with a pad is the owner's handheld. Sprint 9
+reworked Settings, added the background and changed Quit and the pad rules, so
+this is a full pass of those paths. Record each item as `pass`, `fail` or `not
+applicable`, with a short note for each `fail`. Where a step names one device, run
+it there only. The Streamer shows nine Settings groups, because it has no
+touchscreen and so no On-screen controls group. The S22 shows ten.
+
+A debug build that was just installed runs slower until the JIT has warmed up.
+Before the Settings steps, open Settings and move through every group a few
+times. Section 14 says how the group switch was measured.
+
+Steps 1 to 9 run on the Streamer. Steps 10 to 17 run on the S22 in landscape with
+a Bluetooth pad, which is a system pad, except where a step says otherwise.
+
+1. Settings, opening and groups.
+   - Open Settings from the rail with the D-pad. Expected: focus lands on the
+     Stream group, not on the rail item.
+   - Expected: the list shows Stream, Video, Input, Gamepad, Audio, Advanced,
+     Appearance, Privacy and diagnostics and About, all whole inside the window,
+     with no scrolling. Moving down the groups does not scroll the list.
+   - Press Left on the group. Expected: focus returns to the Settings item of the
+     rail.
+2. Settings, moving between groups.
+   - Press Down and Up over the groups. Expected: the pane changes together with
+     focus, and a switch feels instant. There is no wait.
+   - Hold Down over the groups, through Privacy and diagnostics to About, and
+     back with Up. Expected: no stutter. Privacy and diagnostics may take a
+     moment the first time, because its pane is built when it is selected (about
+     230 ms in section 14).
+   - Press Down once and then Right at once. Expected: Right enters the first row
+     of the new group, not of the group left behind, and focus is not lost.
+   - In a group with several rows, press Right and scroll down with the D-pad.
+     Move to another group and back. Expected: the group opens at its top.
+   - Change a switch in one group and move to another group. Expected: the
+     switches of the other group show their own state, and no thumb slides.
+   - Left from a row returns to the selected group.
+3. Appearance, Background.
+   - Select the Appearance group, then the Background row. Expected: the row shows
+     Aurora curtains. Its list offers, in this order, Aurora curtains, Soft glow,
+     Northern lights, Light mist, Flowing light, Starfield and Off, with Aurora
+     curtains focused.
+   - Choose each of the seven styles in turn. Expected: the background behind
+     Settings changes at once, with no restart. Off is the plain page colour. The
+     four clips (Northern lights, Light mist, Flowing light and Starfield) play and
+     loop without a visible seam. Their still shows until the clip plays. Aurora
+     curtains and Soft glow move slowly. Record any stutter, and the style.
+   - Choose Starfield, leave Settings and come back, then stop the app (`adb -s
+     <serial-tv> shell am force-stop io.github.magalz.borealis.debug`) and open it
+     again. Expected: the choice is kept.
+   - Set the style back to Aurora curtains.
+4. The background across the screens, and not in a stream.
+   - Choose Northern lights. Open Hosts, Apps, Add host, Settings and Privacy and
+     diagnostics, then the Audit trail. Expected: the background shows behind
+     each of them. The rail keeps its own colour. No screen shows a page colour of
+     its own.
+   - Move between the screens. Expected: the screen that is left goes at once and
+     the next one fades in over about 150 ms, with no frame that shows two
+     screens one over the other.
+   - Start a stream. Expected: no background shows on the Starting screen or in
+     the stream, and the stream runs as before. During the stream the Library is
+     stopped, so no player of the background runs (`adb -s <serial-tv> shell
+     dumpsys activity activities` shows `LibraryActivity` as stopped;
+     `TODO(verify)`: the exact line). End the stream. Expected: the background
+     plays again.
+   - Turn the system animations off (Developer options, Animator duration scale
+     off, or `adb -s <serial-tv> shell settings put global animator_duration_scale
+     0`). Stop the app and open it again. Expected: Aurora curtains is one still
+     frame, and a clip style shows its still, with no movement. Turn the
+     animations back on (`1`).
+5. Quit texts.
+   - With Desktop running, open the in-game menu. Expected: the Quit row reads
+     "Quit Desktop" with "Ends the stream." and "The display and controls go back
+     to the PC." on two lines. Choose it. Expected: the confirmation is titled
+     "Quit Desktop?", its body is the same two lines, and Cancel has the focus.
+     Cancel returns to the menu. Confirm once. Expected: "Quitting Desktop…", then
+     the Library with "Nothing running".
+   - With a game running (an app that is not Desktop, chosen by the owner), open
+     the menu. Expected: "Quit `<app>`" with "Closes `<app>` on the PC." and "Unsaved
+     progress in it is lost." on two lines. The confirmation is titled "Quit
+     `<app>`?" with the same body. Cancel. Do not confirm: the game may hold unsaved
+     progress. Disconnect is unchanged ("`<app>` keeps running on the PC").
+   - Leave the stream with Disconnect and open Apps. Open the actions of the
+     running app. Expected, with a game running: Quit has the two lines of the
+     game, and "Quit `<game>` and start `<other>`" says "Closes `<game>` on the PC
+     first." and "Unsaved progress in it is lost." With Desktop running: Quit has
+     the two Desktop lines, and "Quit Desktop and start `<other>`" says "Ends the
+     stream first." and "Nothing is lost." Each confirmation has only "Quit
+     `<running app>`?" as its title and the consequence as its body.
+   - Conflict dialog: let the S22 run Desktop, then start an app on the Streamer.
+     Expected: "An app is already running", and the warning reads "Quitting ends
+     the stream on the other device." only. Repeat with a game on the S22.
+     Expected: "Quitting ends the stream on the other device and closes the app."
+     and, on a second line, "Unsaved progress in it is lost." Cancel has the focus.
+     Choose Cancel.
+6. Host details. Open the host options of the PC and choose Details. Expected:
+   - plain lines: `Name`, `Status`, `Address`, `Other addresses` when the host has
+     any besides the one in use, `Paired`, `MAC address (for wake)` and
+     `Running` while an app runs. A line whose value is not known is missing. The
+     status is `Online`, `Offline` or `Checking…`;
+   - the address has no port when it is the default HTTP port;
+   - no UUID, and no `null` or `OFFLINE` text;
+   - the capability block follows after a blank line, with its ports (3.4).
+
+   The dialog shows addresses and the MAC address of the PC: hide them in any
+   capture (section 5).
+7. The Starting screen. Start a stream. Expected: the Starting screen shows its
+   steps, including "Preparing the display", and no "The host is preparing the
+   display." text appears over it or over the stream at any time (3.9 step 2).
+8. Send to phone, the two states that no round has run. Export the bundle (3.14
+   step 7) and choose Send to phone, then do not download.
+   - Expired: wait 5 minutes. Expected: "The link expired. Try again for a new
+     one."
+   - No network: the owner turns the Wi-Fi of the Streamer off, then opens Send to
+     phone again. Expected: the dialog says "This device is not on a local network,
+     so a phone cannot reach it. Use the adb command below instead." and shows the
+     adb command. ADB runs over Wi-Fi, so the connection drops: read the
+     result on the screen, then turn the Wi-Fi on and connect again (1.1 step 9).
+     Do not change any other network setting.
+9. The rows of section 12 that no round recorded (F15 and F16). Run the visual
+   items of 3.20 step 5 for them: the dialog frames of Forget, Saved with Send to
+   phone, About, Host details and App details, on the Streamer; and the Aurora
+   loader, the PIN and "Paired", the error actions, the TV keyboard row and the
+   phone host cards at their content size, on the Streamer and the S22.
+10. Host cards and the phone bar gap.
+    - Connect the pad and open Hosts. Expected: the layout is the handheld layout,
+      with the rail, and the host cards follow their content: no card has empty
+      space under its last line. Compare with the Streamer, where the cards of a
+      row have equal height (at least 176 dp).
+    - Switch the pad off and turn the phone to portrait. Open Apps, Settings,
+      Privacy and diagnostics and the Audit trail. Expected: the back arrow, the
+      title and the actions have the same 4 dp between them on all four. The title
+      starts at the same distance from the arrow on each.
+11. Fn 123. In a stream, open Keyboard from the in-game menu. Expected: the
+    bottom row reads Ctrl, Win, Alt, Space, Tab and "Fn 123". Tap it. Expected: the
+    digits 1 to 0, F1 to F10 and the arrows with Home, End, PgUp, PgDn and Del
+    show, and "Fn 123" shows as on. Tap it again. Expected: the letters return. Type
+    only into a test file on the PC (section 5).
+12. A keyboard alone. Pair the AULA F75Max over Bluetooth and keep the pad off, in
+    landscape.
+    - Open the Library. Expected: the phone layout stays, with no rail. Connect and
+      disconnect the keyboard: the layout does not change.
+    - Clear logcat, start a stream and end it. Expected: no line `Creating
+      controller context for device: AULA` with the tag `Borealis.UPSTREAM`.
+    - Switch the pad on. Expected: the layout becomes the handheld layout, and a
+      stream creates a controller context for the pad only.
+13. The quit combo, in the order that Sprint 8 found. Turn Gamepad mouse on in
+    Settings, Input, so that a long Start hold could toggle it. Start a stream
+    with the pad, a system pad. Press Start, Select, LB and RB together.
+    - Let go of LB and RB first, keep Start and Select held for more than a
+      second, then let go of them. Expected: the stream ends once all four are
+      let go. The menu does not open. Steam does not open on the PC. "Mouse
+      emulation is: ON" does not show.
+    - Repeat, and let go of Start and Select soon after the bumpers, one before
+      the other. Expected: no Guide tap reaches the PC, so Steam does not open.
+    - Repeat three more times with different orders of letting go. Expected: the
+      same.
+    - Hold Select and Start alone for one second. Expected: the menu still opens.
+14. The Gamepad mouse speed slider. In Settings, Input, set Gamepad mouse speed
+    to 10 %, start a stream, and move the pointer with the stick. Repeat at 200 %.
+    Expected: the pointer is slow at 10 % and fast at 200 %. A change made during a
+    stream does not change that stream (3.20 step 1).
+15. The quit combo on a pad that the app's USB driver holds, on the final build.
+    Plug the 8BitDo receiver into the S22, with ADB over Wi-Fi, and turn USB driver
+    for Xbox controllers on in Settings, Gamepad. Press Start, Select, LB and RB
+    together, then let all four go, once with the bumpers first. Expected: the
+    stream ends, the menu does not open, Steam does not open, and the gamepad mouse
+    does not turn on or off.
+16. The battery saver. Turn the battery saver on and open the Library with a
+    clip style chosen. Expected: the clip does not play and its still shows. Turn
+    the saver off. Expected: the clip plays. With Aurora curtains, the saver stops
+    the movement, and turning it off starts it again.
+17. Evidence: for each item, the note above. A screenshot is taken only where it
+    shows no address, host name, PIN or PC screen (section 5), and the logcat
+    capture of 1.4. Take no capture during a stream, because it would show the PC
+    screen.
+
 ## 4. Results templates
 
 Copy one table per device. Use `pass`, `fail` or `not applicable`, and add a
 short note for each `fail`. The tables list sections 2 to 3.12. Add a row for
-every scenario you ran, such as 3.13 to 3.21 (one row per item for the sprint
-checks 3.19 to 3.21).
+every scenario you ran, such as 3.13 to 3.22 (one row per item for the sprint
+checks 3.19 to 3.22).
 
 ### 4.1 Samsung Galaxy S22 (USB or wireless ADB)
 
@@ -1834,3 +2021,81 @@ No crash or ANR appeared in logcat in any part.
   on the Guide button. Released together, the order of the events decides, which
   is why it happens only sometimes. Not a Sprint 8 change. The owner chose to
   fix it in Sprint 9, test first.
+
+## 14. Results: Sprint 9
+
+This section holds the Sprint 9 results. The checks follow the steps of
+[section 3.22](#322-sprint-9-checks). The TV measurement is recorded. The device
+round has not run yet, so its results are a placeholder.
+
+### Setup
+
+- Build: the debug APK of the phase branch `phase/s9-ux-handheld`. To fill in
+  after the round: the commit that was built and installed.
+- Host: LuminalShine 26.09.1. To confirm after the round.
+- Devices: the Google TV Streamer, over wireless ADB, and the Galaxy S22 in
+  landscape with a pad, over USB or wireless ADB.
+- Pads and keyboard: to fill in after the round (the 8BitDo pads and the AULA
+  F75Max keyboard of Sprint 8).
+- Rounds: to fill in after the round.
+- Evidence: logcat and `dumpsys` over ADB. Captures are cropped to the menu or the
+  overlay, or reduced to unreadable thumbnails, and deleted after use (section 5).
+
+### TV measurement: moving between Settings groups
+
+The Google TV Streamer, debug builds, with the app warmed up. A freshly installed
+debuggable build runs slower until the JIT has warmed up, so open Settings and
+move through the groups a few times before measuring.
+
+The method, for each move between two groups:
+
+- Start the trace with `atrace --async_start -a <package> gfx view input`.
+- Move focus with the D-pad, stop the trace and pull it.
+- For each `deliverInputEvent`, take the `Choreographer#doFrame` that follows it.
+  That frame draws the effect of the key. Its length is the group switch frame.
+  The time from the key to the frame that shows focus and the pane is the second
+  figure.
+
+The scripts that ran the trace and read the frame times are not in the repository.
+
+| Build | Group switch frame | Focus and pane shown after the key |
+| --- | --- | --- |
+| S8, before (the phase base `68a8972a`: selection followed focus, and each move built the whole pane) | 87 to 169 ms | focus and pane 120 to 400 ms |
+| Keyed pane, rejected (the pane keyed by its group, `191b0268`) | 254 to 464 ms | not recorded |
+| Tabs (a pane composed once per group, `95bd5feb`, with a 150 ms wait before the pane follows focus) | 58 to 78 ms | focus about 25 ms, pane about 240 ms with the 150 ms wait |
+| Stacked v1 (the panes laid out and stacked, `6b9f2eb2`, with a 30 ms wait) | about 70 ms | pane about 110 ms |
+| **Final** (a switch changes layers with no wait, `1f2d9769`, merge `1b6d651f`) | **about 50 ms** | **focus and pane together 55 to 100 ms** |
+
+- An intermediate build that updated the rows in place, before the pane was kept
+  per group, measured about 209 ms of pane frame and about 430 ms until the pane
+  showed (message of `95bd5feb`).
+- Privacy and diagnostics takes about 230 ms on entry, because its pane is built
+  when it is selected. About takes about 100 ms.
+- Opening Settings: the first frame takes about 340 ms. Then the panes of the
+  other groups are built one per frame, in frames of 110 to 250 ms over about
+  1.2 s.
+
+### Device round
+
+Not run yet. After the round, one row per step of
+[section 3.22](#322-sprint-9-checks) goes here, with the result, the device, the
+evidence and a note for each failure.
+
+| # | Item | Device | Result | Evidence and notes |
+| --- | --- | --- | --- | --- |
+| 1 | Settings, opening and groups | TV | not run | |
+| 2 | Settings, moving between groups | TV | not run | |
+| 3 | Appearance, Background (the seven styles) | TV | not run | |
+| 4 | The background across the screens, and not in a stream | TV | not run | |
+| 5 | Quit texts | TV | not run | |
+| 6 | Host details | TV | not run | |
+| 7 | The Starting screen | TV | not run | |
+| 8 | Send to phone: Expired and No network | TV | not run | |
+| 9 | Rows F15 and F16 of section 12 | TV, S22 | not run | |
+| 10 | Host cards and the phone bar gap | S22 | not run | |
+| 11 | Fn 123 | S22 | not run | |
+| 12 | A keyboard alone | S22 | not run | |
+| 13 | The quit combo, bumpers first | S22 | not run | |
+| 14 | The Gamepad mouse speed slider at 10 % and 200 % | S22 | not run | |
+| 15 | The quit combo on a USB-driver pad, final build | S22 | not run | |
+| 16 | The battery saver | S22 | not run | |

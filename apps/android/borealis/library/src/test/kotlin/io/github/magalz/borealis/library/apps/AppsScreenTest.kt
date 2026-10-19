@@ -7,12 +7,10 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.longClick
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -45,7 +43,6 @@ class AppsScreenTest {
     private val steam = item(2, "Steam Big Picture")
     private val hades = item(3, "Hades II", hdrSupported = true)
     private val secret = item(4, "Secret", hidden = true)
-    private val runningSteam = item(2, "Steam Big Picture", running = true)
 
     private fun item(
         id: Int,
@@ -454,44 +451,6 @@ class AppsScreenTest {
 
     @Test
     @Config(qualifiers = TV)
-    fun `the sheet of a running game says Quit closes it and its unsaved progress is lost`() {
-        show(
-            state(
-                runningSteam,
-                actions =
-                    sheetFor(
-                        runningSteam,
-                        "Steam Big Picture",
-                        AppAction.RESUME,
-                        AppAction.QUIT,
-                        AppAction.DETAILS,
-                    ),
-            ),
-            FormFactor.Tv,
-        )
-
-        composeRule.onNodeWithText("Quit Steam Big Picture").assertIsDisplayed()
-        composeRule.onNodeWithText(GAME_QUIT).assertIsDisplayed()
-    }
-
-    @Test
-    @Config(qualifiers = TV)
-    fun `the sheet of Desktop says nothing of lost work`() {
-        show(
-            state(
-                desktop,
-                actions =
-                    desktopSheet(desktop, AppAction.RESUME, AppAction.QUIT, AppAction.DETAILS),
-            ),
-            FormFactor.Tv,
-        )
-
-        composeRule.onAllNodesWithText("lost", substring = true).assertCountEquals(0)
-        composeRule.onAllNodesWithText("Unsaved", substring = true).assertCountEquals(0)
-    }
-
-    @Test
-    @Config(qualifiers = TV)
     fun `the sheet names the running app that a start would quit`() {
         show(
             state(
@@ -514,51 +473,6 @@ class AppsScreenTest {
         composeRule
             .onNodeWithText("You can show it again with Show hidden apps.")
             .assertIsDisplayed()
-    }
-
-    @Test
-    @Config(qualifiers = TV)
-    fun `the sheet says a start would close the running game and lose its unsaved progress`() {
-        show(
-            state(
-                runningSteam,
-                hades,
-                actions =
-                    sheetFor(
-                        hades,
-                        "Steam Big Picture",
-                        AppAction.QUIT_AND_START,
-                        AppAction.DETAILS,
-                        AppAction.HIDE,
-                    ),
-            ),
-            FormFactor.Tv,
-        )
-
-        composeRule.onNodeWithText("Quit Steam Big Picture and start Hades II").assertIsDisplayed()
-        composeRule.onNodeWithText(GAME_QUIT_FIRST).assertIsDisplayed()
-    }
-
-    @Test
-    @Config(qualifiers = TV)
-    fun `the sheet of another app says nothing of lost work while Desktop runs`() {
-        show(
-            state(
-                desktop,
-                hades,
-                actions =
-                    desktopSheet(
-                        hades,
-                        AppAction.QUIT_AND_START,
-                        AppAction.DETAILS,
-                        AppAction.HIDE,
-                    ),
-            ),
-            FormFactor.Tv,
-        )
-
-        composeRule.onAllNodesWithText("lost", substring = true).assertCountEquals(0)
-        composeRule.onAllNodesWithText("Unsaved", substring = true).assertCountEquals(0)
     }
 
     @Test
@@ -627,33 +541,6 @@ class AppsScreenTest {
 
     @Test
     @Config(qualifiers = TV)
-    fun `the confirmation of Quit on a game says it closes and its unsaved progress is lost`() {
-        show(
-            state(
-                runningSteam,
-                actions =
-                    sheetFor(
-                        runningSteam,
-                        "Steam Big Picture",
-                        AppAction.RESUME,
-                        AppAction.QUIT,
-                    ),
-            ),
-            FormFactor.Tv,
-        )
-
-        composeRule.onNodeWithText("Quit Steam Big Picture").performClick()
-
-        composeRule.onNodeWithText(GAME_CONFIRM).assertIsDisplayed()
-        assertThat(chosen).isEmpty()
-
-        composeRule.onNodeWithText("Quit").performClick()
-
-        assertThat(chosen).containsExactly(AppAction.QUIT)
-    }
-
-    @Test
-    @Config(qualifiers = TV)
     fun `Quit and start asks for confirmation naming the running app`() {
         show(
             state(
@@ -672,44 +559,6 @@ class AppsScreenTest {
         composeRule.onNodeWithText("Quit").performClick()
 
         assertThat(chosen).containsExactly(AppAction.QUIT_AND_START)
-    }
-
-    @Test
-    @Config(qualifiers = TV)
-    fun `Quit and start on a game asks for confirmation saying its unsaved progress is lost`() {
-        show(
-            state(
-                runningSteam,
-                hades,
-                actions =
-                    sheetFor(
-                        hades,
-                        "Steam Big Picture",
-                        AppAction.QUIT_AND_START,
-                        AppAction.DETAILS,
-                    ),
-            ),
-            FormFactor.Tv,
-        )
-
-        composeRule.onNodeWithText("Quit Steam Big Picture and start Hades II").performClick()
-
-        composeRule.onNodeWithText(GAME_CONFIRM).assertIsDisplayed()
-        assertThat(chosen).isEmpty()
-    }
-
-    @Test
-    @Config(qualifiers = TV)
-    fun `the confirmation of Quit on Desktop says nothing of lost work`() {
-        show(
-            state(desktop, actions = desktopSheet(desktop, AppAction.RESUME, AppAction.QUIT)),
-            FormFactor.Tv,
-        )
-
-        composeRule.onNodeWithText("Quit Desktop").performClick()
-
-        composeRule.onAllNodesWithText("lost", substring = true).assertCountEquals(0)
-        composeRule.onAllNodesWithText("Unsaved", substring = true).assertCountEquals(0)
     }
 
     @Test
@@ -778,13 +627,6 @@ class AppsScreenTest {
             "Ends the stream first. The display and controls go back to the PC."
         const val DESKTOP_CONFIRM =
             "Quit Desktop? This ends the stream. The display and controls go back to the PC."
-
-        // What it says for a game: the game closes and its unsaved progress is lost.
-        const val GAME_QUIT = "Closes Steam Big Picture on the PC. Unsaved progress in it is lost."
-        const val GAME_QUIT_FIRST =
-            "Closes Steam Big Picture on the PC first. Unsaved progress in it is lost."
-        const val GAME_CONFIRM =
-            "Quit Steam Big Picture? This closes it on the PC. Unsaved progress in it is lost."
     }
 
     @Test

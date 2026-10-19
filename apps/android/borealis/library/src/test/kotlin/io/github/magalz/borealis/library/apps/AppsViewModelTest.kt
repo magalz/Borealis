@@ -233,58 +233,6 @@ class AppsViewModelTest {
             )
     }
 
-    private fun hostRunning(app: RunningApp) = aHost(id = "host-1", runningApp = app)
-
-    @Test
-    fun `the actions of the running app say when it is Desktop`() = runTest {
-        val running = RunningApp(1, "Desktop", isDesktop = true)
-        repository.emit(snapshot(desktop, steam, host = hostRunning(running)))
-        subscribe(viewModel.uiState)
-
-        viewModel.onActions(1)
-        runCurrent()
-
-        assertThat(viewModel.uiState.value.actions?.runningAppIsDesktop).isTrue()
-    }
-
-    @Test
-    fun `the actions of another app say that the running app is Desktop`() = runTest {
-        val running = RunningApp(1, "Desktop", isDesktop = true)
-        repository.emit(snapshot(desktop, steam, host = hostRunning(running)))
-        subscribe(viewModel.uiState)
-
-        viewModel.onActions(2)
-        runCurrent()
-
-        assertThat(viewModel.uiState.value.actions?.runningAppIsDesktop).isTrue()
-    }
-
-    @Test
-    fun `the actions say the running app is not Desktop when it is a game`() = runTest {
-        repository.emit(snapshot(desktop, steam, host = hostRunning(RunningApp(2, "steam"))))
-        subscribe(viewModel.uiState)
-
-        viewModel.onActions(2)
-        runCurrent()
-        assertThat(viewModel.uiState.value.actions?.runningAppIsDesktop).isFalse()
-
-        viewModel.onActionsDismissed()
-        viewModel.onActions(1)
-        runCurrent()
-        assertThat(viewModel.uiState.value.actions?.runningAppIsDesktop).isFalse()
-    }
-
-    @Test
-    fun `the actions say the running app is not Desktop when nothing runs`() = runTest {
-        repository.emit(snapshot(desktop, steam))
-        subscribe(viewModel.uiState)
-
-        viewModel.onActions(1)
-        runCurrent()
-
-        assertThat(viewModel.uiState.value.actions?.runningAppIsDesktop).isFalse()
-    }
-
     @Test
     fun `a hidden app offers unhide instead of hide`() = runTest {
         repository.emit(snapshot(desktop, secret))

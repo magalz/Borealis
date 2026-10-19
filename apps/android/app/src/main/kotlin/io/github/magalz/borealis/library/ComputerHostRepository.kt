@@ -5,7 +5,10 @@ import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import com.limelight.nvstream.http.PairingManager.PairState
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.github.magalz.borealis.host.caps.HostDetailsFacts
+import io.github.magalz.borealis.host.caps.HostDetailsText
 import io.github.magalz.borealis.host.caps.HostInfoText
+import io.github.magalz.borealis.host.caps.HostState
 import io.github.magalz.borealis.library.domain.AddHostResult
 import io.github.magalz.borealis.library.domain.Host
 import io.github.magalz.borealis.library.domain.HostAddress
@@ -108,9 +111,11 @@ constructor(
         }
     }
 
+    /** The host in plain words, then its capabilities; no line is left over at the end. */
     override suspend fun details(hostId: String): String? =
         connection.lookup(hostId)?.let {
-            HostInfoText.appendTo(context, it.toString(), it.borealis)
+            val facts = HostDetailsText.build(context, it.toDetailsFacts())
+            HostInfoText.appendTo(context, facts, it.borealis).trimEnd()
         }
 
     /** The host may not answer or confirm; the host is removed from this device either way. */
@@ -130,3 +135,26 @@ constructor(
             compareBy(String.CASE_INSENSITIVE_ORDER) { host: Host -> host.name }.thenBy { it.id }
     }
 }
+
+/**
+ * What the details dialog says about this host. The running app is named as the Hosts screen names
+ * it; the UUID and the HTTPS port are not part of it (the capabilities block lists the ports).
+ */
+private fun ComputerDetails.toDetailsFacts() =
+    HostDetailsFacts(
+        name = name,
+        state =
+            when (state) {
+                ComputerDetails.State.ONLINE -> HostState.ONLINE
+                ComputerDetails.State.OFFLINE -> HostState.OFFLINE
+                else -> HostState.UNKNOWN
+            },
+        address = activeAddress?.toString(),
+        otherAddresses =
+            listOfNotNull(localAddress, remoteAddress, manualAddress, ipv6Address).map {
+                it.toString()
+            },
+        paired = pairState?.let { it == PairState.PAIRED },
+        macAddress = macAddress,
+        runningApp = toHost().runningApp?.name,
+    )

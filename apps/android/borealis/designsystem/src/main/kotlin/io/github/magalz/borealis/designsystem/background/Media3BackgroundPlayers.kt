@@ -7,6 +7,7 @@ import android.view.SurfaceView
 import androidx.annotation.RawRes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 
@@ -34,6 +35,9 @@ internal object Media3BackgroundPlayers : BackgroundPlayerFactory {
         player.addListener(
             object : Player.Listener {
                 override fun onRenderedFirstFrame() = onFirstFrame()
+
+                // The name of the error only: the message and the cause can hold a URI.
+                override fun onPlayerError(error: PlaybackException) = onError(error.errorCodeName)
             }
         )
         player.setVideoSurfaceView(surface)

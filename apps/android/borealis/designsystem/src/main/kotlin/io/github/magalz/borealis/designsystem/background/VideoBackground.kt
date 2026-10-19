@@ -26,6 +26,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogTag
 import kotlin.math.roundToInt
 
 /** Every clip is 16:9; the surface is cut from the middle of it to fill any screen. */
@@ -69,6 +71,9 @@ internal fun VideoBackground(clip: BackgroundClip, stillOnly: Boolean, modifier:
  * playing while it is resumed, released when it stops, when [clip] changes and when this leaves the
  * composition. There is one player at a time and none while the screen is stopped, which is what a
  * stream does to the Library.
+ *
+ * A player that fails is released, the log says so once and the clip is not tried again until
+ * [clip] changes: [onReleased] puts the still back over the surface.
  */
 @Composable
 private fun VideoSurface(clip: BackgroundClip, onFirstFrame: () -> Unit, onReleased: () -> Unit) {
@@ -84,10 +89,28 @@ private fun VideoSurface(clip: BackgroundClip, onFirstFrame: () -> Unit, onRelea
         }
     DisposableEffect(lifecycle, factory, clip, surface) {
         var player: BackgroundPlayer? = null
+        var failed = false
+        val onError = { reason: String ->
+            if (!failed) {
+                failed = true
+                // The name of the clip and of the error: the player knows nothing else worth a log.
+                BorealisLog.w(
+                    LogTag.APP,
+                    "Background video failed",
+                    "clip" to context.resources.getResourceEntryName(clip.video),
+                    "reason" to reason,
+                )
+                player?.release()
+                player = null
+                onReleased()
+            }
+        }
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START ->
-                    player = factory.create(context, clip.video, surface, onFirstFrame) {}
+                    if (!failed) {
+                        player = factory.create(context, clip.video, surface, onFirstFrame, onError)
+                    }
                 Lifecycle.Event.ON_RESUME -> player?.play()
                 Lifecycle.Event.ON_PAUSE -> player?.pause()
                 Lifecycle.Event.ON_STOP -> {

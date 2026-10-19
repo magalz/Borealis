@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
+import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.PairingManager.PairState
 import io.github.magalz.borealis.host.caps.BorealisHostInfo
 import io.github.magalz.borealis.library.domain.AddHostResult
@@ -380,7 +381,7 @@ class ComputerHostRepositoryTest {
             .isEqualTo(
                 "Name: Den PC\n" +
                     "Status: Online\n" +
-                    "Address: 192.168.1.5:47989\n" +
+                    "Address: 192.168.1.5\n" +
                     "Paired: Yes\n" +
                     "MAC address (for wake): AA:BB:CC:DD:EE:FF"
             )
@@ -425,10 +426,39 @@ class ComputerHostRepositoryTest {
 
         assertThat(repository.details("a"))
             .contains(
-                "Address: 192.168.1.5:47989\n" +
-                    "Other addresses: 203.0.113.7:47989, den.example.net:47989, " +
-                    "[2001:db8::1]:47989\n"
+                "Address: 192.168.1.5\n" +
+                    "Other addresses: 203.0.113.7, den.example.net, 2001:db8::1\n"
             )
+    }
+
+    @Test
+    fun `an address shows its port only when it is not the default HTTP port`() = runTest {
+        val repository = repository()
+        binder.computers["a"] =
+            details(address = null).also {
+                it.activeAddress = AddressTuple("192.168.1.5", 50000)
+                it.localAddress = AddressTuple("fe80::1", 50002)
+                it.remoteAddress = AddressTuple("203.0.113.7", NvHTTP.DEFAULT_HTTP_PORT)
+                it.manualAddress = AddressTuple("den.example.net", 50001)
+                it.ipv6Address = AddressTuple("2001:db8::1", NvHTTP.DEFAULT_HTTP_PORT)
+            }
+
+        assertThat(repository.details("a"))
+            .contains(
+                "Address: 192.168.1.5:50000\n" +
+                    "Other addresses: [fe80::1]:50002, 203.0.113.7, den.example.net:50001, " +
+                    "2001:db8::1\n"
+            )
+    }
+
+    @Test
+    fun `the same host on another port is not the address in use`() = runTest {
+        val repository = repository()
+        binder.computers["a"] =
+            details().also { it.remoteAddress = AddressTuple("192.168.1.5", 50000) }
+
+        assertThat(repository.details("a"))
+            .contains("Address: 192.168.1.5\nOther addresses: 192.168.1.5:50000\n")
     }
 
     @Test
@@ -489,7 +519,7 @@ class ComputerHostRepositoryTest {
             .isEqualTo(
                 "Name: Den PC\n" +
                     "Status: Online\n" +
-                    "Address: 192.168.1.5:47989\n" +
+                    "Address: 192.168.1.5\n" +
                     "Paired: Yes\n" +
                     "\n" +
                     "Host capabilities\n" +

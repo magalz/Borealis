@@ -163,8 +163,8 @@ class HostsScreenshotTest {
             """
             Name: Desk PC
             Status: Online
-            Address: 192.168.1.20:47989
-            Other addresses: 203.0.113.7:47989, [2001:db8::20]:47989
+            Address: 192.168.1.20
+            Other addresses: 203.0.113.7, 2001:db8::20
             Paired: Yes
             MAC address (for wake): AA:BB:CC:DD:EE:20
             Running: Desktop

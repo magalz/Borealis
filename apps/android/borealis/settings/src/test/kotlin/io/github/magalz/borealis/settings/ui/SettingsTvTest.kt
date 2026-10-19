@@ -55,6 +55,7 @@ class SettingsTvTest : SettingsScreenTestBase() {
                 "On-screen controls",
                 "Audio",
                 "Advanced",
+                "Appearance",
                 "Privacy and diagnostics",
                 "About",
             )
@@ -177,6 +178,47 @@ class SettingsTvTest : SettingsScreenTestBase() {
     }
 
     @Test
+    fun `the Appearance group has the Background row with the seven styles`() {
+        show(keyboard = true)
+
+        selectGroup("Appearance")
+
+        composeRule.onNodeWithText("Background").assertIsDisplayed()
+        composeRule.onNodeWithText("Aurora curtains").assertIsDisplayed()
+        composeRule.onNodeWithText("Resolution").assertDoesNotExist()
+        composeRule.onNodeWithText("Background").performClick()
+        composeRule.waitForIdle()
+        BACKGROUND_NAMES.forEach { sheetOption(it).assertExists() }
+        sheetOption("Aurora curtains").assertIsFocused()
+    }
+
+    @Test
+    fun `choosing a style stores it and the row shows it`() {
+        show(keyboard = true)
+        selectGroup("Appearance")
+        composeRule.onNodeWithText("Background").performClick()
+        composeRule.waitForIdle()
+
+        sheetOption("Starfield").performClick()
+        composeRule.waitForIdle()
+
+        assertThat(snapshot[Settings.BACKGROUND]).isEqualTo("starfield")
+        composeRule.onNodeWithText("Starfield").assertIsDisplayed()
+        composeRule.onNodeWithText("Aurora curtains").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a stored style that is unknown shows the default as the chosen one`() {
+        stored(Settings.BACKGROUND to "bogus")
+        show(keyboard = true)
+
+        selectGroup("Appearance")
+
+        composeRule.onNodeWithText("Aurora curtains").assertIsDisplayed()
+        composeRule.onNodeWithText("bogus").assertDoesNotExist()
+    }
+
+    @Test
     fun `a disabled row of the Input group can be focused and shows why it is disabled`() {
         options.rowStates[Settings.ANALOG_SCROLLING] =
             RowState.Disabled(DisabledReason.DEPENDS_ON_SETTING, Settings.MOUSE_EMULATION)
@@ -279,5 +321,20 @@ class SettingsHandheldTest : SettingsScreenTestBase() {
         composeRule.onNodeWithText("Stream").assertIsDisplayed()
         composeRule.onNodeWithText("Privacy and diagnostics").assertIsDisplayed()
         composeRule.onNodeWithText("Resolution").assertIsDisplayed()
+    }
+
+    @Test
+    fun `the Appearance group has the Background row with the seven styles`() {
+        show(keyboard = true)
+
+        composeRule.onNodeWithText("Appearance").assertIsDisplayed()
+        composeRule.onNodeWithText("Appearance").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Background").assertIsDisplayed()
+        composeRule.onNodeWithText("Aurora curtains").assertIsDisplayed()
+        composeRule.onNodeWithText("Background").performClick()
+        composeRule.waitForIdle()
+        BACKGROUND_NAMES.forEach { sheetOption(it).assertExists() }
     }
 }

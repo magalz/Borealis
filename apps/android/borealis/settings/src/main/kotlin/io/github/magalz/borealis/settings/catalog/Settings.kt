@@ -180,6 +180,9 @@ object Settings {
     /** Value of [PERF_OVERLAY] with the full overlay. */
     const val PERF_OVERLAY_DETAILED = "detailed"
 
+    /** The background of the Library. */
+    val BACKGROUND = StringSetting("borealis_background", default = "")
+
     /** Verbose logging. Stored in DataStore. */
     val VERBOSE_LOGGING =
         BooleanSetting("borealis_verbose_logging", default = false, store = SettingStore.DATASTORE)

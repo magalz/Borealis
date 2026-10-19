@@ -57,6 +57,9 @@ object FixedChoices {
             FixedChoice(Settings.PERF_OVERLAY_DETAILED, R.string.settings_choice_overlay_detailed),
         )
 
+    /** Background. */
+    val BACKGROUND = emptyList<FixedChoice>()
+
     /** Touch. */
     val TOUCH =
         listOf(

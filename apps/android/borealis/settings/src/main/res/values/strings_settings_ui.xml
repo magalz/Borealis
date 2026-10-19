@@ -13,6 +13,7 @@
     <string name="settings_group_on_screen_controls">On-screen controls</string>
     <string name="settings_group_audio">Audio</string>
     <string name="settings_group_advanced">Advanced</string>
+    <string name="settings_group_appearance"></string>
     <string name="settings_group_privacy">Privacy and diagnostics</string>
     <string name="settings_group_about">About</string>
     <string name="settings_privacy_link_summary">Logs, diagnostic bundle, audit trail</string>
@@ -94,6 +95,8 @@
     <string name="settings_post_stream_toast_title">Latency summary after a stream</string>
     <string name="settings_pip_title">Picture-in-picture</string>
     <string name="settings_pip_summary">Watch the stream, without controlling it, while you use other apps.</string>
+
+    <string name="settings_background_title"></string>
 
     <!-- Disabled notes -->
     <string name="settings_note_turn_on_first">Turn on %1$s first</string>

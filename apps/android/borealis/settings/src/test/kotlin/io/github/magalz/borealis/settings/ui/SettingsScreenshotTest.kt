@@ -80,6 +80,26 @@ class SettingsScreenshotTest : SettingsScreenTestBase() {
     }
 
     @Test
+    @Config(qualifiers = PHONE)
+    fun phoneAppearance() {
+        show()
+        composeRule.onNodeWithText("Background").performScrollTo()
+
+        shoot("settingsscreen_phone_appearance")
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun tvAppearanceFocused() {
+        asTelevision()
+        show(keyboard = true)
+        composeRule.onNodeWithText("Appearance").performClick()
+        composeRule.onNodeWithText("Background").requestFocus()
+
+        shoot("settingsscreen_tv_appearance-focused")
+    }
+
+    @Test
     @Config(qualifiers = TV)
     fun tvChoiceSheet() {
         asTelevision()

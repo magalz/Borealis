@@ -21,6 +21,7 @@ enum class SettingsGroupId(@StringRes val titleRes: Int) {
     ON_SCREEN_CONTROLS(R.string.settings_group_on_screen_controls),
     AUDIO(R.string.settings_group_audio),
     ADVANCED(R.string.settings_group_advanced),
+    APPEARANCE(R.string.settings_group_appearance),
 
     /** Has no rows here: the Privacy and diagnostics screen provides its content. */
     PRIVACY(R.string.settings_group_privacy),
@@ -371,6 +372,13 @@ enum class SettingsItem(
         Settings.ENABLE_PIP,
         R.string.settings_pip_title,
         R.string.settings_pip_summary,
+    ),
+    BACKGROUND(
+        SettingsGroupId.ADVANCED,
+        SettingsItemKind.CHOICE,
+        Settings.BACKGROUND,
+        R.string.settings_background_title,
+        input = ItemInput(fixedChoices = FixedChoices.BACKGROUND),
     );
 
     companion object {

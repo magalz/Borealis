@@ -71,11 +71,16 @@ class DataStoreBackingTest {
         DataStoreBacking(DataStoreBacking.create(preferences, scope, file), scope)
 
     @Test
-    fun `an empty store reads as absent for both switches`() =
+    fun `an empty store reads as absent for both switches and the background`() =
         runBlocking<Unit> {
             val read = backing().read()
 
-            assertThat(read.keys).containsExactly(Settings.VERBOSE_LOGGING, Settings.MASK_ADDRESSES)
+            assertThat(read.keys)
+                .containsExactly(
+                    Settings.VERBOSE_LOGGING,
+                    Settings.MASK_ADDRESSES,
+                    Settings.BACKGROUND,
+                )
             assertThat(read.values.filterNotNull()).isEmpty()
         }
 
@@ -89,6 +94,16 @@ class DataStoreBackingTest {
 
             assertThat(backing.read())
                 .containsExactly(Settings.VERBOSE_LOGGING, true, Settings.MASK_ADDRESSES, false)
+        }
+
+    @Test
+    fun `the background reads back the id that was written, also after a new DataStore`() =
+        runBlocking<Unit> {
+            val first = newScope()
+            backing(first).write(Settings.BACKGROUND, "northern_lights")
+            first.coroutineContext[Job]!!.cancelAndJoin()
+
+            assertThat(backing().read()[Settings.BACKGROUND]).isEqualTo("northern_lights")
         }
 
     @Test

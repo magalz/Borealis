@@ -203,6 +203,60 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `the Background list stores the stable id of the chosen style`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onChoiceSelected(SettingsItem.BACKGROUND, "starfield")
+        advanceUntilIdle()
+
+        assertThat(repository.writes).containsExactly(Write(Settings.BACKGROUND, "starfield"))
+        assertThat(viewModel.uiState.value.snapshot[Settings.BACKGROUND]).isEqualTo("starfield")
+        assertThat(SettingsItem.BACKGROUND.selectedChoiceKey(viewModel.uiState.value.snapshot))
+            .isEqualTo("starfield")
+    }
+
+    @Test
+    fun `each of the seven styles of the Background list can be chosen`() = runTest {
+        val viewModel = viewModel()
+        val ids =
+            listOf(
+                "aurora_curtains",
+                "soft_glow",
+                "northern_lights",
+                "light_mist",
+                "flowing_light",
+                "starfield",
+                "off",
+            )
+
+        for (id in ids) viewModel.onChoiceSelected(SettingsItem.BACKGROUND, id)
+        advanceUntilIdle()
+
+        assertThat(repository.writes.map { it.value }).containsExactlyElementsIn(ids).inOrder()
+    }
+
+    @Test
+    fun `a style that the Background list does not offer is not stored`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onChoiceSelected(SettingsItem.BACKGROUND, "bogus")
+        viewModel.onChoiceSelected(SettingsItem.BACKGROUND, "Starfield")
+        viewModel.onChoiceSelected(SettingsItem.BACKGROUND, "5")
+        advanceUntilIdle()
+
+        assertThat(repository.writes).isEmpty()
+    }
+
+    @Test
+    fun `an unknown stored background shows the default style as the chosen one`() = runTest {
+        stored(Settings.BACKGROUND to "bogus")
+        val viewModel = viewModel()
+
+        assertThat(SettingsItem.BACKGROUND.selectedChoiceKey(viewModel.uiState.value.snapshot))
+            .isEqualTo("aurora_curtains")
+    }
+
+    @Test
     fun `changing the resolution stores it and then returns the bitrate to automatic`() = runTest {
         stored(Settings.BITRATE_KBPS to 30_000)
         val viewModel = viewModel()
@@ -507,7 +561,10 @@ class SettingsViewModelTest {
         }
 }
 
-/** The groups and rows of the table in `docs/ux/phase-2-proposal.md#settings-groups`. */
+/**
+ * The groups and rows of the table in `docs/ux/phase-2-proposal.md#settings-groups`, and the
+ * Appearance group that Sprint 9 added after Advanced.
+ */
 private val UC_009_ROWS =
     linkedMapOf(
         SettingsGroupId.STREAM to
@@ -571,4 +628,5 @@ private val UC_009_ROWS =
                 SettingsItem.LATENCY_SUMMARY,
                 SettingsItem.PICTURE_IN_PICTURE,
             ),
+        SettingsGroupId.APPEARANCE to listOf(SettingsItem.BACKGROUND),
     )

@@ -266,8 +266,7 @@ The cancel flag never goes through `NvConnection.stop()`: `stop()` releases the 
 
 LuminalShine can need about 18 s after the client attaches to send the first frame (contract section 10.1); upstream Moonlight dismisses the spinner at `connectionStarted`, long before that.
 
-- `StreamStartup.create(...)` builds the `StreamStartupGuard` that `Game` holds. `Game` passes only the termination callback, so its hooks hold no logic.
-- `StreamStartupGuard` runs the `FirstFrameWatchdog` from `connectionStarted` until the first rendered frame. During that wait the user sees the Starting screen of `:borealis:stream`, which has its own "Preparing the display" step.
+- `StreamStartupGuard(terminate)` is what `Game` holds. `Game` passes only the termination callback, so its hooks hold no logic. It runs the `FirstFrameWatchdog` from `connectionStarted` until the first rendered frame. During that wait the user sees the Starting screen of `:borealis:stream`, which has its own "Preparing the display" step.
 - `FirstFrameWatchdog` (states IDLE, ARMED, SATISFIED, FIRED, CANCELLED; one terminal state per stream) ends the stream with `ML_ERROR_NO_VIDEO_FRAME` if no frame is rendered 45 s after `connectionStarted`, above the about 35 s worst case of the patched moonlight-common-c deadlines. The termination runs off the main thread because `Game.connectionTerminated` does network I/O first. The watchdog is cancelled on stop, `onStop`, `onDestroy` and termination.
 - `FirstFrameSignal` is raised by `MediaCodecDecoderRenderer` at the first output buffer released for rendering (Choreographer and renderer-thread paths); after that it costs one volatile read per frame.
 - `StreamErrorHints.withHint` appends a LuminalShine hint to the -100 (no video traffic) and -101 (no complete frame) messages; the blocked-port message is left unchanged.

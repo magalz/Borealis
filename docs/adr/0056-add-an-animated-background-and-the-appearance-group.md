@@ -65,7 +65,7 @@ This is the record that the [dependency policy](../policies/dependencies.md#addi
 
 * **Reason:** gapless looping and hardware decoding of the background clips. The platform `MediaPlayer` loops with a hiccup. Code alone cannot make the video styles.
 * **Licence:** Apache-2.0, on the allowlist. `licensee` passes without a change. Guava 33.3.1-android and failureaccess come with it, also Apache-2.0.
-* **Maintainer:** Google, as part of AndroidX. The version is pinned in the version catalog (`androidx-media3`), and Dependabot updates it.
+* **Maintenance:** Google maintains it, as part of AndroidX. The release in use is 1.11.1. The version is pinned in the version catalog (`androidx-media3`), and Dependabot updates it.
 * **Footprint:**
   * The seven Media3 modules that come in (common, container, database, datasource, decoder, extractor and exoplayer) hold no native code. Their minSdk is 23, against the app's 28.
   * The modules declare the permissions `ACCESS_NETWORK_STATE` and `WAKE_LOCK`. The app declares both already, so the merged permission list does not change.

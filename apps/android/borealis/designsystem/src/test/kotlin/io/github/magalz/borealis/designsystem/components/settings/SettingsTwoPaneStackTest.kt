@@ -3,6 +3,7 @@ package io.github.magalz.borealis.designsystem.components.settings
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -13,6 +14,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
@@ -48,8 +50,16 @@ class SettingsTwoPaneStackTest {
     private var selected by mutableStateOf("g1")
 
     private val composed = mutableMapOf<String, Int>()
+    private val recomposed = mutableMapOf<String, Int>()
     private val measured = mutableMapOf<String, Int>()
     private val drawn = mutableMapOf<String, Int>()
+
+    /** How many times the two-pane recomposed: it puts its modifier on its nodes each time. */
+    private val twoPaneRecompositions = intArrayOf(0)
+
+    /** How many times the content of the pane of each group ran, and the screen itself did. */
+    private val contentRuns = mutableMapOf<String, Int>()
+    private var screenRuns = 0
     private val clicks = mutableListOf<String>()
     private val focused = mutableListOf<String>()
 
@@ -64,14 +74,35 @@ class SettingsTwoPaneStackTest {
         // The pane that is not shown was built, laid out and recorded while it waited.
         assertThat(measured["g3"] ?: 0).isGreaterThan(0)
         assertThat(drawn["g3"] ?: 0).isGreaterThan(0)
-        val before = Triple(composed.toMap(), measured.toMap(), drawn.toMap())
+        val before = counts()
 
         composeRule.onNodeWithText("Group g3").performClick()
         composeRule.waitForIdle()
         composeRule.onRoot().captureToImage()
 
         composeRule.onNodeWithText("Row 1 of g3").assertIsDisplayed()
-        assertThat(Triple(composed.toMap(), measured.toMap(), drawn.toMap())).isEqualTo(before)
+        assertThat(counts()).isEqualTo(before)
+    }
+
+    @Test
+    fun `a switch recomposes neither the two-pane nor the content of a pane nor a row`() {
+        composeRule.setContent { Specimen() }
+        composeRule.waitForIdle()
+        val before = counts()
+
+        composeRule.onNodeWithText("Group g2").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Group g4").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Group g1").performClick()
+        composeRule.waitForIdle()
+
+        // Not the screen, not the two-pane, not the content of any pane, not a row: only the
+        // layers and the two wrappers of the panes that change are touched.
+        assertThat(twoPaneRecompositions[0]).isEqualTo(0)
+        assertThat(screenRuns).isEqualTo(before.screenRuns)
+        assertThat(contentRuns).isEqualTo(before.contentRuns)
+        assertThat(recomposed).isEqualTo(before.recomposed)
     }
 
     @Test
@@ -162,11 +193,32 @@ class SettingsTwoPaneStackTest {
         assertThat(clicks).isEmpty()
     }
 
+    /** What was counted so far, to compare before and after a step. */
+    private fun counts() =
+        Counts(
+            composed.toMap(),
+            recomposed.toMap(),
+            measured.toMap(),
+            drawn.toMap(),
+            contentRuns.toMap(),
+            screenRuns,
+        )
+
+    private data class Counts(
+        val composed: Map<String, Int>,
+        val recomposed: Map<String, Int>,
+        val measured: Map<String, Int>,
+        val drawn: Map<String, Int>,
+        val contentRuns: Map<String, Int>,
+        val screenRuns: Int,
+    )
+
     /** A row that counts its composition, its measures and its draws, and notes taps and focus. */
     @Composable
     private fun ProbeRow(group: String, index: Int) {
         val name = "Row $index of $group"
         remember { composed.merge(group, 1, Int::plus) }
+        SideEffect { recomposed.merge(group, 1, Int::plus) }
         SettingsValueRow(
             title = name,
             value = null,
@@ -184,15 +236,18 @@ class SettingsTwoPaneStackTest {
 
     @Composable
     private fun Specimen() {
+        SideEffect { screenRuns++ }
         BorealisTheme(FormFactor.Tv) {
             SettingsTwoPane(
                 groups = groups,
+                modifier = CountingModifier(twoPaneRecompositions),
                 selected = { selected },
                 onSelect = { selected = it },
                 selfScrolling = { it == "own" },
                 // Focus that moves over the groups does not select them: a test moves it far.
                 selectDelayMillis = NEVER_MILLIS,
             ) { group ->
+                contentRuns.merge(group, 1, Int::plus)
                 // Rows at the same places in every pane, and more of them in "g2" than in "g1".
                 when (group) {
                     "own" -> Box(Modifier.fillMaxSize().testTag("own"))
@@ -202,6 +257,24 @@ class SettingsTwoPaneStackTest {
             }
         }
     }
+
+    /**
+     * A modifier that is never equal to itself, so that each recomposition that applies it shows.
+     */
+    private class CountingModifier(private val applied: IntArray) :
+        ModifierNodeElement<CountingNode>() {
+        override fun create() = CountingNode()
+
+        override fun update(node: CountingNode) {
+            applied[0]++
+        }
+
+        override fun equals(other: Any?) = false
+
+        override fun hashCode() = System.identityHashCode(this)
+    }
+
+    private class CountingNode : Modifier.Node()
 
     private companion object {
         /** Enough frames for one pane in each of them. */

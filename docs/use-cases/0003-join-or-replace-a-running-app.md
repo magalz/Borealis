@@ -25,9 +25,15 @@ app again, or to cancel. Every choice is explicit, and Cancel has the focus.
 1. The user chooses an app on the Apps screen and chooses Start.
 2. The system finds a running app on the host and shows the Conflict dialog.
    The dialog says whether the running app is the same app or another one. It
-   says that quitting ends the stream on the other device. Cancel has the focus.
-   A different app found running at start always asks. The system does not
+   says what quitting costs, in a warning below the question. Cancel has the
+   focus. A different app found running at start always asks. The system does not
    quit it on its own, even when the Library has not seen that app.
+   - When the running app is Desktop, the app whose title is "Desktop", ignoring
+     case, the warning says "Quitting ends the stream on the other device." and
+     nothing about lost work.
+   - For any other app, also one whose name is not known, it says "Quitting ends
+     the stream on the other device and closes the app." and "Unsaved progress in
+     it is lost." on a second line.
 3. The user chooses Join. The running app may be the requested app or another
    one; Join always resumes the running app.
 4. The system resumes the running app on the host and writes LAUNCH_CONFLICT
@@ -90,10 +96,12 @@ app again, or to cancel. Every choice is explicit, and Cancel has the focus.
 | UC-003-T6 | Given the dialog is open, when the user reads it, then it says that quitting ends the stream on the other device. | UI | exists (Sprint 5, UI) |
 | UC-003-T7 | Given another app runs on the host when the user starts an app, when the start reads the host, then the Conflict dialog asks and nothing is quit before the user chooses. | unit | exists (Sprint 5, unit; device round) |
 | UC-003-T8 | Given the dialog is open for a different app, or for the same app whose name is unknown, when the user reads the third button, then it says Quit and start; for the same app with a known name it says Quit and relaunch. | UI | exists (Sprint 5, UI) |
+| UC-003-T9 | Given the running app is Desktop, whatever its case or the spaces around its title, when the dialog opens, then the warning says only that quitting ends the stream on the other device, whether the same app or another one was requested. | UI | exists (Sprint 9, UI) |
+| UC-003-T10 | Given the running app is not Desktop (a game, an app whose title only contains "Desktop", or an unknown app), when the dialog opens, then the warning says that quitting closes the app and that its unsaved progress is lost. | UI | exists (Sprint 9, UI) |
 
 Tests marked "exists (Sprint 2, unit)" cover the launch logic. Tests marked
-"exists (Sprint 5, UI)" are Compose tests of the Conflict dialog in
-`:borealis:stream`.
+"exists (Sprint 5, UI)" or "exists (Sprint 9, UI)" are Compose tests of the
+Conflict dialog in `:borealis:stream`; `ConflictDialogTest` holds them.
 
 On LuminalShine, the race that makes a same-app `/launch` conflict is
 practically unreachable. While the host builds a display it holds

@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.designsystem.background
 
 import android.view.SurfaceView
+import android.view.View
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.tween
@@ -74,7 +75,13 @@ private fun VideoSurface(clip: BackgroundClip, onFirstFrame: () -> Unit, onRelea
     val context = LocalContext.current
     val factory = LocalBackgroundPlayerFactory.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val surface = remember(context) { SurfaceView(context) }
+    val surface =
+        remember(context) {
+            SurfaceView(context).apply {
+                // The picture is decoration: a screen reader has nothing to say about it.
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }
+        }
     DisposableEffect(lifecycle, factory, clip, surface) {
         var player: BackgroundPlayer? = null
         val observer = LifecycleEventObserver { _, event ->

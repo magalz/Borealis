@@ -49,13 +49,11 @@ class StreamErrorHintsTest {
     }
 
     @Test
-    fun `the stream strings are not blank and promise no duration`() {
+    fun `the stream strings are not blank`() {
         val english = strings("values")
 
-        assertThat(english.keys)
-            .containsExactly("stream_preparing_display", "stream_luminalshine_hint")
+        assertThat(english.keys).containsExactly("stream_luminalshine_hint")
         for (text in english.values) assertThat(text).isNotEmpty()
-        assertThat(english.getValue("stream_preparing_display").any { it.isDigit() }).isFalse()
     }
 
     private fun strings(directory: String): Map<String, String> {

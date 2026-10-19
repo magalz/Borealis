@@ -143,7 +143,7 @@ internal fun LibraryNavHost(
 
 /** The NavHost with a quick cross-fade between screens; the rail is outside it and stays put. */
 @Composable
-private fun FadingNavHost(navController: NavHostController, graph: NavGraphBuilder.() -> Unit) {
+internal fun FadingNavHost(navController: NavHostController, graph: NavGraphBuilder.() -> Unit) {
     NavHost(
         navController,
         startDestination = Hosts,

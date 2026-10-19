@@ -234,7 +234,9 @@ yet. Its results go to
     Appearance the TV group list was about 70 dp too tall: Privacy and diagnostics
     was cut and About was off-screen. A group entry's vertical padding went from
     10 dp to 5 dp, with the focus outline gap unchanged at 10 dp. All ten groups
-    fit a 960 x 540 dp TV without scrolling. The handheld list may still scroll.
+    fit a 960 x 540 dp TV window without scrolling. The Google TV Streamer shows
+    nine, because it has no touchscreen and so no On-screen controls group. The
+    handheld list may still scroll.
 11. **The "preparing the display" text.** Done (issue #31, merge `75dbf7be`). Found
     during the sprint. The message on the stream's notification overlay predates
     the Sprint 5 Starting screen, which is opaque and covers the overlay from the

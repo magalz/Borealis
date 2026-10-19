@@ -12,9 +12,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
@@ -57,16 +60,105 @@ class SettingsTwoPaneTest {
     }
 
     @Test
-    fun `moving focus down the left list selects the next group by its key`() {
+    fun `moving focus down the left list selects the next group by its key once focus rests`() {
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Stream").requestFocus()
 
-        composeRule.onNodeWithText("Stream").performKeyInput { pressKey(Key.DirectionDown) }
+        press(Key.DirectionDown)
+        restOnTheGroup()
 
         composeRule.onNodeWithText("Video").assertIsFocused()
         assertThat(selections).containsExactly("video")
         composeRule.onNodeWithText("Codec").assertIsDisplayed()
         composeRule.onNodeWithText("Resolution").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the pane keeps its group until focus has rested on another one`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+
+        press(Key.DirectionDown)
+        composeRule.mainClock.advanceTimeBy(GROUP_SELECT_DELAY_MILLIS / 2)
+
+        composeRule.onNodeWithText("Video").assertIsFocused()
+        assertThat(selections).isEmpty()
+        composeRule.onNodeWithText("Resolution").assertIsDisplayed()
+        composeRule.onNodeWithText("Codec").assertDoesNotExist()
+
+        restOnTheGroup()
+
+        assertThat(selections).containsExactly("video")
+        composeRule.onNodeWithText("Codec").assertIsDisplayed()
+    }
+
+    @Test
+    fun `moving over several groups quickly selects only the last one`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+
+        press(Key.DirectionDown)
+        press(Key.DirectionDown)
+        press(Key.DirectionDown)
+        restOnTheGroup()
+
+        composeRule.onNodeWithText("About").assertIsFocused()
+        assertThat(selections).containsExactly("about")
+        composeRule.onNodeWithText("Licences").assertIsDisplayed()
+    }
+
+    @Test
+    fun `moving back to the selected group before the delay selects nothing`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+
+        press(Key.DirectionDown)
+        press(Key.DirectionUp)
+        restOnTheGroup()
+
+        composeRule.onNodeWithText("Stream").assertIsFocused()
+        assertThat(selections).isEmpty()
+        composeRule.onNodeWithText("Resolution").assertIsDisplayed()
+    }
+
+    @Test
+    fun `the group that has focus looks selected at once`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+
+        press(Key.DirectionDown)
+
+        composeRule.onNodeWithText("Video").assertIsSelected()
+        composeRule.onNodeWithText("Stream").assertIsNotSelected()
+        assertThat(selections).isEmpty()
+    }
+
+    @Test
+    fun `OK on a group selects it at once`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+        press(Key.DirectionDown)
+
+        press(Key.Enter)
+
+        assertThat(selections).containsExactly("video")
+        composeRule.onNodeWithText("Codec").assertIsDisplayed()
+        restOnTheGroup()
+        assertThat(selections).containsExactly("video")
+    }
+
+    @Test
+    fun `Right from a group the pane has not followed yet selects it and enters its rows`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+        press(Key.DirectionDown)
+
+        press(Key.DirectionRight)
+
+        assertThat(selections).containsExactly("video")
+        composeRule.onNodeWithText("Codec").assertIsFocused()
+        restOnTheGroup()
+        assertThat(selections).containsExactly("video")
     }
 
     @Test
@@ -77,6 +169,8 @@ class SettingsTwoPaneTest {
 
         assertThat(selected).isEqualTo("audio")
         composeRule.onNodeWithText("Channels").assertIsDisplayed()
+        restOnTheGroup()
+        assertThat(selections).containsExactly("audio")
     }
 
     @Test
@@ -201,6 +295,17 @@ class SettingsTwoPaneTest {
         val group = composeRule.onNodeWithText("Stream").getUnclippedBoundsInRoot()
 
         assertThat(group.right - group.left).isEqualTo(184.dp)
+    }
+
+    private fun press(key: Key) {
+        composeRule.onRoot().performKeyInput { pressKey(key) }
+        composeRule.waitForIdle()
+    }
+
+    /** Lets focus rest on the group it is on for longer than the pane waits. */
+    private fun restOnTheGroup() {
+        composeRule.mainClock.advanceTimeBy(2 * GROUP_SELECT_DELAY_MILLIS)
+        composeRule.waitForIdle()
     }
 
     @Composable

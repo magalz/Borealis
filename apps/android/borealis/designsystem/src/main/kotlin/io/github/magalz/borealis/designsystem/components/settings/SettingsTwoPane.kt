@@ -54,6 +54,9 @@ private val AREA_PADDING = 8.dp
 private val GROUP_PADDING_HORIZONTAL = 12.dp
 private val GROUP_PADDING_VERTICAL = 10.dp
 
+/** How long focus must rest on a group before the pane follows it. */
+internal const val GROUP_SELECT_DELAY_MILLIS = 150L
+
 /**
  * The settings of a TV or handheld in two panes: the [groups] by title in a list on the left, and
  * on the right whatever [content] shows for the group whose key is [selected]. The pane scrolls and

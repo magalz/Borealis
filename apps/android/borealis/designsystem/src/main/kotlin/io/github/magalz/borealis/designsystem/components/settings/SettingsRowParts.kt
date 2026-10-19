@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -24,6 +25,15 @@ private val PADDING_HORIZONTAL = 16.dp
 private val PADDING_VERTICAL = 6.dp
 /** The size of the chevron of a row and of the check mark of a choice. */
 internal val ROW_ICON_SIZE = 20.dp
+
+/**
+ * The key of the group of a [SettingsTwoPane] that the rows are drawn for, or null outside one. The
+ * pane updates its rows in place when the group changes, which is much cheaper than composing them
+ * again, but the Material 3 Switch slides its thumb when `checked` changes. A switch row is made
+ * again with the group, so that its thumb starts where it belongs and does not slide across the
+ * rows of another group.
+ */
+internal val LocalSettingsGroup = compositionLocalOf<Any?> { null }
 
 /** What a row of settings draws before its interaction: focus lift, outline and clipping. */
 @Composable

@@ -22,9 +22,9 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
- * What the pane of a [SettingsTwoPane] shows when the group changes: the new group looks fresh, with
- * no switch sliding and no scroll left over from the one before, and its rows are updated in place,
- * which on a TV costs far less than composing them again.
+ * What the pane of a [SettingsTwoPane] shows when the group changes: the new group looks fresh,
+ * with no switch sliding and no scroll left over from the one before, and its rows are updated in
+ * place, which on a TV costs far less than composing them again.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")

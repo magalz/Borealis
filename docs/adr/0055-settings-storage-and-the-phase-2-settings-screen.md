@@ -91,3 +91,5 @@ This ADR amends [0050](0050-diagnostics-audit-and-interim-settings.md) section 3
 * Related: [0011](0011-datastore-room-and-keystore-for-new-persistence.md), [0050](0050-diagnostics-audit-and-interim-settings.md), [0052](0052-structure-the-phase-2-ui.md).
 * Use case: [UC-009, change settings](../use-cases/0009-change-settings.md).
 * Policy: [privacy and logging](../policies/privacy-and-logging.md) (where settings are stored).
+
+Amended by [0056](0056-add-an-animated-background-and-the-appearance-group.md): the DataStore file `borealis_settings` also holds the Appearance setting `borealis_background`, so it no longer holds only the two logging switches. The Settings screen has one more group, Appearance.

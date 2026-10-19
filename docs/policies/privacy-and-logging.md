@@ -59,6 +59,10 @@ Implementation requirements:
 - The "Verbose logging" and "Mask addresses in logs and diagnostics" switches
   are stored in the app's private DataStore file, `borealis_settings`. The file
   is excluded from Android backup.
+- The Appearance setting "Background" (`borealis_background`) is stored in the
+  same DataStore file, so the file is excluded from backup too. It holds the id
+  of a background style, such as `aurora_curtains` or `off`, and nothing
+  personal ([ADR 0056](../adr/0056-add-an-animated-background-and-the-appearance-group.md)).
 - The other settings stay in the app's private SharedPreferences, as before.
   They are not backed up either: the app's backup rules exclude its
   SharedPreferences from cloud backup and from device transfer.

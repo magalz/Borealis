@@ -21,7 +21,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,8 +50,10 @@ import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 /** One group of a [SettingsTwoPane]: the [key] that identifies it and its [title]. */
 class SettingsGroup<out K>(val key: K, val title: String)
@@ -101,82 +102,9 @@ fun <K> SettingsTwoPane(
     val current = groups.firstOrNull { it.key == selected } ?: groups.firstOrNull()
     val selectedGroup = remember { FocusRequester() }
     val pane = remember { FocusRequester() }
-    val focusManager = LocalFocusManager.current
-    val currentKey by rememberUpdatedState(current?.key)
-    val select by rememberUpdatedState(onSelect)
-    // The group that D-pad focus moved to and the pane has not followed yet.
-    val resting = remember { mutableStateOf<K?>(null) }
-    // The group whose pane Right asked to enter, while [onSelect] has yet to bring it.
-    val entering = remember { mutableStateOf<K?>(null) }
-
-    fun selectNow(key: K) {
-        resting.value = null
-        entering.value = null
-        if (key != currentKey) select(key)
-    }
-
-    // A new group restarts the wait, so groups that focus passes over are never selected.
-    LaunchedEffect(Unit) {
-        snapshotFlow { resting.value }
-            .collectLatest { key ->
-                if (key != null) {
-                    delay(GROUP_SELECT_DELAY_MILLIS)
-                    selectNow(key)
-                }
-            }
-    }
-
-    fun focusPane() {
-        // The search for a focus target to the right would pick the row nearest to the group.
-        // With no focus to measure from, entering the pane picks its first row.
-        focusManager.clearFocus()
-        if (!pane.requestFocus()) selectedGroup.requestFocus()
-    }
-
-    // Focus enters the pane once its group has arrived, whenever the caller applies the selection.
-    // A cancel of the entry, even during the frame, drops it.
-    LaunchedEffect(Unit) {
-        snapshotFlow { entering.value != null && entering.value == currentKey }
-            .collectLatest { arrived ->
-                if (arrived) {
-                    // The rows are composed by now; the next frame has them placed.
-                    withFrameNanos {}
-                    entering.value = null
-                    focusPane()
-                }
-            }
-    }
-
-    fun enterPane() {
-        val group = resting.value
-        when {
-            group != null -> {
-                selectNow(group)
-                entering.value = group
-            }
-            // Right again, as a held key repeats it, while the group has yet to arrive.
-            entering.value == null -> focusPane()
-        }
-    }
-
+    val navigation = rememberGroupNavigation(current?.key, onSelect, pane, selectedGroup)
     Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(PANE_GAP)) {
-        GroupList(
-            groups,
-            current?.key,
-            resting,
-            onRest = {
-                resting.value = if (it == currentKey) null else it
-                entering.value = null
-            },
-            onSelect = ::selectNow,
-            onEnterPane = ::enterPane,
-            onOtherKey = { entering.value = null },
-            onLeave = {
-                resting.value = null
-                entering.value = null
-            },
-            selectedGroup = selectedGroup,
-        )
+        GroupList(groups, current?.key, navigation, selectedGroup)
         Box(
             Modifier.weight(1f)
                 .fillMaxHeight()
@@ -213,27 +141,124 @@ fun <K> SettingsTwoPane(
 }
 
 /**
- * The groups by title. The group that has focus and that the pane has not followed yet, [resting],
- * looks selected in place of [selected]. [onRest] is told when focus lands on a group, [onSelect]
- * when a tap or OK selects one, [onEnterPane] when Right is pressed, [onOtherKey] on any other key,
- * and [onLeave] when focus leaves the list. [selectedGroup] is where an entry of the list by the
- * D-pad lands.
+ * What stands between focus on a group and the pane of a [SettingsTwoPane]: the group that focus
+ * [resting] on and the pane has not followed yet, and the group that Right is [entering]. The
+ * [currentKey] and [select] are those of the pane; [focusPane] puts focus into it.
+ */
+private class GroupNavigation<K>(
+    private val currentKey: State<K?>,
+    private val select: State<(K) -> Unit>,
+    private val focusPane: () -> Unit,
+) {
+    /** The group that D-pad focus moved to and the pane has not followed yet. */
+    val resting = mutableStateOf<K?>(null)
+
+    /** The group whose pane Right asked to enter, while the caller has yet to bring it. */
+    private val entering = mutableStateOf<K?>(null)
+
+    /** Focus landed on the group [key]; the pane follows once focus stays. */
+    fun onRest(key: K) {
+        resting.value = if (key == currentKey.value) null else key
+        entering.value = null
+    }
+
+    /** A tap or OK on the group [key], or the wait over: the pane follows at once. */
+    fun selectNow(key: K) {
+        resting.value = null
+        entering.value = null
+        if (key != currentKey.value) select.value(key)
+    }
+
+    /** A key other than Right: whatever it does, it is not entering the pane. */
+    fun onOtherKey() {
+        entering.value = null
+    }
+
+    /** Focus left the list, for the pane or elsewhere: a selection that waited is dropped. */
+    fun onLeave() {
+        resting.value = null
+        entering.value = null
+    }
+
+    /** Right: enter the pane, after the group that focus rests on has become the selected one. */
+    fun enterPane() {
+        val group = resting.value
+        when {
+            group != null -> {
+                selectNow(group)
+                entering.value = group
+            }
+            // Right again, as a held key repeats it, while the group has yet to arrive.
+            entering.value == null -> focusPane()
+        }
+    }
+
+    /** Follows focus: selects a group that focus rested on, and enters a pane that has arrived. */
+    suspend fun run(): Unit = coroutineScope {
+        // A new group restarts the wait, so groups that focus passes over are never selected.
+        launch {
+            snapshotFlow { resting.value }
+                .collectLatest { key ->
+                    if (key != null) {
+                        delay(GROUP_SELECT_DELAY_MILLIS)
+                        selectNow(key)
+                    }
+                }
+        }
+        // Focus enters once the group has arrived, whenever the caller applies the selection. A
+        // cancel of the entry, even during the frame, drops it.
+        launch {
+            snapshotFlow { entering.value != null && entering.value == currentKey.value }
+                .collectLatest { arrived ->
+                    if (arrived) {
+                        // The rows are composed by now; the next frame has them placed.
+                        withFrameNanos {}
+                        entering.value = null
+                        focusPane()
+                    }
+                }
+        }
+    }
+}
+
+@Composable
+private fun <K> rememberGroupNavigation(
+    currentKey: K?,
+    onSelect: (K) -> Unit,
+    pane: FocusRequester,
+    selectedGroup: FocusRequester,
+): GroupNavigation<K> {
+    val focusManager = LocalFocusManager.current
+    val currentKeyState = rememberUpdatedState(currentKey)
+    val select = rememberUpdatedState(onSelect)
+    val navigation =
+        remember(focusManager) {
+            GroupNavigation(currentKeyState, select) {
+                // The search for a focus target to the right would pick the row nearest to the
+                // group. With no focus to measure from, entering the pane picks its first row.
+                focusManager.clearFocus()
+                if (!pane.requestFocus()) selectedGroup.requestFocus()
+            }
+        }
+    LaunchedEffect(navigation) { navigation.run() }
+    return navigation
+}
+
+/**
+ * The groups by title. The group that has focus and that the pane has not followed yet looks
+ * selected in place of [selected]; [navigation] hears of focus, of the keys and of a selection.
+ * [selectedGroup] is where an entry of the list by the D-pad lands.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun <K> GroupList(
     groups: List<SettingsGroup<K>>,
     selected: K?,
-    resting: State<K?>,
-    onRest: (K) -> Unit,
-    onSelect: (K) -> Unit,
-    onEnterPane: () -> Unit,
-    onOtherKey: () -> Unit,
-    onLeave: () -> Unit,
+    navigation: GroupNavigation<K>,
     selectedGroup: FocusRequester,
 ) {
     // Read here, so that a focus move recomposes the list and not the pane.
-    val shown = resting.value ?: selected
+    val shown = navigation.resting.value ?: selected
     Column(
         Modifier.width(BorealisDimens.navWidth(LocalFormFactor.current))
             .fillMaxHeight()
@@ -243,7 +268,7 @@ private fun <K> GroupList(
             .onKeyEvent { event ->
                 val right = event.key == Key.DirectionRight
                 if (event.type == KeyEventType.KeyDown) {
-                    if (right) onEnterPane() else onOtherKey()
+                    if (right) navigation.enterPane() else navigation.onOtherKey()
                 }
                 right
             }
@@ -254,7 +279,7 @@ private fun <K> GroupList(
                     if (direction != FocusDirection.Enter) selectedGroup else FocusRequester.Default
                 }
             }
-            .onFocusChanged { if (!it.hasFocus) onLeave() }
+            .onFocusChanged { if (!it.hasFocus) navigation.onLeave() }
             .focusGroup(),
         verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
     ) {
@@ -262,8 +287,8 @@ private fun <K> GroupList(
             GroupEntry(
                 group.title,
                 selected = group.key == shown,
-                onFocus = { onRest(group.key) },
-                onSelect = { onSelect(group.key) },
+                onFocus = { navigation.onRest(group.key) },
+                onSelect = { navigation.selectNow(group.key) },
                 modifier =
                     if (group.key == selected) Modifier.focusRequester(selectedGroup) else Modifier,
             )

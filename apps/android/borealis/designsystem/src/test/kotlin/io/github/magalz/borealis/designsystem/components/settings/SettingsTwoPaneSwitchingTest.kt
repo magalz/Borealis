@@ -89,8 +89,11 @@ class SettingsTwoPaneSwitchingTest {
     @Composable
     private fun Specimen() {
         BorealisTheme(FormFactor.Tv) {
-            SettingsTwoPane(groups = groups, selected = selected, onSelect = { selected = it }) {
-                group ->
+            SettingsTwoPane(
+                groups = groups,
+                selected = { selected },
+                onSelect = { selected = it },
+            ) { group ->
                 when (group) {
                     // One call site for both groups, as the rows of a screen are drawn from a list.
                     "on",

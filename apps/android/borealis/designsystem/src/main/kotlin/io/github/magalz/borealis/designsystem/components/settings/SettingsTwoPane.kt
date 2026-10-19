@@ -91,6 +91,9 @@ internal const val GROUP_SELECT_DELAY_MILLIS = 30L
  * [selectDelayMillis] is how long focus must rest on a group before the pane follows it; a test
  * gives a longer wait, so that the time that its own steps take does not decide the outcome.
  *
+ * [selected] gives the key of the selected group. It is a function so that a caller that keeps the
+ * selection in state does not read it while it composes, and so is not recomposed by a change.
+ *
  * Groups are identified by key, not by position, so a screen can hide a group on some devices
  * without moving the selection. A [selected] key that no group has falls back to the first group,
  * and with no groups the pane is empty.
@@ -108,14 +111,14 @@ internal const val GROUP_SELECT_DELAY_MILLIS = 30L
 @Composable
 fun <K> SettingsTwoPane(
     groups: List<SettingsGroup<K>>,
-    selected: K,
+    selected: () -> K,
     onSelect: (K) -> Unit,
     modifier: Modifier = Modifier,
     selfScrolling: (K) -> Boolean = { false },
     selectDelayMillis: Long = GROUP_SELECT_DELAY_MILLIS,
     content: @Composable ColumnScope.(K) -> Unit,
 ) {
-    val current = groups.firstOrNull { it.key == selected } ?: groups.firstOrNull()
+    val current = groups.firstOrNull { it.key == selected() } ?: groups.firstOrNull()
     val selectedGroup = remember { FocusRequester() }
     val pane = remember { FocusRequester() }
     val navigation =

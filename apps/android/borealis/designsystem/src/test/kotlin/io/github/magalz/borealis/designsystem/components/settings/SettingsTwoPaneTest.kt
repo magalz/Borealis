@@ -387,7 +387,7 @@ class SettingsTwoPaneTest {
             BorealisTheme(FormFactor.Tv) {
                 SettingsTwoPane(
                     groups = listOf(SettingsGroup("own", "Own")),
-                    selected = "own",
+                    selected = { "own" },
                     onSelect = {},
                     selfScrolling = { true },
                 ) {
@@ -445,7 +445,7 @@ class SettingsTwoPaneTest {
         BorealisTheme(formFactor) {
             SettingsTwoPane(
                 groups = groups,
-                selected = selected,
+                selected = { selected },
                 onSelect = {
                     selections += it
                     if (deferSelection) held = it else selected = it

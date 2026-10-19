@@ -181,7 +181,7 @@ private fun TwoPaneSettings(
         ScreenTitle()
         SettingsTwoPane(
             groups = groups,
-            selected = selected,
+            selected = { selected },
             onSelect = { selected = it },
             // The Privacy pane scrolls itself and has its own snackbar.
             selfScrolling = { it == SettingsGroupId.PRIVACY },

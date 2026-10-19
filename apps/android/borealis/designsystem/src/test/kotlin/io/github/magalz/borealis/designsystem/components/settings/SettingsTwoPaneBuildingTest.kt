@@ -173,7 +173,7 @@ class SettingsTwoPaneBuildingTest {
         BorealisTheme(FormFactor.Tv) {
             SettingsTwoPane(
                 groups = groups,
-                selected = selected,
+                selected = { selected },
                 onSelect = { selected = it },
                 selfScrolling = { it == "own" },
             ) { group ->

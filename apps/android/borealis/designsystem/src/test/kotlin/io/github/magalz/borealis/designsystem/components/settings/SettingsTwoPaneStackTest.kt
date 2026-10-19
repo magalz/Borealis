@@ -187,7 +187,7 @@ class SettingsTwoPaneStackTest {
         BorealisTheme(FormFactor.Tv) {
             SettingsTwoPane(
                 groups = groups,
-                selected = selected,
+                selected = { selected },
                 onSelect = { selected = it },
                 selfScrolling = { it == "own" },
                 // Focus that moves over the groups does not select them: a test moves it far.

@@ -6,8 +6,9 @@
 ## Summary
 
 A user changes the global Borealis settings for streams, input, gamepads,
-on-screen controls, audio and advanced behaviour. A change is stored at once and
-applies to the next stream. The screen shows only the rows that the device can
+on-screen controls, audio, advanced behaviour and appearance. A change is stored
+at once and applies to the next stream, except the background, which changes
+behind the screen at once. The screen shows only the rows that the device can
 use.
 
 ## Actors
@@ -24,9 +25,10 @@ use.
 
 1. The user opens Settings. On a phone, the user taps the gear in the top bar.
    On a TV or a handheld, the user chooses Settings in the rail.
-2. The system shows the settings in groups. The user picks a row. The groups
-   and rows are listed in
-   [the Phase 2 proposal](../ux/phase-2-proposal.md#settings-groups).
+2. The system shows the settings in groups, in this order: Stream, Video, Input,
+   Gamepad, On-screen controls, Audio, Advanced, Appearance, Privacy and
+   diagnostics, and About. The user picks a row. The groups and rows are listed
+   in [the Phase 2 proposal](../ux/phase-2-proposal.md#settings-groups).
 3. The user changes the row. A switch changes at once. A list opens a choice
    sheet. A slider moves with touch, or with D-pad Left and Right.
 4. The system stores the value at once. Each row shows its current value. There
@@ -37,7 +39,19 @@ use.
 
 - A phone shows one list.
 - A TV or a handheld shows two panes: the groups on the left and the rows on the
-  right. D-pad Right moves into the rows. D-pad Left returns to the groups.
+  right. D-pad Right moves into the rows. D-pad Left returns to the groups, and
+  Left again returns to the rail.
+- Opening Settings from the rail puts focus on the selected group.
+- Moving focus from group to group changes the pane at once, in the same frame,
+  with no wait. Every group has its own pane, built once and stacked with the
+  others, so a switch only changes which pane is visible. The selected group is
+  built first and the others follow, one per frame, nearest first. Privacy and
+  diagnostics is built only while it is selected.
+- A pane that is not shown takes no focus, touch or accessibility. A group opens
+  at its top whenever it is shown.
+- The list fits a 540 dp TV window without scrolling, even with all ten groups
+  (the On-screen controls group needs a touchscreen, so a TV shows nine). On a
+  handheld the list may scroll.
 
 ## Alternative flows
 
@@ -85,10 +99,25 @@ check.
    layout unchanged.
 3. On confirmation, the system resets the layout of the on-screen controls.
 
+### A7: The user changes the background (branches from step 3)
+
+1. The user opens the Appearance group and chooses the Background row. The system
+   opens a list of the seven styles, with the current one chosen: Aurora curtains,
+   Soft glow, Northern lights, Light mist, Flowing light, Starfield and Off.
+2. The user chooses a style. The system stores its id under `borealis_background`.
+   The background behind Settings changes at once, with no restart.
+3. While the system removes animations or the battery saver is on, a style shows
+   one still frame and nothing plays.
+4. A stored value that no style has shows Aurora curtains, the default.
+
+The background shows behind every Library and Settings screen. It never shows in a
+stream ([ADR 0056](../adr/0056-add-an-animated-background-and-the-appearance-group.md)).
+
 ## Postconditions
 
 - On success: the changed value is stored, and it applies to the next stream.
-  The current stream is not changed.
+  The current stream is not changed. The background is the exception: it changes
+  at once.
 - On failure to store a value: the previous value stays, and the row shows it.
   The error is logged; no message is shown.
 
@@ -96,7 +125,8 @@ check.
 
 UC-009-T1 to T8 exist (Sprint 6). UC-009-T9 and T10 were checked on a device in
 the Sprint 6 device round (see [device validation](../development/device-validation.md),
-section 11).
+section 11). UC-009-T11 to T21 are Sprint 9 rows. The Compose tests run on
+Robolectric. T22 is checked in the Sprint 9 device round (section 3.22).
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
@@ -110,6 +140,18 @@ section 11).
 | UC-009-T8 | Given a TV or a handheld, when the user presses D-pad Right and Left, then focus moves into the rows and back to the groups. | UI | exists (Sprint 6, UI) |
 | UC-009-T9 | Given an app with the two logging switches stored in the SharedPreferences build, when the app is upgraded, then both switches keep their values. | device | exists (Sprint 6, device round) |
 | UC-009-T10 | Given a setting is changed, when the next stream starts, then the stream uses the new value. | device | exists (Sprint 6, device round) |
+| UC-009-T11 | Given the Appearance group, when the user opens the Background row, then the list offers the seven styles, with Aurora curtains first and chosen by default. | UI | exists (Sprint 9, UI): `SettingsTvTest`, `SettingsHandheldTest`, `SettingsPhoneTest` |
+| UC-009-T12 | Given the user chooses a style, when the choice is stored, then `borealis_background` holds the stable id of the style, never its ordinal, and the row shows the style. | unit, UI | exists (Sprint 9): `BackgroundChoicesTest`, `SettingsViewModelTest`, `StoreSettingsRepositoryTest`, `DataStoreBackingTest`, `SettingsTvTest` |
+| UC-009-T13 | Given a stored value that no style has, when Settings opens, then the default style is read and shown as chosen. | unit, UI | exists (Sprint 9): `BackgroundChoicesTest`, `SettingsTvTest` |
+| UC-009-T14 | Given the Library shows Settings, when the style changes, then the background changes at once with no restart, and Off leaves the plain page colour. | UI | exists (Sprint 9, UI): `LibraryActivityBackgroundTest` |
+| UC-009-T15 | Given a TV or a handheld, when focus moves to another group, then its pane shows at once and no row is composed, measured or drawn again. | UI | exists (Sprint 9, UI): `SettingsTwoPaneStackTest` |
+| UC-009-T16 | Given Settings opens, then the selected pane is built first and the others one per frame, nearest first, and a pane that brings its own content (Privacy and diagnostics) is composed only while it is shown. | UI | exists (Sprint 9, UI): `SettingsTwoPaneBuildingTest` |
+| UC-009-T17 | Given a pane that is not shown, then it cannot be touched, takes no focus from the D-pad or Tab, and has no accessibility node. | UI | exists (Sprint 9, UI): `SettingsTwoPaneStackTest`, `SettingsTwoPaneBuildingTest` |
+| UC-009-T18 | Given a group that was scrolled, when it is shown again, then it opens at its top. | UI | exists (Sprint 9, UI): `SettingsTwoPaneSwitchingTest` |
+| UC-009-T19 | Given one setting changes, then the rows of the other settings are not recomposed. | UI, unit | exists (Sprint 9): `SettingsRowSkippingTest`, `SettingsRowValueTest` |
+| UC-009-T20 | Given the user chooses Settings in the rail with the D-pad, then focus is on the selected group, and Left from the group returns to the rail. | UI | exists (Sprint 9, UI): `LibrarySettingsTvTest` |
+| UC-009-T21 | Given a 540 dp TV window with all ten groups, when Settings opens, then every group is whole inside the window, and Down from Stream to About focuses each group in turn without the list scrolling. | UI | exists (Sprint 9, UI): `SettingsTvTest` |
+| UC-009-T22 | Given the Google TV Streamer, when the user moves between groups, then focus and the pane change together without a wait. | device | planned (Sprint 9 device round, section 3.22); measured with atrace in section 14 |
 
 ## Host dependency
 
@@ -120,7 +162,9 @@ LuminalShine capability.
 ## Related
 
 - ADRs: [0055](../adr/0055-settings-storage-and-the-phase-2-settings-screen.md),
-  [0052](../adr/0052-structure-the-phase-2-ui.md) (settings are global, D7).
+  [0052](../adr/0052-structure-the-phase-2-ui.md) (settings are global, D7),
+  [0056](../adr/0056-add-an-animated-background-and-the-appearance-group.md)
+  (the Appearance group and the background).
 - Use cases: [UC-006](0006-send-diagnostics-from-a-tv-to-a-phone.md) and
   [UC-007](0007-review-and-erase-the-audit-trail.md) (the Privacy and diagnostics
   screen, reached from Settings).

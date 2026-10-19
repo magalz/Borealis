@@ -26,6 +26,14 @@ Sprint 8 was a tidy-up of the code. On screen, the four phone title bars (Apps,
 Audit, Settings and Privacy) now share one phone bar and one back button, and the
 Help button is gone.
 
+Sprint 9 polished the screens and the handheld. Quit says what it does, for
+Desktop and for a game. The host Details dialog lists plain lines. Every phone
+bar has the same 4dp gap, and handheld host cards follow their content. The
+keyboard key for the digits reads "Fn 123". Settings changes between groups at
+once on a TV and a handheld, and it has a new Appearance group. An animated
+background sits behind the Library and Settings screens
+([ADR 0056](../adr/0056-add-an-animated-background-and-the-appearance-group.md)).
+
 The screens below are the approved design; where the built screen differs, the
 section says so. Screenshots use
 Roborazzi ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)), and
@@ -71,7 +79,9 @@ and the handheld (gamepad). The rules are the same in every mode:
   - hold OK on a TV (Shift + Enter in the prototype);
   - X on a gamepad.
 - Gamepad menu chord: hold Select + Start to open the in-game menu. The
-  prototype uses Q on a keyboard to stand for the chord.
+  prototype uses Q on a keyboard to stand for the chord. The chord arms only from
+  a clean start: Start and Select left held after the quit combo (Start, Select,
+  LB and RB) do not open the menu.
 - On a stream, every other button goes to the PC. The prototype shows a toast
   for the keys that are not Back or the chord.
 
@@ -151,6 +161,15 @@ States:
   wake, forget).
 - Gamepad: as the TV. A runs the card's action and X shows the options. Menu
   also shows the options. B does nothing at the top level.
+- Card height: on a TV a card is at least 176dp high, so the cards of a grid
+  match. On a handheld, which is short, and on a phone, a card is as high as its
+  content.
+- Details, in the host options, lists what the client knows of the host in plain
+  lines: name, status, address, other addresses, paired, MAC address (for wake)
+  and the running app. An unknown value leaves its line out, except the status,
+  which reads "Checking…". An address shows its port only when it is not the
+  default HTTP port. The UUID is not shown. The host capabilities follow after a
+  blank line, with the HTTP and HTTPS ports.
 
 Changes from 12.2: 12.2 hides pairing, wake and details in a long-press
 context menu, and has no Continue row.
@@ -254,6 +273,20 @@ Session, Quit Current Game and Start.
 
 Decisions: [D6](#decisions).
 
+The consequence of Quit and of Quit and start has one sentence on each line:
+
+- Quit, when the app is Desktop (the app titled "Desktop", ignoring case): "Ends
+  the stream." and "The display and controls go back to the PC."
+- Quit, for any other app: "Closes `<app>` on the PC." and "Unsaved progress in it
+  is lost."
+- Quit and start, when Desktop runs: "Ends the stream first." and "Nothing is
+  lost."
+- Quit and start, when another app runs: "Closes `<app>` on the PC first." and
+  "Unsaved progress in it is lost."
+
+The confirmation of a quit has only "Quit `<app>`?" as its title and the
+consequence as its body.
+
 ### Starting stream
 
 Purpose: each stage of starting a stream. The stages include the per-client
@@ -300,8 +333,10 @@ Changes from 12.2: the Sprint 2 dialog, restyled.
 
 Decisions: none.
 
-Quitting ends the stream on the other device. Unsaved work in the app is lost.
-See [UC-003](../use-cases/0003-join-or-replace-a-running-app.md).
+The dialog warns what quitting costs. For Desktop it says "Quitting ends the
+stream on the other device." For any other app it says "Quitting ends the stream
+on the other device and closes the app." and, on a second line, "Unsaved progress
+in it is lost." See [UC-003](../use-cases/0003-join-or-replace-a-running-app.md).
 
 ![Conflict dialog on a phone](captures/conflict-phone.png)
 
@@ -396,9 +431,11 @@ Decisions: none.
 ### Settings
 
 Purpose: global settings in groups (Stream, Video, Input, Gamepad, On-screen
-controls, Audio, Advanced and About), plus Privacy and diagnostics, which is a
-link row on a phone and a group on TV and handheld. Each row shows its current
-value. Per-host overrides come later.
+controls, Audio, Advanced, Appearance and About), plus Privacy and diagnostics,
+which is a link row on a phone and a group on TV and handheld. On a TV and a
+handheld the groups are in this order: Stream, Video, Input, Gamepad, On-screen
+controls, Audio, Advanced, Appearance, Privacy and diagnostics, and About. Each
+row shows its current value. Per-host overrides come later.
 
 States: none.
 
@@ -410,6 +447,21 @@ Changes from 12.2: one long preference screen, plus a separate Borealis
 screen.
 
 Decisions: [D7](#decisions).
+
+The two panes of a TV and a handheld work like stacked tabs:
+
+- Every group has a pane that is built once and stacked with the others. Moving
+  focus to another group only changes which pane is visible, in the same frame
+  and with no wait.
+- The selected group is built first and the others follow, one per frame,
+  nearest first. Privacy and diagnostics is built only while it is selected.
+- A pane that is not shown takes no focus, touch or accessibility. A group opens
+  at its top.
+- Opening Settings from the rail puts focus on the selected group. Right enters
+  the rows of the group. Left returns to the group, and from the group to the
+  rail.
+- On a TV the group list fits the window without scrolling. On a handheld it may
+  scroll.
 
 The groups and their rows are listed in [Settings groups](#settings-groups).
 
@@ -508,8 +560,11 @@ disabled are marked.
    figures, and the bitrate against its limit.
 9. Display for next launch. Disabled: it needs the host API (Phase 3).
 10. Disconnect. Describes the consequence: the app keeps running on the PC.
-11. Quit and the app name. Ends the app on the PC. This row is shown in the
-    danger style.
+11. Quit and the app name. Says what Quit does, one sentence on each line. For
+    Desktop: "Ends the stream." and "The display and controls go back to the PC."
+    For any other app: "Closes `<app>` on the PC." and "Unsaved progress in it is
+    lost." A confirmation follows, titled "Quit `<app>`?", with the same lines as
+    its body. This row is shown in the danger style.
 
 ### In-stream keyboard
 
@@ -517,11 +572,12 @@ disabled are marked.
   F11 and Close.
 - Three letter rows. The first is Q to P. The second is A to L and ends with
   Backspace. The third starts with Shift, has Z to M, and ends with Enter.
-- A bottom row: Ctrl, Win, Alt, Space, Tab and Fn.
-- Fn switches the three letter rows to the Fn layer, and Fn again switches back.
-  The layer has three rows: the digits 1 to 0; F1 to F10; and the four arrows
-  with Home, End, PgUp, PgDn and Del. The bottom row stays, and Fn shows as on
-  while the layer is open.
+- A bottom row: Ctrl, Win, Alt, Space, Tab and Fn 123.
+- Fn 123 switches the three letter rows to the Fn layer, and Fn 123 again switches
+  back. The key says "123" so that the digits are found. The layer has three
+  rows: the digits 1 to 0; F1 to F10; and the four arrows with Home, End, PgUp,
+  PgDn and Del. The bottom row stays, and Fn 123 shows as on while the layer is
+  open.
 - Ctrl, Alt, Win and Shift latch. The next typed key is sent with them, and
   the latch is cleared. A latch stays on across the switch to the Fn layer.
 
@@ -592,18 +648,20 @@ The prototype's figures are examples. The overlay is off by default
 | | Disable connection warnings | switch | |
 | | Latency summary after a stream | switch | |
 | | Picture-in-picture | switch | Hidden without picture-in-picture, and on Fire OS. |
+| Appearance | Background | list | Aurora curtains (the default), Soft glow, Northern lights, Light mist, Flowing light, Starfield or Off. Stored as `borealis_background`. The Library follows the choice at once. |
 | Privacy and diagnostics | Verbose logging, Mask addresses in logs and diagnostics, Export diagnostic bundle, Audit trail, Erase audit trail | | On a phone it is a link row to its own screen; on TV and handheld it is a group. |
 | About | Borealis version and commit, Source code, Open-source licences, Privacy policy | | A link with no browser shows the address in a dialog. |
 
 The extra groups (Gamepad, On-screen controls and Advanced) and the dropped
 settings (Language and Small icon mode) come from
-[ADR 0055](../adr/0055-settings-storage-and-the-phase-2-settings-screen.md).
+[ADR 0055](../adr/0055-settings-storage-and-the-phase-2-settings-screen.md). The
+Appearance group comes from [ADR 0056](../adr/0056-add-an-animated-background-and-the-appearance-group.md).
 
 The prototype fills the rows with example values, not defaults. Phase 2 keeps
 the current defaults: 1280 x 720, 60 fps, automatic bitrate, lowest-latency
 frame pacing, automatic codec, HDR off, full range off, overlay off,
-trackpad on, stereo audio, audio on the PC off, Verbose logging off and
-Mask addresses in logs and diagnostics off.
+trackpad on, stereo audio, audio on the PC off, Verbose logging off, Mask
+addresses in logs and diagnostics off and the background Aurora curtains.
 
 ### Audit event names
 
@@ -648,6 +706,10 @@ The owner approved the first option of each decision on 2026-10-15.
 | D8 | First run | No onboarding; the empty Hosts screen explains the next step |
 
 The options that were not chosen, with their pros and cons, are in ADR 0052.
+
+Sprint 9 refined D6 by an owner decision: the consequence of Quit has two lines,
+one sentence on each, and says what Quit does for Desktop and for another app
+(see [In-game menu items](#in-game-menu-items)).
 
 ## Visual language
 
@@ -705,6 +767,9 @@ Dark palette, WCAG 2.x, computed:
 | warning-ink on surface | 11.69 | Warning text |
 | danger-ink on surface | 7.88 | Danger text |
 
+These ratios are for the plain page and the surfaces. Over the animated
+background, see [Background](#background).
+
 ### Type
 
 - Typefaces: IBM Plex Sans for the UI; IBM Plex Mono for data, codes,
@@ -720,6 +785,29 @@ Dark palette, WCAG 2.x, computed:
   18dp at the top corners; pill 999dp.
 - Spacing: a 4dp base unit. Screen gutter 16dp on phones and 34dp on TVs.
   Card padding 14dp on phones and 18dp on TVs.
+- A phone bar has 4dp at each side, so the back arrow lines up with the gutter,
+  and 4dp between the arrow, the title and the actions, as a Material 3 top app
+  bar leaves.
+
+### Background
+
+One animated background sits behind the Library and Settings screens: Hosts, Add
+host, Pairing, Apps, Settings, Privacy and diagnostics and the Audit trail. The
+screens have no page colour of their own. It is never shown in a stream.
+[ADR 0056](../adr/0056-add-an-animated-background-and-the-appearance-group.md) records the decision.
+
+- Styles: Aurora curtains (the default) and Soft glow are drawn in Compose.
+  Northern lights, Light mist, Flowing light and Starfield are looping clips. Off
+  is the plain page colour. The user chooses in Settings, Appearance, Background.
+- A navigation removes the old screen at once and fades the new one in over
+  150ms.
+- Reduced motion (the system setting that removes animations) and the battery
+  saver give one still frame, and no video player is made.
+- The Compose styles use the `page`, `accent-strong` and `accent` tokens, and
+  one teal that has no token.
+- Over the brightest bands of the aurora, the small ink-3 and ink-4 texts fall to
+  3.0 to 3.7:1. A review of the contrast is on the
+  [roadmap](../roadmap.md#next-ux-and-accessibility).
 
 ## Phase 3 extension points
 
@@ -753,8 +841,12 @@ items or placeholders. The host endpoints are in
 4. Sprint 7 refined the visuals and added the Pointer speed row to the in-game
    menu.
 5. Sprint 8 tidied the code and gave the phone title bars one shared bar.
-6. Next, Sprint 9: UX polish and the handheld. See the
+6. Sprint 9 polished the screens and the handheld, and added the Appearance group
+   and the animated background. See the
    [roadmap](../roadmap.md#sprint-9-ux-polish-and-the-handheld).
+7. Next, the UX and accessibility items on the
+   [roadmap](../roadmap.md#next-ux-and-accessibility): a WCAG review and the
+   phone portrait Settings navigation.
 
 Each screen comes with the acceptance tests of its use case first
 ([TDD](../development/tdd.md)).

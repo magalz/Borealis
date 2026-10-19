@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.InfiniteAnimationPolicy
 import androidx.compose.ui.unit.Constraints
@@ -58,7 +59,13 @@ private const val COLUMNS = 160
 
 /**
  * The three hues of the aurora, taken from the tokens of [colors]: the page, the strong accent
- * (`#7C3AED`), the accent (`#A78BFA`) and the teal.
+ * (`#7C3AED`), the accent (`#A78BFA`) and the teal; and the brush of each curtain and each glow.
+ *
+ * A brush is made once, for a unit length, and a frame moves and stretches it with the canvas: a
+ * brush made for every strip of every frame would also make a shader for each. The gradient of a
+ * strip runs from nothing at its top to the curtain's brightness a quarter of the way down and back
+ * to nothing at its bottom; that of a glow from its brightness at the centre, over a shoulder, to
+ * nothing at its edge.
  */
 private class Hues(colors: BorealisColors) {
     val page = colors.page
@@ -71,6 +78,30 @@ private class Hues(colors: BorealisColors) {
             Hue.VIOLET -> violet
             Hue.TEAL -> TEAL
         }
+
+    /** One brush for each of [BANDS], across the unit height of a strip. */
+    val curtains: List<Brush> = BANDS.map { band ->
+        val color = of(band.hue)
+        Brush.verticalGradient(
+            0f to color.copy(alpha = 0f),
+            CURTAIN_PEAK to color.copy(alpha = band.alpha),
+            1f to color.copy(alpha = 0f),
+            startY = 0f,
+            endY = 1f,
+        )
+    }
+
+    /** One brush for each of [SPOTS], across the unit radius of a glow centred on the origin. */
+    val glows: List<Brush> = SPOTS.map { spot ->
+        val color = of(spot.hue)
+        Brush.radialGradient(
+            0f to color.copy(alpha = spot.alpha),
+            GLOW_SHOULDER to color.copy(alpha = spot.alpha * GLOW_SHOULDER_ALPHA),
+            1f to color.copy(alpha = 0f),
+            center = Offset.Zero,
+            radius = 1f,
+        )
+    }
 }
 
 private enum class Hue {
@@ -204,7 +235,8 @@ internal fun DrawnBackground(style: BackgroundStyle, animated: Boolean, modifier
 /** The same, at the position in the loop that [cycle] says: a test sets it to any point. */
 @Composable
 internal fun DrawnBackground(style: BackgroundStyle, cycle: FloatState, modifier: Modifier) {
-    val hues = Hues(LocalBorealisColors.current)
+    val colors = LocalBorealisColors.current
+    val hues = remember(colors) { Hues(colors) }
     Layout(
         content = {
             Box(
@@ -274,13 +306,15 @@ private fun cycleAt(frameNanos: Long): Float = (frameNanos % PERIOD_NANOS).toFlo
 
 /**
  * Three curtains of light, each a row of strips whose height, thickness and brightness follow
- * waves; the strips add up where curtains cross.
+ * waves; the strips add up where curtains cross. A strip is the brush of its curtain, moved to the
+ * strip and stretched to its length, and dimmed by how much the curtain breathes there.
  */
 @Suppress("MagicNumber") // the choreography of the approved prototype, one literal per curve
 private fun DrawScope.drawCurtains(cycle: Float, hues: Hues) {
     val stripWidth = size.width / COLUMNS
-    for (band in BANDS) {
-        val color = hues.of(band.hue)
+    for (index in BANDS.indices) {
+        val band = BANDS[index]
+        val brush = hues.curtains[index]
         for (column in 0 until COLUMNS) {
             val u = column.toFloat() / COLUMNS
             val centre =
@@ -293,19 +327,17 @@ private fun DrawScope.drawCurtains(cycle: Float, hues: Hues) {
             val length =
                 band.thick * size.height * (0.8f + 0.4f * sin(TAU * (LENGTH_WAVES * u + cycle)))
             val top = centre - length * 0.25f
-            drawRect(
-                brush =
-                    Brush.verticalGradient(
-                        0f to color.copy(alpha = 0f),
-                        0.25f to color.copy(alpha = band.alpha * breathe),
-                        1f to color.copy(alpha = 0f),
-                        startY = top,
-                        endY = centre + length,
-                    ),
-                topLeft = Offset(column * stripWidth, top),
-                size = Size(stripWidth, length * 1.25f),
-                blendMode = BlendMode.Plus,
-            )
+            withTransform({
+                translate(column * stripWidth, top)
+                scale(1f, length * 1.25f, Offset.Zero)
+            }) {
+                drawRect(
+                    brush = brush,
+                    size = Size(stripWidth, 1f),
+                    alpha = breathe,
+                    blendMode = BlendMode.Plus,
+                )
+            }
         }
     }
 }
@@ -314,29 +346,27 @@ private fun DrawScope.drawCurtains(cycle: Float, hues: Hues) {
 @Suppress("MagicNumber") // the choreography of the approved prototype, one literal per curve
 private fun DrawScope.drawGlows(cycle: Float, hues: Hues) {
     val longer = max(size.width, size.height)
-    for (spot in SPOTS) {
-        val centre =
-            Offset(
-                (spot.x + spot.driftX * sin(TAU * spot.cyclesX * cycle + spot.phase)) * size.width,
-                (spot.y + spot.driftY * cos(TAU * spot.cyclesY * cycle + spot.phase)) * size.height,
-            )
+    for (index in SPOTS.indices) {
+        val spot = SPOTS[index]
+        val x = (spot.x + spot.driftX * sin(TAU * spot.cyclesX * cycle + spot.phase)) * size.width
+        val y = (spot.y + spot.driftY * cos(TAU * spot.cyclesY * cycle + spot.phase)) * size.height
         val radius = spot.radius * longer * (0.8f + 0.2f * sin(TAU * cycle + spot.phase))
-        val color = hues.of(spot.hue)
-        drawCircle(
-            brush =
-                Brush.radialGradient(
-                    0f to color.copy(alpha = spot.alpha),
-                    GLOW_SHOULDER to color.copy(alpha = spot.alpha * GLOW_SHOULDER_ALPHA),
-                    1f to color.copy(alpha = 0f),
-                    center = centre,
-                    radius = radius,
-                ),
-            radius = radius,
-            center = centre,
-            blendMode = BlendMode.Plus,
-        )
+        withTransform({
+            translate(x, y)
+            scale(radius, radius, Offset.Zero)
+        }) {
+            drawCircle(
+                brush = hues.glows[index],
+                radius = 1f,
+                center = Offset.Zero,
+                blendMode = BlendMode.Plus,
+            )
+        }
     }
 }
+
+/** Where a strip reaches its brightness, as a part of its length. */
+private const val CURTAIN_PEAK = 0.25f
 
 /** The ripple of a curtain's edge, and the waves it makes along the width. */
 private const val CURTAIN_RIPPLE = 0.02f

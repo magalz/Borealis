@@ -190,6 +190,8 @@ class SettingsTwoPaneStackTest {
                 selected = selected,
                 onSelect = { selected = it },
                 selfScrolling = { it == "own" },
+                // Focus that moves over the groups does not select them: a test moves it far.
+                selectDelayMillis = NEVER_MILLIS,
             ) { group ->
                 // Rows at the same places in every pane, and more of them in "g2" than in "g1".
                 when (group) {
@@ -205,6 +207,7 @@ class SettingsTwoPaneStackTest {
         /** Enough frames for one pane in each of them. */
         const val FRAMES_TO_BUILD_ALL = 12
         const val TABS = 8
+        const val NEVER_MILLIS = 60_000L
         const val MANY_ROWS = 3
     }
 }

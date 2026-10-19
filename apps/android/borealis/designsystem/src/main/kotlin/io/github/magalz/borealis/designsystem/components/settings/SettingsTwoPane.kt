@@ -64,8 +64,12 @@ internal val AREA_PADDING = 8.dp
 private val GROUP_PADDING_HORIZONTAL = 12.dp
 private val GROUP_PADDING_VERTICAL = 10.dp
 
-/** How long focus must rest on a group before the pane follows it. */
-internal const val GROUP_SELECT_DELAY_MILLIS = 150L
+/**
+ * How long focus must rest on a group before the pane follows it. It is short: with the panes built
+ * and stacked, showing one only changes which pane counts, so the wait only has to skip the groups
+ * that a held key passes over.
+ */
+internal const val GROUP_SELECT_DELAY_MILLIS = 30L
 
 /**
  * The settings of a TV or handheld in two panes: the [groups] by title in a list on the left, and
@@ -75,13 +79,14 @@ internal const val GROUP_SELECT_DELAY_MILLIS = 150L
  * padding: its [content] fills the pane, which does not wrap it in a scroll that would give it an
  * unbounded height.
  *
- * Every group has a pane of its own, composed once and kept, so that moving to a group costs a
- * layout and a draw and no composition. The pane of the selected group is composed at once, those
- * of the others after the first frame, one in each frame, and a pane that is not shown is neither
- * measured nor placed, takes no focus and is left out of the semantics tree. A group for which
- * [selfScrolling] is true brings content and work of its own (the screen of Privacy, say), so its
- * pane is composed only when the group is first selected. A pane opens at its top whenever it is
- * shown.
+ * Every group has a pane of its own, composed once and kept, and the panes are stacked: each is
+ * laid out and drawn in the same bounds, and only the selected one is visible. Moving to a group
+ * therefore composes, measures and records nothing; it changes which pane counts. The pane of the
+ * selected group is composed at once, those of the others after the first frame, one in each frame
+ * and the nearest to the selected group first. A pane that is not shown cannot be touched, takes no
+ * focus (D-pad, Tab) and is left out of the semantics tree. A group for which [selfScrolling] is
+ * true brings content and work of its own (the screen of Privacy, say), so its pane is composed
+ * while the group is selected and not after. A pane opens at its top whenever it is shown.
  *
  * [selectDelayMillis] is how long focus must rest on a group before the pane follows it; a test
  * gives a longer wait, so that the time that its own steps take does not decide the outcome.
@@ -123,16 +128,13 @@ fun <K> SettingsTwoPane(
             composed,
             current?.key,
             selfScrolling,
-            Modifier.weight(1f)
-                .fillMaxHeight()
-                .focusRequester(pane)
-                .onKeyEvent { event ->
-                    // No row used Left: go back to the selected group.
-                    val left = event.key == Key.DirectionLeft
-                    if (left && event.type == KeyEventType.KeyDown) selectedGroup.requestFocus()
-                    left
-                }
-                .focusGroup(),
+            pane,
+            Modifier.weight(1f).fillMaxHeight().onKeyEvent { event ->
+                // No row used Left: go back to the selected group.
+                val left = event.key == Key.DirectionLeft
+                if (left && event.type == KeyEventType.KeyDown) selectedGroup.requestFocus()
+                left
+            },
             content,
         )
     }

@@ -329,6 +329,17 @@ class SettingsTwoPaneTest {
     }
 
     @Test
+    fun `a request for a row that is not the first, from a group, stays on that row`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Frame rate").requestFocus()
+
+        composeRule.onNodeWithText("Frame rate").assertIsFocused()
+    }
+
+    @Test
     fun `Left from any row of the pane returns to the selected group`() {
         selected = "video"
         composeRule.setContentInKeyboardMode { Specimen() }

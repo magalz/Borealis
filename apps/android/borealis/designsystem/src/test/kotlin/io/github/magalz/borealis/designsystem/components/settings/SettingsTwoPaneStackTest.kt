@@ -51,6 +51,12 @@ class SettingsTwoPaneStackTest {
     @get:Rule val composeRule = createComposeRule()
     private var selected by mutableStateOf("g1")
 
+    /**
+     * Whether the screen applies the selection that [SettingsTwoPane] asks for. A test that moves
+     * focus over the groups without wanting the selection to follow turns it off.
+     */
+    private var applySelection = true
+
     private val composed = mutableMapOf<String, Int>()
     private val recomposed = mutableMapOf<String, Int>()
     private val measured = mutableMapOf<String, Int>()
@@ -143,6 +149,7 @@ class SettingsTwoPaneStackTest {
 
     @Test
     fun `focus never goes to a pane that is not shown`() {
+        applySelection = false
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Group g1").requestFocus()
         composeRule.waitForIdle()
@@ -165,6 +172,7 @@ class SettingsTwoPaneStackTest {
 
     @Test
     fun `Shift and Tab from the first group wrap into the selected pane, not the first`() {
+        applySelection = false
         selected = "g3"
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Group g1").requestFocus()
@@ -196,6 +204,7 @@ class SettingsTwoPaneStackTest {
 
     @Test
     fun `Tab from the last group enters the selected pane at its first row`() {
+        applySelection = false
         selected = "g3"
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Group own").requestFocus()
@@ -288,10 +297,8 @@ class SettingsTwoPaneStackTest {
                 groups = groups,
                 modifier = CountingModifier(twoPaneRecompositions),
                 selected = { selected },
-                onSelect = { selected = it },
+                onSelect = { if (applySelection) selected = it },
                 selfScrolling = { it == "own" },
-                // Focus that moves over the groups does not select them: a test moves it far.
-                selectDelayMillis = NEVER_MILLIS,
             ) { group ->
                 contentRuns.merge(group, 1, Int::plus)
                 // Rows at the same places in every pane, and more of them in "g2" than in "g1".
@@ -327,7 +334,6 @@ class SettingsTwoPaneStackTest {
         /** Enough frames for one pane in each of them. */
         const val FRAMES_TO_BUILD_ALL = 12
         const val TABS = 8
-        const val NEVER_MILLIS = 60_000L
         const val MANY_ROWS = 3
     }
 }

@@ -41,10 +41,6 @@ class SettingsTwoPaneTest {
     private var selected by mutableStateOf("stream")
     private val selections = mutableListOf<String>()
 
-    /** A screen that applies a selection some frames after [SettingsTwoPane] asks for it. */
-    private var deferSelection = false
-    private var held: String? = null
-
     private val allGroups =
         listOf(
             SettingsGroup("stream", "Stream"),
@@ -65,81 +61,36 @@ class SettingsTwoPaneTest {
     }
 
     @Test
-    fun `moving focus down the left list selects the next group by its key once focus rests`() {
+    fun `moving focus down the left list selects the next group by its key at once`() {
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Stream").requestFocus()
 
         press(Key.DirectionDown)
-        restOnTheGroup()
 
         composeRule.onNodeWithText("Video").assertIsFocused()
+        composeRule.onNodeWithText("Video").assertIsSelected()
+        composeRule.onNodeWithText("Stream").assertIsNotSelected()
         assertThat(selections).containsExactly("video")
         composeRule.onNodeWithText("Codec").assertIsDisplayed()
         composeRule.onNodeWithText("Resolution").assertDoesNotExist()
     }
 
     @Test
-    fun `the pane keeps its group until focus has rested on another one`() {
-        composeRule.setContentInKeyboardMode { Specimen() }
-        composeRule.onNodeWithText("Stream").requestFocus()
-
-        press(Key.DirectionDown)
-        composeRule.mainClock.advanceTimeBy(WAIT_MILLIS / 2)
-
-        composeRule.onNodeWithText("Video").assertIsFocused()
-        assertThat(selections).isEmpty()
-        composeRule.onNodeWithText("Resolution").assertIsDisplayed()
-        composeRule.onNodeWithText("Codec").assertDoesNotExist()
-
-        restOnTheGroup()
-
-        assertThat(selections).containsExactly("video")
-        composeRule.onNodeWithText("Codec").assertIsDisplayed()
-    }
-
-    @Test
-    fun `moving over several groups quickly selects only the last one`() {
+    fun `moving down over several groups selects each of them in turn`() {
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Stream").requestFocus()
 
         press(Key.DirectionDown)
         press(Key.DirectionDown)
         press(Key.DirectionDown)
-        restOnTheGroup()
 
         composeRule.onNodeWithText("About").assertIsFocused()
-        assertThat(selections).containsExactly("about")
+        assertThat(selections).containsExactly("video", "audio", "about").inOrder()
         composeRule.onNodeWithText("Licences").assertIsDisplayed()
     }
 
     @Test
-    fun `moving back to the selected group before the delay selects nothing`() {
-        composeRule.setContentInKeyboardMode { Specimen() }
-        composeRule.onNodeWithText("Stream").requestFocus()
-
-        press(Key.DirectionDown)
-        press(Key.DirectionUp)
-        restOnTheGroup()
-
-        composeRule.onNodeWithText("Stream").assertIsFocused()
-        assertThat(selections).isEmpty()
-        composeRule.onNodeWithText("Resolution").assertIsDisplayed()
-    }
-
-    @Test
-    fun `the group that has focus looks selected at once`() {
-        composeRule.setContentInKeyboardMode { Specimen() }
-        composeRule.onNodeWithText("Stream").requestFocus()
-
-        press(Key.DirectionDown)
-
-        composeRule.onNodeWithText("Video").assertIsSelected()
-        composeRule.onNodeWithText("Stream").assertIsNotSelected()
-        assertThat(selections).isEmpty()
-    }
-
-    @Test
-    fun `OK on a group selects it at once`() {
+    fun `OK on the group that has focus keeps it selected`() {
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Stream").requestFocus()
         press(Key.DirectionDown)
@@ -148,12 +99,10 @@ class SettingsTwoPaneTest {
 
         assertThat(selections).containsExactly("video")
         composeRule.onNodeWithText("Codec").assertIsDisplayed()
-        restOnTheGroup()
-        assertThat(selections).containsExactly("video")
     }
 
     @Test
-    fun `Right from a group the pane has not followed yet selects it and enters its rows`() {
+    fun `Right right after Down enters the rows of the new group`() {
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Stream").requestFocus()
         press(Key.DirectionDown)
@@ -162,12 +111,10 @@ class SettingsTwoPaneTest {
 
         assertThat(selections).containsExactly("video")
         composeRule.onNodeWithText("Codec").assertIsFocused()
-        restOnTheGroup()
-        assertThat(selections).containsExactly("video")
     }
 
     @Test
-    fun `Left from the pane after Right on a pending group returns to the new group`() {
+    fun `Left from the pane after Down and Right returns to the new group`() {
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Stream").requestFocus()
         press(Key.DirectionDown)
@@ -181,99 +128,6 @@ class SettingsTwoPaneTest {
     }
 
     @Test
-    fun `Right on a pending group waits for the group when the selection lands later`() {
-        deferSelection = true
-        composeRule.setContentInKeyboardMode { Specimen() }
-        composeRule.onNodeWithText("Stream").requestFocus()
-        press(Key.DirectionDown)
-
-        press(Key.DirectionRight)
-        composeRule.mainClock.advanceTimeBy(WAIT_MILLIS / 2)
-        composeRule.waitForIdle()
-
-        // The caller was asked and has not applied it: the old pane must not take focus.
-        assertThat(selections).containsExactly("video")
-        composeRule.onNodeWithText("Resolution").assertIsNotFocused()
-
-        landSelection()
-
-        composeRule.onNodeWithText("Codec").assertIsFocused()
-        composeRule.onNodeWithText("Resolution").assertDoesNotExist()
-    }
-
-    @Test
-    fun `moving to another group before the pending one arrives cancels entering the pane`() {
-        deferSelection = true
-        composeRule.setContentInKeyboardMode { Specimen() }
-        composeRule.onNodeWithText("Stream").requestFocus()
-        press(Key.DirectionDown)
-        press(Key.DirectionRight)
-
-        press(Key.DirectionDown)
-        landSelection()
-
-        composeRule.onNodeWithText("Codec").assertIsNotFocused()
-        composeRule.onNodeWithText("Audio").assertIsFocused()
-    }
-
-    @Test
-    fun `a key that moves nothing also cancels entering the pane`() {
-        deferSelection = true
-        composeRule.setContentInKeyboardMode { Specimen() }
-        composeRule.onNodeWithText("Stream").requestFocus()
-        press(Key.DirectionDown)
-        press(Key.DirectionRight)
-
-        press(Key.DirectionLeft)
-        landSelection()
-
-        composeRule.onNodeWithText("Codec").assertIsNotFocused()
-        composeRule.onNodeWithText("Video").assertIsFocused()
-    }
-
-    @Test
-    fun `focus leaving the group list cancels the pending selection`() {
-        composeRule.setContentInKeyboardMode { Specimen() }
-        composeRule.onNodeWithText("Stream").requestFocus()
-        press(Key.DirectionDown)
-
-        composeRule.onNodeWithText("Resolution").requestFocus()
-        restOnTheGroup()
-
-        assertThat(selections).isEmpty()
-        composeRule.onNodeWithText("Resolution").assertIsFocused()
-        composeRule.onNodeWithText("Codec").assertDoesNotExist()
-        composeRule.onNodeWithText("Stream").assertIsSelected()
-    }
-
-    @Test
-    fun `a tap on another group cancels the pending one`() {
-        composeRule.setContentInKeyboardMode { Specimen() }
-        composeRule.onNodeWithText("Stream").requestFocus()
-        press(Key.DirectionDown)
-
-        composeRule.onNodeWithText("Audio").performClick()
-        restOnTheGroup()
-
-        assertThat(selections).containsExactly("audio")
-        composeRule.onNodeWithText("Channels").assertIsDisplayed()
-    }
-
-    @Test
-    fun `OK on a group that focus reached after a pending one cancels that one`() {
-        composeRule.setContentInKeyboardMode { Specimen() }
-        composeRule.onNodeWithText("Stream").requestFocus()
-        press(Key.DirectionDown)
-        press(Key.DirectionDown)
-
-        press(Key.Enter)
-        restOnTheGroup()
-
-        assertThat(selections).containsExactly("audio")
-        composeRule.onNodeWithText("Channels").assertIsDisplayed()
-    }
-
-    @Test
     fun `a tap on a group selects it`() {
         composeRule.setContent { Specimen() }
 
@@ -281,7 +135,6 @@ class SettingsTwoPaneTest {
 
         assertThat(selected).isEqualTo("audio")
         composeRule.onNodeWithText("Channels").assertIsDisplayed()
-        restOnTheGroup()
         assertThat(selections).containsExactly("audio")
     }
 
@@ -464,18 +317,6 @@ class SettingsTwoPaneTest {
         composeRule.waitForIdle()
     }
 
-    /** Applies the selection that the screen was asked for and has held back. */
-    private fun landSelection() {
-        composeRule.runOnIdle { selected = checkNotNull(held) }
-        composeRule.waitForIdle()
-    }
-
-    /** Lets focus rest on the group it is on for longer than the pane waits. */
-    private fun restOnTheGroup() {
-        composeRule.mainClock.advanceTimeBy(2 * WAIT_MILLIS)
-        composeRule.waitForIdle()
-    }
-
     @Composable
     private fun Specimen(
         groups: List<SettingsGroup<String>> = allGroups,
@@ -488,9 +329,8 @@ class SettingsTwoPaneTest {
                 selected = { selected },
                 onSelect = {
                     selections += it
-                    if (deferSelection) held = it else selected = it
+                    selected = it
                 },
-                selectDelayMillis = WAIT_MILLIS,
                 focusOnOpen = focusOnOpen,
             ) { group ->
                 when (group) {
@@ -510,14 +350,5 @@ class SettingsTwoPaneTest {
                 }
             }
         }
-    }
-
-    private companion object {
-        /**
-         * The wait of the pane in these tests. It is far longer than the frames that one step of a
-         * test lets pass, so that the steps are what the tests mean them to be, whatever the screen
-         * uses.
-         */
-        const val WAIT_MILLIS = 300L
     }
 }

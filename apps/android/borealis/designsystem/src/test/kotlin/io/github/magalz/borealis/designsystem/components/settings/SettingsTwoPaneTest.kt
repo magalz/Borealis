@@ -84,7 +84,7 @@ class SettingsTwoPaneTest {
         composeRule.onNodeWithText("Stream").requestFocus()
 
         press(Key.DirectionDown)
-        composeRule.mainClock.advanceTimeBy(GROUP_SELECT_DELAY_MILLIS / 2)
+        composeRule.mainClock.advanceTimeBy(WAIT_MILLIS / 2)
 
         composeRule.onNodeWithText("Video").assertIsFocused()
         assertThat(selections).isEmpty()
@@ -188,7 +188,7 @@ class SettingsTwoPaneTest {
         press(Key.DirectionDown)
 
         press(Key.DirectionRight)
-        composeRule.mainClock.advanceTimeBy(GROUP_SELECT_DELAY_MILLIS / 2)
+        composeRule.mainClock.advanceTimeBy(WAIT_MILLIS / 2)
         composeRule.waitForIdle()
 
         // The caller was asked and has not applied it: the old pane must not take focus.
@@ -422,7 +422,7 @@ class SettingsTwoPaneTest {
 
     /** Lets focus rest on the group it is on for longer than the pane waits. */
     private fun restOnTheGroup() {
-        composeRule.mainClock.advanceTimeBy(2 * GROUP_SELECT_DELAY_MILLIS)
+        composeRule.mainClock.advanceTimeBy(2 * WAIT_MILLIS)
         composeRule.waitForIdle()
     }
 
@@ -439,6 +439,7 @@ class SettingsTwoPaneTest {
                     selections += it
                     if (deferSelection) held = it else selected = it
                 },
+                selectDelayMillis = WAIT_MILLIS,
             ) { group ->
                 when (group) {
                     "stream" -> {
@@ -457,5 +458,14 @@ class SettingsTwoPaneTest {
                 }
             }
         }
+    }
+
+    private companion object {
+        /**
+         * The wait of the pane in these tests. It is far longer than the frames that one step of a
+         * test lets pass, so that the steps are what the tests mean them to be, whatever the screen
+         * uses.
+         */
+        const val WAIT_MILLIS = 300L
     }
 }

@@ -83,6 +83,9 @@ internal const val GROUP_SELECT_DELAY_MILLIS = 150L
  * pane is composed only when the group is first selected. A pane opens at its top whenever it is
  * shown.
  *
+ * [selectDelayMillis] is how long focus must rest on a group before the pane follows it; a test
+ * gives a longer wait, so that the time that its own steps take does not decide the outcome.
+ *
  * Groups are identified by key, not by position, so a screen can hide a group on some devices
  * without moving the selection. A [selected] key that no group has falls back to the first group,
  * and with no groups the pane is empty.
@@ -104,12 +107,14 @@ fun <K> SettingsTwoPane(
     onSelect: (K) -> Unit,
     modifier: Modifier = Modifier,
     selfScrolling: (K) -> Boolean = { false },
+    selectDelayMillis: Long = GROUP_SELECT_DELAY_MILLIS,
     content: @Composable ColumnScope.(K) -> Unit,
 ) {
     val current = groups.firstOrNull { it.key == selected } ?: groups.firstOrNull()
     val selectedGroup = remember { FocusRequester() }
     val pane = remember { FocusRequester() }
-    val navigation = rememberGroupNavigation(current?.key, onSelect, pane, selectedGroup)
+    val navigation =
+        rememberGroupNavigation(current?.key, onSelect, selectDelayMillis, pane, selectedGroup)
     val composed = rememberComposedGroups(groups, current?.key, selfScrolling)
     Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(PANE_GAP)) {
         GroupList(groups, current?.key, navigation, selectedGroup)
@@ -141,6 +146,7 @@ fun <K> SettingsTwoPane(
 private class GroupNavigation<K>(
     private val currentKey: State<K?>,
     private val select: State<(K) -> Unit>,
+    private val selectDelayMillis: Long,
     private val focusPane: () -> Unit,
 ) {
     /** The group that D-pad focus moved to and the pane has not followed yet. */
@@ -193,7 +199,7 @@ private class GroupNavigation<K>(
             snapshotFlow { resting.value }
                 .collectLatest { key ->
                     if (key != null) {
-                        delay(GROUP_SELECT_DELAY_MILLIS)
+                        delay(selectDelayMillis)
                         selectNow(key)
                     }
                 }
@@ -218,6 +224,7 @@ private class GroupNavigation<K>(
 private fun <K> rememberGroupNavigation(
     currentKey: K?,
     onSelect: (K) -> Unit,
+    selectDelayMillis: Long,
     pane: FocusRequester,
     selectedGroup: FocusRequester,
 ): GroupNavigation<K> {
@@ -225,8 +232,8 @@ private fun <K> rememberGroupNavigation(
     val currentKeyState = rememberUpdatedState(currentKey)
     val select = rememberUpdatedState(onSelect)
     val navigation =
-        remember(focusManager) {
-            GroupNavigation(currentKeyState, select) {
+        remember(focusManager, selectDelayMillis) {
+            GroupNavigation(currentKeyState, select, selectDelayMillis) {
                 // The search for a focus target to the right would pick the row nearest to the
                 // group. With no focus to measure from, entering the pane picks its first row.
                 focusManager.clearFocus()

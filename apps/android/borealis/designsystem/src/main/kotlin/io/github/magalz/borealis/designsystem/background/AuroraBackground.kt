@@ -18,9 +18,11 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.InfiniteAnimationPolicy
 import androidx.compose.ui.unit.Constraints
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import kotlin.coroutines.coroutineContext
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.max
@@ -235,7 +237,11 @@ internal fun DrawnBackground(style: BackgroundStyle, cycle: FloatState, modifier
     }
 }
 
-/** The position in the loop, from 0 until 1, as the frames of a running loop move it. */
+/**
+ * The position in the loop, from 0 until 1, as the frames of a running loop move it. The frames are
+ * an infinite animation, so a test cancels them through the `InfiniteAnimationPolicy` of its
+ * composition; the sleep between them keeps the rate at about 30 fps.
+ */
 @Composable
 private fun rememberCycle(animated: Boolean): FloatState {
     val cycle = remember { mutableFloatStateOf(STILL_CYCLE) }
@@ -246,10 +252,21 @@ private fun rememberCycle(animated: Boolean): FloatState {
         }
         while (true) {
             delay(FRAME_GAP_MILLIS)
-            withFrameNanos { cycle.floatValue = cycleAt(it) }
+            withInfiniteFrameNanos { cycle.floatValue = cycleAt(it) }
         }
     }
     return cycle
+}
+
+/**
+ * [withFrameNanos] as an infinite animation does it: through the [InfiniteAnimationPolicy] of the
+ * coroutine, if it has one. A test cancels the loop there; the framework's own helper for it is
+ * internal.
+ */
+private suspend fun <R> withInfiniteFrameNanos(onFrame: (Long) -> R): R {
+    val policy = coroutineContext[InfiniteAnimationPolicy]
+    return if (policy == null) withFrameNanos(onFrame)
+    else policy.onInfiniteOperation { withFrameNanos(onFrame) }
 }
 
 /** The position in the loop at [frameNanos], which is the same position at every loop. */

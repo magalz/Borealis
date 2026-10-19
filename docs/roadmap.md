@@ -128,7 +128,7 @@ crash notice, which cannot be triggered. The results are in
 7. **Phone title bars.** Done (merge `8a6acbad`). The four phone title bars
    (Apps, Audit, Settings and Privacy) share one phone bar and one back button.
    The back arrows of Add host and Pairing use the same button. The gap below
-   the arrow still differs; see Sprint 9.
+   the arrow still differed; Sprint 9 fixed it (item 5).
 8. **Kotlin suppressions.** Done (merge `543896a9`).
 9. **Detekt type analysis.** Done (merge `65f6b3a9`, fix merges `933f368f`,
    `67cef8eb` and `b72163d3`, baselines removed in commit `50854eda`). Every
@@ -145,54 +145,139 @@ crash notice, which cannot be triggered. The results are in
 
 ### Sprint 9: UX polish and the handheld
 
-- **Smoother D-pad moves in Settings on a TV.** Reported by the owner on
-  2026-10-17. Moving from one Settings row to the next has a small delay, while
-  every other screen moves at once. Investigate where the time goes, for
-  example rows that recompose or reload their options on every focus change.
-- **The quit warning for Desktop.** Reported by the owner on 2026-10-17.
-  Quitting the stream asks "Quit Desktop? Unsaved work is lost.", but quitting
-  Desktop only ends the stream and gives the display back to the PC; nothing is
-  lost. The warning still fits a game, which the quit closes. The strings are
-  `stream_menu_quit_confirm`, `apps_confirm_quit`, `apps_action_quit_consequence`
-  and `stream_conflict_warning`.
-- **Host details text.** Noticed on 2026-10-17. The host Details dialog lists
-  raw fields inherited from Moonlight, such as "Active Address: null" and
-  "State: OFFLINE". Show only what a user needs, in plain words.
-- **Handheld host card height.** Noticed on 2026-10-17. On the S22 as a
-  handheld (360 dp tall), the host cards use the TV height of 176 dp, which
-  leaves a lot of empty space. Adapt the card height for a handheld.
-- **Phone bar gap.** Found in Sprint 8. Settings and Privacy have 4 dp between
-  the back arrow and the title, and Apps and Audit have none. Unifying the gap
-  needs re-recorded screenshot references.
-- **Make the digits on the Borealis keyboard easier to discover.** Reported by
-  the owner on 2026-10-18. The on-screen keyboard of the stream has an Fn layer
-  with the digits 1 to 0, F1 to F10, the arrows, Home, End, PgUp, PgDn and Del,
-  since Sprint 5. The owner did not find the digits in the Sprint 8 round.
-- **Keyboards that count as game controllers.** Found in the Sprint 8 round. A
-  Bluetooth keyboard (AULA F75Max) reports a JOYSTICK source with X and Y axes,
-  so the controller rule of Sprint 7 counts it as a game controller. On the S22
-  in landscape, the keyboard alone switches the Library to the handheld layout.
-  In the stream, the inherited controller code also creates a controller context
-  for it. Tighten the rule, with a test first.
-- **Steam opens after a quit combo.** Found in the Sprint 8 round, on the S22.
-  Released in some orders, the quit combo leaves Start and Select held alone,
-  which starts the menu chord of Sprint 5 again; releasing them early sends a
-  Guide tap to the PC, and Steam opens. One way out: count the Start and Select
-  hold only when it starts from no buttons held. Test first. See the
-  [Sprint 8 results](development/device-validation.md#13-results-sprint-8).
-- **The animated background:** integrated in this sprint if the owner has
-  delivered it by then; otherwise it stays in the backlog.
-- **A device round** for what Sprint 7 did not run:
-  - a dedicated Android handheld (the owner gets one);
-  - the Send to phone Expired and No network states;
-  - the Gamepad mouse speed slider at 10% and 200%;
-  - the quit combo on a USB-driver pad on the final build (done in the Sprint 8
-    round, on the Sprint 8 build);
-  - the dialog frames and visual items that the Sprint 7 round did not record
-    (rows F15 and F16).
+The work for this sprint is on the phase branch `phase/s9-ux-handheld`, which
+starts at `68a8972a`. All code items are merged on it. The final device round,
+[section 3.22](development/device-validation.md#322-sprint-9-checks), has not run
+yet. Its results go to
+[section 14](development/device-validation.md#14-results-sprint-9).
 
-  See the [device validation runbook, section 12](development/device-validation.md#12-results-sprint-7)
-  for the Sprint 7 round.
+1. **Smoother D-pad moves in Settings on a TV.** Done (issue #22, merges
+   `8d6e6304`, `5e95a90e` and `1b6d651f`). Reported by the owner on 2026-10-17. A
+   move between Settings groups took 120 to 400 ms on the Google TV Streamer.
+   The first fix moved focus at once and let the pane follow after 150 ms, but it
+   recreated the pane on each move and measured worse (254 to 464 ms), so it was
+   replaced. The final design works like stacked tabs, on a TV and on a handheld:
+   - the pane of each group is composed, measured and drawn once, and the panes
+     are stacked;
+   - a switch only changes which pane's layer is visible, with no wait, so focus
+     and the pane change in the same frame, in about 50 ms;
+   - the selected group is built first and the others one per frame, nearest
+     first;
+   - Privacy and diagnostics is composed only while it is selected;
+   - hidden panes take no focus, touch or accessibility;
+   - each group opens at its top, and a row depends only on its own value;
+   - opening Settings from the rail puts focus on the selected group.
+
+   The measurements are in
+   [section 14](development/device-validation.md#14-results-sprint-9).
+2. **The quit warning for Desktop.** Done (issue #23, merge `c7ddfb0b`). Reported
+   by the owner on 2026-10-17. Desktop is the app titled "Desktop", ignoring case.
+   Quitting it only ends the stream, so it says "Ends the stream." and "The display
+   and controls go back to the PC." Any other app says "Closes `<app>` on the PC."
+   and "Unsaved progress in it is lost." One sentence per line (owner decision).
+   The texts are in the Library sheet and its confirmation, in the stream menu row
+   and its confirmation, and in the conflict dialog. A confirmation carries only
+   "Quit `<app>`?" in the title and the consequence in the body. Quit and start
+   for Desktop says "Ends the stream first." and "Nothing is lost." Disconnect is
+   unchanged.
+3. **Host details text.** Done (issue #24, merge `a9fe85b5`). Noticed on
+   2026-10-17. The Details dialog lists plain lines: name, status, address, other
+   addresses, paired, MAC address for wake and running app. An unknown value
+   leaves its line out, except the status, which reads "Checking…". An address
+   shows its port only when it is not the default HTTP port. The UUID is gone,
+   and so is the HTTPS port from these lines. The host capabilities block still
+   follows them, with both ports.
+4. **Handheld host card height.** Done (issues #25 and #26, merge `ecbf2236`).
+   Noticed on 2026-10-17. On a handheld the host cards follow their content, as
+   on a phone. The 176 dp minimum applies on the TV only.
+5. **Phone bar gap.** Done (issues #25 and #26, merge `ecbf2236`). Found in
+   Sprint 8. Every phone bar leaves 4 dp between the back arrow, the title and the
+   actions, as the Material 3 top app bar does.
+6. **Make the digits on the Borealis keyboard easier to discover.** Done (issue
+   #27, merge `4131aa02`). Reported by the owner on 2026-10-18. The key that opens
+   the Fn layer reads "Fn 123", so the digits are found. The layer is unchanged:
+   the digits 1 to 0, F1 to F10, the arrows, Home, End, PgUp, PgDn and Del.
+7. **Keyboards that count as game controllers.** Done (issue #28, merge
+   `36f4534e`). Found in the Sprint 8 round. The shared controller rule and the
+   stream's joystick check no longer accept a device that is only a joystick and
+   reports an alphabetic keyboard. On the S22, the AULA F75Max reports KEYBOARD,
+   DPAD, MOUSE and JOYSTICK sources with keyboard type 2 (alphabetic). The 8BitDo
+   Ultimate 2 reports GAMEPAD with a non-alphabetic keyboard and still counts. The
+   TV remote fallback is unchanged.
+8. **Steam opens after a quit combo.** Done (issue #29, merge `ea4df39e`). Found
+   in the Sprint 8 round, on the S22. The menu chord arms only from a clean start:
+   once a button other than Start and Select is held, Start and Select do not
+   arm it again until every button is released. Letting the quit combo go with a
+   bumper last therefore sends no Guide tap and opens no menu, on system pads and
+   on USB-driver pads. On a system pad, the Start hold no longer toggles the
+   gamepad mouse while the quit combo is pending. See the
+   [Sprint 8 results](development/device-validation.md#13-results-sprint-8).
+9. **The animated background and the Appearance group.** Done (issue #30, merges
+   `6437ab74`, `b9775c55` and `d1c36307`;
+   [ADR 0056](adr/0056-add-an-animated-background-and-the-appearance-group.md)).
+   The owner delivered it in this sprint, so it left the backlog.
+   - One background sits behind every Library and Settings screen and never in a
+     stream. The screens no longer paint their own page.
+   - Seven styles: Aurora curtains (the default, the owner's choice), Soft glow,
+     Northern lights, Light mist, Flowing light, Starfield and Off. The first two
+     are drawn in Compose. The next four are looping clips played with Media3
+     ExoPlayer on a SurfaceView.
+   - Reduced motion and the battery saver give a still frame and no player.
+   - Navigating removes the old screen at once and fades the new one in.
+   - Settings has a new Appearance group, after Advanced and before Privacy and
+     diagnostics, with a Background row. The choice is `borealis_background` in the
+     Borealis DataStore, as a stable id. The Library follows it live.
+   - The provenance of the clips and the scripts that made them are in
+     [design/backgrounds](../design/backgrounds/README.md). NOTICE lists Media3
+     and Guava.
+10. **Ten Settings groups fit the TV.** Done (issue #30, merge `d1c36307`). With
+    Appearance the TV group list was about 70 dp too tall: Privacy and diagnostics
+    was cut and About was off-screen. A group entry's vertical padding went from
+    10 dp to 5 dp, with the focus outline gap unchanged at 10 dp. All ten groups
+    fit a 960 x 540 dp TV without scrolling. The handheld list may still scroll.
+11. **The "preparing the display" text.** Done (issue #31, merge `75dbf7be`). Found
+    during the sprint. The message on the stream's notification overlay predates
+    the Sprint 5 Starting screen, which is opaque and covers the overlay from the
+    connection start to the first frame. No code path showed it, so the message,
+    its overlay plumbing and its string are removed. The Starting screen keeps its
+    own "Preparing the display" step. The first-frame watchdog and the connection
+    warnings are unchanged.
+12. **A device round** for what Sprint 7 and Sprint 8 did not run, and for the
+    Sprint 9 changes. Open.
+    - No dedicated Android handheld is planned. The owner's handheld is the S22 in
+      landscape with a pad.
+    - The Send to phone Expired and No network states.
+    - The Gamepad mouse speed slider at 10% and 200%.
+    - The quit combo on a USB-driver pad on the final build (done in the Sprint 8
+      round, on the Sprint 8 build).
+    - The dialog frames and visual items that the Sprint 7 round did not record
+      (rows F15 and F16).
+    - The Sprint 9 checks of
+      [section 3.22](development/device-validation.md#322-sprint-9-checks).
+
+    See the [device validation runbook, section 12](development/device-validation.md#12-results-sprint-7)
+    for the Sprint 7 round. The results of this round go to
+    [section 14](development/device-validation.md#14-results-sprint-9).
+
+### Next: UX and accessibility
+
+Not planned as a sprint yet. These items came up while the background was built.
+The owner sets their place relative to Sprint 10 when they are planned.
+
+1. **Accessibility and WCAG review.** The background lies behind every Library and
+   Settings screen. Review:
+   - the contrast of text over the background, in the two Compose styles and the
+     four clips;
+   - the look of the cards over the background;
+   - the small ink-3 and ink-4 texts. Over the brightest aurora bands they fall to
+     3.0 to 3.7:1, below the 4.5:1 that WCAG 2.x asks for small text. On the plain
+     page and on surfaces they keep 4.5:1 or more (see the
+     [contrast table](ux/phase-2-proposal.md#contrast)).
+2. **Phone portrait Settings navigation.** Requested by the owner. The phone shows
+   every group in one long list. Two options, to be decided in that discussion:
+   - (A) collapsible sections that start collapsed;
+   - (B) two levels, as the Android Settings app does: a list of the groups, then
+     the page of the chosen group. The recommendation is B.
 
 ### Sprint 10: release preparation
 
@@ -290,9 +375,6 @@ Java to Kotlin, one area at a time.
 
 ## Backlog, not scheduled
 
-- **Animated app background.** Simple and discreet, made by the owner. It is
-  integrated when delivered: in Sprint 9 if it is ready by then, otherwise in a
-  later visual polish.
 - **Deferred RTSP parser rework.** The moonlight-common-c rework `aeba988` is
   deferred by the owner. See the [third-party notes](../core/third_party/README.md).
 

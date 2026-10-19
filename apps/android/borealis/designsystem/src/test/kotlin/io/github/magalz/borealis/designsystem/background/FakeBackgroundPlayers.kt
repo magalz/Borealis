@@ -16,12 +16,14 @@ internal class FakeBackgroundPlayers : BackgroundPlayerFactory {
         video: Int,
         surface: SurfaceView,
         onFirstFrame: () -> Unit,
-    ): BackgroundPlayer = FakePlayer(video, surface, onFirstFrame).also { created += it }
+        onError: (reason: String) -> Unit,
+    ): BackgroundPlayer = FakePlayer(video, surface, onFirstFrame, onError).also { created += it }
 
     class FakePlayer(
         val video: Int,
         val surface: SurfaceView,
         private val onFirstFrame: () -> Unit,
+        private val onError: (String) -> Unit,
     ) : BackgroundPlayer {
         var playing = false
             private set
@@ -47,5 +49,8 @@ internal class FakeBackgroundPlayers : BackgroundPlayerFactory {
 
         /** The player draws its first frame on the surface. */
         fun showFirstFrame() = onFirstFrame()
+
+        /** The player cannot go on: [reason] is what Media3 calls the error. */
+        fun fail(reason: String) = onError(reason)
     }
 }

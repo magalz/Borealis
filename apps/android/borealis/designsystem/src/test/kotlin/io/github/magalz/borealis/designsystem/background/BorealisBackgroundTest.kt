@@ -1,7 +1,5 @@
 package io.github.magalz.borealis.designsystem.background
 
-import android.content.Context
-import android.provider.Settings
 import android.view.View
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
@@ -24,10 +22,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
@@ -369,27 +364,6 @@ class BorealisBackgroundTest {
     @OptIn(ExperimentalComposeApi::class)
     private fun recompositions(): Long =
         Recomposer.runningRecomposers.value.sumOf { it.changeCount }
-
-    private fun removeAnimations() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        Settings.Global.putFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            0f,
-        )
-    }
-
-    private class TestLifecycle : LifecycleOwner {
-        private val registry =
-            LifecycleRegistry(this).also { it.currentState = Lifecycle.State.RESUMED }
-
-        override val lifecycle: Lifecycle
-            get() = registry
-
-        fun moveTo(state: Lifecycle.State) {
-            registry.currentState = state
-        }
-    }
 
     private companion object {
         const val BG = "background"

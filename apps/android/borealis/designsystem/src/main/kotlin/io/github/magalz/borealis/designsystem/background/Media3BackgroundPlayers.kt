@@ -20,6 +20,7 @@ internal object Media3BackgroundPlayers : BackgroundPlayerFactory {
         video: Int,
         surface: SurfaceView,
         onFirstFrame: () -> Unit,
+        onError: (reason: String) -> Unit,
     ): BackgroundPlayer {
         val app = context.applicationContext
         val player = ExoPlayer.Builder(app).build()

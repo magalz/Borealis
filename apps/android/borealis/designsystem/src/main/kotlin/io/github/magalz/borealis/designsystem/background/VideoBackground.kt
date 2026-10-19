@@ -87,7 +87,7 @@ private fun VideoSurface(clip: BackgroundClip, onFirstFrame: () -> Unit, onRelea
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START ->
-                    player = factory.create(context, clip.video, surface, onFirstFrame)
+                    player = factory.create(context, clip.video, surface, onFirstFrame) {}
                 Lifecycle.Event.ON_RESUME -> player?.play()
                 Lifecycle.Event.ON_PAUSE -> player?.pause()
                 Lifecycle.Event.ON_STOP -> {

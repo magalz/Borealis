@@ -15,17 +15,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.input.InputMode
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -147,20 +142,6 @@ private fun PhoneSettings(
     }
 }
 
-/**
- * Leaves touch mode and puts the focus on the selected group when the panes open, so a remote or a
- * gamepad works at once and the outline shows.
- */
-@Composable
-private fun TakeInitialFocus() {
-    val focusManager = LocalFocusManager.current
-    val inputMode = LocalInputModeManager.current
-    LaunchedEffect(Unit) {
-        inputMode.requestInputMode(InputMode.Keyboard)
-        focusManager.moveFocus(FocusDirection.Enter)
-    }
-}
-
 @Composable
 private fun TwoPaneSettings(
     state: SettingsUiState,
@@ -176,7 +157,6 @@ private fun TwoPaneSettings(
             SettingsGroup(it, stringResource(it.titleRes))
         }
     var selected by rememberSaveable { mutableStateOf(initialGroup) }
-    TakeInitialFocus()
     Column(Modifier.fillMaxSize().padding(gutter)) {
         ScreenTitle()
         SettingsTwoPane(
@@ -185,6 +165,9 @@ private fun TwoPaneSettings(
             onSelect = { selected = it },
             // The Privacy pane scrolls itself and has its own snackbar.
             selfScrolling = { it == SettingsGroupId.PRIVACY },
+            // A remote or a gamepad works at once and the outline shows, also when the rail opened
+            // the screen.
+            focusOnOpen = true,
             modifier = Modifier.padding(top = TITLE_GAP),
         ) { group ->
             when (group) {

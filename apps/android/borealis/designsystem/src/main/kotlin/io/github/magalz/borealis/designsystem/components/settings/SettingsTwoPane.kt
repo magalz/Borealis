@@ -47,6 +47,8 @@ import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.liftedWhenFocused
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
+import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
@@ -89,6 +91,10 @@ internal const val GROUP_SELECT_DELAY_MILLIS = 0L
  * true brings content and work of its own (the screen of Privacy, say), so its pane is composed
  * while the group is selected and not after. A pane opens at its top whenever it is shown.
  *
+ * With [focusOnOpen] the selected group takes focus when the panes open, once, and a TV or handheld
+ * leaves touch mode, as the first item of Hosts does: opened from the rail, the screen takes focus
+ * from the rail item that opened it.
+ *
  * [selectDelayMillis] is how long focus must rest on a group before the pane follows it; a test
  * gives a longer wait, so that the time that its own steps take does not decide the outcome.
  *
@@ -117,6 +123,7 @@ fun <K> SettingsTwoPane(
     modifier: Modifier = Modifier,
     selfScrolling: (K) -> Boolean = { false },
     selectDelayMillis: Long = GROUP_SELECT_DELAY_MILLIS,
+    focusOnOpen: Boolean = false,
     content: @Composable ColumnScope.(K) -> Unit,
 ) {
     val selectedGroup = remember { FocusRequester() }
@@ -135,7 +142,7 @@ fun <K> SettingsTwoPane(
         rememberGroupNavigation(current, onSelect, selectDelayMillis, pane, selectedGroup)
     val composed = rememberComposedGroups(groups, current, selfScrolling)
     Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(PANE_GAP)) {
-        GroupList(groups, current, navigation, selectedGroup)
+        GroupList(groups, current, navigation, selectedGroup, focusOnOpen)
         GroupPanes(
             groups,
             composed,
@@ -270,7 +277,9 @@ private fun <K> GroupList(
     selected: State<K?>,
     navigation: GroupNavigation<K>,
     selectedGroup: FocusRequester,
+    focusOnOpen: Boolean,
 ) {
+    val initialFocus = rememberInitialFocusState()
     // Read here, so that a focus move or a switch recomposes the list and not the pane.
     val shown = navigation.resting.value ?: selected.value
     Column(
@@ -304,10 +313,10 @@ private fun <K> GroupList(
                 onFocus = { navigation.onRest(group.key) },
                 onSelect = { navigation.selectNow(group.key) },
                 modifier =
-                    if (group.key == selected.value) {
-                        Modifier.focusRequester(selectedGroup)
-                    } else {
-                        Modifier
+                    when {
+                        group.key != selected.value -> Modifier
+                        focusOnOpen -> Modifier.initialFocus(selectedGroup, initialFocus)
+                        else -> Modifier.focusRequester(selectedGroup)
                     },
             )
         }

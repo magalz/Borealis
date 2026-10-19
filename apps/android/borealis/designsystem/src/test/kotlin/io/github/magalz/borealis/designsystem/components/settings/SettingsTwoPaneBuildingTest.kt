@@ -3,18 +3,25 @@ package io.github.magalz.borealis.designsystem.components.settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
@@ -36,6 +43,9 @@ class SettingsTwoPaneBuildingTest {
 
     /** The groups whose row was composed from nothing, in that order. */
     private val built = mutableListOf<String>()
+
+    /** How many times the row of each group was composed, the first time included. */
+    private val composedTimes = mutableMapOf<String, Int>()
 
     private val groups =
         listOf("g1", "g2", "g3", "g4", "own").map { SettingsGroup(it, "Group $it") }
@@ -113,15 +123,50 @@ class SettingsTwoPaneBuildingTest {
         assertThat(built.count { it == "g1" }).isEqualTo(1)
     }
 
-    /** A row that notes when it is composed from nothing, and not when it is recomposed. */
+    @Test
+    fun `a group that is not shown is not recomposed when the state changes`() {
+        composeRule.setContent { Specimen() }
+        composeRule.waitForIdle()
+        val timesBefore = composedTimes.toMap()
+
+        value = "second value"
+        composeRule.waitForIdle()
+
+        assertThat(composedTimes.getValue("g1")).isGreaterThan(timesBefore.getValue("g1"))
+        for (group in listOf("g2", "g3", "g4")) {
+            assertThat(composedTimes.getValue(group)).isEqualTo(timesBefore.getValue(group))
+        }
+        composeRule.onNodeWithText("Group g2").performClick()
+        composeRule.onNodeWithText("second value").assertIsDisplayed()
+    }
+
+    @Test
+    fun `focus does not leave the pane for the rows of a group that is not shown`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Group g1").requestFocus()
+        composeRule.onNodeWithText("Group g1").performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithText("Row of g1").assertIsFocused()
+
+        composeRule.onNodeWithText("Row of g1").performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.onNodeWithText("Row of g1").assertIsFocused()
+    }
+
+    /**
+     * A row that notes when it is composed from nothing, and each time it is composed, as a row
+     * of the screen is composed with the state that the screen hands down.
+     */
     @Composable
-    private fun BuiltRow(group: String) {
+    private fun BuiltRow(group: String, value: String) {
         remember { built.add(group) }
+        SideEffect { composedTimes.merge(group, 1, Int::plus) }
         SettingsValueRow("Row of $group", value, {})
     }
 
     @Composable
     private fun Specimen() {
+        // Read here, not in the rows, as the screen reads its state and hands it down.
+        val handedDown = value
         BorealisTheme(FormFactor.Tv) {
             SettingsTwoPane(
                 groups = groups,
@@ -129,7 +174,7 @@ class SettingsTwoPaneBuildingTest {
                 onSelect = { selected = it },
                 selfScrolling = { it == "own" },
             ) { group ->
-                BuiltRow(group)
+                BuiltRow(group, handedDown)
             }
         }
     }

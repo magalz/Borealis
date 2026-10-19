@@ -82,12 +82,7 @@ fun PairingScreen(
     BorealisTheme(formFactor) {
         BackHandler(enabled = state !is PairingUiState.Paired, onBack = onCancel)
         val gutter = LocalBorealisSpacing.current.gutter
-        Box(
-            modifier
-                .fillMaxSize()
-                .background(LocalBorealisColors.current.page)
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-        ) {
+        Box(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             Column(Modifier.fillMaxSize().padding(vertical = SECTION_GAP)) {
                 Header(
                     title =

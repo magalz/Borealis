@@ -19,6 +19,9 @@ private val MARKER = Color(0xFF, 0x00, 0xFF)
 /** One dp at xhdpi: inside the gutter of every screen, where no content is drawn. */
 private const val MARGIN_PX = 2
 
+/** Where down the left margin the marker is looked for, as fractions of the height. */
+private val PROBE_HEIGHTS = listOf(0.25f, 0.5f, 0.75f)
+
 /**
  * The page colour behind a screen, which is what a window of the app is (`Theme.Borealis`): the
  * screens leave their background to the shell, and a window of a test is white. [content] is
@@ -41,7 +44,7 @@ fun OverMarker(content: @Composable () -> Unit) {
 /** Asserts that the left margin of the screen shown with [OverMarker] still shows the marker. */
 fun ComposeTestRule.assertMarkerShows() {
     val shot = onNodeWithTag(MARKER_TAG).captureToImage().toPixelMap()
-    for (fraction in listOf(0.25f, 0.5f, 0.75f)) {
+    for (fraction in PROBE_HEIGHTS) {
         val y = (shot.height * fraction).toInt()
         val pixel = shot[MARGIN_PX, y]
         if (pixel != MARKER) {

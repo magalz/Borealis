@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.settings.privacy
 
 import android.content.Intent
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,7 +20,6 @@ import io.github.magalz.borealis.designsystem.components.BorealisPhoneBar
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
-import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.settings.R
 import java.io.File
 
@@ -61,12 +59,7 @@ internal fun PrivacyScreenContent(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier
-            .fillMaxSize()
-            .background(LocalBorealisColors.current.page)
-            .windowInsetsPadding(WindowInsets.safeDrawing)
-    ) {
+    Column(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
         BorealisPhoneBar(
             onBack,
             stringResource(R.string.borealis_privacy_back),

@@ -32,6 +32,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import io.github.magalz.borealis.designsystem.adaptive.rememberFormFactor
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.R
@@ -64,6 +65,10 @@ private const val FADE_MS = 150
  * and the rail open Settings. A [request] from outside (a launcher shortcut, the stream error
  * screen) puts its screens on the back stack; [onRequestHandled] says that it was taken, so it is
  * not taken twice.
+ *
+ * [backgroundStyle] is what the shell draws behind the rail and every screen. It is the one input
+ * of the background: the Appearance setting will pass the style the user chose, and until then it
+ * is [BackgroundStyle.Default].
  */
 @Composable
 internal fun LibraryNavHost(
@@ -71,6 +76,7 @@ internal fun LibraryNavHost(
     modifier: Modifier = Modifier,
     request: LibraryLaunchRequest? = null,
     onRequestHandled: () -> Unit = {},
+    backgroundStyle: BackgroundStyle = BackgroundStyle.Default,
     navController: NavHostController = rememberNavController(),
 ) {
     val resources = LocalResources.current
@@ -119,6 +125,7 @@ internal fun LibraryNavHost(
             },
         actions = rail,
         modifier = modifier,
+        backgroundStyle = backgroundStyle,
     ) {
         Box {
             FadingNavHost(navController) {

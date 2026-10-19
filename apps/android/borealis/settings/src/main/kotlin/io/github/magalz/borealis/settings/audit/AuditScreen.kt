@@ -97,12 +97,7 @@ fun AuditScreen(
         // open stay here, so the list comes back to that entry.
         val listState = rememberLazyListState()
         var lastOpened by rememberSaveable { mutableStateOf<String?>(null) }
-        Column(
-            modifier
-                .fillMaxSize()
-                .background(LocalBorealisColors.current.page)
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-        ) {
+        Column(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             if (formFactor == FormFactor.Phone) {
                 BorealisPhoneBar(close, stringResource(R.string.audit_ui_back)) { Title() }
             } else {

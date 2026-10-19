@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.settings.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,7 +37,6 @@ import io.github.magalz.borealis.designsystem.components.settings.SettingsValueR
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
-import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.settings.R
 
@@ -80,12 +78,7 @@ internal fun SettingsScreen(
     BorealisTheme(formFactor) {
         BackHandler(onBack = onBack)
         val overlays = remember { SettingsOverlays() }
-        Box(
-            modifier
-                .fillMaxSize()
-                .background(LocalBorealisColors.current.page)
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-        ) {
+        Box(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             if (formFactor == FormFactor.Phone) {
                 PhoneSettings(state, actions, overlays, onBack, onOpenPrivacy, about)
             } else {

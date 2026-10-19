@@ -1,6 +1,5 @@
 package io.github.magalz.borealis.library.shell
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -11,12 +10,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.background.BorealisBackground
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.NavigationRail
 import io.github.magalz.borealis.designsystem.components.RailItem
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
-import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.library.R
 
 private const val RAIL_HOSTS = 0
@@ -43,6 +42,10 @@ internal enum class RailSelection {
  * The frame of the Library screens: on a TV or handheld, [content] with the [LibraryRail] beside it
  * on every screen, with [selected] marked. A phone has no rail.
  *
+ * The frame draws the [backgroundStyle] once, behind the rail and the screen: the screens have no
+ * page of their own, so it shows through them, and the rail keeps its own colour.
+ * [BackgroundStyle.Off] is the plain page.
+ *
  * The frame owns the system bar insets where it has the rail, so the rail and the screen beside it
  * start at the same edge and nothing moves when the screen changes; the screens of a phone draw
  * their own insets.
@@ -58,16 +61,18 @@ internal fun LibraryScaffold(
 ) {
     BorealisTheme(formFactor) {
         val rail = formFactor != FormFactor.Phone
-        Row(
-            modifier
-                .fillMaxSize()
-                .background(LocalBorealisColors.current.page)
-                .then(
-                    if (rail) Modifier.windowInsetsPadding(WindowInsets.safeDrawing) else Modifier
-                )
-        ) {
-            if (rail) LibraryRail(selected, actions)
-            Box(Modifier.weight(1f)) { content() }
+        Box(modifier.fillMaxSize()) {
+            BorealisBackground(backgroundStyle, Modifier.fillMaxSize())
+            Row(
+                Modifier.fillMaxSize()
+                    .then(
+                        if (rail) Modifier.windowInsetsPadding(WindowInsets.safeDrawing)
+                        else Modifier
+                    )
+            ) {
+                if (rail) LibraryRail(selected, actions)
+                Box(Modifier.weight(1f)) { content() }
+            }
         }
     }
 }

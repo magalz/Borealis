@@ -30,6 +30,4 @@ internal fun interface BackgroundPlayerFactory {
 }
 
 internal val LocalBackgroundPlayerFactory =
-    staticCompositionLocalOf<BackgroundPlayerFactory> {
-        error("No background player: Media3 comes with the implementation")
-    }
+    staticCompositionLocalOf<BackgroundPlayerFactory> { Media3BackgroundPlayers }

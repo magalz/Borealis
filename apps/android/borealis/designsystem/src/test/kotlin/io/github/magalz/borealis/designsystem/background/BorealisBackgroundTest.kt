@@ -9,6 +9,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.runtime.Recomposer
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -31,6 +32,7 @@ import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
+import kotlin.math.abs
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -108,13 +110,17 @@ class BorealisBackgroundTest {
 
     // Motion
 
-    @Test
-    fun `the curtains move and come back to where they were after one 20 second loop`() =
-        assertLoops(BackgroundStyle.AuroraCurtains)
+    @Test fun `the curtains move with the frames`() = assertMoves(BackgroundStyle.AuroraCurtains)
+
+    @Test fun `the glow moves with the frames`() = assertMoves(BackgroundStyle.SoftGlow)
 
     @Test
-    fun `the glow moves and comes back to where it was after one 20 second loop`() =
-        assertLoops(BackgroundStyle.SoftGlow)
+    fun `the curtains close their 20 second loop without a seam`() =
+        assertClosesLoop(BackgroundStyle.AuroraCurtains)
+
+    @Test
+    fun `the glow closes its 20 second loop without a seam`() =
+        assertClosesLoop(BackgroundStyle.SoftGlow)
 
     @Test
     fun `with animations removed the curtains are one still frame that never changes`() =
@@ -151,7 +157,7 @@ class BorealisBackgroundTest {
         composeRule.mainClock.advanceTimeBy(5_000)
         settle()
 
-        assertThat(frame().buffer).isNotEqualTo(shotBefore.buffer)
+        assertThat(frame().differingPixels(shotBefore)).isGreaterThan(0)
         assertThat(recompositions()).isEqualTo(before)
     }
 
@@ -292,20 +298,40 @@ class BorealisBackgroundTest {
         )
     }
 
-    /** Takes a frame at 1 s, a quarter of a loop later and one whole loop after the first. */
-    private fun assertLoops(style: BackgroundStyle) {
+    /** Takes a frame at 1 s and another, a quarter of a loop later. */
+    private fun assertMoves(style: BackgroundStyle) {
         composeRule.mainClock.autoAdvance = false
         show(style)
         composeRule.mainClock.advanceTimeBy(1_000)
         val start = frame()
         composeRule.mainClock.advanceTimeBy(5_000)
-        val quarterLater = frame()
-        composeRule.mainClock.advanceTimeBy(LOOP_MILLIS - 5_000)
-        val loopLater = frame()
 
         assertThat(start.maxLift(0f, 0.5f)).isIn(LIT_RANGE)
-        assertThat(quarterLater.buffer).isNotEqualTo(start.buffer)
-        assertThat(loopLater.buffer).isEqualTo(start.buffer)
+        assertThat(frame().differingPixels(start)).isGreaterThan(0)
+    }
+
+    /**
+     * The frame at the end of a loop is the frame at its start: every motion has a whole number of
+     * cycles in it. The frames of a test clock do not fall on the loop, so the position is set.
+     */
+    private fun assertClosesLoop(style: BackgroundStyle) {
+        val cycle = mutableFloatStateOf(0f)
+        composeRule.setContent {
+            Specimen { DrawnBackground(style, cycle, Modifier.fillMaxSize().testTag(BG)) }
+        }
+        composeRule.waitForIdle()
+        val start = frame()
+        composeRule.runOnIdle { cycle.floatValue = 0.5f }
+        composeRule.waitForIdle()
+        val middle = frame()
+        composeRule.runOnIdle { cycle.floatValue = 0.99999f }
+        composeRule.waitForIdle()
+        val end = frame()
+
+        assertThat(start.maxLift(0f, 0.5f)).isIn(LIT_RANGE)
+        assertThat(middle.differingPixels(start)).isGreaterThan(0)
+        // The end is a hair of the cycle before the start: a pixel may move by a level or two.
+        assertThat(end.differingPixels(start, tolerance = 2)).isEqualTo(0)
     }
 
     private fun assertStill(style: BackgroundStyle) {
@@ -317,7 +343,7 @@ class BorealisBackgroundTest {
 
         composeRule.mainClock.advanceTimeBy(5_000)
 
-        assertThat(frame().buffer).isEqualTo(first.buffer)
+        assertThat(frame().differingPixels(first)).isEqualTo(0)
     }
 
     /**
@@ -380,6 +406,21 @@ class BorealisBackgroundTest {
         fun PixelMap.maxLift(from: Float, to: Float) = samples(from, to).max()
 
         fun PixelMap.minLift(from: Float, to: Float) = samples(from, to).min()
+
+        /**
+         * How many pixels have a channel that differs by more than [tolerance] of 255, which fails
+         * a test without printing a million of them.
+         */
+        fun PixelMap.differingPixels(other: PixelMap, tolerance: Int = 0) =
+            buffer.indices.count { i ->
+                (0..BLUE_SHIFT_END step CHANNEL_BITS).any { shift ->
+                    abs(((buffer[i] shr shift) and 0xFF) - ((other.buffer[i] shr shift) and 0xFF)) >
+                        tolerance
+                }
+            }
+
+        const val CHANNEL_BITS = 8
+        const val BLUE_SHIFT_END = 16
 
         fun PixelMap.samples(from: Float, to: Float): List<Float> =
             ((height * from).toInt() until (height * to).toInt() step SAMPLE_STEP).flatMap { y ->

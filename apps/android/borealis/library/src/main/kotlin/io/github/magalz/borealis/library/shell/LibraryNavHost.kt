@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.library.shell
 
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -53,7 +54,7 @@ private const val HOSTS_MESSAGE = "hostsMessage"
 
 private val SNACKBAR_PADDING = 16.dp
 
-/** The cross-fade between two screens, much shorter than the 700 ms default of the NavHost. */
+/** The fade-in of a screen, much shorter than the 700 ms default of the NavHost. */
 private const val FADE_MS = 150
 
 /**
@@ -141,16 +142,21 @@ internal fun LibraryNavHost(
     }
 }
 
-/** The NavHost with a quick cross-fade between screens; the rail is outside it and stays put. */
+/**
+ * The NavHost where the next screen fades in and the one that is left goes at once; the rail is
+ * outside it and stays put. The screens have no page of their own, so a fade-out beside the fade-in
+ * would show two screens one over the other. `ExitTransition.None` is no help: the screen that is
+ * left would stay drawn until the fade-in is done, so it fades out in a single frame instead.
+ */
 @Composable
 internal fun FadingNavHost(navController: NavHostController, graph: NavGraphBuilder.() -> Unit) {
     NavHost(
         navController,
         startDestination = Hosts,
         enterTransition = { fadeIn(tween(FADE_MS)) },
-        exitTransition = { fadeOut(tween(FADE_MS)) },
+        exitTransition = { fadeOut(snap()) },
         popEnterTransition = { fadeIn(tween(FADE_MS)) },
-        popExitTransition = { fadeOut(tween(FADE_MS)) },
+        popExitTransition = { fadeOut(snap()) },
         builder = graph,
     )
 }

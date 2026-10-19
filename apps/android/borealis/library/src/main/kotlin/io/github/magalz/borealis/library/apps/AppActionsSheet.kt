@@ -28,9 +28,9 @@ import io.github.magalz.borealis.library.hosts.DialogMessage
 private fun AppAction.endsApp() = this == AppAction.QUIT || this == AppAction.QUIT_AND_START
 
 /**
- * The actions of one app, each with its one-line consequence (ADR 0052, D6). Choosing an action
- * calls [onChosen], except Quit and Quit and start, which ask for a confirmation first; Back or
- * tapping outside calls [onDismiss].
+ * The actions of one app, each with its consequence, one sentence per line (ADR 0052, D6, as
+ * amended in Sprint 9). Choosing an action calls [onChosen], except Quit and Quit and start, which
+ * ask for a confirmation first; Back or tapping outside calls [onDismiss].
  */
 @Composable
 internal fun AppActionsSheet(

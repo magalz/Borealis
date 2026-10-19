@@ -187,10 +187,10 @@ yet. Its results go to
    shows its port only when it is not the default HTTP port. The UUID is gone,
    and so is the HTTPS port from these lines. The host capabilities block still
    follows them, with both ports.
-4. **Handheld host card height.** Done (issues #25 and #26, merge `ecbf2236`).
+4. **Handheld host card height.** Done (issue #25, merge `ecbf2236`).
    Noticed on 2026-10-17. On a handheld the host cards follow their content, as
    on a phone. The 176 dp minimum applies on the TV only.
-5. **Phone bar gap.** Done (issues #25 and #26, merge `ecbf2236`). Found in
+5. **Phone bar gap.** Done (issue #26, merge `ecbf2236`). Found in
    Sprint 8. Every phone bar leaves 4 dp between the back arrow, the title and the
    actions, as the Material 3 top app bar does.
 6. **Make the digits on the Borealis keyboard easier to discover.** Done (issue

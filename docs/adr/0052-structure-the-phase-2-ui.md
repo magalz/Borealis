@@ -156,3 +156,5 @@ Chosen option, per decision, because the owner approved the recommended option o
 * The use cases that follow from this decision: [UC-001](../use-cases/0001-pair-with-a-host.md) to [UC-008](../use-cases/0008-add-a-host-by-address.md).
 * Amends [0005](0005-ui-toolkit-and-visual-style.md): violet accent shades and dark only for 1.0.
 * Related: [0034](0034-screenshot-testing-with-roborazzi.md) (screenshot tests) and [0044](0044-design-tokens-pipeline.md) (token pipeline).
+
+Amended in Sprint 9 (see the [roadmap](../roadmap.md#sprint-9-ux-polish-and-the-handheld)): by the owner's decision of 2026-10-18, the consequence of Quit shows one sentence per line, so it can take two lines. It says what Quit does: for Desktop the stream ends and the display and controls go back to the PC; for any other app the app closes on the PC and its unsaved progress is lost.

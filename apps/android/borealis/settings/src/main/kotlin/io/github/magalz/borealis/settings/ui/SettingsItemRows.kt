@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.settings.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import io.github.magalz.borealis.designsystem.components.settings.SettingsRowTone
@@ -12,6 +13,16 @@ import io.github.magalz.borealis.settings.catalog.BooleanSetting
 import io.github.magalz.borealis.settings.catalog.IntSetting
 import io.github.magalz.borealis.settings.options.DisabledReason
 import kotlin.math.roundToInt
+
+/**
+ * What a row draws of the [SettingsUiState]: the part of it that the row reads. A row is skipped
+ * unless this changes, so a change of one setting recomposes the row of that setting and not every
+ * row of every pane.
+ */
+@Immutable internal data class RowValue(val unused: Int = 0)
+
+/** The part of this state that the row of [item] reads. */
+internal fun SettingsUiState.rowValue(item: SettingsItem): RowValue = RowValue()
 
 /** What a row can ask the screen to do besides changing a value: open its list or its question. */
 internal class RowRequests(val onOpenChoice: (SettingsItem) -> Unit, val onResetLayout: () -> Unit)

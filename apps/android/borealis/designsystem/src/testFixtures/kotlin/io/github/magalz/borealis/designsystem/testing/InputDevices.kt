@@ -12,13 +12,20 @@ import org.robolectric.util.ReflectionHelpers.ClassParameter
 
 /**
  * An input device as the framework reports it. A negative [id] makes it virtual. [joystickXy] gives
- * it the X and Y motion ranges of a joystick.
+ * it the X and Y motion ranges of a joystick. [keyboardType] is what
+ * `InputDevice.getKeyboardType()` returns, one of the `InputDevice.KEYBOARD_TYPE_*` constants.
  */
 @Suppress("DEPRECATION") // the Robolectric helper; InputDevice.Builder is not in the public SDK
-fun inputDevice(id: Int, sources: Int, joystickXy: Boolean = false): InputDevice {
+fun inputDevice(
+    id: Int,
+    sources: Int,
+    joystickXy: Boolean = false,
+    keyboardType: Int = InputDevice.KEYBOARD_TYPE_NONE,
+): InputDevice {
     val device = ShadowInputDevice.makeInputDeviceNamed("test-device-$id")
     ReflectionHelpers.setField(device, "mId", id)
     ReflectionHelpers.setField(device, "mSources", sources)
+    ReflectionHelpers.setField(device, "mKeyboardType", keyboardType)
     if (joystickXy) {
         for (axis in listOf(MotionEvent.AXIS_X, MotionEvent.AXIS_Y)) {
             ReflectionHelpers.callInstanceMethod<Unit>(

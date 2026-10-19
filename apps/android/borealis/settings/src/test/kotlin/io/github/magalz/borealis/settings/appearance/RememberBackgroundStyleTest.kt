@@ -18,8 +18,14 @@ class RememberBackgroundStyleTest {
 
     private var drawn: BackgroundStyle? = null
 
+    /** How many times the body of the content ran: once, and again for each recomposition. */
+    private var runs = 0
+
     private fun show(repository: FakeSettingsRepository) {
-        composeRule.setContent { drawn = rememberBackgroundStyle(repository) }
+        composeRule.setContent {
+            runs++
+            drawn = rememberBackgroundStyle(repository)
+        }
         composeRule.waitForIdle()
     }
 
@@ -77,10 +83,13 @@ class RememberBackgroundStyleTest {
     fun `a change of another setting does not change the style`() {
         val repository = FakeSettingsRepository()
         show(repository)
+        assertThat(runs).isEqualTo(1)
 
         repository.setNow(Settings.DEADZONE, 9)
         composeRule.waitForIdle()
 
         assertThat(drawn).isEqualTo(BackgroundStyle.Default)
+        // The style did not change, so nothing that draws it is composed again.
+        assertThat(runs).isEqualTo(1)
     }
 }

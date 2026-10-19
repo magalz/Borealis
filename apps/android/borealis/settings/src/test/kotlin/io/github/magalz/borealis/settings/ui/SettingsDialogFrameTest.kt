@@ -4,7 +4,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
@@ -25,7 +24,7 @@ class SettingsDialogFrameTest : SettingsScreenTestBase() {
 
     private fun openLicences() {
         show(keyboard = true)
-        composeRule.onNodeWithText("About").performScrollTo().performClick()
+        composeRule.onNodeWithText("About").performClick()
         composeRule.onNodeWithText("Open-source licences").performClick()
         composeRule.waitForIdle()
     }
@@ -91,7 +90,7 @@ class SettingsDialogFrameTest : SettingsScreenTestBase() {
     fun `the link dialog of About stays a standard dialog`() {
         browserAvailable = false
         show(keyboard = true)
-        composeRule.onNodeWithText("About").performScrollTo().performClick()
+        composeRule.onNodeWithText("About").performClick()
         composeRule.onNodeWithText("Source code").performClick()
         composeRule.waitForIdle()
 

@@ -184,8 +184,8 @@ object Settings {
     /**
      * The animated background behind the Library and Settings: the id of one of the styles below,
      * never the ordinal of a style. A stored value that no style has stands for the default, the
-     * Aurora curtains. Only Borealis reads it, in Kotlin, so it lives in DataStore like the other
-     * settings of Borealis alone (ADR 0011) and needs no migration; the Appearance group of the
+     * Aurora curtains. Unlike [PERF_OVERLAY], it has no legacy SharedPreferences value to migrate,
+     * so it starts in DataStore, as ADR 0011 sets for new settings. The Appearance group of the
      * settings screen sets it, and the Library shell follows it.
      */
     val BACKGROUND =

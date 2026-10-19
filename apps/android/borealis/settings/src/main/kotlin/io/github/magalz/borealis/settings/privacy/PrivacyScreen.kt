@@ -18,7 +18,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import io.github.magalz.borealis.designsystem.adaptive.rememberFormFactor
 import io.github.magalz.borealis.designsystem.components.BorealisPhoneBar
-import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
@@ -67,11 +66,7 @@ internal fun PrivacyScreenContent(
             .background(LocalBorealisColors.current.page)
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
-        BorealisPhoneBar(
-            onBack,
-            stringResource(R.string.borealis_privacy_back),
-            gap = BorealisDimens.phoneBarGap,
-        ) {
+        BorealisPhoneBar(onBack, stringResource(R.string.borealis_privacy_back)) {
             Text(
                 stringResource(R.string.borealis_privacy_title),
                 Modifier.semantics { heading() },

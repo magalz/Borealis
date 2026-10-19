@@ -17,6 +17,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -28,6 +29,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.test.withKeyDown
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
@@ -159,6 +161,32 @@ class SettingsTwoPaneStackTest {
 
         assertThat(focused).isNotEmpty()
         assertThat(focused.filterNot { it.endsWith("of g1") }).isEmpty()
+    }
+
+    @Test
+    fun `Shift and Tab from the first group wrap into the selected pane, not the first`() {
+        selected = "g3"
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Group g1").requestFocus()
+        composeRule.waitForIdle()
+
+        composeRule.onRoot().performKeyInput { withKeyDown(Key.ShiftLeft) { pressKey(Key.Tab) } }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Row 1 of g3").assertIsFocused()
+    }
+
+    @Test
+    fun `Tab from the last group enters the selected pane at its first row`() {
+        selected = "g3"
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Group own").requestFocus()
+        composeRule.waitForIdle()
+
+        composeRule.onRoot().performKeyInput { pressKey(Key.Tab) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Row 1 of g3").assertIsFocused()
     }
 
     @Test

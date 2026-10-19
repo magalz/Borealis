@@ -201,7 +201,12 @@ private class GroupNavigation<K>(
         entering.value = null
     }
 
-    /** Right: enter the pane, after the group that focus rests on has become the selected one. */
+    /**
+     * Right: enter the pane, once the current group has arrived. That is a frame later even when
+     * nothing waits: a selection that was just made has not recomposed the panes yet, and the
+     * target of a request for the current pane is still on the old one, which would take focus and
+     * clear it when it stops being current.
+     */
     fun enterPane() {
         val group = resting.value
         when {
@@ -210,7 +215,7 @@ private class GroupNavigation<K>(
                 entering.value = group
             }
             // Right again, as a held key repeats it, while the group has yet to arrive.
-            entering.value == null -> focusPane()
+            entering.value == null -> entering.value = currentKey.value
         }
     }
 

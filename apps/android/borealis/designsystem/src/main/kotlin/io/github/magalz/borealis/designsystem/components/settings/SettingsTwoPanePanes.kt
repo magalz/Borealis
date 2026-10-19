@@ -25,9 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -121,7 +119,6 @@ private fun <K> nearestToBuild(
  * key can reach and has no semantics node. [shownPane] is the target of a request for the current
  * pane, and is attached to it.
  */
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun <K> GroupPanes(
     groups: List<SettingsGroup<K>>,
@@ -142,16 +139,7 @@ internal fun <K> GroupPanes(
                 }
             }
         },
-        modifier =
-            modifier
-                .focusProperties {
-                    // An entry by the D-pad or Tab lands in the current pane, whichever comes
-                    // first. A request for one row is not an entry and stays on it.
-                    enter = { direction ->
-                        if (direction == FocusDirection.Enter) FocusRequester.Default else shownPane
-                    }
-                }
-                .focusGroup(),
+        modifier = modifier.focusGroup(),
     ) { measurables, constraints ->
         val panes = measurables.map { it.measure(constraints) }
         layout(
@@ -177,7 +165,6 @@ internal fun <K> GroupPanes(
  *
  * Only the current pane takes [shownPane], the target of an entry into the panes.
  */
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun <K> GroupPane(
     key: K,

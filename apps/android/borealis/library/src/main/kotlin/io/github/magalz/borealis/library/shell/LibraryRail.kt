@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.NavigationRail
 import io.github.magalz.borealis.designsystem.components.RailItem
@@ -52,6 +53,7 @@ internal fun LibraryScaffold(
     selected: RailSelection,
     actions: RailActions,
     modifier: Modifier = Modifier,
+    backgroundStyle: BackgroundStyle = BackgroundStyle.Off,
     content: @Composable () -> Unit,
 ) {
     BorealisTheme(formFactor) {

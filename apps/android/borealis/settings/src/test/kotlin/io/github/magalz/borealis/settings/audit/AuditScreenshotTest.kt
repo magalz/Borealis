@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import io.github.magalz.borealis.designsystem.testing.OnPage
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
@@ -85,13 +86,15 @@ class AuditScreenshotTest {
 
     private fun shoot(name: String, formFactor: FormFactor, state: AuditUiState) {
         composeRule.setContent {
-            AuditScreen(
-                state = state,
-                formFactor = formFactor,
-                onEntrySelected = {},
-                onDetailDismissed = {},
-                onBack = {},
-            )
+            OnPage {
+                AuditScreen(
+                    state = state,
+                    formFactor = formFactor,
+                    onEntrySelected = {},
+                    onDetailDismissed = {},
+                    onBack = {},
+                )
+            }
         }
         composeRule.waitForIdle()
         captureScreenRoboImage("src/test/screenshots/$name.png")

@@ -40,9 +40,14 @@
     <string name="stream_menu_disconnect_consequence_unknown">The app keeps running on the PC</string>
     <!-- %1$s is the app. -->
     <string name="stream_menu_quit">Quit %1$s</string>
-    <string name="stream_menu_quit_consequence">Ends the app on the PC</string>
+    <!-- %1$s is the app, or the running app when its name is not known. -->
+    <string name="stream_menu_quit_consequence">Closes %1$s on the PC. Unsaved progress in it is lost.</string>
+    <!-- The same for Desktop, which has no program to close. -->
+    <string name="stream_menu_quit_consequence_desktop">Ends the stream. The display and controls go back to the PC.</string>
     <!-- %1$s is the app. -->
-    <string name="stream_menu_quit_confirm">Quit %1$s? Unsaved work is lost.</string>
+    <string name="stream_menu_quit_confirm">Quit %1$s? This closes it on the PC. Unsaved progress in it is lost.</string>
+    <!-- The same for Desktop. -->
+    <string name="stream_menu_quit_confirm_desktop">Quit %1$s? This ends the stream. The display and controls go back to the PC.</string>
     <string name="stream_menu_quit_confirm_cancel">Cancel</string>
     <string name="stream_menu_quit_confirm_quit">Quit</string>
     <!-- What stands for the app when the name is not known, for example after a resume. -->

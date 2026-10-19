@@ -20,8 +20,11 @@ import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.library.R
 
-/** The actions that end an app: they ask first, because unsaved work in it is lost. */
-private fun AppAction.losesWork() = this == AppAction.QUIT || this == AppAction.QUIT_AND_START
+/**
+ * The actions that end the running app: they ask first, because a game closes and loses its unsaved
+ * progress. Desktop closes nothing, but it asks too: it ends the stream.
+ */
+private fun AppAction.endsApp() = this == AppAction.QUIT || this == AppAction.QUIT_AND_START
 
 /**
  * The actions of one app, each with its one-line consequence (ADR 0052, D6). Choosing an action
@@ -37,13 +40,14 @@ internal fun AppActionsSheet(
     var confirming by rememberSaveable { mutableStateOf<AppAction?>(null) }
     val running = actions.runningAppName ?: stringResource(R.string.apps_running_app_fallback)
     val app = actions.app.name
+    val desktop = actions.runningAppIsDesktop
     val confirm = confirming
     if (confirm == null) {
         ActionSheet(
             title = app,
-            actions = actions.choices.map { sheetAction(it, app, running) },
+            actions = actions.choices.map { sheetAction(it, app, running, desktop) },
             onAction = { choice ->
-                if (choice.key.losesWork()) confirming = choice.key else onChosen(choice.key)
+                if (choice.key.endsApp()) confirming = choice.key else onChosen(choice.key)
             },
             onDismiss = onDismiss,
         )
@@ -51,6 +55,7 @@ internal fun AppActionsSheet(
         // One window at a time: the sheet comes back when the confirmation is cancelled.
         ConfirmQuitDialog(
             appName = if (confirm == AppAction.QUIT_AND_START) running else app,
+            desktop = desktop,
             onConfirm = {
                 confirming = null
                 onChosen(confirm)
@@ -65,6 +70,7 @@ private fun sheetAction(
     action: AppAction,
     app: String,
     running: String,
+    desktop: Boolean,
 ): ActionSheetAction<AppAction> =
     when (action) {
         AppAction.RESUME ->
@@ -83,14 +89,22 @@ private fun sheetAction(
             ActionSheetAction(
                 action,
                 stringResource(R.string.apps_action_quit, app),
-                stringResource(R.string.apps_action_quit_consequence, app),
+                if (desktop) {
+                    stringResource(R.string.apps_action_quit_desktop_consequence)
+                } else {
+                    stringResource(R.string.apps_action_quit_consequence, app)
+                },
                 ActionStyle.Danger,
             )
         AppAction.QUIT_AND_START ->
             ActionSheetAction(
                 action,
                 stringResource(R.string.apps_action_quit_and_start, running, app),
-                stringResource(R.string.apps_action_quit_and_start_consequence, running),
+                if (desktop) {
+                    stringResource(R.string.apps_action_quit_and_start_desktop_consequence)
+                } else {
+                    stringResource(R.string.apps_action_quit_and_start_consequence, running)
+                },
                 ActionStyle.Danger,
             )
         AppAction.DETAILS ->
@@ -119,11 +133,23 @@ private fun sheetAction(
             )
     }
 
-/** Asks before an app ends. Focus starts on Cancel, so a stray OK does not lose work. */
+/**
+ * Asks before the running app ends, saying what that costs: for Desktop only the stream, for a game
+ * its unsaved progress. Focus starts on Cancel, so a stray OK does not lose work.
+ */
 @Composable
-private fun ConfirmQuitDialog(appName: String, onConfirm: () -> Unit, onCancel: () -> Unit) {
+private fun ConfirmQuitDialog(
+    appName: String,
+    desktop: Boolean,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+) {
     BorealisDialog(
-        title = stringResource(R.string.apps_confirm_quit, appName),
+        title =
+            stringResource(
+                if (desktop) R.string.apps_confirm_quit_desktop else R.string.apps_confirm_quit,
+                appName,
+            ),
         onDismissRequest = onCancel,
         confirm =
             DialogAction(

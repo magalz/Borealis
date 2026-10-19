@@ -136,6 +136,7 @@ class AppsScreenshotTest {
                     desktop,
                     "Desktop",
                     listOf(AppAction.RESUME, AppAction.QUIT, AppAction.DETAILS),
+                    runningAppIsDesktop = true,
                 ),
         )
     }
@@ -149,6 +150,7 @@ class AppsScreenshotTest {
                     hades,
                     "Desktop",
                     listOf(AppAction.QUIT_AND_START, AppAction.DETAILS, AppAction.HIDE),
+                    runningAppIsDesktop = true,
                 ),
         )
     }

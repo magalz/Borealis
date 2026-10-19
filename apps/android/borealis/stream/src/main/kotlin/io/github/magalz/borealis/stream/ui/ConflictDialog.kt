@@ -37,6 +37,7 @@ import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
+import io.github.magalz.borealis.host.apps.isDesktop
 import io.github.magalz.borealis.host.launch.ConflictChoice
 import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.StreamIntents
@@ -95,7 +96,7 @@ fun ConflictDialog(phase: StreamPhase.Conflict, intents: StreamIntents) {
                 style = MaterialTheme.typography.titleLarge,
             )
             Text(body(phase), color = colors.ink2, style = MaterialTheme.typography.bodyMedium)
-            Warning()
+            Warning(phase.runningAppName)
             Buttons(phase, answer)
         }
     }
@@ -111,12 +112,21 @@ private fun body(phase: StreamPhase.Conflict): String {
     }
 }
 
-/** What quitting costs (UC-003-T6). */
+/**
+ * What quitting costs (UC-003-T6). Quitting Desktop only ends the stream on the other device; any
+ * other app, also one whose name is not known, closes and loses its unsaved progress.
+ */
 @Composable
-private fun Warning() {
+private fun Warning(runningAppName: String?) {
     val colors = LocalBorealisColors.current
     Text(
-        stringResource(R.string.stream_conflict_warning),
+        stringResource(
+            if (isDesktop(runningAppName)) {
+                R.string.stream_conflict_warning_desktop
+            } else {
+                R.string.stream_conflict_warning
+            }
+        ),
         Modifier.fillMaxWidth()
             .background(colors.warning.copy(alpha = WARNING_TINT), MaterialTheme.shapes.medium)
             .padding(WARNING_PADDING_HORIZONTAL, WARNING_PADDING_VERTICAL),

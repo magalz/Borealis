@@ -57,8 +57,8 @@ private val ROWS_GAP = 10.dp
  * it to move the focus out of a segmented control; the host's back callback is for when nothing in
  * the panel has the focus.
  *
- * Quit asks first, inside the panel, because it ends the app for everyone. Disconnect does not: the
- * app keeps running.
+ * Quit asks first, inside the panel, because it ends the stream for everyone and closes a game (its
+ * texts say which). Disconnect does not: the app keeps running.
  */
 @Composable
 internal fun InGameMenu(
@@ -176,7 +176,7 @@ private fun MenuRows(
             stringResource(R.string.stream_menu_quit, appLabel(appName)),
             onQuit,
             Modifier.focusRequester(quitFocus),
-            consequence = stringResource(R.string.stream_menu_quit_consequence),
+            consequence = quitConsequence(appName),
             style = MenuRowStyle.Danger,
         )
     }

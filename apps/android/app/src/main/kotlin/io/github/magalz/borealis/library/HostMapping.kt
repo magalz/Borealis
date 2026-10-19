@@ -4,6 +4,7 @@ import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.PairingManager.PairState
+import io.github.magalz.borealis.host.apps.isDesktop
 import io.github.magalz.borealis.library.domain.Host
 import io.github.magalz.borealis.library.domain.HostCapability
 import io.github.magalz.borealis.library.domain.Reachability
@@ -82,7 +83,10 @@ internal fun ComputerDetails.toHost(
     val running =
         runningGameId
             .takeIf { it != 0 && pairState == PairState.PAIRED }
-            ?.let { id -> RunningApp(id, apps.firstOrNull { it.appId == id }?.appName) }
+            ?.let { id ->
+                val name = apps.firstOrNull { it.appId == id }?.appName
+                RunningApp(id, name, isDesktop(name))
+            }
     val caps = borealis?.caps
     val reachability =
         when (state) {

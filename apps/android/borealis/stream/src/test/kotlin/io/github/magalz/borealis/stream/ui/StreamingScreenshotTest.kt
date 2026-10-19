@@ -128,6 +128,18 @@ class StreamingScreenshotTest {
         shoot("menu_phone_quit-confirm")
     }
 
+    /** The same confirmation for a game: it closes the game and loses its unsaved progress. */
+    @Test
+    @Config(qualifiers = PHONE_LANDSCAPE)
+    fun menuPhoneQuitConfirmGame() {
+        composeRule.setContent {
+            Stream(FormFactor.Phone) { Layer(aStreaming(Panel.MENU), appName = "Hades II") }
+        }
+        composeRule.onNodeWithText("Quit Hades II").performScrollTo().performClick()
+
+        shoot("menu_phone_quit-confirm-game")
+    }
+
     @Test
     @Config(qualifiers = PHONE_LANDSCAPE)
     fun overlayPhoneCompact() {
@@ -163,8 +175,8 @@ class StreamingScreenshotTest {
     }
 
     @Composable
-    private fun Layer(phase: StreamPhase.Streaming) =
-        StreamingLayer("Desktop", "Gaming PC", phase, aPerf(), RecordingIntents())
+    private fun Layer(phase: StreamPhase.Streaming, appName: String = "Desktop") =
+        StreamingLayer(appName, "Gaming PC", phase, aPerf(), RecordingIntents())
 
     /** The picture of the stream is a gradient; [content] is the chrome over it. */
     @Composable

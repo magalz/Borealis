@@ -19,12 +19,25 @@ import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.host.apps.isDesktop
 import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.ui.common.appLabel
 
 private val PADDING_HORIZONTAL = 16.dp
 private val PADDING_VERTICAL = 8.dp
 private val GAP = 12.dp
+
+/**
+ * What Quit does to the app, as the consequence under the menu row. Desktop has no program to
+ * close, so Quit only ends the stream; any other app closes and loses its unsaved progress.
+ */
+@Composable
+internal fun quitConsequence(appName: String): String =
+    if (isDesktop(appName)) {
+        stringResource(R.string.stream_menu_quit_consequence_desktop)
+    } else {
+        stringResource(R.string.stream_menu_quit_consequence, appLabel(appName))
+    }
 
 /**
  * The confirmation of Quit, in the panel: what it costs, Cancel (focused, so a stray OK changes
@@ -38,7 +51,14 @@ internal fun QuitConfirmation(appName: String, onCancel: () -> Unit, onQuit: () 
         verticalArrangement = Arrangement.spacedBy(GAP),
     ) {
         Text(
-            stringResource(R.string.stream_menu_quit_confirm, appLabel(appName)),
+            stringResource(
+                if (isDesktop(appName)) {
+                    R.string.stream_menu_quit_confirm_desktop
+                } else {
+                    R.string.stream_menu_quit_confirm
+                },
+                appLabel(appName),
+            ),
             Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             color = LocalBorealisColors.current.ink2,
             style = MaterialTheme.typography.bodyMedium,

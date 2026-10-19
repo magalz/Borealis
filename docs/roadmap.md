@@ -393,7 +393,7 @@ scheduled yet.
 - **`MenuChordDetector.update`** (`borealis/stream/.../input/MenuChordDetector.kt`).
   Cyclomatic complexity 13 and cognitive complexity 18, seven mutable fields, a
   repeated expression, and an order dependency with no comment.
-- **Host details.** `ComputerHostRepository.toDetailsFacts` (in `:app`) maps the
+- **Host details.** `ComputerDetails.toDetailsFacts` in `ComputerHostRepository.kt` (in `:app`) maps the
   whole `Host` with `toHost()` to read one name, the running app. It holds a
   third copy of the online, offline and unknown mapping, and the code has three
   definitions of "no MAC address".

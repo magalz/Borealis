@@ -11,8 +11,8 @@ import org.robolectric.RobolectricTestRunner
 /**
  * A Bluetooth keyboard can report a JOYSTICK source with X and Y axes (the AULA F75Max does). The
  * stream must not count it as a game controller, or it makes a controller context for the keyboard.
- * These tests read the verdict of `isGameControllerDevice`, which applies the one rule of
- * `:borealis:designsystem` (`ConnectedGamepadsTest` covers the pads and sticks that count);
+ * These tests read the verdict of `isGameControllerDevice`, whose joystick-axes check is the one
+ * rule of `:borealis:designsystem` (`ConnectedGamepadsTest` covers the pads and sticks that count);
  * `getAttachedControllerMask` uses the same joystick check.
  */
 @RunWith(RobolectricTestRunner::class)

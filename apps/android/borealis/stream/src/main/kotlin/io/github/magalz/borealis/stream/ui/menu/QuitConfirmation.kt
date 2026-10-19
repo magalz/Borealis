@@ -26,10 +26,12 @@ import io.github.magalz.borealis.stream.ui.common.appLabel
 private val PADDING_HORIZONTAL = 16.dp
 private val PADDING_VERTICAL = 8.dp
 private val GAP = 12.dp
+private val TITLE_GAP = 4.dp
 
 /**
- * What Quit does to the app, as the consequence under the menu row. Desktop has no program to
- * close, so Quit only ends the stream; any other app closes and loses its unsaved progress.
+ * What Quit does to the app, as the consequence under the menu row and the body of its
+ * confirmation, a sentence on each line. Desktop has no program to close, so Quit only ends the
+ * stream; any other app closes and loses its unsaved progress.
  */
 @Composable
 internal fun quitConsequence(appName: String): String =
@@ -40,29 +42,33 @@ internal fun quitConsequence(appName: String): String =
     }
 
 /**
- * The confirmation of Quit, in the panel: what it costs, Cancel (focused, so a stray OK changes
- * nothing) and Quit.
+ * The confirmation of Quit, in the panel: the question as the title and what it costs as the body
+ * (the consequence of the row, a sentence on each line), then Cancel (focused, so a stray OK
+ * changes nothing) and Quit. The title and the body are announced together when it opens.
  */
 @Composable
 internal fun QuitConfirmation(appName: String, onCancel: () -> Unit, onQuit: () -> Unit) {
     val cancelFocus = remember { FocusRequester() }
+    val colors = LocalBorealisColors.current
     Column(
         Modifier.padding(PADDING_HORIZONTAL, PADDING_VERTICAL),
         verticalArrangement = Arrangement.spacedBy(GAP),
     ) {
-        Text(
-            stringResource(
-                if (isDesktop(appName)) {
-                    R.string.stream_menu_quit_confirm_desktop
-                } else {
-                    R.string.stream_menu_quit_confirm
-                },
-                appLabel(appName),
-            ),
-            Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-            color = LocalBorealisColors.current.ink2,
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        Column(
+            Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+            verticalArrangement = Arrangement.spacedBy(TITLE_GAP),
+        ) {
+            Text(
+                stringResource(R.string.stream_menu_quit_confirm, appLabel(appName)),
+                color = colors.ink,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                quitConsequence(appName),
+                color = colors.ink2,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
             BorealisButton(
                 stringResource(R.string.stream_menu_quit_confirm_cancel),

@@ -480,7 +480,7 @@ class InGameMenuTest {
     fun `an app whose title only contains Desktop is a game`() {
         menu(FormFactor.Phone, appName = "Remote Desktop")
 
-        text("Closes Remote Desktop on the PC. Unsaved progress in it is lost.")
+        text("Closes Remote Desktop on the PC.\nUnsaved progress in it is lost.")
             .performScrollTo()
             .assertIsDisplayed()
     }

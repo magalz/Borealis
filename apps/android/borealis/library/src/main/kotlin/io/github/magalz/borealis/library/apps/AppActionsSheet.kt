@@ -19,6 +19,7 @@ import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.library.R
+import io.github.magalz.borealis.library.hosts.DialogMessage
 
 /**
  * The actions that end the running app: they ask first, because a game closes and loses its unsaved
@@ -55,7 +56,7 @@ internal fun AppActionsSheet(
         // One window at a time: the sheet comes back when the confirmation is cancelled.
         ConfirmQuitDialog(
             appName = if (confirm == AppAction.QUIT_AND_START) running else app,
-            desktop = desktop,
+            consequence = quitConsequence(confirm, app, running, desktop),
             onConfirm = {
                 confirming = null
                 onChosen(confirm)
@@ -89,22 +90,14 @@ private fun sheetAction(
             ActionSheetAction(
                 action,
                 stringResource(R.string.apps_action_quit, app),
-                if (desktop) {
-                    stringResource(R.string.apps_action_quit_desktop_consequence)
-                } else {
-                    stringResource(R.string.apps_action_quit_consequence, app)
-                },
+                quitConsequence(action, app, running, desktop),
                 ActionStyle.Danger,
             )
         AppAction.QUIT_AND_START ->
             ActionSheetAction(
                 action,
                 stringResource(R.string.apps_action_quit_and_start, running, app),
-                if (desktop) {
-                    stringResource(R.string.apps_action_quit_and_start_desktop_consequence)
-                } else {
-                    stringResource(R.string.apps_action_quit_and_start_consequence, running)
-                },
+                quitConsequence(action, app, running, desktop),
                 ActionStyle.Danger,
             )
         AppAction.DETAILS ->
@@ -134,22 +127,40 @@ private fun sheetAction(
     }
 
 /**
- * Asks before the running app ends, saying what that costs: for Desktop only the stream, for a game
- * its unsaved progress. Focus starts on Cancel, so a stray OK does not lose work.
+ * What an action that ends the running app costs, a sentence on each line. Desktop only ends the
+ * stream; a game closes and loses its unsaved progress. [app] is the app the sheet is for and
+ * [running] the app that runs, which Quit and start ends first.
+ */
+@Composable
+private fun quitConsequence(
+    action: AppAction,
+    app: String,
+    running: String,
+    desktop: Boolean,
+): String =
+    when {
+        action == AppAction.QUIT_AND_START && desktop ->
+            stringResource(R.string.apps_action_quit_and_start_desktop_consequence)
+        action == AppAction.QUIT_AND_START ->
+            stringResource(R.string.apps_action_quit_and_start_consequence, running)
+        desktop -> stringResource(R.string.apps_action_quit_desktop_consequence)
+        else -> stringResource(R.string.apps_action_quit_consequence, app)
+    }
+
+/**
+ * Asks before the running app ends: the question as the title and, as the body, what that costs
+ * ([consequence], the one the action shows). Focus starts on Cancel, so a stray OK does not lose
+ * work.
  */
 @Composable
 private fun ConfirmQuitDialog(
     appName: String,
-    desktop: Boolean,
+    consequence: String,
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
 ) {
     BorealisDialog(
-        title =
-            stringResource(
-                if (desktop) R.string.apps_confirm_quit_desktop else R.string.apps_confirm_quit,
-                appName,
-            ),
+        title = stringResource(R.string.apps_confirm_quit, appName),
         onDismissRequest = onCancel,
         confirm =
             DialogAction(
@@ -159,7 +170,9 @@ private fun ConfirmQuitDialog(
             ),
         dismiss = DialogAction(stringResource(R.string.apps_confirm_cancel), onClick = onCancel),
         focusDismiss = true,
-    ) {}
+    ) {
+        DialogMessage(consequence)
+    }
 }
 
 /** The app id and whether the app supports HDR. */

@@ -531,7 +531,8 @@ class AppsScreenTest {
 
         composeRule.onNodeWithText("Quit Desktop").performClick()
 
-        composeRule.onNodeWithText(DESKTOP_CONFIRM).assertIsDisplayed()
+        composeRule.onNodeWithText("Quit Desktop?").assertIsDisplayed()
+        composeRule.onNodeWithText(DESKTOP_QUIT).assertIsDisplayed()
         assertThat(chosen).isEmpty()
 
         composeRule.onNodeWithText("Quit").performClick()
@@ -553,7 +554,8 @@ class AppsScreenTest {
 
         composeRule.onNodeWithText("Quit Desktop and start Hades II").performClick()
 
-        composeRule.onNodeWithText(DESKTOP_CONFIRM).assertIsDisplayed()
+        composeRule.onNodeWithText("Quit Desktop?").assertIsDisplayed()
+        composeRule.onNodeWithText(DESKTOP_QUIT_FIRST).assertIsDisplayed()
         assertThat(chosen).isEmpty()
 
         composeRule.onNodeWithText("Quit").performClick()
@@ -572,7 +574,7 @@ class AppsScreenTest {
 
         composeRule.onNodeWithText("Cancel").performClick()
 
-        composeRule.onNodeWithText(DESKTOP_CONFIRM).assertDoesNotExist()
+        composeRule.onNodeWithText("Quit Desktop?").assertDoesNotExist()
         composeRule.onNodeWithText("Resume").assertIsDisplayed()
         assertThat(chosen).isEmpty()
         assertThat(actionsDismissed).isEqualTo(0)
@@ -621,12 +623,10 @@ class AppsScreenTest {
         const val TV = "w960dp-h540dp-land-television-xhdpi"
         const val HANDHELD = "w800dp-h480dp-land-hdpi"
 
-        // What Quit says for Desktop: it ends the stream and closes no program.
-        const val DESKTOP_QUIT = "Ends the stream. The display and controls go back to the PC."
-        const val DESKTOP_QUIT_FIRST =
-            "Ends the stream first. The display and controls go back to the PC."
-        const val DESKTOP_CONFIRM =
-            "Quit Desktop? This ends the stream. The display and controls go back to the PC."
+        // What Quit says for Desktop: it ends the stream and closes no program. One sentence a
+        // line.
+        const val DESKTOP_QUIT = "Ends the stream.\nThe display and controls go back to the PC."
+        const val DESKTOP_QUIT_FIRST = "Ends the stream first.\nNothing is lost."
     }
 
     @Test

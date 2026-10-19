@@ -35,8 +35,9 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 // What the warning says when the app on the other device is a game: it closes and loses progress.
+// One sentence a line.
 private const val GAME_WARNING =
-    "Quitting ends the stream on the other device and closes the app. " +
+    "Quitting ends the stream on the other device and closes the app.\n" +
         "Unsaved progress in it is lost."
 
 @RunWith(AndroidJUnit4::class)

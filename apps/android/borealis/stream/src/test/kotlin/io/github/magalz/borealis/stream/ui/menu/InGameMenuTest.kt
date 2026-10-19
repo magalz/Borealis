@@ -48,15 +48,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
-// What Quit says for Desktop: it ends the stream and closes no program.
-private const val DESKTOP_QUIT = "Ends the stream. The display and controls go back to the PC."
-private const val DESKTOP_CONFIRM =
-    "Quit Desktop? This ends the stream. The display and controls go back to the PC."
+// What Quit says for Desktop: it ends the stream and closes no program. One sentence a line.
+private const val DESKTOP_QUIT = "Ends the stream.\nThe display and controls go back to the PC."
 
 // What it says for a game: the game closes and its unsaved progress is lost.
-private const val GAME_QUIT = "Closes Hades II on the PC. Unsaved progress in it is lost."
-private const val GAME_CONFIRM =
-    "Quit Hades II? This closes it on the PC. Unsaved progress in it is lost."
+private const val GAME_QUIT = "Closes Hades II on the PC.\nUnsaved progress in it is lost."
 
 /** UC-004: the in-game menu, a side panel over the stream. */
 @RunWith(AndroidJUnit4::class)
@@ -440,7 +436,9 @@ class InGameMenuTest {
         text(DESKTOP_QUIT).performScrollTo().assertIsDisplayed()
         text("Quit Desktop").performScrollTo().performClick()
 
-        text(DESKTOP_CONFIRM).assertIsDisplayed()
+        // The rows are hidden under the confirmation, so this is its body, not the row.
+        text("Quit Desktop?").assertIsDisplayed()
+        text(DESKTOP_QUIT).assertIsDisplayed()
         assertThat(fixture.intents.calls).isEmpty()
     }
 
@@ -452,7 +450,8 @@ class InGameMenuTest {
         text(GAME_QUIT).performScrollTo().assertIsDisplayed()
         text("Quit Hades II").performScrollTo().performClick()
 
-        text(GAME_CONFIRM).assertIsDisplayed()
+        text("Quit Hades II?").assertIsDisplayed()
+        text(GAME_QUIT).assertIsDisplayed()
         assertThat(fixture.intents.calls).isEmpty()
     }
 
@@ -513,7 +512,7 @@ class InGameMenuTest {
 
         text("Cancel").performClick()
 
-        text(DESKTOP_CONFIRM).assertDoesNotExist()
+        text("Quit Desktop?").assertDoesNotExist()
         text("Back to stream").assertIsDisplayed()
         assertThat(fixture.intents.calls).isEmpty()
     }
@@ -537,7 +536,7 @@ class InGameMenuTest {
 
         composeRule.onRoot().performKeyInput { pressKey(Key.ButtonB) }
 
-        text(DESKTOP_CONFIRM).assertDoesNotExist()
+        text("Quit Desktop?").assertDoesNotExist()
         assertThat(fixture.intents.calls).isEmpty()
 
         composeRule.onRoot().performKeyInput { pressKey(Key.ButtonB) }
@@ -579,7 +578,7 @@ class InGameMenuTest {
 
         composeRule.onRoot().performKeyInput { pressKey(Key.Back) }
 
-        text(DESKTOP_CONFIRM).assertDoesNotExist()
+        text("Quit Desktop?").assertDoesNotExist()
         text("Quit Desktop").assertIsFocused()
         assertThat(fixture.intents.calls).isEmpty()
 

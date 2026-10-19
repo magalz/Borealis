@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 import org.junit.Test
 
 class StreamStartupGuardTest {
@@ -142,6 +143,46 @@ class StreamStartupGuardTest {
         guard.onWarningCleared()
 
         assertThat(host.visible).isTrue()
+    }
+
+    @Test
+    fun `starting the connection twice arms the watchdog once`() {
+        guard.onConnectionStarted()
+        guard.onConnectionStarted()
+
+        assertThat(scheduler.scheduledCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `a first frame stops the watchdog before it fires`() {
+        guard.onConnectionStarted()
+
+        guard.onFirstFrame()
+
+        assertThat(scheduler.pendingCount).isEqualTo(0)
+        scheduler.advanceBy(60_000)
+        assertThat(host.terminationCount).isEqualTo(0)
+    }
+
+    @Test
+    fun `a first frame reported from the render thread stops the watchdog`() {
+        guard.onConnectionStarted()
+
+        thread(name = "render") { guard.onFirstFrame() }.join()
+        scheduler.advanceBy(60_000)
+
+        assertThat(host.terminationCount).isEqualTo(0)
+    }
+
+    @Test
+    fun `a cancelled guard does not arm the watchdog when the connection starts later`() {
+        guard.cancel()
+
+        guard.onConnectionStarted()
+        scheduler.advanceBy(60_000)
+
+        assertThat(scheduler.scheduledCount).isEqualTo(0)
+        assertThat(host.terminationCount).isEqualTo(0)
     }
 
     @Test

@@ -79,6 +79,28 @@ class StreamStartupTest {
     }
 
     @Test
+    fun `the first frame stops the watchdog`() {
+        guard.onConnectionStarted()
+
+        guard.onFirstFrame()
+        scheduler.advanceBy(60_000)
+
+        assertThat(scheduler.pendingCount).isEqualTo(0)
+        assertThat(terminated.count).isEqualTo(1L)
+    }
+
+    @Test
+    fun `a cancelled guard never ends the stream`() {
+        guard.onConnectionStarted()
+
+        guard.cancel()
+        scheduler.advanceBy(60_000)
+
+        assertThat(scheduler.pendingCount).isEqualTo(0)
+        assertThat(terminated.count).isEqualTo(1L)
+    }
+
+    @Test
     fun `the timeout ends the stream off the calling thread`() {
         guard.onConnectionStarted()
 

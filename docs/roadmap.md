@@ -207,10 +207,10 @@ yet. Its results go to
 8. **Steam opens after a quit combo.** Done (issue #29, merge `ea4df39e`). Found
    in the Sprint 8 round, on the S22. The menu chord arms only from a clean start:
    once a button other than Start and Select is held, Start and Select do not
-   arm it again until every button is released. Letting the quit combo go with a
-   bumper last therefore sends no Guide tap and opens no menu, on system pads and
-   on USB-driver pads. On a system pad, the Start hold no longer toggles the
-   gamepad mouse while the quit combo is pending. See the
+   arm it again until every button is released. Letting the quit combo go bumpers
+   first, which leaves Start and Select held alone, therefore sends no Guide tap
+   and opens no menu, on system pads and on USB-driver pads. On a system pad, the
+   Start hold no longer toggles the gamepad mouse while the quit combo is pending. See the
    [Sprint 8 results](development/device-validation.md#13-results-sprint-8).
 9. **The animated background and the Appearance group.** Done (issue #30, merges
    `6437ab74`, `b9775c55` and `d1c36307`;

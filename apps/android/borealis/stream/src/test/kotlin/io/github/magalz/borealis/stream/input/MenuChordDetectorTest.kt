@@ -517,4 +517,15 @@ class MenuChordDetectorTest {
         assertThat(detector.hidden()).isEqualTo(START)
         assertThat(detector.deadline()).isEqualTo(2_060)
     }
+
+    @Test
+    fun `reset forgets the buttons held before it, so Start and Select can arm the chord`() {
+        feedLone(A, 0)
+        feedLone(A or START, 10)
+
+        detector.reset()
+        feedLone(chord, 100)
+
+        assertThat(detector.check(1_100)).isTrue()
+    }
 }

@@ -267,4 +267,17 @@ class UsbMenuChordTest {
 
         assertThat(rig.chords).isEqualTo(1)
     }
+
+    @Test
+    fun `a button held before the chrome took the input does not keep Select and Start from arming`() {
+        pad.report(LB_FLAG)
+        rig.handler.setCaptured(true)
+        pad.report(0)
+        rig.handler.setCaptured(false)
+
+        pad.report(chord)
+        rig.advanceBy(1_000)
+
+        assertThat(rig.chords).isEqualTo(1)
+    }
 }

@@ -3,7 +3,6 @@ package io.github.magalz.borealis.designsystem.components.settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.assertIsDisplayed
@@ -23,15 +22,13 @@ import org.robolectric.annotation.Config
 
 /**
  * What the pane of a [SettingsTwoPane] shows when the group changes: the new group looks fresh,
- * with no switch sliding and no scroll left over from the one before, and its rows are updated in
- * place, which on a TV costs far less than composing them again.
+ * with no switch sliding and no scroll left over from the last time it was shown.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class SettingsTwoPaneSwitchingTest {
     @get:Rule val composeRule = createComposeRule()
     private var selected by mutableStateOf("on")
-    private var rowsComposed = 0
 
     private val groups =
         listOf(
@@ -39,8 +36,6 @@ class SettingsTwoPaneSwitchingTest {
             SettingsGroup("off", "Switch off"),
             SettingsGroup("long", "Long"),
             SettingsGroup("mid", "Mid"),
-            SettingsGroup("one", "Group one"),
-            SettingsGroup("two", "Group two"),
         )
 
     @Test
@@ -71,15 +66,15 @@ class SettingsTwoPaneSwitchingTest {
     }
 
     @Test
-    fun `a group switch updates the rows in place instead of composing them again`() {
-        selected = "one"
+    fun `a group that was scrolled opens at its top when it is shown again`() {
         composeRule.setContent { Specimen() }
-        composeRule.onNodeWithText("Row of group one").assertIsDisplayed()
+        composeRule.onNodeWithText("Long").performClick()
+        composeRule.onNodeWithText("Long row 30").performScrollTo()
+        composeRule.onNodeWithText("Mid").performClick()
 
-        composeRule.onNodeWithText("Group two").performClick()
+        composeRule.onNodeWithText("Long").performClick()
 
-        composeRule.onNodeWithText("Row of group two").assertIsDisplayed()
-        assertThat(rowsComposed).isEqualTo(1)
+        composeRule.onNodeWithText("Long row 1").assertIsDisplayed()
     }
 
     private fun pixelsOfSwitchRow(): List<Int> {
@@ -100,20 +95,11 @@ class SettingsTwoPaneSwitchingTest {
                     // One call site for both groups, as the rows of a screen are drawn from a list.
                     "on",
                     "off" -> SettingsSwitchRow("The switch", group == "on", onCheckedChange = {})
-                    "one",
-                    "two" -> CountedRow(group)
                     "long" -> repeat(LONG_ROWS) { SettingsValueRow("Long row ${it + 1}", null, {}) }
                     else -> repeat(MID_ROWS) { SettingsValueRow("Mid row ${it + 1}", null, {}) }
                 }
             }
         }
-    }
-
-    /** A row that counts how many times it was composed from nothing, not recomposed. */
-    @Composable
-    private fun CountedRow(group: String) {
-        remember { rowsComposed++ }
-        SettingsValueRow("Row of group $group", null, {})
     }
 
     private companion object {

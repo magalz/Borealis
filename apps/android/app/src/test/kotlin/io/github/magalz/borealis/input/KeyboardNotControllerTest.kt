@@ -15,8 +15,7 @@ import org.robolectric.util.ReflectionHelpers.ClassParameter
  * A Bluetooth keyboard can report a JOYSTICK source with X and Y axes (the AULA F75Max does). The
  * stream must not count it as a game controller, or it makes a controller context for the keyboard.
  * A pad with a non-alphabetic keyboard type, or none, still counts. These tests read the verdict of
- * `isGameControllerDevice`: `getAttachedControllerMask` and the context creation need the native
- * library, which unit tests do not have.
+ * `isGameControllerDevice`; `getAttachedControllerMask` uses the same joystick check.
  */
 @RunWith(RobolectricTestRunner::class)
 class KeyboardNotControllerTest {

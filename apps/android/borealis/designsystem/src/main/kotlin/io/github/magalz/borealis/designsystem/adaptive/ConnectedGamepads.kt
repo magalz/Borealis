@@ -12,11 +12,13 @@ import androidx.compose.ui.platform.LocalContext
 /**
  * Whether an input device with these facts is a game controller: not virtual, and either a gamepad,
  * or a joystick with the X and Y axes ([hasJoystickXy]) that is no alphabetic keyboard
- * ([keyboardType] is not [InputDevice.KEYBOARD_TYPE_ALPHABETIC]). It matches the gamepad-buttons
- * and joystick-axes part of `ControllerHandler.isGameControllerDevice`, which also has its own
- * exceptions, and is kept in one place for the form factor and the USB driver. The source masks are
- * compared whole, because the class bits overlap with the keyboard's: an 8BitDo pad reports
- * `KEYBOARD | GAMEPAD | JOYSTICK` with a non-alphabetic keyboard, and a remote `KEYBOARD | DPAD`.
+ * ([keyboardType] is not [InputDevice.KEYBOARD_TYPE_ALPHABETIC]). It is the rule for the
+ * gamepad-buttons and joystick-axes part of `ControllerHandler.isGameControllerDevice`, which also
+ * has its own exceptions: the handler takes the joystick part through [hasControllerJoystickAxes].
+ * It is kept in one place for the form factor, the USB driver and the stream's handler. The source
+ * masks are compared whole, because the class bits overlap with the keyboard's: an 8BitDo pad
+ * reports `KEYBOARD | GAMEPAD | JOYSTICK` with a non-alphabetic keyboard, and a remote reports
+ * `KEYBOARD | DPAD`.
  *
  * The keyboard type only matters for the joystick branch: some Bluetooth keyboards report a
  * JOYSTICK source with X and Y axes, and an alphabetic keyboard is no game controller for that. A

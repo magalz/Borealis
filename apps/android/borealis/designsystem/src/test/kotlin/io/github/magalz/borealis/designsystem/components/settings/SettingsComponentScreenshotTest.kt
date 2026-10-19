@@ -218,7 +218,7 @@ class SettingsComponentScreenshotTest {
                     listOf("Stream", "Video", "Input", "Audio", "About").map {
                         SettingsGroup(it, it)
                     },
-                selected = "Stream",
+                selected = { "Stream" },
                 onSelect = {},
                 modifier = Modifier.padding(top = 12.dp),
             ) {

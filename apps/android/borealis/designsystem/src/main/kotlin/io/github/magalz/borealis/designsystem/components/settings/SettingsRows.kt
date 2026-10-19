@@ -12,7 +12,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.layout
@@ -65,7 +64,6 @@ fun SettingsSwitchRow(
     disabledNote: String? = null,
 ) {
     val colors = LocalBorealisColors.current
-    val group = LocalSettingsGroup.current
     Row(
         modifier
             .settingsRowSurface()
@@ -99,24 +97,21 @@ fun SettingsSwitchRow(
             SettingsRowTone.Normal,
             Modifier.weight(1f),
         )
-        // Made again with the group of a two-pane screen: see LocalSettingsGroup.
-        key(group) {
-            Switch(
-                checked = checked,
-                // The row owns the input, so the switch is only drawn.
-                onCheckedChange = null,
-                enabled = enabled,
-                colors =
-                    SwitchDefaults.colors(
-                        checkedThumbColor = colors.onAccent,
-                        checkedTrackColor = colors.accent,
-                        checkedBorderColor = colors.accent,
-                        uncheckedThumbColor = colors.ink3,
-                        uncheckedTrackColor = colors.lineStrong,
-                        uncheckedBorderColor = colors.lineStrong,
-                    ),
-            )
-        }
+        Switch(
+            checked = checked,
+            // The row owns the input, so the switch is only drawn.
+            onCheckedChange = null,
+            enabled = enabled,
+            colors =
+                SwitchDefaults.colors(
+                    checkedThumbColor = colors.onAccent,
+                    checkedTrackColor = colors.accent,
+                    checkedBorderColor = colors.accent,
+                    uncheckedThumbColor = colors.ink3,
+                    uncheckedTrackColor = colors.lineStrong,
+                    uncheckedBorderColor = colors.lineStrong,
+                ),
+        )
     }
 }
 

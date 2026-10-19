@@ -7,12 +7,14 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -144,6 +146,30 @@ class LibrarySettingsTvTest {
         composeRule.onNode(railItem("Settings")).assertIsSelected()
         composeRule.onNode(railItem("Hosts")).assertIsNotSelected()
         composeRule.onNodeWithTag("host:desk").assertDoesNotExist()
+    }
+
+    @Test
+    fun `choosing Settings in the rail by the D-pad puts focus on the selected group`() {
+        launch()
+        composeRule.onNode(railItem("Settings")).requestFocus()
+
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.Enter) }
+        composeRule.waitForIdle()
+
+        showsSettings()
+        composeRule.onNodeWithText("Stream").assertIsFocused()
+    }
+
+    @Test
+    fun `Left from the selected group of Settings returns to the Settings item of the rail`() {
+        launch()
+        composeRule.onNode(railItem("Settings")).requestFocus()
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.Enter) }
+        composeRule.waitForIdle()
+
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNode(isFocused()).assert(railItem("Settings"))
     }
 
     @Test

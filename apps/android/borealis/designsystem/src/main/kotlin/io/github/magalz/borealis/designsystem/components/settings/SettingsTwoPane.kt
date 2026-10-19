@@ -1,6 +1,5 @@
 package io.github.magalz.borealis.designsystem.components.settings
 
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -20,13 +19,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -49,6 +47,8 @@ import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.liftedWhenFocused
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
+import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
@@ -62,13 +62,17 @@ class SettingsGroup<out K>(val key: K, val title: String)
 
 private val PANE_GAP = 12.dp
 /** An outline sits 5dp outside its item, so neighbours need 10dp between them. */
-private val ITEM_GAP = 10.dp
-private val AREA_PADDING = 8.dp
+internal val ITEM_GAP = 10.dp
+internal val AREA_PADDING = 8.dp
 private val GROUP_PADDING_HORIZONTAL = 12.dp
 private val GROUP_PADDING_VERTICAL = 10.dp
 
-/** How long focus must rest on a group before the pane follows it. */
-internal const val GROUP_SELECT_DELAY_MILLIS = 150L
+/**
+ * How long focus must rest on a group before the pane follows it. None: with the panes built and
+ * stacked, a switch changes the layer properties of two panes and recomposes nothing else, so it is
+ * cheap enough to follow every step of a held key.
+ */
+internal const val GROUP_SELECT_DELAY_MILLIS = 0L
 
 /**
  * The settings of a TV or handheld in two panes: the [groups] by title in a list on the left, and
@@ -76,72 +80,83 @@ internal const val GROUP_SELECT_DELAY_MILLIS = 150L
  * spaces its rows 10dp apart; [content] puts the rows of the group in it, with 8dp of padding
  * around them already given. A group for which [selfScrolling] is true brings its own scroll and
  * padding: its [content] fills the pane, which does not wrap it in a scroll that would give it an
- * unbounded height. When the group changes, the rows are updated in place, not composed again, and
- * the pane opens the new group at its top.
+ * unbounded height.
+ *
+ * Every group has a pane of its own, composed once and kept, and the panes are stacked: each is
+ * laid out and drawn in the same bounds, and only the selected one is visible. Moving to a group
+ * therefore composes, measures and records nothing; it changes which pane counts. The pane of the
+ * selected group is composed at once, those of the others after the first frame, one in each frame
+ * and the nearest to the selected group first. A pane that is not shown cannot be touched, takes no
+ * focus (D-pad, Tab) and is left out of the semantics tree. A group for which [selfScrolling] is
+ * true brings content and work of its own (the screen of Privacy, say), so its pane is composed
+ * while the group is selected and not after. A pane opens at its top whenever it is shown.
+ *
+ * With [focusOnOpen] the selected group takes focus when the panes open, once, and a TV or handheld
+ * leaves touch mode, as the first item of Hosts does: opened from the rail, the screen takes focus
+ * from the rail item that opened it.
+ *
+ * [selectDelayMillis] is how long focus must rest on a group before the pane follows it; a test
+ * gives a longer wait, so that the time that its own steps take does not decide the outcome.
+ *
+ * [selected] gives the key of the selected group. It is a function so that a caller that keeps the
+ * selection in state does not read it while it composes, and so is not recomposed by a change.
  *
  * Groups are identified by key, not by position, so a screen can hide a group on some devices
  * without moving the selection. A [selected] key that no group has falls back to the first group,
  * and with no groups the pane is empty.
  *
- * Selection follows focus once focus rests: the group that has focus looks selected at once, but
- * the pane, which costs more than a frame to build on a TV, changes and [onSelect] is called with
- * the key only after focus has stayed on the group for [GROUP_SELECT_DELAY_MILLIS], so moving over
- * several groups quickly selects the last one only. A tap or OK on a group selects it at once.
- * Focus that leaves the list for the pane drops a selection that was still waiting, so the pane
- * never changes under a focused row. Right from any group selects it if the pane has not followed
- * yet, and enters the pane at its first row once the group has arrived, however late [onSelect]
- * brings it; another key cancels that entry. Left from the pane, when no row uses the key, returns
- * to the selected group, whichever row it leaves.
+ * Selection follows focus: the group that has focus looks selected at once, and the pane changes
+ * and [onSelect] is called with its key once focus has stayed on the group for [selectDelayMillis].
+ * That is no time at all by default ([GROUP_SELECT_DELAY_MILLIS]), because a switch is cheap; a
+ * wait would skip the groups that a held key passes over. A tap or OK on a group selects it at
+ * once. Focus that leaves the list for the pane drops a selection that was still waiting, so the
+ * pane never changes under a focused row. Right from any group selects it if the pane has not
+ * followed yet, and enters the pane at its first row once the group has arrived, however late
+ * [onSelect] brings it; another key cancels that entry. Left from the pane, when no row uses the
+ * key, returns to the selected group, whichever row it leaves.
  */
 @Composable
 fun <K> SettingsTwoPane(
     groups: List<SettingsGroup<K>>,
-    selected: K,
+    selected: () -> K,
     onSelect: (K) -> Unit,
     modifier: Modifier = Modifier,
     selfScrolling: (K) -> Boolean = { false },
+    selectDelayMillis: Long = GROUP_SELECT_DELAY_MILLIS,
+    focusOnOpen: Boolean = false,
     content: @Composable ColumnScope.(K) -> Unit,
 ) {
-    val current = groups.firstOrNull { it.key == selected } ?: groups.firstOrNull()
     val selectedGroup = remember { FocusRequester() }
     val pane = remember { FocusRequester() }
-    val navigation = rememberGroupNavigation(current?.key, onSelect, pane, selectedGroup)
-    Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(PANE_GAP)) {
-        GroupList(groups, current?.key, navigation, selectedGroup)
-        Box(
-            Modifier.weight(1f)
-                .fillMaxHeight()
-                .focusRequester(pane)
-                .onKeyEvent { event ->
-                    // No row used Left: go back to the selected group.
-                    val left = event.key == Key.DirectionLeft
-                    if (left && event.type == KeyEventType.KeyDown) selectedGroup.requestFocus()
-                    left
-                }
-                .focusGroup()
-        ) {
-            if (current != null) {
-                // The rows are updated in place when the group changes: composing them again
-                // costs about twice as much on a TV. Each group has its own scroll, so that it
-                // opens at its top, and its switches are made again (see LocalSettingsGroup).
-                CompositionLocalProvider(LocalSettingsGroup provides current.key) {
-                    if (selfScrolling(current.key)) {
-                        Column(Modifier.fillMaxSize()) { content(current.key) }
-                    } else {
-                        val scroll =
-                            rememberSaveable(current.key, saver = ScrollState.Saver) {
-                                ScrollState(0)
-                            }
-                        Column(
-                            Modifier.fillMaxSize().verticalScroll(scroll).padding(AREA_PADDING),
-                            verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
-                        ) {
-                            content(current.key)
-                        }
-                    }
-                }
-            }
+    val groupsNow = rememberUpdatedState(groups)
+    val selectedNow = rememberUpdatedState(selected)
+    // The key of the group whose pane is current. It is state that the list, the layers and the
+    // wrappers of the panes read where they need it, so that a switch recomposes none of this.
+    val current = remember {
+        derivedStateOf {
+            val all = groupsNow.value
+            all.firstOrNull { it.key == selectedNow.value() }?.key ?: all.firstOrNull()?.key
         }
+    }
+    val navigation =
+        rememberGroupNavigation(current, onSelect, selectDelayMillis, pane, selectedGroup)
+    val composed = rememberComposedGroups(groups, current, selfScrolling)
+    Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(PANE_GAP)) {
+        GroupList(groups, current, navigation, selectedGroup, focusOnOpen)
+        GroupPanes(
+            groups,
+            composed,
+            current,
+            selfScrolling,
+            pane,
+            Modifier.weight(1f).fillMaxHeight().onKeyEvent { event ->
+                // No row used Left: go back to the selected group.
+                val left = event.key == Key.DirectionLeft
+                if (left && event.type == KeyEventType.KeyDown) selectedGroup.requestFocus()
+                left
+            },
+            content,
+        )
     }
 }
 
@@ -153,6 +168,7 @@ fun <K> SettingsTwoPane(
 private class GroupNavigation<K>(
     private val currentKey: State<K?>,
     private val select: State<(K) -> Unit>,
+    private val selectDelayMillis: Long,
     private val focusPane: () -> Unit,
 ) {
     /** The group that D-pad focus moved to and the pane has not followed yet. */
@@ -185,7 +201,12 @@ private class GroupNavigation<K>(
         entering.value = null
     }
 
-    /** Right: enter the pane, after the group that focus rests on has become the selected one. */
+    /**
+     * Right: enter the pane, once the current group has arrived. That is a frame later even when
+     * nothing waits: a selection that was just made has not recomposed the panes yet, and the
+     * target of a request for the current pane is still on the old one, which would take focus and
+     * clear it when it stops being current.
+     */
     fun enterPane() {
         val group = resting.value
         when {
@@ -194,7 +215,7 @@ private class GroupNavigation<K>(
                 entering.value = group
             }
             // Right again, as a held key repeats it, while the group has yet to arrive.
-            entering.value == null -> focusPane()
+            entering.value == null -> entering.value = currentKey.value
         }
     }
 
@@ -205,7 +226,7 @@ private class GroupNavigation<K>(
             snapshotFlow { resting.value }
                 .collectLatest { key ->
                     if (key != null) {
-                        delay(GROUP_SELECT_DELAY_MILLIS)
+                        delay(selectDelayMillis)
                         selectNow(key)
                     }
                 }
@@ -228,17 +249,17 @@ private class GroupNavigation<K>(
 
 @Composable
 private fun <K> rememberGroupNavigation(
-    currentKey: K?,
+    currentKey: State<K?>,
     onSelect: (K) -> Unit,
+    selectDelayMillis: Long,
     pane: FocusRequester,
     selectedGroup: FocusRequester,
 ): GroupNavigation<K> {
     val focusManager = LocalFocusManager.current
-    val currentKeyState = rememberUpdatedState(currentKey)
     val select = rememberUpdatedState(onSelect)
     val navigation =
-        remember(focusManager) {
-            GroupNavigation(currentKeyState, select) {
+        remember(focusManager, selectDelayMillis) {
+            GroupNavigation(currentKey, select, selectDelayMillis) {
                 // The search for a focus target to the right would pick the row nearest to the
                 // group. With no focus to measure from, entering the pane picks its first row.
                 focusManager.clearFocus()
@@ -258,12 +279,14 @@ private fun <K> rememberGroupNavigation(
 @Composable
 private fun <K> GroupList(
     groups: List<SettingsGroup<K>>,
-    selected: K?,
+    selected: State<K?>,
     navigation: GroupNavigation<K>,
     selectedGroup: FocusRequester,
+    focusOnOpen: Boolean,
 ) {
-    // Read here, so that a focus move recomposes the list and not the pane.
-    val shown = navigation.resting.value ?: selected
+    val initialFocus = rememberInitialFocusState()
+    // Read here, so that a focus move or a switch recomposes the list and not the pane.
+    val shown = navigation.resting.value ?: selected.value
     Column(
         Modifier.width(BorealisDimens.navWidth(LocalFormFactor.current))
             .fillMaxHeight()
@@ -295,7 +318,11 @@ private fun <K> GroupList(
                 onFocus = { navigation.onRest(group.key) },
                 onSelect = { navigation.selectNow(group.key) },
                 modifier =
-                    if (group.key == selected) Modifier.focusRequester(selectedGroup) else Modifier,
+                    when {
+                        group.key != selected.value -> Modifier
+                        focusOnOpen -> Modifier.initialFocus(selectedGroup, initialFocus)
+                        else -> Modifier.focusRequester(selectedGroup)
+                    },
             )
         }
     }

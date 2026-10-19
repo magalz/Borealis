@@ -84,7 +84,7 @@ class SettingsTwoPaneTest {
         composeRule.onNodeWithText("Stream").requestFocus()
 
         press(Key.DirectionDown)
-        composeRule.mainClock.advanceTimeBy(GROUP_SELECT_DELAY_MILLIS / 2)
+        composeRule.mainClock.advanceTimeBy(WAIT_MILLIS / 2)
 
         composeRule.onNodeWithText("Video").assertIsFocused()
         assertThat(selections).isEmpty()
@@ -188,7 +188,7 @@ class SettingsTwoPaneTest {
         press(Key.DirectionDown)
 
         press(Key.DirectionRight)
-        composeRule.mainClock.advanceTimeBy(GROUP_SELECT_DELAY_MILLIS / 2)
+        composeRule.mainClock.advanceTimeBy(WAIT_MILLIS / 2)
         composeRule.waitForIdle()
 
         // The caller was asked and has not applied it: the old pane must not take focus.
@@ -329,6 +329,56 @@ class SettingsTwoPaneTest {
     }
 
     @Test
+    fun `with focusOnOpen the selected group takes focus when the panes open`() {
+        composeRule.setContent { Specimen(focusOnOpen = true) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Stream").assertIsFocused()
+    }
+
+    @Test
+    fun `with focusOnOpen the group that is selected takes focus, whichever it is`() {
+        selected = "video"
+        composeRule.setContent { Specimen(focusOnOpen = true) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Video").assertIsFocused()
+    }
+
+    @Test
+    fun `focusOnOpen is not taken again when the selection changes later`() {
+        composeRule.setContent { Specimen(focusOnOpen = true) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Stream").assertIsFocused()
+
+        // Another group is selected from outside while focus stays where the user left it.
+        composeRule.runOnUiThread { selected = "video" }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Stream").assertIsFocused()
+        composeRule.onNodeWithText("Video").assertIsNotFocused()
+    }
+
+    @Test
+    fun `without focusOnOpen no group takes focus when the panes open`() {
+        composeRule.setContent { Specimen() }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Stream").assertIsNotFocused()
+    }
+
+    @Test
+    fun `a request for a row that is not the first, from a group, stays on that row`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Frame rate").requestFocus()
+
+        composeRule.onNodeWithText("Frame rate").assertIsFocused()
+    }
+
+    @Test
     fun `Left from any row of the pane returns to the selected group`() {
         selected = "video"
         composeRule.setContentInKeyboardMode { Specimen() }
@@ -376,7 +426,7 @@ class SettingsTwoPaneTest {
             BorealisTheme(FormFactor.Tv) {
                 SettingsTwoPane(
                     groups = listOf(SettingsGroup("own", "Own")),
-                    selected = "own",
+                    selected = { "own" },
                     onSelect = {},
                     selfScrolling = { true },
                 ) {
@@ -422,7 +472,7 @@ class SettingsTwoPaneTest {
 
     /** Lets focus rest on the group it is on for longer than the pane waits. */
     private fun restOnTheGroup() {
-        composeRule.mainClock.advanceTimeBy(2 * GROUP_SELECT_DELAY_MILLIS)
+        composeRule.mainClock.advanceTimeBy(2 * WAIT_MILLIS)
         composeRule.waitForIdle()
     }
 
@@ -430,15 +480,18 @@ class SettingsTwoPaneTest {
     private fun Specimen(
         groups: List<SettingsGroup<String>> = allGroups,
         formFactor: FormFactor = FormFactor.Tv,
+        focusOnOpen: Boolean = false,
     ) {
         BorealisTheme(formFactor) {
             SettingsTwoPane(
                 groups = groups,
-                selected = selected,
+                selected = { selected },
                 onSelect = {
                     selections += it
                     if (deferSelection) held = it else selected = it
                 },
+                selectDelayMillis = WAIT_MILLIS,
+                focusOnOpen = focusOnOpen,
             ) { group ->
                 when (group) {
                     "stream" -> {
@@ -457,5 +510,14 @@ class SettingsTwoPaneTest {
                 }
             }
         }
+    }
+
+    private companion object {
+        /**
+         * The wait of the pane in these tests. It is far longer than the frames that one step of a
+         * test lets pass, so that the steps are what the tests mean them to be, whatever the screen
+         * uses.
+         */
+        const val WAIT_MILLIS = 300L
     }
 }

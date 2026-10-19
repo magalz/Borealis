@@ -65,7 +65,8 @@ private val PANE_GAP = 12.dp
 internal val ITEM_GAP = 10.dp
 internal val AREA_PADDING = 8.dp
 private val GROUP_PADDING_HORIZONTAL = 12.dp
-private val GROUP_PADDING_VERTICAL = 10.dp
+/** Small enough that the ten groups of Settings, [ITEM_GAP] apart, fit a 540dp TV unscrolled. */
+private val GROUP_PADDING_VERTICAL = 5.dp
 
 /**
  * How long focus must rest on a group before the pane follows it. None: with the panes built and

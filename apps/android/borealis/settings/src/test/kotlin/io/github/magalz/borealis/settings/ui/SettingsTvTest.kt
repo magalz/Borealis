@@ -385,7 +385,7 @@ class SettingsHandheldTest : SettingsScreenTestBase() {
     fun `the Appearance group has the Background row with the seven styles`() {
         show(keyboard = true)
 
-        // The group list is taller than the 480dp window of a handheld: it scrolls to the group.
+        // The group list of a handheld may scroll: do not rely on how many groups fit in 480dp.
         composeRule.onNodeWithText("Appearance").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Appearance").performClick()
         composeRule.waitForIdle()

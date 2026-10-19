@@ -2628,7 +2628,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             // any action.
             if ((context.inputMap & ControllerPacket.PLAY_FLAG) != 0 &&
                     event.getEventTime() - context.startDownTime > ControllerHandler.START_DOWN_TIME_MOUSE_MODE_MS &&
-                    prefConfig.mouseEmulation && !captured &&
+                    prefConfig.mouseEmulation && !captured && !context.pendingExit &&
                     !context.menuChord.claims(ControllerPacket.PLAY_FLAG)) {
                 context.toggleMouseEmulation();
             }

@@ -223,4 +223,61 @@ class UsbMenuChordTest {
         assertThat(rig.activity.isFinishing).isTrue()
         assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
     }
+
+    @Test
+    fun `letting the quit combo go down to Select and Start, then one of them, sends no tap`() {
+        pad.report(PLAY_FLAG)
+        pad.report(chord)
+        pad.report(chord or LB_FLAG)
+        pad.report(quitCombo)
+        pad.report(chord or RB_FLAG)
+        pad.report(chord)
+
+        // Select and Start reach the PC as they are held, not masked as a pending chord
+        assertThat(rig.lastButtons()).isEqualTo(chord)
+        rig.advanceBy(200)
+        pad.report(BACK_FLAG)
+        rig.advanceBy(100)
+
+        assertThat(rig.buttons().dropWhile { it != chord }.drop(1)).containsExactly(BACK_FLAG)
+        assertThat(rig.chords).isEqualTo(0)
+    }
+
+    @Test
+    fun `Select and Start left held after the quit combo do not open the menu`() {
+        pad.report(quitCombo)
+        pad.report(chord or LB_FLAG)
+        pad.report(chord)
+
+        rig.advanceBy(StartHold.HOLD_MS + 500)
+
+        assertThat(rig.chords).isEqualTo(0)
+        assertThat(rig.lastButtons()).isEqualTo(chord)
+    }
+
+    @Test
+    fun `Select and Start arm the chord again after the quit combo was let go entirely`() {
+        pad.report(quitCombo)
+        pad.report(chord)
+        pad.report(0)
+        rig.advanceBy(0)
+
+        pad.report(chord)
+        rig.advanceBy(1_000)
+
+        assertThat(rig.chords).isEqualTo(1)
+    }
+
+    @Test
+    fun `a button held before the chrome took the input does not keep Select and Start from arming`() {
+        pad.report(LB_FLAG)
+        rig.handler.setCaptured(true)
+        pad.report(0)
+        rig.handler.setCaptured(false)
+
+        pad.report(chord)
+        rig.advanceBy(1_000)
+
+        assertThat(rig.chords).isEqualTo(1)
+    }
 }

@@ -51,6 +51,12 @@ class MenuChordDetector {
     private var consumed = 0
     private var masking = false
 
+    /**
+     * A button other than Start and Select has been held since every button was last up, so the
+     * chord cannot arm: what is left of a quit combo or of any other press is not a chord.
+     */
+    private var foreign = false
+
     /** Start or Select pressed alone and held back while its partner may still arrive. */
     private var lone = 0
     private var loneAt = NOT_ARMED
@@ -59,8 +65,10 @@ class MenuChordDetector {
      * Buttons after the latest event. [maskWhilePending] hides the chord from the PC from the
      * start.
      *
-     * The chord starts when the buttons are exactly Select and Start and no button of an earlier
-     * chord is still held. Any other button ends it. Releasing a button before one second ends it
+     * The chord starts when the buttons are exactly Select and Start, no button of an earlier chord
+     * is still held, and no other button has been held since every button was last up. Any other
+     * button ends it, and keeps a new one from starting until every button has been let go, so that
+     * what is left of the quit combo does not count. Releasing a button before one second ends it
      * as an early release. An event at or after the deadline completes it first.
      *
      * With [holdLone], Start or Select that goes down with no other button held is hidden from the
@@ -102,7 +110,8 @@ class MenuChordDetector {
         consumed = consumed and buttons
         if (consumed == 0) masking = false
 
-        if (buttons == CHORD && armedAt == NOT_ARMED && consumed == 0) {
+        foreign = buttons != 0 && (foreign || buttons and CHORD.inv() != 0)
+        if (canArm(buttons)) {
             armedAt = time
             consumed = CHORD
             masking = maskWhilePending
@@ -117,6 +126,12 @@ class MenuChordDetector {
         val silent = !fired && changed != 0 && changed and previousHidden == changed
         return Update(fired, earlyRelease, silent, loneTap)
     }
+
+    /**
+     * Whether [buttons] start a chord: Start and Select alone, and nothing left over from before.
+     */
+    private fun canArm(buttons: Int): Boolean =
+        buttons == CHORD && !foreign && armedAt == NOT_ARMED && consumed == 0
 
     /** The wait of a lone button ends when the buttons change; returns the button let go in it. */
     private fun endLoneWait(buttons: Int): Int {
@@ -174,6 +189,7 @@ class MenuChordDetector {
         armedAt = NOT_ARMED
         consumed = 0
         masking = false
+        foreign = false
         lone = 0
         loneAt = NOT_ARMED
     }

@@ -329,6 +329,45 @@ class SettingsTwoPaneTest {
     }
 
     @Test
+    fun `with focusOnOpen the selected group takes focus when the panes open`() {
+        composeRule.setContent { Specimen(focusOnOpen = true) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Stream").assertIsFocused()
+    }
+
+    @Test
+    fun `with focusOnOpen the group that is selected takes focus, whichever it is`() {
+        selected = "video"
+        composeRule.setContent { Specimen(focusOnOpen = true) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Video").assertIsFocused()
+    }
+
+    @Test
+    fun `focusOnOpen is not taken again when the selection changes later`() {
+        composeRule.setContent { Specimen(focusOnOpen = true) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Stream").assertIsFocused()
+
+        // Another group is selected from outside while focus stays where the user left it.
+        composeRule.runOnUiThread { selected = "video" }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Stream").assertIsFocused()
+        composeRule.onNodeWithText("Video").assertIsNotFocused()
+    }
+
+    @Test
+    fun `without focusOnOpen no group takes focus when the panes open`() {
+        composeRule.setContent { Specimen() }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Stream").assertIsNotFocused()
+    }
+
+    @Test
     fun `a request for a row that is not the first, from a group, stays on that row`() {
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Stream").requestFocus()
@@ -441,6 +480,7 @@ class SettingsTwoPaneTest {
     private fun Specimen(
         groups: List<SettingsGroup<String>> = allGroups,
         formFactor: FormFactor = FormFactor.Tv,
+        focusOnOpen: Boolean = false,
     ) {
         BorealisTheme(formFactor) {
             SettingsTwoPane(
@@ -451,6 +491,7 @@ class SettingsTwoPaneTest {
                     if (deferSelection) held = it else selected = it
                 },
                 selectDelayMillis = WAIT_MILLIS,
+                focusOnOpen = focusOnOpen,
             ) { group ->
                 when (group) {
                     "stream" -> {

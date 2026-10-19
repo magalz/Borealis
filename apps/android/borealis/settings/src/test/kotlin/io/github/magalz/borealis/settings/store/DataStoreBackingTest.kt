@@ -39,8 +39,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * The DataStore backing of the two logging switches and the background, and the migration of the
- * switches from the default SharedPreferences file. Each test gives its file to one DataStore at a time: a second live
- * DataStore on the same file is an error.
+ * switches from the default SharedPreferences file. Each test gives its file to one DataStore at a
+ * time: a second live DataStore on the same file is an error.
  */
 @Suppress("DEPRECATION")
 @RunWith(RobolectricTestRunner::class)

@@ -1,13 +1,12 @@
 package io.github.magalz.borealis.settings.appearance
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.repository.SettingsRepository
-import kotlinx.coroutines.flow.map
 
 /** A background style and the stable id that stores it. */
 class BackgroundChoice(val id: String, val style: BackgroundStyle)
@@ -44,11 +43,11 @@ object BackgroundChoices {
  */
 @Composable
 fun rememberBackgroundStyle(settings: SettingsRepository): BackgroundStyle {
-    val styles =
-        remember(settings) { settings.observe(Settings.BACKGROUND).map(BackgroundChoices::styleOf) }
-    val style by
-        styles.collectAsStateWithLifecycle(
-            BackgroundChoices.styleOf(settings.snapshot.value[Settings.BACKGROUND])
-        )
-    return style
+    val snapshot = settings.snapshot.collectAsStateWithLifecycle()
+    // A change of another setting makes a new snapshot but not a new style: it recomposes nothing.
+    val style =
+        remember(snapshot) {
+            derivedStateOf { BackgroundChoices.styleOf(snapshot.value[Settings.BACKGROUND]) }
+        }
+    return style.value
 }

@@ -93,9 +93,10 @@ private val GROUP_PADDING_VERTICAL = 5.dp
  * without moving the selection. A [selected] key that no group has falls back to the first group,
  * and with no groups the pane is empty.
  *
- * Selection follows focus: [onSelect] is called with a group as soon as focus lands on it, so the
- * pane follows every step of a held key; a tap or OK on a group selects it too. Right from a group
- * enters the pane at its first row, a frame later, and another key before that cancels it. Left
+ * Selection follows focus: [onSelect] is called with a group as soon as focus lands on it (not for
+ * the group already selected), so the pane follows every step of a held key; a tap or OK on a group
+ * selects it too. [onSelect] must apply the selection at once, as a state write: Right from a group
+ * enters the pane at its first row one frame later, and another key before that cancels it. Left
  * from the pane, when no row uses the key, returns to the selected group, whichever row it leaves.
  */
 @Composable

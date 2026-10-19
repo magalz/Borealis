@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.rememberAnimationsRemoved
+import io.github.magalz.borealis.designsystem.theme.rememberPowerSaveMode
 
 /** Tags of the pieces of a video background, for the tests. */
 internal object BackgroundTags {
@@ -20,12 +21,14 @@ internal object BackgroundTags {
  * - [BackgroundStyle.Off] is the plain page colour.
  * - The two Compose styles redraw about 30 times a second and recompose nothing.
  * - A video style plays its clip while the screen is on, and holds no decoder when it is not.
- * - When the system removes animations, a Compose style is one still frame and a video style is the
- *   still of its first frame: nothing plays and no player is made.
+ * - When the system removes animations or the battery saver is on, a Compose style is one still
+ *   frame and a video style is the still of its first frame: nothing plays and no player is made.
  */
 @Composable
 fun BorealisBackground(style: BackgroundStyle, modifier: Modifier = Modifier) {
-    val still = rememberAnimationsRemoved()
+    val animationsRemoved = rememberAnimationsRemoved()
+    val powerSaving = rememberPowerSaveMode()
+    val still = animationsRemoved || powerSaving
     val clip = style.clip
     when {
         style == BackgroundStyle.Off -> Box(modifier.background(LocalBorealisColors.current.page))

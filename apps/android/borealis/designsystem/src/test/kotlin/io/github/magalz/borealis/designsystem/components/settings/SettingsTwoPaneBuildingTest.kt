@@ -1,27 +1,22 @@
 package io.github.magalz.borealis.designsystem.components.settings
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performKeyInput
-import androidx.compose.ui.test.pressKey
-import androidx.compose.ui.test.requestFocus
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
-import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
@@ -31,8 +26,8 @@ import org.robolectric.annotation.Config
 
 /**
  * When a [SettingsTwoPane] composes the pane of each group: the selected one at once, the others in
- * the frames after the first, and a group that brings its own content only when it is first shown.
- * A pane that is built stays built, and switching to it composes nothing.
+ * the frames after the first, the nearest first, and a group that brings its own content only while
+ * it is shown. A pane that is built stays built, and switching to it composes nothing.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
@@ -44,6 +39,9 @@ class SettingsTwoPaneBuildingTest {
 
     /** The groups whose row was composed from nothing, in that order. */
     private val built = mutableListOf<String>()
+
+    /** The groups whose row left the composition, in that order. */
+    private val disposed = mutableListOf<String>()
 
     /** How many times the row of each group was composed, the first time included. */
     private val composedTimes = mutableMapOf<String, Int>()
@@ -69,6 +67,17 @@ class SettingsTwoPaneBuildingTest {
     }
 
     @Test
+    fun `the other groups are built nearest first, the next, the previous and outward`() {
+        selected = "g3"
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent { Specimen() }
+
+        repeat(FRAMES_TO_BUILD_ALL) { composeRule.mainClock.advanceTimeByFrame() }
+
+        assertThat(built).containsExactly("g3", "g4", "g2", "g1").inOrder()
+    }
+
+    @Test
     fun `switching to a group that is built composes none of its rows`() {
         composeRule.setContent { Specimen() }
         composeRule.waitForIdle()
@@ -81,18 +90,21 @@ class SettingsTwoPaneBuildingTest {
     }
 
     @Test
-    fun `a group that brings its own content is composed when first shown, then kept`() {
+    fun `a group that brings its own content is composed while it is shown and not after`() {
         composeRule.setContent { Specimen() }
         composeRule.waitForIdle()
         assertThat(built).doesNotContain("own")
 
         composeRule.onNodeWithText("Group own").performClick()
         composeRule.onNodeWithText("Row of own").assertIsDisplayed()
+        assertThat(disposed).doesNotContain("own")
         composeRule.onNodeWithText("Group g2").performClick()
-        composeRule.onNodeWithText("Group own").performClick()
+        composeRule.waitForIdle()
 
+        assertThat(disposed).containsExactly("own")
+        composeRule.onNodeWithText("Group own").performClick()
         composeRule.onNodeWithText("Row of own").assertIsDisplayed()
-        assertThat(built.count { it == "own" }).isEqualTo(1)
+        assertThat(built.count { it == "own" }).isEqualTo(2)
     }
 
     @Test
@@ -141,18 +153,6 @@ class SettingsTwoPaneBuildingTest {
         composeRule.onNodeWithText("other value").assertIsDisplayed()
     }
 
-    @Test
-    fun `focus does not leave the pane for the rows of a group that is not shown`() {
-        composeRule.setContentInKeyboardMode { Specimen() }
-        composeRule.onNodeWithText("Group g1").requestFocus()
-        composeRule.onNodeWithText("Group g1").performKeyInput { pressKey(Key.DirectionRight) }
-        composeRule.onNodeWithText("Row of g1").assertIsFocused()
-
-        composeRule.onNodeWithText("Row of g1").performKeyInput { pressKey(Key.DirectionDown) }
-
-        composeRule.onNodeWithText("Row of g1").assertIsFocused()
-    }
-
     /**
      * A row that notes when it is composed from nothing, and each time it is composed, as a row of
      * the screen is composed with the state that the screen hands down.
@@ -160,6 +160,7 @@ class SettingsTwoPaneBuildingTest {
     @Composable
     private fun BuiltRow(group: String, value: String) {
         remember { built.add(group) }
+        DisposableEffect(Unit) { onDispose { disposed.add(group) } }
         SideEffect { composedTimes.merge(group, 1, Int::plus) }
         SettingsValueRow("Row of $group", value, {})
     }

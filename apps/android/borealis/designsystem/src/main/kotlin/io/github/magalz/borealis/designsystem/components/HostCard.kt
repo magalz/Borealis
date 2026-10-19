@@ -40,12 +40,12 @@ private val CHIP_PADDING_VERTICAL = 2.dp
  * of asking for options (long press, hold OK, X, Menu) runs [onOptions], named [optionsLabel]. The
  * status line says what the card does, so it carries no label of its own.
  *
- * On a TV or handheld a card is at least as high as its height token, which is the height of the
- * fullest card (online, with one row of tags and the app it runs, plus a few dp of margin), so the
- * cards of a grid are the same size whatever they show; the text stays at the top. The equal height
- * assumes one row of tags: a card whose tags wrap, or whose text needs more room (a large font),
- * grows rather than cutting it and is then taller than its neighbours. On a phone a card is as high
- * as its content.
+ * On a TV a card is at least as high as its height token, which is the height of the fullest card
+ * (online, with one row of tags and the app it runs, plus a few dp of margin), so the cards of a
+ * grid are the same size whatever they show; the text stays at the top. The equal height assumes
+ * one row of tags: a card whose tags wrap, or whose text needs more room (a large font), grows
+ * rather than cutting it and is then taller than its neighbours. On a handheld or a phone a card is
+ * as high as its content, so a short screen is not left with empty space in each card.
  */
 @Composable
 fun HostCard(
@@ -64,11 +64,11 @@ fun HostCard(
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.large
     val padding = LocalBorealisSpacing.current.cardPadding
-    // A phone has a single column of cards, so each is as high as its content; a grid on a TV or
-    // handheld has them all the same height.
+    // Only the TV grid has its cards all the same height; a phone or a handheld, which has little
+    // room to spare, sizes each card by its content.
     val height =
-        if (LocalFormFactor.current == FormFactor.Phone) 0.dp
-        else BorealisTokens.Size.HostCard.HeightTv
+        if (LocalFormFactor.current == FormFactor.Tv) BorealisTokens.Size.HostCard.HeightTv
+        else 0.dp
     HostInfo(
         name,
         status,

@@ -36,7 +36,10 @@ object BorealisDimens {
      */
     val phoneBarPadding: Dp = 4.dp
 
-    /** The space between the back arrow and the title of a phone bar that sets one: 4dp. */
+    /**
+     * The space between the back arrow, the title and the actions of a phone bar: 4dp, as a
+     * Material 3 top app bar leaves between its navigation icon and its title.
+     */
     val phoneBarGap: Dp = 4.dp
 
     /**

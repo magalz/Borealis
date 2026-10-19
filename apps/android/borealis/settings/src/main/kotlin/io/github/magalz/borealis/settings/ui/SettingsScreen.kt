@@ -35,7 +35,6 @@ import io.github.magalz.borealis.designsystem.components.settings.SettingsGroup
 import io.github.magalz.borealis.designsystem.components.settings.SettingsGroupHeader
 import io.github.magalz.borealis.designsystem.components.settings.SettingsTwoPane
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
-import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
@@ -116,11 +115,7 @@ private fun PhoneSettings(
 ) {
     val gutter = LocalBorealisSpacing.current.gutter
     Column(Modifier.fillMaxSize()) {
-        BorealisPhoneBar(
-            onBack,
-            stringResource(R.string.settings_back),
-            gap = BorealisDimens.phoneBarGap,
-        ) {
+        BorealisPhoneBar(onBack, stringResource(R.string.settings_back)) {
             ScreenTitle()
         }
         Column(

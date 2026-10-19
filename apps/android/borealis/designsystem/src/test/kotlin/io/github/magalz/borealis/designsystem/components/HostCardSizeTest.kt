@@ -24,7 +24,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
-/** A host card is the same size whatever it shows: online, offline or not yet paired. */
+/**
+ * A host card on a TV is the same size whatever it shows: online, offline or not yet paired. On a
+ * handheld and a phone it is as high as its content.
+ */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class HostCardSizeTest {
@@ -40,12 +43,32 @@ class HostCardSizeTest {
     }
 
     @Test
-    fun `on a handheld every variant is as high as on a TV`() {
+    fun `on a handheld every card is as high as its content`() {
         showAll(FormFactor.Handheld, 260.dp)
 
-        Variant.entries.forEach {
-            assertThat(height(it)).isEqualTo(BorealisTokens.Size.HostCard.HeightTv)
-        }
+        val online = height(Variant.Online)
+        val offline = height(Variant.Offline)
+        val bare = height(Variant.Bare)
+        // As on a phone: the fullest card is the tallest, a card with less content is shorter, and
+        // none is held to the TV height.
+        assertThat(offline).isLessThan(online)
+        assertThat(bare).isLessThan(offline)
+        assertThat(online).isLessThan(BorealisTokens.Size.HostCard.HeightTv)
+    }
+
+    @Test
+    fun `on a handheld a card ends where its content ends`() {
+        composeRule.setContent { FullestCard(FormFactor.Handheld, 260.dp) }
+        composeRule.waitForIdle()
+
+        val card = composeRule.onNodeWithTag(FULLEST).getUnclippedBoundsInRoot()
+        val runningApp =
+            composeRule
+                .onNodeWithText("Desktop running", useUnmergedTree = true)
+                .getUnclippedBoundsInRoot()
+
+        // The card padding and the 2dp padding of the chip are all that is under the last line.
+        assertThat((card.bottom - runningApp.bottom).value).isWithin(1f).of(20f)
     }
 
     @Test

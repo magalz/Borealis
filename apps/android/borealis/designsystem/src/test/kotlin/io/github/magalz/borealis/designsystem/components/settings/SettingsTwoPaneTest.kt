@@ -128,6 +128,25 @@ class SettingsTwoPaneTest {
     }
 
     @Test
+    fun `focus moving to another group after Right and before the next frame cancels entering`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+        press(Key.DirectionDown)
+
+        // The pane takes focus a frame after Right; focus moves to another group before it.
+        composeRule.mainClock.autoAdvance = false
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithText("Audio").requestFocus()
+        composeRule.waitForIdle()
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Channels").assertIsNotFocused()
+        composeRule.onNodeWithText("Audio").assertIsFocused()
+        composeRule.onNodeWithText("Channels").assertIsDisplayed()
+    }
+
+    @Test
     fun `a tap on a group selects it`() {
         composeRule.setContent { Specimen() }
 

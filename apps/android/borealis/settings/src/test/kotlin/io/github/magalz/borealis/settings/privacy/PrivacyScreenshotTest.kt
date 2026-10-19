@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import io.github.magalz.borealis.designsystem.testing.OnPage
 import io.github.magalz.borealis.designsystem.testing.settleWindows
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -61,13 +62,15 @@ class PrivacyScreenshotTest {
     @Config(qualifiers = PHONE)
     fun privacyPhoneDefault() {
         composeRule.setContent {
-            BorealisTheme(FormFactor.Phone) {
-                PrivacyScreenContent(
-                    PrivacyUiState(verboseLogging = false, maskAddresses = true),
-                    SnackbarHostState(),
-                    actions,
-                    onBack = {},
-                )
+            OnPage {
+                BorealisTheme(FormFactor.Phone) {
+                    PrivacyScreenContent(
+                        PrivacyUiState(verboseLogging = false, maskAddresses = true),
+                        SnackbarHostState(),
+                        actions,
+                        onBack = {},
+                    )
+                }
             }
         }
 

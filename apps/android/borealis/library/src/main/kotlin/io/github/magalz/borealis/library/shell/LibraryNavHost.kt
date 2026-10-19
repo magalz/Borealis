@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.library.shell
 
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -32,6 +33,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import io.github.magalz.borealis.designsystem.adaptive.rememberFormFactor
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.R
@@ -52,7 +54,7 @@ private const val HOSTS_MESSAGE = "hostsMessage"
 
 private val SNACKBAR_PADDING = 16.dp
 
-/** The cross-fade between two screens, much shorter than the 700 ms default of the NavHost. */
+/** The fade-in of a screen, much shorter than the 700 ms default of the NavHost. */
 private const val FADE_MS = 150
 
 /**
@@ -64,6 +66,10 @@ private const val FADE_MS = 150
  * and the rail open Settings. A [request] from outside (a launcher shortcut, the stream error
  * screen) puts its screens on the back stack; [onRequestHandled] says that it was taken, so it is
  * not taken twice.
+ *
+ * [backgroundStyle] is what the shell draws behind the rail and every screen. It is the one input
+ * of the background: the Appearance setting will pass the style the user chose, and until then it
+ * is [BackgroundStyle.Default].
  */
 @Composable
 internal fun LibraryNavHost(
@@ -71,6 +77,7 @@ internal fun LibraryNavHost(
     modifier: Modifier = Modifier,
     request: LibraryLaunchRequest? = null,
     onRequestHandled: () -> Unit = {},
+    backgroundStyle: BackgroundStyle = BackgroundStyle.Default,
     navController: NavHostController = rememberNavController(),
 ) {
     val resources = LocalResources.current
@@ -119,6 +126,7 @@ internal fun LibraryNavHost(
             },
         actions = rail,
         modifier = modifier,
+        backgroundStyle = backgroundStyle,
     ) {
         Box {
             FadingNavHost(navController) {
@@ -134,16 +142,21 @@ internal fun LibraryNavHost(
     }
 }
 
-/** The NavHost with a quick cross-fade between screens; the rail is outside it and stays put. */
+/**
+ * The NavHost where the next screen fades in and the one that is left goes at once; the rail is
+ * outside it and stays put. The screens have no page of their own, so a fade-out beside the fade-in
+ * would show two screens one over the other. `ExitTransition.None` is no help: the screen that is
+ * left would stay drawn until the fade-in is done, so it fades out in a single frame instead.
+ */
 @Composable
-private fun FadingNavHost(navController: NavHostController, graph: NavGraphBuilder.() -> Unit) {
+internal fun FadingNavHost(navController: NavHostController, graph: NavGraphBuilder.() -> Unit) {
     NavHost(
         navController,
         startDestination = Hosts,
         enterTransition = { fadeIn(tween(FADE_MS)) },
-        exitTransition = { fadeOut(tween(FADE_MS)) },
+        exitTransition = { fadeOut(snap()) },
         popEnterTransition = { fadeIn(tween(FADE_MS)) },
-        popExitTransition = { fadeOut(tween(FADE_MS)) },
+        popExitTransition = { fadeOut(snap()) },
         builder = graph,
     )
 }

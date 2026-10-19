@@ -2,7 +2,6 @@ package io.github.magalz.borealis.library.addhost
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -69,15 +68,9 @@ fun AddHostScreen(
     BorealisTheme(formFactor) {
         // Back is ignored while an add runs, so the screen does not close under it.
         BackHandler(onBack = { if (!state.busy) onCancel() })
-        val colors = LocalBorealisColors.current
         val addressFocus = remember { FocusRequester() }
         val submitFocus = remember { FocusRequester() }
-        Box(
-            modifier
-                .fillMaxSize()
-                .background(colors.page)
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-        ) {
+        Box(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             Column(
                 Modifier.widthIn(max = BorealisDimens.contentMaxWidth)
                     .fillMaxWidth()

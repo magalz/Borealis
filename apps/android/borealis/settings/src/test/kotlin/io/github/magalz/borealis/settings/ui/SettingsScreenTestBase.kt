@@ -15,6 +15,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.core.app.ApplicationProvider
+import io.github.magalz.borealis.designsystem.testing.OnPage
 import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot
 import io.github.magalz.borealis.settings.testing.FakeDeviceFactsSource
@@ -64,21 +65,28 @@ open class SettingsScreenTestBase {
     protected fun viewModel(): SettingsViewModel =
         SettingsViewModel(repository, options, facts, { resets++ }, Dispatchers.Unconfined)
 
+    /**
+     * Shows the screen on [backdrop], which is the page colour the window has in the app: the
+     * screen leaves its background to the shell.
+     */
     protected fun show(
         about: AboutSource? = testAbout(),
         keyboard: Boolean = false,
         initialGroup: SettingsGroupId = SettingsGroupId.STREAM,
+        backdrop: @Composable (content: @Composable () -> Unit) -> Unit = { OnPage(it) },
     ) {
         val viewModel = viewModel()
         val content: @Composable () -> Unit = {
-            SettingsRoute(
-                onBack = { backs++ },
-                onOpenPrivacy = { privacyOpens++ },
-                privacyPane = { Text("Privacy pane placeholder") },
-                initialGroup = initialGroup,
-                about = about ?: rememberAboutSource(),
-                viewModel = viewModel,
-            )
+            backdrop {
+                SettingsRoute(
+                    onBack = { backs++ },
+                    onOpenPrivacy = { privacyOpens++ },
+                    privacyPane = { Text("Privacy pane placeholder") },
+                    initialGroup = initialGroup,
+                    about = about ?: rememberAboutSource(),
+                    viewModel = viewModel,
+                )
+            }
         }
         if (keyboard) composeRule.setContentInKeyboardMode(content)
         else composeRule.setContent(content)

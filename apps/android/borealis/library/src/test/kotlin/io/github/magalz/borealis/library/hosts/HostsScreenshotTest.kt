@@ -117,6 +117,18 @@ class HostsScreenshotTest {
         captureScreenRoboImage("src/test/screenshots/hosts_tv_forget.png")
     }
 
+    @Test
+    @Config(qualifiers = TV)
+    fun hostsTvDetails() {
+        composeRule.setContentInKeyboardMode {
+            Screen(withHosts.copy(details = DETAILS), FormFactor.Tv)
+        }
+        composeRule.waitForIdle()
+
+        composeRule.settleWindows()
+        captureScreenRoboImage("src/test/screenshots/hosts_tv_details.png")
+    }
+
     @Composable
     private fun Screen(state: HostsUiState, formFactor: FormFactor) {
         // The shell draws the rail beside Hosts on a TV and a handheld.
@@ -143,6 +155,27 @@ class HostsScreenshotTest {
 
     private companion object {
         const val LOADER_TIME_MILLIS = 600L
+
+        /**
+         * What the repository gives for an online host that runs an app, as the dialog shows it.
+         */
+        val DETAILS =
+            """
+            Name: Desk PC
+            Status: Online
+            Address: 192.168.1.20
+            Other addresses: 203.0.113.7, 2001:db8::20
+            Paired: Yes
+            MAC address (for wake): AA:BB:CC:DD:EE:20
+            Running: Desktop
+
+            Host capabilities
+            Host software: Sunshine-compatible, version 7.1.431.-1
+            Video: HEVC, HEVC 10-bit, AV1, 4:4:4
+            PyroWave: SDR 4:2:0, HDR 4:2:0
+            Ports: HTTP 47989, HTTPS 47984
+            """
+                .trimIndent()
     }
 
     private fun shoot(name: String) {

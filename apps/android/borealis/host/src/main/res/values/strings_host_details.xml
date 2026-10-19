@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The facts block of the host details dialog; one line each, a line is left out when its value is unknown. -->
+    <string name="host_details_name">Name: %1$s</string>
+    <string name="host_details_status">Status: %1$s</string>
+    <string name="host_details_status_online">Online</string>
+    <string name="host_details_status_offline">Offline</string>
+    <string name="host_details_status_checking">Checking…</string>
+    <string name="host_details_address">Address: %1$s</string>
+    <string name="host_details_other_addresses">Other addresses: %1$s</string>
+    <string name="host_details_paired">Paired: %1$s</string>
+    <string name="host_details_paired_yes">Yes</string>
+    <string name="host_details_paired_no">No</string>
+    <string name="host_details_mac_address">MAC address (for wake): %1$s</string>
+    <string name="host_details_running">Running: %1$s</string>
+</resources>

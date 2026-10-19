@@ -58,8 +58,9 @@ private const val RENDER_WIDTH = 480
 private const val COLUMNS = 160
 
 /**
- * The three hues of the aurora, taken from the tokens of [colors]: the page, the strong accent
- * (`#7C3AED`), the accent (`#A78BFA`) and the teal; and the brush of each curtain and each glow.
+ * The four colours of the aurora: the page and three hues, the strong accent (`#7C3AED`), the
+ * accent (`#A78BFA`) and the teal. The page and the accents are taken from the tokens of [colors];
+ * the teal has none. It holds the brush of each curtain and each glow too.
  *
  * A brush is made once, for a unit length, and a frame moves and stretches it with the canvas: a
  * brush made for every strip of every frame would also make a shader for each. The gradient of a

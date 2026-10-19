@@ -6,10 +6,13 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import com.limelight.nvstream.http.PairingManager.PairState
+import io.github.magalz.borealis.host.caps.BorealisHostInfo
 import io.github.magalz.borealis.library.domain.AddHostResult
 import io.github.magalz.borealis.library.domain.Host
 import io.github.magalz.borealis.library.domain.HostAddress
 import io.github.magalz.borealis.library.domain.WakeResult
+import io.github.magalz.borealis.nativecore.HostCaps
+import io.github.magalz.borealis.nativecore.HostFamily
 import java.io.IOException
 import java.net.Inet4Address
 import java.net.InetAddress
@@ -366,15 +369,134 @@ class ComputerHostRepositoryTest {
     }
 
     @Test
-    fun `the details are the upstream details text`() = runTest {
+    fun `the details say what a user needs in plain words`() = runTest {
         val repository = repository()
-        val live = details(uuid = "a", name = "Den PC")
-        binder.computers["a"] = live
+        binder.computers["a"] =
+            details(uuid = "3f2a-uuid", name = "Den PC", mac = "AA:BB:CC:DD:EE:FF")
 
         val text = repository.details("a")
 
-        assertThat(text).isEqualTo(live.toString())
-        assertThat(text).contains("Name: Den PC")
+        assertThat(text)
+            .isEqualTo(
+                "Name: Den PC\n" +
+                    "Status: Online\n" +
+                    "Address: 192.168.1.5:47989\n" +
+                    "Paired: Yes\n" +
+                    "MAC address (for wake): AA:BB:CC:DD:EE:FF"
+            )
         assertThat(repository.details("nobody")).isNull()
+    }
+
+    @Test
+    fun `the details show neither null, the UUID, the HTTPS port nor a raw enum name`() = runTest {
+        val repository = repository()
+        binder.computers["a"] =
+            details(uuid = "3f2a-uuid", state = ComputerDetails.State.OFFLINE, address = null)
+                .also { it.pairState = null }
+
+        val text = repository.details("a")!!
+
+        assertThat(text).isEqualTo("Name: Den PC\nStatus: Offline")
+        assertThat(text).doesNotContain("null")
+        assertThat(text).doesNotContain("3f2a-uuid")
+        assertThat(text).doesNotContain("47984")
+        assertThat(text).doesNotContain("OFFLINE")
+        assertThat(text).doesNotContain("PAIRED")
+    }
+
+    @Test
+    fun `the status of a host that was not checked yet is checking`() = runTest {
+        val repository = repository()
+        binder.computers["a"] = details(state = ComputerDetails.State.UNKNOWN)
+
+        assertThat(repository.details("a")).contains("Status: Checking…\n")
+    }
+
+    @Test
+    fun `the details list the other addresses once, without the one in use`() = runTest {
+        val repository = repository()
+        binder.computers["a"] =
+            details().also {
+                it.localAddress = AddressTuple("192.168.1.5", 47989)
+                it.remoteAddress = AddressTuple("203.0.113.7", 47989)
+                it.manualAddress = AddressTuple("den.example.net", 47989)
+                it.ipv6Address = AddressTuple("2001:db8::1", 47989)
+            }
+
+        assertThat(repository.details("a"))
+            .contains(
+                "Address: 192.168.1.5:47989\n" +
+                    "Other addresses: 203.0.113.7:47989, den.example.net:47989, " +
+                    "[2001:db8::1]:47989\n"
+            )
+    }
+
+    @Test
+    fun `a host that is not paired says so`() = runTest {
+        val repository = repository()
+        binder.computers["a"] = details(pairState = PairState.NOT_PAIRED)
+
+        assertThat(repository.details("a")).contains("Paired: No")
+    }
+
+    @Test
+    fun `the zero MAC address placeholder is not shown`() = runTest {
+        val repository = repository()
+        binder.computers["a"] = details(mac = "00:00:00:00:00:00")
+
+        assertThat(repository.details("a")).doesNotContain("MAC")
+    }
+
+    @Test
+    fun `the running app is shown by the name the app list gives it`() = runTest {
+        val repository = repository()
+        binder.computers["a"] = details(runningGameId = 8, rawAppList = APP_LIST)
+
+        assertThat(repository.details("a")).contains("Running: Desktop")
+    }
+
+    @Test
+    fun `a running app the app list does not know leaves the running line out`() = runTest {
+        val repository = repository()
+        binder.computers["a"] = details(runningGameId = 99, rawAppList = APP_LIST)
+
+        assertThat(repository.details("a")).doesNotContain("Running")
+    }
+
+    @Test
+    fun `the capabilities block follows the facts after a blank line`() = runTest {
+        val repository = repository()
+        binder.computers["a"] =
+            details().also {
+                it.borealis =
+                    BorealisHostInfo(
+                        HostCaps(
+                            HostFamily.SUNSHINE,
+                            listOf(7, 1, 431, -1),
+                            hevc = true,
+                            hevcMain10 = false,
+                            av1 = false,
+                            av1Main10 = false,
+                            yuv444 = false,
+                            pyroWaveProfiles = emptySet(),
+                        ),
+                        httpsPort = 47984,
+                        httpPort = 47989,
+                    )
+            }
+
+        assertThat(repository.details("a"))
+            .isEqualTo(
+                "Name: Den PC\n" +
+                    "Status: Online\n" +
+                    "Address: 192.168.1.5:47989\n" +
+                    "Paired: Yes\n" +
+                    "\n" +
+                    "Host capabilities\n" +
+                    "Host software: Sunshine-compatible, version 7.1.431.-1\n" +
+                    "Video: HEVC\n" +
+                    "PyroWave: off\n" +
+                    "Ports: HTTP 47989, HTTPS 47984"
+            )
     }
 }

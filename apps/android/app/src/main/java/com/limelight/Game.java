@@ -168,11 +168,9 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
 
     private MediaCodecDecoderRenderer decoderRenderer;
 
-    // BOREALIS: preparing message and first-frame watchdog (host.video)
+    // BOREALIS: first-frame watchdog (host.video)
     private final io.github.magalz.borealis.host.video.StreamStartupGuard startupGuard =
-            io.github.magalz.borealis.host.video.StreamStartup.create(this::runOnUiThread,
-                    id -> notificationOverlayView.setText(id), v -> requestedNotificationOverlayVisibility = v,
-                    v -> notificationOverlayView.setVisibility(v), () -> isHidingOverlays,
+            io.github.magalz.borealis.host.video.StreamStartup.create(
                     () -> connectionTerminated(MoonBridge.ML_ERROR_NO_VIDEO_FRAME));
     private boolean reportedCrash;
 
@@ -405,7 +403,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                 connMgr.isActiveNetworkMetered(),
                 willStreamHdr,
                 glPrefs.glRenderer);
-        // BOREALIS: first rendered frame ends the preparing message and the watchdog
+        // BOREALIS: first rendered frame ends the watchdog
         decoderRenderer.firstFrameSignal.setListener(() -> {
             firstFrameShown = true; // BOREALIS
             UsbDriverService.UsbDriverBinder usbBinder = usbDriverBinder; // BOREALIS
@@ -2375,11 +2373,9 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                     }
 
                     requestedNotificationOverlayVisibility = View.VISIBLE;
-                    startupGuard.onWarning(); // BOREALIS: a warning replaces the preparing message
                 }
                 else if (connectionStatus == MoonBridge.CONN_STATUS_OKAY) {
                     requestedNotificationOverlayVisibility = View.GONE;
-                    startupGuard.onWarningCleared(); // BOREALIS: the preparing message may come back
                 }
 
                 if (!isHidingOverlays) {
@@ -2398,7 +2394,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                 connecting = false;
                 updatePipAutoEnter();
                 streamSession.onConnectionStarted(StreamSessionFactory.sessionInfo(prefConfig, streamFrameRate, decoderRenderer.getActiveVideoFormat(), decoderRenderer.getDecoderName())); // BOREALIS: the chrome waits for the first frame
-                startupGuard.onConnectionStarted(); // BOREALIS: preparing message and first-frame watchdog
+                startupGuard.onConnectionStarted(); // BOREALIS: first-frame watchdog
                 io.github.magalz.borealis.host.launch.SessionAudit.started(pcName, Game.this.getIntent().getStringExtra(EXTRA_HOST), decoderRenderer.getActiveVideoFormat(), prefConfig.width, prefConfig.height, streamFrameRate); // BOREALIS: audit trail
 
                 // Hide the mouse cursor now after a short delay.

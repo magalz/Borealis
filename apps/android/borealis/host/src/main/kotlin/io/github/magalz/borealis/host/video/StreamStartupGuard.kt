@@ -3,10 +3,7 @@ package io.github.magalz.borealis.host.video
 import kotlin.concurrent.thread
 
 /** What the guard needs from the stream screen. */
-interface StreamStartupHost : StartupOverlay {
-    /** Runs [action] on the UI thread. */
-    fun runOnUi(action: Runnable)
-
+interface StreamStartupHost {
     /**
      * Ends the stream through the normal failure path with "no video frame" (-101). That path does
      * network I/O, so the guard calls it off the main thread. The screen's own once-only dialog
@@ -16,12 +13,12 @@ interface StreamStartupHost : StartupOverlay {
 }
 
 /**
- * Covers the time between "connection started" and the first rendered frame, which can be long on
- * LuminalShine (about 18 s): it shows the [PreparingMessage] and runs the [FirstFrameWatchdog] as
- * the last safety net behind the native -100/-101 deadlines.
+ * Runs the [FirstFrameWatchdog] from "connection started" to the first rendered frame, which can be
+ * long on LuminalShine (about 18 s). It is the last safety net behind the native -100/-101
+ * deadlines; the Starting screen is what the user sees during the wait.
  *
- * [onFirstFrame] may be called from any thread (the decoder's render path); everything else runs on
- * the UI thread, as do the watchdog timeout and the message updates.
+ * [onFirstFrame] may be called from any thread (the decoder's render path). The watchdog timeout
+ * runs on the scheduler's thread, the main looper in production.
  */
 class StreamStartupGuard
 @JvmOverloads
@@ -30,32 +27,15 @@ constructor(
     scheduler: WatchdogScheduler,
     timeoutMillis: Long = FirstFrameWatchdog.DEFAULT_TIMEOUT_MILLIS,
 ) {
-    private val message = PreparingMessage(host)
     private val watchdog = FirstFrameWatchdog(scheduler, timeoutMillis) { onTimeout() }
 
-    fun onConnectionStarted() {
-        watchdog.arm()
-        // Not armed means a frame already arrived or the guard was cancelled: keep the message
-        // away.
-        if (watchdog.state == FirstFrameWatchdog.State.ARMED) message.show()
-    }
+    fun onConnectionStarted() = watchdog.arm()
 
-    fun onFirstFrame() {
-        watchdog.onFirstFrame()
-        host.runOnUi { message.hide() }
-    }
+    fun onFirstFrame() = watchdog.onFirstFrame()
 
-    fun onWarning() = message.onWarning()
-
-    fun onWarningCleared() = message.onWarningCleared()
-
-    fun cancel() {
-        watchdog.cancel()
-        message.hide()
-    }
+    fun cancel() = watchdog.cancel()
 
     private fun onTimeout() {
-        message.hide()
         thread(name = "Borealis first-frame timeout") { host.terminateNoVideoFrame() }
     }
 }

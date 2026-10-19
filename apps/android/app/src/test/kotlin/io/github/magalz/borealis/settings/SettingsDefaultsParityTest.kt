@@ -21,9 +21,9 @@ import org.robolectric.annotation.Config
  * - the bitrate: absent means automatic, so Java reads [PreferenceConfiguration.getDefaultBitrate];
  * - the motion sensors: Java writes off on Android 12 exactly, and the catalog default stays on.
  *
- * Java does not read the overlay settings ([Settings.PERF_OVERLAY], [Settings.PERF_OVERLAY_LEGACY])
- * or the two logging switches, so they are not compared. The language list and the small icon mode
- * are dropped from the catalog.
+ * Java does not read the overlay settings ([Settings.PERF_OVERLAY], [Settings.PERF_OVERLAY_LEGACY]),
+ * the two logging switches or the background ([Settings.BACKGROUND]), so they are not compared.
+ * The language list and the small icon mode are dropped from the catalog.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [ShadowMoonBridge::class])
@@ -60,6 +60,7 @@ class SettingsDefaultsParityTest {
                 Settings.PERF_OVERLAY_LEGACY,
                 Settings.VERBOSE_LOGGING,
                 Settings.MASK_ADDRESSES,
+                Settings.BACKGROUND,
             )
     }
 

@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -126,7 +127,7 @@ class SettingsRestorationTest : SettingsScreenTestBase() {
             )
         }
         composeRule.waitForIdle()
-        composeRule.onNodeWithText("About").performClick()
+        composeRule.onNodeWithText("About").performScrollTo().performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Source code").assertIsDisplayed()
 

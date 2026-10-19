@@ -85,3 +85,15 @@ fun fakeOptions(): FakeSettingsOptions =
         resolutions = STANDARD_RESOLUTIONS
         frameRates = listOf(FrameRateChoice(30, false), FrameRateChoice(60, false))
     }
+
+/** The names of the seven background styles, in the order of the Background row. */
+val BACKGROUND_NAMES =
+    listOf(
+        "Aurora curtains",
+        "Soft glow",
+        "Northern lights",
+        "Light mist",
+        "Flowing light",
+        "Starfield",
+        "Off",
+    )

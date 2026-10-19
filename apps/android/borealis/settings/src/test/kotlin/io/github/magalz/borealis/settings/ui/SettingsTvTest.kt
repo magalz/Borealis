@@ -11,6 +11,7 @@ import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.espresso.Espresso
@@ -35,8 +36,9 @@ class SettingsTvTest : SettingsScreenTestBase() {
         composeRule.waitForIdle()
     }
 
+    // The ten groups are taller than a TV window, so the list scrolls to the one that is chosen.
     private fun selectGroup(title: String) {
-        composeRule.onNodeWithText(title).performClick()
+        composeRule.onNodeWithText(title).performScrollTo().performClick()
         composeRule.waitForIdle()
     }
 
@@ -52,10 +54,11 @@ class SettingsTvTest : SettingsScreenTestBase() {
                 "On-screen controls",
                 "Audio",
                 "Advanced",
+                "Appearance",
                 "Privacy and diagnostics",
                 "About",
             )
-            .forEach { composeRule.onNodeWithText(it).assertIsDisplayed() }
+            .forEach { composeRule.onNodeWithText(it).performScrollTo().assertIsDisplayed() }
     }
 
     @Test
@@ -171,6 +174,47 @@ class SettingsTvTest : SettingsScreenTestBase() {
     }
 
     @Test
+    fun `the Appearance group has the Background row with the seven styles`() {
+        show(keyboard = true)
+
+        selectGroup("Appearance")
+
+        composeRule.onNodeWithText("Background").assertIsDisplayed()
+        composeRule.onNodeWithText("Aurora curtains").assertIsDisplayed()
+        composeRule.onNodeWithText("Resolution").assertDoesNotExist()
+        composeRule.onNodeWithText("Background").performClick()
+        composeRule.waitForIdle()
+        BACKGROUND_NAMES.forEach { sheetOption(it).assertExists() }
+        sheetOption("Aurora curtains").assertIsFocused()
+    }
+
+    @Test
+    fun `choosing a style stores it and the row shows it`() {
+        show(keyboard = true)
+        selectGroup("Appearance")
+        composeRule.onNodeWithText("Background").performClick()
+        composeRule.waitForIdle()
+
+        sheetOption("Starfield").performClick()
+        composeRule.waitForIdle()
+
+        assertThat(snapshot[Settings.BACKGROUND]).isEqualTo("starfield")
+        composeRule.onNodeWithText("Starfield").assertIsDisplayed()
+        composeRule.onNodeWithText("Aurora curtains").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a stored style that is unknown shows the default as the chosen one`() {
+        stored(Settings.BACKGROUND to "bogus")
+        show(keyboard = true)
+
+        selectGroup("Appearance")
+
+        composeRule.onNodeWithText("Aurora curtains").assertIsDisplayed()
+        composeRule.onNodeWithText("bogus").assertDoesNotExist()
+    }
+
+    @Test
     fun `a disabled row of the Input group can be focused and shows why it is disabled`() {
         options.rowStates[Settings.ANALOG_SCROLLING] =
             RowState.Disabled(DisabledReason.DEPENDS_ON_SETTING, Settings.MOUSE_EMULATION)
@@ -271,7 +315,23 @@ class SettingsHandheldTest : SettingsScreenTestBase() {
         show(keyboard = true)
 
         composeRule.onNodeWithText("Stream").assertIsDisplayed()
-        composeRule.onNodeWithText("Privacy and diagnostics").assertIsDisplayed()
+        composeRule.onNodeWithText("Privacy and diagnostics").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Resolution").assertIsDisplayed()
+    }
+
+    @Test
+    fun `the Appearance group has the Background row with the seven styles`() {
+        show(keyboard = true)
+
+        // The group list is taller than the 480dp window of a handheld: it scrolls to the group.
+        composeRule.onNodeWithText("Appearance").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Appearance").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Background").assertIsDisplayed()
+        composeRule.onNodeWithText("Aurora curtains").assertIsDisplayed()
+        composeRule.onNodeWithText("Background").performClick()
+        composeRule.waitForIdle()
+        BACKGROUND_NAMES.forEach { sheetOption(it).assertExists() }
     }
 }

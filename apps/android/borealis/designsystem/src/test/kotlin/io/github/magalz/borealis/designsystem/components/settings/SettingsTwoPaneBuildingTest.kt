@@ -40,7 +40,7 @@ class SettingsTwoPaneBuildingTest {
     @get:Rule val composeRule = createComposeRule()
     private var selected by mutableStateOf("g1")
     private var value by mutableStateOf("first value")
-    private var otherValue by mutableStateOf("other value")
+    private val otherValue = "other value"
 
     /** The groups whose row was composed from nothing, in that order. */
     private val built = mutableListOf<String>()

@@ -1,9 +1,9 @@
 package io.github.magalz.borealis.designsystem.components.settings
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
@@ -40,6 +40,7 @@ class SettingsTwoPaneBuildingTest {
     @get:Rule val composeRule = createComposeRule()
     private var selected by mutableStateOf("g1")
     private var value by mutableStateOf("first value")
+    private var otherValue by mutableStateOf("other value")
 
     /** The groups whose row was composed from nothing, in that order. */
     private val built = mutableListOf<String>()
@@ -124,7 +125,7 @@ class SettingsTwoPaneBuildingTest {
     }
 
     @Test
-    fun `a group that is not shown is not recomposed when the state changes`() {
+    fun `a row is recomposed only when its own state changes, whatever pane it is in`() {
         composeRule.setContent { Specimen() }
         composeRule.waitForIdle()
         val timesBefore = composedTimes.toMap()
@@ -137,7 +138,7 @@ class SettingsTwoPaneBuildingTest {
             assertThat(composedTimes.getValue(group)).isEqualTo(timesBefore.getValue(group))
         }
         composeRule.onNodeWithText("Group g2").performClick()
-        composeRule.onNodeWithText("second value").assertIsDisplayed()
+        composeRule.onNodeWithText("other value").assertIsDisplayed()
     }
 
     @Test
@@ -153,8 +154,8 @@ class SettingsTwoPaneBuildingTest {
     }
 
     /**
-     * A row that notes when it is composed from nothing, and each time it is composed, as a row
-     * of the screen is composed with the state that the screen hands down.
+     * A row that notes when it is composed from nothing, and each time it is composed, as a row of
+     * the screen is composed with the state that the screen hands down.
      */
     @Composable
     private fun BuiltRow(group: String, value: String) {
@@ -167,6 +168,7 @@ class SettingsTwoPaneBuildingTest {
     private fun Specimen() {
         // Read here, not in the rows, as the screen reads its state and hands it down.
         val handedDown = value
+        val handedDownToOthers = otherValue
         BorealisTheme(FormFactor.Tv) {
             SettingsTwoPane(
                 groups = groups,
@@ -174,7 +176,7 @@ class SettingsTwoPaneBuildingTest {
                 onSelect = { selected = it },
                 selfScrolling = { it == "own" },
             ) { group ->
-                BuiltRow(group, handedDown)
+                BuiltRow(group, if (group == "g1") handedDown else handedDownToOthers)
             }
         }
     }

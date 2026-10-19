@@ -103,6 +103,15 @@ client's stored certificate (`src/nvhttp.cpp:3683-3693`).
 Main10 is active on the host (`video::active_hevc_mode == 3`,
 `src/nvhttp.cpp:2685`); it says nothing about AV1 Main10 or PyroWave HDR.
 
+The host gives no field for the kind of app, so a client cannot tell Desktop from
+a game by data. Borealis recognises Desktop by its title: the app titled
+"Desktop", ignoring case and the spaces around the title. A title that only
+contains the word, such as "Remote Desktop", is another app, and so is an unknown
+title. The client uses this only for the wording of Quit: Desktop ends the stream
+and closes no program, and any other app is closed and loses its unsaved progress
+([UC-004](../use-cases/0004-use-the-in-game-menu.md)). If the host renames
+Desktop, the client treats it as any other app, which is the cautious reading.
+
 ## 4. Pairing
 
 The cryptographic exchange is the standard four-phase GameStream pairing

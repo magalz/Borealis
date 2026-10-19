@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -167,16 +168,21 @@ fun <K> SettingsTwoPane(
                 .focusGroup()
         ) {
             if (current != null) {
-                if (selfScrolling(current.key)) {
-                    Column(Modifier.fillMaxSize()) { content(current.key) }
-                } else {
-                    Column(
-                        Modifier.fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(AREA_PADDING),
-                        verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
-                    ) {
-                        content(current.key)
+                // Keyed, so that a group starts fresh. Its rows would otherwise reuse the nodes of
+                // the group before, and a switch would slide to its state over some 17 frames and
+                // the pane would keep the scroll of the old group.
+                key(current.key) {
+                    if (selfScrolling(current.key)) {
+                        Column(Modifier.fillMaxSize()) { content(current.key) }
+                    } else {
+                        Column(
+                            Modifier.fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(AREA_PADDING),
+                            verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
+                        ) {
+                            content(current.key)
+                        }
                     }
                 }
             }

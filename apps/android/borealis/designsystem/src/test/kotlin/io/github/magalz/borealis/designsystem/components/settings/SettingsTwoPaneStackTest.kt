@@ -177,6 +177,24 @@ class SettingsTwoPaneStackTest {
     }
 
     @Test
+    fun `Right right after the selection changed enters the new pane and is not undone`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Group g1").requestFocus()
+        composeRule.waitForIdle()
+
+        // The selection changes and Right arrives before the panes have recomposed, as a Right
+        // right after a Down does on a device when the pane follows at once.
+        composeRule.mainClock.autoAdvance = false
+        composeRule.runOnUiThread { selected = "g2" }
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Row 1 of g2").assertIsFocused()
+        assertThat(focused).doesNotContain("1 of g1")
+    }
+
+    @Test
     fun `Tab from the last group enters the selected pane at its first row`() {
         selected = "g3"
         composeRule.setContentInKeyboardMode { Specimen() }

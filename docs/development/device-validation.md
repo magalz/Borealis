@@ -340,7 +340,8 @@ removed in the Web UI.
    "An app is already running" with the buttons Join, Quit and relaunch, and
    Cancel (`apps/android/borealis/stream/src/main/res/values/strings_conflict.xml`).
    Focus starts on Cancel. The text warns that quitting ends the session on the
-   other device.
+   other device (since Sprint 9 the warning differs for Desktop and for a game; see
+   section 3.22, step 5).
 7. Run the three answers, each in a new attempt. Start the same app on the
    Streamer while the S22 runs it, and answer the dialog as follows:
    - Join: the device joins the running session and streams.
@@ -920,8 +921,9 @@ A debug build that was just installed runs slower until the JIT has warmed up.
 Before the Settings steps, open Settings and move through every group a few
 times. Section 14 says how the group switch was measured.
 
-Steps 1 to 9 run on the Streamer. Steps 10 to 17 run on the S22 in landscape with
-a Bluetooth pad, which is a system pad, except where a step says otherwise.
+Steps 1 to 9 start on the Streamer; steps 5 and 9 also use the S22. Steps 10 to
+17 run on the S22 in landscape with a Bluetooth pad, which is a system pad,
+except where a step says otherwise.
 
 1. Settings, opening and groups.
    - Open Settings from the rail with the D-pad. Expected: focus lands on the
@@ -978,31 +980,38 @@ a Bluetooth pad, which is a system pad, except where a step says otherwise.
      0`). Stop the app and open it again. Expected: Aurora curtains is one still
      frame, and a clip style shows its still, with no movement. Turn the
      animations back on (`1`).
-5. Quit texts.
-   - With Desktop running, open the in-game menu. Expected: the Quit row reads
-     "Quit Desktop" with "Ends the stream." and "The display and controls go back
-     to the PC." on two lines. Choose it. Expected: the confirmation is titled
-     "Quit Desktop?", its body is the same two lines, and Cancel has the focus.
-     Cancel returns to the menu. Confirm once. Expected: "Quitting Desktop…", then
-     the Library with "Nothing running".
-   - With a game running (an app that is not Desktop, chosen by the owner), open
-     the menu. Expected: "Quit `<app>`" with "Closes `<app>` on the PC." and "Unsaved
-     progress in it is lost." on two lines. The confirmation is titled "Quit
-     `<app>`?" with the same body. Cancel. Do not confirm: the game may hold unsaved
-     progress. Disconnect is unchanged ("`<app>` keeps running on the PC").
-   - Leave the stream with Disconnect and open Apps. Open the actions of the
-     running app. Expected, with a game running: Quit has the two lines of the
-     game, and "Quit `<game>` and start `<other>`" says "Closes `<game>` on the PC
-     first." and "Unsaved progress in it is lost." With Desktop running: Quit has
-     the two Desktop lines, and "Quit Desktop and start `<other>`" says "Ends the
-     stream first." and "Nothing is lost." Each confirmation has only "Quit
-     `<running app>`?" as its title and the consequence as its body.
-   - Conflict dialog: let the S22 run Desktop, then start an app on the Streamer.
-     Expected: "An app is already running", and the warning reads "Quitting ends
-     the stream on the other device." only. Repeat with a game on the S22.
-     Expected: "Quitting ends the stream on the other device and closes the app."
-     and, on a second line, "Unsaved progress in it is lost." Cancel has the focus.
-     Choose Cancel.
+5. Quit texts. Run the game part first, then the Desktop part. The owner picks
+   the game (an app that is not Desktop) and ends it in their own way, saving
+   first, before the Desktop part.
+   - Game, in the stream: start the game on the Streamer and open the in-game
+     menu. Expected: "Quit `<game>`" with "Closes `<game>` on the PC." and
+     "Unsaved progress in it is lost." on two lines. Choose it. Expected: the
+     confirmation is titled "Quit `<game>`?" with the same two lines as its body,
+     and Cancel has the focus. Choose Cancel; do not confirm. Disconnect is
+     unchanged ("`<game>` keeps running on the PC"). Leave with Disconnect.
+   - Game, in Apps: open the actions of the running game. Expected: Quit has the
+     two game lines. Then open the actions of another app. Expected: "Quit
+     `<game>` and start `<other>`" says "Closes `<game>` on the PC first." and
+     "Unsaved progress in it is lost." Its confirmation is titled "Quit
+     `<game>`?" with the consequence as its body. Choose Cancel.
+   - Game, conflict dialog: with the game still running, start another app of the
+     same host on the S22. Expected: "An app is already running", and the warning
+     reads "Quitting ends the stream on the other device and closes the app." and,
+     on a second line, "Unsaved progress in it is lost." Cancel has the focus.
+     Choose Cancel. The owner then ends the game.
+   - Desktop, in the stream: start Desktop on the Streamer and open the in-game
+     menu. Expected: "Quit Desktop" with "Ends the stream." and "The display and
+     controls go back to the PC." on two lines. The confirmation is titled "Quit
+     Desktop?" with the same body. Choose Cancel, then leave with Disconnect.
+   - Desktop, in Apps: open the actions of Desktop. Expected: Quit has the two
+     Desktop lines. Open the actions of another app. Expected: "Quit Desktop and
+     start `<other>`" says "Ends the stream first." and "Nothing is lost." Choose
+     Cancel.
+   - Desktop, conflict dialog: with Desktop still running, start another app on
+     the S22. Expected: the warning reads "Quitting ends the stream on the other
+     device." only. Choose Cancel.
+   - Finally, on the Streamer, quit Desktop and confirm. Expected: "Quitting
+     Desktop…", then the Library with "Nothing running".
 6. Host details. Open the host options of the PC and choose Details. Expected:
    - plain lines: `Name`, `Status`, `Address`, `Other addresses` when the host has
      any besides the one in use, `Paired`, `MAC address (for wake)` and

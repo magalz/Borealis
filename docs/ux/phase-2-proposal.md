@@ -340,6 +340,8 @@ in it is lost." See [UC-003](../use-cases/0003-join-or-replace-a-running-app.md)
 
 ![Conflict dialog on a phone](captures/conflict-phone.png)
 
+The capture is of the prototype and shows the wording from before Sprint 9.
+
 ### Connection error
 
 Purpose: errors say what happened and what the host was doing, and offer the

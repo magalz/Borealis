@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Constraints
@@ -78,6 +79,7 @@ internal fun VideoBackground(clip: BackgroundClip, stillOnly: Boolean, modifier:
 @Composable
 private fun VideoSurface(clip: BackgroundClip, onFirstFrame: () -> Unit, onReleased: () -> Unit) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val factory = LocalBackgroundPlayerFactory.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val surface =
@@ -97,7 +99,7 @@ private fun VideoSurface(clip: BackgroundClip, onFirstFrame: () -> Unit, onRelea
                 BorealisLog.w(
                     LogTag.APP,
                     "Background video failed",
-                    "clip" to context.resources.getResourceEntryName(clip.video),
+                    "clip" to resources.getResourceEntryName(clip.video),
                     "reason" to reason,
                 )
                 player?.release()

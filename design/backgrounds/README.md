@@ -31,16 +31,21 @@ removes animations (no player and no decoder), and until the player draws its fi
 | 3a | `background_flowing_light.mp4` | `background_flowing_light_still.webp` | 20 s | 30 |
 | 3b | `background_starfield.mp4` | `background_starfield_still.webp` | 20 s | 30 |
 
-Every clip is 1920 x 1080 H.264 (High profile), silent and a seamless loop, encoded with
-`-crf 23 -bf 0 -tune grain`: B-frames made the quality of smooth gradients pulse every few frames,
-which looked like stutter. The player crops from the centre, so a clip must be 16:9 (the code
-assumes it).
+Every clip is 1920 x 1080 H.264 (High profile, level 4.1, 4 reference frames), silent and a seamless
+loop, encoded with `-crf 23 -bf 0 -refs 4 -level 4.1 -tune grain`:
+- No B-frames: they made the quality of smooth gradients pulse every few frames, which looked like
+  stutter.
+- Level 4.1 and 4 reference frames: the first encodes were level 5.0, which a decoder of level 4.x
+  could refuse.
+
+The player crops from the centre, so a clip must be 16:9 (the code assumes it).
 
 ## Provenance
 
 - **2a, 2b.** Generated on the owner's ElevenLabs account on 2026-10-18. The start frames come from
   GPT Image 2.5 and the videos from Kling 3.0 Pro; the loop seams were closed with a crossfade by
-  `loopfade.py`.
+  `loopfade.py`. The owner confirmed on 2026-10-19 that their ElevenLabs plan allows bundling the
+  generated clips in the app.
   - 2a: a Kling 3.0 Pro video of about 12 s from the start and end frame, closed with
     `python -I loopfade.py 2a-master.mp4 2a.mp4 24 0 40` (24 frames of crossfade, no frames
     skipped at the start, the 40 last frames dropped: its tail was slow).

@@ -20,6 +20,11 @@ android {
 }
 
 dependencies {
+    // The video styles of the background play their clip with Media3 ExoPlayer, and the player
+    // follows the lifecycle of the screen it is on.
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.media3.exoplayer)
+
     // The shared helpers extend the Compose test rule and drive Robolectric.
     testFixturesApi(platform(libs.androidx.compose.bom))
     testFixturesApi(libs.androidx.compose.ui.test.junit4)

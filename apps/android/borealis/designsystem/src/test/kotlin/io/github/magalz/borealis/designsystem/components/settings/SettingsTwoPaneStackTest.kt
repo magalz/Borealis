@@ -269,7 +269,8 @@ class SettingsTwoPaneStackTest {
             applied[0]++
         }
 
-        override fun equals(other: Any?) = false
+        // On purpose: see the class.
+        @Suppress("EqualsAlwaysReturnsTrueOrFalse") override fun equals(other: Any?) = false
 
         override fun hashCode() = System.identityHashCode(this)
     }

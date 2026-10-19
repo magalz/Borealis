@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -65,11 +66,11 @@ private val GROUP_PADDING_HORIZONTAL = 12.dp
 private val GROUP_PADDING_VERTICAL = 10.dp
 
 /**
- * How long focus must rest on a group before the pane follows it. It is short: with the panes built
- * and stacked, showing one only changes which pane counts, so the wait only has to skip the groups
- * that a held key passes over.
+ * How long focus must rest on a group before the pane follows it. None: with the panes built and
+ * stacked, a switch changes the layer properties of two panes and recomposes nothing else, so it is
+ * cheap enough to follow every step of a held key.
  */
-internal const val GROUP_SELECT_DELAY_MILLIS = 30L
+internal const val GROUP_SELECT_DELAY_MILLIS = 0L
 
 /**
  * The settings of a TV or handheld in two panes: the [groups] by title in a list on the left, and
@@ -98,15 +99,15 @@ internal const val GROUP_SELECT_DELAY_MILLIS = 30L
  * without moving the selection. A [selected] key that no group has falls back to the first group,
  * and with no groups the pane is empty.
  *
- * Selection follows focus once focus rests: the group that has focus looks selected at once, but
- * the pane, which costs more than a frame to build on a TV, changes and [onSelect] is called with
- * the key only after focus has stayed on the group for [GROUP_SELECT_DELAY_MILLIS], so moving over
- * several groups quickly selects the last one only. A tap or OK on a group selects it at once.
- * Focus that leaves the list for the pane drops a selection that was still waiting, so the pane
- * never changes under a focused row. Right from any group selects it if the pane has not followed
- * yet, and enters the pane at its first row once the group has arrived, however late [onSelect]
- * brings it; another key cancels that entry. Left from the pane, when no row uses the key, returns
- * to the selected group, whichever row it leaves.
+ * Selection follows focus: the group that has focus looks selected at once, and the pane changes
+ * and [onSelect] is called with its key once focus has stayed on the group for [selectDelayMillis].
+ * That is no time at all by default ([GROUP_SELECT_DELAY_MILLIS]), because a switch is cheap; a
+ * wait would skip the groups that a held key passes over. A tap or OK on a group selects it at
+ * once. Focus that leaves the list for the pane drops a selection that was still waiting, so the
+ * pane never changes under a focused row. Right from any group selects it if the pane has not
+ * followed yet, and enters the pane at its first row once the group has arrived, however late
+ * [onSelect] brings it; another key cancels that entry. Left from the pane, when no row uses the
+ * key, returns to the selected group, whichever row it leaves.
  */
 @Composable
 fun <K> SettingsTwoPane(
@@ -118,18 +119,27 @@ fun <K> SettingsTwoPane(
     selectDelayMillis: Long = GROUP_SELECT_DELAY_MILLIS,
     content: @Composable ColumnScope.(K) -> Unit,
 ) {
-    val current = groups.firstOrNull { it.key == selected() } ?: groups.firstOrNull()
     val selectedGroup = remember { FocusRequester() }
     val pane = remember { FocusRequester() }
+    val groupsNow = rememberUpdatedState(groups)
+    val selectedNow = rememberUpdatedState(selected)
+    // The key of the group whose pane is current. It is state that the list, the layers and the
+    // wrappers of the panes read where they need it, so that a switch recomposes none of this.
+    val current = remember {
+        derivedStateOf {
+            val all = groupsNow.value
+            all.firstOrNull { it.key == selectedNow.value() }?.key ?: all.firstOrNull()?.key
+        }
+    }
     val navigation =
-        rememberGroupNavigation(current?.key, onSelect, selectDelayMillis, pane, selectedGroup)
-    val composed = rememberComposedGroups(groups, current?.key, selfScrolling)
+        rememberGroupNavigation(current, onSelect, selectDelayMillis, pane, selectedGroup)
+    val composed = rememberComposedGroups(groups, current, selfScrolling)
     Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(PANE_GAP)) {
-        GroupList(groups, current?.key, navigation, selectedGroup)
+        GroupList(groups, current, navigation, selectedGroup)
         GroupPanes(
             groups,
             composed,
-            current?.key,
+            current,
             selfScrolling,
             pane,
             Modifier.weight(1f).fillMaxHeight().onKeyEvent { event ->
@@ -227,18 +237,17 @@ private class GroupNavigation<K>(
 
 @Composable
 private fun <K> rememberGroupNavigation(
-    currentKey: K?,
+    currentKey: State<K?>,
     onSelect: (K) -> Unit,
     selectDelayMillis: Long,
     pane: FocusRequester,
     selectedGroup: FocusRequester,
 ): GroupNavigation<K> {
     val focusManager = LocalFocusManager.current
-    val currentKeyState = rememberUpdatedState(currentKey)
     val select = rememberUpdatedState(onSelect)
     val navigation =
         remember(focusManager, selectDelayMillis) {
-            GroupNavigation(currentKeyState, select, selectDelayMillis) {
+            GroupNavigation(currentKey, select, selectDelayMillis) {
                 // The search for a focus target to the right would pick the row nearest to the
                 // group. With no focus to measure from, entering the pane picks its first row.
                 focusManager.clearFocus()
@@ -258,12 +267,12 @@ private fun <K> rememberGroupNavigation(
 @Composable
 private fun <K> GroupList(
     groups: List<SettingsGroup<K>>,
-    selected: K?,
+    selected: State<K?>,
     navigation: GroupNavigation<K>,
     selectedGroup: FocusRequester,
 ) {
-    // Read here, so that a focus move recomposes the list and not the pane.
-    val shown = navigation.resting.value ?: selected
+    // Read here, so that a focus move or a switch recomposes the list and not the pane.
+    val shown = navigation.resting.value ?: selected.value
     Column(
         Modifier.width(BorealisDimens.navWidth(LocalFormFactor.current))
             .fillMaxHeight()
@@ -295,7 +304,11 @@ private fun <K> GroupList(
                 onFocus = { navigation.onRest(group.key) },
                 onSelect = { navigation.selectNow(group.key) },
                 modifier =
-                    if (group.key == selected) Modifier.focusRequester(selectedGroup) else Modifier,
+                    if (group.key == selected.value) {
+                        Modifier.focusRequester(selectedGroup)
+                    } else {
+                        Modifier
+                    },
             )
         }
     }

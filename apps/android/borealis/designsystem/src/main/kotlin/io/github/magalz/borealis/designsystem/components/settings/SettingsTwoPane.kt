@@ -19,7 +19,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,6 +51,9 @@ import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 /** One group of a [SettingsTwoPane]: the [key] that identifies it and its [title]. */
 class SettingsGroup<out K>(val key: K, val title: String)
@@ -69,10 +80,13 @@ internal const val GROUP_SELECT_DELAY_MILLIS = 150L
  * without moving the selection. A [selected] key that no group has falls back to the first group,
  * and with no groups the pane is empty.
  *
- * Selection follows focus: when the D-pad moves focus to a group, [onSelect] is called with its
- * key, so the pane changes as the user moves. A tap on a group selects it too. Right from any group
- * enters the pane at its first row; Left from the pane, when no row uses the key, returns to the
- * selected group, whichever row it leaves.
+ * Selection follows focus once focus rests: the group that has focus looks selected at once, but
+ * the pane, which costs more than a frame to build on a TV, changes and [onSelect] is called with
+ * the key only after focus has stayed on the group for [GROUP_SELECT_DELAY_MILLIS], so moving over
+ * several groups quickly selects the last one only. A tap or OK on a group selects it at once.
+ * Right from any group selects it if the pane has not followed yet, and enters the pane at its
+ * first row; Left from the pane, when no row uses the key, returns to the selected group, whichever
+ * row it leaves.
  */
 @Composable
 fun <K> SettingsTwoPane(
@@ -86,8 +100,60 @@ fun <K> SettingsTwoPane(
     val current = groups.firstOrNull { it.key == selected } ?: groups.firstOrNull()
     val selectedGroup = remember { FocusRequester() }
     val pane = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
+    val currentKey by rememberUpdatedState(current?.key)
+    val select by rememberUpdatedState(onSelect)
+    // The group that D-pad focus moved to and the pane has not followed yet.
+    val resting = remember { mutableStateOf<K?>(null) }
+
+    fun selectNow(key: K) {
+        resting.value = null
+        if (key != currentKey) select(key)
+    }
+
+    // A new group restarts the wait, so groups that focus passes over are never selected.
+    LaunchedEffect(Unit) {
+        snapshotFlow { resting.value }
+            .collectLatest { key ->
+                if (key != null) {
+                    delay(GROUP_SELECT_DELAY_MILLIS)
+                    selectNow(key)
+                }
+            }
+    }
+
+    fun focusPane() {
+        // The search for a focus target to the right would pick the row nearest to the group.
+        // With no focus to measure from, entering the pane picks its first row.
+        focusManager.clearFocus()
+        if (!pane.requestFocus()) selectedGroup.requestFocus()
+    }
+
+    fun enterPane() {
+        val group = resting.value
+        if (group == null) {
+            focusPane()
+        } else {
+            selectNow(group)
+            // The rows of the group are composed in the next frame and placed by the one after.
+            scope.launch {
+                repeat(2) { withFrameNanos {} }
+                focusPane()
+            }
+        }
+    }
+
     Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(PANE_GAP)) {
-        GroupList(groups, current?.key, onSelect, selectedGroup, pane)
+        GroupList(
+            groups,
+            current?.key,
+            resting,
+            onRest = { resting.value = if (it == currentKey) null else it },
+            onSelect = ::selectNow,
+            onEnterPane = ::enterPane,
+            selectedGroup = selectedGroup,
+        )
         Box(
             Modifier.weight(1f)
                 .fillMaxHeight()
@@ -118,17 +184,25 @@ fun <K> SettingsTwoPane(
     }
 }
 
-/** The groups by title. Right from any of them enters [pane] at its first row. */
+/**
+ * The groups by title. The group that has focus and that the pane has not followed yet, [resting],
+ * looks selected in place of [selected]. [onRest] is told when focus lands on a group, [onSelect]
+ * when a tap or OK selects one, and Right calls [onEnterPane]. [selectedGroup] is where an entry of
+ * the list by the D-pad lands.
+ */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun <K> GroupList(
     groups: List<SettingsGroup<K>>,
     selected: K?,
+    resting: State<K?>,
+    onRest: (K) -> Unit,
     onSelect: (K) -> Unit,
+    onEnterPane: () -> Unit,
     selectedGroup: FocusRequester,
-    pane: FocusRequester,
 ) {
-    val focusManager = LocalFocusManager.current
+    // Read here, so that a focus move recomposes the list and not the pane.
+    val shown = resting.value ?: selected
     Column(
         Modifier.width(BorealisDimens.navWidth(LocalFormFactor.current))
             .fillMaxHeight()
@@ -136,13 +210,8 @@ private fun <K> GroupList(
             .padding(AREA_PADDING)
             .selectableGroup()
             .onKeyEvent { event ->
-                // The search for a focus target to the right would pick the row nearest to the
-                // group. With no focus to measure from, entering the pane picks its first row.
                 val right = event.key == Key.DirectionRight
-                if (right && event.type == KeyEventType.KeyDown) {
-                    focusManager.clearFocus()
-                    if (!pane.requestFocus()) selectedGroup.requestFocus()
-                }
+                if (right && event.type == KeyEventType.KeyDown) onEnterPane()
                 right
             }
             // Entering the list by the D-pad lands on the selected group, not the nearest. A
@@ -156,12 +225,13 @@ private fun <K> GroupList(
         verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
     ) {
         for (group in groups) {
-            val isSelected = group.key == selected
             GroupEntry(
                 group.title,
-                isSelected,
+                selected = group.key == shown,
+                onFocus = { onRest(group.key) },
                 onSelect = { onSelect(group.key) },
-                modifier = if (isSelected) Modifier.focusRequester(selectedGroup) else Modifier,
+                modifier =
+                    if (group.key == selected) Modifier.focusRequester(selectedGroup) else Modifier,
             )
         }
     }
@@ -171,6 +241,7 @@ private fun <K> GroupList(
 private fun GroupEntry(
     title: String,
     selected: Boolean,
+    onFocus: () -> Unit,
     onSelect: () -> Unit,
     modifier: Modifier,
 ) {
@@ -180,8 +251,7 @@ private fun GroupEntry(
         modifier
             .fillMaxWidth()
             .liftedWhenFocused()
-            // Selection follows focus. The selected group already has it when focus returns to it.
-            .onFocusChanged { if (it.isFocused && !selected) onSelect() }
+            .onFocusChanged { if (it.isFocused) onFocus() }
             .borealisFocusIndication(shape)
             .background(if (selected) colors.accentTint else Color.Transparent, shape)
             .clip(shape)

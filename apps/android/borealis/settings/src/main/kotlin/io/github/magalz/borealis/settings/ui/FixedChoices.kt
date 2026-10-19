@@ -2,6 +2,7 @@ package io.github.magalz.borealis.settings.ui
 
 import androidx.annotation.StringRes
 import io.github.magalz.borealis.settings.R
+import io.github.magalz.borealis.settings.appearance.BackgroundChoices
 import io.github.magalz.borealis.settings.catalog.Settings
 
 /** One entry of a list whose entries do not depend on the device. */
@@ -57,8 +58,8 @@ object FixedChoices {
             FixedChoice(Settings.PERF_OVERLAY_DETAILED, R.string.settings_choice_overlay_detailed),
         )
 
-    /** Background. */
-    val BACKGROUND = emptyList<FixedChoice>()
+    /** Background: the styles of the Appearance setting, with their stable ids. */
+    val BACKGROUND = BackgroundChoices.all.map { FixedChoice(it.id, it.style.label) }
 
     /** Touch. */
     val TOUCH =

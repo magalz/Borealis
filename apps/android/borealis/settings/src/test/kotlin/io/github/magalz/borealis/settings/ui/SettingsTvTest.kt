@@ -11,6 +11,7 @@ import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.espresso.Espresso
@@ -38,8 +39,9 @@ class SettingsTvTest : SettingsScreenTestBase() {
         composeRule.waitForIdle()
     }
 
+    // The ten groups are taller than a TV window, so the list scrolls to the one that is chosen.
     private fun selectGroup(title: String) {
-        composeRule.onNodeWithText(title).performClick()
+        composeRule.onNodeWithText(title).performScrollTo().performClick()
         composeRule.waitForIdle()
     }
 
@@ -59,7 +61,7 @@ class SettingsTvTest : SettingsScreenTestBase() {
                 "Privacy and diagnostics",
                 "About",
             )
-            .forEach { composeRule.onNodeWithText(it).assertIsDisplayed() }
+            .forEach { composeRule.onNodeWithText(it).performScrollTo().assertIsDisplayed() }
     }
 
     @Test
@@ -319,7 +321,7 @@ class SettingsHandheldTest : SettingsScreenTestBase() {
         show(keyboard = true)
 
         composeRule.onNodeWithText("Stream").assertIsDisplayed()
-        composeRule.onNodeWithText("Privacy and diagnostics").assertIsDisplayed()
+        composeRule.onNodeWithText("Privacy and diagnostics").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Resolution").assertIsDisplayed()
     }
 
@@ -327,7 +329,8 @@ class SettingsHandheldTest : SettingsScreenTestBase() {
     fun `the Appearance group has the Background row with the seven styles`() {
         show(keyboard = true)
 
-        composeRule.onNodeWithText("Appearance").assertIsDisplayed()
+        // The group list is taller than the 480dp window of a handheld: it scrolls to the group.
+        composeRule.onNodeWithText("Appearance").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Appearance").performClick()
         composeRule.waitForIdle()
 

@@ -7,8 +7,9 @@ import io.github.magalz.borealis.settings.DefaultBitrate
  *
  * It holds the 38 stream settings that the Phase 2 screen ports from the upstream screen (the
  * language list and the small icon mode are dropped), the two logging switches that live in
- * DataStore, the new performance overlay choice and the gamepad mouse speed. The defaults are those
- * of the inherited `PreferenceConfiguration`; a parity test keeps them in step.
+ * DataStore, the new performance overlay choice, the gamepad mouse speed and the background choice
+ * of the Appearance group, which lives in DataStore too. The defaults of the ported settings are
+ * those of the inherited `PreferenceConfiguration`; a parity test keeps them in step.
  */
 object Settings {
     // Stream
@@ -180,8 +181,40 @@ object Settings {
     /** Value of [PERF_OVERLAY] with the full overlay. */
     const val PERF_OVERLAY_DETAILED = "detailed"
 
-    /** The background of the Library. */
-    val BACKGROUND = StringSetting("borealis_background", default = "")
+    /**
+     * The animated background behind the Library and Settings: the id of one of the styles below,
+     * never the ordinal of a style. A stored value that no style has stands for the default, the
+     * Aurora curtains. Only Borealis reads it, in Kotlin, so it lives in DataStore like the other
+     * settings of Borealis alone (ADR 0011) and needs no migration; the Appearance group of the
+     * settings screen sets it, and the Library shell follows it.
+     */
+    val BACKGROUND =
+        StringSetting(
+            "borealis_background",
+            default = BACKGROUND_AURORA_CURTAINS,
+            store = SettingStore.DATASTORE,
+        )
+
+    /** Value of [BACKGROUND] for the Aurora curtains, the default. */
+    const val BACKGROUND_AURORA_CURTAINS = "aurora_curtains"
+
+    /** Value of [BACKGROUND] for the Soft glow. */
+    const val BACKGROUND_SOFT_GLOW = "soft_glow"
+
+    /** Value of [BACKGROUND] for the Northern lights clip. */
+    const val BACKGROUND_NORTHERN_LIGHTS = "northern_lights"
+
+    /** Value of [BACKGROUND] for the Light mist clip. */
+    const val BACKGROUND_LIGHT_MIST = "light_mist"
+
+    /** Value of [BACKGROUND] for the Flowing light clip. */
+    const val BACKGROUND_FLOWING_LIGHT = "flowing_light"
+
+    /** Value of [BACKGROUND] for the Starfield clip. */
+    const val BACKGROUND_STARFIELD = "starfield"
+
+    /** Value of [BACKGROUND] for the plain page colour. */
+    const val BACKGROUND_OFF = "off"
 
     /** Verbose logging. Stored in DataStore. */
     val VERBOSE_LOGGING =
@@ -234,6 +267,7 @@ object Settings {
             PERF_OVERLAY_LEGACY,
             POST_STREAM_TOAST,
             PERF_OVERLAY,
+            BACKGROUND,
             VERBOSE_LOGGING,
             MASK_ADDRESSES,
         )

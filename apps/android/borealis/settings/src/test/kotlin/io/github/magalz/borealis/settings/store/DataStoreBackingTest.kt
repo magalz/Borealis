@@ -38,8 +38,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The DataStore backing of the two logging switches and the migration from the default
- * SharedPreferences file. Each test gives its file to one DataStore at a time: a second live
+ * The DataStore backing of the two logging switches and the background, and the migration of the
+ * switches from the default SharedPreferences file. Each test gives its file to one DataStore at a time: a second live
  * DataStore on the same file is an error.
  */
 @Suppress("DEPRECATION")
@@ -93,7 +93,14 @@ class DataStoreBackingTest {
             backing.write(Settings.MASK_ADDRESSES, false)
 
             assertThat(backing.read())
-                .containsExactly(Settings.VERBOSE_LOGGING, true, Settings.MASK_ADDRESSES, false)
+                .containsExactly(
+                    Settings.VERBOSE_LOGGING,
+                    true,
+                    Settings.MASK_ADDRESSES,
+                    false,
+                    Settings.BACKGROUND,
+                    null,
+                )
         }
 
     @Test

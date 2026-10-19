@@ -25,6 +25,10 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.media3.exoplayer)
 
+    // A video background that fails says so in the log, once; the battery saver is a broadcast.
+    implementation(libs.androidx.core)
+    implementation(project(":borealis:logging"))
+
     // The shared helpers extend the Compose test rule and drive Robolectric; one draws a backdrop.
     testFixturesApi(platform(libs.androidx.compose.bom))
     testFixturesApi(libs.androidx.compose.ui.test.junit4)

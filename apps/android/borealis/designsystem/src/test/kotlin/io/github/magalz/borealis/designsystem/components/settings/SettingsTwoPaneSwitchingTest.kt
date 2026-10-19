@@ -3,6 +3,7 @@ package io.github.magalz.borealis.designsystem.components.settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.assertIsDisplayed
@@ -21,14 +22,16 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
- * What the pane of a [SettingsTwoPane] shows when the group changes: the new group starts fresh,
- * with nothing left over from the one before.
+ * What the pane of a [SettingsTwoPane] shows when the group changes: the new group looks fresh,
+ * with no switch sliding and no scroll left over from the one before, and its rows are updated in
+ * place, which on a TV costs far less than composing them again.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class SettingsTwoPaneSwitchingTest {
     @get:Rule val composeRule = createComposeRule()
     private var selected by mutableStateOf("on")
+    private var rowsComposed = 0
 
     private val groups =
         listOf(
@@ -36,6 +39,8 @@ class SettingsTwoPaneSwitchingTest {
             SettingsGroup("off", "Switch off"),
             SettingsGroup("long", "Long"),
             SettingsGroup("mid", "Mid"),
+            SettingsGroup("one", "Group one"),
+            SettingsGroup("two", "Group two"),
         )
 
     @Test
@@ -65,6 +70,18 @@ class SettingsTwoPaneSwitchingTest {
         composeRule.onNodeWithText("Mid row 1").assertIsDisplayed()
     }
 
+    @Test
+    fun `a group switch updates the rows in place instead of composing them again`() {
+        selected = "one"
+        composeRule.setContent { Specimen() }
+        composeRule.onNodeWithText("Row of group one").assertIsDisplayed()
+
+        composeRule.onNodeWithText("Group two").performClick()
+
+        composeRule.onNodeWithText("Row of group two").assertIsDisplayed()
+        assertThat(rowsComposed).isEqualTo(1)
+    }
+
     private fun pixelsOfSwitchRow(): List<Int> {
         val image = composeRule.onNodeWithText("The switch").captureToImage().toPixelMap()
         return buildList {
@@ -83,11 +100,20 @@ class SettingsTwoPaneSwitchingTest {
                     // One call site for both groups, as the rows of a screen are drawn from a list.
                     "on",
                     "off" -> SettingsSwitchRow("The switch", group == "on", onCheckedChange = {})
+                    "one",
+                    "two" -> CountedRow(group)
                     "long" -> repeat(LONG_ROWS) { SettingsValueRow("Long row ${it + 1}", null, {}) }
                     else -> repeat(MID_ROWS) { SettingsValueRow("Mid row ${it + 1}", null, {}) }
                 }
             }
         }
+    }
+
+    /** A row that counts how many times it was composed from nothing, not recomposed. */
+    @Composable
+    private fun CountedRow(group: String) {
+        remember { rowsComposed++ }
+        SettingsValueRow("Row of group $group", null, {})
     }
 
     private companion object {

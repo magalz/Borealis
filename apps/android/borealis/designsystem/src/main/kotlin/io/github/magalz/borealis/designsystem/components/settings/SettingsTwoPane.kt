@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.designsystem.components.settings
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -19,12 +20,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -74,7 +76,8 @@ internal const val GROUP_SELECT_DELAY_MILLIS = 150L
  * spaces its rows 10dp apart; [content] puts the rows of the group in it, with 8dp of padding
  * around them already given. A group for which [selfScrolling] is true brings its own scroll and
  * padding: its [content] fills the pane, which does not wrap it in a scroll that would give it an
- * unbounded height.
+ * unbounded height. When the group changes, the rows are updated in place, not composed again, and
+ * the pane opens the new group at its top.
  *
  * Groups are identified by key, not by position, so a screen can hide a group on some devices
  * without moving the selection. A [selected] key that no group has falls back to the first group,
@@ -118,17 +121,19 @@ fun <K> SettingsTwoPane(
                 .focusGroup()
         ) {
             if (current != null) {
-                // Keyed, so that a group starts fresh. Its rows would otherwise reuse the nodes of
-                // the group before, and a switch would slide to its state over some 17 frames and
-                // the pane would keep the scroll of the old group.
-                key(current.key) {
+                // The rows are updated in place when the group changes: composing them again
+                // costs about twice as much on a TV. Each group has its own scroll, so that it
+                // opens at its top, and its switches are made again (see LocalSettingsGroup).
+                CompositionLocalProvider(LocalSettingsGroup provides current.key) {
                     if (selfScrolling(current.key)) {
                         Column(Modifier.fillMaxSize()) { content(current.key) }
                     } else {
+                        val scroll =
+                            rememberSaveable(current.key, saver = ScrollState.Saver) {
+                                ScrollState(0)
+                            }
                         Column(
-                            Modifier.fillMaxSize()
-                                .verticalScroll(rememberScrollState())
-                                .padding(AREA_PADDING),
+                            Modifier.fillMaxSize().verticalScroll(scroll).padding(AREA_PADDING),
                             verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
                         ) {
                             content(current.key)

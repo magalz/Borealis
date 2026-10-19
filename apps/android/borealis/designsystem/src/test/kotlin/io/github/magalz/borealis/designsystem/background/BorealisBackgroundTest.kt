@@ -2,6 +2,7 @@ package io.github.magalz.borealis.designsystem.background
 
 import android.content.Context
 import android.provider.Settings
+import android.view.View
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -195,6 +196,14 @@ class BorealisBackgroundTest {
                 assertThat(player.playing).isTrue()
                 composeRule.onNodeWithTag(BackgroundTags.VIDEO).assertIsDisplayed()
             }
+    }
+
+    @Test
+    fun `the surface is no part of what a screen reader reads`() {
+        show(BackgroundStyle.LightMist)
+
+        assertThat(players.live.single().surface.importantForAccessibility)
+            .isEqualTo(View.IMPORTANT_FOR_ACCESSIBILITY_NO)
     }
 
     @Test

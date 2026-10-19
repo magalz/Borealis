@@ -24,6 +24,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
+/** Well over the time that focus must rest on a group before the pane follows it. */
+private const val GROUP_REST_MILLIS = 500L
+
 /** The settings screen on a TV: the groups on the left and the rows of one group on the right. */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = TV)
@@ -109,10 +112,13 @@ class SettingsTvTest : SettingsScreenTestBase() {
     }
 
     @Test
-    fun `moving down the groups shows the rows of each`() {
+    fun `moving down the groups shows the rows of each once focus rests on it`() {
         show(keyboard = true)
 
         press("Stream", Key.DirectionDown)
+        // The rows of a group follow focus after it has rested on the group for a moment.
+        composeRule.mainClock.advanceTimeBy(GROUP_REST_MILLIS)
+        composeRule.waitForIdle()
 
         composeRule.onNodeWithText("Video").assertIsFocused()
         composeRule.onNodeWithText("Codec").assertIsDisplayed()

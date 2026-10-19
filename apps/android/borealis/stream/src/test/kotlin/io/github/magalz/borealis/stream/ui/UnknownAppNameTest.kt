@@ -58,6 +58,10 @@ class UnknownAppNameTest {
             .onNodeWithText("The app keeps running on the PC")
             .performScrollTo()
             .assertIsDisplayed()
+        composeRule
+            .onNodeWithText("Closes the running app on the PC. Unsaved progress in it is lost.")
+            .performScrollTo()
+            .assertIsDisplayed()
         noPlaceholder()
     }
 
@@ -67,7 +71,9 @@ class UnknownAppNameTest {
         composeRule.onNodeWithText("Quit the running app").performScrollTo().performClick()
 
         composeRule
-            .onNodeWithText("Quit the running app? Unsaved work is lost.")
+            .onNodeWithText(
+                "Quit the running app? This closes it on the PC. Unsaved progress in it is lost."
+            )
             .assertIsDisplayed()
         noPlaceholder()
     }

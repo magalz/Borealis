@@ -3,11 +3,13 @@ package io.github.magalz.borealis.stream.ui.starting
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -31,6 +33,11 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+
+// What the warning says when the app on the other device is a game: it closes and loses progress.
+private const val GAME_WARNING =
+    "Quitting ends the stream on the other device and closes the app. " +
+        "Unsaved progress in it is lost."
 
 @RunWith(AndroidJUnit4::class)
 class ConflictDialogTest {
@@ -85,14 +92,58 @@ class ConflictDialogTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `the warning says quitting ends the stream on the other device`() {
+    fun `the warning for Desktop says quitting ends the stream on the other device and no more`() {
         show(sameApp())
 
         composeRule
-            .onNodeWithText(
-                "Quitting ends the stream on the other device. Unsaved work in the app is lost."
-            )
+            .onNodeWithText("Quitting ends the stream on the other device.")
             .assertIsDisplayed()
+        composeRule.onAllNodesWithText("Unsaved", substring = true).assertCountEquals(0)
+        composeRule.onAllNodesWithText("lost", substring = true).assertCountEquals(0)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the warning for Desktop is the same when another app was requested`() {
+        show(otherApp())
+
+        composeRule
+            .onNodeWithText("Quitting ends the stream on the other device.")
+            .assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a Desktop with a different case or spaces is still Desktop`() {
+        show(sameApp().copy(runningAppName = " desktop "))
+
+        composeRule
+            .onNodeWithText("Quitting ends the stream on the other device.")
+            .assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the warning for a game says quitting closes it and its unsaved progress is lost`() {
+        show(otherApp(running = "Steam Big Picture"))
+
+        composeRule.onNodeWithText(GAME_WARNING).assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the warning for an unknown running app says its unsaved progress is lost`() {
+        show(otherApp(running = null))
+
+        composeRule.onNodeWithText(GAME_WARNING).assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `an app whose title only contains Desktop is a game`() {
+        show(otherApp(running = "Remote Desktop"))
+
+        composeRule.onNodeWithText(GAME_WARNING).assertIsDisplayed()
     }
 
     @Test

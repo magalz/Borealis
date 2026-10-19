@@ -36,8 +36,12 @@ enum class Reachability {
     UNKNOWN,
 }
 
-/** An app that is running on a host. [name] is null while the host's app list does not know it. */
-data class RunningApp(val id: Int, val name: String?)
+/**
+ * An app that is running on a host. [name] is null while the host's app list does not know it.
+ * [isDesktop] is true for the Desktop app, whose Quit ends the stream and closes no program; the
+ * app adapter sets it, because the Library has no rule of its own to tell Desktop from a game.
+ */
+data class RunningApp(val id: Int, val name: String?, val isDesktop: Boolean = false)
 
 /** A user-entered host after parsing: a host name or an IP literal, and the HTTP port. */
 data class HostAddress(val host: String, val port: Int = DEFAULT_PORT) {

@@ -3,6 +3,7 @@ package io.github.magalz.borealis.library
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
+import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.PairingManager.PairState
 import io.github.magalz.borealis.host.caps.BorealisHostInfo
 import io.github.magalz.borealis.library.domain.HostCapability
@@ -85,7 +86,37 @@ class HostMappingTest {
 
         val host = details(runningGameId = 8, rawAppList = null).toHost(apps)
 
-        assertThat(host.runningApp).isEqualTo(RunningApp(8, "Desktop"))
+        assertThat(host.runningApp).isEqualTo(RunningApp(8, "Desktop", isDesktop = true))
+    }
+
+    @Test
+    fun `the running app is Desktop when its title is Desktop`() {
+        fun running(title: String) =
+            details(runningGameId = 8)
+                .toHost(listOf(NvApp(title, 8, false)))
+                .runningApp
+                ?.isDesktop
+
+        assertThat(running("Desktop")).isTrue()
+        assertThat(running(" desktop ")).isTrue()
+        assertThat(running("DESKTOP")).isTrue()
+    }
+
+    @Test
+    fun `the running app is not Desktop when it is a game or its name is not known`() {
+        fun running(title: String) =
+            details(runningGameId = 8)
+                .toHost(listOf(NvApp(title, 8, false)))
+                .runningApp
+                ?.isDesktop
+
+        assertThat(running("Steam")).isFalse()
+        assertThat(running("Desktop 2")).isFalse()
+        assertThat(running("My Desktop")).isFalse()
+        assertThat(details(runningGameId = 7, rawAppList = null).toHost().runningApp?.isDesktop)
+            .isFalse()
+        assertThat(details(runningGameId = 99, rawAppList = APP_LIST).toHost().runningApp?.isDesktop)
+            .isFalse()
     }
 
     @Test

@@ -111,6 +111,17 @@ class BorealisBackgroundTest {
     @Test fun `the glow moves with the frames`() = assertMoves(BackgroundStyle.SoftGlow)
 
     @Test
+    fun `the frame loop is an infinite animation, which the policy of a test on auto advance cancels`() {
+        show(BackgroundStyle.AuroraCurtains)
+        val first = frame()
+        assertThat(first.maxLift(0f, 0.5f)).isIn(LIT_RANGE)
+
+        composeRule.mainClock.advanceTimeBy(5_000)
+
+        assertThat(frame().differingPixels(first)).isEqualTo(0)
+    }
+
+    @Test
     fun `the curtains close their 20 second loop without a seam`() =
         assertClosesLoop(BackgroundStyle.AuroraCurtains)
 

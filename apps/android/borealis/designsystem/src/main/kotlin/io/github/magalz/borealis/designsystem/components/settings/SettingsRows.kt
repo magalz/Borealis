@@ -184,6 +184,12 @@ fun SettingsValueRow(
     }
 }
 
+/** A row that only reports a [value] under a [title]. */
+@Composable
+fun SettingsInfoRow(title: String, value: String, modifier: Modifier = Modifier) {
+    SettingsValueRow(title, value, onClick = {}, modifier)
+}
+
 @Composable
 private fun ValueText(value: String, enabled: Boolean) {
     Text(

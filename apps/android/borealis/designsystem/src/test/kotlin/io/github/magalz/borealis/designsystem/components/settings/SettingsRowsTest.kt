@@ -13,10 +13,12 @@ import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -287,6 +289,60 @@ class SettingsRowsTest {
                 composeRule.onNodeWithText("Mouse back and forward buttons", useUnmergedTree = true)
             )
         assertThat(title.lineCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `an info row shows its value at the end of the row, with no chevron after it`() {
+        composeRule.setContent {
+            Specimen(Modifier.width(400.dp)) { SettingsInfoRow("Version", "9.8.7 (commit abc1234)") }
+        }
+
+        val value =
+            composeRule
+                .onNodeWithText("9.8.7 (commit abc1234)", useUnmergedTree = true)
+                .getBoundsInRoot()
+
+        // Only the 16dp of padding: nothing opens from the row, so there is no chevron.
+        assertThat(value.right.value).isWithin(1f).of(400f - 16f)
+    }
+
+    @Test
+    fun `an info row is read as text, with no button role and no click action`() {
+        composeRule.setContent { Specimen { SettingsInfoRow("Version", "9.8.7 (commit abc1234)") } }
+
+        composeRule
+            .onNodeWithText("Version")
+            .assertHasNoClickAction()
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Role))
+    }
+
+    @Test
+    fun `a screen reader reads the title and the value of an info row as one`() {
+        composeRule.setContent { Specimen { SettingsInfoRow("Version", "9.8.7 (commit abc1234)") } }
+
+        composeRule
+            .onNodeWithText("Version")
+            .assert(hasText("Version") and hasText("9.8.7 (commit abc1234)"))
+    }
+
+    @Test
+    fun `an info row stays a focus stop that OK does not act on`() {
+        composeRule.setContentInKeyboardMode {
+            Specimen {
+                SettingsValueRow("Frame rate", "60 fps", { clicks++ })
+                SettingsInfoRow("Version", "9.8.7 (commit abc1234)")
+                SettingsValueRow("Source code", null, { clicks++ })
+            }
+        }
+        composeRule.onNodeWithText("Frame rate").requestFocus()
+
+        composeRule.onNodeWithText("Frame rate").performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithText("Version").assertIsFocused()
+        composeRule.onNodeWithText("Version").performKeyInput { pressKey(Key.DirectionCenter) }
+        composeRule.onNodeWithText("Version").performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.onNodeWithText("Source code").assertIsFocused()
+        assertThat(clicks).isEqualTo(0)
     }
 
     private fun toggleState(state: ToggleableState) =

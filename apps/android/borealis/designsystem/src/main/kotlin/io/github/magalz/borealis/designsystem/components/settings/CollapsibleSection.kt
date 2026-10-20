@@ -39,6 +39,9 @@ private val ROW_GAP = 10.dp
 private const val ANIMATION_MILLIS = 250
 private const val OPEN_DEGREES = 180f
 
+/** The least space between the title and the chevron when the title wraps. */
+private val TITLE_GAP = 12.dp
+
 /** Tags of the pieces of a [CollapsibleSection], for the tests. */
 internal object CollapsibleSectionTags {
     const val CHEVRON = "section:chevron"
@@ -53,7 +56,9 @@ internal object CollapsibleSectionTags {
  * The header is a full-width button of at least 48dp on a phone, announced as a heading with its
  * state, Expanded or Collapsed; the chevron beside the title is only drawn. A collapsed section
  * composes none of its rows, so a screen reader and the D-pad do not reach them. Opening and
- * closing animate the height and turn the chevron; when the system removes animations they snap.
+ * closing animate the height from the top edge, so the rows appear in place, and turn the chevron;
+ * when the system removes animations they snap. A long title wraps beside the chevron, which keeps
+ * its size.
  *
  * The outline of a focused header reaches 5dp outside it, so a list of sections needs 8dp of
  * padding around it and 10dp between sections. The rows are spaced by 10dp, as a list of rows is.
@@ -71,8 +76,8 @@ fun CollapsibleSection(
         SectionHeader(title, expanded, removed) { onExpandedChange(!expanded) }
         AnimatedVisibility(
             visible = expanded,
-            enter = expandVertically(motion(removed)),
-            exit = shrinkVertically(motion(removed)),
+            enter = expandVertically(motion(removed), expandFrom = Alignment.Top),
+            exit = shrinkVertically(motion(removed), shrinkTowards = Alignment.Top),
         ) {
             Column(
                 Modifier.padding(top = ROW_GAP),
@@ -101,10 +106,10 @@ private fun SectionHeader(title: String, expanded: Boolean, removed: Boolean, on
                 stateDescription = if (expanded) expandedState else collapsedState
             }
             .settingsRowSize(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(TITLE_GAP),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Kicker(title)
+        Kicker(title, Modifier.weight(1f))
         Icon(
             BorealisIcons.ChevronDown,
             contentDescription = null,

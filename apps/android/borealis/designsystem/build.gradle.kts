@@ -7,9 +7,9 @@ plugins {
 android {
     namespace = "io.github.magalz.borealis.designsystem"
 
-    // Test-only helpers shared by the tests of designsystem, library, settings and stream: window
-    // settling for the screenshot tests, and fake input devices. A test fixtures artifact is never
-    // packaged into an APK, unlike a main source set.
+    // Test-only helpers shared by the tests of designsystem, library, settings, stream and app:
+    // window settling for the screenshot tests, and fake input devices. A test fixtures artifact is
+    // never packaged into an APK, unlike a main source set.
     testFixtures { enable = true }
 
     sourceSets {
@@ -20,8 +20,18 @@ android {
 }
 
 dependencies {
-    // The shared helpers extend the Compose test rule and drive Robolectric.
+    // The video styles of the background play their clip with Media3 ExoPlayer, and the player
+    // follows the lifecycle of the screen it is on.
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.media3.exoplayer)
+
+    // A video background that fails says so in the log, once; the battery saver is a broadcast.
+    implementation(libs.androidx.core)
+    implementation(project(":borealis:logging"))
+
+    // The shared helpers extend the Compose test rule and drive Robolectric; one draws a backdrop.
     testFixturesApi(platform(libs.androidx.compose.bom))
     testFixturesApi(libs.androidx.compose.ui.test.junit4)
+    testFixturesImplementation(libs.androidx.compose.foundation)
     testFixturesImplementation(libs.robolectric)
 }

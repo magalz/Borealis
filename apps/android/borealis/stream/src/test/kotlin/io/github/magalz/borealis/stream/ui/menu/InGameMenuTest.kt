@@ -48,6 +48,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
+// What Quit says for Desktop: it ends the stream and closes no program. One sentence a line.
+private const val DESKTOP_QUIT = "Ends the stream.\nThe display and controls go back to the PC."
+
+// What it says for a game: the game closes and its unsaved progress is lost.
+private const val GAME_QUIT = "Closes Hades II on the PC.\nUnsaved progress in it is lost."
+
 /** UC-004: the in-game menu, a side panel over the stream. */
 @RunWith(AndroidJUnit4::class)
 class InGameMenuTest {
@@ -61,11 +67,19 @@ class InGameMenuTest {
         withPerf: Boolean = true,
         keyboardMode: Boolean = formFactor != FormFactor.Phone,
         pointerSpeed: PointerSpeed = PointerSpeed.NORMAL,
+        appName: String = "Desktop",
     ): LayerFixture {
         val phase =
             aStreaming(Panel.MENU, overlay, touchMode, gamepadMouse, pointerSpeed = pointerSpeed)
         val perf = if (withPerf) aPerf() else null
-        return LayerFixture(composeRule, formFactor, phase, perf, keyboardMode = keyboardMode)
+        return LayerFixture(
+                composeRule,
+                formFactor,
+                phase,
+                perf,
+                keyboardMode = keyboardMode,
+                appName = appName,
+            )
             .also { it.show() }
     }
 
@@ -416,14 +430,67 @@ class InGameMenuTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `Quit says it ends the app and asks first`() {
+    fun `Quit on Desktop says it ends the stream and asks first`() {
         val fixture = menu(FormFactor.Phone)
 
-        text("Ends the app on the PC").performScrollTo().assertIsDisplayed()
+        text(DESKTOP_QUIT).performScrollTo().assertIsDisplayed()
         text("Quit Desktop").performScrollTo().performClick()
 
-        text("Quit Desktop? Unsaved work is lost.").assertIsDisplayed()
+        // The rows are hidden under the confirmation, so this is its body, not the row.
+        text("Quit Desktop?").assertIsDisplayed()
+        text(DESKTOP_QUIT).assertIsDisplayed()
         assertThat(fixture.intents.calls).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `Quit on a game says it closes the game and its unsaved progress is lost`() {
+        val fixture = menu(FormFactor.Phone, appName = "Hades II")
+
+        text(GAME_QUIT).performScrollTo().assertIsDisplayed()
+        text("Quit Hades II").performScrollTo().performClick()
+
+        text("Quit Hades II?").assertIsDisplayed()
+        text(GAME_QUIT).assertIsDisplayed()
+        assertThat(fixture.intents.calls).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `Desktop says nothing of lost work in the row or in the confirmation`() {
+        menu(FormFactor.Phone)
+        composeRule.onAllNodesWithText("Unsaved", substring = true).assertCountEquals(0)
+
+        text("Quit Desktop").performScrollTo().performClick()
+
+        composeRule.onAllNodesWithText("Unsaved", substring = true).assertCountEquals(0)
+        composeRule.onAllNodesWithText("lost", substring = true).assertCountEquals(0)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a Desktop with a different case or spaces is still Desktop`() {
+        menu(FormFactor.Phone, appName = " desktop ")
+
+        text(DESKTOP_QUIT).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `an app whose title only contains Desktop is a game`() {
+        menu(FormFactor.Phone, appName = "Remote Desktop")
+
+        text("Closes Remote Desktop on the PC.\nUnsaved progress in it is lost.")
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `Disconnect still says a game keeps running on the PC`() {
+        menu(FormFactor.Phone, appName = "Hades II")
+
+        text("Hades II keeps running on the PC").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -445,7 +512,7 @@ class InGameMenuTest {
 
         text("Cancel").performClick()
 
-        text("Quit Desktop? Unsaved work is lost.").assertDoesNotExist()
+        text("Quit Desktop?").assertDoesNotExist()
         text("Back to stream").assertIsDisplayed()
         assertThat(fixture.intents.calls).isEmpty()
     }
@@ -469,7 +536,7 @@ class InGameMenuTest {
 
         composeRule.onRoot().performKeyInput { pressKey(Key.ButtonB) }
 
-        text("Quit Desktop? Unsaved work is lost.").assertDoesNotExist()
+        text("Quit Desktop?").assertDoesNotExist()
         assertThat(fixture.intents.calls).isEmpty()
 
         composeRule.onRoot().performKeyInput { pressKey(Key.ButtonB) }
@@ -511,7 +578,7 @@ class InGameMenuTest {
 
         composeRule.onRoot().performKeyInput { pressKey(Key.Back) }
 
-        text("Quit Desktop? Unsaved work is lost.").assertDoesNotExist()
+        text("Quit Desktop?").assertDoesNotExist()
         text("Quit Desktop").assertIsFocused()
         assertThat(fixture.intents.calls).isEmpty()
 

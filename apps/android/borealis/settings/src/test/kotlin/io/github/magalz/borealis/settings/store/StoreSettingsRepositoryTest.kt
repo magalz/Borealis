@@ -247,6 +247,23 @@ class StoreSettingsRepositoryTest {
         }
 
     @Test
+    fun `a chosen background is stored in DataStore under its id and read back at the next start`() =
+        runBlocking<Unit> {
+            repository.set(Settings.BACKGROUND, "starfield")
+
+            assertThat(repository.snapshot.value[Settings.BACKGROUND]).isEqualTo("starfield")
+            assertThat(dataStore.writes).containsExactly(Settings.BACKGROUND to "starfield")
+            assertThat(prefs.writes).isEmpty()
+            val nextStart = StoreSettingsRepository.create(prefs, dataStore, scope)
+            assertThat(nextStart.snapshot.value[Settings.BACKGROUND]).isEqualTo("starfield")
+        }
+
+    @Test
+    fun `an unset background reads as the Aurora curtains`() {
+        assertThat(repository.snapshot.value[Settings.BACKGROUND]).isEqualTo("aurora_curtains")
+    }
+
+    @Test
     fun `observe gives the value now and each change, without repeats`() {
         val seen = CopyOnWriteArrayList<String>()
         val collector = scope.launch {

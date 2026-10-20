@@ -45,7 +45,8 @@ fun rememberInitialFocusState(key: Any? = null): InitialFocusState =
  *
  * On a TV or handheld the window also leaves touch mode, so the outline of the first element shows
  * as soon as the screen opens; a handheld with a touch screen starts in touch mode otherwise. A
- * phone keeps touch mode and the element still holds focus for a keyboard.
+ * phone keeps touch mode, where a clickable element cannot take focus, so the request does nothing
+ * there; focus appears only once the window leaves touch mode.
  */
 fun Modifier.initialFocus(requester: FocusRequester): Modifier =
     focusRequester(requester) then InitialFocusElement(requester, null)

@@ -94,6 +94,10 @@ class AppsScreenTest {
     private fun sheetFor(app: AppItemUiState, running: String?, vararg choices: AppAction) =
         AppActionsUiState(app, running, choices.toList())
 
+    /** The sheet while Desktop runs: its Quit ends the stream and closes no program. */
+    private fun desktopSheet(app: AppItemUiState, vararg choices: AppAction) =
+        AppActionsUiState(app, "Desktop", choices.toList(), runningAppIsDesktop = true)
+
     @Test
     @Config(qualifiers = PHONE)
     fun `the host name is the title`() {
@@ -299,10 +303,7 @@ class AppsScreenTest {
     @Config(qualifiers = TV)
     fun `the quit confirmation starts with focus on Cancel`() {
         show(
-            state(
-                desktop,
-                actions = sheetFor(desktop, "Desktop", AppAction.RESUME, AppAction.QUIT),
-            ),
+            state(desktop, actions = desktopSheet(desktop, AppAction.RESUME, AppAction.QUIT)),
             FormFactor.Tv,
         )
 
@@ -435,13 +436,7 @@ class AppsScreenTest {
                 desktop,
                 steam,
                 actions =
-                    sheetFor(
-                        desktop,
-                        "Desktop",
-                        AppAction.RESUME,
-                        AppAction.QUIT,
-                        AppAction.DETAILS,
-                    ),
+                    desktopSheet(desktop, AppAction.RESUME, AppAction.QUIT, AppAction.DETAILS),
             ),
             FormFactor.Tv,
         )
@@ -449,9 +444,7 @@ class AppsScreenTest {
         composeRule.onNodeWithText("Resume").assertIsDisplayed()
         composeRule.onNodeWithText("Go back to Desktop where you left it.").assertIsDisplayed()
         composeRule.onNodeWithText("Quit Desktop").assertIsDisplayed()
-        composeRule
-            .onNodeWithText("Ends Desktop on the PC. Unsaved work is lost.")
-            .assertIsDisplayed()
+        composeRule.onNodeWithText(DESKTOP_QUIT).assertIsDisplayed()
         composeRule.onNodeWithText("Details").assertIsDisplayed()
         composeRule.onNodeWithText("App id and HDR support.").assertIsDisplayed()
     }
@@ -464,9 +457,8 @@ class AppsScreenTest {
                 desktop,
                 hades,
                 actions =
-                    sheetFor(
+                    desktopSheet(
                         hades,
-                        "Desktop",
                         AppAction.QUIT_AND_START,
                         AppAction.DETAILS,
                         AppAction.HIDE,
@@ -476,9 +468,7 @@ class AppsScreenTest {
         )
 
         composeRule.onNodeWithText("Quit Desktop and start Hades II").assertIsDisplayed()
-        composeRule
-            .onNodeWithText("Ends Desktop on the PC first. Unsaved work in it is lost.")
-            .assertIsDisplayed()
+        composeRule.onNodeWithText(DESKTOP_QUIT_FIRST).assertIsDisplayed()
         composeRule.onNodeWithText("Hide from this list").assertIsDisplayed()
         composeRule
             .onNodeWithText("You can show it again with Show hidden apps.")
@@ -535,16 +525,14 @@ class AppsScreenTest {
     @Config(qualifiers = TV)
     fun `Quit asks for confirmation before it is reported`() {
         show(
-            state(
-                desktop,
-                actions = sheetFor(desktop, "Desktop", AppAction.RESUME, AppAction.QUIT),
-            ),
+            state(desktop, actions = desktopSheet(desktop, AppAction.RESUME, AppAction.QUIT)),
             FormFactor.Tv,
         )
 
         composeRule.onNodeWithText("Quit Desktop").performClick()
 
-        composeRule.onNodeWithText("Quit Desktop? Unsaved work is lost.").assertIsDisplayed()
+        composeRule.onNodeWithText("Quit Desktop?").assertIsDisplayed()
+        composeRule.onNodeWithText(DESKTOP_QUIT).assertIsDisplayed()
         assertThat(chosen).isEmpty()
 
         composeRule.onNodeWithText("Quit").performClick()
@@ -559,14 +547,15 @@ class AppsScreenTest {
             state(
                 desktop,
                 hades,
-                actions = sheetFor(hades, "Desktop", AppAction.QUIT_AND_START, AppAction.DETAILS),
+                actions = desktopSheet(hades, AppAction.QUIT_AND_START, AppAction.DETAILS),
             ),
             FormFactor.Tv,
         )
 
         composeRule.onNodeWithText("Quit Desktop and start Hades II").performClick()
 
-        composeRule.onNodeWithText("Quit Desktop? Unsaved work is lost.").assertIsDisplayed()
+        composeRule.onNodeWithText("Quit Desktop?").assertIsDisplayed()
+        composeRule.onNodeWithText(DESKTOP_QUIT_FIRST).assertIsDisplayed()
         assertThat(chosen).isEmpty()
 
         composeRule.onNodeWithText("Quit").performClick()
@@ -578,17 +567,14 @@ class AppsScreenTest {
     @Config(qualifiers = TV)
     fun `Cancel in the confirmation reports nothing and leaves the sheet open`() {
         show(
-            state(
-                desktop,
-                actions = sheetFor(desktop, "Desktop", AppAction.RESUME, AppAction.QUIT),
-            ),
+            state(desktop, actions = desktopSheet(desktop, AppAction.RESUME, AppAction.QUIT)),
             FormFactor.Tv,
         )
         composeRule.onNodeWithText("Quit Desktop").performClick()
 
         composeRule.onNodeWithText("Cancel").performClick()
 
-        composeRule.onNodeWithText("Quit Desktop? Unsaved work is lost.").assertDoesNotExist()
+        composeRule.onNodeWithText("Quit Desktop?").assertDoesNotExist()
         composeRule.onNodeWithText("Resume").assertIsDisplayed()
         assertThat(chosen).isEmpty()
         assertThat(actionsDismissed).isEqualTo(0)
@@ -636,6 +622,11 @@ class AppsScreenTest {
         const val PHONE = "w360dp-h640dp-xhdpi"
         const val TV = "w960dp-h540dp-land-television-xhdpi"
         const val HANDHELD = "w800dp-h480dp-land-hdpi"
+
+        // What Quit says for Desktop: it ends the stream and closes no program. One sentence a
+        // line.
+        const val DESKTOP_QUIT = "Ends the stream.\nThe display and controls go back to the PC."
+        const val DESKTOP_QUIT_FIRST = "Ends the stream first.\nNothing is lost."
     }
 
     @Test

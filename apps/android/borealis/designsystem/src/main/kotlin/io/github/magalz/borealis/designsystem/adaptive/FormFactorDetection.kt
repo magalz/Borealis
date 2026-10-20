@@ -17,16 +17,15 @@ internal const val WIDE_WINDOW_DP = 600
 
 /**
  * What the platform reports about a device and its window: the facts [formFactorOf] decides from.
- * [isTvFeature] is the leanback feature, [uiModeType] and [touchscreen] and [navigation] are the
- * `Configuration` constants, [widthDp] is the window's width and [gamepadConnected] says whether a
- * game controller is connected.
+ * [isTvFeature] is the leanback feature, [uiModeType] and [touchscreen] are the `Configuration`
+ * constants, [widthDp] is the window's width and [gamepadConnected] says whether a game controller
+ * is connected.
  */
 data class FormFactorFacts(
     val isTvFeature: Boolean,
     val uiModeType: Int,
     val widthDp: Int,
     val touchscreen: Int,
-    val navigation: Int,
     val gamepadConnected: Boolean,
 )
 
@@ -34,19 +33,19 @@ data class FormFactorFacts(
  * The device class of a window, decided from facts the platform reports (ADR 0052):
  * - **TV** when the leanback feature is present or the UI mode is television. It wins over every
  *   other fact, so a TV with a touch screen or a narrow window is still a TV.
- * - **Handheld** when the window is [WIDE_WINDOW_DP] wide or more and the device reports the
- *   controls of a gamepad console (a D-pad, a trackball or a wheel as its navigation, or no touch
- *   screen at all) or a game controller is connected ([FormFactorFacts.gamepadConnected]).
+ * - **Handheld** when the window is [WIDE_WINDOW_DP] wide or more and the device has no touch
+ *   screen or a game controller is connected ([FormFactorFacts.gamepadConnected]).
  * - **Phone** otherwise.
  *
  * Consequences, all intended:
- * - A touch tablet reports no navigation and a touch screen, so it stays a phone layout.
+ * - A touch tablet has a touch screen and no game controller, so it stays a phone layout.
  * - A phone with a clip-on or paired gamepad (Backbone, Kishi) in landscape, 600dp or wider, counts
  *   as a handheld: that is the use the handheld layout is for.
- * - The configuration alone misses such a pad: Android reports a D-pad navigation only for a device
- *   with D-pad key codes, and modern pads (Xbox, DualSense, 8BitDo, Switch Pro) send the D-pad as a
- *   hat axis, so the phone keeps reporting a touch screen and no navigation. That is why the
- *   connected game controller is a fact of its own.
+ * - The navigation of the configuration (D-pad, trackball or wheel) is no fact. Android reports a
+ *   D-pad navigation for any keyboard with arrow keys, so a Bluetooth keyboard would make a wide
+ *   phone a handheld, and a pad with D-pad key codes counts as a game controller anyway. Modern
+ *   pads (Xbox, DualSense, 8BitDo, Switch Pro) send the D-pad as a hat axis, which the
+ *   configuration never reports. That is why the connected game controller is a fact of its own.
  * - The result follows the window and the connected pads, so it flips when the phone is rotated or
  *   a pad connects or disconnects; the screens recompose with the other layout and keep their
  *   state.
@@ -58,16 +57,10 @@ fun formFactorOf(facts: FormFactorFacts): FormFactor =
         facts.isTvFeature || facts.uiModeType == Configuration.UI_MODE_TYPE_TELEVISION ->
             FormFactor.Tv
         facts.widthDp >= WIDE_WINDOW_DP &&
-            (hasGamepadControls(facts.touchscreen, facts.navigation) || facts.gamepadConnected) ->
+            (facts.touchscreen == Configuration.TOUCHSCREEN_NOTOUCH || facts.gamepadConnected) ->
             FormFactor.Handheld
         else -> FormFactor.Phone
     }
-
-private fun hasGamepadControls(touchscreen: Int, navigation: Int) =
-    touchscreen == Configuration.TOUCHSCREEN_NOTOUCH ||
-        navigation == Configuration.NAVIGATION_DPAD ||
-        navigation == Configuration.NAVIGATION_TRACKBALL ||
-        navigation == Configuration.NAVIGATION_WHEEL
 
 /**
  * The [FormFactor] of this device and window, read again when the configuration or the window size
@@ -91,7 +84,6 @@ fun rememberFormFactor(): FormFactor {
                 uiModeType = uiModeTypeOf(context),
                 widthDp = windowWidthDp(windowWidthPx, density.density, configurationWidthDp),
                 touchscreen = configuration.touchscreen,
-                navigation = configuration.navigation,
                 gamepadConnected = gamepadConnected,
             )
         )

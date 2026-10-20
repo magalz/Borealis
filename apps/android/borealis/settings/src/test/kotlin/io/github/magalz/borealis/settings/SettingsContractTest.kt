@@ -24,13 +24,13 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsContractTest {
     @Test
-    fun `the catalog holds the ported, logging, overlay and mouse speed settings`() {
+    fun `the catalog holds the ported, logging, overlay, background and mouse speed settings`() {
         assertThat(Settings.all).hasSize(CATALOG_SIZE)
         assertThat(Settings.all.map { it.key }).containsNoDuplicates()
         assertThat(Settings.all).contains(Settings.RESOLUTION)
         assertThat(Settings.all).contains(Settings.PERF_OVERLAY)
         assertThat(Settings.all.filter { it.store == SettingStore.DATASTORE })
-            .containsExactly(Settings.VERBOSE_LOGGING, Settings.MASK_ADDRESSES)
+            .containsExactly(Settings.VERBOSE_LOGGING, Settings.MASK_ADDRESSES, Settings.BACKGROUND)
     }
 
     @Test
@@ -43,6 +43,7 @@ class SettingsContractTest {
         assertThat(snapshot[Settings.USB_DRIVER]).isTrue()
         assertThat(snapshot[Settings.ENABLE_HDR]).isFalse()
         assertThat(snapshot[Settings.PERF_OVERLAY]).isEqualTo("off")
+        assertThat(snapshot[Settings.BACKGROUND]).isEqualTo("aurora_curtains")
         for (setting in Settings.all) {
             assertThat(snapshot[setting]).isEqualTo(setting.default)
         }
@@ -303,9 +304,9 @@ class SettingsContractTest {
 
     private companion object {
         /**
-         * 38 ported stream settings, the gamepad mouse speed, 2 logging switches and the overlay
-         * choice.
+         * 38 ported stream settings, the gamepad mouse speed, 2 logging switches, the overlay
+         * choice and the background.
          */
-        const val CATALOG_SIZE = 42
+        const val CATALOG_SIZE = 43
     }
 }

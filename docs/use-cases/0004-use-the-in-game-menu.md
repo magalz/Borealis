@@ -50,9 +50,16 @@ accident.
 
 ### A3: The user quits the app (branches from step 3)
 
-1. The user chooses Quit and the app name. The menu shows the consequence: the
-   app ends on the PC. The menu asks for confirmation first; Cancel has the
-   focus, and Cancel returns to the menu.
+1. The user chooses Quit and the app name. The row says what Quit does, one
+   sentence on each line:
+   - for Desktop, the app whose title is "Desktop", ignoring case: "Ends the
+     stream." and "The display and controls go back to the PC.";
+   - for any other app, also one whose name is not known: "Closes `<app>` on the
+     PC." and "Unsaved progress in it is lost."
+
+   The menu asks for confirmation first. The title of the confirmation is only
+   "Quit `<app>`?", and its body is the same two lines. Cancel has the focus, and
+   Cancel returns to the menu.
 2. The user confirms. The screen shows "Quitting `<app>`…" until the host answers
    the quit. The host may end the stream before it answers. The stream ends, and
    the system writes SESSION_END with the reason.
@@ -89,6 +96,20 @@ for it.
    The next stream starts at Normal.
 4. While RB is held in mouse mode, the pointer moves at a quarter of the speed.
    RB does not reach the PC.
+
+### A7: Select and Start left held after the quit combo (Sprint 9; branches from step 1)
+
+1. The user presses Start, Select, LB and RB together to quit the stream, and lets
+   go of the bumpers first. Start and Select are then the only buttons held.
+2. The menu chord arms only from a clean start: once a button other than Start
+   and Select has been held, Start and Select do not arm it again until every
+   button has been let go. So the menu does not open, and no Guide tap reaches
+   the PC, where a Guide tap opens Steam.
+3. The stream ends once all four buttons are let go. This holds on a system pad
+   and on a pad on the USB driver.
+4. On a system pad, letting go of Start after the combo does not turn the gamepad
+   mouse on or off while the combo is pending, however long Start was held.
+5. After every button has been let go, Start and Select arm the chord again.
 
 No failure flow is defined in the approved design. The Display for next launch
 row is disabled; it needs the Phase 3 host API and cannot be chosen.
@@ -130,6 +151,12 @@ row is disabled; it needs the Phase 3 host API and cannot be chosen.
 | UC-004-T23 | Given the gamepad mouse is on and RB is held, when a stick moves the pointer, then the move is a quarter of the speed and RB does not reach the PC. | unit | exists (Sprint 7, unit) |
 | UC-004-T24 | Given a pad on the USB driver, when Start, Select, LB and RB are pressed together and then all are let go, then the stream ends, and holding Start for the combo does not turn the gamepad mouse on. | unit, device | exists (Sprint 7, unit; device round 2026-10-17) |
 | UC-004-T25 | Given a key is held when the menu opens, when the user keeps it held and then lets it go, then the key does not act in the menu; a fresh press acts. | unit, device | exists (Sprint 7, unit; device round 2026-10-17) |
+| UC-004-T26 | Given the quit combo is let go bumpers first, when Start and Select stay held, then the chord does not arm: no menu opens and no Guide tap reaches the PC. | unit | exists (Sprint 9, unit) |
+| UC-004-T27 | Given every button has been let go after the quit combo, when Select and Start are held again, then the chord arms again. | unit | exists (Sprint 9, unit) |
+| UC-004-T28 | Given a system pad and the quit combo held for more than 750 ms, when the bumpers and then Start are let go, then the gamepad mouse is not toggled and no Guide tap is sent. | unit | exists (Sprint 9, unit) |
+| UC-004-T29 | Given the running app is Desktop, when the menu shows Quit, then the row says "Ends the stream." and "The display and controls go back to the PC." on two lines, and the confirmation is titled "Quit Desktop?" with those lines as its body. | UI | exists (Sprint 9, UI) |
+| UC-004-T30 | Given the running app is a game, when the menu shows Quit, then the row says "Closes `<app>` on the PC." and "Unsaved progress in it is lost." on two lines, and the confirmation is titled "Quit `<app>`?" with those lines as its body. | UI | exists (Sprint 9, UI) |
+| UC-004-T31 | Given an app titled "Desktop" with another case or spaces around it, then it is Desktop; given a title that only contains "Desktop", such as "Remote Desktop", then it is a game. | UI | exists (Sprint 9, UI) |
 
 Sprint 5 built the in-game menu and its logic. A test marked "exists (Sprint 5,
 unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose test
@@ -152,6 +179,13 @@ row (T19, T20). `StreamSessionTest` checks the default and the session choice
 right-stick scrolling (T21, T23). `QuitComboTest`, `UsbMenuChordTest` and
 `UsbStartHoldTest` check the quit combo on a USB-driver pad (T24). The device
 round of 2026-10-17 ran the quit combo on one pad, the 8BitDo Ultimate 2.
+
+UC-004-T26 to T31 are Sprint 9 rows. `MenuChordDetectorTest`, `GuideTapTest` and
+`UsbMenuChordTest` check that the chord does not arm after the quit combo (T26,
+T27), and `SystemPadQuitComboTest` checks the Start hold on a system pad (T28).
+`InGameMenuTest` checks the Quit row and its confirmation (T29 to T31). The
+Sprint 9 device round checks the quit combo on the S22 with a pad
+([device validation](../development/device-validation.md#322-sprint-9-checks)).
 
 Partly covered:
 
@@ -193,4 +227,4 @@ Until then the row is disabled.
   `UsbMenuChordTest`, `ChromeGamepadKeysTest`, `StreamChromeHostTest`,
   `GameStreamActionsTest`, `SessionAuditTest`, `StreamSessionTest`,
   `PointerMotionTest`, `GamepadMouseSpeedTest`, `QuitComboTest`,
-  `UsbStartHoldTest`.
+  `UsbStartHoldTest`, `GuideTapTest`, `SystemPadQuitComboTest`.

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The names of the background styles of the Library, for the Appearance setting. They are
+         working names. -->
+    <string name="borealis_background_off">Off</string>
+    <string name="borealis_background_aurora_curtains">Aurora curtains</string>
+    <string name="borealis_background_soft_glow">Soft glow</string>
+    <string name="borealis_background_northern_lights">Northern lights</string>
+    <string name="borealis_background_light_mist">Light mist</string>
+    <string name="borealis_background_flowing_light">Flowing light</string>
+    <string name="borealis_background_starfield">Starfield</string>
+</resources>

@@ -53,7 +53,7 @@ class StreamChromeHostTest {
     private lateinit var stream: View
     private lateinit var probe: TouchProbe
     private lateinit var host: StreamChromeHost
-    private val session: StreamSession = aSession(dockedKeyboard = true)
+    private val session: StreamSession = aSession(dockKeyboard = { true })
     private var captured = 0
     private var released = 0
 

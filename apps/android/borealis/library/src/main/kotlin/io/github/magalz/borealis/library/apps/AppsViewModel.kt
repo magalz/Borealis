@@ -222,7 +222,12 @@ private fun AppsSnapshot.toUiState(
         actions =
             all.firstOrNull { it.id == actionsAppId }
                 ?.let {
-                    AppActionsUiState(it, running?.name, choicesFor(it, running != null, canPin))
+                    AppActionsUiState(
+                        it,
+                        running?.name,
+                        choicesFor(it, running != null, canPin),
+                        runningAppIsDesktop = running?.isDesktop == true,
+                    )
                 },
         details = all.firstOrNull { it.id == detailsAppId },
     )

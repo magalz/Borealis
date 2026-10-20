@@ -18,9 +18,15 @@
     <string name="apps_action_start">Start</string>
     <string name="apps_action_start_consequence">Start %1$s on the PC.</string>
     <string name="apps_action_quit">Quit %1$s</string>
-    <string name="apps_action_quit_consequence">Ends %1$s on the PC. Unsaved work is lost.</string>
+    <!-- %1$s is the app. A consequence of two sentences has one on each line. -->
+    <string name="apps_action_quit_consequence">Closes %1$s on the PC.\nUnsaved progress in it is lost.</string>
+    <!-- The same for Desktop, which has no program to close. -->
+    <string name="apps_action_quit_desktop_consequence">Ends the stream.\nThe display and controls go back to the PC.</string>
     <string name="apps_action_quit_and_start">Quit %1$s and start %2$s</string>
-    <string name="apps_action_quit_and_start_consequence">Ends %1$s on the PC first. Unsaved work in it is lost.</string>
+    <!-- %1$s is the running app. -->
+    <string name="apps_action_quit_and_start_consequence">Closes %1$s on the PC first.\nUnsaved progress in it is lost.</string>
+    <!-- The same when the running app is Desktop. -->
+    <string name="apps_action_quit_and_start_desktop_consequence">Ends the stream first.\nNothing is lost.</string>
     <string name="apps_action_details">Details</string>
     <string name="apps_action_details_consequence">App id and HDR support.</string>
     <string name="apps_action_hide">Hide from this list</string>
@@ -31,7 +37,8 @@
     <string name="apps_action_pin_consequence">Put a shortcut to %1$s on your home screen.</string>
     <string name="apps_running_app_fallback">the running app</string>
 
-    <string name="apps_confirm_quit">Quit %1$s? Unsaved work is lost.</string>
+    <!-- The title of the confirmation, %1$s is the app. Its body is the consequence of the action. -->
+    <string name="apps_confirm_quit">Quit %1$s?</string>
     <string name="apps_confirm_quit_button">Quit</string>
     <string name="apps_confirm_cancel">Cancel</string>
 

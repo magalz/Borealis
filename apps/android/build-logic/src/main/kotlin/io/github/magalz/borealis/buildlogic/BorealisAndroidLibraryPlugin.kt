@@ -31,6 +31,17 @@ class BorealisAndroidLibraryPlugin : Plugin<Project> {
                 lint {
                     warningsAsErrors = true
                     abortOnError = true
+                    // These checks compare the versions in use with what upstream has released, so
+                    // the result changes with the date and a build is not reproducible: the same
+                    // commit passes until a release appears. Dependabot reports new versions
+                    // instead.
+                    disable +=
+                        setOf(
+                            "NewerVersionAvailable",
+                            "GradleDependency",
+                            "AndroidGradlePluginVersion",
+                            "OutdatedLibrary",
+                        )
                 }
             }
 

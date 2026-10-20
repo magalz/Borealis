@@ -81,6 +81,10 @@ libraries.
   tracked by Dependabot; it changes only by a reviewed Borealis commit or an upstream fix cherry-picked on purpose (see
   [core/third_party/README.md](../../core/third_party/README.md)).
 - Security updates are raised immediately.
+- Lint does not check for newer versions, because the result would change with
+  the date and a build would not be reproducible; Dependabot does (AGP excepted,
+  see above). The checks are turned off in the convention plugins; see
+  [building](../development/building.md#lint-baseline).
 - Updates arrive as PRs and go through the normal CI. Group low-risk updates;
   review major updates individually.
 - The dependency review check (`.github/workflows/security.yml`) blocks PRs

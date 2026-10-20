@@ -39,6 +39,8 @@ data class AppActionsUiState(
     /** The name of the app that is running, for the consequence text; null when nothing runs. */
     val runningAppName: String?,
     val choices: List<AppAction>,
+    /** True when the running app is Desktop: quitting it ends the stream and loses no work. */
+    val runningAppIsDesktop: Boolean = false,
 )
 
 data class AppsUiState(

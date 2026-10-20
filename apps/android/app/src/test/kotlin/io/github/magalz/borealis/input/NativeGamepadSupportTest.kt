@@ -55,6 +55,38 @@ class NativeGamepadSupportTest {
     }
 
     @Test
+    fun `an alphabetic keyboard with joystick axes does not block the driver`() {
+        // A keyboard that reports a JOYSTICK source with X and Y is no pad for the stream, so the
+        // driver may claim the pad of this VID/PID.
+        val keyboard =
+            InputDeviceFacts(
+                vid,
+                pid,
+                InputDevice.SOURCE_KEYBOARD or InputDevice.SOURCE_JOYSTICK,
+                hasJoystickXy = true,
+                keyboardType = InputDevice.KEYBOARD_TYPE_ALPHABETIC,
+            )
+
+        assertThat(blocks(keyboard)).isFalse()
+    }
+
+    @Test
+    fun `a pad with a non-alphabetic keyboard type blocks the driver`() {
+        val pad =
+            InputDeviceFacts(
+                vid,
+                pid,
+                InputDevice.SOURCE_KEYBOARD or
+                    InputDevice.SOURCE_GAMEPAD or
+                    InputDevice.SOURCE_JOYSTICK,
+                hasJoystickXy = true,
+                keyboardType = InputDevice.KEYBOARD_TYPE_NON_ALPHABETIC,
+            )
+
+        assertThat(blocks(pad)).isTrue()
+    }
+
+    @Test
     fun `a joystick source without X and Y axes does not block the driver`() {
         assertThat(blocks(InputDeviceFacts(vid, pid, InputDevice.SOURCE_JOYSTICK))).isFalse()
     }

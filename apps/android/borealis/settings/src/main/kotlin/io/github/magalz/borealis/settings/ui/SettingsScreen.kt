@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.settings.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,17 +14,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.input.InputMode
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -35,10 +29,8 @@ import io.github.magalz.borealis.designsystem.components.settings.SettingsGroup
 import io.github.magalz.borealis.designsystem.components.settings.SettingsGroupHeader
 import io.github.magalz.borealis.designsystem.components.settings.SettingsTwoPane
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
-import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
-import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.settings.R
 
@@ -80,12 +72,7 @@ internal fun SettingsScreen(
     BorealisTheme(formFactor) {
         BackHandler(onBack = onBack)
         val overlays = remember { SettingsOverlays() }
-        Box(
-            modifier
-                .fillMaxSize()
-                .background(LocalBorealisColors.current.page)
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-        ) {
+        Box(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             if (formFactor == FormFactor.Phone) {
                 PhoneSettings(state, actions, overlays, onBack, onOpenPrivacy, about)
             } else {
@@ -116,11 +103,7 @@ private fun PhoneSettings(
 ) {
     val gutter = LocalBorealisSpacing.current.gutter
     Column(Modifier.fillMaxSize()) {
-        BorealisPhoneBar(
-            onBack,
-            stringResource(R.string.settings_back),
-            gap = BorealisDimens.phoneBarGap,
-        ) {
+        BorealisPhoneBar(onBack, stringResource(R.string.settings_back)) {
             ScreenTitle()
         }
         Column(
@@ -132,7 +115,7 @@ private fun PhoneSettings(
             for (group in state.groups) {
                 SettingsGroupHeader(stringResource(group.group.titleRes))
                 for (item in group.items) {
-                    SettingsItemRow(item, state, actions, overlays.requests)
+                    SettingsItemRow(item, state.rowValue(item.item), actions, overlays.requests)
                 }
             }
             SettingsValueRow(
@@ -144,20 +127,6 @@ private fun PhoneSettings(
             SettingsGroupHeader(stringResource(R.string.settings_group_about))
             AboutRows(about)
         }
-    }
-}
-
-/**
- * Leaves touch mode and puts the focus on the selected group when the panes open, so a remote or a
- * gamepad works at once and the outline shows.
- */
-@Composable
-private fun TakeInitialFocus() {
-    val focusManager = LocalFocusManager.current
-    val inputMode = LocalInputModeManager.current
-    LaunchedEffect(Unit) {
-        inputMode.requestInputMode(InputMode.Keyboard)
-        focusManager.moveFocus(FocusDirection.Enter)
     }
 }
 
@@ -176,15 +145,17 @@ private fun TwoPaneSettings(
             SettingsGroup(it, stringResource(it.titleRes))
         }
     var selected by rememberSaveable { mutableStateOf(initialGroup) }
-    TakeInitialFocus()
     Column(Modifier.fillMaxSize().padding(gutter)) {
         ScreenTitle()
         SettingsTwoPane(
             groups = groups,
-            selected = selected,
+            selected = { selected },
             onSelect = { selected = it },
             // The Privacy pane scrolls itself and has its own snackbar.
             selfScrolling = { it == SettingsGroupId.PRIVACY },
+            // A remote or a gamepad works at once and the outline shows, also when the rail opened
+            // the screen.
+            focusOnOpen = true,
             modifier = Modifier.padding(top = TITLE_GAP),
         ) { group ->
             when (group) {
@@ -194,7 +165,9 @@ private fun TwoPaneSettings(
                     state.groups
                         .firstOrNull { it.group == group }
                         ?.items
-                        ?.forEach { SettingsItemRow(it, state, actions, overlays.requests) }
+                        ?.forEach {
+                            SettingsItemRow(it, state.rowValue(it.item), actions, overlays.requests)
+                        }
             }
         }
     }

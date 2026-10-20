@@ -2,7 +2,6 @@ package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -106,21 +105,22 @@ class BorealisPhoneBarTest {
     }
 
     @Test
-    fun `the gap spaces the title from the arrow`() {
-        composeRule.setContent {
-            BorealisTheme {
-                Column {
-                    BorealisPhoneBar(onBack = {}, backDescription = "Back plain") { Text("Plain") }
-                    BorealisPhoneBar(onBack = {}, backDescription = "Back gap", gap = 4.dp) {
-                        Text("Gap")
-                    }
-                }
-            }
-        }
+    fun `the title starts 4dp after the touch target of the arrow`() {
+        composeRule.setContent { Specimen() }
 
-        val plain = composeRule.onNodeWithText("Plain").getUnclippedBoundsInRoot()
-        val gap = composeRule.onNodeWithText("Gap").getUnclippedBoundsInRoot()
-        assertDp(gap.left - plain.left, 4.dp)
+        val title = composeRule.onNodeWithText(TITLE).getUnclippedBoundsInRoot()
+        // The bar's side padding, the 48dp touch target of the arrow and then the gap. The bounds
+        // of the arrow node are those of its 40dp button, so the test counts the target itself.
+        assertDp(title.left, SIDE_PADDING + ARROW_TARGET + GAP)
+    }
+
+    @Test
+    fun `a title that is too long to fit stops 4dp short of the actions`() {
+        composeRule.setContent { Specimen(title = LONG_TITLE, withAction = true) }
+
+        val title = composeRule.onNodeWithText(LONG_TITLE).getUnclippedBoundsInRoot()
+        val action = composeRule.onNodeWithContentDescription(ACTION).getUnclippedBoundsInRoot()
+        assertDp(action.left - title.right, GAP)
     }
 
     @Composable
@@ -158,5 +158,7 @@ class BorealisPhoneBarTest {
             "A host with a name so long that it cannot possibly fit in a bar of a phone, " +
                 "however narrow the arrow and the actions leave it, and then some"
         val SIDE_PADDING = 4.dp
+        val GAP = 4.dp
+        val ARROW_TARGET = 48.dp
     }
 }

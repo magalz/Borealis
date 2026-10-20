@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.library.hosts
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,7 +50,6 @@ import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
-import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
 import io.github.magalz.borealis.library.domain.Reachability
@@ -143,7 +141,6 @@ private fun HostsLayout(
     Box(
         modifier
             .fillMaxSize()
-            .background(LocalBorealisColors.current.page)
             .windowInsetsPadding(WindowInsets.safeDrawing)
             // A gamepad's B is Back at the top level: it must not leave the home screen.
             .onKeyEvent { formFactor != FormFactor.Phone && it.key == Key.ButtonB }

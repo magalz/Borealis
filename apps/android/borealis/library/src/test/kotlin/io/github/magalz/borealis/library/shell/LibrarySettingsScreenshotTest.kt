@@ -3,6 +3,7 @@ package io.github.magalz.borealis.library.shell
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.provider.Settings
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.core.app.ActivityScenario
@@ -37,7 +38,9 @@ import org.robolectric.annotation.Config
 
 /**
  * The Library on a TV with the rail beside Settings, which the rail marks as selected. The screens
- * themselves have their own references in the settings module; these show the frame around them.
+ * themselves have their own references in the settings module; these show the frame around them,
+ * with the Aurora curtains behind it. The system removes animations, so the frame is a still one
+ * and the same at every run.
  */
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
@@ -60,6 +63,11 @@ class LibrarySettingsScreenshotTest {
     fun inject() {
         hiltRule.inject()
         shadowOf(context.packageManager).setSystemFeature(PackageManager.FEATURE_LEANBACK, true)
+        Settings.Global.putFloat(
+            context.contentResolver,
+            Settings.Global.ANIMATOR_DURATION_SCALE,
+            0f,
+        )
     }
 
     @After

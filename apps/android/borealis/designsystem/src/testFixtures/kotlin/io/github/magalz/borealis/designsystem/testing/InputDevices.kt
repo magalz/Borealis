@@ -6,35 +6,32 @@ import android.hardware.input.InputManager
 import android.view.InputDevice
 import android.view.MotionEvent
 import org.robolectric.Shadows.shadowOf
-import org.robolectric.shadows.ShadowInputDevice
+import org.robolectric.shadows.InputDeviceBuilder
 import org.robolectric.util.ReflectionHelpers
-import org.robolectric.util.ReflectionHelpers.ClassParameter
 
 /**
  * An input device as the framework reports it. A negative [id] makes it virtual. [joystickXy] gives
- * it the X and Y motion ranges of a joystick.
+ * it the X and Y motion ranges of a joystick. [keyboardType] is what
+ * `InputDevice.getKeyboardType()` returns, one of the `InputDevice.KEYBOARD_TYPE_*` constants.
  */
-@Suppress("DEPRECATION") // the Robolectric helper; InputDevice.Builder is not in the public SDK
-fun inputDevice(id: Int, sources: Int, joystickXy: Boolean = false): InputDevice {
-    val device = ShadowInputDevice.makeInputDeviceNamed("test-device-$id")
-    ReflectionHelpers.setField(device, "mId", id)
-    ReflectionHelpers.setField(device, "mSources", sources)
+fun inputDevice(
+    id: Int,
+    sources: Int,
+    joystickXy: Boolean = false,
+    keyboardType: Int = InputDevice.KEYBOARD_TYPE_NONE,
+): InputDevice {
+    val builder =
+        InputDeviceBuilder.newBuilder()
+            .setId(id)
+            .setName("test-device-$id")
+            .setSources(sources)
+            .setKeyboardType(keyboardType)
     if (joystickXy) {
         for (axis in listOf(MotionEvent.AXIS_X, MotionEvent.AXIS_Y)) {
-            ReflectionHelpers.callInstanceMethod<Unit>(
-                device,
-                "addMotionRange",
-                ClassParameter.from(Int::class.javaPrimitiveType, axis),
-                ClassParameter.from(Int::class.javaPrimitiveType, InputDevice.SOURCE_JOYSTICK),
-                ClassParameter.from(Float::class.javaPrimitiveType, -1f),
-                ClassParameter.from(Float::class.javaPrimitiveType, 1f),
-                ClassParameter.from(Float::class.javaPrimitiveType, 0f),
-                ClassParameter.from(Float::class.javaPrimitiveType, 0f),
-                ClassParameter.from(Float::class.javaPrimitiveType, 0f),
-            )
+            builder.addMotionRange(axis, InputDevice.SOURCE_JOYSTICK, -1f, 1f, 0f, 0f, 0f)
         }
     }
-    return device
+    return builder.build()
 }
 
 /** Makes [device] one of the devices Android has. It fires no listener. */

@@ -47,5 +47,5 @@ fun aPerf(totalFps: Float = 60f) =
 fun aSession(
     actions: RecordingActions = RecordingActions(),
     defaults: StreamDefaults = aDefaults,
-    dockedKeyboard: Boolean = false,
-) = StreamSession("Desktop", "Gaming PC", defaults, dockedKeyboard, actions)
+    dockKeyboard: () -> Boolean = { false },
+) = StreamSession("Desktop", "Gaming PC", defaults, dockKeyboard, actions)

@@ -9,8 +9,8 @@ import org.junit.Test
 
 /**
  * The shape of the Kotlin settings catalog (ADR 0055): unique keys, the keys that were not ported,
- * the overlay choice and the two DataStore settings. The defaults are compared with what the Java
- * readers use in [SettingsDefaultsParityTest].
+ * the overlay choice, the background choice and the three DataStore settings. The defaults are
+ * compared with what the Java readers use in [SettingsDefaultsParityTest].
  */
 class SettingsCatalogParityTest {
     private fun settingByKey(key: String): Setting<*>? = Settings.all.firstOrNull { it.key == key }
@@ -47,11 +47,23 @@ class SettingsCatalogParityTest {
     }
 
     @Test
-    fun `only the two logging switches are stored in DataStore`() {
+    fun `the background is a String in DataStore that starts as the Aurora curtains`() {
+        assertThat(Settings.BACKGROUND.key).isEqualTo("borealis_background")
+        assertThat(Settings.BACKGROUND).isInstanceOf(StringSetting::class.java)
+        assertThat(Settings.BACKGROUND.default).isEqualTo("aurora_curtains")
+        assertThat(Settings.BACKGROUND.store).isEqualTo(SettingStore.DATASTORE)
+    }
+
+    @Test
+    fun `only the two logging switches and the background are stored in DataStore`() {
         val datastore = Settings.all.filter { it.store == SettingStore.DATASTORE }.map { it.key }
 
         assertThat(datastore)
-            .containsExactly(Settings.VERBOSE_LOGGING.key, Settings.MASK_ADDRESSES.key)
+            .containsExactly(
+                Settings.VERBOSE_LOGGING.key,
+                Settings.MASK_ADDRESSES.key,
+                Settings.BACKGROUND.key,
+            )
     }
 
     private companion object {

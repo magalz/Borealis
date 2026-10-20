@@ -53,13 +53,19 @@ class RememberFormFactorTest {
     }
 
     @Test
-    @Config(qualifiers = "w700dp-h400dp-xhdpi-dpad")
-    fun `a wide device with a D-pad is a handheld`() {
+    @Config(qualifiers = "w700dp-h400dp-xhdpi-notouch")
+    fun `a wide device without a touch screen is a handheld`() {
         assertThat(detected()).isEqualTo(FormFactor.Handheld)
     }
 
     @Test
-    @Config(qualifiers = "w700dp-h400dp-xhdpi-dpad")
+    @Config(qualifiers = "w700dp-h400dp-xhdpi-finger-dpad")
+    fun `a wide touch phone whose keyboard reports a D-pad is a phone`() {
+        assertThat(detected()).isEqualTo(FormFactor.Phone)
+    }
+
+    @Test
+    @Config(qualifiers = "w700dp-h400dp-xhdpi-notouch")
     fun `the very first composition already sees a wide handheld`() {
         val seen = mutableListOf<FormFactor>()
         composeRule.setContent { seen += rememberFormFactor() }

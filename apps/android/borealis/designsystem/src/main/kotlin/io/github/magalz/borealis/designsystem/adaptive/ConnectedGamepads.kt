@@ -11,17 +11,33 @@ import androidx.compose.ui.platform.LocalContext
 
 /**
  * Whether an input device with these facts is a game controller: not virtual, and either a gamepad,
- * or a joystick with the X and Y axes ([hasJoystickXy]). It matches the gamepad-buttons and
- * joystick-axes part of `ControllerHandler.isGameControllerDevice`, which also has its own
- * exceptions, and is kept in one place for the form factor and the USB driver. The source masks are
- * compared whole, because the class bits overlap with the keyboard's: an 8BitDo pad reports
- * `KEYBOARD | GAMEPAD | JOYSTICK`, and a remote `KEYBOARD | DPAD`.
+ * or a joystick with the X and Y axes ([hasJoystickXy]) that is no alphabetic keyboard
+ * ([keyboardType] is not [InputDevice.KEYBOARD_TYPE_ALPHABETIC]). It is the rule for the
+ * gamepad-buttons and joystick-axes part of `ControllerHandler.isGameControllerDevice`, which also
+ * has its own exceptions: the handler takes the joystick part through [hasControllerJoystickAxes].
+ * It is kept in one place for the form factor, the USB driver and the stream's handler. The source
+ * masks are compared whole, because the class bits overlap with the keyboard's: an 8BitDo pad
+ * reports `KEYBOARD | GAMEPAD | JOYSTICK` with a non-alphabetic keyboard, and a remote reports
+ * `KEYBOARD | DPAD`.
+ *
+ * The keyboard type only matters for the joystick branch: some Bluetooth keyboards report a
+ * JOYSTICK source with X and Y axes, and an alphabetic keyboard is no game controller for that. A
+ * gamepad source is a pad whatever its keyboard type.
  */
-fun isGameController(sources: Int, isVirtual: Boolean, hasJoystickXy: Boolean): Boolean =
+fun isGameController(
+    sources: Int,
+    isVirtual: Boolean,
+    hasJoystickXy: Boolean,
+    keyboardType: Int,
+): Boolean =
     !isVirtual &&
         (sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
-            (sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK &&
-                hasJoystickXy))
+            isJoystickController(sources, hasJoystickXy, keyboardType))
+
+private fun isJoystickController(sources: Int, hasJoystickXy: Boolean, keyboardType: Int): Boolean =
+    sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK &&
+        hasJoystickXy &&
+        keyboardType != InputDevice.KEYBOARD_TYPE_ALPHABETIC
 
 /**
  * Whether this device has the X and Y motion ranges of a joystick, for the JOYSTICK source or else
@@ -33,8 +49,17 @@ fun InputDevice.hasJoystickXy(): Boolean =
             getMotionRange(axis, InputDevice.SOURCE_GAMEPAD) != null
     }
 
+/**
+ * Whether this device has the axes of a game controller: the JOYSTICK source with X and Y
+ * ([hasJoystickXy]), on a device that is no alphabetic keyboard. It is the joystick branch of
+ * [isGameController], for the stream's controller handler, which has no virtual-device or gamepad
+ * rule here.
+ */
+fun InputDevice.hasControllerJoystickAxes(): Boolean =
+    isJoystickController(sources, hasJoystickXy(), keyboardType)
+
 private fun InputDevice.isGameController(): Boolean =
-    isGameController(sources, isVirtual, hasJoystickXy())
+    isGameController(sources, isVirtual, hasJoystickXy(), keyboardType)
 
 /**
  * Whether a game controller is connected to Android right now. A pad that the app's USB driver has

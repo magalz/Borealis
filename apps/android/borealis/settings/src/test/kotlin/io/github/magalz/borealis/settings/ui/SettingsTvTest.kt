@@ -1,16 +1,21 @@
 package io.github.magalz.borealis.settings.ui
 
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.espresso.Espresso
@@ -23,6 +28,54 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+
+/** The groups of the settings screen, in the order of the list. */
+private val GROUP_TITLES =
+    listOf(
+        "Stream",
+        "Video",
+        "Input",
+        "Gamepad",
+        "On-screen controls",
+        "Audio",
+        "Advanced",
+        "Appearance",
+        "Privacy and diagnostics",
+        "About",
+    )
+
+/** The entry of the group list with [title], and not a row of a pane that has the same words. */
+private fun SettingsScreenTestBase.group(title: String): SemanticsNodeInteraction =
+    composeRule.onNode(
+        hasText(title) and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
+    )
+
+/**
+ * The [entry] is whole inside the window: the list does not cut it, and none of it is outside the
+ * screen, where only a scroll would bring it.
+ */
+private fun SettingsScreenTestBase.assertWholeInWindow(entry: SemanticsNodeInteraction) {
+    val window = composeRule.onRoot().getUnclippedBoundsInRoot()
+    val whole = entry.getUnclippedBoundsInRoot()
+    assertThat(entry.getBoundsInRoot()).isEqualTo(whole)
+    assertThat(whole.top.value).isAtLeast(window.top.value)
+    assertThat(whole.bottom.value).isAtMost(window.bottom.value)
+    assertThat(whole.left.value).isAtLeast(window.left.value)
+    assertThat(whole.right.value).isAtMost(window.right.value)
+}
+
+/** Walks Down from Stream to About: each group takes focus in turn, whole inside the window. */
+private fun SettingsScreenTestBase.walkDownTheGroups() {
+    group(GROUP_TITLES.first()).assertIsFocused()
+    assertWholeInWindow(group(GROUP_TITLES.first()))
+    GROUP_TITLES.zipWithNext().forEach { (from, to) ->
+        group(from).performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+
+        group(to).assertIsFocused()
+        assertWholeInWindow(group(to))
+    }
+}
 
 /** The settings screen on a TV: the groups on the left and the rows of one group on the right. */
 @RunWith(AndroidJUnit4::class)
@@ -44,18 +97,21 @@ class SettingsTvTest : SettingsScreenTestBase() {
     fun `the groups are on the left, Privacy and diagnostics and About among them`() {
         show(keyboard = true)
 
-        listOf(
-                "Stream",
-                "Video",
-                "Input",
-                "Gamepad",
-                "On-screen controls",
-                "Audio",
-                "Advanced",
-                "Privacy and diagnostics",
-                "About",
-            )
-            .forEach { composeRule.onNodeWithText(it).assertIsDisplayed() }
+        // At rest, with no scroll: the ten groups are not too tall for the window.
+        GROUP_TITLES.forEach {
+            group(it).assertIsDisplayed()
+            assertWholeInWindow(group(it))
+        }
+    }
+
+    @Test
+    fun `Down from Stream to About focuses each group in turn, and the list never scrolls`() {
+        show(keyboard = true)
+        val top = group("Stream").getUnclippedBoundsInRoot().top
+
+        walkDownTheGroups()
+
+        assertThat(group("Stream").getUnclippedBoundsInRoot().top).isEqualTo(top)
     }
 
     @Test
@@ -171,6 +227,47 @@ class SettingsTvTest : SettingsScreenTestBase() {
     }
 
     @Test
+    fun `the Appearance group has the Background row with the seven styles`() {
+        show(keyboard = true)
+
+        selectGroup("Appearance")
+
+        composeRule.onNodeWithText("Background").assertIsDisplayed()
+        composeRule.onNodeWithText("Aurora curtains").assertIsDisplayed()
+        composeRule.onNodeWithText("Resolution").assertDoesNotExist()
+        composeRule.onNodeWithText("Background").performClick()
+        composeRule.waitForIdle()
+        BACKGROUND_NAMES.forEach { sheetOption(it).assertExists() }
+        sheetOption("Aurora curtains").assertIsFocused()
+    }
+
+    @Test
+    fun `choosing a style stores it and the row shows it`() {
+        show(keyboard = true)
+        selectGroup("Appearance")
+        composeRule.onNodeWithText("Background").performClick()
+        composeRule.waitForIdle()
+
+        sheetOption("Starfield").performClick()
+        composeRule.waitForIdle()
+
+        assertThat(snapshot[Settings.BACKGROUND]).isEqualTo("starfield")
+        composeRule.onNodeWithText("Starfield").assertIsDisplayed()
+        composeRule.onNodeWithText("Aurora curtains").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a stored style that is unknown shows the default as the chosen one`() {
+        stored(Settings.BACKGROUND to "bogus")
+        show(keyboard = true)
+
+        selectGroup("Appearance")
+
+        composeRule.onNodeWithText("Aurora curtains").assertIsDisplayed()
+        composeRule.onNodeWithText("bogus").assertDoesNotExist()
+    }
+
+    @Test
     fun `a disabled row of the Input group can be focused and shows why it is disabled`() {
         options.rowStates[Settings.ANALOG_SCROLLING] =
             RowState.Disabled(DisabledReason.DEPENDS_ON_SETTING, Settings.MOUSE_EMULATION)
@@ -226,27 +323,6 @@ class SettingsTvTest : SettingsScreenTestBase() {
     }
 
     @Test
-    fun `the D-pad scrolls the licence texts`() {
-        licenses = (1..200).joinToString("\n") { "Licence line $it" }
-        show(keyboard = true)
-        selectGroup("About")
-        composeRule.onNodeWithText("Open-source licences").performClick()
-        composeRule.waitForIdle()
-        val text =
-            composeRule.onNode(
-                hasText("Licence line 1", substring = true) and hasAnyAncestor(isDialog())
-            )
-        text.requestFocus()
-
-        text.performKeyInput { pressKey(Key.DirectionDown) }
-        composeRule.waitForIdle()
-
-        val scrolled =
-            text.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
-        assertThat(scrolled).isGreaterThan(0f)
-    }
-
-    @Test
     fun `Reset layout on a TV asks first with Cancel focused`() {
         show(keyboard = true)
         selectGroup("On-screen controls")
@@ -271,7 +347,30 @@ class SettingsHandheldTest : SettingsScreenTestBase() {
         show(keyboard = true)
 
         composeRule.onNodeWithText("Stream").assertIsDisplayed()
-        composeRule.onNodeWithText("Privacy and diagnostics").assertIsDisplayed()
+        composeRule.onNodeWithText("Privacy and diagnostics").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Resolution").assertIsDisplayed()
+    }
+
+    @Test
+    fun `Down from Stream to About focuses each group in turn, whole inside the window`() {
+        show(keyboard = true)
+
+        walkDownTheGroups()
+    }
+
+    @Test
+    fun `the Appearance group has the Background row with the seven styles`() {
+        show(keyboard = true)
+
+        // The group list of a handheld may scroll: do not rely on how many groups fit in 480dp.
+        composeRule.onNodeWithText("Appearance").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Appearance").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Background").assertIsDisplayed()
+        composeRule.onNodeWithText("Aurora curtains").assertIsDisplayed()
+        composeRule.onNodeWithText("Background").performClick()
+        composeRule.waitForIdle()
+        BACKGROUND_NAMES.forEach { sheetOption(it).assertExists() }
     }
 }

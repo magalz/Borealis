@@ -14,6 +14,8 @@ import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -68,6 +70,8 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
                 "ADVANCED",
                 "Optimise game settings",
                 "Picture-in-picture",
+                "APPEARANCE",
+                "Background",
                 "Privacy and diagnostics",
                 "ABOUT",
                 "Version",
@@ -134,6 +138,41 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
         composeRule.onNodeWithText("9 %").assertExists()
         composeRule.onNodeWithText("60 %").assertExists()
         composeRule.onNodeWithText("120 %").assertExists()
+    }
+
+    @Test
+    fun `the Appearance group has the Background row with the seven styles`() {
+        show()
+
+        row("Background").performClick()
+        composeRule.waitForIdle()
+
+        BACKGROUND_NAMES.forEach { sheetOption(it).assertExists() }
+    }
+
+    @Test
+    fun `choosing a style stores it and the row shows it`() {
+        show()
+        composeRule.onNodeWithText("Aurora curtains").assertExists()
+
+        row("Background").performClick()
+        composeRule.waitForIdle()
+        sheetOption("Light mist").performClick()
+        composeRule.waitForIdle()
+
+        assertThat(snapshot[Settings.BACKGROUND]).isEqualTo("light_mist")
+        composeRule.onNodeWithText("Light mist").assertExists()
+        composeRule.onNodeWithText("Aurora curtains").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a stored style that is unknown shows the default as the chosen one`() {
+        stored(Settings.BACKGROUND to "bogus")
+
+        show()
+
+        composeRule.onNodeWithText("Aurora curtains").assertExists()
+        composeRule.onNodeWithText("bogus").assertDoesNotExist()
     }
 
     @Test
@@ -617,6 +656,25 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
         composeRule
             .onNode(hasText("The licence texts of the test", substring = true))
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun `a swipe scrolls the licence texts`() {
+        licenses = (1..200).joinToString("\n") { "Licence line $it" }
+        show()
+        row("Open-source licences").performClick()
+        composeRule.waitForIdle()
+        val text =
+            composeRule.onNode(
+                hasText("Licence line 1", substring = true) and hasAnyAncestor(isDialog())
+            )
+
+        text.performTouchInput { swipeUp() }
+        composeRule.waitForIdle()
+
+        val scrolled =
+            text.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+        assertThat(scrolled).isGreaterThan(0f)
     }
 
     @Test

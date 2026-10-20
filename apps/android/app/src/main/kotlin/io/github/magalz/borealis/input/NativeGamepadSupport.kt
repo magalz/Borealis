@@ -8,7 +8,9 @@ import io.github.magalz.borealis.designsystem.adaptive.isGameController
  * What the USB driver needs to know about one Android input device. [hasJoystickXy] is true when
  * the device has the X and Y motion ranges of a joystick (for the JOYSTICK source, or else for the
  * GAMEPAD source), the way `ControllerHandler` looks them up. [isVirtual] marks the system's
- * virtual devices, which are no pad.
+ * virtual devices, which are no pad. [keyboardType] is the device's
+ * `InputDevice.getKeyboardType()`: an alphabetic keyboard with joystick axes is no pad, so the
+ * default is [InputDevice.KEYBOARD_TYPE_NONE].
  */
 data class InputDeviceFacts(
     val vendorId: Int,
@@ -16,6 +18,7 @@ data class InputDeviceFacts(
     val sources: Int,
     val hasJoystickXy: Boolean = false,
     val isVirtual: Boolean = false,
+    val keyboardType: Int = InputDevice.KEYBOARD_TYPE_NONE,
 )
 
 /**
@@ -37,7 +40,7 @@ object NativeGamepadSupport {
         devices.any {
             it.vendorId == vendorId &&
                 it.productId == productId &&
-                isGameController(it.sources, it.isVirtual, it.hasJoystickXy)
+                isGameController(it.sources, it.isVirtual, it.hasJoystickXy, it.keyboardType)
         }
 
     /** The same check against the devices Android has right now. */
@@ -55,6 +58,7 @@ object NativeGamepadSupport {
                         it.sources,
                         hasJoystickXy = it.hasJoystickXy(),
                         isVirtual = it.isVirtual,
+                        keyboardType = it.keyboardType,
                     )
                 }
             },

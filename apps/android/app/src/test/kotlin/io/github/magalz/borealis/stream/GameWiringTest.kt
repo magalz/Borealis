@@ -71,7 +71,13 @@ class GameWiringTest {
     @Test
     fun `the menu chord opens the menu and the USB pad keys reach the chrome`() {
         assertThat(source).contains("controllerHandler.setMenuChordListener(streamSession::openMenu)")
-        assertThat(source).contains("controllerHandler.setChromeKeySink(chromeHost::dispatchKeyEvent)")
+        assertThat(source).contains("controllerHandler.setChromeKeySink(chromeHost::dispatchUsbPadKey)")
+    }
+
+    @Test
+    fun `the keyboard asks the gamepad handler whether the USB driver holds a pad`() {
+        assertThat(source).contains("StreamSessionFactory.create(")
+        assertThat(source).contains("controllerHandler::hasUsbPad")
     }
 
     @Test

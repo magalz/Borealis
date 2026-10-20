@@ -2,6 +2,8 @@ package io.github.magalz.borealis.library.apps
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
@@ -127,6 +129,39 @@ class AppsScreenshotTest {
             state(runningFirst = true).copy(details = apps(runningFirst = true).first()),
         )
 
+    /** The confirmation of Quit for Desktop: the question, then what it costs. */
+    @Test
+    @Config(qualifiers = PHONE)
+    fun appActionsPhoneQuitConfirm() =
+        shoot("appactions_phone_quit-confirm", FormFactor.Phone, runningSheet()) {
+            composeRule.onNodeWithText("Quit Desktop").performClick()
+        }
+
+    /** The same for a game: it closes and its unsaved progress is lost. */
+    @Test
+    @Config(qualifiers = PHONE)
+    fun appActionsPhoneQuitConfirmGame() =
+        shoot("appactions_phone_quit-confirm-game", FormFactor.Phone, gameRunningSheet()) {
+            composeRule.onNodeWithText("Quit Steam Big Picture").performClick()
+        }
+
+    private fun gameRunningSheet(): AppsUiState {
+        val steam = apps(runningFirst = false)[1].copy(running = true)
+        return AppsUiState(
+            loading = false,
+            hostName = "Desk PC",
+            runningAppId = steam.id,
+            runningAppName = steam.name,
+            items = apps(runningFirst = false).map { if (it.id == steam.id) steam else it },
+            actions =
+                AppActionsUiState(
+                    steam,
+                    steam.name,
+                    listOf(AppAction.RESUME, AppAction.QUIT, AppAction.DETAILS),
+                ),
+        )
+    }
+
     private fun runningSheet(): AppsUiState {
         val desktop = apps(runningFirst = true).first()
         return state(
@@ -136,6 +171,7 @@ class AppsScreenshotTest {
                     desktop,
                     "Desktop",
                     listOf(AppAction.RESUME, AppAction.QUIT, AppAction.DETAILS),
+                    runningAppIsDesktop = true,
                 ),
         )
     }
@@ -149,11 +185,18 @@ class AppsScreenshotTest {
                     hades,
                     "Desktop",
                     listOf(AppAction.QUIT_AND_START, AppAction.DETAILS, AppAction.HIDE),
+                    runningAppIsDesktop = true,
                 ),
         )
     }
 
-    private fun shoot(name: String, formFactor: FormFactor, state: AppsUiState) {
+    /** [beforeShot] drives the screen, for instance to open the confirmation, once it is shown. */
+    private fun shoot(
+        name: String,
+        formFactor: FormFactor,
+        state: AppsUiState,
+        beforeShot: () -> Unit = {},
+    ) {
         composeRule.setContent {
             // The shell draws the rail beside Apps on a TV and a handheld.
             LibraryScaffold(
@@ -175,6 +218,8 @@ class AppsScreenshotTest {
                 )
             }
         }
+        composeRule.waitForIdle()
+        beforeShot()
         composeRule.waitForIdle()
         // The whole screen, not the root node: the sheet is a window of its own.
         composeRule.settleWindows()

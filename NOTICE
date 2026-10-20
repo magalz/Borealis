@@ -132,6 +132,15 @@ Borealis Kotlin modules (apps/android/gradle/libs.versions.toml)
     License: Apache-2.0
     https://developer.android.com/jetpack/androidx
 
+  Media3 ExoPlayer (androidx.media3 1.11.1: common, container, database, datasource, decoder,
+  extractor and exoplayer; plays the video backgrounds)
+    License: Apache-2.0
+    https://developer.android.com/media/media3
+
+  Guava 33.3.1-android (and failureaccess; Media3 depends on them)
+    License: Apache-2.0
+    https://github.com/google/guava
+
 Fonts (design/fonts/)
 
   IBM Plex Sans and IBM Plex Mono

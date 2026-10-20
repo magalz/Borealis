@@ -64,4 +64,31 @@ class GuideTapTest {
         assertThat(GuideChord.tapButtons(select, hasSelect = true, hasMode = true))
             .isEqualTo(GamepadButtons.SELECT)
     }
+
+    @Test
+    fun `letting go of the quit combo down to Start and Select and then one of them sends no Guide tap`() {
+        val detector = MenuChordDetector()
+        val start = GamepadButtons.START
+        val select = GamepadButtons.SELECT
+        val left = GamepadButtons.LEFT_BUMPER
+        val right = GamepadButtons.RIGHT_BUMPER
+        val steps =
+            listOf(
+                start,
+                start or select,
+                start or select or left,
+                start or select or left or right,
+                start or select or right,
+                start or select,
+                select,
+                0,
+            )
+
+        val taps = steps.mapIndexed { index, buttons ->
+            val update = detector.update(buttons, index * 100L, true, holdLone = true)
+            GuideChord.tapButtons(update, hasSelect = true, hasMode = false)
+        }
+
+        assertThat(taps).containsExactly(0, 0, 0, 0, 0, 0, 0, 0)
+    }
 }

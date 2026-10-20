@@ -231,6 +231,26 @@ class StreamChromeHost(
         return true
     }
 
+    /**
+     * [dispatchKeyEvent] for a key the gamepad handler made up for a pad on the USB driver. Call it
+     * on the main thread. Such a key reaches the chrome without passing the window's input
+     * pipeline, which is what takes the window out of touch mode for the navigation and typing keys
+     * of a pad Android knows. A phone's window starts in touch mode, where Compose gives the focus
+     * to no clickable row, so the keys of the pad would move and click nothing. Every key that goes
+     * down while the chrome is modal leaves touch mode if the window is in it, and then acts, as on
+     * a TV: the first one is not consumed to show the focus, and the focus starts on the first row.
+     */
+    fun dispatchUsbPadKey(event: KeyEvent): Boolean {
+        if (
+            session.chromeMode == ChromeMode.MODAL &&
+                event.action == KeyEvent.ACTION_DOWN &&
+                isInTouchMode
+        ) {
+            composeView.requestFocusFromTouch()
+        }
+        return dispatchKeyEvent(event)
+    }
+
     /** Whether the modal chrome consumes [event] without acting on it. */
     private fun isSpent(event: KeyEvent): Boolean =
         isHeldThrough(event) ||
@@ -312,11 +332,16 @@ class StreamChromeHost(
         private const val CONFIRM_GUARD_MS = 1000L
 
         /**
-         * Whether the device is a phone, where the keyboard docks under the stream instead of
-         * covering it: the same rule the Library uses for its layouts, so a wide phone with a game
-         * controller connected is not one.
+         * Whether the keyboard that opens now docks under the stream instead of covering it: on a
+         * phone (the form factor the Library uses for its layouts), and only while no game
+         * controller is connected, whether Android has it or the app's USB driver holds it
+         * ([usbPadHeld]; Android has no input device for such a pad). A pad cannot reach a docked
+         * keyboard, because the chrome takes touches only and the keys of the pad go to the stream,
+         * so with a pad the keyboard covers the stream and the pad navigates it. The caller asks
+         * when the keyboard opens, so a pad that connects later is counted.
          */
-        fun isPhone(context: Context): Boolean {
+        fun dockedKeyboard(context: Context, usbPadHeld: Boolean): Boolean {
+            if (usbPadHeld || isGamepadConnected()) return false
             val configuration = context.resources.configuration
             return formFactorOf(
                 FormFactorFacts(
@@ -327,8 +352,8 @@ class StreamChromeHost(
                     uiModeType = configuration.uiMode and Configuration.UI_MODE_TYPE_MASK,
                     widthDp = configuration.screenWidthDp,
                     touchscreen = configuration.touchscreen,
-                    navigation = configuration.navigation,
-                    gamepadConnected = isGamepadConnected(),
+                    // A connected pad returned above, so none counts here.
+                    gamepadConnected = false,
                 )
             ) == FormFactor.Phone
         }

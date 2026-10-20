@@ -48,6 +48,7 @@ import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.GameGestures;
 import com.limelight.utils.Vector2d;
 
+import io.github.magalz.borealis.designsystem.adaptive.ConnectedGamepadsKt;
 import io.github.magalz.borealis.stream.input.ButtonState;
 import io.github.magalz.borealis.stream.input.CaptureEnd;
 import io.github.magalz.borealis.stream.input.ChromeKeySink;
@@ -352,9 +353,8 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     }
 
     private static boolean hasJoystickAxes(InputDevice device) {
-        return (device.getSources() & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK &&
-                getMotionRangeForJoystickAxis(device, MotionEvent.AXIS_X) != null &&
-                getMotionRangeForJoystickAxis(device, MotionEvent.AXIS_Y) != null;
+        // The rule is in Kotlin: an alphabetic keyboard with joystick axes is no pad.
+        return ConnectedGamepadsKt.hasControllerJoystickAxes(device);
     }
 
     private static boolean hasGamepadButtons(InputDevice device) {
@@ -1311,6 +1311,11 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
     public void setChromeKeySink(ChromeKeySink sink) {
         chromeKeySink = sink;
+    }
+
+    // BOREALIS: whether the USB driver holds a pad, which Android has no input device for (stream)
+    public boolean hasUsbPad() {
+        return usbDeviceContexts.size() > 0;
     }
 
     @Override
@@ -2628,7 +2633,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             // any action.
             if ((context.inputMap & ControllerPacket.PLAY_FLAG) != 0 &&
                     event.getEventTime() - context.startDownTime > ControllerHandler.START_DOWN_TIME_MOUSE_MODE_MS &&
-                    prefConfig.mouseEmulation && !captured &&
+                    prefConfig.mouseEmulation && !captured && !context.pendingExit &&
                     !context.menuChord.claims(ControllerPacket.PLAY_FLAG)) {
                 context.toggleMouseEmulation();
             }

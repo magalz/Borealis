@@ -1,6 +1,5 @@
 package io.github.magalz.borealis.library.apps
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -82,12 +81,7 @@ fun AppsScreen(
     modifier: Modifier = Modifier,
 ) {
     BorealisTheme(formFactor) {
-        Box(
-            modifier
-                .fillMaxSize()
-                .background(LocalBorealisColors.current.page)
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-        ) {
+        Box(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             Column(Modifier.fillMaxSize()) {
                 if (formFactor == FormFactor.Phone) {
                     BorealisPhoneBar(

@@ -45,7 +45,8 @@ internal enum class RailSelection {
  *
  * The frame draws the [backgroundStyle] once, behind the rail and the screen: the screens have no
  * page of their own, so it shows through them, and the rail keeps its own colour.
- * [BackgroundStyle.Off] is the plain page.
+ * [BackgroundStyle.Off] is the plain page. It gives the screens the [look] that the viewer chose;
+ * the theme that each screen wears inside it keeps that look.
  *
  * The frame owns the system bar insets where it has the rail, so the rail and the screen beside it
  * start at the same edge and nothing moves when the screen changes; the screens of a phone draw
@@ -61,7 +62,7 @@ internal fun LibraryScaffold(
     look: BorealisLook = BorealisLook(),
     content: @Composable () -> Unit,
 ) {
-    BorealisTheme(formFactor) {
+    BorealisTheme(formFactor, look) {
         val rail = formFactor != FormFactor.Phone
         Box(modifier.fillMaxSize()) {
             BorealisBackground(backgroundStyle, Modifier.fillMaxSize())

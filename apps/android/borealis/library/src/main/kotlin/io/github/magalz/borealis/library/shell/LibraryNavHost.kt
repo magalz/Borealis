@@ -71,7 +71,9 @@ private const val FADE_MS = 150
  *
  * [backgroundStyle] is what the shell draws behind the rail and every screen. It is the one input
  * of the background: [LibraryActivity] passes the style that the Appearance setting stores, and
- * where none is passed it is [BackgroundStyle.Default].
+ * where none is passed it is [BackgroundStyle.Default]. [look] is the look that the screens draw
+ * with: [LibraryActivity] passes the one that the settings store, and where none is passed it is
+ * the default look.
  */
 @Composable
 internal fun LibraryNavHost(

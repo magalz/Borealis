@@ -145,13 +145,13 @@ class CollapsibleSectionTest {
     }
 
     @Test
-    fun `the header is at least 48dp tall and as wide as its parent`() {
+    fun `the header is at least 48dp tall and as wide as the card less its 8dp of padding`() {
         composeRule.setContent { Specimen(expanded = false) }
 
         composeRule.onNodeWithText("STREAM").assertHeightIsAtLeast(48.dp)
         val header = composeRule.onNodeWithText("STREAM").getBoundsInRoot()
         val root = composeRule.onRoot().getBoundsInRoot()
-        assertThat(header.width.value).isWithin(0.5f).of(root.width.value)
+        assertThat(header.width.value).isWithin(0.5f).of(root.width.value - 2 * 8)
     }
 
     @Test

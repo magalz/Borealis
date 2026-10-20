@@ -469,7 +469,7 @@ scheduled yet.
 From the Sprint 9 device round, 2026-10-19. None is scheduled yet.
 
 - Back from Apps puts the focus on the first host card, not on the host that was
-  opened. TODO(verify): the file was not found in the code at `5025614e`.
+  opened. Seen twice on the Streamer in the round; the cause is not traced yet.
 - The About "Version" row shows a chevron but opens nothing (`AboutSection.kt`).
 - Update Gradle 9.8.1 to 9.8.2 and kotlinx-serialization 1.11.0 to 1.12.0.
   Dependabot should open the two updates.
@@ -481,7 +481,9 @@ From the Sprint 9 device round, 2026-10-19. None is scheduled yet.
   order. Check it on a TV with a long entry.
 - When the task root is not the launcher intent (for example a pinned shortcut
   opened first), opening the app from the launcher stacks a new Library instance.
-  TODO(verify): not checked in the code.
+  `LibraryActivity` has the standard launch mode; only `Game` is `singleTask`.
+  Seen on the Streamer after a start with `am start -n`, whose intent has no
+  action or category.
 - A touch handheld whose built-in controls report only `KEYBOARD | DPAD`, with no
   GAMEPAD source, now gets the phone layout. This is rare; watch for it.
 

@@ -17,16 +17,15 @@ internal const val WIDE_WINDOW_DP = 600
 
 /**
  * What the platform reports about a device and its window: the facts [formFactorOf] decides from.
- * [isTvFeature] is the leanback feature, [uiModeType] and [touchscreen] and [navigation] are the
- * `Configuration` constants, [widthDp] is the window's width and [gamepadConnected] says whether a
- * game controller is connected.
+ * [isTvFeature] is the leanback feature, [uiModeType] and [touchscreen] are the `Configuration`
+ * constants, [widthDp] is the window's width and [gamepadConnected] says whether a game controller
+ * is connected.
  */
 data class FormFactorFacts(
     val isTvFeature: Boolean,
     val uiModeType: Int,
     val widthDp: Int,
     val touchscreen: Int,
-    val navigation: Int,
     val gamepadConnected: Boolean,
 )
 
@@ -39,13 +38,14 @@ data class FormFactorFacts(
  * - **Phone** otherwise.
  *
  * Consequences, all intended:
- * - A touch tablet reports no navigation and a touch screen, so it stays a phone layout.
+ * - A touch tablet has a touch screen and no game controller, so it stays a phone layout.
  * - A phone with a clip-on or paired gamepad (Backbone, Kishi) in landscape, 600dp or wider, counts
  *   as a handheld: that is the use the handheld layout is for.
- * - The configuration alone misses such a pad: Android reports a D-pad navigation only for a device
- *   with D-pad key codes, and modern pads (Xbox, DualSense, 8BitDo, Switch Pro) send the D-pad as a
- *   hat axis, so the phone keeps reporting a touch screen and no navigation. That is why the
- *   connected game controller is a fact of its own.
+ * - The navigation of the configuration (D-pad, trackball or wheel) is no fact. Android reports a
+ *   D-pad navigation for any keyboard with arrow keys, so a Bluetooth keyboard would make a wide
+ *   phone a handheld, and a pad with D-pad key codes counts as a game controller anyway. Modern
+ *   pads (Xbox, DualSense, 8BitDo, Switch Pro) send the D-pad as a hat axis, which the
+ *   configuration never reports. That is why the connected game controller is a fact of its own.
  * - The result follows the window and the connected pads, so it flips when the phone is rotated or
  *   a pad connects or disconnects; the screens recompose with the other layout and keep their
  *   state.
@@ -84,7 +84,6 @@ fun rememberFormFactor(): FormFactor {
                 uiModeType = uiModeTypeOf(context),
                 widthDp = windowWidthDp(windowWidthPx, density.density, configurationWidthDp),
                 touchscreen = configuration.touchscreen,
-                navigation = configuration.navigation,
                 gamepadConnected = gamepadConnected,
             )
         )

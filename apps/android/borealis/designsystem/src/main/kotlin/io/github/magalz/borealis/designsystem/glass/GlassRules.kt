@@ -19,7 +19,9 @@ private const val REDUCED_BLUR_DP = 48
 private const val NO_BLUR_DP = 0
 private const val PERCENT = 100
 
-/** The pace of the drawn background on a TV while glass is drawn: the blur fits it (ADR 0057). */
+/**
+ * The pace of the drawn background on a TV while the blur is drawn: the blur fits it (ADR 0057).
+ */
 internal const val TV_GLASS_FRAMES_PER_SECOND = 24
 
 /**
@@ -102,7 +104,10 @@ internal fun BorealisColors.onGlass(style: BackgroundStyle, spec: GlassSpec): Bo
     return withSecondaryInk(walk(ink3, ink, target), walk(ink4, ink, target))
 }
 
-/** How fast the drawn background runs: 24 frames a second on a TV while glass is drawn, else 30. */
+/**
+ * How fast the drawn background runs: 24 frames a second on a TV while the blur is drawn, else 30.
+ * The slower pace pays for the blur, so a tint with no blur (API 28 to 30) keeps 30.
+ */
 internal fun glassFrameRate(spec: GlassSpec, formFactor: FormFactor): Int =
-    if (!spec.solid && formFactor == FormFactor.Tv) TV_GLASS_FRAMES_PER_SECOND
+    if (spec.blurDp > 0 && formFactor == FormFactor.Tv) TV_GLASS_FRAMES_PER_SECOND
     else DRAWN_FRAMES_PER_SECOND

@@ -72,7 +72,7 @@ internal val LocalGlassScene = staticCompositionLocalOf {
  *
  * While a dialog or a sheet is open over the host ([OverlayOpen]) and the device can blur, the host
  * blurs all of its content and holds the background still: no frame of it is drawn while the sheet
- * is up. A drawn background runs at 24 frames a second on a TV while glass is drawn.
+ * is up. A drawn background runs at 24 frames a second on a TV while the blur is drawn.
  */
 @Composable
 fun GlassHost(

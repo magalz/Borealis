@@ -297,12 +297,13 @@ internal fun DrawnBackground(style: BackgroundStyle, cycle: FloatState, modifier
 @Composable
 private fun rememberCycle(animated: Boolean, framesPerSecond: Int): FloatState {
     val cycle = remember { mutableFloatStateOf(STILL_CYCLE) }
-    LaunchedEffect(animated, framesPerSecond) {
+    val loop = LocalCycleLoop.current
+    LaunchedEffect(animated, framesPerSecond, loop) {
         if (!animated) {
             cycle.floatValue = STILL_CYCLE
             return@LaunchedEffect
         }
-        runCycleLoop(framesPerSecond) { cycle.floatValue = it }
+        loop.run(framesPerSecond) { cycle.floatValue = it }
     }
     return cycle
 }

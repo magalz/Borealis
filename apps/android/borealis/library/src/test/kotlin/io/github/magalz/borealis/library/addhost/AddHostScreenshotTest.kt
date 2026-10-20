@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.shell.LibraryScaffold
 import io.github.magalz.borealis.library.shell.RailActions
@@ -58,6 +59,7 @@ class AddHostScreenshotTest {
             formFactor,
             actions = RailActions({}, {}, {}),
             selected = RailSelection.AddHost,
+            backgroundStyle = BackgroundStyle.Off,
         ) {
             AddHostScreen(
                 state = state,

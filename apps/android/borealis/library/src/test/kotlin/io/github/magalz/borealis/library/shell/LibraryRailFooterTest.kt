@@ -13,6 +13,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.testing.HANDHELD
 import io.github.magalz.borealis.library.testing.PHONE
@@ -46,7 +47,12 @@ class LibraryRailFooterTest {
 
     private fun show(formFactor: FormFactor) {
         composeRule.setContent {
-            LibraryScaffold(formFactor, RailSelection.Hosts, RailActions({}, {}, {})) {
+            LibraryScaffold(
+                formFactor,
+                RailSelection.Hosts,
+                RailActions({}, {}, {}),
+                backgroundStyle = BackgroundStyle.Off,
+            ) {
                 Box(Modifier.fillMaxSize())
             }
         }

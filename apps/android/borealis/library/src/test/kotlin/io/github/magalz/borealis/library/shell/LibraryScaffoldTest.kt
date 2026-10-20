@@ -17,6 +17,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.RailItem
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -47,6 +48,7 @@ class LibraryScaffoldTest {
                 formFactor,
                 selected,
                 RailActions({ hosts++ }, { addHost++ }, { settings++ }),
+                backgroundStyle = BackgroundStyle.Off,
             ) {
                 Box(Modifier.fillMaxSize().testTag("content"))
             }

@@ -7,6 +7,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.settleWindows
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.shell.LibraryScaffold
@@ -203,6 +204,7 @@ class AppsScreenshotTest {
                 formFactor,
                 selected = RailSelection.Hosts,
                 actions = RailActions({}, {}, {}),
+                backgroundStyle = BackgroundStyle.Off,
             ) {
                 AppsScreen(
                     state = state,

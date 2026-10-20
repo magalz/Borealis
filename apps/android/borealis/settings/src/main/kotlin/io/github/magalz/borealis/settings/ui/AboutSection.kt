@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.settings.ui
 
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -14,14 +13,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -34,11 +27,9 @@ import io.github.magalz.borealis.designsystem.components.settings.SettingsValueR
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.settings.R
 import kotlin.math.roundToInt
-import kotlinx.coroutines.launch
 
 private const val SOURCE_CODE_URL = "https://github.com/magalz/Borealis"
 private const val PRIVACY_POLICY_URL = "https://github.com/magalz/Borealis/blob/main/PRIVACY.md"
-private val LICENSE_SCROLL_STEP = 96.dp
 private const val LICENSE_HEIGHT_SHARE = 0.6f
 private val LICENSE_OUTLINE_ROOM = 8.dp
 private val LICENSE_TEXT_PADDING = 12.dp
@@ -104,9 +95,7 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
         remember(about) { about.loadLicenses() }
             ?: stringResource(R.string.settings_about_licenses_unavailable)
     val scroll = rememberScrollState()
-    val scope = rememberCoroutineScope()
     val density = LocalDensity.current
-    val stepPx = with(density) { LICENSE_SCROLL_STEP.toPx() }
     val windowHeight = LocalWindowInfo.current.containerSize.height
     // The dialog scrolls its content, so this text needs a height of its own to scroll in. A share
     // of the window is right for a tall one; in a short one the dialog's title, Close and padding
@@ -129,21 +118,7 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
                     val shown = placed.boundsInWindow().height.roundToInt()
                     if (shown < placed.size.height) room = shown
                 }
-                .onKeyEvent { event ->
-                    val delta =
-                        when (event.key) {
-                            Key.DirectionDown -> stepPx
-                            Key.DirectionUp -> -stepPx
-                            else -> 0f
-                        }
-                    val canScroll =
-                        if (delta > 0) scroll.canScrollForward else scroll.canScrollBackward
-                    val scrolls = delta != 0f && canScroll
-                    if (scrolls && event.type == KeyEventType.KeyDown) {
-                        scope.launch { scroll.animateScrollBy(delta) }
-                    }
-                    scrolls
-                }
+                .dpadScroll(scroll)
                 .heightIn(max = maxHeight)
                 // The dialog clips what is outside its content, and the outline reaches about 5dp.
                 .padding(LICENSE_OUTLINE_ROOM)

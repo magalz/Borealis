@@ -101,10 +101,12 @@ class SettingsRowFixesTest : PhoneSettingsTestBase() {
     }
 
     @Test
-    fun `the Version row cannot be clicked`() {
+    fun `the Version row is read as text, not as a button, and shows the title and the value`() {
         showOpen()
 
-        row("Version").assertHasNoClickAction()
+        row("Version")
+            .assertHasNoClickAction()
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Role))
         composeRule.onNodeWithText("9.8.7 (commit abc1234)").assertExists()
     }
 }

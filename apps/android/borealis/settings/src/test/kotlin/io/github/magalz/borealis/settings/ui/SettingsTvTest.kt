@@ -153,6 +153,21 @@ class SettingsTvTest : SettingsScreenTestBase() {
     }
 
     @Test
+    fun `in About the Version row is a focus stop that OK leaves alone and Down passes`() {
+        show(keyboard = true)
+        selectGroup("About")
+
+        group("About").performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Version").assertIsFocused()
+        press("Version", Key.DirectionCenter)
+        press("Version", Key.DirectionDown)
+
+        composeRule.onNodeWithText("Source code").assertIsFocused()
+        assertThat(openedLinks).isEmpty()
+    }
+
+    @Test
     fun `Left from a row further down also returns to the group`() {
         show(keyboard = true)
         press("Stream", Key.DirectionRight)

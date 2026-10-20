@@ -24,11 +24,9 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.settings.SettingsInfoRow
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.settings.R
@@ -51,24 +49,14 @@ internal fun AboutRows(about: AboutSource) {
     var showLicenses by remember { mutableStateOf(false) }
     val openLink: (String) -> Unit = { url -> if (!about.openLink(url)) linkAddress = url }
 
-    // The row only reports a value and has nothing to open. It stays a focus stop, so a D-pad can
-    // scroll to it, but a screen reader hears text and no button.
-    val versionTitle = stringResource(R.string.settings_about_version_title)
-    val versionValue =
-        stringResource(
-            R.string.settings_about_version_summary,
-            about.versionName ?: stringResource(R.string.settings_about_version_unknown),
-            about.commit,
-        )
-    SettingsValueRow(
-        title = versionTitle,
-        value = versionValue,
-        onClick = {},
-        modifier =
-            Modifier.clearAndSetSemantics {
-                this[SemanticsProperties.Text] =
-                    listOf(AnnotatedString(versionTitle), AnnotatedString(versionValue))
-            },
+    SettingsInfoRow(
+        title = stringResource(R.string.settings_about_version_title),
+        value =
+            stringResource(
+                R.string.settings_about_version_summary,
+                about.versionName ?: stringResource(R.string.settings_about_version_unknown),
+                about.commit,
+            ),
     )
     SettingsValueRow(
         title = stringResource(R.string.settings_about_source_code_title),

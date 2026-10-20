@@ -50,8 +50,8 @@ fun Modifier.glassSurface(shape: Shape): Modifier {
 /**
  * Gives [content], which is on a glass surface, the text colours that keep 4.5:1 over the
  * background behind it: the ink-3 and ink-4 roles are replaced, through [LocalBorealisColors], by
- * the colours that [GlassRules] works out for the background, the tint and the blur. Where the
- * glass is solid, or outside any host, [content] sees the tokens as they are.
+ * the colours that `onGlass` works out for the background, the tint and the blur. Where the glass
+ * is solid, or outside any host, [content] sees the tokens as they are.
  */
 @Composable
 fun GlassTextColors(content: @Composable () -> Unit) {

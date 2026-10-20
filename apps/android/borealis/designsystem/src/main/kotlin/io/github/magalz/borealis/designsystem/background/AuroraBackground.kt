@@ -45,13 +45,16 @@ private const val PERIOD_NANOS = 20_000_000_000L
 private const val STILL_CYCLE = 0.1f
 
 /**
- * How many times a second the position of a drawn background moves where nothing slows it. A third
- * of a second is a whole number of vsyncs at 30, 60, 90 and 120 Hz (1, 2, 3 and 4), so each update
- * falls on a vsync.
+ * How many times a second the position of a drawn background moves where nothing slows it. A
+ * thirtieth of a second is a whole number of vsyncs at 30, 60, 90 and 120 Hz (1, 2, 3 and 4), so
+ * each update falls on a vsync.
  */
 internal const val DRAWN_FRAMES_PER_SECOND = 30
 
 private const val NANOS_PER_SECOND = 1_000_000_000L
+
+/** The time an update is due before the first has been drawn: there is none yet. */
+private const val NOTHING_DUE = Long.MIN_VALUE
 
 /**
  * How long before an update is due the thread wakes up and asks for the frame, so that a wake-up
@@ -342,14 +345,14 @@ internal suspend fun runCycleLoop(
 ) {
     val gap = NANOS_PER_SECOND / framesPerSecond
     var sleepMillis = 0L
-    var due: Long? = null
+    var due = NOTHING_DUE
     while (true) {
         delay(sleepMillis)
         val frame = withInfiniteFrameNanos {
             onCycle(cycleAt(it))
             it
         }
-        due = max((due ?: frame) + gap, frame + gap / 2)
+        due = max((if (due == NOTHING_DUE) frame else due) + gap, frame + gap / 2)
         // Clamped to none or one gap: with a clock that is not the one of the frame times the sleep
         // is wrong, but never an endless one.
         val sleepNanos = due - WAKE_EARLY_NANOS - nanoTime()

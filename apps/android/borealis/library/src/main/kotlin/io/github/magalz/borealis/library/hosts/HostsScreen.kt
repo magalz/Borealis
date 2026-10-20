@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
@@ -68,7 +69,10 @@ private val LOADING_SIZE = 64.dp
  *   Pair and Wake buttons are inline, so no long press is needed. A long press opens the options.
  * - **TV and handheld:** a header, then the cards in a grid; the shell draws the rail (Hosts, Add
  *   host, Settings) beside the screen. The first Continue card has focus when the screen opens,
- *   else the first host card. OK opens, hold OK, X or Menu opens the options.
+ *   else the first host card. OK opens, hold OK, X or Menu opens the options. When the screen comes
+ *   back after another one (Back from Apps), the card that had focus has it again, found by its
+ *   host and not by its place: the host may have changed its status or moved in the list. It is the
+ *   first card again when that host is gone.
  *
  * The options (Details, Wake, Forget) and the Forget confirmation belong to the screen: it keeps
  * which host they are open for and calls [onDetails], [onWake] or [onForget] when the user chooses.
@@ -99,6 +103,9 @@ fun HostsScreen(
     BorealisTheme(formFactor) {
         var optionsHostId by rememberSaveable { mutableStateOf<String?>(null) }
         var forgetHostId by rememberSaveable { mutableStateOf<String?>(null) }
+        // The navigation takes this screen out of the composition while another one shows, so an
+        // object it remembers is lost: the card that had focus is saved, like the dialogs are.
+        var focusedHostId by rememberSaveable { mutableStateOf<String?>(null) }
         val handlers =
             HostsHandlers(
                 onHostSelected = onHostSelected,
@@ -106,11 +113,13 @@ fun HostsScreen(
                 onWake = onWake,
                 onOptions = { optionsHostId = it },
                 onAddHost = onAddHost,
+                onHostFocused = { focusedHostId = it },
             )
         HostsLayout(
             state,
             formFactor,
             handlers,
+            focusedHostId,
             snackbarHostState,
             onSettings,
             modifier,
@@ -134,6 +143,7 @@ private fun HostsLayout(
     state: HostsUiState,
     formFactor: FormFactor,
     handlers: HostsHandlers,
+    focusedHostId: String?,
     snackbarHostState: SnackbarHostState,
     onSettings: () -> Unit,
     modifier: Modifier,
@@ -148,12 +158,12 @@ private fun HostsLayout(
         if (formFactor == FormFactor.Phone) {
             Column(Modifier.fillMaxSize()) {
                 PhoneTopBar(handlers.onAddHost, onSettings)
-                HostsBody(state, formFactor, handlers, Modifier.weight(1f))
+                HostsBody(state, formFactor, handlers, focusedHostId, Modifier.weight(1f))
             }
         } else {
             Column(Modifier.fillMaxSize()) {
                 TvHeader(state)
-                HostsBody(state, formFactor, handlers, Modifier.weight(1f))
+                HostsBody(state, formFactor, handlers, focusedHostId, Modifier.weight(1f))
             }
         }
         BorealisSnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter))
@@ -167,14 +177,20 @@ private class HostsHandlers(
     val onWake: (String) -> Unit,
     val onOptions: (String) -> Unit,
     val onAddHost: () -> Unit,
+    val onHostFocused: (String) -> Unit,
 )
 
 /**
  * The element that starts with focus on a TV or handheld, and the guard that lets the screen take
  * it once: a host that sorts first, a Continue card that appears or a card that scrolls back into
- * view later must not pull focus away from where the user moved it.
+ * view later must not pull focus away from where the user moved it. [hostId] is the card that had
+ * focus when the screen was last left, which starts with focus again if its host is still known.
  */
-private class StartFocus(val requester: FocusRequester, val state: InitialFocusState)
+private class StartFocus(
+    val requester: FocusRequester,
+    val state: InitialFocusState,
+    val hostId: String?,
+)
 
 private fun Modifier.withStartFocus(start: StartFocus?): Modifier =
     if (start == null) this else initialFocus(start.requester, start.state)
@@ -184,6 +200,7 @@ private fun HostsBody(
     state: HostsUiState,
     formFactor: FormFactor,
     handlers: HostsHandlers,
+    focusedHostId: String?,
     modifier: Modifier,
 ) {
     BoxWithConstraints(modifier) {
@@ -192,8 +209,14 @@ private fun HostsBody(
         // the hosts load or the search ends, so the first hosts to arrive take the focus.
         val requester = remember { FocusRequester() }
         val initialFocus = rememberInitialFocusState(state.loading || state.searching)
+        // Read when the guard starts, so a card that takes the focus later is not chased.
+        val restoredHostId = remember(initialFocus) { focusedHostId }
         val startFocus =
-            if (formFactor != FormFactor.Phone) StartFocus(requester, initialFocus) else null
+            if (formFactor != FormFactor.Phone) {
+                StartFocus(requester, initialFocus, restoredHostId)
+            } else {
+                null
+            }
         if (state.loading) {
             // Nothing to press while the hosts load: an OK pressed now must not open Add host.
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -236,6 +259,8 @@ private fun HostGrid(
 ) {
     val optionsLabel = stringResource(R.string.hosts_options)
     val unnamedApp = stringResource(R.string.hosts_app_running)
+    // A host card that had focus before wins over the first card, unless its host is gone.
+    val restoredHostId = startFocus?.hostId?.takeIf { id -> state.items.any { it.id == id } }
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
         modifier = Modifier.fillMaxSize(),
@@ -260,7 +285,9 @@ private fun HostGrid(
                     onClick = { handlers.onContinue(item.hostId) },
                     modifier =
                         Modifier.fillMaxWidth()
-                            .withStartFocus(startFocus.takeIf { index == 0 })
+                            .withStartFocus(
+                                startFocus.takeIf { index == 0 && restoredHostId == null }
+                            )
                             .testTag("continue:${item.hostId}"),
                 )
             }
@@ -272,13 +299,15 @@ private fun HostGrid(
             )
         }
         itemsIndexed(state.items, key = { _, item -> item.id }) { index, item ->
-            val first = index == 0 && state.continueItems.isEmpty()
+            val starts =
+                if (restoredHostId != null) item.id == restoredHostId
+                else index == 0 && state.continueItems.isEmpty()
             HostItem(
                 item,
                 handlers,
                 optionsLabel,
                 unnamedApp,
-                Modifier.withStartFocus(startFocus.takeIf { first }),
+                Modifier.withStartFocus(startFocus.takeIf { starts }),
             )
         }
     }
@@ -305,7 +334,10 @@ private fun HostItem(
                 handlers.onHostSelected(item.id)
             }
         },
-        modifier = modifier.testTag("host:${item.id}"),
+        modifier =
+            modifier
+                .onFocusChanged { if (it.isFocused) handlers.onHostFocused(item.id) }
+                .testTag("host:${item.id}"),
         detail = item.detailLine(),
         tags = item.tags.map { stringResource(it.labelRes()) },
         runningApp = item.runningApp?.let { it.name ?: unnamedApp },

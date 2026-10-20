@@ -21,6 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -72,10 +74,10 @@ private const val VK_BACKSPACE = 0x08
  * room it needs, so a [docked] keyboard leaves the stream visible above it. Keys are US virtual
  * keys; the System keyboard chip hands text in other languages to the Android keyboard.
  *
- * Not [docked] (TV and handheld), the focus starts on Q and the D-pad moves between the keys: A
- * types through the platform's D-pad centre fallback, B closes and Y is Backspace. Docked, the
- * panel takes no focus and handles no physical key, so a hardware keyboard keeps typing into the
- * PC.
+ * Not [docked] (TV and handheld), the focus starts on Q and the D-pad moves between the keys (Left
+ * and Right wrap around at the ends of a row): A types through the platform's D-pad centre
+ * fallback, B closes and Y is Backspace. Docked, the panel takes no focus and handles no physical
+ * key, so a hardware keyboard keeps typing into the PC.
  *
  * Nothing typed is logged: this code has no log calls.
  */
@@ -209,8 +211,14 @@ private class KeyActions(
 /** The first key of the row gives [requester] the focus the keyboard starts with. */
 private class FirstKeyFocus(val requester: FocusRequester, val state: InitialFocusState)
 
+/**
+ * A row of keys. The D-pad wraps at the ends of the row, as on any on-screen keyboard: forward from
+ * the last key it reaches the first key, and back from the first key it reaches the last.
+ */
 @Composable
 private fun KeyRow(keys: List<KeySpec>, actions: KeyActions, firstKeyFocus: FirstKeyFocus?) {
+    val rowStart = remember { FocusRequester() }
+    val rowEnd = remember { FocusRequester() }
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(KEY_GAP, Alignment.CenterHorizontally),
@@ -222,6 +230,12 @@ private fun KeyRow(keys: List<KeySpec>, actions: KeyActions, firstKeyFocus: Firs
             // A symbol on the cap is read out as the name of the key.
             if (!name.equals(caption, ignoreCase = true))
                 modifier = modifier.semantics { contentDescription = name }
+            if (index == 0) {
+                modifier = modifier.focusRequester(rowStart).focusProperties { start = rowEnd }
+            }
+            if (index == keys.lastIndex) {
+                modifier = modifier.focusRequester(rowEnd).focusProperties { end = rowStart }
+            }
             if (index == 0 && firstKeyFocus != null) {
                 modifier = modifier.initialFocus(firstKeyFocus.requester, firstKeyFocus.state)
             }

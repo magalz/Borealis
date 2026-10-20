@@ -94,6 +94,9 @@ internal fun disabledNote(disabled: RowState.Disabled?): String? =
     when (disabled?.reason) {
         null -> null
         DisabledReason.HDR_BROKEN_ON_FIRMWARE -> stringResource(R.string.settings_note_hdr_firmware)
+        DisabledReason.TRANSPARENCY_REDUCED,
+        DisabledReason.TRANSPARENCY_OFF,
+        DisabledReason.HIGH_CONTRAST_ON -> null
         DisabledReason.DEPENDS_ON_SETTING ->
             disabled.dependency
                 ?.let { SettingsItem.forSetting(it) }

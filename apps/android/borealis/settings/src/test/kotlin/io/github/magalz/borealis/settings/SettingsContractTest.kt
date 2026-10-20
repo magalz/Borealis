@@ -24,13 +24,25 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsContractTest {
     @Test
-    fun `the catalog holds the ported, logging, overlay, background and mouse speed settings`() {
+    fun `the catalog holds the ported, logging, overlay, background, look and mouse speed settings`() {
         assertThat(Settings.all).hasSize(CATALOG_SIZE)
         assertThat(Settings.all.map { it.key }).containsNoDuplicates()
         assertThat(Settings.all).contains(Settings.RESOLUTION)
         assertThat(Settings.all).contains(Settings.PERF_OVERLAY)
         assertThat(Settings.all.filter { it.store == SettingStore.DATASTORE })
-            .containsExactly(Settings.VERBOSE_LOGGING, Settings.MASK_ADDRESSES, Settings.BACKGROUND)
+            .containsExactly(
+                Settings.VERBOSE_LOGGING,
+                Settings.MASK_ADDRESSES,
+                Settings.BACKGROUND,
+                Settings.GLASS_TINT,
+                Settings.GLASS_BLUR,
+                Settings.REDUCE_MOTION,
+                Settings.TRANSPARENCY,
+                Settings.THICK_FOCUS,
+                Settings.TEXT_SIZE,
+                Settings.HIGH_CONTRAST,
+                Settings.COLOUR_VISION,
+            )
     }
 
     @Test
@@ -305,8 +317,8 @@ class SettingsContractTest {
     private companion object {
         /**
          * 38 ported stream settings, the gamepad mouse speed, 2 logging switches, the overlay
-         * choice and the background.
+         * choice, the background and the 8 settings of the glass and the accessibility group.
          */
-        const val CATALOG_SIZE = 43
+        const val CATALOG_SIZE = 51
     }
 }

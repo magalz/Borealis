@@ -61,6 +61,14 @@ class SettingsDefaultsParityTest {
                 Settings.VERBOSE_LOGGING,
                 Settings.MASK_ADDRESSES,
                 Settings.BACKGROUND,
+                Settings.GLASS_TINT,
+                Settings.GLASS_BLUR,
+                Settings.REDUCE_MOTION,
+                Settings.TRANSPARENCY,
+                Settings.THICK_FOCUS,
+                Settings.TEXT_SIZE,
+                Settings.HIGH_CONTRAST,
+                Settings.COLOUR_VISION,
             )
     }
 

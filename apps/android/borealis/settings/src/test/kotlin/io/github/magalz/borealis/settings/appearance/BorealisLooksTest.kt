@@ -1,0 +1,187 @@
+package io.github.magalz.borealis.settings.appearance
+
+import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
+import io.github.magalz.borealis.designsystem.theme.ColourVision
+import io.github.magalz.borealis.designsystem.theme.ReduceMotion
+import io.github.magalz.borealis.designsystem.theme.TextSize
+import io.github.magalz.borealis.designsystem.theme.Transparency
+import io.github.magalz.borealis.settings.catalog.BooleanSetting
+import io.github.magalz.borealis.settings.catalog.Setting
+import io.github.magalz.borealis.settings.catalog.SettingStore
+import io.github.magalz.borealis.settings.catalog.Settings
+import io.github.magalz.borealis.settings.catalog.StringSetting
+import io.github.magalz.borealis.settings.repository.SettingsSnapshot
+import org.junit.Test
+
+/**
+ * The look that the settings store (ADR 0057): stable string ids, never the ordinals of the enums
+ * of the look, and the defaults of [BorealisLook] for nothing stored or an id that nothing has.
+ */
+class BorealisLooksTest {
+    private fun look(vararg values: Pair<Setting<*>, Any?>): BorealisLook =
+        borealisLook(SettingsSnapshot.fromStored(values.toMap()))
+
+    private val unknownIds = listOf("", "bogus", "ON", "Standard", "FOLLOW_SYSTEM", "2", " on")
+
+    @Test
+    fun `nothing stored gives the look of the app with nothing changed`() {
+        assertThat(borealisLook(SettingsSnapshot.DEFAULTS)).isEqualTo(BorealisLook())
+    }
+
+    @Test
+    fun `the settings are in DataStore under stable keys and start as the default look`() {
+        val strings =
+            mapOf(
+                Settings.REDUCE_MOTION to ("borealis_reduce_motion" to "follow_system"),
+                Settings.TRANSPARENCY to ("borealis_transparency" to "standard"),
+                Settings.TEXT_SIZE to ("borealis_text_size" to "default"),
+                Settings.COLOUR_VISION to ("borealis_colour_vision" to "off"),
+                Settings.GLASS_TINT to ("borealis_glass_tint" to "40"),
+                Settings.GLASS_BLUR to ("borealis_glass_blur" to "8"),
+            )
+        for ((setting, expected) in strings) {
+            assertThat(setting).isInstanceOf(StringSetting::class.java)
+            assertThat(setting.key).isEqualTo(expected.first)
+            assertThat(setting.default).isEqualTo(expected.second)
+        }
+        val switches =
+            mapOf(
+                Settings.THICK_FOCUS to "borealis_thick_focus",
+                Settings.HIGH_CONTRAST to "borealis_high_contrast",
+            )
+        for ((setting, key) in switches) {
+            assertThat(setting).isInstanceOf(BooleanSetting::class.java)
+            assertThat(setting.key).isEqualTo(key)
+            assertThat(setting.default).isFalse()
+        }
+        for (setting in strings.keys + switches.keys) {
+            assertThat(setting.store).isEqualTo(SettingStore.DATASTORE)
+            assertThat(Settings.all).contains(setting)
+        }
+    }
+
+    @Test
+    fun `the defaults of the settings are the defaults of the look`() {
+        val defaults = BorealisLook()
+
+        assertThat(Settings.GLASS_TINT.default).isEqualTo(defaults.glassTintPercent.toString())
+        assertThat(Settings.GLASS_BLUR.default).isEqualTo(defaults.glassBlurDp.toString())
+        assertThat(Settings.THICK_FOCUS.default).isEqualTo(defaults.thickFocus)
+        assertThat(Settings.HIGH_CONTRAST.default).isEqualTo(defaults.highContrast)
+    }
+
+    @Test
+    fun `Reduce motion is stored as follow_system, on or off`() {
+        assertThat(look(Settings.REDUCE_MOTION to "follow_system").reduceMotion)
+            .isEqualTo(ReduceMotion.FollowSystem)
+        assertThat(look(Settings.REDUCE_MOTION to "on").reduceMotion).isEqualTo(ReduceMotion.On)
+        assertThat(look(Settings.REDUCE_MOTION to "off").reduceMotion).isEqualTo(ReduceMotion.Off)
+    }
+
+    @Test
+    fun `Transparency is stored as standard, reduced or off`() {
+        assertThat(look(Settings.TRANSPARENCY to "standard").transparency)
+            .isEqualTo(Transparency.Standard)
+        assertThat(look(Settings.TRANSPARENCY to "reduced").transparency)
+            .isEqualTo(Transparency.Reduced)
+        assertThat(look(Settings.TRANSPARENCY to "off").transparency).isEqualTo(Transparency.Off)
+    }
+
+    @Test
+    fun `Text size is stored as default, larger or largest`() {
+        assertThat(look(Settings.TEXT_SIZE to "default").textSize).isEqualTo(TextSize.Default)
+        assertThat(look(Settings.TEXT_SIZE to "larger").textSize).isEqualTo(TextSize.Larger)
+        assertThat(look(Settings.TEXT_SIZE to "largest").textSize).isEqualTo(TextSize.Largest)
+    }
+
+    @Test
+    fun `The colour-blind palette is stored as off, red_green or blue_yellow`() {
+        assertThat(look(Settings.COLOUR_VISION to "off").colourVision).isEqualTo(ColourVision.Off)
+        assertThat(look(Settings.COLOUR_VISION to "red_green").colourVision)
+            .isEqualTo(ColourVision.RedGreen)
+        assertThat(look(Settings.COLOUR_VISION to "blue_yellow").colourVision)
+            .isEqualTo(ColourVision.BlueYellow)
+    }
+
+    @Test
+    fun `the glass tint is stored as its percent`() {
+        for (percent in listOf(30, 40, 50, 60, 70, 85)) {
+            assertThat(look(Settings.GLASS_TINT to "$percent").glassTintPercent).isEqualTo(percent)
+        }
+    }
+
+    @Test
+    fun `the glass blur is stored as its dp`() {
+        for (dp in listOf(8, 16, 24, 32, 48)) {
+            assertThat(look(Settings.GLASS_BLUR to "$dp").glassBlurDp).isEqualTo(dp)
+        }
+    }
+
+    @Test
+    fun `the two switches are stored as booleans`() {
+        val on =
+            borealisLook(
+                SettingsSnapshot.DEFAULTS.with(Settings.THICK_FOCUS, true)
+                    .with(Settings.HIGH_CONTRAST, true)
+            )
+
+        assertThat(on.thickFocus).isTrue()
+        assertThat(on.highContrast).isTrue()
+        assertThat(on).isEqualTo(BorealisLook(thickFocus = true, highContrast = true))
+    }
+
+    @Test
+    fun `an id that no choice has stands for the default`() {
+        for (id in unknownIds) {
+            val unknown =
+                look(
+                    Settings.REDUCE_MOTION to id,
+                    Settings.TRANSPARENCY to id,
+                    Settings.TEXT_SIZE to id,
+                    Settings.COLOUR_VISION to id,
+                )
+            assertWithMessage("the id \"$id\"").that(unknown).isEqualTo(BorealisLook())
+        }
+    }
+
+    @Test
+    fun `a glass tint or blur that is not offered stands for the default`() {
+        val notOffered = listOf("", "bogus", "0", "35", "100", "-40", "40.0", " 40", "8dp")
+
+        for (id in notOffered) {
+            val unknown = look(Settings.GLASS_TINT to id, Settings.GLASS_BLUR to id)
+            assertWithMessage("the id \"$id\"").that(unknown).isEqualTo(BorealisLook())
+        }
+        assertThat(look(Settings.GLASS_BLUR to "30").glassBlurDp).isEqualTo(8)
+        assertThat(look(Settings.GLASS_TINT to "16").glassTintPercent).isEqualTo(40)
+    }
+
+    @Test
+    fun `each setting changes its own field and nothing else`() {
+        val look =
+            look(
+                Settings.REDUCE_MOTION to "on",
+                Settings.TRANSPARENCY to "reduced",
+                Settings.TEXT_SIZE to "largest",
+                Settings.COLOUR_VISION to "blue_yellow",
+                Settings.GLASS_TINT to "70",
+                Settings.GLASS_BLUR to "32",
+            )
+
+        assertThat(look)
+            .isEqualTo(
+                BorealisLook(
+                    transparency = Transparency.Reduced,
+                    glassTintPercent = 70,
+                    glassBlurDp = 32,
+                    reduceMotion = ReduceMotion.On,
+                    thickFocus = false,
+                    textSize = TextSize.Largest,
+                    highContrast = false,
+                    colourVision = ColourVision.BlueYellow,
+                )
+            )
+    }
+}

@@ -591,6 +591,80 @@ class DefaultSettingsOptionsRowStateTest {
         assertThat(state(Settings.GAMEPAD_MOUSE_SPEED)).isEqualTo(RowState.Enabled)
     }
 
+    // Glass
+
+    private fun SettingsSnapshot.transparency(id: String) = with(Settings.TRANSPARENCY, id)
+
+    private val glassRows = listOf(Settings.GLASS_TINT, Settings.GLASS_BLUR)
+
+    @Test
+    fun `the glass rows are enabled with Standard transparency and no high contrast`() {
+        for (row in glassRows) {
+            assertThat(state(row)).isEqualTo(RowState.Enabled)
+            assertThat(state(row, defaults.transparency("standard"))).isEqualTo(RowState.Enabled)
+        }
+    }
+
+    @Test
+    fun `the glass rows are disabled while Transparency is Reduced`() {
+        for (row in glassRows) {
+            assertThat(state(row, defaults.transparency("reduced")))
+                .isEqualTo(RowState.Disabled(DisabledReason.TRANSPARENCY_REDUCED))
+        }
+    }
+
+    @Test
+    fun `the glass rows are disabled while Transparency is Off`() {
+        for (row in glassRows) {
+            assertThat(state(row, defaults.transparency("off")))
+                .isEqualTo(RowState.Disabled(DisabledReason.TRANSPARENCY_OFF))
+        }
+    }
+
+    @Test
+    fun `the glass rows are disabled while High contrast is on`() {
+        for (row in glassRows) {
+            assertThat(state(row, defaults.on(Settings.HIGH_CONTRAST)))
+                .isEqualTo(RowState.Disabled(DisabledReason.HIGH_CONTRAST_ON))
+        }
+    }
+
+    @Test
+    fun `High contrast is the reason that is given when Transparency is also lowered`() {
+        val both = defaults.on(Settings.HIGH_CONTRAST).transparency("off")
+
+        for (row in glassRows) {
+            assertThat(state(row, both))
+                .isEqualTo(RowState.Disabled(DisabledReason.HIGH_CONTRAST_ON))
+        }
+    }
+
+    @Test
+    fun `an unknown transparency leaves the glass rows enabled, as Standard`() {
+        for (row in glassRows) {
+            assertThat(state(row, defaults.transparency("bogus"))).isEqualTo(RowState.Enabled)
+        }
+    }
+
+    @Test
+    fun `the Accessibility rows are always enabled`() {
+        val lowered = defaults.on(Settings.HIGH_CONTRAST).transparency("off")
+        val rows =
+            listOf(
+                Settings.REDUCE_MOTION,
+                Settings.TRANSPARENCY,
+                Settings.THICK_FOCUS,
+                Settings.TEXT_SIZE,
+                Settings.HIGH_CONTRAST,
+                Settings.COLOUR_VISION,
+                Settings.BACKGROUND,
+            )
+
+        for (row in rows) {
+            assertThat(state(row, lowered)).isEqualTo(RowState.Enabled)
+        }
+    }
+
     @Test
     fun `the answers follow the facts that are passed in, with no memory of the last ones`() {
         val withoutUsb = deviceFacts { hasUsbHost = false }

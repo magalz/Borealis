@@ -216,6 +216,110 @@ object Settings {
     /** Value of [BACKGROUND] for the plain page colour. */
     const val BACKGROUND_OFF = "off"
 
+    /**
+     * How much the glass panels tint the background, in percent: one of the ids `30`, `40`, `50`,
+     * `60`, `70` or `85`. It sets the Standard level of [TRANSPARENCY]. A stored value that no
+     * choice has stands for the default (ADR 0057).
+     */
+    val GLASS_TINT =
+        StringSetting("borealis_glass_tint", default = "40", store = SettingStore.DATASTORE)
+
+    /**
+     * How much the glass panels blur the background, in dp: one of the ids `8`, `16`, `24`, `32` or
+     * `48`. It sets the Standard level of [TRANSPARENCY]. A stored value that no choice has stands
+     * for the default.
+     */
+    val GLASS_BLUR =
+        StringSetting("borealis_glass_blur", default = "8", store = SettingStore.DATASTORE)
+
+    /**
+     * Reduce motion: [REDUCE_MOTION_FOLLOW_SYSTEM], [REDUCE_MOTION_ON] or [REDUCE_MOTION_OFF]. A
+     * stored value that no choice has stands for the default.
+     */
+    val REDUCE_MOTION =
+        StringSetting(
+            "borealis_reduce_motion",
+            default = REDUCE_MOTION_FOLLOW_SYSTEM,
+            store = SettingStore.DATASTORE,
+        )
+
+    /** Value of [REDUCE_MOTION] that follows the animation scale of the system, the default. */
+    const val REDUCE_MOTION_FOLLOW_SYSTEM = "follow_system"
+
+    /** Value of [REDUCE_MOTION] that removes the animations. */
+    const val REDUCE_MOTION_ON = "on"
+
+    /** Value of [REDUCE_MOTION] that keeps the animations, also when the system removes them. */
+    const val REDUCE_MOTION_OFF = "off"
+
+    /**
+     * Transparency of the glass panels: [TRANSPARENCY_STANDARD], [TRANSPARENCY_REDUCED] or
+     * [TRANSPARENCY_OFF]. A stored value that no choice has stands for the default.
+     */
+    val TRANSPARENCY =
+        StringSetting(
+            "borealis_transparency",
+            default = TRANSPARENCY_STANDARD,
+            store = SettingStore.DATASTORE,
+        )
+
+    /** Value of [TRANSPARENCY] for the tint and blur of the Appearance group, the default. */
+    const val TRANSPARENCY_STANDARD = "standard"
+
+    /** Value of [TRANSPARENCY] for panels that are mostly opaque. */
+    const val TRANSPARENCY_REDUCED = "reduced"
+
+    /** Value of [TRANSPARENCY] for solid panels. */
+    const val TRANSPARENCY_OFF = "off"
+
+    /** A thicker, lighter focus outline. Stored in DataStore. */
+    val THICK_FOCUS =
+        BooleanSetting("borealis_thick_focus", default = false, store = SettingStore.DATASTORE)
+
+    /**
+     * The text size of the app: [TEXT_SIZE_DEFAULT], [TEXT_SIZE_LARGER] or [TEXT_SIZE_LARGEST]. A
+     * stored value that no choice has stands for the default.
+     */
+    val TEXT_SIZE =
+        StringSetting(
+            "borealis_text_size",
+            default = TEXT_SIZE_DEFAULT,
+            store = SettingStore.DATASTORE,
+        )
+
+    /** Value of [TEXT_SIZE] for 100 %, the default. */
+    const val TEXT_SIZE_DEFAULT = "default"
+
+    /** Value of [TEXT_SIZE] for 115 %. */
+    const val TEXT_SIZE_LARGER = "larger"
+
+    /** Value of [TEXT_SIZE] for 130 %. */
+    const val TEXT_SIZE_LARGEST = "largest"
+
+    /** High contrast: solid panels and text at 7:1 or more. Stored in DataStore. */
+    val HIGH_CONTRAST =
+        BooleanSetting("borealis_high_contrast", default = false, store = SettingStore.DATASTORE)
+
+    /**
+     * The palette of the status colours: [COLOUR_VISION_OFF], [COLOUR_VISION_RED_GREEN] or
+     * [COLOUR_VISION_BLUE_YELLOW]. A stored value that no choice has stands for the default.
+     */
+    val COLOUR_VISION =
+        StringSetting(
+            "borealis_colour_vision",
+            default = COLOUR_VISION_OFF,
+            store = SettingStore.DATASTORE,
+        )
+
+    /** Value of [COLOUR_VISION] for the usual palette, the default. */
+    const val COLOUR_VISION_OFF = "off"
+
+    /** Value of [COLOUR_VISION] for a palette that keeps red and green apart. */
+    const val COLOUR_VISION_RED_GREEN = "red_green"
+
+    /** Value of [COLOUR_VISION] for a palette that keeps blue and yellow apart. */
+    const val COLOUR_VISION_BLUE_YELLOW = "blue_yellow"
+
     /** Verbose logging. Stored in DataStore. */
     val VERBOSE_LOGGING =
         BooleanSetting("borealis_verbose_logging", default = false, store = SettingStore.DATASTORE)

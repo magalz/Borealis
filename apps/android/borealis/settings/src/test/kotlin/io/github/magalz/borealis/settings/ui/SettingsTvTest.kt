@@ -40,6 +40,7 @@ private val GROUP_TITLES =
         "Audio",
         "Advanced",
         "Appearance",
+        "Accessibility",
         "Privacy and diagnostics",
         "About",
     )
@@ -97,7 +98,7 @@ class SettingsTvTest : SettingsScreenTestBase() {
     fun `the groups are on the left, Privacy and diagnostics and About among them`() {
         show(keyboard = true)
 
-        // At rest, with no scroll: the ten groups are not too tall for the window.
+        // At rest, with no scroll: the eleven groups are not too tall for the window.
         GROUP_TITLES.forEach {
             group(it).assertIsDisplayed()
             assertWholeInWindow(group(it))

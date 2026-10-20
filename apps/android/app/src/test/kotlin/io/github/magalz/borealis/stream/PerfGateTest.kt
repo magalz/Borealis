@@ -47,7 +47,7 @@ class PerfGateTest {
                 "App",
                 "PC",
                 StreamDefaults(OverlayMode.DETAILED, null, null, false),
-                false,
+                { false },
                 RecordingStreamActions(),
             )
         assertThat(enabled(starting)).isFalse()

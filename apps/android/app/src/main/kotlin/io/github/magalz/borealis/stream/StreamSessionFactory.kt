@@ -69,7 +69,7 @@ object StreamSessionFactory {
                     activity.packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN),
                     GameStreamActions.menuHintPending(activity),
                 ),
-            dockedKeyboard = StreamChromeHost.isPhone(activity),
+            dockKeyboard = { StreamChromeHost.isPhone(activity) },
             actions = actions,
         )
 

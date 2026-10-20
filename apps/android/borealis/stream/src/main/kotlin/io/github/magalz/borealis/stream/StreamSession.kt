@@ -36,9 +36,12 @@ class StreamSession(
     appName: String,
     hostName: String,
     private val defaults: StreamDefaults,
-    private val dockedKeyboard: Boolean,
+    dockKeyboard: () -> Boolean,
     private val actions: StreamActions,
 ) : StreamIntents {
+    // Answered once, when the session is created.
+    private val dockedKeyboard = dockKeyboard()
+
     private val mutableState =
         MutableStateFlow(
             StreamUiState(appName, hostName, StreamPhase.Starting(StartStage.CONNECTING))

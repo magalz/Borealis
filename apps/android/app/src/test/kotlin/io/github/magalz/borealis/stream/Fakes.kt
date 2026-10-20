@@ -168,7 +168,7 @@ fun streamingSession(
             appName = "Desktop",
             hostName = "Den PC",
             defaults = StreamDefaults(overlay, TouchMode.TRACKPAD, gamepadMouse, showMenuHint = false),
-            dockedKeyboard = false,
+            dockKeyboard = { false },
             actions = actions,
         )
     session.onConnectionStarted(SessionInfo(1920, 1080, 60, "HEVC", false, null, 20_000))

@@ -13,7 +13,7 @@ class StreamSessionChromeModeTest {
         overlay: OverlayMode = OverlayMode.OFF,
         dockedKeyboard: Boolean = false,
     ): StreamSession =
-        aSession(defaults = aDefaults.copy(overlay = overlay), dockedKeyboard = dockedKeyboard)
+        aSession(defaults = aDefaults.copy(overlay = overlay), dockKeyboard = { dockedKeyboard })
             .also {
                 it.onConnectionStarted(aSessionInfo)
                 it.onFirstFrame()

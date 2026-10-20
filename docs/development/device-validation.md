@@ -1970,7 +1970,7 @@ taken during the stream, because it would show the PC screen.
 - Backlog, from this round: the native pad modes, the smoother D-pad moves in
   Settings on a TV, the quit warning for Desktop, and the host details text. See
   the [roadmap, Sprint 9](../roadmap.md#sprint-9-ux-polish-and-the-handheld). The
-  native pad modes are in Sprint 10.
+  native pad modes are in Sprint 13.
 - The Sprint 6 quit combo follow-up for USB-driver pads is done in `5416a79c`.
   See the [roadmap](../roadmap.md#sprint-7-follow-ups-and-backlog), item 2.
 - Backlog, from the Bluetooth pad round: the handheld host card height. On the

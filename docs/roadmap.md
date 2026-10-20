@@ -15,7 +15,7 @@ How the roadmap is used:
 
 - **Phase 1, Sprint 1 (PR #8):** the foundation and LuminalShine protocol
   compatibility.
-- **Phase 2, Sprints 2 to 7 (PRs #9 to #13 and #19):**
+- **Phase 2, Sprints 2 to 9 (PRs #9 to #13, #19, #20 and #32):**
   - Sprint 2 (PR #9): observability, the audit trail, Phase 1 follow-ups and
     release preparation.
   - Sprint 3 (PR #10): Sprint 2 follow-ups and the Phase 2 UX proposal
@@ -32,6 +32,10 @@ How the roadmap is used:
   - Sprint 7 (PR #19): follow-ups and backlog, the gamepad mouse pointer speed
     and the visual refinement pass. See the
     [Sprint 7 items](#sprint-7-follow-ups-and-backlog).
+  - Sprint 8 (PR #20): tidy-up. See the
+    [Sprint 8 items](#sprint-8-tidy-up).
+  - Sprint 9 (PR #32): UX polish and the handheld. See the
+    [Sprint 9 items](#sprint-9-ux-polish-and-the-handheld).
 
 ### Sprint 7: follow-ups and backlog
 
@@ -53,7 +57,7 @@ Merged as PR #19 (`f3d88540`).
    The USB permission dialog is asked only once the stream shows its first frame,
    and a pad that wakes during the stream asks at once, so it shows one dialog.
    Phones are unchanged. The remaining idea, documenting the native pad modes, is
-   planned for Sprint 10. See the
+   planned for Sprint 13. See the
    [device validation runbook, section 12](development/device-validation.md#12-results-sprint-7).
 4. **Gamepad mouse: pointer speed.** Done (issue #17, merge `1d500bdb`). A speed
    setting from 10% to 200%, default 50%. A 16 ms tick with fraction
@@ -92,15 +96,11 @@ Merged as PR #19 (`f3d88540`).
    in landscape with the Pro 3 over Bluetooth. See the
    [device validation runbook, section 12](development/device-validation.md#bluetooth-pad-round-and-handheld-fix-2026-10-17).
 
-## Next
-
-The 0.1.0 release comes after Sprint 10 and stays at the end of Phase 2
-([ADR 0054](adr/0054-declare-independence-from-moonlight.md)), so Sprints 7 to
-10 close Phase 2.
-
 ### Sprint 8: tidy-up
 
-The work for this sprint is on the phase branch `phase/s8-tidy-up`. The device
+Merged as PR #20 (`68a8972a`).
+
+The device
 smoke round of [section 3.21](development/device-validation.md#321-sprint-8-checks)
 ran on 2026-10-18 on the TV and the S22. Every item passed except the decoder
 crash notice, which cannot be triggered. The results are in
@@ -123,7 +123,7 @@ crash notice, which cannot be triggered. The results are in
    removed by the owner's decision, because they linked to Moonlight's wiki.
 5. **Duplicated game controller rule.** Done (merge `e81583be`). The test of
    what counts as a game controller is one rule. Unifying it with
-   `ControllerHandler.isGameControllerDevice` is open; see Sprint 12.
+   `ControllerHandler.isGameControllerDevice` is open; see Sprint 15.
 6. **Host parameter objects.** Done (merge `d9865d61`).
 7. **Phone title bars.** Done (merge `8a6acbad`). The four phone title bars
    (Apps, Audit, Settings and Privacy) share one phone bar and one back button.
@@ -134,7 +134,7 @@ crash notice, which cannot be triggered. The results are in
    `67cef8eb` and `b72163d3`, baselines removed in commit `50854eda`). Every
    Android module runs detekt with type analysis. The 116 findings are fixed,
    except that `InjectDispatcher` and `LongParameterList` are no longer reported
-   in test sources (see Sprint 12). `MatchingDeclarationName` is off, because
+   in test sources (see Sprint 15). `MatchingDeclarationName` is off, because
    Compose files are named after the composable. `detekt.use.worker.api=true` is
    set.
 10. **Memtrace rule.** Done (merge `599fed98` and commit `7f7b7721`). The index
@@ -145,9 +145,10 @@ crash notice, which cannot be triggered. The results are in
 
 ### Sprint 9: UX polish and the handheld
 
-The work for this sprint is on the phase branch `phase/s9-ux-handheld`, which
-starts at `68a8972a`. All code items are merged on it. The device round ran on
-2026-10-19, with [section 3.22](development/device-validation.md#322-sprint-9-checks)
+Merged as PR #32 (`109e7dff`).
+
+The device round ran on 2026-10-19, with
+[section 3.22](development/device-validation.md#322-sprint-9-checks)
 as its checklist. Its results and the follow-up fixes are in
 [section 14](development/device-validation.md#14-results-sprint-9). The final
 re-check of the follow-ups passed on 2026-10-20.
@@ -308,37 +309,106 @@ re-check of the follow-ups passed on 2026-10-20.
     all items pass, and portrait with a pad is not applicable on the S22
     ([section 14, final re-check](development/device-validation.md#final-re-check)).
 
-### Next: UX and accessibility
+## Next
 
-Not planned as a sprint yet. These items came up while the background was built.
-The owner sets their place relative to Sprint 10 when they are planned.
+The 0.1.0 release comes after Sprint 13 and stays at the end of Phase 2
+([ADR 0054](adr/0054-declare-independence-from-moonlight.md)), so Sprints 10
+to 13 close Phase 2.
 
-1. **Accessibility and WCAG review.** The background lies behind every Library and
-   Settings screen. Review:
-   - the contrast of text over the background, in the two Compose styles and the
-     four clips;
-   - the look of the cards over the background;
-   - the small ink-3 and ink-4 texts. Over the brightest aurora bands they fall to
-     3.0 to 3.7:1, below the 4.5:1 that WCAG 2.x asks for small text. On the plain
-     page and on surfaces they keep 4.5:1 or more (see the
-     [contrast table](ux/phase-2-proposal.md#contrast)).
-2. **Phone portrait Settings navigation.** Requested by the owner. The phone shows
-   every group in one long list. Two options, to be decided in that discussion:
-   - (A) collapsible sections that start collapsed;
-   - (B) two levels, as the Android Settings app does: a list of the groups, then
-     the page of the chosen group. The recommendation is B.
+### Sprint 10: UX and accessibility
 
-Requested by the owner on 2026-10-19:
+The work for this sprint is on the phase branch `phase/s10-ux-accessibility`,
+which starts at `109e7dff`. Each item has an issue, #33 to #44.
 
-- Panel and card backgrounds transparent, with a heavy blur, so that the animated
-  background stays visible. Measure the contrast against WCAG.
-- An Accessibility group in Settings.
-- More appearance customisation options, in Appearance.
-- Warning toasts as wide as their text and centred, not full width (for example
-  "App closed").
-- "Quitting `<app>`…" is too quick to read. Consider a minimum time on screen.
+1. **Text contrast over the animated background (WCAG 2.2).** Issue #33.
+   A tool in `design/accessibility/` measures the contrast of every text token
+   over real frames of the four clips and the two drawn styles, with the glass
+   modelled. The worst case of each token counts. The baseline and the final
+   numbers go to `docs/ux/accessibility.md`. The target is AA on every screen,
+   and 7:1 with high contrast on. Today ink-3 and ink-4 fall to 3.0 to 3.7:1
+   over the brightest aurora bands.
+2. **Glass panels and cards.** Issue #34. Owner request of 2026-10-19:
+   panels and cards become transparent with a heavy blur, so the background
+   stays visible. The owner picks the look from a measured comparison of tint,
+   blur, how the clips are handled, and the dialogs. Three transparency levels
+   ship: Standard, Reduced and Off. The glass also works outside the Library,
+   because Sprint 11 uses it on the Starting screen.
+3. **Accessibility group in Settings.** Issue #35. A new group after
+   Appearance:
+   - **Reduce motion:** Follow system, On or Off. It follows changes to the
+     system animation scale while the app runs.
+   - **Transparency:** Standard, Reduced or Off.
+   - **Thicker focus outline:** 3 to 5 dp, in a lighter colour.
+   - **Text size:** 100, 115 or 130 %, times the system scale.
+   - **High contrast:** solid panels, text at 7:1 or more, opaque borders at
+     3:1 or more, a dimmed background and the thicker outline. While it is on,
+     it overrides the other settings.
+   - **Colour-blind palette:** Off, Red-green or Blue-yellow, for the status
+     colours. Every status also gets a shape or a text, not colour alone.
 
-### Sprint 10: release preparation
+   The stream follows the text size, the focus outline, high contrast, the
+   palette and reduce motion. The stream gets no glass, because the video is
+   behind it.
+4. **TalkBack.** Issue #36. The app works with TalkBack on a phone and on a
+   TV:
+   - labels, headings and traversal order;
+   - accessibility checks in the Robolectric tests;
+   - font scale 2.0 tests;
+   - 48 dp touch targets.
+5. **Phone portrait Settings.** Issue #37. Collapsible sections (option A,
+   owner decision of 2026-10-20):
+   - all sections start collapsed, and several can be open;
+   - the state survives rotation;
+   - About becomes a section, and Privacy and diagnostics stays a row that
+     navigates.
+6. **OK on a Settings group enters its pane.** Issue #38. On a TV or a
+   handheld, OK on a group (Input, Video and so on) moves the focus to the first
+   option of its pane. Today only Right does. Reported by the owner on
+   2026-10-20.
+7. **Notices.** Issue #39.
+   - Snackbars are as wide as their text and centred, not full width (owner
+     request of 2026-10-19).
+   - After a Quit in the stream, the Library shows the same notice as a Quit
+     from Apps, "App quit.". This answers the request that "Quitting `<app>`…"
+     is too quick to read.
+8. **Rail footer.** Issue #40. The app logo, name and version at the bottom
+   of the rail, on a TV and a handheld. Owner request of 2026-10-20.
+9. **About fixes.** Issue #41. The About links open in a new task, so Back
+   returns to the app. The Version row loses its chevron, which opened nothing.
+10. **Focus after Back from Apps.** Issue #42. Focus goes to the host card
+    that was opened, not to the first one.
+11. **Design system cleanup.** Issue #43. The copied spacing constants move
+    to `BorealisDimens`, `FocusProperties.enter` is replaced, and the background
+    has one default.
+12. **Keyboard reach in short windows.** Issue #44. The licence text can be
+    reached from Close on windows shorter than about 320 dp. The Audit detail
+    gets the `focusable()` before `verticalScroll()` order.
+
+### Sprint 11: Appearance
+
+Planned, not started.
+
+- **Fonts:** at least five. A survey picks fonts that help other needs, such
+  as dyslexia. Atkinson Hyperlegible is one of them. The survey checks the
+  licence and the APK size of each.
+- **Accent colour:** purple, green or white, the Borealis colours.
+- **Card density:** Comfortable or Compact.
+- **Background intensity.**
+- **Background during the stream start:** the animated background also shows on
+  the Starting screen, with the step text on a glass panel. It stops before the
+  first frame. This changes the Sprint 9 rule that the background is never in a
+  stream.
+  - Risk: on the TV, a background clip and the stream decoder compete for the
+    hardware decoder.
+
+### Sprint 12: SecOps
+
+Owner decision of 2026-10-20: a whole sprint on security comes before the
+release. Sprint 12 is hardening and security testing. It takes the backlog item
+on the `RiskyLibrary` lint check (see
+[Backlog, not scheduled](#backlog-not-scheduled)).
+
+### Sprint 13: release preparation
 
 - The root and Android READMEs.
 - An install (Obtainium) and pairing guide.
@@ -369,14 +439,14 @@ Requested by the owner on 2026-10-19:
 
 The owner creates the tag. See the [release procedure](development/release.md).
 
-### Sprint 11: translation and opt-in crash reporting
+### Sprint 14: translation and opt-in crash reporting
 
 - **Translation sprint.** The app is English only until this sprint
   ([ADR 0055](adr/0055-settings-storage-and-the-phase-2-settings-screen.md)).
 - **Opt-in crash reporting.** Planned, not implemented. See
   [PRIVACY.md](../PRIVACY.md) and [ADR 0022](adr/0022-crash-reporting-and-privacy.md).
 
-### Sprint 12 onward: Java to Kotlin migration
+### Sprint 15 onward: Java to Kotlin migration
 
 Owner decisions of 2026-10-17 and 2026-10-18. The migration moves the inherited
 Java to Kotlin, one area at a time.
@@ -406,12 +476,6 @@ Java to Kotlin, one area at a time.
   `ControllerHandler.isGameControllerDevice`, possibly in a neutral input module.
   Today `:app` depends on `:borealis:designsystem` for it. `ControllerHandlerRig`
   can then use the shared `InputDevices` fixture.
-
-### Security sprint before the beta release
-
-Owner decision of 2026-10-20: a whole sprint on security comes before the final
-beta release. Items already noted for it are marked "security sprint" in the
-[backlog](#backlog-not-scheduled).
 
 ## Later phases
 
@@ -443,8 +507,9 @@ beta release. Items already noted for it are marked "security sprint" in the
 - **Deferred RTSP parser rework.** The moonlight-common-c rework `aeba988` is
   deferred by the owner. See the [third-party notes](../core/third_party/README.md).
 
-From the Sprint 9 quality review. None of these changes behaviour, and none is
-scheduled yet.
+From the Sprint 9 quality review. None of these changes behaviour. Sprint 10
+(item 11) takes the deprecated `FocusProperties.enter`, the copied spacing
+constants and the two background defaults. The rest is not scheduled yet.
 
 - **Quit wording in three places.** The choice between the Desktop text and the
   game text is made in the Library action sheet (`AppActionsSheet.kt`), the
@@ -459,13 +524,6 @@ scheduled yet.
   whole `Host` with `toHost()` to read one name, the running app. It holds a
   third copy of the online, offline and unknown mapping, and the code has three
   definitions of "no MAC address".
-- **Deprecated `FocusProperties.enter`.** The Settings group list
-  (`SettingsTwoPane.kt`), `NavigationRail.kt` and `SegmentedControl.kt` in
-  `:borealis:designsystem` still use it.
-- **Copied spacing constants.** "5 dp outline, 8 dp padding, 10 dp gap" sits in
-  about eight places, for example `ActionSheet.kt`, `ChoiceSheet.kt`,
-  `NavigationRail.kt`, `AuditScreen.kt` and `PrivacyPane.kt`. They belong in
-  `BorealisDimens`.
 - **Test size and duplication.** The Sprint 9 tests run about 1,160 lines
   against about 590 lines of implementation, with repeated group lists and
   helpers. They belong in shared test support (the `testFixtures` of
@@ -474,19 +532,15 @@ scheduled yet.
   `BackgroundStyle.Default` and `LibraryScaffold` (in `LibraryRail.kt`) defaults
   to `BackgroundStyle.Off`.
 
-From the Sprint 9 device round, 2026-10-19. None is scheduled yet.
+From the Sprint 9 device round, 2026-10-19. Sprint 10 takes the Back from Apps
+focus, the About Version row and links (items 9 and 10), and the licence text
+and the `AuditScreen.kt` `Detail` order (item 12). The rest is not scheduled
+yet.
 
-- Back from Apps puts the focus on the first host card, not on the host that was
-  opened. Seen twice on the Streamer in the round; the cause is not traced yet.
-- The About "Version" row shows a chevron but opens nothing (`AboutSection.kt`).
 - Update Gradle 9.8.1 to 9.8.2 and kotlinx-serialization 1.11.0 to 1.12.0.
   Dependabot should open the two updates.
 - AGP has no new-version notice. Dependabot ignores it until it has a single
   source, and the lint check is off.
-- The licence text cannot be reached from Close on windows shorter than about
-  320 dp, because the 60 % height cap does not allow for the dialog's own scroll.
-- `AuditScreen.kt` `Detail` has the same `verticalScroll()` then `focusable()`
-  order. Check it on a TV with a long entry.
 - When the task root is not the launcher intent (for example a pinned shortcut
   opened first), opening the app from the launcher stacks a new Library instance.
   `LibraryActivity` has the standard launch mode; only `Game` is `singleTask`.
@@ -494,23 +548,21 @@ From the Sprint 9 device round, 2026-10-19. None is scheduled yet.
   action or category.
 - A touch handheld whose built-in controls report only `KEYBOARD | DPAD`, with no
   GAMEPAD source, now gets the phone layout. This is rare; watch for it.
-- The About links (`AboutSource.kt`, `openInApp`, an `ACTION_VIEW` with no
-  `FLAG_ACTIVITY_NEW_TASK`) open the browser inside the Borealis task. On the
-  Streamer, the Downloader app's browser ignores Back, so the Library stays
-  hidden behind it until the task is started again. Open links in a new task.
 - On a narrow window with a pad (a phone in split screen), the stream keyboard
   covers the stream but keeps the TV shortcut row, where Esc is the 7th of 8
   chips. `StreamKeyboard.kt` picks the Esc-first row by `docked`, not by width
   (owner, 2026-10-20: backlog).
-- Security sprint: the lint check `RiskyLibrary` stays on, as a security alert,
-  although it reads the Google Play SDK Index and so can fail a build with no
-  code change, like the version checks that were turned off (owner, 2026-10-20).
-  Review it in the security sprint before the beta release.
+- Sprint 12 (SecOps): the lint check `RiskyLibrary` stays on, as a security
+  alert, although it reads the Google Play SDK Index and so can fail a build with
+  no code change, like the version checks that were turned off (owner,
+  2026-10-20). Review it in Sprint 12, before the release.
 
 ## Host-side items (LuminalShine)
 
 These are proposals and known issues in the LuminalShine host. The client works
-without them. All of them are open as of 2026-10-17.
+without them. The states are as of 2026-10-20. #199, #200 and #203 were merged
+on 2026-10-20, with no LuminalShine release yet. #194 and #202 are closed.
+The open ones are #198, #201, #204 and #205.
 
 | Item | Kind | Summary |
 | --- | --- | --- |
@@ -520,6 +572,6 @@ without them. All of them are open as of 2026-10-17.
 | [NortheBridge/luminalshine#200](https://github.com/NortheBridge/luminalshine/pull/200) | PR | Sends a single response for unknown GameStream paths. Proposed fix for #194. |
 | [NortheBridge/luminalshine#201](https://github.com/NortheBridge/luminalshine/issues/201) | Issue | A second client leaving a shared app ends the first client's session (per-client virtual display). See [UC-003](use-cases/0003-join-or-replace-a-running-app.md). |
 | [NortheBridge/luminalshine#202](https://github.com/NortheBridge/luminalshine/issues/202) | Issue | A long `/launch` blocks every other HTTPS GameStream request until it finishes. See the [host contract](host-contract/luminalshine.md). |
-| [NortheBridge/luminalshine#203](https://github.com/NortheBridge/luminalshine/pull/203) | PR | Proposed fix for #202. Not merged. |
+| [NortheBridge/luminalshine#203](https://github.com/NortheBridge/luminalshine/pull/203) | PR | Proposed fix for #202. Merged on 2026-10-20. |
 | [NortheBridge/luminalshine#204](https://github.com/NortheBridge/luminalshine/issues/204) | Issue | The host process crashes after the virtual display cleanup of an ended session. See the [host contract](host-contract/luminalshine.md). |
 | [NortheBridge/luminalshine#205](https://github.com/NortheBridge/luminalshine/issues/205) | Issue | A second client's resume fails the RTSP tag check while the first client's launch is still setting up. See the [host contract](host-contract/luminalshine.md). |

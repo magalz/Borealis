@@ -2,6 +2,7 @@ package io.github.magalz.borealis.settings.ui
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -12,6 +13,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.theme.rememberAnimationsRemoved
 import kotlinx.coroutines.launch
 
 private val DPAD_SCROLL_STEP = 96.dp
@@ -24,6 +26,7 @@ private val DPAD_SCROLL_STEP = 96.dp
 @Composable
 internal fun Modifier.dpadScroll(scroll: ScrollState): Modifier {
     val scope = rememberCoroutineScope()
+    val removed = rememberAnimationsRemoved()
     val stepPx = with(LocalDensity.current) { DPAD_SCROLL_STEP.toPx() }
     return onKeyEvent { event ->
         val delta =
@@ -35,7 +38,8 @@ internal fun Modifier.dpadScroll(scroll: ScrollState): Modifier {
         val canScroll = if (delta > 0) scroll.canScrollForward else scroll.canScrollBackward
         val scrolls = delta != 0f && canScroll
         if (scrolls && event.type == KeyEventType.KeyDown) {
-            scope.launch { scroll.animateScrollBy(delta) }
+            // A step is smooth, and at once when animations are removed.
+            scope.launch { if (removed) scroll.scrollBy(delta) else scroll.animateScrollBy(delta) }
         }
         scrolls
     }

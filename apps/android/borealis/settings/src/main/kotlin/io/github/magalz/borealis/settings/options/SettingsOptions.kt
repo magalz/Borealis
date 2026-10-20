@@ -136,4 +136,13 @@ enum class DisabledReason {
 
     /** HDR crashes on this NVIDIA SHIELD firmware. Update the firmware to use it. */
     HDR_BROKEN_ON_FIRMWARE,
+
+    /** The glass settings have no effect: Transparency is Reduced. */
+    TRANSPARENCY_REDUCED,
+
+    /** The glass settings have no effect: Transparency is Off. */
+    TRANSPARENCY_OFF,
+
+    /** The glass settings have no effect: High contrast is on. */
+    HIGH_CONTRAST_ON,
 }

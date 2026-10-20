@@ -7,6 +7,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.geometry.Rect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.magalz.borealis.designsystem.adaptive.rememberFormFactor
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamSession
@@ -23,16 +24,35 @@ internal val LocalMenuHandleBounds = staticCompositionLocalOf<(Rect?) -> Unit> {
  * Every screen is inside [BorealisTheme] for the form factor of the window, so the screens read
  * `LocalFormFactor` and never apply the theme themselves.
  */
-@Composable fun StreamChromeRoot(session: StreamSession) = StreamChromeRoot(session) {}
+@Composable fun StreamChromeRoot(session: StreamSession) = StreamChromeRoot(session, report = {})
 
-/** [StreamChromeRoot] for the chrome host, which learns the menu handle bounds through [report]. */
+/**
+ * The theme of the stream chrome: the form factor of the window and the [look] that the viewer
+ * chose when the stream started.
+ */
 @Composable
-internal fun StreamChromeRoot(session: StreamSession, report: (Rect?) -> Unit) {
+internal fun StreamChromeTheme(look: BorealisLook, content: @Composable () -> Unit) {
+    BorealisTheme(rememberFormFactor(), look, content)
+}
+
+/**
+ * [StreamChromeRoot] for the chrome host, which learns the menu handle bounds through [report] and
+ * draws with the [look] that the stream started with. [extra] is composed with the screens, inside
+ * the theme: the chrome host has it for a test, which reads what the theme provides there.
+ */
+@Composable
+internal fun StreamChromeRoot(
+    session: StreamSession,
+    report: (Rect?) -> Unit,
+    look: BorealisLook = BorealisLook(),
+    extra: @Composable () -> Unit = {},
+) {
     val state by session.state.collectAsStateWithLifecycle()
     val perf by session.perf.collectAsStateWithLifecycle()
     if (state.inPip) return
-    BorealisTheme(rememberFormFactor()) {
+    StreamChromeTheme(look) {
         CompositionLocalProvider(LocalMenuHandleBounds provides report) {
+            extra()
             when (val phase = state.phase) {
                 is StreamPhase.Starting ->
                     StartingScreen(state.appName, state.hostName, phase, session)

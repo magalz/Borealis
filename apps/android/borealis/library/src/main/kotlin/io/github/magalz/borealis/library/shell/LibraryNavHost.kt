@@ -34,7 +34,9 @@ import androidx.navigation.toRoute
 import io.github.magalz.borealis.designsystem.adaptive.rememberFormFactor
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.components.BorealisSnackbarHost
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.rememberAnimationsRemoved
 import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.R
 import io.github.magalz.borealis.library.addhost.AddHostRoute
@@ -70,7 +72,9 @@ private const val FADE_MS = 150
  *
  * [backgroundStyle] is what the shell draws behind the rail and every screen. It is the one input
  * of the background: [LibraryActivity] passes the style that the Appearance setting stores, and
- * where none is passed it is [BackgroundStyle.Default].
+ * where none is passed it is [BackgroundStyle.Default]. [look] is the look that the screens draw
+ * with: [LibraryActivity] passes the one that the settings store, and where none is passed it is
+ * the default look.
  */
 @Composable
 internal fun LibraryNavHost(
@@ -80,6 +84,7 @@ internal fun LibraryNavHost(
     request: LibraryLaunchRequest? = null,
     onRequestHandled: () -> Unit = {},
     backgroundStyle: BackgroundStyle = BackgroundStyle.Default,
+    look: BorealisLook = BorealisLook(),
     navController: NavHostController = rememberNavController(),
 ) {
     val resources = LocalResources.current
@@ -130,6 +135,7 @@ internal fun LibraryNavHost(
         actions = rail,
         modifier = modifier,
         backgroundStyle = backgroundStyle,
+        look = look,
     ) {
         Box {
             FadingNavHost(navController) {
@@ -153,12 +159,16 @@ internal fun LibraryNavHost(
  */
 @Composable
 internal fun FadingNavHost(navController: NavHostController, graph: NavGraphBuilder.() -> Unit) {
+    // With animations removed (Reduce motion, or the system when that follows it) the fade is one
+    // frame: the next screen is just there. A snap, and not no transition at all, so that the
+    // screen that is left still goes in that same frame and does not stay drawn under the next one.
+    val enter = fadeIn(if (rememberAnimationsRemoved()) snap() else tween(FADE_MS))
     NavHost(
         navController,
         startDestination = Hosts,
-        enterTransition = { fadeIn(tween(FADE_MS)) },
+        enterTransition = { enter },
         exitTransition = { fadeOut(snap()) },
-        popEnterTransition = { fadeIn(tween(FADE_MS)) },
+        popEnterTransition = { enter },
         popExitTransition = { fadeOut(snap()) },
         builder = graph,
     )

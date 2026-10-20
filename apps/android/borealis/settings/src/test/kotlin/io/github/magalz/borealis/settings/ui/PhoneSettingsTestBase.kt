@@ -20,6 +20,7 @@ internal val PHONE_SECTIONS =
         "AUDIO",
         "ADVANCED",
         "APPEARANCE",
+        "ACCESSIBILITY",
         "ABOUT",
     )
 

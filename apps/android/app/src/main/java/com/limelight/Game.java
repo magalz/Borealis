@@ -540,7 +540,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                         mode -> TouchContexts.build(mode, conn, streamView, prefConfig)),
                 heldKeys);
         streamSession = StreamSessionFactory.create(this, prefConfig, appName, pcName, streamActions, controllerHandler::hasUsbPad);
-        chromeHost = new StreamChromeHost(this, streamSession, streamView, this::chromeCaptured, this::chromeReleased);
+        chromeHost = new StreamChromeHost(this, streamSession, streamView, this::chromeCaptured, this::chromeReleased, StreamSessionFactory.look(this));
         addContentView(chromeHost, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         // BOREALIS: the controller opens the menu and navigates the chrome; the decoder numbers and the gamepad mouse follow the session (stream)

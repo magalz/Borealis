@@ -283,9 +283,16 @@ class GlassRulesTest {
     // The pace of the drawn background
 
     @Test
-    fun `a TV runs the drawn background at 24 frames a second while glass is drawn`() {
+    fun `a TV runs the drawn background at 24 frames a second while the blur is drawn`() {
         assertThat(glassFrameRate(spec(), FormFactor.Tv)).isEqualTo(24)
-        assertThat(glassFrameRate(spec(sdk = API_NO_BLUR), FormFactor.Tv)).isEqualTo(24)
+        val reduced = spec(BorealisLook(transparency = Transparency.Reduced))
+        assertThat(glassFrameRate(reduced, FormFactor.Tv)).isEqualTo(24)
+    }
+
+    @Test
+    fun `a TV runs it at 30 where the glass is the tint only, on API 28 to 30`() {
+        assertThat(glassFrameRate(spec(sdk = API_NO_BLUR), FormFactor.Tv)).isEqualTo(30)
+        assertThat(glassFrameRate(spec(sdk = API_OLDEST), FormFactor.Tv)).isEqualTo(30)
     }
 
     @Test

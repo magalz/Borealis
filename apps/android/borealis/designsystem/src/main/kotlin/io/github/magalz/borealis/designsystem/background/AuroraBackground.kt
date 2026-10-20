@@ -6,6 +6,7 @@ import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -304,6 +305,15 @@ private fun rememberCycle(animated: Boolean, framesPerSecond: Int): FloatState {
         runCycleLoop(framesPerSecond) { cycle.floatValue = it }
     }
     return cycle
+}
+
+/** Runs the frames of a drawn background. A test stands in for it, as it does for the player. */
+internal fun interface CycleLoop {
+    suspend fun run(framesPerSecond: Int, onCycle: (Float) -> Unit)
+}
+
+internal val LocalCycleLoop = staticCompositionLocalOf {
+    CycleLoop { fps, onCycle -> runCycleLoop(fps, onCycle = onCycle) }
 }
 
 /**

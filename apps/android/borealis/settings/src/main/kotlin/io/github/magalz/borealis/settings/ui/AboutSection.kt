@@ -97,8 +97,9 @@ internal fun AboutRows(about: AboutSource) {
 }
 
 /**
- * The bundled `NOTICE` and `LICENSE` texts in a scrollable dialog. The text takes focus, so the
- * D-pad Up and Down scroll it; Down at its end moves on to Close.
+ * The bundled `NOTICE` and `LICENSE` texts in a scrollable dialog. The text is a focus stop above
+ * Close: Up from Close moves focus to it, the D-pad Up and Down then scroll it, and Down at its end
+ * moves on to Close.
  */
 @Composable
 private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
@@ -136,8 +137,10 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
                     scrolls
                 }
                 .heightIn(max = maxHeight)
-                .verticalScroll(scroll)
-                .focusable(),
+                // Before verticalScroll: the focus search from Close does not find a focusable that
+                // comes after a vertical scroll, so the D-pad could never reach the text.
+                .focusable()
+                .verticalScroll(scroll),
             fontFamily = FontFamily.Monospace,
             style = MaterialTheme.typography.bodySmall,
         )

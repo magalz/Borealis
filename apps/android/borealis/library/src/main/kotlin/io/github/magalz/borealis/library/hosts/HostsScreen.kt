@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,6 +38,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.adaptive.hostGridColumns
 import io.github.magalz.borealis.designsystem.components.AuroraLoader
+import io.github.magalz.borealis.designsystem.components.BorealisSnackbarHost
 import io.github.magalz.borealis.designsystem.components.ContinueCard
 import io.github.magalz.borealis.designsystem.components.DotStatus
 import io.github.magalz.borealis.designsystem.components.EmptyState
@@ -156,7 +156,7 @@ private fun HostsLayout(
                 HostsBody(state, formFactor, handlers, Modifier.weight(1f))
             }
         }
-        SnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter))
+        BorealisSnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter))
     }
 }
 

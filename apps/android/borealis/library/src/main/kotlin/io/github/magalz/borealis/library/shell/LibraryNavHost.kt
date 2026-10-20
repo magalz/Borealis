@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,6 +33,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import io.github.magalz.borealis.designsystem.adaptive.rememberFormFactor
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.components.BorealisSnackbarHost
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.R
@@ -132,7 +132,7 @@ internal fun LibraryNavHost(
             FadingNavHost(navController) {
                 libraryGraph(navController, startStream, pendingLaunch)
             }
-            SnackbarHost(
+            BorealisSnackbarHost(
                 snackbarHostState,
                 Modifier.align(Alignment.BottomCenter)
                     .windowInsetsPadding(WindowInsets.safeDrawing)

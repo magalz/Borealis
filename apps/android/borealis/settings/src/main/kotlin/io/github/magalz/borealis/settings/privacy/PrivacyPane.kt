@@ -15,7 +15,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,6 +40,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import io.github.magalz.borealis.designsystem.components.BorealisSnackbarHost
 import io.github.magalz.borealis.designsystem.components.settings.SettingsRowTone
 import io.github.magalz.borealis.designsystem.components.settings.SettingsSwitchRow
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
@@ -243,7 +243,7 @@ internal fun PrivacyContent(
                 )
             }
         }
-        SnackbarHost(
+        BorealisSnackbarHost(
             snackbarHostState,
             Modifier.align(Alignment.BottomCenter).padding(SNACKBAR_PADDING),
         )

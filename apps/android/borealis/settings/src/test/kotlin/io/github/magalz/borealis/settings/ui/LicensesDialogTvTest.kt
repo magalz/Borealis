@@ -20,8 +20,9 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
- * The licences dialog on a TV, reached and driven only by the D-pad: the text is what the focus
- * search finds above Close, and the text takes Up and Down until its ends.
+ * The licences dialog on a TV: a click on its row opens it, and from then on only the D-pad from
+ * Close drives it. The text is what the focus search finds above Close, and it takes Up and Down
+ * until its ends.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = TV)

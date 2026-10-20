@@ -137,8 +137,9 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
                     scrolls
                 }
                 .heightIn(max = maxHeight)
-                // Before verticalScroll: the focus search from Close does not find a focusable that
-                // comes after a vertical scroll, so the D-pad could never reach the text.
+                // Before verticalScroll: a focusable after it takes the size of the whole text, not
+                // of the viewport, and the focus search from Close then does not find it above
+                // Close.
                 .focusable()
                 .verticalScroll(scroll),
             fontFamily = FontFamily.Monospace,

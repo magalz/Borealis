@@ -1096,8 +1096,8 @@ except where a step says otherwise.
 
 ### Re-check after the follow-ups
 
-Run these on the final build, the one after `5025614e`. Its commit is to be
-recorded when it is installed, in [section 14](#14-results-sprint-9). Record each
+Run these on the final build, `5025614e`, and record the results in
+[section 14](#14-results-sprint-9). Record each
 item as `pass`, `fail` or `not applicable`, as in section 3.22.
 
 1. S22 in landscape, with the pad or the receiver named in each item.
@@ -2074,9 +2074,9 @@ round. The final re-check is pending, with the steps in
 
 - Build: the round ran on `51de8e07`, installed with `adb install -r`: on the TV
   at 20:23 and on the S22 at 20:48 on 2026-10-19. The S22 re-check ran on
-  `83a6aa66` at 23:30. The final re-check, on the build after `5025614e`, is
-  pending. TODO(verify): the commit that was built and installed for the final
-  re-check.
+  `83a6aa66` at 23:30. The final re-check runs on `5025614e`, whose gate and
+  four-module Roborazzi verify passed on 2026-10-20; the commits after it change
+  docs only.
 - Host: the app reports "Sunshine-compatible, version 7.1.431". TODO(verify):
   the owner confirms the build name, LuminalShine 26.09.1 as in Sprint 8. The
   `appversion` of the 26.09.1 fixtures in `core/tests/fixtures/luminalshine/26.09.1`

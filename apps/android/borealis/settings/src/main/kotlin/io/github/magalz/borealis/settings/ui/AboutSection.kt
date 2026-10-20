@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -21,6 +22,8 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
@@ -30,6 +33,7 @@ import io.github.magalz.borealis.designsystem.components.settings.SettingsInfoRo
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.settings.R
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 private const val SOURCE_CODE_URL = "https://github.com/magalz/Borealis"
@@ -101,12 +105,15 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
             ?: stringResource(R.string.settings_about_licenses_unavailable)
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
-    val stepPx = with(LocalDensity.current) { LICENSE_SCROLL_STEP.toPx() }
-    // The dialog scrolls its content, so this text needs a height of its own to scroll in.
+    val density = LocalDensity.current
+    val stepPx = with(density) { LICENSE_SCROLL_STEP.toPx() }
+    val windowHeight = LocalWindowInfo.current.containerSize.height
+    // The dialog scrolls its content, so this text needs a height of its own to scroll in. A share
+    // of the window is right for a tall one; in a short one the dialog's title, Close and padding
+    // leave less, and the text learns what is left from how much of it the dialog shows.
+    var room by remember(windowHeight) { mutableIntStateOf(Int.MAX_VALUE) }
     val maxHeight =
-        with(LocalDensity.current) {
-            (LocalWindowInfo.current.containerSize.height * LICENSE_HEIGHT_SHARE).toDp()
-        }
+        with(density) { minOf(windowHeight * LICENSE_HEIGHT_SHARE, room.toFloat()).toDp() }
     SettingsDialog(
         title = stringResource(R.string.settings_about_licenses_title),
         confirm = DialogButton(stringResource(R.string.settings_close), onDismiss),
@@ -115,6 +122,13 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
         Text(
             text,
             Modifier.fillMaxWidth()
+                // A text taller than the room the dialog has runs on under Close: its focus search
+                // from Close does not find it above, so Up does not reach it. It is cut at what
+                // the dialog shows, so this keeps the height at that.
+                .onGloballyPositioned { placed ->
+                    val shown = placed.boundsInWindow().height.roundToInt()
+                    if (shown < placed.size.height) room = shown
+                }
                 .onKeyEvent { event ->
                     val delta =
                         when (event.key) {

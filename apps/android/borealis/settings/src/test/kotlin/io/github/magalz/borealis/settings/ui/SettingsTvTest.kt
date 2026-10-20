@@ -1,6 +1,12 @@
 package io.github.magalz.borealis.settings.ui
 
+import androidx.compose.foundation.focusable
+import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -8,6 +14,7 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
@@ -21,6 +28,8 @@ import androidx.compose.ui.test.requestFocus
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.FakeInputModeManager
+import io.github.magalz.borealis.designsystem.testing.OnPage
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.options.DisabledReason
 import io.github.magalz.borealis.settings.options.RowState
@@ -93,6 +102,54 @@ class SettingsTvTest : SettingsScreenTestBase() {
         composeRule.waitForIdle()
     }
 
+    /**
+     * The gamepad A button as a device delivers it. A click listens for OK, Enter and the numpad
+     * Enter, not for A: when the app leaves A alone, Android hands the focused item the key OK in
+     * its place (the fallback of the key map). Keys injected into a test skip that step, so the
+     * test does it.
+     */
+    private fun pressGamepadA(title: String) {
+        press(title, Key.ButtonA)
+        press(title, Key.DirectionCenter)
+    }
+
+    /** The window of [showWithPrivacyRow], whose input mode a test that stands for a tap sets. */
+    private val window = FakeInputModeManager(InputMode.Keyboard)
+
+    /**
+     * The screen in keyboard mode with a Privacy pane that has a row to focus, as the real pane
+     * has. The row takes focus in touch mode too, as a text field does, so that a pane that
+     * something entered in that mode shows it.
+     */
+    private fun showWithPrivacyRow() {
+        val viewModel = viewModel()
+        composeRule.setContentInKeyboardMode {
+            CompositionLocalProvider(LocalInputModeManager provides window) {
+                OnPage {
+                    SettingsRoute(
+                        onBack = { backs++ },
+                        onOpenPrivacy = { privacyOpens++ },
+                        privacyPane = { Text("Privacy row", Modifier.focusable()) },
+                        about = testAbout(),
+                        viewModel = viewModel,
+                    )
+                }
+            }
+        }
+        composeRule.waitForIdle()
+    }
+
+    /**
+     * The Version row is the first of About. It has no semantics of its own to ask whether it has
+     * focus, so Down shows where focus is: the next row is the one that takes it.
+     */
+    private fun assertFocusIsOnTheVersionRow() {
+        group("About").assertIsNotFocused()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Source code").assertIsFocused()
+    }
+
     @Test
     fun `the groups are on the left, Privacy and diagnostics and About among them`() {
         show(keyboard = true)
@@ -150,6 +207,114 @@ class SettingsTvTest : SettingsScreenTestBase() {
 
         press("Resolution", Key.DirectionLeft)
         composeRule.onNodeWithText("Stream").assertIsFocused()
+    }
+
+    @Test
+    fun `Right enters the rows of a later group at its first row`() {
+        show(keyboard = true)
+        group("Video").requestFocus()
+
+        press("Video", Key.DirectionRight)
+
+        composeRule.onNodeWithText("Codec").assertIsFocused()
+    }
+
+    @Test
+    fun `OK on Video enters its rows at the first row`() = okEntersTheVideoRows {
+        press("Video", Key.DirectionCenter)
+    }
+
+    @Test
+    fun `Enter on Video enters its rows at the first row`() = okEntersTheVideoRows {
+        press("Video", Key.Enter)
+    }
+
+    @Test
+    fun `the numpad Enter on Video enters its rows at the first row`() = okEntersTheVideoRows {
+        press("Video", Key.NumPadEnter)
+    }
+
+    @Test
+    fun `the gamepad A button on Video enters its rows at the first row`() = okEntersTheVideoRows {
+        pressGamepadA("Video")
+    }
+
+    private fun okEntersTheVideoRows(pressOk: () -> Unit) {
+        show(keyboard = true)
+        group("Video").requestFocus()
+
+        pressOk()
+
+        composeRule.onNodeWithText("Codec").assertIsFocused()
+        composeRule.onNodeWithText("Resolution").assertDoesNotExist()
+    }
+
+    @Test
+    fun `OK on Privacy and diagnostics enters its pane at the first row`() {
+        showWithPrivacyRow()
+        group("Privacy and diagnostics").requestFocus()
+
+        press("Privacy and diagnostics", Key.DirectionCenter)
+
+        composeRule.onNodeWithText("Privacy row").assertIsFocused()
+        composeRule.onNodeWithText("Resolution").assertDoesNotExist()
+    }
+
+    @Test
+    fun `Enter on Privacy and diagnostics enters its pane at the first row`() {
+        showWithPrivacyRow()
+        group("Privacy and diagnostics").requestFocus()
+
+        press("Privacy and diagnostics", Key.Enter)
+
+        composeRule.onNodeWithText("Privacy row").assertIsFocused()
+    }
+
+    @Test
+    fun `OK on About enters its rows at the first row`() {
+        show(keyboard = true)
+        group("About").requestFocus()
+
+        press("About", Key.DirectionCenter)
+
+        assertFocusIsOnTheVersionRow()
+    }
+
+    @Test
+    fun `the gamepad A button on About enters its rows at the first row`() {
+        show(keyboard = true)
+        group("About").requestFocus()
+
+        pressGamepadA("About")
+
+        assertFocusIsOnTheVersionRow()
+    }
+
+    @Test
+    fun `OK on a group, then Left, returns to the group and OK enters again`() {
+        show(keyboard = true)
+        group("Video").requestFocus()
+        press("Video", Key.DirectionCenter)
+        composeRule.onNodeWithText("Codec").assertIsFocused()
+        press("Codec", Key.DirectionLeft)
+        group("Video").assertIsFocused()
+
+        press("Video", Key.DirectionCenter)
+
+        composeRule.onNodeWithText("Codec").assertIsFocused()
+    }
+
+    @Test
+    fun `a tap on a group selects it and leaves the focus alone`() {
+        showWithPrivacyRow()
+        window.inputMode = InputMode.Touch
+
+        group("Privacy and diagnostics").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Privacy row").assertIsDisplayed()
+        composeRule.onNodeWithText("Privacy row").assertIsNotFocused()
+        composeRule.onNodeWithText("Resolution").assertDoesNotExist()
     }
 
     @Test

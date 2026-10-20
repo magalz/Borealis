@@ -11,15 +11,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.InputMode
-import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -30,6 +26,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.assertPixel
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.FakeInputModeManager
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import org.junit.Rule
@@ -201,16 +198,6 @@ class FocusIndicationTest {
 
     private fun assertPixel(x: Float, y: Float, expected: Color) =
         composeRule.onNodeWithTag(FRAME).assertPixel(x, y, expected)
-
-    /** A window whose input mode a test can flip, as a touch or a key does on a device. */
-    private class FakeInputModeManager(initial: InputMode) : InputModeManager {
-        override var inputMode: InputMode by mutableStateOf(initial)
-
-        override fun requestInputMode(inputMode: InputMode): Boolean {
-            this.inputMode = inputMode
-            return true
-        }
-    }
 
     private companion object {
         const val FRAME = "frame"

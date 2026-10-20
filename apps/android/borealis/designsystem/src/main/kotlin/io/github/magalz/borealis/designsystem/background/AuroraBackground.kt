@@ -300,8 +300,8 @@ private fun rememberCycle(animated: Boolean): FloatState {
 
 /**
  * The frames of a running loop: [onCycle] gets the position in the loop, from 0 until 1, once every
- * [FRAME_GAP_NANOS]. That is 30 fps at 30, 60, 90 and 120 Hz; at other rates the update lands on the
- * first vsync after the gap (25 fps at 50 and 75 Hz, 24 at 72, 28.8 at 144). [nanoTime] is the
+ * [FRAME_GAP_NANOS]. That is 30 fps at 30, 60, 90 and 120 Hz; at other rates the update lands on
+ * the first vsync after the gap (25 fps at 50 and 75 Hz, 24 at 72, 28.8 at 144). [nanoTime] is the
  * clock of the frame times, which are in the `System.nanoTime` timebase.
  *
  * The thread sleeps between two frames and asks for one only to draw it. The sleep is counted from

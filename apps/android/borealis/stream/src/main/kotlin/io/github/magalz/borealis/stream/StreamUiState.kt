@@ -55,6 +55,7 @@ sealed interface StreamPhase {
         val info: SessionInfo,
         val showMenuHint: Boolean,
         val pointerSpeed: PointerSpeed = PointerSpeed.NORMAL,
+        val dockedKeyboard: Boolean = false,
     ) : StreamPhase
 }
 

@@ -9,6 +9,7 @@ import io.github.magalz.borealis.nativecore.LaunchCategory
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.store.SettingsSnapshots
 import io.github.magalz.borealis.stream.host.StreamChromeHost
+import java.util.function.BooleanSupplier
 
 /** Builds what `Game` gives the stream session from the stream preferences and the connection. */
 object StreamSessionFactory {
@@ -58,6 +59,7 @@ object StreamSessionFactory {
         appName: String?,
         pcName: String?,
         actions: StreamActions,
+        usbPadHeld: BooleanSupplier,
     ): StreamSession =
         StreamSession(
             appName = appName.takeUnless { it == UNKNOWN_APP_NAME }.orEmpty(),
@@ -69,7 +71,7 @@ object StreamSessionFactory {
                     activity.packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN),
                     GameStreamActions.menuHintPending(activity),
                 ),
-            dockKeyboard = { StreamChromeHost.isPhone(activity) },
+            dockKeyboard = { StreamChromeHost.dockedKeyboard(activity, usbPadHeld.asBoolean) },
             actions = actions,
         )
 

@@ -539,7 +539,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                 new StreamControls(controllerHandler, touchContextMap, streamView, () -> streamSession.closePanel(),
                         mode -> TouchContexts.build(mode, conn, streamView, prefConfig)),
                 heldKeys);
-        streamSession = StreamSessionFactory.create(this, prefConfig, appName, pcName, streamActions);
+        streamSession = StreamSessionFactory.create(this, prefConfig, appName, pcName, streamActions, controllerHandler::hasUsbPad);
         chromeHost = new StreamChromeHost(this, streamSession, streamView, this::chromeCaptured, this::chromeReleased);
         addContentView(chromeHost, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));

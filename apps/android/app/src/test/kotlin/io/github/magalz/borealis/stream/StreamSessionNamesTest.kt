@@ -20,7 +20,9 @@ class StreamSessionNamesTest {
                 appName,
                 "Den PC",
                 RecordingStreamActions(),
-            )
+            ) {
+                false
+            }
             .state
             .value
             .appName

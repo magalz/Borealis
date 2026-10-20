@@ -53,8 +53,13 @@ import kotlinx.coroutines.launch
 fun Modifier.borealisFocusIndication(shape: Shape, scaleOnFocus: Boolean = false): Modifier =
     this then BorealisFocusElement(shape, scaleOnFocus)
 
-/** The colour of the focus outline of [colors]: accent-soft, or the ink of the thicker outline. */
-internal fun focusOutlineColor(colors: BorealisColors, thick: Boolean): Color = colors.accentSoft
+/**
+ * The colour of the focus outline of [colors]: accent-soft, or the ink of the thicker outline. The
+ * ink is lighter than accent-soft and keeps 3:1 (WCAG 1.4.11) on the page, on the surface and on
+ * the brightest backdrop that a glass panel is allowed, where accent-soft keeps 4.5:1.
+ */
+internal fun focusOutlineColor(colors: BorealisColors, thick: Boolean): Color =
+    if (thick) colors.ink else colors.accentSoft
 
 private data class BorealisFocusElement(val shape: Shape, val scaleOnFocus: Boolean) :
     ModifierNodeElement<BorealisFocusNode>() {
@@ -114,7 +119,10 @@ private class BorealisFocusNode(var shape: Shape, var scaleOnFocus: Boolean) :
     }
 
     private fun DrawScope.drawFocusOutline() {
-        val stroke = BorealisTokens.Focus.Outline.toPx()
+        val look = currentValueOf(LocalBorealisLook)
+        val thick = look.thickFocus || look.highContrast
+        val stroke =
+            (if (thick) BorealisTokens.Focus.OutlineThick else BorealisTokens.Focus.Outline).toPx()
         // A stroke is centred on its path, so the path sits half a stroke past the 2dp gap.
         val grow = BorealisTokens.Focus.Offset.toPx() + stroke / 2
         val outline =
@@ -126,7 +134,7 @@ private class BorealisFocusNode(var shape: Shape, var scaleOnFocus: Boolean) :
         translate(-grow, -grow) {
             drawOutline(
                 outline,
-                currentValueOf(LocalBorealisColors).accentSoft,
+                focusOutlineColor(currentValueOf(LocalBorealisColors), thick),
                 style = Stroke(stroke),
             )
         }

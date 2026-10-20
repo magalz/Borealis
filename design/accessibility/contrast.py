@@ -53,6 +53,8 @@ GLASS_BLURS_DP = (16, 32, 48)
 FRAME_COUNT = 24
 DEVICE_WIDTH_DP = {"tv": 960.0, "phone": 411.0}
 DEVICE_LABELS = {"tv": "TV", "phone": "phone"}
+# The size in pixels of a screen of each device, as the BackgroundFrameExport test has them.
+DEVICE_SIZE_PX = {"tv": (1920, 1080), "phone": (1233, 2673)}
 
 # The working names of the styles (design/backgrounds/README.md), by the name of the enum.
 STYLE_LABELS = {
@@ -288,7 +290,18 @@ def frame_indices(count, n):
 
 
 def cover_geometry(size, source):
-    return ()
+    """How the player fits a clip to a screen: the same as `VideoBackground` does.
+
+    The clip is scaled to the smallest rectangle of its aspect that covers the screen, and the
+    middle of that is shown. `size` and `source` are (width, height) in pixels. It returns the
+    width and height of the scaled clip, and the x and y of the corner of the screen in it.
+    """
+    (width, height), (clip_width, clip_height) = size, source
+    if width * clip_height >= height * clip_width:
+        cover = (width, round(width * clip_height / clip_width))
+    else:
+        cover = (round(height * clip_width / clip_height), height)
+    return cover[0], cover[1], (cover[0] - width) // 2, (cover[1] - height) // 2
 
 
 def select_filter(indices):
@@ -309,11 +322,27 @@ def _tool(name):
     return path
 
 
-def extract_clips(frames, clips, count=FRAME_COUNT):
-    """Writes `count` frames of each clip, spread over its loop, to `frames/<Style>-tv/NN.png`.
+def clip_filter(indices, size, source):
+    """The ffmpeg filter that makes the frames of a clip as a screen of `size` shows them.
 
-    The clips carry no colour tags. Android decodes an untagged HD stream as BT.709 in limited
-    range, so ffmpeg is told to, or it would take BT.601 and shift the colours.
+    It keeps the frames with these numbers, scales the clip the way the player does (bilinear, as
+    the compositor does), turns it into RGB and cuts the screen out of it. The clips carry no
+    colour tags. Android decodes an untagged HD stream as BT.709 in limited range, so ffmpeg is
+    told to, or it would take BT.601 and shift the colours.
+    """
+    width, height, x, y = cover_geometry(size, source)
+    return (
+        select_filter(indices)
+        + f",scale={width}:{height}:in_color_matrix=bt709:in_range=tv:out_range=pc:flags=bilinear"
+        + f",format=rgb24,crop={size[0]}:{size[1]}:{x}:{y}"
+    )
+
+
+def extract_clips(frames, clips, count=FRAME_COUNT):
+    """Writes `count` frames of each clip, spread over its loop, to `frames/<Style>-<device>/`.
+
+    A TV shows the whole clip. A phone upright shows a slice of the middle of it, scaled up
+    about 2.5 times, so a blur of a given size in dp reaches less far into the clip there.
     """
     ffmpeg, ffprobe = _tool("ffmpeg"), _tool("ffprobe")
     for clip in sorted(Path(clips).glob("background_*.mp4")):
@@ -322,23 +351,26 @@ def extract_clips(frames, clips, count=FRAME_COUNT):
             continue
         shown = subprocess.run(
             [ffprobe, "-v", "error", "-select_streams", "v:0", "-count_frames"]
-            + ["-show_entries", "stream=nb_read_frames", "-of", "csv=p=0", str(clip)],
+            + ["-show_entries", "stream=width,height,nb_read_frames", "-of", "csv=p=0", str(clip)],
             capture_output=True,
             text=True,
             check=True,
         )
-        out = Path(frames) / f"{style}-tv"
-        out.mkdir(parents=True, exist_ok=True)
-        for old in out.glob("*.png"):
-            old.unlink()
-        filters = select_filter(frame_indices(int(shown.stdout.strip()), count))
-        filters += ",scale=in_color_matrix=bt709:in_range=tv:out_range=pc,format=rgb24"
-        subprocess.run(
-            [ffmpeg, "-v", "error", "-y", "-i", str(clip), "-vf", filters]
-            + ["-fps_mode", "passthrough", "-start_number", "0", str(out / "%02d.png")],
-            check=True,
-        )
-        print(f"{clip.name}: {len(list(out.glob('*.png')))} frames in {out}", file=sys.stderr)
+        clip_width, clip_height, clip_frames = (int(v) for v in shown.stdout.strip().split(","))
+        for device, size in DEVICE_SIZE_PX.items():
+            out = Path(frames) / f"{style}-{device}"
+            out.mkdir(parents=True, exist_ok=True)
+            for old in out.glob("*.png"):
+                old.unlink()
+            filters = clip_filter(
+                frame_indices(clip_frames, count), size, (clip_width, clip_height)
+            )
+            subprocess.run(
+                [ffmpeg, "-v", "error", "-y", "-i", str(clip), "-vf", filters]
+                + ["-fps_mode", "passthrough", "-start_number", "0", str(out / "%02d.png")],
+                check=True,
+            )
+            print(f"{clip.name}: {len(list(out.glob('*.png')))} frames in {out}", file=sys.stderr)
 
 
 # Measurement
@@ -350,7 +382,7 @@ def measure_surfaces(colors):
         {
             "surface": surface,
             "token": token,
-            "ratio": round(hex_contrast(colors[token], colors[surface]), 4),
+            "ratio": hex_contrast(colors[token], colors[surface]),
         }
         for surface in SURFACE_TOKENS
         for token in TEXT_TOKENS
@@ -381,11 +413,11 @@ def _fold(per_frame):
     """The stats of the frames of one case and token, as one row: the worst of them all."""
     mins = [stats["min"] for stats in per_frame]
     return {
-        "min": round(min(mins), 4),
-        "p1": round(min(stats["p1"] for stats in per_frame), 4),
-        "p5": round(min(stats["p5"] for stats in per_frame), 4),
+        "min": min(mins),
+        "p1": min(stats["p1"] for stats in per_frame),
+        "p5": min(stats["p5"] for stats in per_frame),
         "worst_frame": int(np.argmin(mins)),
-        "per_frame_min": [round(value, 4) for value in mins],
+        "per_frame_min": mins,
     }
 
 
@@ -507,35 +539,49 @@ def markdown_tables(result):
     rows.append(["worst"] + [format_ratio(ratio) for ratio in worst_ratios])
     table_b = _table(["Surface"] + names, rows)
 
-    worst = {}
-    for row in result["glass"]:
-        key = (row["alpha"], row["blur_dp"])
-        cell = worst.setdefault(key, {}).get(row["token"])
-        if cell is None or row["min"] < cell[0]:
-            worst[key].update({row["token"]: (row["min"], _label(row["style"], row["device"]))})
-    rows = []
-    for (alpha, blur), by_token in worst.items():
-        lowest = min(value for value, _ in by_token.values())
-        rows.append(
-            [f"{alpha:.2f}", f"{blur}"]
-            + [f"{format_ratio(by_token[token][0])} ({by_token[token][1]})" for token in tokens]
-            + [format_ratio(lowest)]
-        )
-    table_c = _table(["Alpha", "Blur dp"] + names + ["Lowest"], rows)
+    def glass_table(devices):
+        worst = {}
+        for row in result["glass"]:
+            if row["device"] not in devices:
+                continue
+            key = (row["alpha"], row["blur_dp"])
+            cell = worst.setdefault(key, {}).get(row["token"])
+            if cell is None or row["min"] < cell[0]:
+                worst[key][row["token"]] = (row["min"], _label(row["style"], row["device"]))
+        rows = []
+        for (alpha, blur), by_token in worst.items():
+            lowest = min(value for value, _ in by_token.values())
+            rows.append(
+                [f"{alpha:.2f}", f"{blur}"]
+                + [f"{format_ratio(by_token[token][0])} ({by_token[token][1]})" for token in tokens]
+                + [format_ratio(lowest)]
+            )
+        return _table(["Alpha", "Blur dp"] + names + ["Lowest"], rows)
+
+    present = list(dict.fromkeys(row["device"] for row in result["glass"]))
+    per_device = []
+    if len(present) > 1:
+        for device in sorted(present, key=lambda name: name != "tv"):
+            label = DEVICE_LABELS[device]
+            per_device += [
+                f"Table C, {label}. The same, for the {label} frames only.",
+                glass_table({device}),
+            ]
 
     return "\n\n".join(
         [
             "Table A. Text straight on the background: the worst case over the frames.",
             style_table("min"),
-            "Table A, p5. The same, for information: the ratio below which 5% of the pixels are, "
-            "in the worst frame.",
+            "Table A, p5. The same, for information: the lowest over the frames of the ratio below "
+            "which 5% of the pixels are.",
             style_table("p5"),
             "Table B. Text on the opaque surfaces: the contrast ratio.",
             table_b,
             "Table C. Text on a glass panel: the worst case over every style and frame, and the "
             "style it is in.",
-            table_c,
+            glass_table(set(present)),
         ]
+        + per_device
     )
 
 

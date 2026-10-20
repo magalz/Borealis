@@ -23,9 +23,13 @@ import androidx.core.content.ContextCompat
  * Whether animations are removed: the Reduce motion setting of the app decides, and Follow system
  * hands it to the system. An animated piece then shows its end state at once. It is read again
  * while this is composed, when the setting or the system animation scale changes.
+ *
+ * Every animation of the app asks this, so that Reduce motion reaches all of them. A piece that has
+ * no composition to ask in (a modifier node) reads [LocalBorealisLook] and the system itself, and
+ * decides with [animationsRemoved].
  */
 @Composable
-internal fun rememberAnimationsRemoved(): Boolean =
+fun rememberAnimationsRemoved(): Boolean =
     animationsRemoved(LocalBorealisLook.current.reduceMotion, rememberSystemAnimationsRemoved())
 
 /**
@@ -55,7 +59,8 @@ private fun rememberSystemAnimationsRemoved(): Boolean {
     return removed
 }
 
-private fun systemAnimationsRemoved(resolver: ContentResolver): Boolean =
+/** Whether the system animation scale is zero now: the setting "Remove animations". */
+internal fun systemAnimationsRemoved(resolver: ContentResolver): Boolean =
     Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
 
 /** Whether animations are removed, given the setting of the app and what the system says. */

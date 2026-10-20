@@ -103,7 +103,7 @@ class StreamChromeHost(
 
     private val composeView =
         ComposeView(activity).apply {
-            setContent { StreamChromeRoot(session, ::setMenuHandleBounds, look) }
+            setContent { StreamChromeRoot(session, ::setMenuHandleBounds, look) { chromeExtra() } }
             // Compose cannot take the focus before its first layout (its root nodes are not
             // attached
             // yet), so the focus waits for it.

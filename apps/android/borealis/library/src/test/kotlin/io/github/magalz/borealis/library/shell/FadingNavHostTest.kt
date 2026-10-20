@@ -112,10 +112,13 @@ class FadingNavHostTest {
         show(BorealisLook(reduceMotion = ReduceMotion.On))
         composeRule.runOnIdle { navController.navigate(AddHost) }
 
-        composeRule.mainClock.advanceTimeBy(TWO_FRAMES_MILLIS)
+        composeRule.mainClock.advanceTimeBy(FOUR_FRAMES_MILLIS)
 
-        assertThat(pixel(OUTSIDE_PX, OUTSIDE_PX).green).isGreaterThan(OPAQUE_WHITE)
-        assertThat(pixel(IN_SQUARE_PX, IN_SQUARE_PX).red).isLessThan(DONE)
+        // The square is drawn in full, and the screen that was left is gone: the window is as big
+        // as the square, where during a fade it is as big as the larger of the two screens.
+        val shot = composeRule.onRoot().captureToImage().toPixelMap()
+        assertThat(shot.width).isEqualTo(SQUARE_PX)
+        assertThat(shot[IN_SQUARE_PX, IN_SQUARE_PX].red).isLessThan(DONE)
     }
 
     @Test
@@ -125,7 +128,7 @@ class FadingNavHostTest {
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
 
         composeRule.runOnIdle { navController.popBackStack() }
-        composeRule.mainClock.advanceTimeBy(TWO_FRAMES_MILLIS)
+        composeRule.mainClock.advanceTimeBy(FOUR_FRAMES_MILLIS)
 
         assertThat(pixel(OUTSIDE_PX, OUTSIDE_PX).green).isLessThan(DONE)
     }
@@ -136,7 +139,7 @@ class FadingNavHostTest {
         show()
         composeRule.runOnIdle { navController.navigate(AddHost) }
 
-        composeRule.mainClock.advanceTimeBy(TWO_FRAMES_MILLIS)
+        composeRule.mainClock.advanceTimeBy(FOUR_FRAMES_MILLIS)
 
         assertThat(pixel(IN_SQUARE_PX, IN_SQUARE_PX).red).isLessThan(DONE)
     }
@@ -154,10 +157,12 @@ class FadingNavHostTest {
 
     private companion object {
         const val SQUARE_DP = 50
+        const val SQUARE_PX = 100
         const val IN_SQUARE_PX = 40
         const val OUTSIDE_PX = 300
         const val SETTLE_MILLIS = 400L
         const val TWO_FRAMES_MILLIS = 32L
+        const val FOUR_FRAMES_MILLIS = 64L
         const val OPAQUE_WHITE = 0.95f
         const val BEGUN = 0.3f
         const val DONE = 0.05f

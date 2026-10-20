@@ -36,6 +36,7 @@ import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.components.BorealisSnackbarHost
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.rememberAnimationsRemoved
 import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.R
 import io.github.magalz.borealis.library.addhost.AddHostRoute
@@ -158,12 +159,16 @@ internal fun LibraryNavHost(
  */
 @Composable
 internal fun FadingNavHost(navController: NavHostController, graph: NavGraphBuilder.() -> Unit) {
+    // With animations removed (Reduce motion, or the system when that follows it) the fade is one
+    // frame: the next screen is just there. A snap, and not no transition at all, so that the
+    // screen that is left still goes in that same frame and does not stay drawn under the next one.
+    val enter = fadeIn(if (rememberAnimationsRemoved()) snap() else tween(FADE_MS))
     NavHost(
         navController,
         startDestination = Hosts,
-        enterTransition = { fadeIn(tween(FADE_MS)) },
+        enterTransition = { enter },
         exitTransition = { fadeOut(snap()) },
-        popEnterTransition = { fadeIn(tween(FADE_MS)) },
+        popEnterTransition = { enter },
         popExitTransition = { fadeOut(snap()) },
         builder = graph,
     )

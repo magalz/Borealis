@@ -186,6 +186,17 @@ class DefaultSettingsOptions @Inject constructor() : SettingsOptions {
             Rule(hiddenOn = { !it.hasTouchscreen }, dependency = Settings.SHOW_ONSCREEN_CONTROLS)
 
         /**
+         * High contrast overrides the Transparency and the Thicker focus outline rows too: it sets
+         * solid panels and the thicker outline itself (ADR 0057).
+         */
+        val highContrastOverrides =
+            Rule(
+                overriddenBy = { snapshot ->
+                    DisabledReason.HIGH_CONTRAST_ON.takeIf { snapshot[Settings.HIGH_CONTRAST] }
+                }
+            )
+
+        /**
          * The glass rows set the Standard level of Transparency. High contrast, and Transparency
          * Reduced or Off, override them (ADR 0057); High contrast is the reason that is given
          * first, because it overrides everything.
@@ -243,6 +254,8 @@ class DefaultSettingsOptions @Inject constructor() : SettingsOptions {
                     ),
                 Settings.GLASS_TINT to glass,
                 Settings.GLASS_BLUR to glass,
+                Settings.TRANSPARENCY to highContrastOverrides,
+                Settings.THICK_FOCUS to highContrastOverrides,
             )
     }
 }

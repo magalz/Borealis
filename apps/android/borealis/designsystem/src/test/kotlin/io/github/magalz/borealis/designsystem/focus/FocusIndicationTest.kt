@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -203,18 +206,41 @@ class FocusIndicationTest {
         assertPixel(x = 74f, y = 24f - 1f, PAGE)
     }
 
+    @Test
+    fun `a focused tile that leaves while its scale animation is pending raises nothing`() {
+        var shown by mutableStateOf(true)
+        composeRule.setContentInKeyboardMode { Specimen(scaleOnFocus = true, tile = shown) }
+        clearFocus()
+        composeRule.mainClock.autoAdvance = false
+
+        // The animation is launched when the tile takes focus and has not run when the tile goes.
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.runOnIdle { shown = false }
+        composeRule.mainClock.advanceTimeBy(EARLY_MILLIS)
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(FRAME).assertExists()
+    }
+
     @Composable
-    private fun Specimen(scaleOnFocus: Boolean = false, look: BorealisLook = BorealisLook()) {
+    private fun Specimen(
+        scaleOnFocus: Boolean = false,
+        look: BorealisLook = BorealisLook(),
+        tile: Boolean = true,
+    ) {
         BorealisTheme(look = look) {
             Column {
                 Box(Modifier.testTag(FRAME).background(PAGE).padding(24.dp)) {
-                    Box(
-                        Modifier.size(100.dp)
-                            .borealisFocusIndication(RoundedCornerShape(8.dp), scaleOnFocus)
-                            .background(FILL, RoundedCornerShape(8.dp))
-                            .focusRequester(focus)
-                            .focusable()
-                    )
+                    if (tile) {
+                        Box(
+                            Modifier.size(100.dp)
+                                .borealisFocusIndication(RoundedCornerShape(8.dp), scaleOnFocus)
+                                .background(FILL, RoundedCornerShape(8.dp))
+                                .focusRequester(focus)
+                                .focusable()
+                        )
+                    }
                 }
                 Box(Modifier.size(10.dp).focusRequester(elsewhere).focusable())
             }

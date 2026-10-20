@@ -1,6 +1,5 @@
 package io.github.magalz.borealis.designsystem.focus
 
-import android.provider.Settings
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -25,6 +24,9 @@ import androidx.compose.ui.node.invalidateDraw
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInputModeManager
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
+import io.github.magalz.borealis.designsystem.theme.animationsRemoved
+import io.github.magalz.borealis.designsystem.theme.systemAnimationsRemoved
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import kotlinx.coroutines.launch
 
@@ -32,7 +34,7 @@ import kotlinx.coroutines.launch
  * The Borealis focus indication (ADR 0053): while the element has focus, an accent-soft outline
  * ([BorealisTokens.Focus.Outline] wide, [BorealisTokens.Focus.Offset] outside [shape]) is drawn
  * around it. With [scaleOnFocus] the element also grows to [BorealisTokens.Focus.TileScale],
- * animated unless the system has animations turned off.
+ * animated unless animations are removed (Reduce motion, or the system when that follows it).
  *
  * The outline shows only when focus did not come from touch (keyboard input mode), so a tap on a
  * phone never leaves an outline behind. It is [shape] laid out on the rectangle grown by the offset
@@ -69,15 +71,19 @@ private class BorealisFocusNode(var shape: Shape, var scaleOnFocus: Boolean) :
     private val scale = Animatable(1f)
 
     override fun onFocusEvent(focusState: FocusState) {
-        if (focusState.isFocused == focused) return
+        // A node that has gone has nothing to draw or to animate.
+        if (!isAttached || focusState.isFocused == focused) return
         focused = focusState.isFocused
         invalidateDraw()
         if (scaleOnFocus) animateScale(if (focused) BorealisTokens.Focus.TileScale else 1f)
     }
 
     private fun animateScale(target: Float) {
+        // Read now, while attached: the coroutine can first run when the node has gone, and a node
+        // that is not attached has no composition locals to read.
+        val removed = motionRemoved()
         coroutineScope.launch {
-            if (animationsRemoved()) {
+            if (removed) {
                 scale.snapTo(target)
             } else {
                 scale.animateTo(target, tween(SCALE_MILLIS, easing = FastOutSlowInEasing))
@@ -85,11 +91,12 @@ private class BorealisFocusNode(var shape: Shape, var scaleOnFocus: Boolean) :
         }
     }
 
-    /** Reduced motion: the system setting "Remove animations" sets the animator scale to zero. */
-    private fun animationsRemoved(): Boolean {
-        val resolver = currentValueOf(LocalContext).contentResolver
-        return Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
-    }
+    /** Reduce motion, now: the setting of the app, or the system when that follows it. */
+    private fun motionRemoved(): Boolean =
+        animationsRemoved(
+            currentValueOf(LocalBorealisLook).reduceMotion,
+            systemAnimationsRemoved(currentValueOf(LocalContext).contentResolver),
+        )
 
     override fun ContentDrawScope.draw() {
         val showOutline =

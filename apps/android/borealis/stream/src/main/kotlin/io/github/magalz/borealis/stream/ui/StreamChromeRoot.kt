@@ -37,7 +37,8 @@ internal fun StreamChromeTheme(look: BorealisLook, content: @Composable () -> Un
 
 /**
  * [StreamChromeRoot] for the chrome host, which learns the menu handle bounds through [report] and
- * draws with the [look] that the stream started with.
+ * draws with the [look] that the stream started with. [extra] is composed with the screens, inside
+ * the theme: the chrome host has it for a test, which reads what the theme provides there.
  */
 @Composable
 internal fun StreamChromeRoot(
@@ -51,6 +52,7 @@ internal fun StreamChromeRoot(
     if (state.inPip) return
     StreamChromeTheme(look) {
         CompositionLocalProvider(LocalMenuHandleBounds provides report) {
+            extra()
             when (val phase = state.phase) {
                 is StreamPhase.Starting ->
                     StartingScreen(state.appName, state.hostName, phase, session)

@@ -106,17 +106,17 @@
 
     <!-- Rows: Accessibility -->
     <string name="settings_reduce_motion_title">Reduce motion</string>
-    <string name="settings_reduce_motion_summary">Removes animations. Follow system uses the animation setting of the device.</string>
+    <string name="settings_reduce_motion_summary">On removes animations; Off keeps them even when the device removes them. Follow system uses the device\'s animation setting.</string>
     <string name="settings_transparency_title">Transparency</string>
     <string name="settings_transparency_summary">Reduced and Off override Glass tint and Glass blur.</string>
     <string name="settings_thick_focus_title">Thicker focus outline</string>
-    <string name="settings_thick_focus_summary">A thicker, lighter outline around the focused item.</string>
+    <string name="settings_thick_focus_summary">Draws a thicker, lighter outline around the focused item.</string>
     <string name="settings_text_size_title">Text size</string>
     <string name="settings_text_size_summary">Scales the text of Borealis on top of the system font size.</string>
     <string name="settings_high_contrast_title">High contrast</string>
-    <string name="settings_high_contrast_summary">Solid panels, brighter text, a dimmed background and the thicker outline.</string>
+    <string name="settings_high_contrast_summary">Uses solid panels, brighter text, a dimmed background and the thicker outline.</string>
     <string name="settings_colour_vision_title">Colour-blind palette</string>
-    <string name="settings_colour_vision_summary">Status colours that stay apart for red-green or blue-yellow colour blindness.</string>
+    <string name="settings_colour_vision_summary">Uses status colours that are easy to tell apart with red-green or blue-yellow colour blindness.</string>
 
     <!-- Disabled notes -->
     <string name="settings_note_turn_on_first">Turn on %1$s first</string>

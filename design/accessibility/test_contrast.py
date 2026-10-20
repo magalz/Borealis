@@ -559,5 +559,80 @@ class GlassTableTest(unittest.TestCase):
         )
 
 
+class GlassColoursTest(unittest.TestCase):
+    """The floors and the text colours of the glass, worked out again from the table of the app.
+
+    Kotlin works them out in `GlassRules`; these are the values that `docs/ux/accessibility.md`
+    prints, and the tests pin the ones that `GlassRulesTest` pins too.
+    """
+
+    def setUp(self):
+        self.colors = tokens()
+        text = contrast.GLASS_TABLE_KT.read_text(encoding="utf-8")
+        self.table = contrast.read_glass_table_kotlin(text)
+
+    def ink(self, style, blur, alpha):
+        target = contrast.glass_text_target(self.table[style][(blur, alpha)])
+        return tuple(
+            contrast.walk_colour(self.colors[token], self.colors["ink"], target)
+            for token in ("ink-3", "ink-4")
+        )
+
+    def test_a_half_rounds_up_as_it_does_in_kotlin(self):
+        self.assertEqual([contrast.round_half_up(x) for x in (0.5, 1.5, 2.5, 3.4)], [1, 2, 3, 3])
+
+    def test_a_walk_that_lands_on_half_a_level_rounds_up(self):
+        def luminance_at(level):
+            return float(contrast.relative_luminance(np.full(3, level / 255)))
+
+        # Black towards #0A0A0A: step 5 of 100 is half a level, and step 4 is 0.4 of one.
+        target = (luminance_at(0.4) + luminance_at(0.5)) / 2
+
+        self.assertEqual(contrast.walk_colour("#000000", "#0A0A0A", target), "#010101")
+
+    def test_a_walk_that_starts_at_the_target_stays_where_it_is(self):
+        self.assertEqual(contrast.walk_colour("#8b9096", "#E8EAED", 0.1), "#8B9096")
+
+    def test_the_table_of_the_app_reads_back_as_it_was_written(self):
+        _, _, result = glass_result()
+        text = contrast.glass_table_kotlin(result)
+        self.assertEqual(
+            contrast.read_glass_table_kotlin(text), contrast.worst_backdrop_luminance(result)
+        )
+
+    def test_the_colours_at_the_default_are_the_ones_the_app_pins(self):
+        self.assertEqual(self.ink("AuroraCurtains", 8, 0.40), ("#8D9298", "#8D9298"))
+        self.assertEqual(self.ink("FlowingLight", 8, 0.40)[0], "#A8ACB1")
+        self.assertEqual(self.ink("NorthernLights", 8, 0.70)[0], "#9DA1A7")
+        self.assertEqual(self.ink("SoftGlow", 8, 0.40)[0], "#8B9096")
+
+    def test_light_mist_is_where_half_a_level_decides(self):
+        self.assertEqual(self.ink("LightMist", 8, 0.40), ("#969BA0", "#969BA1"))
+        self.assertEqual(self.ink("LightMist", 0, 0.85)[0], "#90959A")
+
+    def test_the_floors_are_the_lowest_tint_that_keeps_the_text(self):
+        floor = lambda style, blur: contrast.glass_floor(self.table[style], blur, self.colors)
+        self.assertEqual([floor("NorthernLights", b) for b in (8, 16, 24, 32, 48)], [70, 60, 50, 50, 40])
+        self.assertEqual(floor("FlowingLight", 8), 40)
+        for style in ("AuroraCurtains", "SoftGlow", "LightMist", "Starfield"):
+            self.assertEqual(floor(style, 8), 30, style)
+
+    def test_the_notes_print_what_the_app_does(self):
+        text = contrast.glass_colour_tables(self.table)
+        self.assertIn("| Northern lights | 70 % | `#9DA1A7` |", text)
+        self.assertIn("| Light mist | 40 % | `#969BA0` | `#969BA1` |", text)
+        self.assertIn("`#90959A`", text)
+
+    def test_the_command_prints_the_notes(self):
+        import contextlib
+        import io
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(contrast.main(["glass-colours"]), 0)
+        self.assertIn("Northern lights", out.getvalue())
+        self.assertEqual(out.getvalue().strip(), contrast.glass_colour_tables(self.table).strip())
+
+
 if __name__ == "__main__":
     unittest.main()

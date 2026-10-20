@@ -699,6 +699,33 @@ def glass_table_kotlin(result):
     )
 
 
+# The floors and the text colours of the glass, for the notes (stubs)
+
+
+def round_half_up(value):
+    return round(value)
+
+
+def read_glass_table_kotlin(text):
+    return {}
+
+
+def glass_text_target(backdrop):
+    return 0.0
+
+
+def walk_colour(start, end, target):
+    return start
+
+
+def glass_floor(cell, blur, colors):
+    return 0
+
+
+def glass_colour_tables(table):
+    return ""
+
+
 # The command line
 
 
@@ -735,7 +762,12 @@ def main(argv=None):
     table.add_argument("result", type=Path, help="the JSON that measure wrote")
     table.add_argument("--out", type=Path, default=GLASS_TABLE_KT, help="the Kotlin file")
 
+    colours = commands.add_parser("glass-colours", help="print the floors and colours of the glass")
+    colours.add_argument("--table", type=Path, default=GLASS_TABLE_KT, help="the Kotlin table")
+
     args = parser.parse_args(argv)
+    if args.command == "glass-colours":
+        return 0
     if args.command == "glass-table":
         result = json.loads(args.result.read_text(encoding="utf-8"))
         args.out.parent.mkdir(parents=True, exist_ok=True)

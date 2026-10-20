@@ -304,12 +304,14 @@ private fun rememberCycle(animated: Boolean): FloatState {
  * a frame time is in the `System.nanoTime` timebase.
  *
  * The thread sleeps between two frames and asks for one only to draw it. The sleep ends
- * [WAKE_EARLY_NANOS] before the vsync that is [FRAME_GAP_NANOS] after the frame that was drawn
- * last, so the frame asked for is that vsync's. The sleep is counted from the time of that frame,
- * not from the moment the coroutine goes on: it goes on after the work of the frame, which took
- * about 11 ms for the curtains on a TV Streamer. A fixed sleep of 25 ms from there ended after the
- * vsync that was meant, and the frame came one vsync late: every 50 ms at 60 Hz, which is 20 fps.
- * Each sleep is counted from the frame just drawn, so a late frame does not move the ones after it.
+ * [WAKE_EARLY_NANOS] before the vsync that is [FRAME_GAP_NANOS] after the frame drawn last, so the
+ * frame that is asked for is that vsync's. Every sleep starts from the time of the frame before, so
+ * the loop keeps to the vsyncs and does not drift from them.
+ *
+ * The sleep is counted from the time of that frame, not from the moment the coroutine goes on: it
+ * goes on after the work of the frame, which took about 11 ms for the curtains on a TV Streamer. A
+ * fixed sleep of 25 ms from there ended after the vsync that was meant, and the frame came one
+ * vsync late: every 50 ms at 60 Hz, which is 20 fps.
  *
  * A frame whose work took the whole gap leaves no sleep, and the next one is the next vsync.
  */

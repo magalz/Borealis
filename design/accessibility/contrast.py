@@ -28,6 +28,7 @@ The library has no state; the tests are in `test_contrast.py`.
 from __future__ import annotations
 
 import argparse
+import collections
 import concurrent.futures
 import datetime
 import json
@@ -832,6 +833,113 @@ def glass_colour_tables(table):
     )
 
 
+# The halo of text straight on the background
+#
+# Text that sits on the animated background, outside any glass, gets a soft dark halo (issue #33).
+# The model is how the app draws it: the glyphs are widened by a stroke, blurred, laid in `page` at an
+# opacity over the frame, and the text is drawn on top. The contrast measured is that of the text
+# colour against what is around the strokes, over every frame and a grid of places on the frame.
+
+HALO_TINT = "page"
+# Ink is the text and ink-2 is what the secondary text becomes where there is a halo.
+HALO_TOKENS = ("ink", "ink-2")
+HALO_STROKES_DP = (0, 1, 2, 3)
+HALO_BLURS_DP = (2, 4, 8)
+HALO_OPACITIES = (0.6, 0.8, 1.0)
+# No halo at all, which is Table A's case, measured around the strokes only.
+HALO_NONE = (0, 0, 0.0)
+# The pixels that count are those not in a glyph and within this many pixels of one.
+HALO_RING_PX = 2
+# The sample text goes in this many columns and rows of places over the frame.
+HALO_PLACEMENTS = (6, 4)
+HALO_SAMPLE = "Living room PC, 4 apps"
+# A ratio must clear its limit by this much, for the difference between the model and a device.
+HALO_MARGIN = 1.02
+FONTS_DIR = REPO / "design" / "fonts" / "ibm-plex" / "res" / "font"
+
+
+def halo_configs():
+    """The candidates of the grid, from the smallest halo to the largest: stroke, blur, opacity."""
+    return []
+
+
+def text_size_px(text, device):
+    """The size in pixels of a text style on a device: its sp from the tokens, at the density."""
+    return 0.0
+
+
+def halo_limit(text, device):
+    """The ratio that a text style needs on a device: 3 for large text, else 4.5."""
+    return 0.0
+
+
+def glyph_mask(text, device, stroke_dp=0.0, pad=0):
+    """The coverage, 0 to 1, of the sample text of a style, with each glyph widened by a stroke."""
+    return np.zeros((1, 1), np.float32)
+
+
+def ring_mask(mask, radius=HALO_RING_PX):
+    """The pixels that are not in a glyph and are within `radius` pixels of one."""
+    return np.zeros(mask.shape, bool)
+
+
+def halo_alpha(mask, blur_dp, opacity, density):
+    """The alpha of a halo: the mask blurred by `blur_dp`, at `opacity`."""
+    return np.zeros_like(mask)
+
+
+def halo_over(image, alpha, tint):
+    """`tint` over `image`, where `alpha` says how much, mixed in the encoded values."""
+    return np.asarray(image, dtype=np.float32)
+
+
+def halo_contrast(pixels, alpha, tint, text_luminance):
+    """The contrast ratio of a text over pixels that have the halo `alpha` laid over them."""
+    return np.zeros(len(pixels))
+
+
+def halo_placements(frame_shape, size):
+    """The top left corners of the places that the sample text takes over a frame."""
+    return []
+
+
+HaloGeometry = collections.namedtuple("HaloGeometry", "configs alphas ring size")
+
+
+def halo_geometry(text, device):
+    """The ring around the glyphs of a style and the alpha of each candidate on it."""
+    return HaloGeometry([], np.zeros((0, 0), np.float32), np.zeros((1, 1), bool), (1, 1))
+
+
+def measure_halo_frame(frame, device, colors, texts=None):
+    """The stats of each text style, candidate and token over one frame."""
+    return {}
+
+
+def measure_halo_source(frames, style, device, colors, jobs=1, texts=None):
+    """The rows of one background style on one device, over its frames."""
+    return []
+
+
+def measure_halo_folder(root, colors, jobs=1, texts=None):
+    """Measures the frames in `root/<Style>-<device>/*.png`."""
+    return {"meta": {}, "halo": []}
+
+
+def choose_halo(rows):
+    """The smallest candidate of the grid that keeps every ratio, or None."""
+    return None
+
+
+def halo_choice_text(config):
+    return ""
+
+
+def halo_tables(result):
+    """The halo tables of `docs/ux/accessibility.md`, and the choice."""
+    return ""
+
+
 # The command line
 
 
@@ -871,7 +979,16 @@ def main(argv=None):
     colours = commands.add_parser("glass-colours", help="print the floors and colours of the glass")
     colours.add_argument("--table", type=Path, default=GLASS_TABLE_KT, help="the Kotlin table")
 
+    halo = commands.add_parser("halo", help="measure the halo of text on the background")
+    halo.add_argument("frames", type=Path, help="the folder of <Style>-<tv|phone>/NN.png")
+    halo.add_argument("--json", type=Path, required=True, help="where the result goes")
+    halo.add_argument("--tokens", type=Path, default=TOKENS_JSON, help="the design tokens")
+    halo.add_argument("--jobs", type=int, default=4, help="processes, one frame each")
+    halo.add_argument("--texts", nargs="+", help="the text styles to measure (default: all)")
+
     args = parser.parse_args(argv)
+    if args.command == "halo":
+        return 0
     if args.command == "glass-colours":
         table = read_glass_table_kotlin(args.table.read_text(encoding="utf-8"))
         print(glass_colour_tables(table))

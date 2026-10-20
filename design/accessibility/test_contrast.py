@@ -635,5 +635,427 @@ class GlassColoursTest(unittest.TestCase):
         self.assertEqual(out.getvalue().strip(), contrast.glass_colour_tables(self.table).strip())
 
 
+class HaloGridTest(unittest.TestCase):
+    """The halo of text straight on the background: the grid of what is tried, and the text."""
+
+    def test_the_grid_is_the_stroke_the_blur_and_the_opacity_of_the_issue(self):
+        self.assertEqual(contrast.HALO_STROKES_DP, (0, 1, 2, 3))
+        self.assertEqual(contrast.HALO_BLURS_DP, (2, 4, 8))
+        self.assertEqual(contrast.HALO_OPACITIES, (0.6, 0.8, 1.0))
+
+    def test_the_candidates_run_from_the_smallest_halo_to_the_largest(self):
+        configs = contrast.halo_configs()
+        self.assertEqual(len(configs), 4 * 3 * 3)
+        self.assertEqual(configs[0], (0, 2, 0.6))
+        self.assertEqual(configs[1], (0, 2, 0.8))
+        self.assertEqual(configs[3], (0, 4, 0.6))
+        self.assertEqual(configs[-1], (3, 8, 1.0))
+        self.assertEqual(configs, sorted(configs))
+
+    def test_no_halo_is_a_candidate_of_its_own(self):
+        self.assertEqual(contrast.HALO_NONE, (0, 0, 0.0))
+        self.assertNotIn(contrast.HALO_NONE, contrast.halo_configs())
+
+    def test_the_text_is_sized_in_sp_by_the_token_file_at_the_density_of_the_device(self):
+        sizes = {
+            ("title", "tv"): 24 * 2.0,
+            ("title", "phone"): 18 * 3.0,
+            ("label", "tv"): 12 * 2.0,
+            ("label", "phone"): 11 * 3.0,
+            ("body", "tv"): 15 * 2.0,
+            ("body", "phone"): 14 * 3.0,
+            ("small", "tv"): 14.5 * 2.0,
+            ("small", "phone"): 12.5 * 3.0,
+        }
+        for (text, device), px in sizes.items():
+            with self.subTest(text=text, device=device):
+                self.assertEqual(contrast.text_size_px(text, device), px)
+
+    def test_a_title_is_large_text_on_a_tv_only(self):
+        # 24 sp regular or 18.66 sp bold is large; a title of 18 sp semibold on a phone is not.
+        self.assertEqual(contrast.halo_limit("title", "tv"), 3.0)
+        self.assertEqual(contrast.halo_limit("title", "phone"), 4.5)
+        for text in ("label", "body", "small"):
+            for device in ("tv", "phone"):
+                self.assertEqual(contrast.halo_limit(text, device), 4.5)
+
+
+class HaloModelTest(unittest.TestCase):
+    """The halo as the app draws it: the glyphs widened by a stroke, blurred, in `page`."""
+
+    def setUp(self):
+        self.colors = tokens()
+        self.page = contrast.parse_hex(self.colors["page"])
+
+    def test_a_glyph_mask_is_coverage_where_the_text_is_and_nothing_elsewhere(self):
+        mask = contrast.glyph_mask("body", "tv", pad=8)
+        self.assertEqual(mask.dtype, np.float32)
+        self.assertEqual(mask.ndim, 2)
+        self.assertGreater(float(mask.max()), 0.95)
+        self.assertLessEqual(float(mask.max()), 1.0)
+        self.assertGreater(float((mask > 0).sum()), 500)
+        self.assertLess(float((mask > 0).mean()), 0.5)
+        self.assertEqual(float(mask[:8].max()), 0.0)
+        self.assertEqual(float(mask[:, :8].max()), 0.0)
+
+    def test_a_stroke_widens_every_glyph_by_its_width_in_dp(self):
+        plain = contrast.glyph_mask("body", "tv", pad=20)
+        wide = contrast.glyph_mask("body", "tv", stroke_dp=2, pad=20)
+        self.assertEqual(plain.shape, wide.shape)
+        self.assertTrue(np.all(wide >= plain - 1e-6))
+        # 2 dp are 4 px on a TV: a pixel 3 px outside a glyph is covered, 6 px outside is not.
+        rows, columns = np.nonzero(plain > 0.9)
+        y, x = rows[np.argmin(columns)], columns.min()
+        self.assertGreater(float(wide[y, x - 3]), 0.5)
+        self.assertEqual(float(wide[y, x - 6]), 0.0)
+
+    def test_a_label_is_set_in_capitals_with_the_spacing_of_the_kicker(self):
+        spaced = contrast.glyph_mask("label", "tv")
+        # 12 sp are 24 px on a TV, and capitals are wider than the lower case of the same size.
+        self.assertGreater(spaced.shape[1], contrast.glyph_mask("small", "tv").shape[1] * 0.8)
+        self.assertGreater(spaced.shape[1], 24 * 0.55 * len(contrast.HALO_SAMPLE))
+
+    def test_the_ring_is_the_pixels_within_two_pixels_of_a_glyph_and_not_the_glyph(self):
+        mask = np.zeros((9, 9), np.float32)
+        mask[4, 4] = 1.0
+        ring = contrast.ring_mask(mask)
+        self.assertEqual(ring.shape, mask.shape)
+        self.assertFalse(ring[4, 4])
+        # The disc of radius 2 has 13 pixels, 12 of them round the glyph.
+        self.assertEqual(int(ring.sum()), 12)
+        self.assertTrue(ring[4, 6])
+        self.assertTrue(ring[3, 5])
+        self.assertFalse(ring[4, 7])
+        self.assertFalse(ring[2, 2])
+
+    def test_a_partly_covered_pixel_is_a_glyph_pixel_and_not_the_ring(self):
+        mask = np.zeros((9, 9), np.float32)
+        mask[4, 4] = 1.0
+        mask[4, 5] = 0.2
+        ring = contrast.ring_mask(mask)
+        self.assertFalse(ring[4, 5])
+        self.assertTrue(ring[4, 7])
+
+    def test_the_alpha_of_the_halo_is_the_blurred_mask_at_the_opacity(self):
+        mask = np.zeros((101, 101), np.float32)
+        mask[50, 50] = 1.0
+        alpha = contrast.halo_alpha(mask, blur_dp=2, opacity=0.5, density=2.0)
+        blurred = contrast.gaussian_blur(mask[..., None], contrast.blur_sigma(2 * 2.0))[..., 0]
+        self.assertEqual(alpha.shape, mask.shape)
+        np.testing.assert_allclose(alpha, 0.5 * blurred, atol=1e-6)
+
+    def test_a_larger_blur_spreads_the_halo_and_thins_it_at_the_glyph(self):
+        mask = np.zeros((101, 101), np.float32)
+        mask[40:60, 40:60] = 1.0
+        small = contrast.halo_alpha(mask, 2, 1.0, 2.0)
+        large = contrast.halo_alpha(mask, 8, 1.0, 2.0)
+        self.assertGreater(float(small[50, 50]), float(large[50, 50]))
+        self.assertGreater(float(large[50, 25]), float(small[50, 25]))
+
+    def test_no_blur_is_the_mask_itself_at_the_opacity(self):
+        mask = np.zeros((20, 20), np.float32)
+        mask[5:9, 5:9] = 1.0
+        mask[9, 9] = 0.5
+        np.testing.assert_allclose(contrast.halo_alpha(mask, 0, 0.8, 3.0), 0.8 * mask, atol=1e-7)
+
+    def test_no_opacity_is_no_halo(self):
+        mask = np.ones((20, 20), np.float32)
+        self.assertEqual(float(contrast.halo_alpha(mask, 4, 0.0, 2.0).max()), 0.0)
+
+    def test_the_halo_is_composited_in_the_tint_at_its_alpha_in_the_encoded_values(self):
+        image = uniform(4, 2, (1.0, 1.0, 1.0))
+        alpha = np.array([[0.0, 0.25, 0.5, 1.0], [1.0, 0.5, 0.25, 0.0]], np.float32)
+        out = contrast.halo_over(image, alpha, np.array([0.2, 0.4, 0.0]))
+        np.testing.assert_allclose(out[0, 0], [1.0, 1.0, 1.0], atol=1e-6)
+        np.testing.assert_allclose(out[0, 1], [0.8, 0.85, 0.75], atol=1e-6)
+        np.testing.assert_allclose(out[0, 3], [0.2, 0.4, 0.0], atol=1e-6)
+
+    def test_a_full_opacity_halo_with_a_wide_stroke_makes_the_page_around_the_glyph(self):
+        plain = contrast.glyph_mask("body", "tv", pad=60)
+        wide = contrast.glyph_mask("body", "tv", stroke_dp=8, pad=60)
+        ring = contrast.ring_mask(plain)
+        alpha = contrast.halo_alpha(wide, 2, 1.0, 2.0)
+        white = uniform(plain.shape[1], plain.shape[0], (1.0, 1.0, 1.0))
+        around = contrast.halo_over(white, alpha, self.page)[ring]
+        np.testing.assert_allclose(
+            around, np.broadcast_to(self.page, (int(ring.sum()), 3)), atol=2e-3
+        )
+        ink = float(contrast.relative_luminance(contrast.parse_hex(self.colors["ink"])))
+        ratios = contrast.halo_contrast(white[ring], alpha[ring], self.page, ink)
+        self.assertAlmostEqual(
+            float(ratios.min()),
+            contrast.hex_contrast(self.colors["ink"], self.colors["page"]),
+            delta=0.05,
+        )
+
+    def test_no_halo_leaves_the_contrast_of_the_background_as_it_is(self):
+        pixels = np.array([[0.2, 0.3, 0.4], [0.9, 0.9, 0.9]], np.float32)
+        ink = float(contrast.relative_luminance(contrast.parse_hex(self.colors["ink"])))
+        ratios = contrast.halo_contrast(pixels, np.zeros(2, np.float32), self.page, ink)
+        np.testing.assert_allclose(
+            ratios, contrast.contrast_ratio(contrast.relative_luminance(pixels), ink), rtol=1e-6
+        )
+
+    def test_a_text_is_placed_on_a_grid_of_six_by_four_over_the_frame(self):
+        places = contrast.halo_placements((1080, 1920), (120, 386))
+        self.assertEqual(len(places), 6 * 4)
+        self.assertEqual(len(set(places)), 24)
+        self.assertEqual(places[0], (0, 0))
+        self.assertEqual(places[-1], (1920 - 386, 1080 - 120))
+        self.assertEqual(len({x for x, _ in places}), 6)
+        self.assertEqual(len({y for _, y in places}), 4)
+        for x, y in places:
+            self.assertTrue(0 <= x <= 1920 - 386 and 0 <= y <= 1080 - 120)
+
+
+class HaloGeometryTest(unittest.TestCase):
+    """What does not depend on the frame: the ring around the glyphs and the alpha of each halo."""
+
+    def setUp(self):
+        self.geometry = contrast.halo_geometry("body", "tv")
+        self.index = {config: i for i, config in enumerate(self.geometry.configs)}
+
+    def test_the_candidates_are_no_halo_and_then_the_grid(self):
+        self.assertEqual(self.geometry.configs, [contrast.HALO_NONE] + contrast.halo_configs())
+
+    def test_there_is_an_alpha_for_each_candidate_at_each_pixel_of_the_ring(self):
+        ring = self.geometry.ring
+        self.assertEqual(ring.dtype, bool)
+        self.assertEqual(self.geometry.alphas.shape, (37, int(ring.sum())))
+        self.assertEqual(ring.shape, self.geometry.size)
+        self.assertEqual(float(self.geometry.alphas[0].max()), 0.0)
+
+    def test_the_opacity_scales_the_alpha_of_a_stroke_and_a_blur(self):
+        full = self.geometry.alphas[self.index[(2, 4, 1.0)]]
+        part = self.geometry.alphas[self.index[(2, 4, 0.6)]]
+        np.testing.assert_allclose(part, 0.6 * full, atol=1e-6)
+        self.assertLessEqual(float(full.max()), 1.0)
+
+    def test_a_wider_stroke_puts_more_halo_on_the_ring(self):
+        means = [
+            float(self.geometry.alphas[self.index[(stroke, 2, 1.0)]].mean())
+            for stroke in (0, 1, 2, 3)
+        ]
+        self.assertEqual(means, sorted(means))
+        self.assertGreater(means[3], 0.8)
+        self.assertLess(means[0], 0.5)
+
+    def test_the_ring_of_a_phone_is_at_its_own_density(self):
+        phone = contrast.halo_geometry("body", "phone")
+        self.assertGreater(phone.size[1], self.geometry.size[1])
+        self.assertGreater(float(phone.alphas[phone.configs.index((1, 2, 1.0))].mean()), 0.5)
+
+
+class HaloMeasureTest(unittest.TestCase):
+    def setUp(self):
+        self.colors = tokens()
+        self.page = contrast.parse_hex(self.colors["page"])
+        self.geometry = contrast.halo_geometry("body", "tv")
+        self.ink = float(contrast.relative_luminance(contrast.parse_hex(self.colors["ink"])))
+
+    def measure(self, frame, texts=("body",)):
+        return contrast.measure_halo_frame(frame, "tv", self.colors, texts=texts)
+
+    def test_with_no_halo_a_flat_frame_gives_the_ratio_of_the_text_on_that_colour(self):
+        # The case of Table A: no halo and no opacity leave the background as it is.
+        colour = np.array([0.35, 0.5, 0.65], np.float32)
+        stats = self.measure(uniform(1920, 1080, colour))["body"][contrast.HALO_NONE]["ink"]
+        expected = contrast.contrast_stats(contrast.relative_luminance(colour)[None], self.ink)
+        for key in ("min", "p1", "p5"):
+            self.assertAlmostEqual(stats[key], expected[key], places=4)
+
+    def test_both_text_tokens_are_measured(self):
+        stats = self.measure(uniform(1920, 1080, self.page))["body"][contrast.HALO_NONE]
+        self.assertEqual(sorted(stats), ["ink", "ink-2"])
+        self.assertLess(stats["ink-2"]["min"], stats["ink"]["min"])
+
+    def test_a_bigger_halo_gives_more_contrast_over_a_bright_frame(self):
+        white = uniform(1920, 1080, (1.0, 1.0, 1.0))
+        by_config = self.measure(white)["body"]
+        ratios = [
+            by_config[config]["ink"]["min"]
+            for config in (contrast.HALO_NONE, (1, 2, 1.0), (2, 2, 1.0), (3, 2, 1.0))
+        ]
+        self.assertEqual(ratios, sorted(ratios))
+        self.assertLess(ratios[0], 1.5)
+        self.assertGreater(ratios[3], 9.0)
+
+    def test_a_bright_pixel_on_the_ring_counts_and_one_off_the_ring_does_not(self):
+        ring = np.argwhere(self.geometry.ring)[0]
+        off_ring = np.argwhere(~self.geometry.ring)[0]
+        on = uniform(1920, 1080, self.page)
+        on[ring[0], ring[1]] = 1.0
+        off = uniform(1920, 1080, self.page)
+        off[off_ring[0], off_ring[1]] = 1.0
+        flat = self.measure(uniform(1920, 1080, self.page))["body"][contrast.HALO_NONE]["ink"]
+        seen_on = self.measure(on)["body"][contrast.HALO_NONE]["ink"]
+        seen_off = self.measure(off)["body"][contrast.HALO_NONE]["ink"]
+        self.assertAlmostEqual(seen_off["min"], flat["min"], places=4)
+        self.assertLess(seen_on["min"], 1.3)
+
+    def test_the_halo_hides_a_bright_pixel_on_the_ring_in_part(self):
+        ring = np.argwhere(self.geometry.ring)[0]
+        frame = uniform(1920, 1080, self.page)
+        frame[ring[0], ring[1]] = 1.0
+        by_config = self.measure(frame)["body"]
+        self.assertGreater(
+            by_config[(3, 2, 1.0)]["ink"]["min"], by_config[contrast.HALO_NONE]["ink"]["min"] * 5
+        )
+
+    def test_the_worst_case_is_the_lowest_over_every_placement_of_the_text(self):
+        # The last placement of the grid is the one in the bottom right corner of the frame.
+        x, y = contrast.halo_placements((1080, 1920), self.geometry.size)[-1]
+        ring = np.argwhere(self.geometry.ring)[0]
+        frame = uniform(1920, 1080, self.page)
+        frame[y + ring[0], x + ring[1]] = 1.0
+        stats = self.measure(frame)["body"][contrast.HALO_NONE]["ink"]
+        self.assertLess(stats["min"], 1.3)
+        # One pixel in a thousand is not the 1% that p1 and p5 report.
+        self.assertGreater(stats["p1"], 10.0)
+        self.assertGreater(stats["p5"], 10.0)
+
+    def test_a_source_folds_the_frames_to_the_worst_one(self):
+        ring = np.argwhere(self.geometry.ring)[0]
+        dark = uniform(1920, 1080, self.page)
+        bright = dark.copy()
+        bright[ring[0], ring[1]] = 1.0
+        rows = contrast.measure_halo_source(
+            [dark, bright, dark], "AuroraCurtains", "tv", self.colors, texts=("body",)
+        )
+        self.assertEqual(len(rows), 1 * 2 * 37)
+        row = next(
+            r
+            for r in rows
+            if (r["text"], r["token"], r["stroke_dp"], r["blur_dp"], r["opacity"])
+            == ("body", "ink", 0, 0, 0.0)
+        )
+        self.assertEqual(row["style"], "AuroraCurtains")
+        self.assertEqual(row["device"], "tv")
+        self.assertEqual(row["worst_frame"], 1)
+        self.assertLess(row["min"], 1.3)
+        self.assertLessEqual(row["min"], row["p1"])
+        self.assertLessEqual(row["p1"], row["p5"])
+        json.dumps(rows)
+
+    def test_a_folder_of_frames_is_read_by_style_and_device(self):
+        with tempfile.TemporaryDirectory() as folder:
+            (Path(folder) / "Starfield-tv").mkdir()
+            (Path(folder) / "notes").mkdir()
+            page = tuple(round(c * 255) for c in self.page)
+            Image.new("RGB", (1920, 1080), page).save(Path(folder) / "Starfield-tv" / "00.png")
+            result = contrast.measure_halo_folder(Path(folder), self.colors, texts=("body",))
+        self.assertEqual({(r["style"], r["device"]) for r in result["halo"]}, {("Starfield", "tv")})
+        self.assertEqual(result["meta"]["strokes_dp"], [0, 1, 2, 3])
+        self.assertEqual(result["meta"]["placements"], [6, 4])
+        json.dumps(result)
+
+
+def halo_rows(passing, ratio=10.0, failing=2.0, texts=("title", "body"), devices=("tv",)):
+    """Rows for every candidate over `texts` and `devices`: those in `passing` keep `ratio`."""
+    rows = []
+    for config in [contrast.HALO_NONE] + contrast.halo_configs():
+        stroke, blur, opacity = config
+        for text in texts:
+            for device in devices:
+                for token in contrast.HALO_TOKENS:
+                    value = ratio if config in passing else failing
+                    rows.append(
+                        {
+                            "style": "AuroraCurtains",
+                            "device": device,
+                            "text": text,
+                            "token": token,
+                            "stroke_dp": stroke,
+                            "blur_dp": blur,
+                            "opacity": opacity,
+                            "min": value,
+                            "p1": value + 1,
+                            "p5": value + 2,
+                            "worst_frame": 0,
+                        }
+                    )
+    return rows
+
+
+class HaloChoiceTest(unittest.TestCase):
+    def test_the_smallest_halo_that_keeps_the_ratios_is_chosen(self):
+        rows = halo_rows({(2, 2, 0.8), (2, 2, 1.0), (3, 2, 0.6), (2, 8, 1.0)})
+        self.assertEqual(contrast.choose_halo(rows), (2, 2, 0.8))
+
+    def test_the_least_stroke_comes_first_then_the_least_blur_then_the_least_opacity(self):
+        self.assertEqual(contrast.choose_halo(halo_rows({(3, 2, 0.6), (2, 8, 1.0)})), (2, 8, 1.0))
+        self.assertEqual(contrast.choose_halo(halo_rows({(2, 8, 0.6), (2, 4, 1.0)})), (2, 4, 1.0))
+        self.assertEqual(contrast.choose_halo(halo_rows({(2, 4, 1.0), (2, 4, 0.8)})), (2, 4, 0.8))
+
+    def test_no_halo_is_never_the_choice(self):
+        rows = halo_rows({contrast.HALO_NONE, (3, 8, 1.0)})
+        self.assertEqual(contrast.choose_halo(rows), (3, 8, 1.0))
+
+    def test_nothing_is_chosen_when_no_candidate_of_the_grid_keeps_the_ratios(self):
+        self.assertIsNone(contrast.choose_halo(halo_rows(set())))
+
+    def test_one_row_below_its_limit_rejects_the_candidate(self):
+        rows = halo_rows({(2, 2, 0.8), (3, 2, 0.8)})
+        low = next(
+            r
+            for r in rows
+            if (r["stroke_dp"], r["blur_dp"], r["opacity"], r["text"], r["token"])
+            == (2, 2, 0.8, "body", "ink-2")
+        )
+        low["min"] = 4.4
+        self.assertEqual(contrast.choose_halo(rows), (3, 2, 0.8))
+
+    def test_a_ratio_must_clear_its_limit_by_the_margin_of_the_model(self):
+        # 4.5 : 1 with 2 percent to spare is 4.59.
+        self.assertIsNone(contrast.choose_halo(halo_rows({(2, 2, 0.8)}, ratio=4.55)))
+        self.assertEqual(contrast.choose_halo(halo_rows({(2, 2, 0.8)}, ratio=4.6)), (2, 2, 0.8))
+
+    def test_a_tv_title_is_large_text_and_is_measured_with_ink_only(self):
+        rows = halo_rows({(2, 2, 0.8)}, texts=("title",), ratio=3.2)
+        for row in rows:
+            if row["token"] != "ink":
+                row["min"] = 1.0
+        self.assertEqual(contrast.choose_halo(rows), (2, 2, 0.8))
+
+    def test_a_phone_title_is_small_text_and_needs_4_5_to_1(self):
+        rows = halo_rows({(2, 2, 0.8)}, texts=("title",), devices=("phone",), ratio=3.2)
+        self.assertIsNone(contrast.choose_halo(rows))
+
+    def test_the_choice_is_printed_in_words(self):
+        self.assertEqual(
+            contrast.halo_choice_text((2, 2, 0.8)), "stroke 2 dp, blur 2 dp, opacity 80 %"
+        )
+
+    def test_the_tables_name_the_candidates_and_the_choice(self):
+        rows = halo_rows({(2, 2, 0.8)}, devices=("tv", "phone"))
+        text = contrast.halo_tables({"meta": {}, "halo": rows})
+        self.assertIn("Table D", text)
+        self.assertIn("Table E", text)
+        self.assertIn("| 2 | 2 | 80 % |", text)
+        self.assertIn("The choice: stroke 2 dp, blur 2 dp, opacity 80 %.", text)
+
+    def test_the_tables_say_when_no_candidate_does_it(self):
+        text = contrast.halo_tables({"meta": {}, "halo": halo_rows(set())})
+        self.assertIn("No candidate of the grid", text)
+
+    def test_the_command_measures_a_folder_and_writes_the_result(self):
+        import contextlib
+        import io
+
+        with tempfile.TemporaryDirectory() as folder:
+            frames = Path(folder) / "frames"
+            (frames / "Starfield-tv").mkdir(parents=True)
+            Image.new("RGB", (1920, 1080), (14, 16, 19)).save(frames / "Starfield-tv" / "00.png")
+            target = Path(folder) / "halo.json"
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                args = ["halo", str(frames), "--json", str(target), "--texts", "body"]
+                code = contrast.main(args)
+            self.assertEqual(code, 0)
+            written = json.loads(target.read_text(encoding="utf-8"))
+            self.assertEqual({r["text"] for r in written["halo"]}, {"body"})
+        self.assertIn("Table D", out.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -14,6 +14,7 @@ import io.github.magalz.borealis.designsystem.background.BorealisBackground
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.NavigationRail
 import io.github.magalz.borealis.designsystem.components.RailItem
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.R
@@ -57,6 +58,7 @@ internal fun LibraryScaffold(
     actions: RailActions,
     modifier: Modifier = Modifier,
     backgroundStyle: BackgroundStyle = BackgroundStyle.Off,
+    look: BorealisLook = BorealisLook(),
     content: @Composable () -> Unit,
 ) {
     BorealisTheme(formFactor) {

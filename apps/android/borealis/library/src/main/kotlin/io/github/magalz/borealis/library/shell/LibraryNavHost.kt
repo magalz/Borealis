@@ -34,6 +34,7 @@ import androidx.navigation.toRoute
 import io.github.magalz.borealis.designsystem.adaptive.rememberFormFactor
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.components.BorealisSnackbarHost
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.R
@@ -80,6 +81,7 @@ internal fun LibraryNavHost(
     request: LibraryLaunchRequest? = null,
     onRequestHandled: () -> Unit = {},
     backgroundStyle: BackgroundStyle = BackgroundStyle.Default,
+    look: BorealisLook = BorealisLook(),
     navController: NavHostController = rememberNavController(),
 ) {
     val resources = LocalResources.current
@@ -130,6 +132,7 @@ internal fun LibraryNavHost(
         actions = rail,
         modifier = modifier,
         backgroundStyle = backgroundStyle,
+        look = look,
     ) {
         Box {
             FadingNavHost(navController) {

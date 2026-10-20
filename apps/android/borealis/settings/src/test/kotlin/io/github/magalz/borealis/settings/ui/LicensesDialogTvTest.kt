@@ -1,9 +1,12 @@
 package io.github.magalz.borealis.settings.ui
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
@@ -14,6 +17,8 @@ import androidx.compose.ui.test.pressKey
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
+import kotlin.math.abs
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -95,6 +100,39 @@ class LicensesDialogTvTest : SettingsScreenTestBase() {
     }
 
     @Test
+    fun `the text shows the focus outline when it has focus`() {
+        press(close, Key.DirectionUp)
+        text.assertIsFocused()
+
+        assertThat(outlinePixelsAcrossText()).isGreaterThan(0)
+    }
+
+    @Test
+    fun `the text shows no focus outline while Close has focus`() {
+        close.assertIsFocused()
+
+        assertThat(outlinePixelsAcrossText()).isEqualTo(0)
+    }
+
+    /**
+     * How many pixels of the focus outline (ADR 0053) lie on the middle row of the text, from a
+     * little outside its left edge to a little outside its right edge. The outline reaches about
+     * 5dp (10 pixels at xhdpi) outside what it surrounds, so a margin of 12dp takes in all of it
+     * however the text is padded inside its node.
+     */
+    private fun outlinePixelsAcrossText(): Int {
+        val image = composeRule.onNode(isDialog()).captureToImage().toPixelMap()
+        val bounds = text.fetchSemanticsNode().boundsInRoot
+        val row = bounds.center.y.toInt()
+        val margin = 2 * OUTLINE_MARGIN_DP
+        val xs = (bounds.left.toInt() - margin)..(bounds.right.toInt() + margin)
+        return xs.count { x -> image[x, row].isCloseTo(OUTLINE) }
+    }
+
+    private fun Color.isCloseTo(other: Color) =
+        abs(red - other.red) + abs(green - other.green) + abs(blue - other.blue) < COLOUR_TOLERANCE
+
+    @Test
     fun `Back dismisses the dialog`() {
         Espresso.pressBack()
         composeRule.waitForIdle()
@@ -104,5 +142,8 @@ class LicensesDialogTvTest : SettingsScreenTestBase() {
 
     private companion object {
         const val LINES = 40
+        const val OUTLINE_MARGIN_DP = 12
+        const val COLOUR_TOLERANCE = 0.02f
+        val OUTLINE = BorealisTokens.Color.AccentSoft
     }
 }

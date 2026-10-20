@@ -45,6 +45,29 @@ class KeyboardNavigationTest {
             .config[SemanticsProperties.TestTag]
             .substringAfter(':')
 
+    /** Puts the focus on the key [from], presses [key] and returns the key that has the focus. */
+    private fun focusAfter(from: String, key: Key): String {
+        composeRule.onNodeWithTag("key:$from").requestFocus()
+        press(key)
+        return focused()
+    }
+
+    /** Presses Fn 123, which stays focused as the rows change. */
+    private fun switchLayer() {
+        composeRule.onNodeWithTag("key:Fn 123").requestFocus()
+        press(Key.DirectionCenter)
+    }
+
+    /** What Right on the last key of each row of [ends] reaches, in the order of [ends]. */
+    private fun rightFromLast(ends: List<Pair<String, String>>) = ends.map { (_, last) ->
+        focusAfter(last, Key.DirectionRight)
+    }
+
+    /** What Left on the first key of each row of [ends] reaches, in the order of [ends]. */
+    private fun leftFromFirst(ends: List<Pair<String, String>>) = ends.map { (first, _) ->
+        focusAfter(first, Key.DirectionLeft)
+    }
+
     @Test
     fun `the D-pad walks down the letter layer to the bottom row and back up`() {
         show()
@@ -129,5 +152,74 @@ class KeyboardNavigationTest {
         assertThat(visited)
             .containsExactly("←", "↑", "↓", "→", "Home", "End", "PgUp", "PgDn", "Del")
             .inOrder()
+    }
+
+    @Test
+    fun `Right on the last key of a letter row goes to the first key of that row`() {
+        show()
+
+        assertThat(rightFromLast(LETTER_ENDS)).containsExactly("Q", "A", "Shift").inOrder()
+    }
+
+    @Test
+    fun `Left on the first key of a letter row goes to the last key of that row`() {
+        show()
+
+        assertThat(leftFromFirst(LETTER_ENDS)).containsExactly("P", "Backspace", "Enter").inOrder()
+    }
+
+    @Test
+    fun `Right on the last key of an Fn row goes to the first key of that row`() {
+        show()
+        switchLayer()
+
+        assertThat(rightFromLast(FN_ENDS)).containsExactly("1", "F1", "←").inOrder()
+    }
+
+    @Test
+    fun `Left on the first key of an Fn row goes to the last key of that row`() {
+        show()
+        switchLayer()
+
+        assertThat(leftFromFirst(FN_ENDS)).containsExactly("0", "F10", "Del").inOrder()
+    }
+
+    @Test
+    fun `the bottom row wraps on the letter layer`() {
+        show()
+
+        assertThat(rightFromLast(listOf(BOTTOM_ENDS))).containsExactly("Ctrl")
+        assertThat(leftFromFirst(listOf(BOTTOM_ENDS))).containsExactly("Fn 123")
+    }
+
+    @Test
+    fun `the bottom row wraps on the Fn layer`() {
+        show()
+        switchLayer()
+
+        assertThat(rightFromLast(listOf(BOTTOM_ENDS))).containsExactly("Ctrl")
+        assertThat(leftFromFirst(listOf(BOTTOM_ENDS))).containsExactly("Fn 123")
+    }
+
+    @Test
+    fun `every row still wraps after the Fn layer is shown and hidden again`() {
+        show()
+        switchLayer()
+        switchLayer()
+        composeRule.onNodeWithTag("key:Q").assertExists()
+
+        assertThat(rightFromLast(LETTER_ENDS + BOTTOM_ENDS))
+            .containsExactly("Q", "A", "Shift", "Ctrl")
+            .inOrder()
+        assertThat(leftFromFirst(LETTER_ENDS + BOTTOM_ENDS))
+            .containsExactly("P", "Backspace", "Enter", "Fn 123")
+            .inOrder()
+    }
+
+    private companion object {
+        // The first and the last key of each row, by the tag after `key:`.
+        val LETTER_ENDS = listOf("Q" to "P", "A" to "Backspace", "Shift" to "Enter")
+        val FN_ENDS = listOf("1" to "0", "F1" to "F10", "←" to "Del")
+        val BOTTOM_ENDS = "Ctrl" to "Fn 123"
     }
 }

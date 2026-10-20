@@ -167,6 +167,115 @@ class SettingsTwoPaneTest {
     }
 
     @Test
+    fun `OK on a group enters the pane at its first row`() =
+        okEntersTheFirstRow(Key.DirectionCenter)
+
+    @Test fun `Enter on a group enters the pane at its first row`() = okEntersTheFirstRow(Key.Enter)
+
+    @Test
+    fun `the numpad Enter on a group enters the pane at its first row`() =
+        okEntersTheFirstRow(Key.NumPadEnter)
+
+    @Test
+    fun `the gamepad A button on a group enters the pane at its first row`() =
+        okEntersTheFirstRow(Key.ButtonA)
+
+    private fun okEntersTheFirstRow(ok: Key) {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+        press(Key.DirectionDown)
+        composeRule.onNodeWithText("Video").assertIsFocused()
+
+        press(ok)
+
+        // The first row, not the nearest to the group, and the group stays selected.
+        composeRule.onNodeWithText("Codec").assertIsFocused()
+        assertThat(selected).isEqualTo("video")
+        assertThat(selections).containsExactly("video")
+    }
+
+    @Test
+    fun `OK on the first group enters the pane at its first row`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+
+        press(Key.DirectionCenter)
+
+        composeRule.onNodeWithText("Resolution").assertIsFocused()
+        assertThat(selected).isEqualTo("stream")
+        assertThat(selections).isEmpty()
+    }
+
+    @Test
+    fun `OK on a group with a single row enters that row`() {
+        selected = "about"
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("About").requestFocus()
+
+        press(Key.DirectionCenter)
+
+        composeRule.onNodeWithText("Licences").assertIsFocused()
+    }
+
+    @Test
+    fun `Left from the pane that OK entered returns to the group`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        composeRule.onNodeWithText("Codec").assertIsFocused()
+
+        press(Key.DirectionLeft)
+
+        composeRule.onNodeWithText("Video").assertIsFocused()
+        assertThat(selected).isEqualTo("video")
+    }
+
+    @Test
+    fun `focus moving to another group after OK and before the next frame cancels entering`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+        press(Key.DirectionDown)
+
+        // The pane takes focus a frame after OK; focus moves to another group before it.
+        composeRule.mainClock.autoAdvance = false
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+        composeRule.onNodeWithText("Audio").requestFocus()
+        composeRule.waitForIdle()
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Channels").assertIsNotFocused()
+        composeRule.onNodeWithText("Audio").assertIsFocused()
+        composeRule.onNodeWithText("Channels").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a tap on a group selects it and takes no focus into the pane`() {
+        composeRule.setContent { Specimen() }
+
+        composeRule.onNodeWithText("Audio").performClick()
+        composeRule.waitForIdle()
+
+        assertThat(selected).isEqualTo("audio")
+        composeRule.onNodeWithText("Channels").assertIsDisplayed()
+        composeRule.onNodeWithText("Channels").assertIsNotFocused()
+        composeRule.onNodeWithText("Vibration").assertIsNotFocused()
+    }
+
+    @Test
+    fun `a tap in a window that was in keyboard mode selects the group and enters no pane`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+
+        composeRule.onNodeWithText("Audio").performClick()
+        composeRule.waitForIdle()
+
+        assertThat(selected).isEqualTo("audio")
+        composeRule.onNodeWithText("Channels").assertIsNotFocused()
+        composeRule.onNodeWithText("Vibration").assertIsNotFocused()
+    }
+
+    @Test
     fun `Right from the first group enters the pane at its first row`() {
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Stream").requestFocus()

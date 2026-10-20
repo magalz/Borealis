@@ -1315,7 +1315,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
     // BOREALIS: whether the USB driver holds a pad, which Android has no input device for (stream)
     public boolean hasUsbPad() {
-        return false;
+        return usbDeviceContexts.size() > 0;
     }
 
     @Override

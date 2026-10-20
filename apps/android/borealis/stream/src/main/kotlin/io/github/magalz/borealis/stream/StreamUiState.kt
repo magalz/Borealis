@@ -45,7 +45,9 @@ sealed interface StreamPhase {
     /**
      * The first frame is on screen. [touchMode] is null when the device has no touchscreen and
      * [gamepadMouse] is null when there is no gamepad-as-mouse choice to offer. [pointerSpeed] is
-     * the speed of the gamepad mouse for this session.
+     * the speed of the gamepad mouse for this session. [dockedKeyboard] says whether the keyboard
+     * docks under the stream (the stream keeps the keys) or covers it (the chrome takes them, and a
+     * pad can use it). It is decided when the keyboard opens and means nothing while none is open.
      */
     data class Streaming(
         val panel: Panel = Panel.NONE,

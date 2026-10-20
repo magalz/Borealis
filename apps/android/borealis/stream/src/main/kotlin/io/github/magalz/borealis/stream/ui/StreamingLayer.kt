@@ -65,7 +65,7 @@ fun StreamingLayer(
                     )
                 }
             Panel.MENU -> InGameMenu(appName, hostName, phase, perf, intents)
-            Panel.KEYBOARD -> StreamKeyboard(docked = formFactor == FormFactor.Phone, intents)
+            Panel.KEYBOARD -> StreamKeyboard(docked = phase.dockedKeyboard, intents)
         }
         MenuHint(
             phase.showMenuHint,

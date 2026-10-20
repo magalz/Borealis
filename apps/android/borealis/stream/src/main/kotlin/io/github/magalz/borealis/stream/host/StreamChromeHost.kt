@@ -332,13 +332,16 @@ class StreamChromeHost(
         private const val CONFIRM_GUARD_MS = 1000L
 
         /**
-         * Whether the device is a phone, where the keyboard docks under the stream instead of
-         * covering it: the same rule the Library uses for its layouts, so a wide phone with a game
-         * controller connected is not one.
+         * Whether the keyboard that opens now docks under the stream instead of covering it: on a
+         * phone (the form factor the Library uses for its layouts), and only while no game
+         * controller is connected, whether Android has it or the app's USB driver holds it
+         * ([usbPadHeld]; Android has no input device for such a pad). A pad cannot reach a docked
+         * keyboard, because the chrome takes touches only and the keys of the pad go to the stream,
+         * so with a pad the keyboard covers the stream and the pad navigates it. The caller asks
+         * when the keyboard opens, so a pad that connects later is counted.
          */
-        fun dockedKeyboard(context: Context, usbPadHeld: Boolean): Boolean = isPhone(context)
-
-        private fun isPhone(context: Context): Boolean {
+        fun dockedKeyboard(context: Context, usbPadHeld: Boolean): Boolean {
+            if (usbPadHeld || isGamepadConnected()) return false
             val configuration = context.resources.configuration
             return formFactorOf(
                 FormFactorFacts(
@@ -349,7 +352,8 @@ class StreamChromeHost(
                     uiModeType = configuration.uiMode and Configuration.UI_MODE_TYPE_MASK,
                     widthDp = configuration.screenWidthDp,
                     touchscreen = configuration.touchscreen,
-                    gamepadConnected = isGamepadConnected(),
+                    // A connected pad returned above, so none counts here.
+                    gamepadConnected = false,
                 )
             ) == FormFactor.Phone
         }

@@ -30,18 +30,19 @@ data class StreamDefaults(
  * `retry()` starts the stream again in a new activity and a new session. Cancelling a conflict
  * leaves the phase at [StreamPhase.Conflict]; the activity finishes itself. When the host ends the
  * stream while a quit is pending, the phase is [StreamPhase.Quitting] until the quit answers.
+ *
+ * The keyboard is docked or covering as [dockKeyboard] says at the moment it opens, and keeps that
+ * type until it closes (see [StreamPhase.Streaming.dockedKeyboard]): a pad that connects or
+ * disconnects while it is open does not change it.
  */
 @Suppress("TooManyFunctions") // One method per stream event and per StreamIntents call.
 class StreamSession(
     appName: String,
     hostName: String,
     private val defaults: StreamDefaults,
-    dockKeyboard: () -> Boolean,
+    private val dockKeyboard: () -> Boolean,
     private val actions: StreamActions,
 ) : StreamIntents {
-    // Answered once, when the session is created.
-    private val dockedKeyboard = dockKeyboard()
-
     private val mutableState =
         MutableStateFlow(
             StreamUiState(appName, hostName, StreamPhase.Starting(StartStage.CONNECTING))
@@ -76,7 +77,7 @@ class StreamSession(
     private fun streamingChromeMode(phase: StreamPhase.Streaming): ChromeMode =
         when (phase.panel) {
             Panel.MENU -> ChromeMode.MODAL
-            Panel.KEYBOARD -> if (dockedKeyboard) ChromeMode.DOCKED else ChromeMode.MODAL
+            Panel.KEYBOARD -> if (phase.dockedKeyboard) ChromeMode.DOCKED else ChromeMode.MODAL
             Panel.NONE ->
                 if (phase.overlay != OverlayMode.OFF) ChromeMode.OVERLAY else ChromeMode.IDLE
         }
@@ -190,7 +191,11 @@ class StreamSession(
 
     override fun openMenu() = whileStreaming { it.copy(panel = Panel.MENU) }
 
-    override fun openKeyboard() = whileStreaming { it.copy(panel = Panel.KEYBOARD) }
+    override fun openKeyboard() {
+        // Asked here, not inside the update, which can run again.
+        val docked = dockKeyboard()
+        whileStreaming { it.copy(panel = Panel.KEYBOARD, dockedKeyboard = docked) }
+    }
 
     override fun closePanel() = whileStreaming { it.copy(panel = Panel.NONE) }
 

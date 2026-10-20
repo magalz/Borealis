@@ -74,10 +74,10 @@ private const val VK_BACKSPACE = 0x08
  * room it needs, so a [docked] keyboard leaves the stream visible above it. Keys are US virtual
  * keys; the System keyboard chip hands text in other languages to the Android keyboard.
  *
- * Not [docked] (TV and handheld), the focus starts on Q and the D-pad moves between the keys (Left
- * and Right wrap around at the ends of a row): A types through the platform's D-pad centre
- * fallback, B closes and Y is Backspace. Docked, the panel takes no focus and handles no physical
- * key, so a hardware keyboard keeps typing into the PC.
+ * Not [docked] (a TV, a handheld, or a phone with a pad), the focus starts on Q and the D-pad moves
+ * between the keys (Left and Right wrap around at the ends of a row): A types through the
+ * platform's D-pad centre fallback, B closes and Y is Backspace. Docked, the panel takes no focus
+ * and handles no physical key, so a hardware keyboard keeps typing into the PC.
  *
  * Nothing typed is logged: this code has no log calls.
  */

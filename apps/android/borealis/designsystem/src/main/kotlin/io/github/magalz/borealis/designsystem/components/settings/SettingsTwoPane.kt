@@ -64,8 +64,8 @@ private val PANE_GAP = 12.dp
 internal val ITEM_GAP = 10.dp
 internal val AREA_PADDING = 8.dp
 private val GROUP_PADDING_HORIZONTAL = 12.dp
-/** Small enough that the ten groups of Settings, [ITEM_GAP] apart, fit a 540dp TV unscrolled. */
-private val GROUP_PADDING_VERTICAL = 5.dp
+/** Small enough that the eleven groups of Settings, [ITEM_GAP] apart, fit a 540dp TV unscrolled. */
+private val GROUP_PADDING_VERTICAL = 4.dp
 
 /**
  * The settings of a TV or handheld in two panes: the [groups] by title in a list on the left, and

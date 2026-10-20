@@ -76,6 +76,9 @@ LUMINANCE_WEIGHTS = (0.2126, 0.7152, 0.0722)
 SRGB_THRESHOLD = 0.04045
 NEAR_BLACK = 0.05
 
+# The contrast ratios WCAG 2.x asks for: large text and graphics, text, and text at level AAA.
+WCAG_LIMITS = (3.0, 4.5, 7.0)
+
 # How far the blur reaches, in sigmas. The padding of the frame is that wide, so the circular
 # convolution of the FFT never wraps anything in: exp(-25/2) is 4e-6.
 KERNEL_SIGMAS = 5
@@ -166,7 +169,15 @@ def hex_contrast(foreground, background):
 
 
 def format_ratio(value):
-    return ""
+    """A ratio to two places, or to three, cut off, when it is short of a WCAG limit.
+
+    3:1, 4.5:1 and 7:1 are the limits. A ratio of 4.4962 is not 4.5:1 and must not read as it, which
+    two places would make of it.
+    """
+    text = f"{value:.2f}"
+    if any(value < limit <= float(text) for limit in WCAG_LIMITS):
+        return f"{math.floor(value * 1000) / 1000:.3f}"
+    return text
 
 
 def contrast_stats(luminance, text_luminance):
@@ -477,7 +488,7 @@ def markdown_tables(result):
         return _table(
             ["Style"] + names,
             [
-                [_label(*source)] + [f"{by_token[token]:.2f}" for token in tokens]
+                [_label(*source)] + [format_ratio(by_token[token]) for token in tokens]
                 for source, by_token in by_source.items()
             ],
         )
@@ -485,11 +496,11 @@ def markdown_tables(result):
     ratios = {(row["surface"], row["token"]): row["ratio"] for row in result["surfaces"]}
     surfaces = list(dict.fromkeys(row["surface"] for row in result["surfaces"]))
     rows = [
-        [f"`{surface}`"] + [f"{ratios[(surface, token)]:.2f}" for token in tokens]
+        [f"`{surface}`"] + [format_ratio(ratios[(surface, token)]) for token in tokens]
         for surface in surfaces
     ]
     worst_ratios = [min(ratios[(surface, token)] for surface in surfaces) for token in tokens]
-    rows.append(["worst"] + [f"{ratio:.2f}" for ratio in worst_ratios])
+    rows.append(["worst"] + [format_ratio(ratio) for ratio in worst_ratios])
     table_b = _table(["Surface"] + names, rows)
 
     worst = {}
@@ -503,8 +514,8 @@ def markdown_tables(result):
         lowest = min(value for value, _ in by_token.values())
         rows.append(
             [f"{alpha:.2f}", f"{blur}"]
-            + [f"{by_token[token][0]:.2f} ({by_token[token][1]})" for token in tokens]
-            + [f"{lowest:.2f}"]
+            + [f"{format_ratio(by_token[token][0])} ({by_token[token][1]})" for token in tokens]
+            + [format_ratio(lowest)]
         )
     table_c = _table(["Alpha", "Blur dp"] + names + ["Lowest"], rows)
 

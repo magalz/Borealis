@@ -1,8 +1,8 @@
 # Contrast tool
 
-Measures the contrast of text over the animated backgrounds, and over the glass panels planned for
+Measures the contrast of text over the animated backgrounds, and over the glass panels drawn on
 them, as WCAG 2.x defines it. `docs/ux/accessibility.md` has the method and the baseline numbers.
-Sprint 10 uses it to choose the glass look of a panel and to fix the text tokens, and runs it again
+Sprint 10 uses it to choose the glass look of a panel and the text colours on it, and runs it again
 after the fixes.
 
 ## What it needs
@@ -63,8 +63,9 @@ For each style, each frame and each text token (`ink`, `ink-2`, `ink-3`, `ink-4`
 - (b) The text on an opaque surface: `page`, `surface` or `surface-raised`. It does not depend on
   the frames.
 - (c) The text on a glass panel: the frame blurred, then the `surface` colour on it at an alpha.
-  The grid is an alpha of 0.55, 0.70 or 0.85 and a blur radius of 16, 32 or 48 dp, nine
-  candidates. The dp are turned into pixels with the density of the frame.
+  The grid is what Settings offers: an alpha of 0.30, 0.40, 0.50, 0.60, 0.70 or 0.85 and a blur
+  radius of 8, 16, 24, 32 or 48 dp, and also a radius of 0, which is no blur (the glass of API 28 to
+  30), 36 candidates. The dp are turned into pixels with the density of the frame.
 
 The statistic is taken over the whole frame, which is deliberately conservative: the worst case is
 the lowest ratio of any pixel (a single star counts), and the JSON also holds p1 and p5, the
@@ -76,8 +77,32 @@ The blur is a Gaussian of sigma `0.57735 * radius_px + 0.5`, which is how Skia (
 values, as the platform does, and the edge of the frame repeats. The clips have no colour tags, and
 Android decodes an untagged HD stream as BT.709 in limited range, so `extract` does too.
 
-The clips are drawn on a `SurfaceView`, which an in-app blur cannot sample, so a glass panel over a
-clip needs a `TextureView`. The tool models the panel, not that path.
+The clips are drawn on a `TextureView`, which an in-app blur can sample. The tool models the panel,
+not that path.
+
+## The table for the app
+
+The app does not read the JSON. Once the measurement is done,
+
+```sh
+python -I design/accessibility/contrast.py glass-table <result.json>
+```
+
+writes `GlassContrastTable.kt` in `borealis/designsystem/.../glass/`: for each style, blur and tint,
+the luminance of the brightest pixel behind the text, over every frame of the TV and of the phone.
+It is the contrast of `ink` turned back into a luminance, `Lb = (L(ink) + 0.05) / ratio - 0.05`,
+rounded up. The tint floors and the text colours of the glass are worked out from it in Kotlin
+(`GlassRules`), so that rule lives in one tested place. Commit the file with the measurement it
+came from, and do not edit it by hand.
+
+```sh
+python -I design/accessibility/contrast.py glass-colours
+```
+
+prints the floors and the text colours that the app works out from that file, as the tables of
+`docs/ux/accessibility.md` have them. It is the same rule written again in Python, and its tests pin
+the colours that the Kotlin tests pin. A channel that lands on half a level rounds up, as Kotlin's
+`roundToInt` does.
 
 ## The JSON
 

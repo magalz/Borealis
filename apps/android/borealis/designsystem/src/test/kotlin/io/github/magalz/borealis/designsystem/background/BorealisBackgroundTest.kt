@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.designsystem.background
 
+import android.view.TextureView
 import android.view.View
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
@@ -186,7 +187,7 @@ class BorealisBackgroundTest {
     }
 
     @Test
-    fun `each video style plays its own clip on the surface as the only player`() {
+    fun `each video style plays its own clip on the texture as the only player`() {
         var style by mutableStateOf(BackgroundStyle.NorthernLights)
         composeRule.setContent { Specimen { BorealisBackground(style, Modifier.fillMaxSize()) } }
         composeRule.waitForIdle()
@@ -205,10 +206,19 @@ class BorealisBackgroundTest {
     }
 
     @Test
-    fun `the surface is no part of what a screen reader reads`() {
+    fun `a clip plays on a texture view, which the glass can sample`() {
+        show(BackgroundStyle.NorthernLights)
+
+        val view = players.live.single().texture
+        assertThat(view).isInstanceOf(TextureView::class.java)
+        assertThat(view.isAttachedToWindow).isTrue()
+    }
+
+    @Test
+    fun `the texture is no part of what a screen reader reads`() {
         show(BackgroundStyle.LightMist)
 
-        assertThat(players.live.single().surface.importantForAccessibility)
+        assertThat(players.live.single().texture.importantForAccessibility)
             .isEqualTo(View.IMPORTANT_FOR_ACCESSIBILITY_NO)
     }
 

@@ -12,11 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
-import io.github.magalz.borealis.designsystem.background.BorealisBackground
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.NavigationRail
 import io.github.magalz.borealis.designsystem.components.RailFooter
 import io.github.magalz.borealis.designsystem.components.RailItem
+import io.github.magalz.borealis.designsystem.glass.GlassHost
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -47,10 +47,12 @@ internal enum class RailSelection {
  * The frame of the Library screens: on a TV or handheld, [content] with the [LibraryRail] beside it
  * on every screen, with [selected] marked. A phone has no rail.
  *
- * The frame draws the [backgroundStyle] once, behind the rail and the screen: the screens have no
- * page of their own, so it shows through them, and the rail keeps its own colour.
- * [BackgroundStyle.Off] is the plain page. It gives the screens the [look] that the viewer chose;
- * the theme that each screen wears inside it keeps that look.
+ * The frame is a [GlassHost]: it draws the [backgroundStyle] once, behind the rail and the screen,
+ * and the glass surfaces on the screens show it blurred. The screens have no page of their own, so
+ * it shows through them, and the rail keeps its own colour. [BackgroundStyle.Off] is the plain
+ * page. It gives the screens the [look] that the viewer chose, and the host reads it too: the
+ * Transparency, the tint, the blur and High contrast make its glass; the theme that each screen
+ * wears inside it keeps that look.
  *
  * The frame owns the system bar insets where it has the rail, so the rail and the screen beside it
  * start at the same edge and nothing moves when the screen changes; the screens of a phone draw
@@ -68,8 +70,7 @@ internal fun LibraryScaffold(
 ) {
     BorealisTheme(formFactor, look) {
         val rail = formFactor != FormFactor.Phone
-        Box(modifier.fillMaxSize()) {
-            BorealisBackground(backgroundStyle, Modifier.fillMaxSize())
+        GlassHost(backgroundStyle, modifier) {
             Row(
                 Modifier.fillMaxSize()
                     .then(

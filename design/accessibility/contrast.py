@@ -1,13 +1,13 @@
 """Text contrast over the animated backgrounds, and over the glass panels planned for them.
 
-Sprint 10 bases two choices on these numbers: the glass look of a panel and the fixes of the text
-tokens. The tool measures WCAG 2.x contrast ratios as the worst case (the minimum) of each text
+Sprint 10 bases two choices on these numbers: the glass look of a panel and the text colours on
+it. The tool measures WCAG 2.x contrast ratios as the worst case (the minimum) of each text
 token over real frames of each background, in three cases:
 
 - (a) the text straight on the background;
 - (b) the text on one of today's opaque surfaces (`page`, `surface`, `surface-raised`);
 - (c) the text on a glass panel: the background blurred, then the `surface` colour on top at an
-  alpha, for a grid of alphas and blur radii.
+  alpha, for a grid of alphas and blur radii (a radius of 0 is no blur, the glass of API 28 to 30).
 
 The colours come from `design/tokens.json`. The frames come from two places: `extract` writes them
 from the four clips with ffmpeg, and the `BackgroundFrameExport` test of `:borealis:designsystem`
@@ -15,6 +15,12 @@ writes the two drawn styles. `README.md` has the whole procedure.
 
     python -I contrast.py extract <frames> [--clips <dir>]
     python -I contrast.py measure <frames> --json <result.json> [--jobs N]
+    python -I contrast.py glass-table <result.json> [--out <GlassContrastTable.kt>]
+    python -I contrast.py glass-colours [--table <GlassContrastTable.kt>]
+
+`glass-table` writes the table of the worst backdrop behind a glass panel that the app turns into
+the tint floors and the text colours of the glass. `glass-colours` prints those floors and colours,
+worked out from the table the app has, for `docs/ux/accessibility.md`.
 
 The library has no state; the tests are in `test_contrast.py`.
 """
@@ -26,6 +32,7 @@ import concurrent.futures
 import datetime
 import json
 import math
+import re
 import shutil
 import subprocess
 import sys
@@ -37,15 +44,22 @@ from PIL import Image
 REPO = Path(__file__).resolve().parents[2]
 TOKENS_JSON = REPO / "design" / "tokens.json"
 CLIPS_DIR = REPO / "apps/android/borealis/designsystem/src/main/res/raw"
+GLASS_TABLE_KT = (
+    REPO
+    / "apps/android/borealis/designsystem/src/main/kotlin/io/github/magalz/borealis/designsystem"
+    / "glass/GlassContrastTable.kt"
+)
 
 # The text tokens that are measured, and the surfaces they sit on today.
 TEXT_TOKENS = ("ink", "ink-2", "ink-3", "ink-4", "accent-soft")
 SURFACE_TOKENS = ("page", "surface", "surface-raised")
 
-# The glass candidates: the tint, and the grid of its alpha and of the blur radius in dp.
+# The glass candidates: the tint, and the grid of its alpha and of the blur radius in dp. They are
+# the tints and the blurs that Settings offers. A blur of 0 is no blur: the glass of API 28 to 30,
+# which cannot blur, draws the tint over the frame as it is.
 GLASS_TINT = "surface"
-GLASS_ALPHAS = (0.55, 0.70, 0.85)
-GLASS_BLURS_DP = (16, 32, 48)
+GLASS_ALPHAS = (0.30, 0.40, 0.50, 0.60, 0.70, 0.85)
+GLASS_BLURS_DP = (0, 8, 16, 24, 32, 48)
 
 # How many frames of each loop, and the width in dp of the device a frame stands for. The density
 # of a frame is its width in pixels over that: 1920 px of a TV is xhdpi (2.0), 1233 px of a phone
@@ -400,9 +414,13 @@ def _measure_frame(frame, device, colors):
     text = {token: float(relative_luminance(parse_hex(colors[token]))) for token in TEXT_TOKENS}
     tint = parse_hex(colors[GLASS_TINT])
     density = frame_density(frame.shape[1], device)
-    blurred = gaussian_blurs(frame, [blur_sigma(dp * density) for dp in GLASS_BLURS_DP])
+    blurring = [dp for dp in GLASS_BLURS_DP if dp > 0]
+    sigmas = [blur_sigma(dp * density) for dp in blurring]
+    images = dict(zip(blurring, gaussian_blurs(frame, sigmas)))
+    images[0] = frame
     panels = {}
-    for dp, image in zip(GLASS_BLURS_DP, blurred):
+    for dp in GLASS_BLURS_DP:
+        image = images[dp]
         for alpha in GLASS_ALPHAS:
             luminance = relative_luminance(composite(image, tint, alpha))
             panels[(alpha, dp)] = _token_stats(luminance, text)
@@ -465,7 +483,7 @@ def measure_sources(sources, colors, jobs=1):
             ),
             "blur_model": (
                 "Gaussian, sigma = 0.57735 * radius_px + 0.5 (Skia); blurred and composited in "
-                "sRGB values; the edge of the frame repeats."
+                "sRGB values; the edge of the frame repeats. A radius of 0 dp is no blur."
             ),
             "colors": colors,
             "text_tokens": list(TEXT_TOKENS),
@@ -552,7 +570,7 @@ def markdown_tables(result):
         for (alpha, blur), by_token in worst.items():
             lowest = min(value for value, _ in by_token.values())
             rows.append(
-                [f"{alpha:.2f}", f"{blur}"]
+                [f"{alpha:.2f}", "0 (no blur)" if blur == 0 else f"{blur}"]
                 + [f"{format_ratio(by_token[token][0])} ({by_token[token][1]})" for token in tokens]
                 + [format_ratio(lowest)]
             )
@@ -582,6 +600,235 @@ def markdown_tables(result):
             glass_table(set(present)),
         ]
         + per_device
+    )
+
+
+# The table for the app
+
+# What a value of the table is rounded up to: five places of a luminance, 0 to 1.
+TABLE_PLACES = 5
+
+KOTLIN_PACKAGE = "io.github.magalz.borealis.designsystem.glass"
+
+
+def worst_backdrop_luminance(result):
+    """The brightest pixel behind a glass panel, as a luminance, per style, blur and alpha.
+
+    It is the worst case over every frame of every device. It is read off the contrast of `ink`,
+    the lightest text token, which is lowest where the backdrop is brightest:
+    `Lb = (L(ink) + 0.05) / ratio - 0.05`. The value is rounded up, so the app never takes a
+    backdrop for darker than it was measured. It returns `{style: {(blur_dp, alpha): luminance}}`.
+    """
+    ink = float(relative_luminance(parse_hex(result["meta"]["colors"]["ink"])))
+    lowest = {}
+    for row in result["glass"]:
+        if row["token"] == "ink":
+            cell = lowest.setdefault(row["style"], {})
+            key = (row["blur_dp"], row["alpha"])
+            cell[key] = min(cell.get(key, math.inf), row["min"])
+    scale = 10**TABLE_PLACES
+    return {
+        style: {
+            key: math.ceil(((ink + NEAR_BLACK) / ratio - NEAR_BLACK) * scale - 1e-6) / scale
+            for key, ratio in sorted(cell.items())
+        }
+        for style, cell in sorted(lowest.items())
+    }
+
+
+# The Kotlin file, with the places that the table fills in marked by @NAME@.
+KOTLIN_TEMPLATE = """\
+// Generated by `python design/accessibility/contrast.py glass-table`. Do not edit by hand.
+// Measured @SOURCE@; docs/ux/accessibility.md has the method.
+
+package @PACKAGE@
+
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+
+/**
+ * The luminance of the brightest pixel behind the text of a glass panel, for each style, blur and
+ * tint: the worst case over every frame of the TV and of the phone, rounded up. The floors and the
+ * text colours of the glass are worked out from it in `GlassRules`.
+ */
+@Suppress("MagicNumber") // a table of measurements
+internal object GlassContrastTable {
+    /** The tints of the grid, in percent. */
+    val tintsPercent = intArrayOf(@TINTS@)
+
+    /** The blur radii of the grid, in dp. A radius of 0 is no blur. */
+    val blursDp = intArrayOf(@BLURS@)
+
+    /** For each style, a row for each of [blursDp] with a value for each of [tintsPercent]. */
+    val backdropLuminance: Map<BackgroundStyle, Array<DoubleArray>> =
+        mapOf(
+@ENTRIES@
+        )
+}
+"""
+
+
+def glass_table_kotlin(result):
+    """The Kotlin file `GlassContrastTable.kt` for a measurement: the table, row by row.
+
+    A row of a style is one blur of the grid and holds a value for each tint of the grid. The
+    floors and the text colours are worked out in Kotlin from it.
+    """
+    table = worst_backdrop_luminance(result)
+    alphas = sorted({alpha for cell in table.values() for _, alpha in cell})
+    blurs = sorted({blur for cell in table.values() for blur, _ in cell})
+    meta = result.get("meta", {})
+    date = meta.get("date", "an unknown date")
+    revision = meta.get("revision", "an unknown revision")
+    entries = []
+    for style, cell in table.items():
+        rows = [
+            "                    doubleArrayOf("
+            + ", ".join(f"{cell[(blur, alpha)]:.{TABLE_PLACES}f}" for alpha in alphas)
+            + "),"
+            for blur in blurs
+        ]
+        entries.append(
+            f"            BackgroundStyle.{style} to\n"
+            + "                arrayOf(\n"
+            + "\n".join(rows)
+            + "\n                ),"
+        )
+    return (
+        KOTLIN_TEMPLATE.replace("@SOURCE@", f"{date} at {revision}")
+        .replace("@PACKAGE@", KOTLIN_PACKAGE)
+        .replace("@TINTS@", ", ".join(str(round(alpha * 100)) for alpha in alphas))
+        .replace("@BLURS@", ", ".join(str(blur) for blur in blurs))
+        .replace("@ENTRIES@", "\n".join(entries))
+    )
+
+
+# The floors and the text colours of the glass, for the notes
+#
+# Kotlin works them out in `GlassRules.kt` and `GlassInk.kt`, and those tests are the ones that run
+# in the app. This is the same rule over the same table, so that the notes print what the app does:
+# the tests of both pin the same colours. Where a channel lands on half a level it rounds up, as
+# Kotlin's `roundToInt` does and Python's `round` does not.
+
+GLASS_TEXT_MARGIN = 1.02
+GLASS_WALK_STEPS = 100
+# The lightest ink-3 that a glass may need: what Flowing light needs at 40 percent and 8 dp.
+GLASS_SECONDARY_BOUND = "#A8ACB1"
+# The tint and blur that Settings starts at, and the glass of Reduced and of API 28 to 30.
+GLASS_DEFAULT = (0.40, 8)
+GLASS_REDUCED = (0.85, 48)
+GLASS_NO_BLUR = (0.85, 0)
+
+GLASS_UNCHANGED_TOKENS = ("ink", "ink-2", "accent-soft")
+
+
+def round_half_up(value):
+    """The nearest whole number, with a half rounded up: what Kotlin's `roundToInt` does."""
+    return math.floor(value + 0.5)
+
+
+def _kotlin_ints(text, name):
+    """The numbers of `val <name> = intArrayOf(...)` in the Kotlin table."""
+    found = re.search(name + r" = intArrayOf\(([^)]*)\)", text)
+    return [int(value) for value in found[1].split(",")]
+
+
+def read_glass_table_kotlin(text):
+    """The table of `GlassContrastTable.kt`, as `worst_backdrop_luminance` gives it."""
+    tints = _kotlin_ints(text, "tintsPercent")
+    blurs = _kotlin_ints(text, "blursDp")
+    table = {}
+    for entry in re.finditer(r"BackgroundStyle\.(\w+) to\s+arrayOf\((.*?)\n\s*\),", text, re.S):
+        rows = re.findall(r"doubleArrayOf\(([^)]*)\)", entry[2])
+        table[entry[1]] = {
+            (blur, tint / 100): float(value)
+            for blur, row in zip(blurs, rows)
+            for tint, value in zip(tints, row.split(","))
+        }
+    return table
+
+
+def glass_text_target(backdrop):
+    """The luminance of the text that keeps 4.5:1, with the margin, over a backdrop."""
+    return WCAG_LIMITS[1] * GLASS_TEXT_MARGIN * (backdrop + NEAR_BLACK) - NEAR_BLACK
+
+
+def _hex_luminance(value):
+    return float(relative_luminance(parse_hex(value)))
+
+
+def walk_colour(start, end, target):
+    """The first colour from `start` towards `end`, a percent at a time, that reaches `target`.
+
+    The luminance is checked on the step as it is worked out and the colour is rounded to 8 bits
+    only then. A token that reaches the target already is returned as it is. Colours are `#RRGGBB`.
+    """
+    first = np.rint(parse_hex(start) * 255)
+    last = np.rint(parse_hex(end) * 255)
+    for step in range(GLASS_WALK_STEPS + 1):
+        mixed = first + (last - first) * step / GLASS_WALK_STEPS
+        if float(relative_luminance(mixed / 255)) >= target:
+            if step == 0:
+                return start.upper()
+            return "#" + "".join(f"{round_half_up(channel):02X}" for channel in mixed)
+    return end.upper()
+
+
+def glass_floor(cell, blur, colors):
+    """The lowest tint of the grid, in percent, that a style may have at a blur (`cell` is its row).
+
+    `ink`, `ink-2` and `accent-soft` keep 4.5:1 as they are, and the adjusted `ink-3` is no lighter
+    than `#A8ACB1`. It is 100 where no tint of the grid does.
+    """
+    bound = _hex_luminance(GLASS_SECONDARY_BOUND)
+    for alpha in sorted({alpha for _, alpha in cell}):
+        backdrop = cell[(blur, alpha)]
+        keeps = all(
+            (_hex_luminance(colors[token]) + NEAR_BLACK) / (backdrop + NEAR_BLACK) >= WCAG_LIMITS[1]
+            for token in GLASS_UNCHANGED_TOKENS
+        )
+        ink3 = walk_colour(colors["ink-3"], colors["ink"], glass_text_target(backdrop))
+        if keeps and _hex_luminance(ink3) <= bound:
+            return round(alpha * 100)
+    return 100
+
+
+def _glass_ink(cell, colors, blur, alpha):
+    """The glass colours of ink-3 and ink-4 over a style at a blur and a tint."""
+    target = glass_text_target(cell[(blur, alpha)])
+    walked = [walk_colour(colors[token], colors["ink"], target) for token in ("ink-3", "ink-4")]
+    return [f"`{colour}`" for colour in walked]
+
+
+def glass_colour_tables(table):
+    """Three tables for the notes: the floors, the colours at the default, Reduced and no blur."""
+    colors = load_colors(TOKENS_JSON, TEXT_TOKENS)
+    styles = [style for style in STYLE_LABELS if style in table]
+    blurs = sorted({blur for cell in table.values() for blur, _ in cell if blur > 0})
+    floors = _table(
+        ["Style"] + [f"{blur} dp" for blur in blurs],
+        [
+            [STYLE_LABELS[style]]
+            + [f"{glass_floor(table[style], blur, colors)} %" for blur in blurs]
+            for style in styles
+        ],
+    )
+    tint, blur = GLASS_DEFAULT
+    default = []
+    for style in styles:
+        alpha = max(tint, glass_floor(table[style], blur, colors) / 100)
+        default.append(
+            [STYLE_LABELS[style], f"{round(alpha * 100)} %"]
+            + _glass_ink(table[style], colors, blur, alpha)
+        )
+    reduced = [
+        [STYLE_LABELS[style]]
+        + _glass_ink(table[style], colors, GLASS_REDUCED[1], GLASS_REDUCED[0])
+        + _glass_ink(table[style], colors, GLASS_NO_BLUR[1], GLASS_NO_BLUR[0])
+        for style in styles
+    ]
+    heads = ["Style", "Reduced ink-3", "Reduced ink-4", "No blur ink-3", "No blur ink-4"]
+    return "\n\n".join(
+        [floors, _table(["Style", "Tint", "ink-3", "ink-4"], default), _table(heads, reduced)]
     )
 
 
@@ -617,7 +864,25 @@ def main(argv=None):
     measure.add_argument("--jobs", type=int, default=4, help="processes, one frame each")
     measure.add_argument("--revision", help="the revision measured (default: HEAD)")
 
+    table = commands.add_parser("glass-table", help="write the Kotlin table of the glass")
+    table.add_argument("result", type=Path, help="the JSON that measure wrote")
+    table.add_argument("--out", type=Path, default=GLASS_TABLE_KT, help="the Kotlin file")
+
+    colours = commands.add_parser("glass-colours", help="print the floors and colours of the glass")
+    colours.add_argument("--table", type=Path, default=GLASS_TABLE_KT, help="the Kotlin table")
+
     args = parser.parse_args(argv)
+    if args.command == "glass-colours":
+        table = read_glass_table_kotlin(args.table.read_text(encoding="utf-8"))
+        print(glass_colour_tables(table))
+        return 0
+    if args.command == "glass-table":
+        result = json.loads(args.result.read_text(encoding="utf-8"))
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        # Written as bytes, so the file has unix line ends on every platform.
+        args.out.write_bytes(glass_table_kotlin(result).encode("utf-8"))
+        print(f"wrote {args.out}", file=sys.stderr)
+        return 0
     if args.command == "extract":
         extract_clips(args.frames, args.clips, args.count)
         return 0

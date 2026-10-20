@@ -4,41 +4,50 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
+
+private val tokens = BorealisTokens.Color
 
 /**
  * Every colour token, for what Material's [ColorScheme] has no slot for: the ink steps, the accent
- * family, the status colours and the hairlines.
+ * family, the status colours and the hairlines. Each role is a parameter that defaults to its
+ * token, so a variant of the palette is a [copy] of it that changes some roles and keeps the rest.
+ *
+ * [ink3] and [ink4] are the two roles that a glass surface replaces, to keep 4.5:1 over the
+ * background that shows through it ([withSecondaryInk]).
  */
 @Immutable
-class BorealisColors {
-    private val tokens = BorealisTokens.Color
-
-    val page = tokens.Page
-    val chrome = tokens.Chrome
-    val surface = tokens.Surface
-    val surfaceRaised = tokens.SurfaceRaised
-    val line = tokens.Line
-    val lineStrong = tokens.LineStrong
-    val hover = tokens.Hover
-    val scrim = tokens.Scrim
-    val ink = tokens.Ink
-    val ink2 = tokens.Ink2
-    val ink3 = tokens.Ink3
-    val ink4 = tokens.Ink4
-    val accent = tokens.Accent
-    val accentSoft = tokens.AccentSoft
-    val accentStrong = tokens.AccentStrong
-    val onAccent = tokens.OnAccent
-    val accentTint = tokens.AccentTint
-    val accentLine = tokens.AccentLine
-    val success = tokens.Success
-    val successInk = tokens.SuccessInk
-    val warning = tokens.Warning
-    val warningInk = tokens.WarningInk
-    val danger = tokens.Danger
-    val dangerInk = tokens.DangerInk
-    val offline = tokens.Offline
+@Suppress("LongParameterList") // one parameter for each colour token
+data class BorealisColors(
+    val page: Color = tokens.Page,
+    val chrome: Color = tokens.Chrome,
+    val surface: Color = tokens.Surface,
+    val surfaceRaised: Color = tokens.SurfaceRaised,
+    val line: Color = tokens.Line,
+    val lineStrong: Color = tokens.LineStrong,
+    val hover: Color = tokens.Hover,
+    val scrim: Color = tokens.Scrim,
+    val ink: Color = tokens.Ink,
+    val ink2: Color = tokens.Ink2,
+    val ink3: Color = tokens.Ink3,
+    val ink4: Color = tokens.Ink4,
+    val accent: Color = tokens.Accent,
+    val accentSoft: Color = tokens.AccentSoft,
+    val accentStrong: Color = tokens.AccentStrong,
+    val onAccent: Color = tokens.OnAccent,
+    val accentTint: Color = tokens.AccentTint,
+    val accentLine: Color = tokens.AccentLine,
+    val success: Color = tokens.Success,
+    val successInk: Color = tokens.SuccessInk,
+    val warning: Color = tokens.Warning,
+    val warningInk: Color = tokens.WarningInk,
+    val danger: Color = tokens.Danger,
+    val dangerInk: Color = tokens.DangerInk,
+    val offline: Color = tokens.Offline,
+) {
+    /** These colours with the roles [ink3] and [ink4] replaced; the rest stays as it is. */
+    fun withSecondaryInk(ink3: Color, ink4: Color) = copy(ink3 = ink3, ink4 = ink4)
 }
 
 val LocalBorealisColors = staticCompositionLocalOf { BorealisColors() }

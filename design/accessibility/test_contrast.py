@@ -5,6 +5,7 @@ simulation and the measurement of a folder of frames. Run from the repository ro
 """
 
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -303,7 +304,7 @@ class MeasureTest(unittest.TestCase):
         result = self.measure([uniform(96, 54, page)])
         self.assertIn("glass", result)
         panels = [r for r in result["glass"] if r["token"] == "ink"]
-        self.assertEqual(len(panels), 9)
+        self.assertEqual(len(panels), 36)
         low = contrast.hex_contrast(self.colors["ink"], self.colors["surface"])
         high = contrast.hex_contrast(self.colors["ink"], self.colors["page"])
         for row in panels:
@@ -316,7 +317,8 @@ class MeasureTest(unittest.TestCase):
         self.assertIn("glass", result)
         grid = {(r["alpha"], r["blur_dp"]) for r in result["glass"]}
         self.assertEqual(
-            grid, {(a, b) for a in (0.55, 0.70, 0.85) for b in (16, 32, 48)}
+            grid,
+            {(a, b) for a in (0.30, 0.40, 0.50, 0.60, 0.70, 0.85) for b in (0, 8, 16, 24, 32, 48)},
         )
 
     def test_the_opaque_surfaces_do_not_depend_on_the_frames(self):
@@ -358,7 +360,7 @@ class MeasureTest(unittest.TestCase):
                 frame = uniform(width, width * 9 // 16, page)
                 frame[frame.shape[0] // 2, width // 2] = 1.0
                 result = self.measure([frame])
-                for alpha, blur_dp in ((0.55, 16), (0.85, 32)):
+                for alpha, blur_dp in ((0.30, 16), (0.85, 32)):
                     sigma = 0.57735 * blur_dp * density + 0.5
                     lift = 1 / (2 * np.pi * sigma**2)
                     seen = alpha * tint + (1 - alpha) * (page + (1 - page) * lift)
@@ -412,6 +414,225 @@ class MeasureTest(unittest.TestCase):
         frames = {("SoftGlow", "tv"): [uniform(96, 54, page)]}
         result = contrast.measure_sources(frames, self.colors)
         self.assertIn("lowest over the frames", contrast.markdown_tables(result))
+
+
+class NoBlurTest(unittest.TestCase):
+    """A blur of 0 dp is no blur at all: the glass of an older phone, which cannot blur."""
+
+    def test_the_panel_without_blur_is_the_frame_under_the_tint(self):
+        colors = tokens()
+        page = contrast.parse_hex(colors["page"])
+        tint = contrast.parse_hex(colors["surface"])
+        frame = uniform(96, 54, page)
+        frame[20, 40] = 1.0
+        result = contrast.measure_source([frame], "AuroraCurtains", "tv", colors)
+        row = next(
+            r
+            for r in result["glass"]
+            if (r["alpha"], r["blur_dp"], r["token"]) == (0.85, 0, "ink")
+        )
+        ink = float(contrast.relative_luminance(contrast.parse_hex(colors["ink"])))
+        brightest = float(contrast.relative_luminance(contrast.composite(frame, tint, 0.85)).max())
+        self.assertAlmostEqual(row["min"], float(contrast.contrast_ratio(brightest, ink)), places=4)
+
+    def test_a_blur_makes_the_worst_pixel_darker_than_none(self):
+        colors = tokens()
+        page = contrast.parse_hex(colors["page"])
+        frame = uniform(96, 54, page)
+        frame[20, 40] = 1.0
+        result = contrast.measure_source([frame], "AuroraCurtains", "tv", colors)
+        ratios = {
+            r["blur_dp"]: r["min"]
+            for r in result["glass"]
+            if (r["alpha"], r["token"]) == (0.85, "ink")
+        }
+        self.assertLess(ratios[0], ratios[8])
+
+
+def glass_result():
+    """A measurement of two styles: a flat page, and a page with a bright pixel on the phone."""
+    colors = tokens()
+    page = contrast.parse_hex(colors["page"])
+    bright = uniform(96, 54, page)
+    bright[20, 40] = (0.9, 0.9, 1.0)
+    result = contrast.measure_sources(
+        {
+            ("AuroraCurtains", "tv"): [uniform(96, 54, page)],
+            ("AuroraCurtains", "phone"): [bright],
+            ("Starfield", "tv"): [uniform(96, 54, page)],
+        },
+        colors,
+    )
+    return colors, bright, result
+
+
+class GlassTableTest(unittest.TestCase):
+    """The table of the worst backdrop that Kotlin turns into floors and text colours."""
+
+    def test_the_worst_backdrop_is_the_brightest_pixel_over_both_devices(self):
+        colors, bright, result = glass_result()
+        table = contrast.worst_backdrop_luminance(result)
+        self.assertEqual(sorted(table), ["AuroraCurtains", "Starfield"])
+        tint = contrast.parse_hex(colors["surface"])
+        density = contrast.frame_density(96, "phone")
+        for blur_dp, alpha in ((8, 0.40), (48, 0.85), (0, 0.30)):
+            panel = (
+                contrast.composite(bright, tint, alpha)
+                if blur_dp == 0
+                else contrast.glass(bright, tint, alpha, blur_dp * density)
+            )
+            expected = float(contrast.relative_luminance(panel).max())
+            self.assertAlmostEqual(table["AuroraCurtains"][(blur_dp, alpha)], expected, delta=2e-5)
+
+    def test_a_style_with_one_device_is_measured_on_that_device(self):
+        colors, _, result = glass_result()
+        page = contrast.parse_hex(colors["page"])
+        tint = contrast.parse_hex(colors["surface"])
+        expected = float(contrast.relative_luminance(contrast.composite(page, tint, 0.5)))
+        table = contrast.worst_backdrop_luminance(result)
+        self.assertAlmostEqual(table["Starfield"][(0, 0.50)], expected, delta=2e-5)
+
+    def test_the_table_is_rounded_up_never_down(self):
+        colors, bright, result = glass_result()
+        tint = contrast.parse_hex(colors["surface"])
+        exact = float(contrast.relative_luminance(contrast.composite(bright, tint, 0.85)).max())
+        value = contrast.worst_backdrop_luminance(result)["AuroraCurtains"][(0, 0.85)]
+        self.assertGreaterEqual(value, exact - 1e-9)
+        self.assertLess(value - exact, 1.1e-5)
+
+    def test_the_kotlin_file_says_it_is_generated(self):
+        _, _, result = glass_result()
+        text = contrast.glass_table_kotlin(result)
+        header = text.split("package", 1)[0]
+        self.assertIn("Generated by", header)
+        self.assertIn("contrast.py glass-table", header)
+        self.assertIn("Do not edit", header)
+        self.assertIn("package io.github.magalz.borealis.designsystem.glass", text)
+
+    def test_the_kotlin_file_has_a_row_for_each_style_in_the_grid(self):
+        _, _, result = glass_result()
+        text = contrast.glass_table_kotlin(result)
+        self.assertIn("intArrayOf(30, 40, 50, 60, 70, 85)", text)
+        self.assertIn("intArrayOf(0, 8, 16, 24, 32, 48)", text)
+        self.assertIn("BackgroundStyle.AuroraCurtains to", text)
+        self.assertIn("BackgroundStyle.Starfield to", text)
+        self.assertNotIn("BackgroundStyle.SoftGlow", text)
+
+    def test_the_numbers_in_the_kotlin_file_are_the_table_row_by_row(self):
+        _, _, result = glass_result()
+        table = contrast.worst_backdrop_luminance(result)
+        text = contrast.glass_table_kotlin(result)
+        block = text.split("BackgroundStyle.AuroraCurtains to", 1)[1].split("BackgroundStyle.", 1)[0]
+        rows = [
+            [float(n) for n in row.split(",")]
+            for row in re.findall(r"doubleArrayOf\(([^)]*)\)", block)
+        ]
+        self.assertEqual(len(rows), 6)
+        for blur_index, blur_dp in enumerate((0, 8, 16, 24, 32, 48)):
+            expected = [
+                table["AuroraCurtains"][(blur_dp, alpha)]
+                for alpha in (0.30, 0.40, 0.50, 0.60, 0.70, 0.85)
+            ]
+            self.assertEqual(rows[blur_index], expected)
+
+    def test_the_kotlin_file_has_unix_line_ends_and_is_the_same_every_time(self):
+        _, _, result = glass_result()
+        text = contrast.glass_table_kotlin(result)
+        self.assertNotIn("\r", text)
+        self.assertTrue(text.endswith("}\n"))
+        self.assertEqual(text, contrast.glass_table_kotlin(result))
+
+    def test_the_command_writes_the_file_from_a_measurement(self):
+        _, _, result = glass_result()
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "result.json"
+            source.write_text(json.dumps(result), encoding="utf-8")
+            out = Path(folder) / "GlassContrastTable.kt"
+            self.assertEqual(contrast.main(["glass-table", str(source), "--out", str(out)]), 0)
+            self.assertEqual(out.read_bytes(), contrast.glass_table_kotlin(result).encode("utf-8"))
+
+    def test_the_file_is_written_where_the_app_reads_it(self):
+        self.assertEqual(
+            contrast.GLASS_TABLE_KT.relative_to(contrast.REPO).as_posix(),
+            "apps/android/borealis/designsystem/src/main/kotlin/io/github/magalz/borealis/"
+            "designsystem/glass/GlassContrastTable.kt",
+        )
+
+
+class GlassColoursTest(unittest.TestCase):
+    """The floors and the text colours of the glass, worked out again from the table of the app.
+
+    Kotlin works them out in `GlassRules`; these are the values that `docs/ux/accessibility.md`
+    prints, and the tests pin the ones that `GlassRulesTest` pins too.
+    """
+
+    def setUp(self):
+        self.colors = tokens()
+        text = contrast.GLASS_TABLE_KT.read_text(encoding="utf-8")
+        self.table = contrast.read_glass_table_kotlin(text)
+
+    def ink(self, style, blur, alpha):
+        target = contrast.glass_text_target(self.table[style][(blur, alpha)])
+        return tuple(
+            contrast.walk_colour(self.colors[token], self.colors["ink"], target)
+            for token in ("ink-3", "ink-4")
+        )
+
+    def test_a_half_rounds_up_as_it_does_in_kotlin(self):
+        self.assertEqual([contrast.round_half_up(x) for x in (0.5, 1.5, 2.5, 3.4)], [1, 2, 3, 3])
+
+    def test_a_walk_that_lands_on_half_a_level_rounds_up(self):
+        def luminance_at(level):
+            return float(contrast.relative_luminance(np.full(3, level / 255)))
+
+        # Black towards #0A0A0A: step 5 of 100 is half a level, and step 4 is 0.4 of one.
+        target = (luminance_at(0.4) + luminance_at(0.5)) / 2
+
+        self.assertEqual(contrast.walk_colour("#000000", "#0A0A0A", target), "#010101")
+
+    def test_a_walk_that_starts_at_the_target_stays_where_it_is(self):
+        self.assertEqual(contrast.walk_colour("#8b9096", "#E8EAED", 0.1), "#8B9096")
+
+    def test_the_table_of_the_app_reads_back_as_it_was_written(self):
+        _, _, result = glass_result()
+        text = contrast.glass_table_kotlin(result)
+        self.assertEqual(
+            contrast.read_glass_table_kotlin(text), contrast.worst_backdrop_luminance(result)
+        )
+
+    def test_the_colours_at_the_default_are_the_ones_the_app_pins(self):
+        self.assertEqual(self.ink("AuroraCurtains", 8, 0.40), ("#8D9298", "#8D9298"))
+        self.assertEqual(self.ink("FlowingLight", 8, 0.40)[0], "#A8ACB1")
+        self.assertEqual(self.ink("NorthernLights", 8, 0.70)[0], "#9DA1A7")
+        self.assertEqual(self.ink("SoftGlow", 8, 0.40)[0], "#8B9096")
+
+    def test_light_mist_is_where_half_a_level_decides(self):
+        self.assertEqual(self.ink("LightMist", 8, 0.40), ("#969BA0", "#969BA1"))
+        self.assertEqual(self.ink("LightMist", 0, 0.85)[0], "#90959A")
+
+    def test_the_floors_are_the_lowest_tint_that_keeps_the_text(self):
+        floor = lambda style, blur: contrast.glass_floor(self.table[style], blur, self.colors)
+        northern = [floor("NorthernLights", blur) for blur in (8, 16, 24, 32, 48)]
+        self.assertEqual(northern, [70, 60, 50, 50, 40])
+        self.assertEqual(floor("FlowingLight", 8), 40)
+        for style in ("AuroraCurtains", "SoftGlow", "LightMist", "Starfield"):
+            self.assertEqual(floor(style, 8), 30, style)
+
+    def test_the_notes_print_what_the_app_does(self):
+        text = contrast.glass_colour_tables(self.table)
+        self.assertIn("| Northern lights | 70 % | `#9DA1A7` |", text)
+        self.assertIn("| Light mist | 40 % | `#969BA0` | `#969BA1` |", text)
+        self.assertIn("`#90959A`", text)
+
+    def test_the_command_prints_the_notes(self):
+        import contextlib
+        import io
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(contrast.main(["glass-colours"]), 0)
+        self.assertIn("Northern lights", out.getvalue())
+        self.assertEqual(out.getvalue().strip(), contrast.glass_colour_tables(self.table).strip())
 
 
 if __name__ == "__main__":

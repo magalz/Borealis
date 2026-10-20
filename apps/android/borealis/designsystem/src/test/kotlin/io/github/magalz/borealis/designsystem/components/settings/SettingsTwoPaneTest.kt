@@ -1,21 +1,28 @@
 package io.github.magalz.borealis.designsystem.components.settings
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -27,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.FakeInputModeManager
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
@@ -164,6 +172,144 @@ class SettingsTwoPaneTest {
 
         composeRule.onNodeWithText("Channels").assertIsDisplayed()
         composeRule.onNodeWithText("Codec").assertDoesNotExist()
+    }
+
+    @Test
+    fun `OK on a group enters the pane at its first row`() = okEntersTheFirstRow {
+        press(Key.DirectionCenter)
+    }
+
+    @Test
+    fun `Enter on a group enters the pane at its first row`() = okEntersTheFirstRow {
+        press(Key.Enter)
+    }
+
+    @Test
+    fun `the numpad Enter on a group enters the pane at its first row`() = okEntersTheFirstRow {
+        press(Key.NumPadEnter)
+    }
+
+    @Test
+    fun `the gamepad A button on a group enters the pane at its first row`() = okEntersTheFirstRow {
+        pressGamepadA()
+    }
+
+    private fun okEntersTheFirstRow(pressOk: () -> Unit) {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+        press(Key.DirectionDown)
+        composeRule.onNodeWithText("Video").assertIsFocused()
+
+        pressOk()
+
+        // The first row, not the nearest to the group, and the group stays selected.
+        composeRule.onNodeWithText("Codec").assertIsFocused()
+        assertThat(selected).isEqualTo("video")
+        assertThat(selections).containsExactly("video")
+    }
+
+    @Test
+    fun `OK on the first group enters the pane at its first row`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+
+        press(Key.DirectionCenter)
+
+        composeRule.onNodeWithText("Resolution").assertIsFocused()
+        assertThat(selected).isEqualTo("stream")
+        assertThat(selections).isEmpty()
+    }
+
+    @Test
+    fun `OK on a group that is not the selected one selects it and enters its first row`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+        // Another group is selected from outside while focus stays where the user left it.
+        composeRule.runOnUiThread { selected = "video" }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Stream").assertIsFocused()
+        assertThat(selections).isEmpty()
+
+        press(Key.DirectionCenter)
+
+        assertThat(selected).isEqualTo("stream")
+        assertThat(selections).containsExactly("stream")
+        composeRule.onNodeWithText("Resolution").assertIsFocused()
+        composeRule.onNodeWithText("Codec").assertDoesNotExist()
+    }
+
+    @Test
+    fun `OK on a group with a single row enters that row`() {
+        selected = "about"
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("About").requestFocus()
+
+        press(Key.DirectionCenter)
+
+        composeRule.onNodeWithText("Licences").assertIsFocused()
+    }
+
+    @Test
+    fun `Left from the pane that OK entered returns to the group`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        composeRule.onNodeWithText("Codec").assertIsFocused()
+
+        press(Key.DirectionLeft)
+
+        composeRule.onNodeWithText("Video").assertIsFocused()
+        assertThat(selected).isEqualTo("video")
+    }
+
+    @Test
+    fun `focus moving to another group after OK and before the next frame cancels entering`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+        press(Key.DirectionDown)
+
+        // The pane takes focus a frame after OK; focus moves to another group before it.
+        composeRule.mainClock.autoAdvance = false
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+        composeRule.onNodeWithText("Audio").requestFocus()
+        composeRule.waitForIdle()
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Channels").assertIsNotFocused()
+        composeRule.onNodeWithText("Audio").assertIsFocused()
+        composeRule.onNodeWithText("Channels").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a tap on a group selects it and takes no focus into the pane`() {
+        composeRule.setContent { Specimen() }
+
+        composeRule.onNodeWithText("Audio").performClick()
+        composeRule.waitForIdle()
+
+        assertThat(selected).isEqualTo("audio")
+        composeRule.onNodeWithText("Channels").assertIsDisplayed()
+        // The slider and the notes take focus in touch mode too: a pane that was entered shows it.
+        composeRule.onAllNodes(isFocused()).assertCountEquals(0)
+    }
+
+    @Test
+    fun `a tap in a window that was in keyboard mode selects the group and enters no pane`() {
+        val window = FakeInputModeManager(InputMode.Keyboard)
+        composeRule.setContentInKeyboardMode {
+            CompositionLocalProvider(LocalInputModeManager provides window) { Specimen() }
+        }
+
+        window.inputMode = InputMode.Touch
+        composeRule.onNodeWithText("Audio").performClick()
+        composeRule.waitForIdle()
+
+        assertThat(selected).isEqualTo("audio")
+        composeRule.onNodeWithText("Channels").assertIsDisplayed()
+        // The slider and the notes take focus in touch mode too: a pane that was entered shows it.
+        composeRule.onAllNodes(isFocused()).assertCountEquals(0)
     }
 
     @Test
@@ -336,6 +482,17 @@ class SettingsTwoPaneTest {
         composeRule.waitForIdle()
     }
 
+    /**
+     * The gamepad A button as a device delivers it. A click listens for OK, Enter and the numpad
+     * Enter, not for A: when the app leaves A alone, Android hands the focused item the key OK in
+     * its place (the fallback of the key map). Keys injected into a test skip that step, so the
+     * test does it.
+     */
+    private fun pressGamepadA() {
+        press(Key.ButtonA)
+        press(Key.DirectionCenter)
+    }
+
     @Composable
     private fun Specimen(
         groups: List<SettingsGroup<String>> = allGroups,
@@ -364,6 +521,9 @@ class SettingsTwoPaneTest {
                     "audio" -> {
                         SettingsValueRow("Channels", "Stereo", {})
                         SettingsSliderRow("Vibration", 0f, 0f..200f, 10f, "0 %", {})
+                        // Unlike the clickable rows it takes focus in touch mode too, as a text
+                        // field does: a pane that something entered in that mode shows it.
+                        Text("Notes", Modifier.focusable())
                     }
                     else -> SettingsValueRow("Licences", null, {})
                 }

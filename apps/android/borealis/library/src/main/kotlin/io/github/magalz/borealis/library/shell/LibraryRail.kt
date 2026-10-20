@@ -7,17 +7,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.background.BorealisBackground
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.NavigationRail
+import io.github.magalz.borealis.designsystem.components.RailFooter
 import io.github.magalz.borealis.designsystem.components.RailItem
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.R
+import io.github.magalz.borealis.settings.ui.versionName
 
 private const val RAIL_HOSTS = 0
 private const val RAIL_ADD_HOST = 1
@@ -100,7 +104,8 @@ internal fun libraryRailItems(): List<RailItem> =
 
 /**
  * Hosts (also for Apps and Pairing, which are part of it), Add host and Settings (also for Privacy
- * and diagnostics and the Audit trail).
+ * and diagnostics and the Audit trail). At its bottom it has the name and the version of the app,
+ * which it reads from the place About reads them from.
  */
 @Composable
 internal fun LibraryRail(selected: RailSelection, actions: RailActions) {
@@ -119,5 +124,20 @@ internal fun LibraryRail(selected: RailSelection, actions: RailActions) {
                 RAIL_SETTINGS -> actions.onSettings()
             }
         },
+        footer = { LibraryRailFooter() },
+    )
+}
+
+@Composable
+private fun LibraryRailFooter() {
+    val context = LocalContext.current
+    val version = remember(context) { versionName(context) }
+    val name = stringResource(R.string.shell_rail_name)
+    RailFooter(
+        name = name,
+        version = version,
+        description =
+            if (version != null) stringResource(R.string.shell_rail_description, name, version)
+            else name,
     )
 }

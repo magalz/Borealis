@@ -1,8 +1,11 @@
 package io.github.magalz.borealis.designsystem.components.settings
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -12,9 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
@@ -30,9 +37,11 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.test.withKeyDown
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.FakeInputModeManager
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
@@ -70,6 +79,9 @@ class SettingsTwoPaneStackTest {
     private var screenRuns = 0
     private val clicks = mutableListOf<String>()
     private val focused = mutableListOf<String>()
+
+    /** The keys that the field of a pane got. */
+    private val fieldKeys = mutableListOf<Key>()
 
     private val groups =
         listOf("g1", "g2", "g3", "g4", "own").map { SettingsGroup(it, "Group $it") }
@@ -234,17 +246,27 @@ class SettingsTwoPaneStackTest {
 
     @Test
     fun `a pane that holds focus when a tap selects another group gets no more keys`() {
-        composeRule.setContentInKeyboardMode { Specimen() }
+        val window = FakeInputModeManager(InputMode.Keyboard)
+        composeRule.setContentInKeyboardMode {
+            CompositionLocalProvider(LocalInputModeManager provides window) { Specimen() }
+        }
         composeRule.onNodeWithText("Group g1").requestFocus()
         composeRule.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.waitForIdle()
-        composeRule.onNodeWithText("Row 1 of g1").requestFocus()
+        // The field takes focus in touch mode as well, where a tap leaves the window.
+        composeRule.onNodeWithTag("field of g1").requestFocus()
+        composeRule.onRoot().performKeyInput { pressKey(Key.Enter) }
+        composeRule.waitForIdle()
+        assertThat(fieldKeys).isNotEmpty()
+        fieldKeys.clear()
 
+        window.inputMode = InputMode.Touch
         composeRule.onNodeWithText("Group g3").performClick()
         composeRule.waitForIdle()
         composeRule.onRoot().performKeyInput { pressKey(Key.Enter) }
         composeRule.waitForIdle()
 
+        assertThat(fieldKeys).isEmpty()
         assertThat(clicks).isEmpty()
     }
 
@@ -289,6 +311,24 @@ class SettingsTwoPaneStackTest {
         )
     }
 
+    /**
+     * A row that takes focus in touch mode too, as a text field does, and notes the keys that it
+     * gets. A clickable row cannot be focused in that mode, so it could not show a pane that holds
+     * focus while the window is in it.
+     */
+    @Composable
+    private fun FieldRow(group: String) {
+        Box(
+            Modifier.testTag("field of $group")
+                .size(FIELD_SIZE)
+                .onKeyEvent {
+                    fieldKeys += it.key
+                    false
+                }
+                .focusable()
+        )
+    }
+
     @Composable
     private fun Specimen() {
         SideEffect { screenRuns++ }
@@ -304,6 +344,10 @@ class SettingsTwoPaneStackTest {
                 // Rows at the same places in every pane, and more of them in "g2" than in "g1".
                 when (group) {
                     "own" -> Box(Modifier.fillMaxSize().testTag("own"))
+                    "g1" -> {
+                        ProbeRow(group, 1)
+                        FieldRow(group)
+                    }
                     "g2" -> repeat(MANY_ROWS) { ProbeRow(group, it + 1) }
                     else -> ProbeRow(group, 1)
                 }
@@ -335,5 +379,6 @@ class SettingsTwoPaneStackTest {
         const val FRAMES_TO_BUILD_ALL = 12
         const val TABS = 8
         const val MANY_ROWS = 3
+        val FIELD_SIZE = 40.dp
     }
 }

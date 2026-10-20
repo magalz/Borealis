@@ -2,6 +2,7 @@ package io.github.magalz.borealis.designsystem.glass
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -116,12 +117,12 @@ class GlassHostStateTest {
                 GlassHostOver(
                     style,
                     background = {
-                        remember { ++backgroundStarts }
+                        Counted { ++backgroundStarts }
                         Box(Modifier.fillMaxSize())
                     },
                     modifier = Modifier.testTag(ROOT),
                 ) {
-                    remember { ++contentStarts }
+                    Counted { ++contentStarts }
                 }
             }
         }
@@ -137,10 +138,16 @@ class GlassHostStateTest {
                 LocalBackgroundPlayerFactory provides players,
                 LocalLifecycleOwner provides lifecycle,
             ) {
-                GlassHost(style, Modifier.testTag(ROOT)) { remember { ++contentStarts } }
+                GlassHost(style, Modifier.testTag(ROOT)) { Counted { ++contentStarts } }
             }
         }
         composeRule.waitForIdle()
+    }
+
+    /** Counts the times this is started: a state that is kept is started once. */
+    @Composable
+    private fun Counted(start: () -> Int) {
+        remember { start() }
     }
 
     private fun change(edit: () -> Unit) {

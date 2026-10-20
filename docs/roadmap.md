@@ -407,6 +407,12 @@ Java to Kotlin, one area at a time.
   Today `:app` depends on `:borealis:designsystem` for it. `ControllerHandlerRig`
   can then use the shared `InputDevices` fixture.
 
+### Security sprint before the beta release
+
+Owner decision of 2026-10-20: a whole sprint on security comes before the final
+beta release. Items already noted for it are marked "security sprint" in the
+[backlog](#backlog-not-scheduled).
+
 ## Later phases
 
 - **Phase 3: LuminalShine REST features.** Several documents mark these as
@@ -489,9 +495,17 @@ From the Sprint 9 device round, 2026-10-19. None is scheduled yet.
 - A touch handheld whose built-in controls report only `KEYBOARD | DPAD`, with no
   GAMEPAD source, now gets the phone layout. This is rare; watch for it.
 - The About links (`AboutSource.kt`, `openInApp`, an `ACTION_VIEW` with no
-  `FLAG_ACTIVITY_NEW_TASK`) open the browser inside the Borealis task. On the Streamer, the Downloader app's browser ignores Back, so
-  the Library stays hidden behind it until the task is started again. Open
-  links in a new task.
+  `FLAG_ACTIVITY_NEW_TASK`) open the browser inside the Borealis task. On the
+  Streamer, the Downloader app's browser ignores Back, so the Library stays
+  hidden behind it until the task is started again. Open links in a new task.
+- On a narrow window with a pad (a phone in split screen), the stream keyboard
+  covers the stream but keeps the TV shortcut row, where Esc is the 7th of 8
+  chips. `StreamKeyboard.kt` picks the Esc-first row by `docked`, not by width
+  (owner, 2026-10-20: backlog).
+- Security sprint: the lint check `RiskyLibrary` stays on, as a security alert,
+  although it reads the Google Play SDK Index and so can fail a build with no
+  code change, like the version checks that were turned off (owner, 2026-10-20).
+  Review it in the security sprint before the beta release.
 
 ## Host-side items (LuminalShine)
 

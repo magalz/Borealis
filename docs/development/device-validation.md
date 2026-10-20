@@ -2078,10 +2078,9 @@ results are in [Final re-check](#final-re-check) below.
   `83a6aa66` at 23:30. The final re-check runs on `5025614e`, whose gate and
   four-module Roborazzi verify passed on 2026-10-20; the commits after it change
   docs only.
-- Host: the app reports "Sunshine-compatible, version 7.1.431". TODO(verify):
-  the owner confirms the build name, LuminalShine 26.09.1 as in Sprint 8. The
-  `appversion` of the 26.09.1 fixtures in `core/tests/fixtures/luminalshine/26.09.1`
-  is the same.
+- Host: LuminalShine 26.09.1, as in Sprint 8 (confirmed by the owner). The app
+  reports "Sunshine-compatible, version 7.1.431", the `appversion` of the 26.09.1
+  fixtures in `core/tests/fixtures/luminalshine/26.09.1`.
 - Devices: the Google TV Streamer over wireless ADB, and the Samsung Galaxy S22
   over wireless ADB.
 - Pads and keyboard:

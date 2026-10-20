@@ -15,7 +15,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -43,7 +42,6 @@ private val SEGMENT_PADDING_VERTICAL = 4.dp
  * and OK selects. [label] names an option; [onSelect] gets the one the user chose. A disabled
  * control is dimmed and takes neither focus nor input.
  */
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun <T> SegmentedControl(
     options: List<T>,
@@ -65,11 +63,9 @@ fun <T> SegmentedControl(
             // Entering the control by the D-pad lands on the selected segment, not the nearest. A
             // request for one segment (a tap, an initial focus) is not an entry and stays on it.
             .focusProperties {
-                enter = { direction ->
-                    if (hasSelected && direction != FocusDirection.Enter) {
-                        selectedFocus
-                    } else {
-                        FocusRequester.Default
+                onEnter = {
+                    if (hasSelected && requestedFocusDirection != FocusDirection.Enter) {
+                        selectedFocus.requestFocus()
                     }
                 }
             }

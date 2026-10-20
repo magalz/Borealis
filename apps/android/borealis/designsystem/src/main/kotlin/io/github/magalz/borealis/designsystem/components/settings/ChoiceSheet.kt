@@ -52,12 +52,9 @@ import io.github.magalz.borealis.designsystem.theme.sheetWidth
 class ChoiceOption<out T>(val key: T, val label: String, val summary: String? = null)
 
 private val CONTENT_PADDING = 20.dp
-/** The list sits 8dp from the edge, so the 12dp padding of a row puts its text at 20dp. */
-private val LIST_PADDING = 8.dp
-/** An outline sits 5dp outside its row, so neighbouring rows need 10dp between them. */
-private val OPTION_GAP = 10.dp
 /** The first option's outline reaches 5dp above it: leave room under the title for it. */
 private val LIST_TOP_PADDING = 16.dp
+/** The list sits 8dp from the edge, so the 12dp padding of a row puts its text at 20dp. */
 private val OPTION_PADDING_HORIZONTAL = 12.dp
 private val OPTION_PADDING_VERTICAL = 10.dp
 private val MARK_GAP = 12.dp
@@ -146,12 +143,12 @@ private fun <T> OptionList(
                 .verticalScroll(rememberScrollState())
                 .selectableGroup()
                 .padding(
-                    start = LIST_PADDING,
+                    start = BorealisDimens.listPadding,
                     top = LIST_TOP_PADDING,
-                    end = LIST_PADDING,
+                    end = BorealisDimens.listPadding,
                     bottom = CONTENT_PADDING,
                 ),
-            verticalArrangement = Arrangement.spacedBy(OPTION_GAP),
+            verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
         ) {
             options.forEachIndexed { index, option ->
                 OptionRow(

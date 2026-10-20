@@ -31,11 +31,10 @@ import io.github.magalz.borealis.designsystem.R
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.Kicker
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.rememberAnimationsRemoved
 
-/** An outline sits 5dp outside its row, so neighbouring rows need 10dp between them. */
-private val ROW_GAP = 10.dp
 private const val ANIMATION_MILLIS = 250
 private const val OPEN_DEGREES = 180f
 
@@ -80,8 +79,8 @@ fun CollapsibleSection(
             exit = shrinkVertically(motion(removed), shrinkTowards = Alignment.Top),
         ) {
             Column(
-                Modifier.padding(top = ROW_GAP),
-                verticalArrangement = Arrangement.spacedBy(ROW_GAP),
+                Modifier.padding(top = BorealisDimens.listGap),
+                verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
                 content = content,
             )
         }

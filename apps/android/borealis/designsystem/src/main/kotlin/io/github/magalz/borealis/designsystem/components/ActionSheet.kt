@@ -54,9 +54,6 @@ class ActionSheetAction<out T>(
 
 private val CONTENT_PADDING = 20.dp
 /** The list sits 8dp from the edge, so the 12dp padding of a row puts its text at 20dp. */
-private val LIST_PADDING = 8.dp
-/** An outline sits 5dp outside its row, so neighbouring rows need 10dp between them. */
-private val ACTION_GAP = 10.dp
 private val ACTION_PADDING_HORIZONTAL = 12.dp
 private val ACTION_PADDING_VERTICAL = 10.dp
 
@@ -132,12 +129,12 @@ private fun <T> ActionList(
             Modifier.weight(1f, fill = false)
                 .verticalScroll(rememberScrollState())
                 .padding(
-                    start = LIST_PADDING,
-                    top = ACTION_GAP,
-                    end = LIST_PADDING,
+                    start = BorealisDimens.listPadding,
+                    top = BorealisDimens.listGap,
+                    end = BorealisDimens.listPadding,
                     bottom = CONTENT_PADDING,
                 ),
-            verticalArrangement = Arrangement.spacedBy(ACTION_GAP),
+            verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
         ) {
             actions.forEachIndexed { index, action ->
                 ActionRow(

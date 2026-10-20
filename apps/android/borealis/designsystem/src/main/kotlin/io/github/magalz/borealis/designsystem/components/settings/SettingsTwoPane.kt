@@ -27,7 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
@@ -60,11 +59,11 @@ import kotlinx.coroutines.flow.collectLatest
 class SettingsGroup<out K>(val key: K, val title: String)
 
 private val PANE_GAP = 12.dp
-/** An outline sits 5dp outside its item, so neighbours need 10dp between them. */
-internal val ITEM_GAP = 10.dp
-internal val AREA_PADDING = 8.dp
 private val GROUP_PADDING_HORIZONTAL = 12.dp
-/** Small enough that the eleven groups of Settings, [ITEM_GAP] apart, fit a 540dp TV unscrolled. */
+/**
+ * Small enough that the eleven groups of Settings, [BorealisDimens.listGap] apart, fit a 540dp TV
+ * unscrolled.
+ */
 private val GROUP_PADDING_VERTICAL = 4.dp
 
 /**
@@ -228,7 +227,6 @@ private fun <K> rememberGroupNavigation(
  * The groups by title, the one that is [selected] marked. [navigation] hears of focus, of the keys
  * and of a tap. [selectedGroup] is where an entry of the list by the D-pad lands.
  */
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun <K> GroupList(
     groups: List<SettingsGroup<K>>,
@@ -245,7 +243,7 @@ private fun <K> GroupList(
         Modifier.width(BorealisDimens.navWidth(LocalFormFactor.current))
             .fillMaxHeight()
             .verticalScroll(rememberScrollState())
-            .padding(AREA_PADDING)
+            .padding(BorealisDimens.listPadding)
             .selectableGroup()
             .onKeyEvent { event ->
                 val right = event.key == Key.DirectionRight
@@ -257,12 +255,13 @@ private fun <K> GroupList(
             // Entering the list by the D-pad lands on the selected group, not the nearest. A
             // request for one group (a tap, an initial focus) is not an entry and stays on it.
             .focusProperties {
-                enter = { direction ->
-                    if (direction != FocusDirection.Enter) selectedGroup else FocusRequester.Default
+                onEnter = {
+                    if (requestedFocusDirection != FocusDirection.Enter)
+                        selectedGroup.requestFocus()
                 }
             }
             .focusGroup(),
-        verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
+        verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
     ) {
         for (group in groups) {
             GroupEntry(

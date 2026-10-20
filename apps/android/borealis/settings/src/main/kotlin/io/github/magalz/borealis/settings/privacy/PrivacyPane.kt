@@ -44,6 +44,7 @@ import io.github.magalz.borealis.designsystem.components.BorealisSnackbarHost
 import io.github.magalz.borealis.designsystem.components.settings.SettingsRowTone
 import io.github.magalz.borealis.designsystem.components.settings.SettingsSwitchRow
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
@@ -53,9 +54,6 @@ import io.github.magalz.borealis.settings.R
 import java.io.File
 import kotlinx.coroutines.launch
 
-/** The outline of a focused row reaches 5dp outside it: 8dp around the list, 10dp between rows. */
-private val LIST_PADDING = 8.dp
-private val ROW_GAP = 10.dp
 private val ROW_INSET = 16.dp
 private val SNACKBAR_PADDING = 16.dp
 
@@ -204,8 +202,10 @@ internal fun PrivacyContent(
     val auditFocus = rememberAuditRowFocus(actions.onOpenAudit)
     Box(modifier) {
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(LIST_PADDING),
-            verticalArrangement = Arrangement.spacedBy(ROW_GAP),
+            Modifier.fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(BorealisDimens.listPadding),
+            verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
         ) {
             SettingsSwitchRow(
                 title = stringResource(R.string.borealis_privacy_verbose_title),
@@ -288,7 +288,7 @@ private fun rememberAuditRowFocus(onOpenAudit: () -> Unit): AuditRowFocus {
  */
 @Composable
 private fun ExportRow(exporting: Boolean, television: Boolean, onExport: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(ROW_GAP)) {
+    Column(verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap)) {
         SettingsValueRow(
             title = stringResource(R.string.borealis_privacy_export_title),
             value = null,

@@ -61,9 +61,6 @@ import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.settings.R
 import io.github.magalz.borealis.settings.ui.dpadScroll
 
-/** An outline sits 5dp outside a row, so the list keeps 8dp around it and 10dp between rows. */
-private val LIST_PADDING = 8.dp
-private val ROW_GAP = 10.dp
 private val ROW_PADDING_HORIZONTAL = 12.dp
 private val ROW_PADDING_VERTICAL = 10.dp
 private val COLUMN_GAP = 12.dp
@@ -178,8 +175,8 @@ private fun Entries(
     LazyColumn(
         modifier = Modifier.widthIn(max = BorealisDimens.contentMaxWidth).fillMaxSize(),
         state = listState,
-        contentPadding = PaddingValues(horizontal = gutter, vertical = LIST_PADDING),
-        verticalArrangement = Arrangement.spacedBy(ROW_GAP),
+        contentPadding = PaddingValues(horizontal = gutter, vertical = BorealisDimens.listPadding),
+        verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
     ) {
         itemsIndexed(entries, key = { _, row -> row.key }) { index, row ->
             val tag = Modifier.testTag("audit:entry:$index")
@@ -262,7 +259,7 @@ private fun Detail(detail: AuditDetail) {
     Column(
         Modifier.widthIn(max = BorealisDimens.contentMaxWidth)
             .fillMaxWidth()
-            .padding(horizontal = spacing.gutter, vertical = LIST_PADDING)
+            .padding(horizontal = spacing.gutter, vertical = BorealisDimens.listPadding)
             .initialFocus(focusRequester)
             .dpadScroll(scroll)
             .borealisFocusIndication(shape)

@@ -29,16 +29,12 @@ import io.github.magalz.borealis.designsystem.components.settings.CollapsibleSec
 import io.github.magalz.borealis.designsystem.components.settings.SettingsGroup
 import io.github.magalz.borealis.designsystem.components.settings.SettingsTwoPane
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.settings.R
 
-/** An outline sits 5dp outside its row, so a list of rows needs 8dp around it. */
-private val LIST_PADDING = 8.dp
-
-/** An outline sits 5dp outside its row, so neighbouring rows need 10dp between them. */
-private val LIST_GAP = 10.dp
 private val TITLE_GAP = 12.dp
 
 /**
@@ -115,8 +111,11 @@ private fun PhoneSettings(
         Column(
             Modifier.weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = gutter - LIST_PADDING, vertical = LIST_PADDING),
-            verticalArrangement = Arrangement.spacedBy(LIST_GAP),
+                .padding(
+                    horizontal = gutter - BorealisDimens.listPadding,
+                    vertical = BorealisDimens.listPadding,
+                ),
+            verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
         ) {
             for (group in state.groups) {
                 CollapsibleSection(

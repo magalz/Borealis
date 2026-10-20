@@ -19,7 +19,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
@@ -53,8 +52,6 @@ import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 class RailItem(val label: String, val icon: ImageVector)
 
 private val RAIL_PADDING = 12.dp
-/** An outline sits 5dp outside its item, so neighbours need 10dp between them. */
-private val ITEM_GAP = 10.dp
 private val ITEM_PADDING_HORIZONTAL = 12.dp
 private val ITEM_PADDING_VERTICAL = 10.dp
 private val ICON_GAP = 12.dp
@@ -80,7 +77,6 @@ private val FOOTER_GAP =
  * not move for it. It takes no focus, whatever it holds. A rail too short for it does not show it,
  * so it never overlaps an item. It draws no background: it is on whatever the rail draws.
  */
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun NavigationRail(
     items: List<RailItem>,
@@ -100,12 +96,13 @@ fun NavigationRail(
             // Entering the rail by the D-pad lands on the selected item, not the nearest.
             // A request for one item (a tap, an initial focus) is not an entry and stays on it.
             .focusProperties {
-                enter = { direction ->
-                    if (direction != FocusDirection.Enter) selectedFocus else FocusRequester.Default
+                onEnter = {
+                    if (requestedFocusDirection != FocusDirection.Enter)
+                        selectedFocus.requestFocus()
                 }
             }
             .focusGroup(),
-        verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
+        verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
     ) {
         items.forEachIndexed { index, item ->
             val selected = index == selectedIndex

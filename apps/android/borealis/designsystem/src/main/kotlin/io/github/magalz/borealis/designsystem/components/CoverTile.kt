@@ -113,7 +113,7 @@ internal fun CoverPlaceholder(
     val initialsStyle = remember(style) { style.copy(fontFamily = BorealisFonts.Mono) }
     Box(
         modifier
-            .background(colors.surfaceRaised, shape)
+            .glassOrSolid(shape, colors.surfaceRaised)
             .border(1.dp, colors.line, shape)
             .clip(shape)
             .then(interaction)

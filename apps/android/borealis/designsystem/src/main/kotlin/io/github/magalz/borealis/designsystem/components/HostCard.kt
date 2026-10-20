@@ -19,6 +19,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
+import io.github.magalz.borealis.designsystem.glass.GlassTextColors
+import io.github.magalz.borealis.designsystem.glass.glassSurface
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisShapes
@@ -69,22 +71,24 @@ fun HostCard(
     val height =
         if (LocalFormFactor.current == FormFactor.Tv) BorealisTokens.Size.HostCard.HeightTv
         else 0.dp
-    HostInfo(
-        name,
-        status,
-        statusText,
-        detail,
-        tags,
-        runningApp,
-        modifier
-            .heightIn(min = height)
-            .borealisFocusIndication(shape)
-            .background(colors.surface, shape)
-            .border(1.dp, colors.line, shape)
-            .clip(shape)
-            .optionsClickable(onClick, onOptions, Role.Button, optionsLabel, onClickLabel)
-            .padding(padding),
-    )
+    GlassTextColors {
+        HostInfo(
+            name,
+            status,
+            statusText,
+            detail,
+            tags,
+            runningApp,
+            modifier
+                .heightIn(min = height)
+                .borealisFocusIndication(shape)
+                .glassSurface(shape)
+                .border(1.dp, colors.line, shape)
+                .clip(shape)
+                .optionsClickable(onClick, onOptions, Role.Button, optionsLabel, onClickLabel)
+                .padding(padding),
+        )
+    }
 }
 
 @Composable

@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
+import io.github.magalz.borealis.designsystem.glass.glassSurface
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 
@@ -45,7 +46,7 @@ fun ContinueCard(
     Row(
         modifier
             .borealisFocusIndication(shape)
-            .background(colors.surface, shape)
+            .glassSurface(shape)
             .background(colors.accentTint, shape)
             .border(1.dp, colors.accentLine, shape)
             .clip(shape)

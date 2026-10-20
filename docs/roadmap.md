@@ -318,22 +318,22 @@ to 13 close Phase 2.
 ### Sprint 10: UX and accessibility
 
 The work for this sprint is on the phase branch `phase/s10-ux-accessibility`,
-which starts at `109e7dff`. Each item has an issue, ISSUE-1 to ISSUE-12.
+which starts at `109e7dff`. Each item has an issue, #33 to #44.
 
-1. **Text contrast over the animated background (WCAG 2.2).** Issue ISSUE-1.
+1. **Text contrast over the animated background (WCAG 2.2).** Issue #33.
    A tool in `design/accessibility/` measures the contrast of every text token
    over real frames of the four clips and the two drawn styles, with the glass
    modelled. The worst case of each token counts. The baseline and the final
    numbers go to `docs/ux/accessibility.md`. The target is AA on every screen,
    and 7:1 with high contrast on. Today ink-3 and ink-4 fall to 3.0 to 3.7:1
    over the brightest aurora bands.
-2. **Glass panels and cards.** Issue ISSUE-2. Owner request of 2026-10-19:
+2. **Glass panels and cards.** Issue #34. Owner request of 2026-10-19:
    panels and cards become transparent with a heavy blur, so the background
    stays visible. The owner picks the look from a measured comparison of tint,
    blur, how the clips are handled, and the dialogs. Three transparency levels
    ship: Standard, Reduced and Off. The glass also works outside the Library,
    because Sprint 11 uses it on the Starting screen.
-3. **Accessibility group in Settings.** Issue ISSUE-3. A new group after
+3. **Accessibility group in Settings.** Issue #35. A new group after
    Appearance:
    - **Reduce motion:** Follow system, On or Off. It follows changes to the
      system animation scale while the app runs.
@@ -349,38 +349,38 @@ which starts at `109e7dff`. Each item has an issue, ISSUE-1 to ISSUE-12.
    The stream follows the text size, the focus outline, high contrast, the
    palette and reduce motion. The stream gets no glass, because the video is
    behind it.
-4. **TalkBack.** Issue ISSUE-4. The app works with TalkBack on a phone and on a
+4. **TalkBack.** Issue #36. The app works with TalkBack on a phone and on a
    TV:
    - labels, headings and traversal order;
    - accessibility checks in the Robolectric tests;
    - font scale 2.0 tests;
    - 48 dp touch targets.
-5. **Phone portrait Settings.** Issue ISSUE-5. Collapsible sections (option A,
+5. **Phone portrait Settings.** Issue #37. Collapsible sections (option A,
    owner decision of 2026-10-20):
    - all sections start collapsed, and several can be open;
    - the state survives rotation;
    - About becomes a section, and Privacy and diagnostics stays a row that
      navigates.
-6. **OK on a Settings group enters its pane.** Issue ISSUE-6. On a TV or a
+6. **OK on a Settings group enters its pane.** Issue #38. On a TV or a
    handheld, OK on a group (Input, Video and so on) moves the focus to the first
    option of its pane. Today only Right does. Reported by the owner on
    2026-10-20.
-7. **Notices.** Issue ISSUE-7.
+7. **Notices.** Issue #39.
    - Snackbars are as wide as their text and centred, not full width (owner
      request of 2026-10-19).
    - After a Quit in the stream, the Library shows the same notice as a Quit
      from Apps, "App quit.". This answers the request that "Quitting `<app>`…"
      is too quick to read.
-8. **Rail footer.** Issue ISSUE-8. The app logo, name and version at the bottom
+8. **Rail footer.** Issue #40. The app logo, name and version at the bottom
    of the rail, on a TV and a handheld. Owner request of 2026-10-20.
-9. **About fixes.** Issue ISSUE-9. The About links open in a new task, so Back
+9. **About fixes.** Issue #41. The About links open in a new task, so Back
    returns to the app. The Version row loses its chevron, which opened nothing.
-10. **Focus after Back from Apps.** Issue ISSUE-10. Focus goes to the host card
+10. **Focus after Back from Apps.** Issue #42. Focus goes to the host card
     that was opened, not to the first one.
-11. **Design system cleanup.** Issue ISSUE-11. The copied spacing constants move
+11. **Design system cleanup.** Issue #43. The copied spacing constants move
     to `BorealisDimens`, `FocusProperties.enter` is replaced, and the background
     has one default.
-12. **Keyboard reach in short windows.** Issue ISSUE-12. The licence text can be
+12. **Keyboard reach in short windows.** Issue #44. The licence text can be
     reached from Close on windows shorter than about 320 dp. The Audit detail
     gets the `focusable()` before `verticalScroll()` order.
 

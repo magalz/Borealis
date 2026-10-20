@@ -34,9 +34,8 @@ data class FormFactorFacts(
  * The device class of a window, decided from facts the platform reports (ADR 0052):
  * - **TV** when the leanback feature is present or the UI mode is television. It wins over every
  *   other fact, so a TV with a touch screen or a narrow window is still a TV.
- * - **Handheld** when the window is [WIDE_WINDOW_DP] wide or more and the device reports the
- *   controls of a gamepad console (a D-pad, a trackball or a wheel as its navigation, or no touch
- *   screen at all) or a game controller is connected ([FormFactorFacts.gamepadConnected]).
+ * - **Handheld** when the window is [WIDE_WINDOW_DP] wide or more and the device has no touch
+ *   screen or a game controller is connected ([FormFactorFacts.gamepadConnected]).
  * - **Phone** otherwise.
  *
  * Consequences, all intended:
@@ -58,16 +57,10 @@ fun formFactorOf(facts: FormFactorFacts): FormFactor =
         facts.isTvFeature || facts.uiModeType == Configuration.UI_MODE_TYPE_TELEVISION ->
             FormFactor.Tv
         facts.widthDp >= WIDE_WINDOW_DP &&
-            (hasGamepadControls(facts.touchscreen, facts.navigation) || facts.gamepadConnected) ->
+            (facts.touchscreen == Configuration.TOUCHSCREEN_NOTOUCH || facts.gamepadConnected) ->
             FormFactor.Handheld
         else -> FormFactor.Phone
     }
-
-private fun hasGamepadControls(touchscreen: Int, navigation: Int) =
-    touchscreen == Configuration.TOUCHSCREEN_NOTOUCH ||
-        navigation == Configuration.NAVIGATION_DPAD ||
-        navigation == Configuration.NAVIGATION_TRACKBALL ||
-        navigation == Configuration.NAVIGATION_WHEEL
 
 /**
  * The [FormFactor] of this device and window, read again when the configuration or the window size

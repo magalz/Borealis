@@ -21,6 +21,7 @@ import androidx.lifecycle.lifecycleScope
 import io.github.magalz.borealis.designsystem.adaptive.FormFactorFacts
 import io.github.magalz.borealis.designsystem.adaptive.formFactorOf
 import io.github.magalz.borealis.designsystem.adaptive.isGamepadConnected
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.host.launch.ConflictChoice
 import io.github.magalz.borealis.stream.ChromeMode
@@ -66,12 +67,15 @@ import kotlinx.coroutines.launch
  */
 @SuppressLint("ViewConstructor") // Created in code by the stream activity, never inflated.
 @Suppress("TooManyFunctions") // One override per input path of the view.
-class StreamChromeHost(
+class StreamChromeHost
+@JvmOverloads
+constructor(
     private val activity: ComponentActivity,
     private val session: StreamSession,
     private val streamView: View,
     private val onCaptured: Runnable,
     private val onReleased: Runnable,
+    private val look: BorealisLook = BorealisLook(),
 ) : FrameLayout(activity) {
     /** The time the guard reads, in the [SystemClock.uptimeMillis] timebase. */
     internal var clock: () -> Long = SystemClock::uptimeMillis
@@ -94,7 +98,7 @@ class StreamChromeHost(
 
     private val composeView =
         ComposeView(activity).apply {
-            setContent { StreamChromeRoot(session, ::setMenuHandleBounds) }
+            setContent { StreamChromeRoot(session, ::setMenuHandleBounds, look) }
             // Compose cannot take the focus before its first layout (its root nodes are not
             // attached
             // yet), so the focus waits for it.

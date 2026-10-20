@@ -14,6 +14,8 @@ import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -654,6 +656,25 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
         composeRule
             .onNode(hasText("The licence texts of the test", substring = true))
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun `a swipe scrolls the licence texts`() {
+        licenses = (1..200).joinToString("\n") { "Licence line $it" }
+        show()
+        row("Open-source licences").performClick()
+        composeRule.waitForIdle()
+        val text =
+            composeRule.onNode(
+                hasText("Licence line 1", substring = true) and hasAnyAncestor(isDialog())
+            )
+
+        text.performTouchInput { swipeUp() }
+        composeRule.waitForIdle()
+
+        val scrolled =
+            text.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+        assertThat(scrolled).isGreaterThan(0f)
     }
 
     @Test

@@ -106,6 +106,10 @@ This is the record that the [dependency policy](../policies/dependencies.md#addi
 ## More Information
 
 * Amends [0055](0055-settings-storage-and-the-phase-2-settings-screen.md): the DataStore file holds the background setting too, not only the two logging switches.
+* Amended on 2026-10-20 by [0057](0057-glass-surfaces-and-the-accessibility-settings.md):
+  * the clips now play in a `TextureView` (ADR 0057), not a `SurfaceView`, so the glass can see them;
+  * on a TV with the glass on, the drawn background runs at 24 frames a second;
+  * Sprint 11 will show the background on the stream's Starting screen.
 * Related: [0011](0011-datastore-room-and-keystore-for-new-persistence.md) (new settings start in DataStore), [0052](0052-structure-the-phase-2-ui.md) (Phase 2 UI, dark only) and [0044](0044-design-tokens-pipeline.md) (the tokens that the drawn styles use).
 * Use case: [UC-009, change settings](../use-cases/0009-change-settings.md).
 * Provenance of the clips: [design/backgrounds](../../design/backgrounds/README.md). Roadmap: [Sprint 9](../roadmap.md#sprint-9-ux-polish-and-the-handheld).

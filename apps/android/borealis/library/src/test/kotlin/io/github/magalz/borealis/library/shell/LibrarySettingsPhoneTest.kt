@@ -105,8 +105,14 @@ class LibrarySettingsPhoneTest {
         composeRule.waitForIdle()
     }
 
-    // The title: Settings keeps its scroll position, so Resolution may be above the screen.
-    private fun showsSettings() = composeRule.onNodeWithText("Settings").assertIsDisplayed()
+    // The title and the header of the first section, which no other screen has.
+    private fun showsSettings() {
+        composeRule.onNodeWithText("Settings").assertIsDisplayed()
+        composeRule.onNodeWithText(SETTINGS_ONLY_HEADER).assertExists()
+    }
+
+    private fun settingsIsGone() =
+        composeRule.onNodeWithText(SETTINGS_ONLY_HEADER).assertDoesNotExist()
 
     private fun showsPrivacy() =
         composeRule.onNodeWithText("Export diagnostic bundle").assertIsDisplayed()
@@ -131,7 +137,7 @@ class LibrarySettingsPhoneTest {
         openPrivacy()
 
         showsPrivacy()
-        composeRule.onNodeWithText("Resolution").assertDoesNotExist()
+        settingsIsGone()
     }
 
     @Test
@@ -159,7 +165,7 @@ class LibrarySettingsPhoneTest {
 
         back()
         composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
-        composeRule.onNodeWithText("Resolution").assertDoesNotExist()
+        settingsIsGone()
     }
 
     @Test
@@ -207,3 +213,5 @@ class LibrarySettingsPhoneTest {
         composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
     }
 }
+
+private const val SETTINGS_ONLY_HEADER = "STREAM"

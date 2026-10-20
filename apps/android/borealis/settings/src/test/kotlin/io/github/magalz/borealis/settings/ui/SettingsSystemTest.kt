@@ -73,6 +73,17 @@ class SettingsSystemTest : SettingsScreenTestBase() {
     }
 
     @Test
+    fun `a link opens in a task of its own, so Back from a browser cannot strand the app`() {
+        val source = realAbout()
+
+        source.openLink("https://github.com/magalz/Borealis")
+
+        val started = shadowOf(app).nextStartedActivity
+        assertThat(started.flags and Intent.FLAG_ACTIVITY_NEW_TASK)
+            .isEqualTo(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    @Test
     fun `a link that no app takes is reported so that the address can be shown`() {
         shadowOf(app).checkActivities(true)
         val source = realAbout()

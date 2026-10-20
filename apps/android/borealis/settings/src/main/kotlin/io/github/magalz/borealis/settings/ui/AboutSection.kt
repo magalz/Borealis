@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.settings.ui
 
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -11,32 +10,26 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.settings.SettingsInfoRow
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.settings.R
-import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 private const val SOURCE_CODE_URL = "https://github.com/magalz/Borealis"
 private const val PRIVACY_POLICY_URL = "https://github.com/magalz/Borealis/blob/main/PRIVACY.md"
-private val LICENSE_SCROLL_STEP = 96.dp
 private const val LICENSE_HEIGHT_SHARE = 0.6f
 private val LICENSE_OUTLINE_ROOM = 8.dp
 private val LICENSE_TEXT_PADDING = 12.dp
@@ -51,24 +44,14 @@ internal fun AboutRows(about: AboutSource) {
     var showLicenses by remember { mutableStateOf(false) }
     val openLink: (String) -> Unit = { url -> if (!about.openLink(url)) linkAddress = url }
 
-    // The row only reports a value and has nothing to open. It stays a focus stop, so a D-pad can
-    // scroll to it, but a screen reader hears text and no button.
-    val versionTitle = stringResource(R.string.settings_about_version_title)
-    val versionValue =
-        stringResource(
-            R.string.settings_about_version_summary,
-            about.versionName ?: stringResource(R.string.settings_about_version_unknown),
-            about.commit,
-        )
-    SettingsValueRow(
-        title = versionTitle,
-        value = versionValue,
-        onClick = {},
-        modifier =
-            Modifier.clearAndSetSemantics {
-                this[SemanticsProperties.Text] =
-                    listOf(AnnotatedString(versionTitle), AnnotatedString(versionValue))
-            },
+    SettingsInfoRow(
+        title = stringResource(R.string.settings_about_version_title),
+        value =
+            stringResource(
+                R.string.settings_about_version_summary,
+                about.versionName ?: stringResource(R.string.settings_about_version_unknown),
+                about.commit,
+            ),
     )
     SettingsValueRow(
         title = stringResource(R.string.settings_about_source_code_title),
@@ -112,13 +95,14 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
         remember(about) { about.loadLicenses() }
             ?: stringResource(R.string.settings_about_licenses_unavailable)
     val scroll = rememberScrollState()
-    val scope = rememberCoroutineScope()
-    val stepPx = with(LocalDensity.current) { LICENSE_SCROLL_STEP.toPx() }
-    // The dialog scrolls its content, so this text needs a height of its own to scroll in.
+    val density = LocalDensity.current
+    val windowHeight = LocalWindowInfo.current.containerSize.height
+    // The dialog scrolls its content, so this text needs a height of its own to scroll in. A share
+    // of the window does for a tall one; in a short one the dialog's title, padding and Close leave
+    // less, and the text learns what is left from how much of it the dialog shows.
+    var room by remember(windowHeight) { mutableIntStateOf(Int.MAX_VALUE) }
     val maxHeight =
-        with(LocalDensity.current) {
-            (LocalWindowInfo.current.containerSize.height * LICENSE_HEIGHT_SHARE).toDp()
-        }
+        with(density) { minOf(windowHeight * LICENSE_HEIGHT_SHARE, room.toFloat()).toDp() }
     SettingsDialog(
         title = stringResource(R.string.settings_about_licenses_title),
         confirm = DialogButton(stringResource(R.string.settings_close), onDismiss),
@@ -127,21 +111,14 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
         Text(
             text,
             Modifier.fillMaxWidth()
-                .onKeyEvent { event ->
-                    val delta =
-                        when (event.key) {
-                            Key.DirectionDown -> stepPx
-                            Key.DirectionUp -> -stepPx
-                            else -> 0f
-                        }
-                    val canScroll =
-                        if (delta > 0) scroll.canScrollForward else scroll.canScrollBackward
-                    val scrolls = delta != 0f && canScroll
-                    if (scrolls && event.type == KeyEventType.KeyDown) {
-                        scope.launch { scroll.animateScrollBy(delta) }
-                    }
-                    scrolls
+                // The dialog clips the text where its room ends. A text that runs on under Close is
+                // not above Close for the focus search, so Up from Close would not find it: keep
+                // its height to the part that is shown.
+                .onGloballyPositioned { placed ->
+                    val shown = placed.boundsInWindow().height.roundToInt()
+                    if (shown < placed.size.height) room = shown
                 }
+                .dpadScroll(scroll)
                 .heightIn(max = maxHeight)
                 // The dialog clips what is outside its content, and the outline reaches about 5dp.
                 .padding(LICENSE_OUTLINE_ROOM)

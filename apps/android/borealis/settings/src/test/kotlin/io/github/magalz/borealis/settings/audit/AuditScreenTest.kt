@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
@@ -474,5 +475,46 @@ class AuditScreenTest {
 
         composeRule.onNodeWithText("Result").assertIsDisplayed()
         composeRule.onNodeWithText("Cancelled").assertIsDisplayed()
+    }
+
+    private val longDetail =
+        AuditDetail(
+            AuditType.PAIRING_FAILURE,
+            "12 Oct 2026 18:02:09",
+            AuditOutcome.FAILURE,
+            "Studio (192.168.1.40)",
+            (1..60).joinToString("\n") { "The host answered with line $it of its reason" },
+        )
+
+    /** The opened entry: the one node of the screen that scrolls. */
+    private val opened: SemanticsNodeInteraction
+        get() = composeRule.onNode(hasScrollAction())
+
+    private fun scrolled(): Float =
+        opened.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV the opened entry has focus`() {
+        composeRule.setContentInKeyboardMode { Screen(state(detail = longDetail), FormFactor.Tv) }
+
+        opened.assertIsFocused()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV a long opened entry scrolls with Down and back with Up`() {
+        composeRule.setContentInKeyboardMode { Screen(state(detail = longDetail), FormFactor.Tv) }
+        assertThat(scrolled()).isEqualTo(0f)
+
+        opened.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        val afterDown = scrolled()
+        opened.performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.waitForIdle()
+
+        assertThat(afterDown).isGreaterThan(0f)
+        assertThat(scrolled()).isLessThan(afterDown)
+        opened.assertIsFocused()
     }
 }

@@ -287,6 +287,10 @@ def frame_indices(count, n):
     return [i * count // n for i in range(n)]
 
 
+def cover_geometry(size, source):
+    return ()
+
+
 def select_filter(indices):
     """The ffmpeg filter that keeps only the frames with these numbers."""
     return "select=" + "+".join(f"eq(n\\,{index})" for index in indices)

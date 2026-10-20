@@ -234,6 +234,41 @@ class ClipFramesTest(unittest.TestCase):
             self.assertIn(f"eq(n\\,{index})", expression)
 
 
+class CoverGeometryTest(unittest.TestCase):
+    def test_a_phone_scales_the_clip_to_its_height_and_cuts_the_sides(self):
+        # 16:9 at 2673 px high is 4752 px wide; the centre 1233 px of it are shown.
+        self.assertEqual(
+            contrast.cover_geometry((1233, 2673), (1920, 1080)), (4752, 2673, 1759, 0)
+        )
+
+    def test_a_screen_wider_than_the_clip_scales_to_its_width_and_cuts_top_and_bottom(self):
+        self.assertEqual(contrast.cover_geometry((2000, 1000), (1920, 1080)), (2000, 1125, 0, 62))
+
+    def test_a_screen_of_the_aspect_of_the_clip_cuts_nothing(self):
+        self.assertEqual(contrast.cover_geometry((1920, 1080), (1920, 1080)), (1920, 1080, 0, 0))
+
+
+class FoldTest(unittest.TestCase):
+    def test_the_worst_case_keeps_its_precision_until_it_is_printed(self):
+        # 4.49996 rounded to four places is 4.5000, which would print as a pass.
+        row = contrast._fold(
+            [
+                {"min": 4.5, "p1": 4.6, "p5": 4.7},
+                {"min": 4.49996, "p1": 4.5, "p5": 4.6},
+            ]
+        )
+        self.assertEqual(row["min"], 4.49996)
+        self.assertEqual(row["per_frame_min"], [4.5, 4.49996])
+        self.assertEqual(row["worst_frame"], 1)
+        self.assertEqual(contrast.format_ratio(row["min"]), "4.499")
+
+    def test_the_ratio_of_a_surface_is_not_rounded(self):
+        colors = tokens()
+        rows = contrast.measure_surfaces(colors)
+        row = next(r for r in rows if r["surface"] == "surface" and r["token"] == "ink-4")
+        self.assertEqual(row["ratio"], contrast.hex_contrast(colors["ink-4"], colors["surface"]))
+
+
 class MeasureTest(unittest.TestCase):
     def setUp(self):
         self.colors = tokens()
@@ -357,6 +392,26 @@ class MeasureTest(unittest.TestCase):
         table_c = text[text.index("Table C") :]
         self.assertIn("Soft glow", table_c)
         self.assertNotIn("Aurora curtains", table_c)
+
+
+    def test_a_table_of_panels_is_given_for_each_device(self):
+        page = contrast.parse_hex(self.colors["page"])
+        result = contrast.measure_sources(
+            {
+                ("AuroraCurtains", "tv"): [uniform(96, 54, page)],
+                ("AuroraCurtains", "phone"): [uniform(96, 54, page)],
+            },
+            self.colors,
+        )
+        text = contrast.markdown_tables(result)
+        self.assertIn("Table C, TV", text)
+        self.assertIn("Table C, phone", text)
+
+    def test_the_p5_table_says_it_is_the_lowest_of_the_frames(self):
+        page = contrast.parse_hex(self.colors["page"])
+        frames = {("SoftGlow", "tv"): [uniform(96, 54, page)]}
+        result = contrast.measure_sources(frames, self.colors)
+        self.assertIn("lowest over the frames", contrast.markdown_tables(result))
 
 
 if __name__ == "__main__":

@@ -19,7 +19,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.InputMode
-import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -30,7 +29,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.assertPixel
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.FakeInputModeManager
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
+import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import org.junit.Rule
 import org.junit.Test
@@ -170,18 +172,75 @@ class FocusIndicationTest {
         assertPixel(x = 74f, y = 24f - 1f, FILL)
     }
 
+    @Test
+    fun `the scale is instant when Reduce motion is On, though the system animates`() {
+        composeRule.setContentInKeyboardMode {
+            Specimen(scaleOnFocus = true, look = BorealisLook(reduceMotion = ReduceMotion.On))
+        }
+        clearFocus()
+        composeRule.mainClock.autoAdvance = false
+
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.mainClock.advanceTimeBy(EARLY_MILLIS)
+
+        assertPixel(x = 74f, y = 24f - 1f, FILL)
+    }
+
+    @Test
+    fun `the scale animates when Reduce motion is Off, though the system removes animations`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        Settings.Global.putFloat(
+            context.contentResolver,
+            Settings.Global.ANIMATOR_DURATION_SCALE,
+            0f,
+        )
+        composeRule.setContentInKeyboardMode {
+            Specimen(scaleOnFocus = true, look = BorealisLook(reduceMotion = ReduceMotion.Off))
+        }
+        clearFocus()
+        composeRule.mainClock.autoAdvance = false
+
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.mainClock.advanceTimeBy(EARLY_MILLIS)
+
+        assertPixel(x = 74f, y = 24f - 1f, PAGE)
+    }
+
+    @Test
+    fun `a focused tile that leaves while its scale animation is pending raises nothing`() {
+        var shown by mutableStateOf(true)
+        composeRule.setContentInKeyboardMode { Specimen(scaleOnFocus = true, tile = shown) }
+        clearFocus()
+        composeRule.mainClock.autoAdvance = false
+
+        // The animation is launched when the tile takes focus and has not run when the tile goes.
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.runOnIdle { shown = false }
+        composeRule.mainClock.advanceTimeBy(EARLY_MILLIS)
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(FRAME).assertExists()
+    }
+
     @Composable
-    private fun Specimen(scaleOnFocus: Boolean = false) {
-        BorealisTheme {
+    private fun Specimen(
+        scaleOnFocus: Boolean = false,
+        look: BorealisLook = BorealisLook(),
+        tile: Boolean = true,
+    ) {
+        BorealisTheme(look = look) {
             Column {
                 Box(Modifier.testTag(FRAME).background(PAGE).padding(24.dp)) {
-                    Box(
-                        Modifier.size(100.dp)
-                            .borealisFocusIndication(RoundedCornerShape(8.dp), scaleOnFocus)
-                            .background(FILL, RoundedCornerShape(8.dp))
-                            .focusRequester(focus)
-                            .focusable()
-                    )
+                    if (tile) {
+                        Box(
+                            Modifier.size(100.dp)
+                                .borealisFocusIndication(RoundedCornerShape(8.dp), scaleOnFocus)
+                                .background(FILL, RoundedCornerShape(8.dp))
+                                .focusRequester(focus)
+                                .focusable()
+                        )
+                    }
                 }
                 Box(Modifier.size(10.dp).focusRequester(elsewhere).focusable())
             }
@@ -201,16 +260,6 @@ class FocusIndicationTest {
 
     private fun assertPixel(x: Float, y: Float, expected: Color) =
         composeRule.onNodeWithTag(FRAME).assertPixel(x, y, expected)
-
-    /** A window whose input mode a test can flip, as a touch or a key does on a device. */
-    private class FakeInputModeManager(initial: InputMode) : InputModeManager {
-        override var inputMode: InputMode by mutableStateOf(initial)
-
-        override fun requestInputMode(inputMode: InputMode): Boolean {
-            this.inputMode = inputMode
-            return true
-        }
-    }
 
     private companion object {
         const val FRAME = "frame"

@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -68,7 +69,13 @@ private val LOADING_SIZE = 64.dp
  *   Pair and Wake buttons are inline, so no long press is needed. A long press opens the options.
  * - **TV and handheld:** a header, then the cards in a grid; the shell draws the rail (Hosts, Add
  *   host, Settings) beside the screen. The first Continue card has focus when the screen opens,
- *   else the first host card. OK opens, hold OK, X or Menu opens the options.
+ *   else the first host card. OK opens, hold OK, X or Menu opens the options. When the screen comes
+ *   back after another one (Back from Apps), the card that had focus, or that a tap chose, has it
+ *   again: [FocusedCard] finds it by its host and not by its place, because the host may have
+ *   changed its status or moved in the list, and the grid scrolls to it if the list moved it out of
+ *   view. It is the first card again when that host is gone. The screen keeps this in its own saved
+ *   state and not in `focusRestorer`, whose state is on the focus node of the container and goes
+ *   with the screen when the navigation takes it out of the composition.
  *
  * The options (Details, Wake, Forget) and the Forget confirmation belong to the screen: it keeps
  * which host they are open for and calls [onDetails], [onWake] or [onForget] when the user chooses.
@@ -99,6 +106,7 @@ fun HostsScreen(
     BorealisTheme(formFactor) {
         var optionsHostId by rememberSaveable { mutableStateOf<String?>(null) }
         var forgetHostId by rememberSaveable { mutableStateOf<String?>(null) }
+        val focusedCard = rememberSaveable(saver = FocusedCardSaver) { FocusedCard() }
         val handlers =
             HostsHandlers(
                 onHostSelected = onHostSelected,
@@ -106,6 +114,8 @@ fun HostsScreen(
                 onWake = onWake,
                 onOptions = { optionsHostId = it },
                 onAddHost = onAddHost,
+                // A phone starts with no focus, so nothing would read what it wrote.
+                focusedCard = focusedCard.takeIf { formFactor != FormFactor.Phone },
             )
         HostsLayout(
             state,
@@ -167,17 +177,30 @@ private class HostsHandlers(
     val onWake: (String) -> Unit,
     val onOptions: (String) -> Unit,
     val onAddHost: () -> Unit,
+    /** Null on a phone, which starts with no focus. */
+    val focusedCard: FocusedCard?,
 )
 
 /**
  * The element that starts with focus on a TV or handheld, and the guard that lets the screen take
  * it once: a host that sorts first, a Continue card that appears or a card that scrolls back into
- * view later must not pull focus away from where the user moved it.
+ * view later must not pull focus away from where the user moved it. [cardKey] is the card that had
+ * focus when the screen was last left, which starts with focus again if it is still there.
  */
-private class StartFocus(val requester: FocusRequester, val state: InitialFocusState)
+private class StartFocus(
+    val requester: FocusRequester,
+    val state: InitialFocusState,
+    val cardKey: String?,
+)
 
 private fun Modifier.withStartFocus(start: StartFocus?): Modifier =
     if (start == null) this else initialFocus(start.requester, start.state)
+
+/** [this] when the card [key] starts with focus: the [restored] card, else the [first] one. */
+private fun StartFocus?.startingAt(key: String, restored: String?, first: Boolean): StartFocus? =
+    takeIf {
+        if (restored != null) key == restored else first
+    }
 
 @Composable
 private fun HostsBody(
@@ -192,8 +215,14 @@ private fun HostsBody(
         // the hosts load or the search ends, so the first hosts to arrive take the focus.
         val requester = remember { FocusRequester() }
         val initialFocus = rememberInitialFocusState(state.loading || state.searching)
+        // Read when the guard starts, so a card that takes the focus later is not chased.
+        val restoredCard = remember(initialFocus) { handlers.focusedCard?.key }
         val startFocus =
-            if (formFactor != FormFactor.Phone) StartFocus(requester, initialFocus) else null
+            if (formFactor != FormFactor.Phone) {
+                StartFocus(requester, initialFocus, restoredCard)
+            } else {
+                null
+            }
         if (state.loading) {
             // Nothing to press while the hosts load: an OK pressed now must not open Add host.
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -236,8 +265,13 @@ private fun HostGrid(
 ) {
     val optionsLabel = stringResource(R.string.hosts_options)
     val unnamedApp = stringResource(R.string.hosts_app_running)
+    // The card that had focus before wins over the first card, unless its host is gone.
+    val restoredCard = startFocus?.cardKey?.takeIf { it in state.cardKeys() }
+    val gridState = rememberLazyGridState()
+    ScrollToCard(gridState, state, restoredCard, startFocus?.state)
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
+        state = gridState,
         modifier = Modifier.fillMaxSize(),
         // The padding and the gaps keep the focus outline, 5dp outside a card, from being clipped.
         contentPadding = PaddingValues(LocalBorealisSpacing.current.gutter),
@@ -250,18 +284,23 @@ private fun HostGrid(
             }
             itemsIndexed(
                 state.continueItems,
-                key = { _, item -> "continue:${item.hostId}" },
+                key = { _, item -> continueKey(item.hostId) },
                 span = { _, _ -> fullWidth() },
             ) { index, item ->
+                val key = continueKey(item.hostId)
                 ContinueCard(
                     appName = item.appName ?: unnamedApp,
                     detail = stringResource(R.string.hosts_continue_detail, item.hostName),
                     resumeLabel = stringResource(R.string.hosts_continue_resume),
-                    onClick = { handlers.onContinue(item.hostId) },
+                    onClick = {
+                        handlers.focusedCard?.key = key
+                        handlers.onContinue(item.hostId)
+                    },
                     modifier =
                         Modifier.fillMaxWidth()
-                            .withStartFocus(startFocus.takeIf { index == 0 })
-                            .testTag("continue:${item.hostId}"),
+                            .keepsFocusIn(handlers.focusedCard, key)
+                            .withStartFocus(startFocus.startingAt(key, restoredCard, index == 0))
+                            .testTag(key),
                 )
             }
         }
@@ -273,13 +312,8 @@ private fun HostGrid(
         }
         itemsIndexed(state.items, key = { _, item -> item.id }) { index, item ->
             val first = index == 0 && state.continueItems.isEmpty()
-            HostItem(
-                item,
-                handlers,
-                optionsLabel,
-                unnamedApp,
-                Modifier.withStartFocus(startFocus.takeIf { first }),
-            )
+            val start = startFocus.startingAt(hostKey(item.id), restoredCard, first)
+            HostItem(item, handlers, optionsLabel, unnamedApp, Modifier.withStartFocus(start))
         }
     }
 }
@@ -293,24 +327,30 @@ private fun HostItem(
     modifier: Modifier,
 ) {
     // A tap or OK runs the action of the state. Open and Pair both select the host: the ViewModel
-    // decides between apps and pairing. Wake wakes it. The label tells a screen reader which.
+    // decides between apps and pairing. Wake wakes it. The label tells a screen reader which. A tap
+    // keeps the card too, for the touch mode of a handheld, where a card cannot take focus.
+    val key = hostKey(item.id)
     HostCard(
         name = item.name,
         status = item.dotStatus(),
         statusText = stringResource(item.statusTextRes()),
         onClick = {
+            handlers.focusedCard?.key = key
             if (item.action == HostAction.WAKE) {
                 handlers.onWake(item.id)
             } else {
                 handlers.onHostSelected(item.id)
             }
         },
-        modifier = modifier.testTag("host:${item.id}"),
+        modifier = modifier.keepsFocusIn(handlers.focusedCard, key).testTag(key),
         detail = item.detailLine(),
         tags = item.tags.map { stringResource(it.labelRes()) },
         runningApp = item.runningApp?.let { it.name ?: unnamedApp },
         onClickLabel = item.action.labelRes()?.let { stringResource(it) },
-        onOptions = { handlers.onOptions(item.id) },
+        onOptions = {
+            handlers.focusedCard?.key = key
+            handlers.onOptions(item.id)
+        },
         optionsLabel = optionsLabel,
     )
 }

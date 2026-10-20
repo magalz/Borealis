@@ -12,6 +12,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.ComposeView
@@ -21,6 +22,7 @@ import androidx.lifecycle.lifecycleScope
 import io.github.magalz.borealis.designsystem.adaptive.FormFactorFacts
 import io.github.magalz.borealis.designsystem.adaptive.formFactorOf
 import io.github.magalz.borealis.designsystem.adaptive.isGamepadConnected
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.host.launch.ConflictChoice
 import io.github.magalz.borealis.stream.ChromeMode
@@ -44,6 +46,9 @@ import kotlinx.coroutines.launch
  * - MODAL: all of it, the focus included. The stream keeps rendering below.
  * - DOCKED: the touches inside the chrome, not the keys.
  * - HIDDEN (picture-in-picture): nothing, and nothing is drawn.
+ *
+ * The chrome draws with the [look] that the viewer chose, read by the caller when the stream
+ * starts: a change of a setting during a stream shows in the next one.
  *
  * [onCaptured] runs when the chrome starts taking the input (the mode becomes MODAL): the caller
  * releases what is held and drops the pointer capture. [onReleased] runs, posted, when it stops:
@@ -72,7 +77,11 @@ class StreamChromeHost(
     private val streamView: View,
     private val onCaptured: Runnable,
     private val onReleased: Runnable,
+    look: BorealisLook = BorealisLook(),
 ) : FrameLayout(activity) {
+    /** More content for the chrome, composed with its screens; a test reads the theme there. */
+    internal var chromeExtra: @Composable () -> Unit = {}
+
     /** The time the guard reads, in the [SystemClock.uptimeMillis] timebase. */
     internal var clock: () -> Long = SystemClock::uptimeMillis
     private var mode: ChromeMode? = null
@@ -94,7 +103,7 @@ class StreamChromeHost(
 
     private val composeView =
         ComposeView(activity).apply {
-            setContent { StreamChromeRoot(session, ::setMenuHandleBounds) }
+            setContent { StreamChromeRoot(session, ::setMenuHandleBounds, look) { chromeExtra() } }
             // Compose cannot take the focus before its first layout (its root nodes are not
             // attached
             // yet), so the focus waits for it.

@@ -4,6 +4,7 @@ import androidx.annotation.Keep
 import androidx.annotation.StringRes
 import io.github.magalz.borealis.settings.R
 import io.github.magalz.borealis.settings.appearance.BackgroundChoices
+import io.github.magalz.borealis.settings.appearance.LookLists
 import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.catalog.StringSetting
@@ -25,6 +26,9 @@ enum class SettingsGroupId(@StringRes val titleRes: Int) {
 
     /** The visual options of the app. It follows the stream groups and precedes the app groups. */
     APPEARANCE(R.string.settings_group_appearance),
+
+    /** Reduce motion, transparency, focus, text size, contrast and palette (ADR 0057). */
+    ACCESSIBILITY(R.string.settings_group_accessibility),
 
     /** Has no rows here: the Privacy and diagnostics screen provides its content. */
     PRIVACY(R.string.settings_group_privacy),
@@ -382,6 +386,68 @@ enum class SettingsItem(
         Settings.BACKGROUND,
         R.string.settings_background_title,
         input = ItemInput(fixedChoices = FixedChoices.BACKGROUND),
+    ),
+    GLASS_TINT(
+        SettingsGroupId.APPEARANCE,
+        SettingsItemKind.CHOICE,
+        Settings.GLASS_TINT,
+        R.string.settings_glass_tint_title,
+        R.string.settings_glass_tint_summary,
+        input = ItemInput(fixedChoices = FixedChoices.GLASS_TINT),
+    ),
+    GLASS_BLUR(
+        SettingsGroupId.APPEARANCE,
+        SettingsItemKind.CHOICE,
+        Settings.GLASS_BLUR,
+        R.string.settings_glass_blur_title,
+        R.string.settings_glass_blur_summary,
+        input = ItemInput(fixedChoices = FixedChoices.GLASS_BLUR),
+    ),
+    REDUCE_MOTION(
+        SettingsGroupId.ACCESSIBILITY,
+        SettingsItemKind.CHOICE,
+        Settings.REDUCE_MOTION,
+        R.string.settings_reduce_motion_title,
+        R.string.settings_reduce_motion_summary,
+        input = ItemInput(fixedChoices = FixedChoices.REDUCE_MOTION),
+    ),
+    TRANSPARENCY(
+        SettingsGroupId.ACCESSIBILITY,
+        SettingsItemKind.CHOICE,
+        Settings.TRANSPARENCY,
+        R.string.settings_transparency_title,
+        R.string.settings_transparency_summary,
+        input = ItemInput(fixedChoices = FixedChoices.TRANSPARENCY),
+    ),
+    THICK_FOCUS(
+        SettingsGroupId.ACCESSIBILITY,
+        SettingsItemKind.SWITCH,
+        Settings.THICK_FOCUS,
+        R.string.settings_thick_focus_title,
+        R.string.settings_thick_focus_summary,
+    ),
+    TEXT_SIZE(
+        SettingsGroupId.ACCESSIBILITY,
+        SettingsItemKind.CHOICE,
+        Settings.TEXT_SIZE,
+        R.string.settings_text_size_title,
+        R.string.settings_text_size_summary,
+        input = ItemInput(fixedChoices = FixedChoices.TEXT_SIZE),
+    ),
+    HIGH_CONTRAST(
+        SettingsGroupId.ACCESSIBILITY,
+        SettingsItemKind.SWITCH,
+        Settings.HIGH_CONTRAST,
+        R.string.settings_high_contrast_title,
+        R.string.settings_high_contrast_summary,
+    ),
+    COLOUR_VISION(
+        SettingsGroupId.ACCESSIBILITY,
+        SettingsItemKind.CHOICE,
+        Settings.COLOUR_VISION,
+        R.string.settings_colour_vision_title,
+        R.string.settings_colour_vision_summary,
+        input = ItemInput(fixedChoices = FixedChoices.COLOUR_VISION),
     );
 
     companion object {
@@ -407,6 +473,7 @@ fun SettingsItem.selectedChoiceKey(snapshot: SettingsSnapshot): String =
         // A stored value that no style has is drawn as the default, so the list shows that one.
         Settings.BACKGROUND ->
             BackgroundChoices.idOf(BackgroundChoices.styleOf(snapshot[Settings.BACKGROUND]))
-        is StringSetting -> snapshot[stored]
+        // The same for the choices of the look.
+        is StringSetting -> LookLists.of(stored)?.shownId(snapshot[stored]) ?: snapshot[stored]
         else -> error("$this is not a list")
     }

@@ -17,6 +17,7 @@ import io.github.magalz.borealis.designsystem.components.NavigationRail
 import io.github.magalz.borealis.designsystem.components.RailFooter
 import io.github.magalz.borealis.designsystem.components.RailItem
 import io.github.magalz.borealis.designsystem.glass.GlassHost
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.R
@@ -49,7 +50,9 @@ internal enum class RailSelection {
  * The frame is a [GlassHost]: it draws the [backgroundStyle] once, behind the rail and the screen,
  * and the glass surfaces on the screens show it blurred. The screens have no page of their own, so
  * it shows through them, and the rail keeps its own colour. [BackgroundStyle.Off] is the plain
- * page.
+ * page. It gives the screens the [look] that the viewer chose, and the host reads it too: the
+ * Transparency, the tint, the blur and High contrast make its glass; the theme that each screen
+ * wears inside it keeps that look.
  *
  * The frame owns the system bar insets where it has the rail, so the rail and the screen beside it
  * start at the same edge and nothing moves when the screen changes; the screens of a phone draw
@@ -62,9 +65,10 @@ internal fun LibraryScaffold(
     actions: RailActions,
     modifier: Modifier = Modifier,
     backgroundStyle: BackgroundStyle = BackgroundStyle.Off,
+    look: BorealisLook = BorealisLook(),
     content: @Composable () -> Unit,
 ) {
-    BorealisTheme(formFactor) {
+    BorealisTheme(formFactor, look) {
         val rail = formFactor != FormFactor.Phone
         GlassHost(backgroundStyle, modifier) {
             Row(

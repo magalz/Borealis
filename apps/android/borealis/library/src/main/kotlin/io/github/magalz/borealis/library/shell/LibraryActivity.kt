@@ -15,6 +15,7 @@ import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.domain.LegacyBridge
 import io.github.magalz.borealis.library.domain.StreamLauncher
 import io.github.magalz.borealis.settings.appearance.rememberBackgroundStyle
+import io.github.magalz.borealis.settings.appearance.rememberBorealisLook
 import io.github.magalz.borealis.settings.repository.SettingsRepository
 import javax.inject.Inject
 
@@ -49,6 +50,7 @@ class LibraryActivity : Hilt_LibraryActivity() {
                 request = request,
                 onRequestHandled = { request = null },
                 backgroundStyle = rememberBackgroundStyle(settings),
+                look = rememberBorealisLook(settings),
             )
         }
         // After the content: the bridge posts the GL renderer probe, which must not lose its

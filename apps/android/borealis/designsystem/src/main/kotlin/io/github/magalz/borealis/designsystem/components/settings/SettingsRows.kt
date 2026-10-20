@@ -184,6 +184,28 @@ fun SettingsValueRow(
     }
 }
 
+/**
+ * A row that only reports a [value] beside its [title], such as the version in About. It draws like
+ * a [SettingsValueRow] without the chevron, because nothing opens from it, and it has no click
+ * action and no button role. It stays a focus stop, so a D-pad scrolls a list through it; a screen
+ * reader reads the title and the value as one text.
+ */
+@Composable
+fun SettingsInfoRow(title: String, value: String, modifier: Modifier = Modifier) {
+    Row(
+        modifier
+            .settingsRowSurface()
+            .focusable()
+            .semantics(mergeDescendants = true) {}
+            .settingsRowSize(),
+        horizontalArrangement = Arrangement.spacedBy(CONTENT_GAP),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SettingsRowText(title, null, null, true, SettingsRowTone.Normal, Modifier.weight(1f))
+        ValueText(value, enabled = true)
+    }
+}
+
 @Composable
 private fun ValueText(value: String, enabled: Boolean) {
     Text(

@@ -62,7 +62,7 @@ open class SettingsScreenTestBase {
             loadLicenses = { licenses },
         )
 
-    protected fun viewModel(): SettingsViewModel =
+    protected open fun viewModel(): SettingsViewModel =
         SettingsViewModel(repository, options, facts, { resets++ }, Dispatchers.Unconfined)
 
     /**

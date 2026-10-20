@@ -5,12 +5,14 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -69,6 +71,15 @@ class SettingsPhoneTest : PhoneSettingsTestBase() {
                 "Picture-in-picture",
                 "APPEARANCE",
                 "Background",
+                "Glass tint",
+                "Glass blur",
+                "ACCESSIBILITY",
+                "Reduce motion",
+                "Transparency",
+                "Thicker focus outline",
+                "Text size",
+                "High contrast",
+                "Colour-blind palette",
                 "Privacy and diagnostics",
                 "ABOUT",
                 "Version",
@@ -130,7 +141,8 @@ class SettingsPhoneTest : PhoneSettingsTestBase() {
         composeRule.onNodeWithText("Balanced").assertExists()
         composeRule.onNodeWithText("Automatic").assertExists()
         composeRule.onNodeWithText("Trackpad").assertExists()
-        composeRule.onNodeWithText("Off").assertExists()
+        // The Performance overlay and the Colour-blind palette are both Off.
+        composeRule.onAllNodesWithText("Off").assertCountEquals(2)
         composeRule.onNodeWithText("Stereo (2.0)").assertExists()
         composeRule.onNodeWithText("9 %").assertExists()
         composeRule.onNodeWithText("60 %").assertExists()

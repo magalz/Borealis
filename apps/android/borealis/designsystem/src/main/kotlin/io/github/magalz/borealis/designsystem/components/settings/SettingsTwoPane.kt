@@ -36,12 +36,14 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.liftedWhenFocused
@@ -96,8 +98,10 @@ private val GROUP_PADDING_VERTICAL = 5.dp
  * Selection follows focus: [onSelect] is called with a group as soon as focus lands on it (not for
  * the group already selected), so the pane follows every step of a held key; a tap or OK on a group
  * selects it too. [onSelect] must apply the selection at once, as a state write: Right from a group
- * enters the pane at its first row one frame later, and another key before that cancels it. Left
- * from the pane, when no row uses the key, returns to the selected group, whichever row it leaves.
+ * enters the pane at its first row one frame later, and another key before that cancels it. OK on a
+ * group (OK, Enter, the numpad Enter or the gamepad A button) does the same as Right, in the
+ * keyboard input mode only: a tap selects the group and leaves focus where it is. Left from the
+ * pane, when no row uses the key, returns to the selected group, whichever row it leaves.
  */
 @Composable
 fun <K> SettingsTwoPane(
@@ -144,8 +148,8 @@ fun <K> SettingsTwoPane(
 
 /**
  * What stands between focus on a group and the pane of a [SettingsTwoPane]: a group that focus or a
- * tap reaches is [select]ed at once, and Right asks to enter the pane. The [currentKey] is that of
- * the pane; [focusPane] puts focus into it.
+ * tap reaches is [select]ed at once, and Right or OK asks to enter the pane. The [currentKey] is
+ * that of the pane; [focusPane] puts focus into it.
  */
 private class GroupNavigation<K>(
     private val currentKey: State<K?>,
@@ -161,15 +165,24 @@ private class GroupNavigation<K>(
         if (key != currentKey.value) onSelect.value(key)
     }
 
+    /**
+     * A click chose the group [key]: it is selected. In the [keyboard] input mode the click is OK,
+     * and the pane is entered as Right does; a tap, in the touch mode, leaves focus where it is.
+     */
+    fun choose(key: K, keyboard: Boolean) {
+        select(key)
+        if (keyboard) enterPane()
+    }
+
     /** A key other than Right: whatever it does, it is not entering the pane. */
     fun onOtherKey() {
         entering.value = false
     }
 
     /**
-     * Right: enter the pane, a frame later. A selection that was just made has not recomposed the
-     * panes yet, and the target of a request for the current pane is still on the old one, which
-     * would take focus and clear it when it stops being current.
+     * Right or OK: enter the pane, a frame later. A selection that was just made has not recomposed
+     * the panes yet, and the target of a request for the current pane is still on the old one,
+     * which would take focus and clear it when it stops being current.
      */
     fun enterPane() {
         entering.value = true
@@ -225,6 +238,7 @@ private fun <K> GroupList(
     focusOnOpen: Boolean,
 ) {
     val initialFocus = rememberInitialFocusState()
+    val inputMode = LocalInputModeManager.current
     // Read here, so that a switch recomposes the list and not the pane.
     val current = selected.value
     Column(
@@ -255,6 +269,14 @@ private fun <K> GroupList(
                 group.title,
                 selected = group.key == current,
                 onSelect = { navigation.select(group.key) },
+                // The click of OK, of Enter and of the gamepad A (which Android turns into OK) is
+                // read in the keyboard mode, the click of a tap in the touch mode.
+                onClick = {
+                    navigation.choose(
+                        group.key,
+                        keyboard = inputMode.inputMode == InputMode.Keyboard,
+                    )
+                },
                 modifier =
                     when {
                         group.key != current -> Modifier
@@ -266,9 +288,15 @@ private fun <K> GroupList(
     }
 }
 
-/** One group of the list. Focus on it selects it, as a tap or OK does. */
+/** One group of the list. Focus on it selects it, as a tap or OK does: [onClick] is for those. */
 @Composable
-private fun GroupEntry(title: String, selected: Boolean, onSelect: () -> Unit, modifier: Modifier) {
+private fun GroupEntry(
+    title: String,
+    selected: Boolean,
+    onSelect: () -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.medium
     Box(
@@ -284,7 +312,7 @@ private fun GroupEntry(title: String, selected: Boolean, onSelect: () -> Unit, m
                 interactionSource = null,
                 indication = BorealisPressIndication,
                 role = Role.Tab,
-                onClick = onSelect,
+                onClick = onClick,
             )
             .padding(horizontal = GROUP_PADDING_HORIZONTAL, vertical = GROUP_PADDING_VERTICAL)
     ) {

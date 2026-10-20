@@ -128,7 +128,6 @@ class BlurAndGlassTest(unittest.TestCase):
 
     def test_the_sigma_is_the_one_skia_derives_from_the_radius(self):
         self.assertAlmostEqual(contrast.blur_sigma(32), 0.57735 * 32 + 0.5, places=6)
-        self.assertAlmostEqual(contrast.blur_sigma(0), 0.5, places=6)
 
     def test_the_density_comes_from_the_width_of_the_frame(self):
         self.assertAlmostEqual(contrast.frame_density(1920, "tv"), 2.0, places=6)

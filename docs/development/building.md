@@ -92,12 +92,19 @@ commit that fixes the code, and check that it has no absolute or Windows path
 (CI fails on that). This is the rule for the file in every case, also when a
 cherry-pick from upstream brings new findings.
 
+The convention plugins turn off the lint checks that compare the versions in
+use with what upstream has released (`NewerVersionAvailable`,
+`GradleDependency`, `AndroidGradlePluginVersion` and `OutdatedLibrary`). Their
+result changes with the date, so a build would fail without any change in the
+code. Lint does not check for newer versions; Dependabot does, except for AGP,
+which it ignores (see [dependencies](../policies/dependencies.md#updates-dependabot)).
+
 What stays, and why:
 
 | Lint ids | Why they stay |
 | --- | --- |
 | `UnusedAttribute`, `RtlHardcoded`, `ViewConstructor`, `UseRequiresApi` | Cosmetic. The attributes apply from API 30 or 33 and older versions ignore them. The gravity in `activity_game.xml` is the stream notification overlay. The seven virtual-controller views are built in code only. The `@TargetApi` annotations are for API 30 and later; the ones for API 28 and below went with the dead checks. |
-| `AndroidGradlePluginVersion`, `OldTargetApi` | Versions. A newer AGP and a `targetSdk` of 37 are dependency and platform updates, decided on their own and not in a lint sweep. |
+| `OldTargetApi` | A `targetSdk` of 37 is a platform update, decided on its own and not in a lint sweep. |
 | `NotShrinkingResources` | Release builds minify without `shrinkResources`. Turning it on changes the release package, so it is a release decision. |
 | `DefaultLocale`, `ApplySharedPref`, `SourceLockedOrientationActivity`, `VectorRaster` | Inherited code that does what it should. `toLowerCase()` runs on device and GPU names. `commit()` is deliberate: the crash listener must persist the crash count before the process dies. The stream locks the orientation on purpose. `ic_settings.xml` is a large vector. |
 

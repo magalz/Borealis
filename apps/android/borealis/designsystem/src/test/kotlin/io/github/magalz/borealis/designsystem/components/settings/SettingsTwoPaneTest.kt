@@ -15,12 +15,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -289,8 +291,8 @@ class SettingsTwoPaneTest {
 
         assertThat(selected).isEqualTo("audio")
         composeRule.onNodeWithText("Channels").assertIsDisplayed()
-        // The notes take focus in touch mode too, so they would show a pane that was entered.
-        composeRule.onNodeWithText("Notes").assertIsNotFocused()
+        // The slider and the notes take focus in touch mode too: a pane that was entered shows it.
+        composeRule.onAllNodes(isFocused()).assertCountEquals(0)
     }
 
     @Test
@@ -306,8 +308,8 @@ class SettingsTwoPaneTest {
 
         assertThat(selected).isEqualTo("audio")
         composeRule.onNodeWithText("Channels").assertIsDisplayed()
-        // The notes take focus in touch mode too, so they would show a pane that was entered.
-        composeRule.onNodeWithText("Notes").assertIsNotFocused()
+        // The slider and the notes take focus in touch mode too: a pane that was entered shows it.
+        composeRule.onAllNodes(isFocused()).assertCountEquals(0)
     }
 
     @Test

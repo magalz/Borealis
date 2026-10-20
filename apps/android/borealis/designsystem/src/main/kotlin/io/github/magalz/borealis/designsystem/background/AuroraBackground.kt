@@ -283,12 +283,23 @@ private fun rememberCycle(animated: Boolean): FloatState {
             cycle.floatValue = STILL_CYCLE
             return@LaunchedEffect
         }
-        while (true) {
-            delay(FRAME_GAP_MILLIS)
-            withInfiniteFrameNanos { cycle.floatValue = cycleAt(it) }
-        }
+        runCycleLoop { cycle.floatValue = it }
     }
     return cycle
+}
+
+/**
+ * The frames of a running loop: [onCycle] gets the position in the loop, from 0 until 1, at about
+ * 30 frames a second. [nanoTime] is the clock of the frame times.
+ */
+internal suspend fun runCycleLoop(
+    nanoTime: () -> Long = System::nanoTime,
+    onCycle: (Float) -> Unit,
+) {
+    while (true) {
+        delay(FRAME_GAP_MILLIS)
+        withInfiniteFrameNanos { onCycle(cycleAt(it)) }
+    }
 }
 
 /**

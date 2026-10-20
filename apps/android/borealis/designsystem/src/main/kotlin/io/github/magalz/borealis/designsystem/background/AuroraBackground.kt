@@ -51,9 +51,9 @@ private const val FRAME_GAP_NANOS = 1_000_000_000L / 30
 
 /**
  * How long before that vsync the thread wakes up and asks for the frame, so that a wake-up that is
- * late still makes it. It is less than the shortest time between two vsyncs, 8.3 ms at 120 Hz, or
- * the frame asked for would be the one before; it is more than the lateness of a wake-up, a few
- * milliseconds.
+ * late still makes it: it absorbs about 4 ms of lateness. It is less than the vsync period of the
+ * highest rate the loop is tuned for, 120 Hz (8.3 ms), or the frame asked for would be the one
+ * before.
  */
 private const val WAKE_EARLY_NANOS = 4_000_000L
 
@@ -299,21 +299,15 @@ private fun rememberCycle(animated: Boolean): FloatState {
 }
 
 /**
- * The frames of a running loop: [onCycle] gets the position in the loop, from 0 until 1, at about
- * 30 frames a second on a display of any refresh rate. [nanoTime] is the clock of the frame times:
- * a frame time is in the `System.nanoTime` timebase.
+ * The frames of a running loop: [onCycle] gets the position in the loop, from 0 until 1, once every
+ * [FRAME_GAP_NANOS]. That is 30 fps at 30, 60, 90 and 120 Hz; at other rates the update lands on the
+ * first vsync after the gap (25 fps at 50 and 75 Hz, 24 at 72, 28.8 at 144). [nanoTime] is the
+ * clock of the frame times, which are in the `System.nanoTime` timebase.
  *
- * The thread sleeps between two frames and asks for one only to draw it. The sleep ends
- * [WAKE_EARLY_NANOS] before the vsync that is [FRAME_GAP_NANOS] after the frame drawn last, so the
- * frame that is asked for is that vsync's. Every sleep starts from the time of the frame before, so
- * the loop keeps to the vsyncs and does not drift from them.
- *
- * The sleep is counted from the time of that frame, not from the moment the coroutine goes on: it
- * goes on after the work of the frame, which took about 11 ms for the curtains on a TV Streamer. A
- * fixed sleep of 25 ms from there ended after the vsync that was meant, and the frame came one
- * vsync late: every 50 ms at 60 Hz, which is 20 fps.
- *
- * A frame whose work took the whole gap leaves no sleep, and the next one is the next vsync.
+ * The thread sleeps between two frames and asks for one only to draw it. The sleep is counted from
+ * the time of the frame drawn last, and it ends [WAKE_EARLY_NANOS] before the vsync that is
+ * [FRAME_GAP_NANOS] after that frame, so the frame asked for is that vsync's. It is clamped to
+ * between none and one gap.
  */
 internal suspend fun runCycleLoop(
     nanoTime: () -> Long = System::nanoTime,
@@ -326,8 +320,8 @@ internal suspend fun runCycleLoop(
             onCycle(cycleAt(it))
             it
         }
-        // Held to the gap, so a clock that is not the one of the frame times costs one wrong sleep,
-        // never an endless one.
+        // Clamped to none or one gap: with a clock that is not the one of the frame times the sleep
+        // is wrong, but never an endless one.
         val sleepNanos = FRAME_GAP_NANOS - WAKE_EARLY_NANOS - (nanoTime() - frame)
         sleepMillis = sleepNanos.coerceIn(0L, FRAME_GAP_NANOS) / NANOS_PER_MILLI
     }

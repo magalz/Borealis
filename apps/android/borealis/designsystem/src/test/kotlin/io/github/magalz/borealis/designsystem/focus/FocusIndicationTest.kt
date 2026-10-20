@@ -27,7 +27,9 @@ import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.assertPixel
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.testing.FakeInputModeManager
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
+import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import org.junit.Rule
 import org.junit.Test
@@ -167,9 +169,43 @@ class FocusIndicationTest {
         assertPixel(x = 74f, y = 24f - 1f, FILL)
     }
 
+    @Test
+    fun `the scale is instant when Reduce motion is On, though the system animates`() {
+        composeRule.setContentInKeyboardMode {
+            Specimen(scaleOnFocus = true, look = BorealisLook(reduceMotion = ReduceMotion.On))
+        }
+        clearFocus()
+        composeRule.mainClock.autoAdvance = false
+
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.mainClock.advanceTimeBy(EARLY_MILLIS)
+
+        assertPixel(x = 74f, y = 24f - 1f, FILL)
+    }
+
+    @Test
+    fun `the scale animates when Reduce motion is Off, though the system removes animations`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        Settings.Global.putFloat(
+            context.contentResolver,
+            Settings.Global.ANIMATOR_DURATION_SCALE,
+            0f,
+        )
+        composeRule.setContentInKeyboardMode {
+            Specimen(scaleOnFocus = true, look = BorealisLook(reduceMotion = ReduceMotion.Off))
+        }
+        clearFocus()
+        composeRule.mainClock.autoAdvance = false
+
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.mainClock.advanceTimeBy(EARLY_MILLIS)
+
+        assertPixel(x = 74f, y = 24f - 1f, PAGE)
+    }
+
     @Composable
-    private fun Specimen(scaleOnFocus: Boolean = false) {
-        BorealisTheme {
+    private fun Specimen(scaleOnFocus: Boolean = false, look: BorealisLook = BorealisLook()) {
+        BorealisTheme(look = look) {
             Column {
                 Box(Modifier.testTag(FRAME).background(PAGE).padding(24.dp)) {
                     Box(

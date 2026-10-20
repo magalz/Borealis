@@ -42,12 +42,14 @@ private val APPEARANCE_ROWS = listOf("Background", "Glass tint", "Glass blur")
 
 private val ACCESSIBILITY_SUMMARIES =
     listOf(
-        "Removes animations. Follow system uses the animation setting of the device.",
+        "On removes animations; Off keeps them even when the device removes them. " +
+            "Follow system uses the device's animation setting.",
         "Reduced and Off override Glass tint and Glass blur.",
-        "A thicker, lighter outline around the focused item.",
+        "Draws a thicker, lighter outline around the focused item.",
         "Scales the text of Borealis on top of the system font size.",
-        "Solid panels, brighter text, a dimmed background and the thicker outline.",
-        "Status colours that stay apart for red-green or blue-yellow colour blindness.",
+        "Uses solid panels, brighter text, a dimmed background and the thicker outline.",
+        "Uses status colours that are easy to tell apart with red-green or blue-yellow " +
+            "colour blindness.",
     )
 
 private val APPEARANCE_SUMMARIES =
@@ -353,6 +355,51 @@ abstract class SettingsLookTestBase : SettingsScreenTestBase() {
 
         assertDisabledWithNote(NOTE_CONTRAST)
         composeRule.onNodeWithText(NOTE_OFF).assertDoesNotExist()
+    }
+
+    @Test
+    fun `High contrast disables Transparency and Thicker focus outline, and says so`() {
+        stored(Settings.HIGH_CONTRAST to true)
+        show(keyboard = keyboard)
+        open("Accessibility")
+
+        listOf("Transparency", "Thicker focus outline").forEach { row(it).assertIsNotEnabled() }
+        composeRule.onAllNodesWithText(NOTE_CONTRAST).assertCountEquals(2)
+    }
+
+    @Test
+    fun `High contrast leaves the other Accessibility rows to change`() {
+        stored(Settings.HIGH_CONTRAST to true)
+        show(keyboard = keyboard)
+        open("Accessibility")
+
+        listOf("Reduce motion", "Text size", "High contrast", "Colour-blind palette").forEach {
+            row(it).assertIsEnabled()
+        }
+    }
+
+    @Test
+    fun `Transparency and Thicker focus outline can be changed without High contrast`() {
+        stored(Settings.TRANSPARENCY to "reduced")
+        show(keyboard = keyboard)
+        open("Accessibility")
+
+        listOf("Transparency", "Thicker focus outline").forEach { row(it).assertIsEnabled() }
+        composeRule.onNodeWithText(NOTE_CONTRAST).assertDoesNotExist()
+    }
+
+    @Test
+    fun `turning High contrast on disables the two rows at once, and off frees them`() {
+        show(keyboard = keyboard)
+        open("Accessibility")
+
+        row("High contrast").performClick()
+        composeRule.waitForIdle()
+        listOf("Transparency", "Thicker focus outline").forEach { row(it).assertIsNotEnabled() }
+
+        row("High contrast").performClick()
+        composeRule.waitForIdle()
+        listOf("Transparency", "Thicker focus outline").forEach { row(it).assertIsEnabled() }
     }
 
     @Test

@@ -647,13 +647,22 @@ class DefaultSettingsOptionsRowStateTest {
     }
 
     @Test
-    fun `the Accessibility rows are always enabled`() {
+    fun `High contrast disables Transparency and Thicker focus outline`() {
+        val contrast = defaults.on(Settings.HIGH_CONTRAST)
+
+        for (row in listOf(Settings.TRANSPARENCY, Settings.THICK_FOCUS)) {
+            assertThat(state(row, contrast))
+                .isEqualTo(RowState.Disabled(DisabledReason.HIGH_CONTRAST_ON))
+            assertThat(state(row, defaults)).isEqualTo(RowState.Enabled)
+        }
+    }
+
+    @Test
+    fun `the other Accessibility rows are always enabled`() {
         val lowered = defaults.on(Settings.HIGH_CONTRAST).transparency("off")
         val rows =
             listOf(
                 Settings.REDUCE_MOTION,
-                Settings.TRANSPARENCY,
-                Settings.THICK_FOCUS,
                 Settings.TEXT_SIZE,
                 Settings.HIGH_CONTRAST,
                 Settings.COLOUR_VISION,

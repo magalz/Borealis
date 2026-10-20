@@ -1,9 +1,12 @@
 package io.github.magalz.borealis.library.shell
 
+import android.content.Context
+import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
@@ -14,8 +17,12 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
+import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.library.testing.PHONE
 import org.junit.Rule
 import org.junit.Test
@@ -37,16 +44,27 @@ class FadingNavHostTest {
 
     private lateinit var navController: NavHostController
 
-    private fun show() {
+    private fun show(look: BorealisLook = BorealisLook()) {
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
             navController = rememberNavController()
-            FadingNavHost(navController) {
-                composable<Hosts> { Box(Modifier.fillMaxSize().background(Color.Red)) }
-                composable<AddHost> { Box(Modifier.size(SQUARE_DP.dp).background(Color.Blue)) }
+            CompositionLocalProvider(LocalBorealisLook provides look) {
+                FadingNavHost(navController) {
+                    composable<Hosts> { Box(Modifier.fillMaxSize().background(Color.Red)) }
+                    composable<AddHost> { Box(Modifier.size(SQUARE_DP.dp).background(Color.Blue)) }
+                }
             }
         }
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+    }
+
+    private fun systemAnimationScale(scale: Float) {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        Settings.Global.putFloat(
+            context.contentResolver,
+            Settings.Global.ANIMATOR_DURATION_SCALE,
+            scale,
+        )
     }
 
     private fun pixel(x: Int, y: Int): Color =
@@ -87,6 +105,51 @@ class FadingNavHostTest {
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
 
         assertThat(pixel(OUTSIDE_PX, OUTSIDE_PX).green).isLessThan(DONE)
+    }
+
+    @Test
+    fun `with Reduce motion On the next screen is there at once, with no fade`() {
+        show(BorealisLook(reduceMotion = ReduceMotion.On))
+        composeRule.runOnIdle { navController.navigate(AddHost) }
+
+        composeRule.mainClock.advanceTimeBy(TWO_FRAMES_MILLIS)
+
+        assertThat(pixel(OUTSIDE_PX, OUTSIDE_PX).green).isGreaterThan(OPAQUE_WHITE)
+        assertThat(pixel(IN_SQUARE_PX, IN_SQUARE_PX).red).isLessThan(DONE)
+    }
+
+    @Test
+    fun `with Reduce motion On going back shows the screen before at once too`() {
+        show(BorealisLook(reduceMotion = ReduceMotion.On))
+        composeRule.runOnIdle { navController.navigate(AddHost) }
+        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+
+        composeRule.runOnIdle { navController.popBackStack() }
+        composeRule.mainClock.advanceTimeBy(TWO_FRAMES_MILLIS)
+
+        assertThat(pixel(OUTSIDE_PX, OUTSIDE_PX).green).isLessThan(DONE)
+    }
+
+    @Test
+    fun `a system that removes animations removes the fade when Reduce motion follows it`() {
+        systemAnimationScale(0f)
+        show()
+        composeRule.runOnIdle { navController.navigate(AddHost) }
+
+        composeRule.mainClock.advanceTimeBy(TWO_FRAMES_MILLIS)
+
+        assertThat(pixel(IN_SQUARE_PX, IN_SQUARE_PX).red).isLessThan(DONE)
+    }
+
+    @Test
+    fun `with Reduce motion Off the fade stays, also when the system removes animations`() {
+        systemAnimationScale(0f)
+        show(BorealisLook(reduceMotion = ReduceMotion.Off))
+        composeRule.runOnIdle { navController.navigate(AddHost) }
+
+        composeRule.mainClock.advanceTimeBy(TWO_FRAMES_MILLIS)
+
+        assertThat(pixel(IN_SQUARE_PX, IN_SQUARE_PX).red).isGreaterThan(BEGUN)
     }
 
     private companion object {

@@ -44,6 +44,7 @@ internal fun StreamChromeRoot(
     session: StreamSession,
     report: (Rect?) -> Unit,
     look: BorealisLook = BorealisLook(),
+    extra: @Composable () -> Unit = {},
 ) {
     val state by session.state.collectAsStateWithLifecycle()
     val perf by session.perf.collectAsStateWithLifecycle()

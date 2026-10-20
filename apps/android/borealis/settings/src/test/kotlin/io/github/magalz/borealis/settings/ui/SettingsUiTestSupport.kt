@@ -30,7 +30,7 @@ import org.junit.runner.Description
 /** Robolectric qualifiers of the devices that the settings screen is laid out for. */
 const val PHONE = "w360dp-h640dp-xhdpi"
 const val TV = "w960dp-h540dp-land-television-xhdpi"
-const val HANDHELD = "w800dp-h480dp-land-hdpi-dpad"
+const val HANDHELD = "w800dp-h480dp-land-hdpi-notouch"
 
 /**
  * Sets [content] and switches the window to the keyboard input mode, the way a D-pad or a gamepad

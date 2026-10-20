@@ -20,14 +20,20 @@ class StreamChromeHostPhoneTest {
     }
 
     @Test
-    @Config(qualifiers = "w900dp-h500dp-notouch-dpad")
-    fun `a handheld with a D-pad and no touch screen does not`() {
+    @Config(qualifiers = "w900dp-h500dp-notouch")
+    fun `a wide device without a touch screen does not`() {
         assertThat(StreamChromeHost.isPhone(context)).isFalse()
     }
 
     @Test
     @Config(qualifiers = "w780dp-h360dp-finger-nonav")
     fun `a wide touch phone gets the docked keyboard without a gamepad`() {
+        assertThat(StreamChromeHost.isPhone(context)).isTrue()
+    }
+
+    @Test
+    @Config(qualifiers = "w780dp-h360dp-finger-dpad")
+    fun `a wide touch phone whose keyboard reports a D-pad still gets the docked keyboard`() {
         assertThat(StreamChromeHost.isPhone(context)).isTrue()
     }
 

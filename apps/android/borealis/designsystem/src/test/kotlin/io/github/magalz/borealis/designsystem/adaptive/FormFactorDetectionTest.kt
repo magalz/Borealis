@@ -31,21 +31,6 @@ class FormFactorDetectionTest {
     }
 
     @Test
-    fun `a wide device with a D-pad is a handheld`() {
-        val formFactor = detect(widthDp = 640, navigation = Configuration.NAVIGATION_DPAD)
-
-        assertThat(formFactor).isEqualTo(FormFactor.Handheld)
-    }
-
-    @Test
-    fun `a wide device with a trackball or wheel is a handheld`() {
-        assertThat(detect(widthDp = 600, navigation = Configuration.NAVIGATION_TRACKBALL))
-            .isEqualTo(FormFactor.Handheld)
-        assertThat(detect(widthDp = 600, navigation = Configuration.NAVIGATION_WHEEL))
-            .isEqualTo(FormFactor.Handheld)
-    }
-
-    @Test
     fun `a wide device without a touch screen is a handheld`() {
         val formFactor = detect(widthDp = 800, touchscreen = Configuration.TOUCHSCREEN_NOTOUCH)
 
@@ -53,14 +38,14 @@ class FormFactorDetectionTest {
     }
 
     @Test
-    fun `a narrow device with a D-pad stays a phone`() {
-        val formFactor = detect(widthDp = 599, navigation = Configuration.NAVIGATION_DPAD)
+    fun `a narrow device without a touch screen stays a phone`() {
+        val formFactor = detect(widthDp = 599, touchscreen = Configuration.TOUCHSCREEN_NOTOUCH)
 
         assertThat(formFactor).isEqualTo(FormFactor.Phone)
     }
 
     @Test
-    fun `a wide touch device without a D-pad is a phone`() {
+    fun `a wide touch tablet without a game controller is a phone`() {
         assertThat(detect(widthDp = 840)).isEqualTo(FormFactor.Phone)
     }
 
@@ -134,17 +119,9 @@ class FormFactorDetectionTest {
         uiModeType: Int = Configuration.UI_MODE_TYPE_NORMAL,
         widthDp: Int = 360,
         touchscreen: Int = Configuration.TOUCHSCREEN_FINGER,
-        navigation: Int = Configuration.NAVIGATION_NONAV,
         gamepadConnected: Boolean = false,
     ) =
         formFactorOf(
-            FormFactorFacts(
-                isTvFeature,
-                uiModeType,
-                widthDp,
-                touchscreen,
-                navigation,
-                gamepadConnected,
-            )
+            FormFactorFacts(isTvFeature, uiModeType, widthDp, touchscreen, gamepadConnected)
         )
 }

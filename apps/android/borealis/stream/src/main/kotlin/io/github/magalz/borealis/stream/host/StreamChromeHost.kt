@@ -347,7 +347,6 @@ class StreamChromeHost(
                     uiModeType = configuration.uiMode and Configuration.UI_MODE_TYPE_MASK,
                     widthDp = configuration.screenWidthDp,
                     touchscreen = configuration.touchscreen,
-                    navigation = configuration.navigation,
                     gamepadConnected = isGamepadConnected(),
                 )
             ) == FormFactor.Phone

@@ -32,7 +32,7 @@ internal val LocalMenuHandleBounds = staticCompositionLocalOf<(Rect?) -> Unit> {
  */
 @Composable
 internal fun StreamChromeTheme(look: BorealisLook, content: @Composable () -> Unit) {
-    BorealisTheme(rememberFormFactor(), content = content)
+    BorealisTheme(rememberFormFactor(), look, content)
 }
 
 /**

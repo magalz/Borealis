@@ -46,6 +46,9 @@ import kotlinx.coroutines.launch
  * - DOCKED: the touches inside the chrome, not the keys.
  * - HIDDEN (picture-in-picture): nothing, and nothing is drawn.
  *
+ * The chrome draws with the [look] that the viewer chose, read by the caller when the stream
+ * starts: a change of a setting during a stream shows in the next one.
+ *
  * [onCaptured] runs when the chrome starts taking the input (the mode becomes MODAL): the caller
  * releases what is held and drops the pointer capture. [onReleased] runs, posted, when it stops:
  * the caller asks for the pointer capture again. Both run on the main thread.
@@ -67,9 +70,7 @@ import kotlinx.coroutines.launch
  */
 @SuppressLint("ViewConstructor") // Created in code by the stream activity, never inflated.
 @Suppress("TooManyFunctions") // One override per input path of the view.
-class StreamChromeHost
-@JvmOverloads
-constructor(
+class StreamChromeHost(
     private val activity: ComponentActivity,
     private val session: StreamSession,
     private val streamView: View,

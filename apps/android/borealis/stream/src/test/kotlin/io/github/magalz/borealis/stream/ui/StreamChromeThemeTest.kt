@@ -12,7 +12,6 @@ import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.designsystem.theme.TextSize
 import io.github.magalz.borealis.stream.testing.PHONE
-import io.github.magalz.borealis.stream.testing.TV
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -40,18 +39,17 @@ class StreamChromeThemeTest {
     }
 
     @Test
-    @Config(qualifiers = TV)
-    fun `the screens get the look that the stream started with and the form factor of the window`() {
+    @Config(qualifiers = PHONE)
+    fun `the screens get the look that the stream started with`() {
         composeRule.setContent { StreamChromeTheme(chosen) { Probe() } }
         composeRule.waitForIdle()
 
         assertThat(seenLook).isEqualTo(chosen)
-        assertThat(seenFormFactor).isEqualTo(FormFactor.Tv)
     }
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `a look of the default gives the screens the look of the app with nothing changed`() {
+    fun `the screens get the form factor of the window, and the default look when that is the look`() {
         composeRule.setContent { StreamChromeTheme(BorealisLook()) { Probe() } }
         composeRule.waitForIdle()
 

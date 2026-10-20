@@ -1313,6 +1313,11 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         chromeKeySink = sink;
     }
 
+    // BOREALIS: whether the USB driver holds a pad, which Android has no input device for (stream)
+    public boolean hasUsbPad() {
+        return usbDeviceContexts.size() > 0;
+    }
+
     @Override
     public void setCaptured(boolean captured) {
         if (captured == this.captured) {

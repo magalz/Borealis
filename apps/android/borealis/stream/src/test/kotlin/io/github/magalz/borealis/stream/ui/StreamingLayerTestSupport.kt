@@ -36,7 +36,18 @@ internal fun aStreaming(
     info: SessionInfo = aSessionInfo,
     showMenuHint: Boolean = false,
     pointerSpeed: PointerSpeed = PointerSpeed.NORMAL,
-) = StreamPhase.Streaming(panel, overlay, touchMode, gamepadMouse, info, showMenuHint, pointerSpeed)
+    dockedKeyboard: Boolean = false,
+) =
+    StreamPhase.Streaming(
+        panel,
+        overlay,
+        touchMode,
+        gamepadMouse,
+        info,
+        showMenuHint,
+        pointerSpeed,
+        dockedKeyboard,
+    )
 
 /**
  * The streaming layer over a form factor, the way `StreamChromeRoot` draws it. [phase] and [perf]

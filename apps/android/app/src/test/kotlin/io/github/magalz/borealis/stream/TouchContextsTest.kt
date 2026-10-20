@@ -72,7 +72,7 @@ class TouchContextsTest {
                 "App",
                 "PC",
                 StreamDefaults(OverlayMode.OFF, null, null, false),
-                false,
+                { false },
                 RecordingStreamActions(),
             )
 
@@ -87,7 +87,7 @@ class TouchContextsTest {
                 "App",
                 "PC",
                 StreamDefaults(OverlayMode.OFF, null, false, false),
-                false,
+                { false },
                 RecordingStreamActions(),
             )
         noTouch.onConnectionStarted(SessionInfo(1, 1, 1, "H.264", false, null, 1))

@@ -59,7 +59,7 @@ class StreamKeyboardsTest {
                 "App",
                 "PC",
                 StreamDefaults(OverlayMode.OFF, null, null, false),
-                false,
+                { false },
                 RecordingStreamActions(),
             )
         failed.onFailed(StreamFailure(FailureKind.GENERIC, "Error 1", null))

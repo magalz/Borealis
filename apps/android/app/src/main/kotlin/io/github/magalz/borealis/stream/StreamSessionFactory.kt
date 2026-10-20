@@ -9,6 +9,7 @@ import io.github.magalz.borealis.nativecore.LaunchCategory
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.store.SettingsSnapshots
 import io.github.magalz.borealis.stream.host.StreamChromeHost
+import java.util.function.BooleanSupplier
 
 /** Builds what `Game` gives the stream session from the stream preferences and the connection. */
 object StreamSessionFactory {
@@ -46,18 +47,21 @@ object StreamSessionFactory {
         }
 
     /**
-     * The session of [activity]'s stream. The docked keyboard is for phones. [pcName] and [appName]
-     * are what the intent carried; either can be missing, for example when a running session is
-     * resumed. The placeholder name that the Library gives a resumed app it has no name for is
-     * dropped here, so the screens never show it.
+     * The session of [activity]'s stream. Its keyboard docks on a phone with no game controller,
+     * decided each time the keyboard opens; [usbPadHeld] tells then whether the app's USB driver
+     * holds a pad. [pcName] and [appName] are what the intent carried; either can be missing, for
+     * example when a running session is resumed. The placeholder name that the Library gives a
+     * resumed app it has no name for is dropped here, so the screens never show it.
      */
     @JvmStatic
+    @Suppress("LongParameterList") // The Java call site in Game.java passes what the activity has.
     fun create(
         activity: Activity,
         prefs: PreferenceConfiguration,
         appName: String?,
         pcName: String?,
         actions: StreamActions,
+        usbPadHeld: BooleanSupplier,
     ): StreamSession =
         StreamSession(
             appName = appName.takeUnless { it == UNKNOWN_APP_NAME }.orEmpty(),
@@ -69,7 +73,7 @@ object StreamSessionFactory {
                     activity.packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN),
                     GameStreamActions.menuHintPending(activity),
                 ),
-            dockedKeyboard = StreamChromeHost.isPhone(activity),
+            dockKeyboard = { StreamChromeHost.dockedKeyboard(activity, usbPadHeld.asBoolean) },
             actions = actions,
         )
 

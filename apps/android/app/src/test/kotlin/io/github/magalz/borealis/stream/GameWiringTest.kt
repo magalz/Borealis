@@ -75,6 +75,12 @@ class GameWiringTest {
     }
 
     @Test
+    fun `the keyboard asks the gamepad handler whether the USB driver holds a pad`() {
+        assertThat(source).contains("StreamSessionFactory.create(")
+        assertThat(source).contains("controllerHandler::hasUsbPad")
+    }
+
+    @Test
     fun `the menu reads the gamepad mouse and the decoder numbers follow the overlay and the menu`() {
         assertThat(source).contains("GamepadMouseSync.bind(")
         assertThat(source).contains("controllerHandler::isMouseEmulationOnAnyPad")

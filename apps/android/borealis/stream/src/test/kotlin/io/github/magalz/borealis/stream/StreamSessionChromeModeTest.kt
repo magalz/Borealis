@@ -11,13 +11,12 @@ import org.junit.Test
 class StreamSessionChromeModeTest {
     private fun streaming(
         overlay: OverlayMode = OverlayMode.OFF,
-        dockedKeyboard: Boolean = false,
+        dockKeyboard: () -> Boolean = { false },
     ): StreamSession =
-        aSession(defaults = aDefaults.copy(overlay = overlay), dockedKeyboard = dockedKeyboard)
-            .also {
-                it.onConnectionStarted(aSessionInfo)
-                it.onFirstFrame()
-            }
+        aSession(defaults = aDefaults.copy(overlay = overlay), dockKeyboard = dockKeyboard).also {
+            it.onConnectionStarted(aSessionInfo)
+            it.onFirstFrame()
+        }
 
     @Test
     fun `starting is modal`() {
@@ -53,7 +52,7 @@ class StreamSessionChromeModeTest {
 
     @Test
     fun `a docked keyboard is docked`() {
-        val session = streaming(dockedKeyboard = true)
+        val session = streaming(dockKeyboard = { true })
 
         session.openKeyboard()
 
@@ -62,9 +61,55 @@ class StreamSessionChromeModeTest {
 
     @Test
     fun `a keyboard that is not docked is modal`() {
-        val session = streaming(dockedKeyboard = false)
+        val session = streaming(dockKeyboard = { false })
 
         session.openKeyboard()
+
+        assertThat(session.chromeMode).isEqualTo(ChromeMode.MODAL)
+    }
+
+    @Test
+    fun `the keyboard type is decided when the keyboard opens, not when the session is created`() {
+        var docks = true
+        val session = streaming(dockKeyboard = { docks })
+
+        docks = false
+        session.openKeyboard()
+
+        assertThat(session.chromeMode).isEqualTo(ChromeMode.MODAL)
+    }
+
+    @Test
+    fun `a keyboard that opens again follows the rule as it is then`() {
+        var docks = false
+        val session = streaming(dockKeyboard = { docks })
+        session.openKeyboard()
+        session.closePanel()
+
+        docks = true
+        session.openKeyboard()
+
+        assertThat(session.chromeMode).isEqualTo(ChromeMode.DOCKED)
+    }
+
+    @Test
+    fun `a keyboard that opened docked stays docked while the rule changes under it`() {
+        var docks = true
+        val session = streaming(dockKeyboard = { docks })
+        session.openKeyboard()
+
+        docks = false
+
+        assertThat(session.chromeMode).isEqualTo(ChromeMode.DOCKED)
+    }
+
+    @Test
+    fun `a keyboard that opened covering stays covering while the rule changes under it`() {
+        var docks = false
+        val session = streaming(dockKeyboard = { docks })
+        session.openKeyboard()
+
+        docks = true
 
         assertThat(session.chromeMode).isEqualTo(ChromeMode.MODAL)
     }

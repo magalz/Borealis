@@ -37,6 +37,11 @@ from PIL import Image
 REPO = Path(__file__).resolve().parents[2]
 TOKENS_JSON = REPO / "design" / "tokens.json"
 CLIPS_DIR = REPO / "apps/android/borealis/designsystem/src/main/res/raw"
+GLASS_TABLE_KT = (
+    REPO
+    / "apps/android/borealis/designsystem/src/main/kotlin/io/github/magalz/borealis/designsystem"
+    / "glass/GlassContrastTable.kt"
+)
 
 # The text tokens that are measured, and the surfaces they sit on today.
 TEXT_TOKENS = ("ink", "ink-2", "ink-3", "ink-4", "accent-soft")
@@ -585,6 +590,19 @@ def markdown_tables(result):
     )
 
 
+# The table for the app
+
+
+def worst_backdrop_luminance(result):
+    """Stub: the table of the worst backdrop is not written yet."""
+    return {}
+
+
+def glass_table_kotlin(result):
+    """Stub: the Kotlin file is not written yet."""
+    return ""
+
+
 # The command line
 
 
@@ -617,7 +635,13 @@ def main(argv=None):
     measure.add_argument("--jobs", type=int, default=4, help="processes, one frame each")
     measure.add_argument("--revision", help="the revision measured (default: HEAD)")
 
+    table = commands.add_parser("glass-table", help="write the Kotlin table of the glass")
+    table.add_argument("result", type=Path, help="the JSON that measure wrote")
+    table.add_argument("--out", type=Path, default=GLASS_TABLE_KT, help="the Kotlin file")
+
     args = parser.parse_args(argv)
+    if args.command == "glass-table":
+        return 0
     if args.command == "extract":
         extract_clips(args.frames, args.clips, args.count)
         return 0

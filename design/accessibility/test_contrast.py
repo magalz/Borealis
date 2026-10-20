@@ -102,6 +102,21 @@ class FrameStatisticsTest(unittest.TestCase):
             self.assertAlmostEqual(stats[key], 0.85 / 0.25, places=6)
 
 
+class FormatRatioTest(unittest.TestCase):
+    def test_a_ratio_is_rounded_to_two_places(self):
+        self.assertEqual(contrast.format_ratio(15.8077), "15.81")
+        self.assertEqual(contrast.format_ratio(4.5072), "4.51")
+
+    def test_a_ratio_short_of_a_wcag_limit_is_never_rounded_up_to_it(self):
+        self.assertEqual(contrast.format_ratio(4.4962), "4.496")
+        self.assertEqual(contrast.format_ratio(2.9996), "2.999")
+        self.assertEqual(contrast.format_ratio(6.9999), "6.999")
+
+    def test_a_ratio_at_a_limit_is_printed_as_it_is(self):
+        self.assertEqual(contrast.format_ratio(4.5), "4.50")
+        self.assertEqual(contrast.format_ratio(7.0), "7.00")
+
+
 class BlurAndGlassTest(unittest.TestCase):
     def test_a_uniform_image_keeps_its_colour_after_the_blur(self):
         image = uniform(80, 60, (0.2, 0.4, 0.6))

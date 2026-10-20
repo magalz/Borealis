@@ -165,6 +165,10 @@ def hex_contrast(foreground, background):
     )
 
 
+def format_ratio(value):
+    return ""
+
+
 def contrast_stats(luminance, text_luminance):
     """The contrast of a text over every pixel of a frame: the worst case, p1 and p5.
 

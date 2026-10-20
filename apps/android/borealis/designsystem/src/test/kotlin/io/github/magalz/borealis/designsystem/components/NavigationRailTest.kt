@@ -152,7 +152,24 @@ class NavigationRailTest {
         assertThat(version.getUnclippedBoundsInRoot().right.value)
             .isAtMost(rail.right.value - RAIL_PADDING_DP)
         assertThat(textLayout(name).lineCount).isEqualTo(1)
-        assertThat(textLayout(name).didOverflowWidth).isFalse()
+        assertThat(textLayout(name).isLineEllipsized(0)).isFalse()
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD, fontScale = 1.3f)
+    fun `a version too long for the rail wraps inside the footer`() {
+        composeRule.setContent {
+            Rail(Modifier.testTag(RAIL), version = LONG_VERSION, description = DESCRIPTION)
+        }
+
+        val rail = composeRule.onNodeWithTag(RAIL).getUnclippedBoundsInRoot()
+        val version = composeRule.onNodeWithText(LONG_VERSION, useUnmergedTree = true)
+
+        assertThat(footerShown()).isTrue()
+        assertThat(version.getUnclippedBoundsInRoot().right.value)
+            .isAtMost(rail.right.value - RAIL_PADDING_DP)
+        assertThat(textLayout(version).lineCount).isGreaterThan(1)
+        assertThat(textLayout(version).lineCount).isAtMost(2)
     }
 
     @Test
@@ -259,6 +276,7 @@ class NavigationRailTest {
         const val PROBE = "probe"
         const val VERSION = "0.1.0"
         const val DESCRIPTION = "Borealis, version 0.1.0"
+        const val LONG_VERSION = "0.1.0-debug+3a419f4e-dirty-with-a-suffix-that-is-far-too-long"
 
         val ICON: ImageVector =
             ImageVector.Builder(

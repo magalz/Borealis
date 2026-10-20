@@ -46,7 +46,11 @@ fun rememberAboutSource(): AboutSource {
     }
 }
 
-private fun versionName(context: Context): String? =
+/**
+ * The version name of the app, or `null` when the system does not know it. The About rows and the
+ * footer of the Library rail read the version from here.
+ */
+fun versionName(context: Context): String? =
     try {
         context.packageManager.getPackageInfo(context.packageName, 0).versionName
     } catch (_: PackageManager.NameNotFoundException) {

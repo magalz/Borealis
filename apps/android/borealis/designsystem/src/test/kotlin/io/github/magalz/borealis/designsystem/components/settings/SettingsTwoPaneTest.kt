@@ -5,11 +5,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
@@ -167,26 +170,32 @@ class SettingsTwoPaneTest {
     }
 
     @Test
-    fun `OK on a group enters the pane at its first row`() =
-        okEntersTheFirstRow(Key.DirectionCenter)
-
-    @Test fun `Enter on a group enters the pane at its first row`() = okEntersTheFirstRow(Key.Enter)
-
-    @Test
-    fun `the numpad Enter on a group enters the pane at its first row`() =
-        okEntersTheFirstRow(Key.NumPadEnter)
+    fun `OK on a group enters the pane at its first row`() = okEntersTheFirstRow {
+        press(Key.DirectionCenter)
+    }
 
     @Test
-    fun `the gamepad A button on a group enters the pane at its first row`() =
-        okEntersTheFirstRow(Key.ButtonA)
+    fun `Enter on a group enters the pane at its first row`() = okEntersTheFirstRow {
+        press(Key.Enter)
+    }
 
-    private fun okEntersTheFirstRow(ok: Key) {
+    @Test
+    fun `the numpad Enter on a group enters the pane at its first row`() = okEntersTheFirstRow {
+        press(Key.NumPadEnter)
+    }
+
+    @Test
+    fun `the gamepad A button on a group enters the pane at its first row`() = okEntersTheFirstRow {
+        pressGamepadA()
+    }
+
+    private fun okEntersTheFirstRow(pressOk: () -> Unit) {
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Stream").requestFocus()
         press(Key.DirectionDown)
         composeRule.onNodeWithText("Video").assertIsFocused()
 
-        press(ok)
+        pressOk()
 
         // The first row, not the nearest to the group, and the group stays selected.
         composeRule.onNodeWithText("Codec").assertIsFocused()
@@ -265,8 +274,12 @@ class SettingsTwoPaneTest {
 
     @Test
     fun `a tap in a window that was in keyboard mode selects the group and enters no pane`() {
-        composeRule.setContentInKeyboardMode { Specimen() }
+        val window = FakeInputModeManager(InputMode.Keyboard)
+        composeRule.setContentInKeyboardMode {
+            CompositionLocalProvider(LocalInputModeManager provides window) { Specimen() }
+        }
 
+        window.inputMode = InputMode.Touch
         composeRule.onNodeWithText("Audio").performClick()
         composeRule.waitForIdle()
 
@@ -443,6 +456,17 @@ class SettingsTwoPaneTest {
     private fun press(key: Key) {
         composeRule.onRoot().performKeyInput { pressKey(key) }
         composeRule.waitForIdle()
+    }
+
+    /**
+     * The gamepad A button as a device delivers it. A click listens for OK, Enter and the numpad
+     * Enter, not for A: when the app leaves A alone, Android hands the focused item the key OK in
+     * its place (the fallback of the key map). Keys injected into a test skip that step, so the
+     * test does it.
+     */
+    private fun pressGamepadA() {
+        press(Key.ButtonA)
+        press(Key.DirectionCenter)
     }
 
     @Composable

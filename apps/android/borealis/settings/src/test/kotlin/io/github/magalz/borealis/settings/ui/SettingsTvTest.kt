@@ -1,6 +1,13 @@
 package io.github.magalz.borealis.settings.ui
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -80,6 +87,20 @@ private fun SettingsScreenTestBase.walkDownTheGroups() {
     }
 }
 
+/**
+ * A window whose input mode a test sets. On a device a touch puts the window in touch mode before
+ * the click that follows; a touch injected into a test does not, so a test that stands for a tap
+ * sets the mode itself.
+ */
+private class FakeInputModeManager(initial: InputMode) : InputModeManager {
+    override var inputMode: InputMode by mutableStateOf(initial)
+
+    override fun requestInputMode(inputMode: InputMode): Boolean {
+        this.inputMode = inputMode
+        return true
+    }
+}
+
 /** The settings screen on a TV: the groups on the left and the rows of one group on the right. */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = TV)
@@ -96,21 +117,51 @@ class SettingsTvTest : SettingsScreenTestBase() {
         composeRule.waitForIdle()
     }
 
-    /** The screen with a Privacy pane that has a row to focus, as the real pane has. */
+    /**
+     * The gamepad A button as a device delivers it. A click listens for OK, Enter and the numpad
+     * Enter, not for A: when the app leaves A alone, Android hands the focused item the key OK in
+     * its place (the fallback of the key map). Keys injected into a test skip that step, so the
+     * test does it.
+     */
+    private fun pressGamepadA(title: String) {
+        press(title, Key.ButtonA)
+        press(title, Key.DirectionCenter)
+    }
+
+    /** The window of [showWithPrivacyRow], whose input mode a test that stands for a tap sets. */
+    private val window = FakeInputModeManager(InputMode.Keyboard)
+
+    /**
+     * The screen in keyboard mode with a Privacy pane that has a row to focus, as the real pane
+     * has.
+     */
     private fun showWithPrivacyRow() {
         val viewModel = viewModel()
         composeRule.setContentInKeyboardMode {
-            OnPage {
-                SettingsRoute(
-                    onBack = { backs++ },
-                    onOpenPrivacy = { privacyOpens++ },
-                    privacyPane = { SettingsValueRow("Privacy row", null, {}) },
-                    about = testAbout(),
-                    viewModel = viewModel,
-                )
+            CompositionLocalProvider(LocalInputModeManager provides window) {
+                OnPage {
+                    SettingsRoute(
+                        onBack = { backs++ },
+                        onOpenPrivacy = { privacyOpens++ },
+                        privacyPane = { SettingsValueRow("Privacy row", null, {}) },
+                        about = testAbout(),
+                        viewModel = viewModel,
+                    )
+                }
             }
         }
         composeRule.waitForIdle()
+    }
+
+    /**
+     * The Version row is the first of About. It has no semantics of its own to ask whether it has
+     * focus, so Down shows where focus is: the next row is the one that takes it.
+     */
+    private fun assertFocusIsOnTheVersionRow() {
+        group("About").assertIsNotFocused()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Source code").assertIsFocused()
     }
 
     @Test
@@ -183,23 +234,30 @@ class SettingsTvTest : SettingsScreenTestBase() {
     }
 
     @Test
-    fun `OK on Video enters its rows at the first row`() = okEntersTheVideoRows(Key.DirectionCenter)
-
-    @Test fun `Enter on Video enters its rows at the first row`() = okEntersTheVideoRows(Key.Enter)
-
-    @Test
-    fun `the numpad Enter on Video enters its rows at the first row`() =
-        okEntersTheVideoRows(Key.NumPadEnter)
+    fun `OK on Video enters its rows at the first row`() = okEntersTheVideoRows {
+        press("Video", Key.DirectionCenter)
+    }
 
     @Test
-    fun `the gamepad A button on Video enters its rows at the first row`() =
-        okEntersTheVideoRows(Key.ButtonA)
+    fun `Enter on Video enters its rows at the first row`() = okEntersTheVideoRows {
+        press("Video", Key.Enter)
+    }
 
-    private fun okEntersTheVideoRows(ok: Key) {
+    @Test
+    fun `the numpad Enter on Video enters its rows at the first row`() = okEntersTheVideoRows {
+        press("Video", Key.NumPadEnter)
+    }
+
+    @Test
+    fun `the gamepad A button on Video enters its rows at the first row`() = okEntersTheVideoRows {
+        pressGamepadA("Video")
+    }
+
+    private fun okEntersTheVideoRows(pressOk: () -> Unit) {
         show(keyboard = true)
         group("Video").requestFocus()
 
-        press("Video", ok)
+        pressOk()
 
         composeRule.onNodeWithText("Codec").assertIsFocused()
         composeRule.onNodeWithText("Resolution").assertDoesNotExist()
@@ -233,7 +291,7 @@ class SettingsTvTest : SettingsScreenTestBase() {
 
         press("About", Key.DirectionCenter)
 
-        composeRule.onNodeWithText("Version").assertIsFocused()
+        assertFocusIsOnTheVersionRow()
     }
 
     @Test
@@ -241,9 +299,9 @@ class SettingsTvTest : SettingsScreenTestBase() {
         show(keyboard = true)
         group("About").requestFocus()
 
-        press("About", Key.ButtonA)
+        pressGamepadA("About")
 
-        composeRule.onNodeWithText("Version").assertIsFocused()
+        assertFocusIsOnTheVersionRow()
     }
 
     @Test
@@ -262,7 +320,8 @@ class SettingsTvTest : SettingsScreenTestBase() {
 
     @Test
     fun `a tap on a group selects it and leaves the focus alone`() {
-        show(keyboard = true)
+        showWithPrivacyRow()
+        window.inputMode = InputMode.Touch
 
         group("Video").performClick()
         composeRule.waitForIdle()

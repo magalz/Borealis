@@ -3,6 +3,7 @@ package io.github.magalz.borealis.designsystem.components.settings
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -12,9 +13,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
@@ -234,12 +237,16 @@ class SettingsTwoPaneStackTest {
 
     @Test
     fun `a pane that holds focus when a tap selects another group gets no more keys`() {
-        composeRule.setContentInKeyboardMode { Specimen() }
+        val window = FakeInputModeManager(InputMode.Keyboard)
+        composeRule.setContentInKeyboardMode {
+            CompositionLocalProvider(LocalInputModeManager provides window) { Specimen() }
+        }
         composeRule.onNodeWithText("Group g1").requestFocus()
         composeRule.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Row 1 of g1").requestFocus()
 
+        window.inputMode = InputMode.Touch
         composeRule.onNodeWithText("Group g3").performClick()
         composeRule.waitForIdle()
         composeRule.onRoot().performKeyInput { pressKey(Key.Enter) }

@@ -331,6 +331,32 @@ class LibraryAppsBackFocusTest {
         composeRule.onNodeWithTag("host:${far.id}").assertIsFocused()
     }
 
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV Back from Apps focuses a card that the refreshed list moved out of view`() {
+        launch(tv = true)
+        val many = longList()
+        val opened = many[LONG_LIST - 5]
+        hosts.emit(*many.toTypedArray())
+        apps.emit(AppsSnapshot(host = opened, apps = listOf(anApp(1, "Hades II")), loading = false))
+        composeRule.waitForIdle()
+        composeRule
+            .onNode(hasScrollToNodeAction())
+            .performScrollToNode(hasTestTag("host:${opened.id}"))
+        composeRule.onNodeWithTag("host:${opened.id}").requestFocus()
+        composeRule.onNodeWithTag("host:${opened.id}").performKeyInput {
+            pressKey(Key.DirectionCenter)
+        }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithContentDescription("Hades II").assertIsDisplayed()
+
+        // The host now sorts first, far from the scroll position Hosts comes back to.
+        hosts.emit(opened.copy(name = "Aardvark"), *many.filterNot { it == opened }.toTypedArray())
+        back()
+
+        composeRule.onNodeWithTag("host:${opened.id}").assertIsFocused()
+    }
+
     /**
      * The activity as the form factor detection sees a TV, or a wide window without a touch screen.
      */

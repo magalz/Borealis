@@ -24,8 +24,10 @@ awkward to type.
    ([UC-004](0004-use-the-in-game-menu.md)). On touch, a three-finger tap also
    opens the keyboard, as in Moonlight 12.2.
 2. The system shows the keyboard. On a phone it is docked at the bottom and the
-   stream stays visible above it. On a TV or handheld it is shown on the stream screen.
-   On a phone the shortcut row starts with Esc.
+   stream stays visible above it, unless a game controller is connected when the
+   keyboard opens. A pad that the app's USB driver holds counts. Then the keyboard
+   covers the stream, and the pad navigates it. On a TV or handheld it is shown on
+   the stream screen. On a phone the shortcut row starts with Esc.
 3. The user taps a modifier (Ctrl, Alt, Win or Shift). The modifier latches and
    shows as on.
 4. The user taps a key. Letter keys show in lowercase unless Shift is latched;
@@ -39,12 +41,14 @@ awkward to type.
 
 ### A1: The user types with the D-pad (branches from step 4, TV)
 
-1. The D-pad moves across the keys. OK types the focused key.
+1. The D-pad moves across the keys and wraps at the ends of a row. OK types the
+   focused key.
 2. Rejoins the main flow at step 5.
 
 ### A2: The user types on a gamepad (branches from step 4, handheld)
 
-1. The D-pad moves across the keys. A types the focused key. Y sends
+1. The D-pad moves across the keys and wraps at the ends of a row. A types the
+   focused key. Y sends
    Backspace. B closes the keyboard.
 2. Rejoins the main flow at step 5, or ends at B.
 
@@ -92,6 +96,8 @@ what they name; the host's response to a key is outside this use case.
 | UC-005-T9 | Given the keyboard is open, when the user taps Win+Tab, then Win+Tab is sent once. | unit | exists (Sprint 5, unit; device round) |
 | UC-005-T10 | Given the keyboard is open, when the user taps Fn 123, then the digits, F1 to F10 and the arrows show instead of the letters, and Fn 123 again shows the letters. A latched modifier stays latched across the switch. | UI | exists (Sprint 5, UI) |
 | UC-005-T11 | Given the keyboard is open, when the bottom row shows, then it reads Ctrl, Win, Alt, Space, Tab and Fn 123, and the D-pad walks up the Fn layer from Fn 123 and back down. | UI | exists (Sprint 9, UI): `KeyboardLayoutTest`, `KeyboardNavigationTest` |
+| UC-005-T12 | Given the keyboard is open, when the D-pad moves past the last key of a row, then focus goes to the first key of that row, and past the first key, to the last key. Up and Down do not wrap. | UI | exists (Sprint 9, UI): `KeyboardNavigationTest` |
+| UC-005-T13 | Given a phone with a game controller connected, or with a pad that the USB driver holds, when the user opens the keyboard, then it covers the stream and the pad moves and types on it. | UI | exists (Sprint 9, UI): `PadKeyboardTest`, `StreamSessionChromeModeTest` |
 
 Sprint 5 built the Borealis keyboard and its logic. A test marked "exists (Sprint
 5, unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose

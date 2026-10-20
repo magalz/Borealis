@@ -31,18 +31,19 @@ class FormFactorDetectionTest {
     }
 
     @Test
-    fun `a wide device with a D-pad is a handheld`() {
-        val formFactor = detect(widthDp = 640, navigation = Configuration.NAVIGATION_DPAD)
+    fun `a wide touch phone whose keyboard reports D-pad navigation is a phone`() {
+        // The AULA F75Max on the S22 in landscape: Android reports NAVIGATION_DPAD for it.
+        val formFactor = detect(widthDp = 780, navigation = Configuration.NAVIGATION_DPAD)
 
-        assertThat(formFactor).isEqualTo(FormFactor.Handheld)
+        assertThat(formFactor).isEqualTo(FormFactor.Phone)
     }
 
     @Test
-    fun `a wide device with a trackball or wheel is a handheld`() {
+    fun `a wide touch device with trackball or wheel navigation is a phone`() {
         assertThat(detect(widthDp = 600, navigation = Configuration.NAVIGATION_TRACKBALL))
-            .isEqualTo(FormFactor.Handheld)
+            .isEqualTo(FormFactor.Phone)
         assertThat(detect(widthDp = 600, navigation = Configuration.NAVIGATION_WHEEL))
-            .isEqualTo(FormFactor.Handheld)
+            .isEqualTo(FormFactor.Phone)
     }
 
     @Test

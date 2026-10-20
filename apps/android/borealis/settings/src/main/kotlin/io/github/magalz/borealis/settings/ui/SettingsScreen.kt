@@ -25,8 +25,8 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.BorealisPhoneBar
+import io.github.magalz.borealis.designsystem.components.settings.CollapsibleSection
 import io.github.magalz.borealis.designsystem.components.settings.SettingsGroup
-import io.github.magalz.borealis.designsystem.components.settings.SettingsGroupHeader
 import io.github.magalz.borealis.designsystem.components.settings.SettingsTwoPane
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -42,10 +42,11 @@ private val LIST_GAP = 10.dp
 private val TITLE_GAP = 12.dp
 
 /**
- * The settings screen (UC-009), stateless. A phone shows one list: the groups with their rows, a
- * Privacy and diagnostics link row and About. A TV or a handheld shows two panes: the groups on the
- * left, Privacy and diagnostics and About among them, and the rows of the selected group on the
- * right. Back calls [onBack].
+ * The settings screen (UC-009), stateless. A phone shows one list: each group is a section that
+ * opens and closes its rows, all collapsed at first, then a Privacy and diagnostics link row and
+ * About as a last section. A TV or a handheld shows two panes: the groups on the left, Privacy and
+ * diagnostics and About among them, and the rows of the selected group on the right. Back calls
+ * [onBack].
  *
  * A change is reported through [actions] and stored at once, so there is no Save. Lists open a
  * choice sheet; Reset layout and a native resolution or frame rate ask or warn first.
@@ -53,8 +54,7 @@ private val TITLE_GAP = 12.dp
  * @param onOpenPrivacy opens Privacy and diagnostics from the link row of a phone.
  * @param privacyPane the rows of Privacy and diagnostics, drawn in the right pane of a TV or a
  *   handheld.
- * @param initialGroup the group a TV or a handheld selects when the panes open; a phone shows every
- *   group in one list.
+ * @param initialGroup the group a TV or a handheld selects when the panes open; a phone ignores it.
  * @param about the version, the links and the licence texts of the About rows.
  */
 @Composable
@@ -102,6 +102,12 @@ private fun PhoneSettings(
     about: AboutSource,
 ) {
     val gutter = LocalBorealisSpacing.current.gutter
+    // Every section starts collapsed. The set is saved, so a recreation and a trip to Privacy and
+    // diagnostics keep it.
+    var open by rememberSaveable { mutableStateOf(emptySet<SettingsGroupId>()) }
+    val sectionChanged = { group: SettingsGroupId, expanded: Boolean ->
+        open = if (expanded) open + group else open - group
+    }
     Column(Modifier.fillMaxSize()) {
         BorealisPhoneBar(onBack, stringResource(R.string.settings_back)) {
             ScreenTitle()
@@ -113,9 +119,14 @@ private fun PhoneSettings(
             verticalArrangement = Arrangement.spacedBy(LIST_GAP),
         ) {
             for (group in state.groups) {
-                SettingsGroupHeader(stringResource(group.group.titleRes))
-                for (item in group.items) {
-                    SettingsItemRow(item, state.rowValue(item.item), actions, overlays.requests)
+                CollapsibleSection(
+                    title = stringResource(group.group.titleRes),
+                    expanded = group.group in open,
+                    onExpandedChange = { sectionChanged(group.group, it) },
+                ) {
+                    for (item in group.items) {
+                        SettingsItemRow(item, state.rowValue(item.item), actions, overlays.requests)
+                    }
                 }
             }
             SettingsValueRow(
@@ -124,8 +135,13 @@ private fun PhoneSettings(
                 summary = stringResource(R.string.settings_privacy_link_summary),
                 onClick = onOpenPrivacy,
             )
-            SettingsGroupHeader(stringResource(R.string.settings_group_about))
-            AboutRows(about)
+            CollapsibleSection(
+                title = stringResource(R.string.settings_group_about),
+                expanded = SettingsGroupId.ABOUT in open,
+                onExpandedChange = { sectionChanged(SettingsGroupId.ABOUT, it) },
+            ) {
+                AboutRows(about)
+            }
         }
     }
 }

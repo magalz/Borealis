@@ -65,7 +65,8 @@ private const val FADE_MS = 150
  * diagnostics and the Audit trail are destinations of the same graph (UC-009): the gear of Hosts
  * and the rail open Settings. A [request] from outside (a launcher shortcut, the stream error
  * screen) puts its screens on the back stack; [onRequestHandled] says that it was taken, so it is
- * not taken twice.
+ * not taken twice. A Quit in the stream leaves its "App quit." in [quitNotice], which the shell
+ * shows on the current screen.
  *
  * [backgroundStyle] is what the shell draws behind the rail and every screen. It is the one input
  * of the background: [LibraryActivity] passes the style that the Appearance setting stores, and
@@ -74,6 +75,7 @@ private const val FADE_MS = 150
 @Composable
 internal fun LibraryNavHost(
     onStartStream: (StreamRequest) -> Boolean,
+    quitNotice: QuitNotice,
     modifier: Modifier = Modifier,
     request: LibraryLaunchRequest? = null,
     onRequestHandled: () -> Unit = {},
@@ -85,6 +87,7 @@ internal fun LibraryNavHost(
     val snackbarHostState = remember { SnackbarHostState() }
     val destination = navController.currentBackStackEntryAsState().value?.destination
     val formFactor = rememberFormFactor()
+    ShowQuitNotice(quitNotice, snackbarHostState)
     // The app a Launch request asks for, until its Apps screen has the list and selects it.
     val pendingLaunch = remember { mutableStateOf<LibraryLaunchRequest.Launch?>(null) }
     LaunchedEffect(request) {

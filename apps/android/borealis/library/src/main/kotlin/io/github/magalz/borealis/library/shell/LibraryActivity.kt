@@ -28,6 +28,7 @@ class LibraryActivity : Hilt_LibraryActivity() {
     @Inject lateinit var streamLauncher: StreamLauncher
     @Inject lateinit var legacyBridge: LegacyBridge
     @Inject lateinit var settings: SettingsRepository
+    @Inject lateinit var quitNotice: QuitNotice
 
     private var request by mutableStateOf<LibraryLaunchRequest?>(null)
 
@@ -44,6 +45,7 @@ class LibraryActivity : Hilt_LibraryActivity() {
         setContent {
             LibraryNavHost(
                 onStartStream = { streamLauncher.start(this, it) },
+                quitNotice = quitNotice,
                 request = request,
                 onRequestHandled = { request = null },
                 backgroundStyle = rememberBackgroundStyle(settings),

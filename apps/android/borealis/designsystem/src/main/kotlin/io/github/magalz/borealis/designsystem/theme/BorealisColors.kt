@@ -47,7 +47,7 @@ data class BorealisColors(
     val offline: Color = tokens.Offline,
 ) {
     /** These colours with the roles [ink3] and [ink4] replaced; the rest stays as it is. */
-    fun withSecondaryInk(ink3: Color, ink4: Color) = BorealisColors(ink3 = ink3, ink4 = ink4)
+    fun withSecondaryInk(ink3: Color, ink4: Color) = copy(ink3 = ink3, ink4 = ink4)
 }
 
 val LocalBorealisColors = staticCompositionLocalOf { BorealisColors() }

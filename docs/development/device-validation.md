@@ -2067,8 +2067,9 @@ This section holds the Sprint 9 results. The checks follow the steps of
 [section 3.22](#322-sprint-9-checks). The TV measurement is recorded. The device
 round ran on 2026-10-19. Its results are in the table below, with the follow-up
 fixes that the round led to. Some fixes were re-checked on the S22 after the
-round. The final re-check is pending, with the steps in
-[section 3.22, re-check after the follow-ups](#re-check-after-the-follow-ups).
+round. The final re-check ran on 2026-10-20, on `5025614e`, with the steps in
+[section 3.22, re-check after the follow-ups](#re-check-after-the-follow-ups). Its
+results are in [Final re-check](#final-re-check) below.
 
 ### Setup
 
@@ -2090,7 +2091,9 @@ round. The final re-check is pending, with the steps in
   - the AULA F75Max keyboard over Bluetooth.
 - Rounds:
   - 2026-10-19, from about 20:20 to 22:00, for the round;
-  - 2026-10-19, at 23:30, for the S22 re-check.
+  - 2026-10-19, at 23:30, for the S22 re-check;
+  - 2026-10-20, from about 08:35 to 09:10, for the final re-check (S22, then the
+    Streamer).
 - Evidence: logcat and `dumpsys` over ADB. Captures are cropped to the menu or the
   overlay, or reduced to unreadable thumbnails, and deleted after use (section 5).
 
@@ -2119,6 +2122,7 @@ The scripts that ran the trace and read the frame times are not in the repositor
 | Stacked v1 (the panes laid out and stacked, `6b9f2eb2`, with a 30 ms wait) | about 70 ms | pane about 110 ms |
 | **Final** (a switch changes layers with no wait, `1f2d9769`, merge `1b6d651f`) | **about 50 ms** | **focus and pane together 55 to 100 ms** |
 | Round build `51de8e07` (2026-10-19, 12 moves) | 48 to 60 ms (median 58) | focus shown 60 ms (median) after the key |
+| Final re-check build `5025614e` (2026-10-20, 12 moves) | 47 to 52 ms between ordinary groups; 207 to 333 ms on entering Privacy and diagnostics, about 95 ms on leaving it | focus shown 80 ms (median) after the key |
 
 - Settings has no regression since the final stacked build.
 - An intermediate build that updated the rows in place, before the pane was kept
@@ -2132,7 +2136,10 @@ The scripts that ran the trace and read the frame times are not in the repositor
 
 **Background pacing.** On `51de8e07`, the Aurora curtains work frames came every
 50 ms (20 fps) at 60 Hz, as atrace showed on the Streamer. `31dc1335` fixed this:
-the frames now come about every 33 ms (30 fps). The re-measure is pending.
+the frames now come about every 33 ms (30 fps). Re-measured on `5025614e` on
+2026-10-20, with Settings at rest for 5 s: a work frame every 33.3 ms (33.2 to
+33.5), 30.2 per second, about 10 ms each. Each work frame is still followed by an
+empty frame from the UI dispatcher, which draws nothing.
 
 ### Device round
 
@@ -2156,7 +2163,7 @@ the evidence and a note for each failure.
 | 12 | A keyboard alone | S22 | fail, then fixed | The AULA alone in landscape gave the handheld layout, because of the D-pad navigation from the keyboard. The stream part passed (no controller context for the AULA). Fixed in `83a6aa66`; the re-check on `83a6aa66` passed. |
 | 13 | The quit combo, bumpers first | S22 | pass | Five combos in different release orders. The stream ended each time, with no Steam, no menu and no mouse toast. Select and Start held for 1 s open the menu. |
 | 14 | The Gamepad mouse speed slider at 10 % and 200 % | S22 | pass | 10 % is slow and 200 % is fast. The speed was set back to 50 %. |
-| 15 | The quit combo on a USB-driver pad, final build | S22 | partial | Receiver in XInput mode, the USB driver on, and "always allow" set on the S22. The combo with the bumpers first ended the stream. Finding: the menu did not navigate with the USB pad on the phone; fixed in `e3a29236`, and the re-check passed for D-pad, A and B, also as the first key. Then the keyboard opened docked and out of reach; fixed in `5025614e`. That re-check is pending ([section 3.22](#re-check-after-the-follow-ups), steps (a) and (b)). |
+| 15 | The quit combo on a USB-driver pad, final build | S22 | pass, after fixes | Receiver in XInput mode, the USB driver on, and "always allow" set on the S22. The combo with the bumpers first ended the stream. Finding: the menu did not navigate with the USB pad on the phone; fixed in `e3a29236`, and the re-check passed for D-pad, A and B, also as the first key. Then the keyboard opened docked and out of reach; fixed in `5025614e`, and the final re-check passed ([Final re-check](#final-re-check), items (a) and (b)). |
 | 16 | The battery saver | S22 | pass | Northern lights moves. With the saver on: no movement, the still is shown and the player is released. Aurora curtains is still with the saver on. With the saver off, the player starts again. |
 
 Follow-ups, merged after the round, in this order:
@@ -2181,3 +2188,27 @@ Follow-ups, merged after the round, in this order:
 - `5025614e`: the stream keyboard type (docked or covering) is decided each time
   the keyboard opens. A pad held by the USB driver counts, and a phone with any
   pad gets the covering keyboard, also in portrait.
+
+### Final re-check
+
+The steps of [section 3.22, re-check after the follow-ups](#re-check-after-the-follow-ups),
+on build `5025614e`, on 2026-10-20.
+
+| Item | Device | Result | Evidence and notes |
+| --- | --- | --- | --- |
+| (a) USB-driver pad and the keyboard | S22 | pass | Receiver in XInput mode. Down lands on Keyboard, A opens it covering the stream, and the D-pad, A, B and the row ends work. B closes it. The owner keeps the first key acting (it lands on the second menu item). |
+| (b) A system pad switched on during the stream | S22 | pass | The receiver was switched to its other mode with the stream running; its controller context was created after the start. The keyboard opened covering, and the pad navigated it. |
+| (c) Row ends with the Bluetooth pad | S22 | pass | Right on the last key and Left on the first key wrap, in a letter row, an Fn 123 row and the bottom row. The owner also switched the pad between XInput, the other mode and Bluetooth during one stream: the keyboard worked in every mode. |
+| (d) Portrait with a pad | S22 | not applicable | `Game` locks a regular phone display to landscape, so the stream never runs in portrait there. The narrow case arises only in split screen; `StreamChromeHostPhoneTest` covers the rule. |
+| (e) The AULA F75Max alone in landscape | S22 | pass | Checked on `83a6aa66`. The form factor code did not change after it. |
+| (f) Licence text | TV | pass | Up from Close focuses the text and shows its outline. Down scrolls it, and Down at its end moves to Close, which shows its outline again. |
+| (g) Background pacing | TV | pass | See "Background pacing" above: a work frame every 33.3 ms, 30.2 per second. |
+| (h) Settings group switch | TV | pass | See the table above: 47 to 52 ms between ordinary groups. |
+
+The Streamer was put to sleep with `KEYCODE_SLEEP` at the end.
+
+Observation: a key press on the About "Privacy policy" row, which the Library had
+restored, opened the link in the Streamer's Downloader app inside the Borealis
+task. Back does not leave that browser, so the Library stayed hidden until the
+task was started again with `FLAG_ACTIVITY_CLEAR_TASK`. This is in the
+[backlog](../roadmap.md#backlog-not-scheduled).

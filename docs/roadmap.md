@@ -150,7 +150,7 @@ starts at `68a8972a`. All code items are merged on it. The device round ran on
 2026-10-19, with [section 3.22](development/device-validation.md#322-sprint-9-checks)
 as its checklist. Its results and the follow-up fixes are in
 [section 14](development/device-validation.md#14-results-sprint-9). The final
-re-check of the follow-ups is pending.
+re-check of the follow-ups passed on 2026-10-20.
 
 1. **Smoother D-pad moves in Settings on a TV.** Done (issue #22, merges
    `8d6e6304`, `5e95a90e` and `1b6d651f`). Reported by the owner on 2026-10-17. A
@@ -249,7 +249,7 @@ re-check of the follow-ups is pending.
     own "Preparing the display" step. The first-frame watchdog and the connection
     warnings are unchanged.
 12. **A device round** for what Sprint 7 and Sprint 8 did not run, and for the
-    Sprint 9 changes. Run on 2026-10-19; the final re-check is pending
+    Sprint 9 changes. Run on 2026-10-19; the final re-check passed on 2026-10-20
     ([section 14](development/device-validation.md#14-results-sprint-9)).
     - No dedicated Android handheld is planned. The owner's handheld is the S22 in
       landscape with a pad.
@@ -302,9 +302,11 @@ re-check of the follow-ups is pending.
     with no game controller connected docks the keyboard, and a pad held by the USB
     driver counts as connected. A phone with any pad gets the covering keyboard,
     also in portrait.
-20. **Final re-check of the follow-ups.** Open. Run the steps of
-    [section 3.22, re-check after the follow-ups](development/device-validation.md#re-check-after-the-follow-ups)
-    on the build after `5025614e`.
+20. **Final re-check of the follow-ups.** Done on 2026-10-20, on `5025614e`, with
+    the steps of
+    [section 3.22, re-check after the follow-ups](development/device-validation.md#re-check-after-the-follow-ups):
+    all items pass, and portrait with a pad is not applicable on the S22
+    ([section 14, final re-check](development/device-validation.md#final-re-check)).
 
 ### Next: UX and accessibility
 
@@ -486,6 +488,10 @@ From the Sprint 9 device round, 2026-10-19. None is scheduled yet.
   action or category.
 - A touch handheld whose built-in controls report only `KEYBOARD | DPAD`, with no
   GAMEPAD source, now gets the phone layout. This is rare; watch for it.
+- The About links (`AboutSource.kt`, `openInApp`, an `ACTION_VIEW` with no
+  `FLAG_ACTIVITY_NEW_TASK`) open the browser inside the Borealis task. On the Streamer, the Downloader app's browser ignores Back, so
+  the Library stays hidden behind it until the task is started again. Open
+  links in a new task.
 
 ## Host-side items (LuminalShine)
 

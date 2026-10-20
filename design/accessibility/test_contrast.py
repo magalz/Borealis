@@ -612,7 +612,8 @@ class GlassColoursTest(unittest.TestCase):
 
     def test_the_floors_are_the_lowest_tint_that_keeps_the_text(self):
         floor = lambda style, blur: contrast.glass_floor(self.table[style], blur, self.colors)
-        self.assertEqual([floor("NorthernLights", b) for b in (8, 16, 24, 32, 48)], [70, 60, 50, 50, 40])
+        northern = [floor("NorthernLights", blur) for blur in (8, 16, 24, 32, 48)]
+        self.assertEqual(northern, [70, 60, 50, 50, 40])
         self.assertEqual(floor("FlowingLight", 8), 40)
         for style in ("AuroraCurtains", "SoftGlow", "LightMist", "Starfield"):
             self.assertEqual(floor(style, 8), 30, style)

@@ -95,6 +95,15 @@ rounded up. The tint floors and the text colours of the glass are worked out fro
 (`GlassRules`), so that rule lives in one tested place. Commit the file with the measurement it
 came from, and do not edit it by hand.
 
+```sh
+python -I design/accessibility/contrast.py glass-colours
+```
+
+prints the floors and the text colours that the app works out from that file, as the tables of
+`docs/ux/accessibility.md` have them. It is the same rule written again in Python, and its tests pin
+the colours that the Kotlin tests pin. A channel that lands on half a level rounds up, as Kotlin's
+`roundToInt` does.
+
 ## The JSON
 
 `meta` has the date, the revision, the colours and the grid. `sources` lists the folders read.

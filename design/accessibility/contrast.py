@@ -16,9 +16,11 @@ writes the two drawn styles. `README.md` has the whole procedure.
     python -I contrast.py extract <frames> [--clips <dir>]
     python -I contrast.py measure <frames> --json <result.json> [--jobs N]
     python -I contrast.py glass-table <result.json> [--out <GlassContrastTable.kt>]
+    python -I contrast.py glass-colours [--table <GlassContrastTable.kt>]
 
 `glass-table` writes the table of the worst backdrop behind a glass panel that the app turns into
-the tint floors and the text colours of the glass.
+the tint floors and the text colours of the glass. `glass-colours` prints those floors and colours,
+worked out from the table the app has, for `docs/ux/accessibility.md`.
 
 The library has no state; the tests are in `test_contrast.py`.
 """
@@ -30,6 +32,7 @@ import concurrent.futures
 import datetime
 import json
 import math
+import re
 import shutil
 import subprocess
 import sys
@@ -699,31 +702,134 @@ def glass_table_kotlin(result):
     )
 
 
-# The floors and the text colours of the glass, for the notes (stubs)
+# The floors and the text colours of the glass, for the notes
+#
+# Kotlin works them out in `GlassRules.kt` and `GlassInk.kt`, and those tests are the ones that run
+# in the app. This is the same rule over the same table, so that the notes print what the app does:
+# the tests of both pin the same colours. Where a channel lands on half a level it rounds up, as
+# Kotlin's `roundToInt` does and Python's `round` does not.
+
+GLASS_TEXT_MARGIN = 1.02
+GLASS_WALK_STEPS = 100
+# The lightest ink-3 that a glass may need: what Flowing light needs at 40 percent and 8 dp.
+GLASS_SECONDARY_BOUND = "#A8ACB1"
+# The tint and blur that Settings starts at, and the glass of Reduced and of API 28 to 30.
+GLASS_DEFAULT = (0.40, 8)
+GLASS_REDUCED = (0.85, 48)
+GLASS_NO_BLUR = (0.85, 0)
+
+GLASS_UNCHANGED_TOKENS = ("ink", "ink-2", "accent-soft")
 
 
 def round_half_up(value):
-    return round(value)
+    """The nearest whole number, with a half rounded up: what Kotlin's `roundToInt` does."""
+    return math.floor(value + 0.5)
+
+
+def _kotlin_ints(text, name):
+    """The numbers of `val <name> = intArrayOf(...)` in the Kotlin table."""
+    found = re.search(name + r" = intArrayOf\(([^)]*)\)", text)
+    return [int(value) for value in found[1].split(",")]
 
 
 def read_glass_table_kotlin(text):
-    return {}
+    """The table of `GlassContrastTable.kt`, as `worst_backdrop_luminance` gives it."""
+    tints = _kotlin_ints(text, "tintsPercent")
+    blurs = _kotlin_ints(text, "blursDp")
+    table = {}
+    for entry in re.finditer(r"BackgroundStyle\.(\w+) to\s+arrayOf\((.*?)\n\s*\),", text, re.S):
+        rows = re.findall(r"doubleArrayOf\(([^)]*)\)", entry[2])
+        table[entry[1]] = {
+            (blur, tint / 100): float(value)
+            for blur, row in zip(blurs, rows)
+            for tint, value in zip(tints, row.split(","))
+        }
+    return table
 
 
 def glass_text_target(backdrop):
-    return 0.0
+    """The luminance of the text that keeps 4.5:1, with the margin, over a backdrop."""
+    return WCAG_LIMITS[1] * GLASS_TEXT_MARGIN * (backdrop + NEAR_BLACK) - NEAR_BLACK
+
+
+def _hex_luminance(value):
+    return float(relative_luminance(parse_hex(value)))
 
 
 def walk_colour(start, end, target):
-    return start
+    """The first colour from `start` towards `end`, a percent at a time, that reaches `target`.
+
+    The luminance is checked on the step as it is worked out and the colour is rounded to 8 bits
+    only then. A token that reaches the target already is returned as it is. Colours are `#RRGGBB`.
+    """
+    first = np.rint(parse_hex(start) * 255)
+    last = np.rint(parse_hex(end) * 255)
+    for step in range(GLASS_WALK_STEPS + 1):
+        mixed = first + (last - first) * step / GLASS_WALK_STEPS
+        if float(relative_luminance(mixed / 255)) >= target:
+            if step == 0:
+                return start.upper()
+            return "#" + "".join(f"{round_half_up(channel):02X}" for channel in mixed)
+    return end.upper()
 
 
 def glass_floor(cell, blur, colors):
-    return 0
+    """The lowest tint of the grid, in percent, that a style may have at a blur (`cell` is its row).
+
+    `ink`, `ink-2` and `accent-soft` keep 4.5:1 as they are, and the adjusted `ink-3` is no lighter
+    than `#A8ACB1`. It is 100 where no tint of the grid does.
+    """
+    bound = _hex_luminance(GLASS_SECONDARY_BOUND)
+    for alpha in sorted({alpha for _, alpha in cell}):
+        backdrop = cell[(blur, alpha)]
+        keeps = all(
+            (_hex_luminance(colors[token]) + NEAR_BLACK) / (backdrop + NEAR_BLACK) >= WCAG_LIMITS[1]
+            for token in GLASS_UNCHANGED_TOKENS
+        )
+        ink3 = walk_colour(colors["ink-3"], colors["ink"], glass_text_target(backdrop))
+        if keeps and _hex_luminance(ink3) <= bound:
+            return round(alpha * 100)
+    return 100
+
+
+def _glass_ink(cell, colors, blur, alpha):
+    """The glass colours of ink-3 and ink-4 over a style at a blur and a tint."""
+    target = glass_text_target(cell[(blur, alpha)])
+    walked = [walk_colour(colors[token], colors["ink"], target) for token in ("ink-3", "ink-4")]
+    return [f"`{colour}`" for colour in walked]
 
 
 def glass_colour_tables(table):
-    return ""
+    """Three tables for the notes: the floors, the colours at the default, Reduced and no blur."""
+    colors = load_colors(TOKENS_JSON, TEXT_TOKENS)
+    styles = [style for style in STYLE_LABELS if style in table]
+    blurs = sorted({blur for cell in table.values() for blur, _ in cell if blur > 0})
+    floors = _table(
+        ["Style"] + [f"{blur} dp" for blur in blurs],
+        [
+            [STYLE_LABELS[style]]
+            + [f"{glass_floor(table[style], blur, colors)} %" for blur in blurs]
+            for style in styles
+        ],
+    )
+    tint, blur = GLASS_DEFAULT
+    default = []
+    for style in styles:
+        alpha = max(tint, glass_floor(table[style], blur, colors) / 100)
+        default.append(
+            [STYLE_LABELS[style], f"{round(alpha * 100)} %"]
+            + _glass_ink(table[style], colors, blur, alpha)
+        )
+    reduced = [
+        [STYLE_LABELS[style]]
+        + _glass_ink(table[style], colors, GLASS_REDUCED[1], GLASS_REDUCED[0])
+        + _glass_ink(table[style], colors, GLASS_NO_BLUR[1], GLASS_NO_BLUR[0])
+        for style in styles
+    ]
+    heads = ["Style", "Reduced ink-3", "Reduced ink-4", "No blur ink-3", "No blur ink-4"]
+    return "\n\n".join(
+        [floors, _table(["Style", "Tint", "ink-3", "ink-4"], default), _table(heads, reduced)]
+    )
 
 
 # The command line
@@ -767,6 +873,8 @@ def main(argv=None):
 
     args = parser.parse_args(argv)
     if args.command == "glass-colours":
+        table = read_glass_table_kotlin(args.table.read_text(encoding="utf-8"))
+        print(glass_colour_tables(table))
         return 0
     if args.command == "glass-table":
         result = json.loads(args.result.read_text(encoding="utf-8"))

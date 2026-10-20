@@ -349,12 +349,26 @@ At the default, a tint of 40% (raised to the floor) and a blur of 8 dp:
 | Aurora curtains | 40 % | `#8D9298` | `#8D9298` |
 | Soft glow | 40 % | `#8B9096` | `#888E94` |
 | Northern lights | 70 % | `#9DA1A7` | `#9DA2A8` |
-| Light mist | 40 % | `#969BA0` | `#969AA0` |
+| Light mist | 40 % | `#969BA0` | `#969BA1` |
 | Flowing light | 40 % | `#A8ACB1` | `#A7ABB1` |
 | Starfield | 40 % | `#8B9096` | `#858B91` |
 
-Reduced is a tint of 85% and a blur of 48 dp, with no floor needed. `ink-3`
-keeps its token `#8B9096` over every background, and `ink-4` moves from `#7A8087`
-to between `#7C8289` and `#83888F`. With no blur (API 28 to 30, 85%) `ink-3` is
-the token over Aurora curtains, Soft glow and Flowing light, and moves to
-`#90949A`, `#91959B` and `#93989E` over Light mist, Starfield and Northern lights.
+Reduced is a tint of 85% and a blur of 48 dp, with no floor needed. The glass of
+API 28 to 30 is also 85%, with no blur. `ink-3` keeps its token `#8B9096` in Reduced
+over every background, and `ink-4` moves from `#7A8087`. With no blur `ink-3` is the
+token over Aurora curtains, Soft glow and Flowing light, and moves over the other
+three:
+
+| Style | Reduced ink-3 | Reduced ink-4 | No blur ink-3 | No blur ink-4 |
+| --- | --- | --- | --- | --- |
+| Aurora curtains | `#8B9096` | `#7E848B` | `#8B9096` | `#80858C` |
+| Soft glow | `#8B9096` | `#7E848B` | `#8B9096` | `#7E848B` |
+| Northern lights | `#8B9096` | `#83888F` | `#93989E` | `#93989E` |
+| Light mist | `#8B9096` | `#7E848B` | `#90959A` | `#90959B` |
+| Flowing light | `#8B9096` | `#83888F` | `#8B9096` | `#858B91` |
+| Starfield | `#8B9096` | `#7C8289` | `#91959B` | `#90959B` |
+
+These three tables are printed by `contrast.py glass-colours` from the committed
+table. Its tests and those of `GlassRules` pin the same colours. A channel that
+lands on half a level rounds up, as Kotlin's `roundToInt` does and Python's
+`round` does not.

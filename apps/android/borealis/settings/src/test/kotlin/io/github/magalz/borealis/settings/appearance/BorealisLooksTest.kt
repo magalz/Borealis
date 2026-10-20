@@ -168,10 +168,10 @@ class BorealisLooksTest {
             values: List<T>,
             read: (BorealisLook) -> T,
         ) {
-            val read = entries.map { read(look(setting to it.key)) }
+            val seen = entries.map { read(look(setting to it.key)) }
 
             assertThat(entries.map { it.key }).containsNoDuplicates()
-            assertThat(read).containsExactlyElementsIn(values).inOrder()
+            assertThat(seen).containsExactlyElementsIn(values).inOrder()
             assertThat(entries.map { it.key }).contains(setting.default)
         }
 

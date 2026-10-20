@@ -76,7 +76,7 @@ class StreamChromeHost(
     private val streamView: View,
     private val onCaptured: Runnable,
     private val onReleased: Runnable,
-    private val look: BorealisLook = BorealisLook(),
+    look: BorealisLook = BorealisLook(),
 ) : FrameLayout(activity) {
     /** The time the guard reads, in the [SystemClock.uptimeMillis] timebase. */
     internal var clock: () -> Long = SystemClock::uptimeMillis

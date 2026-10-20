@@ -3,7 +3,7 @@ package io.github.magalz.borealis.settings.ui
 import androidx.annotation.StringRes
 import io.github.magalz.borealis.settings.R
 import io.github.magalz.borealis.settings.appearance.BackgroundChoices
-import io.github.magalz.borealis.settings.appearance.LookChoices
+import io.github.magalz.borealis.settings.appearance.LookLists
 import io.github.magalz.borealis.settings.catalog.Settings
 
 /**
@@ -68,13 +68,13 @@ object FixedChoices {
 
     /** Glass tint: 30 to 85 percent, with the percent as the stored id. */
     val GLASS_TINT =
-        LookChoices.GLASS_TINT.map {
+        LookLists.GLASS_TINT.choices.map {
             FixedChoice(it.id, R.string.settings_value_percent, labelArg = it.value)
         }
 
     /** Glass blur: 8 to 48 dp, with the dp as the stored id. */
     val GLASS_BLUR =
-        LookChoices.GLASS_BLUR.map {
+        LookLists.GLASS_BLUR.choices.map {
             FixedChoice(it.id, R.string.settings_value_dp, labelArg = it.value)
         }
 

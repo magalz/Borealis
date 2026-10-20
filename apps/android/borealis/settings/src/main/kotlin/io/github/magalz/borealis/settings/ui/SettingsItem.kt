@@ -4,7 +4,7 @@ import androidx.annotation.Keep
 import androidx.annotation.StringRes
 import io.github.magalz.borealis.settings.R
 import io.github.magalz.borealis.settings.appearance.BackgroundChoices
-import io.github.magalz.borealis.settings.appearance.LookChoices
+import io.github.magalz.borealis.settings.appearance.LookLists
 import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.catalog.StringSetting
@@ -474,6 +474,6 @@ fun SettingsItem.selectedChoiceKey(snapshot: SettingsSnapshot): String =
         Settings.BACKGROUND ->
             BackgroundChoices.idOf(BackgroundChoices.styleOf(snapshot[Settings.BACKGROUND]))
         // The same for the choices of the look.
-        is StringSetting -> LookChoices.shownId(stored, snapshot[stored]) ?: snapshot[stored]
+        is StringSetting -> LookLists.of(stored)?.shownId(snapshot[stored]) ?: snapshot[stored]
         else -> error("$this is not a list")
     }

@@ -1,9 +1,12 @@
 package io.github.magalz.borealis.library.apps
 
+import android.content.Context
+import android.provider.Settings
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
@@ -191,11 +194,47 @@ class AppsScreenshotTest {
         )
     }
 
+    /** The glass of the covers and the rail over the still of Northern lights. */
+    @Test
+    @Config(qualifiers = TV)
+    fun appsTvGlass() {
+        removeAnimations()
+        shoot(
+            "appsglass_tv_desktop-running",
+            FormFactor.Tv,
+            state(runningFirst = true),
+            BackgroundStyle.NorthernLights,
+        )
+    }
+
+    /** The bottom sheet of a phone over the blurred window of the glass. */
+    @Test
+    @Config(qualifiers = PHONE)
+    fun appActionsPhoneGlass() {
+        removeAnimations()
+        shoot(
+            "appsglass_phone_actions-sheet",
+            FormFactor.Phone,
+            runningSheet(),
+            BackgroundStyle.NorthernLights,
+        )
+    }
+
+    private fun removeAnimations() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        Settings.Global.putFloat(
+            context.contentResolver,
+            Settings.Global.ANIMATOR_DURATION_SCALE,
+            0f,
+        )
+    }
+
     /** [beforeShot] drives the screen, for instance to open the confirmation, once it is shown. */
     private fun shoot(
         name: String,
         formFactor: FormFactor,
         state: AppsUiState,
+        style: BackgroundStyle = BackgroundStyle.Off,
         beforeShot: () -> Unit = {},
     ) {
         composeRule.setContent {
@@ -204,7 +243,7 @@ class AppsScreenshotTest {
                 formFactor,
                 selected = RailSelection.Hosts,
                 actions = RailActions({}, {}, {}),
-                backgroundStyle = BackgroundStyle.Off,
+                backgroundStyle = style,
             ) {
                 AppsScreen(
                     state = state,

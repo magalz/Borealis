@@ -231,6 +231,9 @@ class StreamChromeHost(
         return true
     }
 
+    /** The key [event] the gamepad handler made up for a pad on the USB driver, for the chrome. */
+    fun dispatchUsbPadKey(event: KeyEvent): Boolean = dispatchKeyEvent(event)
+
     /** Whether the modal chrome consumes [event] without acting on it. */
     private fun isSpent(event: KeyEvent): Boolean =
         isHeldThrough(event) ||

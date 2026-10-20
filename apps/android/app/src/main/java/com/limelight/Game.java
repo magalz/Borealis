@@ -545,7 +545,7 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         // BOREALIS: the controller opens the menu and navigates the chrome; the decoder numbers and the gamepad mouse follow the session (stream)
         controllerHandler.setMenuChordListener(streamSession::openMenu);
-        controllerHandler.setChromeKeySink(chromeHost::dispatchKeyEvent);
+        controllerHandler.setChromeKeySink(chromeHost::dispatchUsbPadKey);
         decoderRenderer.setPerfSink(streamSession::onPerf);
         PerfGate.bind(LifecycleOwnerKt.getLifecycleScope(this), streamSession, decoderRenderer::setPerfEnabled);
         GamepadMouseSync.bind(LifecycleOwnerKt.getLifecycleScope(this), streamSession, controllerHandler::isMouseEmulationOnAnyPad);

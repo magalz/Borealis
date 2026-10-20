@@ -1,9 +1,13 @@
 package io.github.magalz.borealis.designsystem.theme
 
 import android.content.BroadcastReceiver
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.compose.runtime.Composable
@@ -16,20 +20,51 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 
 /**
- * Whether the system removes animations: the setting "Remove animations" sets the animator scale to
- * zero. An animated piece then shows its end state at once. It is read once per composition.
+ * Whether animations are removed: the Reduce motion setting of the app decides, and Follow system
+ * hands it to the system. An animated piece then shows its end state at once. It is read again
+ * while this is composed, when the setting or the system animation scale changes.
  */
 @Composable
-internal fun rememberAnimationsRemoved(): Boolean {
+internal fun rememberAnimationsRemoved(): Boolean =
+    animationsRemoved(LocalBorealisLook.current.reduceMotion, rememberSystemAnimationsRemoved())
+
+/**
+ * Whether the system removes animations: the setting "Remove animations" sets the animator scale to
+ * zero. It is read once and again each time the system says that the scale changed.
+ */
+@Composable
+private fun rememberSystemAnimationsRemoved(): Boolean {
     val resolver = LocalContext.current.contentResolver
-    return remember(resolver) {
-        Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+    var removed by remember(resolver) { mutableStateOf(systemAnimationsRemoved(resolver)) }
+    DisposableEffect(resolver) {
+        val observer =
+            object : ContentObserver(Handler(Looper.getMainLooper())) {
+                override fun onChange(selfChange: Boolean) {
+                    removed = systemAnimationsRemoved(resolver)
+                }
+            }
+        resolver.registerContentObserver(
+            Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE),
+            false,
+            observer,
+        )
+        // It may have changed between the first read and the registration.
+        removed = systemAnimationsRemoved(resolver)
+        onDispose { resolver.unregisterContentObserver(observer) }
     }
+    return removed
 }
+
+private fun systemAnimationsRemoved(resolver: ContentResolver): Boolean =
+    Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
 
 /** Whether animations are removed, given the setting of the app and what the system says. */
 internal fun animationsRemoved(reduceMotion: ReduceMotion, systemRemoved: Boolean): Boolean =
-    systemRemoved
+    when (reduceMotion) {
+        ReduceMotion.FollowSystem -> systemRemoved
+        ReduceMotion.On -> true
+        ReduceMotion.Off -> false
+    }
 
 /**
  * Whether the battery saver is on, now and while this is composed: it is read once and again each

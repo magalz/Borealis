@@ -26,6 +26,7 @@ fun BorealisTheme(
     val colors = remember { BorealisColors() }
     CompositionLocalProvider(
         LocalFormFactor provides formFactor,
+        LocalBorealisLook provides look,
         LocalBorealisColors provides colors,
         // Material leaves the content colour black; text and icons outside a Surface need ink.
         LocalContentColor provides colors.ink,

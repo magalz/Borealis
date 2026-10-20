@@ -33,7 +33,10 @@ Use one folder for the frames, outside the repository. Its sub-folders are named
    test even when it is up to date. Without the variable the test is skipped and writes nothing.
 
 2. **The clips.** 24 frames of each clip in `designsystem/src/main/res/raw`, evenly spaced over its
-   loop, at the clip's own 1920 x 1080 px, which is a TV at xhdpi:
+   loop, as each device shows them. On a TV that is the whole 1920 x 1080 px clip. On a phone
+   upright it is what `VideoBackground` shows: the clip scaled to the height of the screen, about
+   2.5 times larger, and the middle 1233 x 2673 px of it. So a blur of a given size in dp reaches
+   less far into the clip on a phone than on a TV:
 
    ```sh
    python -I design/accessibility/contrast.py extract <frames>
@@ -65,15 +68,16 @@ For each style, each frame and each text token (`ink`, `ink-2`, `ink-3`, `ink-4`
 
 The statistic is taken over the whole frame, which is deliberately conservative: the worst case is
 the lowest ratio of any pixel (a single star counts), and the JSON also holds p1 and p5, the
-ratios below which 1% and 5% of the pixels are. A style's figure is the worst of its frames.
+ratios below which 1% and 5% of the pixels are. A style's figure is the worst of its frames; for
+p1 and p5 it is the lowest of the frames' p1 and p5.
 
 The blur is a Gaussian of sigma `0.57735 * radius_px + 0.5`, which is how Skia (and so
 `RenderEffect.createBlurEffect`) turns a radius into a sigma. Pixels are blurred and mixed as sRGB
 values, as the platform does, and the edge of the frame repeats. The clips have no colour tags, and
 Android decodes an untagged HD stream as BT.709 in limited range, so `extract` does too.
 
-The clips are measured at TV size only. On a phone the player shows a centre crop of the same
-frame, so the whole-frame figure covers it.
+The clips are drawn on a `SurfaceView`, which an in-app blur cannot sample, so a glass panel over a
+clip needs a `TextureView`. The tool models the panel, not that path.
 
 ## The JSON
 

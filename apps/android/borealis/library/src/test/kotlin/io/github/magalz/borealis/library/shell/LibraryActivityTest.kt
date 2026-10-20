@@ -21,6 +21,7 @@ import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
+import io.github.magalz.borealis.designsystem.testing.assertSnackbarIsAsWideAsItsText
 import io.github.magalz.borealis.library.domain.AppRepository
 import io.github.magalz.borealis.library.domain.AppsSnapshot
 import io.github.magalz.borealis.library.domain.HostRepository
@@ -202,6 +203,18 @@ class LibraryActivityTest {
         composeRule.waitForIdle()
 
         composeRule.onNodeWithText("This host is no longer available.").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a message of the shell is as wide as its text`() {
+        streams.known = false
+        hosts.emit(aHost(id = "desk", name = "Desk PC", runningApp = RunningApp(7, "Steam")))
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("continue:desk").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.assertSnackbarIsAsWideAsItsText("This host is no longer available.")
     }
 
     @Test

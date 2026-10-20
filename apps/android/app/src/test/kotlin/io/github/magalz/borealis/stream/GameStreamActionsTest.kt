@@ -29,6 +29,9 @@ import io.github.magalz.borealis.stream.keys.Shortcuts
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -241,6 +244,25 @@ class GameStreamActionsTest {
 
         assertThat(entryPoint.apps.quits).containsExactly("host-1")
         assertThat(activity.isFinishing).isTrue()
+    }
+
+    @Test
+    fun `a quit that worked leaves the Library the notice to show`() = runTest {
+        entryPoint.notice.attach()
+
+        actions.quitApp {}
+
+        assertThat(withTimeoutOrNull(1) { entryPoint.notice.notices.first() }).isNotNull()
+    }
+
+    @Test
+    fun `a failed quit leaves the Library no notice`() = runTest {
+        entryPoint.notice.attach()
+        entryPoint.apps.result = QuitResult.Failed(null)
+
+        actions.quitApp {}
+
+        assertThat(withTimeoutOrNull(1) { entryPoint.notice.notices.first() }).isNull()
     }
 
     @Test

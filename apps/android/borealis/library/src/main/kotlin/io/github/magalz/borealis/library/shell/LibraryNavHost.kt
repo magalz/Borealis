@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,6 +33,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import io.github.magalz.borealis.designsystem.adaptive.rememberFormFactor
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.components.BorealisSnackbarHost
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.R
@@ -65,7 +65,8 @@ private const val FADE_MS = 150
  * diagnostics and the Audit trail are destinations of the same graph (UC-009): the gear of Hosts
  * and the rail open Settings. A [request] from outside (a launcher shortcut, the stream error
  * screen) puts its screens on the back stack; [onRequestHandled] says that it was taken, so it is
- * not taken twice.
+ * not taken twice. A Quit in the stream leaves its "App quit." in [quitNotice], which the shell
+ * shows on the current screen.
  *
  * [backgroundStyle] is what the shell draws behind the rail and every screen. It is the one input
  * of the background: [LibraryActivity] passes the style that the Appearance setting stores, and
@@ -74,6 +75,7 @@ private const val FADE_MS = 150
 @Composable
 internal fun LibraryNavHost(
     onStartStream: (StreamRequest) -> Boolean,
+    quitNotice: QuitNotice,
     modifier: Modifier = Modifier,
     request: LibraryLaunchRequest? = null,
     onRequestHandled: () -> Unit = {},
@@ -85,6 +87,7 @@ internal fun LibraryNavHost(
     val snackbarHostState = remember { SnackbarHostState() }
     val destination = navController.currentBackStackEntryAsState().value?.destination
     val formFactor = rememberFormFactor()
+    ShowQuitNotice(quitNotice, snackbarHostState)
     // The app a Launch request asks for, until its Apps screen has the list and selects it.
     val pendingLaunch = remember { mutableStateOf<LibraryLaunchRequest.Launch?>(null) }
     LaunchedEffect(request) {
@@ -132,7 +135,7 @@ internal fun LibraryNavHost(
             FadingNavHost(navController) {
                 libraryGraph(navController, startStream, pendingLaunch)
             }
-            SnackbarHost(
+            BorealisSnackbarHost(
                 snackbarHostState,
                 Modifier.align(Alignment.BottomCenter)
                     .windowInsetsPadding(WindowInsets.safeDrawing)

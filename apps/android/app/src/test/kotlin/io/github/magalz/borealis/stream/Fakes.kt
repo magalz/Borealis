@@ -9,6 +9,7 @@ import io.github.magalz.borealis.library.domain.HostAddress
 import io.github.magalz.borealis.library.domain.HostRepository
 import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.domain.WakeResult
+import io.github.magalz.borealis.library.shell.QuitNotice
 import io.github.magalz.borealis.stream.keys.KeyChord
 import java.util.Locale
 import kotlinx.coroutines.CompletableDeferred
@@ -77,11 +78,17 @@ class FakeHosts(var result: WakeResult = WakeResult.SENT) : HostRepository {
     override suspend fun details(hostId: String): String? = null
 }
 
-class FakeEntryPoint(val apps: FakeApps = FakeApps(), val hosts: FakeHosts = FakeHosts()) :
+class FakeEntryPoint(
+    val apps: FakeApps = FakeApps(),
+    val hosts: FakeHosts = FakeHosts(),
+    val notice: QuitNotice = QuitNotice(),
+) :
     StreamEntryPoint {
     override fun appRepository(): AppRepository = apps
 
     override fun hostRepository(): HostRepository = hosts
+
+    override fun quitNotice(): QuitNotice = notice
 }
 
 /** Records what the session asks of the activity, by name. */

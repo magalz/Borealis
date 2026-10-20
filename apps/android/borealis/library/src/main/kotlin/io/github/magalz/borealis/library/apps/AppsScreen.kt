@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +36,7 @@ import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.BorealisPhoneBar
+import io.github.magalz.borealis.designsystem.components.BorealisSnackbarHost
 import io.github.magalz.borealis.designsystem.components.CoverTile
 import io.github.magalz.borealis.designsystem.components.DotStatus
 import io.github.magalz.borealis.designsystem.components.EmptyState
@@ -96,7 +96,7 @@ fun AppsScreen(
                 }
                 Content(state, formFactor, onAppSelected, onActions, Modifier.weight(1f))
             }
-            SnackbarHost(
+            BorealisSnackbarHost(
                 snackbarHostState,
                 Modifier.align(Alignment.BottomCenter).padding(SNACKBAR_PADDING),
             )

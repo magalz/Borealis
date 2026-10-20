@@ -311,6 +311,32 @@ class MeasureTest(unittest.TestCase):
         # The result is plain data: it goes to JSON as it is.
         json.dumps(result)
 
+    def test_a_panel_blurs_by_dp_at_the_density_of_the_frame(self):
+        # One white pixel on a page-coloured frame. The pixel is where the glass is brightest, and
+        # a Gaussian of sigma s lets a point keep 1 / (2 pi s^2) of its lift, so the worst case
+        # tells the sigma that was used: radius dp * density px, as Skia turns it into a sigma.
+        page = contrast.parse_hex(self.colors["page"])
+        tint = contrast.parse_hex(self.colors["surface"])
+        ink = float(contrast.relative_luminance(contrast.parse_hex(self.colors["ink"])))
+        for width, density in ((96, 0.1), (192, 0.2)):
+            with self.subTest(width=width):
+                frame = uniform(width, width * 9 // 16, page)
+                frame[frame.shape[0] // 2, width // 2] = 1.0
+                result = self.measure([frame])
+                for alpha, blur_dp in ((0.55, 16), (0.85, 32)):
+                    sigma = 0.57735 * blur_dp * density + 0.5
+                    lift = 1 / (2 * np.pi * sigma**2)
+                    seen = alpha * tint + (1 - alpha) * (page + (1 - page) * lift)
+                    expected = float(
+                        contrast.contrast_ratio(contrast.relative_luminance(seen), ink)
+                    )
+                    row = next(
+                        r
+                        for r in result["glass"]
+                        if (r["alpha"], r["blur_dp"], r["token"]) == (alpha, blur_dp, "ink")
+                    )
+                    self.assertAlmostEqual(row["min"] / expected, 1.0, delta=2e-3)
+
     def test_the_tables_name_the_worst_style_of_each_candidate(self):
         page = contrast.parse_hex(self.colors["page"])
         bright = uniform(96, 54, page)

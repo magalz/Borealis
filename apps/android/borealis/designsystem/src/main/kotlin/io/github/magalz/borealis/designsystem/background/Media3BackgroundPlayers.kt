@@ -3,7 +3,7 @@ package io.github.magalz.borealis.designsystem.background
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
-import android.view.SurfaceView
+import android.view.TextureView
 import androidx.annotation.RawRes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -13,13 +13,14 @@ import androidx.media3.exoplayer.ExoPlayer
 
 /**
  * The player of the video styles: Media3 ExoPlayer, muted, looping the one clip and drawing it on
- * the surface. A clip has no sound, so its audio track is switched off and no audio output opens.
+ * the texture, which the glass can sample (a surface it cannot). A clip has no sound, so its audio
+ * track is switched off and no audio output opens.
  */
 internal object Media3BackgroundPlayers : BackgroundPlayerFactory {
     override fun create(
         context: Context,
         video: Int,
-        surface: SurfaceView,
+        texture: TextureView,
         onFirstFrame: () -> Unit,
         onError: (reason: String) -> Unit,
     ): BackgroundPlayer {
@@ -40,7 +41,7 @@ internal object Media3BackgroundPlayers : BackgroundPlayerFactory {
                 override fun onPlayerError(error: PlaybackException) = onError(error.errorCodeName)
             }
         )
-        player.setVideoSurfaceView(surface)
+        player.setVideoTextureView(texture)
         player.setMediaItem(MediaItem.fromUri(rawResourceUri(app, video)))
         player.prepare()
         return object : BackgroundPlayer {

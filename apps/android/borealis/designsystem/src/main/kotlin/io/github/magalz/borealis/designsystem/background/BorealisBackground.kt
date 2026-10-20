@@ -19,20 +19,35 @@ internal object BackgroundTags {
  * lie behind the screens of a window and fill it, so a video can be cut from the middle to fit.
  *
  * - [BackgroundStyle.Off] is the plain page colour.
- * - The two Compose styles redraw about 30 times a second and recompose nothing.
+ * - The two Compose styles redraw about [framesPerSecond] times a second and recompose nothing.
  * - A video style plays its clip while the screen is on, and holds no decoder when it is not.
- * - When the system removes animations or the battery saver is on, a Compose style is one still
- *   frame and a video style is the still of its first frame: nothing plays and no player is made.
+ * - When the system removes animations, the battery saver is on or the background is [frozen], a
+ *   Compose style is one still frame and a video style is the still of its first frame: nothing
+ *   plays and no player is made.
+ *
+ * [frozen] is how a [GlassHost] holds the background still while a dialog or a sheet is open over
+ * it. [framesPerSecond] is the pace of the Compose styles; a clip plays at its own.
  */
 @Composable
-fun BorealisBackground(style: BackgroundStyle, modifier: Modifier = Modifier) {
+fun BorealisBackground(
+    style: BackgroundStyle,
+    modifier: Modifier = Modifier,
+    frozen: Boolean = false,
+    framesPerSecond: Int = DRAWN_FRAMES_PER_SECOND,
+) {
     val animationsRemoved = rememberAnimationsRemoved()
     val powerSaving = rememberPowerSaveMode()
-    val still = animationsRemoved || powerSaving
+    val still = animationsRemoved || powerSaving || frozen
     val clip = style.clip
     when {
         style == BackgroundStyle.Off -> Box(modifier.background(LocalBorealisColors.current.page))
         clip != null -> VideoBackground(clip, stillOnly = still, modifier = modifier)
-        else -> DrawnBackground(style, animated = !still, modifier = modifier)
+        else ->
+            DrawnBackground(
+                style,
+                animated = !still,
+                modifier = modifier,
+                framesPerSecond = framesPerSecond,
+            )
     }
 }

@@ -83,6 +83,16 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
                 baseline = file("lint-baseline.xml")
                 warningsAsErrors = true
                 abortOnError = true
+                // These checks compare the versions in use with what upstream has released, so
+                // the result changes with the date and a build is not reproducible: the same
+                // commit passes until a release appears. Dependabot reports new versions instead.
+                disable +=
+                    setOf(
+                        "NewerVersionAvailable",
+                        "GradleDependency",
+                        "AndroidGradlePluginVersion",
+                        "OutdatedLibrary",
+                    )
             }
             if (signing != null) {
                 val release =

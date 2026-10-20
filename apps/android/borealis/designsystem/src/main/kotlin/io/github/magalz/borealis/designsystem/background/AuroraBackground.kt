@@ -310,6 +310,7 @@ private fun rememberCycle(animated: Boolean): FloatState {
  * between none and one gap.
  */
 internal suspend fun runCycleLoop(
+    @Suppress("UNUSED_PARAMETER") framesPerSecond: Int = 30,
     nanoTime: () -> Long = System::nanoTime,
     onCycle: (Float) -> Unit,
 ) {

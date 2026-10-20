@@ -16,8 +16,10 @@ import org.junit.Test
 
 /**
  * The pace of the frame loop of the Compose background on displays of 60, 90 and 120 Hz: it moves
- * the position about 30 times a second whatever the refresh rate, and sleeps between two frames.
- * The display is simulated in the virtual time of a test.
+ * the position about 30 times a second whatever the refresh rate, and sleeps between two frames. On
+ * a TV with glass the loop is asked for 24 a second, and keeps that on every one of the three
+ * displays, though a 24th of a second is not a whole number of their frames. The display is
+ * simulated in the virtual time of a test.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class BackgroundPaceTest {
@@ -55,10 +57,74 @@ class BackgroundPaceTest {
         assertThat(shown.lastCycle).isWithin(0.002f).of(0.049f)
     }
 
-    private fun TestScope.assertPace(hertz: Int, wakeLateMillis: Long = 0L) {
-        val shown = runFirstSecond(hertz, wakeLateMillis)
+    // The TV with glass: 24 a second, though a frame of 24 Hz falls between the frames of the
+    // display.
 
-        assertThat(shown.updates).isIn(Range.closed(28, 32))
+    @Test
+    fun `at 60 Hz the position moves about 24 times a second when 24 are asked for`() = runTest {
+        assertPace(60, framesPerSecond = TV_FRAMES_PER_SECOND)
+    }
+
+    @Test
+    fun `at 90 Hz the position moves about 24 times a second when 24 are asked for`() = runTest {
+        assertPace(90, framesPerSecond = TV_FRAMES_PER_SECOND)
+    }
+
+    @Test
+    fun `at 120 Hz the position moves about 24 times a second when 24 are asked for`() = runTest {
+        assertPace(120, framesPerSecond = TV_FRAMES_PER_SECOND)
+    }
+
+    @Test
+    fun `at 60 Hz with wake-ups 3 ms late 24 are still about 24 a second`() = runTest {
+        assertPace(60, wakeLateMillis = LATE_WAKE_MILLIS, framesPerSecond = TV_FRAMES_PER_SECOND)
+    }
+
+    @Test
+    fun `at 90 Hz with wake-ups 3 ms late 24 are still about 24 a second`() = runTest {
+        assertPace(90, wakeLateMillis = LATE_WAKE_MILLIS, framesPerSecond = TV_FRAMES_PER_SECOND)
+    }
+
+    @Test
+    fun `a pace of 24 never moves the position faster than 30 does`() = runTest {
+        val slow = runFirstSecond(hertz = 120, framesPerSecond = TV_FRAMES_PER_SECOND)
+        val fast = runFirstSecond(hertz = 120)
+
+        assertThat(slow.updates).isLessThan(fast.updates)
+    }
+
+    @Test
+    fun `the loop catches up on frames that did not come by waiting, not by a burst`() = runTest {
+        // The display stops for two seconds, as it does when the app is not on screen, and comes
+        // back: the loop does not draw a frame at each vsync to make up for the time lost.
+        val display = Display(testScheduler, hertz = 60, wakeLateMillis = 0L, stallAt = 500L)
+        var updates = 0
+        val loop =
+            launch(display) {
+                runCycleLoop(
+                    framesPerSecond = TV_FRAMES_PER_SECOND,
+                    nanoTime = { testScheduler.currentTime * NANOS_PER_MILLI },
+                ) {
+                    updates++
+                }
+            }
+        advanceTimeBy(500L + STALL_MILLIS + ONE_SECOND_MILLIS)
+        runCurrent()
+        loop.cancel()
+
+        // Half a second before the stall and a second after it: 36 or so, never one per vsync.
+        assertThat(updates).isIn(Range.closed(33, 39))
+    }
+
+    private fun TestScope.assertPace(
+        hertz: Int,
+        wakeLateMillis: Long = 0L,
+        framesPerSecond: Int = FRAMES_PER_SECOND,
+    ) {
+        val shown = runFirstSecond(hertz, wakeLateMillis, framesPerSecond)
+
+        assertThat(shown.updates)
+            .isIn(Range.closed(framesPerSecond - TOLERANCE, framesPerSecond + TOLERANCE))
         // The thread sleeps: it asks for a frame to draw one, not to skip it.
         assertThat(shown.frameRequests).isEqualTo(shown.updates)
     }
@@ -67,13 +133,20 @@ class BackgroundPaceTest {
      * Runs the loop for one second on a display of [hertz], and says what it did. The thread of the
      * loop is [wakeLateMillis] late in asking for each frame, as a wake-up that is late is.
      */
-    private fun TestScope.runFirstSecond(hertz: Int, wakeLateMillis: Long = 0L): Shown {
+    private fun TestScope.runFirstSecond(
+        hertz: Int,
+        wakeLateMillis: Long = 0L,
+        framesPerSecond: Int = FRAMES_PER_SECOND,
+    ): Shown {
         val display = Display(testScheduler, hertz, wakeLateMillis)
         var updates = 0
         var lastCycle = 0f
         val loop =
             launch(display) {
-                runCycleLoop(nanoTime = { testScheduler.currentTime * NANOS_PER_MILLI }) {
+                runCycleLoop(
+                    framesPerSecond = framesPerSecond,
+                    nanoTime = { testScheduler.currentTime * NANOS_PER_MILLI },
+                ) {
                     updates++
                     lastCycle = it
                 }
@@ -90,18 +163,27 @@ class BackgroundPaceTest {
      * A display that refreshes [hertz] times a second. A frame that is asked for comes at the next
      * vsync, with the time of the test as its time, and the coroutine that asked goes on when the
      * work of the frame is done. The thread asks for the frame [wakeLateMillis] after it is woken.
+     * A display with a [stallAt] stops for [STALL_MILLIS] when a frame is asked for at that time or
+     * after it, once, as one does when the app is off the screen.
      */
     private class Display(
         private val scheduler: TestCoroutineScheduler,
         private val hertz: Int,
         private val wakeLateMillis: Long,
+        private val stallAt: Long = Long.MAX_VALUE,
     ) : MonotonicFrameClock {
         var frameRequests = 0
             private set
 
+        private var stalled = false
+
         override suspend fun <R> withFrameNanos(onFrame: (Long) -> R): R {
             frameRequests++
             delay(wakeLateMillis)
+            if (!stalled && scheduler.currentTime >= stallAt) {
+                stalled = true
+                delay(STALL_MILLIS)
+            }
             val now = scheduler.currentTime
             val vsync = (now * hertz / ONE_SECOND_MILLIS + 1) * ONE_SECOND_MILLIS.toDouble() / hertz
             delay(ceil(vsync).toLong() - now)
@@ -112,6 +194,10 @@ class BackgroundPaceTest {
     }
 
     private companion object {
+        const val FRAMES_PER_SECOND = 30
+        const val TV_FRAMES_PER_SECOND = 24
+        const val TOLERANCE = 2
+        const val STALL_MILLIS = 2_000L
         const val NANOS_PER_MILLI = 1_000_000L
         const val ONE_SECOND_MILLIS = 1_000L
 

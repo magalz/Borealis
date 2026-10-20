@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.designsystem.background
 
+import android.view.TextureView
 import android.view.View
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
@@ -202,6 +203,15 @@ class BorealisBackgroundTest {
                 assertThat(player.playing).isTrue()
                 composeRule.onNodeWithTag(BackgroundTags.VIDEO).assertIsDisplayed()
             }
+    }
+
+    @Test
+    fun `a clip plays on a texture view, which the glass can sample`() {
+        show(BackgroundStyle.NorthernLights)
+
+        val view = players.live.single().surface
+        assertThat(view).isInstanceOf(TextureView::class.java)
+        assertThat(view.isAttachedToWindow).isTrue()
     }
 
     @Test

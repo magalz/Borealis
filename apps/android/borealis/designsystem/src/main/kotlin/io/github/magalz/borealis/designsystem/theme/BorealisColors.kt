@@ -4,14 +4,21 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 
 /**
  * Every colour token, for what Material's [ColorScheme] has no slot for: the ink steps, the accent
  * family, the status colours and the hairlines.
+ *
+ * [ink3] and [ink4] are the two roles that a glass surface replaces, to keep 4.5:1 over the
+ * background that shows through it ([withSecondaryInk]).
  */
 @Immutable
-class BorealisColors {
+class BorealisColors(
+    val ink3: Color = BorealisTokens.Color.Ink3,
+    val ink4: Color = BorealisTokens.Color.Ink4,
+) {
     private val tokens = BorealisTokens.Color
 
     val page = tokens.Page
@@ -24,8 +31,6 @@ class BorealisColors {
     val scrim = tokens.Scrim
     val ink = tokens.Ink
     val ink2 = tokens.Ink2
-    val ink3 = tokens.Ink3
-    val ink4 = tokens.Ink4
     val accent = tokens.Accent
     val accentSoft = tokens.AccentSoft
     val accentStrong = tokens.AccentStrong
@@ -39,6 +44,9 @@ class BorealisColors {
     val danger = tokens.Danger
     val dangerInk = tokens.DangerInk
     val offline = tokens.Offline
+
+    /** These colours with the roles [ink3] and [ink4] replaced; the rest stays as it is. */
+    fun withSecondaryInk(ink3: Color, ink4: Color) = BorealisColors(ink3, ink4)
 }
 
 val LocalBorealisColors = staticCompositionLocalOf { BorealisColors() }

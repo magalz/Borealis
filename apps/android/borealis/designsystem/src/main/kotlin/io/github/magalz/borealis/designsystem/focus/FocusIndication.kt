@@ -8,6 +8,7 @@ import androidx.compose.ui.focus.FocusEventModifierNode
 import androidx.compose.ui.focus.FocusState
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
@@ -23,6 +24,7 @@ import androidx.compose.ui.node.currentValueOf
 import androidx.compose.ui.node.invalidateDraw
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInputModeManager
+import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.animationsRemoved
@@ -50,6 +52,9 @@ import kotlinx.coroutines.launch
  */
 fun Modifier.borealisFocusIndication(shape: Shape, scaleOnFocus: Boolean = false): Modifier =
     this then BorealisFocusElement(shape, scaleOnFocus)
+
+/** The colour of the focus outline of [colors]: accent-soft, or the ink of the thicker outline. */
+internal fun focusOutlineColor(colors: BorealisColors, thick: Boolean): Color = colors.accentSoft
 
 private data class BorealisFocusElement(val shape: Shape, val scaleOnFocus: Boolean) :
     ModifierNodeElement<BorealisFocusNode>() {

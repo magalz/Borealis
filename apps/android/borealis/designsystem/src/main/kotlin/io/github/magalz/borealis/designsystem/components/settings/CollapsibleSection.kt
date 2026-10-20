@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -37,6 +38,11 @@ import io.github.magalz.borealis.designsystem.theme.rememberAnimationsRemoved
 private val ROW_GAP = 10.dp
 private const val ANIMATION_MILLIS = 250
 private const val OPEN_DEGREES = 180f
+
+/** Tags of the pieces of a [CollapsibleSection], for the tests. */
+internal object CollapsibleSectionTags {
+    const val CHEVRON = "section:chevron"
+}
 
 /**
  * A section of the phone list of settings that opens and closes: a header with the [title] and a
@@ -102,7 +108,10 @@ private fun SectionHeader(title: String, expanded: Boolean, removed: Boolean, on
         Icon(
             BorealisIcons.ChevronDown,
             contentDescription = null,
-            modifier = Modifier.size(ROW_ICON_SIZE).graphicsLayer { rotationZ = turn.value },
+            modifier =
+                Modifier.testTag(CollapsibleSectionTags.CHEVRON).size(ROW_ICON_SIZE).graphicsLayer {
+                    rotationZ = turn.value
+                },
             tint = LocalBorealisColors.current.ink3,
         )
     }

@@ -13,13 +13,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -28,6 +30,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
@@ -82,8 +85,14 @@ class CollapsibleSectionTest {
     }
 
     @Test
-    fun `an expanded section shows its rows`() {
-        composeRule.setContent { Specimen(expanded = true) }
+    fun `a section shows its rows once it is expanded and not before`() {
+        var expanded by mutableStateOf(false)
+        composeRule.setContent { Specimen(expanded) }
+        composeRule.onNodeWithText("Resolution").assertDoesNotExist()
+        composeRule.onNodeWithText("Frame rate").assertDoesNotExist()
+
+        composeRule.runOnIdle { expanded = true }
+        composeRule.waitForIdle()
 
         composeRule.onNodeWithText("Resolution").assertIsDisplayed()
         composeRule.onNodeWithText("Frame rate").assertIsDisplayed()
@@ -150,11 +159,50 @@ class CollapsibleSectionTest {
         composeRule.setContent { Specimen(expanded = true) }
 
         composeRule
-            .onAllNodes(
-                SemanticsMatcher.keyIsDefined(SemanticsProperties.ContentDescription),
-                useUnmergedTree = true,
-            )
-            .assertCountEquals(0)
+            .onNodeWithTag(CollapsibleSectionTags.CHEVRON, useUnmergedTree = true)
+            .assertExists()
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h640dp-xhdpi", fontScale = 2f)
+    fun `a title of several words wraps and the chevron keeps its size at font scale 2`() {
+        composeRule.setContent { Specimen(expanded = false, title = "On-screen controls") }
+
+        assertTitleWrapsBesideChevron("ON-SCREEN CONTROLS")
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h640dp-xhdpi", fontScale = 2f)
+    fun `a long word wraps and the chevron keeps its size at font scale 2`() {
+        composeRule.setContent { Specimen(expanded = false, title = "Interdisciplinarity") }
+
+        assertTitleWrapsBesideChevron("INTERDISCIPLINARITY")
+    }
+
+    @Test
+    fun `opening reveals the rows from the top, so they appear in place`() {
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent { Hosted() }
+
+        composeRule.onNodeWithText("STREAM").performClick()
+        composeRule.mainClock.advanceTimeBy(HALFWAY_MILLIS)
+        val midway = rowTop("Resolution")
+        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+
+        assertThat(midway).isWithin(0.5f).of(rowTop("Resolution"))
+    }
+
+    @Test
+    fun `closing hides the rows towards the top, so they stay in place`() {
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent { Hosted(startOpen = true) }
+        val open = rowTop("Resolution")
+
+        composeRule.onNodeWithText("STREAM").performClick()
+        composeRule.mainClock.advanceTimeBy(HALFWAY_MILLIS)
+
+        assertThat(rowTop("Resolution")).isWithin(0.5f).of(open)
     }
 
     @Test
@@ -221,6 +269,35 @@ class CollapsibleSectionTest {
 
     private fun sectionHeight(): Dp = composeRule.onNodeWithTag(SECTION).getBoundsInRoot().height
 
+    private fun rowTop(text: String): Float =
+        composeRule.onNodeWithText(text).getUnclippedBoundsInRoot().top.value
+
+    /** The title takes the lines it needs beside the chevron, which keeps its 20dp square. */
+    private fun assertTitleWrapsBesideChevron(shown: String) {
+        val chevron =
+            composeRule
+                .onNodeWithTag(CollapsibleSectionTags.CHEVRON, useUnmergedTree = true)
+                .getBoundsInRoot()
+        val title = composeRule.onNodeWithText(shown, useUnmergedTree = true)
+        val layout = textLayout(title)
+
+        assertThat(chevron.width.value).isWithin(0.5f).of(20f)
+        assertThat(chevron.height.value).isWithin(0.5f).of(20f)
+        assertThat(layout.lineCount).isGreaterThan(1)
+        assertThat(layout.hasVisualOverflow).isFalse()
+        assertThat(title.getBoundsInRoot().right.value).isAtMost(chevron.left.value)
+    }
+
+    private fun textLayout(node: SemanticsNodeInteraction): TextLayoutResult {
+        val results = mutableListOf<TextLayoutResult>()
+        node
+            .fetchSemanticsNode()
+            .config[SemanticsActions.GetTextLayoutResult]
+            .action
+            ?.invoke(results)
+        return results.first()
+    }
+
     private fun removeAnimations() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         Settings.Global.putFloat(
@@ -234,10 +311,10 @@ class CollapsibleSectionTest {
         SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, state)
 
     @Composable
-    private fun Specimen(expanded: Boolean) {
+    private fun Specimen(expanded: Boolean, title: String = "Stream") {
         BorealisTheme(FormFactor.Phone) {
             Column {
-                CollapsibleSection("Stream", expanded, { changes += it }) {
+                CollapsibleSection(title, expanded, { changes += it }) {
                     Text("Resolution")
                     Text("Frame rate")
                 }
@@ -266,6 +343,9 @@ class CollapsibleSectionTest {
     private companion object {
         const val SECTION = "section"
         const val FRAME_MILLIS = 16L
+
+        // About halfway through the 250 ms of the animation.
+        const val HALFWAY_MILLIS = 120L
         const val SETTLE_MILLIS = 2_000L
     }
 }

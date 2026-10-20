@@ -3,14 +3,19 @@ package io.github.magalz.borealis.library.shell
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
@@ -197,6 +202,22 @@ class LibraryAppsBackFocusTest {
         composeRule.onNodeWithTag("host:aard").assertIsFocused()
     }
 
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV Cancel on Add host focuses the card that had the focus before`() {
+        launch(tv = true)
+        hosts.emit(aardvark, living, studio)
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("host:studio").requestFocus()
+
+        composeRule.onNode(hasText("Add host") and hasRole(Role.Tab)).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Cancel").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("host:studio").assertIsFocused()
+    }
+
     /**
      * The activity as the form factor detection sees a TV, or a wide window without a touch screen.
      */
@@ -227,6 +248,8 @@ class LibraryAppsBackFocusTest {
         composeRule.waitForIdle()
         assertThat(focusedTag()).isNotNull()
     }
+
+    private fun hasRole(role: Role) = SemanticsMatcher.expectValue(SemanticsProperties.Role, role)
 
     private fun focusedTag(): String? =
         composeRule.onAllNodes(isFocused()).fetchSemanticsNodes().firstNotNullOfOrNull {

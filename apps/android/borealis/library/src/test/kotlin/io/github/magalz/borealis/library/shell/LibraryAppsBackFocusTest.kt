@@ -389,7 +389,9 @@ class LibraryAppsBackFocusTest {
     }
 
     private fun longList() =
-        (0 until LONG_LIST).map { aHost(id = "h%02d".format(it), name = "Host %02d".format(it)) }
+        (0 until LONG_LIST).map { aHost(id = "h${it.padded()}", name = "Host ${it.padded()}") }
+
+    private fun Int.padded() = toString().padStart(2, '0')
 
     private fun hasRole(role: Role) = SemanticsMatcher.expectValue(SemanticsProperties.Role, role)
 

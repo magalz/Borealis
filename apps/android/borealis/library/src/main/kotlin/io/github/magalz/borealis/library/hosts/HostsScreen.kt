@@ -21,18 +21,14 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
@@ -58,7 +54,6 @@ import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
 import io.github.magalz.borealis.library.domain.Reachability
-import kotlinx.coroutines.flow.first
 
 /** An outline sits 5dp outside its card, so neighbouring cards need 10dp between them. */
 private val GRID_GAP = 12.dp
@@ -187,26 +182,6 @@ private class HostsHandlers(
 )
 
 /**
- * The card of Hosts that had focus, or that a tap chose where a card cannot take focus: a [hostKey]
- * or a [continueKey]. It is a plain holder and not state, so that a D-pad move writes it without
- * recomposing a card; the screen reads it once, when its initial-focus guard starts. The navigation
- * takes Hosts out of the composition while Apps (or Add host) shows, so the key is saved with
- * [FocusedCardSaver].
- */
-private class FocusedCard(var key: String? = null)
-
-private val FocusedCardSaver =
-    Saver<FocusedCard, String>(save = { it.key }, restore = { FocusedCard(it) })
-
-private fun hostKey(hostId: String) = "host:$hostId"
-
-private fun continueKey(hostId: String) = "continue:$hostId"
-
-/** Keeps [key] in [card] while this element has focus. */
-private fun Modifier.keepsFocusIn(card: FocusedCard?, key: String): Modifier =
-    if (card == null) this else onFocusChanged { if (it.isFocused) card.key = key }
-
-/**
  * The element that starts with focus on a TV or handheld, and the guard that lets the screen take
  * it once: a host that sorts first, a Continue card that appears or a card that scrolls back into
  * view later must not pull focus away from where the user moved it. [cardKey] is the card that had
@@ -220,6 +195,12 @@ private class StartFocus(
 
 private fun Modifier.withStartFocus(start: StartFocus?): Modifier =
     if (start == null) this else initialFocus(start.requester, start.state)
+
+/** [this] when the card [key] starts with focus: the [restored] card, else the [first] one. */
+private fun StartFocus?.startingAt(key: String, restored: String?, first: Boolean): StartFocus? =
+    takeIf {
+        if (restored != null) key == restored else first
+    }
 
 @Composable
 private fun HostsBody(
@@ -287,15 +268,7 @@ private fun HostGrid(
     // The card that had focus before wins over the first card, unless its host is gone.
     val restoredCard = startFocus?.cardKey?.takeIf { it in state.cardKeys() }
     val gridState = rememberLazyGridState()
-    // Once per guard: a card that the list moved out of view is not composed, so it cannot take
-    // focus. The grid is scrolled to it only when it is not in view, to keep the place it was left.
-    LaunchedEffect(startFocus?.state) {
-        val card = restoredCard ?: return@LaunchedEffect
-        val index = state.gridIndexOf(card)
-        val shown = snapshotFlow { gridState.layoutInfo.visibleItemsInfo }
-        val inView = shown.first { it.isNotEmpty() }
-        if (inView.none { it.index == index }) gridState.scrollToItem(index)
-    }
+    ScrollToCard(gridState, state, restoredCard, startFocus?.state)
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
         state = gridState,
@@ -315,7 +288,6 @@ private fun HostGrid(
                 span = { _, _ -> fullWidth() },
             ) { index, item ->
                 val key = continueKey(item.hostId)
-                val starts = if (restoredCard != null) key == restoredCard else index == 0
                 ContinueCard(
                     appName = item.appName ?: unnamedApp,
                     detail = stringResource(R.string.hosts_continue_detail, item.hostName),
@@ -327,7 +299,7 @@ private fun HostGrid(
                     modifier =
                         Modifier.fillMaxWidth()
                             .keepsFocusIn(handlers.focusedCard, key)
-                            .withStartFocus(startFocus.takeIf { starts })
+                            .withStartFocus(startFocus.startingAt(key, restoredCard, index == 0))
                             .testTag(key),
                 )
             }
@@ -339,16 +311,9 @@ private fun HostGrid(
             )
         }
         itemsIndexed(state.items, key = { _, item -> item.id }) { index, item ->
-            val starts =
-                if (restoredCard != null) hostKey(item.id) == restoredCard
-                else index == 0 && state.continueItems.isEmpty()
-            HostItem(
-                item,
-                handlers,
-                optionsLabel,
-                unnamedApp,
-                Modifier.withStartFocus(startFocus.takeIf { starts }),
-            )
+            val first = index == 0 && state.continueItems.isEmpty()
+            val start = startFocus.startingAt(hostKey(item.id), restoredCard, first)
+            HostItem(item, handlers, optionsLabel, unnamedApp, Modifier.withStartFocus(start))
         }
     }
 }
@@ -415,18 +380,3 @@ private fun HostAction.labelRes(): Int? =
         HostAction.WAKE -> R.string.hosts_action_wake
         HostAction.NONE -> null
     }
-
-/** The keys of the cards on the screen. */
-private fun HostsUiState.cardKeys(): List<String> =
-    continueItems.map { continueKey(it.hostId) } + items.map { hostKey(it.id) }
-
-/**
- * The place of the card [key] in the grid, which has a section title before the Continue cards
- * (when there are any) and one before the hosts.
- */
-private fun HostsUiState.gridIndexOf(key: String): Int {
-    val continueIndex = continueItems.indexOfFirst { continueKey(it.hostId) == key }
-    if (continueIndex >= 0) return 1 + continueIndex
-    val hostsStart = if (continueItems.isEmpty()) 1 else continueItems.size + 2
-    return hostsStart + items.indexOfFirst { hostKey(it.id) == key }
-}

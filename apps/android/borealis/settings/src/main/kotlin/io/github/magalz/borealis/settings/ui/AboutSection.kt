@@ -98,8 +98,8 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
     val density = LocalDensity.current
     val windowHeight = LocalWindowInfo.current.containerSize.height
     // The dialog scrolls its content, so this text needs a height of its own to scroll in. A share
-    // of the window is right for a tall one; in a short one the dialog's title, Close and padding
-    // leave less, and the text learns what is left from how much of it the dialog shows.
+    // of the window does for a tall one; in a short one the dialog's title, padding and Close leave
+    // less, and the text learns what is left from how much of it the dialog shows.
     var room by remember(windowHeight) { mutableIntStateOf(Int.MAX_VALUE) }
     val maxHeight =
         with(density) { minOf(windowHeight * LICENSE_HEIGHT_SHARE, room.toFloat()).toDp() }
@@ -111,9 +111,9 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
         Text(
             text,
             Modifier.fillMaxWidth()
-                // A text taller than the room the dialog has runs on under Close: its focus search
-                // from Close does not find it above, so Up does not reach it. It is cut at what
-                // the dialog shows, so this keeps the height at that.
+                // The dialog clips the text where its room ends. A text that runs on under Close is
+                // not above Close for the focus search, so Up from Close would not find it: keep
+                // its height to the part that is shown.
                 .onGloballyPositioned { placed ->
                     val shown = placed.boundsInWindow().height.roundToInt()
                     if (shown < placed.size.height) room = shown

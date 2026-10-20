@@ -231,8 +231,24 @@ class StreamChromeHost(
         return true
     }
 
-    /** The key [event] the gamepad handler made up for a pad on the USB driver, for the chrome. */
-    fun dispatchUsbPadKey(event: KeyEvent): Boolean = dispatchKeyEvent(event)
+    /**
+     * [dispatchKeyEvent] for a key the gamepad handler made up for a pad on the USB driver. Such a
+     * key reaches the chrome without passing the window's input pipeline, which is what takes the
+     * window out of touch mode when a key comes from a pad Android knows. A phone's window starts
+     * in touch mode, where Compose gives the focus to no clickable row, so the keys of the pad
+     * would move and click nothing. The first key that goes down while the chrome is modal leaves
+     * touch mode, as the window does for a system pad, and the focus starts where it does on a TV.
+     */
+    fun dispatchUsbPadKey(event: KeyEvent): Boolean {
+        if (
+            session.chromeMode == ChromeMode.MODAL &&
+                event.action == KeyEvent.ACTION_DOWN &&
+                isInTouchMode
+        ) {
+            composeView.requestFocusFromTouch()
+        }
+        return dispatchKeyEvent(event)
+    }
 
     /** Whether the modal chrome consumes [event] without acting on it. */
     private fun isSpent(event: KeyEvent): Boolean =

@@ -140,10 +140,7 @@ class SettingsComponentScreenshotTest {
 
     @Composable
     private fun PhoneList() {
-        Column(Modifier.padding(horizontal = 8.dp)) {
-            SettingsGroupHeader("Video")
-            Rows(Modifier.fillMaxWidth())
-        }
+        Column(Modifier.padding(horizontal = 8.dp)) { Rows(Modifier.fillMaxWidth()) }
     }
 
     @Composable

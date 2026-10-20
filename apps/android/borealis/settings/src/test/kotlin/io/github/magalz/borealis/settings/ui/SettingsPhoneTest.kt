@@ -32,16 +32,13 @@ import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-/** The settings screen on a phone: one list (UC-009). */
+/** The settings screen on a phone: the rows of its sections (UC-009). */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = PHONE)
-class SettingsPhoneTest : SettingsScreenTestBase() {
-    private fun top(title: String): Float =
-        composeRule.onNodeWithText(title).getUnclippedBoundsInRoot().top.value
-
+class SettingsPhoneTest : PhoneSettingsTestBase() {
     @Test
     fun `the list has the groups with their rows in UC-009 order`() {
-        show()
+        showOpen()
 
         val titles =
             listOf(
@@ -87,7 +84,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
     fun `a row that the device cannot use does not appear`() {
         options.rowStates[Settings.ENABLE_HDR] = RowState.Hidden
 
-        show()
+        showOpen()
 
         composeRule.onNodeWithText("Full range").assertExists()
         composeRule.onNodeWithText("HDR").assertDoesNotExist()
@@ -98,7 +95,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
         options.onScreenControlsGroup = RowState.Hidden
         options.resetLayout = RowState.Hidden
 
-        show()
+        showOpen()
 
         composeRule.onNodeWithText("ON-SCREEN CONTROLS").assertDoesNotExist()
         composeRule.onNodeWithText("Show on-screen controls").assertDoesNotExist()
@@ -125,7 +122,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
             Settings.VIBRATE_FALLBACK_STRENGTH to 120,
         )
 
-        show()
+        showOpen()
 
         row("Resolution")
         composeRule.onNodeWithText("720p (1280x720)").assertExists()
@@ -142,7 +139,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `the Appearance group has the Background row with the seven styles`() {
-        show()
+        showOpen()
 
         row("Background").performClick()
         composeRule.waitForIdle()
@@ -152,7 +149,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `choosing a style stores it and the row shows it`() {
-        show()
+        showOpen()
         composeRule.onNodeWithText("Aurora curtains").assertExists()
 
         row("Background").performClick()
@@ -169,7 +166,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
     fun `a stored style that is unknown shows the default as the chosen one`() {
         stored(Settings.BACKGROUND to "bogus")
 
-        show()
+        showOpen()
 
         composeRule.onNodeWithText("Aurora curtains").assertExists()
         composeRule.onNodeWithText("bogus").assertDoesNotExist()
@@ -177,7 +174,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `an automatic bitrate shows the value computed from the resolution and the frame rate`() {
-        show()
+        showOpen()
 
         composeRule.onNodeWithText("Automatic (10 Mbps)").assertExists()
     }
@@ -186,7 +183,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
     fun `a stored bitrate shows in megabits`() {
         stored(Settings.BITRATE_KBPS to 12_500)
 
-        show()
+        showOpen()
 
         composeRule.onNodeWithText("12.5 Mbps").assertExists()
         composeRule.onNodeWithText("Automatic (10 Mbps)").assertDoesNotExist()
@@ -196,14 +193,14 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
     fun `a stored bitrate in whole megabits has no decimals`() {
         stored(Settings.BITRATE_KBPS to 20_000)
 
-        show()
+        showOpen()
 
         composeRule.onNodeWithText("20 Mbps").assertExists()
     }
 
     @Test
     fun `a switch toggles through the repository and shows it`() {
-        show()
+        showOpen()
 
         row("Stretch video").performClick()
         composeRule.waitForIdle()
@@ -230,7 +227,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
         options.rowStates[Settings.VIBRATE_FALLBACK_STRENGTH] =
             RowState.Disabled(DisabledReason.DEPENDS_ON_SETTING, Settings.VIBRATE_FALLBACK)
 
-        show()
+        showOpen()
 
         row("Analog scrolling").assertIsNotEnabled()
         composeRule.onNodeWithText("Turn on Gamepad mouse first").assertExists()
@@ -246,7 +243,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
         options.rowStates[Settings.ENABLE_HDR] =
             RowState.Disabled(DisabledReason.HDR_BROKEN_ON_FIRMWARE)
 
-        show()
+        showOpen()
 
         row("HDR").assertIsNotEnabled()
         composeRule
@@ -258,7 +255,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `a list opens a choice sheet with its entries and the chosen one is stored`() {
-        show()
+        showOpen()
 
         row("Frame pacing").performClick()
         composeRule.waitForIdle()
@@ -278,7 +275,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `the codec list stores its choice`() {
-        show()
+        showOpen()
 
         row("Codec").performClick()
         composeRule.waitForIdle()
@@ -290,7 +287,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `the performance overlay list has Off, Compact and Detailed`() {
-        show()
+        showOpen()
 
         row("Performance overlay").performClick()
         composeRule.waitForIdle()
@@ -304,7 +301,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `Touch is a list of Trackpad and Direct`() {
-        show()
+        showOpen()
 
         row("Touch").performClick()
         composeRule.waitForIdle()
@@ -317,7 +314,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `Analog scrolling and Channels store their choices`() {
-        show()
+        showOpen()
 
         row("Analog scrolling").performClick()
         composeRule.waitForIdle()
@@ -335,7 +332,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
     @Test
     fun `the Resolution list has the offered entries and choosing one returns the bitrate to automatic`() {
         stored(Settings.BITRATE_KBPS to 30_000)
-        show()
+        showOpen()
         composeRule.onNodeWithText("30 Mbps").assertExists()
 
         row("Resolution").performClick()
@@ -354,7 +351,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
     @Test
     fun `the Frame rate list has the offered entries and choosing one returns the bitrate to automatic`() {
         stored(Settings.BITRATE_KBPS to 30_000)
-        show()
+        showOpen()
 
         row("Frame rate").performClick()
         composeRule.waitForIdle()
@@ -388,7 +385,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
                     ),
                     ResolutionChoice("2560x1200", 2560, 1200, ResolutionKind.NATIVE_FULLSCREEN),
                 )
-        show()
+        showOpen()
 
         row("Resolution").performClick()
         composeRule.waitForIdle()
@@ -404,7 +401,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
         options.resolutions =
             STANDARD_RESOLUTIONS.take(1) +
                 ResolutionChoice("2400x1080", 2400, 1080, ResolutionKind.NATIVE)
-        show()
+        showOpen()
 
         row("Resolution").performClick()
         composeRule.waitForIdle()
@@ -429,7 +426,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
         options.resolutions =
             STANDARD_RESOLUTIONS.take(1) +
                 ResolutionChoice("2400x1080", 2400, 1080, ResolutionKind.NATIVE)
-        show()
+        showOpen()
         row("Resolution").performClick()
         composeRule.waitForIdle()
         sheetOption("Native (2400x1080)").performClick()
@@ -444,7 +441,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `choosing a standard resolution shows no warning`() {
-        show()
+        showOpen()
 
         row("Resolution").performClick()
         composeRule.waitForIdle()
@@ -457,7 +454,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
     @Test
     fun `choosing the native frame rate warns that the PC must support it`() {
         options.frameRates = options.frameRates + FrameRateChoice(144, isNative = true)
-        show()
+        showOpen()
 
         row("Frame rate").performClick()
         composeRule.waitForIdle()
@@ -470,7 +467,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `Back from a choice sheet changes nothing`() {
-        show()
+        showOpen()
         row("Frame pacing").performClick()
         composeRule.waitForIdle()
 
@@ -484,7 +481,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `turning on Unlock all frame rates adds 90 and 120 to the Frame rate list at once`() {
-        show()
+        showOpen()
         row("Frame rate").performClick()
         composeRule.waitForIdle()
         sheetOption("90 fps").assertDoesNotExist()
@@ -502,7 +499,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `the sliders store whole numbers in their stored unit`() {
-        show()
+        showOpen()
 
         setProgress("Bitrate", 20_000f)
         setProgress("Deadzone", 12f)
@@ -522,7 +519,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `a bitrate set by touch moves in steps of half a megabit`() {
-        show()
+        showOpen()
 
         setProgress("Bitrate", 12_300f)
 
@@ -531,7 +528,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `the gamepad mouse speed starts at 50 percent`() {
-        show()
+        showOpen()
 
         row("Gamepad mouse speed").assertExists()
         composeRule.onNodeWithText("50 %").assertExists()
@@ -542,7 +539,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
         options.rowStates[Settings.OSC_OPACITY] =
             RowState.Disabled(DisabledReason.DEPENDS_ON_SETTING, Settings.SHOW_ONSCREEN_CONTROLS)
 
-        show()
+        showOpen()
 
         row("Opacity").assertIsNotEnabled()
         composeRule.onNodeWithText("Turn on Show on-screen controls first").assertExists()
@@ -550,7 +547,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `Reset layout asks first, with Cancel leaving the layout alone`() {
-        show()
+        showOpen()
 
         row("Reset layout").performClick()
         composeRule.waitForIdle()
@@ -568,7 +565,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `confirming Reset layout resets it once`() {
-        show()
+        showOpen()
 
         row("Reset layout").performClick()
         composeRule.waitForIdle()
@@ -581,7 +578,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `Back from the Reset layout question cancels it`() {
-        show()
+        showOpen()
         row("Reset layout").performClick()
         composeRule.waitForIdle()
 
@@ -603,14 +600,14 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
                 }
             )
 
-        show(about = null)
+        showOpen(about = null)
 
         composeRule.onNodeWithText("9.8.7 (commit unknown)").assertExists()
     }
 
     @Test
     fun `Source code opens its link`() {
-        show()
+        showOpen()
 
         row("Source code").performClick()
 
@@ -619,7 +616,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `Privacy policy opens its link`() {
-        show()
+        showOpen()
 
         row("Privacy policy").performClick()
 
@@ -630,7 +627,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
     @Test
     fun `with no browser a link shows its address in a dialog`() {
         browserAvailable = false
-        show()
+        showOpen()
 
         row("Source code").performClick()
         composeRule.waitForIdle()
@@ -648,7 +645,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
 
     @Test
     fun `Open-source licences shows the licence texts`() {
-        show()
+        showOpen()
 
         row("Open-source licences").performClick()
         composeRule.waitForIdle()
@@ -661,7 +658,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
     @Test
     fun `a swipe scrolls the licence texts`() {
         licenses = (1..200).joinToString("\n") { "Licence line $it" }
-        show()
+        showOpen()
         row("Open-source licences").performClick()
         composeRule.waitForIdle()
         val text =
@@ -680,7 +677,7 @@ class SettingsPhoneTest : SettingsScreenTestBase() {
     @Test
     fun `without licence texts the dialog says they are not in this build`() {
         licenses = null
-        show()
+        showOpen()
 
         row("Open-source licences").performClick()
         composeRule.waitForIdle()

@@ -52,8 +52,21 @@ class SettingsScreenshotTest : SettingsScreenTestBase() {
 
     @Test
     @Config(qualifiers = PHONE)
+    fun phoneTwoSectionsOpen() {
+        show()
+        openSection("STREAM")
+        openSection("INPUT")
+
+        shoot("settingsscreen_phone_two-open")
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
     fun phoneScrolled() {
         show()
+        openSection("VIDEO")
+        openSection("INPUT")
+        openSection("GAMEPAD")
         composeRule.onNodeWithText("Vibration strength").performScrollTo()
 
         shoot("settingsscreen_phone_scrolled")
@@ -83,6 +96,7 @@ class SettingsScreenshotTest : SettingsScreenTestBase() {
     @Config(qualifiers = PHONE)
     fun phoneAppearance() {
         show()
+        openSection("APPEARANCE")
         composeRule.onNodeWithText("Background").performScrollTo()
 
         shoot("settingsscreen_phone_appearance")
@@ -116,6 +130,12 @@ class SettingsScreenshotTest : SettingsScreenTestBase() {
         show(keyboard = true)
 
         shoot("settingsscreen_handheld_stream")
+    }
+
+    /** Opens the section of a phone list: its header shows the title in capitals. */
+    private fun openSection(title: String) {
+        composeRule.onNodeWithText(title).performScrollTo().performClick()
+        composeRule.waitForIdle()
     }
 
     private fun shoot(name: String) {

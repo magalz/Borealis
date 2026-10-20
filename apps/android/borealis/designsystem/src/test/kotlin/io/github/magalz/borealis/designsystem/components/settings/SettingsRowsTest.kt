@@ -246,16 +246,6 @@ class SettingsRowsTest {
     }
 
     @Test
-    fun `a group header shows its title as a heading`() {
-        composeRule.setContent { Specimen { SettingsGroupHeader("Stream") } }
-
-        composeRule
-            .onNodeWithText("STREAM")
-            .assertIsDisplayed()
-            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
-    }
-
-    @Test
     fun `a value row names what a tap does for a screen reader`() {
         composeRule.setContent {
             Specimen {

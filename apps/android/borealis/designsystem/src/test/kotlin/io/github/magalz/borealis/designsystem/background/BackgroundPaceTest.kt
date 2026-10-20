@@ -29,6 +29,28 @@ class BackgroundPaceTest {
 
     @Test fun `at 120 Hz the position moves about 30 times a second`() = runTest { assertPace(120) }
 
+    // The displays that 30 a second is not a whole number of frames of: the updates fall due 30 a
+    // second and the loop draws each at the first vsync after it is due, alternating the frames
+    // between the gap, so the average holds where the first vsync after the last frame gave 25.
+
+    @Test fun `at 50 Hz the position moves about 30 times a second`() = runTest { assertPace(50) }
+
+    @Test fun `at 72 Hz the position moves about 30 times a second`() = runTest { assertPace(72) }
+
+    @Test fun `at 75 Hz the position moves about 30 times a second`() = runTest { assertPace(75) }
+
+    @Test
+    fun `at 50 Hz with wake-ups 3 ms late the position still moves about 30 times a second`() =
+        runTest {
+            assertPace(50, wakeLateMillis = LATE_WAKE_MILLIS)
+        }
+
+    @Test
+    fun `at 75 Hz with wake-ups 3 ms late the position still moves about 30 times a second`() =
+        runTest {
+            assertPace(75, wakeLateMillis = LATE_WAKE_MILLIS)
+        }
+
     // The sleep ends a few milliseconds before the vsync, so a wake-up that is late still makes it.
 
     @Test

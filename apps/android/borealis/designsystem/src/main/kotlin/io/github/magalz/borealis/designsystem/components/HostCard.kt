@@ -42,6 +42,10 @@ private val CHIP_PADDING_VERTICAL = 2.dp
  * of asking for options (long press, hold OK, X, Menu) runs [onOptions], named [optionsLabel]. The
  * status line says what the card does, so it carries no label of its own.
  *
+ * The card is a glass surface: in a glass host it shows the background through, blurred, and its
+ * secondary text has the glass colours. Where the glass is solid, or outside a host, it is the
+ * `surface` colour.
+ *
  * On a TV a card is at least as high as its height token, which is the height of the fullest card
  * (online, with one row of tags and the app it runs, plus a few dp of margin), so the cards of a
  * grid are the same size whatever they show; the text stays at the top. The equal height assumes

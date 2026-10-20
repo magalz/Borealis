@@ -29,7 +29,7 @@ private val CONTENT_GAP = 14.dp
  * The session to continue (decision D2): the app, a [detail] line that says where it runs and since
  * when, and a resume affordance. The whole card is the target: [onClick] resumes, and every way of
  * asking for options runs [onOptions]. The resume button only looks like one, so the card is a
- * single focus stop.
+ * single focus stop. The card is a glass surface with the accent tint over it.
  */
 @Composable
 fun ContinueCard(

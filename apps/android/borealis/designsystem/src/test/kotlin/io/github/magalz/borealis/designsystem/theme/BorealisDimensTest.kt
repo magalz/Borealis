@@ -18,6 +18,23 @@ class BorealisDimensTest {
     }
 
     @Test
+    fun `the focus outline reaches 5dp outside its element`() {
+        assertThat(BorealisDimens.outlineReach).isEqualTo(5.dp)
+    }
+
+    @Test
+    fun `a list of focusable rows keeps 8dp around it and 10dp between its rows`() {
+        assertThat(BorealisDimens.listPadding).isEqualTo(8.dp)
+        assertThat(BorealisDimens.listGap).isEqualTo(10.dp)
+    }
+
+    @Test
+    fun `the padding of a list holds the outline of a row, and the gap holds two outlines`() {
+        assertThat(BorealisDimens.listPadding).isAtLeast(BorealisDimens.outlineReach)
+        assertThat(BorealisDimens.listGap).isAtLeast(BorealisDimens.outlineReach * 2)
+    }
+
+    @Test
     fun `the navigation is 220 wide on a TV and 200 on a handheld`() {
         assertThat(BorealisDimens.navWidth(FormFactor.Tv)).isEqualTo(220.dp)
         assertThat(BorealisDimens.navWidth(FormFactor.Handheld)).isEqualTo(200.dp)

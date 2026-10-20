@@ -210,6 +210,26 @@ class GlassOverlaysTest {
     }
 
     @Test
+    fun `the still stays over a clip that starts again until the new player has a frame`() {
+        showHost(BackgroundStyle.NorthernLights, useBackground = true) { Overlays() }
+        composeRule.runOnIdle { players.live.single().showFirstFrame() }
+        composeRule.waitForIdle()
+        composeRule.runOnIdle { first = true }
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle { first = false }
+        composeRule.waitForIdle()
+
+        // The new player has drawn nothing yet: without the still, the texture would show black.
+        assertThat(players.live).hasSize(1)
+        composeRule.onNodeWithTag(BackgroundTags.STILL).assertIsDisplayed()
+
+        composeRule.runOnIdle { players.live.single().showFirstFrame() }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(BackgroundTags.STILL).assertDoesNotExist()
+    }
+
+    @Test
     fun `an open overlay holds a drawn background still, and it moves again when it closes`() {
         composeRule.mainClock.autoAdvance = false
         showHost(BackgroundStyle.AuroraCurtains, useBackground = true) { Overlays() }

@@ -44,10 +44,20 @@ private const val PERIOD_NANOS = 20_000_000_000L
 private const val STILL_CYCLE = 0.1f
 
 /**
- * The least time between two frames. The next frame is the first vsync after it, which is every
- * second one at 60 Hz: about 30 fps, and the thread sleeps in between.
+ * The time from one update of the position to the next: a thirtieth of a second. It is a whole
+ * number of vsyncs at 30, 60, 90 and 120 Hz (1, 2, 3 and 4), so the next update falls on a vsync.
  */
-private const val FRAME_GAP_MILLIS = 25L
+private const val FRAME_GAP_NANOS = 1_000_000_000L / 30
+
+/**
+ * How long before that vsync the thread wakes up and asks for the frame, so that a wake-up that is
+ * late still makes it: it absorbs about 4 ms of lateness. It is less than the vsync period of the
+ * highest rate the loop is tuned for, 120 Hz (8.3 ms), or the frame asked for would be the one
+ * before.
+ */
+private const val WAKE_EARLY_NANOS = 4_000_000L
+
+private const val NANOS_PER_MILLI = 1_000_000L
 
 private const val TAU = (2 * PI).toFloat()
 
@@ -283,12 +293,38 @@ private fun rememberCycle(animated: Boolean): FloatState {
             cycle.floatValue = STILL_CYCLE
             return@LaunchedEffect
         }
-        while (true) {
-            delay(FRAME_GAP_MILLIS)
-            withInfiniteFrameNanos { cycle.floatValue = cycleAt(it) }
-        }
+        runCycleLoop { cycle.floatValue = it }
     }
     return cycle
+}
+
+/**
+ * The frames of a running loop: [onCycle] gets the position in the loop, from 0 until 1, once every
+ * [FRAME_GAP_NANOS]. That is 30 fps at 30, 60, 90 and 120 Hz; at other rates the update lands on
+ * the first vsync after the gap (25 fps at 50 and 75 Hz, 24 at 72, 28.8 at 144). [nanoTime] is the
+ * clock of the frame times, which are in the `System.nanoTime` timebase.
+ *
+ * The thread sleeps between two frames and asks for one only to draw it. The sleep is counted from
+ * the time of the frame drawn last, and it ends [WAKE_EARLY_NANOS] before the vsync that is
+ * [FRAME_GAP_NANOS] after that frame, so the frame asked for is that vsync's. It is clamped to
+ * between none and one gap.
+ */
+internal suspend fun runCycleLoop(
+    nanoTime: () -> Long = System::nanoTime,
+    onCycle: (Float) -> Unit,
+) {
+    var sleepMillis = 0L
+    while (true) {
+        delay(sleepMillis)
+        val frame = withInfiniteFrameNanos {
+            onCycle(cycleAt(it))
+            it
+        }
+        // Clamped to none or one gap: with a clock that is not the one of the frame times the sleep
+        // is wrong, but never an endless one.
+        val sleepNanos = FRAME_GAP_NANOS - WAKE_EARLY_NANOS - (nanoTime() - frame)
+        sleepMillis = sleepNanos.coerceIn(0L, FRAME_GAP_NANOS) / NANOS_PER_MILLI
+    }
 }
 
 /**

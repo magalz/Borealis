@@ -2,7 +2,9 @@ package io.github.magalz.borealis.settings.ui
 
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +30,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
+import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.settings.R
 import kotlinx.coroutines.launch
 
@@ -35,6 +38,8 @@ private const val SOURCE_CODE_URL = "https://github.com/magalz/Borealis"
 private const val PRIVACY_POLICY_URL = "https://github.com/magalz/Borealis/blob/main/PRIVACY.md"
 private val LICENSE_SCROLL_STEP = 96.dp
 private const val LICENSE_HEIGHT_SHARE = 0.6f
+private val LICENSE_OUTLINE_ROOM = 8.dp
+private val LICENSE_TEXT_PADDING = 12.dp
 
 /**
  * The rows of the About group: the version and commit, the source code, the open-source licences
@@ -121,7 +126,8 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
     ) {
         Text(
             text,
-            Modifier.onKeyEvent { event ->
+            Modifier.fillMaxWidth()
+                .onKeyEvent { event ->
                     val delta =
                         when (event.key) {
                             Key.DirectionDown -> stepPx
@@ -137,11 +143,15 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
                     scrolls
                 }
                 .heightIn(max = maxHeight)
+                // The dialog clips what is outside its content, and the outline reaches about 5dp.
+                .padding(LICENSE_OUTLINE_ROOM)
+                .borealisFocusIndication(MaterialTheme.shapes.medium)
                 // Before verticalScroll: a focusable after it takes the size of the whole text, not
                 // of the viewport, and the focus search from Close then does not find it above
                 // Close.
                 .focusable()
-                .verticalScroll(scroll),
+                .verticalScroll(scroll)
+                .padding(LICENSE_TEXT_PADDING),
             fontFamily = FontFamily.Monospace,
             style = MaterialTheme.typography.bodySmall,
         )

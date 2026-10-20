@@ -294,7 +294,9 @@ class SettingsRowsTest {
     @Test
     fun `an info row shows its value at the end of the row, with no chevron after it`() {
         composeRule.setContent {
-            Specimen(Modifier.width(400.dp)) { SettingsInfoRow("Version", "9.8.7 (commit abc1234)") }
+            Specimen(Modifier.width(400.dp)) {
+                SettingsInfoRow("Version", "9.8.7 (commit abc1234)")
+            }
         }
 
         val value =

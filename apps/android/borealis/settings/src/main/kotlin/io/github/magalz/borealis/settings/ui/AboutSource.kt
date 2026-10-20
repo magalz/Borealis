@@ -55,8 +55,8 @@ private fun versionName(context: Context): String? =
 
 /**
  * Opens [url] in the app that takes it, in a task of its own; false when none does (a Google TV
- * often has no browser). In the task of Borealis a browser that ignores Back would keep the
- * Library out of reach until the task restarted.
+ * often has no browser). In the task of Borealis a browser that ignores Back would keep the Library
+ * out of reach until the task restarted.
  */
 private fun openInApp(context: Context, url: String): Boolean =
     try {

@@ -26,8 +26,8 @@ private const val PHONE_260 = "w360dp-h260dp-xhdpi"
 /**
  * The licences dialog in a short window, such as a phone in landscape with its system bars. The
  * dialog scrolls its content when the window leaves too little room after its title, its Close
- * button and its padding, so the text may not be taller than what is left: a focus target that
- * runs on under Close is not above Close for the focus search, and Up from Close does not find it.
+ * button and its padding, so the text may not be taller than what is left: a focus target that runs
+ * on under Close is not above Close for the focus search, and Up from Close does not find it.
  */
 abstract class LicensesDialogShortWindowBase : PhoneSettingsTestBase() {
     /** Opens the licences dialog, with a long text, on the form factor of the subclass. */

@@ -64,6 +64,7 @@ fun NavigationRail(
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    @Suppress("UNUSED_PARAMETER") footer: (@Composable () -> Unit)? = null,
 ) {
     val selectedFocus = remember { FocusRequester() }
     Column(
@@ -94,6 +95,16 @@ fun NavigationRail(
         }
     }
 }
+
+/** The footer of the [NavigationRail]: the Borealis mark, the name and the version. */
+@Composable
+@Suppress("UNUSED_PARAMETER")
+fun RailFooter(
+    name: String,
+    version: String?,
+    description: String,
+    modifier: Modifier = Modifier,
+) = Unit
 
 @Composable
 private fun RailEntry(

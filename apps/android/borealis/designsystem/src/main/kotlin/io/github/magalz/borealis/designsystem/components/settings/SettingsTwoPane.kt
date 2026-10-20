@@ -50,6 +50,8 @@ import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
+import io.github.magalz.borealis.designsystem.glass.GlassTextColors
+import io.github.magalz.borealis.designsystem.glass.glassSurface
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
@@ -68,8 +70,9 @@ private val GROUP_PADDING_VERTICAL = 4.dp
 
 /**
  * The settings of a TV or handheld in two panes: the [groups] by title in a list on the left, and
- * on the right whatever [content] shows for the group whose key is [selected]. The pane scrolls and
- * spaces its rows 10dp apart; [content] puts the rows of the group in it, with 8dp of padding
+ * on the right whatever [content] shows for the group whose key is [selected]. The list is a glass
+ * panel and the stack of panes another, and [content] has the glass text colours. The pane scrolls
+ * and spaces its rows 10dp apart; [content] puts the rows of the group in it, with 8dp of padding
  * around them already given. A group for which [selfScrolling] is true brings its own scroll and
  * padding: its [content] fills the pane, which does not wrap it in a scroll that would give it an
  * unbounded height.
@@ -126,22 +129,25 @@ fun <K> SettingsTwoPane(
     }
     val navigation = rememberGroupNavigation(current, onSelect, pane, selectedGroup)
     val composed = rememberComposedGroups(groups, current, selfScrolling)
-    Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(PANE_GAP)) {
-        GroupList(groups, current, navigation, selectedGroup, focusOnOpen)
-        GroupPanes(
-            groups,
-            composed,
-            current,
-            selfScrolling,
-            pane,
-            Modifier.weight(1f).fillMaxHeight().onKeyEvent { event ->
-                // No row used Left: go back to the selected group.
-                val left = event.key == Key.DirectionLeft
-                if (left && event.type == KeyEventType.KeyDown) selectedGroup.requestFocus()
-                left
-            },
-            content,
-        )
+    val shape = MaterialTheme.shapes.large
+    GlassTextColors {
+        Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(PANE_GAP)) {
+            GroupList(groups, current, navigation, selectedGroup, focusOnOpen)
+            GroupPanes(
+                groups,
+                composed,
+                current,
+                selfScrolling,
+                pane,
+                Modifier.weight(1f).fillMaxHeight().glassSurface(shape).onKeyEvent { event ->
+                    // No row used Left: go back to the selected group.
+                    val left = event.key == Key.DirectionLeft
+                    if (left && event.type == KeyEventType.KeyDown) selectedGroup.requestFocus()
+                    left
+                },
+                content,
+            )
+        }
     }
 }
 
@@ -242,6 +248,7 @@ private fun <K> GroupList(
     Column(
         Modifier.width(BorealisDimens.navWidth(LocalFormFactor.current))
             .fillMaxHeight()
+            .glassSurface(MaterialTheme.shapes.large)
             .verticalScroll(rememberScrollState())
             .padding(BorealisDimens.listPadding)
             .selectableGroup()

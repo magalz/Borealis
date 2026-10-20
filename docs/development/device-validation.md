@@ -1094,6 +1094,35 @@ except where a step says otherwise.
     capture of 1.4. Take no capture during a stream, because it would show the PC
     screen.
 
+### Re-check after the follow-ups
+
+Run these on the final build, `5025614e`, and record the results in
+[section 14](#14-results-sprint-9). Record each
+item as `pass`, `fail` or `not applicable`, as in section 3.22.
+
+1. S22 in landscape, with the pad or the receiver named in each item.
+   - (a) With a pad on the USB driver (receiver in XInput mode, the USB driver on):
+     open the in-game menu with Select and Start held. Down lands on Keyboard.
+     Open it with A. Expected: the covering keyboard opens, and D-pad, A and B
+     work. The row ends wrap. B closes it.
+   - (b) With the receiver in its other mode (a system pad), switched on after the
+     stream started: open the keyboard from the menu. Expected: the keyboard opens
+     covering, and the pad navigates it.
+   - (c) With the Bluetooth pad: Right on the last key of a letter row, of an Fn
+     123 row and of the bottom row goes to the first key. Left on the first key
+     goes to the last key. Expected: the same in each row.
+   - (d) With the phone in portrait and a pad connected: the keyboard covers the
+     stream. While the covering keyboard is open, touches do not reach the stream.
+   - (e) The AULA F75Max alone, in landscape: the phone layout, as at `83a6aa66`.
+2. Streamer.
+   - (f) Settings, About, Open-source licences: Up from Close focuses the text and
+     shows its outline. Down and Up scroll it. Down at the end returns to Close.
+   - (g) atrace with Aurora curtains (the method of section 14): the work frames
+     come about every 33 ms.
+   - (h) Settings group switch: still one frame of about 50 to 60 ms.
+3. End with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the
+   Streamer.
+
 ## 4. Results templates
 
 Copy one table per device. Use `pass`, `fail` or `not applicable`, and add a
@@ -1901,7 +1930,8 @@ Fix (merge `89b46c5b`, task commits `748f688c`, the test first, and `dd3d383f`):
   the JOYSTICK source with X and Y axes.
 - The layout goes back to the phone layout when the controller disconnects.
 - At the stream start, the docked keyboard follows the same rule
-  (`StreamChromeHost.isPhone`).
+  (`StreamChromeHost.isPhone`; since Sprint 9, `StreamChromeHost.dockedKeyboard`,
+  decided when the keyboard opens).
 - Limitation: a pad claimed by the app's USB driver is no Android input device
   while it is claimed, so the form factor cannot see it.
 
@@ -2035,18 +2065,32 @@ No crash or ANR appeared in logcat in any part.
 
 This section holds the Sprint 9 results. The checks follow the steps of
 [section 3.22](#322-sprint-9-checks). The TV measurement is recorded. The device
-round has not run yet, so its results are a placeholder.
+round ran on 2026-10-19. Its results are in the table below, with the follow-up
+fixes that the round led to. Some fixes were re-checked on the S22 after the
+round. The final re-check is pending, with the steps in
+[section 3.22, re-check after the follow-ups](#re-check-after-the-follow-ups).
 
 ### Setup
 
-- Build: the debug APK of the phase branch `phase/s9-ux-handheld`. To fill in
-  after the round: the commit that was built and installed.
-- Host: LuminalShine 26.09.1. To confirm after the round.
-- Devices: the Google TV Streamer, over wireless ADB, and the Galaxy S22 in
-  landscape with a pad, over USB or wireless ADB.
-- Pads and keyboard: to fill in after the round (the 8BitDo pads and the AULA
-  F75Max keyboard of Sprint 8).
-- Rounds: to fill in after the round.
+- Build: the round ran on `51de8e07`, installed with `adb install -r`: on the TV
+  at 20:23 and on the S22 at 20:48 on 2026-10-19. The S22 re-check ran on
+  `83a6aa66` at 23:30. The final re-check runs on `5025614e`, whose gate and
+  four-module Roborazzi verify passed on 2026-10-20; the commits after it change
+  docs only.
+- Host: the app reports "Sunshine-compatible, version 7.1.431". TODO(verify):
+  the owner confirms the build name, LuminalShine 26.09.1 as in Sprint 8. The
+  `appversion` of the 26.09.1 fixtures in `core/tests/fixtures/luminalshine/26.09.1`
+  is the same.
+- Devices: the Google TV Streamer over wireless ADB, and the Samsung Galaxy S22
+  over wireless ADB.
+- Pads and keyboard:
+  - the 8BitDo Ultimate 2 over Bluetooth, a system pad;
+  - the same pad through its 2.4 GHz receiver, in XInput mode `2dc8:310b` (held
+    by the app's USB driver) and in the other mode `2dc8:6012` (a system pad);
+  - the AULA F75Max keyboard over Bluetooth.
+- Rounds:
+  - 2026-10-19, from about 20:20 to 22:00, for the round;
+  - 2026-10-19, at 23:30, for the S22 re-check.
 - Evidence: logcat and `dumpsys` over ADB. Captures are cropped to the menu or the
   overlay, or reduced to unreadable thumbnails, and deleted after use (section 5).
 
@@ -2074,7 +2118,9 @@ The scripts that ran the trace and read the frame times are not in the repositor
 | Tabs (a pane composed once per group, `95bd5feb`, with a 150 ms wait before the pane follows focus) | 58 to 78 ms | focus about 25 ms, pane about 240 ms with the 150 ms wait |
 | Stacked v1 (the panes laid out and stacked, `6b9f2eb2`, with a 30 ms wait) | about 70 ms | pane about 110 ms |
 | **Final** (a switch changes layers with no wait, `1f2d9769`, merge `1b6d651f`) | **about 50 ms** | **focus and pane together 55 to 100 ms** |
+| Round build `51de8e07` (2026-10-19, 12 moves) | 48 to 60 ms (median 58) | focus shown 60 ms (median) after the key |
 
+- Settings has no regression since the final stacked build.
 - An intermediate build that updated the rows in place, before the pane was kept
   per group, measured about 209 ms of pane frame and about 430 ms until the pane
   showed (message of `95bd5feb`).
@@ -2084,27 +2130,54 @@ The scripts that ran the trace and read the frame times are not in the repositor
   other groups are built one per frame, in frames of 110 to 250 ms over about
   1.2 s.
 
+**Background pacing.** On `51de8e07`, the Aurora curtains work frames came every
+50 ms (20 fps) at 60 Hz, as atrace showed on the Streamer. `31dc1335` fixed this:
+the frames now come about every 33 ms (30 fps). The re-measure is pending.
+
 ### Device round
 
-Not run yet. After the round, one row per step of
-[section 3.22](#322-sprint-9-checks) goes here, with the result, the device, the
-evidence and a note for each failure.
+The round ran on 2026-10-19, on build `51de8e07` unless a row says otherwise. One
+row per step of [section 3.22](#322-sprint-9-checks), with the result, the device,
+the evidence and a note for each failure.
 
 | # | Item | Device | Result | Evidence and notes |
 | --- | --- | --- | --- | --- |
-| 1 | Settings, opening and groups | TV | not run | |
-| 2 | Settings, moving between groups | TV | not run | |
-| 3 | Appearance, Background (the seven styles) | TV | not run | |
-| 4 | The background across the screens, and not in a stream | TV | not run | |
-| 5 | Quit texts | TV | not run | |
-| 6 | Host details | TV | not run | |
-| 7 | The Starting screen | TV | not run | |
-| 8 | Send to phone: Expired and No network | TV | not run | |
-| 9 | Rows F15 and F16 of section 12 | TV, S22 | not run | |
-| 10 | Host cards and the phone bar gap | S22 | not run | |
-| 11 | Fn 123 | S22 | not run | |
-| 12 | A keyboard alone | S22 | not run | |
-| 13 | The quit combo, bumpers first | S22 | not run | |
-| 14 | The Gamepad mouse speed slider at 10 % and 200 % | S22 | not run | |
-| 15 | The quit combo on a USB-driver pad, final build | S22 | not run | |
-| 16 | The battery saver | S22 | not run | |
+| 1 | Settings, opening and groups | TV | pass | Focus on Stream on open. Nine groups, all whole, with no scrolling. Left goes to the rail's Settings. |
+| 2 | Settings, moving between groups | TV | pass | Switch frame 48 to 60 ms. Down then Right (one input command) enters the first row of the new group, 6 times. Each group opens at its top. Switches show their own state. Left from a row returns to the group. Holding Down over the groups gave no stutter. |
+| 3 | Appearance, Background (the seven styles) | TV | pass | List order with Aurora curtains focused. All seven styles apply live. One ExoPlayer per style (Release and Init in logcat), no errors. Starfield is kept across leaving, returning and a force-stop. Off is a uniform page colour. |
+| 4 | The background across the screens, and not in a stream | TV | pass | The background shows behind Hosts, Add host, Apps, Settings, Privacy and diagnostics, and the Audit trail. The rail keeps its own colour. The owner saw clean transitions and checked reduced motion. No background on the Starting screen or in the stream; the Library is stopped and the player is released at the stream start. Observation: the activity transition into the stream crossfades Apps and Starting for one frame. This is the system animation. |
+| 5 | Quit texts | TV, S22 | pass | Game (Steam Big Picture): the menu Quit lines are on two lines; the confirmation "Quit `<game>`?" has Cancel focused; Disconnect is unchanged; Apps Quit and Quit-and-start; the conflict dialog, from a race (TV start, then S22 1.2 s later), with Cancel, and the TV kept streaming. Desktop: the conflict dialog shows one line; the menu, its confirmation and Apps Quit-and-start ("Ends the stream first." and "Nothing is lost.") are as specified. Finding: the final Quit of Desktop ends in "Nothing running", and "Quitting Desktop…" was too quick to read (see [roadmap, Next: UX and accessibility](../roadmap.md#next-ux-and-accessibility)). |
+| 6 | Host details | TV | pass | Offline host: Name, Status Offline, and Other addresses (a non-default port in brackets). Online host: Name, Online, the address without its port, Other addresses, Paired Yes, MAC address (for wake), a blank line and the capability block. "Running: `<app>`" while the game ran. No UUID and no "null". |
+| 7 | The Starting screen | TV | pass | The steps include "Preparing the display". No overlay text appears. |
+| 8 | Send to phone: Expired and No network | TV | pass | Expired: "The link expired. Try again for a new one." after 5 minutes. No network: the message and the adb command, read from the owner's photo. The wireless debugging dropped with the Wi-Fi; the owner turned it on again. |
+| 9 | Rows F15 and F16 of section 12 | TV | partial | Frames checked: Forget and Erase are Compact with Cancel focused; Host details, App details, Saved and the licences are Standard; Send to phone is Wide. The TV keyboard row is centred. Not run: the Aurora loader, the PIN and "Paired" (no unpaired host), and the error actions. The S22 part was not run. Finding: the licence text could not be scrolled, fixed in `3eed2dee`. |
+| 10 | Host cards and the phone bar gap | S22 | pass | With a pad, the handheld layout. The cards follow their content (90 dp and 111 dp, each with 18 dp under its last line). In portrait, Apps, Settings, Privacy and the Audit trail put the title at the same distance from the back arrow. |
+| 11 | Fn 123 | S22 | pass | Layer and toggle pass. Finding (owner): the row ends did not wrap; fixed in `39c4648c`. The wrap is checked in [section 3.22](#re-check-after-the-follow-ups), step (c). |
+| 12 | A keyboard alone | S22 | fail, then fixed | The AULA alone in landscape gave the handheld layout, because of the D-pad navigation from the keyboard. The stream part passed (no controller context for the AULA). Fixed in `83a6aa66`; the re-check on `83a6aa66` passed. |
+| 13 | The quit combo, bumpers first | S22 | pass | Five combos in different release orders. The stream ended each time, with no Steam, no menu and no mouse toast. Select and Start held for 1 s open the menu. |
+| 14 | The Gamepad mouse speed slider at 10 % and 200 % | S22 | pass | 10 % is slow and 200 % is fast. The speed was set back to 50 %. |
+| 15 | The quit combo on a USB-driver pad, final build | S22 | partial | Receiver in XInput mode, the USB driver on, and "always allow" set on the S22. The combo with the bumpers first ended the stream. Finding: the menu did not navigate with the USB pad on the phone; fixed in `e3a29236`, and the re-check passed for D-pad, A and B, also as the first key. Then the keyboard opened docked and out of reach; fixed in `5025614e`. That re-check is pending ([section 3.22](#re-check-after-the-follow-ups), steps (a) and (b)). |
+| 16 | The battery saver | S22 | pass | Northern lights moves. With the saver on: no movement, the still is shown and the player is released. Aurora curtains is still with the saver on. With the saver off, the player starts again. |
+
+Follow-ups, merged after the round, in this order:
+
+- `39c4648c`: the on-screen keyboard wraps at the end of a row. Right on the last
+  key goes to the first key, and Left on the first key goes to the last, in both
+  layers and in the bottom row. There is no vertical wrap.
+- `f2682e2c`: lint no longer fails when a newer version comes out.
+  `NewerVersionAvailable`, `GradleDependency`, `AndroidGradlePluginVersion` and
+  `OutdatedLibrary` are off in both convention plugins. Dependabot reports new
+  versions instead, except for AGP.
+- `e3a29236`: a USB-driver pad navigates the in-game menu on a phone.
+  `StreamChromeHost.dispatchUsbPadKey` leaves touch mode before a key while the
+  chrome is modal. The first key also acts, as on a TV.
+- `83a6aa66`: on a touch device, only a connected game controller makes a wide
+  window a handheld. A keyboard's D-pad navigation no longer counts. ADR 0052 is
+  amended. This is the first symptom of issue #28.
+- `31dc1335`: the drawn backgrounds update about every 33 ms, which is 30 fps at
+  30, 60, 90 and 120 Hz. Before, they ran at 20 fps at 60 Hz.
+- `3eed2dee`: on a TV, Up from Close reaches the licence text, Up and Down scroll
+  it, and Down at its end returns to Close. The text shows the focus outline.
+- `5025614e`: the stream keyboard type (docked or covering) is decided each time
+  the keyboard opens. A pad held by the USB driver counts, and a phone with any
+  pad gets the covering keyboard, also in portrait.

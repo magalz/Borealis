@@ -146,10 +146,11 @@ crash notice, which cannot be triggered. The results are in
 ### Sprint 9: UX polish and the handheld
 
 The work for this sprint is on the phase branch `phase/s9-ux-handheld`, which
-starts at `68a8972a`. All code items are merged on it. The final device round,
-[section 3.22](development/device-validation.md#322-sprint-9-checks), has not run
-yet. Its results go to
-[section 14](development/device-validation.md#14-results-sprint-9).
+starts at `68a8972a`. All code items are merged on it. The device round ran on
+2026-10-19, with [section 3.22](development/device-validation.md#322-sprint-9-checks)
+as its checklist. Its results and the follow-up fixes are in
+[section 14](development/device-validation.md#14-results-sprint-9). The final
+re-check of the follow-ups is pending.
 
 1. **Smoother D-pad moves in Settings on a TV.** Done (issue #22, merges
    `8d6e6304`, `5e95a90e` and `1b6d651f`). Reported by the owner on 2026-10-17. A
@@ -203,7 +204,9 @@ yet. Its results go to
    reports an alphabetic keyboard. On the S22, the AULA F75Max reports KEYBOARD,
    DPAD, MOUSE and JOYSTICK sources with keyboard type 2 (alphabetic). The 8BitDo
    Ultimate 2 reports GAMEPAD with a non-alphabetic keyboard and still counts. The
-   TV remote fallback is unchanged.
+   TV remote fallback is unchanged. On a touch device, the layout rule now counts
+   only a connected game controller, so a keyboard alone does not make a handheld
+   (`83a6aa66`, item 17).
 8. **Steam opens after a quit combo.** Done (issue #29, merge `ea4df39e`). Found
    in the Sprint 8 round, on the S22. The menu chord arms only from a clean start:
    once a button other than Start and Select is held, Start and Select do not
@@ -246,7 +249,8 @@ yet. Its results go to
     own "Preparing the display" step. The first-frame watchdog and the connection
     warnings are unchanged.
 12. **A device round** for what Sprint 7 and Sprint 8 did not run, and for the
-    Sprint 9 changes. Open.
+    Sprint 9 changes. Run on 2026-10-19; the final re-check is pending
+    ([section 14](development/device-validation.md#14-results-sprint-9)).
     - No dedicated Android handheld is planned. The owner's handheld is the S22 in
       landscape with a pad.
     - The Send to phone Expired and No network states.
@@ -261,6 +265,46 @@ yet. Its results go to
     See the [device validation runbook, section 12](development/device-validation.md#12-results-sprint-7)
     for the Sprint 7 round. The results of this round go to
     [section 14](development/device-validation.md#14-results-sprint-9).
+13. **Keyboard wraps at the end of a row.** Done (merge `39c4648c`). Found by the
+    owner in the device round, on the S22 with a pad. Right on the last key of a
+    row goes to its first key, and Left on the first key goes to its last, in both
+    layers and in the bottom row. Up and Down do not wrap.
+14. **Lint no longer fails for a newer version.** Done (merge `f2682e2c`). A fresh
+    build failed lint on 2026-10-19, after Gradle 9.8.2 and kotlinx-serialization
+    1.12.0 came out. `NewerVersionAvailable`, `GradleDependency`,
+    `AndroidGradlePluginVersion` and `OutdatedLibrary` are off in both convention
+    plugins. Dependabot reports new versions instead, except for AGP.
+15. **A USB-driver pad navigates the in-game menu on a phone.** Done (merge
+    `e3a29236`). Found in the device round on the S22. With the pad on the app's
+    USB driver, Select and Start opened the menu, but no key moved its focus. The
+    window stayed in touch mode, where Compose gives no clickable row focus. A pad
+    key now leaves touch mode while the chrome is modal, and the first key acts, as
+    on a TV. The owner keeps this.
+16. **A keyboard alone does not make a phone a handheld.** Done (merge `83a6aa66`,
+    issue #28; [ADR 0052](adr/0052-structure-the-phase-2-ui.md) is amended). Found
+    in the device round on the S22 in landscape, with the AULA F75Max only. On a
+    touch device only a connected game controller makes a wide window a handheld.
+    This is the first symptom of item 7.
+17. **The drawn backgrounds run at about 30 fps.** Done (merge `31dc1335`). Found
+    in the device round: atrace on the Streamer at 60 Hz showed the Aurora curtains
+    frames every 50 ms (20 fps). The loop now wakes before each vsync, so the rate
+    is 30 fps at 30, 60, 90 and 120 Hz.
+18. **The licence text scrolls with the D-pad on a TV.** Done (merge `3eed2dee`).
+    Found in the device round on the Streamer: Up from Close never reached the
+    licence text. `focusable()` now comes before `verticalScroll()`, and the text
+    shows the focus outline ([ADR 0053](adr/0053-material-3-with-borealis-focus-on-tv.md)). Windows shorter
+    than about 320 dp are a known limit.
+19. **The stream keyboard is decided when it opens.** Done (merge `5025614e`). Found
+    in the device re-check on the S22: with a pad on the USB driver, or a system pad
+    switched on after the stream started, the Keyboard of the in-game menu opened
+    docked and out of the pad's reach. The type is now decided each time the
+    keyboard opens (`StreamChromeHost.dockedKeyboard`), not at session start. A phone
+    with no game controller connected docks the keyboard, and a pad held by the USB
+    driver counts as connected. A phone with any pad gets the covering keyboard,
+    also in portrait.
+20. **Final re-check of the follow-ups.** Open. Run the steps of
+    [section 3.22, re-check after the follow-ups](development/device-validation.md#re-check-after-the-follow-ups)
+    on the build after `5025614e`.
 
 ### Next: UX and accessibility
 
@@ -281,6 +325,16 @@ The owner sets their place relative to Sprint 10 when they are planned.
    - (A) collapsible sections that start collapsed;
    - (B) two levels, as the Android Settings app does: a list of the groups, then
      the page of the chosen group. The recommendation is B.
+
+Requested by the owner on 2026-10-19:
+
+- Panel and card backgrounds transparent, with a heavy blur, so that the animated
+  background stays visible. Measure the contrast against WCAG.
+- An Accessibility group in Settings.
+- More appearance customisation options, in Appearance.
+- Warning toasts as wide as their text and centred, not full width (for example
+  "App closed").
+- "Quitting `<app>`…" is too quick to read. Consider a minimum time on screen.
 
 ### Sprint 10: release preparation
 
@@ -411,6 +465,27 @@ scheduled yet.
 - **Two background defaults for one concept.** `LibraryNavHost` defaults to
   `BackgroundStyle.Default` and `LibraryScaffold` (in `LibraryRail.kt`) defaults
   to `BackgroundStyle.Off`.
+
+From the Sprint 9 device round, 2026-10-19. None is scheduled yet.
+
+- Back from Apps puts the focus on the first host card, not on the host that was
+  opened. Seen twice on the Streamer in the round; the cause is not traced yet.
+- The About "Version" row shows a chevron but opens nothing (`AboutSection.kt`).
+- Update Gradle 9.8.1 to 9.8.2 and kotlinx-serialization 1.11.0 to 1.12.0.
+  Dependabot should open the two updates.
+- AGP has no new-version notice. Dependabot ignores it until it has a single
+  source, and the lint check is off.
+- The licence text cannot be reached from Close on windows shorter than about
+  320 dp, because the 60 % height cap does not allow for the dialog's own scroll.
+- `AuditScreen.kt` `Detail` has the same `verticalScroll()` then `focusable()`
+  order. Check it on a TV with a long entry.
+- When the task root is not the launcher intent (for example a pinned shortcut
+  opened first), opening the app from the launcher stacks a new Library instance.
+  `LibraryActivity` has the standard launch mode; only `Game` is `singleTask`.
+  Seen on the Streamer after a start with `am start -n`, whose intent has no
+  action or category.
+- A touch handheld whose built-in controls report only `KEYBOARD | DPAD`, with no
+  GAMEPAD source, now gets the phone layout. This is rare; watch for it.
 
 ## Host-side items (LuminalShine)
 

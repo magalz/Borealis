@@ -74,8 +74,9 @@ Decision details:
      tint the secondary text is `#9DA1A7`.
 4. **Tint floor.** Each background has a tint floor. The glass is never more transparent than the
    lowest tint at which ink, ink-2 and accent-soft keep 4.5:1 unchanged. The adjusted secondary
-   text is also no lighter than `#A8ACB1`. TODO(verify): the direction of this bound is not clear
-   in the notes; check it against the generated table. In practice only Northern lights rises, to
+   text must also be no lighter than `#A8ACB1`, the Flowing light colour at 40 %, so it stays
+   clearly below ink-2. Northern lights at 60 % needs `#ACB0B4`, which is lighter than that bound,
+   and at 70 % it needs `#9DA1A7`, which is darker. So in practice only Northern lights rises, to
    70 % at 8 dp.
 5. **Technique.**
    * One shared blur per frame, at a quarter of the resolution, which each panel samples.
@@ -189,10 +190,9 @@ page is private, so it is not linked here.
 
 ### TV: accept about 27 frames a second
 
-* Good, because the background moves more smoothly.
-* Bad, because the Settings screen with glass costs 37 ms, and the 27 frames a second budget is
-  about 37 ms, so there is no margin. TODO(verify): the notes do not give the reason for 27 frames a
-  second.
+* Good, because nothing changes in the pacing code: the 30 fps loop simply misses its frame time.
+* Bad, because with glass the TV Settings frame costs 37 ms, more than the 33.3 ms budget at
+  30 fps, so the background drops to about 27 fps with uneven gaps between frames.
 
 ### TV: 24 frames a second (chosen)
 
@@ -202,8 +202,8 @@ page is private, so it is not linked here.
 ### TV: blur at 15 frames a second
 
 * Good, because the blur would update less often.
-* Bad, because the notes give no measurement for this option. TODO(verify): no figure for 15 frames
-  a second is in the notes.
+* Bad, because it was not measured: it halves the blur work on average, but the frames that redo
+  the blur still cost about 37 ms, so the frame times stay uneven.
 
 ### TV: tint only
 

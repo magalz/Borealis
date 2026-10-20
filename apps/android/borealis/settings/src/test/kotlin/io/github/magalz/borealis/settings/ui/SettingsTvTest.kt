@@ -1,11 +1,10 @@
 package io.github.magalz.borealis.settings.ui
 
+import androidx.compose.foundation.focusable
+import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.InputMode
-import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.Role
@@ -29,7 +28,7 @@ import androidx.compose.ui.test.requestFocus
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
-import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
+import io.github.magalz.borealis.designsystem.testing.FakeInputModeManager
 import io.github.magalz.borealis.designsystem.testing.OnPage
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.options.DisabledReason
@@ -87,20 +86,6 @@ private fun SettingsScreenTestBase.walkDownTheGroups() {
     }
 }
 
-/**
- * A window whose input mode a test sets. On a device a touch puts the window in touch mode before
- * the click that follows; a touch injected into a test does not, so a test that stands for a tap
- * sets the mode itself.
- */
-private class FakeInputModeManager(initial: InputMode) : InputModeManager {
-    override var inputMode: InputMode by mutableStateOf(initial)
-
-    override fun requestInputMode(inputMode: InputMode): Boolean {
-        this.inputMode = inputMode
-        return true
-    }
-}
-
 /** The settings screen on a TV: the groups on the left and the rows of one group on the right. */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = TV)
@@ -133,7 +118,8 @@ class SettingsTvTest : SettingsScreenTestBase() {
 
     /**
      * The screen in keyboard mode with a Privacy pane that has a row to focus, as the real pane
-     * has.
+     * has. The row takes focus in touch mode too, as a text field does, so that a pane that
+     * something entered in that mode shows it.
      */
     private fun showWithPrivacyRow() {
         val viewModel = viewModel()
@@ -143,7 +129,7 @@ class SettingsTvTest : SettingsScreenTestBase() {
                     SettingsRoute(
                         onBack = { backs++ },
                         onOpenPrivacy = { privacyOpens++ },
-                        privacyPane = { SettingsValueRow("Privacy row", null, {}) },
+                        privacyPane = { Text("Privacy row", Modifier.focusable()) },
                         about = testAbout(),
                         viewModel = viewModel,
                     )
@@ -323,11 +309,11 @@ class SettingsTvTest : SettingsScreenTestBase() {
         showWithPrivacyRow()
         window.inputMode = InputMode.Touch
 
-        group("Video").performClick()
+        group("Privacy and diagnostics").performClick()
         composeRule.waitForIdle()
 
-        composeRule.onNodeWithText("Codec").assertIsDisplayed()
-        composeRule.onNodeWithText("Codec").assertIsNotFocused()
+        composeRule.onNodeWithText("Privacy row").assertIsDisplayed()
+        composeRule.onNodeWithText("Privacy row").assertIsNotFocused()
         composeRule.onNodeWithText("Resolution").assertDoesNotExist()
     }
 

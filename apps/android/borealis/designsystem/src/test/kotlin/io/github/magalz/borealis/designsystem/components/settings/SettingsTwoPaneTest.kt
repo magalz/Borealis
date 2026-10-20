@@ -1,9 +1,11 @@
 package io.github.magalz.borealis.designsystem.components.settings
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -30,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.FakeInputModeManager
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
@@ -216,6 +219,24 @@ class SettingsTwoPaneTest {
     }
 
     @Test
+    fun `OK on a group that is not the selected one selects it and enters its first row`() {
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Stream").requestFocus()
+        // Another group is selected from outside while focus stays where the user left it.
+        composeRule.runOnUiThread { selected = "video" }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Stream").assertIsFocused()
+        assertThat(selections).isEmpty()
+
+        press(Key.DirectionCenter)
+
+        assertThat(selected).isEqualTo("stream")
+        assertThat(selections).containsExactly("stream")
+        composeRule.onNodeWithText("Resolution").assertIsFocused()
+        composeRule.onNodeWithText("Codec").assertDoesNotExist()
+    }
+
+    @Test
     fun `OK on a group with a single row enters that row`() {
         selected = "about"
         composeRule.setContentInKeyboardMode { Specimen() }
@@ -268,8 +289,8 @@ class SettingsTwoPaneTest {
 
         assertThat(selected).isEqualTo("audio")
         composeRule.onNodeWithText("Channels").assertIsDisplayed()
-        composeRule.onNodeWithText("Channels").assertIsNotFocused()
-        composeRule.onNodeWithText("Vibration").assertIsNotFocused()
+        // The notes take focus in touch mode too, so they would show a pane that was entered.
+        composeRule.onNodeWithText("Notes").assertIsNotFocused()
     }
 
     @Test
@@ -284,8 +305,9 @@ class SettingsTwoPaneTest {
         composeRule.waitForIdle()
 
         assertThat(selected).isEqualTo("audio")
-        composeRule.onNodeWithText("Channels").assertIsNotFocused()
-        composeRule.onNodeWithText("Vibration").assertIsNotFocused()
+        composeRule.onNodeWithText("Channels").assertIsDisplayed()
+        // The notes take focus in touch mode too, so they would show a pane that was entered.
+        composeRule.onNodeWithText("Notes").assertIsNotFocused()
     }
 
     @Test
@@ -497,6 +519,9 @@ class SettingsTwoPaneTest {
                     "audio" -> {
                         SettingsValueRow("Channels", "Stereo", {})
                         SettingsSliderRow("Vibration", 0f, 0f..200f, 10f, "0 %", {})
+                        // Unlike the clickable rows it takes focus in touch mode too, as a text
+                        // field does: a pane that something entered in that mode shows it.
+                        Text("Notes", Modifier.focusable())
                     }
                     else -> SettingsValueRow("Licences", null, {})
                 }

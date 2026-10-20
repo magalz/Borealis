@@ -97,7 +97,14 @@ private fun HostBackground(style: BackgroundStyle) {
     )
 }
 
-/** The host over any [background], which a test makes plain. */
+/**
+ * The host over any [background], which a test makes plain.
+ *
+ * The tree of the host is the same whatever the glass is: the background in a box of its own, then
+ * [content], and the three layers whether they are used or not. Only modifiers change when the look
+ * does, because a content that moved in the tree would be composed again and lose its state: the
+ * Library keeps its navigation in the host, and the look changes while the screen is on.
+ */
 @Composable
 internal fun GlassHostOver(
     style: BackgroundStyle,
@@ -113,51 +120,42 @@ internal fun GlassHostOver(
         else null
     val glass = rememberUpdatedState(overlayGlass)
     val overlays = remember { GlassOverlays(glass) }
-    CompositionLocalProvider(LocalGlassOverlays provides overlays) {
+    val source = rememberGraphicsLayer()
+    val blurred = rememberGraphicsLayer()
+    val small = rememberGraphicsLayer()
+    val scene =
+        remember(spec, style, small) {
+            GlassScene(spec, style, backdrop = small.takeIf { spec.blurDp > 0 })
+        }
+    val radiusPx = with(LocalDensity.current) { spec.blurDp.dp.toPx() }
+    CompositionLocalProvider(LocalGlassOverlays provides overlays, LocalGlassScene provides scene) {
         Box(modifier.fillMaxSize().windowBlur(overlays)) {
-            if (spec.blurDp > 0) {
-                BlurredHost(spec, style, background, content)
-            } else {
-                val scene = remember(spec, style) { GlassScene(spec, style) }
-                CompositionLocalProvider(LocalGlassScene provides scene) {
-                    background()
-                    content()
-                }
+            Box(Modifier.fillMaxSize().recordBackdrop(scene, source, blurred, radiusPx)) {
+                background()
             }
+            content()
         }
     }
 }
 
 /**
- * The host of a blurred glass: [background] is recorded into a layer of its own and drawn full
- * screen, and the blurred copy at a fourth of the size is made from that layer.
+ * Where the glass blurs, records what this draws, which is the background, into [source] and draws
+ * it from there, and makes the blurred copy at a fourth of the size that the surfaces take their
+ * regions of. Where it does not, this draws as it is.
  */
-@Composable
-private fun BlurredHost(
-    spec: GlassSpec,
-    style: BackgroundStyle,
-    background: @Composable () -> Unit,
-    content: @Composable () -> Unit,
-) {
-    val source = rememberGraphicsLayer()
-    val blurred = rememberGraphicsLayer()
-    val small = rememberGraphicsLayer()
-    val scene = remember(spec, style, small) { GlassScene(spec, style, small) }
-    val radiusPx = with(LocalDensity.current) { spec.blurDp.dp.toPx() }
-    CompositionLocalProvider(LocalGlassScene provides scene) {
-        Box(
-            Modifier.fillMaxSize()
-                .onGloballyPositioned { scene.origin = it.positionInRoot() }
-                .drawWithContent {
-                    source.record { this@drawWithContent.drawContent() }
-                    recordBackdrop(source, blurred, small, radiusPx)
-                    drawLayer(source)
-                }
-        ) {
-            background()
+private fun Modifier.recordBackdrop(
+    scene: GlassScene,
+    source: GraphicsLayer,
+    blurred: GraphicsLayer,
+    radiusPx: Float,
+): Modifier {
+    val small = scene.backdrop ?: return this
+    return onGloballyPositioned { scene.origin = it.positionInRoot() }
+        .drawWithContent {
+            source.record { this@drawWithContent.drawContent() }
+            blurBackdrop(source, blurred, small, radiusPx)
+            drawLayer(source)
         }
-        content()
-    }
 }
 
 /**
@@ -166,7 +164,7 @@ private fun BlurredHost(
  * the layer it is drawn into: that is why [small] is rendered offscreen at that size. The radius
  * shrinks with the size, so the blur reaches as far as it would at full size.
  */
-private fun DrawScope.recordBackdrop(
+private fun DrawScope.blurBackdrop(
     source: GraphicsLayer,
     blurred: GraphicsLayer,
     small: GraphicsLayer,

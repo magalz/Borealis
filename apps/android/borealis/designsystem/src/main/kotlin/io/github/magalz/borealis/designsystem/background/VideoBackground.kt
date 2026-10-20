@@ -43,7 +43,8 @@ private const val STILL_FADE_MILLIS = 250
  */
 @Composable
 internal fun VideoBackground(clip: BackgroundClip, stillOnly: Boolean, modifier: Modifier) {
-    var frameShown by remember(clip) { mutableStateOf(false) }
+    // A texture that is made again, as when a sheet closes, has drawn no frame: it starts over.
+    var frameShown by remember(clip, stillOnly) { mutableStateOf(false) }
     Box(modifier) {
         if (!stillOnly) {
             VideoSurface(

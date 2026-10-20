@@ -21,6 +21,7 @@ import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
+import io.github.magalz.borealis.designsystem.testing.assertSnackbarIsAsWideAsItsText
 import io.github.magalz.borealis.library.domain.AppRepository
 import io.github.magalz.borealis.library.domain.AppsSnapshot
 import io.github.magalz.borealis.library.domain.HostRepository
@@ -41,7 +42,6 @@ import io.github.magalz.borealis.library.testing.FakeStreamLauncher
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.aHost
 import io.github.magalz.borealis.library.testing.anApp
-import io.github.magalz.borealis.library.testing.assertSnackbarIsAsWideAsItsText
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test

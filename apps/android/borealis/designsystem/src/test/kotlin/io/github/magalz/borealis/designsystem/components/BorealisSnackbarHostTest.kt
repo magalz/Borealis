@@ -14,11 +14,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocusable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -118,6 +123,23 @@ class BorealisSnackbarHostTest {
 
     @Test
     @Config(qualifiers = PHONE)
+    fun `a screen reader is told of a snackbar that shows`() {
+        composeRule.setContent { Specimen(FormFactor.Phone, SHORT) }
+
+        // Material's host announces the snackbar politely; the Borealis one draws its own content
+        // inside that host and must keep it.
+        composeRule
+            .onNode(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.LiveRegion,
+                    LiveRegionMode.Polite,
+                ) and hasAnyDescendant(hasText(SHORT))
+            )
+            .assertExists()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
     fun `an action still runs and answers the call that showed the snackbar`() {
         composeRule.setContent { Specimen(FormFactor.Phone, SHORT, actionLabel = "Undo") }
 
@@ -136,8 +158,7 @@ class BorealisSnackbarHostTest {
                     state.showSnackbar(message, actionLabel, duration = SnackbarDuration.Indefinite)
             }
             // On the page, so the shadow of the snackbar is no colour of it. At the bottom start,
-            // so
-            // a host that does not centre its snackbar leaves it there.
+            // so a host that does not centre its snackbar leaves it there.
             Box(
                 Modifier.fillMaxSize().background(LocalBorealisColors.current.page),
                 contentAlignment = Alignment.BottomStart,

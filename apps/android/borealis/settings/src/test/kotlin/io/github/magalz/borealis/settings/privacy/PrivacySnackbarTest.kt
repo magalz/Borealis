@@ -3,10 +3,10 @@ package io.github.magalz.borealis.settings.privacy
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.magalz.borealis.designsystem.testing.StaysAsSnackbar
+import io.github.magalz.borealis.designsystem.testing.assertSnackbarIsAsWideAsItsText
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
-import io.github.magalz.borealis.settings.testing.StaysAsSnackbar
-import io.github.magalz.borealis.settings.testing.assertSnackbarIsAsWideAsItsText
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

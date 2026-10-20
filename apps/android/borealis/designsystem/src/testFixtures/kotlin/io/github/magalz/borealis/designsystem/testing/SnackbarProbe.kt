@@ -1,4 +1,4 @@
-package io.github.magalz.borealis.settings.testing
+package io.github.magalz.borealis.designsystem.testing
 
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState

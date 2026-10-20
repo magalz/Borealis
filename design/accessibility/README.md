@@ -25,7 +25,7 @@ Use one folder for the frames, outside the repository. Its sub-folders are named
    `DrawnBackground` the app uses, and it writes only when `BOREALIS_FRAMES_OUT` is set. From
    `apps/android`:
 
-   ```
+   ```sh
    BOREALIS_FRAMES_OUT=<frames> ./gradlew :borealis:designsystem:testDebugUnitTest --tests '*BackgroundFrameExport*' --rerun
    ```
 
@@ -35,20 +35,20 @@ Use one folder for the frames, outside the repository. Its sub-folders are named
 2. **The clips.** 24 frames of each clip in `designsystem/src/main/res/raw`, evenly spaced over its
    loop, at the clip's own 1920 x 1080 px, which is a TV at xhdpi:
 
-   ```
+   ```sh
    python -I design/accessibility/contrast.py extract <frames>
    ```
 
 3. **The measurement.** It reads the colours from `design/tokens.json`, writes the JSON and prints
    the tables of `docs/ux/accessibility.md`. It takes minutes, one frame to a process:
 
-   ```
+   ```sh
    python -I design/accessibility/contrast.py measure <frames> --json <result.json> --jobs 4
    ```
 
 Run the tests from the repository root:
 
-```
+```sh
 python -m unittest discover -s design/accessibility
 ```
 

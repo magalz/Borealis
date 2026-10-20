@@ -59,6 +59,7 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.settings.R
+import io.github.magalz.borealis.settings.ui.dpadScroll
 
 /** An outline sits 5dp outside a row, so the list keeps 8dp around it and 10dp between rows. */
 private val LIST_PADDING = 8.dp
@@ -257,16 +258,20 @@ private fun Detail(detail: AuditDetail) {
     val shape = MaterialTheme.shapes.medium
     val spacing = LocalBorealisSpacing.current
     val focusRequester = remember { FocusRequester() }
+    val scroll = rememberScrollState()
     Column(
         Modifier.widthIn(max = BorealisDimens.contentMaxWidth)
             .fillMaxWidth()
             .padding(horizontal = spacing.gutter, vertical = LIST_PADDING)
             .initialFocus(focusRequester)
+            .dpadScroll(scroll)
             .borealisFocusIndication(shape)
             .clip(shape)
             .background(LocalBorealisColors.current.surface, shape)
-            .verticalScroll(rememberScrollState())
+            // Before verticalScroll: a focusable after it takes the size of the whole entry, not
+            // of the viewport, and the focus search does not find it where it is shown.
             .focusable()
+            .verticalScroll(scroll)
             .padding(spacing.cardPadding),
         verticalArrangement = Arrangement.spacedBy(FIELD_GAP),
     ) {

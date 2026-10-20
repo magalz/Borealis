@@ -41,6 +41,7 @@ import io.github.magalz.borealis.library.testing.FakeStreamLauncher
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.aHost
 import io.github.magalz.borealis.library.testing.anApp
+import io.github.magalz.borealis.library.testing.assertSnackbarIsAsWideAsItsText
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -202,6 +203,18 @@ class LibraryActivityTest {
         composeRule.waitForIdle()
 
         composeRule.onNodeWithText("This host is no longer available.").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a message of the shell is as wide as its text`() {
+        streams.known = false
+        hosts.emit(aHost(id = "desk", name = "Desk PC", runningApp = RunningApp(7, "Steam")))
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("continue:desk").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.assertSnackbarIsAsWideAsItsText("This host is no longer available.")
     }
 
     @Test

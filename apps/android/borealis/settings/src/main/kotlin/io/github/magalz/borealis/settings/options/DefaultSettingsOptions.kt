@@ -71,12 +71,14 @@ class DefaultSettingsOptions @Inject constructor() : SettingsOptions {
     ): RowState {
         val rule = rules[setting] ?: return RowState.Enabled
         val dependency = rule.dependency
+        val overridden = rule.overriddenBy(snapshot)
         return when {
             rule.hiddenOn(facts) -> RowState.Hidden
             rule.blockedByFirmware(facts) ->
                 RowState.Disabled(DisabledReason.HDR_BROKEN_ON_FIRMWARE)
             dependency != null && !snapshot[dependency] ->
                 RowState.Disabled(DisabledReason.DEPENDS_ON_SETTING, dependency)
+            overridden != null -> RowState.Disabled(overridden)
             else -> RowState.Enabled
         }
     }
@@ -88,13 +90,14 @@ class DefaultSettingsOptions @Inject constructor() : SettingsOptions {
 
     /**
      * What decides the state of one row: [hiddenOn] says when the device cannot use it,
-     * [blockedByFirmware] when the firmware breaks it, and [dependency] is the switch that must be
-     * on.
+     * [blockedByFirmware] when the firmware breaks it, [dependency] is the switch that must be on,
+     * and [overriddenBy] says which other setting makes the row useless, if one does.
      */
     private class Rule(
         val hiddenOn: (DeviceFacts) -> Boolean = { false },
         val blockedByFirmware: (DeviceFacts) -> Boolean = { false },
         val dependency: BooleanSetting? = null,
+        val overriddenBy: (SettingsSnapshot) -> DisabledReason? = { null },
     )
 
     private companion object {
@@ -182,6 +185,25 @@ class DefaultSettingsOptions @Inject constructor() : SettingsOptions {
         val onScreenControls =
             Rule(hiddenOn = { !it.hasTouchscreen }, dependency = Settings.SHOW_ONSCREEN_CONTROLS)
 
+        /**
+         * The glass rows set the Standard level of Transparency. High contrast, and Transparency
+         * Reduced or Off, override them (ADR 0057); High contrast is the reason that is given
+         * first, because it overrides everything.
+         */
+        val glass =
+            Rule(
+                overriddenBy = { snapshot ->
+                    when {
+                        snapshot[Settings.HIGH_CONTRAST] -> DisabledReason.HIGH_CONTRAST_ON
+                        snapshot[Settings.TRANSPARENCY] == Settings.TRANSPARENCY_OFF ->
+                            DisabledReason.TRANSPARENCY_OFF
+                        snapshot[Settings.TRANSPARENCY] == Settings.TRANSPARENCY_REDUCED ->
+                            DisabledReason.TRANSPARENCY_REDUCED
+                        else -> null
+                    }
+                }
+            )
+
         /** The rows that have a rule; a row that is not here is always enabled. */
         val rules: Map<Setting<*>, Rule> =
             mapOf(
@@ -219,6 +241,8 @@ class DefaultSettingsOptions @Inject constructor() : SettingsOptions {
                         hiddenOn = { !it.supportsHdr10 },
                         blockedByFirmware = { it.hasBrokenHdrFirmware },
                     ),
+                Settings.GLASS_TINT to glass,
+                Settings.GLASS_BLUR to glass,
             )
     }
 }

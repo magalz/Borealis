@@ -94,9 +94,10 @@ internal fun disabledNote(disabled: RowState.Disabled?): String? =
     when (disabled?.reason) {
         null -> null
         DisabledReason.HDR_BROKEN_ON_FIRMWARE -> stringResource(R.string.settings_note_hdr_firmware)
-        DisabledReason.TRANSPARENCY_REDUCED,
-        DisabledReason.TRANSPARENCY_OFF,
-        DisabledReason.HIGH_CONTRAST_ON -> null
+        DisabledReason.TRANSPARENCY_REDUCED ->
+            stringResource(R.string.settings_note_transparency_reduced)
+        DisabledReason.TRANSPARENCY_OFF -> stringResource(R.string.settings_note_transparency_off)
+        DisabledReason.HIGH_CONTRAST_ON -> stringResource(R.string.settings_note_high_contrast)
         DisabledReason.DEPENDS_ON_SETTING ->
             disabled.dependency
                 ?.let { SettingsItem.forSetting(it) }
@@ -107,6 +108,11 @@ internal fun disabledNote(disabled: RowState.Disabled?): String? =
                     )
                 }
     }
+
+/** The label of an entry of a fixed list: `Larger`, or `115 %` when the label has a number. */
+@Composable
+private fun FixedChoice.label(): String =
+    labelArg?.let { stringResource(labelRes, it) } ?: stringResource(labelRes)
 
 /** What the row of the list [item] shows as its value, for its [value]. */
 @Composable
@@ -120,10 +126,7 @@ internal fun choiceValue(item: SettingsItem, value: RowValue): String {
                 .firstOrNull { it.fps.toString() == key }
                 ?.let { frameRateLabel(it) }
                 ?: key.toIntOrNull()?.let { frameRateLabel(FrameRateChoice(it, isNative = false)) }
-        else ->
-            item.input.fixedChoices
-                .firstOrNull { it.key == key }
-                ?.let { stringResource(it.labelRes) }
+        else -> item.input.fixedChoices.firstOrNull { it.key == key }?.label()
     } ?: key
 }
 
@@ -139,7 +142,7 @@ internal fun choiceOptions(item: SettingsItem, state: SettingsUiState): List<Cho
             item.input.fixedChoices.map {
                 ChoiceOption(
                     it.key,
-                    stringResource(it.labelRes),
+                    it.label(),
                     it.summaryRes?.let { summary -> stringResource(summary) },
                 )
             }

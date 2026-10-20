@@ -13,6 +13,8 @@ import io.github.magalz.borealis.settings.catalog.SettingStore
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.catalog.StringSetting
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot
+import io.github.magalz.borealis.settings.ui.FixedChoice
+import io.github.magalz.borealis.settings.ui.FixedChoices
 import org.junit.Test
 
 /**
@@ -156,6 +158,61 @@ class BorealisLooksTest {
         }
         assertThat(look(Settings.GLASS_BLUR to "30").glassBlurDp).isEqualTo(8)
         assertThat(look(Settings.GLASS_TINT to "16").glassTintPercent).isEqualTo(40)
+    }
+
+    @Test
+    fun `every entry of a list is an id that maps to its own value, and every value has an entry`() {
+        fun <T> assertOneEntryPerValue(
+            setting: StringSetting,
+            entries: List<FixedChoice>,
+            values: List<T>,
+            read: (BorealisLook) -> T,
+        ) {
+            val read = entries.map { read(look(setting to it.key)) }
+
+            assertThat(entries.map { it.key }).containsNoDuplicates()
+            assertThat(read).containsExactlyElementsIn(values).inOrder()
+            assertThat(entries.map { it.key }).contains(setting.default)
+        }
+
+        assertOneEntryPerValue(
+            Settings.REDUCE_MOTION,
+            FixedChoices.REDUCE_MOTION,
+            ReduceMotion.entries,
+        ) {
+            it.reduceMotion
+        }
+        assertOneEntryPerValue(
+            Settings.TRANSPARENCY,
+            FixedChoices.TRANSPARENCY,
+            Transparency.entries,
+        ) {
+            it.transparency
+        }
+        assertOneEntryPerValue(Settings.TEXT_SIZE, FixedChoices.TEXT_SIZE, TextSize.entries) {
+            it.textSize
+        }
+        assertOneEntryPerValue(
+            Settings.COLOUR_VISION,
+            FixedChoices.COLOUR_VISION,
+            ColourVision.entries,
+        ) {
+            it.colourVision
+        }
+        assertOneEntryPerValue(
+            Settings.GLASS_TINT,
+            FixedChoices.GLASS_TINT,
+            listOf(30, 40, 50, 60, 70, 85),
+        ) {
+            it.glassTintPercent
+        }
+        assertOneEntryPerValue(
+            Settings.GLASS_BLUR,
+            FixedChoices.GLASS_BLUR,
+            listOf(8, 16, 24, 32, 48),
+        ) {
+            it.glassBlurDp
+        }
     }
 
     @Test

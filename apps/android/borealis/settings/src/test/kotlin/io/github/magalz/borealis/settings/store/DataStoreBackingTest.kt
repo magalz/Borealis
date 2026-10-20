@@ -38,9 +38,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The DataStore backing of the two logging switches and the background, and the migration of the
- * switches from the default SharedPreferences file. Each test gives its file to one DataStore at a
- * time: a second live DataStore on the same file is an error.
+ * The DataStore backing of the logging switches, the background and the look settings, and the
+ * migration of the switches from the default SharedPreferences file. Each test gives its file to
+ * one DataStore at a time: a second live DataStore on the same file is an error.
  */
 @Suppress("DEPRECATION")
 @RunWith(RobolectricTestRunner::class)
@@ -52,6 +52,24 @@ class DataStoreBackingTest {
         PreferenceManager.getDefaultSharedPreferences(context)
     private lateinit var file: File
     private val scopes = mutableListOf<CoroutineScope>()
+
+    /**
+     * Every setting that the DataStore holds: the logging switches, the background and the look.
+     */
+    private val datastoreSettings =
+        listOf<Setting<*>>(
+            Settings.VERBOSE_LOGGING,
+            Settings.MASK_ADDRESSES,
+            Settings.BACKGROUND,
+            Settings.GLASS_TINT,
+            Settings.GLASS_BLUR,
+            Settings.REDUCE_MOTION,
+            Settings.TRANSPARENCY,
+            Settings.THICK_FOCUS,
+            Settings.TEXT_SIZE,
+            Settings.HIGH_CONTRAST,
+            Settings.COLOUR_VISION,
+        )
 
     @Before
     fun setUp() {
@@ -71,16 +89,11 @@ class DataStoreBackingTest {
         DataStoreBacking(DataStoreBacking.create(preferences, scope, file), scope)
 
     @Test
-    fun `an empty store reads as absent for both switches and the background`() =
+    fun `an empty store reads as absent for every DataStore setting`() =
         runBlocking<Unit> {
             val read = backing().read()
 
-            assertThat(read.keys)
-                .containsExactly(
-                    Settings.VERBOSE_LOGGING,
-                    Settings.MASK_ADDRESSES,
-                    Settings.BACKGROUND,
-                )
+            assertThat(read.keys).containsExactlyElementsIn(datastoreSettings)
             assertThat(read.values.filterNotNull()).isEmpty()
         }
 
@@ -93,13 +106,9 @@ class DataStoreBackingTest {
             backing.write(Settings.MASK_ADDRESSES, false)
 
             assertThat(backing.read())
-                .containsExactly(
-                    Settings.VERBOSE_LOGGING,
-                    true,
-                    Settings.MASK_ADDRESSES,
-                    false,
-                    Settings.BACKGROUND,
-                    null,
+                .containsExactlyEntriesIn(
+                    datastoreSettings.associateWith<Setting<*>, Any?> { null } +
+                        mapOf(Settings.VERBOSE_LOGGING to true, Settings.MASK_ADDRESSES to false)
                 )
         }
 

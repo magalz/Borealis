@@ -562,8 +562,9 @@ class SettingsViewModelTest {
 }
 
 /**
- * The groups and rows of the table in `docs/ux/phase-2-proposal.md#settings-groups`, and the
- * Appearance group that Sprint 9 added after Advanced.
+ * The groups and rows of the table in `docs/ux/phase-2-proposal.md#settings-groups`, the Appearance
+ * group that Sprint 9 added after Advanced, the glass rows that Sprint 10 added to it and the
+ * Accessibility group after it.
  */
 private val UC_009_ROWS =
     linkedMapOf(
@@ -628,5 +629,15 @@ private val UC_009_ROWS =
                 SettingsItem.LATENCY_SUMMARY,
                 SettingsItem.PICTURE_IN_PICTURE,
             ),
-        SettingsGroupId.APPEARANCE to listOf(SettingsItem.BACKGROUND),
+        SettingsGroupId.APPEARANCE to
+            listOf(SettingsItem.BACKGROUND, SettingsItem.GLASS_TINT, SettingsItem.GLASS_BLUR),
+        SettingsGroupId.ACCESSIBILITY to
+            listOf(
+                SettingsItem.REDUCE_MOTION,
+                SettingsItem.TRANSPARENCY,
+                SettingsItem.THICK_FOCUS,
+                SettingsItem.TEXT_SIZE,
+                SettingsItem.HIGH_CONTRAST,
+                SettingsItem.COLOUR_VISION,
+            ),
     )

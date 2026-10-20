@@ -1,10 +1,11 @@
-# Borealis icon, shortcut icon and TV banner
+# Borealis icon, shortcut icon, mark and TV banner
 
 `generate.py` draws the Borealis art from one geometry source: an aurora over a
 purple night sky and a dark ridge in the LuminalShine page colour (`#0E1013`).
 The owner approved it on 2026-10-14.
 
-It writes these files under `apps/android/app/src/main/res/`:
+It writes these files under `apps/android/app/src/main/res/`, and the mark under the
+resources of the design system:
 
 | Output | Use |
 | --- | --- |
@@ -13,6 +14,7 @@ It writes these files under `apps/android/app/src/main/res/`:
 | `drawable/borealis_shortcut_foreground.xml`, `drawable/borealis_shortcut_monochrome.xml` | Monitor glyph layers of the host and pinned-app shortcut icon (`mipmap-anydpi/ic_pc_scut.xml`, hand-written: the launcher sky behind these two layers) |
 | `mipmap-*/ic_launcher.png` | Legacy launcher PNGs, for tools that read a raster icon from the APK |
 | `drawable-xhdpi/atv_banner.png` | Google TV and Android TV banner (320 x 180 dp) |
+| `apps/android/borealis/designsystem/src/main/res/drawable/borealis_mark.xml` | The mark in the footer of the navigation rail: the paths of the monochrome layer, cropped to the 72 x 72 that a launcher shows and drawn at 24 dp. It has no colour of its own: a screen tints it |
 
 Regenerate from the repository root after changing the geometry or colours:
 

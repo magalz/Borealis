@@ -1,13 +1,13 @@
 """Text contrast over the animated backgrounds, and over the glass panels planned for them.
 
-Sprint 10 bases two choices on these numbers: the glass look of a panel and the fixes of the text
-tokens. The tool measures WCAG 2.x contrast ratios as the worst case (the minimum) of each text
+Sprint 10 bases two choices on these numbers: the glass look of a panel and the text colours on
+it. The tool measures WCAG 2.x contrast ratios as the worst case (the minimum) of each text
 token over real frames of each background, in three cases:
 
 - (a) the text straight on the background;
 - (b) the text on one of today's opaque surfaces (`page`, `surface`, `surface-raised`);
 - (c) the text on a glass panel: the background blurred, then the `surface` colour on top at an
-  alpha, for a grid of alphas and blur radii.
+  alpha, for a grid of alphas and blur radii (a radius of 0 is no blur, the glass of API 28 to 30).
 
 The colours come from `design/tokens.json`. The frames come from two places: `extract` writes them
 from the four clips with ffmpeg, and the `BackgroundFrameExport` test of `:borealis:designsystem`
@@ -15,6 +15,10 @@ writes the two drawn styles. `README.md` has the whole procedure.
 
     python -I contrast.py extract <frames> [--clips <dir>]
     python -I contrast.py measure <frames> --json <result.json> [--jobs N]
+    python -I contrast.py glass-table <result.json> [--out <GlassContrastTable.kt>]
+
+`glass-table` writes the table of the worst backdrop behind a glass panel that the app turns into
+the tint floors and the text colours of the glass.
 
 The library has no state; the tests are in `test_contrast.py`.
 """
@@ -47,10 +51,12 @@ GLASS_TABLE_KT = (
 TEXT_TOKENS = ("ink", "ink-2", "ink-3", "ink-4", "accent-soft")
 SURFACE_TOKENS = ("page", "surface", "surface-raised")
 
-# The glass candidates: the tint, and the grid of its alpha and of the blur radius in dp.
+# The glass candidates: the tint, and the grid of its alpha and of the blur radius in dp. They are
+# the tints and the blurs that Settings offers. A blur of 0 is no blur: the glass of API 28 to 30,
+# which cannot blur, draws the tint over the frame as it is.
 GLASS_TINT = "surface"
-GLASS_ALPHAS = (0.55, 0.70, 0.85)
-GLASS_BLURS_DP = (16, 32, 48)
+GLASS_ALPHAS = (0.30, 0.40, 0.50, 0.60, 0.70, 0.85)
+GLASS_BLURS_DP = (0, 8, 16, 24, 32, 48)
 
 # How many frames of each loop, and the width in dp of the device a frame stands for. The density
 # of a frame is its width in pixels over that: 1920 px of a TV is xhdpi (2.0), 1233 px of a phone
@@ -405,9 +411,12 @@ def _measure_frame(frame, device, colors):
     text = {token: float(relative_luminance(parse_hex(colors[token]))) for token in TEXT_TOKENS}
     tint = parse_hex(colors[GLASS_TINT])
     density = frame_density(frame.shape[1], device)
-    blurred = gaussian_blurs(frame, [blur_sigma(dp * density) for dp in GLASS_BLURS_DP])
+    blurring = [dp for dp in GLASS_BLURS_DP if dp > 0]
+    images = dict(zip(blurring, gaussian_blurs(frame, [blur_sigma(dp * density) for dp in blurring])))
+    images[0] = frame
     panels = {}
-    for dp, image in zip(GLASS_BLURS_DP, blurred):
+    for dp in GLASS_BLURS_DP:
+        image = images[dp]
         for alpha in GLASS_ALPHAS:
             luminance = relative_luminance(composite(image, tint, alpha))
             panels[(alpha, dp)] = _token_stats(luminance, text)
@@ -470,7 +479,7 @@ def measure_sources(sources, colors, jobs=1):
             ),
             "blur_model": (
                 "Gaussian, sigma = 0.57735 * radius_px + 0.5 (Skia); blurred and composited in "
-                "sRGB values; the edge of the frame repeats."
+                "sRGB values; the edge of the frame repeats. A radius of 0 dp is no blur."
             ),
             "colors": colors,
             "text_tokens": list(TEXT_TOKENS),
@@ -557,7 +566,7 @@ def markdown_tables(result):
         for (alpha, blur), by_token in worst.items():
             lowest = min(value for value, _ in by_token.values())
             rows.append(
-                [f"{alpha:.2f}", f"{blur}"]
+                [f"{alpha:.2f}", "0 (no blur)" if blur == 0 else f"{blur}"]
                 + [f"{format_ratio(by_token[token][0])} ({by_token[token][1]})" for token in tokens]
                 + [format_ratio(lowest)]
             )
@@ -592,15 +601,92 @@ def markdown_tables(result):
 
 # The table for the app
 
+# What a value of the table is rounded up to: five places of a luminance, 0 to 1.
+TABLE_PLACES = 5
+
+KOTLIN_PACKAGE = "io.github.magalz.borealis.designsystem.glass"
+
 
 def worst_backdrop_luminance(result):
-    """Stub: the table of the worst backdrop is not written yet."""
-    return {}
+    """The brightest pixel behind a glass panel, as a luminance, per style, blur and alpha.
+
+    It is the worst case over every frame of every device. It is read off the contrast of `ink`,
+    the lightest text token, which is lowest where the backdrop is brightest:
+    `Lb = (L(ink) + 0.05) / ratio - 0.05`. The value is rounded up, so the app never takes a
+    backdrop for darker than it was measured. It returns `{style: {(blur_dp, alpha): luminance}}`.
+    """
+    ink = float(relative_luminance(parse_hex(result["meta"]["colors"]["ink"])))
+    lowest = {}
+    for row in result["glass"]:
+        if row["token"] == "ink":
+            cell = lowest.setdefault(row["style"], {})
+            key = (row["blur_dp"], row["alpha"])
+            cell[key] = min(cell.get(key, math.inf), row["min"])
+    scale = 10**TABLE_PLACES
+    return {
+        style: {
+            key: math.ceil(((ink + NEAR_BLACK) / ratio - NEAR_BLACK) * scale - 1e-6) / scale
+            for key, ratio in sorted(cell.items())
+        }
+        for style, cell in sorted(lowest.items())
+    }
 
 
 def glass_table_kotlin(result):
-    """Stub: the Kotlin file is not written yet."""
-    return ""
+    """The Kotlin file `GlassContrastTable.kt` for a measurement: the table, row by row.
+
+    A row of a style is one blur of the grid and holds a value for each tint of the grid. The
+    floors and the text colours are worked out in Kotlin from it.
+    """
+    table = worst_backdrop_luminance(result)
+    alphas = sorted({alpha for cell in table.values() for _, alpha in cell})
+    blurs = sorted({blur for cell in table.values() for blur, _ in cell})
+    meta = result.get("meta", {})
+    source = f"{meta.get('date', 'an unknown date')} at {meta.get('revision', 'an unknown revision')}"
+    entries = []
+    for style, cell in table.items():
+        rows = [
+            "                    doubleArrayOf("
+            + ", ".join(f"{cell[(blur, alpha)]:.{TABLE_PLACES}f}" for alpha in alphas)
+            + "),"
+            for blur in blurs
+        ]
+        entries.append(
+            f"            BackgroundStyle.{style} to\n"
+            + "                arrayOf(\n"
+            + "\n".join(rows)
+            + "\n                ),"
+        )
+    lines = [
+        "// Generated by `python design/accessibility/contrast.py glass-table`. Do not edit by hand.",
+        f"// Measured {source}; docs/ux/accessibility.md has the method.",
+        "",
+        f"package {KOTLIN_PACKAGE}",
+        "",
+        "import io.github.magalz.borealis.designsystem.background.BackgroundStyle",
+        "",
+        "/**",
+        " * The luminance of the brightest pixel behind the text of a glass panel, for each style, blur",
+        " * and tint: the worst case over every frame of the TV and of the phone, rounded up. The floors",
+        " * and the text colours of the glass are worked out from it in `GlassRules`.",
+        " */",
+        '@Suppress("MagicNumber") // a table of measurements',
+        "internal object GlassContrastTable {",
+        "    /** The tints of the grid, in percent. */",
+        "    val tintsPercent = intArrayOf(" + ", ".join(str(round(a * 100)) for a in alphas) + ")",
+        "",
+        "    /** The blur radii of the grid, in dp. A radius of 0 is no blur. */",
+        "    val blursDp = intArrayOf(" + ", ".join(str(b) for b in blurs) + ")",
+        "",
+        "    /** For each style, a row for each of [blursDp] with a value for each of [tintsPercent]. */",
+        "    val backdropLuminance: Map<BackgroundStyle, Array<DoubleArray>> =",
+        "        mapOf(",
+        *entries,
+        "        )",
+        "}",
+        "",
+    ]
+    return "\n".join(lines)
 
 
 # The command line
@@ -641,6 +727,11 @@ def main(argv=None):
 
     args = parser.parse_args(argv)
     if args.command == "glass-table":
+        result = json.loads(args.result.read_text(encoding="utf-8"))
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        # Written as bytes, so the file has unix line ends on every platform.
+        args.out.write_bytes(glass_table_kotlin(result).encode("utf-8"))
+        print(f"wrote {args.out}", file=sys.stderr)
         return 0
     if args.command == "extract":
         extract_clips(args.frames, args.clips, args.count)

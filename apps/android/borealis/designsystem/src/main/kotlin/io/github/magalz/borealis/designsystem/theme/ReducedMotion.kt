@@ -27,6 +27,10 @@ internal fun rememberAnimationsRemoved(): Boolean {
     }
 }
 
+/** Whether animations are removed, given the setting of the app and what the system says. */
+internal fun animationsRemoved(reduceMotion: ReduceMotion, systemRemoved: Boolean): Boolean =
+    systemRemoved
+
 /**
  * Whether the battery saver is on, now and while this is composed: it is read once and again each
  * time the system says it changed. A screen that animates for its looks rests while it is on.

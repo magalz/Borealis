@@ -31,7 +31,7 @@ internal const val PHONE_LANDSCAPE = "w640dp-h360dp-land-xhdpi"
 internal fun ComposeContentTestRule.setChrome(
     formFactor: FormFactor,
     content: @Composable () -> Unit,
-) = setContent { BorealisTheme(formFactor, content) }
+) = setContent { BorealisTheme(formFactor) { content() } }
 
 /**
  * Sets [content] and switches the window to the keyboard input mode, the way a D-pad or a gamepad
@@ -52,7 +52,7 @@ internal fun ComposeContentTestRule.setContentInKeyboardMode(content: @Composabl
 internal fun ComposeContentTestRule.setChromeInKeyboardMode(
     formFactor: FormFactor,
     content: @Composable () -> Unit,
-) = setContentInKeyboardMode { BorealisTheme(formFactor, content) }
+) = setContentInKeyboardMode { BorealisTheme(formFactor) { content() } }
 
 /** Asserts the node is [expected] wide, give or take a dp for rounding to pixels. */
 internal fun SemanticsNodeInteraction.assertWidthNear(expected: Dp) {

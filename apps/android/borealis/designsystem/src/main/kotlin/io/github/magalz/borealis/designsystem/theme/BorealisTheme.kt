@@ -9,9 +9,17 @@ import androidx.compose.runtime.staticCompositionLocalOf
 
 val LocalFormFactor = staticCompositionLocalOf { FormFactor.Phone }
 
-/** The dark Borealis theme: Material 3 plus the Borealis colours, type, shapes and spacing. */
+/**
+ * The dark Borealis theme: Material 3 plus the Borealis colours, type, shapes and spacing, and the
+ * [look] that the viewer chose. A theme given no look keeps the one of the theme around it, so the
+ * screens that wear their own theme inside the shell do not undo what the shell provides.
+ */
 @Composable
-fun BorealisTheme(formFactor: FormFactor = FormFactor.Phone, content: @Composable () -> Unit) {
+fun BorealisTheme(
+    formFactor: FormFactor = FormFactor.Phone,
+    look: BorealisLook = LocalBorealisLook.current,
+    content: @Composable () -> Unit,
+) {
     val colorScheme = remember { borealisColorScheme() }
     val shapes = remember { borealisShapes() }
     val typography = remember(formFactor) { borealisTypography(formFactor) }

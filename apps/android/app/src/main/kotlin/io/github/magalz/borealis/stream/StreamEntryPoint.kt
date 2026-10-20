@@ -11,7 +11,8 @@ import io.github.magalz.borealis.library.shell.QuitNotice
 
 /**
  * What the stream activity takes from the Hilt graph. `Game` is not an `@AndroidEntryPoint`, so it
- * asks the application component for the repositories its actions need.
+ * asks the application component for what its actions need: the repositories and the notice that a
+ * Quit leaves for the Library.
  */
 @EntryPoint
 @InstallIn(SingletonComponent::class)

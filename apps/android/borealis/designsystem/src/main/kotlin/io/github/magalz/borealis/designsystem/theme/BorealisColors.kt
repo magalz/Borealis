@@ -48,7 +48,16 @@ data class BorealisColors(
 ) {
     /** These colours with the roles [ink3] and [ink4] replaced; the rest stays as it is. */
     fun withSecondaryInk(ink3: Color, ink4: Color) = copy(ink3 = ink3, ink4 = ink4)
+
+    /** These colours as high contrast has them. Not done yet. */
+    fun withHighContrast(): BorealisColors = this
+
+    /** These colours with the status roles of the palette [vision]. Not done yet. */
+    fun withColourVision(vision: ColourVision): BorealisColors = this
 }
+
+/** The colours that a [look] gives: high contrast, then the palette. Not done yet. */
+fun borealisColors(look: BorealisLook): BorealisColors = BorealisColors()
 
 val LocalBorealisColors = staticCompositionLocalOf { BorealisColors() }
 

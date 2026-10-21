@@ -835,7 +835,8 @@ each over the three surfaces.
 - **What it overrides.** Only Transparency, Thicker focus outline, Glass tint and Glass blur. Their
   rows are disabled and say "High contrast is on in Accessibility". Text size, the palette and
   Reduce motion still apply, and a palette is applied after High contrast: the status inks of both
-  palettes keep 7.5:1, so the two compose.
+  palettes keep 7:1 or more (the bar of `ColourVisionPaletteTest`; 9.2:1 measured), so the two
+  compose.
 
 ### The offline colour and the status shapes
 
@@ -870,7 +871,8 @@ deficiency. Each replaces the status roles only (`BorealisColors.withColourVisio
   red-green (protanopia and deuteranopia) and 23.9 for blue-yellow (tritanopia). The colours of
   today fail that bar for a red-green dichromat.
 - Each status colour keeps 3:1 on `page`, `surface` and `surface-raised`, and each status ink keeps
-  7.5:1 as text, so High contrast can keep the palette.
+  7:1 or more as text (the bar of `ColourVisionPaletteTest`; 9.2:1 measured), so High contrast can
+  keep the palette.
 - The Python contrast tool does not model this: it had a copy until `5fe33a63` removed it, and the
   Kotlin check is the only one.
 
@@ -888,16 +890,19 @@ focus outline shows them. `TouchTargetTest` pins these:
 
 - a segment of a segmented control is 48 dp wide and high, and the 48 dp of a chip is a cell around
   it, so the chip keeps its look;
-- a group of the settings list is 48 dp high on a handheld, and the header of a phone section is a
-  48 dp button;
-- the handle of a bottom sheet is 48 dp wide and high;
-- a button (40 dp) and a menu row (44 dp) keep their size: Compose gives them 48 dp of touch where
-  no neighbour is in the way, and the checks pass.
+- a group of the settings list is 48 dp high on a handheld;
+- the handle of a bottom sheet is 48 dp wide and high.
 
-Three effects of the rule wait for the owner's review. A handheld shows about half of the 11
-Settings groups at once, so its group list scrolls. The docked keyboard of a phone is 24 dp taller,
-because its shortcut chips have 48 dp cells. The keys of the phone keyboard stay under 48 dp
-(an accepted finding, below).
+`CollapsibleSectionTest` pins the header of a phone section, a 48 dp button. A button (40 dp) and a
+menu row (44 dp) keep their size: Compose gives them a 48 dp touch area where no neighbour is in the
+way, and the checks pass.
+
+Three effects of the rule wait for the owner's review. The Settings group list of a handheld
+scrolls, because its entries are 48 dp. At 800 × 480 dp (the `settingsscreen_handheld_stream.png`
+reference) 6 of the 11 groups show (Stream to Audio) and the other 5 need scrolling. In a window 360
+dp tall, such as a phone in landscape with a pad, about 4 show. The docked keyboard of a phone is 24
+dp taller, because its shortcut chips have 48 dp cells. The keys of the phone keyboard stay under 48
+dp (an accepted finding, below).
 
 ### Headings, pane titles and what is said
 
@@ -962,7 +967,7 @@ and AAA (1.4.6) for the text of High contrast.
 | 1.4.6 Contrast (Enhanced) | AAA | High contrast: 7:1 or more for the text roles on every fill, and for the loose text over every background (Tables G and H). |
 | 1.4.11 Non-text Contrast | AA | The offline ring at 3.25:1 or more, the icons on the background through the halo (Tables I to K), the outlines of the text field (Tables L and M), the opaque borders of High contrast. |
 | 2.1.1 Keyboard | A | The D-pad and a gamepad reach every control; OK on a Settings group enters its pane, and the licence text and the Audit detail scroll with the D-pad. |
-| 2.2.2 Pause, Stop, Hide | A | The animated background is the only moving content. Reduce motion On, the system's Remove animations and the battery saver make it a still frame, and the background Off is the plain page. |
+| 2.2.2 Pause, Stop, Hide | A | The animated background is the only decorative moving content; it stops with Reduce motion On, the system's Remove animations or the battery saver, and the background Off is the plain page. Progress indicators are not covered yet (roadmap backlog). |
 | 2.4.3 Focus Order | A | The traversal order of every screen is tested (`readingOrder`), and the focus goes back to the card that had it after Back from Apps. |
 | 2.4.6 Headings and Labels | AA | Headings on every screen title and section label. |
 | 2.4.7 Focus Visible | AA | The Borealis focus outline, 3 dp in accent-soft, and 5 dp in `ink` with Thicker focus outline and High contrast. |

@@ -168,7 +168,7 @@ Decision details:
 17. **Colour-blind palettes.** The colours are from the Okabe and Ito set, checked with the Machado
     simulation (severity 1.0) and the CIEDE2000 distance. The least distance between two status
     colours is 23.7 or more for red-green and 23.9 for blue-yellow under tritanopia, against a bar
-    of 20. Each colour keeps 3:1 as an indicator, and the status inks keep 7.5:1. The check is in
+    of 20. Each colour keeps 3:1 as an indicator, and the status inks keep 7:1 or more (the bar of `ColourVisionPaletteTest`; 9.2:1 measured). The check is in
     Kotlin (`ColourMeasures` and `ColourVisionPaletteTest`), not in the Python tool.
 18. **New panels, and Off.** The Settings panes, the Privacy card, the Audit panel and the Privacy
     row had no surface before Sprint 10. Under Off, under High contrast and on the plain page they

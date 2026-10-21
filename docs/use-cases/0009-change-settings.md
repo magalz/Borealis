@@ -57,10 +57,12 @@ device can use.
   shows ten). On a handheld the list scrolls, because its entries are 48 dp.
 
 The 48 dp touch targets of Sprint 10 have effects that are pending the owner's
-review: only 6 of the eleven groups are visible at once on a handheld, and the
-docked keyboard of a phone is 24 dp taller, because its shortcut chips have 48 dp
-cells. The keys of the phone keyboard stay under
-48 dp, which is an accepted finding of the accessibility checks
+review. At 800 × 480 dp (the `settingsscreen_handheld_stream.png` reference) 6
+of the 11 groups show (Stream to Audio) and the other 5 need scrolling. In a
+window 360 dp tall, such as a phone in landscape with a pad, about 4 show. The
+docked keyboard of a phone is 24 dp taller, because its shortcut chips have 48
+dp cells. The keys of the phone keyboard stay under 48 dp, which is an accepted
+finding of the accessibility checks
 ([accessibility](../ux/accessibility.md#accepted-findings)).
 
 ## Alternative flows

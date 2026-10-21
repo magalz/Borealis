@@ -49,7 +49,8 @@ private val LABEL_GAP = 8.dp
  * the tile. The cover is the focusable target: a tap or OK runs [onClick], every way of asking for
  * options runs [onOptions] (named [optionsLabel] for a screen reader), and it grows on focus. The
  * cover is announced by the app name and its state: [runningLabel] and, for a hidden app,
- * [hiddenLabel], so the state is spoken and not only shown.
+ * [hiddenLabel], so the state is spoken and not only shown. The name under the cover is a
+ * [BackdropText], for it stands on the background.
  */
 @Composable
 fun CoverTile(
@@ -62,7 +63,6 @@ fun CoverTile(
     onOptions: (() -> Unit)? = null,
     optionsLabel: String? = null,
 ) {
-    val colors = LocalBorealisColors.current
     val shape = LocalBorealisShapes.current.cover
     val state =
         listOfNotNull(runningLabel, hiddenLabel.takeIf { hidden }).joinToString(", ").ifEmpty {
@@ -83,11 +83,12 @@ fun CoverTile(
         ) {
             if (runningLabel != null) RunningBadge(runningLabel)
         }
-        Text(
+        // The name stands on the background, under the cover, and not on glass.
+        BackdropText(
             name,
             modifier = Modifier.clearAndSetSemantics {},
             style = MaterialTheme.typography.labelLarge,
-            color = colors.ink2,
+            ink = BackdropInk.Ink2,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -95,9 +96,9 @@ fun CoverTile(
 }
 
 /**
- * The stand-in for a cover until the host serves covers (Phase 3): the app initials on a raised
- * surface with the cover radius. [interaction] comes after the clip, so a ripple keeps the radius;
- * [content] draws over the cover (a badge).
+ * The stand-in for a cover until the host serves covers (Phase 3): the app initials on a glass
+ * surface with the cover radius (the raised surface colour where the glass is solid). [interaction]
+ * comes after the clip, so a ripple keeps the radius; [content] draws over the cover (a badge).
  */
 @Composable
 internal fun CoverPlaceholder(
@@ -113,7 +114,7 @@ internal fun CoverPlaceholder(
     val initialsStyle = remember(style) { style.copy(fontFamily = BorealisFonts.Mono) }
     Box(
         modifier
-            .background(colors.surfaceRaised, shape)
+            .glassOrSolid(shape, colors.surfaceRaised)
             .border(1.dp, colors.line, shape)
             .clip(shape)
             .then(interaction)

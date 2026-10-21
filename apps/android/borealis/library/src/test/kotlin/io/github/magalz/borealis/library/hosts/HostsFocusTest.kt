@@ -17,6 +17,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.shell.LibraryScaffold
@@ -164,6 +165,7 @@ class HostsFocusTest {
                     FormFactor.Tv,
                     selected = RailSelection.Hosts,
                     actions = RailActions({}, {}, {}),
+                    backgroundStyle = BackgroundStyle.Off,
                 ) {
                     screen()
                 }

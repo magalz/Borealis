@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -24,11 +23,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.BackdropInk
+import io.github.magalz.borealis.designsystem.components.BackdropText
 import io.github.magalz.borealis.designsystem.components.BorealisBackButton
 import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
@@ -111,17 +114,17 @@ private fun Header(showBack: Boolean, backEnabled: Boolean, onBack: () -> Unit) 
         if (showBack) {
             BorealisBackButton(onBack, stringResource(R.string.addhost_back), enabled = backEnabled)
         }
-        Text(stringResource(R.string.addhost_title), style = MaterialTheme.typography.titleLarge)
+        BackdropText(
+            stringResource(R.string.addhost_title),
+            Modifier.semantics { heading() },
+            style = MaterialTheme.typography.titleLarge,
+        )
     }
 }
 
 @Composable
 private fun Hint(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.bodySmall,
-        color = LocalBorealisColors.current.ink3,
-    )
+    BackdropText(text, style = MaterialTheme.typography.bodySmall, ink = BackdropInk.Ink3)
 }
 
 @StringRes
@@ -147,12 +150,13 @@ private fun AddHostButtons(
         BorealisButton(
             stringResource(R.string.addhost_submit),
             onSubmit,
-            modifier = Modifier.focusRequester(submitFocus),
+            modifier = Modifier.focusRequester(submitFocus).testTag("addhost-submit"),
             enabled = !busy,
         )
         BorealisButton(
             stringResource(R.string.addhost_cancel),
             onCancel,
+            modifier = Modifier.testTag("addhost-cancel"),
             style = BorealisButtonStyle.Secondary,
             enabled = !busy,
         )

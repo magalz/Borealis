@@ -14,10 +14,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
+import io.github.magalz.borealis.designsystem.glass.glassSurface
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 
@@ -28,7 +28,7 @@ private val CONTENT_GAP = 14.dp
  * The session to continue (decision D2): the app, a [detail] line that says where it runs and since
  * when, and a resume affordance. The whole card is the target: [onClick] resumes, and every way of
  * asking for options runs [onOptions]. The resume button only looks like one, so the card is a
- * single focus stop.
+ * single focus stop. The card is a glass surface with the accent tint over it.
  */
 @Composable
 fun ContinueCard(
@@ -45,7 +45,7 @@ fun ContinueCard(
     Row(
         modifier
             .borealisFocusIndication(shape)
-            .background(colors.surface, shape)
+            .glassSurface(shape)
             .background(colors.accentTint, shape)
             .border(1.dp, colors.accentLine, shape)
             .clip(shape)
@@ -60,19 +60,10 @@ fun ContinueCard(
             initialsAlignment = Alignment.Center,
         )
         Column(Modifier.weight(1f)) {
-            Text(
-                appName,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                detail,
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.ink2,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            // No limit on the lines: at a large text size the Resume button leaves the name and the
+            // detail a narrow column, and the card grows to hold them rather than cut them off.
+            Text(appName, style = MaterialTheme.typography.titleMedium)
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = colors.ink2)
         }
         ButtonFace(
             resumeLabel,

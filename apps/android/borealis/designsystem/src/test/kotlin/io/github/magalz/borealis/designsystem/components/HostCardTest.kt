@@ -8,7 +8,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -24,7 +23,6 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.width
@@ -32,6 +30,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.assertPixel
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
@@ -92,15 +91,13 @@ class HostCardTest {
     fun `a long detail line wraps instead of cutting the address`() {
         composeRule.setContent { Specimen(FormFactor.Tv, cardWidth = 220.dp) }
 
-        val layouts = mutableListOf<TextLayoutResult>()
-        composeRule
-            .onNodeWithText("LuminalShine 26.09.1 · 192.168.1.20", useUnmergedTree = true)
-            .fetchSemanticsNode()
-            .config[SemanticsActions.GetTextLayoutResult]
-            .action!!(layouts)
+        val layout =
+            composeRule
+                .onNodeWithText("LuminalShine 26.09.1 · 192.168.1.20", useUnmergedTree = true)
+                .textLayout()
 
-        assertThat(layouts.single().hasVisualOverflow).isFalse()
-        assertThat(layouts.single().lineCount).isEqualTo(2)
+        assertThat(layout.hasVisualOverflow).isFalse()
+        assertThat(layout.lineCount).isEqualTo(2)
     }
 
     @Test

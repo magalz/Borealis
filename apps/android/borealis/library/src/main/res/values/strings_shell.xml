@@ -2,4 +2,8 @@
 <resources>
     <string name="shell_host_added">%1$s added. Pair it to see its apps.</string>
     <string name="shell_host_unavailable">This host is no longer available.</string>
+    <!-- The name of the app, in the footer of the rail. -->
+    <string name="shell_rail_name">Borealis</string>
+    <!-- What a screen reader says for the footer of the rail. %1$s is the name, %2$s the version. -->
+    <string name="shell_rail_description">%1$s, version %2$s</string>
 </resources>

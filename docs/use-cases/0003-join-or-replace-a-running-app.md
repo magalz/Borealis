@@ -109,6 +109,17 @@ practically unreachable. While the host builds a display it holds
 instead (device round, 2026-10-16). The dialog for that race is covered by the
 Compose tests only (UC-003-T1).
 
+Revisit this after the round on 26.10.0-beta.1 (#203). According to its release
+notes, that host runs launch, resume and cancel in order on a worker of their
+own, off the HTTPS I/O thread, so `/serverinfo` is no longer held while a display
+is built. In the round of 2026-10-21 a second device (the S22) opened the apps of
+the host while the Streamer's launch was setting up: its list loaded, its host
+polls succeeded, and neither device logged a retry, the 3 s wait before
+`/resume` or a 503
+([device validation](../development/device-validation.md#15-results-sprint-10)).
+The paragraph above is for 26.09.1 and older hosts, and whether the race is still
+reachable on 26.10.0-beta.1 is not tested.
+
 ## Host dependency
 
 The flow needs `/serverinfo` (the running app), `/resume`, and the quit path.

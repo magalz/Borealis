@@ -24,6 +24,7 @@ instead of re-reading the host source.
 | Contract revision date | 2026-10-18 |
 | Protocol version string the host reports | `7.1.431.-1` (`src/nvhttp.h:37`) |
 | Lineage | Sunshine, then Vibeshine, then LuminalShine; not derived from Apollo (`gh-pages-template/compare.html:66-82`) |
+| Later release | `26.10.0-beta.1`, a prerelease of 2026-10-20, is not covered by this revision. What it changes is recorded as "Changed in 26.10.0-beta.1", and every such item is reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source. Re-verify it in a later sprint. |
 
 The host source tree is the only authority for the host side. The Moonlight
 client facts were checked against the Moonlight Android 12.2 code in this
@@ -78,8 +79,9 @@ Artemis at commit `c5cf27f4` (2026-09-09).
    `core/tests/fixtures/luminalshine/<version>/`, one directory per verified
    LuminalShine version. The directory exists: `26.09.1/` holds
    `serverinfo-http.xml`, `unpair-http.response` and `PROVENANCE.md`, and the
-   golden vectors are in `core/tests/fixtures/vectors/`. Add a new directory for a new version
-   instead of overwriting the old one.
+   golden vectors are in `core/tests/fixtures/vectors/`. The fixtures are 26.09.1
+   only: 26.10.0-beta.1 has no folder yet, and capturing one is a follow-up. Add a
+   new directory for a new version instead of overwriting the old one.
 7. Run the contract tests against the new fixtures and record the result in the
    compatibility table.
 8. Commit with a Conventional Commit message such as
@@ -107,7 +109,8 @@ above.
 
 | Borealis version | LuminalShine version | Host commit | Status | Notes |
 | --- | --- | --- | --- | --- |
-| (unreleased) | `26.09.1` + 15 commits | `5afdbdc6` | Known issues | Device-tested on 26.09.1 in Phase 1 and in the later sprint rounds (Galaxy S22 and Google TV Streamer; see [device-validation.md](../development/device-validation.md)). The Sprint 8 round of 2026-10-18 ran against LuminalShine 26.09.1 ([section 13](../development/device-validation.md#13-results-sprint-8)). Known issues: the 400 "Out of order call" after a wrong PIN, handled by one automatic restart; NortheBridge/luminalshine#194 (stray bytes after a 404); #198 (teardown hang after a disconnect); #201 (a second client leaving a shared app ends the first client's session); #202 (a long `/launch` blocks every other HTTPS request; PR #203 proposes a fix); #204 (host crash after the virtual display cleanup of an ended session); #205 (a second client's `/resume` fails the RTSP tag check while the first client's launch is still setting up). The [roadmap](../roadmap.md#host-side-items-luminalshine) lists the host items with the state when last checked |
+| (unreleased) | `26.09.1` + 15 commits | `5afdbdc6` | Known issues | Device-tested on 26.09.1 in Phase 1 and in the later sprint rounds (Galaxy S22 and Google TV Streamer; see [device-validation.md](../development/device-validation.md)). The Sprint 8 round of 2026-10-18 ran against LuminalShine 26.09.1 ([section 13](../development/device-validation.md#13-results-sprint-8)). Known issues: the 400 "Out of order call" after a wrong PIN, handled by one automatic restart; NortheBridge/luminalshine#194 (stray bytes after a 404; fixed by PR #200, which shipped in 26.10.0-beta.1, according to its release notes); #198 (teardown hang after a disconnect); #201 (a second client leaving a shared app ends the first client's session); #202 (a long `/launch` blocks every other HTTPS request; fixed by PR #203, which shipped in 26.10.0-beta.1, according to its release notes); #204 (host crash after the virtual display cleanup of an ended session); #205 (a second client's `/resume` fails the RTSP tag check while the first client's launch is still setting up). The [roadmap](../roadmap.md#host-side-items-luminalshine) lists the host items with the state when last checked |
+| (unreleased) | `26.10.0-beta.1` (a prerelease of 2026-10-20) | not recorded | Known issues | Documented from its release notes (2026-10-20), not yet verified in source. The status is Known issues because the issues below stay open. Live-checked in part in the Sprint 10 round of 2026-10-21 ([section 15](../development/device-validation.md#15-results-sprint-10)): launch, stream, quit, a second device during a launch (#203) and Host details; pairing, teardown and `/unpair` were not run. Known issues: #198, #201, #204 and #205 stay open; #194 and #202 are fixed on the host. "Quitting `<app>`…" stayed on screen until `/cancel` answered: about 17 s once in the night round of 2026-10-21, and 5.5 to 6.7 s in the morning smoke of the same day (5 to 7 s on 26.09.1). The cause is not known, and it is on the [roadmap](../roadmap.md#backlog-not-scheduled). The release ships #199 (`LuminalShineVersion` in the HTTPS `/serverinfo`), #200 and #203, experimental PyroWave, and changes to pairing and teardown ([luminalshine.md](luminalshine.md), "Changed in 26.10.0-beta.1") |
 
 Allowed status values:
 

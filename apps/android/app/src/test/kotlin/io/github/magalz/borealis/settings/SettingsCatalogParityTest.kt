@@ -9,7 +9,7 @@ import org.junit.Test
 
 /**
  * The shape of the Kotlin settings catalog (ADR 0055): unique keys, the keys that were not ported,
- * the overlay choice, the background choice and the three DataStore settings. The defaults are
+ * the overlay choice, the background choice and the DataStore settings. The defaults are
  * compared with what the Java readers use in [SettingsDefaultsParityTest].
  */
 class SettingsCatalogParityTest {
@@ -55,7 +55,7 @@ class SettingsCatalogParityTest {
     }
 
     @Test
-    fun `only the two logging switches and the background are stored in DataStore`() {
+    fun `only the logging switches, the background and the look settings are stored in DataStore`() {
         val datastore = Settings.all.filter { it.store == SettingStore.DATASTORE }.map { it.key }
 
         assertThat(datastore)
@@ -63,6 +63,14 @@ class SettingsCatalogParityTest {
                 Settings.VERBOSE_LOGGING.key,
                 Settings.MASK_ADDRESSES.key,
                 Settings.BACKGROUND.key,
+                Settings.GLASS_TINT.key,
+                Settings.GLASS_BLUR.key,
+                Settings.REDUCE_MOTION.key,
+                Settings.TRANSPARENCY.key,
+                Settings.THICK_FOCUS.key,
+                Settings.TEXT_SIZE.key,
+                Settings.HIGH_CONTRAST.key,
+                Settings.COLOUR_VISION.key,
             )
     }
 

@@ -1,9 +1,5 @@
 package io.github.magalz.borealis.settings.privacy
 
-import android.app.Activity
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +11,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -41,21 +35,19 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import io.github.magalz.borealis.designsystem.components.BorealisSnackbarHost
+import io.github.magalz.borealis.designsystem.components.settings.SettingsCard
 import io.github.magalz.borealis.designsystem.components.settings.SettingsRowTone
 import io.github.magalz.borealis.designsystem.components.settings.SettingsSwitchRow
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
-import io.github.magalz.borealis.logging.BorealisLog
-import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.settings.R
 import java.io.File
 import kotlinx.coroutines.launch
 
-/** The outline of a focused row reaches 5dp outside it: 8dp around the list, 10dp between rows. */
-private val LIST_PADDING = 8.dp
-private val ROW_GAP = 10.dp
 private val ROW_INSET = 16.dp
 private val SNACKBAR_PADDING = 16.dp
 
@@ -141,22 +133,6 @@ internal fun rememberPrivacyBinding(
     return PrivacyBinding(state, snackbarHostState, actions)
 }
 
-/**
- * False when the system refused the share sheet: nothing handles the chooser, or the system does
- * not allow it. Any other failure is a bug and is not hidden.
- */
-internal fun tryShare(startShare: (Intent) -> Unit, chooser: Intent): Boolean =
-    try {
-        startShare(chooser)
-        true
-    } catch (e: ActivityNotFoundException) {
-        BorealisLog.e(LogTag.APP, "could not start the diagnostic share", e)
-        false
-    } catch (e: SecurityException) {
-        BorealisLog.e(LogTag.APP, "could not start the diagnostic share", e)
-        false
-    }
-
 private fun PrivacyMessage.text(): Int =
     when (this) {
         PrivacyMessage.ExportFailed -> R.string.borealis_privacy_export_failed
@@ -164,31 +140,9 @@ private fun PrivacyMessage.text(): Int =
         PrivacyMessage.EraseFailed -> R.string.borealis_privacy_erase_failed
     }
 
-/** Starts the share sheet from the current context. */
-@Composable
-internal fun rememberShareStarter(): (Intent) -> Unit {
-    val context = LocalContext.current
-    return remember(context) { { chooser -> context.startShareSheet(chooser) } }
-}
-
-/**
- * Starts [chooser] from the activity behind this context, if there is one; a context with no
- * activity needs a task of its own.
- */
-internal fun Context.startShareSheet(chooser: Intent) {
-    if (findActivity() == null) chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    startActivity(chooser)
-}
-
-private tailrec fun Context.findActivity(): Activity? =
-    when (this) {
-        is Activity -> this
-        is ContextWrapper -> baseContext.findActivity()
-        else -> null
-    }
-
 /**
  * The rows of the pane, its snackbar and its dialogs. Stateless: the dialog to show is in [state].
+ * On a phone the rows are one glass card; on a TV or handheld they are on the glass of the pane.
  * When the Audit trail row had the focus as it opened the viewer, Back finds the focus on it again:
  * the screen leaves the composition while the viewer shows, and a focus that is lost with it would
  * land on whatever comes first.
@@ -204,51 +158,68 @@ internal fun PrivacyContent(
     val auditFocus = rememberAuditRowFocus(actions.onOpenAudit)
     Box(modifier) {
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(LIST_PADDING),
-            verticalArrangement = Arrangement.spacedBy(ROW_GAP),
+            Modifier.fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(BorealisDimens.listPadding)
         ) {
-            SettingsSwitchRow(
-                title = stringResource(R.string.borealis_privacy_verbose_title),
-                checked = state.verboseLogging,
-                onCheckedChange = actions.onVerboseLoggingChange,
-                summary = stringResource(R.string.borealis_privacy_verbose_summary),
-            )
-            SettingsSwitchRow(
-                title = stringResource(R.string.borealis_privacy_mask_title),
-                checked = state.maskAddresses,
-                onCheckedChange = actions.onMaskAddressesChange,
-                summary = stringResource(R.string.borealis_privacy_mask_summary),
-            )
-            ExportRow(state.exporting, LocalFormFactor.current == FormFactor.Tv, actions.onExport)
-            SettingsValueRow(
-                title = stringResource(R.string.borealis_privacy_audit_title),
-                value = null,
-                onClick = auditFocus.onClick,
-                summary = stringResource(R.string.borealis_privacy_audit_summary),
-                modifier = auditFocus.modifier,
-            )
-            SettingsValueRow(
-                title = stringResource(R.string.borealis_privacy_erase_title),
-                value = null,
-                onClick = actions.onEraseRequested,
-                summary = stringResource(R.string.borealis_privacy_erase_summary),
-                tone = SettingsRowTone.Danger,
-            )
-            if (phone) {
-                Text(
-                    stringResource(R.string.borealis_privacy_footer),
-                    Modifier.padding(horizontal = ROW_INSET),
-                    color = LocalBorealisColors.current.ink3,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
+            // On a TV or handheld the rows are on the glass of the pane, which Settings draws; a
+            // phone has a screen of its own, so the rows are on a glass card.
+            if (phone) SettingsCard { PrivacyRows(state, actions, auditFocus, phone) }
+            else PrivacyRows(state, actions, auditFocus, phone)
         }
-        SnackbarHost(
+        BorealisSnackbarHost(
             snackbarHostState,
             Modifier.align(Alignment.BottomCenter).padding(SNACKBAR_PADDING),
         )
     }
     PrivacyDialogs(state.dialog, actions.dialogs)
+}
+
+/** The rows of Privacy and diagnostics, and on a phone the note under them. */
+@Composable
+private fun PrivacyRows(
+    state: PrivacyUiState,
+    actions: PrivacyActions,
+    auditFocus: AuditRowFocus,
+    phone: Boolean,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap)) {
+        SettingsSwitchRow(
+            title = stringResource(R.string.borealis_privacy_verbose_title),
+            checked = state.verboseLogging,
+            onCheckedChange = actions.onVerboseLoggingChange,
+            summary = stringResource(R.string.borealis_privacy_verbose_summary),
+        )
+        SettingsSwitchRow(
+            title = stringResource(R.string.borealis_privacy_mask_title),
+            checked = state.maskAddresses,
+            onCheckedChange = actions.onMaskAddressesChange,
+            summary = stringResource(R.string.borealis_privacy_mask_summary),
+        )
+        ExportRow(state.exporting, LocalFormFactor.current == FormFactor.Tv, actions.onExport)
+        SettingsValueRow(
+            title = stringResource(R.string.borealis_privacy_audit_title),
+            value = null,
+            onClick = auditFocus.onClick,
+            summary = stringResource(R.string.borealis_privacy_audit_summary),
+            modifier = auditFocus.modifier,
+        )
+        SettingsValueRow(
+            title = stringResource(R.string.borealis_privacy_erase_title),
+            value = null,
+            onClick = actions.onEraseRequested,
+            summary = stringResource(R.string.borealis_privacy_erase_summary),
+            tone = SettingsRowTone.Danger,
+        )
+        if (phone) {
+            Text(
+                stringResource(R.string.borealis_privacy_footer),
+                Modifier.padding(horizontal = ROW_INSET),
+                color = LocalBorealisColors.current.ink3,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
 }
 
 /** The Audit trail row's [modifier] and [onClick], which keep the focus across the viewer. */
@@ -288,7 +259,7 @@ private fun rememberAuditRowFocus(onOpenAudit: () -> Unit): AuditRowFocus {
  */
 @Composable
 private fun ExportRow(exporting: Boolean, television: Boolean, onExport: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(ROW_GAP)) {
+    Column(verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap)) {
         SettingsValueRow(
             title = stringResource(R.string.borealis_privacy_export_title),
             value = null,

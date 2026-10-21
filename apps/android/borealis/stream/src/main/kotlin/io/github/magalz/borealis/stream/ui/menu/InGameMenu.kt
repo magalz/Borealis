@@ -27,12 +27,14 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.MenuRow
 import io.github.magalz.borealis.designsystem.components.MenuRowStyle
 import io.github.magalz.borealis.designsystem.components.SidePanel
 import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.stream.PerfSnapshot
 import io.github.magalz.borealis.stream.R
@@ -45,9 +47,6 @@ import io.github.magalz.borealis.stream.ui.common.onGamepadB
 private val HEADER_PADDING_HORIZONTAL = 16.dp
 private val HEADER_PADDING_TOP = 14.dp
 private val HEADER_PADDING_BOTTOM = 8.dp
-// The focus outline of a row reaches 5dp outside it: 8dp around the rows and 10dp between them.
-private val ROWS_PADDING = 8.dp
-private val ROWS_GAP = 10.dp
 
 /**
  * The in-game menu (UC-004): a side panel over the stream with the header "<app> · <host>" (the
@@ -83,18 +82,23 @@ internal fun InGameMenu(
         }
     }
     val back = { if (confirmingQuit) cancelQuit() else intents.closePanel() }
+    val header =
+        if (appName.isBlank()) hostName
+        else stringResource(R.string.stream_menu_header, appName, hostName)
     SidePanel(
         onDismiss = intents::closePanel,
         modifier = Modifier.onGamepadB(back).onBackKey(back),
     ) {
         Column(
             Modifier.windowInsetsPadding(
-                WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical + WindowInsetsSides.End)
-            )
+                    WindowInsets.safeDrawing.only(
+                        WindowInsetsSides.Vertical + WindowInsetsSides.End
+                    )
+                )
+                .semantics { paneTitle = header }
         ) {
             Text(
-                if (appName.isBlank()) hostName
-                else stringResource(R.string.stream_menu_header, appName, hostName),
+                header,
                 Modifier.padding(
                         start = HEADER_PADDING_HORIZONTAL,
                         top = HEADER_PADDING_TOP,
@@ -134,8 +138,10 @@ private fun MenuRows(
 ) {
     val firstFocus = remember { FocusRequester() }
     Column(
-        Modifier.hiddenWhen(hidden).padding(ROWS_PADDING),
-        verticalArrangement = Arrangement.spacedBy(ROWS_GAP),
+        // The focus outline of a row reaches BorealisDimens.outlineReach outside it,
+        // thickOutlineReach when it is the thicker one: the padding and the gap of a list hold it.
+        Modifier.hiddenWhen(hidden).padding(BorealisDimens.listPadding),
+        verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
     ) {
         MenuRow(
             stringResource(R.string.stream_menu_back_to_stream),

@@ -6,6 +6,7 @@ import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -44,16 +45,22 @@ private const val PERIOD_NANOS = 20_000_000_000L
 private const val STILL_CYCLE = 0.1f
 
 /**
- * The time from one update of the position to the next: a thirtieth of a second. It is a whole
- * number of vsyncs at 30, 60, 90 and 120 Hz (1, 2, 3 and 4), so the next update falls on a vsync.
+ * How many times a second the position of a drawn background moves where nothing slows it. A
+ * thirtieth of a second is a whole number of vsyncs at 30, 60, 90 and 120 Hz (1, 2, 3 and 4), so
+ * each update falls on a vsync.
  */
-private const val FRAME_GAP_NANOS = 1_000_000_000L / 30
+internal const val DRAWN_FRAMES_PER_SECOND = 30
+
+private const val NANOS_PER_SECOND = 1_000_000_000L
+
+/** The time an update is due before the first has been drawn: there is none yet. */
+private const val NOTHING_DUE = Long.MIN_VALUE
 
 /**
- * How long before that vsync the thread wakes up and asks for the frame, so that a wake-up that is
- * late still makes it: it absorbs about 4 ms of lateness. It is less than the vsync period of the
- * highest rate the loop is tuned for, 120 Hz (8.3 ms), or the frame asked for would be the one
- * before.
+ * How long before an update is due the thread wakes up and asks for the frame, so that a wake-up
+ * that is late still makes it: it absorbs about 4 ms of lateness. It is less than the vsync period
+ * of the highest rate the loop is tuned for, 120 Hz (8.3 ms), or the frame asked for would be the
+ * one before.
  */
 private const val WAKE_EARLY_NANOS = 4_000_000L
 
@@ -136,6 +143,7 @@ private class Band(
     val phase: Float,
 )
 
+/** The curtains. A change needs the glass table measured again: see [DrawnBackground]. */
 private val BANDS =
     listOf(
         Band(
@@ -188,6 +196,7 @@ private class Spot(
     val phase: Float,
 )
 
+/** The glows. A change needs the glass table measured again: see [DrawnBackground]. */
 private val SPOTS =
     listOf(
         Spot(
@@ -237,10 +246,21 @@ private val SPOTS =
  * redraws this layer and nothing is recomposed. The layer is at most 480 pixels wide and scaled up
  * to the screen: the light is soft, so the smoothing of the scale hides the strips of a curtain,
  * and a frame costs a sixteenth of the fill on a TV.
+ *
+ * `GlassContrastTable` is measured over frames of these two styles, and nothing detects a change to
+ * them (the four clips are hashed into it). After a change to [Hues], [BANDS], [SPOTS] or the
+ * constants of the drawing, export the frames again with `BackgroundFrameExport`, run `measure` and
+ * `glass-table` of `design/accessibility/contrast.py`, and commit the table: see
+ * `design/backgrounds/README.md`.
  */
 @Composable
-internal fun DrawnBackground(style: BackgroundStyle, animated: Boolean, modifier: Modifier) {
-    DrawnBackground(style, rememberCycle(animated), modifier)
+internal fun DrawnBackground(
+    style: BackgroundStyle,
+    animated: Boolean,
+    modifier: Modifier,
+    framesPerSecond: Int = DRAWN_FRAMES_PER_SECOND,
+) {
+    DrawnBackground(style, rememberCycle(animated, framesPerSecond), modifier)
 }
 
 /** The same, at the position in the loop that [cycle] says: a test sets it to any point. */
@@ -283,47 +303,68 @@ internal fun DrawnBackground(style: BackgroundStyle, cycle: FloatState, modifier
 /**
  * The position in the loop, from 0 until 1, as the frames of a running loop move it. The frames are
  * an infinite animation, so a test cancels them through the `InfiniteAnimationPolicy` of its
- * composition; the sleep between them keeps the rate at about 30 fps.
+ * composition; the sleep between them keeps the rate at about [framesPerSecond].
  */
 @Composable
-private fun rememberCycle(animated: Boolean): FloatState {
+private fun rememberCycle(animated: Boolean, framesPerSecond: Int): FloatState {
     val cycle = remember { mutableFloatStateOf(STILL_CYCLE) }
-    LaunchedEffect(animated) {
+    val loop = LocalCycleLoop.current
+    LaunchedEffect(animated, framesPerSecond, loop) {
         if (!animated) {
             cycle.floatValue = STILL_CYCLE
             return@LaunchedEffect
         }
-        runCycleLoop { cycle.floatValue = it }
+        loop.run(framesPerSecond) { cycle.floatValue = it }
     }
     return cycle
 }
 
+/** Runs the frames of a drawn background. A test stands in for it, as it does for the player. */
+internal fun interface CycleLoop {
+    suspend fun run(framesPerSecond: Int, onCycle: (Float) -> Unit)
+}
+
+internal val LocalCycleLoop = staticCompositionLocalOf {
+    CycleLoop { fps, onCycle -> runCycleLoop(fps, onCycle = onCycle) }
+}
+
 /**
- * The frames of a running loop: [onCycle] gets the position in the loop, from 0 until 1, once every
- * [FRAME_GAP_NANOS]. That is 30 fps at 30, 60, 90 and 120 Hz; at other rates the update lands on
- * the first vsync after the gap (25 fps at 50 and 75 Hz, 24 at 72, 28.8 at 144). [nanoTime] is the
+ * The frames of a running loop: [onCycle] gets the position in the loop, from 0 until 1, about
+ * [framesPerSecond] times a second, 30 in general and 24 on a TV with glass. [nanoTime] is the
  * clock of the frame times, which are in the `System.nanoTime` timebase.
  *
- * The thread sleeps between two frames and asks for one only to draw it. The sleep is counted from
- * the time of the frame drawn last, and it ends [WAKE_EARLY_NANOS] before the vsync that is
- * [FRAME_GAP_NANOS] after that frame, so the frame asked for is that vsync's. It is clamped to
- * between none and one gap.
+ * An update falls due every gap of a [framesPerSecond]th of a second, counted from the one that
+ * fell due before it, not from the frame that was drawn for it, and it is drawn at the first vsync
+ * after it falls due. Where the gap is a whole number of vsyncs that is every gap, as 30 fps is at
+ * 30, 60, 90 and 120 Hz. Where it is not, the vsyncs between two updates are now the fewer and now
+ * the more that bracket the gap, and the rate holds on average: 24 fps at 60 Hz is 2 vsyncs and 3
+ * vsyncs in turn, where the first vsync after each gap would give 20, and 30 fps at 50 and 75 Hz is
+ * 30, where it would give 25. A loop that has fallen behind, as after the display stopped, does not
+ * catch up in a burst: the next update is due no sooner than half a gap after the frame drawn.
+ *
+ * The thread sleeps between two frames and asks for one only to draw it. The sleep ends
+ * [WAKE_EARLY_NANOS] before the update is due, so the frame asked for is that vsync's. It is
+ * clamped to between none and one gap.
  */
 internal suspend fun runCycleLoop(
+    framesPerSecond: Int = DRAWN_FRAMES_PER_SECOND,
     nanoTime: () -> Long = System::nanoTime,
     onCycle: (Float) -> Unit,
 ) {
+    val gap = NANOS_PER_SECOND / framesPerSecond
     var sleepMillis = 0L
+    var due = NOTHING_DUE
     while (true) {
         delay(sleepMillis)
         val frame = withInfiniteFrameNanos {
             onCycle(cycleAt(it))
             it
         }
+        due = max((if (due == NOTHING_DUE) frame else due) + gap, frame + gap / 2)
         // Clamped to none or one gap: with a clock that is not the one of the frame times the sleep
         // is wrong, but never an endless one.
-        val sleepNanos = FRAME_GAP_NANOS - WAKE_EARLY_NANOS - (nanoTime() - frame)
-        sleepMillis = sleepNanos.coerceIn(0L, FRAME_GAP_NANOS) / NANOS_PER_MILLI
+        val sleepNanos = due - WAKE_EARLY_NANOS - nanoTime()
+        sleepMillis = sleepNanos.coerceIn(0L, gap) / NANOS_PER_MILLI
     }
 }
 

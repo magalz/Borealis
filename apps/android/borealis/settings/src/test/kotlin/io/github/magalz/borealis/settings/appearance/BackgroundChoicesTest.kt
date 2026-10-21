@@ -6,6 +6,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.settings.catalog.SettingStore
 import io.github.magalz.borealis.settings.catalog.Settings
+import io.github.magalz.borealis.settings.repository.SettingsSnapshot
 import io.github.magalz.borealis.settings.ui.FixedChoices
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -19,19 +20,22 @@ import org.robolectric.RobolectricTestRunner
 class BackgroundChoicesTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
 
+    /** The style that a store with [id] for the Background setting stands for. */
+    private fun styleOf(id: String): BackgroundStyle =
+        BackgroundChoices.all.valueIn(SettingsSnapshot.fromStored(mapOf(Settings.BACKGROUND to id)))
+
     @Test
     fun `the background is a string in DataStore that starts as the Aurora curtains`() {
         assertThat(Settings.BACKGROUND.key).isEqualTo("borealis_background")
         assertThat(Settings.BACKGROUND.default).isEqualTo("aurora_curtains")
         assertThat(Settings.BACKGROUND.store).isEqualTo(SettingStore.DATASTORE)
         assertThat(Settings.all).contains(Settings.BACKGROUND)
-        assertThat(BackgroundChoices.styleOf(Settings.BACKGROUND.default))
-            .isEqualTo(BackgroundStyle.Default)
+        assertThat(styleOf(Settings.BACKGROUND.default)).isEqualTo(BackgroundStyle.Default)
     }
 
     @Test
     fun `the styles are stored under stable ids, in the order of the row`() {
-        assertThat(BackgroundChoices.all.map { it.id to it.style })
+        assertThat(BackgroundChoices.all.choices.map { it.id to it.value })
             .containsExactly(
                 "aurora_curtains" to BackgroundStyle.AuroraCurtains,
                 "soft_glow" to BackgroundStyle.SoftGlow,
@@ -46,23 +50,25 @@ class BackgroundChoicesTest {
 
     @Test
     fun `every style of the design system has exactly one id`() {
-        assertThat(BackgroundChoices.all.map { it.style })
+        assertThat(BackgroundChoices.all.choices.map { it.value })
             .containsExactlyElementsIn(BackgroundStyle.entries)
-        assertThat(BackgroundChoices.all.map { it.id }).containsNoDuplicates()
+        assertThat(BackgroundChoices.all.choices.map { it.id }).containsNoDuplicates()
     }
 
     @Test
-    fun `an id is read as its style and a style is stored as its id`() {
-        for (choice in BackgroundChoices.all) {
-            assertThat(BackgroundChoices.styleOf(choice.id)).isEqualTo(choice.style)
-            assertThat(BackgroundChoices.idOf(choice.style)).isEqualTo(choice.id)
+    fun `an id is read as its style and shown as chosen`() {
+        for (choice in BackgroundChoices.all.choices) {
+            assertThat(styleOf(choice.id)).isEqualTo(choice.value)
+            assertThat(BackgroundChoices.all.shownId(choice.id)).isEqualTo(choice.id)
         }
     }
 
     @Test
-    fun `an unknown stored value is read as the default style`() {
+    fun `an unknown stored value is read as the default style, and shown as chosen`() {
         for (unknown in listOf("", "bogus", "Aurora curtains", "AuroraCurtains", "2", "OFF")) {
-            assertThat(BackgroundChoices.styleOf(unknown)).isEqualTo(BackgroundStyle.Default)
+            assertThat(styleOf(unknown)).isEqualTo(BackgroundStyle.Default)
+            assertThat(BackgroundChoices.all.shownId(unknown))
+                .isEqualTo(Settings.BACKGROUND.default)
         }
     }
 
@@ -71,7 +77,7 @@ class BackgroundChoicesTest {
         val names = FixedChoices.BACKGROUND.map { context.getString(it.labelRes) }
 
         assertThat(FixedChoices.BACKGROUND.map { it.key })
-            .containsExactlyElementsIn(BackgroundChoices.all.map { it.id })
+            .containsExactlyElementsIn(BackgroundChoices.all.choices.map { it.id })
             .inOrder()
         assertThat(names)
             .containsExactly(

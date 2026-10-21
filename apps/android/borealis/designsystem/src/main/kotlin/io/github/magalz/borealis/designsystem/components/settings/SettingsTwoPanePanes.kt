@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 
 /**
  * The groups whose panes are composed: the [built] ones, which stay, and the [unbuilt] one that is
@@ -212,8 +213,8 @@ private fun <K> PaneRows(
         Column(Modifier.fillMaxSize()) { content(key) }
     } else {
         Column(
-            Modifier.fillMaxSize().verticalScroll(scroll).padding(AREA_PADDING),
-            verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
+            Modifier.fillMaxSize().verticalScroll(scroll).padding(BorealisDimens.listPadding),
+            verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
         ) {
             content(key)
         }

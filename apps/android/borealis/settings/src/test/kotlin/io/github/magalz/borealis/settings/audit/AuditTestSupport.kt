@@ -6,10 +6,14 @@ import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
+import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.diagnostics.audit.AuditEntry
 import io.github.magalz.borealis.diagnostics.audit.AuditTrail
 import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
+import io.github.magalz.borealis.settings.testing.InGlassHost
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -77,6 +81,30 @@ fun ComposeContentTestRule.setContentInKeyboardMode(content: @Composable () -> U
         content()
     }
     runOnIdle { assertThat(checkNotNull(manager).requestInputMode(InputMode.Keyboard)).isTrue() }
+    waitForIdle()
+}
+
+/**
+ * Shows the Audit trail of [formFactor] with [state], over a glass host of [style] under [look],
+ * and does nothing when an entry is chosen or Back is pressed.
+ */
+fun ComposeContentTestRule.showAudit(
+    state: AuditUiState,
+    formFactor: FormFactor = FormFactor.Phone,
+    look: BorealisLook = BorealisLook(),
+    style: BackgroundStyle = BackgroundStyle.FlowingLight,
+) {
+    setContent {
+        InGlassHost(formFactor, look, style) {
+            AuditScreen(
+                state = state,
+                formFactor = formFactor,
+                onEntrySelected = {},
+                onDetailDismissed = {},
+                onBack = {},
+            )
+        }
+    }
     waitForIdle()
 }
 

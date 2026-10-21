@@ -175,6 +175,8 @@ internal constructor(
             when (result) {
                 QuitResult.Quit -> {
                     SessionAudit.quit()
+                    // The Library behind the stream shows the notice that the Apps sheet shows.
+                    entryPoint().quitNotice().post()
                     activity.finish()
                 }
                 is QuitResult.Failed -> {

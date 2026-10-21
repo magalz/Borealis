@@ -1,3 +1,6 @@
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.testing.Test
+
 plugins {
     id("borealis.android.library")
     id("borealis.android.compose")
@@ -19,6 +22,15 @@ android {
     }
 }
 
+// A test reads the halo that docs/ux/accessibility.md chooses (two levels above the Gradle
+// root), so the notes are an input of the unit tests: a change of the notes runs them again.
+tasks.withType<Test>().configureEach {
+    inputs
+        .file(rootDir.resolve("../../docs/ux/accessibility.md"))
+        .withPathSensitivity(PathSensitivity.NONE)
+        .withPropertyName("accessibilityNotes")
+}
+
 dependencies {
     // The video styles of the background play their clip with Media3 ExoPlayer, and the player
     // follows the lifecycle of the screen it is on.
@@ -33,5 +45,8 @@ dependencies {
     testFixturesApi(platform(libs.androidx.compose.bom))
     testFixturesApi(libs.androidx.compose.ui.test.junit4)
     testFixturesImplementation(libs.androidx.compose.foundation)
+    testFixturesImplementation(libs.androidx.compose.material3)
     testFixturesImplementation(libs.robolectric)
+    testFixturesApi(libs.roborazzi.accessibility.check)
+    testFixturesImplementation(libs.truth)
 }

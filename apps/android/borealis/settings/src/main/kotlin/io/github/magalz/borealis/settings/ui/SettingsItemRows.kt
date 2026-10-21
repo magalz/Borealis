@@ -73,17 +73,14 @@ internal fun SettingsItemRow(
 ) {
     val item = itemState.item
     val title = stringResource(item.titleRes)
-    val summary = item.summaryRes?.let { stringResource(it) }
+    val summary = item.summaryText()
     val enabled = itemState.disabled == null
     val note = disabledNote(itemState.disabled)
     when (item.kind) {
         SettingsItemKind.SWITCH ->
             SettingsSwitchRow(
                 title = title,
-                // A firmware that crashes with HDR cannot use it, whatever is stored.
-                checked =
-                    value.checked &&
-                        itemState.disabled?.reason != DisabledReason.HDR_BROKEN_ON_FIRMWARE,
+                checked = switchShownOn(item, value.checked, itemState.disabled?.reason),
                 onCheckedChange = { actions.onSwitchChanged(item, it) },
                 modifier = modifier,
                 summary = summary,
@@ -116,6 +113,18 @@ internal fun SettingsItemRow(
             )
     }
 }
+
+/**
+ * Whether the switch of [item] shows as on, given what is [stored] and why it is disabled. A
+ * firmware that crashes with HDR cannot use it, and High contrast sets the thicker outline itself,
+ * whatever is stored.
+ */
+private fun switchShownOn(item: SettingsItem, stored: Boolean, reason: DisabledReason?): Boolean =
+    when {
+        reason == DisabledReason.HDR_BROKEN_ON_FIRMWARE -> false
+        item == SettingsItem.THICK_FOCUS && reason == DisabledReason.HIGH_CONTRAST_ON -> true
+        else -> stored
+    }
 
 @Composable
 private fun SliderItemRow(

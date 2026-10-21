@@ -1,7 +1,7 @@
 package io.github.magalz.borealis.designsystem.background
 
 import android.content.Context
-import android.view.SurfaceView
+import android.view.TextureView
 
 /** Stands in for Media3: records every player the background makes and what it does with it. */
 internal class FakeBackgroundPlayers : BackgroundPlayerFactory {
@@ -14,14 +14,14 @@ internal class FakeBackgroundPlayers : BackgroundPlayerFactory {
     override fun create(
         context: Context,
         video: Int,
-        surface: SurfaceView,
+        texture: TextureView,
         onFirstFrame: () -> Unit,
         onError: (reason: String) -> Unit,
-    ): BackgroundPlayer = FakePlayer(video, surface, onFirstFrame, onError).also { created += it }
+    ): BackgroundPlayer = FakePlayer(video, texture, onFirstFrame, onError).also { created += it }
 
     class FakePlayer(
         val video: Int,
-        val surface: SurfaceView,
+        val texture: TextureView,
         private val onFirstFrame: () -> Unit,
         private val onError: (String) -> Unit,
     ) : BackgroundPlayer {
@@ -47,7 +47,7 @@ internal class FakeBackgroundPlayers : BackgroundPlayerFactory {
             playing = false
         }
 
-        /** The player draws its first frame on the surface. */
+        /** The player draws its first frame on the texture. */
         fun showFirstFrame() = onFirstFrame()
 
         /** The player cannot go on: [reason] is what Media3 calls the error. */

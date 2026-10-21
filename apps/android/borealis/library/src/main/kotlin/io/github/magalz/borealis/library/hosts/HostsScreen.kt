@@ -1,6 +1,5 @@
 package io.github.magalz.borealis.library.hosts
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,7 +17,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.material3.SnackbarHost
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,12 +38,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.adaptive.hostGridColumns
 import io.github.magalz.borealis.designsystem.components.AuroraLoader
+import io.github.magalz.borealis.designsystem.components.BackdropKicker
+import io.github.magalz.borealis.designsystem.components.BorealisSnackbarHost
 import io.github.magalz.borealis.designsystem.components.ContinueCard
-import io.github.magalz.borealis.designsystem.components.DotStatus
 import io.github.magalz.borealis.designsystem.components.EmptyState
 import io.github.magalz.borealis.designsystem.components.EmptyStateAction
 import io.github.magalz.borealis.designsystem.components.HostCard
-import io.github.magalz.borealis.designsystem.components.Kicker
 import io.github.magalz.borealis.designsystem.focus.InitialFocusState
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
@@ -52,9 +51,11 @@ import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
-import io.github.magalz.borealis.library.domain.Reachability
 
-/** An outline sits 5dp outside its card, so neighbouring cards need 10dp between them. */
+/**
+ * An outline reaches BorealisDimens.outlineReach outside its card, thickOutlineReach when it is the
+ * thicker one, so neighbouring cards need BorealisDimens.listGap between them.
+ */
 private val GRID_GAP = 12.dp
 private val SECTION_PADDING = 6.dp
 private val LOADING_SIZE = 64.dp
@@ -68,7 +69,13 @@ private val LOADING_SIZE = 64.dp
  *   Pair and Wake buttons are inline, so no long press is needed. A long press opens the options.
  * - **TV and handheld:** a header, then the cards in a grid; the shell draws the rail (Hosts, Add
  *   host, Settings) beside the screen. The first Continue card has focus when the screen opens,
- *   else the first host card. OK opens, hold OK, X or Menu opens the options.
+ *   else the first host card. OK opens, hold OK, X or Menu opens the options. When the screen comes
+ *   back after another one (Back from Apps), the card that had focus, or that a tap chose, has it
+ *   again: [FocusedCard] finds it by its host and not by its place, because the host may have
+ *   changed its status or moved in the list, and the grid scrolls to it if the list moved it out of
+ *   view. It is the first card again when that host is gone. The screen keeps this in its own saved
+ *   state and not in `focusRestorer`, whose state is on the focus node of the container and goes
+ *   with the screen when the navigation takes it out of the composition.
  *
  * The options (Details, Wake, Forget) and the Forget confirmation belong to the screen: it keeps
  * which host they are open for and calls [onDetails], [onWake] or [onForget] when the user chooses.
@@ -99,6 +106,7 @@ fun HostsScreen(
     BorealisTheme(formFactor) {
         var optionsHostId by rememberSaveable { mutableStateOf<String?>(null) }
         var forgetHostId by rememberSaveable { mutableStateOf<String?>(null) }
+        val focusedCard = rememberSaveable(saver = FocusedCardSaver) { FocusedCard() }
         val handlers =
             HostsHandlers(
                 onHostSelected = onHostSelected,
@@ -106,6 +114,8 @@ fun HostsScreen(
                 onWake = onWake,
                 onOptions = { optionsHostId = it },
                 onAddHost = onAddHost,
+                // A phone starts with no focus, so nothing would read what it wrote.
+                focusedCard = focusedCard.takeIf { formFactor != FormFactor.Phone },
             )
         HostsLayout(
             state,
@@ -156,7 +166,7 @@ private fun HostsLayout(
                 HostsBody(state, formFactor, handlers, Modifier.weight(1f))
             }
         }
-        SnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter))
+        BorealisSnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter))
     }
 }
 
@@ -167,17 +177,35 @@ private class HostsHandlers(
     val onWake: (String) -> Unit,
     val onOptions: (String) -> Unit,
     val onAddHost: () -> Unit,
-)
+    /** Null on a phone, which starts with no focus. */
+    val focusedCard: FocusedCard?,
+) {
+    /** Remembers the card [key] as the one to focus when the screen comes back. */
+    fun remember(key: String) {
+        focusedCard?.key = key
+    }
+}
 
 /**
  * The element that starts with focus on a TV or handheld, and the guard that lets the screen take
  * it once: a host that sorts first, a Continue card that appears or a card that scrolls back into
- * view later must not pull focus away from where the user moved it.
+ * view later must not pull focus away from where the user moved it. [cardKey] is the card that had
+ * focus when the screen was last left, which starts with focus again if it is still there.
  */
-private class StartFocus(val requester: FocusRequester, val state: InitialFocusState)
+private class StartFocus(
+    val requester: FocusRequester,
+    val state: InitialFocusState,
+    val cardKey: String?,
+)
 
 private fun Modifier.withStartFocus(start: StartFocus?): Modifier =
     if (start == null) this else initialFocus(start.requester, start.state)
+
+/** [this] when the card [key] starts with focus: the [restored] card, else the [first] one. */
+private fun StartFocus?.startingAt(key: String, restored: String?, first: Boolean): StartFocus? =
+    takeIf {
+        if (restored != null) key == restored else first
+    }
 
 @Composable
 private fun HostsBody(
@@ -192,8 +220,14 @@ private fun HostsBody(
         // the hosts load or the search ends, so the first hosts to arrive take the focus.
         val requester = remember { FocusRequester() }
         val initialFocus = rememberInitialFocusState(state.loading || state.searching)
+        // Read when the guard starts, so a card that takes the focus later is not chased.
+        val savedCard = remember(initialFocus) { handlers.focusedCard?.key }
         val startFocus =
-            if (formFactor != FormFactor.Phone) StartFocus(requester, initialFocus) else null
+            if (formFactor != FormFactor.Phone) {
+                StartFocus(requester, initialFocus, savedCard)
+            } else {
+                null
+            }
         if (state.loading) {
             // Nothing to press while the hosts load: an OK pressed now must not open Add host.
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -236,50 +270,57 @@ private fun HostGrid(
 ) {
     val optionsLabel = stringResource(R.string.hosts_options)
     val unnamedApp = stringResource(R.string.hosts_app_running)
+    // The card that had focus before wins over the first card, unless its host is gone.
+    val cardKeys = remember(state.continueItems, state.items) { state.cardKeys() }
+    val restoredCard = startFocus?.cardKey?.takeIf { it in cardKeys }
+    val gridState = rememberLazyGridState()
+    ScrollToCard(gridState, state, restoredCard, startFocus?.state)
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
+        state = gridState,
         modifier = Modifier.fillMaxSize(),
-        // The padding and the gaps keep the focus outline, 5dp outside a card, from being clipped.
+        // The padding and the gaps keep the focus outline, BorealisDimens.outlineReach outside a
+        // card (thickOutlineReach when it is the thicker one), from being clipped.
         contentPadding = PaddingValues(LocalBorealisSpacing.current.gutter),
         verticalArrangement = Arrangement.spacedBy(GRID_GAP),
         horizontalArrangement = Arrangement.spacedBy(GRID_GAP),
     ) {
         if (state.continueItems.isNotEmpty()) {
             item(key = "continue-section", span = { fullWidth() }) {
-                Kicker(stringResource(R.string.hosts_section_continue))
+                BackdropKicker(stringResource(R.string.hosts_section_continue))
             }
             itemsIndexed(
                 state.continueItems,
-                key = { _, item -> "continue:${item.hostId}" },
+                key = { _, item -> continueKey(item.hostId) },
                 span = { _, _ -> fullWidth() },
             ) { index, item ->
+                val key = continueKey(item.hostId)
                 ContinueCard(
                     appName = item.appName ?: unnamedApp,
                     detail = stringResource(R.string.hosts_continue_detail, item.hostName),
                     resumeLabel = stringResource(R.string.hosts_continue_resume),
-                    onClick = { handlers.onContinue(item.hostId) },
+                    onClick = {
+                        handlers.remember(key)
+                        handlers.onContinue(item.hostId)
+                    },
                     modifier =
                         Modifier.fillMaxWidth()
-                            .withStartFocus(startFocus.takeIf { index == 0 })
-                            .testTag("continue:${item.hostId}"),
+                            .keepsFocusIn(handlers.focusedCard, key)
+                            .withStartFocus(startFocus.startingAt(key, restoredCard, index == 0))
+                            .testTag(key),
                 )
             }
         }
         item(key = "hosts-section", span = { fullWidth() }) {
-            Kicker(
+            BackdropKicker(
                 stringResource(R.string.hosts_section_hosts),
                 Modifier.padding(top = SECTION_PADDING),
             )
         }
         itemsIndexed(state.items, key = { _, item -> item.id }) { index, item ->
             val first = index == 0 && state.continueItems.isEmpty()
-            HostItem(
-                item,
-                handlers,
-                optionsLabel,
-                unnamedApp,
-                Modifier.withStartFocus(startFocus.takeIf { first }),
-            )
+            val start = startFocus.startingAt(hostKey(item.id), restoredCard, first)
+            HostItem(item, handlers, optionsLabel, unnamedApp, Modifier.withStartFocus(start))
         }
     }
 }
@@ -293,50 +334,32 @@ private fun HostItem(
     modifier: Modifier,
 ) {
     // A tap or OK runs the action of the state. Open and Pair both select the host: the ViewModel
-    // decides between apps and pairing. Wake wakes it. The label tells a screen reader which.
+    // decides between apps and pairing. Wake wakes it. The label tells a screen reader which. A tap
+    // keeps the card too, for the touch mode of a handheld, where a card cannot take focus.
+    val key = hostKey(item.id)
+    val runningLabel = item.runningApp?.name?.let { stringResource(R.string.hosts_running_app, it) }
     HostCard(
         name = item.name,
         status = item.dotStatus(),
         statusText = stringResource(item.statusTextRes()),
         onClick = {
+            handlers.remember(key)
             if (item.action == HostAction.WAKE) {
                 handlers.onWake(item.id)
             } else {
                 handlers.onHostSelected(item.id)
             }
         },
-        modifier = modifier.testTag("host:${item.id}"),
+        modifier = modifier.keepsFocusIn(handlers.focusedCard, key).testTag(key),
         detail = item.detailLine(),
         tags = item.tags.map { stringResource(it.labelRes()) },
         runningApp = item.runningApp?.let { it.name ?: unnamedApp },
+        runningLabel = runningLabel,
         onClickLabel = item.action.labelRes()?.let { stringResource(it) },
-        onOptions = { handlers.onOptions(item.id) },
+        onOptions = {
+            handlers.remember(key)
+            handlers.onOptions(item.id)
+        },
         optionsLabel = optionsLabel,
     )
 }
-
-/** An online host that is not paired needs the user, so its dot is the warning one. */
-private fun HostItemUiState.dotStatus(): DotStatus =
-    when (reachability) {
-        Reachability.ONLINE -> if (paired) DotStatus.Online else DotStatus.Attention
-        Reachability.OFFLINE -> DotStatus.Offline
-        Reachability.UNKNOWN -> DotStatus.Unknown
-    }
-
-@StringRes
-private fun HostItemUiState.statusTextRes(): Int =
-    when (reachability) {
-        Reachability.ONLINE ->
-            if (paired) R.string.hosts_status_online else R.string.hosts_status_not_paired
-        Reachability.OFFLINE -> R.string.hosts_status_offline
-        Reachability.UNKNOWN -> R.string.hosts_status_checking
-    }
-
-@StringRes
-private fun HostAction.labelRes(): Int? =
-    when (this) {
-        HostAction.OPEN -> R.string.hosts_action_open
-        HostAction.PAIR -> R.string.hosts_action_pair
-        HostAction.WAKE -> R.string.hosts_action_wake
-        HostAction.NONE -> null
-    }

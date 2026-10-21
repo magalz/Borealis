@@ -7,6 +7,8 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.testing.settleWindows
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.shell.LibraryScaffold
@@ -190,11 +192,38 @@ class AppsScreenshotTest {
         )
     }
 
+    /** The glass of the covers and the rail over the still of Northern lights. */
+    @Test
+    @Config(qualifiers = TV)
+    fun appsTvGlass() {
+        noAnimations()
+        shoot(
+            "appsglass_tv_desktop-running",
+            FormFactor.Tv,
+            state(runningFirst = true),
+            BackgroundStyle.NorthernLights,
+        )
+    }
+
+    /** The bottom sheet of a phone over the blurred window of the glass. */
+    @Test
+    @Config(qualifiers = PHONE)
+    fun appActionsPhoneGlass() {
+        noAnimations()
+        shoot(
+            "appsglass_phone_actions-sheet",
+            FormFactor.Phone,
+            runningSheet(),
+            BackgroundStyle.NorthernLights,
+        )
+    }
+
     /** [beforeShot] drives the screen, for instance to open the confirmation, once it is shown. */
     private fun shoot(
         name: String,
         formFactor: FormFactor,
         state: AppsUiState,
+        style: BackgroundStyle = BackgroundStyle.Off,
         beforeShot: () -> Unit = {},
     ) {
         composeRule.setContent {
@@ -203,6 +232,7 @@ class AppsScreenshotTest {
                 formFactor,
                 selected = RailSelection.Hosts,
                 actions = RailActions({}, {}, {}),
+                backgroundStyle = style,
             ) {
                 AppsScreen(
                     state = state,

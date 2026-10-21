@@ -15,12 +15,9 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -28,15 +25,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.adaptive.appGridColumns
 import io.github.magalz.borealis.designsystem.components.AuroraLoader
+import io.github.magalz.borealis.designsystem.components.BackdropIcon
+import io.github.magalz.borealis.designsystem.components.BackdropInk
+import io.github.magalz.borealis.designsystem.components.BackdropText
 import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.BorealisPhoneBar
+import io.github.magalz.borealis.designsystem.components.BorealisSnackbarHost
 import io.github.magalz.borealis.designsystem.components.CoverTile
 import io.github.magalz.borealis.designsystem.components.DotStatus
 import io.github.magalz.borealis.designsystem.components.EmptyState
@@ -45,11 +46,14 @@ import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
-import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
 
-/** An outline sits 5dp outside a tile, so the grid keeps 10dp or more between tiles and edges. */
+/**
+ * An outline reaches BorealisDimens.outlineReach outside a tile, thickOutlineReach when it is the
+ * thicker one, and a focused tile grows by 2 percent: the grid keeps 12dp or more at its edges and
+ * BorealisDimens.listGap or more between tiles.
+ */
 private val TILE_GAP = 12.dp
 private val ROW_GAP = 16.dp
 private val GRID_VERTICAL_PADDING = 12.dp
@@ -96,7 +100,7 @@ fun AppsScreen(
                 }
                 Content(state, formFactor, onAppSelected, onActions, Modifier.weight(1f))
             }
-            SnackbarHost(
+            BorealisSnackbarHost(
                 snackbarHostState,
                 Modifier.align(Alignment.BottomCenter).padding(SNACKBAR_PADDING),
             )
@@ -110,7 +114,7 @@ fun AppsScreen(
 @Composable
 private fun ShowHiddenToggle(state: AppsUiState, onToggleShowHidden: () -> Unit) {
     IconButton(onClick = onToggleShowHidden) {
-        Icon(
+        BackdropIcon(
             // The icon shows what the toggle does: open eye shows them, crossed eye hides.
             if (state.showHidden) BorealisIcons.VisibilityOff else BorealisIcons.Visibility,
             stringResource(toggleLabel(state)),
@@ -140,21 +144,19 @@ private fun toggleLabel(state: AppsUiState) =
 /** The host name with what runs on it. */
 @Composable
 private fun Title(state: AppsUiState, modifier: Modifier = Modifier) {
-    val colors = LocalBorealisColors.current
     val running = state.runningAppId != null
     Column(modifier, verticalArrangement = Arrangement.spacedBy(BorealisDimens.stackedTextGap)) {
-        Text(
+        BackdropText(
             state.hostName.orEmpty(),
+            Modifier.semantics { heading() },
             style = MaterialTheme.typography.titleLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
         )
         Row(
             horizontalArrangement = Arrangement.spacedBy(STATUS_GAP),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (running) StatusDot(DotStatus.Online, contentDescription = null)
-            Text(
+            BackdropText(
                 when {
                     state.runningAppName != null ->
                         stringResource(R.string.apps_status_running, state.runningAppName)
@@ -162,7 +164,7 @@ private fun Title(state: AppsUiState, modifier: Modifier = Modifier) {
                     else -> stringResource(R.string.apps_status_idle)
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = colors.ink3,
+                ink = BackdropInk.Ink3,
             )
         }
     }

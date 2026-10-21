@@ -14,6 +14,7 @@
     <string name="settings_group_audio">Audio</string>
     <string name="settings_group_advanced">Advanced</string>
     <string name="settings_group_appearance">Appearance</string>
+    <string name="settings_group_accessibility">Accessibility</string>
     <string name="settings_group_privacy">Privacy and diagnostics</string>
     <string name="settings_group_about">About</string>
     <string name="settings_privacy_link_summary">Logs, diagnostic bundle, audit trail</string>
@@ -98,10 +99,30 @@
 
     <!-- Rows: Appearance -->
     <string name="settings_background_title">Background</string>
+    <string name="settings_glass_tint_title">Glass tint</string>
+    <string name="settings_glass_tint_summary">How much the panels tint the background. Higher is more opaque.</string>
+    <string name="settings_glass_blur_title">Glass blur</string>
+    <string name="settings_glass_blur_summary">How much the panels blur the background.</string>
+
+    <!-- Rows: Accessibility -->
+    <string name="settings_reduce_motion_title">Reduce motion</string>
+    <string name="settings_reduce_motion_summary">On removes animations; Off keeps them even when the device removes them. Follow system uses the device\'s animation setting.</string>
+    <string name="settings_transparency_title">Transparency</string>
+    <string name="settings_transparency_summary">%1$s and %2$s override %3$s and %4$s.</string>
+    <string name="settings_thick_focus_title">Thicker focus outline</string>
+    <string name="settings_thick_focus_summary">Draws a thicker, lighter outline around the focused item.</string>
+    <string name="settings_text_size_title">Text size</string>
+    <string name="settings_text_size_summary">Scales the text of Borealis on top of the system font size.</string>
+    <string name="settings_high_contrast_title">High contrast</string>
+    <string name="settings_high_contrast_summary">Uses solid panels, brighter text, a dimmed background and the thicker outline.</string>
+    <string name="settings_colour_vision_title">Colour-blind palette</string>
+    <string name="settings_colour_vision_summary">Uses status colours that are easy to tell apart with red-green or blue-yellow colour blindness.</string>
 
     <!-- Disabled notes -->
     <string name="settings_note_turn_on_first">Turn on %1$s first</string>
     <string name="settings_note_hdr_firmware">HDR crashes on the firmware of this device. Update the firmware to use it.</string>
+    <string name="settings_note_transparency_level">%1$s is set to %2$s in %3$s</string>
+    <string name="settings_note_high_contrast">%1$s is on in %2$s</string>
 
     <!-- Values -->
     <string name="settings_value_frame_rate">%1$d fps</string>
@@ -109,6 +130,7 @@
     <string name="settings_value_bitrate">%1$s Mbps</string>
     <string name="settings_value_bitrate_automatic">Automatic (%1$s Mbps)</string>
     <string name="settings_value_percent">%1$d %%</string>
+    <string name="settings_value_dp">%1$d dp</string>
     <string name="settings_value_resolution_standard">%1$s (%2$dx%3$d)</string>
     <string name="settings_resolution_name_p">%1$dp</string>
     <string name="settings_resolution_name_4k">4K</string>
@@ -143,6 +165,15 @@
     <string name="settings_choice_audio_stereo">Stereo (2.0)</string>
     <string name="settings_choice_audio_51">5.1 surround</string>
     <string name="settings_choice_audio_71">7.1 surround</string>
+    <string name="settings_choice_motion_follow">Follow system</string>
+    <string name="settings_choice_motion_on">On</string>
+    <string name="settings_choice_motion_off">Off</string>
+    <string name="settings_choice_transparency_standard">Standard</string>
+    <string name="settings_choice_transparency_reduced">Reduced</string>
+    <string name="settings_choice_transparency_off">Off</string>
+    <string name="settings_choice_palette_off">Off</string>
+    <string name="settings_choice_palette_red_green">Red-green</string>
+    <string name="settings_choice_palette_blue_yellow">Blue-yellow</string>
 
     <!-- Native warnings -->
     <string name="settings_native_resolution_title">Native resolution</string>

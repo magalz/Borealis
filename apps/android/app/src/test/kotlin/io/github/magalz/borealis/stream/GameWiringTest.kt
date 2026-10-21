@@ -54,6 +54,13 @@ class GameWiringTest {
     }
 
     @Test
+    fun `the chrome gets the look that the settings store when the stream starts`() {
+        val host = source.substringAfter("new StreamChromeHost(", "").substringBefore(");")
+
+        assertThat(host).contains("StreamSessionFactory.look(this)")
+    }
+
+    @Test
     fun `the chrome takes and gives back the gamepad`() {
         assertThat(body("private void chromeCaptured()")).contains("controllerHandler.setCaptured(true)")
         assertThat(body("private void chromeReleased()")).contains("controllerHandler.setCaptured(false)")

@@ -7,6 +7,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.geometry.Rect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.magalz.borealis.designsystem.adaptive.rememberFormFactor
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamSession
@@ -19,19 +20,26 @@ import io.github.magalz.borealis.stream.StreamSession
 internal val LocalMenuHandleBounds = staticCompositionLocalOf<(Rect?) -> Unit> { {} }
 
 /**
+ * The theme of the stream chrome: the form factor of the window and the [look] that the viewer
+ * chose when the stream started.
+ */
+@Composable
+internal fun StreamChromeTheme(look: BorealisLook, content: @Composable () -> Unit) {
+    BorealisTheme(rememberFormFactor(), look, content)
+}
+
+/**
  * The chrome over the stream: the screen for the phase of [session], nothing in picture-in-picture.
  * Every screen is inside [BorealisTheme] for the form factor of the window, so the screens read
- * `LocalFormFactor` and never apply the theme themselves.
+ * `LocalFormFactor` and never apply the theme themselves. The chrome host learns the menu handle
+ * bounds through [report], and the screens draw with the [look] that the stream started with.
  */
-@Composable fun StreamChromeRoot(session: StreamSession) = StreamChromeRoot(session) {}
-
-/** [StreamChromeRoot] for the chrome host, which learns the menu handle bounds through [report]. */
 @Composable
-internal fun StreamChromeRoot(session: StreamSession, report: (Rect?) -> Unit) {
+internal fun StreamChromeRoot(session: StreamSession, report: (Rect?) -> Unit, look: BorealisLook) {
     val state by session.state.collectAsStateWithLifecycle()
     val perf by session.perf.collectAsStateWithLifecycle()
     if (state.inPip) return
-    BorealisTheme(rememberFormFactor()) {
+    StreamChromeTheme(look) {
         CompositionLocalProvider(LocalMenuHandleBounds provides report) {
             when (val phase = state.phase) {
                 is StreamPhase.Starting ->

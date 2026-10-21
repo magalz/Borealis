@@ -7,7 +7,7 @@ Everything is written in English. Start with the repository
 | --- | --- |
 | [adr/](adr/README.md) | Architecture decision records: why Borealis is built the way it is. Never rewritten once accepted; superseded by a new ADR instead. |
 | [use-cases/](use-cases/README.md) | Use cases (UC-NNN) with actors, flows and acceptance tests. They drive the tests. |
-| [ux/](ux/phase-2-proposal.md) | Phase 2 UX proposal, clickable prototype and screen captures. |
+| [ux/](ux/phase-2-proposal.md) | Phase 2 UX proposal, clickable prototype and screen captures, and the [accessibility notes](ux/accessibility.md): contrast over the background, the high-contrast and colour-blind palettes, TalkBack and a WCAG 2.2 checklist. |
 | `host-contract/` | What the client expects from the LuminalShine host (endpoints, behaviour, golden fixtures), and which parts are proposals. |
 | [development/](development/README.md) | How to build, test (TDD), sync upstream, release and orchestrate AI agents. |
 | [policies/](policies/) | Rules: [dependencies](policies/dependencies.md), [release](policies/release.md), [upstream sync](policies/upstream-sync.md), [AI-assisted development](policies/ai-assisted-development.md), [host contributions](policies/host-contributions.md), [privacy and logging](policies/privacy-and-logging.md). |

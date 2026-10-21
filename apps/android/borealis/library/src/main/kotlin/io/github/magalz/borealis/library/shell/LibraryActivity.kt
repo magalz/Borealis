@@ -14,7 +14,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.domain.LegacyBridge
 import io.github.magalz.borealis.library.domain.StreamLauncher
-import io.github.magalz.borealis.settings.appearance.rememberBackgroundStyle
+import io.github.magalz.borealis.settings.appearance.rememberLooks
 import io.github.magalz.borealis.settings.repository.SettingsRepository
 import javax.inject.Inject
 
@@ -28,6 +28,7 @@ class LibraryActivity : Hilt_LibraryActivity() {
     @Inject lateinit var streamLauncher: StreamLauncher
     @Inject lateinit var legacyBridge: LegacyBridge
     @Inject lateinit var settings: SettingsRepository
+    @Inject lateinit var quitNotice: QuitNotice
 
     private var request by mutableStateOf<LibraryLaunchRequest?>(null)
 
@@ -42,11 +43,14 @@ class LibraryActivity : Hilt_LibraryActivity() {
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
         setContent {
+            val looks = rememberLooks(settings)
             LibraryNavHost(
                 onStartStream = { streamLauncher.start(this, it) },
+                quitNotice = quitNotice,
                 request = request,
                 onRequestHandled = { request = null },
-                backgroundStyle = rememberBackgroundStyle(settings),
+                backgroundStyle = looks.background,
+                look = looks.look,
             )
         }
         // After the content: the bridge posts the GL renderer probe, which must not lose its

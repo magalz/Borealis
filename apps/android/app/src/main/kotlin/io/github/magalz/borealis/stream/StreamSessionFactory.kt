@@ -4,8 +4,10 @@ import android.app.Activity
 import android.content.pm.PackageManager
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.library.UNKNOWN_APP_NAME
 import io.github.magalz.borealis.nativecore.LaunchCategory
+import io.github.magalz.borealis.settings.appearance.borealisLook
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.store.SettingsSnapshots
 import io.github.magalz.borealis.stream.host.StreamChromeHost
@@ -76,6 +78,13 @@ object StreamSessionFactory {
             dockKeyboard = { StreamChromeHost.dockedKeyboard(activity, usbPadHeld.asBoolean) },
             actions = actions,
         )
+
+    /**
+     * The look that the stream chrome draws with: the one that the settings store now, mapped as
+     * the Library maps it. `Game` reads it once, when the stream starts.
+     */
+    @JvmStatic
+    fun look(activity: Activity): BorealisLook = borealisLook(SettingsSnapshots.current(activity))
 
     /**
      * The negotiated stream: the size and the bitrate limit from [prefs], the [frameRate] and

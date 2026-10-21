@@ -6,4 +6,7 @@
     <string name="borealis_step_failed">Failed</string>
     <!-- Spoken state of a modifier key of the keyboard that stays pressed for the next key. -->
     <string name="borealis_key_locked">Locked</string>
+    <!-- Spoken state of a section of a list that opens and closes. -->
+    <string name="borealis_section_expanded">Expanded</string>
+    <string name="borealis_section_collapsed">Collapsed</string>
 </resources>

@@ -24,6 +24,7 @@ import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.Chip
 import io.github.magalz.borealis.designsystem.components.MenuRow
 import io.github.magalz.borealis.designsystem.components.SegmentedControl
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
@@ -39,10 +40,7 @@ import io.github.magalz.borealis.stream.TouchMode
 import io.github.magalz.borealis.stream.keys.Shortcuts
 import io.github.magalz.borealis.stream.ui.overlay.rememberPerfFormat
 
-private val CHIPS_PADDING_HORIZONTAL = 8.dp
 private val CHIP_GAP_HORIZONTAL = 8.dp
-// Chips are focus stops: 10dp between them keeps their outlines apart.
-private val CHIP_GAP_VERTICAL = 10.dp
 private val INFO_PADDING_HORIZONTAL = 16.dp
 private val INFO_GAP = 12.dp
 
@@ -57,10 +55,11 @@ internal fun SendKeysRow(intents: StreamIntents) {
         trailing = { ExpandMark(open) },
     )
     if (open) {
+        // Chips are focus stops: the padding and the gap of a list keep their outlines whole.
         FlowRow(
-            Modifier.fillMaxWidth().padding(horizontal = CHIPS_PADDING_HORIZONTAL),
+            Modifier.fillMaxWidth().padding(horizontal = BorealisDimens.listPadding),
             horizontalArrangement = Arrangement.spacedBy(CHIP_GAP_HORIZONTAL),
-            verticalArrangement = Arrangement.spacedBy(CHIP_GAP_VERTICAL),
+            verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
         ) {
             for (key in Shortcuts.sendKeys) {
                 Chip(stringResource(key.label), onClick = { intents.send(key.chord) })
@@ -134,6 +133,7 @@ private fun <T> OptionRow(
                 selected = selected,
                 label = label,
                 onSelect = onSelect,
+                groupLabel = title,
             )
         },
     )

@@ -3,13 +3,18 @@ package io.github.magalz.borealis.settings.ui
 import androidx.annotation.StringRes
 import io.github.magalz.borealis.settings.R
 import io.github.magalz.borealis.settings.appearance.BackgroundChoices
+import io.github.magalz.borealis.settings.appearance.LookLists
 import io.github.magalz.borealis.settings.catalog.Settings
 
-/** One entry of a list whose entries do not depend on the device. */
+/**
+ * One entry of a list whose entries do not depend on the device. The label is [labelRes], with
+ * [labelArg] as its number when it has one ("40 %").
+ */
 class FixedChoice(
     val key: String,
     @StringRes val labelRes: Int,
     @StringRes val summaryRes: Int? = null,
+    val labelArg: Int? = null,
 )
 
 /** The lists of the settings screen whose entries are the same on every device. */
@@ -59,7 +64,74 @@ object FixedChoices {
         )
 
     /** Background: the styles of the Appearance setting, with their stable ids. */
-    val BACKGROUND = BackgroundChoices.all.map { FixedChoice(it.id, it.style.label) }
+    val BACKGROUND = BackgroundChoices.all.choices.map { FixedChoice(it.id, it.value.label) }
+
+    /** Glass tint: 30 to 85 percent, with the percent as the stored id. */
+    val GLASS_TINT =
+        LookLists.GLASS_TINT.choices.map {
+            FixedChoice(it.id, R.string.settings_value_percent, labelArg = it.value)
+        }
+
+    /** Glass blur: 8 to 48 dp, with the dp as the stored id. */
+    val GLASS_BLUR =
+        LookLists.GLASS_BLUR.choices.map {
+            FixedChoice(it.id, R.string.settings_value_dp, labelArg = it.value)
+        }
+
+    /** Reduce motion. */
+    val REDUCE_MOTION =
+        listOf(
+            FixedChoice(
+                Settings.REDUCE_MOTION_FOLLOW_SYSTEM,
+                R.string.settings_choice_motion_follow,
+            ),
+            FixedChoice(Settings.REDUCE_MOTION_ON, R.string.settings_choice_motion_on),
+            FixedChoice(Settings.REDUCE_MOTION_OFF, R.string.settings_choice_motion_off),
+        )
+
+    /** Transparency. */
+    val TRANSPARENCY =
+        listOf(
+            FixedChoice(
+                Settings.TRANSPARENCY_STANDARD,
+                R.string.settings_choice_transparency_standard,
+            ),
+            FixedChoice(
+                Settings.TRANSPARENCY_REDUCED,
+                R.string.settings_choice_transparency_reduced,
+            ),
+            FixedChoice(Settings.TRANSPARENCY_OFF, R.string.settings_choice_transparency_off),
+        )
+
+    /** Text size: 100, 115 and 130 percent. */
+    val TEXT_SIZE =
+        listOf(
+            FixedChoice(
+                Settings.TEXT_SIZE_DEFAULT,
+                R.string.settings_value_percent,
+                labelArg = 100,
+            ),
+            FixedChoice(Settings.TEXT_SIZE_LARGER, R.string.settings_value_percent, labelArg = 115),
+            FixedChoice(
+                Settings.TEXT_SIZE_LARGEST,
+                R.string.settings_value_percent,
+                labelArg = 130,
+            ),
+        )
+
+    /** The colour-blind palette. */
+    val COLOUR_VISION =
+        listOf(
+            FixedChoice(Settings.COLOUR_VISION_OFF, R.string.settings_choice_palette_off),
+            FixedChoice(
+                Settings.COLOUR_VISION_RED_GREEN,
+                R.string.settings_choice_palette_red_green,
+            ),
+            FixedChoice(
+                Settings.COLOUR_VISION_BLUE_YELLOW,
+                R.string.settings_choice_palette_blue_yellow,
+            ),
+        )
 
     /** Touch. */
     val TOUCH =

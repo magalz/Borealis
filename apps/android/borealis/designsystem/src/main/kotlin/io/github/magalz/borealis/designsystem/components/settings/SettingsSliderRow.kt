@@ -54,8 +54,8 @@ private val THUMB_RADIUS = 9.dp
  *
  * A disabled row is dimmed and ignores input, but it stays a focus stop: on a TV the user can still
  * land on it and read [disabledNote], which says why it is disabled and shows only then. The
- * outline of a focused row reaches 5dp outside it, so a list of rows needs 8dp of padding around it
- * and 10dp between rows.
+ * outline of a focused row reaches 5dp outside it, 7dp when it is the thicker one, so a list of
+ * rows needs 8dp of padding around it and 10dp between rows.
  */
 @Composable
 fun SettingsSliderRow(
@@ -137,11 +137,11 @@ private fun SliderHeader(
     ) {
         SettingsRowText(
             title,
-            summary,
-            disabledNote,
-            enabled,
-            SettingsRowTone.Normal,
-            Modifier.weight(1f),
+            summary = summary,
+            note = disabledNote,
+            enabled = enabled,
+            tone = SettingsRowTone.Normal,
+            modifier = Modifier.weight(1f),
         )
         Text(
             valueLabel,

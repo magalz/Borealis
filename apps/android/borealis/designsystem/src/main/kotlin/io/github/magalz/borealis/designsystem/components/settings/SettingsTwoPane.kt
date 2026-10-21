@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -27,7 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
@@ -36,20 +37,24 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import io.github.magalz.borealis.designsystem.components.liftedWhenFocused
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
+import io.github.magalz.borealis.designsystem.glass.GlassTextColors
+import io.github.magalz.borealis.designsystem.glass.glassSurface
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
+import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import kotlinx.coroutines.flow.collectLatest
@@ -58,17 +63,20 @@ import kotlinx.coroutines.flow.collectLatest
 class SettingsGroup<out K>(val key: K, val title: String)
 
 private val PANE_GAP = 12.dp
-/** An outline sits 5dp outside its item, so neighbours need 10dp between them. */
-internal val ITEM_GAP = 10.dp
-internal val AREA_PADDING = 8.dp
 private val GROUP_PADDING_HORIZONTAL = 12.dp
-/** Small enough that the ten groups of Settings, [ITEM_GAP] apart, fit a 540dp TV unscrolled. */
-private val GROUP_PADDING_VERTICAL = 5.dp
+/**
+ * Small enough that the eleven groups of Settings, [BorealisDimens.listGap] apart, fit a 540dp TV
+ * unscrolled.
+ */
+private val GROUP_PADDING_VERTICAL = 4.dp
+/** The height that a finger needs (WCAG 2.5.8); a TV has no touch screen and keeps the padding. */
+private val GROUP_MIN_TOUCH = 48.dp
 
 /**
  * The settings of a TV or handheld in two panes: the [groups] by title in a list on the left, and
- * on the right whatever [content] shows for the group whose key is [selected]. The pane scrolls and
- * spaces its rows 10dp apart; [content] puts the rows of the group in it, with 8dp of padding
+ * on the right whatever [content] shows for the group whose key is [selected]. The list is a glass
+ * panel and the stack of panes another, and [content] has the glass text colours. The pane scrolls
+ * and spaces its rows 10dp apart; [content] puts the rows of the group in it, with 8dp of padding
  * around them already given. A group for which [selfScrolling] is true brings its own scroll and
  * padding: its [content] fills the pane, which does not wrap it in a scroll that would give it an
  * unbounded height.
@@ -96,8 +104,10 @@ private val GROUP_PADDING_VERTICAL = 5.dp
  * Selection follows focus: [onSelect] is called with a group as soon as focus lands on it (not for
  * the group already selected), so the pane follows every step of a held key; a tap or OK on a group
  * selects it too. [onSelect] must apply the selection at once, as a state write: Right from a group
- * enters the pane at its first row one frame later, and another key before that cancels it. Left
- * from the pane, when no row uses the key, returns to the selected group, whichever row it leaves.
+ * enters the pane at its first row one frame later, and another key before that cancels it. OK on a
+ * group (OK, Enter, the numpad Enter or the gamepad A button) does the same as Right, in the
+ * keyboard input mode only: a tap selects the group and leaves focus where it is. Left from the
+ * pane, when no row uses the key, returns to the selected group, whichever row it leaves.
  */
 @Composable
 fun <K> SettingsTwoPane(
@@ -123,29 +133,32 @@ fun <K> SettingsTwoPane(
     }
     val navigation = rememberGroupNavigation(current, onSelect, pane, selectedGroup)
     val composed = rememberComposedGroups(groups, current, selfScrolling)
-    Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(PANE_GAP)) {
-        GroupList(groups, current, navigation, selectedGroup, focusOnOpen)
-        GroupPanes(
-            groups,
-            composed,
-            current,
-            selfScrolling,
-            pane,
-            Modifier.weight(1f).fillMaxHeight().onKeyEvent { event ->
-                // No row used Left: go back to the selected group.
-                val left = event.key == Key.DirectionLeft
-                if (left && event.type == KeyEventType.KeyDown) selectedGroup.requestFocus()
-                left
-            },
-            content,
-        )
+    val shape = MaterialTheme.shapes.large
+    GlassTextColors {
+        Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(PANE_GAP)) {
+            GroupList(groups, current, navigation, selectedGroup, focusOnOpen)
+            GroupPanes(
+                groups,
+                composed,
+                current,
+                selfScrolling,
+                pane,
+                Modifier.weight(1f).fillMaxHeight().glassSurface(shape).onKeyEvent { event ->
+                    // No row used Left: go back to the selected group.
+                    val left = event.key == Key.DirectionLeft
+                    if (left && event.type == KeyEventType.KeyDown) selectedGroup.requestFocus()
+                    left
+                },
+                content,
+            )
+        }
     }
 }
 
 /**
  * What stands between focus on a group and the pane of a [SettingsTwoPane]: a group that focus or a
- * tap reaches is [select]ed at once, and Right asks to enter the pane. The [currentKey] is that of
- * the pane; [focusPane] puts focus into it.
+ * tap reaches is [select]ed at once, and Right or OK asks to enter the pane. The [currentKey] is
+ * that of the pane; [focusPane] puts focus into it.
  */
 private class GroupNavigation<K>(
     private val currentKey: State<K?>,
@@ -161,15 +174,24 @@ private class GroupNavigation<K>(
         if (key != currentKey.value) onSelect.value(key)
     }
 
+    /**
+     * A click chose the group [key]: it is selected. In the [keyboard] input mode the click is OK,
+     * and the pane is entered as Right does; a tap, in the touch mode, leaves focus where it is.
+     */
+    fun choose(key: K, keyboard: Boolean) {
+        select(key)
+        if (keyboard) enterPane()
+    }
+
     /** A key other than Right: whatever it does, it is not entering the pane. */
     fun onOtherKey() {
         entering.value = false
     }
 
     /**
-     * Right: enter the pane, a frame later. A selection that was just made has not recomposed the
-     * panes yet, and the target of a request for the current pane is still on the old one, which
-     * would take focus and clear it when it stops being current.
+     * Right or OK: enter the pane, a frame later. A selection that was just made has not recomposed
+     * the panes yet, and the target of a request for the current pane is still on the old one,
+     * which would take focus and clear it when it stops being current.
      */
     fun enterPane() {
         entering.value = true
@@ -215,7 +237,6 @@ private fun <K> rememberGroupNavigation(
  * The groups by title, the one that is [selected] marked. [navigation] hears of focus, of the keys
  * and of a tap. [selectedGroup] is where an entry of the list by the D-pad lands.
  */
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun <K> GroupList(
     groups: List<SettingsGroup<K>>,
@@ -225,13 +246,15 @@ private fun <K> GroupList(
     focusOnOpen: Boolean,
 ) {
     val initialFocus = rememberInitialFocusState()
+    val inputMode = LocalInputModeManager.current
     // Read here, so that a switch recomposes the list and not the pane.
     val current = selected.value
     Column(
         Modifier.width(BorealisDimens.navWidth(LocalFormFactor.current))
             .fillMaxHeight()
+            .glassSurface(MaterialTheme.shapes.large)
             .verticalScroll(rememberScrollState())
-            .padding(AREA_PADDING)
+            .padding(BorealisDimens.listPadding)
             .selectableGroup()
             .onKeyEvent { event ->
                 val right = event.key == Key.DirectionRight
@@ -243,18 +266,27 @@ private fun <K> GroupList(
             // Entering the list by the D-pad lands on the selected group, not the nearest. A
             // request for one group (a tap, an initial focus) is not an entry and stays on it.
             .focusProperties {
-                enter = { direction ->
-                    if (direction != FocusDirection.Enter) selectedGroup else FocusRequester.Default
+                onEnter = {
+                    if (requestedFocusDirection != FocusDirection.Enter)
+                        selectedGroup.requestFocus()
                 }
             }
             .focusGroup(),
-        verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
+        verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
     ) {
         for (group in groups) {
             GroupEntry(
                 group.title,
                 selected = group.key == current,
                 onSelect = { navigation.select(group.key) },
+                // The click of OK, of Enter and of the gamepad A (which Android turns into OK) is
+                // read in the keyboard mode, the click of a tap in the touch mode.
+                onClick = {
+                    navigation.choose(
+                        group.key,
+                        keyboard = inputMode.inputMode == InputMode.Keyboard,
+                    )
+                },
                 modifier =
                     when {
                         group.key != current -> Modifier
@@ -266,15 +298,21 @@ private fun <K> GroupList(
     }
 }
 
-/** One group of the list. Focus on it selects it, as a tap or OK does. */
+/** One group of the list. Focus on it selects it, as a tap or OK does: [onClick] is for those. */
 @Composable
-private fun GroupEntry(title: String, selected: Boolean, onSelect: () -> Unit, modifier: Modifier) {
+private fun GroupEntry(
+    title: String,
+    selected: Boolean,
+    onSelect: () -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.medium
+    val touch = LocalFormFactor.current != FormFactor.Tv
     Box(
         modifier
             .fillMaxWidth()
-            .liftedWhenFocused()
             .onFocusChanged { if (it.isFocused) onSelect() }
             .borealisFocusIndication(shape)
             .background(if (selected) colors.accentTint else Color.Transparent, shape)
@@ -284,9 +322,11 @@ private fun GroupEntry(title: String, selected: Boolean, onSelect: () -> Unit, m
                 interactionSource = null,
                 indication = BorealisPressIndication,
                 role = Role.Tab,
-                onClick = onSelect,
+                onClick = onClick,
             )
-            .padding(horizontal = GROUP_PADDING_HORIZONTAL, vertical = GROUP_PADDING_VERTICAL)
+            .heightIn(min = if (touch) GROUP_MIN_TOUCH else 0.dp)
+            .padding(horizontal = GROUP_PADDING_HORIZONTAL, vertical = GROUP_PADDING_VERTICAL),
+        contentAlignment = Alignment.CenterStart,
     ) {
         Text(
             title,

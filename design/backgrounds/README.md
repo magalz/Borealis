@@ -1,9 +1,9 @@
 # Animated backgrounds
 
 The Library and Settings screens sit on one animated background, chosen from seven styles
-(issue #30, owner decision of 2026-10-18). `BorealisBackground` in `:borealis:designsystem` draws it
-and `BackgroundStyle` names the styles. The Compose styles have no files; the four video styles
-are the clips below.
+(issue #30, owner decision of 2026-10-18). `GlassHost` in `:borealis:designsystem` draws it, through
+`BorealisBackground`, which is internal to that module, and `BackgroundStyle` names the styles. The
+Compose styles have no files; the four video styles are the clips below.
 
 | Style | Working name | Kind | Source |
 | --- | --- | --- | --- |
@@ -33,6 +33,7 @@ removes animations (no player and no decoder), and until the player draws its fi
 
 Every clip is 1920 x 1080 H.264 (High profile, level 4.1, 4 reference frames), silent and a seamless
 loop, encoded with `-crf 23 -bf 0 -refs 4 -level 4.1 -tune grain`:
+
 - No B-frames: they made the quality of smooth gradients pulse every few frames, which looked like
   stutter.
 - Level 4.1 and 4 reference frames: the first encodes were level 5.0, which a decoder of level 4.x
@@ -72,3 +73,16 @@ ffmpeg -i background_northern_lights.mp4 -frames:v 1 -vf scale=1280:720:flags=la
 The Compose styles use the design tokens `page`, `accent-strong` (`#7C3AED`) and `accent`
 (`#A78BFA`), plus a deep teal (`#1F8A8A`) that has no token, so it is a named constant in
 `AuroraBackground.kt`. The code-made clips use the same four colours.
+
+## What the glass table depends on
+
+`GlassContrastTable.kt` in `:borealis:designsystem` is measured over frames of these backgrounds
+(`design/accessibility/README.md`), and the glass tint floors and text colours follow from it.
+
+- **The four clips** are hashed into the table. `GlassContrastTableClipsTest` fails when a clip in
+  `res/raw` is not the one that was measured, so encode a clip again only together with a new table.
+- **The two drawn styles** have no clip, so nothing detects a change to them. After a change to
+  `Hues`, `BANDS`, `SPOTS` or the constants of the drawing in `AuroraBackground.kt` (and likewise to
+  the tokens `page`, `accent` and `accent-strong` that it takes), take the frames again with the
+  `BackgroundFrameExport` test, run `contrast.py measure` on them and `contrast.py glass-table` on
+  the result, and commit the table.

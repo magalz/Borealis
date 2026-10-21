@@ -15,10 +15,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
+import io.github.magalz.borealis.designsystem.glass.GlassTextColors
+import io.github.magalz.borealis.designsystem.glass.glassSurface
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisShapes
@@ -40,6 +44,14 @@ private val CHIP_PADDING_VERTICAL = 2.dp
  * of asking for options (long press, hold OK, X, Menu) runs [onOptions], named [optionsLabel]. The
  * status line says what the card does, so it carries no label of its own.
  *
+ * A screen reader gets the card as one sentence: the name, the status, the detail, the tags and the
+ * app that runs, as [runningLabel] says it ("Running Desktop") or, without one, as [runningApp]
+ * shows it. The dot says nothing of its own, and the tags are read as text with the card.
+ *
+ * The card is a glass surface: in a glass host it shows the background through, blurred, and its
+ * secondary text has the glass colours. Where the glass is solid, or outside a host, it is the
+ * `surface` colour.
+ *
  * On a TV a card is at least as high as its height token, which is the height of the fullest card
  * (online, with one row of tags and the app it runs, plus a few dp of margin), so the cards of a
  * grid are the same size whatever they show; the text stays at the top. The equal height assumes
@@ -57,6 +69,7 @@ fun HostCard(
     detail: String? = null,
     tags: List<String> = emptyList(),
     runningApp: String? = null,
+    runningLabel: String? = null,
     onClickLabel: String? = null,
     onOptions: (() -> Unit)? = null,
     optionsLabel: String? = null,
@@ -64,27 +77,39 @@ fun HostCard(
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.large
     val padding = LocalBorealisSpacing.current.cardPadding
+    val said =
+        listOfNotNull(
+                name,
+                statusText,
+                detail,
+                tags.joinToString(", ").ifEmpty { null },
+                runningLabel ?: runningApp,
+            )
+            .joinToString(", ")
     // Only the TV grid has its cards all the same height; a phone or a handheld, which has little
     // room to spare, sizes each card by its content.
     val height =
         if (LocalFormFactor.current == FormFactor.Tv) BorealisTokens.Size.HostCard.HeightTv
         else 0.dp
-    HostInfo(
-        name,
-        status,
-        statusText,
-        detail,
-        tags,
-        runningApp,
-        modifier
-            .heightIn(min = height)
-            .borealisFocusIndication(shape)
-            .background(colors.surface, shape)
-            .border(1.dp, colors.line, shape)
-            .clip(shape)
-            .optionsClickable(onClick, onOptions, Role.Button, optionsLabel, onClickLabel)
-            .padding(padding),
-    )
+    GlassTextColors {
+        HostInfo(
+            name,
+            status,
+            statusText,
+            detail,
+            tags,
+            runningApp,
+            modifier
+                .heightIn(min = height)
+                .borealisFocusIndication(shape)
+                .glassSurface(shape)
+                .border(1.dp, colors.line, shape)
+                .clip(shape)
+                .optionsClickable(onClick, onOptions, Role.Button, optionsLabel, onClickLabel)
+                .semantics { contentDescription = said }
+                .padding(padding),
+        )
+    }
 }
 
 @Composable
@@ -99,12 +124,9 @@ private fun HostInfo(
 ) {
     val colors = LocalBorealisColors.current
     Column(modifier, verticalArrangement = Arrangement.spacedBy(LINE_GAP)) {
-        Text(
-            name,
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        // No limit on the lines: at a large text size a long name wraps and the card grows, where
+        // an ellipsis would cut it.
+        Text(name, style = MaterialTheme.typography.titleMedium)
         if (detail != null) {
             Text(
                 detail,
@@ -139,8 +161,6 @@ private fun HostInfo(
                 runningApp,
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.accentSoft,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
                 modifier =
                     Modifier.background(colors.accentTint, pill)
                         .border(1.dp, colors.accentLine, pill)

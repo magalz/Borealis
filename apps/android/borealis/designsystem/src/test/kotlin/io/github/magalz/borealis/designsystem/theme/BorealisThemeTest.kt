@@ -17,7 +17,7 @@ class BorealisThemeTest {
 
     @Test
     fun `the colour scheme maps the page surface and accent tokens`() {
-        val scheme = borealisColorScheme()
+        val scheme = borealisColorScheme(BorealisColors())
 
         assertThat(scheme.background).isEqualTo(colors.Page)
         assertThat(scheme.surface).isEqualTo(colors.Surface)
@@ -30,7 +30,7 @@ class BorealisThemeTest {
 
     @Test
     fun `the colour scheme maps lines errors containers and the scrim`() {
-        val scheme = borealisColorScheme()
+        val scheme = borealisColorScheme(BorealisColors())
 
         assertThat(scheme.outline).isEqualTo(colors.LineStrong)
         assertThat(scheme.outlineVariant).isEqualTo(colors.Line)
@@ -42,7 +42,7 @@ class BorealisThemeTest {
 
     @Test
     fun `no container puts text on accent strong`() {
-        val scheme = borealisColorScheme()
+        val scheme = borealisColorScheme(BorealisColors())
 
         assertThat(scheme.primaryContainer).isEqualTo(colors.SurfaceRaised)
         assertThat(scheme.onPrimaryContainer).isEqualTo(colors.AccentSoft)

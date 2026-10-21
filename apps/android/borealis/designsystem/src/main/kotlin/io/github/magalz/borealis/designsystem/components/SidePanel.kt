@@ -34,8 +34,9 @@ private const val SCRIM_ALPHA = 0.35f
  * The panel has a hairline on its left edge only. The scrim is the page colour at 35%, lighter than
  * the dialog scrim so the stream stays visible.
  *
- * The panel clips and scrolls its content, and the focus outline of an item reaches 5dp outside it
- * (see [io.github.magalz.borealis.designsystem.focus.borealisFocusIndication]). Put at least 8dp of
+ * The panel clips and scrolls its content, and the focus outline of an item reaches 5dp outside it,
+ * 7dp when it is the thicker one (see
+ * [io.github.magalz.borealis.designsystem.focus.borealisFocusIndication]). Put at least 8dp of
  * horizontal padding around rows and other focusable items, and 10dp between them, or the outline
  * is cut at the edge of the panel.
  */

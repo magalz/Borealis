@@ -25,14 +25,14 @@ import org.robolectric.annotation.Config
 /** How a row shows what is stored, and what the screen asks of the device when it opens. */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = PHONE)
-class SettingsRowFixesTest : SettingsScreenTestBase() {
+class SettingsRowFixesTest : PhoneSettingsTestBase() {
     @Test
     fun `HDR on a broken firmware shows off even when on is stored`() {
         stored(Settings.ENABLE_HDR to true)
         options.rowStates[Settings.ENABLE_HDR] =
             RowState.Disabled(DisabledReason.HDR_BROKEN_ON_FIRMWARE)
 
-        show()
+        showOpen()
 
         row("HDR")
             .assert(
@@ -50,7 +50,7 @@ class SettingsRowFixesTest : SettingsScreenTestBase() {
         options.rowStates[Settings.ENABLE_HDR] =
             RowState.Disabled(DisabledReason.DEPENDS_ON_SETTING, Settings.FULL_RANGE)
 
-        show()
+        showOpen()
 
         row("HDR")
             .assert(
@@ -86,6 +86,9 @@ class SettingsRowFixesTest : SettingsScreenTestBase() {
         }
         composeRule.waitForIdle()
 
+        header("STREAM").performClick()
+        composeRule.waitForIdle()
+
         composeRule.onNodeWithText("144 fps").assertExists()
         composeRule.onNodeWithText("144").assertDoesNotExist()
     }
@@ -98,10 +101,12 @@ class SettingsRowFixesTest : SettingsScreenTestBase() {
     }
 
     @Test
-    fun `the Version row cannot be clicked`() {
-        show()
+    fun `the Version row is read as text, not as a button, and shows the title and the value`() {
+        showOpen()
 
-        row("Version").assertHasNoClickAction()
+        row("Version")
+            .assertHasNoClickAction()
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Role))
         composeRule.onNodeWithText("9.8.7 (commit abc1234)").assertExists()
     }
 }

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,7 +33,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import io.github.magalz.borealis.designsystem.adaptive.rememberFormFactor
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.components.BorealisSnackbarHost
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.rememberAnimationsRemoved
 import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.R
 import io.github.magalz.borealis.library.addhost.AddHostRoute
@@ -65,19 +67,24 @@ private const val FADE_MS = 150
  * diagnostics and the Audit trail are destinations of the same graph (UC-009): the gear of Hosts
  * and the rail open Settings. A [request] from outside (a launcher shortcut, the stream error
  * screen) puts its screens on the back stack; [onRequestHandled] says that it was taken, so it is
- * not taken twice.
+ * not taken twice. A Quit in the stream leaves its "App quit." in [quitNotice], which the shell
+ * shows on the current screen.
  *
  * [backgroundStyle] is what the shell draws behind the rail and every screen. It is the one input
  * of the background: [LibraryActivity] passes the style that the Appearance setting stores, and
- * where none is passed it is [BackgroundStyle.Default].
+ * where none is passed it is [BackgroundStyle.Default]. [look] is the look that the screens draw
+ * with: [LibraryActivity] passes the one that the settings store, and where none is passed it is
+ * the default look.
  */
 @Composable
 internal fun LibraryNavHost(
     onStartStream: (StreamRequest) -> Boolean,
+    quitNotice: QuitNotice,
     modifier: Modifier = Modifier,
     request: LibraryLaunchRequest? = null,
     onRequestHandled: () -> Unit = {},
     backgroundStyle: BackgroundStyle = BackgroundStyle.Default,
+    look: BorealisLook = BorealisLook(),
     navController: NavHostController = rememberNavController(),
 ) {
     val resources = LocalResources.current
@@ -85,6 +92,7 @@ internal fun LibraryNavHost(
     val snackbarHostState = remember { SnackbarHostState() }
     val destination = navController.currentBackStackEntryAsState().value?.destination
     val formFactor = rememberFormFactor()
+    ShowQuitNotice(quitNotice, snackbarHostState)
     // The app a Launch request asks for, until its Apps screen has the list and selects it.
     val pendingLaunch = remember { mutableStateOf<LibraryLaunchRequest.Launch?>(null) }
     LaunchedEffect(request) {
@@ -100,7 +108,37 @@ internal fun LibraryNavHost(
             }
         }
     }
-    val rail =
+    LibraryScaffold(
+        formFactor = formFactor,
+        selected =
+            when {
+                destination?.hasRoute<AddHost>() == true -> RailSelection.AddHost
+                destination.isSettingsDestination() -> RailSelection.Settings
+                else -> RailSelection.Hosts
+            },
+        actions = rememberRailActions(navController),
+        modifier = modifier,
+        backgroundStyle = backgroundStyle,
+        look = look,
+    ) {
+        Box {
+            FadingNavHost(navController) {
+                libraryGraph(navController, startStream, pendingLaunch)
+            }
+            BorealisSnackbarHost(
+                snackbarHostState,
+                Modifier.align(Alignment.BottomCenter)
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .padding(SNACKBAR_PADDING),
+            )
+        }
+    }
+}
+
+/** What the items of the rail do on [navController]. */
+@Composable
+private fun rememberRailActions(navController: NavHostController): RailActions =
+    remember(navController) {
         RailActions(
             onHosts = { navController.popBackStack<Hosts>(inclusive = false) },
             // Add host closes onto Hosts, also when it opens from Apps. Choosing it while it shows
@@ -115,32 +153,7 @@ internal fun LibraryNavHost(
             },
             onSettings = { navController.openSettingsFromRail() },
         )
-
-    LibraryScaffold(
-        formFactor = formFactor,
-        selected =
-            when {
-                destination?.hasRoute<AddHost>() == true -> RailSelection.AddHost
-                destination.isSettingsDestination() -> RailSelection.Settings
-                else -> RailSelection.Hosts
-            },
-        actions = rail,
-        modifier = modifier,
-        backgroundStyle = backgroundStyle,
-    ) {
-        Box {
-            FadingNavHost(navController) {
-                libraryGraph(navController, startStream, pendingLaunch)
-            }
-            SnackbarHost(
-                snackbarHostState,
-                Modifier.align(Alignment.BottomCenter)
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .padding(SNACKBAR_PADDING),
-            )
-        }
     }
-}
 
 /**
  * The NavHost where the next screen fades in and the one that is left goes at once; the rail is
@@ -150,12 +163,16 @@ internal fun LibraryNavHost(
  */
 @Composable
 internal fun FadingNavHost(navController: NavHostController, graph: NavGraphBuilder.() -> Unit) {
+    // With animations removed (Reduce motion, or the system when that follows it) the fade is one
+    // frame: the next screen is just there. A snap, and not no transition at all, so that the
+    // screen that is left still goes in that same frame and does not stay drawn under the next one.
+    val enter = fadeIn(if (rememberAnimationsRemoved()) snap() else tween(FADE_MS))
     NavHost(
         navController,
         startDestination = Hosts,
-        enterTransition = { fadeIn(tween(FADE_MS)) },
+        enterTransition = { enter },
         exitTransition = { fadeOut(snap()) },
-        popEnterTransition = { fadeIn(tween(FADE_MS)) },
+        popEnterTransition = { enter },
         popExitTransition = { fadeOut(snap()) },
         builder = graph,
     )

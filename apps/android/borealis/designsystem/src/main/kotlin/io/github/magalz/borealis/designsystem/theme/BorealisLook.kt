@@ -1,0 +1,56 @@
+package io.github.magalz.borealis.designsystem.theme
+
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
+
+/** How see-through the glass panels are (ADR 0057). [Off] draws them solid, as before the glass. */
+enum class Transparency {
+    Standard,
+    Reduced,
+    Off,
+}
+
+/** Whether motion follows the system's animation scale or is forced on or off. */
+enum class ReduceMotion {
+    FollowSystem,
+    On,
+    Off,
+}
+
+/** The app's own text size, multiplied by the system font scale. */
+enum class TextSize(val scale: Float) {
+    Default(1f),
+    Larger(1.15f),
+    Largest(1.3f),
+}
+
+/** The palette for status colours. Every status also has a shape or a text, not colour alone. */
+enum class ColourVision {
+    Off,
+    RedGreen,
+    BlueYellow,
+}
+
+/**
+ * The viewer's appearance and accessibility choices, read from Settings by each activity and
+ * provided through [LocalBorealisLook]. The defaults are the app's look with nothing changed.
+ *
+ * @property glassTintPercent the tint of a [Transparency.Standard] glass panel, before the floor of
+ *   the background raises it.
+ * @property glassBlurDp the blur radius of a [Transparency.Standard] glass panel.
+ * @property highContrast when on, it overrides [transparency], [thickFocus] and the background.
+ */
+@Immutable
+data class BorealisLook(
+    val transparency: Transparency = Transparency.Standard,
+    val glassTintPercent: Int = 40,
+    val glassBlurDp: Int = 8,
+    val reduceMotion: ReduceMotion = ReduceMotion.FollowSystem,
+    val thickFocus: Boolean = false,
+    val textSize: TextSize = TextSize.Default,
+    val highContrast: Boolean = false,
+    val colourVision: ColourVision = ColourVision.Off,
+)
+
+/** The [BorealisLook] in effect. A screen that nobody gives a look to gets the defaults. */
+val LocalBorealisLook = staticCompositionLocalOf { BorealisLook() }

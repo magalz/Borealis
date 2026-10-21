@@ -65,6 +65,11 @@ accident.
    the system writes SESSION_END with the reason.
 3. The system returns to the Apps screen. The app is no longer running on the
    host.
+4. The Library shows "App quit." once (Sprint 10), in a snackbar as wide as its
+   text, the same notice that a Quit from the Apps sheet shows. The notice waits
+   for a Library that is there and is dropped when none is, as after a stream that
+   a launcher shortcut started. A Quit that fails shows no notice, and the stream
+   goes on.
 
 ### A4: Select or Start on a system pad (Sprint 6; branches from step 1)
 
@@ -157,6 +162,9 @@ row is disabled; it needs the Phase 3 host API and cannot be chosen.
 | UC-004-T29 | Given the running app is Desktop, when the menu shows Quit, then the row says "Ends the stream." and "The display and controls go back to the PC." on two lines, and the confirmation is titled "Quit Desktop?" with those lines as its body. | UI | exists (Sprint 9, UI) |
 | UC-004-T30 | Given the running app is a game, when the menu shows Quit, then the row says "Closes `<app>` on the PC." and "Unsaved progress in it is lost." on two lines, and the confirmation is titled "Quit `<app>`?" with those lines as its body. | UI | exists (Sprint 9, UI) |
 | UC-004-T31 | Given an app titled "Desktop" with another case or spaces around it, then it is Desktop; given a title that only contains "Desktop", such as "Remote Desktop", then it is a game. | UI | exists (Sprint 9, UI) |
+| UC-004-T32 | Given a Quit in the stream that the host answers, when the stream ends, then the Library shows "App quit." once, as wide as its text; given a Quit that fails, then no notice is left. | unit, UI | exists (Sprint 10): `GameStreamActionsTest`, `LibraryQuitNoticeTest` |
+| UC-004-T33 | Given a notice that a Quit left, then it is delivered once; it waits while the Library is stopped; it is dropped when no Library is there, and is not shown again after the activity is recreated. | unit, UI | exists (Sprint 10): `QuitNoticeTest`, `LibraryQuitNoticeTest` |
+| UC-004-T34 | Given a snackbar, when it shows, then it is as wide as its text, centred and at most 600 dp, a long message wraps, and a screen reader is told of it. | UI | exists (Sprint 10, UI): `BorealisSnackbarHostTest` |
 
 Sprint 5 built the in-game menu and its logic. A test marked "exists (Sprint 5,
 unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose test
@@ -186,6 +194,16 @@ T27), and `SystemPadQuitComboTest` checks the Start hold on a system pad (T28).
 `InGameMenuTest` checks the Quit row and its confirmation (T29 to T31). The
 Sprint 9 device round checks the quit combo on the S22 with a pad
 ([device validation](../development/device-validation.md#322-sprint-9-checks)).
+
+UC-004-T32 to T34 are Sprint 10 rows. `GameStreamActionsTest` checks that a Quit
+that worked leaves the notice and a failed one leaves none (T32). The Sprint 10
+device round saw "App quit." once on the Streamer, 3 s after the Library came
+back and gone 5 s later
+([device validation](../development/device-validation.md#15-results-sprint-10)).
+That round also saw "Quitting `<app>`…" stay on screen about 17 s once, in the
+night round, and 5.5 to 6.7 s in the morning smoke, until the host answered
+`/cancel`. The cause is not known. The Quit logged `Connection terminated: -1`
+as an error; the [roadmap](../roadmap.md#backlog-not-scheduled) has both.
 
 Partly covered:
 
@@ -227,4 +245,5 @@ Until then the row is disabled.
   `UsbMenuChordTest`, `ChromeGamepadKeysTest`, `StreamChromeHostTest`,
   `GameStreamActionsTest`, `SessionAuditTest`, `StreamSessionTest`,
   `PointerMotionTest`, `GamepadMouseSpeedTest`, `QuitComboTest`,
-  `UsbStartHoldTest`, `GuideTapTest`, `SystemPadQuitComboTest`.
+  `UsbStartHoldTest`, `GuideTapTest`, `SystemPadQuitComboTest`,
+  `QuitNoticeTest`, `LibraryQuitNoticeTest`, `BorealisSnackbarHostTest`.

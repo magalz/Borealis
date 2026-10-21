@@ -903,6 +903,36 @@ HALO_TEXTS = {
 }
 
 
+# The icons that the app draws straight on the background (issue #33): the back arrow of the bars,
+# the actions of the Hosts bar and the toggle of the Apps bar. Each is measured as a glyph mask, the
+# paths of `BorealisIcons.kt` stroked 2 units wide on the grid of 24 units, drawn at 24 dp.
+BOREALIS_ICONS_KT = (
+    REPO
+    / "apps/android/borealis/designsystem/src/main/kotlin/io/github/magalz/borealis/designsystem"
+    / "components/BorealisIcons.kt"
+)
+HALO_ICONS = ("Back", "Add", "Gear", "Visibility", "VisibilityOff")
+HALO_ICON_SIZE_DP = 24
+HALO_ICON_GRID = 24
+
+IconSet = collections.namedtuple("IconSet", "stroke paths")
+
+
+def read_icons(path=BOREALIS_ICONS_KT):
+    """The stroke width and the paths of the icons of `BorealisIcons.kt`, read from its source."""
+    return IconSet(0.0, {})
+
+
+def icon_polylines(data):
+    """The polylines, in units of the grid, that the path data of an icon draws."""
+    return []
+
+
+def halo_icon_tables(result, config):
+    """The tables of the icons with the halo `config`, and their verdict."""
+    return ""
+
+
 def halo_configs():
     """The candidates of the grid, from the smallest halo to the largest: stroke, blur, opacity."""
     return sorted(
@@ -940,6 +970,8 @@ def halo_limit(text, device, high_contrast=False):
 
     3 for large text and 4.5 for the rest, and 7 for all of it under high contrast.
     """
+    if text in HALO_ICONS:
+        return WCAG_LIMITS[1]
     if high_contrast:
         return WCAG_LIMITS[2]
     return WCAG_LIMITS[0] if device in HALO_TEXTS[text]["large"] else WCAG_LIMITS[1]
@@ -989,6 +1021,8 @@ def _set_sample(text, device, pad):
     The picture is that many times as large as the text with `pad` pixels round it. A label is in
     capitals, with its letters spaced.
     """
+    if text in HALO_ICONS:
+        return _set_icon(text, device, pad)
     style = HALO_TEXTS[text]
     size = text_size_px(text, device)
     scale = HALO_SUPERSAMPLE
@@ -1005,6 +1039,14 @@ def _set_sample(text, device, pad):
     for letter, start in zip(sample, starts):
         draw.text((pad * scale + start, pad * scale), letter, font=font, fill=255)
     return np.asarray(image, dtype=np.float32) / 255
+
+
+def _set_icon(name, device, pad):
+    """The icon at `HALO_SUPERSAMPLE` times its size, as coverage, 0 to 1, with `pad` pixels round."""
+    side = round(HALO_ICON_SIZE_DP * device_density(device))
+    big = np.zeros(((side + 2 * pad) * HALO_SUPERSAMPLE,) * 2, np.float32)
+    big[pad * HALO_SUPERSAMPLE : (pad + side) * HALO_SUPERSAMPLE] = 1.0
+    return big
 
 
 def _widen(covered, radius):
@@ -1586,6 +1628,7 @@ def main(argv=None):
     halo.add_argument("--jobs", type=int, default=4, help="processes, one frame each")
     halo.add_argument("--texts", nargs="+", choices=sorted(HALO_TEXTS), help="the text styles")
     halo.add_argument("--revision", help="the revision measured (default: HEAD)")
+    halo.add_argument("--icons", action="store_true", help="measure the icons, not the text")
     halo.add_argument("--high-contrast", action="store_true", help="measure under high contrast")
     halo.add_argument(
         "--halo",
@@ -1597,7 +1640,7 @@ def main(argv=None):
 
     args = parser.parse_args(argv)
     if args.command == "halo":
-        if args.high_contrast != (args.halo is not None):
+        if args.high_contrast != (args.halo is not None) and not args.icons:
             parser.error("--high-contrast and --halo go together: the halo to check is named")
         colors = load_colors(TOKENS_JSON, TEXT_TOKENS + SURFACE_TOKENS)
         dim = 0.0

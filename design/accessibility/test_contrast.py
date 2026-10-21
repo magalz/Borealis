@@ -1214,5 +1214,377 @@ class HaloHighContrastTest(unittest.TestCase):
         self.assertIn("Table G", out.getvalue())
 
 
+class HaloIconPathTest(unittest.TestCase):
+    """The icons of the app, read from the source of `BorealisIcons`, and the paths as polylines."""
+
+    def test_the_icons_are_read_from_the_icon_set_of_the_app(self):
+        icons = contrast.read_icons()
+        self.assertEqual(icons.stroke, 2.0)
+        self.assertEqual(icons.paths["Back"], ("M19 12H5", "M12 19l-7-7 7-7"))
+        self.assertEqual(icons.paths["Add"], ("M12 5v14M5 12h14",))
+        self.assertEqual(icons.paths["Check"], ("M5 12.5l4.5 4.5L19 7.5",))
+        self.assertEqual(
+            icons.paths["Visibility"],
+            (
+                "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z",
+                "M9 12a3 3 0 1 0 6 0a3 3 0 1 0-6 0",
+            ),
+        )
+        self.assertEqual(icons.paths["VisibilityOff"][2], "M4 4l16 16")
+
+    def test_a_path_that_is_a_constant_in_the_source_is_read_whole(self):
+        paths = contrast.read_icons().paths
+        self.assertIn("Gear", paths)
+        gear, hub = paths["Gear"]
+        # The gear is written in several strings, added together.
+        self.assertTrue(gear.startswith("M10.38 4.98L10.75 2.48"))
+        self.assertTrue(gear.endswith("A7.2 7.2 0 0 1 10.38 4.98Z"))
+        self.assertGreater(len(gear), 300)
+        self.assertEqual(hub, "M9 12a3 3 0 1 0 6 0a3 3 0 1 0-6 0")
+
+    def test_the_icons_that_are_measured_are_in_the_set(self):
+        icons = contrast.read_icons()
+        for name in contrast.HALO_ICONS:
+            self.assertIn(name, icons.paths)
+
+    def test_a_path_is_a_polyline_in_the_units_of_the_grid(self):
+        lines = contrast.icon_polylines("M19 12H5")
+        self.assertEqual(len(lines), 1)
+        np.testing.assert_allclose(lines[0], [[19, 12], [5, 12]])
+
+    def test_relative_commands_move_from_the_current_point(self):
+        lines = contrast.icon_polylines("M12 19l-7-7 7-7")
+        self.assertEqual(len(lines), 1)
+        np.testing.assert_allclose(lines[0], [[12, 19], [5, 12], [12, 5]])
+
+    def test_a_move_starts_a_new_polyline(self):
+        lines = contrast.icon_polylines("M12 5v14M5 12h14")
+        self.assertEqual(len(lines), 2)
+        np.testing.assert_allclose(lines[0], [[12, 5], [12, 19]])
+        np.testing.assert_allclose(lines[1], [[5, 12], [19, 12]])
+
+    def test_a_closed_path_ends_where_it_started(self):
+        lines = contrast.icon_polylines("M3.5 4.5h17v11h-17z")
+        self.assertEqual(len(lines), 1)
+        np.testing.assert_allclose(
+            lines[0], [[3.5, 4.5], [20.5, 4.5], [20.5, 15.5], [3.5, 15.5], [3.5, 4.5]]
+        )
+
+    def test_an_arc_is_a_circle_of_its_radius_round_its_centre(self):
+        lines = contrast.icon_polylines("M9 12a3 3 0 1 0 6 0a3 3 0 1 0-6 0")
+        self.assertGreater(len(lines), 0)
+        points = np.concatenate(lines)
+        self.assertGreater(len(points), 40)
+        distances = np.hypot(points[:, 0] - 12, points[:, 1] - 12)
+        self.assertLess(float(abs(distances - 3).max()), 0.02)
+        # It goes all the way round: the top and the bottom of the circle are on it.
+        self.assertLess(float(points[:, 1].min()), 9.05)
+        self.assertGreater(float(points[:, 1].max()), 14.95)
+
+    def test_a_smooth_curve_goes_on_from_the_last_curve(self):
+        lines = contrast.icon_polylines("M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z")
+        self.assertGreater(len(lines), 0)
+        points = np.concatenate(lines)
+        for corner in ((2, 12), (12, 5), (22, 12), (12, 19)):
+            nearest = float(np.hypot(*(points - corner).T).min())
+            self.assertLess(nearest, 0.05, corner)
+        self.assertAlmostEqual(float(points[:, 1].min()), 5.0, delta=0.05)
+        self.assertAlmostEqual(float(points[:, 1].max()), 19.0, delta=0.05)
+        np.testing.assert_allclose(lines[0][0], lines[0][-1], atol=1e-6)
+
+    def test_every_icon_of_the_app_is_drawn_by_the_parser(self):
+        icons = contrast.read_icons()
+        self.assertGreater(len(icons.paths), 0)
+        for name, paths in icons.paths.items():
+            for data in paths:
+                with self.subTest(icon=name, path=data[:20]):
+                    lines = contrast.icon_polylines(data)
+                    self.assertGreater(len(lines), 0)
+                    points = np.concatenate(lines)
+                    self.assertTrue(np.all(np.isfinite(points)))
+                    self.assertGreaterEqual(float(points.min()), 0.0)
+                    self.assertLessEqual(float(points.max()), contrast.HALO_ICON_GRID)
+
+
+class HaloIconMaskTest(unittest.TestCase):
+    """An icon as a glyph mask: its centre line stroked 2 units wide, 24 dp square."""
+
+    def arm(self, mask, column):
+        """How much of a column of the mask is covered, which is the width of a stroke across it."""
+        return float(mask[:, column].sum())
+
+    def test_an_icon_is_24_dp_at_the_density_of_the_device(self):
+        for device, density in (("tv", 2.0), ("phone", 3.0)):
+            with self.subTest(device=device):
+                mask = contrast.glyph_mask("Add", device, pad=8)
+                columns = np.nonzero(mask.max(axis=0) > 0.5)[0]
+                self.assertGreater(len(columns), 0)
+                # The arms run from 5 to 19 units, and the round caps add half a stroke: 16 units.
+                self.assertAlmostEqual(
+                    int(columns.max() - columns.min() + 1), 16 * density, delta=1
+                )
+
+    def test_the_stroke_of_an_icon_is_two_units_wide(self):
+        mask = contrast.glyph_mask("Add", "tv", pad=8)
+        # 7 units from the left edge of the grid, across the horizontal arm: 2 units, 4 px.
+        self.assertAlmostEqual(self.arm(mask, 8 + 14), 4.0, delta=0.3)
+        phone = contrast.glyph_mask("Add", "phone", pad=8)
+        self.assertAlmostEqual(self.arm(phone, 8 + 21), 6.0, delta=0.3)
+
+    def test_the_mask_is_coverage_and_nothing_outside_the_icon(self):
+        mask = contrast.glyph_mask("Add", "tv", pad=8)
+        self.assertEqual(mask.dtype, np.float32)
+        self.assertEqual(mask.shape, (48 + 16, 48 + 16))
+        self.assertEqual(float(mask[:8].max()), 0.0)
+        self.assertEqual(float(mask[:, :8].max()), 0.0)
+        self.assertGreater(float(mask.max()), 0.95)
+        self.assertLessEqual(float(mask.max()), 1.0)
+        # The corners of the grid are empty: a plus has no part there.
+        self.assertEqual(float(mask[8 : 8 + 6, 8 : 8 + 6].max()), 0.0)
+
+    def test_a_halo_stroke_widens_the_icon_by_its_width_on_every_side(self):
+        mask = contrast.glyph_mask("Add", "tv", stroke_dp=3, pad=10)
+        # 2 units of the stroke and 3 dp (6 px) on each side of the arm: 2 + 6 + 6 = 8 dp, 16 px.
+        self.assertAlmostEqual(self.arm(mask, 10 + 14), 16.0, delta=0.6)
+        plain = contrast.glyph_mask("Add", "tv", pad=10)
+        self.assertEqual(mask.shape, plain.shape)
+        self.assertTrue(np.all(mask >= plain - 1e-6))
+
+    def test_the_back_arrow_is_a_shaft_and_the_head_of_an_arrow(self):
+        mask = contrast.glyph_mask("Back", "tv", pad=4)
+
+        def at(x, y):
+            return float(mask[4 + round(y * 2), 4 + round(x * 2)])
+
+        self.assertGreater(at(12, 12), 0.9)  # the shaft
+        self.assertGreater(at(18, 12), 0.9)  # the far end of the shaft
+        self.assertGreater(at(5, 12), 0.9)  # the tip
+        self.assertGreater(at(8.5, 8.5), 0.9)  # the upper stroke of the head
+        self.assertGreater(at(8.5, 15.5), 0.9)  # the lower stroke of the head
+        self.assertEqual(at(19.5, 4), 0.0)  # a corner of the grid
+        self.assertEqual(at(12, 8.5), 0.0)  # between the shaft and the head
+
+    def test_the_gear_has_a_hole_in_the_middle_and_the_hub_round_it(self):
+        mask = contrast.glyph_mask("Gear", "phone", pad=4)
+
+        def at(x, y):
+            return float(mask[4 + round(y * 3), 4 + round(x * 3)])
+
+        self.assertEqual(at(12, 12), 0.0)  # the hole of the hub, of radius 2 units
+        self.assertGreater(at(12, 9), 0.9)  # the hub: a circle of radius 3
+        self.assertGreater(at(12, 2.5), 0.9)  # a tooth
+
+    def test_the_eye_is_a_lid_a_pupil_and_nothing_between(self):
+        for name in ("Visibility", "VisibilityOff"):
+            with self.subTest(icon=name):
+                mask = contrast.glyph_mask(name, "tv", pad=4)
+
+                def at(x, y):
+                    return float(mask[4 + round(y * 2), 4 + round(x * 2)])
+
+                self.assertGreater(at(12, 5), 0.9)  # the top of the lid
+                self.assertGreater(at(12, 9), 0.9)  # the top of the pupil
+                self.assertEqual(at(12, 12), 0.0)  # the hole in the pupil
+        slashed = contrast.glyph_mask("VisibilityOff", "tv", pad=4)
+        plain = contrast.glyph_mask("Visibility", "tv", pad=4)
+        self.assertGreater(float(slashed.sum()), float(plain.sum()))
+
+    def test_the_icons_differ(self):
+        sums = {n: float(contrast.glyph_mask(n, "tv", pad=4).sum()) for n in contrast.HALO_ICONS}
+        self.assertEqual(len({round(v) for v in sums.values()}), len(sums))
+
+
+class HaloIconMeasureTest(unittest.TestCase):
+    """The halo of an icon: the ring round it and the ratio over a frame."""
+
+    CHOICE = (3, 2, 0.8)
+
+    def setUp(self):
+        self.colors = tokens()
+        self.page = contrast.parse_hex(self.colors["page"])
+        self.ink = float(contrast.relative_luminance(contrast.parse_hex(self.colors["ink"])))
+
+    def test_an_icon_needs_3_to_1_on_every_device_and_under_high_contrast(self):
+        for name in contrast.HALO_ICONS:
+            for device in ("tv", "phone"):
+                for high in (False, True):
+                    with self.subTest(icon=name, device=device, high_contrast=high):
+                        self.assertEqual(contrast.halo_limit(name, device, high), 3.0)
+
+    def test_the_icons_are_not_text_styles(self):
+        for name in contrast.HALO_ICONS:
+            self.assertNotIn(name, contrast.HALO_TEXTS)
+
+    def test_the_ring_of_an_icon_has_an_alpha_for_each_candidate(self):
+        geometry = contrast.halo_geometry("Back", "tv")
+        ring = geometry.ring
+        self.assertEqual(geometry.configs, [contrast.HALO_NONE] + contrast.halo_configs())
+        self.assertEqual(geometry.alphas.shape, (37, int(ring.sum())))
+        # 24 dp are 48 px, and the ring is two pixels wide round the arrow.
+        self.assertLess(ring.shape[0], 48 + 2 * contrast.HALO_RING_PX + 2)
+        self.assertLess(int(ring.sum()), 48 * 48 // 3)
+
+    def test_the_chosen_halo_covers_the_ring_of_an_icon_thickly(self):
+        for name in contrast.HALO_ICONS:
+            geometry = contrast.halo_geometry(name, "tv")
+            alphas = geometry.alphas[geometry.configs.index(self.CHOICE)]
+            with self.subTest(icon=name):
+                # A 2 unit stroke widened by 3 dp on each side is thick: the ring is well inside.
+                self.assertGreater(float(alphas.mean()), 0.7)
+                self.assertLessEqual(float(alphas.max()), 0.8 + 1e-6)
+
+    def test_an_icon_is_measured_as_a_text_style_is(self):
+        stats = contrast.measure_halo_frame(
+            uniform(1920, 1080, (1.0, 1.0, 1.0)), "tv", self.colors, texts=("Add",)
+        )
+        self.assertEqual(list(stats), ["Add"])
+        self.assertEqual(len(stats["Add"]), 37)
+        none = stats["Add"][contrast.HALO_NONE]["ink"]["min"]
+        halo = stats["Add"][self.CHOICE]["ink"]["min"]
+        self.assertLess(none, 1.5)
+        self.assertGreater(halo, 3.0)
+
+    def test_a_bright_pixel_counts_for_an_icon_wherever_it_is_on_the_frame(self):
+        frame = uniform(1920, 1080, self.page)
+        frame[523, 877] = 1.0
+        stats = contrast.measure_halo_frame(frame, "tv", self.colors, texts=("Gear",))
+        self.assertAlmostEqual(
+            stats["Gear"][contrast.HALO_NONE]["ink"]["min"],
+            contrast.hex_contrast(self.colors["ink"], "#FFFFFF"),
+            places=3,
+        )
+
+    def test_the_rows_of_a_source_are_the_icons_with_their_own_limit(self):
+        rows = contrast.measure_halo_source(
+            [uniform(1920, 1080, self.page)], "Starfield", "tv", self.colors, texts=("Add", "Gear")
+        )
+        self.assertEqual({row["text"] for row in rows}, {"Add", "Gear"})
+        self.assertEqual(len(rows), 2 * 37 * 2)
+        json.dumps(rows)
+        for row in rows:
+            self.assertEqual(contrast.halo_limit(row["text"], row["device"]), 3.0)
+
+    def test_the_meta_of_a_measurement_says_which_icons_and_how_they_are_drawn(self):
+        result = contrast.measure_halo_sources(
+            {("Starfield", "tv"): [uniform(1920, 1080, self.page)]}, self.colors, texts=("Add",)
+        )
+        self.assertIn("icons", result["meta"])
+        self.assertEqual(result["meta"]["icons"]["names"], list(contrast.HALO_ICONS))
+        self.assertEqual(result["meta"]["icons"]["size_dp"], 24)
+        self.assertEqual(result["meta"]["icons"]["stroke_units"], 2.0)
+        json.dumps(result)
+
+
+class HaloIconTablesTest(unittest.TestCase):
+    CHOICE = (3, 2, 0.8)
+
+    def rows(self, passing, ratio=6.0, **kwargs):
+        return halo_rows(
+            passing, ratio=ratio, texts=contrast.HALO_ICONS, devices=("tv", "phone"), **kwargs
+        )
+
+    def test_the_tables_say_every_icon_keeps_3_to_1_when_it_does(self):
+        rows = self.rows({self.CHOICE})
+        text = contrast.halo_icon_tables({"meta": {}, "halo": rows}, self.CHOICE)
+        self.assertIn("Table I", text)
+        self.assertIn("Table J", text)
+        self.assertIn("every icon keeps 3:1", text)
+        self.assertIn("stroke 3 dp, blur 2 dp, opacity 80 %", text)
+        for name in contrast.HALO_ICONS:
+            self.assertIn(name, text)
+
+    def test_the_tables_name_the_icon_that_falls_short(self):
+        rows = self.rows({self.CHOICE})
+        low = next(
+            r
+            for r in rows
+            if (r["stroke_dp"], r["blur_dp"], r["opacity"], r["text"], r["token"], r["device"])
+            == (3, 2, 0.8, "Gear", "ink-2", "phone")
+        )
+        low["min"] = 2.5
+        low["style"] = "Starfield"
+        text = contrast.halo_icon_tables({"meta": {}, "halo": rows}, self.CHOICE)
+        self.assertIn("falls short of 3:1", text)
+        self.assertIn("2.50", text)
+        self.assertIn("Gear", text)
+        self.assertIn("Starfield", text)
+
+    def test_an_icon_must_clear_3_to_1_by_the_margin_of_the_model(self):
+        # 3.04 reaches 3:1 but not with 2 percent to spare, which is 3.06.
+        tight = {"meta": {}, "halo": self.rows({self.CHOICE}, ratio=3.04)}
+        self.assertIn("falls short", contrast.halo_icon_tables(tight, self.CHOICE))
+        clear = {"meta": {}, "halo": self.rows({self.CHOICE}, ratio=3.07)}
+        self.assertIn("every icon keeps 3:1", contrast.halo_icon_tables(clear, self.CHOICE))
+
+    def test_under_high_contrast_the_icons_have_no_margin_to_clear(self):
+        meta = {"high_contrast": {"dim": 0.85}}
+        result = {"meta": meta, "halo": self.rows({self.CHOICE}, ratio=3.01)}
+        text = contrast.halo_icon_tables(result, self.CHOICE)
+        self.assertIn("every icon keeps 3:1", text)
+        self.assertIn("0.85", text)
+
+    def test_the_smallest_halo_that_an_icon_needs_alone_is_named(self):
+        rows = self.rows({(2, 2, 0.8), self.CHOICE})
+        text = contrast.halo_icon_tables({"meta": {}, "halo": rows}, self.CHOICE)
+        self.assertIn("smallest candidate", text)
+        self.assertIn("stroke 2 dp, blur 2 dp, opacity 80 %", text)
+
+    def test_the_tables_of_the_text_leave_the_icon_rows_alone(self):
+        rows = halo_rows({(2, 2, 0.8)}, devices=("tv", "phone"))
+        rows += self.rows(set(), failing=1.0)
+        text = contrast.halo_tables({"meta": {}, "halo": rows})
+        self.assertIn("The choice: stroke 2 dp, blur 2 dp, opacity 80 %.", text)
+        self.assertNotIn("Gear", text)
+
+    def run_command(self, *extra):
+        import contextlib
+        import io
+
+        with tempfile.TemporaryDirectory() as folder:
+            frames = Path(folder) / "frames"
+            (frames / "Starfield-tv").mkdir(parents=True)
+            Image.new("RGB", (1920, 1080), (255, 255, 255)).save(frames / "Starfield-tv" / "00.png")
+            target = Path(folder) / "halo-icons.json"
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = contrast.main(["halo", str(frames), "--json", str(target), *extra])
+            written = json.loads(target.read_text(encoding="utf-8"))
+        return code, written, out.getvalue()
+
+    def test_the_command_measures_the_icons_and_prints_their_tables(self):
+        code, written, out = self.run_command("--icons", "--halo", "3", "2", "80")
+        self.assertEqual(code, 0)
+        self.assertEqual({r["text"] for r in written["halo"]}, set(contrast.HALO_ICONS))
+        self.assertIn("Table I", out)
+
+    def test_the_command_measures_the_icons_under_high_contrast(self):
+        code, written, out = self.run_command(
+            "--icons", "--high-contrast", "--halo", "3", "2", "80"
+        )
+        self.assertEqual(code, 0)
+        self.assertEqual(written["meta"]["high_contrast"]["dim"], 0.85)
+        self.assertEqual(written["meta"]["colors"]["ink"].upper(), "#FFFFFF")
+        self.assertIn("Table I", out)
+
+    def test_icons_and_text_styles_are_not_asked_for_together(self):
+        import contextlib
+        import io
+
+        with tempfile.TemporaryDirectory() as folder:
+            args = ["halo", folder, "--json", str(Path(folder) / "x.json"), "--icons"]
+            args += ["--texts", "body", "--halo", "3", "2", "80"]
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                contrast.main(args)
+
+    def test_the_halo_to_check_goes_with_the_icons(self):
+        import contextlib
+        import io
+
+        with tempfile.TemporaryDirectory() as folder:
+            args = ["halo", folder, "--json", str(Path(folder) / "x.json"), "--icons"]
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                contrast.main(args)
+
+
 if __name__ == "__main__":
     unittest.main()

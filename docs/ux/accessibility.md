@@ -6,15 +6,19 @@ animated background is measured, the baseline measured before any fix, how the
 table that the glass of the app reads comes out of that measurement, the halo
 of the text that stands on the background, and what the icons and the text field
 on it keep. It then records the high contrast and colour-blind palettes, what the
-screen readers and the touch targets need, and a WCAG 2.2 checklist. The tool is in
-[`design/accessibility/`](../../design/accessibility/README.md); its README says
-how to run it again. The decisions that follow from the numbers are in
+screen readers and the touch targets need, and a WCAG 2.2 checklist. Sprint 11
+adds two sections before the checklist: the candidates of the accent colour
+(Accent candidates) and the halo in each candidate font (Halo per font). The
+tool is in [`design/accessibility/`](../../design/accessibility/README.md); its
+README says how to run it again. The decisions that follow from the numbers are in
 [ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md).
 
 - Date: 2026-10-20. The sections on the halo, the icons and the text field, which
   came later, carry their own date and revision. The glass table of the app was
   regenerated on 2026-10-21 at `cdd48edc`, with identical numbers: it now also
-  holds the hash of each clip.
+  holds the hash of each clip. The two sections of Sprint 11, on the accent
+  candidates and on the halo per font, were measured on 2026-10-21 and carry
+  their own revision.
 - Revision measured: `fedc4ce0`. It widens the grid of the glass candidates of
   `fec048bb`, the first measurement. The frames are those of that first
   measurement, taken with the app code of `109e7dff`, the Sprint 9 merge: the
@@ -962,9 +966,9 @@ accent, and `green`, `teal` and `white`, which start from the colours of the ico
 has the sets, with a note on how each value was derived, and `contrast.py accents` measures them.
 The tokens are not changed: the sets are proposals, and the values may still move at the gate.
 
-- Date: 2026-10-21. Revision measured: `d67fe661`, the tool and `accents.json` as they are in that
-  commit. The frames are the 288 of the baseline: the drawn backgrounds and the clips have not
-  changed since.
+- Date: 2026-10-21. Revision measured: `c5e91653`, the tool; the colours of `accents.json` are
+  those of `d67fe661`, and a note of white has changed since. The frames are the 288 of the
+  baseline: the drawn backgrounds and the clips have not changed since.
 - The backgrounds are measured as they are drawn today, with their fixed violet. Sprint 11 stops
   the drawn backgrounds from taking the accent (`AuroraBackground` draws its curtains with the
   accent and the strong accent of the tokens), so they keep that violet, and the glass table of
@@ -981,7 +985,8 @@ The tokens are not changed: the sets are proposals, and the values may still mov
 - **On the surfaces (Table O).** `on-accent` on `accent` needs 4.5:1. `accent` and `accent-soft`
   as text need 4.5:1 on `page`, `surface` and `surface-raised` and on the tint of a selected row
   over `surface` and over `surface-raised`. The tint is laid in whole 8 bit values, as Compose
-  draws it: that is how violet gives the 7.55 and 9.04 of the high contrast table below.
+  draws it: that is how violet gives the 7.55 and 9.04 of the table of high contrast above and
+  of Table T.
   `accent-strong` is given for information: it carries no text.
 - **Over the glass (Tables P to S).** The glass of each style at the default of Settings and at
   Reduced, over every frame of both devices, and the luminance of the brightest pixel behind the
@@ -990,7 +995,10 @@ The tokens are not changed: the sets are proposals, and the values may still mov
   floor keeps at 4.5:1 (it is the same for the four: Table P). At Reduced it is 85 % at 48 dp.
   `accent` and `accent-soft` are read as text (4.5:1) and as an outline (3:1), and the selected
   label, `accent` over its own tint laid on that glass, as text (4.5:1). A ratio is held to its
-  limit with no margin.
+  limit with no margin. The glass of API 28 to 30 (85 %, no blur) is not in these tables: its
+  brightest backdrop, 0.0287 (Northern lights), is under the 0.0495 of the Standard glass over
+  Flowing light, where each proposal has its lowest ratio, and the proposals have 19 % or more
+  to spare there, so a measure of it is not likely to change a verdict.
 - **High contrast (Table T).** The opaque `accent` and `accent-soft` need 7:1 and `accent-line`
   3:1 over every fill that text lies on: `page`, `chrome`, `surface`, `surface-raised`, the tint of
   a selected row on `surface` and on `surface-raised`, and the hover on `surface-raised`. These
@@ -1001,8 +1009,8 @@ The tokens are not changed: the sets are proposals, and the values may still mov
   blue-yellow palettes. 20 or more is distinct, as in `ColourVisionPaletteTest`. It is held where
   a palette is for the vision: today's colours for normal vision, the red-green palette for normal
   vision, protanopia and deuteranopia, the blue-yellow palette for normal vision and tritanopia.
-  The other rows are for information. An accent with no chroma (white) is also held to 20 from `ink`
-  and `ink-2`.
+  The other rows are for information. Every accent is also held to 20 from `ink` and `ink-2` as
+  normal vision sees them, whatever its chroma.
 
 ### The candidates
 
@@ -1132,8 +1140,8 @@ Table U. The least CIEDE2000 distance of `accent` from the status colours as eac
 | `accent` from the blue-yellow status colours, protanopia vision | 26.6, offline (not claimed) | 21.2, warning (not claimed) | 21.7, success (not claimed) | 31.6, offline (not claimed) |
 | `accent` from the blue-yellow status colours, deuteranopia vision | 25.9, offline (not claimed) | 22.6, success (not claimed) | 23.0, offline (not claimed) | 31.4, offline (not claimed) |
 | `accent` from the blue-yellow status colours, tritanopia vision | 14.8, offline (short) | 21.3, success | 21.1, success | 20.5, warning |
-| `accent` from `ink`, normal vision | 28.9, ink (not claimed) | 24.9, ink (not claimed) | 25.4, ink (not claimed) | 4.5, ink (short) |
-| `accent` from `ink-2`, normal vision | 21.9, ink-2 (not claimed) | 25.1, ink-2 (not claimed) | 25.0, ink-2 (not claimed) | 10.6, ink-2 (short) |
+| `accent` from `ink`, normal vision | 28.9, ink | 24.9, ink | 25.4, ink | 4.5, ink (short) |
+| `accent` from `ink-2`, normal vision | 21.9, ink-2 | 25.1, ink-2 | 25.0, ink-2 | 10.6, ink-2 (short) |
 
 ### What the tables show
 
@@ -1191,10 +1199,12 @@ Table U. The least CIEDE2000 distance of `accent` from the status colours as eac
 
 - **White and the ink.** An accent with no chroma is told from `ink` (`#E8EAED`) and `ink-2`
   (`#C3C7CC`) by its lightness alone. A neutral that is light enough to be read as text over the
-  Standard glass (L\* 69.5, and 4.5:1 over Flowing light) is at most 19.4 from `ink` and 16.4 from
-  `ink-2`, and none is more than 14.6 from both, so `distance:ink` and `distance:ink-2` fail for any
-  white. The accent of such a set is told from the ink by its fill, with the label on it at
-  17.18:1, and by its tint, and not by its colour. They are the `known_fails` of the set.
+  Standard glass (L\* 69.5, and 4.5:1 over Flowing light) is at most 19.7 from `ink` and 16.6 from
+  `ink-2`, and none is more than 15.0 from both, so `distance:ink` and `distance:ink-2` fail for any
+  white. The bounds are sampled: every colour of CIELAB chroma under 10 and L\* 69.5 or more, each
+  channel of sRGB from 130 to 255 in steps of 1. The accent of such a set is told from the ink by
+  its fill, with the label on it at 17.18:1, and by its tint, and not by its colour. They are the
+  `known_fails` of the set.
 - **Violet and the dichromats.** The three rows that violet fails (`distance:red-green:protanopia`,
   `distance:red-green:deuteranopia` and `distance:blue-yellow:tritanopia`) are the violet of
   today, which a protanope and a deuteranope see as blue and a tritanope as grey. They are the
@@ -1210,28 +1220,29 @@ measures whether it keeps the contrast of the text in each candidate font, and i
 companion of each that has one, as the app will draw them: the text set at the size of the tokens
 times the scale that sets the x-height of the font to that of IBM Plex Sans.
 
-- Date: 2026-10-21. Revision measured: `84c85c96`, the tool and `design/tokens.json` as they are
-  after the merge of the TV text size (#47). The frames are the 288 of the baseline. The fonts are
+- Date: 2026-10-21. Revision measured: `c5e91653`, the tool and `design/tokens.json` as they are
+  after the merge of the TV text size (#47) and the change of the scale to the drawn x. The frames
+  are the 288 of the baseline. Andika, B612 and B612 Mono were measured at that revision, and Lexend
+  again as a control, which gave the same rows. The other five sets are those of `84c85c96`: the
+  scale of each is the same under the drawn x, so a new run would give the same rows. The fonts are
   in a folder of their own and not in the repository: the files below were passed to the tool by
   path, and the SHA-256 of each is given by its first 12 digits.
-- **The text sizes are those of Sprint 11.** On a TV the body is 16 sp and the label, the least
-  text of a TV, is 13 sp, and the title (24 sp) and the small text (14.5 sp) are as they were; on a
-  phone the sizes are as they were (18, 14, 11 and 12.5 sp). The older Tables D to F above are the
-  record of Sprint 10, measured at 15 and 12 sp for the body and the label of a TV, and they stay
-  as they are: the row of IBM Plex Sans in Table V is the same halo at the new sizes, so it is not
-  Table E. At the old sizes the lowest case of Plex was 5.32:1 (the body of a TV),
-  and at the new sizes it is 5.16:1 (the label of a TV).
-- `python -I design/accessibility/contrast.py halo <frames> --json <font.json> --fonts <manifest.json> --jobs 4`
-  measures one font in about two to three minutes. The README of the tool says how to make the
-  manifest and what the options do.
+- **The text sizes are those of Sprint 11.** On a TV the body is 16 sp and the label, the least text
+  of a TV, is 13 sp, and the title (24 sp) and the small text (14.5 sp) are as they were; on a phone
+  the sizes are as they were (18, 14, 11 and 12.5 sp). The older Tables D to F above are the record
+  of Sprint 10, measured at 15 and 12 sp for the body and the label of a TV, and they stay as they
+  are: the row of IBM Plex Sans in Table V is the same halo at the new sizes, so it is not Table E.
+  At the old sizes the lowest case of Plex was 5.32:1 (the body of a TV), and at the new sizes it is
+  5.16:1 (the label of a TV).
+- `python -I design/accessibility/contrast.py halo <frames> --json <font.json> --fonts <manifest.json> --jobs 4` measures one font in about two to three minutes. The README of the tool says how to make the manifest and what the options do.
 - The halo is the one that the app draws, stroke 3 dp, blur 2 dp and opacity 80 %, and the question
   is whether it keeps `ink` and `ink-2` at 4.5:1 for the label, the body, the small text and the
   title of a phone, and `ink` at 3:1 for the title of a TV, with 2 % to spare, over every
   background, as the section Halo has it.
 - The sets are the owner's: IBM Plex Sans as the baseline and five more sans fonts, and three
   monospaced fonts, with IBM Plex Mono as the baseline of the monospaced ones. OpenDyslexic and
-  OpenDyslexic Mono were measured at the Sprint 10 sizes and are out of the set (owner,
-  2026-10-21): they are not in this section.
+  OpenDyslexic Mono were measured at the Sprint 10 sizes and are out of the set (owner, 2026-10-21):
+  they are not in this section.
 
 ### The fonts and their scale
 
@@ -1252,21 +1263,25 @@ where it has not (B612, B612 Mono and Luciole), which is the face that Compose p
 of 600. None of the fonts is a variable font; the tool sets the weight of one with `fvar`, but no
 number below depends on it.
 
-The scale is the x-height of IBM Plex Sans (0.516 of the em) over that of the regular face, which is
-`sxHeight` of its OS/2 table. The scale is the same at any text size, so it does not change with the
-sizes of Sprint 11.
+The scale is the x-height of IBM Plex Sans (0.516 of the em) over that of the regular face, both as
+drawn: the tool measures the height of the x at 1000 px, because the app draws the x. The
+`sxHeight` of the OS/2 table is given as a cross-check. It agrees to the thousandth for six of the
+nine fonts. The drawn x of Andika is 1.7 % under its table, and those of B612 and B612 Mono are
+1.6 and 1.8 % over theirs, and their scales follow the x (1.034, 0.923 and 0.921, where the table
+would give 1.016, 0.938 and 0.938). The scale is the same at any text size, so it does not change
+with the sizes of Sprint 11.
 
-| Font | x-height (em) | Scale | Semibold face |
-| --- | --- | --- | --- |
-| IBM Plex Sans 1.1.0 | 0.516 | 1.000 | SemiBold |
-| Atkinson Hyperlegible Next 2.001 | 0.496 | 1.040 | SemiBold |
-| Lexend 1.008 | 0.525 | 0.983 | SemiBold |
-| Andika 7.000 | 0.508 | 1.016 | SemiBold |
-| B612 1.008 | 0.550 | 0.938 | Bold |
-| Luciole | 0.545 | 0.947 | Bold |
-| IBM Plex Mono 2.5.0 | 0.516 | 1.000 | SemiBold |
-| Atkinson Hyperlegible Mono 2.001 | 0.496 | 1.040 | SemiBold |
-| B612 Mono 1.008 | 0.550 | 0.938 | Bold |
+| Font | Drawn x (em) | OS/2 sxHeight (em) | Drawn against table | Scale | Semibold face |
+| --- | --- | --- | --- | --- | --- |
+| IBM Plex Sans 1.1.0 | 0.516 | 0.516 | +0.0 % | 1.000 | SemiBold |
+| Atkinson Hyperlegible Next 2.001 | 0.496 | 0.496 | +0.0 % | 1.040 | SemiBold |
+| Lexend 1.008 | 0.525 | 0.525 | +0.0 % | 0.983 | SemiBold |
+| Andika 7.000 | 0.499 | 0.508 | -1.7 % | 1.034 | SemiBold |
+| B612 1.008 | 0.559 | 0.550 | +1.6 % | 0.923 | Bold |
+| Luciole | 0.545 | 0.545 | +0.0 % | 0.947 | Bold |
+| IBM Plex Mono 2.5.0 | 0.516 | 0.516 | +0.0 % | 1.000 | SemiBold |
+| Atkinson Hyperlegible Mono 2.001 | 0.496 | 0.496 | +0.0 % | 1.040 | SemiBold |
+| B612 Mono 1.008 | 0.560 | 0.550 | +1.8 % | 0.921 | Bold |
 
 ### The halo of the app in each font
 
@@ -1281,38 +1296,36 @@ the smallest candidate of the grid that does for that font alone.
 | IBM Plex Sans 1.1.0 | 7.27 | 5.16 | 7.26 | 5.16, `ink-2`, label, TV, Northern lights | 15 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
 | Atkinson Hyperlegible Next 2.001 | 7.44 | 5.28 | 7.61 | 5.28, `ink-2`, body, TV, Northern lights | 17 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
 | Lexend 1.008 | 7.27 | 5.16 | 7.18 | 5.16, `ink-2`, body, TV, Northern lights | 15 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
-| Andika 7.000 | 7.21 | 5.11 | 7.32 | 5.11, `ink-2`, label, TV, Northern lights | 14 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
-| B612 1.008 | 7.22 | 5.12 | 7.28 | 5.12, `ink-2`, label, TV, Northern lights | 14 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| Andika 7.000 | 7.20 | 5.11 | 7.60 | 5.11, `ink-2`, label, TV, Northern lights | 14 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| B612 1.008 | 7.02 | 4.98 | 7.24 | 4.98, `ink-2`, body, TV, Northern lights | 11 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
 | Luciole | 7.42 | 5.27 | 7.54 | 5.27, `ink-2`, small, TV, Northern lights | 17 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
 | IBM Plex Mono 2.5.0 | 7.17 | 5.09 | 7.16 | 5.09, `ink-2`, label, TV, Northern lights | 13 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
 | Atkinson Hyperlegible Mono 2.001 | 7.15 | 5.07 | 7.44 | 5.07, `ink-2`, body, TV, Northern lights | 13 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
-| B612 Mono 1.008 | 7.33 | 5.20 | 7.08 | 5.20, `ink-2`, small, TV, Northern lights | 15 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| B612 Mono 1.008 | 7.08 | 5.02 | 7.37 | 5.02, `ink-2`, body, TV, Northern lights | 12 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
 
 ### What it shows
 
-- **The halo of the app still keeps the contrast in every font.** All 9 sets, 6 sans and 3 monospaced,
-  keep every ratio at stroke 3 dp, blur 2 dp and opacity 80 % with 2 % to spare, and so with none.
-  The lowest case is 5.07:1, `ink-2` in the body of a TV over Northern lights in
-  Atkinson Hyperlegible Mono 2.001, 13 % over its limit, and the highest of the lowest cases is 5.28:1 in
-  Atkinson Hyperlegible Next 2.001. Every set has `ink-2` over Northern lights as its lowest case. The lowest `ink-2` of
-  small text is 5.07 to 5.28:1 over the sets, `ink` for small text is
-  7.1:1 or more, and the title of a TV in `ink`, which needs 3:1, is
-  7.0:1 or more.
+- **The halo of the app still keeps the contrast in every font.** All 9 sets, 6 sans and 3
+  monospaced, keep every ratio at stroke 3 dp, blur 2 dp and opacity 80 % with 2 % to spare, and so
+  with none. The lowest case is 4.98:1, `ink-2` in the body of a TV over Northern lights in B612
+  1.008, 11 % over its limit, and the highest of the lowest cases is 5.28:1 in Atkinson Hyperlegible
+  Next 2.001. Every set has `ink-2` over Northern lights as its lowest case. The lowest `ink-2` of
+  small text is 4.98 to 5.28:1 over the sets, `ink` for small text is 7.0:1 or more, and the title
+  of a TV in `ink`, which needs 3:1, is 7.1:1 or more.
 - **No smaller halo works for any of them.** The smallest candidate of the grid that keeps the
   ratios is the same as Plex's for each font, stroke 3 dp, blur 2 dp, opacity 80 %, so it is also
   the smallest that keeps every font at once. The halo of the app does not have to change for any
   font of the list, at the sizes of Sprint 10 or of Sprint 11.
-- **The sizes of Sprint 11 move the lowest case by a few points, either way.** The label of a TV
-  is 13 sp and the body 16 sp, so the ring that the halo has to cover is not the same. The lowest
-  case of Plex is 5.16:1 against 5.32:1 at the old sizes, 15 % against 18 % over
-  the limit. Over the 9 sets the margin over the limit moved by -6.7 to +1.5 points of
-  that percentage (the lowest `ink-2` of a font is not always in the same text style), and it is
-  12.7 % or more everywhere.
+- **The sizes of Sprint 11 move the lowest case by a few points, either way.** The label of a TV is
+  13 sp and the body 16 sp, so the ring that the halo has to cover is not the same. The lowest case
+  of Plex is 5.16:1 against 5.32:1 at the old sizes, 15 % against 18 % over the limit. Over the 9
+  sets the margin over the limit moved by -6.7 to +1.5 points of that percentage (the lowest `ink-2`
+  of a font is not always in the same text style, and the scales of Andika and B612 changed), and it
+  is 10.7 % or more everywhere.
 - **High contrast does not depend on the font or on the size.** Under it the dim of the page at 0.85
-  gives 12.00:1 for `ink-2` and 14.46:1 for `ink` over every pixel of every background with no
-  halo at all (Tables G and H), which is a property of the pixels and not of the glyphs, and a halo
-  only raises them, so no font or size can bring the loose text under 7:1. The icons do not use a
-  font.
+  gives 12.00:1 for `ink-2` and 14.46:1 for `ink` over every pixel of every background with no halo
+  at all (Tables G and H), which is a property of the pixels and not of the glyphs, and a halo only
+  raises them, so no font or size can bring the loose text under 7:1. The icons do not use a font.
 
 ### Not covered
 

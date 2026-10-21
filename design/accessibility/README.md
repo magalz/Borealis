@@ -186,12 +186,14 @@ the regular file). Pass the files by path, and do not copy a font into the repos
   reported, and nothing is measured at the wrong weight.
 - **The x-height scale.** Fonts differ in how tall their lowercase is, so the app draws each at a
   size that sets its x-height to that of IBM Plex Sans at the same size. The scale is Plex's x-height
-  over the font's: `sxHeight` of the OS/2 table over the units per em, or the height of an x as
-  drawn when the table has none, or has a value that no x has (under 0.3 or over 0.8 of the em: the
-  `sxHeight` of OpenDyslexic Mono is the em). The text is measured at the size of the tokens times
-  that scale, the ring and the halo follow it, and `meta.fonts.scale` has it. The limits of the
-  styles, 3:1 for the title of a TV and 4.5:1 for the rest, are those of the token sizes: a scale
-  does not turn a small text into a large one. The scale is the one of the regular face, for both.
+  over the font's, and the x-height is the height of the x as it is drawn (measured at 1000 px, so
+  to a thousandth of the em), because the app draws the x. The `sxHeight` of the OS/2 table is only
+  a cross-check: it is read (`os2_x_height`) and `meta.fonts.x_height` has the two, `drawn` and
+  `os2`. They agree for most fonts and differ by 1.6 to 1.8 % for Andika and B612, whose scale
+  follows the x. The text is measured at the size of the tokens times that scale, the ring and the
+  halo follow it, and `meta.fonts.scale` has it. The limits of the styles, 3:1 for the title of a
+  TV and 4.5:1 for the rest, are those of the token sizes: a scale does not turn a small text into
+  a large one. The scale is the one of the regular face, for both.
 - **A monospaced companion** is a font set like any other: pass its Regular and its SemiBold (or
   Bold). The sample text is the same, "Living room PC, 4 apps".
 - **The tables of another font** begin with a line "Font: ..." with the font, its files and its
@@ -267,8 +269,9 @@ What is checked, for each candidate (a limit is met at or over it, with no margi
   vision and each dichromacy sees them (the Machado matrices of `ColourMeasures.kt`). 20 or more is
   distinct, as in `ColourVisionPaletteTest`. It is held where a palette is for the vision: today's
   colours for normal vision, the red-green palette for normal vision, protanopia and deuteranopia,
-  the blue-yellow palette for normal vision and tritanopia. The other rows are for information. A
-  neutral accent (CIELAB chroma under 10: white) is also held to 20 from `ink` and `ink-2`.
+  the blue-yellow palette for normal vision and tritanopia. The other rows are for information.
+  Every accent is also held to 20 from `ink` and `ink-2` as normal vision sees them, whatever its
+  chroma: a selected label is told from the text beside it by its colour.
 
 The result has `meta`, `sources`, `backdrops` (the brightest pixel of each glass and tint, by style
 and device) and `candidates`, with every check as a row: `id`, `ratio` (or `least`), `limit` and,

@@ -120,8 +120,8 @@
         "high-contrast.accent-line": "The accent as an opaque border colour: 10.31:1 on the worst fill, over the 3:1 of a border."
       },
       "known_fails": {
-        "distance:ink": "Whatever its value: a neutral that keeps 4.5:1 as text over the Standard glass is lighter than L* 69.5, and none of them is 20 from ink (#E8EAED, L* 92): the furthest is 19.4, and a white is under 6. The accent is told from the ink by its fill and its tint.",
-        "distance:ink-2": "Whatever its value: ink-2 (#C3C7CC, L* 80) lies in the lightness of a neutral that can be read as text over the glass (L* 69.5 and over), and none of those is 20 from it: the furthest is 16.4, and no neutral is 20 from both ink and ink-2 (the best is 14.6)."
+        "distance:ink": "Whatever its value: a neutral that keeps 4.5:1 as text over the Standard glass is at L* 69.5 or more, and none of them is 20 from ink (#E8EAED, L* 92): the furthest is 19.7, and a white is under 6 (sampled over every colour of chroma under 10, each channel from 130 to 255). The accent is told from the ink by its fill and its tint.",
+        "distance:ink-2": "Whatever its value: ink-2 (#C3C7CC, L* 80) lies in the lightness of a neutral that can be read as text over the glass (L* 69.5 and over), and none of those is 20 from it: the furthest is 16.6, and no neutral is 20 from both ink and ink-2 (the best is 15.0)."
       }
     }
   }

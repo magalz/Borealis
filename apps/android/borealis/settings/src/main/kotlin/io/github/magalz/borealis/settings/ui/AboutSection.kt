@@ -17,6 +17,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -120,8 +121,8 @@ internal fun AboutRows(about: AboutSource) {
 /**
  * The address of [link] and a QR code that holds it, for a phone to scan, in a dialog titled with
  * the link. The address is a code, so it is set in the code font, and the screen reader says it
- * once: the image is described as a QR code for the link and does not repeat it. Close has the
- * focus.
+ * once: the image is described as a QR code for the link and does not repeat it. The text sits
+ * level with the middle of the code. Close has the focus.
  */
 @Composable
 private fun LinkQrDialog(link: AboutLink, onDismiss: () -> Unit) {
@@ -133,7 +134,10 @@ private fun LinkQrDialog(link: AboutLink, onDismiss: () -> Unit) {
         onDismiss = onDismiss,
         width = DialogWidth.Wide,
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(LINK_COLUMN_GAP)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(LINK_COLUMN_GAP),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             QrCode(
                 qr,
                 LINK_QR_SIDE,

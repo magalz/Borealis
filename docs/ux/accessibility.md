@@ -524,6 +524,58 @@ of 2 dp from 80 %, and a stroke of 3 dp with a blur of 2 dp at 80 % is the small
 that the app draws. Its lowest p1 and p5 are 8.32 and 9.33 for `ink-2` and 11.73 and 13.15 for
 `ink`: the pixels that come near the lowest ratios are very few.
 
+### Loose text under high contrast
+
+With High contrast on, the loose text has to reach 7:1 (AAA), and the dim of
+[`design/tokens.json`](../../design/tokens.json) is what the high contrast mode does to the
+background: the `page` colour lies over the animated background at 0.85, in the host, under the
+text and the halo. The text is `ink`, white, and `ink-2`, `#E8EAED`, the colours of high contrast.
+The `ink-3` and `ink-4` roles of a loose text are `ink-2` there too, as they are without it: a
+test reads the colour of the text under a look with High contrast on. The halo is the same as
+without it, for the background is still behind the text.
+
+- Revision measured: `d7b559e8`, on 2026-10-21, with the same 288 frames.
+- `python -I design/accessibility/contrast.py halo <frames> --json <result.json> --jobs 4
+  --high-contrast --halo 3 2 80` measures it, and prints Tables G and H and the verdict. The frame
+  is laid under the veil in the 8 bit values, as the screen is, and then measured as the rest of the
+  section is, over every place of the text. The limit is 7:1 for every size of text and has no
+  margin.
+
+Table G. Loose text under high contrast, with the page colour over it at 0.85 and the ink of high contrast: the lowest ratio over the text styles, by background, with the dim alone and with the dim and the halo (stroke 3 dp, blur 2 dp, opacity 80 %).
+
+| Background | `ink`, dim only | `ink`, halo | `ink-2`, dim only | `ink-2`, halo |
+| --- | --- | --- | --- | --- |
+| Aurora curtains, phone | 18.12 | 18.82 | 15.03 | 15.61 |
+| Aurora curtains, TV | 18.12 | 18.75 | 15.03 | 15.57 |
+| Flowing light, phone | 17.18 | 18.59 | 14.25 | 15.43 |
+| Flowing light, TV | 17.16 | 18.46 | 14.24 | 15.33 |
+| Light mist, phone | 17.20 | 18.60 | 14.27 | 15.43 |
+| Light mist, TV | 15.04 | 17.82 | 12.48 | 14.83 |
+| Northern lights, phone | 14.49 | 17.99 | 12.02 | 14.92 |
+| Northern lights, TV | 14.46 | 17.66 | 12.00 | 14.70 |
+| Soft glow, phone | 18.28 | 18.86 | 15.17 | 15.64 |
+| Soft glow, TV | 18.36 | 18.83 | 15.24 | 15.63 |
+| Starfield, phone | 15.09 | 18.11 | 12.52 | 15.03 |
+| Starfield, TV | 15.02 | 17.82 | 12.46 | 14.82 |
+
+Table H. The same halo by text style and device: the lowest ratio over the backgrounds, with the background it is in, and the lowest p1 and p5.
+
+| Text | Device | Needs | `ink` min | `ink` p1 | `ink` p5 | `ink-2` min | `ink-2` p1 | `ink-2` p5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| title | TV | 7.00 | 17.66 (Northern lights) | 18.45 | 18.76 | 14.65 (Northern lights) | 15.31 | 15.57 |
+| title | phone | 7.00 | 17.99 (Northern lights) | 18.58 | 18.74 | 14.92 (Northern lights) | 15.42 | 15.55 |
+| label | TV | 7.00 | 17.76 (Northern lights) | 18.60 | 18.78 | 14.73 (Northern lights) | 15.43 | 15.58 |
+| label | phone | 7.00 | 18.04 (Northern lights) | 18.53 | 18.71 | 14.97 (Northern lights) | 15.37 | 15.52 |
+| body | TV | 7.00 | 17.71 (Northern lights) | 18.55 | 18.77 | 14.70 (Northern lights) | 15.39 | 15.58 |
+| body | phone | 7.00 | 17.99 (Northern lights) | 18.57 | 18.69 | 14.92 (Northern lights) | 15.41 | 15.51 |
+| small | TV | 7.00 | 17.74 (Northern lights) | 18.54 | 18.76 | 14.72 (Northern lights) | 15.38 | 15.56 |
+| small | phone | 7.00 | 18.00 (Northern lights) | 18.55 | 18.65 | 14.94 (Northern lights) | 15.39 | 15.47 |
+
+Under high contrast every text keeps 7:1 over every background: the lowest is 14.70 (`ink-2`, body, TV, Northern lights).
+
+The dim alone is enough: the lowest `ink-2` with no halo is 12.00, over Northern lights on a TV, and
+the halo raises every case. No case falls short, so neither the dim nor the halo needs to change.
+
 ### How the app draws it
 
 `BackdropText` in `:borealis:designsystem` (`components/BackdropText.kt`) is the one place that
@@ -552,4 +604,5 @@ equal. `BackdropKicker` is a label in it, and `EmptyState` and the name under a 
   Off and High contrast draw it too, because the background is still behind the text. Outside a
   host, as in the Stream, there is no background and no halo.
 - **The ink.** `BackdropInk` says what the text was: `Ink3` and `Ink4` are `ink-2` where there is
-  a halo and the tokens, as they were, where there is not. `Ink` and `Ink2` are the tokens.
+  a halo and the tokens, as they were, where there is not. `Ink` and `Ink2` are the tokens. The
+  colours are those of the theme, so under High contrast they are the high contrast ones.

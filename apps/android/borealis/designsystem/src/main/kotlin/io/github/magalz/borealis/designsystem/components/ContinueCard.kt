@@ -14,7 +14,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
@@ -61,14 +60,9 @@ fun ContinueCard(
             initialsAlignment = Alignment.Center,
         )
         Column(Modifier.weight(1f)) {
-            Text(
-                appName,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            // No limit on the lines: at a large text size the Resume button leaves the detail a
-            // narrow column, and the card grows to hold it rather than cut it off.
+            // No limit on the lines: at a large text size the Resume button leaves the name and the
+            // detail a narrow column, and the card grows to hold them rather than cut them off.
+            Text(appName, style = MaterialTheme.typography.titleMedium)
             Text(detail, style = MaterialTheme.typography.bodySmall, color = colors.ink2)
         }
         ButtonFace(

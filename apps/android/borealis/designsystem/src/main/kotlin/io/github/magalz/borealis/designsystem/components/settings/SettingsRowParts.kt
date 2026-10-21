@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import io.github.magalz.borealis.designsystem.components.liftedWhenFocused
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
@@ -25,11 +24,11 @@ private val PADDING_VERTICAL = 6.dp
 /** The size of the chevron of a row and of the check mark of a choice. */
 internal val ROW_ICON_SIZE = 20.dp
 
-/** What a row of settings draws before its interaction: focus lift, outline and clipping. */
+/** What a row of settings draws before its interaction: the focus outline and the clipping. */
 @Composable
 internal fun Modifier.settingsRowSurface(): Modifier {
     val shape = MaterialTheme.shapes.medium
-    return liftedWhenFocused().borealisFocusIndication(shape).clip(shape)
+    return borealisFocusIndication(shape).clip(shape)
 }
 
 /** The size and padding of a row of settings; put it after the row's interaction. */

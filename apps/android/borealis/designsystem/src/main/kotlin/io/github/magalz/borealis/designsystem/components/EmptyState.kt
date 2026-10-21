@@ -8,6 +8,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
@@ -21,7 +23,7 @@ private val ACTION_GAP = 16.dp
 /**
  * What a screen shows when it has nothing to list yet, such as Hosts while it is still searching
  * (decision D8): a [title], a [body] that says what to do next and, optionally, one [action]. It
- * stands on the background, so its texts are [BackdropText].
+ * stands on the background, so its texts are [BackdropText]. The title is a heading.
  */
 @Composable
 fun EmptyState(
@@ -37,6 +39,7 @@ fun EmptyState(
     ) {
         BackdropText(
             title,
+            Modifier.semantics { heading() },
             style = MaterialTheme.typography.titleLarge,
             textAlign = TextAlign.Center,
         )

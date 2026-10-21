@@ -44,9 +44,11 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -208,7 +210,8 @@ private fun EditOnOkField(
             },
         )
         EditWrapper(
-            description(content.label, content.state.text),
+            description(content.label, content.state.text, content.error),
+            announce = content.error != null,
             editing,
             wrapper,
             onFocusChanged = { wrapperFocused = it },
@@ -226,6 +229,7 @@ private fun EditOnOkField(
 @Composable
 private fun BoxScope.EditWrapper(
     description: String,
+    announce: Boolean,
     editing: Boolean,
     focus: FocusRequester,
     onFocusChanged: (Boolean) -> Unit,
@@ -241,6 +245,7 @@ private fun BoxScope.EditWrapper(
             .focusable()
             .semantics {
                 contentDescription = description
+                if (announce) liveRegion = LiveRegionMode.Polite
                 role = Role.Button
                 onClick {
                     startEditing()
@@ -257,9 +262,14 @@ private fun BoxScope.EditWrapper(
     )
 }
 
-/** What the wrapper says: the label and the text, so that one node tells what the field holds. */
-private fun description(label: String, text: CharSequence): String =
-    if (text.isEmpty()) label else "$label, $text"
+/**
+ * What the wrapper says: the label, the text and the error, so that one node tells what the field
+ * holds and what is wrong with it.
+ */
+private fun description(label: String, text: CharSequence, error: String?): String {
+    val said = if (text.isEmpty()) label else "$label, $text"
+    return if (error == null) said else "$said. $error"
+}
 
 /** OK starts editing; Enter, as on a hardware keyboard, is Done. Everything else is the D-pad's. */
 private fun wrapperKey(event: KeyEvent, startEditing: () -> Unit, onDone: () -> Unit): Boolean =
@@ -288,7 +298,12 @@ private fun TextFieldBody(
         state = content.state,
         modifier = modifier,
         label = { Text(content.label) },
-        supportingText = content.error?.let { message -> { Text(message) } },
+        // The error is announced when it appears: focus stays on the button that asked for it. It
+        // goes with the first edit, so the field is not announced as the text changes.
+        supportingText =
+            content.error?.let { message ->
+                { Text(message, Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
+            },
         isError = content.error != null,
         lineLimits = TextFieldLineLimits.SingleLine,
         shape = MaterialTheme.shapes.medium,

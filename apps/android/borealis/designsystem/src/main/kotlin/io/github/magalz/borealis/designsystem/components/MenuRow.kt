@@ -99,7 +99,6 @@ fun MenuRow(
                 // it.
                 if (trailing == null) Modifier else Modifier.focusProperties { end = trailingFocus }
             )
-            .liftedWhenFocused()
             .borealisFocusIndication(shape)
             .clip(shape)
             .then(if (value == null) Modifier else Modifier.semantics { stateDescription = value })

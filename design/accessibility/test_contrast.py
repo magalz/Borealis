@@ -4,6 +4,9 @@ simulation and the measurement of a folder of frames. Run from the repository ro
     python -m unittest discover -s design/accessibility
 """
 
+import contextlib
+import hashlib
+import io
 import json
 import re
 import tempfile
@@ -548,8 +551,63 @@ class GlassTableTest(unittest.TestCase):
             source = Path(folder) / "result.json"
             source.write_text(json.dumps(result), encoding="utf-8")
             out = Path(folder) / "GlassContrastTable.kt"
-            self.assertEqual(contrast.main(["glass-table", str(source), "--out", str(out)]), 0)
+            args = ["glass-table", str(source), "--out", str(out)]
+            self.assertEqual(contrast.main(args, log=io.StringIO()), 0)
             self.assertEqual(out.read_bytes(), contrast.glass_table_kotlin(result).encode("utf-8"))
+
+    def test_the_command_says_what_it_wrote_to_the_log_it_is_given(self):
+        _, _, result = glass_result()
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "result.json"
+            source.write_text(json.dumps(result), encoding="utf-8")
+            out = Path(folder) / "GlassContrastTable.kt"
+            log, screen = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stderr(screen):
+                contrast.main(["glass-table", str(source), "--out", str(out)], log=log)
+            self.assertEqual(log.getvalue(), f"wrote {out}\n")
+            self.assertEqual(screen.getvalue(), "")
+
+    def test_the_hash_of_a_clip_is_its_sha256_by_the_name_of_the_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            (Path(folder) / "background_one.mp4").write_bytes(b"one")
+            (Path(folder) / "background_two.mp4").write_bytes(b"")
+            (Path(folder) / "other.mp4").write_bytes(b"not a clip of the backgrounds")
+            (Path(folder) / "background_one_still.webp").write_bytes(b"a still")
+            self.assertEqual(
+                contrast.clip_hashes(folder),
+                {
+                    "background_one": hashlib.sha256(b"one").hexdigest(),
+                    "background_two": hashlib.sha256(b"").hexdigest(),
+                },
+            )
+
+    def test_the_kotlin_file_holds_the_hash_of_each_clip(self):
+        _, _, result = glass_result()
+        with tempfile.TemporaryDirectory() as folder:
+            (Path(folder) / "background_one.mp4").write_bytes(b"one")
+            (Path(folder) / "background_two.mp4").write_bytes(b"two")
+            text = contrast.glass_table_kotlin(result, folder)
+        for name, content in (("background_one", b"one"), ("background_two", b"two")):
+            digest = hashlib.sha256(content).hexdigest()
+            self.assertRegex(text, rf'"{name}"\s+to\s+"{digest}"')
+
+    def test_a_clip_that_changes_changes_the_file(self):
+        _, _, result = glass_result()
+        with tempfile.TemporaryDirectory() as folder:
+            clip = Path(folder) / "background_one.mp4"
+            clip.write_bytes(b"first take")
+            before = contrast.glass_table_kotlin(result, folder)
+            clip.write_bytes(b"second take")
+            self.assertNotEqual(contrast.glass_table_kotlin(result, folder), before)
+
+    def test_the_file_holds_the_hash_of_the_clips_of_the_app(self):
+        _, _, result = glass_result()
+        text = contrast.glass_table_kotlin(result)
+        clips = sorted(contrast.CLIPS_DIR.glob("background_*.mp4"))
+        self.assertEqual(len(clips), 4)
+        for clip in clips:
+            digest = hashlib.sha256(clip.read_bytes()).hexdigest()
+            self.assertRegex(text, rf'"{clip.stem}"\s+to\s+"{digest}"')
 
     def test_the_file_is_written_where_the_app_reads_it(self):
         self.assertEqual(
@@ -1214,6 +1272,66 @@ class HaloHighContrastTest(unittest.TestCase):
         self.assertIn("Table G", out.getvalue())
 
 
+class HaloTokensTest(unittest.TestCase):
+    """`--tokens` names the token file of the halo, as it does for `measure`."""
+
+    def custom_tokens(self, folder):
+        data = json.loads(TOKENS.read_text(encoding="utf-8"))
+        data["color"]["ink"]["$value"] = "#ABCDEF"
+        data["size"]["tv"]["body"]["$value"] = "30sp"
+        data["high-contrast"]["ink"]["$value"] = "#FEDCBA"
+        data["high-contrast"]["dim"]["$value"] = 0.5
+        path = Path(folder) / "tokens.json"
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    def run_command(self, folder, *extra):
+        frames = Path(folder) / "frames"
+        (frames / "Starfield-tv").mkdir(parents=True)
+        Image.new("RGB", (1920, 1080), (14, 16, 19)).save(frames / "Starfield-tv" / "00.png")
+        target = Path(folder) / "halo.json"
+        args = ["halo", str(frames), "--json", str(target), "--texts", "body", *extra]
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(contrast.main(args), 0)
+        return json.loads(target.read_text(encoding="utf-8"))
+
+    def test_the_colours_come_from_the_token_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            written = self.run_command(folder, "--tokens", str(self.custom_tokens(folder)))
+        self.assertEqual(written["meta"]["colors"]["ink"], "#ABCDEF")
+        bare = [
+            row
+            for row in written["halo"]
+            if row["token"] == "ink" and (row["stroke_dp"], row["blur_dp"]) == (0, 0)
+        ]
+        self.assertEqual(len(bare), 1)
+        self.assertAlmostEqual(bare[0]["min"], contrast.hex_contrast("#ABCDEF", "#0E1013"))
+
+    def test_the_text_sizes_come_from_the_token_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            tokens_json = self.custom_tokens(folder)
+            written = self.run_command(folder, "--tokens", str(tokens_json))
+            tall = contrast.halo_geometry("body", "tv", tokens_json).size
+        self.assertEqual(written["meta"]["texts"]["body"]["sizes_sp"]["tv"], 30.0)
+        self.assertGreater(tall[0], contrast.halo_geometry("body", "tv").size[0])
+
+    def test_the_high_contrast_colours_and_dim_come_from_the_token_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            written = self.run_command(
+                folder,
+                *("--tokens", str(self.custom_tokens(folder))),
+                *("--high-contrast", "--halo", "3", "2", "80"),
+            )
+        self.assertEqual(written["meta"]["colors"]["ink"], "#FEDCBA")
+        self.assertEqual(written["meta"]["high_contrast"]["dim"], 0.5)
+
+    def test_without_it_the_tokens_of_the_repository_are_used(self):
+        with tempfile.TemporaryDirectory() as folder:
+            written = self.run_command(folder)
+        self.assertEqual(written["meta"]["colors"]["ink"], tokens()["ink"])
+        self.assertEqual(written["meta"]["texts"]["body"]["sizes_sp"]["tv"], 15.0)
+
+
 class HaloIconPathTest(unittest.TestCase):
     """The icons of the app, read from the source of `BorealisIcons`, and the paths as polylines."""
 
@@ -1241,6 +1359,44 @@ class HaloIconPathTest(unittest.TestCase):
         self.assertTrue(gear.endswith("A7.2 7.2 0 0 1 10.38 4.98Z"))
         self.assertGreater(len(gear), 300)
         self.assertEqual(hub, "M9 12a3 3 0 1 0 6 0a3 3 0 1 0-6 0")
+
+    def test_a_declaration_that_the_formatter_wrapped_is_read_all_the_same(self):
+        source = """
+object BorealisIcons {
+    val Short: ImageVector by lazy { icon("Short", "M0 0h5") }
+
+    val Wrapped: ImageVector
+        by lazy {
+        icon(
+            "Wrapped",
+            FIRST,
+            "M1 1l2 2",
+        )
+    }
+
+    val Called: ImageVector by lazy {
+        icon("Called", "M3 3h4")
+    }
+
+    private const val FIRST =
+        "M2 2h4" +
+            "v4"
+    private const val STROKE = 2.5f
+}
+"""
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "BorealisIcons.kt"
+            path.write_text(source, encoding="utf-8")
+            icons = contrast.read_icons(path)
+        self.assertEqual(icons.stroke, 2.5)
+        self.assertEqual(
+            icons.paths,
+            {
+                "Short": ("M0 0h5",),
+                "Wrapped": ("M2 2h4v4", "M1 1l2 2"),
+                "Called": ("M3 3h4",),
+            },
+        )
 
     def test_the_icons_that_are_measured_are_in_the_set(self):
         icons = contrast.read_icons()

@@ -674,7 +674,11 @@ internal object GlassContrastTable {
 """
 
 
-def glass_table_kotlin(result):
+def clip_hashes(clips=CLIPS_DIR):
+    return {}
+
+
+def glass_table_kotlin(result, clips=CLIPS_DIR):
     """The Kotlin file `GlassContrastTable.kt` for a measurement: the table, row by row.
 
     A row of a style is one blur of the grid and holds a value for each tint of the grid. The
@@ -1392,7 +1396,7 @@ HaloGeometry = collections.namedtuple("HaloGeometry", "configs alphas ring size"
 
 
 @functools.lru_cache(maxsize=None)
-def halo_geometry(text, device):
+def halo_geometry(text, device, tokens=TOKENS_JSON):
     """The ring around the glyphs of a style and the alpha of each candidate on it.
 
     None of it depends on the frame. `ring` is the ring as a mask of its bounding box, `size` the
@@ -1857,7 +1861,7 @@ def _revision():
         return "unknown"
 
 
-def main(argv=None):
+def main(argv=None, log=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     commands = parser.add_subparsers(dest="command", required=True)
 
@@ -1883,6 +1887,7 @@ def main(argv=None):
     halo = commands.add_parser("halo", help="measure the halo of text on the background")
     halo.add_argument("frames", type=Path, help="the folder of <Style>-<tv|phone>/NN.png")
     halo.add_argument("--json", type=Path, required=True, help="where the result goes")
+    halo.add_argument("--tokens", type=Path, default=TOKENS_JSON, help="the design tokens")
     halo.add_argument("--jobs", type=int, default=4, help="processes, one frame each")
     halo.add_argument("--texts", nargs="+", choices=sorted(HALO_TEXTS), help="the text styles")
     halo.add_argument("--revision", help="the revision measured (default: HEAD)")

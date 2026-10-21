@@ -179,6 +179,33 @@
     <string name="settings_choice_palette_off">Off</string>
     <string name="settings_choice_palette_red_green">Red-green</string>
     <string name="settings_choice_palette_blue_yellow">Blue-yellow</string>
+    <string name="settings_choice_font_plex">IBM Plex Sans</string>
+    <string name="settings_choice_font_plex_summary">Default. Clear at small sizes, covers many languages.</string>
+    <string name="settings_choice_font_atkinson_next">Atkinson Hyperlegible Next</string>
+    <string name="settings_choice_font_atkinson_next_summary">Made for low vision: letters that look alike are drawn to differ.</string>
+    <string name="settings_choice_font_luciole" tools:ignore="Typos">Luciole</string>
+    <string name="settings_choice_font_luciole_summary">Made with readers with low vision and tested in a published study.</string>
+    <string name="settings_choice_font_lexend" tools:ignore="Typos">Lexend</string>
+    <string name="settings_choice_font_lexend_summary">Wider spacing built into the letters, for text that feels crowded.</string>
+    <string name="settings_choice_font_andika" tools:ignore="Typos">Andika</string>
+    <string name="settings_choice_font_andika_summary">Made for new readers: mirror letters such as b and d look different.</string>
+    <string name="settings_choice_font_b612" tools:ignore="Typos">B612</string>
+    <string name="settings_choice_font_b612_summary">Made for cockpit screens: quick to read at a glance and from a distance.</string>
+    <string name="settings_choice_font_system">System font</string>
+    <string name="settings_choice_font_system_summary">Uses your device\'s font.</string>
+    <string name="settings_choice_accent_violet">Violet</string>
+    <string name="settings_choice_accent_teal">Teal</string>
+    <string name="settings_choice_accent_white">White</string>
+    <string name="settings_choice_density_comfortable">Comfortable</string>
+    <string name="settings_choice_density_compact">Compact</string>
+    <string name="settings_choice_density_compact_summary">More cards in each row.</string>
+    <string name="settings_choice_density_dense">Dense</string>
+    <string name="settings_choice_density_dense_summary">More cards in each row, with less padding.</string>
+    <string name="settings_choice_spacing_normal">Normal</string>
+    <string name="settings_choice_spacing_wide">Wide</string>
+    <string name="settings_choice_spacing_wide_summary">More space between letters, words and lines.</string>
+    <string name="settings_choice_spacing_wider">Wider</string>
+    <string name="settings_choice_spacing_wider_summary">Even more space, for text that feels crowded.</string>
 
     <!-- Native warnings -->
     <string name="settings_native_resolution_title">Native resolution</string>

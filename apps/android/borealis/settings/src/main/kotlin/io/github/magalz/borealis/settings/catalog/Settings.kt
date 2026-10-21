@@ -8,9 +8,10 @@ import io.github.magalz.borealis.settings.DefaultBitrate
  * It holds the 38 stream settings that the Phase 2 screen ports from the upstream screen (the
  * language list and the small icon mode are dropped), the two logging switches that live in
  * DataStore, the new performance overlay choice, the gamepad mouse speed, the background choice and
- * the glass choices of the Appearance group, and the choices of the Accessibility group, which live
- * in DataStore too. The defaults of the ported settings are those of the inherited
- * `PreferenceConfiguration`; a parity test keeps them in step.
+ * the font, accent colour, background intensity, card density and glass choices of the Appearance
+ * group, and the choices of the Accessibility group, which live in DataStore too. The defaults of
+ * the ported settings are those of the inherited `PreferenceConfiguration`; a parity test keeps
+ * them in step.
  */
 object Settings {
     // Stream
@@ -470,13 +471,18 @@ object Settings {
             PERF_OVERLAY_LEGACY,
             POST_STREAM_TOAST,
             PERF_OVERLAY,
+            FONT,
+            ACCENT,
             BACKGROUND,
+            BACKGROUND_INTENSITY,
+            CARD_DENSITY,
             GLASS_TINT,
             GLASS_BLUR,
             REDUCE_MOTION,
             TRANSPARENCY,
             THICK_FOCUS,
             TEXT_SIZE,
+            TEXT_SPACING,
             HIGH_CONTRAST,
             COLOUR_VISION,
             VERBOSE_LOGGING,

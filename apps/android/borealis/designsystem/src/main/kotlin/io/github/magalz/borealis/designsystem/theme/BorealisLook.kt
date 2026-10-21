@@ -50,15 +50,16 @@ enum class AccentChoice {
 }
 
 /**
- * How strongly the animated background shows. The rest is a [veil]: the alpha of the page colour
- * that lies over the background, so that the glass panels, whose floors assume the background at
- * full strength, stay legible. A veil only darkens.
+ * How strongly the animated background shows: [Full] is 100 %, [ThreeQuarters] 75 %, [Half] 50 %
+ * and [Quarter] 25 %. The rest is a [veil]: the alpha of the page colour that lies over the
+ * background, so that the glass panels, whose floors assume the background at full strength, stay
+ * legible. A veil only darkens.
  */
 enum class BackgroundIntensity(val veil: Float) {
     Full(0f),
-    ThreeQuarters(0f),
-    Half(0f),
-    Quarter(0f),
+    ThreeQuarters(0.25f),
+    Half(0.5f),
+    Quarter(0.75f),
 }
 
 /** The space between the letters, words and lines of the text (WCAG 1.4.12). */

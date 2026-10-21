@@ -37,10 +37,14 @@ fun BorealisTheme(
     look: BorealisLook = LocalBorealisLook.current,
     content: @Composable () -> Unit,
 ) {
-    val colors = remember(look.highContrast, look.colourVision) { borealisColors(look) }
+    // The accent, the font and the text spacing are keys already, for the effects that follow: they
+    // change nothing that is drawn yet.
+    val colors =
+        remember(look.highContrast, look.colourVision, look.accent) { borealisColors(look) }
     val colorScheme = remember(colors) { borealisColorScheme(colors) }
     val shapes = remember { borealisShapes() }
-    val typography = remember(formFactor) { borealisTypography(formFactor) }
+    val typography =
+        remember(formFactor, look.font, look.textSpacing) { borealisTypography(formFactor) }
     // One observer of the animator scale for all that is under the theme, and none in a theme that
     // is inside another one.
     val systemAnimationsRemoved = rememberSystemAnimationsRemoved()
@@ -60,7 +64,8 @@ fun BorealisTheme(
         LocalSystemAnimationsRemoved provides systemAnimationsRemoved,
         // Material leaves the content colour black; text and icons outside a Surface need ink.
         LocalContentColor provides colors.ink,
-        LocalBorealisType provides remember(formFactor) { borealisType(formFactor) },
+        LocalBorealisType provides
+            remember(formFactor, look.font, look.textSpacing) { borealisType(formFactor) },
         LocalBorealisShapes provides remember { borealisExtraShapes() },
         LocalBorealisSpacing provides remember(formFactor) { borealisSpacing(formFactor) },
     ) {

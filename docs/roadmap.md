@@ -618,9 +618,12 @@ yet.
 - **A UAT note:** "Fn 123" wraps on narrow phones at the default look.
 - **Re-verify the 26.10.0-beta.1 host changes in the source,** and capture a
   fixture folder for them. See the [host contract](host-contract/README.md).
-- **Quit takes about 17 s on 26.10.0-beta.1.** "Quitting `<app>`…" stays on
-  screen until `/cancel` answers, about 17 s, against 5 to 7 s on 26.09.1. It
-  looks host-side. Measure it a second time, then report it upstream.
+- **Quit took about 17 s once on 26.10.0-beta.1.** "Quitting `<app>`…" stayed on
+  screen until `/cancel` answered: about 17 s once in the night round of
+  2026-10-21, and 5.5 to 6.7 s in the morning smoke of the same day, against 5 to
+  7 s on 26.09.1. The cause is not known, because the client logs nothing in
+  between. Measure it again in the next round, and report it upstream if it
+  repeats.
 - **A Quit from the user logs an error.** The user's own Quit logs
   `E Borealis.UPSTREAM: Connection terminated: -1`, and the system logs
   `Duplicate finish request` for `com.limelight.Game`.

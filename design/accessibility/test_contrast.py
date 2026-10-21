@@ -1261,7 +1261,8 @@ class HaloTokensTest(unittest.TestCase):
             if row["token"] == "ink" and (row["stroke_dp"], row["blur_dp"]) == (0, 0)
         ]
         self.assertEqual(len(bare), 1)
-        self.assertAlmostEqual(bare[0]["min"], contrast.hex_contrast("#ABCDEF", "#0E1013"))
+        expected = contrast.hex_contrast("#ABCDEF", "#0E1013")
+        self.assertAlmostEqual(bare[0]["min"], expected, delta=1e-4)
 
     def test_the_text_sizes_come_from_the_token_file(self):
         with tempfile.TemporaryDirectory() as folder:

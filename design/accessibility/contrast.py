@@ -1,26 +1,34 @@
-"""Text contrast over the animated backgrounds, and over the glass panels planned for them.
+"""Text contrast over the animated backgrounds, over the glass panels on them, and under a halo.
 
-Sprint 10 bases two choices on these numbers: the glass look of a panel and the text colours on
-it. The tool measures WCAG 2.x contrast ratios as the worst case (the minimum) of each text
-token over real frames of each background, in three cases:
+Sprint 10 bases its choices on these numbers: the glass look of a panel and the text colours on it,
+and the halo of the text and the icons that stand straight on the background. The tool measures WCAG
+2.x contrast ratios as the worst case (the minimum) of each text token over real frames of each
+background, in four cases:
 
 - (a) the text straight on the background;
 - (b) the text on one of today's opaque surfaces (`page`, `surface`, `surface-raised`);
 - (c) the text on a glass panel: the background blurred, then the `surface` colour on top at an
-  alpha, for a grid of alphas and blur radii (a radius of 0 is no blur, the glass of API 28 to 30).
+  alpha, for a grid of alphas and blur radii (a radius of 0 is no blur, the glass of API 28 to 30);
+- (d) the text and the icons straight on the background, with a halo: the glyphs widened by a
+  stroke, blurred and laid in `page` at an opacity, for a grid of strokes, blurs and opacities.
 
-The colours come from `design/tokens.json`. The frames come from two places: `extract` writes them
-from the four clips with ffmpeg, and the `BackgroundFrameExport` test of `:borealis:designsystem`
-writes the two drawn styles. `README.md` has the whole procedure.
+The colours and the sizes of the text come from `design/tokens.json`, or from the file that
+`--tokens` names. The frames come from two places: `extract` writes them from the four clips with
+ffmpeg, and the `BackgroundFrameExport` test of `:borealis:designsystem` writes the two drawn
+styles. `README.md` has the whole procedure.
 
-    python -I contrast.py extract <frames> [--clips <dir>]
-    python -I contrast.py measure <frames> --json <result.json> [--jobs N]
+    python -I contrast.py extract <frames> [--clips <dir>] [--count N]
+    python -I contrast.py measure <frames> --json <result.json> [--tokens <tokens.json>] [--jobs N]
     python -I contrast.py glass-table <result.json> [--out <GlassContrastTable.kt>]
     python -I contrast.py glass-colours [--table <GlassContrastTable.kt>]
+    python -I contrast.py halo <frames> --json <halo.json> [--tokens <tokens.json>] [--jobs N]
+        [--texts <style> ...] [--icons] [--high-contrast] [--halo <stroke dp> <blur dp> <opacity %>]
 
-`glass-table` writes the table of the worst backdrop behind a glass panel that the app turns into
-the tint floors and the text colours of the glass. `glass-colours` prints those floors and colours,
-worked out from the table the app has, for `docs/ux/accessibility.md`.
+`measure` is cases (a) to (c) and `halo` is case (d). `glass-table` writes the table of the worst
+backdrop behind a glass panel that the app turns into the tint floors and the text colours of the
+glass, with the SHA-256 of the clips it was measured over, so that a test of the app tells a table
+that the clips have outgrown. `glass-colours` prints those floors and colours, worked out from the
+table the app has, for `docs/ux/accessibility.md`.
 
 The library has no state; the tests are in `test_contrast.py`.
 """
@@ -32,6 +40,7 @@ import collections
 import concurrent.futures
 import datetime
 import functools
+import hashlib
 import json
 import math
 import re
@@ -238,14 +247,21 @@ def gaussian_blur(image, sigma):
 
 
 def composite(image, tint, alpha):
-    """`tint` over `image` at `alpha`, mixed in the sRGB values as the platform composites."""
+    """`tint` over `image` at `alpha`, mixed in the sRGB values as the platform composites.
+
+    `alpha` is one number, or an array with an alpha for each pixel and a last axis of 1.
+    """
     return alpha * np.asarray(tint, dtype=np.float32) + (1 - alpha) * np.asarray(
         image, dtype=np.float32
     )
 
 
 def glass(image, tint, alpha, radius_px):
-    """A glass panel over `image`: the image blurred by `radius_px`, the tint on it at `alpha`."""
+    """A glass panel over `image`: the image blurred by `radius_px`, the tint on it at `alpha`.
+
+    This is a model oracle for the tests. The measurement does not call it: it blurs a frame once
+    for all the alphas of a radius (`_measure_frame`), and the tests check that against this.
+    """
     return composite(gaussian_blur(image, blur_sigma(radius_px)), tint, alpha)
 
 
@@ -306,11 +322,12 @@ def clip_filter(indices, size, source):
     )
 
 
-def extract_clips(frames, clips, count=FRAME_COUNT):
+def extract_clips(frames, clips, count=FRAME_COUNT, log=None):
     """Writes `count` frames of each clip, spread over its loop, to `frames/<Style>-<device>/`.
 
     A TV shows the whole clip. A phone upright shows a slice of the middle of it, scaled up
-    about 2.5 times, so a blur of a given size in dp reaches less far into the clip there.
+    about 2.5 times, so a blur of a given size in dp reaches less far into the clip there. It tells
+    `log` (the standard error unless given another) what it wrote.
     """
     ffmpeg, ffprobe = _tool("ffmpeg"), _tool("ffprobe")
     for clip in sorted(Path(clips).glob("background_*.mp4")):
@@ -338,7 +355,7 @@ def extract_clips(frames, clips, count=FRAME_COUNT):
                 + ["-fps_mode", "passthrough", "-start_number", "0", str(out / "%02d.png")],
                 check=True,
             )
-            print(f"{clip.name}: {len(list(out.glob('*.png')))} frames in {out}", file=sys.stderr)
+            _say(log, f"{clip.name}: {len(list(out.glob('*.png')))} frames in {out}")
 
 
 # Measurement
@@ -355,6 +372,14 @@ def measure_surfaces(colors):
         for surface in SURFACE_TOKENS
         for token in TEXT_TOKENS
     ]
+
+
+def _map_frames(function, frames, jobs, *shared):
+    """`function(frame, *shared)` for each of `frames`, in order, in `jobs` processes if above 1."""
+    if jobs > 1:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=jobs) as pool:
+            return list(pool.map(function, frames, *([value] * len(frames) for value in shared)))
+    return [function(frame, *shared) for frame in frames]
 
 
 def _token_stats(luminance, text):
@@ -400,13 +425,7 @@ def measure_source(frames, style, device, colors, jobs=1):
     "glass", each with the worst case ("min") over the frames of a token, p1 and p5 (the lowest
     over the frames), the number of the worst frame and the worst case of each frame.
     """
-    if jobs > 1:
-        with concurrent.futures.ProcessPoolExecutor(max_workers=jobs) as pool:
-            measured = list(
-                pool.map(_measure_frame, frames, [device] * len(frames), [colors] * len(frames))
-            )
-    else:
-        measured = [_measure_frame(frame, device, colors) for frame in frames]
+    measured = _map_frames(_measure_frame, frames, jobs, device, colors)
     where = {"style": style, "device": device}
     background = [
         {**where, "token": token, **_fold([m["background"][token] for m in measured])}
@@ -622,19 +641,34 @@ internal object GlassContrastTable {
         mapOf(
 @ENTRIES@
         )
+
+    /**
+     * The SHA-256 of each clip the table was measured over, by the name of its file in
+     * `designsystem/src/main/res/raw`. A test compares them with the clips, so a clip that is
+     * encoded again says that the table is stale. The two styles that are drawn have no clip.
+     */
+    val clipSha256: Map<String, String> =
+        mapOf(
+@CLIPS@
+        )
 }
 """
 
 
 def clip_hashes(clips=CLIPS_DIR):
-    return {}
+    """The SHA-256 of each `background_*.mp4` of `clips`, by the name of its file without `.mp4`."""
+    return {
+        clip.stem: hashlib.sha256(clip.read_bytes()).hexdigest()
+        for clip in sorted(Path(clips).glob("background_*.mp4"))
+    }
 
 
 def glass_table_kotlin(result, clips=CLIPS_DIR):
     """The Kotlin file `GlassContrastTable.kt` for a measurement: the table, row by row.
 
     A row of a style is one blur of the grid and holds a value for each tint of the grid. The
-    floors and the text colours are worked out in Kotlin from it.
+    floors and the text colours are worked out in Kotlin from it. The file also holds the hash of
+    each clip in the folder `clips`, as they are when it is written.
     """
     table = worst_backdrop_luminance(result)
     alphas = sorted({alpha for cell in table.values() for _, alpha in cell})
@@ -656,12 +690,17 @@ def glass_table_kotlin(result, clips=CLIPS_DIR):
             + "\n".join(rows)
             + "\n                ),"
         )
+    hashes = [
+        f'            "{name}" to\n                "{digest}",'
+        for name, digest in clip_hashes(clips).items()
+    ]
     return (
         KOTLIN_TEMPLATE.replace("@SOURCE@", f"{date} at {revision}")
         .replace("@PACKAGE@", KOTLIN_PACKAGE)
         .replace("@TINTS@", ", ".join(str(round(alpha * 100)) for alpha in alphas))
         .replace("@BLURS@", ", ".join(str(blur) for blur in blurs))
         .replace("@ENTRIES@", "\n".join(entries))
+        .replace("@CLIPS@", "\n".join(hashes))
     )
 
 
@@ -874,11 +913,15 @@ HALO_ICON_GRID = 24
 IconSet = collections.namedtuple("IconSet", "stroke paths")
 
 # A string of the Kotlin source, and the constants that icons are made of: `const val NAME = "..."`,
-# one string or several added together.
+# one string or several added together. Any run of white space, a line end too, may stand between
+# the words and the signs of a declaration, as the formatter wraps it.
 _KT_STRING = re.compile(r'"([^"]*)"')
-_KT_CONSTANT = re.compile(r'const val (\w+) =\s*((?:"[^"]*"\s*\+?\s*)+)')
-_KT_STROKE = re.compile(r"const val STROKE = ([\d.]+)f")
-_KT_ICON = re.compile(r'val (\w+): ImageVector by lazy \{ icon\("\w+",(.*?)\) \}', re.DOTALL)
+_KT_CONSTANT = re.compile(r'const\s+val\s+(\w+)\s*=\s*((?:"[^"]*"\s*\+?\s*)+)')
+_KT_STROKE = re.compile(r"const\s+val\s+STROKE\s*=\s*([\d.]+)f")
+_KT_ICON = re.compile(
+    r'val\s+(\w+)\s*:\s*ImageVector\s+by\s+lazy\s*\{\s*icon\(\s*"\w+"\s*,(.*?)\)\s*\}',
+    re.DOTALL,
+)
 _KT_ARGUMENT = re.compile(r'"([^"]*)"|\b([A-Z][A-Z_]+)\b')
 
 
@@ -1130,16 +1173,16 @@ def _font(name, size):
 HALO_SUPERSAMPLE = 4
 
 
-def _set_sample(text, device, pad):
+def _set_sample(text, device, pad, tokens=TOKENS_JSON):
     """The sample text of a style at `HALO_SUPERSAMPLE` times its size, as coverage, 0 to 1.
 
     The picture is that many times as large as the text with `pad` pixels round it. A label is in
-    capitals, with its letters spaced.
+    capitals, with its letters spaced. The size of the text is that of the token file `tokens`.
     """
     if text in HALO_ICONS:
         return _set_icon(text, device, pad)
     style = HALO_TEXTS[text]
-    size = text_size_px(text, device)
+    size = text_size_px(text, device, tokens)
     scale = HALO_SUPERSAMPLE
     sample = HALO_SAMPLE.upper() if style["upper"] else HALO_SAMPLE
     ascent, descent = _font(style["font"], size).getmetrics()
@@ -1223,16 +1266,16 @@ def _reduce(big):
     return big.reshape(height, scale, width, scale).mean(axis=(1, 3))
 
 
-def glyph_mask(text, device, stroke_dp=0.0, pad=0):
+def glyph_mask(text, device, stroke_dp=0.0, pad=0, tokens=TOKENS_JSON):
     """The coverage, 0 to 1, of the sample text of a style, with each glyph widened by a stroke.
 
     The text is set in the font of the style at its size on the device. A label is in capitals, with
     its letters spaced. `stroke_dp` widens each glyph by that much on every side, as a fill under a
     stroke of twice the width does, with round joins. The picture is as large as the text with `pad`
     pixels on each side, whatever the stroke, so that masks of different strokes line up, and `pad`
-    must be at least the stroke.
+    must be at least the stroke. The size of the text is that of the token file `tokens`.
     """
-    big = _set_sample(text, device, pad)
+    big = _set_sample(text, device, pad, tokens)
     plain = _reduce(big)
     stroke = stroke_dp * device_density(device)
     if stroke <= 0:
@@ -1274,10 +1317,7 @@ def halo_alpha(mask, blur_dp, opacity, density):
 
 def halo_over(image, alpha, tint):
     """`tint` over `image`, as much as `alpha` says at each pixel, mixed in the encoded values."""
-    alpha = np.asarray(alpha, dtype=np.float32)[..., None]
-    return alpha * np.asarray(tint, dtype=np.float32) + (1 - alpha) * np.asarray(
-        image, dtype=np.float32
-    )
+    return composite(image, tint, np.asarray(alpha, dtype=np.float32)[..., None])
 
 
 def halo_contrast(pixels, alpha, tint, text_luminance):
@@ -1325,6 +1365,10 @@ def halo_worst_ratio(colours, alphas, tint, text_luminance):
     `alphas` is the least and the greatest alpha of the halo. It is the worst case of the text with
     every colour of a frame at every pixel of the ring, which is the worst case over every place of
     the text on the frame, and a little more at its edges.
+
+    This is a model oracle for the tests. The measurement does not call it: it takes the same two
+    steps itself (`_halo_ends` and `_worst_of_ends`), so as to work out the ends once for both text
+    tokens, and the tests hold it to this.
     """
     return _worst_of_ends(_halo_ends(colours, alphas, tint), text_luminance)
 
@@ -1353,19 +1397,20 @@ def halo_geometry(text, device, tokens=TOKENS_JSON):
 
     None of it depends on the frame. `ring` is the ring as a mask of its bounding box, `size` the
     (height, width) of that box and `alphas` has a row for each of `configs` (no halo first, then
-    the grid) and a column for each pixel of the ring.
+    the grid) and a column for each pixel of the ring. The text is the size of the token file
+    `tokens`.
     """
     density = device_density(device)
     sigma = blur_sigma(max(HALO_BLURS_DP) * density)
     pad = math.ceil(max(HALO_STROKES_DP) * density + HALO_REACH_SIGMAS * sigma) + HALO_RING_PX + 1
-    ring = ring_mask(glyph_mask(text, device, pad=pad))
+    ring = ring_mask(glyph_mask(text, device, pad=pad, tokens=tokens))
     rows, columns = np.nonzero(ring)
     box = (slice(rows.min(), rows.max() + 1), slice(columns.min(), columns.max() + 1))
     ring = ring[box]
     configs = [HALO_NONE] + halo_configs()
     alphas = {HALO_NONE: np.zeros(int(ring.sum()), np.float32)}
     for stroke in HALO_STROKES_DP:
-        widened = glyph_mask(text, device, stroke_dp=stroke, pad=pad)
+        widened = glyph_mask(text, device, stroke_dp=stroke, pad=pad, tokens=tokens)
         for blur in HALO_BLURS_DP:
             full = halo_alpha(widened, blur, 1.0, density)[box][ring]
             for opacity in HALO_OPACITIES:
@@ -1382,7 +1427,7 @@ def _halo_place(pixels, geometry, tint, lights):
     return stats
 
 
-def measure_halo_frame(frame, device, colors, texts=None, dim=0.0):
+def measure_halo_frame(frame, device, colors, texts=None, dim=0.0, tokens=TOKENS_JSON):
     """The stats of each text style, candidate and token over one frame.
 
     The worst case ("min") is over every colour of the frame with every alpha of the ring, which is
@@ -1391,7 +1436,8 @@ def measure_halo_frame(frame, device, colors, texts=None, dim=0.0):
     ring pixels with the halo on them, the ratio below which 1% and 5% of them are, and the lowest
     of those over the places. It returns `{text: {config: {token: stats}}}`, where `stats` has
     "min", "p1" and "p5". `frame` is an array or the path of a PNG. A `dim` is the veil of the page
-    colour that high contrast lays over the frame, which the text is measured under.
+    colour that high contrast lays over the frame, which the text is measured under. The text is
+    the size that the token file `tokens` says.
     """
     if not isinstance(frame, np.ndarray):
         frame = load_frame(frame)
@@ -1401,7 +1447,7 @@ def measure_halo_frame(frame, device, colors, texts=None, dim=0.0):
     colours = frame_colours(frame)
     result = {}
     for text in texts or HALO_TEXTS:
-        geometry = halo_geometry(text, device)
+        geometry = halo_geometry(text, device, tokens)
         worst = {token: None for token in HALO_TOKENS}
         for x, y in halo_placements(frame.shape, geometry.size):
             height, width = geometry.size
@@ -1425,26 +1471,15 @@ def measure_halo_frame(frame, device, colors, texts=None, dim=0.0):
     return result
 
 
-def measure_halo_source(frames, style, device, colors, jobs=1, texts=None, dim=0.0):
+def measure_halo_source(
+    frames, style, device, colors, jobs=1, texts=None, dim=0.0, tokens=TOKENS_JSON
+):
     """The rows of one background style on one device, over its frames.
 
     A row is a text style, a token and a candidate, with the lowest ratio over the frames ("min"),
     p1 and p5 (their lowest) and the number of the worst frame. The rows are plain data.
     """
-    if jobs > 1:
-        with concurrent.futures.ProcessPoolExecutor(max_workers=jobs) as pool:
-            measured = list(
-                pool.map(
-                    measure_halo_frame,
-                    frames,
-                    [device] * len(frames),
-                    [colors] * len(frames),
-                    [texts] * len(frames),
-                    [dim] * len(frames),
-                )
-            )
-    else:
-        measured = [measure_halo_frame(frame, device, colors, texts, dim) for frame in frames]
+    measured = _map_frames(measure_halo_frame, frames, jobs, device, colors, texts, dim, tokens)
     rows = []
     for text in texts or HALO_TEXTS:
         for config in [HALO_NONE] + halo_configs():
@@ -1466,8 +1501,11 @@ def measure_halo_source(frames, style, device, colors, jobs=1, texts=None, dim=0
     return rows
 
 
-def measure_halo_sources(sources, colors, jobs=1, texts=None, dim=0.0):
-    """The halo over `sources`, which maps (style, device) to its frames."""
+def measure_halo_sources(sources, colors, jobs=1, texts=None, dim=0.0, tokens=TOKENS_JSON):
+    """The halo over `sources`, which maps (style, device) to its frames.
+
+    The sizes of the text are those of the token file `tokens`; `colors` are given.
+    """
     result = {
         "meta": {
             "statistic": (
@@ -1490,7 +1528,7 @@ def measure_halo_sources(sources, colors, jobs=1, texts=None, dim=0.0):
             "texts": {
                 name: {
                     "sizes_sp": {
-                        device: _text_sizes(TOKENS_JSON)[size]
+                        device: _text_sizes(tokens)[size]
                         for device, size in style["sizes"].items()
                     },
                     "font": style["font"],
@@ -1515,13 +1553,15 @@ def measure_halo_sources(sources, colors, jobs=1, texts=None, dim=0.0):
     }
     for (style, device), frames in sorted(sources.items()):
         result["sources"].append({"style": style, "device": device, "frames": len(frames)})
-        result["halo"] += measure_halo_source(frames, style, device, colors, jobs, texts, dim)
+        result["halo"] += measure_halo_source(
+            frames, style, device, colors, jobs, texts, dim, tokens
+        )
     return result
 
 
-def measure_halo_folder(root, colors, jobs=1, texts=None, dim=0.0):
+def measure_halo_folder(root, colors, jobs=1, texts=None, dim=0.0, tokens=TOKENS_JSON):
     """Measures the halo over the frames in `root/<Style>-<device>/*.png`."""
-    return measure_halo_sources(_folder_sources(root), colors, jobs, texts, dim)
+    return measure_halo_sources(_folder_sources(root), colors, jobs, texts, dim, tokens)
 
 
 def _halo_required(row):
@@ -1813,7 +1853,85 @@ def _revision():
         return "unknown"
 
 
-def main(argv=None, log=None):
+def _say(log, message):
+    """`message` on the stream `log`, which is the standard error unless a caller gives another."""
+    print(message, file=sys.stderr if log is None else log)
+
+
+def _save_result(result, args):
+    """Puts the date and the revision in the `meta` of a result and writes it to `args.json`."""
+    result["meta"]["date"] = datetime.date.today().isoformat()
+    result["meta"]["revision"] = args.revision or _revision()
+    args.json.parent.mkdir(parents=True, exist_ok=True)
+    args.json.write_text(json.dumps(result, indent=1) + "\n", encoding="utf-8")
+
+
+def _run_extract(args, log):
+    extract_clips(args.frames, args.clips, args.count, log)
+    return 0
+
+
+def _run_measure(args, log):
+    colors = load_colors(args.tokens, TEXT_TOKENS + SURFACE_TOKENS)
+    result = measure_folder(args.frames, colors, args.jobs)
+    _save_result(result, args)
+    print(markdown_tables(result))
+    return 0
+
+
+def _run_glass_table(args, log):
+    result = json.loads(args.result.read_text(encoding="utf-8"))
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    # Written as bytes, so the file has unix line ends on every platform.
+    args.out.write_bytes(glass_table_kotlin(result).encode("utf-8"))
+    _say(log, f"wrote {args.out}")
+    return 0
+
+
+def _run_glass_colours(args, log):
+    table = read_glass_table_kotlin(args.table.read_text(encoding="utf-8"))
+    print(glass_colour_tables(table))
+    return 0
+
+
+def _run_halo(args, log):
+    colors = load_colors(args.tokens, TEXT_TOKENS + SURFACE_TOKENS)
+    dim = 0.0
+    if args.high_contrast:
+        found = load_high_contrast(args.tokens)
+        colors = {**colors, "ink": found["ink"], "ink-2": found["ink-2"]}
+        dim = found["dim"]
+    texts = list(HALO_ICONS) if args.icons else args.texts
+    result = measure_halo_folder(args.frames, colors, args.jobs, texts, dim, args.tokens)
+    _save_result(result, args)
+    if args.halo is None:
+        print(halo_tables(result))
+    else:
+        stroke, blur, percent = args.halo
+        config = (int(stroke), int(blur), round(percent / 100, 2))
+        print((halo_icon_tables if args.icons else halo_high_contrast_tables)(result, config))
+    return 0
+
+
+COMMANDS = {
+    "extract": _run_extract,
+    "measure": _run_measure,
+    "glass-table": _run_glass_table,
+    "glass-colours": _run_glass_colours,
+    "halo": _run_halo,
+}
+
+
+def _add_measuring_arguments(command):
+    """The arguments of the two commands that measure a folder of frames."""
+    command.add_argument("frames", type=Path, help="the folder of <Style>-<tv|phone>/NN.png")
+    command.add_argument("--json", type=Path, required=True, help="where the result goes")
+    command.add_argument("--tokens", type=Path, default=TOKENS_JSON, help="the design tokens")
+    command.add_argument("--jobs", type=int, default=4, help="processes, one frame each")
+    command.add_argument("--revision", help="the revision measured (default: HEAD)")
+
+
+def _parser():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     commands = parser.add_subparsers(dest="command", required=True)
 
@@ -1823,11 +1941,7 @@ def main(argv=None, log=None):
     extract.add_argument("--count", type=int, default=FRAME_COUNT, help="frames of each clip")
 
     measure = commands.add_parser("measure", help="measure the frames in a folder")
-    measure.add_argument("frames", type=Path, help="the folder of <Style>-<tv|phone>/NN.png")
-    measure.add_argument("--json", type=Path, required=True, help="where the result goes")
-    measure.add_argument("--tokens", type=Path, default=TOKENS_JSON, help="the design tokens")
-    measure.add_argument("--jobs", type=int, default=4, help="processes, one frame each")
-    measure.add_argument("--revision", help="the revision measured (default: HEAD)")
+    _add_measuring_arguments(measure)
 
     table = commands.add_parser("glass-table", help="write the Kotlin table of the glass")
     table.add_argument("result", type=Path, help="the JSON that measure wrote")
@@ -1837,12 +1951,8 @@ def main(argv=None, log=None):
     colours.add_argument("--table", type=Path, default=GLASS_TABLE_KT, help="the Kotlin table")
 
     halo = commands.add_parser("halo", help="measure the halo of text on the background")
-    halo.add_argument("frames", type=Path, help="the folder of <Style>-<tv|phone>/NN.png")
-    halo.add_argument("--json", type=Path, required=True, help="where the result goes")
-    halo.add_argument("--tokens", type=Path, default=TOKENS_JSON, help="the design tokens")
-    halo.add_argument("--jobs", type=int, default=4, help="processes, one frame each")
+    _add_measuring_arguments(halo)
     halo.add_argument("--texts", nargs="+", choices=sorted(HALO_TEXTS), help="the text styles")
-    halo.add_argument("--revision", help="the revision measured (default: HEAD)")
     halo.add_argument("--icons", action="store_true", help="measure the icons, not the text")
     halo.add_argument("--high-contrast", action="store_true", help="measure under high contrast")
     halo.add_argument(
@@ -1852,59 +1962,27 @@ def main(argv=None, log=None):
         metavar=("STROKE_DP", "BLUR_DP", "OPACITY_PERCENT"),
         help="the halo to check under high contrast",
     )
+    return parser
 
+
+def _check_halo(parser, args):
+    if args.icons and args.texts:
+        parser.error("--icons and --texts are not asked together")
+    if (args.high_contrast or args.icons) != (args.halo is not None):
+        parser.error("--high-contrast and --icons go with --halo: the halo to check is named")
+
+
+def main(argv=None, log=None):
+    """Runs the command that `argv` names and returns its exit code.
+
+    `log` takes the lines that a command says about what it wrote. They go to the standard error
+    when no stream is given; a test gives its own, so that nothing is printed.
+    """
+    parser = _parser()
     args = parser.parse_args(argv)
     if args.command == "halo":
-        if args.icons and args.texts:
-            parser.error("--icons and --texts are not asked together")
-        if (args.high_contrast or args.icons) != (args.halo is not None):
-            parser.error("--high-contrast and --icons go with --halo: the halo to check is named")
-        if args.icons:
-            args.texts = list(HALO_ICONS)
-        colors = load_colors(TOKENS_JSON, TEXT_TOKENS + SURFACE_TOKENS)
-        dim = 0.0
-        if args.high_contrast:
-            found = load_high_contrast()
-            colors = {**colors, "ink": found["ink"], "ink-2": found["ink-2"]}
-            dim = found["dim"]
-        result = measure_halo_folder(args.frames, colors, args.jobs, args.texts, dim)
-        result["meta"]["date"] = datetime.date.today().isoformat()
-        result["meta"]["revision"] = args.revision or _revision()
-        args.json.parent.mkdir(parents=True, exist_ok=True)
-        args.json.write_text(json.dumps(result, indent=1) + "\n", encoding="utf-8")
-        if args.halo is not None:
-            stroke, blur, percent = args.halo
-            config = (int(stroke), int(blur), round(percent / 100, 2))
-            if args.icons:
-                print(halo_icon_tables(result, config))
-            else:
-                print(halo_high_contrast_tables(result, config))
-        else:
-            print(halo_tables(result))
-        return 0
-    if args.command == "glass-colours":
-        table = read_glass_table_kotlin(args.table.read_text(encoding="utf-8"))
-        print(glass_colour_tables(table))
-        return 0
-    if args.command == "glass-table":
-        result = json.loads(args.result.read_text(encoding="utf-8"))
-        args.out.parent.mkdir(parents=True, exist_ok=True)
-        # Written as bytes, so the file has unix line ends on every platform.
-        args.out.write_bytes(glass_table_kotlin(result).encode("utf-8"))
-        print(f"wrote {args.out}", file=sys.stderr)
-        return 0
-    if args.command == "extract":
-        extract_clips(args.frames, args.clips, args.count)
-        return 0
-
-    colors = load_colors(args.tokens, TEXT_TOKENS + SURFACE_TOKENS)
-    result = measure_folder(args.frames, colors, args.jobs)
-    result["meta"]["date"] = datetime.date.today().isoformat()
-    result["meta"]["revision"] = args.revision or _revision()
-    args.json.parent.mkdir(parents=True, exist_ok=True)
-    args.json.write_text(json.dumps(result, indent=1) + "\n", encoding="utf-8")
-    print(markdown_tables(result))
-    return 0
+        _check_halo(parser, args)
+    return COMMANDS[args.command](args, log)
 
 
 if __name__ == "__main__":

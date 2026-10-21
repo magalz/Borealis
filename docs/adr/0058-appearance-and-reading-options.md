@@ -51,8 +51,8 @@ Decision details:
    * The entries of the TV Settings groups get 3 dp of padding instead of 4 dp, so the 11 groups fit
      in 540 dp without scrolling.
    * The shared text halo (stroke 3 dp, blur 2 dp, 80 %) keeps every font at 4.5:1 or more at the new
-     sizes. The lowest case over the fonts is 5.07:1 (Atkinson Hyperlegible Mono, `ink-2`, body text
-     on a TV over Northern lights). See [Halo per font](../ux/accessibility.md#halo-per-font-sprint-11).
+     sizes, with each font scaled by its drawn x-height. The lowest case over the fonts is 4.98:1 (B612,
+     `ink-2`, body text on a TV over Northern lights). See [Halo per font](../ux/accessibility.md#halo-per-font-sprint-11).
    * This change is merged in the phase (issue #47).
 
 2. **Font choice.** Every font in the choice has an accessibility purpose. The choices are:

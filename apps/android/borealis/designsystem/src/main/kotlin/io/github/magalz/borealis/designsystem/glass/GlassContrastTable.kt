@@ -76,4 +76,7 @@ internal object GlassContrastTable {
                     doubleArrayOf(0.01075, 0.01037, 0.01001, 0.00966, 0.00932, 0.00885),
                 ),
         )
+
+    /** The SHA-256 of each clip the table was measured over, by the name of its file. */
+    val clipSha256: Map<String, String> = emptyMap()
 }

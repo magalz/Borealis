@@ -1680,6 +1680,24 @@ class FontReadingTest(unittest.TestCase):
             ratio = contrast.x_height_ratio(contrast.font_face(path, 400))
         self.assertAlmostEqual(ratio, 0.516, delta=0.005)
 
+    def test_a_table_that_gives_an_x_as_tall_as_the_em_is_a_mistake_of_the_font(self):
+        # The sxHeight of OpenDyslexic Mono is 1000 units of 1000: it is the em, not an x. A value
+        # that no Latin x has (under 0.3 of the em, or over 0.8) is measured instead.
+        with tempfile.TemporaryDirectory() as folder:
+            for units in (1000, 100):
+                path = patched_plex(folder, f"wrong{units}.ttf", x_height=units)
+                with self.subTest(units=units):
+                    ratio = contrast.x_height_ratio(contrast.font_face(path, 400))
+                    self.assertAlmostEqual(ratio, 0.516, delta=0.005)
+
+    def test_a_table_with_an_x_taller_or_shorter_than_plex_is_believed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            for units in (320, 790):
+                path = patched_plex(folder, f"font{units}.ttf", x_height=units)
+                with self.subTest(units=units):
+                    ratio = contrast.x_height_ratio(contrast.font_face(path, 400))
+                    self.assertAlmostEqual(ratio, units / 1000, places=9)
+
     def test_a_static_font_has_no_axes_and_is_used_at_the_weight_of_its_file(self):
         self.assertEqual(contrast.font_axes(PLEX_REGULAR), [])
         self.assertEqual(contrast.font_face(PLEX_SEMIBOLD, 600), (str(PLEX_SEMIBOLD), None))

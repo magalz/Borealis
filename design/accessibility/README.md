@@ -134,10 +134,22 @@ colour at the dim of the tokens, 0.85) and `ink` and `ink-2` are those of high c
 the halo that is named, and not the grid, against 7:1 for every size of text, and prints Tables G
 and H and whether every text keeps it.
 
+With `--icons --halo STROKE_DP BLUR_DP OPACITY_PERCENT` it measures the icons that stand on the
+background instead of the text: the back arrow, the plus, the gear and the eye of `BorealisIcons.kt`.
+The tool reads the paths from that file, strokes them as wide as the app does (2 units on the grid of
+24, with round caps and joins) and draws them at 24 dp, 48 px on a TV and 72 px on a phone. The mask
+is the icon, and the rest is the method above: the same ring, grid and worst case over every place.
+An icon is a non-text indicator that needs 3:1 (WCAG 1.4.11), also under high contrast. The halo
+that is named is the one to check, as it is for high contrast. The command prints Tables I and J
+and the smallest candidate that keeps 3:1 for the icons alone; `--high-contrast` as well puts the
+frames under the veil first. It takes under a minute for 12 sets of 24 frames with 4 jobs.
+`--icons` and `--texts` are not asked together.
+
 ## The JSON
 
 `meta` has the date, the revision, the colours and the grid. `sources` lists the folders read.
-The halo's JSON has the same `meta` and `sources`, and rows in `halo`.
+The halo's JSON has the same `meta` and `sources`, and rows in `halo`; the icons are rows of
+`halo` too, with the name of the icon in `text`, and `meta.icons` says which they are.
 `background` (a) and `glass` (c) have a row for each style, device, token (and alpha and `blur_dp`):
 `min`, `p1`, `p5`, `worst_frame` and `per_frame_min`. `surfaces` (b) has a `ratio` for each
 surface and token.

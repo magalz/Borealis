@@ -85,3 +85,4 @@ Never rewrite an accepted ADR to change its decision. If a decision changes, wri
 | 0055 | [Store settings through one repository and build the Phase 2 settings screen](0055-settings-storage-and-the-phase-2-settings-screen.md) | accepted | 2026-10-16 |
 | 0056 | [Add an animated background and the Appearance group](0056-add-an-animated-background-and-the-appearance-group.md) | accepted | 2026-10-19 |
 | 0057 | [Add glass surfaces and the Accessibility settings](0057-glass-surfaces-and-the-accessibility-settings.md) | accepted | 2026-10-20 |
+| 0058 | [Add the appearance and reading options](0058-appearance-and-reading-options.md) | accepted | 2026-10-21 |

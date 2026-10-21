@@ -182,7 +182,7 @@ the plain task on `build-logic`. One module alone: `./gradlew :borealis:host:det
   warm local run takes about 30 s more; CI, which starts cold, is unchanged.
 - **Two rules are off in test sources:** `InjectDispatcher` and
   `LongParameterList` (see `config/detekt/detekt.yml`). The Java to Kotlin
-  migration turns them back on and standardizes the tests.
+  migration turns them back on in Sprint 14 and standardizes the tests.
 
 ### Screenshot tests
 

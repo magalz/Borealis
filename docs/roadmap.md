@@ -323,7 +323,8 @@ The work for this sprint is on the phase branch `phase/s10-ux-accessibility`,
 which starts at `109e7dff`. Each item has an issue, #33 to #44. All twelve items
 are done on the phase branch, and the phase pull request is not merged yet. The
 decisions are in [ADR 0057](adr/0057-glass-surfaces-and-the-accessibility-settings.md).
-The device round of 2026-10-21 ran on `8d5e8332`
+The device round of 2026-10-21 ran on `8d5e8332`, and the owner's user
+acceptance test (UAT) of the same day ran on `20861a28`
 ([section 15](development/device-validation.md#15-results-sprint-10)).
 
 1. **Text contrast over the animated background (WCAG 2.2).** Done (issue #33,
@@ -340,8 +341,8 @@ The device round of 2026-10-21 ran on `8d5e8332`
    - The bare icons share that halo: 5.71:1 at the worst, 14.79:1 under High
      contrast, against the 3:1 that they need.
    - The Add host field is a filled glass field with its own outline: label
-     4.60:1, focused outline 3.88:1, error text 4.62:1. The switch from an
-     outlined field waits for the owner's verdict.
+     4.60:1, focused outline 3.88:1, error text 4.62:1. The owner accepted the
+     filled field at the Sprint 10 UAT (2026-10-21), so the switch is decided.
    - CI runs the tests of the tool (the "Design tools" job), and a test fails
      when a clip changes without a new measurement.
 2. **Glass panels and cards.** Done (issue #34, merges `07602b1a` and
@@ -377,7 +378,8 @@ The device round of 2026-10-21 ran on `8d5e8332`
    - font scale 2.0 tests;
    - 48 dp touch targets on phones and handhelds. A TV keeps its sizes.
 
-   Three trade-offs of the 48 dp targets are pending the owner's review:
+   The owner accepted these trade-offs of the 48 dp targets as they are, at the
+   Sprint 10 UAT (2026-10-21):
    - on a handheld the Settings group list now scrolls, because its entries are
      48 dp. At 800 × 480 dp (the `settingsscreen_handheld_stream.png` reference)
      6 of the 11 groups show (Stream to Audio) and the other 5 need scrolling.
@@ -386,7 +388,8 @@ The device round of 2026-10-21 ran on `8d5e8332`
    - the docked phone keyboard is 24 dp taller, because its shortcut chips have
      48 dp cells;
    - the keys of the phone keyboard stay under 48 dp, which is an accepted
-     finding of the checks.
+     finding of the checks;
+   - phone buttons stay 40 dp and menu rows stay 44 dp.
 5. **Phone portrait Settings.** Done (issue #37, merge `787b1aab`). Collapsible
    sections (option A, owner decision of 2026-10-20):
    - all sections start collapsed, and several can be open;
@@ -437,6 +440,22 @@ Planned, not started.
   stream.
   - Risk: on the TV, a background clip and the stream decoder compete for the
     hardware decoder.
+- **Connecting and disconnecting screens.** Added at the Sprint 10 UAT
+  (2026-10-21). The Quitting screen gets the same treatment as the Starting
+  screen above: translucent over the animated background, with the step text on
+  a blurred glass panel.
+- **In-game menu in the Library's glass style.** Added at the Sprint 10 UAT
+  (2026-10-21). The video is drawn in a `SurfaceView`, which the Library's
+  `GlassHost` cannot blur. A spike compares a blurred `PixelCopy` snapshot of
+  the video, refreshed a few times a second, with tint only. This changes the
+  rule of [ADR 0057](adr/0057-glass-surfaces-and-the-accessibility-settings.md)
+  that the stream has no glass, so it needs a new decision.
+- **Quit confirmation of the stream as a centred popup.** Added at the Sprint 10
+  UAT (2026-10-21). It is a row in the side panel today.
+- **About links on the TV show the link in Borealis.** Added at the Sprint 10
+  UAT (2026-10-21). A QR code or the URL in a dialog, instead of opening another
+  app. See the finding on the Streamer in
+  [device validation, section 15](development/device-validation.md#owner-checks-uat-2026-10-21).
 
 ### Sprint 12: SecOps
 
@@ -444,6 +463,22 @@ Owner decision of 2026-10-20: a whole sprint on security comes before the
 release. Sprint 12 is hardening and security testing. It takes the backlog item
 on the `RiskyLibrary` lint check (see
 [Backlog, not scheduled](#backlog-not-scheduled)).
+
+- **LuminalShine wrong-PIN fix, as a contribution to the host.** Added at the
+  Sprint 10 UAT (2026-10-21). Proposed; the owner confirms at planning. On
+  LuminalShine 26.10.0-beta.1, a wrong PIN keeps the pairing session for 5
+  minutes, and a retry gets 409 until it expires. The fix:
+  - Fix A: a fresh phase 1 from the same peer address and the same client
+    certificate, after the PIN was applied, ends the old exchange as FAILED and
+    starts a new one that needs a new PIN.
+  - Fix C: a session stalled after the PIN expires after 30 s instead of 5 min.
+    5 min stays for a session still waiting for its PIN.
+  - Not chosen: option D, where Borealis sends phase 4 with an invalid secret
+    after a wrong PIN, so the host deletes the session at once. The owner has
+    not chosen it.
+  - An independent review recommended against a `/unpair` cancel route.
+  - See [host contract, section 4.3](host-contract/luminalshine.md) and the
+    [host-side table](#host-side-items-luminalshine).
 
 ### Sprint 13: release preparation
 
@@ -633,9 +668,23 @@ yet.
   against 47 to 60 ms in Sprint 9. With Transparency Off the median was 50 to
   54 ms, within that range, so the glass costs about 12 to 15 ms of GPU and swap
   time per move. A frame at rest is about 9 ms longer with the blur.
+  **Decided 2026-10-21:** the owner accepted this cost as it is, at the Sprint 10
+  UAT. [ADR 0057](adr/0057-glass-surfaces-and-the-accessibility-settings.md) is
+  amended to say so.
 - **The Streamer's only web handler is the third-party Downloader app,** which
   keeps Back after an About link. It is a limit of that environment, not a bug
-  of the app.
+  of the app. **Decided 2026-10-21:** the About links on the TV show the link in
+  Borealis instead (Sprint 11).
+
+From the Sprint 10 UAT (2026-10-21). None is scheduled yet; the owner put them
+after Sprint 12, or post-MVP.
+
+- **A refresh button on Hosts.** After Forget, the Hosts list does not update
+  until the app is restarted. The owner wants a refresh button on Hosts. Schedule:
+  after Sprint 12, or post-MVP.
+- **Why the Hosts list does not update after Forget.** The owner wants this
+  looked into, so the list updates by itself. Schedule: after Sprint 12, or
+  post-MVP.
 
 ## Host-side items (LuminalShine)
 
@@ -656,3 +705,4 @@ ones are #198, #201, #204 and #205.
 | [NortheBridge/luminalshine#203](https://github.com/NortheBridge/luminalshine/pull/203) | PR | Fix for #202. Merged on 2026-10-20 and shipped in 26.10.0-beta.1 (release notes). |
 | [NortheBridge/luminalshine#204](https://github.com/NortheBridge/luminalshine/issues/204) | Issue | The host process crashes after the virtual display cleanup of an ended session. See the [host contract](host-contract/luminalshine.md). |
 | [NortheBridge/luminalshine#205](https://github.com/NortheBridge/luminalshine/issues/205) | Issue | A second client's resume fails the RTSP tag check while the first client's launch is still setting up. See the [host contract](host-contract/luminalshine.md). |
+| Wrong-PIN lockout on 26.10.0-beta.1 | Finding | After a wrong PIN, the host keeps the pairing session, and every retry gets 409 for up to 5 minutes. Restarting LuminalShine clears it. Seen live on 2026-10-21 and checked in source at `e2662a44`. Not filed upstream yet. See the [host contract](host-contract/luminalshine.md) and [Sprint 12](#sprint-12-secops). |

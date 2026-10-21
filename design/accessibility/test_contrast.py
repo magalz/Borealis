@@ -1128,5 +1128,91 @@ class HaloChoiceTest(unittest.TestCase):
         self.assertIn("Table D", out.getvalue())
 
 
+class HaloHighContrastTest(unittest.TestCase):
+    """High contrast: the page lies over the background at 0.85 and the text is whiter."""
+
+    def setUp(self):
+        self.colors = tokens()
+        self.page = contrast.parse_hex(self.colors["page"])
+
+    def test_the_high_contrast_colours_come_from_the_token_file(self):
+        found = contrast.load_high_contrast(TOKENS)
+        self.assertEqual(found["ink"].upper(), "#FFFFFF")
+        self.assertEqual(found["ink-2"].upper(), "#E8EAED")
+        self.assertEqual(found["dim"], 0.85)
+
+    def test_the_veil_is_the_page_over_the_frame_at_the_dim_in_the_8_bit_values(self):
+        frame = uniform(3, 2, (1.0, 0.5, 0.0))
+        veiled = contrast.halo_veil(frame, self.page, 0.85)
+        expected = np.rint((0.85 * self.page + 0.15 * np.array([1.0, 0.5, 0.0])) * 255) / 255
+        np.testing.assert_allclose(veiled[0, 0], expected, atol=1e-6)
+        self.assertEqual(veiled.shape, frame.shape)
+
+    def test_no_dim_leaves_the_frame_as_it_is(self):
+        frame = uniform(3, 2, (0.9, 0.5, 0.1))
+        np.testing.assert_allclose(contrast.halo_veil(frame, self.page, 0.0), frame, atol=1e-6)
+
+    def test_a_dimmed_frame_is_measured_under_the_veil(self):
+        colors = dict(self.colors, ink="#FFFFFF")
+        white = uniform(1920, 1080, (1.0, 1.0, 1.0))
+        stats = contrast.measure_halo_frame(white, "tv", colors, texts=("body",), dim=0.85)
+        veiled = np.rint((0.85 * self.page + 0.15 * np.ones(3)) * 255) / 255
+        expected = contrast.contrast_ratio(
+            contrast.relative_luminance(veiled), contrast.relative_luminance(np.ones(3))
+        )
+        self.assertAlmostEqual(
+            stats["body"][contrast.HALO_NONE]["ink"]["min"], float(expected), places=4
+        )
+
+    def test_the_text_needs_7_to_1_under_high_contrast_whatever_its_size(self):
+        for text in contrast.HALO_TEXTS:
+            for device in ("tv", "phone"):
+                with self.subTest(text=text, device=device):
+                    self.assertEqual(contrast.halo_limit(text, device, high_contrast=True), 7.0)
+
+    def test_the_table_says_every_loose_text_keeps_7_to_1_when_it_does(self):
+        rows = halo_rows({(3, 2, 0.8)}, ratio=9.0, devices=("tv", "phone"))
+        text = contrast.halo_high_contrast_tables({"meta": {}, "halo": rows}, (3, 2, 0.8))
+        self.assertIn("Table G", text)
+        self.assertIn("Table H", text)
+        self.assertIn("every text keeps 7:1", text)
+        self.assertIn("stroke 3 dp, blur 2 dp, opacity 80 %", text)
+
+    def test_the_table_names_the_text_that_falls_short(self):
+        rows = halo_rows({(3, 2, 0.8)}, ratio=9.0, devices=("tv",))
+        low = next(
+            r
+            for r in rows
+            if (r["stroke_dp"], r["blur_dp"], r["opacity"], r["text"], r["token"])
+            == (3, 2, 0.8, "body", "ink-2")
+        )
+        low["min"] = 6.5
+        low["style"] = "Starfield"
+        text = contrast.halo_high_contrast_tables({"meta": {}, "halo": rows}, (3, 2, 0.8))
+        self.assertIn("falls short of 7:1", text)
+        self.assertIn("6.50", text)
+        self.assertIn("Starfield", text)
+
+    def test_the_command_measures_under_high_contrast_and_prints_the_tables(self):
+        import contextlib
+        import io
+
+        with tempfile.TemporaryDirectory() as folder:
+            frames = Path(folder) / "frames"
+            (frames / "Starfield-tv").mkdir(parents=True)
+            Image.new("RGB", (1920, 1080), (255, 255, 255)).save(frames / "Starfield-tv" / "00.png")
+            target = Path(folder) / "halo-hc.json"
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                args = ["halo", str(frames), "--json", str(target)]
+                args += ["--texts", "body", "--high-contrast", "--halo", "3", "2", "80"]
+                code = contrast.main(args)
+            self.assertEqual(code, 0)
+            written = json.loads(target.read_text(encoding="utf-8"))
+        self.assertEqual(written["meta"]["high_contrast"]["dim"], 0.85)
+        self.assertEqual(written["meta"]["colors"]["ink"].upper(), "#FFFFFF")
+        self.assertIn("Table G", out.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

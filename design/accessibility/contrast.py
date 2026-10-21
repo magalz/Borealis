@@ -935,9 +935,24 @@ def text_size_px(text, device, tokens=TOKENS_JSON):
     return _text_sizes(tokens)[HALO_TEXTS[text]["sizes"][device]] * device_density(device)
 
 
-def halo_limit(text, device):
+def halo_limit(text, device, high_contrast=False):
     """The ratio that a text style needs on a device: 3 for large text, 4.5 for the rest."""
     return WCAG_LIMITS[0] if device in HALO_TEXTS[text]["large"] else WCAG_LIMITS[1]
+
+
+def load_high_contrast(path=TOKENS_JSON):
+    """The colours that high contrast puts in the place of the roles of the same name, and its dim."""
+    return {}
+
+
+def halo_veil(frame, tint, dim):
+    """The frame under the veil that high contrast lays over the background."""
+    return np.asarray(frame, dtype=np.float32)
+
+
+def halo_high_contrast_tables(result, config):
+    """The tables of loose text under high contrast, for the halo `config`."""
+    return ""
 
 
 @functools.lru_cache(maxsize=None)
@@ -1164,7 +1179,7 @@ def _halo_place(pixels, geometry, tint, lights):
     return stats
 
 
-def measure_halo_frame(frame, device, colors, texts=None):
+def measure_halo_frame(frame, device, colors, texts=None, dim=0.0):
     """The stats of each text style, candidate and token over one frame.
 
     The worst case ("min") is over every colour of the frame with every alpha of the ring, which is
@@ -1504,6 +1519,8 @@ def main(argv=None):
     halo.add_argument("--jobs", type=int, default=4, help="processes, one frame each")
     halo.add_argument("--texts", nargs="+", choices=sorted(HALO_TEXTS), help="the text styles")
     halo.add_argument("--revision", help="the revision measured (default: HEAD)")
+    halo.add_argument("--high-contrast", action="store_true", help="measure under high contrast")
+    halo.add_argument("--halo", type=float, nargs=3, help="stroke dp, blur dp and opacity percent")
 
     args = parser.parse_args(argv)
     if args.command == "halo":

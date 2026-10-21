@@ -216,12 +216,12 @@ class BackdropTextTest {
     @Test
     fun `the halo round a stem has the alpha that the notes choose, under the text`() {
         val choice = NotesChoice.read()
-        // The stem of a capital I on black, with no halo: where its edges are, to a fraction of a
-        // pixel.
+        // The stem of a capital I on black, with no halo: where its edges are, to a fraction of
+        // a pixel.
         showStem(BackgroundStyle.Off, Color.Black)
         val stem = Stem.of(hostPixels())
-        // The same stem over white, with the halo: the alpha of the halo at a few distances from
-        // it.
+        // The same stem over white, with the halo: the alpha of the halo at a few distances
+        // from it.
         change(BackgroundStyle.Starfield, backdrop = Color.White)
         val pixels = hostPixels()
 

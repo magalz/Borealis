@@ -76,9 +76,8 @@ internal object BackdropHalo {
             Shadow(page.copy(alpha = OPACITY_PERCENT / PERCENT), Offset.Zero, BLUR_DP.dp.toPx())
         val stroke =
             Stroke(BOTH_SIDES * STROKE_DP.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-        // The paragraph is painted and not drawn with drawText, which clips to the size of the
-        // layout
-        // unless its overflow is visible, and the halo is outside it.
+        // The paragraph is painted and not drawn with drawText: drawText clips to the size of the
+        // layout unless the overflow is visible, and the halo is outside it.
         drawIntoCanvas { canvas ->
             layout.multiParagraph.paint(
                 canvas,

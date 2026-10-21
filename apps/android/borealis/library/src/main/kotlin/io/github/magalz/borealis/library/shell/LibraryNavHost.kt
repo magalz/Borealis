@@ -108,22 +108,6 @@ internal fun LibraryNavHost(
             }
         }
     }
-    val rail =
-        RailActions(
-            onHosts = { navController.popBackStack<Hosts>(inclusive = false) },
-            // Add host closes onto Hosts, also when it opens from Apps. Choosing it while it shows
-            // does nothing: it would recreate the screen and lose what was typed.
-            onAddHost = {
-                if (navController.currentDestination?.hasRoute<AddHost>() != true) {
-                    navController.navigate(AddHost) {
-                        popUpTo<Hosts>()
-                        launchSingleTop = true
-                    }
-                }
-            },
-            onSettings = { navController.openSettingsFromRail() },
-        )
-
     LibraryScaffold(
         formFactor = formFactor,
         selected =
@@ -132,7 +116,7 @@ internal fun LibraryNavHost(
                 destination.isSettingsDestination() -> RailSelection.Settings
                 else -> RailSelection.Hosts
             },
-        actions = rail,
+        actions = rememberRailActions(navController),
         modifier = modifier,
         backgroundStyle = backgroundStyle,
         look = look,
@@ -150,6 +134,26 @@ internal fun LibraryNavHost(
         }
     }
 }
+
+/** What the items of the rail do on [navController]. */
+@Composable
+private fun rememberRailActions(navController: NavHostController): RailActions =
+    remember(navController) {
+        RailActions(
+            onHosts = { navController.popBackStack<Hosts>(inclusive = false) },
+            // Add host closes onto Hosts, also when it opens from Apps. Choosing it while it shows
+            // does nothing: it would recreate the screen and lose what was typed.
+            onAddHost = {
+                if (navController.currentDestination?.hasRoute<AddHost>() != true) {
+                    navController.navigate(AddHost) {
+                        popUpTo<Hosts>()
+                        launchSingleTop = true
+                    }
+                }
+            },
+            onSettings = { navController.openSettingsFromRail() },
+        )
+    }
 
 /**
  * The NavHost where the next screen fades in and the one that is left goes at once; the rail is

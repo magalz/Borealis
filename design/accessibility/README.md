@@ -177,9 +177,9 @@ python -I design/accessibility/contrast.py halo <frames> --json <halo.json> --jo
 The files of a manifest are by the manifest, or by absolute path, and `name` is optional (the stem of
 the regular file). Pass the files by path, and do not copy a font into the repository for this.
 
-- **A font with no SemiBold** (B612, Luciole, OpenDyslexic) takes its Bold for the semibold face,
-  which is the face that Compose picks for a weight of 600. A font with a Regular only (OpenDyslexic
-  Mono) takes it for both: Compose would make a bold of it, a little heavier than the model.
+- **A font with no SemiBold** (B612, Luciole) takes its Bold for the semibold face, which is the
+  face that Compose picks for a weight of 600. A font with a Regular only takes it for both:
+  Compose would make a bold of it, a little heavier than the model.
 - **A variable font** is given as the same file twice. The tool reads its `fvar` table and sets the
   `wght` axis to 400 and 600 with Pillow's variation API, and every other axis to its default. A
   font with no weight axis, one that does not have the weight, and a FreeType older than 2.9.1 are

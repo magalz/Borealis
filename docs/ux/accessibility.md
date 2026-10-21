@@ -1210,10 +1210,17 @@ measures whether it keeps the contrast of the text in each candidate font, and i
 companion of each that has one, as the app will draw them: the text set at the size of the tokens
 times the scale that sets the x-height of the font to that of IBM Plex Sans.
 
-- Date: 2026-10-21. Revision measured: `d1021cba`, the tool as it is in that commit. The frames
-  are the 288 of the baseline. The fonts are in a folder of their own and not in the repository:
-  the files below were passed to the tool by path, and the SHA-256 of each is given by its first 12
-  digits.
+- Date: 2026-10-21. Revision measured: `84c85c96`, the tool and `design/tokens.json` as they are
+  after the merge of the TV text size (#47). The frames are the 288 of the baseline. The fonts are
+  in a folder of their own and not in the repository: the files below were passed to the tool by
+  path, and the SHA-256 of each is given by its first 12 digits.
+- **The text sizes are those of Sprint 11.** On a TV the body is 16 sp and the label, the least
+  text of a TV, is 13 sp, and the title (24 sp) and the small text (14.5 sp) are as they were; on a
+  phone the sizes are as they were (18, 14, 11 and 12.5 sp). The older Tables D to F above are the
+  record of Sprint 10, measured at 15 and 12 sp for the body and the label of a TV, and they stay
+  as they are: the row of IBM Plex Sans in Table V is the same halo at the new sizes, so it is not
+  Table E. At the old sizes the lowest case of Plex was 5.32:1 (the body of a TV),
+  and at the new sizes it is 5.16:1 (the label of a TV).
 - `python -I design/accessibility/contrast.py halo <frames> --json <font.json> --fonts <manifest.json> --jobs 4`
   measures one font in about two to three minutes. The README of the tool says how to make the
   manifest and what the options do.
@@ -1221,6 +1228,10 @@ times the scale that sets the x-height of the font to that of IBM Plex Sans.
   is whether it keeps `ink` and `ink-2` at 4.5:1 for the label, the body, the small text and the
   title of a phone, and `ink` at 3:1 for the title of a TV, with 2 % to spare, over every
   background, as the section Halo has it.
+- The sets are the owner's: IBM Plex Sans as the baseline and five more sans fonts, and three
+  monospaced fonts, with IBM Plex Mono as the baseline of the monospaced ones. OpenDyslexic and
+  OpenDyslexic Mono were measured at the Sprint 10 sizes and are out of the set (owner,
+  2026-10-21): they are not in this section.
 
 ### The fonts and their scale
 
@@ -1232,22 +1243,18 @@ times the scale that sets the x-height of the font to that of IBM Plex Sans.
 | Andika 7.000 | sans | `Andika-Regular.ttf` `27484fdc98d0` | `Andika-SemiBold.ttf` `73c4df767769` | OFL 1.1 |
 | B612 1.008 | sans | `B612-Regular.ttf` `139dce659100` | `B612-Bold.ttf` `91749541ac7b` | OFL 1.1 |
 | Luciole | sans | `Luciole-Regular.ttf` `4c75513464f2` | `Luciole-Bold.ttf` `254e958919dd` | CC BY 4.0 |
-| OpenDyslexic 0.92 | sans | `OpenDyslexic-Regular.otf` `215f0b29780d` | `OpenDyslexic-Bold.otf` `ee7a8b9590a7` | OFL 1.1 |
 | IBM Plex Mono 2.5.0 | mono | `ibm_plex_mono_regular.ttf` `7c6fbddca4b7` | `ibm_plex_mono_semibold.ttf` `f04d7c488ddf` | OFL 1.1 (in the repository) |
 | Atkinson Hyperlegible Mono 2.001 | mono | `AtkinsonHyperlegibleMono-Regular.ttf` `2c9a7b9fabeb` | `AtkinsonHyperlegibleMono-SemiBold.ttf` `6dafae0d4cd6` | OFL 1.1 |
 | B612 Mono 1.008 | mono | `B612Mono-Regular.ttf` `b98cb96cc8a6` | `B612Mono-Bold.ttf` `b467b1d19fda` | OFL 1.1 |
-| OpenDyslexic Mono | mono | `OpenDyslexicMono-Regular.otf` `cbb54f92f232` | the Regular | OFL 1.1 |
 
 The semibold roles (the title and the label) use the SemiBold where the font has one, and the Bold
-where it has not, which is the face that Compose picks for a weight of 600. OpenDyslexic Mono has a
-Regular only: the model sets both roles in it, and Compose would make a bold of it, a little
-heavier, so its label and title are measured a little lighter than they will be. None of the
-candidates is a variable font; the tool sets the weight of one with `fvar`, but no number below
-depends on it.
+where it has not (B612, B612 Mono and Luciole), which is the face that Compose picks for a weight
+of 600. None of the fonts is a variable font; the tool sets the weight of one with `fvar`, but no
+number below depends on it.
 
 The scale is the x-height of IBM Plex Sans (0.516 of the em) over that of the regular face, which is
-`sxHeight` of its OS/2 table. The `sxHeight` of OpenDyslexic Mono says 1000 units of 1000, the em
-and not an x, so the tool measures the x as it is drawn, 0.547.
+`sxHeight` of its OS/2 table. The scale is the same at any text size, so it does not change with the
+sizes of Sprint 11.
 
 | Font | x-height (em) | Scale | Semibold face |
 | --- | --- | --- | --- |
@@ -1257,62 +1264,64 @@ and not an x, so the tool measures the x as it is drawn, 0.547.
 | Andika 7.000 | 0.508 | 1.016 | SemiBold |
 | B612 1.008 | 0.550 | 0.938 | Bold |
 | Luciole | 0.545 | 0.947 | Bold |
-| OpenDyslexic 0.92 | 0.560 | 0.921 | Bold |
 | IBM Plex Mono 2.5.0 | 0.516 | 1.000 | SemiBold |
 | Atkinson Hyperlegible Mono 2.001 | 0.496 | 1.040 | SemiBold |
 | B612 Mono 1.008 | 0.550 | 0.938 | Bold |
-| OpenDyslexic Mono | 0.547 | 0.943 | Regular (no Bold or SemiBold) |
 
 ### The halo of the app in each font
 
-Table V. The halo of the app (stroke 3 dp, blur 2 dp, opacity 80 %) in each font: the lowest ratio
-over every background, device and text style, as Table D has it for Plex: `ink` and `ink-2` for
-small text (4.5:1) and `ink` for large text (the title of a TV, 3:1). Then the lowest case, how
-far it is over its limit, whether the halo keeps every ratio with 2 % to spare, and the smallest
-candidate of the grid that does for that font alone.
+Table V. The halo of the app (stroke 3 dp, blur 2 dp, opacity 80 %) in each font at the Sprint 11
+sizes: the lowest ratio over every background, device and text style, as Table D has it for Plex:
+`ink` and `ink-2` for small text (4.5:1) and `ink` for large text (the title of a TV, 3:1). Then the
+lowest case, how far it is over its limit, whether the halo keeps every ratio with 2 % to spare, and
+the smallest candidate of the grid that does for that font alone.
 
 | Font | `ink`, small | `ink-2`, small | `ink`, large | Lowest case | Over its limit | Keeps | Smallest for the font |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| IBM Plex Sans 1.1.0 | 7.50 | 5.32 | 7.26 | 5.32, `ink-2`, body, TV, Northern lights | 18 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
-| Atkinson Hyperlegible Next 2.001 | 7.48 | 5.31 | 7.61 | 5.31, `ink-2`, body, TV, Northern lights | 18 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
-| Lexend 1.008 | 7.51 | 5.33 | 7.18 | 5.33, `ink-2`, label, TV, Northern lights | 18 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
-| Andika 7.000 | 7.33 | 5.20 | 7.32 | 5.20, `ink-2`, body, TV, Northern lights | 16 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
-| B612 1.008 | 7.36 | 5.22 | 7.28 | 5.22, `ink-2`, label, TV, Northern lights | 16 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
-| Luciole | 7.33 | 5.20 | 7.54 | 5.20, `ink-2`, body, TV, Northern lights | 16 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
-| OpenDyslexic 0.92 | 7.31 | 5.19 | 7.27 | 5.19, `ink-2`, label, TV, Northern lights | 15 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
-| IBM Plex Mono 2.5.0 | 7.28 | 5.16 | 7.16 | 5.16, `ink-2`, body, TV, Northern lights | 15 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
-| Atkinson Hyperlegible Mono 2.001 | 7.57 | 5.37 | 7.44 | 5.37, `ink-2`, label, TV, Northern lights | 19 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| IBM Plex Sans 1.1.0 | 7.27 | 5.16 | 7.26 | 5.16, `ink-2`, label, TV, Northern lights | 15 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| Atkinson Hyperlegible Next 2.001 | 7.44 | 5.28 | 7.61 | 5.28, `ink-2`, body, TV, Northern lights | 17 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| Lexend 1.008 | 7.27 | 5.16 | 7.18 | 5.16, `ink-2`, body, TV, Northern lights | 15 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| Andika 7.000 | 7.21 | 5.11 | 7.32 | 5.11, `ink-2`, label, TV, Northern lights | 14 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| B612 1.008 | 7.22 | 5.12 | 7.28 | 5.12, `ink-2`, label, TV, Northern lights | 14 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| Luciole | 7.42 | 5.27 | 7.54 | 5.27, `ink-2`, small, TV, Northern lights | 17 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| IBM Plex Mono 2.5.0 | 7.17 | 5.09 | 7.16 | 5.09, `ink-2`, label, TV, Northern lights | 13 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| Atkinson Hyperlegible Mono 2.001 | 7.15 | 5.07 | 7.44 | 5.07, `ink-2`, body, TV, Northern lights | 13 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
 | B612 Mono 1.008 | 7.33 | 5.20 | 7.08 | 5.20, `ink-2`, small, TV, Northern lights | 15 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
-| OpenDyslexic Mono | 7.24 | 5.13 | 7.35 | 5.13, `ink-2`, small, TV, Northern lights | 14 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
 
 ### What it shows
 
-- **The halo of the app keeps the contrast in every font.** All 11 sets, the nine candidates and
-  the two of Plex (7 sans and 4 monospaced), keep every ratio at stroke 3 dp, blur 2 dp and
-  opacity 80 % with 2 % to spare, and so with none. The lowest case of each is `ink-2` over
-  Northern lights, the same background and token as in Plex, and none is under 14 % over its
-  limit: 5.13:1 for the small text of a TV in OpenDyslexic Mono, against 5.32 in Plex. `ink` for
-  small text is 7.2:1 or more, and the title of a TV in `ink`, which needs 3:1, is 7.0:1 or more.
+- **The halo of the app still keeps the contrast in every font.** All 9 sets, 6 sans and 3 monospaced,
+  keep every ratio at stroke 3 dp, blur 2 dp and opacity 80 % with 2 % to spare, and so with none.
+  The lowest case is 5.07:1, `ink-2` in the body of a TV over Northern lights in
+  Atkinson Hyperlegible Mono 2.001, 13 % over its limit, and the highest of the lowest cases is 5.28:1 in
+  Atkinson Hyperlegible Next 2.001. Every set has `ink-2` over Northern lights as its lowest case. The lowest `ink-2` of
+  small text is 5.07 to 5.28:1 over the sets, `ink` for small text is
+  7.1:1 or more, and the title of a TV in `ink`, which needs 3:1, is
+  7.0:1 or more.
 - **No smaller halo works for any of them.** The smallest candidate of the grid that keeps the
   ratios is the same as Plex's for each font, stroke 3 dp, blur 2 dp, opacity 80 %, so it is also
   the smallest that keeps every font at once. The halo of the app does not have to change for any
-  font of the list.
-- **The fonts differ by a few percent only.** What moves the result is how much of the ring round
-  the glyphs the halo covers, which follows the stroke of the font and its size. The lowest `ink-2`
-  of the small text of each font is within 0.2:1 of Plex's, from 5.13 to 5.37 against 5.32.
-- **High contrast does not depend on the font.** Under it the dim of the page at 0.85 gives 12.00:1
-  for `ink-2` and 14.46:1 for `ink` over every pixel of every background with no halo at all
-  (Tables G and H), and a halo only raises them, so no font can bring the loose text under 7:1.
-  The icons do not use a font.
+  font of the list, at the sizes of Sprint 10 or of Sprint 11.
+- **The sizes of Sprint 11 move the lowest case by a few points, either way.** The label of a TV
+  is 13 sp and the body 16 sp, so the ring that the halo has to cover is not the same. The lowest
+  case of Plex is 5.16:1 against 5.32:1 at the old sizes, 15 % against 18 % over
+  the limit. Over the 9 sets the margin over the limit moved by -6.7 to +1.5 points of
+  that percentage (the lowest `ink-2` of a font is not always in the same text style), and it is
+  12.7 % or more everywhere.
+- **High contrast does not depend on the font or on the size.** Under it the dim of the page at 0.85
+  gives 12.00:1 for `ink-2` and 14.46:1 for `ink` over every pixel of every background with no
+  halo at all (Tables G and H), which is a property of the pixels and not of the glyphs, and a halo
+  only raises them, so no font or size can bring the loose text under 7:1. The icons do not use a
+  font.
 
 ### Not covered
 
-- Compose's own bold of OpenDyslexic Mono, and the Medium (500) of Atkinson, Lexend and Andika: the
-  model sets the small text, which has the size of the rail items, in the regular face.
+- The Medium (500) of Atkinson, Lexend and Andika: the model sets the small text, which has the size
+  of the rail items, in the regular face.
 - Hinting and rasterising: as in the section Halo, the sample is drawn at four times its size and
   brought down by the mean of each block, as Android does not hint it. The FreeType 2.14.3 of Pillow
-  12.2.0 draws every face, OpenDyslexic (CFF outlines) too; Android draws with Skia, so a small
-  difference at the edge of a glyph is possible, which the 2 % to spare is for.
+  12.2.0 draws every face; Android draws with Skia, so a small difference at the edge of a glyph is
+  possible, which the 2 % to spare is for.
 - The numbers are the model of the halo and not a device: the halo has not been seen with these
   fonts.
 

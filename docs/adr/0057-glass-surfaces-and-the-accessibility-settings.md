@@ -271,7 +271,7 @@ page is private, so it is not linked here.
 ### TV: 24 frames a second (chosen)
 
 * Good, because the Settings screen with glass (37 ms) fits the 41.7 ms budget at 24 frames a second.
-* Bad, because the background moves less smoothly while the glass is on.
+* Bad, because the background moves less smoothly while the blur is drawn.
 
 ### TV: blur at 15 frames a second
 
@@ -318,11 +318,14 @@ page is private, so it is not linked here.
      the build already uses; the framework 4.1.1 (2024-03-29) is the latest release, by Google.
   4. **Footprint:** a 21 KB module and the 773 KB framework, with Material Components 1.2.0-rc01,
      Espresso, the AndroidX test runner, Guava and protobuf-javalite behind it. The framework also
-     brings `jsoup` 1.15.1, `checker-qual`, `error_prone_annotations` and `hamcrest`, which are
-     test-only artifacts too. jsoup 1.15.1 predates the fix of CVE-2022-36033 (jsoup 1.15.3). It is
-     on the unit-test classpath only and is never shipped. It is a test dependency of the
-     fixtures: it is not on the release classpath of the app (checked with `:app:dependencies`),
-     has no permissions and no native code.
+     brings `jsoup` 1.15.1, `checker-qual` 3.22.1, `error_prone_annotations` (2.14.0 asked for,
+     2.47.0 resolved) and `hamcrest` 1.3 (core and library), which are test-only artifacts too.
+     jsoup 1.15.1 predates the fix of CVE-2022-36033 (jsoup 1.15.3). It is on the unit-test
+     classpath only (`:borealis:designsystem:dependencies --configuration
+     debugUnitTestRuntimeClasspath`) and is never shipped. It is a test dependency of the
+     fixtures: none of these artifacts is on the release classpath of the app (checked with
+     `:app:dependencies --configuration releaseRuntimeClasspath` on 2026-10-21), and they have no
+     permissions and no native code.
   5. **Alternatives:** our own assertions only (rejected for the reason in 1); Espresso
      `AccessibilityChecks.enable()` (needs a device or an emulator, which the CI does not run, and
      looks at views, not at Compose); the Accessibility Scanner app (by hand, not in the CI).

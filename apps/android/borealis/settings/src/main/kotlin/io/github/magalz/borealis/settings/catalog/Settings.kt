@@ -183,6 +183,50 @@ object Settings {
     const val PERF_OVERLAY_DETAILED = "detailed"
 
     /**
+     * The font of the app: the id of one of the fonts below, never the ordinal of a font. A stored
+     * value that no font has stands for the default, IBM Plex Sans. It starts in DataStore, as ADR
+     * 0011 sets for new settings.
+     */
+    val FONT = StringSetting("borealis_font", default = FONT_PLEX, store = SettingStore.DATASTORE)
+
+    /** Value of [FONT] for IBM Plex Sans, the default. */
+    const val FONT_PLEX = "plex"
+
+    /** Value of [FONT] for Atkinson Hyperlegible Next. */
+    const val FONT_ATKINSON_NEXT = "atkinson_next"
+
+    /** Value of [FONT] for Luciole. */
+    const val FONT_LUCIOLE = "luciole"
+
+    /** Value of [FONT] for Lexend. */
+    const val FONT_LEXEND = "lexend"
+
+    /** Value of [FONT] for Andika. */
+    const val FONT_ANDIKA = "andika"
+
+    /** Value of [FONT] for B612. */
+    const val FONT_B612 = "b612"
+
+    /** Value of [FONT] for the font of the device. */
+    const val FONT_SYSTEM = "system"
+
+    /**
+     * The accent colour of the app: [ACCENT_VIOLET], [ACCENT_TEAL] or [ACCENT_WHITE]. A stored
+     * value that no choice has stands for the default.
+     */
+    val ACCENT =
+        StringSetting("borealis_accent", default = ACCENT_VIOLET, store = SettingStore.DATASTORE)
+
+    /** Value of [ACCENT] for violet, the default. */
+    const val ACCENT_VIOLET = "violet"
+
+    /** Value of [ACCENT] for teal. */
+    const val ACCENT_TEAL = "teal"
+
+    /** Value of [ACCENT] for white. */
+    const val ACCENT_WHITE = "white"
+
+    /**
      * The animated background behind the Library and Settings: the id of one of the styles below,
      * never the ordinal of a style. A stored value that no style has stands for the default, the
      * Aurora curtains. Unlike [PERF_OVERLAY], it has no legacy SharedPreferences value to migrate,
@@ -216,6 +260,39 @@ object Settings {
 
     /** Value of [BACKGROUND] for the plain page colour. */
     const val BACKGROUND_OFF = "off"
+
+    /**
+     * How strongly the animated background shows, in percent: one of the ids `100`, `75`, `50` or
+     * `25`. The rest is a veil of the page colour laid over it, so that the glass panels, which
+     * assume the background at full strength, stay legible. A stored value that no choice has
+     * stands for the default.
+     */
+    val BACKGROUND_INTENSITY =
+        StringSetting(
+            "borealis_background_intensity",
+            default = "100",
+            store = SettingStore.DATASTORE,
+        )
+
+    /**
+     * How close the cards of a screen sit: [CARD_DENSITY_COMFORTABLE], [CARD_DENSITY_COMPACT] or
+     * [CARD_DENSITY_DENSE]. A stored value that no choice has stands for the default.
+     */
+    val CARD_DENSITY =
+        StringSetting(
+            "borealis_card_density",
+            default = CARD_DENSITY_COMFORTABLE,
+            store = SettingStore.DATASTORE,
+        )
+
+    /** Value of [CARD_DENSITY] for the layout of today, the default. */
+    const val CARD_DENSITY_COMFORTABLE = "comfortable"
+
+    /** Value of [CARD_DENSITY] for more cards in each row. */
+    const val CARD_DENSITY_COMPACT = "compact"
+
+    /** Value of [CARD_DENSITY] for more cards in each row, with less padding. */
+    const val CARD_DENSITY_DENSE = "dense"
 
     /**
      * How much the glass panels tint the background, in percent: one of the ids `30`, `40`, `50`,
@@ -296,6 +373,27 @@ object Settings {
 
     /** Value of [TEXT_SIZE] for 130 %. */
     const val TEXT_SIZE_LARGEST = "largest"
+
+    /**
+     * The space between the letters, words and lines of the text: [TEXT_SPACING_NORMAL],
+     * [TEXT_SPACING_WIDE] or [TEXT_SPACING_WIDER]. A stored value that no choice has stands for the
+     * default.
+     */
+    val TEXT_SPACING =
+        StringSetting(
+            "borealis_text_spacing",
+            default = TEXT_SPACING_NORMAL,
+            store = SettingStore.DATASTORE,
+        )
+
+    /** Value of [TEXT_SPACING] for the spacing of the font, the default. */
+    const val TEXT_SPACING_NORMAL = "normal"
+
+    /** Value of [TEXT_SPACING] for more space between letters, words and lines. */
+    const val TEXT_SPACING_WIDE = "wide"
+
+    /** Value of [TEXT_SPACING] for even more space. */
+    const val TEXT_SPACING_WIDER = "wider"
 
     /** High contrast: solid panels and text at 7:1 or more. Stored in DataStore. */
     val HIGH_CONTRAST =

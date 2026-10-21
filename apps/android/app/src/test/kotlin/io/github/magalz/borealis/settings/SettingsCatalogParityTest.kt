@@ -71,7 +71,31 @@ class SettingsCatalogParityTest {
                 Settings.TEXT_SIZE.key,
                 Settings.HIGH_CONTRAST.key,
                 Settings.COLOUR_VISION.key,
+                Settings.FONT.key,
+                Settings.ACCENT.key,
+                Settings.BACKGROUND_INTENSITY.key,
+                Settings.CARD_DENSITY.key,
+                Settings.TEXT_SPACING.key,
             )
+    }
+
+    @Test
+    fun `the font, accent, intensity, density and spacing are Strings in DataStore`() {
+        val keys =
+            mapOf(
+                Settings.FONT to "borealis_font",
+                Settings.ACCENT to "borealis_accent",
+                Settings.BACKGROUND_INTENSITY to "borealis_background_intensity",
+                Settings.CARD_DENSITY to "borealis_card_density",
+                Settings.TEXT_SPACING to "borealis_text_spacing",
+            )
+
+        for ((setting, key) in keys) {
+            assertThat(setting.key).isEqualTo(key)
+            assertThat(setting).isInstanceOf(StringSetting::class.java)
+            assertThat(setting.store).isEqualTo(SettingStore.DATASTORE)
+            assertThat(Settings.all).contains(setting)
+        }
     }
 
     private companion object {

@@ -2,10 +2,15 @@ package io.github.magalz.borealis.stream
 
 import android.app.Activity
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.theme.AccentChoice
+import io.github.magalz.borealis.designsystem.theme.BackgroundIntensity
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
+import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.ColourVision
+import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.designsystem.theme.TextSize
+import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.store.SettingsSnapshots
@@ -46,6 +51,27 @@ class StreamSessionFactoryLookTest {
                     textSize = TextSize.Larger,
                     highContrast = true,
                     colourVision = ColourVision.RedGreen,
+                )
+            )
+    }
+
+    @Test
+    fun `the stored font, accent, intensity, density and spacing are the look of the stream`() {
+        val settings = SettingsSnapshots.repository(activity)
+        settings.setNow(Settings.FONT, "luciole")
+        settings.setNow(Settings.ACCENT, "white")
+        settings.setNow(Settings.BACKGROUND_INTENSITY, "25")
+        settings.setNow(Settings.CARD_DENSITY, "dense")
+        settings.setNow(Settings.TEXT_SPACING, "wider")
+
+        assertThat(StreamSessionFactory.look(activity))
+            .isEqualTo(
+                BorealisLook(
+                    font = FontChoice.Luciole,
+                    accent = AccentChoice.White,
+                    backgroundIntensity = BackgroundIntensity.Quarter,
+                    cardDensity = CardDensity.Dense,
+                    textSpacing = TextSpacing.Wider,
                 )
             )
     }

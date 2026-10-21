@@ -98,7 +98,11 @@
     <string name="settings_pip_summary">Watch the stream, without controlling it, while you use other apps.</string>
 
     <!-- Rows: Appearance -->
+    <string name="settings_font_title">Font</string>
+    <string name="settings_accent_title">Accent colour</string>
     <string name="settings_background_title">Background</string>
+    <string name="settings_background_intensity_title">Background intensity</string>
+    <string name="settings_card_density_title">Card density</string>
     <string name="settings_glass_tint_title">Glass tint</string>
     <string name="settings_glass_tint_summary">How much the panels tint the background. Higher is more opaque.</string>
     <string name="settings_glass_blur_title">Glass blur</string>
@@ -113,6 +117,7 @@
     <string name="settings_thick_focus_summary">Draws a thicker, lighter outline around the focused item.</string>
     <string name="settings_text_size_title">Text size</string>
     <string name="settings_text_size_summary">Scales the text of Borealis on top of the system font size.</string>
+    <string name="settings_text_spacing_title">Text spacing</string>
     <string name="settings_high_contrast_title">High contrast</string>
     <string name="settings_high_contrast_summary">Uses solid panels, brighter text, a dimmed background and the thicker outline.</string>
     <string name="settings_colour_vision_title">Colour-blind palette</string>

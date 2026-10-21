@@ -133,6 +133,21 @@ object FixedChoices {
             ),
         )
 
+    /** Font. */
+    val FONT = emptyList<FixedChoice>()
+
+    /** Accent colour. */
+    val ACCENT = emptyList<FixedChoice>()
+
+    /** Background intensity. */
+    val BACKGROUND_INTENSITY = emptyList<FixedChoice>()
+
+    /** Card density. */
+    val CARD_DENSITY = emptyList<FixedChoice>()
+
+    /** Text spacing. */
+    val TEXT_SPACING = emptyList<FixedChoice>()
+
     /** Touch. */
     val TOUCH =
         listOf(

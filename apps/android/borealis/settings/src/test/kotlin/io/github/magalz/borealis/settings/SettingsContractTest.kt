@@ -42,6 +42,11 @@ class SettingsContractTest {
                 Settings.TEXT_SIZE,
                 Settings.HIGH_CONTRAST,
                 Settings.COLOUR_VISION,
+                Settings.FONT,
+                Settings.ACCENT,
+                Settings.BACKGROUND_INTENSITY,
+                Settings.CARD_DENSITY,
+                Settings.TEXT_SPACING,
             )
     }
 
@@ -317,8 +322,9 @@ class SettingsContractTest {
     private companion object {
         /**
          * 38 ported stream settings, the gamepad mouse speed, 2 logging switches, the overlay
-         * choice, the background and the 8 settings of the glass and the accessibility group.
+         * choice, the background, the 8 settings of the glass and the accessibility group, and the
+         * 5 of Sprint 11: font, accent colour, background intensity, card density and text spacing.
          */
-        const val CATALOG_SIZE = 51
+        const val CATALOG_SIZE = 56
     }
 }

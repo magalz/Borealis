@@ -26,6 +26,11 @@ class BorealisLookThemeTest {
             textSize = TextSize.Larger,
             highContrast = true,
             colourVision = ColourVision.RedGreen,
+            font = FontChoice.AtkinsonNext,
+            accent = AccentChoice.Teal,
+            backgroundIntensity = BackgroundIntensity.Half,
+            cardDensity = CardDensity.Compact,
+            textSpacing = TextSpacing.Wide,
         )
 
     private var seen: BorealisLook? = null

@@ -667,6 +667,11 @@ class DefaultSettingsOptionsRowStateTest {
                 Settings.HIGH_CONTRAST,
                 Settings.COLOUR_VISION,
                 Settings.BACKGROUND,
+                Settings.FONT,
+                Settings.ACCENT,
+                Settings.BACKGROUND_INTENSITY,
+                Settings.CARD_DENSITY,
+                Settings.TEXT_SPACING,
             )
 
         for (row in rows) {

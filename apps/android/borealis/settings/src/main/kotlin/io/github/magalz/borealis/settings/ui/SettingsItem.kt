@@ -450,6 +450,41 @@ enum class SettingsItem(
         R.string.settings_colour_vision_title,
         R.string.settings_colour_vision_summary,
         input = ItemInput(fixedChoices = FixedChoices.COLOUR_VISION),
+    ),
+    FONT(
+        SettingsGroupId.APPEARANCE,
+        SettingsItemKind.CHOICE,
+        Settings.FONT,
+        R.string.settings_font_title,
+        input = ItemInput(fixedChoices = FixedChoices.FONT),
+    ),
+    ACCENT(
+        SettingsGroupId.APPEARANCE,
+        SettingsItemKind.CHOICE,
+        Settings.ACCENT,
+        R.string.settings_accent_title,
+        input = ItemInput(fixedChoices = FixedChoices.ACCENT),
+    ),
+    BACKGROUND_INTENSITY(
+        SettingsGroupId.APPEARANCE,
+        SettingsItemKind.CHOICE,
+        Settings.BACKGROUND_INTENSITY,
+        R.string.settings_background_intensity_title,
+        input = ItemInput(fixedChoices = FixedChoices.BACKGROUND_INTENSITY),
+    ),
+    CARD_DENSITY(
+        SettingsGroupId.APPEARANCE,
+        SettingsItemKind.CHOICE,
+        Settings.CARD_DENSITY,
+        R.string.settings_card_density_title,
+        input = ItemInput(fixedChoices = FixedChoices.CARD_DENSITY),
+    ),
+    TEXT_SPACING(
+        SettingsGroupId.ACCESSIBILITY,
+        SettingsItemKind.CHOICE,
+        Settings.TEXT_SPACING,
+        R.string.settings_text_spacing_title,
+        input = ItemInput(fixedChoices = FixedChoices.TEXT_SPACING),
     );
 
     companion object {

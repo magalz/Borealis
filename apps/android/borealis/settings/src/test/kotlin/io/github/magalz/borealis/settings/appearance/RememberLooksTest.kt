@@ -4,8 +4,13 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.theme.AccentChoice
+import io.github.magalz.borealis.designsystem.theme.BackgroundIntensity
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
+import io.github.magalz.borealis.designsystem.theme.CardDensity
+import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.TextSize
+import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot
@@ -59,6 +64,49 @@ class RememberLooksTest {
         )
 
         assertThat(look).isEqualTo(BorealisLook(textSize = TextSize.Larger, highContrast = true))
+    }
+
+    @Test
+    fun `the stored font, accent, intensity, density and spacing are drawn from the first frame`() {
+        show(
+            FakeSettingsRepository(
+                SettingsSnapshot.fromStored(
+                    mapOf(
+                        Settings.FONT to "lexend",
+                        Settings.ACCENT to "teal",
+                        Settings.BACKGROUND_INTENSITY to "50",
+                        Settings.CARD_DENSITY to "compact",
+                        Settings.TEXT_SPACING to "wide",
+                    )
+                )
+            )
+        )
+
+        assertThat(look)
+            .isEqualTo(
+                BorealisLook(
+                    font = FontChoice.Lexend,
+                    accent = AccentChoice.Teal,
+                    backgroundIntensity = BackgroundIntensity.Half,
+                    cardDensity = CardDensity.Compact,
+                    textSpacing = TextSpacing.Wide,
+                )
+            )
+    }
+
+    @Test
+    fun `a change of the font or the accent reaches the screens at once`() {
+        val repository = FakeSettingsRepository()
+        show(repository)
+
+        repository.setNow(Settings.FONT, "system")
+        composeRule.waitForIdle()
+        assertThat(look).isEqualTo(BorealisLook(font = FontChoice.System))
+
+        repository.setNow(Settings.ACCENT, "white")
+        composeRule.waitForIdle()
+        assertThat(look)
+            .isEqualTo(BorealisLook(font = FontChoice.System, accent = AccentChoice.White))
     }
 
     @Test

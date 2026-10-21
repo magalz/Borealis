@@ -16,7 +16,7 @@ private constructor(val strokeDp: Int, val blurDp: Int, val opacity: Int) {
             Regex("""The choice: stroke (\d+) dp, blur (\d+) dp, opacity (\d+) %\.""")
 
         /** The notes are four levels above the module that a unit test runs in. */
-        val NOTES = File("../../../../docs/ux/accessibility.md")
+        private val NOTES = File("../../../../docs/ux/accessibility.md")
 
         fun read(): NotesChoice {
             assertWithMessage("the notes are not at ${NOTES.absolutePath}")

@@ -5,6 +5,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.components.BackdropTextHalo
+import io.github.magalz.borealis.designsystem.testing.assertHalo
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.settings.testing.InGlassHost
@@ -33,8 +34,8 @@ class AuditBackdropTextTest {
     fun `the title and the retention on a phone are on the background`() {
         show(entries, FormFactor.Phone)
 
-        assertHalo("Audit trail")
-        assertHalo("Kept for 90 days or 2,000 entries")
+        composeRule.assertHalo("Audit trail")
+        composeRule.assertHalo("Kept for 90 days or 2,000 entries")
     }
 
     @Test
@@ -42,8 +43,8 @@ class AuditBackdropTextTest {
     fun `the title and the retention on a TV are on the background`() {
         show(entries, FormFactor.Tv)
 
-        assertHalo("Audit trail")
-        assertHalo("Kept for 90 days or 2,000 entries")
+        composeRule.assertHalo("Audit trail")
+        composeRule.assertHalo("Kept for 90 days or 2,000 entries")
     }
 
     @Test
@@ -51,8 +52,8 @@ class AuditBackdropTextTest {
     fun `the empty state is on the background`() {
         show(empty, FormFactor.Phone)
 
-        assertHalo("No events recorded yet.")
-        assertHalo("Pairing, launch and session events appear here.")
+        composeRule.assertHalo("No events recorded yet.")
+        composeRule.assertHalo("Pairing, launch and session events appear here.")
     }
 
     @Test
@@ -81,14 +82,5 @@ class AuditBackdropTextTest {
             }
         }
         composeRule.waitForIdle()
-    }
-
-    private fun assertHalo(text: String) {
-        composeRule
-            .onNode(
-                hasText(text) and SemanticsMatcher.expectValue(BackdropTextHalo, true),
-                useUnmergedTree = true,
-            )
-            .assertExists()
     }
 }

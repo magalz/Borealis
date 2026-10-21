@@ -4,12 +4,13 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.components.BackdropTextHalo
 import io.github.magalz.borealis.designsystem.glass.GlassHost
+import io.github.magalz.borealis.designsystem.testing.assertHalo
+import io.github.magalz.borealis.designsystem.testing.assertNoHalo
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.addhost.AddHostScreen
@@ -47,8 +48,8 @@ class LibraryBackdropTextTest {
     fun `the header of Hosts on a TV is on the background`() {
         show(FormFactor.Tv) { Hosts(FormFactor.Tv, withHosts) }
 
-        assertHalo("Hosts")
-        assertHalo("3 hosts")
+        composeRule.assertHalo("Hosts")
+        composeRule.assertHalo("3 hosts")
     }
 
     @Test
@@ -56,8 +57,8 @@ class LibraryBackdropTextTest {
     fun `the labels of the sections of Hosts are on the background`() {
         show(FormFactor.Tv) { Hosts(FormFactor.Tv, withHosts) }
 
-        assertHalo("CONTINUE")
-        assertHalo("HOSTS")
+        composeRule.assertHalo("CONTINUE")
+        composeRule.assertHalo("HOSTS")
     }
 
     @Test
@@ -65,7 +66,7 @@ class LibraryBackdropTextTest {
     fun `the cards of Hosts are glass and have no halo`() {
         show(FormFactor.Tv) { Hosts(FormFactor.Tv, withHosts) }
 
-        assertNoHalo("Studio")
+        composeRule.assertNoHalo("Studio")
     }
 
     @Test
@@ -73,7 +74,7 @@ class LibraryBackdropTextTest {
     fun `the title of Hosts on a phone is on the background`() {
         show(FormFactor.Phone) { Hosts(FormFactor.Phone, withHosts) }
 
-        assertHalo("Hosts")
+        composeRule.assertHalo("Hosts")
     }
 
     @Test
@@ -81,8 +82,8 @@ class LibraryBackdropTextTest {
     fun `the searching state of Hosts is on the background`() {
         show(FormFactor.Tv) { Hosts(FormFactor.Tv, searching) }
 
-        assertHalo("Looking for hosts")
-        assertHalo("Borealis searches the local network", substring = true)
+        composeRule.assertHalo("Looking for hosts")
+        composeRule.assertHalo("Borealis searches the local network", substring = true)
     }
 
     // Apps
@@ -92,8 +93,8 @@ class LibraryBackdropTextTest {
     fun `the title of Apps on a phone is on the background`() {
         show(FormFactor.Phone) { Apps(FormFactor.Phone) }
 
-        assertHalo("Desk PC")
-        assertHalo("Nothing running")
+        composeRule.assertHalo("Desk PC")
+        composeRule.assertHalo("Nothing running")
     }
 
     @Test
@@ -101,8 +102,8 @@ class LibraryBackdropTextTest {
     fun `the header of Apps on a TV is on the background`() {
         show(FormFactor.Tv) { Apps(FormFactor.Tv) }
 
-        assertHalo("Desk PC")
-        assertHalo("Nothing running")
+        composeRule.assertHalo("Desk PC")
+        composeRule.assertHalo("Nothing running")
     }
 
     @Test
@@ -110,8 +111,8 @@ class LibraryBackdropTextTest {
     fun `the empty state of Apps is on the background`() {
         show(FormFactor.Phone) { Apps(FormFactor.Phone, items = emptyList()) }
 
-        assertHalo("No apps to show")
-        assertHalo("Add apps in the LuminalShine Web UI", substring = true)
+        composeRule.assertHalo("No apps to show")
+        composeRule.assertHalo("Add apps in the LuminalShine Web UI", substring = true)
     }
 
     @Test
@@ -140,8 +141,8 @@ class LibraryBackdropTextTest {
     fun `the title and the hints of Add host are on the background`() {
         show(FormFactor.Phone) { AddHost(FormFactor.Phone) }
 
-        assertHalo("Add host")
-        assertHalo("IP address or host name", substring = true)
+        composeRule.assertHalo("Add host")
+        composeRule.assertHalo("IP address or host name", substring = true)
     }
 
     // Pairing
@@ -151,7 +152,7 @@ class LibraryBackdropTextTest {
     fun `the title of Pairing is on the background`() {
         show(FormFactor.Phone) { Pairing(FormFactor.Phone, waiting) }
 
-        assertHalo("Pair with Desk PC")
+        composeRule.assertHalo("Pair with Desk PC")
     }
 
     @Test
@@ -159,9 +160,9 @@ class LibraryBackdropTextTest {
     fun `the hint and the steps of Pairing are on the background`() {
         show(FormFactor.Tv) { Pairing(FormFactor.Tv, waiting) }
 
-        assertHalo("The PIN stays valid for 5 minutes.")
-        assertHalo("Go to the Clients page.")
-        assertHalo("https://192.168.1.20:47990")
+        composeRule.assertHalo("The PIN stays valid for 5 minutes.")
+        composeRule.assertHalo("Go to the Clients page.")
+        composeRule.assertHalo("https://192.168.1.20:47990")
     }
 
     @Test
@@ -171,7 +172,7 @@ class LibraryBackdropTextTest {
             Pairing(FormFactor.Phone, PairingUiState.Failed(PairingFailure.PIN_WRONG, null))
         }
 
-        assertHalo("The PIN was wrong.")
+        composeRule.assertHalo("The PIN was wrong.")
     }
 
     @Test
@@ -179,7 +180,7 @@ class LibraryBackdropTextTest {
     fun `Paired is on the background`() {
         show(FormFactor.Phone) { Pairing(FormFactor.Phone, PairingUiState.Paired) }
 
-        assertHalo("Paired")
+        composeRule.assertHalo("Paired")
     }
 
     // The plain page
@@ -189,8 +190,8 @@ class LibraryBackdropTextTest {
     fun `with no background Hosts has no halo`() {
         show(FormFactor.Tv, BackgroundStyle.Off) { Hosts(FormFactor.Tv, withHosts) }
 
-        assertNoHalo("Hosts", drawn = true)
-        assertNoHalo("CONTINUE", drawn = true)
+        composeRule.assertNoHalo("Hosts", drawn = true)
+        composeRule.assertNoHalo("CONTINUE", drawn = true)
     }
 
     // Helpers
@@ -205,24 +206,6 @@ class LibraryBackdropTextTest {
     ) {
         composeRule.setContent { BorealisTheme(formFactor) { GlassHost(style, content = content) } }
         composeRule.waitForIdle()
-    }
-
-    /** The text is a backdrop text with the halo drawn. */
-    private fun assertHalo(text: String, substring: Boolean = false) {
-        composeRule
-            .onNode(
-                hasText(text, substring) and SemanticsMatcher.expectValue(BackdropTextHalo, true),
-                useUnmergedTree = true,
-            )
-            .assertExists()
-    }
-
-    /** The text is no backdrop text, or [drawn] says that it is one with no halo. */
-    private fun assertNoHalo(text: String, drawn: Boolean = false) {
-        val rule =
-            if (drawn) SemanticsMatcher.expectValue(BackdropTextHalo, false)
-            else SemanticsMatcher.keyNotDefined(BackdropTextHalo)
-        composeRule.onNode(hasText(text) and rule, useUnmergedTree = true).assertExists()
     }
 
     @Composable

@@ -1,11 +1,9 @@
 package io.github.magalz.borealis.settings.privacy
 
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import io.github.magalz.borealis.designsystem.components.BackdropTextHalo
+import io.github.magalz.borealis.designsystem.testing.assertHalo
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.settings.testing.InGlassHost
 import java.io.File
@@ -41,12 +39,6 @@ class PrivacyBackdropTextTest {
         }
         composeRule.waitForIdle()
 
-        composeRule
-            .onNode(
-                hasText("Privacy and diagnostics") and
-                    SemanticsMatcher.expectValue(BackdropTextHalo, true),
-                useUnmergedTree = true,
-            )
-            .assertExists()
+        composeRule.assertHalo("Privacy and diagnostics")
     }
 }

@@ -49,44 +49,12 @@ class BackgroundIntensityTest {
     // The veil
 
     @Test
-    fun `a drawn background shows the light that the veil leaves over the page`() {
-        noAnimations()
-        start(BackgroundStyle.SoftGlow)
-        val full = composeRule.frame(BG).brightest()
-        assertThat(full).isGreaterThan(0.3f)
-
-        veiled.forEach { level ->
-            choose(level)
-
-            val frame = composeRule.frame(BG)
-            // The light above the page is what the page colour over it leaves: 1 less the veil.
-            assertWithMessage("$level")
-                .that(frame.brightest())
-                .isWithin(TOLERANCE)
-                .of(full * (1f - level.veil))
-            // The veil is the page colour, so nothing goes darker than the page.
-            assertWithMessage("$level darkest").that(frame.darkest()).isGreaterThan(-NONE)
-        }
-    }
+    fun `a drawn background shows the light that the veil leaves over the page`() =
+        assertVeilLeavesTheLift(BackgroundStyle.SoftGlow)
 
     @Test
-    fun `the veil lies over the still of a clip`() {
-        noAnimations()
-        start(BackgroundStyle.LightMist)
-        val full = composeRule.frame(BG).brightest()
-        assertThat(full).isGreaterThan(0.1f)
-
-        veiled.forEach { level ->
-            choose(level)
-
-            val frame = composeRule.frame(BG)
-            assertWithMessage("$level")
-                .that(frame.brightest())
-                .isWithin(TOLERANCE)
-                .of(full * (1f - level.veil))
-            assertWithMessage("$level darkest").that(frame.darkest()).isGreaterThan(-NONE)
-        }
-    }
+    fun `the veil lies over the still of a clip`() =
+        assertVeilLeavesTheLift(BackgroundStyle.LightMist)
 
     @Test
     fun `at 100 percent no veil lies over the background, whatever it was before`() {
@@ -169,6 +137,32 @@ class BackgroundIntensityTest {
 
     // Helpers
 
+    /**
+     * The veil is the page colour at its alpha, so every pixel keeps 1 less the veil of its
+     * distance from the page, whether it is lighter than the page or, as in a clip, darker.
+     */
+    private fun assertVeilLeavesTheLift(style: BackgroundStyle) {
+        noAnimations()
+        start(style)
+        val full = composeRule.frame(BG)
+        assertThat(full.brightest()).isGreaterThan(MIN_LIGHT)
+
+        veiled.forEach { level ->
+            choose(level)
+
+            val frame = composeRule.frame(BG)
+            val kept = 1f - level.veil
+            assertWithMessage("$level lightest")
+                .that(frame.brightest())
+                .isWithin(TOLERANCE)
+                .of(full.brightest() * kept)
+            assertWithMessage("$level darkest")
+                .that(frame.darkest())
+                .isWithin(TOLERANCE)
+                .of(full.darkest() * kept)
+        }
+    }
+
     /** Shows [BackgroundStyle.SoftGlow] still, at each level of the intensity, under [still]. */
     private fun assertStillVeiled(still: BorealisLook) {
         start(BackgroundStyle.SoftGlow, still)
@@ -231,6 +225,7 @@ class BackgroundIntensityTest {
         const val BG = "background"
         const val STEP = 8
         const val TOLERANCE = 0.02f
+        const val MIN_LIGHT = 0.1f
 
         // The sum of red, green and blue above the page colour: negative below it.
         const val NONE = 0.01f

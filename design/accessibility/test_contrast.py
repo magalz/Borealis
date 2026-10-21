@@ -677,9 +677,9 @@ class HaloGridTest(unittest.TestCase):
         sizes = {
             ("title", "tv"): 24 * 2.0,
             ("title", "phone"): 18 * 3.0,
-            ("label", "tv"): 12 * 2.0,
+            ("label", "tv"): 13 * 2.0,
             ("label", "phone"): 11 * 3.0,
-            ("body", "tv"): 15 * 2.0,
+            ("body", "tv"): 16 * 2.0,
             ("body", "phone"): 14 * 3.0,
             ("small", "tv"): 14.5 * 2.0,
             ("small", "phone"): 12.5 * 3.0,
@@ -728,9 +728,9 @@ class HaloModelTest(unittest.TestCase):
 
     def test_a_label_is_set_in_capitals_with_the_spacing_of_the_kicker(self):
         spaced = contrast.glyph_mask("label", "tv")
-        # 12 sp are 24 px on a TV, and capitals are wider than the lower case of the same size.
+        # 13 sp are 26 px on a TV, and capitals are wider than the lower case of the same size.
         self.assertGreater(spaced.shape[1], contrast.glyph_mask("small", "tv").shape[1] * 0.8)
-        self.assertGreater(spaced.shape[1], 24 * 0.55 * len(contrast.HALO_SAMPLE))
+        self.assertGreater(spaced.shape[1], 26 * 0.55 * len(contrast.HALO_SAMPLE))
 
     def test_the_ring_is_the_pixels_within_two_pixels_of_a_glyph_and_not_the_glyph(self):
         mask = np.zeros((9, 9), np.float32)
@@ -1289,7 +1289,7 @@ class HaloTokensTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             written = self.run_command(folder)
         self.assertEqual(written["meta"]["colors"]["ink"], tokens()["ink"])
-        self.assertEqual(written["meta"]["texts"]["body"]["sizes_sp"]["tv"], 15.0)
+        self.assertEqual(written["meta"]["texts"]["body"]["sizes_sp"]["tv"], 16.0)
 
 
 class HaloIconPathTest(unittest.TestCase):

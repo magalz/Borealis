@@ -23,8 +23,12 @@ styles. `README.md` has the whole procedure.
     python -I contrast.py glass-colours [--table <GlassContrastTable.kt>]
     python -I contrast.py halo <frames> --json <halo.json> [--tokens <tokens.json>] [--jobs N]
         [--texts <style> ...] [--icons] [--high-contrast] [--halo <stroke dp> <blur dp> <opacity %>]
+        [--font <sans regular> --font-semibold <sans semibold> | --fonts <font.json>]
 
-`measure` is cases (a) to (c) and `halo` is case (d). `glass-table` writes the table of the worst
+`measure` is cases (a) to (c) and `halo` is case (d), in IBM Plex Sans unless a font is named: two
+files, the regular and the semibold face (a variable font is set to 400 and 600), or a JSON manifest
+of them. The text is drawn at the size of the tokens times the scale that sets the x-height of the
+font to that of Plex. `glass-table` writes the table of the worst
 backdrop behind a glass panel that the app turns into the tint floors and the text colours of the
 glass, with the SHA-256 of the clips it was measured over, so that a test of the app tells a table
 that the clips have outgrown. `glass-colours` prints those floors and colours, worked out from the
@@ -45,6 +49,7 @@ import json
 import math
 import re
 import shutil
+import struct
 import subprocess
 import sys
 from pathlib import Path
@@ -862,7 +867,181 @@ HALO_MARGIN = 1.02
 HALO_REACH_SIGMAS = 4
 FONTS_DIR = REPO / "design" / "fonts" / "ibm-plex" / "res" / "font"
 
-# The text styles of the app that stand on the background, with the size token of each device. They
+
+# The fonts of the halo
+#
+# The text is set in a font set: the regular face (the body and the small text), the semibold face
+# (the title and the label) and a scale that sets the x-height of the font to that of IBM Plex Sans
+# at the same size, which the app applies to the size of its text (Sprint 11, issue #48). A face is
+# a file, and for a variable font the values of its axes, which set the weight.
+
+FontFace = collections.namedtuple("FontFace", "path axes")
+FontSet = collections.namedtuple("FontSet", "name regular semibold scale")
+
+# The weights of the two faces: the tokens `regular` and `semibold`.
+FONT_WEIGHTS = {"regular": 400, "semibold": 600}
+# The size at which the height of an x is measured, in pixels: a thousandth of it is a unit of Plex.
+X_HEIGHT_SIZE = 1000
+
+# IBM Plex Sans is the reference of the scale, so its own scale is one by definition.
+PLEX_SANS = FontSet(
+    "IBM Plex Sans",
+    FontFace(str(FONTS_DIR / "ibm_plex_sans_regular.ttf"), None),
+    FontFace(str(FONTS_DIR / "ibm_plex_sans_semibold.ttf"), None),
+    1.0,
+)
+
+
+def _sfnt_tables(data):
+    """The tables of a font file, `{tag: (offset, length)}`, from its table directory."""
+    if data[:4] == b"ttcf":
+        raise ValueError("a font collection is not a font file: name one of its fonts")
+    count = struct.unpack_from(">H", data, 4)[0]
+    entries = struct.iter_unpack(">4sIII", data[12 : 12 + 16 * count])
+    return {tag.decode("latin-1"): (offset, length) for tag, _, offset, length in entries}
+
+
+def font_axes(path):
+    """The axes of a variable font, each `(tag, minimum, default, maximum)`, in the order of its
+    `fvar` table. A static font has none."""
+    data = Path(path).read_bytes()
+    tables = _sfnt_tables(data)
+    if "fvar" not in tables:
+        return []
+    offset = tables["fvar"][0]
+    _, _, first, _, count, size, _, _ = struct.unpack_from(">HHHHHHHH", data, offset)
+    axes = []
+    for index in range(count):
+        tag, low, default, high = struct.unpack_from(">4siii", data, offset + first + index * size)
+        axes.append((tag.decode("ascii"), low / 65536, default / 65536, high / 65536))
+    return axes
+
+
+def font_face(path, weight):
+    """The face of a font file at a weight: the file itself for a static font, and for a variable
+    one the values of its axes, the weight on the `wght` axis and the default on every other."""
+    axes = font_axes(path)
+    if not axes:
+        return FontFace(str(path), None)
+    weights = [axis for axis in axes if axis[0] == "wght"]
+    if not weights:
+        raise ValueError(f"{path} is a variable font with no weight axis")
+    low, high = weights[0][1], weights[0][3]
+    if not low <= weight <= high:
+        raise ValueError(
+            f"{path} is a variable font whose weight axis runs from {low:g} to {high:g}, "
+            f"so it has no weight of {weight}"
+        )
+    values = (float(weight) if tag == "wght" else default for tag, _, default, _ in axes)
+    return FontFace(str(path), tuple(values))
+
+
+def load_face(face, size):
+    """The font of a face at `size` pixels, as Pillow draws it, with the layout of the basic engine.
+
+    A variable font is set to the weight of its face, which needs a FreeType of 2.9.1 or later. A
+    FreeType that cannot is reported and not worked around, for the weight would be the wrong one.
+    """
+    font = ImageFont.truetype(face.path, size, layout_engine=ImageFont.Layout.BASIC)
+    if face.axes is not None:
+        try:
+            font.set_variation_by_axes(list(face.axes))
+        except NotImplementedError as error:
+            raise ValueError(
+                f"{face.path} is a variable font and this FreeType cannot set its weight "
+                f"({error}): use a file of the weight"
+            ) from error
+    return font
+
+
+@functools.lru_cache(maxsize=None)
+def _font(face, size):
+    return load_face(face, size)
+
+
+def _measured_x_height(face):
+    """The height of an x in a face as a part of the em: its ink above the baseline, as drawn."""
+    size = X_HEIGHT_SIZE
+    image = Image.new("L", (2 * size, 2 * size), 0)
+    font = load_face(face, size)
+    ImageDraw.Draw(image).text((size // 2, size), "x", font=font, fill=255, anchor="ls")
+    return (size - image.getbbox()[1]) / size
+
+
+def x_height_ratio(face):
+    """The x-height of a face as a part of the em: `sxHeight` of its OS/2 table over the units per
+    em, or, where the table has none (before version 2, or zero), the height of an x as drawn."""
+    data = Path(face.path).read_bytes()
+    tables = _sfnt_tables(data)
+    if "head" not in tables:
+        raise ValueError(f"{face.path} has no head table: it is not a TrueType or OpenType font")
+    units = struct.unpack_from(">H", data, tables["head"][0] + 18)[0]
+    if "OS/2" in tables:
+        offset, length = tables["OS/2"]
+        if length >= 90 and struct.unpack_from(">H", data, offset)[0] >= 2:
+            x_height = struct.unpack_from(">h", data, offset + 86)[0]
+            if x_height > 0:
+                return x_height / units
+    return _measured_x_height(face)
+
+
+def x_height_scale(face, reference=PLEX_SANS.regular):
+    """The scale that makes the x-height of `face` that of `reference` (IBM Plex Sans) at the same
+    size: a font with a taller x is drawn smaller, by the ratio of the two x-heights."""
+    return x_height_ratio(reference) / x_height_ratio(face)
+
+
+def font_set(regular, semibold, name=None):
+    """The font set of two files, the regular and the semibold face, with the scale of the first.
+
+    Both are opened, so that a file that is not there, one that is not a font and a variable font
+    that this FreeType cannot set are reported here. `name` is the stem of the regular file by
+    default.
+    """
+    files = {"regular": regular, "semibold": semibold}
+    faces = [font_face(file, FONT_WEIGHTS[weight]) for weight, file in files.items()]
+    for face in faces:
+        load_face(face, 16)
+    return FontSet(name or Path(regular).stem, *faces, x_height_scale(faces[0]))
+
+
+def read_font_manifest(path):
+    """The font set that a JSON manifest names: `regular` and `semibold`, the files next to the
+    manifest (or by absolute path), and the `name`, which is optional."""
+    path = Path(path)
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    missing = [weight for weight in FONT_WEIGHTS if weight not in manifest]
+    if missing:
+        raise ValueError(f"{path} has no {' or '.join(missing)}: a font set is both faces")
+    return font_set(
+        path.parent / manifest["regular"], path.parent / manifest["semibold"], manifest.get("name")
+    )
+
+
+def _face_weight(face):
+    """The weight that a variable face is set to, or None for a static one."""
+    if face.axes is None:
+        return None
+    for (tag, *_), value in zip(font_axes(face.path), face.axes):
+        if tag == "wght":
+            return value
+    return None
+
+
+def fonts_meta(fonts):
+    """A font set as plain data, for the JSON of a measurement."""
+    faces = {weight: getattr(fonts, weight) for weight in FONT_WEIGHTS}
+    return {
+        "name": fonts.name,
+        **{
+            weight: {"file": Path(face.path).name, "wght": _face_weight(face)}
+            for weight, face in faces.items()
+        },
+        "scale": fonts.scale,
+    }
+
+# The text styles of the app that stand on the background, with the size token of each device and
+# the weight of the face that sets them (`FontSet`). They
 # are the styles of `borealisTypography`: the title is `titleLarge`, the label is the kicker (its
 # capitals set 0.07 em apart), the body is `bodyMedium` and the small text is `bodySmall`. Large
 # text is 24 sp regular or 18.66 sp bold and over: the title of a TV is, the title of a phone (18 sp
@@ -870,28 +1049,28 @@ FONTS_DIR = REPO / "design" / "fonts" / "ibm-plex" / "res" / "font"
 HALO_TEXTS = {
     "title": {
         "sizes": {"tv": ("tv", "title"), "phone": ("phone", "title")},
-        "font": "ibm_plex_sans_semibold",
+        "weight": "semibold",
         "tracking": 0.0,
         "upper": False,
         "large": ("tv",),
     },
     "label": {
         "sizes": {"tv": ("tv", "minimum"), "phone": ("phone", "kicker")},
-        "font": "ibm_plex_sans_semibold",
+        "weight": "semibold",
         "tracking": 0.07,
         "upper": True,
         "large": (),
     },
     "body": {
         "sizes": {"tv": ("tv", "body"), "phone": ("phone", "body")},
-        "font": "ibm_plex_sans_regular",
+        "weight": "regular",
         "tracking": 0.0,
         "upper": False,
         "large": (),
     },
     "small": {
         "sizes": {"tv": ("tv", "rail"), "phone": ("phone", "secondary")},
-        "font": "ibm_plex_sans_regular",
+        "weight": "regular",
         "tracking": 0.0,
         "upper": False,
         "large": (),
@@ -1160,13 +1339,6 @@ def halo_veil(frame, tint, dim):
     return (np.rint(composite(frame, tint, dim) * 255) / 255).astype(np.float32)
 
 
-@functools.lru_cache(maxsize=None)
-def _font(name, size):
-    return ImageFont.truetype(
-        str(FONTS_DIR / f"{name}.ttf"), size, layout_engine=ImageFont.Layout.BASIC
-    )
-
-
 # The sample text is set at this many times its size, and what is wanted of it is cut from that:
 # its coverage by averaging, and its widening by a stroke on the hard edge of the big picture.
 # Android does not hint the text, so the big picture, whose hinting is a fourth of a pixel, is
@@ -1174,20 +1346,22 @@ def _font(name, size):
 HALO_SUPERSAMPLE = 4
 
 
-def _set_sample(text, device, pad, tokens=TOKENS_JSON):
+def _set_sample(text, device, pad, tokens=TOKENS_JSON, fonts=PLEX_SANS):
     """The sample text of a style at `HALO_SUPERSAMPLE` times its size, as coverage, 0 to 1.
 
     The picture is that many times as large as the text with `pad` pixels round it. A label is in
-    capitals, with its letters spaced. The size of the text is that of the token file `tokens`.
+    capitals, with its letters spaced. The size of the text is that of the token file `tokens`,
+    times the scale of the font set `fonts`, and the face is its regular or its semibold one.
     """
     if text in HALO_ICONS:
         return _set_icon(text, device, pad)
     style = HALO_TEXTS[text]
-    size = text_size_px(text, device, tokens)
+    face = getattr(fonts, style["weight"])
+    size = text_size_px(text, device, tokens) * fonts.scale
     scale = HALO_SUPERSAMPLE
     sample = HALO_SAMPLE.upper() if style["upper"] else HALO_SAMPLE
-    ascent, descent = _font(style["font"], size).getmetrics()
-    font = _font(style["font"], size * scale)
+    ascent, descent = _font(face, size).getmetrics()
+    font = _font(face, size * scale)
     starts = [
         font.getlength(sample[:index]) + index * style["tracking"] * size * scale
         for index in range(len(sample))
@@ -1267,16 +1441,17 @@ def _reduce(big):
     return big.reshape(height, scale, width, scale).mean(axis=(1, 3))
 
 
-def glyph_mask(text, device, stroke_dp=0.0, pad=0, tokens=TOKENS_JSON):
+def glyph_mask(text, device, stroke_dp=0.0, pad=0, tokens=TOKENS_JSON, fonts=PLEX_SANS):
     """The coverage, 0 to 1, of the sample text of a style, with each glyph widened by a stroke.
 
-    The text is set in the font of the style at its size on the device. A label is in capitals, with
-    its letters spaced. `stroke_dp` widens each glyph by that much on every side, as a fill under a
-    stroke of twice the width does, with round joins. The picture is as large as the text with `pad`
-    pixels on each side, whatever the stroke, so that masks of different strokes line up, and `pad`
-    must be at least the stroke. The size of the text is that of the token file `tokens`.
+    The text is set in the face of the style (of the font set `fonts`) at its size on the device. A
+    label is in capitals, with its letters spaced. `stroke_dp` widens each glyph by that much on
+    every side, as a fill under a stroke of twice the width does, with round joins. The picture is
+    as large as the text with `pad` pixels on each side, whatever the stroke, so that masks of
+    different strokes line up, and `pad` must be at least the stroke. The size of the text is that
+    of the token file `tokens`, times the scale of the font set.
     """
-    big = _set_sample(text, device, pad, tokens)
+    big = _set_sample(text, device, pad, tokens, fonts)
     plain = _reduce(big)
     stroke = stroke_dp * device_density(device)
     if stroke <= 0:
@@ -1393,25 +1568,25 @@ HaloGeometry = collections.namedtuple("HaloGeometry", "configs alphas ring size"
 
 
 @functools.lru_cache(maxsize=None)
-def halo_geometry(text, device, tokens=TOKENS_JSON):
+def halo_geometry(text, device, tokens=TOKENS_JSON, fonts=PLEX_SANS):
     """The ring around the glyphs of a style and the alpha of each candidate on it.
 
     None of it depends on the frame. `ring` is the ring as a mask of its bounding box, `size` the
     (height, width) of that box and `alphas` has a row for each of `configs` (no halo first, then
     the grid) and a column for each pixel of the ring. The text is the size of the token file
-    `tokens`.
+    `tokens`, set in the font set `fonts`.
     """
     density = device_density(device)
     sigma = blur_sigma(max(HALO_BLURS_DP) * density)
     pad = math.ceil(max(HALO_STROKES_DP) * density + HALO_REACH_SIGMAS * sigma) + HALO_RING_PX + 1
-    ring = ring_mask(glyph_mask(text, device, pad=pad, tokens=tokens))
+    ring = ring_mask(glyph_mask(text, device, pad=pad, tokens=tokens, fonts=fonts))
     rows, columns = np.nonzero(ring)
     box = (slice(rows.min(), rows.max() + 1), slice(columns.min(), columns.max() + 1))
     ring = ring[box]
     configs = [HALO_NONE] + halo_configs()
     alphas = {HALO_NONE: np.zeros(int(ring.sum()), np.float32)}
     for stroke in HALO_STROKES_DP:
-        widened = glyph_mask(text, device, stroke_dp=stroke, pad=pad, tokens=tokens)
+        widened = glyph_mask(text, device, stroke, pad, tokens, fonts)
         for blur in HALO_BLURS_DP:
             full = halo_alpha(widened, blur, 1.0, density)[box][ring]
             for opacity in HALO_OPACITIES:
@@ -1428,7 +1603,9 @@ def _halo_place(pixels, geometry, tint, lights):
     return stats
 
 
-def measure_halo_frame(frame, device, colors, texts=None, dim=0.0, tokens=TOKENS_JSON):
+def measure_halo_frame(
+    frame, device, colors, texts=None, dim=0.0, tokens=TOKENS_JSON, fonts=PLEX_SANS
+):
     """The stats of each text style, candidate and token over one frame.
 
     The worst case ("min") is over every colour of the frame with every alpha of the ring, which is
@@ -1438,7 +1615,7 @@ def measure_halo_frame(frame, device, colors, texts=None, dim=0.0, tokens=TOKENS
     of those over the places. It returns `{text: {config: {token: stats}}}`, where `stats` has
     "min", "p1" and "p5". `frame` is an array or the path of a PNG. A `dim` is the veil of the page
     colour that high contrast lays over the frame, which the text is measured under. The text is
-    the size that the token file `tokens` says.
+    the size that the token file `tokens` says, set in the font set `fonts`.
     """
     if not isinstance(frame, np.ndarray):
         frame = load_frame(frame)
@@ -1448,7 +1625,7 @@ def measure_halo_frame(frame, device, colors, texts=None, dim=0.0, tokens=TOKENS
     colours = frame_colours(frame)
     result = {}
     for text in texts or HALO_TEXTS:
-        geometry = halo_geometry(text, device, tokens)
+        geometry = halo_geometry(text, device, tokens, fonts)
         worst = {token: None for token in HALO_TOKENS}
         for x, y in halo_placements(frame.shape, geometry.size):
             height, width = geometry.size
@@ -1473,14 +1650,16 @@ def measure_halo_frame(frame, device, colors, texts=None, dim=0.0, tokens=TOKENS
 
 
 def measure_halo_source(
-    frames, style, device, colors, jobs=1, texts=None, dim=0.0, tokens=TOKENS_JSON
+    frames, style, device, colors, jobs=1, texts=None, dim=0.0, tokens=TOKENS_JSON, fonts=PLEX_SANS
 ):
     """The rows of one background style on one device, over its frames.
 
     A row is a text style, a token and a candidate, with the lowest ratio over the frames ("min"),
     p1 and p5 (their lowest) and the number of the worst frame. The rows are plain data.
     """
-    measured = _map_frames(measure_halo_frame, frames, jobs, device, colors, texts, dim, tokens)
+    measured = _map_frames(
+        measure_halo_frame, frames, jobs, device, colors, texts, dim, tokens, fonts
+    )
     rows = []
     for text in texts or HALO_TEXTS:
         for config in [HALO_NONE] + halo_configs():
@@ -1502,10 +1681,13 @@ def measure_halo_source(
     return rows
 
 
-def measure_halo_sources(sources, colors, jobs=1, texts=None, dim=0.0, tokens=TOKENS_JSON):
+def measure_halo_sources(
+    sources, colors, jobs=1, texts=None, dim=0.0, tokens=TOKENS_JSON, fonts=PLEX_SANS
+):
     """The halo over `sources`, which maps (style, device) to its frames.
 
-    The sizes of the text are those of the token file `tokens`; `colors` are given.
+    The sizes of the text are those of the token file `tokens`, set in the font set `fonts`;
+    `colors` are given.
     """
     result = {
         "meta": {
@@ -1523,6 +1705,7 @@ def measure_halo_sources(sources, colors, jobs=1, texts=None, dim=0.0, tokens=TO
                 "frame in the encoded values, and the text on top."
             ),
             "colors": colors,
+            "fonts": fonts_meta(fonts),
             "tokens": list(HALO_TOKENS),
             "tint": HALO_TINT,
             "sample": HALO_SAMPLE,
@@ -1532,7 +1715,8 @@ def measure_halo_sources(sources, colors, jobs=1, texts=None, dim=0.0, tokens=TO
                         device: _text_sizes(tokens)[size]
                         for device, size in style["sizes"].items()
                     },
-                    "font": style["font"],
+                    "weight": style["weight"],
+                    "font": Path(getattr(fonts, style["weight"]).path).stem,
                 }
                 for name, style in HALO_TEXTS.items()
             },
@@ -1555,14 +1739,16 @@ def measure_halo_sources(sources, colors, jobs=1, texts=None, dim=0.0, tokens=TO
     for (style, device), frames in sorted(sources.items()):
         result["sources"].append({"style": style, "device": device, "frames": len(frames)})
         result["halo"] += measure_halo_source(
-            frames, style, device, colors, jobs, texts, dim, tokens
+            frames, style, device, colors, jobs, texts, dim, tokens, fonts
         )
     return result
 
 
-def measure_halo_folder(root, colors, jobs=1, texts=None, dim=0.0, tokens=TOKENS_JSON):
+def measure_halo_folder(
+    root, colors, jobs=1, texts=None, dim=0.0, tokens=TOKENS_JSON, fonts=PLEX_SANS
+):
     """Measures the halo over the frames in `root/<Style>-<device>/*.png`."""
-    return measure_halo_sources(_folder_sources(root), colors, jobs, texts, dim, tokens)
+    return measure_halo_sources(_folder_sources(root), colors, jobs, texts, dim, tokens, fonts)
 
 
 def _halo_required(row):
@@ -1713,6 +1899,13 @@ def halo_tables(result):
     for name in names:
         heads += [f"{name} min", f"{name} p1", f"{name} p5"]
     chosen = [row for row in rows if _halo_config(row) == choice]
+    fonts = result.get("meta", {}).get("fonts")
+    if fonts is None or fonts == fonts_meta(PLEX_SANS):
+        verdict = f"The choice: {halo_choice_text(choice)}."
+    else:
+        # The notes have the line "The choice: ..." once, and a test reads it: it is the font of the
+        # app's.
+        verdict = f"The smallest candidate for {fonts['name']}: {halo_choice_text(choice)}."
     tables += [
         f"Table E. The chosen halo ({halo_choice_text(choice)}) by text style and device: the "
         "lowest ratio over the backgrounds, with the background it is in, and the lowest p1 "
@@ -1725,7 +1918,7 @@ def halo_tables(result):
             + [f"{name}, {kind}" for name in names for kind in ("none", "halo")],
             _background_lines(rows, choice),
         ),
-        f"The choice: {halo_choice_text(choice)}.",
+        verdict,
     ]
     return "\n\n".join(tables)
 
@@ -1903,8 +2096,12 @@ def _run_halo(args, log):
         colors = {**colors, "ink": found["ink"], "ink-2": found["ink-2"]}
         dim = found["dim"]
     texts = list(HALO_ICONS) if args.icons else args.texts
-    result = measure_halo_folder(args.frames, colors, args.jobs, texts, dim, args.tokens)
+    fonts = args.font_set
+    result = measure_halo_folder(args.frames, colors, args.jobs, texts, dim, args.tokens, fonts)
     _save_result(result, args)
+    if fonts != PLEX_SANS:
+        files = ", ".join(Path(face.path).name for face in (fonts.regular, fonts.semibold))
+        print(f"Font: {fonts.name} ({files}), x-height scale {fonts.scale:.3f}.\n")
     if args.halo is None:
         print(halo_tables(result))
     else:
@@ -1963,7 +2160,28 @@ def _parser():
         metavar=("STROKE_DP", "BLUR_DP", "OPACITY_PERCENT"),
         help="the halo to check under high contrast",
     )
+    halo.add_argument("--font", type=Path, help="the regular face of the font (default: Plex Sans)")
+    halo.add_argument("--font-semibold", type=Path, help="the semibold face, with --font")
+    halo.add_argument("--fonts", type=Path, help="a JSON manifest of the font, for --font")
     return parser
+
+
+def _font_set(parser, args):
+    """The font set that the options of `halo` name, IBM Plex Sans if they name none."""
+    if args.fonts and (args.font or args.font_semibold):
+        parser.error("--fonts and --font are not asked together")
+    if bool(args.font) != bool(args.font_semibold):
+        parser.error("--font and --font-semibold go together")
+    if args.icons and (args.fonts or args.font):
+        parser.error("--icons and a font are not asked together")
+    try:
+        if args.fonts:
+            return read_font_manifest(args.fonts)
+        if args.font:
+            return font_set(args.font, args.font_semibold)
+    except (OSError, ValueError) as error:
+        parser.error(str(error))
+    return PLEX_SANS
 
 
 def _check_halo(parser, args):
@@ -1971,6 +2189,7 @@ def _check_halo(parser, args):
         parser.error("--icons and --texts are not asked together")
     if (args.high_contrast or args.icons) != (args.halo is not None):
         parser.error("--high-contrast and --icons go with --halo: the halo to check is named")
+    args.font_set = _font_set(parser, args)
 
 
 def main(argv=None, log=None):

@@ -1772,11 +1772,9 @@ class XHeightScaleTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             tall = patched_plex(folder, "tall.ttf", x_height=600)
             fonts = contrast.font_set(tall, tall)
-        face = fonts.regular
+            drawn = contrast.x_height_ratio(fonts.regular) * fonts.scale
         self.assertAlmostEqual(
-            contrast.x_height_ratio(face) * fonts.scale,
-            contrast.x_height_ratio(contrast.PLEX_SANS.regular),
-            places=9,
+            drawn, contrast.x_height_ratio(contrast.PLEX_SANS.regular), places=9
         )
 
     def test_the_scale_of_a_set_is_that_of_its_regular_face(self):
@@ -1881,9 +1879,8 @@ class HaloFontsTest(unittest.TestCase):
         sans = contrast.glyph_mask("body", "tv", pad=8)
         other = contrast.glyph_mask("body", "tv", pad=8, fonts=mono)
         self.assertNotEqual(sans.shape, other.shape)
-        self.assertNotEqual(
-            contrast.halo_geometry("body", "tv").size, contrast.halo_geometry("body", "tv", fonts=mono).size
-        )
+        sans_size = contrast.halo_geometry("body", "tv").size
+        self.assertNotEqual(sans_size, contrast.halo_geometry("body", "tv", fonts=mono).size)
 
     def test_the_semibold_face_sets_the_title_and_the_label_and_the_regular_the_rest(self):
         regular_only = contrast.font_set(PLEX_REGULAR, PLEX_REGULAR)
@@ -1896,7 +1893,8 @@ class HaloFontsTest(unittest.TestCase):
         for text in ("title", "label"):
             with self.subTest(text=text):
                 lighter = contrast.glyph_mask(text, "tv", pad=8, fonts=regular_only)
-                self.assertLess(float(lighter.sum()), float(contrast.glyph_mask(text, "tv", pad=8).sum()) * 0.97)
+                heavier = contrast.glyph_mask(text, "tv", pad=8)
+                self.assertLess(float(lighter.sum()), float(heavier.sum()) * 0.97)
 
     def test_the_scale_sets_the_size_of_the_text_and_the_spacing_of_the_label(self):
         scaled = contrast.PLEX_SANS._replace(scale=1.25)
@@ -1987,6 +1985,7 @@ class HaloFontsCommandTest(unittest.TestCase):
             result = self.run_command(
                 folder, "--font", str(tall), "--font-semibold", str(PLEX_SEMIBOLD)
             )
+        with tempfile.TemporaryDirectory() as folder:
             default = self.run_command(folder)
         self.assertAlmostEqual(result["meta"]["fonts"]["scale"], 0.516 / 0.6, places=9)
         self.assertNotEqual(result["halo"], default["halo"])
@@ -2022,14 +2021,18 @@ class HaloFontsCommandTest(unittest.TestCase):
                     contrast.main([*args, "--texts", "body", *extra])
             return out.getvalue()
 
-        other = printed("--font", str(PLEX_MONO_REGULAR), "--font-semibold", str(PLEX_MONO_SEMIBOLD))
+        other = printed(
+            *("--font", str(PLEX_MONO_REGULAR)), *("--font-semibold", str(PLEX_MONO_SEMIBOLD))
+        )
         self.assertTrue(other.startswith("Font: ibm_plex_mono_regular"))
         self.assertIn("x-height scale 1.000", other.splitlines()[0])
         self.assertNotIn("Font:", printed())
 
     def test_one_face_alone_is_not_a_font_set(self):
         self.refuses("--font and --font-semibold go together", "--font", str(PLEX_REGULAR))
-        self.refuses("--font and --font-semibold go together", "--font-semibold", str(PLEX_SEMIBOLD))
+        self.refuses(
+            "--font and --font-semibold go together", "--font-semibold", str(PLEX_SEMIBOLD)
+        )
 
     def test_a_manifest_and_the_options_are_not_asked_together(self):
         self.refuses(
@@ -2075,7 +2078,8 @@ class HaloFontTablesTest(unittest.TestCase):
         other = dict(contrast.fonts_meta(contrast.PLEX_SANS), name="Lexend")
         text = contrast.halo_tables(self.result(other))
         self.assertNotIn("The choice:", text)
-        self.assertIn("The smallest candidate for Lexend: stroke 2 dp, blur 2 dp, opacity 80 %.", text)
+        line = "The smallest candidate for Lexend: stroke 2 dp, blur 2 dp, opacity 80 %."
+        self.assertIn(line, text)
 
     def test_the_same_files_under_another_scale_are_another_font(self):
         scaled = dict(contrast.fonts_meta(contrast.PLEX_SANS), scale=1.1)

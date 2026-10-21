@@ -2417,8 +2417,9 @@ This section holds the results of the Sprint 10 device round, which ran on
 2026-10-21 from 02:00 to 03:05. The steps are those of
 [section 3.23](#323-sprint-10-checks). The round ran over ADB on build
 `8d5e8332`. The permission system refused `screencap`, so no capture was taken
-and every visual item is marked `owner check`. The final re-check on the final
-build is below.
+and every visual item is marked `owner check`, or as passed by the owner in the
+user acceptance test (UAT) of the same day, which is below. The final re-check on
+the final build is below.
 
 ### Setup
 
@@ -2455,34 +2456,34 @@ that it belongs to.
 | Step | Item | Device | Result | Evidence and notes |
 | --- | --- | --- | --- | --- |
 | - | Install and start | TV, S22 | pass | Each starts on Hosts. `logcat -b crash` is empty at the start and at the end. |
-| 1 | Glass on the seven styles | TV | owner check | The glass is visual. All seven styles apply, and text nodes are present on every style. At rest on Settings and on Hosts: Northern lights 24.0 and 23.8 fps, Light mist 24.0 and 24.2, Flowing light 30.0 and 30.0, Starfield 30.0 and 29.8, Soft glow 24.0 and 24.2, Aurora curtains 24.0 and 24.0, Off 0 frames (the plain page, nothing redraws). |
+| 1 | Glass on the seven styles | TV | passed by the owner (UAT) | The glass is visual. All seven styles apply, and text nodes are present on every style. At rest on Settings and on Hosts: Northern lights 24.0 and 23.8 fps, Light mist 24.0 and 24.2, Flowing light 30.0 and 30.0, Starfield 30.0 and 29.8, Soft glow 24.0 and 24.2, Aurora curtains 24.0 and 24.0, Off 0 frames (the plain page, nothing redraws). |
 | 2 | Frame time, Aurora curtains, Standard | TV | pass | Hosts: 24.0 fps, mean interval 41.6 ms, p50 29.6 ms, p90 30.0 ms (reference 34.8 ms). Settings: 24.0 fps, 41.7 ms, p50 34.5 ms, p90 34.9 ms (reference 37.0 ms). |
 | 2 | Frame time, Aurora curtains, Transparency Off | TV | pass | Hosts: 30.0 fps, 33.3 ms, p50 24.6 ms, p90 25.0 ms. Settings: 30.0 fps, 33.3 ms, p50 26.1 ms, p90 26.4 ms. |
 | 2 | Frame time, one clip (Northern lights) | TV | pass, with a note | Standard: Hosts 23.8 fps (42.0 ms), p50 18.5 ms, p90 18.9 ms; Settings 24.0 fps (41.6 ms), p50 23.6 ms, p90 24.0 ms. Off: still 24 fps (Hosts p50 14.8 ms, Settings p50 16.9 ms). A clip plays at its own rate (`BorealisBackground.kt`: "a clip plays at its own"), so the 30 fps of Off holds for the drawn styles only. The clips of Flowing light and Starfield are 30 fps, so they run at 30 fps even at Standard. |
 | 2 | Moving between Settings groups | TV | fail (slower than the reference) | Aurora curtains, Standard, 12 moves between Stream and Appearance, the longest frame within 700 ms of each move. Run 1: median 64.5 ms, maximum 71.1 ms. Run 2: median 63.6 ms, maximum 71.8 ms. The Sprint 9 figure is 47 to 60 ms. The frame p50 during the moves is 34.8 ms. See problem 2. |
-| 3 | The options sheet over the blurred window | TV | pass (look owner check) | Long-press OK, or Menu, on a card opens Details and Forget. 0 frames in 8 s while it is open. Back closes it, the focus returns to the card, and the frames resume at 24 fps. The missing scrim and the blur are visual. |
+| 3 | The options sheet over the blurred window | TV | pass (look passed by the owner, UAT) | Long-press OK, or Menu, on a card opens Details and Forget. 0 frames in 8 s while it is open. Back closes it, the focus returns to the card, and the frames resume at 24 fps. The missing scrim and the blur are visual. |
 | 4 | The groups | TV | pass | 10 groups, Stream to About. Bounds y 150 to 921 inside 1080, no scrollable node, no On-screen controls group. |
 | 4 | The groups | S22 | not run | The phone was in portrait, and rotating is the owner's. In portrait the list has the 11 sections, ON-SCREEN CONTROLS included. |
-| 5 | OK enters the pane | TV | pass | On Video, DPAD_CENTER, ENTER, BUTTON_A (`input keyevent`, keyboard source), BUTTON_A (`input gamepad keyevent`, gamepad source) and RIGHT each move the focus to the first row, Codec. LEFT returns to Video. An injected A comes from the virtual device (id -1), so the physical pad stays an owner check. |
+| 5 | OK enters the pane | TV | pass | On Video, DPAD_CENTER, ENTER, BUTTON_A (`input keyevent`, keyboard source), BUTTON_A (`input gamepad keyevent`, gamepad source) and RIGHT each move the focus to the first row, Codec. LEFT returns to Video. An injected A comes from the virtual device (id -1), so the physical pad was checked by the owner (UAT). |
 | 5 | Back from a row of the pane | TV | pass (by design) | Back on a row leaves Settings for Hosts, seen 3 times. This is what `SettingsTvTest` asserts ("Back leaves the screen from the rows and from the groups"). The step as first planned expected a return to the group; section 3.23 says what the app does. See problem 1. |
-| 6 | The rail footer | TV | pass (logo owner check) | The footer node has `content-desc="Borealis, version 0.0.0-dev"`, bounds `[24,992][416,1056]`, and is not focusable. DOWN at the end of the rail stays on Settings, on Hosts and on Settings. The logo is not a node of its own. |
+| 6 | The rail footer | TV | pass (footer and logo passed by the owner, UAT) | The footer node has `content-desc="Borealis, version 0.0.0-dev"`, bounds `[24,992][416,1056]`, and is not focusable. DOWN at the end of the rail stays on Settings, on Hosts and on Settings. The logo is not a node of its own. |
 | 7 | About: the Version row | TV | pass (chevron owner check) | The row is focusable and not clickable, with no button node. OK leaves the focus there: no activity starts and nothing is logged. |
 | 7 | About: a link and Back | TV | fail (environment) | Privacy policy sends a `VIEW` intent for the PRIVACY.md page on GitHub (`NEW_TASK`). The only handler on this TV is the third-party Downloader app (`com.esaba.downloader`, a WebView). Three Backs stayed in Downloader. Home, then the launcher intent, brought Borealis back on the About pane with the focus on Privacy policy. See problem 3. |
 | 9 | Back from Apps | TV | pass | OK on the online card opens Apps. Back puts the focus on that card, bounds `[964,266][1396,618]`. |
 | 9 | Back from Apps | S22 | pass | A tap on the online card opens Apps. Back returns to Hosts with no node focused (touch mode). |
 | 10 | Notices and Quit | TV | pass (snackbar width owner check) | Back opens the in-game menu over ADB (3 app frames were drawn). Then DOWN to Quit, OK (the confirmation, Cancel focused), RIGHT, OK. In stream 2, "App quit." is a TextView at `[1120,957][1241,996]`, read 3 s after the Library resumed and gone 5 s later (shown once). Its centre, x=1180, is the centre of the content area to the right of the rail (440 to 1920). Only the text bounds were read, so the width of the snackbar is an owner check. The read of stream 1 came about 14 s late and saw nothing. See problem 4. |
 | 11 | The phone sections | S22 | pass | Settings opens with all 11 sections collapsed (twice). VIDEO and INPUT were opened, then Privacy and diagnostics, then Back: the same scroll position, and VIDEO and INPUT still open. |
-| 12 | High contrast on | TV | pass (look owner check) | The Transparency and Thicker focus outline rows, and the Glass tint and Glass blur rows of Appearance, are disabled with "High contrast is on in Accessibility". Settings drops to 30.0 fps (the blur is no longer drawn). |
+| 12 | High contrast on | TV | pass (look passed by the owner, UAT) | The Transparency and Thicker focus outline rows, and the Glass tint and Glass blur rows of Appearance, are disabled with "High contrast is on in Accessibility". Settings drops to 30.0 fps (the blur is no longer drawn). |
 | 12 | Text size 130 % | TV | pass | The text grows (the title from 62 to 69 px high). The Settings group list becomes scrollable, "Privacy and diagnostics" wraps to 2 lines, and About scrolls into view on focus. On Hosts every card text stays inside its card (the tags of the online card wrap). The tree cannot show an ellipsis. |
-| 12 | Colour-blind palette | TV | owner check | Red-green and Blue-yellow apply with no crash. The status dot has no node in the tree, so its colour and shape are visual. |
-| 12 | Thicker focus outline | TV | owner check | The switch toggles. The outline is visual. |
+| 12 | Colour-blind palette | TV | passed by the owner (UAT) | Red-green and Blue-yellow apply with no crash. The status dot has no node in the tree, so its colour and shape are visual. |
+| 12 | Thicker focus outline | TV | passed by the owner (UAT) | The switch toggles. The outline is visual. |
 | 12 | Reduce motion On | TV | pass | 0 frames in 8 s on Settings, 1 frame in 8 s on Hosts. |
 | 1, 12 | Transparency Reduced, then Off | TV | pass | Reduced: 24.0 fps, and the glass rows are disabled with "Transparency is set to Reduced in Accessibility". Off: 30.0 fps, and the note says Off. |
 | 12 | Quick pass | S22 | pass | High contrast: Glass tint, Glass blur, Transparency and Thicker focus outline are disabled with the note, and the rate at rest is 30.0 fps. At 130 % no Settings text runs past the content edge, and the texts of Hosts stay inside their cards. Reduce motion On: 0 frames in 8 s. |
 | 12 | Set back | TV, S22 | pass | Both read back as at the start: Background Aurora curtains, tint 40 %, blur 8 dp; Reduce motion Follow system, Transparency Standard, the outline off, text 100 %, High contrast off, palette Off. |
-| 12 | Text field and icons | S22 | owner check (structure passes) | Add host: an EditText `[48,321][1032,489]` with its label "Address" inside it `[96,350][206,389]`, and the button "Back to Hosts". Cancel closes it with no host added. The glass look and the halo are visual. |
-| 12 | The halo | TV | owner check | Visual, and the capture was refused. |
-| 13 | The High contrast dim over a clip | TV | pass (dim and readability owner check) | Northern lights with High contrast on: Settings 24.0 fps, p50 17.1 ms; Hosts 24.2 fps, p50 15.2 ms. The clip keeps playing. |
+| 12 | Text field and icons | S22 | passed by the owner (UAT; structure passes) | Add host: an EditText `[48,321][1032,489]` with its label "Address" inside it `[96,350][206,389]`, and the button "Back to Hosts". Cancel closes it with no host added. The glass look and the halo are visual. |
+| 12 | The halo | TV | passed by the owner (UAT) | Visual, and the capture was refused. |
+| 13 | The High contrast dim over a clip | TV | pass (dim and readability passed by the owner, UAT) | Northern lights with High contrast on: Settings 24.0 fps, p50 17.1 ms; Hosts 24.2 fps, p50 15.2 ms. The clip keeps playing. |
 | 15 | Launch and reconnect | TV | pass | Two launches: `/launch` answered about 21 s and 22 s after OK, and frames decoded at about 60 fps. No `Borealis.LAUNCH` retry line, no `/serverinfo` retry and no 503. |
 | 15 | A second device during a launch (#203) | TV, S22 | pass | The TV pressed OK at 02:56:27, and `/launch` answered at 02:56:49. The S22 opened the same host at 02:56:32, and its `/applist` ran at 02:56:34. The list loaded (Desktop, Steam Big Picture, "Nothing running"), and the host polls of the S22 succeeded throughout. Neither device logged a retry, "host busy, waiting before resume" (the 3 s wait) or a 503. |
 | 15 | Host details | TV | pass | Status Online, Paired Yes, `Host software: Sunshine-compatible, version 7.1.431.-1`, Video HEVC, HEVC 10-bit, 4:4:4, PyroWave off. No error. |
@@ -2625,7 +2626,8 @@ a maximum of 74 to 77 ms. That is above the Sprint 9 range of 47 to 60 ms, and
 it matches the night round. With Transparency Off the median is 50 to 54 ms,
 inside the range, so the glass costs about 12 to 15 ms per move. The phase split
 puts the cost in GPU and swap time; layout and drawing are the same in both
-modes. There is no log excerpt, only frame data.
+modes. There is no log excerpt, only frame data. The owner accepted this cost on
+2026-10-21 (see the UAT subsection below).
 
 The method is the one of problem 2 of section 15: after the warm-up, six DOWN and
 six UP from Stream, 1.1 s apart, with the framestats read every 3 moves (every 2
@@ -2670,3 +2672,71 @@ Stream 1 also logs `I Borealis.COMMONC: Control stream received unexpected disco
 at the moment of the quit. Both streams log `I Borealis.COMMONC: No audio traffic was ever received from the host!`
 when they stop. The night results do not say whether that line appeared then, so
 compare the next round before treating it as new.
+
+### Owner checks (UAT), 2026-10-21
+
+The owner ran the user acceptance test (UAT) of Sprint 10 after the night round,
+on 2026-10-21, on build `20861a28`, on the Google TV Streamer and the Galaxy S22.
+The rows of the night round and of the smoke that the UAT covered are marked
+"passed by the owner (UAT)" in the tables above. The owner's decisions are in
+[ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md), amended
+on 2026-10-21, and in the [roadmap](../roadmap.md#sprint-10-ux-and-accessibility).
+
+| Check | Device | Result |
+| --- | --- | --- |
+| Glass on the seven background styles. The owner's comment: "Light mist is beautiful" | TV | pass |
+| The halo, the rail footer and the options sheet | TV | pass |
+| High contrast, including over a playing clip | TV | pass |
+| Both colour-blind palettes, the Thicker focus outline and text at 130 % | TV | pass |
+| Gamepad A on a Settings group, and the focus outline with the controller | TV | pass |
+| Moving between Settings groups, which feels fine with the glass | TV | pass; the cost is accepted (trade-off 5 below) |
+| Add host field, handheld group list, stream menu and keyboard, maximum system font and split screen | S22 | pass |
+| TalkBack | S22 and TV | pass |
+| About link opens the Downloader app, and Back does not leave it | TV | finding 1 |
+| Forget, then the Hosts list does not update until the app restarts | TODO(verify): device not stated | finding 2 |
+| Wrong PIN locks pairing for 5 minutes on 26.10.0-beta.1 | S22 | finding 3 |
+
+The owner accepted the five trade-offs of Sprint 10 as they are:
+
+1. The Add host field is a filled glass field with its own outline.
+2. On a handheld, the Settings group entries are 48 dp, so the list scrolls. At
+   800 × 480 dp, 6 of the 11 groups show.
+3. The docked phone keyboard is 24 dp taller, and its keys stay under 48 dp.
+4. Phone buttons stay 40 dp and menu rows 44 dp.
+5. A move between Settings groups on the TV costs about 12 to 15 ms more with
+   the glass: about 65 ms, against 50 to 54 ms with Transparency Off.
+
+Findings:
+
+1. **An About link on the Streamer.** The link opens the third-party Downloader
+   app, and Back does not leave it (problem 3 of the device round above). The
+   owner prefers that the TV shows the link inside Borealis, as a QR code or the
+   URL in a dialog. This goes to Sprint 11.
+2. **The Hosts list after Forget.** After Forget, the Hosts list does not update
+   until the app is restarted. The owner wants a refresh button on Hosts, and a
+   look at why the list does not update by itself. Schedule: after Sprint 12
+   (SecOps), or post-MVP. See the [roadmap backlog](../roadmap.md#backlog-not-scheduled).
+3. **A wrong PIN locks pairing for 5 minutes on LuminalShine 26.10.0-beta.1.**
+   Seen live on the S22. It was checked in the host source at `e2662a44`, the
+   commit of the beta tag. `src/nvhttp.cpp` there is the same as upstream `main`
+   at `236aff9a`.
+   - **What happens:** the client runs phases 1 to 3, detects the wrong PIN after
+     phase 3 (`serverchallengeresp`), and stops, as every Moonlight client does.
+     It then sends `/unpair`, which LuminalShine does not route, so it gets a 404.
+   - **Evidence, client log:** `pairing ended state=PIN_WRONG`, then 409
+     `IN_PROGRESS` on each retry.
+   - **Evidence, host log:** the log ends at "Pairing PIN delivered; awaiting
+     client proof" (`src/nvhttp.cpp:2499`).
+   - **Effect:** every new phase 1 from the same client gets 409 `Pairing exchange
+     already in progress` at once (`src/nvhttp.cpp:2227-2250`), until the session
+     expires 5 minutes after its last update (`kPairingSessionTtl`,
+     `src/nvhttp.cpp:918`). Restarting the app does not help; restarting
+     LuminalShine clears it.
+   - **What Borealis shows:** "the host holds another session (it expires after
+     5 minutes)", with no restart.
+   - **Decision:** the owner chose to leave Borealis as it is, and to fix the host
+     in Sprint 12 (proposed), as a contribution to LuminalShine. Fix A and Fix C
+     are in the [roadmap](../roadmap.md#sprint-12-secops). An independent review
+     recommended against a `/unpair` cancel route. Option D, sending phase 4 with
+     an invalid secret after a wrong PIN, is not chosen.
+   - **Not filed upstream yet.** The host-side table of the roadmap has the row.

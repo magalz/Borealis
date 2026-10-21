@@ -11,8 +11,10 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.sp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
@@ -96,15 +98,57 @@ class StepListTest {
             )
     }
 
+    @Test
+    @Config(qualifiers = TV)
+    fun `the number of a step is 13 sp on a TV`() {
+        composeRule.setContent { Specimen(current = 1, formFactor = FormFactor.Tv) }
+
+        assertThat(numberSize("2")).isEqualTo(13.sp)
+        assertThat(numberSize("3")).isEqualTo(13.sp)
+    }
+
+    @Test
+    fun `the number of a step stays 12 sp on a phone`() {
+        composeRule.setContent { Specimen(current = 1) }
+
+        assertThat(numberSize("2")).isEqualTo(12.sp)
+        assertThat(numberSize("3")).isEqualTo(12.sp)
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun `the number of a step stays 12 sp on a handheld`() {
+        composeRule.setContent { Specimen(current = 1, formFactor = FormFactor.Handheld) }
+
+        assertThat(numberSize("2")).isEqualTo(12.sp)
+        assertThat(numberSize("3")).isEqualTo(12.sp)
+    }
+
+    // The circle is decoration and has no semantics of its own, so it is read from the unmerged
+    // tree.
+    private fun numberSize(number: String) =
+        composeRule
+            .onNodeWithText(number, useUnmergedTree = true)
+            .textLayout()
+            .layoutInput
+            .style
+            .fontSize
+
     private fun SemanticsNodeInteraction.assertState(state: String) =
         assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, state))
 
     @Composable
-    private fun Specimen(current: Int, failedAt: Int? = null) {
-        BorealisTheme(FormFactor.Phone) { StepList(STEPS, current, failedAt = failedAt) }
+    private fun Specimen(
+        current: Int,
+        failedAt: Int? = null,
+        formFactor: FormFactor = FormFactor.Phone,
+    ) {
+        BorealisTheme(formFactor) { StepList(STEPS, current, failedAt = failedAt) }
     }
 
     private companion object {
         val STEPS = listOf("Find the host", "Pair", "Start the app")
+        const val TV = "w960dp-h540dp-land-television-xhdpi"
+        const val HANDHELD = "w800dp-h360dp-land-xhdpi"
     }
 }

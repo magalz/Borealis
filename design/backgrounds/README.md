@@ -73,3 +73,16 @@ ffmpeg -i background_northern_lights.mp4 -frames:v 1 -vf scale=1280:720:flags=la
 The Compose styles use the design tokens `page`, `accent-strong` (`#7C3AED`) and `accent`
 (`#A78BFA`), plus a deep teal (`#1F8A8A`) that has no token, so it is a named constant in
 `AuroraBackground.kt`. The code-made clips use the same four colours.
+
+## What the glass table depends on
+
+`GlassContrastTable.kt` in `:borealis:designsystem` is measured over frames of these backgrounds
+(`design/accessibility/README.md`), and the glass tint floors and text colours follow from it.
+
+- **The four clips** are hashed into the table. `GlassContrastTableClipsTest` fails when a clip in
+  `res/raw` is not the one that was measured, so encode a clip again only together with a new table.
+- **The two drawn styles** have no clip, so nothing detects a change to them. After a change to
+  `Hues`, `BANDS`, `SPOTS` or the constants of the drawing in `AuroraBackground.kt` (and likewise to
+  the tokens `page`, `accent` and `accent-strong` that it takes), take the frames again with the
+  `BackgroundFrameExport` test, run `contrast.py measure` on them and `contrast.py glass-table` on
+  the result, and commit the table.

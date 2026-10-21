@@ -22,7 +22,8 @@ android {
     }
 }
 
-// A test reads the halo that docs/ux/accessibility.md chooses (two levels above the Gradle root), so
+// A test reads the halo that docs/ux/accessibility.md chooses (two levels above the Gradle root),
+// so
 // the notes are an input of the unit tests: a change of the notes runs them again.
 tasks.withType<Test>().configureEach {
     inputs

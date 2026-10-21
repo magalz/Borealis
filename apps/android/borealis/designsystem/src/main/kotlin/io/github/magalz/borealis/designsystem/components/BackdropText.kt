@@ -52,13 +52,15 @@ var SemanticsPropertyReceiver.backdropTextHalo by BackdropTextHalo
 /**
  * The halo behind a text on the animated background: the glyphs widened by [STROKE_DP], blurred by
  * [BLUR_DP], in the `page` colour at [OPACITY_PERCENT]. It is the smallest candidate of the grid
- * that keeps ink and ink-2 at 4.5:1 (3:1 for the title of a TV, which is large text) over every
- * background, on a TV and on a phone. `contrast.py halo` measures it, and the section Halo of
- * docs/ux/accessibility.md has the method and the numbers; a test keeps these constants equal to
- * the choice that the notes record.
+ * that keeps ink and ink-2 at 4.5:1 (3:1 for the title of a TV, which is large text), with 2% to
+ * spare, over every background on a TV and on a phone. The figure that it keeps is the minimum over
+ * every place that the text can take on every frame, a pixel apart, and not over a few places.
+ * `contrast.py halo` measures it, and the section Halo of docs/ux/accessibility.md has the method
+ * and the numbers; a test keeps these constants equal to the choice that the notes record, and
+ * another reads the alpha of the drawn halo beside a stem against the model.
  */
 internal object BackdropHalo {
-    const val STROKE_DP = 2
+    const val STROKE_DP = 3
     const val BLUR_DP = 2
     const val OPACITY_PERCENT = 80
 

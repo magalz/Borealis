@@ -2,14 +2,19 @@ package io.github.magalz.borealis.settings.privacy
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
+import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.diagnostics.audit.AuditEntry
 import io.github.magalz.borealis.diagnostics.audit.AuditTrail
 import io.github.magalz.borealis.diagnostics.bundle.ExportResult
+import io.github.magalz.borealis.settings.testing.InGlassHost
 import java.io.File
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +46,32 @@ class MainDispatcherRule(private val dispatcher: TestDispatcher = StandardTestDi
     override fun finished(description: Description) {
         Dispatchers.resetMain()
     }
+}
+
+/** Privacy actions that do nothing, for a screen that is only looked at. */
+internal fun noopPrivacyActions() =
+    PrivacyActions({}, {}, {}, {}, {}, PrivacyDialogActions({}, {}, {}, { _: File, _: String -> }))
+
+/**
+ * Shows the Privacy screen of [formFactor] over a glass host of [style] under [look], with nothing
+ * to do and nothing exported, as the shell of the Library draws it.
+ */
+fun ComposeContentTestRule.showPrivacy(
+    formFactor: FormFactor = FormFactor.Phone,
+    look: BorealisLook = BorealisLook(),
+    style: BackgroundStyle = BackgroundStyle.FlowingLight,
+) {
+    setContent {
+        InGlassHost(formFactor, look, style) {
+            PrivacyScreenContent(
+                PrivacyUiState(),
+                SnackbarHostState(),
+                noopPrivacyActions(),
+                onBack = {},
+            )
+        }
+    }
+    waitForIdle()
 }
 
 /** Collects [flow] until the test ends, as a screen does, and runs the work that this starts. */

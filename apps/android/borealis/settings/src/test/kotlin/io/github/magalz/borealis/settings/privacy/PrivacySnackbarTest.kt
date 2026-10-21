@@ -20,15 +20,7 @@ class PrivacySnackbarTest {
     @Test
     fun `a message on the Privacy pane is as wide as its text`() {
         val snackbars = SnackbarHostState()
-        val actions =
-            PrivacyActions(
-                onVerboseLoggingChange = {},
-                onMaskAddressesChange = {},
-                onExport = {},
-                onOpenAudit = {},
-                onEraseRequested = {},
-                dialogs = PrivacyDialogActions({}, {}, {}, { _, _ -> }),
-            )
+        val actions = noopPrivacyActions()
         composeRule.setContent {
             BorealisTheme(FormFactor.Phone) {
                 StaysAsSnackbar(snackbars, MESSAGE)

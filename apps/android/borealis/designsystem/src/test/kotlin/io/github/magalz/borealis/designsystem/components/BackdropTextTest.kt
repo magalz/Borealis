@@ -17,8 +17,10 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -145,6 +147,42 @@ class BackdropTextTest {
         assertThat(textColor("Add a host")).isEqualTo(colors.ink2)
     }
 
+    @Test
+    fun `a modifier of the caller that clears the semantics leaves the halo in them`() {
+        show(BackgroundStyle.Starfield) { BackdropText("Hosts", Modifier.clearAndSetSemantics {}) }
+
+        composeRule
+            .onAllNodes(
+                SemanticsMatcher.expectValue(BackdropTextHalo, true),
+                useUnmergedTree = true,
+            )
+            .assertCountEquals(1)
+    }
+
+    @Test
+    fun `the name under a cover tile is on the background`() {
+        show(BackgroundStyle.NorthernLights) { CoverTile("Steam Big Picture", onClick = {}) }
+
+        composeRule
+            .onAllNodes(
+                SemanticsMatcher.expectValue(BackdropTextHalo, true),
+                useUnmergedTree = true,
+            )
+            .assertCountEquals(1)
+    }
+
+    @Test
+    fun `the name under a cover tile has no halo on the plain page`() {
+        show(BackgroundStyle.Off) { CoverTile("Steam Big Picture", onClick = {}) }
+
+        composeRule
+            .onAllNodes(
+                SemanticsMatcher.expectValue(BackdropTextHalo, false),
+                useUnmergedTree = true,
+            )
+            .assertCountEquals(1)
+    }
+
     // The drawing
 
     @Test
@@ -175,25 +213,53 @@ class BackdropTextTest {
         assertThat(pixels.count { it.near(colors.ink) }).isGreaterThan(MIN_TEXT_PIXELS)
     }
 
+    @Test
+    fun `the halo round a stem has the alpha that the notes choose, under the text`() {
+        val choice = NotesChoice.read()
+        // The stem of a capital I on black, with no halo: where its edges are, to a fraction of a
+        // pixel.
+        showStem(BackgroundStyle.Off, Color.Black)
+        val stem = Stem.of(hostPixels())
+        // The same stem over white, with the halo: the alpha of the halo at a few distances from
+        // it.
+        change(BackgroundStyle.Starfield, backdrop = Color.White)
+        val pixels = hostPixels()
+
+        for (distance in DISTANCES_PX) {
+            val at = stem.left - distance
+            val seen = alphaOver(pixels[at.toInt(), stem.row].green)
+            assertWithMessage("alpha at $distance px from the stem")
+                .that(seen)
+                .isWithin(ALPHA_TOLERANCE)
+                .of(expectedAlpha(choice, stem.left - (at.toInt() + 0.5f), stem.width))
+        }
+        // The halo is behind the text: the middle of the stem is the ink, and far from it is white.
+        assertThat(pixels[(stem.left + stem.width / 2).toInt(), stem.row].near(colors.ink)).isTrue()
+        assertThat(pixels[(stem.left - FAR_PX).toInt(), stem.row].near(Color.White)).isTrue()
+    }
+
     // Helpers
 
     private var style by mutableStateOf(BackgroundStyle.Off)
     private var look by mutableStateOf(BorealisLook())
+    private var backdrop by mutableStateOf(Color.White)
 
     /** [content] in a host of [style], over a bright backdrop, under [look]. */
     private fun show(
         style: BackgroundStyle,
         look: BorealisLook = BorealisLook(),
         host: String? = null,
+        backdrop: Color = Color.White,
         content: @Composable () -> Unit,
     ) {
         this.style = style
         this.look = look
+        this.backdrop = backdrop
         composeRule.setContent {
             BorealisTheme(FormFactor.Tv, this.look) {
                 GlassHostOver(
                     this.style,
-                    background = { Box(Modifier.fillMaxSize().background(Color.White)) },
+                    background = { Box(Modifier.fillMaxSize().background(this.backdrop)) },
                     modifier =
                         if (host != null) Modifier.size(HOST_WIDTH.dp, HOST_HEIGHT.dp).testTag(host)
                         else Modifier,
@@ -205,12 +271,76 @@ class BackdropTextTest {
     }
 
     /** Changes the host that is shown, as the viewer does in Settings. */
-    private fun change(style: BackgroundStyle = this.style, look: BorealisLook = this.look) {
+    private fun change(
+        style: BackgroundStyle = this.style,
+        look: BorealisLook = this.look,
+        backdrop: Color = this.backdrop,
+    ) {
         composeRule.runOnIdle {
             this.style = style
             this.look = look
+            this.backdrop = backdrop
         }
         composeRule.waitForIdle()
+    }
+
+    /** A capital I over [backdrop], in a host of [style]. */
+    private fun showStem(style: BackgroundStyle, backdrop: Color) {
+        show(style, host = HOST, backdrop = backdrop) {
+            Box(Modifier.padding(STEM_PADDING.dp)) {
+                BackdropText("I", style = MaterialTheme.typography.titleLarge)
+            }
+        }
+    }
+
+    private fun hostPixels() = composeRule.onNodeWithTag(HOST).captureToImage().toPixelMap()
+
+    /** The alpha of `page` that makes [green] of white. */
+    private fun alphaOver(green: Float) = (1f - green) / (1f - colors.page.green)
+
+    /**
+     * The alpha that a halo of [choice] has at [distance] px outside the left edge of a stem
+     * [width] px wide: the bar of the stem widened by the stroke on both sides, blurred by the
+     * Gaussian of the shadow, at the opacity. It is worked out along a line across the stem, far
+     * from its ends.
+     */
+    private fun expectedAlpha(choice: NotesChoice, distance: Float, width: Float): Float {
+        val stroke = choice.strokeDp * PIXELS_PER_DP
+        val sigma = BLUR_SIGMA_PER_PX * choice.blurDp * PIXELS_PER_DP + BLUR_SIGMA_BASE
+        var covered = 0.0
+        var step = -(stroke + 6 * sigma)
+        while (step <= width + stroke + 6 * sigma) {
+            if (step >= -stroke && step <= width + stroke) {
+                val offset = (step - (-distance)) / sigma
+                covered +=
+                    kotlin.math.exp(-offset * offset / 2) /
+                        (sigma * kotlin.math.sqrt(2 * Math.PI)) * STEP
+            }
+            step += STEP
+        }
+        return (covered * choice.opacity / 100).toFloat()
+    }
+
+    /** Where the stem of the I is in a picture of it over black: its left edge, width and row. */
+    private class Stem(val left: Float, val width: Float, val row: Int) {
+        companion object {
+            fun of(pixels: PixelMap): Stem {
+                val ink = BorealisColors().ink.green
+                val coverage = { x: Int, y: Int -> (pixels[x, y].green / ink).coerceIn(0f, 1f) }
+                val rows =
+                    (0 until pixels.height).filter { y ->
+                        (0 until pixels.width).any { x -> coverage(x, y) > 0.5f }
+                    }
+                val row = (rows.first() + rows.last()) / 2
+                val covered = (0 until pixels.width).filter { coverage(it, row) > 0f }
+                val first = covered.first()
+                return Stem(
+                    first + (1f - coverage(first, row)),
+                    covered.sumOf { coverage(it, row).toDouble() }.toFloat(),
+                    row,
+                )
+            }
+        }
     }
 
     private fun haloOf(text: String): Boolean {
@@ -251,5 +381,18 @@ class BackdropTextTest {
         const val MIN_HALO_PIXELS = 400
         const val MIN_TEXT_PIXELS = 30
         const val NEAR = 0.03f
+
+        const val STEM_PADDING = 40
+        const val PIXELS_PER_DP = 2f
+
+        /** Skia turns the radius of a blur in pixels into a sigma: 0.57735 * radius + 0.5. */
+        const val BLUR_SIGMA_PER_PX = 0.57735
+        const val BLUR_SIGMA_BASE = 0.5
+        const val STEP = 0.05
+
+        /** How far outside the stem the halo is read, in pixels, and how far is far. */
+        val DISTANCES_PX = listOf(2f, 5f, 8f, 12f)
+        const val FAR_PX = 40f
+        const val ALPHA_TOLERANCE = 0.07f
     }
 }

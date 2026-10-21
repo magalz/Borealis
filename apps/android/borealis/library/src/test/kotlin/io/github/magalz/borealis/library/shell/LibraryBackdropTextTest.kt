@@ -3,6 +3,7 @@ package io.github.magalz.borealis.library.shell
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -111,6 +112,25 @@ class LibraryBackdropTextTest {
 
         assertHalo("No apps to show")
         assertHalo("Add apps in the LuminalShine Web UI", substring = true)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the names under the covers of Apps are on the background`() {
+        val two =
+            listOf(
+                AppItemUiState(1, "Desktop", false, false, false),
+                AppItemUiState(2, "Steam Big Picture", false, false, false),
+            )
+        show(FormFactor.Tv) { Apps(FormFactor.Tv, items = two) }
+
+        // The title, its status line and the two names under the covers.
+        composeRule
+            .onAllNodes(
+                SemanticsMatcher.expectValue(BackdropTextHalo, true),
+                useUnmergedTree = true,
+            )
+            .assertCountEquals(4)
     }
 
     // Add host

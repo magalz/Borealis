@@ -104,9 +104,30 @@ prints the floors and the text colours that the app works out from that file, as
 the colours that the Kotlin tests pin. A channel that lands on half a level rounds up, as Kotlin's
 `roundToInt` does.
 
+## The halo of text on the background
+
+Text that stands on the background, outside any glass, gets a soft dark halo (issue #33). The same
+frames give the contrast that the halo keeps, and the candidate that the app draws:
+
+```sh
+python -I design/accessibility/contrast.py halo <frames> --json <halo.json> --jobs 4
+```
+
+The sample text of four styles of the app (title, label, body and small text, in IBM Plex at the
+sizes of `design/tokens.json`, on a TV and on a phone) is put in 6 x 4 places over each frame.
+Each glyph is widened by a stroke, blurred, and laid in `page` at an opacity, and the ratio of `ink`
+and `ink-2` is taken at the pixels that are not in a glyph and are within 2 px of one. The grid is a
+stroke of 0 to 3 dp, a blur of 2, 4 or 8 dp and an opacity of 60, 80 or 100 %, and no halo. The
+command prints Tables D, E and F of `docs/ux/accessibility.md` and the smallest candidate that
+keeps 4.5:1 (3:1 for the title of a TV), with 2% to spare. `--texts body title` measures only some of
+the styles. It takes a minute or two with 8 jobs; the JSON has the worst case, p1, p5 and the worst
+frame of every text style, token and candidate. `BackdropHalo` in `:borealis:designsystem` has the
+choice, and a test keeps it equal to the line "The choice: ..." of the notes.
+
 ## The JSON
 
 `meta` has the date, the revision, the colours and the grid. `sources` lists the folders read.
+The halo's JSON has the same `meta` and `sources`, and rows in `halo`.
 `background` (a) and `glass` (c) have a row for each style, device, token (and alpha and `blur_dp`):
 `min`, `p1`, `p5`, `worst_frame` and `per_frame_min`. `surfaces` (b) has a `ratio` for each
 surface and token.

@@ -2,11 +2,12 @@
 
 Sprint 10 aims at WCAG 2.2 level AA on every screen, and at 7:1 (AAA) for text
 when high contrast is on. This page records how the contrast of text over the
-animated background is measured, the baseline measured before any fix, and how
-the table that the glass of the app reads comes out of that measurement. The
-tool is in [`design/accessibility/`](../../design/accessibility/README.md); its
-README says how to run it again. The decisions that follow from the numbers are
-in [ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md).
+animated background is measured, the baseline measured before any fix, how the
+table that the glass of the app reads comes out of that measurement, and the halo
+of the text that stands on the background. The tool is in
+[`design/accessibility/`](../../design/accessibility/README.md); its README says
+how to run it again. The decisions that follow from the numbers are in
+[ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md).
 
 - Date: 2026-10-20.
 - Revision measured: `fedc4ce0`. It widens the grid of the glass candidates of
@@ -372,3 +373,161 @@ These three tables are printed by `contrast.py glass-colours` from the committed
 table. Its tests and those of `GlassRules` pin the same colours. A channel that
 lands on half a level rounds up, as Kotlin's `roundToInt` does and Python's
 `round` does not.
+
+## Halo: text straight on the background
+
+Text that sits on the animated background, outside any glass, is the case (a) of the baseline. The
+owner decided on 2026-10-20 that it gets a soft dark halo, and that its secondary text, the `ink-3`
+and `ink-4` roles, uses `ink-2`. That covers the title of a screen, the labels of a section, a
+count such as "2 hosts", the loading, searching and empty texts, the hints of Add host and of
+Pairing, and the titles of the phone bars. The text inside a glass surface is not part of it:
+the text colours of the glass cover that. Where the background is off, the plain page, there is no
+halo and the numbers of Table B apply. The halo has to keep `ink` and `ink-2` at 4.5:1 for small
+text and at 3:1 for large text (24 sp regular or 18.66 sp bold and over) on every background and
+device. Without it the text reaches 2:1 or less over Northern lights, Starfield and Light mist on a
+TV (Table A).
+
+- Revision measured: `5c59ceb1`, on 2026-10-20. The frames are the 288 of the baseline, taken
+  again with the same commands: the drawn styles with the `BackgroundFrameExport` test and the clips
+  with `contrast.py extract`.
+- `python -I design/accessibility/contrast.py halo <frames> --json <result.json> --jobs 4` measures
+  it and prints Tables D, E and F and the choice.
+
+### Method of the halo
+
+- **The text.** Four styles of the app that stand on the background, in IBM Plex, at the size that
+  `design/tokens.json` gives each device and at its density (2.0 on the TV and 3.0 on the phone).
+  The title is `titleLarge` (24 sp on a TV, 18 sp on a phone, semibold), the label is the kicker
+  (12 sp on a TV, 11 sp on a phone, semibold, capitals set 0.07 em apart), the body is `bodyMedium`
+  (15 and 14 sp, regular) and the small text is `bodySmall` (14.5 and 12.5 sp, regular). The title
+  of a TV is large text and the title of a phone (18 sp semibold) is not. The sample is "Living room
+  PC, 4 apps". It is drawn at four times its size and brought down by the mean of each block, so it
+  is not hinted, as Android does not hint it.
+- **The halo.** The glyphs are widened by a stroke of 0 to 3 dp, round all of each glyph. The
+  picture is blurred by a Gaussian of sigma `0.57735 * radius_px + 0.5`, which is how Skia turns a
+  blur radius into a sigma and so what a shadow of a text gets, with a radius of 2, 4 or 8 dp. It
+  is laid in `page` at an opacity of 60, 80 or 100 %, over the frame, in the encoded values as the
+  platform composites. The text is drawn on top. That is 36 candidates, and no halo as a 37th.
+- **The ratio.** It is the contrast of the text colour with the pixels that are not in a glyph and
+  are within 2 px of one: the pixels beside the strokes, the counters of the letters included. A
+  pixel that a glyph covers in part is a glyph pixel. A pixel brighter than the text counts, as in
+  the baseline.
+- **Where.** The sample is put in 6 columns and 4 rows of places, from one corner of the frame to
+  the other, on each of the 24 frames of each of the 12 sets of frames. The worst case is the
+  lowest ratio of all of it. p1 and p5 are the lowest, over the places and the frames, of the ratio
+  below which 1% and 5% of those pixels are, for information.
+- **The choice.** The smallest candidate that keeps `ink` and `ink-2` at 4.5:1 for the label, the
+  body, the small text and the title of a phone, and `ink` at 3:1 for the title of a TV, with 2%
+  to spare for the difference between this model and a device, as the glass has. A title is `ink`
+  only. The smallest is the least stroke, then the least blur, then the least opacity. The grid is
+  that of the issue. One of its candidates keeps the ratios with a stroke of 2 dp, so the grid was
+  not widened.
+- **Why a stroke of 1 dp is too little.** The ring reaches 2 px from a glyph, and a stroke of 1 dp
+  is 2 px on a TV. The halo ends where the ring ends, so the blur thins it there to half, and a
+  bright pixel is only half darkened. A pixel that a halo darkens a little is as bright as the
+  text, and then its ratio is 1:1, lower than with no halo at all. So no candidate of 1 dp or less
+  keeps the ratios, whatever the opacity.
+
+### Table D, E and F
+
+Table D. Text on the background with a halo: the lowest ratio over every background, device and text style, for each candidate. Small text is the label, the body, the small text and the title of a phone, which need 4.5:1. The title of a TV is large text and needs 3:1. A candidate keeps the ratios when every one clears its limit by 2%.
+
+| Stroke dp | Blur dp | Opacity | `ink`, small | `ink-2`, small | `ink`, large | Keeps |
+| --- | --- | --- | --- | --- | --- | --- |
+| none | - | - | 2.01 | 1.43 | 1.80 | - |
+| 0 | 2 | 60 % | 2.51 | 1.78 | 2.10 | no |
+| 0 | 2 | 80 % | 2.64 | 1.87 | 2.22 | no |
+| 0 | 2 | 100 % | 2.73 | 1.94 | 2.34 | no |
+| 0 | 4 | 60 % | 2.46 | 1.75 | 2.12 | no |
+| 0 | 4 | 80 % | 2.62 | 1.86 | 2.24 | no |
+| 0 | 4 | 100 % | 2.77 | 1.96 | 2.38 | no |
+| 0 | 8 | 60 % | 2.38 | 1.69 | 2.07 | no |
+| 0 | 8 | 80 % | 2.46 | 1.75 | 2.17 | no |
+| 0 | 8 | 100 % | 2.55 | 1.81 | 2.28 | no |
+| 1 | 2 | 60 % | 3.52 | 2.50 | 2.83 | no |
+| 1 | 2 | 80 % | 4.03 | 2.86 | 3.34 | no |
+| 1 | 2 | 100 % | 4.50 | 3.19 | 3.98 | no |
+| 1 | 4 | 60 % | 3.41 | 2.42 | 2.56 | no |
+| 1 | 4 | 80 % | 3.84 | 2.72 | 2.90 | no |
+| 1 | 4 | 100 % | 4.23 | 3.00 | 3.31 | no |
+| 1 | 8 | 60 % | 2.95 | 2.10 | 2.32 | no |
+| 1 | 8 | 80 % | 3.31 | 2.35 | 2.54 | no |
+| 1 | 8 | 100 % | 3.72 | 2.64 | 2.79 | no |
+| 2 | 2 | 60 % | 5.06 | 3.59 | 4.20 | no |
+| 2 | 2 | 80 % | 6.86 | 4.87 | 5.83 | yes |
+| 2 | 2 | 100 % | 8.87 | 6.29 | 8.00 | yes |
+| 2 | 4 | 60 % | 4.47 | 3.17 | 3.23 | no |
+| 2 | 4 | 80 % | 5.41 | 3.84 | 4.02 | no |
+| 2 | 4 | 100 % | 6.57 | 4.66 | 5.07 | yes |
+| 2 | 8 | 60 % | 3.73 | 2.64 | 2.68 | no |
+| 2 | 8 | 80 % | 4.47 | 3.17 | 3.09 | no |
+| 2 | 8 | 100 % | 5.15 | 3.65 | 3.58 | no |
+| 3 | 2 | 60 % | 6.50 | 4.61 | 5.66 | yes |
+| 3 | 2 | 80 % | 9.75 | 6.92 | 8.83 | yes |
+| 3 | 2 | 100 % | 13.46 | 9.55 | 12.95 | yes |
+| 3 | 4 | 60 % | 5.43 | 3.86 | 4.10 | no |
+| 3 | 4 | 80 % | 7.24 | 5.14 | 5.64 | yes |
+| 3 | 4 | 100 % | 9.47 | 6.72 | 7.86 | yes |
+| 3 | 8 | 60 % | 4.54 | 3.22 | 3.14 | no |
+| 3 | 8 | 80 % | 5.57 | 3.95 | 3.86 | no |
+| 3 | 8 | 100 % | 6.69 | 4.75 | 4.80 | yes |
+
+Table E. The chosen halo (stroke 2 dp, blur 2 dp, opacity 80 %) by text style and device: the lowest ratio over the backgrounds, with the background it is in, and the lowest p1 and p5.
+
+| Text | Device | Needs | `ink` min | `ink` p1 | `ink` p5 | `ink-2` min | `ink-2` p1 | `ink-2` p5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| title | TV | 3.00 | 5.83 (Northern lights) | 10.09 | 12.96 | 4.14 (Northern lights) | 7.16 | 9.19 |
+| title | phone | 4.50 | 8.05 (Northern lights) | 11.34 | 13.22 | 5.71 (Northern lights) | 8.05 | 9.38 |
+| label | TV | 4.50 | 7.84 (Starfield) | 15.12 | 15.24 | 5.56 (Starfield) | 10.73 | 10.81 |
+| label | phone | 4.50 | 9.09 (Northern lights) | 10.75 | 13.07 | 6.45 (Northern lights) | 7.62 | 9.28 |
+| body | TV | 4.50 | 7.94 (Northern lights) | 10.49 | 12.97 | 5.64 (Northern lights) | 7.44 | 9.20 |
+| body | phone | 4.50 | 8.38 (Northern lights) | 11.29 | 12.96 | 5.94 (Northern lights) | 8.01 | 9.20 |
+| small | TV | 4.50 | 6.86 (Northern lights) | 10.38 | 12.80 | 4.87 (Northern lights) | 7.36 | 9.08 |
+| small | phone | 4.50 | 9.15 (Northern lights) | 11.33 | 12.86 | 6.49 (Northern lights) | 8.04 | 9.12 |
+
+Table F. The lowest ratio over the text styles, by background, with no halo and with the chosen one.
+
+| Background | `ink`, none | `ink`, halo | `ink-2`, none | `ink-2`, halo |
+| --- | --- | --- | --- | --- |
+| Aurora curtains, phone | 10.50 | 13.79 | 7.45 | 9.79 |
+| Aurora curtains, TV | 10.43 | 13.28 | 7.49 | 9.49 |
+| Flowing light, phone | 5.79 | 11.18 | 4.18 | 7.99 |
+| Flowing light, TV | 5.52 | 9.89 | 3.96 | 7.03 |
+| Light mist, phone | 14.52 | 15.39 | 10.37 | 10.94 |
+| Light mist, TV | 3.17 | 8.85 | 2.25 | 6.63 |
+| Northern lights, phone | 2.67 | 8.05 | 2.03 | 5.94 |
+| Northern lights, TV | 1.80 | 5.83 | 1.52 | 4.87 |
+| Soft glow, phone | 10.90 | 13.95 | 7.73 | 9.93 |
+| Soft glow, TV | 11.50 | 13.68 | 8.17 | 9.83 |
+| Starfield, phone | 3.08 | 9.34 | 2.34 | 6.66 |
+| Starfield, TV | 2.01 | 6.68 | 1.43 | 4.94 |
+
+The choice: stroke 2 dp, blur 2 dp, opacity 80 %.
+
+The title of a TV needs 3:1 and keeps 5.83 over Northern lights, its worst background. The worst
+small text is `ink-2` at 4.87 for the small text of a TV over Northern lights, 8% above 4.5. The
+candidates of the grid with a stroke of 2 dp keep the ratios from an opacity of 80 % at a blur of 2
+dp, and from 100 % at a blur of 4 dp. A stroke of 3 dp keeps them from 60 % at a blur of 2 dp. A
+halo of 2 dp with a blur of 2 dp at 80 % is the smallest, and the one that the app draws.
+
+### How the app draws it
+
+`BackdropText` in `:borealis:designsystem` (`components/BackdropText.kt`) is the one place that
+draws a text on the background, and its constants are the choice above; a test keeps the two
+equal. `BackdropKicker` is a label in it, and `EmptyState` uses it for its texts.
+
+- **Drawn with a shadow of a stroked copy of the text.** Behind the text the node draws its own
+  layout again, with no colour of its own, as a stroke of twice the width of the halo, and with a
+  shadow of the halo's blur radius in `page` at the opacity. The stroke widens each glyph by 2 dp
+  and the shadow blurs it, which is the model. With the tool's masks, the stroke and a glyph widened
+  by 2 dp give the same alpha at the pixels of the ring, so the drawing is the model and not a
+  look-alike.
+- **Every API level.** It needs no blur effect, which is API 31 and over, so API 28 to 30 draw the
+  same halo, and there is no second form to measure. A shadow layer is a part of every text paint.
+  The tests draw it with Robolectric and see it, but they are not a device: the halo has not been
+  seen on API 28 to 30.
+- **When.** Over a background of any style, which is every one but the plain page. The Transparency
+  Off and High contrast draw it too, because the background is still behind the text. Outside a
+  host, as in the Stream, there is no background and no halo.
+- **The ink.** `BackdropInk` says what the text was: `Ink3` and `Ink4` are `ink-2` where there is
+  a halo and the tokens, as they were, where there is not. `Ink` and `Ink2` are the tokens.

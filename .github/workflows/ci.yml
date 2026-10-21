@@ -28,6 +28,7 @@ jobs:
       android: ${{ steps.filter.outputs.android }}
       core: ${{ steps.filter.outputs.core }}
       docs: ${{ steps.filter.outputs.docs }}
+      design: ${{ steps.filter.outputs.design }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: filter
@@ -46,6 +47,9 @@ jobs:
             docs:
               - '**/*.md'
               - '.markdownlint.jsonc'
+              - '.github/workflows/ci.yml'
+            design:
+              - 'design/**'
               - '.github/workflows/ci.yml'
 
   android:
@@ -225,6 +229,24 @@ jobs:
           disable_search: true
           fail_ci_if_error: true
 
+  design:
+    # The contrast tool (design/accessibility) measures the text over the backgrounds and writes the
+    # glass table of the app. Its tests are plain unittest; the versions are those it was tried with.
+    name: Design tools
+    needs: changes
+    if: needs.changes.outputs.design == 'true' || github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+      - name: Install the packages of the contrast tool
+        run: python -m pip install numpy==2.4.6 pillow==12.2.0
+      - name: Test the contrast tool
+        run: python -I -m unittest discover -s design/accessibility -v
+
   docs:
     name: Docs
     needs: changes
@@ -243,12 +265,13 @@ jobs:
             core/**/*.md
             .github/**/*.md
             apps/android/borealis/**/*.md
+            design/**/*.md
 
   ci-ok:
     name: CI result
     # Single required status check: passes when every job that ran succeeded or was skipped.
     if: always()
-    needs: [changes, android, core, docs]
+    needs: [changes, android, screenshots, core, design, docs]
     runs-on: ubuntu-latest
     steps:
       - name: Evaluate job results

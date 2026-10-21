@@ -33,6 +33,7 @@ removes animations (no player and no decoder), and until the player draws its fi
 
 Every clip is 1920 x 1080 H.264 (High profile, level 4.1, 4 reference frames), silent and a seamless
 loop, encoded with `-crf 23 -bf 0 -refs 4 -level 4.1 -tune grain`:
+
 - No B-frames: they made the quality of smooth gradients pulse every few frames, which looked like
   stutter.
 - Level 4.1 and 4 reference frames: the first encodes were level 5.0, which a decoder of level 4.x

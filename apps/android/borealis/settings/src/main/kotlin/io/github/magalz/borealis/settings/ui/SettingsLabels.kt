@@ -96,15 +96,9 @@ internal fun disabledNote(disabled: RowState.Disabled?): String? =
         null -> null
         DisabledReason.HDR_BROKEN_ON_FIRMWARE -> stringResource(R.string.settings_note_hdr_firmware)
         DisabledReason.TRANSPARENCY_REDUCED ->
-            transparencyNote(
-                R.string.settings_note_transparency_reduced,
-                R.string.settings_choice_transparency_reduced,
-            )
+            transparencyNote(R.string.settings_choice_transparency_reduced)
         DisabledReason.TRANSPARENCY_OFF ->
-            transparencyNote(
-                R.string.settings_note_transparency_off,
-                R.string.settings_choice_transparency_off,
-            )
+            transparencyNote(R.string.settings_choice_transparency_off)
         DisabledReason.HIGH_CONTRAST_ON ->
             stringResource(
                 R.string.settings_note_high_contrast,
@@ -124,9 +118,9 @@ internal fun disabledNote(disabled: RowState.Disabled?): String? =
 
 /** The note that says Transparency is set to the level [level], with the names of the rows. */
 @Composable
-private fun transparencyNote(@StringRes note: Int, @StringRes level: Int): String =
+private fun transparencyNote(@StringRes level: Int): String =
     stringResource(
-        note,
+        R.string.settings_note_transparency_level,
         stringResource(R.string.settings_transparency_title),
         stringResource(level),
         stringResource(R.string.settings_group_accessibility),

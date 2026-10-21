@@ -121,8 +121,7 @@
     <!-- Disabled notes -->
     <string name="settings_note_turn_on_first">Turn on %1$s first</string>
     <string name="settings_note_hdr_firmware">HDR crashes on the firmware of this device. Update the firmware to use it.</string>
-    <string name="settings_note_transparency_off">%1$s is set to %2$s in %3$s</string>
-    <string name="settings_note_transparency_reduced">%1$s is set to %2$s in %3$s</string>
+    <string name="settings_note_transparency_level">%1$s is set to %2$s in %3$s</string>
     <string name="settings_note_high_contrast">%1$s is on in %2$s</string>
 
     <!-- Values -->

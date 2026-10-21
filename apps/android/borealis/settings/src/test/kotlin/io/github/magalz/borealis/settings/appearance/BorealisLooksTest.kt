@@ -247,21 +247,21 @@ class BorealisLooksTest {
             .isEqualTo(BackgroundIntensity.Full)
     }
 
+    private fun <T> assertOneEntryPerValue(
+        setting: StringSetting,
+        entries: List<FixedChoice>,
+        values: List<T>,
+        read: (BorealisLook) -> T,
+    ) {
+        val seen = entries.map { read(look(setting to it.key)) }
+
+        assertThat(entries.map { it.key }).containsNoDuplicates()
+        assertThat(seen).containsExactlyElementsIn(values).inOrder()
+        assertThat(entries.map { it.key }).contains(setting.default)
+    }
+
     @Test
     fun `every entry of a list is an id that maps to its own value, and every value has an entry`() {
-        fun <T> assertOneEntryPerValue(
-            setting: StringSetting,
-            entries: List<FixedChoice>,
-            values: List<T>,
-            read: (BorealisLook) -> T,
-        ) {
-            val seen = entries.map { read(look(setting to it.key)) }
-
-            assertThat(entries.map { it.key }).containsNoDuplicates()
-            assertThat(seen).containsExactlyElementsIn(values).inOrder()
-            assertThat(entries.map { it.key }).contains(setting.default)
-        }
-
         assertOneEntryPerValue(
             Settings.REDUCE_MOTION,
             FixedChoices.REDUCE_MOTION,
@@ -300,6 +300,10 @@ class BorealisLooksTest {
         ) {
             it.glassBlurDp
         }
+    }
+
+    @Test
+    fun `every entry of a list of Sprint 11 is an id that maps to its own value`() {
         assertOneEntryPerValue(Settings.FONT, FixedChoices.FONT, FontChoice.entries) { it.font }
         assertOneEntryPerValue(Settings.ACCENT, FixedChoices.ACCENT, AccentChoice.entries) {
             it.accent

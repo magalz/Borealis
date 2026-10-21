@@ -276,7 +276,8 @@ private fun HostGrid(
         columns = GridCells.Fixed(columns),
         state = gridState,
         modifier = Modifier.fillMaxSize(),
-        // The padding and the gaps keep the focus outline, 5dp outside a card, from being clipped.
+        // The padding and the gaps keep the focus outline, 5dp outside a card (7dp when it is the
+        // thicker one), from being clipped.
         contentPadding = PaddingValues(LocalBorealisSpacing.current.gutter),
         verticalArrangement = Arrangement.spacedBy(GRID_GAP),
         horizontalArrangement = Arrangement.spacedBy(GRID_GAP),

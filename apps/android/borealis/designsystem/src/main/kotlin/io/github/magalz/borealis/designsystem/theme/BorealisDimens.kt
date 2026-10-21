@@ -48,7 +48,10 @@ object BorealisDimens {
      */
     val stackedTextGap: Dp = 4.dp
 
-    /** How far the focus outline reaches outside its element: its offset and its stroke, 5dp. */
+    /**
+     * How far the focus outline reaches outside its element: its offset and its stroke, 5dp. The
+     * thicker outline reaches [thickOutlineReach].
+     */
     val outlineReach: Dp = BorealisTokens.Focus.Offset + BorealisTokens.Focus.Outline
 
     /**

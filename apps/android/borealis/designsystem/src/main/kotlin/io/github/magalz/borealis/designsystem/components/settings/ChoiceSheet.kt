@@ -149,7 +149,7 @@ private fun <T> OptionList(
             style = MaterialTheme.typography.titleLarge,
         )
         // The padding is inside the scroll area: the area clips, and an outline reaches 5dp outside
-        // its row.
+        // its row, 7dp when it is the thicker one.
         Column(
             Modifier.weight(1f, fill = false)
                 .verticalScroll(rememberScrollState())

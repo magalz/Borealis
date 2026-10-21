@@ -60,9 +60,9 @@ internal object CollapsibleSectionTags {
  * when the system removes animations they snap. A long title wraps beside the chevron, which keeps
  * its size.
  *
- * The outline of a focused header or row reaches 5dp outside it, and the card clips it, so the card
- * has 8dp of padding inside. A list of sections is spaced by [BorealisDimens.listGap], and so are
- * the rows of one.
+ * The outline of a focused header or row reaches 5dp outside it, 7dp when it is the thicker one,
+ * and the card clips it, so the card has 8dp of padding inside. A list of sections is spaced by
+ * [BorealisDimens.listGap], and so are the rows of one.
  */
 @Composable
 fun CollapsibleSection(

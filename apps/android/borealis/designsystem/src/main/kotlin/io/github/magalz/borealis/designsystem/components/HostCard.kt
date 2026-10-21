@@ -63,6 +63,7 @@ fun HostCard(
     detail: String? = null,
     tags: List<String> = emptyList(),
     runningApp: String? = null,
+    runningLabel: String? = null,
     onClickLabel: String? = null,
     onOptions: (() -> Unit)? = null,
     optionsLabel: String? = null,

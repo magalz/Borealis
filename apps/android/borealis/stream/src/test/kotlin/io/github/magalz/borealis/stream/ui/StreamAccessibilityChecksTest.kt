@@ -63,6 +63,19 @@ class StreamAccessibilityChecksTest {
      * high as a phone held sideways allows, so a key is smaller than 48dp. The System keyboard chip
      * opens the keyboard of the device, whose keys are the size of a finger.
      */
+    /**
+     * The chips of the shortcut row scroll sideways, and the last one that shows is cut by the edge
+     * of the row. The check reads the contrast of the sliver that is left, which has hardly any
+     * text in it; the chip itself has ink-2 text on the surface, 10:1.
+     */
+    private val cutChip =
+        AcceptedFinding(
+            TextContrastCheck::class.java,
+            "the check reads the contrast of the sliver of a chip that the edge of the scrolling " +
+                "row cuts off; whole, the chip is ink-2 on the surface, at 10:1",
+            taggedWith("chip:"),
+        )
+
     private val smallKeys =
         AcceptedFinding(
             TouchTargetSizeCheck::class.java,
@@ -122,7 +135,7 @@ class StreamAccessibilityChecksTest {
     fun `the keyboard on a phone`() {
         show(FormFactor.Phone) { StreamKeyboard(true, RecordingIntents()) }
 
-        composeRule.assertAccessible(smallKeys)
+        composeRule.assertAccessible(smallKeys, cutChip)
     }
 
     @Test

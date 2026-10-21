@@ -16,6 +16,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.BackdropInk
 import io.github.magalz.borealis.designsystem.components.BackdropText
@@ -41,7 +43,7 @@ internal fun PhoneTopBar(onAddHost: () -> Unit, onSettings: () -> Unit) {
     ) {
         BackdropText(
             stringResource(R.string.hosts_title),
-            Modifier.weight(1f),
+            Modifier.weight(1f).semantics { heading() },
             style = MaterialTheme.typography.titleLarge,
         )
         IconAction(
@@ -86,6 +88,7 @@ internal fun TvHeader(state: HostsUiState) {
     ) {
         BackdropText(
             stringResource(R.string.hosts_title),
+            Modifier.semantics { heading() },
             style = MaterialTheme.typography.titleLarge,
         )
         if (!state.loading && !state.searching) {

@@ -27,6 +27,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.MenuRow
@@ -84,18 +85,23 @@ internal fun InGameMenu(
         }
     }
     val back = { if (confirmingQuit) cancelQuit() else intents.closePanel() }
+    val header =
+        if (appName.isBlank()) hostName
+        else stringResource(R.string.stream_menu_header, appName, hostName)
     SidePanel(
         onDismiss = intents::closePanel,
         modifier = Modifier.onGamepadB(back).onBackKey(back),
     ) {
         Column(
             Modifier.windowInsetsPadding(
-                WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical + WindowInsetsSides.End)
-            )
+                    WindowInsets.safeDrawing.only(
+                        WindowInsetsSides.Vertical + WindowInsetsSides.End
+                    )
+                )
+                .semantics { paneTitle = header }
         ) {
             Text(
-                if (appName.isBlank()) hostName
-                else stringResource(R.string.stream_menu_header, appName, hostName),
+                header,
                 Modifier.padding(
                         start = HEADER_PADDING_HORIZONTAL,
                         top = HEADER_PADDING_TOP,

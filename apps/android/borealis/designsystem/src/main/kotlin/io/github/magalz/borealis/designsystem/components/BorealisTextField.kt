@@ -147,7 +147,7 @@ fun BorealisTextField(
                 currentOnDone?.invoke()
                 performDefaultAction()
             },
-            modifier = modifier.fillMaxWidth(),
+            glassModifier = modifier.fillMaxWidth(),
         )
     } else {
         EditOnOkField(content, modifier, leaveWithDpad) { currentOnDone?.invoke() }
@@ -312,16 +312,16 @@ private fun wrapperKey(event: KeyEvent, startEditing: () -> Unit, onDone: () -> 
  * indicator of its own, and the glass, with the outline on it, is drawn here round the field and
  * its message. An outlined field would float its label over the top of its outline, where the
  * outline is cut and the glass would not show: half of the label would stand on the background.
- * [modifier] is for the glass, so that what the caller gives lays out the whole field, and
- * [fieldModifier] is for the [TextField] inside it.
+ * [modifier] is for the [TextField] inside the glass, and [glassModifier] is for the glass round
+ * it, so that what the caller gives lays out the whole field.
  */
 @Composable
 private fun TextFieldBody(
     content: FieldContent,
-    fieldModifier: Modifier,
+    modifier: Modifier,
     interactionSource: MutableInteractionSource?,
     onKeyboardAction: KeyboardActionHandler,
-    modifier: Modifier = Modifier,
+    glassModifier: Modifier = Modifier,
 ) {
     val shape = MaterialTheme.shapes.medium
     val source = interactionSource ?: remember { MutableInteractionSource() }
@@ -336,14 +336,14 @@ private fun TextFieldBody(
                 else -> colors.ink3
             }
         Box(
-            modifier
+            glassModifier
                 .glassSurface(shape)
                 .border(if (focused) FOCUSED_OUTLINE else OUTLINE, outline, shape)
                 .padding(bottom = if (content.error != null) ERROR_ROOM else 0.dp)
         ) {
             TextField(
                 state = content.state,
-                modifier = fieldModifier,
+                modifier = modifier,
                 label = { Text(content.label) },
                 // The error is announced when it appears: focus stays on the button that asked for
                 // it. It goes with the first edit, so the field is not announced as the text

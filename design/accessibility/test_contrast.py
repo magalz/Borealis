@@ -9,12 +9,14 @@ import hashlib
 import io
 import json
 import re
+import struct
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 
 import contrast
 
@@ -1591,6 +1593,451 @@ class HaloIconMeasureTest(unittest.TestCase):
         self.assertEqual(result["meta"]["icons"]["size_dp"], 24)
         self.assertEqual(result["meta"]["icons"]["stroke_units"], 2.0)
         json.dumps(result)
+
+
+FONTS = Path(__file__).resolve().parents[1] / "fonts" / "ibm-plex" / "res" / "font"
+PLEX_REGULAR = FONTS / "ibm_plex_sans_regular.ttf"
+PLEX_SEMIBOLD = FONTS / "ibm_plex_sans_semibold.ttf"
+PLEX_MONO_REGULAR = FONTS / "ibm_plex_mono_regular.ttf"
+PLEX_MONO_SEMIBOLD = FONTS / "ibm_plex_mono_semibold.ttf"
+
+
+def sfnt(tables):
+    """The bytes of a font file with these tables (a tag to its bytes) and nothing else.
+
+    FreeType cannot load it. It is what the readers of the `head`, `OS/2` and `fvar` tables need.
+    """
+    count = len(tables)
+    out = bytearray(struct.pack(">IHHHH", 0x00010000, count, 0, 0, 0))
+    offset = 12 + 16 * count
+    body = bytearray()
+    for tag, data in tables.items():
+        out += struct.pack(">4sIII", tag.encode("ascii"), 0, offset + len(body), len(data))
+        body += data + bytes(-len(data) % 4)
+    return bytes(out + body)
+
+
+def head_table(units_per_em):
+    table = bytearray(54)
+    struct.pack_into(">H", table, 18, units_per_em)
+    return bytes(table)
+
+
+def os2_table(version, x_height):
+    table = bytearray(96)
+    struct.pack_into(">H", table, 0, version)
+    struct.pack_into(">h", table, 86, x_height)
+    return bytes(table)
+
+
+def fvar_table(axes):
+    """An `fvar` table of axes, each a (tag, minimum, default, maximum)."""
+    out = bytearray(struct.pack(">HHHHHHHH", 1, 0, 16, 2, len(axes), 20, 0, 0))
+    for tag, low, default, high in axes:
+        values = (round(value * 65536) for value in (low, default, high))
+        out += struct.pack(">4siiiHH", tag.encode("ascii"), *values, 0, 256)
+    return bytes(out)
+
+
+def patched_plex(folder, name, os2_version=None, x_height=None):
+    """A copy of Plex Sans Regular with its `OS/2` version or its `sxHeight` changed."""
+    data = bytearray(PLEX_REGULAR.read_bytes())
+    for index in range(struct.unpack_from(">H", data, 4)[0]):
+        tag, _, offset, _ = struct.unpack_from(">4sIII", data, 12 + 16 * index)
+        if tag == b"OS/2":
+            if os2_version is not None:
+                struct.pack_into(">H", data, offset, os2_version)
+            if x_height is not None:
+                struct.pack_into(">h", data, offset + 86, x_height)
+    path = Path(folder) / name
+    path.write_bytes(bytes(data))
+    return path
+
+
+class FontReadingTest(unittest.TestCase):
+    """What the tool reads of a font file: its x-height, and the axes of a variable font."""
+
+    def test_the_x_height_of_plex_sans_is_its_os2_value_over_the_units_per_em(self):
+        face = contrast.font_face(PLEX_REGULAR, 400)
+        self.assertAlmostEqual(contrast.x_height_ratio(face), 0.516, places=6)
+
+    def test_the_x_height_comes_from_the_os2_table_of_the_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "made.ttf"
+            path.write_bytes(sfnt({"head": head_table(2048), "OS/2": os2_table(4, 1024)}))
+            self.assertAlmostEqual(contrast.x_height_ratio(contrast.font_face(path, 400)), 0.5)
+
+    def test_a_table_without_an_x_height_gives_the_measured_height_of_an_x(self):
+        # Version 1 of the OS/2 table has no sxHeight. Plex Sans has a flat x, 516 units high.
+        with tempfile.TemporaryDirectory() as folder:
+            path = patched_plex(folder, "old.ttf", os2_version=1, x_height=0)
+            ratio = contrast.x_height_ratio(contrast.font_face(path, 400))
+        self.assertAlmostEqual(ratio, 0.516, delta=0.005)
+
+    def test_a_table_that_says_zero_gives_the_measured_height_too(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = patched_plex(folder, "zero.ttf", x_height=0)
+            ratio = contrast.x_height_ratio(contrast.font_face(path, 400))
+        self.assertAlmostEqual(ratio, 0.516, delta=0.005)
+
+    def test_a_static_font_has_no_axes_and_is_used_at_the_weight_of_its_file(self):
+        self.assertEqual(contrast.font_axes(PLEX_REGULAR), [])
+        self.assertEqual(contrast.font_face(PLEX_SEMIBOLD, 600), (str(PLEX_SEMIBOLD), None))
+
+    def test_the_axes_of_a_variable_font_are_read_from_its_fvar_table(self):
+        axes = [("wght", 100.0, 400.0, 900.0), ("wdth", 75.0, 100.0, 125.0)]
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "variable.ttf"
+            path.write_bytes(sfnt({"fvar": fvar_table(axes)}))
+            self.assertEqual(contrast.font_axes(path), axes)
+
+    def test_a_variable_font_is_set_to_the_weight_asked_and_the_default_of_every_other_axis(self):
+        axes = [("wdth", 75.0, 100.0, 125.0), ("wght", 100.0, 400.0, 900.0)]
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "variable.ttf"
+            path.write_bytes(sfnt({"fvar": fvar_table(axes)}))
+            self.assertEqual(contrast.font_face(path, 600), (str(path), (100.0, 600.0)))
+            self.assertEqual(contrast.font_face(path, 400).axes, (100.0, 400.0))
+
+    def test_a_weight_the_font_does_not_have_is_reported_with_the_range_it_has(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "variable.ttf"
+            path.write_bytes(sfnt({"fvar": fvar_table([("wght", 300.0, 400.0, 500.0)])}))
+            with self.assertRaisesRegex(ValueError, "300.*500"):
+                contrast.font_face(path, 600)
+
+    def test_a_variable_font_without_a_weight_axis_is_reported(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "variable.ttf"
+            path.write_bytes(sfnt({"fvar": fvar_table([("wdth", 75.0, 100.0, 125.0)])}))
+            with self.assertRaisesRegex(ValueError, "weight"):
+                contrast.font_face(path, 400)
+
+    def test_a_variable_font_that_this_freetype_cannot_set_is_reported(self):
+        # A FreeType older than 2.9.1 refuses to set an axis, and Pillow says so with this error.
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "variable.ttf"
+            path.write_bytes(sfnt({"fvar": fvar_table([("wght", 100.0, 400.0, 900.0)])}))
+            face = contrast.font_face(path, 600)
+            with unittest.mock.patch("PIL.ImageFont.truetype") as truetype:
+                truetype.return_value.set_variation_by_axes.side_effect = NotImplementedError(
+                    "FreeType 2.9.1 or greater is required"
+                )
+                with self.assertRaisesRegex(ValueError, "variable.*FreeType"):
+                    contrast.load_face(face, 16)
+
+    @unittest.skipUnless(
+        Path("C:/Windows/Fonts/bahnschrift.ttf").is_file(), "a variable font is not installed"
+    )
+    def test_a_real_variable_font_is_drawn_heavier_at_a_higher_weight(self):
+        path = Path("C:/Windows/Fonts/bahnschrift.ttf")
+        light = contrast.font_face(path, 400)
+        heavy = contrast.font_face(path, 600)
+        self.assertIsNotNone(heavy.axes)
+
+        def coverage(face):
+            font = contrast.load_face(face, 40)
+            image = Image.new("L", (400, 120), 0)
+            ImageDraw.Draw(image).text((10, 10), "Living room", font=font, fill=255)
+            return float(np.asarray(image, np.float32).sum() / 255)
+
+        self.assertGreater(coverage(heavy), coverage(light) * 1.05)
+
+
+class XHeightScaleTest(unittest.TestCase):
+    """The scale that sets the x-height of a font to that of IBM Plex Sans at the same size."""
+
+    def test_ibm_plex_sans_is_the_scale_of_one(self):
+        self.assertEqual(contrast.x_height_scale(contrast.font_face(PLEX_REGULAR, 400)), 1.0)
+        self.assertEqual(contrast.PLEX_SANS.scale, 1.0)
+
+    def test_a_font_with_a_taller_x_has_a_scale_below_one_and_a_shorter_one_above(self):
+        with tempfile.TemporaryDirectory() as folder:
+            tall = patched_plex(folder, "tall.ttf", x_height=600)
+            short = patched_plex(folder, "short.ttf", x_height=430)
+            tall_scale = contrast.x_height_scale(contrast.font_face(tall, 400))
+            short_scale = contrast.x_height_scale(contrast.font_face(short, 400))
+        self.assertAlmostEqual(tall_scale, 0.516 / 0.600, places=9)
+        self.assertAlmostEqual(short_scale, 0.516 / 0.430, places=9)
+
+    def test_the_scale_is_measured_from_the_height_of_an_x_when_the_table_has_none(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = patched_plex(folder, "old.ttf", os2_version=1, x_height=0)
+            scale = contrast.x_height_scale(contrast.font_face(path, 400))
+        self.assertAlmostEqual(scale, 1.0, delta=0.01)
+
+    def test_a_scaled_font_has_the_x_height_of_plex_at_the_size_of_the_text(self):
+        # The font set of a font with an x of 600 units is drawn at 0.86 of the size, and its x is
+        # 600 * 0.86 = 516 units of that size, as tall as the x of Plex.
+        with tempfile.TemporaryDirectory() as folder:
+            tall = patched_plex(folder, "tall.ttf", x_height=600)
+            fonts = contrast.font_set(tall, tall)
+        face = fonts.regular
+        self.assertAlmostEqual(
+            contrast.x_height_ratio(face) * fonts.scale,
+            contrast.x_height_ratio(contrast.PLEX_SANS.regular),
+            places=9,
+        )
+
+    def test_the_scale_of_a_set_is_that_of_its_regular_face(self):
+        with tempfile.TemporaryDirectory() as folder:
+            tall = patched_plex(folder, "tall.ttf", x_height=600)
+            fonts = contrast.font_set(tall, PLEX_SEMIBOLD)
+        self.assertAlmostEqual(fonts.scale, 0.516 / 0.600, places=9)
+
+
+class FontSetTest(unittest.TestCase):
+    """A font set: the regular and the semibold face of a font, its name and its scale."""
+
+    def test_the_default_is_ibm_plex_sans(self):
+        plex = contrast.PLEX_SANS
+        self.assertEqual(plex.name, "IBM Plex Sans")
+        self.assertEqual(Path(plex.regular.path), PLEX_REGULAR)
+        self.assertEqual(Path(plex.semibold.path), PLEX_SEMIBOLD)
+        self.assertIsNone(plex.regular.axes)
+        self.assertIsNone(plex.semibold.axes)
+
+    def test_a_set_is_named_after_its_regular_file_unless_it_is_given_a_name(self):
+        self.assertEqual(
+            contrast.font_set(PLEX_MONO_REGULAR, PLEX_MONO_SEMIBOLD).name, "ibm_plex_mono_regular"
+        )
+        named = contrast.font_set(PLEX_REGULAR, PLEX_SEMIBOLD, "Plex")
+        self.assertEqual(named.name, "Plex")
+
+    def test_a_set_that_is_not_there_is_reported(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with self.assertRaises(OSError):
+                contrast.font_set(Path(folder) / "none.ttf", PLEX_SEMIBOLD)
+
+    def test_a_manifest_names_the_set_and_its_files_next_to_it(self):
+        with tempfile.TemporaryDirectory() as folder:
+            (Path(folder) / "regular.ttf").write_bytes(PLEX_MONO_REGULAR.read_bytes())
+            (Path(folder) / "semibold.ttf").write_bytes(PLEX_MONO_SEMIBOLD.read_bytes())
+            manifest = Path(folder) / "font.json"
+            manifest.write_text(
+                json.dumps({"name": "Mono", "regular": "regular.ttf", "semibold": "semibold.ttf"}),
+                encoding="utf-8",
+            )
+            fonts = contrast.read_font_manifest(manifest)
+            self.assertEqual(fonts.name, "Mono")
+            self.assertEqual(Path(fonts.regular.path), Path(folder) / "regular.ttf")
+            self.assertEqual(Path(fonts.semibold.path), Path(folder) / "semibold.ttf")
+            self.assertEqual(fonts.scale, contrast.x_height_scale(fonts.regular))
+
+    def test_a_manifest_may_name_files_by_absolute_path(self):
+        with tempfile.TemporaryDirectory() as folder:
+            manifest = Path(folder) / "font.json"
+            manifest.write_text(
+                json.dumps({"regular": str(PLEX_REGULAR), "semibold": str(PLEX_SEMIBOLD)}),
+                encoding="utf-8",
+            )
+            fonts = contrast.read_font_manifest(manifest)
+        self.assertEqual(Path(fonts.regular.path), PLEX_REGULAR)
+        self.assertEqual(fonts.name, "ibm_plex_sans_regular")
+
+    def test_a_manifest_without_both_faces_is_reported(self):
+        with tempfile.TemporaryDirectory() as folder:
+            manifest = Path(folder) / "font.json"
+            manifest.write_text(json.dumps({"regular": str(PLEX_REGULAR)}), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "semibold"):
+                contrast.read_font_manifest(manifest)
+
+
+class HaloFontsTest(unittest.TestCase):
+    """The halo of text set in a font set: the faces, and the scale of the x-height."""
+
+    def test_the_default_reproduces_the_masks_and_the_rings_of_ibm_plex(self):
+        # Characterization: these are the figures that the tool gave before it took a font set, and
+        # `docs/ux/accessibility.md` has the tables that come from them.
+        pinned = {
+            ("title", "tv"): ((80, 522), 6130.316, (51, 504), 4409),
+            ("title", "phone"): ((87, 586), 7749.765, (56, 567), 5015),
+            ("label", "tv"): ((48, 343), 1914.605, (26, 327), 2395),
+            ("label", "phone"): ((60, 464), 3622.095, (33, 447), 3399),
+            ("body", "tv"): ((56, 322), 1607.156, (33, 306), 2638),
+            ("body", "phone"): ((72, 445), 3127.875, (45, 427), 3901),
+            ("small", "tv"): ((54, 312), 1494.114, (32, 295), 2542),
+            ("small", "phone"): ((66, 399), 2502.756, (41, 381), 3424),
+        }
+        for (text, device), (shape, coverage, size, ring) in pinned.items():
+            with self.subTest(text=text, device=device):
+                mask = contrast.glyph_mask(text, device, pad=8)
+                geometry = contrast.halo_geometry(text, device)
+                self.assertEqual(mask.shape, shape)
+                self.assertAlmostEqual(float(mask.sum()), coverage, delta=coverage * 1e-3)
+                self.assertEqual(geometry.size, size)
+                self.assertEqual(int(geometry.ring.sum()), ring)
+
+    def test_asking_for_plex_is_asking_for_nothing(self):
+        for text in contrast.HALO_TEXTS:
+            with self.subTest(text=text):
+                np.testing.assert_array_equal(
+                    contrast.glyph_mask(text, "tv", pad=8),
+                    contrast.glyph_mask(text, "tv", pad=8, fonts=contrast.PLEX_SANS),
+                )
+
+    def test_a_set_sets_the_text_in_its_own_faces(self):
+        mono = contrast.font_set(PLEX_MONO_REGULAR, PLEX_MONO_SEMIBOLD)
+        sans = contrast.glyph_mask("body", "tv", pad=8)
+        other = contrast.glyph_mask("body", "tv", pad=8, fonts=mono)
+        self.assertNotEqual(sans.shape, other.shape)
+        self.assertNotEqual(
+            contrast.halo_geometry("body", "tv").size, contrast.halo_geometry("body", "tv", fonts=mono).size
+        )
+
+    def test_the_semibold_face_sets_the_title_and_the_label_and_the_regular_the_rest(self):
+        regular_only = contrast.font_set(PLEX_REGULAR, PLEX_REGULAR)
+        for text in ("body", "small"):
+            with self.subTest(text=text):
+                np.testing.assert_array_equal(
+                    contrast.glyph_mask(text, "tv", pad=8, fonts=regular_only),
+                    contrast.glyph_mask(text, "tv", pad=8),
+                )
+        for text in ("title", "label"):
+            with self.subTest(text=text):
+                lighter = contrast.glyph_mask(text, "tv", pad=8, fonts=regular_only)
+                self.assertLess(float(lighter.sum()), float(contrast.glyph_mask(text, "tv", pad=8).sum()) * 0.97)
+
+    def test_the_scale_sets_the_size_of_the_text_and_the_spacing_of_the_label(self):
+        scaled = contrast.PLEX_SANS._replace(scale=1.25)
+        for text in contrast.HALO_TEXTS:
+            with self.subTest(text=text):
+                plain = contrast.halo_geometry(text, "tv").size
+                bigger = contrast.halo_geometry(text, "tv", fonts=scaled).size
+                self.assertAlmostEqual(bigger[0] / plain[0], 1.25, delta=0.1)
+                self.assertAlmostEqual(bigger[1] / plain[1], 1.25, delta=0.05)
+
+    def test_a_frame_is_measured_with_the_font_set_it_is_given(self):
+        colors = tokens()
+        white = uniform(1920, 1080, (1.0, 1.0, 1.0))
+        scaled = contrast.PLEX_SANS._replace(scale=1.25)
+        plain = contrast.measure_halo_frame(white, "tv", colors, texts=("body",))
+        wider = contrast.measure_halo_frame(white, "tv", colors, texts=("body",), fonts=scaled)
+        # The ring is another set of pixels, so a halo that is thin at it gives another ratio.
+        config = (1, 2, 0.6)
+        self.assertNotEqual(plain["body"][config]["ink"]["p5"], wider["body"][config]["ink"]["p5"])
+        # No halo is the ratio of the frame itself, whatever the text is set in.
+        none = contrast.HALO_NONE
+        self.assertAlmostEqual(
+            plain["body"][none]["ink"]["min"], wider["body"][none]["ink"]["min"], places=6
+        )
+
+
+class HaloFontsCommandTest(unittest.TestCase):
+    """`halo --font ... --font-semibold ...` and `halo --fonts <manifest>`."""
+
+    def frames(self, folder):
+        frames = Path(folder) / "frames"
+        (frames / "Starfield-tv").mkdir(parents=True)
+        ramp = np.linspace(0, 255, 1920).astype(np.uint8)
+        pixels = np.zeros((1080, 1920, 3), np.uint8)
+        pixels[..., 0] = ramp
+        pixels[..., 1] = ramp // 2
+        pixels[..., 2] = 255 - ramp
+        Image.fromarray(pixels).save(frames / "Starfield-tv" / "00.png")
+        return frames
+
+    def run_command(self, folder, *extra, texts=("body", "title")):
+        target = Path(folder) / "halo.json"
+        args = ["halo", str(self.frames(folder)), "--json", str(target), "--texts", *texts, *extra]
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(contrast.main(args), 0)
+        return json.loads(target.read_text(encoding="utf-8"))
+
+    def refuses(self, message, *extra):
+        """Runs `halo` with these options, which it refuses with a message that has `message`."""
+        with tempfile.TemporaryDirectory() as folder:
+            args = ["halo", folder, "--json", str(Path(folder) / "x.json"), *extra]
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as stop:
+                contrast.main(args)
+        self.assertEqual(stop.exception.code, 2)
+        self.assertIn(message, err.getvalue())
+
+    def test_with_no_option_the_rows_are_those_of_plex_given_by_name(self):
+        with tempfile.TemporaryDirectory() as folder:
+            default = self.run_command(folder)
+        with tempfile.TemporaryDirectory() as folder:
+            named = self.run_command(
+                folder, "--font", str(PLEX_REGULAR), "--font-semibold", str(PLEX_SEMIBOLD)
+            )
+        self.assertEqual(default["halo"], named["halo"])
+        self.assertEqual(default["meta"]["fonts"]["name"], "IBM Plex Sans")
+        self.assertEqual(default["meta"]["fonts"]["scale"], 1.0)
+
+    def test_the_font_files_set_the_rows_and_the_meta_says_which_they_are(self):
+        with tempfile.TemporaryDirectory() as folder:
+            default = self.run_command(folder)
+        with tempfile.TemporaryDirectory() as folder:
+            other = self.run_command(
+                folder, "--font", str(PLEX_MONO_REGULAR), "--font-semibold", str(PLEX_MONO_SEMIBOLD)
+            )
+        self.assertNotEqual(default["halo"], other["halo"])
+        fonts = other["meta"]["fonts"]
+        self.assertEqual(fonts["name"], "ibm_plex_mono_regular")
+        self.assertEqual(fonts["regular"], {"file": "ibm_plex_mono_regular.ttf", "wght": None})
+        self.assertEqual(fonts["semibold"], {"file": "ibm_plex_mono_semibold.ttf", "wght": None})
+        self.assertEqual(fonts["scale"], 1.0)
+        self.assertEqual(other["meta"]["texts"]["title"]["font"], "ibm_plex_mono_semibold")
+        self.assertEqual(other["meta"]["texts"]["body"]["font"], "ibm_plex_mono_regular")
+
+    def test_the_scale_of_the_font_is_in_the_meta_and_changes_the_rows(self):
+        with tempfile.TemporaryDirectory() as folder:
+            tall = patched_plex(folder, "tall.ttf", x_height=600)
+            result = self.run_command(
+                folder, "--font", str(tall), "--font-semibold", str(PLEX_SEMIBOLD)
+            )
+            default = self.run_command(folder)
+        self.assertAlmostEqual(result["meta"]["fonts"]["scale"], 0.516 / 0.6, places=9)
+        self.assertNotEqual(result["halo"], default["halo"])
+
+    def test_a_manifest_gives_the_same_set_as_the_two_options(self):
+        with tempfile.TemporaryDirectory() as folder:
+            manifest = Path(folder) / "font.json"
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "name": "Plex Mono",
+                        "regular": str(PLEX_MONO_REGULAR),
+                        "semibold": str(PLEX_MONO_SEMIBOLD),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            by_manifest = self.run_command(folder, "--fonts", str(manifest))
+        with tempfile.TemporaryDirectory() as folder:
+            by_options = self.run_command(
+                folder, "--font", str(PLEX_MONO_REGULAR), "--font-semibold", str(PLEX_MONO_SEMIBOLD)
+            )
+        self.assertEqual(by_manifest["halo"], by_options["halo"])
+        self.assertEqual(by_manifest["meta"]["fonts"]["name"], "Plex Mono")
+
+    def test_one_face_alone_is_not_a_font_set(self):
+        self.refuses("--font and --font-semibold go together", "--font", str(PLEX_REGULAR))
+        self.refuses("--font and --font-semibold go together", "--font-semibold", str(PLEX_SEMIBOLD))
+
+    def test_a_manifest_and_the_options_are_not_asked_together(self):
+        self.refuses(
+            "--fonts and --font are not asked together",
+            *("--fonts", "font.json", "--font", str(PLEX_REGULAR)),
+            *("--font-semibold", str(PLEX_SEMIBOLD)),
+        )
+
+    def test_a_font_file_that_is_not_there_is_reported(self):
+        self.refuses(
+            "No such file or directory: 'none.ttf'",
+            *("--font", "none.ttf", "--font-semibold", str(PLEX_SEMIBOLD)),
+        )
+
+    def test_a_manifest_that_is_not_there_is_reported(self):
+        self.refuses("No such file or directory: 'none.json'", "--fonts", "none.json")
+
+    def test_the_icons_have_no_font(self):
+        self.refuses(
+            "--icons and a font are not asked together",
+            *("--icons", "--halo", "3", "2", "80"),
+            *("--font", str(PLEX_REGULAR), "--font-semibold", str(PLEX_SEMIBOLD)),
+        )
 
 
 class HaloIconTablesTest(unittest.TestCase):

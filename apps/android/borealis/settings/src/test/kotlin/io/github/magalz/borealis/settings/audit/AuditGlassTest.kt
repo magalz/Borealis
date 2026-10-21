@@ -8,6 +8,7 @@ import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.settings.testing.FlowingLightGlassCases
 import io.github.magalz.borealis.settings.testing.InGlassHost
+import io.github.magalz.borealis.settings.testing.Probe
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
@@ -34,8 +35,9 @@ private fun FlowingLightGlassCases.showAudit(
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = PHONE)
 class AuditListGlassTest : FlowingLightGlassCases() {
-    // In the padding of the panel, 4dp from its edge, beside the first entry.
-    override val probes = listOf("Desk PC · Desktop" to 12f)
+    // In the padding of the panel, which is at 8dp, 2dp in from its edge, beside the first entry;
+    // the background is read 2dp outside the panel.
+    override val probes = listOf(Probe("Desk PC · Desktop", 10f, outside = 6f))
 
     override fun showScreen(look: BorealisLook, style: BackgroundStyle) =
         showAudit(
@@ -56,8 +58,10 @@ class AuditListGlassTest : FlowingLightGlassCases() {
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = PHONE)
 class AuditDetailGlassTest : FlowingLightGlassCases() {
-    // In the padding of the card, which is at the gutter, beside the host.
-    override val probes = listOf("Studio (192.168.1.40)" to 22f)
+    // In the padding of the card, which is at the 16dp gutter, 2dp in from its edge, beside the
+    // time; the background is read 2dp outside the card. The rows below it are over a steeper edge
+    // of the still, where the blur and the 4dp between the two points make a larger difference.
+    override val probes = listOf(Probe("12 Oct 2026 18:02:09", 18f, outside = 14f))
 
     override fun showScreen(look: BorealisLook, style: BackgroundStyle) =
         showAudit(

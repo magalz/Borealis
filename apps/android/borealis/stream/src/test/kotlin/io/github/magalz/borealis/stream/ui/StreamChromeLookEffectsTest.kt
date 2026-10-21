@@ -5,11 +5,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
@@ -107,7 +110,10 @@ class StreamChromeLookEffectsTest {
 
         assertChipOutline("Esc", Edge.Left)
         // The row of chips scrolls sideways on a phone: the last chip is at its right end.
-        composeRule.onNodeWithTag("chip:F11").performScrollTo()
+        composeRule
+            .onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.HorizontalScrollAxisRange))
+            .performTouchInput { repeat(SWIPES) { swipeLeft() } }
+        composeRule.waitForIdle()
         assertChipOutline("F11", Edge.Right)
     }
 
@@ -161,5 +167,6 @@ class StreamChromeLookEffectsTest {
 
     private companion object {
         const val OUTLINE_MIDDLE_DP = 6.5f
+        const val SWIPES = 3
     }
 }

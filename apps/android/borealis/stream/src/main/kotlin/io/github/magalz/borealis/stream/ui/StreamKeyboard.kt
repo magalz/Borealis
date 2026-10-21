@@ -40,6 +40,7 @@ import io.github.magalz.borealis.designsystem.components.KeyboardKey
 import io.github.magalz.borealis.designsystem.focus.InitialFocusState
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.StreamIntents
@@ -63,8 +64,9 @@ private val PANEL_PADDING_BOTTOM = 10.dp
 private val KEY_GAP = 5.dp
 private val CHIP_GAP = 6.dp
 
-// Room for the focus outline of a chip inside a row that scrolls, which clips what it draws.
-private val CHIP_ROW_PADDING = 6.dp
+// Room for the focus outline of a chip inside a row that scrolls, which clips what it draws: the
+// outline reaches 7dp when it is the thicker one, and the padding of a list is 8dp.
+private val CHIP_ROW_PADDING = BorealisDimens.listPadding
 
 private const val VK_BACKSPACE = 0x08
 

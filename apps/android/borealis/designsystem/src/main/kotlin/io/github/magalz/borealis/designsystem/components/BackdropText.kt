@@ -48,7 +48,7 @@ enum class BackdropInk {
 /** Set on the node of a [BackdropText]: true where the halo is drawn behind its text. */
 val BackdropTextHalo = SemanticsPropertyKey<Boolean>("BackdropTextHalo")
 
-var SemanticsPropertyReceiver.backdropTextHalo by BackdropTextHalo
+private var SemanticsPropertyReceiver.backdropTextHalo by BackdropTextHalo
 
 /**
  * The halo behind a text on the animated background: the glyphs widened by [STROKE_DP], blurred by
@@ -68,13 +68,15 @@ internal object BackdropHalo {
     private const val PERCENT = 100f
     private const val BOTH_SIDES = 2
 
+    /** The colour of the halo over the page colour [page]: [page] at [OPACITY_PERCENT]. */
+    fun color(page: Color): Color = page.copy(alpha = OPACITY_PERCENT / PERCENT)
+
     /** Draws the halo of the text that [layout] laid out, in [page], behind it. */
     fun DrawScope.drawHalo(layout: TextLayoutResult, page: Color) {
         // The shadow of a stroked copy of the text, which has no colour of its own, is the halo: a
         // stroke of twice the width widens each glyph by the width, and the shadow blurs it. The
         // shadow layer of a paint is drawn on every API level, where a blur effect is not (API 31).
-        val shadow =
-            Shadow(page.copy(alpha = OPACITY_PERCENT / PERCENT), Offset.Zero, BLUR_DP.dp.toPx())
+        val shadow = Shadow(color(page), Offset.Zero, BLUR_DP.dp.toPx())
         val stroke =
             Stroke(BOTH_SIDES * STROKE_DP.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
         // The paragraph is painted and not drawn with drawText: drawText clips to the size of the

@@ -24,9 +24,12 @@ private val LocalAppliedTextSize = compositionLocalOf { 1f }
  * [look] that the viewer chose. A theme given no look keeps the one of the theme around it, so the
  * screens that wear their own theme inside the shell do not undo what the shell provides.
  *
- * The look reaches the content in three ways. High contrast and the colour-blind palette make the
+ * The theme applies the look in two ways. High contrast and the colour-blind palette make the
  * colours ([borealisColors]), for the Borealis components and for Material. The text size
- * multiplies the font scale of the system, so every `sp` follows it, and `dp` stay as they are.
+ * multiplies the font scale of the system, so every `sp` follows it, and `dp` stay as they are. The
+ * rest of the look (the transparency, Reduce motion and the thicker focus) is read from
+ * [LocalBorealisLook] by the pieces that use it; for Reduce motion the theme also watches the
+ * system animation scale once, for all of them ([rememberAnimationsRemoved]).
  */
 @Composable
 fun BorealisTheme(
@@ -38,6 +41,9 @@ fun BorealisTheme(
     val colorScheme = remember(colors) { borealisColorScheme(colors) }
     val shapes = remember { borealisShapes() }
     val typography = remember(formFactor) { borealisTypography(formFactor) }
+    // One observer of the animator scale for all that is under the theme, and none in a theme that
+    // is inside another one.
+    val systemAnimationsRemoved = rememberSystemAnimationsRemoved()
     val system = LocalDensity.current
     val applied = LocalAppliedTextSize.current
     val density =
@@ -51,6 +57,7 @@ fun BorealisTheme(
         LocalBorealisColors provides colors,
         LocalDensity provides density,
         LocalAppliedTextSize provides look.textSize.scale,
+        LocalSystemAnimationsRemoved provides systemAnimationsRemoved,
         // Material leaves the content colour black; text and icons outside a Surface need ink.
         LocalContentColor provides colors.ink,
         LocalBorealisType provides remember(formFactor) { borealisType(formFactor) },

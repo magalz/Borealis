@@ -50,7 +50,7 @@ data class BorealisColors(
     val offline: Color = tokens.Offline,
 ) {
     /** These colours with the roles [ink3] and [ink4] replaced; the rest stays as it is. */
-    fun withSecondaryInk(ink3: Color, ink4: Color) = copy(ink3 = ink3, ink4 = ink4)
+    internal fun withSecondaryInk(ink3: Color, ink4: Color) = copy(ink3 = ink3, ink4 = ink4)
 
     /**
      * These colours as high contrast has them: the text at 7:1 or more on the page and the
@@ -80,7 +80,7 @@ data class BorealisColors(
             ColourVision.Off -> this
             ColourVision.RedGreen ->
                 with(BorealisTokens.ColourVision.RedGreen) {
-                    copy(
+                    withStatus(
                         success = Success,
                         successInk = SuccessInk,
                         warning = Warning,
@@ -92,7 +92,7 @@ data class BorealisColors(
                 }
             ColourVision.BlueYellow ->
                 with(BorealisTokens.ColourVision.BlueYellow) {
-                    copy(
+                    withStatus(
                         success = Success,
                         successInk = SuccessInk,
                         warning = Warning,
@@ -103,6 +103,27 @@ data class BorealisColors(
                     )
                 }
         }
+
+    /** These colours with the status roles replaced; the rest stays as it is. */
+    @Suppress("LongParameterList") // one parameter for each status role
+    private fun withStatus(
+        success: Color,
+        successInk: Color,
+        warning: Color,
+        warningInk: Color,
+        danger: Color,
+        dangerInk: Color,
+        offline: Color,
+    ) =
+        copy(
+            success = success,
+            successInk = successInk,
+            warning = warning,
+            warningInk = warningInk,
+            danger = danger,
+            dangerInk = dangerInk,
+            offline = offline,
+        )
 }
 
 /** The colours that a [look] gives: the high contrast ones when it is on, then its palette. */
@@ -122,7 +143,7 @@ val LocalBorealisColors = staticCompositionLocalOf { BorealisColors() }
  * accent-soft text. [ColorScheme.inversePrimary] is the one place accent-strong is text: it sits on
  * the light inverse surface (ink), where it has 4.7:1 and accent-soft would have 1.5:1.
  */
-fun borealisColorScheme(colors: BorealisColors = BorealisColors()): ColorScheme {
+fun borealisColorScheme(colors: BorealisColors): ColorScheme {
     return darkColorScheme(
         primary = colors.accent,
         onPrimary = colors.onAccent,

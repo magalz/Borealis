@@ -24,8 +24,9 @@ private val MAX_WIDTH = 600.dp
 
 /** The space that Material's snackbar keeps around itself, so it sits where it did. */
 private val MARGIN = 12.dp
-private val TEXT_START = 16.dp
-private val TEXT_END = 16.dp
+
+/** The room at the start of the text, and at its end when there is no action. */
+private val TEXT_HORIZONTAL = 16.dp
 private val TEXT_VERTICAL = 14.dp
 private val ACTION_GAP = 8.dp
 private val ELEVATION = 6.dp
@@ -57,8 +58,8 @@ private fun BorealisSnackbar(data: SnackbarData) {
         ) {
             Row(
                 Modifier.padding(
-                    start = TEXT_START,
-                    end = if (actionLabel == null) TEXT_END else 0.dp,
+                    start = TEXT_HORIZONTAL,
+                    end = if (actionLabel == null) TEXT_HORIZONTAL else 0.dp,
                 ),
                 horizontalArrangement = Arrangement.spacedBy(ACTION_GAP),
                 verticalAlignment = Alignment.CenterVertically,

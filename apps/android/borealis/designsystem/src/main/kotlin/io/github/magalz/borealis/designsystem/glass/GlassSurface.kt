@@ -22,8 +22,6 @@ import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.invalidateDraw
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 
-private const val PERCENT = 100f
-
 /**
  * The background of a glass surface of [shape]. Over a [GlassHost] with glass, it shows the
  * background behind it, blurred, under a tint of the `surface` colour; where the glass is solid, or
@@ -40,10 +38,8 @@ fun Modifier.glassSurface(shape: Shape): Modifier {
     val backdrop = scene.backdrop
     return when {
         spec.solid -> background(surface, shape)
-        backdrop == null -> background(surface.copy(alpha = spec.tintPercent / PERCENT), shape)
-        else ->
-            clip(shape)
-                .then(GlassBackdropElement(scene, surface.copy(alpha = spec.tintPercent / PERCENT)))
+        backdrop == null -> background(surface.copy(alpha = spec.tint), shape)
+        else -> clip(shape).then(GlassBackdropElement(scene, surface.copy(alpha = spec.tint)))
     }
 }
 
@@ -74,8 +70,8 @@ private data class GlassBackdropElement(val scene: GlassScene, val tint: Color) 
 
 /**
  * A glass surface over a blurred backdrop. It draws the region of the host's blurred copy that is
- * behind it, scaled back up, then its tint, then its content. Where it is on the host is its
- * position in the root less the host's, which it hears of when it moves.
+ * behind it, scaled back up, then its tint, then its content. The host fills the window, so where
+ * it is on the host is its position in the root, which it hears of when it moves.
  */
 private class GlassBackdropNode(var scene: GlassScene, var tint: Color) :
     Modifier.Node(), DrawModifierNode, GlobalPositionAwareModifierNode {
@@ -92,7 +88,7 @@ private class GlassBackdropNode(var scene: GlassScene, var tint: Color) :
     override fun ContentDrawScope.draw() {
         val backdrop = scene.backdrop
         if (backdrop != null) {
-            val at = if (position.isSpecified) position - scene.origin else Offset.Zero
+            val at = if (position.isSpecified) position else Offset.Zero
             translate(-at.x, -at.y) {
                 scale(BACKDROP_DOWNSCALE.toFloat(), Offset.Zero) { drawLayer(backdrop) }
             }

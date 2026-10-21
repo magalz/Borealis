@@ -59,8 +59,8 @@ Both `/serverinfo` and the RTSP DESCRIBE response test
 `config::pyrowave.enabled && pyrowave::available()`
 (`src/nvhttp.cpp:2573-2575`, `src/rtsp.cpp:1312-1314`).
 
-**Release.** 26.10.0-beta.1, a prerelease of 2026-10-20, is the first tagged
-release with PyroWave: experimental and opt-in, in the official Windows build,
+**Release.** The release notes of 26.10.0-beta.1, a prerelease of 2026-10-20,
+report that the official Windows build now includes experimental, opt-in PyroWave,
 needing Vulkan 1.3, with a target of 700 Mbps (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source).
 
 ## 3. Negotiation
@@ -542,8 +542,9 @@ From the host's own documentation:
   revisions (`docs/pyrowave.md:84-87`).
 - The feature stays opt-in until live acceptance on NVIDIA, AMD and Intel and a
   measurement of bitrate, frame loss, latency and colour fidelity are done
-  (`docs/pyrowave.md:124-129`, `docs/pyrowave.md:149-161`). 26.10.0-beta.1 is the
-  first tagged release that ships it, experimental and opt-in (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source).
+  (`docs/pyrowave.md:124-129`, `docs/pyrowave.md:149-161`). The release notes of
+  26.10.0-beta.1 report that the official Windows build now includes it,
+  experimental and opt-in (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source).
 
 ## 10. Client obligations for a Borealis PyroWave client
 

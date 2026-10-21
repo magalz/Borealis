@@ -378,8 +378,11 @@ The device round of 2026-10-21 ran on `8d5e8332`
    - 48 dp touch targets on phones and handhelds. A TV keeps its sizes.
 
    Three trade-offs of the 48 dp targets are pending the owner's review:
-   - on a handheld the Settings group list now scrolls (about 6 of the 11 groups
-     show at once), because its entries are 48 dp;
+   - on a handheld the Settings group list now scrolls, because its entries are
+     48 dp. At 800 × 480 dp (the `settingsscreen_handheld_stream.png` reference)
+     6 of the 11 groups show (Stream to Audio) and the other 5 need scrolling.
+     In a window 360 dp tall, such as a phone in landscape with a pad, about 4
+     show.
    - the docked phone keyboard is 24 dp taller, because its shortcut chips have
      48 dp cells;
    - the keys of the phone keyboard stay under 48 dp, which is an accepted
@@ -448,8 +451,8 @@ on the `RiskyLibrary` lint check (see
 - An install (Obtainium) and pairing guide.
 - The compatibility note. It cites LuminalShine 26.10.x once that is stable.
 - Show `LuminalShineVersion` from the HTTPS `/serverinfo` in Host details. The
-  26.10.0-beta.1 host sends it (#199), and the client still shows the protocol
-  version `7.1.431.-1`.
+  26.10.0-beta.1 host sends it (#199, release notes), and the client still shows
+  the protocol version `7.1.431.-1`.
 - [PRIVACY.md](../PRIVACY.md).
 - The release certificate fingerprint.
 - [CONTRIBUTING.md](../CONTRIBUTING.md) and the release docs.
@@ -534,7 +537,7 @@ Java to Kotlin, one area at a time.
     [Phase 3 extension points](ux/phase-2-proposal.md#phase-3-extension-points).
 - **Phase 4: PyroWave.** See the [host contract](host-contract/pyrowave.md).
   The official LuminalShine build ships experimental PyroWave, opt-in and
-  needing Vulkan 1.3, in 26.10.0-beta.1 (according to its release notes).
+  needing Vulkan 1.3, in 26.10.0-beta.1 (release notes).
 - **Phase 5: stores.** Google Play and Amazon Appstore. See the
   [release policy](policies/release.md) and
   [ADR 0045](adr/0045-store-publishing-automation.md), which is proposed.
@@ -616,7 +619,7 @@ yet.
 - **Re-verify the 26.10.0-beta.1 host changes in the source,** and capture a
   fixture folder for them. See the [host contract](host-contract/README.md).
 - **Quit takes about 17 s on 26.10.0-beta.1.** "Quitting `<app>`…" stays on
-  screen until `/cancel` answers, about 17 s, against about 7 s on 26.09.1. It
+  screen until `/cancel` answers, about 17 s, against 5 to 7 s on 26.09.1. It
   looks host-side. Measure it a second time, then report it upstream.
 - **A Quit from the user logs an error.** The user's own Quit logs
   `E Borealis.UPSTREAM: Connection terminated: -1`, and the system logs
@@ -632,18 +635,18 @@ yet.
 
 These are proposals and known issues in the LuminalShine host. The client works
 without them. The states are as of 2026-10-20. #199, #200 and #203 were merged
-on 2026-10-20, and 26.10.0-beta.1 (a prerelease of 2026-10-20) ships them,
-according to its release notes. #194 and #202 are fixed on the host. The open
+on 2026-10-20, and 26.10.0-beta.1 (a prerelease of 2026-10-20) ships them
+(release notes). #194 and #202 are fixed on the host (release notes). The open
 ones are #198, #201, #204 and #205.
 
 | Item | Kind | Summary |
 | --- | --- | --- |
-| [NortheBridge/luminalshine#194](https://github.com/NortheBridge/luminalshine/issues/194) | Issue | Stray bytes after a 404 response. Fixed on the host by #200, in 26.10.0-beta.1. See the [host contract](host-contract/README.md). |
+| [NortheBridge/luminalshine#194](https://github.com/NortheBridge/luminalshine/issues/194) | Issue | Stray bytes after a 404 response. Fixed on the host by #200, in 26.10.0-beta.1 (release notes). See the [host contract](host-contract/README.md). |
 | [NortheBridge/luminalshine#198](https://github.com/NortheBridge/luminalshine/issues/198) | Issue | Teardown hang after a disconnect. See the [host contract](host-contract/README.md). |
-| [NortheBridge/luminalshine#199](https://github.com/NortheBridge/luminalshine/pull/199) | PR | Reports the LuminalShine release in `/serverinfo`, so the client can show the host version. Shipped in 26.10.0-beta.1. The client shows it in Sprint 13. |
-| [NortheBridge/luminalshine#200](https://github.com/NortheBridge/luminalshine/pull/200) | PR | Sends a single response for unknown GameStream paths. Fix for #194. Shipped in 26.10.0-beta.1. |
+| [NortheBridge/luminalshine#199](https://github.com/NortheBridge/luminalshine/pull/199) | PR | Reports the LuminalShine release in `/serverinfo`, so the client can show the host version. Shipped in 26.10.0-beta.1 (release notes). The client shows it in Sprint 13. |
+| [NortheBridge/luminalshine#200](https://github.com/NortheBridge/luminalshine/pull/200) | PR | Sends a single response for unknown GameStream paths. Fix for #194. Shipped in 26.10.0-beta.1 (release notes). |
 | [NortheBridge/luminalshine#201](https://github.com/NortheBridge/luminalshine/issues/201) | Issue | A second client leaving a shared app ends the first client's session (per-client virtual display). See [UC-003](use-cases/0003-join-or-replace-a-running-app.md). |
-| [NortheBridge/luminalshine#202](https://github.com/NortheBridge/luminalshine/issues/202) | Issue | A long `/launch` blocks every other HTTPS GameStream request until it finishes. Fixed on the host by #203, in 26.10.0-beta.1. See the [host contract](host-contract/luminalshine.md). |
-| [NortheBridge/luminalshine#203](https://github.com/NortheBridge/luminalshine/pull/203) | PR | Fix for #202. Merged on 2026-10-20 and shipped in 26.10.0-beta.1. |
+| [NortheBridge/luminalshine#202](https://github.com/NortheBridge/luminalshine/issues/202) | Issue | A long `/launch` blocks every other HTTPS GameStream request until it finishes. Fixed on the host by #203, in 26.10.0-beta.1 (release notes). See the [host contract](host-contract/luminalshine.md). |
+| [NortheBridge/luminalshine#203](https://github.com/NortheBridge/luminalshine/pull/203) | PR | Fix for #202. Merged on 2026-10-20 and shipped in 26.10.0-beta.1 (release notes). |
 | [NortheBridge/luminalshine#204](https://github.com/NortheBridge/luminalshine/issues/204) | Issue | The host process crashes after the virtual display cleanup of an ended session. See the [host contract](host-contract/luminalshine.md). |
 | [NortheBridge/luminalshine#205](https://github.com/NortheBridge/luminalshine/issues/205) | Issue | A second client's resume fails the RTSP tag check while the first client's launch is still setting up. See the [host contract](host-contract/luminalshine.md). |

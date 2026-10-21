@@ -1138,14 +1138,14 @@ notice, the About fixes, the focus after Back from Apps and TalkBack support. Th
 Streamer shows 10 Settings groups, because it has no touchscreen and so no
 On-screen controls group. The S22 shows 11, as sections in portrait and as groups
 in landscape with a pad. For the rail, the S22 with a pad is the handheld.
-Record each item as `pass`, `fail`, `owner only` or `not applicable`, with a short
+Record each item as `pass`, `fail`, `owner check` or `not applicable`, with a short
 note for each `fail`. Where a step names one device, run it there only.
 
 Not runnable: API 28 to 30 (no device), where the halo and the glass with a tint
 and no blur have been drawn in tests only. A visual item (the look of the glass,
 the halo, the dot shapes, the thickness of an outline) needs a capture or the
 owner's eyes. A capture is taken only where it shows no address, host name, PIN
-or PC screen (section 5). If a capture is refused, mark the item `owner only`.
+or PC screen (section 5). If a capture is refused, mark the item `owner check`.
 
 A debug build that was just installed runs slower until the JIT has warmed up.
 Before the frame-time steps, open Settings and move through every group a few
@@ -1251,7 +1251,8 @@ Steps:
     - A snackbar is as wide as its text, centred, not full width.
     - Start Desktop, open the menu, choose Quit and confirm. Expected: "Quitting
       Desktop…" shows, the stream ends, and the Library shows "App quit." once. It
-      is shown once and not again.
+      is shown once and not again. "Quitting `<app>`…" can take about 17 s on
+      26.10.0-beta.1 (5 to 7 s on 26.09.1) until `/cancel` answers.
 11. The phone sections (S22, portrait).
     - Settings opens with all 11 sections collapsed. Open two, go into Privacy and
       diagnostics and press Back. Expected: the same scroll position, and the two
@@ -2416,7 +2417,7 @@ build is below.
   log reads `commit=8d5e83324000`, and About shows `0.0.0-dev (commit
   8d5e83324000)`. It was installed with `adb install -r` on the TV from 02:01:27
   to 02:01:33 and on the S22 from 02:01:33 to 02:01:50, both `Success`.
-- Host: LuminalShine 26.10.0-beta.1, as the owner said. The app does not show that
+- Host: LuminalShine 26.10.0-beta.1, as the round brief says; the app does not show that
   string: Host details shows `Host software: Sunshine-compatible, version
   7.1.431.-1`.
 - Hosts: 2 paired hosts, 1 online and 1 offline.
@@ -2527,7 +2528,7 @@ I ActivityTaskManager: Displayed com.esaba.downloader/.ui.main.MainActivity for 
 #### 4. Quit takes about 17 s and logs a connection error (TV)
 
 After the confirmation the stream stops at once, but "Quitting Desktop…" stays on
-screen until `/cancel` answers, about 17 s later (about 7 s on 26.09.1). The user's
+screen until `/cancel` answers, about 17 s later (5 to 7 s on 26.09.1). The user's
 own Quit is logged as an error, `Connection terminated: -1`, and the system reports
 a duplicate finish of the stream activity. The Library then shows "App quit."
 correctly. It was seen in both streams. It is not known whether the 17 s are host

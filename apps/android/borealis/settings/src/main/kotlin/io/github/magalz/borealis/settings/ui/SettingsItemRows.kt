@@ -73,7 +73,7 @@ internal fun SettingsItemRow(
 ) {
     val item = itemState.item
     val title = stringResource(item.titleRes)
-    val summary = item.summaryRes?.let { stringResource(it) }
+    val summary = item.summaryText()
     val enabled = itemState.disabled == null
     val note = disabledNote(itemState.disabled)
     when (item.kind) {

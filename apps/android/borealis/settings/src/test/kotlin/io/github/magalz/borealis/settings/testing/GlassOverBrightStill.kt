@@ -5,14 +5,12 @@ import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.collect.Range
@@ -67,17 +65,6 @@ fun ComposeTestRule.colorBeside(text: String, xDp: Float): Color {
     return onRoot()
         .captureToImage()
         .toPixelMap()[(xDp * PIXELS_PER_DP).toInt(), (middle * PIXELS_PER_DP).toInt()]
-}
-
-/** The colour of the text that [text] is in the unmerged tree of the screen. */
-fun ComposeTestRule.textColorOf(text: String): Color {
-    val results = mutableListOf<TextLayoutResult>()
-    onNodeWithText(text, useUnmergedTree = true)
-        .fetchSemanticsNode()
-        .config[SemanticsActions.GetTextLayoutResult]
-        .action
-        ?.invoke(results)
-    return results.single().layoutInput.style.color
 }
 
 /**

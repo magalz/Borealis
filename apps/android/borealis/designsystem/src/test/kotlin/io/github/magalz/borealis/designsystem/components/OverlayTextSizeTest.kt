@@ -2,12 +2,11 @@ package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -80,12 +79,8 @@ class OverlayTextSizeTest {
     }
 
     /** The font scale that the text with [text] was laid out with. */
-    private fun fontScaleOf(text: String): Float {
-        val node = composeRule.onNodeWithText(text).fetchSemanticsNode()
-        val layouts = mutableListOf<TextLayoutResult>()
-        node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
-        return layouts.single().layoutInput.density.fontScale
-    }
+    private fun fontScaleOf(text: String): Float =
+        composeRule.onNodeWithText(text).textLayout().layoutInput.density.fontScale
 
     private companion object {
         const val EPSILON = 0.001f

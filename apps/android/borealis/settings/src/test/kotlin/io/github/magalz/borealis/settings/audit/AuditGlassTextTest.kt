@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -13,7 +14,6 @@ import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.settings.testing.InGlassHost
 import io.github.magalz.borealis.settings.testing.noAnimations
-import io.github.magalz.borealis.settings.testing.textColorOf
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -58,28 +58,28 @@ class AuditGlassTextTest {
     fun `the time of an entry of the list is the glass ink-3`() {
         showList(BorealisLook())
 
-        assertThat(composeRule.textColorOf("20:42")).isEqualTo(glassInk3)
+        assertThat(composeRule.textColor("20:42")).isEqualTo(glassInk3)
     }
 
     @Test
     fun `the time of an entry of the list is the token ink-3 where the glass is off`() {
         showList(BorealisLook(transparency = Transparency.Off))
 
-        assertThat(composeRule.textColorOf("20:42")).isEqualTo(BorealisColors().ink3)
+        assertThat(composeRule.textColor("20:42")).isEqualTo(BorealisColors().ink3)
     }
 
     @Test
     fun `the labels of the opened entry are the glass ink-3`() {
         showDetail(BorealisLook())
 
-        assertThat(composeRule.textColorOf("Host")).isEqualTo(glassInk3)
+        assertThat(composeRule.textColor("Host")).isEqualTo(glassInk3)
     }
 
     @Test
     fun `the labels of the opened entry are the token ink-3 where the glass is off`() {
         showDetail(BorealisLook(transparency = Transparency.Off))
 
-        assertThat(composeRule.textColorOf("Host")).isEqualTo(BorealisColors().ink3)
+        assertThat(composeRule.textColor("Host")).isEqualTo(BorealisColors().ink3)
     }
 
     private companion object {

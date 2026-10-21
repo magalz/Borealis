@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -29,12 +28,12 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.PIXELS_PER_DP
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
@@ -195,15 +194,8 @@ class BorealisSnackbarHostTest {
     private fun Color.isNear(other: Color) =
         abs(red - other.red) + abs(green - other.green) + abs(blue - other.blue) < TOLERANCE
 
-    private fun lineCount(message: String): Int {
-        val layouts = mutableListOf<TextLayoutResult>()
-        composeRule
-            .onNodeWithText(message)
-            .fetchSemanticsNode()
-            .config[SemanticsActions.GetTextLayoutResult]
-            .action!!(layouts)
-        return layouts.single().lineCount
-    }
+    private fun lineCount(message: String): Int =
+        composeRule.onNodeWithText(message).textLayout().lineCount
 
     private companion object {
         const val PHONE = "w360dp-h640dp-xhdpi"

@@ -13,7 +13,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -31,12 +30,12 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
@@ -151,8 +150,8 @@ class NavigationRailTest {
             .isAtMost(rail.right.value - RAIL_PADDING_DP)
         assertThat(version.getUnclippedBoundsInRoot().right.value)
             .isAtMost(rail.right.value - RAIL_PADDING_DP)
-        assertThat(textLayout(name).lineCount).isEqualTo(1)
-        assertThat(textLayout(name).isLineEllipsized(0)).isFalse()
+        assertThat(name.textLayout().lineCount).isEqualTo(1)
+        assertThat(name.textLayout().isLineEllipsized(0)).isFalse()
     }
 
     @Test
@@ -168,8 +167,8 @@ class NavigationRailTest {
         assertThat(footerShown()).isTrue()
         assertThat(version.getUnclippedBoundsInRoot().right.value)
             .isAtMost(rail.right.value - RAIL_PADDING_DP)
-        assertThat(textLayout(version).lineCount).isGreaterThan(1)
-        assertThat(textLayout(version).lineCount).isAtMost(2)
+        assertThat(version.textLayout().lineCount).isGreaterThan(1)
+        assertThat(version.textLayout().lineCount).isAtMost(2)
     }
 
     @Test
@@ -259,12 +258,6 @@ class NavigationRailTest {
 
     private fun itemBounds(): List<DpRect> = ITEMS.map {
         composeRule.onNodeWithText(it.label).getUnclippedBoundsInRoot()
-    }
-
-    private fun textLayout(text: SemanticsNodeInteraction): TextLayoutResult {
-        val layouts = mutableListOf<TextLayoutResult>()
-        text.fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult].action!!(layouts)
-        return layouts.single()
     }
 
     private companion object {

@@ -11,18 +11,17 @@ import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ViewRootForTest
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.PIXELS_PER_DP
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -99,7 +98,7 @@ abstract class OverlayGlassCases {
     fun `the secondary text is the glass ink-3 over Flowing light`() {
         show(BorealisLook(), BackgroundStyle.FlowingLight)
 
-        assertThat(textColor(secondaryText)).isEqualTo(Color(0xFFA8ACB1))
+        assertThat(composeRule.textColor(secondaryText)).isEqualTo(Color(0xFFA8ACB1))
     }
 
     // Where the window is not blurred
@@ -136,7 +135,7 @@ abstract class OverlayGlassCases {
         assertThat(scrim()).isGreaterThan(NO_SCRIM)
         assertThat(panel().alpha).isWithin(TOLERANCE).of(1f)
         assertThat(panel().red).isWithin(TOLERANCE).of(colors.surface.red)
-        assertThat(textColor(secondaryText)).isEqualTo(colors.ink3)
+        assertThat(composeRule.textColor(secondaryText)).isEqualTo(colors.ink3)
     }
 
     private fun show(
@@ -183,17 +182,6 @@ abstract class OverlayGlassCases {
                     ((title.top - ABOVE_TITLE).value * PIXELS_PER_DP).toInt(),
                 )
         )
-    }
-
-    private fun textColor(text: String): Color {
-        val results = mutableListOf<TextLayoutResult>()
-        composeRule
-            .onNodeWithText(text, useUnmergedTree = true)
-            .fetchSemanticsNode()
-            .config[SemanticsActions.GetTextLayoutResult]
-            .action
-            ?.invoke(results)
-        return results.single().layoutInput.style.color
     }
 
     /** How much the window of a dialog dims what is behind it, from 0 to 1. */

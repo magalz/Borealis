@@ -13,10 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
@@ -30,7 +28,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
@@ -39,6 +36,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
@@ -279,23 +277,13 @@ class CollapsibleSectionTest {
                 .onNodeWithTag(CollapsibleSectionTags.CHEVRON, useUnmergedTree = true)
                 .getBoundsInRoot()
         val title = composeRule.onNodeWithText(shown, useUnmergedTree = true)
-        val layout = textLayout(title)
+        val layout = title.textLayout()
 
         assertThat(chevron.width.value).isWithin(0.5f).of(20f)
         assertThat(chevron.height.value).isWithin(0.5f).of(20f)
         assertThat(layout.lineCount).isGreaterThan(1)
         assertThat(layout.hasVisualOverflow).isFalse()
         assertThat(title.getBoundsInRoot().right.value).isAtMost(chevron.left.value)
-    }
-
-    private fun textLayout(node: SemanticsNodeInteraction): TextLayoutResult {
-        val results = mutableListOf<TextLayoutResult>()
-        node
-            .fetchSemanticsNode()
-            .config[SemanticsActions.GetTextLayoutResult]
-            .action
-            ?.invoke(results)
-        return results.first()
     }
 
     private fun removeAnimations() {

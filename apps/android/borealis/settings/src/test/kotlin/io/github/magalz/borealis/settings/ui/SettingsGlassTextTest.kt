@@ -4,13 +4,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.settings.testing.InGlassHost
 import io.github.magalz.borealis.settings.testing.noAnimations
-import io.github.magalz.borealis.settings.testing.textColorOf
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,7 +39,7 @@ class SettingsGlassTextTest : SettingsScreenTestBase() {
         showWith(BorealisLook())
 
         row("Privacy and diagnostics")
-        assertThat(composeRule.textColorOf(privacySummary)).isEqualTo(glassInk3)
+        assertThat(composeRule.textColor(privacySummary)).isEqualTo(glassInk3)
     }
 
     @Test
@@ -47,6 +47,6 @@ class SettingsGlassTextTest : SettingsScreenTestBase() {
         showWith(BorealisLook(transparency = Transparency.Off))
 
         row("Privacy and diagnostics")
-        assertThat(composeRule.textColorOf(privacySummary)).isEqualTo(BorealisColors().ink3)
+        assertThat(composeRule.textColor(privacySummary)).isEqualTo(BorealisColors().ink3)
     }
 }

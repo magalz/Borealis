@@ -2,9 +2,7 @@ package io.github.magalz.borealis.settings.audit
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
@@ -21,10 +19,10 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.logging.AuditOutcome
@@ -77,13 +75,6 @@ class AuditScreenTest {
             onBack = { backs++ },
         )
 
-    private fun textColor(text: String): Color {
-        val results = mutableListOf<TextLayoutResult>()
-        val node = composeRule.onNodeWithText(text, useUnmergedTree = true).fetchSemanticsNode()
-        node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
-        return results.single().layoutInput.style.color
-    }
-
     private fun entry(index: Int): SemanticsNodeInteraction =
         composeRule.onNodeWithTag("audit:entry:$index")
 
@@ -130,14 +121,15 @@ class AuditScreenTest {
     fun `a certificate change has its title in the warning colour`() {
         show(state(certificate, sessionEnd))
 
-        assertThat(textColor("Host certificate changed")).isEqualTo(BorealisColors().warningInk)
+        assertThat(composeRule.textColor("Host certificate changed"))
+            .isEqualTo(BorealisColors().warningInk)
     }
 
     @Test
     fun `the other titles are in the primary ink`() {
         show(state(certificate, sessionEnd))
 
-        assertThat(textColor("Stream ended")).isEqualTo(BorealisColors().ink)
+        assertThat(composeRule.textColor("Stream ended")).isEqualTo(BorealisColors().ink)
     }
 
     @Test
@@ -260,7 +252,8 @@ class AuditScreenTest {
             )
         )
 
-        assertThat(textColor("Host certificate changed")).isEqualTo(BorealisColors().warningInk)
+        assertThat(composeRule.textColor("Host certificate changed"))
+            .isEqualTo(BorealisColors().warningInk)
     }
 
     @Test

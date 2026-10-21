@@ -15,14 +15,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.requestFocus
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -35,6 +32,7 @@ import io.github.magalz.borealis.designsystem.glass.backdropLuminance
 import io.github.magalz.borealis.designsystem.glass.contrast
 import io.github.magalz.borealis.designsystem.glass.glassSpec
 import io.github.magalz.borealis.designsystem.glass.luminance as wcagLuminance
+import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -89,7 +87,7 @@ class BorealisTextFieldOnGlassTest {
     fun `the label is the glass ink-3 over Flowing light at 40 percent and 8 dp`() {
         show(BackgroundStyle.FlowingLight) { Field() }
 
-        assertThat(textColor("Address")).isEqualTo(ink3OverFlowingLight)
+        assertThat(composeRule.textColor("Address")).isEqualTo(ink3OverFlowingLight)
     }
 
     @Test
@@ -98,14 +96,14 @@ class BorealisTextFieldOnGlassTest {
             Field()
         }
 
-        assertThat(textColor("Address")).isEqualTo(colors.ink3)
+        assertThat(composeRule.textColor("Address")).isEqualTo(colors.ink3)
     }
 
     @Test
     fun `the typed text is ink`() {
         show(BackgroundStyle.FlowingLight) { Field(value = "192.168.1.20") }
 
-        assertThat(textColor("192.168.1.20")).isEqualTo(colors.ink)
+        assertThat(composeRule.textColor("192.168.1.20")).isEqualTo(colors.ink)
     }
 
     @Test
@@ -115,7 +113,7 @@ class BorealisTextFieldOnGlassTest {
         composeRule.onNode(hasSetTextAction()).requestFocus()
         composeRule.waitForIdle()
 
-        assertThat(textColor("Address")).isEqualTo(colors.accentSoft)
+        assertThat(composeRule.textColor("Address")).isEqualTo(colors.accentSoft)
     }
 
     @Test
@@ -125,8 +123,13 @@ class BorealisTextFieldOnGlassTest {
                 show(style, look) { Field(value = "192.168.1.20") }
                 val backdrop = backdropOf(style, look)
 
-                assertAtLeast(AA, textColor("Address"), backdrop, "label over $style")
-                assertAtLeast(AA, textColor("192.168.1.20"), backdrop, "text over $style")
+                assertAtLeast(AA, composeRule.textColor("Address"), backdrop, "label over $style")
+                assertAtLeast(
+                    AA,
+                    composeRule.textColor("192.168.1.20"),
+                    backdrop,
+                    "text over $style",
+                )
             }
         }
     }
@@ -138,7 +141,12 @@ class BorealisTextFieldOnGlassTest {
         for (style in styles) {
             change(style)
 
-            assertAtLeast(AA, textColor("Address"), backdropOf(style), "focused label over $style")
+            assertAtLeast(
+                AA,
+                composeRule.textColor("Address"),
+                backdropOf(style),
+                "focused label over $style",
+            )
         }
     }
 
@@ -150,7 +158,7 @@ class BorealisTextFieldOnGlassTest {
 
                 assertAtLeast(
                     AA,
-                    textColor("Not valid"),
+                    composeRule.textColor("Not valid"),
                     backdropOf(style, look),
                     "message over $style",
                 )
@@ -298,17 +306,6 @@ class BorealisTextFieldOnGlassTest {
         assertWithMessage("$what is ${contrast(colour, backdrop)}:1, and needs $limit:1")
             .that(contrast(colour, backdrop))
             .isAtLeast(limit)
-    }
-
-    private fun textColor(text: String): Color {
-        val results = mutableListOf<TextLayoutResult>()
-        composeRule
-            .onNodeWithText(text, useUnmergedTree = true)
-            .fetchSemanticsNode()
-            .config[SemanticsActions.GetTextLayoutResult]
-            .action
-            ?.invoke(results)
-        return results.single().layoutInput.style.color
     }
 
     private companion object {

@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PixelMap
@@ -24,6 +27,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.glass.GlassHostOver
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
@@ -38,8 +42,8 @@ import org.robolectric.annotation.Config
 
 /**
  * The text that stands on the animated background, outside any glass, has a soft dark halo and its
- * secondary ink is ink-2 (issue #33). Where there is no background, which is the plain page, there is
- * no halo and the ink is the token, as it was.
+ * secondary ink is ink-2 (issue #33). Where there is no background, which is the plain page, there
+ * is no halo and the ink is the token, as it was.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
@@ -52,10 +56,12 @@ class BackdropTextTest {
 
     @Test
     fun `the halo is drawn over a background of every style that draws one`() {
-        for (style in BackgroundStyle.entries.filter { it != BackgroundStyle.Off }) {
-            show(style) { BackdropText("Hosts") }
+        show(BackgroundStyle.AuroraCurtains) { BackdropText("Hosts") }
 
-            assertThat(haloOf("Hosts")).isTrue()
+        for (next in BackgroundStyle.entries.filter { it != BackgroundStyle.Off }) {
+            change(style = next)
+
+            assertWithMessage("over $next").that(haloOf("Hosts")).isTrue()
         }
     }
 
@@ -66,9 +72,7 @@ class BackdropTextTest {
         }
         assertThat(haloOf("Hosts")).isTrue()
 
-        show(BackgroundStyle.AuroraCurtains, BorealisLook(highContrast = true)) {
-            BackdropText("Hosts")
-        }
+        change(look = BorealisLook(highContrast = true))
         assertThat(haloOf("Hosts")).isTrue()
     }
 
@@ -127,7 +131,7 @@ class BackdropTextTest {
         assertThat(textColor("HOSTS")).isEqualTo(colors.ink2)
         assertThat(haloOf("HOSTS")).isTrue()
 
-        show(BackgroundStyle.Off) { BackdropKicker("Hosts") }
+        change(style = BackgroundStyle.Off)
         assertThat(textColor("HOSTS")).isEqualTo(colors.ink4)
         assertThat(haloOf("HOSTS")).isFalse()
     }
@@ -173,6 +177,9 @@ class BackdropTextTest {
 
     // Helpers
 
+    private var style by mutableStateOf(BackgroundStyle.Off)
+    private var look by mutableStateOf(BorealisLook())
+
     /** [content] in a host of [style], over a bright backdrop, under [look]. */
     private fun show(
         style: BackgroundStyle,
@@ -180,10 +187,12 @@ class BackdropTextTest {
         host: String? = null,
         content: @Composable () -> Unit,
     ) {
+        this.style = style
+        this.look = look
         composeRule.setContent {
-            BorealisTheme(FormFactor.Tv, look) {
+            BorealisTheme(FormFactor.Tv, this.look) {
                 GlassHostOver(
-                    style,
+                    this.style,
                     background = { Box(Modifier.fillMaxSize().background(Color.White)) },
                     modifier =
                         if (host != null) Modifier.size(HOST_WIDTH.dp, HOST_HEIGHT.dp).testTag(host)
@@ -191,6 +200,15 @@ class BackdropTextTest {
                     content = content,
                 )
             }
+        }
+        composeRule.waitForIdle()
+    }
+
+    /** Changes the host that is shown, as the viewer does in Settings. */
+    private fun change(style: BackgroundStyle = this.style, look: BorealisLook = this.look) {
+        composeRule.runOnIdle {
+            this.style = style
+            this.look = look
         }
         composeRule.waitForIdle()
     }

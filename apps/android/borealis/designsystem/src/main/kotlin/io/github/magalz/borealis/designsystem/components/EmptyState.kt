@@ -5,13 +5,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 
 /** The optional action of an [EmptyState]. */
@@ -22,7 +20,8 @@ private val ACTION_GAP = 16.dp
 
 /**
  * What a screen shows when it has nothing to list yet, such as Hosts while it is still searching
- * (decision D8): a [title], a [body] that says what to do next and, optionally, one [action].
+ * (decision D8): a [title], a [body] that says what to do next and, optionally, one [action]. It
+ * stands on the background, so its texts are [BackdropText].
  */
 @Composable
 fun EmptyState(
@@ -36,11 +35,15 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(CONTENT_GAP),
     ) {
-        Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
-        Text(
+        BackdropText(
+            title,
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+        )
+        BackdropText(
             body,
             style = MaterialTheme.typography.bodyMedium,
-            color = LocalBorealisColors.current.ink3,
+            ink = BackdropInk.Ink3,
             textAlign = TextAlign.Center,
         )
         if (action != null) {

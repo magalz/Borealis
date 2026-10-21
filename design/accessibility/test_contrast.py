@@ -1384,7 +1384,9 @@ class HaloIconMaskTest(unittest.TestCase):
 
                 self.assertGreater(at(12, 5), 0.9)  # the top of the lid
                 self.assertGreater(at(12, 9), 0.9)  # the top of the pupil
-                self.assertEqual(at(12, 12), 0.0)  # the hole in the pupil
+                self.assertEqual(at(12, 7), 0.0)  # between the lid and the pupil
+                # The hole in the pupil, which the slash of the other icon runs through.
+                self.assertEqual(at(12, 12) > 0.9, name == "VisibilityOff")
         slashed = contrast.glyph_mask("VisibilityOff", "tv", pad=4)
         plain = contrast.glyph_mask("Visibility", "tv", pad=4)
         self.assertGreater(float(slashed.sum()), float(plain.sum()))

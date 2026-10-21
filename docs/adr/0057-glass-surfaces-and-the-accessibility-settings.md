@@ -39,7 +39,7 @@ For dialogs and sheets:
 * Blur between windows, which the platform would draw behind the dialog.
 * Blur the app's own window while a dialog is open.
 
-For the TV, when the glass is on:
+For the TV, when the blur is drawn:
 
 * Accept about 27 frames a second.
 * Run the drawn background at 24 frames a second.
@@ -87,31 +87,98 @@ Decision details:
 7. **Clips move to `TextureView`.** The video clips of [0056](0056-add-an-animated-background-and-the-appearance-group.md)
    play in a `TextureView`, not a `SurfaceView`, so the glass can see them.
 8. **Dialogs and sheets.**
-   * While one is open, the app blurs its own window and freezes the background on its still frame.
+   * While one is open, the app blurs its own window (24 dp, `WINDOW_BLUR_DP` in `GlassHost.kt`) and
+     freezes the background on its still frame.
    * The dialog draws no scrim, and its panel takes the glass tint.
    * On API 28 to 30 the scrim stays.
-9. **TV pace.** While the glass is on, the drawn background runs at 24 frames a second on a TV.
-   Phones and clips are unchanged.
+9. **TV pace.** The drawn background runs at 24 frames a second only while the blur is drawn: on a
+   TV, on API 31 or later, with Standard or Reduced transparency (Reduced blurs at 48 dp).
+   * A TV on API 28 to 30, which has the tint and no blur, stays at 30 frames a second.
+   * Off, High contrast and the plain page draw no blur, so they run at 30 frames a second too.
+   * Phones are unchanged, and a clip plays at its own rate.
+
+   The rule is `glassFrameRate` in `GlassRules.kt`.
 10. **The stream** has no glass, because the video is behind the chrome. Sprint 11 adds the
     background and a glass panel to the Starting screen.
 11. **The Accessibility group** holds these settings:
-    * **Reduce motion:** Follow system, On or Off.
+    * **Reduce motion:** Follow system, On or Off. Follow system tracks the animation scale of the
+      system while the app runs.
     * **Transparency:** Standard, Reduced or Off, as in decision 1.
-    * **Focus outline:** thicker, from 3 to 5 dp, in a lighter colour.
+    * **Thicker focus outline:** a switch. On, the outline is 5 dp and drawn in `ink`; otherwise it
+      is 3 dp in accent-soft. High contrast draws the thicker one too.
     * **Text size:** 100, 115 or 130 %, times the system scale.
     * **High contrast:** solid panels, text at 7:1 or more, opaque borders at 3:1 or more, a dimmed
-      background and the thicker outline. It overrides the other settings while it is on.
+      background and the thicker outline (decision 15). It overrides only Transparency, Thicker
+      focus outline, Glass tint and Glass blur: while it is on, those four rows are disabled with
+      the note "High contrast is on in Accessibility". Text size, the palette and Reduce motion
+      still apply, and the palette is applied after High contrast.
     * **Colour-blind palette:** Off, Red-green or Blue-yellow, for the status colours. Every status
-      also gets a shape or a text.
+      also gets a shape or a text (decisions 16 and 17).
 
-    The stream follows the text size, the focus, high contrast, the palette and reduce motion.
+    The stream follows the text size, the focus, high contrast, the palette and reduce motion. It
+    reads the look once, when the stream starts (`StreamSessionFactory.look`), so a change made in
+    Settings shows in the next stream.
 12. **The contract** is `BorealisLook`, with `LocalBorealisLook`, in `:borealis:designsystem`
     (`theme/BorealisLook.kt`).
+13. **A halo for the text on the background.** Text that stands on the animated background with no
+    glass behind it (a screen title, a section label, a count, a hint, a loading or an empty text)
+    has a soft dark halo. Owner, 2026-10-20. The numbers are in the Halo section of
+    [docs/ux/accessibility.md](../ux/accessibility.md) (Tables D to H); the code is `BackdropText`
+    (`components/BackdropText.kt`).
+    * **What it is:** the shadow of a stroked copy of the text, with a stroke of 3 dp, a blur of 2 dp
+      and the `page` colour at 80 %. It needs no blur effect, so it is drawn on every API level.
+    * **When it is drawn:** over a background of any style except the plain page, with Transparency
+      Off and under High contrast too, because the background is still behind the text. It is never
+      drawn in the stream, which has no background.
+    * **The ink:** off glass, the ink-3 and ink-4 roles become ink-2, which the halo keeps at 4.5:1
+      and which they do not reach on their own.
+    * **Why 3 dp:** the worst case is taken over every place that the text can take on every frame,
+      a pixel apart, and not over a few places. No stroke of 2 dp keeps ink-2 at 4.5:1 with 2 % to
+      spare: at a blur of 2 dp and 80 % its worst is 3.11, and the best of them, at 100 %, is 4.24.
+      A stroke of 3 dp keeps it from 80 %, and that is the smallest candidate. Its tightest case is
+      5.32:1 (ink-2, body text, TV, Northern lights).
+    * **Under High contrast** every loose text is 14.70:1 or more, against the 7:1 that the mode
+      promises. The dim of the background alone gives 12.00.
+14. **The bare icons and the Add host field.** The icons that stand on the background with no
+    surface behind them (the back arrow, the actions of the Hosts bar and the show-hidden toggle of
+    the Apps bar) get the halo of the text through `BackdropIcon`, so the screen has one halo. They
+    are measured as glyph masks and need 3:1 (WCAG 1.4.11): the worst is 5.71:1 (ink-2, the gear,
+    TV, Northern lights), and 14.79:1 or more under High contrast. The Address field of Add host is
+    a filled glass field with its own outline, so its label never stands on the raw background. Its
+    lowest ratios over every background are 4.60:1 for the label, 3.88:1 for the focused outline
+    and 4.62:1 for the error text. **The owner has not yet given a verdict on the switch from an
+    outlined field to a filled one.** An outlined field cuts its outline behind the floating label,
+    so half of the label stood on the background and not on the glass. Tables I to M of the
+    accessibility page have the numbers.
+15. **High contrast.** The colours are the `high-contrast` group of `design/tokens.json`.
+    * **Text:** 7:1 or more on page, chrome, surface, surface-raised and under the accent tint and
+      the hover. ink-3 is `#D0D3D7` at 9:1, ink-4 is `#BEC1C4` at 7.5:1 and the accent is
+      `#C8B7FC`.
+    * **Borders:** opaque, 3:1 or more. The line is `#80868D` and the strong line is `#9CA2A8`.
+    * **The outline** is 5 dp and drawn in ink.
+    * **The background** has a `page` veil at 0.85. Over the brightest pixel of the 12 sets of
+      frames of the six backgrounds every text role keeps 8:1 or more, and the lowest is ink-4 at
+      8.00:1, about 14 % above the 7:1 limit.
+    * **What it overrides** is in decision 11.
+16. **The offline colour and the status shapes.** The offline colour goes from `#4B5158` (2.2:1) to
+    `#686E75`: 3.7:1 on page, 3.5:1 on surface and 3.25:1 on surface-raised (WCAG 1.4.11). Owner,
+    2026-10-20. The status dot has a shape for each state, so that colour is not the only signal
+    (WCAG 1.4.1): a filled circle for online, a filled triangle for attention, and a hollow ring
+    for offline and unknown.
+17. **Colour-blind palettes.** The colours are from the Okabe and Ito set, checked with the Machado
+    simulation (severity 1.0) and the CIEDE2000 distance. The least distance between two status
+    colours is 23.7 or more for red-green and 23.9 for blue-yellow under tritanopia, against a bar
+    of 20. Each colour keeps 3:1 as an indicator, and the status inks keep 7.5:1. The check is in
+    Kotlin (`ColourMeasures` and `ColourVisionPaletteTest`), not in the Python tool.
+18. **New panels, and Off.** The Settings panes, the Privacy card, the Audit panel and the Privacy
+    row had no surface before Sprint 10. Under Off, under High contrast and on the plain page they
+    are solid `surface`. Owner, 2026-10-20: accessibility comes first.
 
 ### Measurements behind the decision
 
-Measured on 2026-10-20 with a spike build from the throwaway branch `task/s10-blur-spike`, at
-`154ca822`. Times are the per-frame p50 from `gfxinfo framestats`. The budget is 33.3 ms at 30 fps.
+Measured on 2026-10-20 with a spike build from the throwaway local branch `task/s10-blur-spike`
+(not pushed), at `154ca822`. Times are the per-frame p50 from `gfxinfo framestats`. The budget is
+33.3 ms at 30 fps.
 
 * **Google TV Streamer** (MT8696, API 34):
 
@@ -144,12 +211,19 @@ page is private, so it is not linked here.
 * Good, because the Accessibility settings let each user choose less motion, less transparency,
   more contrast, a bigger text and a palette that suits them.
 * Good, because a stream does not pay for the glass.
-* Bad, because the drawn background runs at 24 frames a second on a TV while the glass is on.
+* Good, because the text on the background keeps 4.5:1 with the halo, and 7:1 under High contrast,
+  over every background (decision 13).
+* Bad, because the drawn background runs at 24 frames a second on a TV while the blur is drawn.
 * Bad, because the glass costs about 9 ms more per frame on the TV Settings screen, and 1.8 ms more
   on the S22 Hosts screen.
 * Bad, because the Northern lights background needs a higher floor, so its glass is more opaque
   than the other backgrounds.
 * Bad, because API 28 to 30 get no blur, and the dialogs keep a scrim there.
+* Bad, because the halo and the tint-only glass have been drawn only in tests on API 28 to 30, and
+  have not been seen on a device there: no such device is available.
+* Bad, because in the device round of Sprint 10 a move between Settings groups on the Streamer, with
+  the glass at Standard, took 64 ms at the median (72 ms at the most), against 47 to 60 ms in
+  Sprint 9. A frame at rest is about 9 ms longer with the blur, as the measurements above say.
 
 ## Pros and Cons of the Options
 
@@ -170,7 +244,7 @@ page is private, so it is not linked here.
 * Good, because it costs the least of the blur options on the TV (34.8 ms on Hosts and 37.0 ms on
   Settings) and needs no dependency.
 * Good, because each panel samples the same blurred frame.
-* Bad, because the TV drawn background must run at 24 frames a second while the glass is on.
+* Bad, because the TV drawn background must run at 24 frames a second while the blur is drawn.
 
 ### Tint only, with no blur
 
@@ -213,7 +287,17 @@ page is private, so it is not linked here.
 ## More Information
 
 * Amends [0056](0056-add-an-animated-background-and-the-appearance-group.md): the clips play in a
-  `TextureView`, and the drawn background runs at 24 frames a second on a TV while the glass is on.
+  `TextureView`, and the drawn background runs at 24 frames a second on a TV while the blur is drawn.
+* Amended on 2026-10-21, after the work of Sprint 10:
+  * decisions 13 to 18 record the halo, the icons and the Add host field, High contrast, the
+    offline colour and the status shapes, the colour-blind palettes and the new panels, which the
+    first version of this ADR left to the notes;
+  * decision 9 now says that the 24 frames a second apply only while the blur is drawn;
+  * decision 11 now says that High contrast overrides four rows and not "the other settings", and
+    that the thicker outline is 5 dp in ink;
+  * decision 8 records the 24 dp of the window blur;
+  * the switch from an outlined to a filled Add host field (decision 14) waits for the owner's
+    verdict.
 * Related: [0053](0053-material-3-with-borealis-focus-on-tv.md) (the focus indication on TV),
   [0044](0044-design-tokens-pipeline.md) (the design tokens that the text colours come from) and
   [0055](0055-settings-storage-and-the-phase-2-settings-screen.md) (the settings storage).
@@ -233,9 +317,12 @@ page is private, so it is not linked here.
   3. **Maintenance:** the module 1.76.0 was released on 2026-09-29 by the Roborazzi project, which
      the build already uses; the framework 4.1.1 (2024-03-29) is the latest release, by Google.
   4. **Footprint:** a 21 KB module and the 773 KB framework, with Material Components 1.2.0-rc01,
-     Espresso, the AndroidX test runner, Guava and protobuf-javalite behind it. It is a test
-     dependency of the fixtures: it is not on the release classpath of the app (checked with
-     `:app:dependencies`), has no permissions and no native code.
+     Espresso, the AndroidX test runner, Guava and protobuf-javalite behind it. The framework also
+     brings `jsoup` 1.15.1, `checker-qual`, `error_prone_annotations` and `hamcrest`, which are
+     test-only artifacts too. jsoup 1.15.1 predates the fix of CVE-2022-36033 (jsoup 1.15.3). It is
+     on the unit-test classpath only and is never shipped. It is a test dependency of the
+     fixtures: it is not on the release classpath of the app (checked with `:app:dependencies`),
+     has no permissions and no native code.
   5. **Alternatives:** our own assertions only (rejected for the reason in 1); Espresso
      `AccessibilityChecks.enable()` (needs a device or an emulator, which the CI does not run, and
      looks at views, not at Compose); the Accessibility Scanner app (by hand, not in the CI).

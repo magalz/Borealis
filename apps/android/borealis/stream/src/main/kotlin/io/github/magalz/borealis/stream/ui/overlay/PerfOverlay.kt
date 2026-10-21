@@ -12,10 +12,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.theme.BorealisFonts
-import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
-import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
-import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisType
 import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.PerfSnapshot
 import io.github.magalz.borealis.stream.SessionInfo
@@ -31,8 +29,8 @@ private val LINE_GAP = 2.dp
 /**
  * The performance readout over a corner of the stream: one line for Compact, a line for each figure
  * for Detailed, nothing for Off. [perf] is null until the first reading arrives. It is plain text
- * with no pointer input and no focus: the stream keeps the touches and the keys. Mono type, 11sp on
- * a phone and 12sp (the TV minimum) on a TV or handheld.
+ * with no pointer input and no focus: the stream keeps the touches and the keys. Mono type, at the
+ * kicker size of the device: 11sp on a phone, 12sp on a handheld and 13sp (the TV minimum) on a TV.
  */
 @Composable
 internal fun PerfOverlay(
@@ -49,12 +47,7 @@ internal fun PerfOverlay(
             OverlayMode.DETAILED -> format.detailed(perf, info)
         }
     val colors = LocalBorealisColors.current
-    val size =
-        if (LocalFormFactor.current == FormFactor.Phone) {
-            BorealisTokens.Size.Phone.Kicker
-        } else {
-            BorealisTokens.Size.Tv.Minimum
-        }
+    val size = LocalBorealisType.current.kicker.fontSize
     Column(
         modifier
             .testTag(PERF_OVERLAY_TAG)

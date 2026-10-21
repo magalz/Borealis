@@ -25,8 +25,12 @@ runtime behaviour that the source alone cannot establish are marked
   fourth component tells Moonlight that the server is Sunshine-derived
   (`src/nvhttp.h:32-37`). It reports the emulated GFE version `3.23.0.74`
   (`src/nvhttp.h:42`). These are protocol-emulation constants, not the
-  LuminalShine release version; there is no field in `/serverinfo` that carries
-  the LuminalShine version (see proposal P1 in section 20).
+  LuminalShine release version; in `26.09.1` there is no field in `/serverinfo`
+  that carries the LuminalShine version (see proposal P1 in section 20).
+  **Changed in 26.10.0-beta.1** (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source): the HTTPS `/serverinfo`
+  appends `LuminalShineVersion` (#199), and keeps `appversion` (`7.1.431.-1`) and
+  `GfeVersion`; the HTTP response is unchanged. The Borealis client does not read
+  the field yet (Sprint 13), so Host details still shows `7.1.431.-1`.
 - `/serverinfo` reports `state` as `SUNSHINE_SERVER_BUSY` while an app is
   running and `SUNSHINE_SERVER_FREE` otherwise, and `currentgame` as the running
   app id (`src/nvhttp.cpp:2578-2581`). Moonlight therefore classifies the host
@@ -77,6 +81,11 @@ Moonlight already skips `127.` addresses in
 The host serves exactly the endpoints in the table. Any other path on either
 server returns an XML body with `status_code` 404 (`src/nvhttp.cpp:2127-2143`,
 `src/nvhttp.cpp:3723-3748`). All endpoints use GET.
+
+**Changed in 26.10.0-beta.1** (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source): an unknown path returns one
+correctly framed response, HTTP 200 with the XML `status_code="404"`, and then the
+connection closes (#200, which fixes #194). The 26.09.1 behaviour below, with the
+trailing bytes, stays the rule for older hosts.
 
 | Path | HTTP | HTTPS | Purpose |
 | --- | --- | --- | --- |
@@ -361,13 +370,23 @@ for resume the equivalent is `resume` 1 (`src/nvhttp.cpp:3471-3486`).
   virtual display for one client's `/launch` (about 14 s on the Sprint 2 test
   host), it answers no other HTTPS request, because the server has a single io
   thread (upstream issue `NortheBridge/luminalshine#202`; the proposed fix,
-  PR #203, is not merged as of 2026-10-17). A second client's `GET /serverinfo` then runs into the
+  PR #203, was not merged as of 2026-10-17). A second client's `GET /serverinfo` then runs into the
   client's 7 s read timeout. Borealis retries a `/serverinfo` read timeout at
   stream start, up to 3 attempts within about 25 s and until the launch is
   cancelled, and then reports the timeout as before. Only `/serverinfo` is
   retried: `/launch`, `/resume`, `/cancel`, `/quit` and pairing are not
   idempotent. A client that polls `/serverinfo` in the background can see the
   host as briefly offline during that window.
+  **Changed in 26.10.0-beta.1** (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source): PR #203 was merged on
+  2026-10-20 and ships in this release, so launch, resume and cancel run in order
+  on one dedicated worker, off the HTTPS I/O thread, and a long `/launch` no
+  longer holds the other requests (#202). Borealis keeps the 3-attempt
+  `/serverinfo` retry and the 3 s wait before `/resume` for older hosts and for
+  #205, which is still open, and keeps the handling of the not-found cases for
+  26.09.1. In the device round of 2026-10-21 neither was triggered on
+  26.10.0-beta.1 (no retry, no wait and no 503, with a second device opening the
+  host during a launch); whether the race of #205 is still reachable is not
+  tested.
 - **Observed, not verified in the source (Sprint 3):** when a second client's
   `/resume` is accepted while the first client's `/launch` is still setting up,
   the host logs `Failed to verify RTSP message tag` and the second client's RTSP
@@ -922,7 +941,10 @@ Moonlight Android 12.2 client already does the right thing the item says so.
    does not mask PIN_WRONG or FAILED. The risk is the trailing bytes: an HTTP
    client that pools the connection can read them as the start of its next
    response on that connection. Send `/unpair` without connection reuse and
-   read its XML `status_code`.
+   read its XML `status_code`. **Changed in 26.10.0-beta.1** (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source):
+   #200 makes the host send a single response for an unknown path, so the
+   trailing bytes are gone. Keep the 26.09.1 behaviour and the
+   `BestEffortUnpair` `Connection: close` for older hosts.
 5. **Keep the client certificate stable and use HTTPS for everything except
    pairing phases 1 to 4 and the initial `/serverinfo`.** Identity, per-client
    settings and the virtual display depend on the certificate (section 5.1).
@@ -1010,7 +1032,9 @@ nothing in this document until the host adopts them.
   changes) and a `Capabilities` list (for example `pyrowave`, `virtual-display`,
   `launch-retry-codes`). Today a client can only infer the host from the absence
   of Apollo fields and from `appversion` `7.1.431.-1`, which is a fixed
-  emulation constant (`src/nvhttp.h:37`).
+  emulation constant (`src/nvhttp.h:37`). **Partly adopted in 26.10.0-beta.1** (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source):
+  `LuminalShineVersion` is in the HTTPS `/serverinfo` (#199). The release notes
+  name no `LuminalShineApiLevel` and no `Capabilities` list.
 - **P2. A client-requested PyroWave bitrate cap.** The host ignores the client's
   bitrate and always uses `pyrowave_bitrate_mbps`, default 700
   (`src/rtsp.cpp:1694`). Honour the client's `x-nv-vqos[0].bw.maximumBitrateKbps`

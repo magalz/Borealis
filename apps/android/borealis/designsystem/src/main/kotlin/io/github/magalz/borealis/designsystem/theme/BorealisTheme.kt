@@ -38,6 +38,9 @@ fun BorealisTheme(
     val colorScheme = remember(colors) { borealisColorScheme(colors) }
     val shapes = remember { borealisShapes() }
     val typography = remember(formFactor) { borealisTypography(formFactor) }
+    // One observer of the animator scale for all that is under the theme, and none in a theme that
+    // is inside another one.
+    val systemAnimationsRemoved = rememberSystemAnimationsRemoved()
     val system = LocalDensity.current
     val applied = LocalAppliedTextSize.current
     val density =
@@ -51,6 +54,7 @@ fun BorealisTheme(
         LocalBorealisColors provides colors,
         LocalDensity provides density,
         LocalAppliedTextSize provides look.textSize.scale,
+        LocalSystemAnimationsRemoved provides systemAnimationsRemoved,
         // Material leaves the content colour black; text and icons outside a Surface need ink.
         LocalContentColor provides colors.ink,
         LocalBorealisType provides remember(formFactor) { borealisType(formFactor) },

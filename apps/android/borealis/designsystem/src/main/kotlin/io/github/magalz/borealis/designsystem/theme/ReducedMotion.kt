@@ -12,6 +12,7 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,18 +27,35 @@ import androidx.core.content.ContextCompat
  *
  * Every animation of the app asks this, so that Reduce motion reaches all of them. A piece that has
  * no composition to ask in (a modifier node) reads [LocalBorealisLook] and the system itself, and
- * decides with [animationsRemoved].
+ * decides with [animationsRemoved]. Under a [BorealisTheme] the system animation scale is watched
+ * once for all of them.
  */
 @Composable
 fun rememberAnimationsRemoved(): Boolean =
     animationsRemoved(LocalBorealisLook.current.reduceMotion, rememberSystemAnimationsRemoved())
 
 /**
- * Whether the system removes animations: the setting "Remove animations" sets the animator scale to
- * zero. It is read once and again each time the system says that the scale changed.
+ * Whether the system removes animations, as the [BorealisTheme] around the reader found it: the
+ * theme watches the setting once and every piece under it reads that. Null outside a theme, where
+ * a reader watches the setting itself.
+ */
+internal val LocalSystemAnimationsRemoved = compositionLocalOf<Boolean?> { null }
+
+/**
+ * Whether the system removes animations: what the theme around this has found, or, outside a theme,
+ * what this watches for itself.
  */
 @Composable
-private fun rememberSystemAnimationsRemoved(): Boolean {
+internal fun rememberSystemAnimationsRemoved(): Boolean =
+    LocalSystemAnimationsRemoved.current ?: watchSystemAnimationsRemoved()
+
+/**
+ * Whether the system removes animations: the setting "Remove animations" sets the animator scale to
+ * zero. It is read once and again each time the system says that the scale changed, through an
+ * observer that lives as long as this is composed.
+ */
+@Composable
+private fun watchSystemAnimationsRemoved(): Boolean {
     val resolver = LocalContext.current.contentResolver
     var removed by remember(resolver) { mutableStateOf(systemAnimationsRemoved(resolver)) }
     DisposableEffect(resolver) {

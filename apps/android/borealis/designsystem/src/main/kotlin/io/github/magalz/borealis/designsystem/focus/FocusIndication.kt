@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
+import io.github.magalz.borealis.designsystem.theme.LocalSystemAnimationsRemoved
 import io.github.magalz.borealis.designsystem.theme.animationsRemoved
 import io.github.magalz.borealis.designsystem.theme.systemAnimationsRemoved
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
@@ -107,11 +108,15 @@ private class BorealisFocusNode(var shape: Shape, var scaleOnFocus: Boolean) :
         }
     }
 
-    /** Reduce motion, now: the setting of the app, or the system when that follows it. */
+    /**
+     * Reduce motion, now: the setting of the app, or the system when that follows it. The system is
+     * what the theme watches, or, outside a theme, what the setting says at this moment.
+     */
     private fun motionRemoved(): Boolean =
         animationsRemoved(
             currentValueOf(LocalBorealisLook).reduceMotion,
-            systemAnimationsRemoved(currentValueOf(LocalContext).contentResolver),
+            currentValueOf(LocalSystemAnimationsRemoved)
+                ?: systemAnimationsRemoved(currentValueOf(LocalContext).contentResolver),
         )
 
     override fun ContentDrawScope.draw() {

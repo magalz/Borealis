@@ -162,6 +162,14 @@ class ColourVisionPaletteTest {
     }
 
     @Test
+    fun `the difference of two chromatic colours is the one that an independent implementation gives`() {
+        // The two pairs of the palettes that are nearest and furthest; the figures are from a
+        // second implementation of CIEDE2000 that reproduces the test data of Sharma, Wu and Dalal.
+        assertThat(deltaE2000(Color(0xFF009E73), Color(0xFF808080))).isWithin(0.01).of(24.975)
+        assertThat(deltaE2000(Color(0xFF56B4E9), Color(0xFFF0E442))).isWithin(0.01).of(57.529)
+    }
+
+    @Test
     fun `the difference of two colours is zero for the same colour and large for black and white`() {
         // A check of the measure: CIEDE2000 of black against white is 100.
         assertThat(deltaE2000(Color.Red, Color.Red)).isEqualTo(0.0)

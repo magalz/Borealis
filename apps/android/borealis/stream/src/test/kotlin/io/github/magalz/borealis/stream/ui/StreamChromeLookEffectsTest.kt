@@ -1,9 +1,14 @@
 package io.github.magalz.borealis.stream.ui
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -21,6 +26,7 @@ import io.github.magalz.borealis.designsystem.theme.borealisColors
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.Panel
+import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
 import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.setContentInKeyboardMode
@@ -85,6 +91,46 @@ class StreamChromeLookEffectsTest {
         )
     }
 
+    @Test
+    @Config(qualifiers = TV)
+    fun `the thicker outline of the first and the last shortcut chip of the keyboard is whole on a TV`() {
+        showKeyboard(docked = false)
+
+        assertChipOutline("Alt+Tab", Edge.Left)
+        assertChipOutline("F11", Edge.Right)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the thicker outline of the first and the last shortcut chip of the docked keyboard is whole`() {
+        showKeyboard(docked = true)
+
+        assertChipOutline("Esc", Edge.Left)
+        // The row of chips scrolls sideways on a phone: the last chip is at its right end.
+        composeRule.onNodeWithTag("chip:F11").performScrollTo()
+        assertChipOutline("F11", Edge.Right)
+    }
+
+    private fun showKeyboard(docked: Boolean) {
+        composeRule.setContentInKeyboardMode {
+            StreamChromeTheme(BorealisLook(thickFocus = true)) {
+                Box(Modifier.fillMaxSize()) { StreamKeyboard(docked, RecordingIntents()) }
+            }
+        }
+    }
+
+    /** 6.5dp outside [edge] of the chip is inside the 2dp to 7dp of the thicker outline. */
+    private fun assertChipOutline(label: String, edge: Edge) {
+        val chip = composeRule.onNodeWithTag("chip:$label")
+        chip.requestFocus()
+        composeRule.waitForIdle()
+
+        val seen = composeRule.colourOutside(chip, edge, OUTLINE_MIDDLE_DP)
+        assertWithMessage("6.5dp past the $edge edge of the chip $label is $seen")
+            .that(seen.isNear(BorealisColors().ink))
+            .isTrue()
+    }
+
     private fun assertOutlineOfBackToStream(
         look: BorealisLook,
         expected: androidx.compose.ui.graphics.Color,
@@ -111,5 +157,9 @@ class StreamChromeLookEffectsTest {
         assertWithMessage("6.5dp left of the focused row is $seen")
             .that(seen.isNear(expected))
             .isTrue()
+    }
+
+    private companion object {
+        const val OUTLINE_MIDDLE_DP = 6.5f
     }
 }

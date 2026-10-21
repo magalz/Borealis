@@ -20,13 +20,6 @@ import io.github.magalz.borealis.stream.StreamSession
 internal val LocalMenuHandleBounds = staticCompositionLocalOf<(Rect?) -> Unit> { {} }
 
 /**
- * The chrome over the stream: the screen for the phase of [session], nothing in picture-in-picture.
- * Every screen is inside [BorealisTheme] for the form factor of the window, so the screens read
- * `LocalFormFactor` and never apply the theme themselves.
- */
-@Composable fun StreamChromeRoot(session: StreamSession) = StreamChromeRoot(session, report = {})
-
-/**
  * The theme of the stream chrome: the form factor of the window and the [look] that the viewer
  * chose when the stream started.
  */
@@ -36,23 +29,18 @@ internal fun StreamChromeTheme(look: BorealisLook, content: @Composable () -> Un
 }
 
 /**
- * [StreamChromeRoot] for the chrome host, which learns the menu handle bounds through [report] and
- * draws with the [look] that the stream started with. [extra] is composed with the screens, inside
- * the theme: the chrome host has it for a test, which reads what the theme provides there.
+ * The chrome over the stream: the screen for the phase of [session], nothing in picture-in-picture.
+ * Every screen is inside [BorealisTheme] for the form factor of the window, so the screens read
+ * `LocalFormFactor` and never apply the theme themselves. The chrome host learns the menu handle
+ * bounds through [report], and the screens draw with the [look] that the stream started with.
  */
 @Composable
-internal fun StreamChromeRoot(
-    session: StreamSession,
-    report: (Rect?) -> Unit,
-    look: BorealisLook = BorealisLook(),
-    extra: @Composable () -> Unit = {},
-) {
+internal fun StreamChromeRoot(session: StreamSession, report: (Rect?) -> Unit, look: BorealisLook) {
     val state by session.state.collectAsStateWithLifecycle()
     val perf by session.perf.collectAsStateWithLifecycle()
     if (state.inPip) return
     StreamChromeTheme(look) {
         CompositionLocalProvider(LocalMenuHandleBounds provides report) {
-            extra()
             when (val phase = state.phase) {
                 is StreamPhase.Starting ->
                     StartingScreen(state.appName, state.hostName, phase, session)

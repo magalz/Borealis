@@ -146,8 +146,6 @@ private fun Title(modifier: Modifier = Modifier) {
             stringResource(R.string.audit_ui_screen_title),
             Modifier.semantics { heading() },
             style = MaterialTheme.typography.titleLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
         )
         BackdropText(
             stringResource(R.string.audit_ui_retention),

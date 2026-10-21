@@ -27,7 +27,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.adaptive.appGridColumns
 import io.github.magalz.borealis.designsystem.components.AuroraLoader
@@ -151,8 +150,6 @@ private fun Title(state: AppsUiState, modifier: Modifier = Modifier) {
             state.hostName.orEmpty(),
             Modifier.semantics { heading() },
             style = MaterialTheme.typography.titleLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
         )
         Row(
             horizontalArrangement = Arrangement.spacedBy(STATUS_GAP),

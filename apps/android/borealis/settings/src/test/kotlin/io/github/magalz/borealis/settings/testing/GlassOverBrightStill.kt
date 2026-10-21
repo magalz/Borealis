@@ -68,7 +68,10 @@ data class Probe(val title: String, val x: Float, val outside: Float)
  * read beside the surface. A colour's distance is how far it is from the `surface` colour, in the
  * sum of its three channels. A glass of tint t over a background shows (1 - t) of the distance of
  * the background: Standard is 40 percent, so about 0.6 of it; Reduced is 85 percent, so about 0.15;
- * and a solid surface is the `surface` colour, which is no distance at all.
+ * and a solid surface is the `surface` colour, which is no distance at all. It reads these
+ * fractions over the bright still, and not the exact tint of each pixel: the blur and the gradient
+ * of the still move a colour a little from one place to the next, but the fractions of the three
+ * levels stay far apart, so a band for each tells them apart with room to spare.
  */
 class GlassProbes(private val rule: ComposeTestRule, private val probes: List<Probe>) {
     private val surface = BorealisTokens.Color.Surface

@@ -192,4 +192,6 @@
     <string name="settings_about_licenses_unavailable">The licence texts are not included in this build.</string>
     <string name="settings_about_privacy_policy_title">Privacy policy</string>
     <string name="settings_about_link_dialog_title">No app can open this link</string>
+    <string name="settings_about_link_scan_hint">Scan with your phone to open this link.</string>
+    <string name="settings_about_link_qr_description">QR code for the link to %1$s</string>
 </resources>

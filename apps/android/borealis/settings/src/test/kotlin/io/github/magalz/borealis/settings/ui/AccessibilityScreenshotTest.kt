@@ -1,14 +1,17 @@
 package io.github.magalz.borealis.settings.ui
 
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.noAnimations
+import io.github.magalz.borealis.designsystem.testing.settleWindows
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
@@ -67,6 +70,25 @@ class AccessibilityScreenshotTest : SettingsScreenTestBase() {
         }
 
         shoot("settingsa11y_tv_text-largest")
+    }
+
+    @Test
+    @Config(qualifiers = TV, fontScale = 1.3f)
+    fun tvLinkDialogLargestText() {
+        asTelevision()
+        show(keyboard = true, initialGroup = SettingsGroupId.ABOUT) { content ->
+            InGlassHost(
+                FormFactor.Tv,
+                BorealisLook(textSize = TextSize.Largest),
+                BackgroundStyle.AuroraCurtains,
+                content,
+            )
+        }
+        composeRule.onNodeWithText("Privacy policy").performClick()
+        composeRule.waitForIdle()
+        composeRule.settleWindows()
+
+        captureScreenRoboImage("src/test/screenshots/settingsa11y_tv_link-dialog-text-largest.png")
     }
 
     /** Opens the section of a phone list: its header shows the title in capitals. */

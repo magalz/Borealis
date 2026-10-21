@@ -1,0 +1,128 @@
+{
+  "$description": "The candidates of the accent colour of Sprint 11 (issue #50): a full set of the roles of design/tokens.json for each, which `contrast.py accents` measures. `color` and `high-contrast` are named as in the tokens, `notes` says how each value was derived, and `known_fails` names the checks that need no frame and that the set fails, with the reason. The owner chooses a set at the gate; these are proposals and the tokens are not changed.",
+  "candidates": {
+    "violet": {
+      "label": "Violet (today)",
+      "source": "The accent tokens of design/tokens.json at 7e300e53, which are the values of Sprint 10.",
+      "color": {
+        "accent": "#A78BFA",
+        "accent-soft": "#C4B5FD",
+        "accent-strong": "#7C3AED",
+        "on-accent": "#160B2E",
+        "accent-tint": "#A78BFA21",
+        "accent-line": "#A78BFA66"
+      },
+      "high-contrast": {
+        "accent": "#C8B7FC",
+        "accent-soft": "#D6CCFE",
+        "accent-line": "#C8B7FC"
+      },
+      "notes": {
+        "accent": "Today's token, violet-400 of the Tailwind scale: L* 64.6, chroma 62, hue 304 degrees. It is not changed.",
+        "accent-soft": "Today's token, violet-300: L* 77.2 and 0.63 of the chroma of the accent, lighter so that it keeps 4.5:1 as text over the glass where the accent does not.",
+        "accent-strong": "Today's token, violet-600: L* 43.4, 21 below the accent and more saturated. It carries no text.",
+        "on-accent": "Today's token: a deep violet at L* 5.5 that keeps 6.88:1 on the accent fill.",
+        "accent-tint": "Today's token: the accent at an alpha of 0x21, which is 13 %.",
+        "accent-line": "Today's token: the accent at an alpha of 0x66, which is 40 %.",
+        "high-contrast.accent": "Today's token: the accent lightened until it keeps 7.5:1 on the worst fill; it keeps 7.55:1 (selected row on surface-raised).",
+        "high-contrast.accent-soft": "Today's token: the accent-soft lightened as the accent is; it keeps 9.04:1 on the worst fill.",
+        "high-contrast.accent-line": "Today's token: the opaque colour of the high contrast accent, for the borders of tags and chips, which need 3:1."
+      },
+      "known_fails": {
+        "distance:red-green:protanopia": "Violet is 9.3 from success in the red-green palette as protanopia vision sees it: a viewer of that vision sees the accent as a status colour.",
+        "distance:red-green:deuteranopia": "Violet is 5.0 from success in the red-green palette as deuteranopia vision sees it: a viewer of that vision sees the accent as a status colour.",
+        "distance:blue-yellow:tritanopia": "Violet is 14.8 from offline in the blue-yellow palette as tritanopia vision sees it: a viewer of that vision sees the accent as a status colour."
+      }
+    },
+    "green": {
+      "label": "Green",
+      "source": "The icon green #6EE7B7 (emerald-300 of the Tailwind scale).",
+      "color": {
+        "accent": "#78EFC7",
+        "accent-soft": "#B9FFE4",
+        "accent-strong": "#36B48F",
+        "on-accent": "#001710",
+        "accent-tint": "#78EFC721",
+        "accent-line": "#78EFC766"
+      },
+      "high-contrast": {
+        "accent": "#78EFC7",
+        "accent-soft": "#B9FFE4",
+        "accent-line": "#78EFC7"
+      },
+      "notes": {
+        "accent": "The icon green is 18.5 from the success green #4CAF50, 19.2 from the warning yellow as a protanope sees it in the red-green palette and 19.3 from the success of the blue-yellow palette as a tritanope sees it, all under the 20 that a status colour keeps from the accent. This is a colour of its hue that clears 20 from every status colour of the three palettes, as the viewers of each see them, with the least change. It is 2.9 CIEDE2000 from #6EE7B7 (L* 86.9, chroma 44, hue 168 degrees against L* 83.9, 47, 164), and its least distance from a status colour is 21.2 (warning, red-green palette, protanopia vision).",
+        "accent-soft": "Lighter than the accent as violet-300 is lighter than violet-400: L* 94.9 with 0.63 of the chroma. It keeps 14.73:1 on surface-raised.",
+        "accent-strong": "The accent 21 L* lower with the hue and the chroma kept, as violet-600 is below violet-400: L* 66.1. It carries no text, and is 6.44:1 on surface-raised.",
+        "on-accent": "The deepest colour of the hue of the accent that the gamut has at L* 5.9, as the deep violet is for violet. It keeps 13.25:1 on the accent.",
+        "accent-tint": "The accent at an alpha of 0x21, which is 13 %, as in violet.",
+        "accent-line": "The accent at an alpha of 0x66, which is 40 %, as in violet.",
+        "high-contrast.accent": "The accent as it is: it keeps 8.67:1 on the worst fill (selected row on surface-raised), over the 7:1 of high contrast, so there is nothing to lighten as there is in violet.",
+        "high-contrast.accent-soft": "The accent-soft as it is: it keeps 10.71:1 on the worst fill.",
+        "high-contrast.accent-line": "The accent as an opaque border colour: 8.67:1 on the worst fill, over the 3:1 of a border."
+      },
+      "known_fails": {}
+    },
+    "teal": {
+      "label": "Teal",
+      "source": "The teal end of the icon, #14B8A6 (teal-500 of the Tailwind scale).",
+      "color": {
+        "accent": "#4BECD0",
+        "accent-soft": "#A2FCE8",
+        "accent-strong": "#06AF97",
+        "on-accent": "#001713",
+        "accent-tint": "#4BECD021",
+        "accent-line": "#4BECD066"
+      },
+      "high-contrast": {
+        "accent": "#4BECD0",
+        "accent-soft": "#A2FCE8",
+        "accent-line": "#4BECD0"
+      },
+      "notes": {
+        "accent": "The icon teal is too dark for the accent: over the brightest Standard glass (Flowing light) it is 4.24:1 as text and 3.52:1 as a selected label, under the 4.5:1 that text needs, and its high contrast set is under 7:1. It is 19.7 from the success green of the default palette, 15.2 and 11.5 from the status colours as a protanope and a deuteranope sees them, and 11.7 and 8.9 from the bluish green of the blue-yellow palette as normal vision and a tritanope sees them. This is the colour of its hue (178 degrees) lightened to L* 85, where it clears all of them: the teal that sits furthest from the success greens without leaving the hue. It is 13.0 CIEDE2000 from #14B8A6 (L* 85.0, chroma 48, hue 178 degrees against L* 67.4, 42, 182), and its least distance from a status colour is 21.1 (success, blue-yellow palette, tritanopia vision).",
+        "accent-soft": "Lighter than the accent as violet-300 is lighter than violet-400: L* 93.1 with 0.65 of the chroma. It keeps 14.04:1 on surface-raised.",
+        "accent-strong": "The accent 21 L* lower with the hue and the chroma kept, as violet-600 is below violet-400: L* 64.1. It carries no text, and is 6.04:1 on surface-raised.",
+        "on-accent": "The deepest colour of the hue of the accent that the gamut has at L* 6.0, as the deep violet is for violet. It keeps 12.55:1 on the accent.",
+        "accent-tint": "The accent at an alpha of 0x21, which is 13 %, as in violet.",
+        "accent-line": "The accent at an alpha of 0x66, which is 40 %, as in violet.",
+        "high-contrast.accent": "The accent as it is: it keeps 8.32:1 on the worst fill (selected row on surface-raised), over the 7:1 of high contrast, so there is nothing to lighten as there is in violet.",
+        "high-contrast.accent-soft": "The accent-soft as it is: it keeps 10.32:1 on the worst fill.",
+        "high-contrast.accent-line": "The accent as an opaque border colour: 8.32:1 on the worst fill, over the 3:1 of a border."
+      },
+      "known_fails": {}
+    },
+    "white": {
+      "label": "White",
+      "source": "The star of the icon, #F5F3FF (violet-50 of the Tailwind scale).",
+      "color": {
+        "accent": "#EFF3FF",
+        "accent-soft": "#FFFFFF",
+        "accent-strong": "#B4B8C4",
+        "on-accent": "#0E1013",
+        "accent-tint": "#EFF3FF21",
+        "accent-line": "#EFF3FF66"
+      },
+      "high-contrast": {
+        "accent": "#EFF3FF",
+        "accent-soft": "#FFFFFF",
+        "accent-line": "#EFF3FF"
+      },
+      "notes": {
+        "accent": "The star of the icon is 17.3 from the warning yellow of the blue-yellow palette as a tritanope sees it (that yellow is a pale pink to them), under the 20 that a status colour keeps from the accent. A hair cooler (hue 278 degrees instead of 297) it clears 20 from every status colour. It is still a white: its chroma is under 10. It is 2.9 CIEDE2000 from #F5F3FF (L* 95.9, chroma 6, hue 278 degrees against L* 96.3, 6, 297), and its least distance from a status colour is 20.5 (warning, blue-yellow palette, tritanopia vision).",
+        "accent-soft": "Pure white: the only step lighter than a white accent. It is the focus outline of a TV, which needs 3:1, and keeps far more over the glass.",
+        "accent-strong": "The accent 21 L* lower with the hue and the chroma kept, as violet-600 is below violet-400: L* 74.8. It carries no text, and is 8.44:1 on surface-raised.",
+        "on-accent": "The page colour #0E1013: the text on a white fill is the black of the page. The deep violet of the other sets would be a hue on a colourless fill.",
+        "accent-tint": "The accent at an alpha of 0x21, which is 13 %, as in violet.",
+        "accent-line": "The accent at an alpha of 0x66, which is 40 %, as in violet.",
+        "high-contrast.accent": "The accent as it is: it keeps 10.31:1 on the worst fill (selected row on surface-raised), over the 7:1 of high contrast, so there is nothing to lighten as there is in violet.",
+        "high-contrast.accent-soft": "Pure white, as the accent-soft is: it needs no change for 7:1.",
+        "high-contrast.accent-line": "The accent as an opaque border colour: 10.31:1 on the worst fill, over the 3:1 of a border."
+      },
+      "known_fails": {
+        "distance:ink": "Whatever its value: a neutral that keeps 4.5:1 as text over the Standard glass is at L* 69.5 or more, and none of them is 20 from ink (#E8EAED, L* 92): the furthest is 19.7, and a white is under 6 (sampled over every colour of chroma under 10, each channel from 130 to 255). The accent is told from the ink by its fill and its tint.",
+        "distance:ink-2": "Whatever its value: ink-2 (#C3C7CC, L* 80) lies in the lightness of a neutral that can be read as text over the glass (L* 69.5 and over), and none of those is 20 from it: the furthest is 16.6, and no neutral is 20 from both ink and ink-2 (the best is 15.0)."
+      }
+    }
+  }
+}

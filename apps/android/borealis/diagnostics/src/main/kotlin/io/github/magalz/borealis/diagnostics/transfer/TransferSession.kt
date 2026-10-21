@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-/** The QR code of the link: [size] by [size] modules, quiet margin included; true is dark. */
+/** A QR code: [size] by [size] modules, quiet margin included; true is dark. */
 class QrMatrix internal constructor(val size: Int, modules: BooleanArray) {
     private val modules = modules.copyOf()
 
@@ -29,6 +29,14 @@ class QrMatrix internal constructor(val size: Int, modules: BooleanArray) {
         other is QrMatrix && size == other.size && modules.contentEquals(other.modules)
 
     override fun hashCode(): Int = 31 * size + modules.contentHashCode()
+
+    companion object {
+        /**
+         * The QR code of [text], at error correction M and the smallest size that holds it, with a
+         * margin of 2 modules.
+         */
+        fun encode(text: String): QrMatrix = TransferQr.encode(text).toQrMatrix()
+    }
 }
 
 private fun BitMatrix.toQrMatrix(): QrMatrix =
@@ -159,7 +167,7 @@ internal constructor(
             val waiting =
                 TransferState.Waiting(
                     link = link,
-                    qr = TransferQr.encode(link).toQrMatrix(),
+                    qr = QrMatrix.encode(link),
                     fileName = file.name,
                     sizeBytes = file.length(),
                     remainingMillis = opened.remainingMillis(),

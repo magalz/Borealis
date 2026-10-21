@@ -23,8 +23,12 @@ styles. `README.md` has the whole procedure.
     python -I contrast.py glass-colours [--table <GlassContrastTable.kt>]
     python -I contrast.py halo <frames> --json <halo.json> [--tokens <tokens.json>] [--jobs N]
         [--texts <style> ...] [--icons] [--high-contrast] [--halo <stroke dp> <blur dp> <opacity %>]
+        [--font <sans regular> --font-semibold <sans semibold> | --fonts <font.json>]
 
-`measure` is cases (a) to (c) and `halo` is case (d). `glass-table` writes the table of the worst
+`measure` is cases (a) to (c) and `halo` is case (d), in IBM Plex Sans unless a font is named: two
+files, the regular and the semibold face (a variable font is set to 400 and 600), or a JSON manifest
+of them. The text is drawn at the size of the tokens times the scale that sets the x-height of the
+font to that of Plex. `glass-table` writes the table of the worst
 backdrop behind a glass panel that the app turns into the tint floors and the text colours of the
 glass, with the SHA-256 of the clips it was measured over, so that a test of the app tells a table
 that the clips have outgrown. `glass-colours` prints those floors and colours, worked out from the
@@ -45,6 +49,7 @@ import json
 import math
 import re
 import shutil
+import struct
 import subprocess
 import sys
 from pathlib import Path
@@ -862,36 +867,244 @@ HALO_MARGIN = 1.02
 HALO_REACH_SIGMAS = 4
 FONTS_DIR = REPO / "design" / "fonts" / "ibm-plex" / "res" / "font"
 
-# The text styles of the app that stand on the background, with the size token of each device. They
-# are the styles of `borealisTypography`: the title is `titleLarge`, the label is the kicker (its
-# capitals set 0.07 em apart), the body is `bodyMedium` and the small text is `bodySmall`. Large
-# text is 24 sp regular or 18.66 sp bold and over: the title of a TV is, the title of a phone (18 sp
-# semibold) is not.
+
+# The fonts of the halo
+#
+# The text is set in a font set: the regular face (the body and the small text), the semibold face
+# (the title and the label) and a scale that sets the x-height of the font to that of IBM Plex Sans
+# at the same size, which the app applies to the size of its text (Sprint 11, issue #48). A face is
+# a file, and for a variable font the values of its axes, which set the weight.
+
+FontFace = collections.namedtuple("FontFace", "path axes")
+FontSet = collections.namedtuple("FontSet", "name regular semibold scale")
+
+# The weights of the two faces: the tokens `regular` and `semibold`.
+FONT_WEIGHTS = {"regular": 400, "semibold": 600}
+# The size at which the height of an x is measured, in pixels: a thousandth of it is a unit of Plex.
+X_HEIGHT_SIZE = 1000
+
+# IBM Plex Sans is the reference of the scale, so its own scale is one by definition.
+PLEX_SANS = FontSet(
+    "IBM Plex Sans",
+    FontFace(str(FONTS_DIR / "ibm_plex_sans_regular.ttf"), None),
+    FontFace(str(FONTS_DIR / "ibm_plex_sans_semibold.ttf"), None),
+    1.0,
+)
+
+
+# The version at the start of a TrueType or OpenType file: TrueType outlines, CFF outlines, and the
+# `true` of some old Apple fonts.
+SFNT_VERSIONS = (b"\x00\x01\x00\x00", b"OTTO", b"true")
+
+
+def _read_sfnt(path):
+    """The bytes of a font file and its table directory, `{tag: (offset, length)}`.
+
+    A file that is not a font, a collection, and a directory that the file is too short for are a
+    `ValueError` that names the file, and not an error of `struct`.
+    """
+    data = Path(path).read_bytes()
+    if data[:4] == b"ttcf":
+        raise ValueError(f"{path} is a font collection, not a font file: name one of its fonts")
+    if data[:4] not in SFNT_VERSIONS:
+        raise ValueError(f"{path} is not a font file: it is not TrueType or OpenType")
+    count = _unpack(path, ">H", data, 4)[0]
+    if len(data) < 12 + 16 * count:
+        raise ValueError(f"{path} is cut short: its table directory is not all there")
+    entries = struct.iter_unpack(">4sIII", data[12 : 12 + 16 * count])
+    return data, {tag.decode("latin-1"): (offset, length) for tag, _, offset, length in entries}
+
+
+def _unpack(path, form, data, offset):
+    """`struct.unpack_from`, with a table that runs past the end of the file as a `ValueError`."""
+    try:
+        return struct.unpack_from(form, data, offset)
+    except struct.error:
+        raise ValueError(f"{path} is cut short: a table runs past the end of the file") from None
+
+
+def font_axes(path):
+    """The axes of a variable font, each `(tag, minimum, default, maximum)`, in the order of its
+    `fvar` table. A static font has none."""
+    data, tables = _read_sfnt(path)
+    if "fvar" not in tables:
+        return []
+    offset = tables["fvar"][0]
+    _, _, first, _, count, size, _, _ = _unpack(path, ">HHHHHHHH", data, offset)
+    axes = []
+    for index in range(count):
+        tag, low, default, high = _unpack(path, ">4siii", data, offset + first + index * size)
+        axes.append((tag.decode("ascii"), low / 65536, default / 65536, high / 65536))
+    return axes
+
+
+def font_face(path, weight):
+    """The face of a font file at a weight: the file itself for a static font, and for a variable
+    one the values of its axes, the weight on the `wght` axis and the default on every other."""
+    axes = font_axes(path)
+    if not axes:
+        return FontFace(str(path), None)
+    weights = [axis for axis in axes if axis[0] == "wght"]
+    if not weights:
+        raise ValueError(f"{path} is a variable font with no weight axis")
+    low, high = weights[0][1], weights[0][3]
+    if not low <= weight <= high:
+        raise ValueError(
+            f"{path} is a variable font whose weight axis runs from {low:g} to {high:g}, "
+            f"so it has no weight of {weight}"
+        )
+    values = (float(weight) if tag == "wght" else default for tag, _, default, _ in axes)
+    return FontFace(str(path), tuple(values))
+
+
+def load_face(face, size):
+    """The font of a face at `size` pixels, as Pillow draws it, with the layout of the basic engine.
+
+    A variable font is set to the weight of its face, which needs a FreeType of 2.9.1 or later. A
+    FreeType that cannot is reported and not worked around, for the weight would be the wrong one.
+    """
+    font = ImageFont.truetype(face.path, size, layout_engine=ImageFont.Layout.BASIC)
+    if face.axes is not None:
+        try:
+            font.set_variation_by_axes(list(face.axes))
+        except NotImplementedError as error:
+            raise ValueError(
+                f"{face.path} is a variable font and this FreeType cannot set its weight "
+                f"({error}): use a file of the weight"
+            ) from error
+    return font
+
+
+@functools.lru_cache(maxsize=None)
+def _font(face, size):
+    return load_face(face, size)
+
+
+def _measured_x_height(face):
+    """The height of an x in a face as a part of the em: its ink above the baseline, as drawn."""
+    size = X_HEIGHT_SIZE
+    image = Image.new("L", (2 * size, 2 * size), 0)
+    font = load_face(face, size)
+    ImageDraw.Draw(image).text((size // 2, size), "x", font=font, fill=255, anchor="ls")
+    return (size - image.getbbox()[1]) / size
+
+
+def x_height_ratio(face):
+    """The x-height of a face as a part of the em: the height of its x as drawn.
+
+    It is the drawn x and not the `sxHeight` of the OS/2 table, because the app draws the x: the
+    table of Andika and of B612 is 1.6 to 1.8 % off it, and that of OpenDyslexic Mono is the em.
+    `os2_x_height` is the table, for a cross-check.
+    """
+    return _measured_x_height(face)
+
+
+def os2_x_height(face):
+    """`sxHeight` of the OS/2 table of a face as a part of the em, for a cross-check of the x as
+    drawn, or None where the table has none: it is absent, before version 2, or zero."""
+    data, tables = _read_sfnt(face.path)
+    if "head" not in tables:
+        raise ValueError(f"{face.path} has no head table: it is not a TrueType or OpenType font")
+    units = _unpack(face.path, ">H", data, tables["head"][0] + 18)[0]
+    if "OS/2" not in tables:
+        return None
+    offset, length = tables["OS/2"]
+    if length < 90 or _unpack(face.path, ">H", data, offset)[0] < 2:
+        return None
+    x_height = _unpack(face.path, ">h", data, offset + 86)[0]
+    return x_height / units if x_height > 0 else None
+
+
+def x_height_scale(face, reference=PLEX_SANS.regular):
+    """The scale that makes the x-height of `face` that of `reference` (IBM Plex Sans) at the same
+    size: a font with a taller x is drawn smaller, by the ratio of the two drawn x-heights."""
+    return x_height_ratio(reference) / x_height_ratio(face)
+
+
+def font_set(regular, semibold, name=None):
+    """The font set of two files, the regular and the semibold face, with the scale of the first.
+
+    Both are opened, so that a file that is not there, one that is not a font and a variable font
+    that this FreeType cannot set are reported here. `name` is the stem of the regular file by
+    default.
+    """
+    files = {"regular": regular, "semibold": semibold}
+    faces = [font_face(file, FONT_WEIGHTS[weight]) for weight, file in files.items()]
+    for face in faces:
+        load_face(face, 16)
+    return FontSet(name or Path(regular).stem, *faces, x_height_scale(faces[0]))
+
+
+def read_font_manifest(path):
+    """The font set that a JSON manifest names: `regular` and `semibold`, the files next to the
+    manifest (or by absolute path), and the `name`, which is optional."""
+    path = Path(path)
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    missing = [weight for weight in FONT_WEIGHTS if weight not in manifest]
+    if missing:
+        raise ValueError(f"{path} has no {' or '.join(missing)}: a font set is both faces")
+    return font_set(
+        path.parent / manifest["regular"], path.parent / manifest["semibold"], manifest.get("name")
+    )
+
+
+def _face_weight(face):
+    """The weight that a variable face is set to, or None for a static one."""
+    if face.axes is None:
+        return None
+    for (tag, *_), value in zip(font_axes(face.path), face.axes):
+        if tag == "wght":
+            return value
+    return None
+
+
+def fonts_meta(fonts):
+    """A font set as plain data, for the JSON of a measurement."""
+    faces = {weight: getattr(fonts, weight) for weight in FONT_WEIGHTS}
+    return {
+        "name": fonts.name,
+        **{
+            weight: {"file": Path(face.path).name, "wght": _face_weight(face)}
+            for weight, face in faces.items()
+        },
+        "x_height": {
+            "drawn": x_height_ratio(fonts.regular),
+            "os2": os2_x_height(fonts.regular),
+        },
+        "scale": fonts.scale,
+    }
+
+
+# The text styles of the app that stand on the background, with the size token of each device and
+# the weight of the face that sets them (`FontSet`). They are the styles of `borealisTypography`:
+# the title is `titleLarge`, the label is the kicker (its capitals set 0.07 em apart), the body is
+# `bodyMedium` and the small text is `bodySmall`. Large text is 24 sp regular or 18.66 sp bold and
+# over: the title of a TV is, the title of a phone (18 sp semibold) is not.
 HALO_TEXTS = {
     "title": {
         "sizes": {"tv": ("tv", "title"), "phone": ("phone", "title")},
-        "font": "ibm_plex_sans_semibold",
+        "weight": "semibold",
         "tracking": 0.0,
         "upper": False,
         "large": ("tv",),
     },
     "label": {
         "sizes": {"tv": ("tv", "minimum"), "phone": ("phone", "kicker")},
-        "font": "ibm_plex_sans_semibold",
+        "weight": "semibold",
         "tracking": 0.07,
         "upper": True,
         "large": (),
     },
     "body": {
         "sizes": {"tv": ("tv", "body"), "phone": ("phone", "body")},
-        "font": "ibm_plex_sans_regular",
+        "weight": "regular",
         "tracking": 0.0,
         "upper": False,
         "large": (),
     },
     "small": {
         "sizes": {"tv": ("tv", "rail"), "phone": ("phone", "secondary")},
-        "font": "ibm_plex_sans_regular",
+        "weight": "regular",
         "tracking": 0.0,
         "upper": False,
         "large": (),
@@ -1160,13 +1373,6 @@ def halo_veil(frame, tint, dim):
     return (np.rint(composite(frame, tint, dim) * 255) / 255).astype(np.float32)
 
 
-@functools.lru_cache(maxsize=None)
-def _font(name, size):
-    return ImageFont.truetype(
-        str(FONTS_DIR / f"{name}.ttf"), size, layout_engine=ImageFont.Layout.BASIC
-    )
-
-
 # The sample text is set at this many times its size, and what is wanted of it is cut from that:
 # its coverage by averaging, and its widening by a stroke on the hard edge of the big picture.
 # Android does not hint the text, so the big picture, whose hinting is a fourth of a pixel, is
@@ -1174,20 +1380,22 @@ def _font(name, size):
 HALO_SUPERSAMPLE = 4
 
 
-def _set_sample(text, device, pad, tokens=TOKENS_JSON):
+def _set_sample(text, device, pad, tokens=TOKENS_JSON, fonts=PLEX_SANS):
     """The sample text of a style at `HALO_SUPERSAMPLE` times its size, as coverage, 0 to 1.
 
     The picture is that many times as large as the text with `pad` pixels round it. A label is in
-    capitals, with its letters spaced. The size of the text is that of the token file `tokens`.
+    capitals, with its letters spaced. The size of the text is that of the token file `tokens`,
+    times the scale of the font set `fonts`, and the face is its regular or its semibold one.
     """
     if text in HALO_ICONS:
         return _set_icon(text, device, pad)
     style = HALO_TEXTS[text]
-    size = text_size_px(text, device, tokens)
+    face = getattr(fonts, style["weight"])
+    size = text_size_px(text, device, tokens) * fonts.scale
     scale = HALO_SUPERSAMPLE
     sample = HALO_SAMPLE.upper() if style["upper"] else HALO_SAMPLE
-    ascent, descent = _font(style["font"], size).getmetrics()
-    font = _font(style["font"], size * scale)
+    ascent, descent = _font(face, size).getmetrics()
+    font = _font(face, size * scale)
     starts = [
         font.getlength(sample[:index]) + index * style["tracking"] * size * scale
         for index in range(len(sample))
@@ -1267,16 +1475,17 @@ def _reduce(big):
     return big.reshape(height, scale, width, scale).mean(axis=(1, 3))
 
 
-def glyph_mask(text, device, stroke_dp=0.0, pad=0, tokens=TOKENS_JSON):
+def glyph_mask(text, device, stroke_dp=0.0, pad=0, tokens=TOKENS_JSON, fonts=PLEX_SANS):
     """The coverage, 0 to 1, of the sample text of a style, with each glyph widened by a stroke.
 
-    The text is set in the font of the style at its size on the device. A label is in capitals, with
-    its letters spaced. `stroke_dp` widens each glyph by that much on every side, as a fill under a
-    stroke of twice the width does, with round joins. The picture is as large as the text with `pad`
-    pixels on each side, whatever the stroke, so that masks of different strokes line up, and `pad`
-    must be at least the stroke. The size of the text is that of the token file `tokens`.
+    The text is set in the face of the style (of the font set `fonts`) at its size on the device. A
+    label is in capitals, with its letters spaced. `stroke_dp` widens each glyph by that much on
+    every side, as a fill under a stroke of twice the width does, with round joins. The picture is
+    as large as the text with `pad` pixels on each side, whatever the stroke, so that masks of
+    different strokes line up, and `pad` must be at least the stroke. The size of the text is that
+    of the token file `tokens`, times the scale of the font set.
     """
-    big = _set_sample(text, device, pad, tokens)
+    big = _set_sample(text, device, pad, tokens, fonts)
     plain = _reduce(big)
     stroke = stroke_dp * device_density(device)
     if stroke <= 0:
@@ -1393,25 +1602,25 @@ HaloGeometry = collections.namedtuple("HaloGeometry", "configs alphas ring size"
 
 
 @functools.lru_cache(maxsize=None)
-def halo_geometry(text, device, tokens=TOKENS_JSON):
+def halo_geometry(text, device, tokens=TOKENS_JSON, fonts=PLEX_SANS):
     """The ring around the glyphs of a style and the alpha of each candidate on it.
 
     None of it depends on the frame. `ring` is the ring as a mask of its bounding box, `size` the
     (height, width) of that box and `alphas` has a row for each of `configs` (no halo first, then
     the grid) and a column for each pixel of the ring. The text is the size of the token file
-    `tokens`.
+    `tokens`, set in the font set `fonts`.
     """
     density = device_density(device)
     sigma = blur_sigma(max(HALO_BLURS_DP) * density)
     pad = math.ceil(max(HALO_STROKES_DP) * density + HALO_REACH_SIGMAS * sigma) + HALO_RING_PX + 1
-    ring = ring_mask(glyph_mask(text, device, pad=pad, tokens=tokens))
+    ring = ring_mask(glyph_mask(text, device, pad=pad, tokens=tokens, fonts=fonts))
     rows, columns = np.nonzero(ring)
     box = (slice(rows.min(), rows.max() + 1), slice(columns.min(), columns.max() + 1))
     ring = ring[box]
     configs = [HALO_NONE] + halo_configs()
     alphas = {HALO_NONE: np.zeros(int(ring.sum()), np.float32)}
     for stroke in HALO_STROKES_DP:
-        widened = glyph_mask(text, device, stroke_dp=stroke, pad=pad, tokens=tokens)
+        widened = glyph_mask(text, device, stroke, pad, tokens, fonts)
         for blur in HALO_BLURS_DP:
             full = halo_alpha(widened, blur, 1.0, density)[box][ring]
             for opacity in HALO_OPACITIES:
@@ -1428,7 +1637,9 @@ def _halo_place(pixels, geometry, tint, lights):
     return stats
 
 
-def measure_halo_frame(frame, device, colors, texts=None, dim=0.0, tokens=TOKENS_JSON):
+def measure_halo_frame(
+    frame, device, colors, texts=None, dim=0.0, tokens=TOKENS_JSON, fonts=PLEX_SANS
+):
     """The stats of each text style, candidate and token over one frame.
 
     The worst case ("min") is over every colour of the frame with every alpha of the ring, which is
@@ -1438,7 +1649,7 @@ def measure_halo_frame(frame, device, colors, texts=None, dim=0.0, tokens=TOKENS
     of those over the places. It returns `{text: {config: {token: stats}}}`, where `stats` has
     "min", "p1" and "p5". `frame` is an array or the path of a PNG. A `dim` is the veil of the page
     colour that high contrast lays over the frame, which the text is measured under. The text is
-    the size that the token file `tokens` says.
+    the size that the token file `tokens` says, set in the font set `fonts`.
     """
     if not isinstance(frame, np.ndarray):
         frame = load_frame(frame)
@@ -1448,7 +1659,7 @@ def measure_halo_frame(frame, device, colors, texts=None, dim=0.0, tokens=TOKENS
     colours = frame_colours(frame)
     result = {}
     for text in texts or HALO_TEXTS:
-        geometry = halo_geometry(text, device, tokens)
+        geometry = halo_geometry(text, device, tokens, fonts)
         worst = {token: None for token in HALO_TOKENS}
         for x, y in halo_placements(frame.shape, geometry.size):
             height, width = geometry.size
@@ -1473,14 +1684,16 @@ def measure_halo_frame(frame, device, colors, texts=None, dim=0.0, tokens=TOKENS
 
 
 def measure_halo_source(
-    frames, style, device, colors, jobs=1, texts=None, dim=0.0, tokens=TOKENS_JSON
+    frames, style, device, colors, jobs=1, texts=None, dim=0.0, tokens=TOKENS_JSON, fonts=PLEX_SANS
 ):
     """The rows of one background style on one device, over its frames.
 
     A row is a text style, a token and a candidate, with the lowest ratio over the frames ("min"),
     p1 and p5 (their lowest) and the number of the worst frame. The rows are plain data.
     """
-    measured = _map_frames(measure_halo_frame, frames, jobs, device, colors, texts, dim, tokens)
+    measured = _map_frames(
+        measure_halo_frame, frames, jobs, device, colors, texts, dim, tokens, fonts
+    )
     rows = []
     for text in texts or HALO_TEXTS:
         for config in [HALO_NONE] + halo_configs():
@@ -1502,10 +1715,13 @@ def measure_halo_source(
     return rows
 
 
-def measure_halo_sources(sources, colors, jobs=1, texts=None, dim=0.0, tokens=TOKENS_JSON):
+def measure_halo_sources(
+    sources, colors, jobs=1, texts=None, dim=0.0, tokens=TOKENS_JSON, fonts=PLEX_SANS
+):
     """The halo over `sources`, which maps (style, device) to its frames.
 
-    The sizes of the text are those of the token file `tokens`; `colors` are given.
+    The sizes of the text are those of the token file `tokens`, set in the font set `fonts`;
+    `colors` are given.
     """
     result = {
         "meta": {
@@ -1523,6 +1739,7 @@ def measure_halo_sources(sources, colors, jobs=1, texts=None, dim=0.0, tokens=TO
                 "frame in the encoded values, and the text on top."
             ),
             "colors": colors,
+            "fonts": fonts_meta(fonts),
             "tokens": list(HALO_TOKENS),
             "tint": HALO_TINT,
             "sample": HALO_SAMPLE,
@@ -1532,7 +1749,8 @@ def measure_halo_sources(sources, colors, jobs=1, texts=None, dim=0.0, tokens=TO
                         device: _text_sizes(tokens)[size]
                         for device, size in style["sizes"].items()
                     },
-                    "font": style["font"],
+                    "weight": style["weight"],
+                    "font": Path(getattr(fonts, style["weight"]).path).stem,
                 }
                 for name, style in HALO_TEXTS.items()
             },
@@ -1555,14 +1773,16 @@ def measure_halo_sources(sources, colors, jobs=1, texts=None, dim=0.0, tokens=TO
     for (style, device), frames in sorted(sources.items()):
         result["sources"].append({"style": style, "device": device, "frames": len(frames)})
         result["halo"] += measure_halo_source(
-            frames, style, device, colors, jobs, texts, dim, tokens
+            frames, style, device, colors, jobs, texts, dim, tokens, fonts
         )
     return result
 
 
-def measure_halo_folder(root, colors, jobs=1, texts=None, dim=0.0, tokens=TOKENS_JSON):
+def measure_halo_folder(
+    root, colors, jobs=1, texts=None, dim=0.0, tokens=TOKENS_JSON, fonts=PLEX_SANS
+):
     """Measures the halo over the frames in `root/<Style>-<device>/*.png`."""
-    return measure_halo_sources(_folder_sources(root), colors, jobs, texts, dim, tokens)
+    return measure_halo_sources(_folder_sources(root), colors, jobs, texts, dim, tokens, fonts)
 
 
 def _halo_required(row):
@@ -1713,6 +1933,13 @@ def halo_tables(result):
     for name in names:
         heads += [f"{name} min", f"{name} p1", f"{name} p5"]
     chosen = [row for row in rows if _halo_config(row) == choice]
+    fonts = result.get("meta", {}).get("fonts")
+    if fonts is None or fonts == fonts_meta(PLEX_SANS):
+        verdict = f"The choice: {halo_choice_text(choice)}."
+    else:
+        # The notes have the line "The choice: ..." once, and a test reads it: it is the font of the
+        # app's.
+        verdict = f"The smallest candidate for {fonts['name']}: {halo_choice_text(choice)}."
     tables += [
         f"Table E. The chosen halo ({halo_choice_text(choice)}) by text style and device: the "
         "lowest ratio over the backgrounds, with the background it is in, and the lowest p1 "
@@ -1725,7 +1952,7 @@ def halo_tables(result):
             + [f"{name}, {kind}" for name in names for kind in ("none", "halo")],
             _background_lines(rows, choice),
         ),
-        f"The choice: {halo_choice_text(choice)}.",
+        verdict,
     ]
     return "\n\n".join(tables)
 
@@ -1838,6 +2065,728 @@ def halo_icon_tables(result, config):
     return "\n\n".join(tables)
 
 
+# The accent candidates
+#
+# Sprint 11 lets the viewer choose the accent colour (issue #50), and the gate of the owner chooses
+# the candidates from these numbers. `accents.json` holds each candidate as a full set of roles, the
+# ones of `design/tokens.json`. For each set the tool checks:
+#
+# - the label on an accent fill, and the accent and accent-soft as text on the surfaces and on the
+#   tint of a selected row;
+# - the accent and accent-soft over the brightest pixel behind the glass of each style, at the
+#   default of Settings and at Reduced, as text and as an outline, and the selected label, which is
+#   the accent over its own tint on that glass;
+# - the high contrast set: text at 7:1 and borders at 3:1 over every fill;
+# - the CIEDE2000 distance of the accent from the status colours, as the viewers of each palette see
+#   them, and from the ink.
+#
+# The backgrounds are as they are drawn today, with their fixed violet: Sprint 11 stops the drawn
+# ones from taking the accent, so the glass table stays as it is.
+
+ACCENTS_JSON = REPO / "design" / "accessibility" / "accents.json"
+
+ACCENT_ROLES = ("accent", "accent-soft", "accent-strong", "on-accent", "accent-tint", "accent-line")
+# The tint and the line are drawn with an alpha. The other roles are opaque colours.
+ACCENT_ALPHA_ROLES = ("accent-tint", "accent-line")
+ACCENT_HIGH_CONTRAST_ROLES = ("accent", "accent-soft", "accent-line")
+# The neutral tokens that the accents are checked against.
+ACCENT_NEUTRALS = (
+    "page",
+    "chrome",
+    "surface",
+    "surface-raised",
+    "ink",
+    "ink-2",
+    "ink-3",
+    "hover",
+)
+# The fills that text lies on in high contrast, before the tint of a selected row and the hover.
+ACCENT_FILLS = ("page", "chrome", "surface", "surface-raised")
+STATUS_COLOURS = ("success", "warning", "danger", "offline")
+STATUS_PALETTES = ("default", "red-green", "blue-yellow")
+
+ACCENT_TEXT = WCAG_LIMITS[1]
+ACCENT_OUTLINE = WCAG_LIMITS[0]
+ACCENT_HIGH_CONTRAST_TEXT = WCAG_LIMITS[2]
+ACCENT_HIGH_CONTRAST_BORDER = WCAG_LIMITS[0]
+# Two colours are apart when CIEDE2000 puts them 20 or more from each other, as in
+# `ColourVisionPaletteTest`.
+ACCENT_DISTANCE = 20.0
+
+# The glass the accents are measured over: the 8 dp of the default of Settings at every tint of the
+# grid (the tint of a style is its floor), and the glass of Reduced.
+ACCENT_PANELS = [(GLASS_DEFAULT[1], alpha) for alpha in GLASS_ALPHAS] + [
+    (GLASS_REDUCED[1], GLASS_REDUCED[0])
+]
+
+# The Machado, Oliveira and Fernandes (2009) matrices of the dichromacies at severity 1.0, as
+# `ColourMeasures.kt` has them. A matrix acts on linear RGB, and each row adds up to 1.
+DICHROMACIES = {
+    "protanopia": (
+        (0.152286, 1.052583, -0.204868),
+        (0.114503, 0.786281, 0.099216),
+        (-0.003882, -0.048116, 1.051998),
+    ),
+    "deuteranopia": (
+        (0.367322, 0.860646, -0.227968),
+        (0.280085, 0.672501, 0.047413),
+        (-0.011820, 0.042940, 0.968881),
+    ),
+    "tritanopia": (
+        (1.255528, -0.076749, -0.178779),
+        (-0.078411, 0.930809, 0.147602),
+        (0.004733, 0.691367, 0.303900),
+    ),
+}
+VISIONS = ("normal", *DICHROMACIES)
+# Each palette is made for some vision, and the distance is held to 20 where it is made for it:
+# the status colours of today for normal vision, the red-green palette for protanopia and
+# deuteranopia, the blue-yellow palette for tritanopia, and each of them for normal vision too.
+ACCENT_CLAIMED = {
+    ("default", "normal"),
+    ("red-green", "normal"),
+    ("red-green", "protanopia"),
+    ("red-green", "deuteranopia"),
+    ("blue-yellow", "normal"),
+    ("blue-yellow", "tritanopia"),
+}
+
+_RGBA = re.compile(r"#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?\Z")
+LAB_WHITE_X, LAB_WHITE_Z = 0.95047, 1.08883
+LAB_EPSILON, LAB_KAPPA = 216.0 / 24389.0, 24389.0 / 27.0
+# Linear sRGB to XYZ (D65), and where the encoding of sRGB turns from the line to the power: they
+# are the numbers of `ColourMeasures.kt`, and a test keeps the two equal.
+SRGB_TO_XYZ = (
+    (0.4124564, 0.3575761, 0.1804375),
+    (0.2126729, 0.7151522, 0.0721750),
+    (0.0193339, 0.1191920, 0.9503041),
+)
+SRGB_ENCODE_THRESHOLD = 0.0031308
+
+
+def parse_rgba(value):
+    """A colour `#RRGGBB` or `#RRGGBBAA`, as the tokens write them, as its sRGB floats and alpha."""
+    found = _RGBA.match(value) if isinstance(value, str) else None
+    if found is None:
+        raise ValueError(f"{value!r} is not a #RRGGBB or #RRGGBBAA colour")
+    alpha = int(found[2], 16) / 255 if found[2] else 1.0
+    return parse_hex("#" + found[1]), alpha
+
+
+def over(foreground, background):
+    """The colour `foreground` (`#RRGGBB` or `#RRGGBBAA`) over the opaque `background`, as sRGB
+    floats, mixed in the encoded values as the platform composites.
+
+    The result is whole 8 bit values, as it is in Compose, whose sRGB colours hold 8 bits to a
+    channel and round half up: `HighContrastColorsTest` measures the colour that this gives.
+    """
+    rgb, alpha = parse_rgba(foreground)
+    mixed = alpha * rgb + (1 - alpha) * np.asarray(background, dtype=np.float64)
+    return np.floor(mixed * 255 + 0.5) / 255
+
+
+def rgb_contrast(first, second):
+    """The WCAG contrast ratio of two opaque colours given as sRGB floats."""
+    return float(contrast_ratio(relative_luminance(first), relative_luminance(second)))
+
+
+def seen_by(rgb, kind):
+    """An sRGB colour as someone with the dichromacy `kind` sees it, to 8 bits a channel.
+
+    This is `seenBy` of `ColourMeasures.kt`: the matrix acts on the linear values, which are clipped
+    to 0 to 1, encoded and rounded half up.
+    """
+    linear = srgb_to_linear(np.asarray(rgb, np.float64))
+    seen = np.clip(np.asarray(DICHROMACIES[kind]) @ linear, 0.0, 1.0)
+    encoded = np.where(
+        seen <= SRGB_ENCODE_THRESHOLD, seen * 12.92, 1.055 * seen ** (1 / 2.4) - 0.055
+    )
+    return np.floor(encoded * 255 + 0.5) / 255
+
+
+def srgb_to_lab(rgb):
+    """CIELAB under D65, as a tuple of the lightness and a and b, of an sRGB colour of floats."""
+    x, y, z = np.asarray(SRGB_TO_XYZ) @ srgb_to_linear(np.asarray(rgb, np.float64))
+    x, z = x / LAB_WHITE_X, z / LAB_WHITE_Z
+
+    def f(t):
+        return math.cbrt(t) if t > LAB_EPSILON else (LAB_KAPPA * t + 16) / 116
+
+    fx, fy, fz = f(x), f(y), f(z)
+    return 116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)
+
+
+def _hue(b, a):
+    return 0.0 if a == 0 and b == 0 else (math.degrees(math.atan2(b, a)) + 360) % 360
+
+
+def _hue_difference(c1, c2, h1, h2):
+    if c1 * c2 == 0:
+        return 0.0
+    difference = h2 - h1
+    if abs(difference) <= 180:
+        return difference
+    return difference - 360 if difference > 180 else difference + 360
+
+
+def _mean_hue(c1, c2, h1, h2):
+    if c1 * c2 == 0:
+        return h1 + h2
+    if abs(h1 - h2) <= 180:
+        return (h1 + h2) / 2
+    return (h1 + h2 + 360) / 2 if h1 + h2 < 360 else (h1 + h2 - 360) / 2
+
+
+def delta_e2000(lab1, lab2):
+    """The colour difference CIEDE2000 of two colours given in CIELAB (Sharma, Wu and Dalal, 2005).
+
+    2 or so is the least that is seen. It is `deltaE2000` of `ColourMeasures.kt`.
+    """
+    (l1, a1, b1), (l2, a2, b2) = lab1, lab2
+    mean_chroma = (math.hypot(a1, b1) + math.hypot(a2, b2)) / 2
+    g = 0.5 * (1 - math.sqrt(mean_chroma**7 / (mean_chroma**7 + 25.0**7)))
+    a1p, a2p = (1 + g) * a1, (1 + g) * a2
+    c1, c2 = math.hypot(a1p, b1), math.hypot(a2p, b2)
+    h1, h2 = _hue(b1, a1p), _hue(b2, a2p)
+    d_light, d_chroma = l2 - l1, c2 - c1
+    d_hue = 2 * math.sqrt(c1 * c2) * math.sin(math.radians(_hue_difference(c1, c2, h1, h2) / 2))
+    mean_light, mean_c, mean_h = (l1 + l2) / 2, (c1 + c2) / 2, _mean_hue(c1, c2, h1, h2)
+    t = (
+        1
+        - 0.17 * math.cos(math.radians(mean_h - 30))
+        + 0.24 * math.cos(math.radians(2 * mean_h))
+        + 0.32 * math.cos(math.radians(3 * mean_h + 6))
+        - 0.20 * math.cos(math.radians(4 * mean_h - 63))
+    )
+    rotation = (
+        -math.sin(math.radians(2 * 30 * math.exp(-(((mean_h - 275) / 25) ** 2))))
+        * 2
+        * math.sqrt(mean_c**7 / (mean_c**7 + 25.0**7))
+    )
+    sl = 1 + 0.015 * (mean_light - 50) ** 2 / math.sqrt(20 + (mean_light - 50) ** 2)
+    sc = 1 + 0.045 * mean_c
+    sh = 1 + 0.015 * mean_c * t
+    return math.sqrt(
+        (d_light / sl) ** 2
+        + (d_chroma / sc) ** 2
+        + (d_hue / sh) ** 2
+        + rotation * (d_chroma / sc) * (d_hue / sh)
+    )
+
+
+def colour_distance(first, second, kind=None):
+    """CIEDE2000 of two `#RRGGBB` colours, as someone with the dichromacy `kind` sees them, or as
+    anyone does when `kind` is None."""
+    colours = [parse_hex(value) for value in (first, second)]
+    if kind is not None:
+        colours = [seen_by(colour, kind) for colour in colours]
+    return delta_e2000(*(srgb_to_lab(colour) for colour in colours))
+
+
+def _check_accent_candidate(name, found):
+    """A candidate of `accents.json` made valid: every role there, every colour well formed, the
+    alpha only where it is drawn with one, a note on how each value was derived, and a reason for
+    each check that is known to fail (`known_fails`, which maps the id of a check to why)."""
+    candidate = {
+        "label": found.get("label", name),
+        "source": found.get("source", ""),
+        "color": found.get("color", {}),
+        "high-contrast": found.get("high-contrast", {}),
+        "notes": found.get("notes", {}),
+        "known_fails": dict(found.get("known_fails", {})),
+    }
+    sections = (
+        ("color", "", ACCENT_ROLES, ACCENT_ALPHA_ROLES),
+        ("high-contrast", "high-contrast.", ACCENT_HIGH_CONTRAST_ROLES, ()),
+    )
+    for section, prefix, roles, with_alpha in sections:
+        missing = [role for role in roles if role not in candidate[section]]
+        if missing:
+            raise ValueError(f"{name}: {section} has no {', '.join(missing)}")
+        for role in roles:
+            value = candidate[section][role]
+            try:
+                parse_rgba(value)
+            except ValueError:
+                raise ValueError(
+                    f"{name}: {prefix}{role} is not a #RRGGBB colour: {value!r}"
+                ) from None
+            if role not in with_alpha and len(value) != 7:
+                raise ValueError(
+                    f"{name}: {prefix}{role} must be an opaque #RRGGBB colour: {value}"
+                )
+            if f"{prefix}{role}" not in candidate["notes"]:
+                raise ValueError(f"{name}: {prefix}{role} has no note on how it was derived")
+    for check, reason in candidate["known_fails"].items():
+        if not isinstance(reason, str) or not reason.strip():
+            raise ValueError(f"{name}: known_fails of {check} has no reason")
+    return candidate
+
+
+def load_accents(path=ACCENTS_JSON):
+    """The candidates of `accents.json`, by name, each checked (`_check_accent_candidate`)."""
+    found = json.loads(Path(path).read_text(encoding="utf-8")).get("candidates") or {}
+    if not found:
+        raise ValueError(f"{path} has no candidate")
+    return {name: _check_accent_candidate(name, entry) for name, entry in found.items()}
+
+
+def accent_context(tokens=TOKENS_JSON):
+    """The colours of the token file that the accents are checked against: the neutrals, and the
+    status colours of the default and of the two colour-blind palettes."""
+    data = json.loads(Path(tokens).read_text(encoding="utf-8"))
+    colors = load_colors(tokens, ACCENT_NEUTRALS)
+    status = {"default": {name: data["color"][name]["$value"] for name in STATUS_COLOURS}}
+    for palette in STATUS_PALETTES[1:]:
+        status[palette] = {
+            name: data["colour-vision"][palette][name]["$value"] for name in STATUS_COLOURS
+        }
+    return {"colors": colors, "status": status}
+
+
+def _backdrop_frame(frame, device, surface, overlays):
+    """The luminance of the brightest pixel of each glass panel over one frame, plain and with the
+    tint of each candidate laid on it: `{(blur_dp, alpha, overlay): luminance}`.
+
+    A panel is the frame blurred and the `surface` colour over it at an alpha, and an overlay is
+    `(rgb, alpha)`, which is laid over the panel as the platform composites the tint of a selected
+    row. The text is lighter than every backdrop, so its lowest ratio is over the brightest pixel.
+    """
+    if not isinstance(frame, np.ndarray):
+        frame = load_frame(frame)
+    density = frame_density(frame.shape[1], device)
+    blurs = sorted({blur for blur, _ in ACCENT_PANELS})
+    images = dict(zip(blurs, gaussian_blurs(frame, [blur_sigma(dp * density) for dp in blurs])))
+    found = {}
+    for blur, alpha in ACCENT_PANELS:
+        panel = composite(images[blur], surface, alpha)
+        found[(blur, alpha, None)] = float(relative_luminance(panel).max())
+        for name, (rgb, tint_alpha) in overlays.items():
+            laid = composite(panel, rgb, tint_alpha)
+            found[(blur, alpha, name)] = float(relative_luminance(laid).max())
+    return found
+
+
+def measure_backdrops(sources, candidates, context, jobs=1):
+    """The brightest pixel behind each glass, for every style and device in `sources` (which maps
+    (style, device) to its frames), plain and with the accent tint of each candidate on it.
+
+    A row is `{style, device, blur_dp, alpha, overlay, luminance}`, with the highest luminance over
+    the frames of the source. `overlay` is None for the glass alone, else the name of a candidate.
+    """
+    surface = parse_hex(context["colors"][GLASS_TINT])
+    overlays = {
+        name: parse_rgba(found["color"]["accent-tint"]) for name, found in candidates.items()
+    }
+    rows = []
+    for (style, device), frames in sorted(sources.items()):
+        measured = _map_frames(_backdrop_frame, frames, jobs, device, surface, overlays)
+        for blur, alpha in ACCENT_PANELS:
+            for overlay in (None, *overlays):
+                rows.append(
+                    {
+                        "style": style,
+                        "device": device,
+                        "blur_dp": blur,
+                        "alpha": alpha,
+                        "overlay": overlay,
+                        "luminance": max(m[(blur, alpha, overlay)] for m in measured),
+                    }
+                )
+    return rows
+
+
+def _worst_backdrops(rows):
+    """The rows folded over the devices to the brightest: `{(style, blur, alpha, overlay): L}`."""
+    worst = {}
+    for row in rows:
+        key = (row["style"], row["blur_dp"], row["alpha"], row["overlay"])
+        worst[key] = max(worst.get(key, 0.0), row["luminance"])
+    return worst
+
+
+def _luminance(value):
+    return float(relative_luminance(parse_hex(value)))
+
+
+def _accent_fills(roles, colors):
+    """The checks on the opaque fills: the label on the accent, and the accent and accent-soft as
+    text on the surfaces and on the tint of a selected row."""
+    fills = [
+        {
+            "id": "on-accent/accent",
+            "label": "`on-accent` on `accent`",
+            "ratio": rgb_contrast(parse_hex(roles["on-accent"]), parse_hex(roles["accent"])),
+            "limit": ACCENT_TEXT,
+        }
+    ]
+    for role in ("accent", "accent-soft"):
+        text = parse_hex(roles[role])
+        for surface in SURFACE_TOKENS:
+            fills.append(
+                {
+                    "id": f"{role}/{surface}",
+                    "label": f"`{role}` on `{surface}`",
+                    "ratio": rgb_contrast(text, parse_hex(colors[surface])),
+                    "limit": ACCENT_TEXT,
+                }
+            )
+        for surface in ("surface", "surface-raised"):
+            tint = over(roles["accent-tint"], parse_hex(colors[surface]))
+            fills.append(
+                {
+                    "id": f"{role}/tint-on-{surface}",
+                    "label": f"`{role}` on the tint over `{surface}`",
+                    "ratio": rgb_contrast(text, tint),
+                    "limit": ACCENT_TEXT,
+                }
+            )
+    strong = parse_hex(roles["accent-strong"])
+    for surface in SURFACE_TOKENS:
+        fills.append(
+            {
+                "id": f"accent-strong/{surface}",
+                "label": f"`accent-strong` on `{surface}` (information)",
+                "ratio": rgb_contrast(strong, parse_hex(colors[surface])),
+                "limit": None,
+            }
+        )
+    return fills
+
+
+def _grid_alpha(cell, tint):
+    """The tint of the grid that a tint is read as: the next one below it, which is the brighter
+    backdrop, as `backdropLuminance` of the app reads it."""
+    alphas = sorted({alpha for _, alpha in cell})
+    below = [alpha for alpha in alphas if alpha <= tint + 1e-9]
+    return below[-1] if below else alphas[0]
+
+
+def _accent_glass(name, roles, colors, worst):
+    """The rows over the glass of each style at the default and at Reduced, the floors, and the
+    failures. The default is the tint of Settings raised to the floor of the style, which is worked
+    out with the accent-soft of the candidate, as it is one of the colours that the floor keeps."""
+    floor_colors = {**colors, "accent-soft": roles["accent-soft"]}
+    text = {role: _luminance(roles[role]) for role in ("accent", "accent-soft")}
+    rows, floors, fails = [], {}, []
+    for style in STYLE_LABELS:
+        cell = {
+            (blur, alpha): value
+            for (found, blur, alpha, overlay), value in worst.items()
+            if found == style and overlay is None
+        }
+        if not cell:
+            continue
+        floors[style] = glass_floor(cell, GLASS_DEFAULT[1], floor_colors)
+        specs = {
+            "standard": (max(round(GLASS_DEFAULT[0] * 100), floors[style]), GLASS_DEFAULT[1]),
+            "reduced": (round(GLASS_REDUCED[0] * 100), GLASS_REDUCED[1]),
+        }
+        for spec, (tint, blur) in specs.items():
+            column = {key: value for key, value in cell.items() if key[0] == blur}
+            if not column:
+                continue
+            alpha = _grid_alpha(column, tint / 100)
+            backdrop = column[(blur, alpha)]
+            laid = worst.get((style, blur, alpha, name))
+            row = {
+                "style": style,
+                "spec": spec,
+                "tint": tint,
+                "backdrop": backdrop,
+                "accent": float(contrast_ratio(text["accent"], backdrop)),
+                "accent-soft": float(contrast_ratio(text["accent-soft"], backdrop)),
+                "selected": None if laid is None else float(contrast_ratio(text["accent"], laid)),
+            }
+            rows.append(row)
+            where = f"glass:{spec}:{style}"
+            for role in ("accent", "accent-soft"):
+                if row[role] < ACCENT_TEXT:
+                    fails.append(f"{where}:{role}-text")
+                if row[role] < ACCENT_OUTLINE:
+                    fails.append(f"{where}:{role}-outline")
+            if row["selected"] is not None and row["selected"] < ACCENT_TEXT:
+                fails.append(f"{where}:selected")
+    return rows, floors, fails
+
+
+def _accent_high_contrast(roles, high, colors):
+    """The checks of high contrast: text at 7:1 and borders at 3:1 over every fill that text lies
+    on, which are the surfaces, the tint of a selected row on them and the hover on the raised one.
+    """
+    surfaces = {name: parse_hex(colors[name]) for name in ACCENT_FILLS}
+    fills = dict(surfaces)
+    for surface in ("surface", "surface-raised"):
+        fills[f"selected row on {surface}"] = over(roles["accent-tint"], surfaces[surface])
+    fills["hover on surface-raised"] = over(colors["hover"], surfaces["surface-raised"])
+
+    def lowest(role, limit):
+        colour = parse_hex(high[role])
+        where = min(fills, key=lambda fill: rgb_contrast(colour, fills[fill]))
+        return {
+            "id": f"hc:{role}",
+            "label": f"high contrast `{role}`",
+            "ratio": rgb_contrast(colour, fills[where]),
+            "limit": limit,
+            "on": where,
+        }
+
+    return [
+        lowest("accent", ACCENT_HIGH_CONTRAST_TEXT),
+        lowest("accent-soft", ACCENT_HIGH_CONTRAST_TEXT),
+        lowest("accent-line", ACCENT_HIGH_CONTRAST_BORDER),
+        {
+            "id": "hc:on-accent/accent",
+            "label": "`on-accent` on high contrast `accent`",
+            "ratio": rgb_contrast(parse_hex(roles["on-accent"]), parse_hex(high["accent"])),
+            "limit": ACCENT_HIGH_CONTRAST_TEXT,
+            "on": "accent",
+        },
+    ]
+
+
+def _accent_distance(accent, context):
+    """The least CIEDE2000 distance of the accent from the status colours of each palette as each
+    vision sees them, and from `ink` and `ink-2` as normal vision sees them: the accent of a
+    selected label is told from the ink beside it by its colour, whatever the colour is."""
+    found = []
+    for palette, colours in context["status"].items():
+        for vision in VISIONS:
+            kind = None if vision == "normal" else vision
+            apart = {status: colour_distance(accent, hue, kind) for status, hue in colours.items()}
+            nearest = min(apart, key=apart.get)
+            found.append(
+                {
+                    "id": f"distance:{palette}:{vision}",
+                    "label": f"`accent` from the {palette} status colours, {vision} vision",
+                    "palette": palette,
+                    "vision": vision,
+                    "least": apart[nearest],
+                    "nearest": nearest,
+                    "limit": ACCENT_DISTANCE,
+                    "relevant": (palette, vision) in ACCENT_CLAIMED,
+                }
+            )
+    for ink in ("ink", "ink-2"):
+        found.append(
+            {
+                "id": f"distance:{ink}",
+                "label": f"`accent` from `{ink}`, normal vision",
+                "palette": None,
+                "vision": "normal",
+                "least": colour_distance(accent, context["colors"][ink]),
+                "nearest": ink,
+                "limit": ACCENT_DISTANCE,
+                "relevant": True,
+            }
+        )
+    return found
+
+
+def accent_report(candidates, context, rows):
+    """For each candidate (`{name: candidate}`), the checks that issue #50 asks for.
+
+    `rows` are those of `measure_backdrops`, and may be empty: the checks over the glass are then
+    left out. Each check is a dict with an `id`, a `label`, a ratio (or a `least` distance) and its
+    `limit`; `fails` lists the ids of the checks that are short of their limit, in the order of
+    fills, glass, high contrast and distance.
+    """
+    worst = _worst_backdrops(rows)
+    colors = context["colors"]
+    report = {}
+    for name, found in candidates.items():
+        roles, high = found["color"], found["high-contrast"]
+        fills = _accent_fills(roles, colors)
+        glass, floors, glass_fails = _accent_glass(name, roles, colors, worst)
+        hc = _accent_high_contrast(roles, high, colors)
+        distance = _accent_distance(roles["accent"], context)
+        fails = [c["id"] for c in fills if c["limit"] is not None and c["ratio"] < c["limit"]]
+        fails += glass_fails
+        fails += [c["id"] for c in hc if c["ratio"] < c["limit"]]
+        fails += [c["id"] for c in distance if c["relevant"] and c["least"] < c["limit"]]
+        report[name] = {
+            "label": found["label"],
+            "roles": {"color": roles, "high-contrast": high},
+            "fills": fills,
+            "glass": glass,
+            "floors": floors,
+            "high_contrast": hc,
+            "distance": distance,
+            "fails": fails,
+        }
+    return report
+
+
+def measure_accents(root, candidates, context, jobs=1):
+    """The accents over the frames in `root/<Style>-<device>/*.png`: the rows of the backdrops and
+    the report of each candidate, as plain data."""
+    sources = _folder_sources(root)
+    rows = measure_backdrops(sources, candidates, context, jobs)
+    return {
+        "meta": {
+            "statistic": (
+                "The luminance of the brightest pixel behind the text of a glass panel, over every "
+                "frame of each source and then over both devices: the frame blurred, the surface "
+                "colour on it at the tint, and for the selected label the accent tint on that. The "
+                "ratio of the accent over it is the lowest of the text on that glass. The tint of "
+                "the default is that of Settings, 40 %, raised to the floor of the style."
+            ),
+            "colors": context["colors"],
+            "status": context["status"],
+            "glass_tint": GLASS_TINT,
+            "glass_default": {"tint_percent": round(GLASS_DEFAULT[0] * 100), "blur_dp": 8},
+            "glass_reduced": {"tint_percent": round(GLASS_REDUCED[0] * 100), "blur_dp": 48},
+            "limits": {
+                "text": ACCENT_TEXT,
+                "outline": ACCENT_OUTLINE,
+                "high_contrast_text": ACCENT_HIGH_CONTRAST_TEXT,
+                "high_contrast_border": ACCENT_HIGH_CONTRAST_BORDER,
+                "distance": ACCENT_DISTANCE,
+            },
+        },
+        "sources": [
+            {"style": style, "device": device, "frames": len(frames)}
+            for (style, device), frames in sorted(sources.items())
+        ],
+        "backdrops": rows,
+        "candidates": accent_report(candidates, context, rows),
+    }
+
+
+def _ratio_cell(ratio, text=ACCENT_TEXT, outline=None):
+    """A ratio as a cell: with a word when it is short of its limit, and, if there is a second and
+    lower limit for an outline, when it is only above that."""
+    if ratio is None:
+        return "-"
+    cell = format_ratio(ratio)
+    if ratio >= text:
+        return cell
+    if outline is not None and ratio >= outline:
+        return f"{cell} (outline only)"
+    return f"{cell} (short)"
+
+
+def _glass_cells(reports, names, row, cell):
+    """The cells of a line of a glass table: `cell` of the glass of each candidate that is the style
+    and the glass of `row`."""
+    where = (row["style"], row["spec"])
+    return [
+        cell(next(g for g in reports[name]["glass"] if (g["style"], g["spec"]) == where))
+        for name in names
+    ]
+
+
+def _glass_table(reports, names, cell):
+    """A table over the glass: a line for each style and glass, a column for each candidate."""
+    lines = [
+        [STYLE_LABELS[row["style"]], row["spec"].capitalize()]
+        + _glass_cells(reports, names, row, cell)
+        for row in reports[names[0]]["glass"]
+    ]
+    return _table(["Style", "Glass"] + [reports[name]["label"] for name in names], lines)
+
+
+def _glass_ratio(key, outline):
+    """The cell of a glass table for the ratio `key` of a row, with the limit of an outline."""
+    return lambda row: _ratio_cell(row[key], ACCENT_TEXT, outline)
+
+
+def _limit_label(label, limit):
+    return label if limit is None else f"{label}, {format_ratio(limit)}:1"
+
+
+def accent_tables(result):
+    """The tables of the accent candidates for `docs/ux/accessibility.md`, from a result.
+
+    N is the role sets, O the checks on the opaque fills, P the glass of each candidate (its tint
+    and the brightest pixel), Q and R the accent and the accent-soft over the glass, S the selected
+    label over the glass, T high contrast and U the distances. A line for each candidate says which
+    checks it fails.
+    """
+    reports = result["candidates"]
+    names = list(reports)
+    heads = [reports[name]["label"] for name in names]
+    sections = []
+
+    def add(title, header, lines):
+        sections.extend([title, _table(header, lines)])
+
+    roles = []
+    for section, prefix in (("color", ""), ("high-contrast", "high contrast ")):
+        for role in reports[names[0]]["roles"][section]:
+            cells = [f"`{reports[name]['roles'][section][role]}`" for name in names]
+            roles.append([f"{prefix}`{role}`"] + cells)
+    add("Table N. The role sets of the candidates.", ["Role"] + heads, roles)
+
+    lines = []
+    for index, fill in enumerate(reports[names[0]]["fills"]):
+        found = [reports[name]["fills"][index] for name in names]
+        cells = [_ratio_cell(one["ratio"], one["limit"] or 0.0) for one in found]
+        lines.append([_limit_label(fill["label"], fill["limit"])] + cells)
+    add(
+        "Table O. Text on the opaque fills: the contrast ratio, and the label on an accent fill. "
+        "The limit of each is in its first column.",
+        ["Check"] + heads,
+        lines,
+    )
+
+    if any(reports[name]["glass"] for name in names):
+        sections.append(
+            "Table P. The glass: its tint, which is the 40 % of Settings raised to the floor of "
+            "the style for the accent-soft of the candidate (85 % at Reduced), and the luminance "
+            "of the brightest pixel behind the text over every frame of both devices."
+        )
+        sections.append(
+            _glass_table(reports, names, lambda g: f"{g['tint']} %, {g['backdrop']:.4f}")
+        )
+        for title, key, outline in (
+            ("Table Q. `accent` over the glass: text needs 4.5:1, an outline 3:1.", "accent", 3.0),
+            ("Table R. `accent-soft` over the glass: text 4.5:1, outline 3:1.", "accent-soft", 3.0),
+            ("Table S. The selected label, `accent` over its tint on the glass.", "selected", None),
+        ):
+            sections.append(title)
+            sections.append(_glass_table(reports, names, _glass_ratio(key, outline)))
+
+    lines = []
+    for index, check in enumerate(reports[names[0]]["high_contrast"]):
+        found = [reports[name]["high_contrast"][index] for name in names]
+        cells = [f"{_ratio_cell(one['ratio'], one['limit'])} ({one['on']})" for one in found]
+        lines.append([_limit_label(check["label"], check["limit"])] + cells)
+    add(
+        "Table T. High contrast: the lowest ratio over the fills that text lies on, the surfaces, "
+        "the tint of a selected row on them and the hover, and the fill it is on. Text needs 7:1 "
+        "and a border 3:1.",
+        ["Check"] + heads,
+        lines,
+    )
+
+    def distance_cell(one):
+        if not one["relevant"]:
+            note = " (not claimed)"
+        else:
+            note = " (short)" if one["least"] < one["limit"] else ""
+        return f"{one['least']:.1f}, {one['nearest']}{note}"
+
+    lines = []
+    for index, check in enumerate(reports[names[0]]["distance"]):
+        found = [reports[name]["distance"][index] for name in names]
+        lines.append([check["label"]] + [distance_cell(one) for one in found])
+    add(
+        "Table U. The least CIEDE2000 distance of `accent` from the status colours as each vision "
+        "sees them, and from the ink. 20 or more apart is distinct. A row that its palette is not "
+        "for is given for information.",
+        ["Check"] + heads,
+        lines,
+    )
+
+    for name in names:
+        label, fails = reports[name]["label"], reports[name]["fails"]
+        sections.append(
+            f"{label} fails no check." if not fails else f"{label} fails: {', '.join(fails)}."
+        )
+    return "\n\n".join(sections)
+
+
 # The command line
 
 
@@ -1860,9 +2809,12 @@ def _say(log, message):
 
 
 def _save_result(result, args):
-    """Puts the date and the revision in the `meta` of a result and writes it to `args.json`."""
+    """Puts the date and the revision in the `meta` of a result and writes it to `args.json`, if
+    there is one: `accents` has it only when it is asked for."""
     result["meta"]["date"] = datetime.date.today().isoformat()
     result["meta"]["revision"] = args.revision or _revision()
+    if args.json is None:
+        return
     args.json.parent.mkdir(parents=True, exist_ok=True)
     args.json.write_text(json.dumps(result, indent=1) + "\n", encoding="utf-8")
 
@@ -1903,8 +2855,12 @@ def _run_halo(args, log):
         colors = {**colors, "ink": found["ink"], "ink-2": found["ink-2"]}
         dim = found["dim"]
     texts = list(HALO_ICONS) if args.icons else args.texts
-    result = measure_halo_folder(args.frames, colors, args.jobs, texts, dim, args.tokens)
+    fonts = args.font_set
+    result = measure_halo_folder(args.frames, colors, args.jobs, texts, dim, args.tokens, fonts)
     _save_result(result, args)
+    if fonts != PLEX_SANS:
+        files = ", ".join(Path(face.path).name for face in (fonts.regular, fonts.semibold))
+        print(f"Font: {fonts.name} ({files}), x-height scale {fonts.scale:.3f}.\n")
     if args.halo is None:
         print(halo_tables(result))
     else:
@@ -1914,12 +2870,20 @@ def _run_halo(args, log):
     return 0
 
 
+def _run_accents(args, log):
+    result = measure_accents(args.frames, args.candidates, args.context, args.jobs)
+    _save_result(result, args)
+    print(accent_tables(result))
+    return 0
+
+
 COMMANDS = {
     "extract": _run_extract,
     "measure": _run_measure,
     "glass-table": _run_glass_table,
     "glass-colours": _run_glass_colours,
     "halo": _run_halo,
+    "accents": _run_accents,
 }
 
 
@@ -1963,7 +2927,36 @@ def _parser():
         metavar=("STROKE_DP", "BLUR_DP", "OPACITY_PERCENT"),
         help="the halo to check under high contrast",
     )
+    halo.add_argument("--font", type=Path, help="the regular face of the font (default: Plex Sans)")
+    halo.add_argument("--font-semibold", type=Path, help="the semibold face, with --font")
+    halo.add_argument("--fonts", type=Path, help="a JSON manifest of the font, for --font")
+
+    accents = commands.add_parser("accents", help="measure the accent colour candidates")
+    accents.add_argument("frames", type=Path, help="the folder of <Style>-<tv|phone>/NN.png")
+    accents.add_argument("--accents", type=Path, default=ACCENTS_JSON, help="the candidates")
+    accents.add_argument("--tokens", type=Path, default=TOKENS_JSON, help="the design tokens")
+    accents.add_argument("--json", type=Path, help="where the result goes (default: nowhere)")
+    accents.add_argument("--jobs", type=int, default=4, help="processes, one frame each")
+    accents.add_argument("--revision", help="the revision measured (default: HEAD)")
     return parser
+
+
+def _font_set(parser, args):
+    """The font set that the options of `halo` name, IBM Plex Sans if they name none."""
+    if args.fonts and (args.font or args.font_semibold):
+        parser.error("--fonts and --font are not asked together")
+    if bool(args.font) != bool(args.font_semibold):
+        parser.error("--font and --font-semibold go together")
+    if args.icons and (args.fonts or args.font):
+        parser.error("--icons and a font are not asked together")
+    try:
+        if args.fonts:
+            return read_font_manifest(args.fonts)
+        if args.font:
+            return font_set(args.font, args.font_semibold)
+    except (OSError, ValueError) as error:
+        parser.error(str(error))
+    return PLEX_SANS
 
 
 def _check_halo(parser, args):
@@ -1971,6 +2964,16 @@ def _check_halo(parser, args):
         parser.error("--icons and --texts are not asked together")
     if (args.high_contrast or args.icons) != (args.halo is not None):
         parser.error("--high-contrast and --icons go with --halo: the halo to check is named")
+    args.font_set = _font_set(parser, args)
+
+
+def _check_accents(parser, args):
+    """Reads the candidates and the colours that `accents` is asked to measure, or says why not."""
+    try:
+        args.candidates = load_accents(args.accents)
+        args.context = accent_context(args.tokens)
+    except (OSError, ValueError) as error:
+        parser.error(str(error))
 
 
 def main(argv=None, log=None):
@@ -1983,6 +2986,8 @@ def main(argv=None, log=None):
     args = parser.parse_args(argv)
     if args.command == "halo":
         _check_halo(parser, args)
+    elif args.command == "accents":
+        _check_accents(parser, args)
     return COMMANDS[args.command](args, log)
 
 

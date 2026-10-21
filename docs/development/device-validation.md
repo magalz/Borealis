@@ -1,10 +1,11 @@
 # Device validation runbook
 
-This runbook checks Borealis Phase 1 and Sprints 2 to 9 on two devices against
-LuminalShine 26.09.1 running on the owner's Windows PC. It is for the owner and
-for the orchestrator who runs the checks. Run the steps in order and record the
-results as a new section with a table, like sections 7 to 10. Sections 6 to 14
-hold the results of Phase 1 and Sprints 2 to 9, in that order.
+This runbook checks Borealis Phase 1 and Sprints 2 to 10 on two devices against
+LuminalShine 26.09.1 and 26.10.0-beta.1 running on the owner's Windows PC. It is
+for the owner and for the orchestrator who runs the checks. Run the steps in
+order and record the results as a new section with a table, like sections 7 to
+10. Sections 6 to 15 hold the results of Phase 1 and Sprints 2 to 10, in that
+order.
 
 Sources: [host contract](../host-contract/luminalshine.md) (cited as "contract"),
 [Borealis Android README](../../apps/android/borealis/README.md),
@@ -96,7 +97,12 @@ capture that is committed.
 2. Record the LuminalShine release from the host installation. `TODO(verify)`:
    `/serverinfo` does not carry the release version (contract section 1 and
    proposal P1), so the version in the Host details dialog is the protocol
-   version `7.1.431.-1`, not `26.09.1`.
+   version `7.1.431.-1`, not `26.09.1`. On 26.10.0-beta.1 the HTTPS
+   `/serverinfo` carries `LuminalShineVersion` (#199; reported in its release
+   notes, not yet verified in the source). The client does not show it yet
+   (Sprint 13), so Host details still shows `7.1.431.-1` there too, and must
+   show no error because of the new field. The Sprint 10 checks (section 3.23)
+   run against 26.10.0-beta.1, which has no fixtures folder yet.
 3. Open `https://<host>:47990` (the Web UI) in a browser on the PC and check
    that it loads. Accept a self-signed certificate warning if the browser shows
    one. `TODO(verify)`: whether the browser warning appears.
@@ -1123,12 +1129,193 @@ item as `pass`, `fail` or `not applicable`, as in section 3.22.
 3. End with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the
    Streamer.
 
+### 3.23 Sprint 10 checks
+
+Run these with the Sprint 10 build on the Google TV Streamer and on the S22,
+against LuminalShine 26.10.0-beta.1. Sprint 10 added the glass, the Accessibility
+group, the phone Settings sections, OK entering a pane, the rail footer, the quit
+notice, the About fixes, the focus after Back from Apps and TalkBack support. The
+Streamer shows 10 Settings groups, because it has no touchscreen and so no
+On-screen controls group. The S22 shows 11, as sections in portrait and as groups
+in landscape with a pad. For the rail, the S22 with a pad is the handheld.
+Record each item as `pass`, `fail`, `owner only` or `not applicable`, with a short
+note for each `fail`. Where a step names one device, run it there only.
+
+Not runnable: API 28 to 30 (no device), where the halo and the glass with a tint
+and no blur have been drawn in tests only. A visual item (the look of the glass,
+the halo, the dot shapes, the thickness of an outline) needs a capture or the
+owner's eyes. A capture is taken only where it shows no address, host name, PIN
+or PC screen (section 5). If a capture is refused, mark the item `owner only`.
+
+A debug build that was just installed runs slower until the JIT has warmed up.
+Before the frame-time steps, open Settings and move through every group a few
+times.
+
+**Frame-time method.** The steps that name a frame rate or a frame time use
+`gfxinfo` on the debug package, `io.github.magalz.borealis.debug`:
+
+1. Put the app on the screen to measure, and run
+   `adb -s <serial> shell dumpsys gfxinfo io.github.magalz.borealis.debug reset`.
+2. Leave the screen at rest for about 8 s, or press the keys of the move.
+3. Run `adb -s <serial> shell dumpsys gfxinfo io.github.magalz.borealis.debug framestats`.
+   Android keeps only the last 120 frames of a window, so for a sequence of moves
+   read it every few moves (the round of section 15 read it every 3 moves, 1.1 s
+   apart) and merge the readings by `IntendedVsync`.
+4. Parse the output. Each window is a `Window:` line, then a `---PROFILEDATA---`
+   line, a header of column names separated by commas, one row of integers (in
+   nanoseconds) per frame, and a closing `---PROFILEDATA---` line. Keep the rows
+   that have as many fields as the header and `Flags` equal to 0.
+   - The duration of a frame is `FrameCompleted` minus `IntendedVsync`. Report its
+     p50 (and the p90 and the maximum), in milliseconds.
+   - The rate is the number of rows less one over the time from the first to the
+     last `IntendedVsync`. On a 60 Hz output, 24 fps alternates frame intervals of
+     33.3 ms and 50 ms, so the median interval flips between them: report the rate
+     and the mean interval instead.
+   - The longest frame after a key is the longest duration among the frames that
+     start within 700 ms of a frame that handled input (`InputEventId` not 0; a
+     cluster of such frames within 400 ms is one move).
+5. The reference figures are in
+   [ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md): on the
+   Streamer with the glass at Standard, Hosts 34.8 ms and Settings 37.0 ms, against
+   the budget of 41.7 ms at 24 fps. No script is committed; any parser that does
+   the above will do.
+
+Steps:
+
+1. Glass on all seven styles, at each level (Streamer; the S22 for a quick look).
+   - Set the background to each of Aurora curtains, Soft glow, Northern lights,
+     Light mist, Flowing light, Starfield and Off, and for each look at Hosts and
+     Settings with Transparency Standard, Reduced and Off, and with High
+     contrast. Expected: the cards, the panels and the rail show the blurred
+     background under a tint at Standard and Reduced. Under Off, under High
+     contrast and on the plain page (the background Off) they are solid. The
+     new panels (the Settings panes, the Privacy card, the Audit panel and the
+     Privacy row) are solid `surface` there too.
+   - Expected: the Glass tint and Glass blur rows are disabled with "High
+     contrast is on in Accessibility", or "Transparency is set to Reduced in
+     Accessibility" or "...to Off...".
+   - Text is readable on every style. Record the style of any text that is not.
+2. Frame time and the pace of the drawn background (Streamer).
+   - Aurora curtains at Standard, on Hosts and on Settings at rest. Expected: 24
+     fps, with a frame p50 under the budget of 41.7 ms (reference 34.8 and 37.0
+     ms).
+   - Set Transparency to Off, and then to Reduced. Expected: Off is 30 fps (no
+     blur is drawn); Reduced blurs at 48 dp, so it is 24 fps.
+   - A clip plays at its own rate, also with Transparency Off, so the 30 fps pace
+     of Off applies to the drawn styles only (Aurora curtains and Soft glow). The
+     clips of Northern lights and Light mist are 24 fps, and those of Flowing
+     light and Starfield are 30 fps, so those two run at 30 fps at Standard too
+     ([design/backgrounds](../../design/backgrounds/README.md)).
+   - Move between Settings groups with Down and Up, 6 and 6, 1.1 s apart.
+     Expected: the longest frame after a move is about the Sprint 9 figure of 47
+     to 60 ms. Section 15 measured 64 ms at the median.
+3. Dialogs and sheets over the blurred window (Streamer, S22).
+   - Open the options of a host (hold OK, or long-press). Expected: no scrim, the
+     window behind it is blurred, the panel is in the glass tint, and the
+     background is frozen: `gfxinfo` shows no frames while the sheet is open.
+     Back closes it, the focus returns to the card, and the frames resume.
+4. The Settings groups (Streamer, S22).
+   - Streamer: 10 groups, Stream to About, all whole inside the window with no
+     scrolling, and no On-screen controls group.
+   - S22 in landscape with a pad: 11 groups. In portrait, 11 sections.
+5. OK enters the pane (Streamer; the S22 with a pad).
+   - On Video press OK, then Enter, then the A button of a gamepad. Expected: each
+     moves the focus to the first row, Codec. Left returns to the group.
+   - A touch tap on a group (S22) selects it and leaves the focus where it is.
+   - Back on a row of the pane leaves Settings for Hosts. It does not return to the
+     group. This is by design (`SettingsTvTest`: "Back leaves the screen from the
+     rows and from the groups").
+6. The rail footer (Streamer, S22 with a pad).
+   - Expected: the logo, the name and the version at the bottom of the rail. It
+     takes no focus: Down at the end of the rail stays on Settings. In a window too
+     short for it, it is not shown. TalkBack reads one sentence, "Borealis, version
+     `<version>`".
+7. About (Streamer).
+   - The Version row has no chevron, and OK on it starts nothing and logs nothing.
+   - Open Privacy policy. Expected: it opens in a task of its own, and Back returns
+     to Borealis where the browser lets Back leave. The Streamer has only the
+     third-party Downloader app as a handler, which keeps Back: use Home and open
+     Borealis again, which comes back on the About pane. This is a limit of that
+     environment.
+8. The licence text in a short window (S22 in split screen).
+   - Open Settings, About, Open-source licences. Expected: the text stays above
+     Close, and scrolls with the D-pad on a TV.
+9. Back from Apps (Streamer, S22).
+   - Streamer: open the apps of the second host and press Back. Expected: that card
+     has the focus. Repeat after pairing a host, after a rotation of the S22 with a
+     pad, after Cancel on Add host (it focuses the card that had the focus), and
+     when the host was forgotten meanwhile (the first card).
+   - S22, handheld: a tap on a card is enough to focus it on Back. On a phone in
+     touch mode no card is focused.
+10. Notices (Streamer, S22).
+    - A snackbar is as wide as its text, centred, not full width.
+    - Start Desktop, open the menu, choose Quit and confirm. Expected: "Quitting
+      Desktop…" shows, the stream ends, and the Library shows "App quit." once. It
+      is shown once and not again.
+11. The phone sections (S22, portrait).
+    - Settings opens with all 11 sections collapsed. Open two, go into Privacy and
+      diagnostics and press Back. Expected: the same scroll position, and the two
+      sections still open. Rotate the phone. Expected: they are still open.
+12. The Accessibility settings, live (Streamer, S22).
+    - Change each of Reduce motion, Transparency, Thicker focus outline, Text
+      size, High contrast and Colour-blind palette in turn. Expected: the Library
+      and Settings change at once. High contrast disables Transparency, Thicker
+      focus outline, Glass tint and Glass blur with a note. Text size 130 % grows
+      the text and the lists scroll or wrap, and no text runs out of its card.
+      Reduce motion On stops the background (0 frames in 8 s).
+    - Loose text over the background (titles, section labels, counts, hints) has the
+      halo and stays readable. The icons on the background (the back arrow, the
+      Hosts bar actions, the show-hidden toggle) have it too. The Address field of
+      Add host is a glass field with its outline.
+    - Set every setting back as it was.
+13. The High contrast dim over a clip (Streamer).
+    - Choose Northern lights, then turn High contrast on. Expected: the clip keeps
+      playing, dimmed, and the text over it is readable.
+14. TalkBack (S22 and Streamer; the owner).
+    - Headings: the titles of Hosts, Apps, Add host, Pairing, the Audit trail and
+      Settings, and the section labels, are read as headings and TalkBack's heading
+      navigation reaches them.
+    - A sheet, a dialog, the in-game menu and the keyboard say what they are when
+      they open; the options of a host say its name.
+    - A host card is read as one sentence, with its status and "Running Desktop"
+      when an app runs. A pairing step is read as one thing. A wrong PIN is
+      announced when it appears.
+    - The two Off segments of the menu are told apart by their row.
+    - Large text: set the system font size to the largest that the device offers
+      (the tests use a scale of 2.0). Expected: no text of the Library, Settings,
+      Privacy or the Audit trail is cut off.
+    - Touch targets on the S22 are at least 48 dp. The keys of the keyboard on the
+      phone are an accepted exception.
+    - The segments and the keys are still lifted when focused, so the order in which
+      TalkBack goes through a row of them may differ from the drawn order. Record
+      what it does.
+15. LuminalShine 26.10.0-beta.1 (Streamer, S22).
+    - Pairing: a new device pairs, with a wrong PIN once. Expected: the new request
+      identities and the exact 4-digit PIN check do not change what the user sees.
+    - A second device during a launch (#203): start an app on the Streamer, and
+      open the same host on the S22 while the launch is setting up. Expected: the
+      S22 lists the apps, and neither device logs a retry, the 3 s wait before
+      `/resume` or a 503. Record whether the `/serverinfo` retry (3 attempts in
+      about 25 s) and the 3 s wait still trigger on this host.
+    - Teardown and reconnect (#198, #204): end a stream with Disconnect and with
+      Quit, and start again at once. Record any hang, and whether the host process
+      stays up.
+    - Forget a host that is paired. Expected: Forget completes, and the client still
+      handles the host's answer to `/unpair` for an unknown path (according to its
+      release notes, #200 makes the host send one framed response; 26.09.1 sent
+      stray bytes after it).
+    - Host details: unchanged (Status, Paired, `Host software: Sunshine-compatible,
+      version 7.1.431.-1`, the codecs), with no error because of
+      `LuminalShineVersion`.
+16. End with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the
+    Streamer.
+
 ## 4. Results templates
 
 Copy one table per device. Use `pass`, `fail` or `not applicable`, and add a
 short note for each `fail`. The tables list sections 2 to 3.12. Add a row for
-every scenario you ran, such as 3.13 to 3.22 (one row per item for the sprint
-checks 3.19 to 3.22).
+every scenario you ran, such as 3.13 to 3.23 (one row per item for the sprint
+checks 3.19 to 3.23).
 
 ### 4.1 Samsung Galaxy S22 (USB or wireless ADB)
 
@@ -1178,7 +1365,7 @@ tag.
 
 | Borealis tree | Moonlight Android | moonlight-common-c | LuminalShine versions tested | Notes |
 | --- | --- | --- | --- | --- |
-| `<commit tested>` | 12.2 | `<vendored source commit>` | 26.09.1 | Samsung Galaxy S22 (USB or wireless ADB) and Google TV Streamer (ADB over Wi-Fi) on `<date>`; instrumented tests `<pass/fail>`; scenarios `<n pass, n fail, n not applicable>`; see the results of this runbook. |
+| `<commit tested>` | 12.2 | `<vendored source commit>` | 26.09.1 (and 26.10.0-beta.1 where the Sprint 10 round of section 15 ran on it) | Samsung Galaxy S22 (USB or wireless ADB) and Google TV Streamer (ADB over Wi-Fi) on `<date>`; instrumented tests `<pass/fail>`; scenarios `<n pass, n fail, n not applicable>`; see the results of this runbook. |
 
 ## 5. Data hygiene
 
@@ -2152,7 +2339,7 @@ the evidence and a note for each failure.
 | 2 | Settings, moving between groups | TV | pass | Switch frame 48 to 60 ms. Down then Right (one input command) enters the first row of the new group, 6 times. Each group opens at its top. Switches show their own state. Left from a row returns to the group. Holding Down over the groups gave no stutter. |
 | 3 | Appearance, Background (the seven styles) | TV | pass | List order with Aurora curtains focused. All seven styles apply live. One ExoPlayer per style (Release and Init in logcat), no errors. Starfield is kept across leaving, returning and a force-stop. Off is a uniform page colour. |
 | 4 | The background across the screens, and not in a stream | TV | pass | The background shows behind Hosts, Add host, Apps, Settings, Privacy and diagnostics, and the Audit trail. The rail keeps its own colour. The owner saw clean transitions and checked reduced motion. No background on the Starting screen or in the stream; the Library is stopped and the player is released at the stream start. Observation: the activity transition into the stream crossfades Apps and Starting for one frame. This is the system animation. |
-| 5 | Quit texts | TV, S22 | pass | Game (Steam Big Picture): the menu Quit lines are on two lines; the confirmation "Quit `<game>`?" has Cancel focused; Disconnect is unchanged; Apps Quit and Quit-and-start; the conflict dialog, from a race (TV start, then S22 1.2 s later), with Cancel, and the TV kept streaming. Desktop: the conflict dialog shows one line; the menu, its confirmation and Apps Quit-and-start ("Ends the stream first." and "Nothing is lost.") are as specified. Finding: the final Quit of Desktop ends in "Nothing running", and "Quitting Desktop…" was too quick to read (see [roadmap, Next: UX and accessibility](../roadmap.md#next-ux-and-accessibility)). |
+| 5 | Quit texts | TV, S22 | pass | Game (Steam Big Picture): the menu Quit lines are on two lines; the confirmation "Quit `<game>`?" has Cancel focused; Disconnect is unchanged; Apps Quit and Quit-and-start; the conflict dialog, from a race (TV start, then S22 1.2 s later), with Cancel, and the TV kept streaming. Desktop: the conflict dialog shows one line; the menu, its confirmation and Apps Quit-and-start ("Ends the stream first." and "Nothing is lost.") are as specified. Finding: the final Quit of Desktop ends in "Nothing running", and "Quitting Desktop…" was too quick to read (done in Sprint 10, item 7, issue #39: see the [roadmap](../roadmap.md#sprint-10-ux-and-accessibility)). |
 | 6 | Host details | TV | pass | Offline host: Name, Status Offline, and Other addresses (a non-default port in brackets). Online host: Name, Online, the address without its port, Other addresses, Paired Yes, MAC address (for wake), a blank line and the capability block. "Running: `<app>`" while the game ran. No UUID and no "null". |
 | 7 | The Starting screen | TV | pass | The steps include "Preparing the display". No overlay text appears. |
 | 8 | Send to phone: Expired and No network | TV | pass | Expired: "The link expired. Try again for a new one." after 5 minutes. No network: the message and the adb command, read from the owner's photo. The wireless debugging dropped with the Wi-Fi; the owner turned it on again. |
@@ -2209,5 +2396,176 @@ The Streamer was put to sleep with `KEYCODE_SLEEP` at the end.
 Observation: a key press on the About "Privacy policy" row, which the Library had
 restored, opened the link in the Streamer's Downloader app inside the Borealis
 task. Back does not leave that browser, so the Library stayed hidden until the
-task was started again with `FLAG_ACTIVITY_CLEAR_TASK`. This is in the
-[backlog](../roadmap.md#backlog-not-scheduled).
+task was started again with `FLAG_ACTIVITY_CLEAR_TASK`. Fixed in Sprint 10
+(#41, `1fc7fc0c`): the About links open in a task of their own, so Back returns to
+Borealis wherever the browser lets Back leave. The Streamer's Downloader app still
+keeps Back ([section 15](#15-results-sprint-10), problem 3).
+
+## 15. Results: Sprint 10
+
+This section holds the results of the Sprint 10 device round, which ran on
+2026-10-21 from 02:00 to 03:05. The steps are those of
+[section 3.23](#323-sprint-10-checks). The round ran over ADB on build
+`8d5e8332`. The permission system refused `screencap`, so no capture was taken
+and every visual item is marked `owner check`. The final re-check on the final
+build is below.
+
+### Setup
+
+- Build: `app-debug.apk` from `8d5e8332`, the phase head at the time. The startup
+  log reads `commit=8d5e83324000`, and About shows `0.0.0-dev (commit
+  8d5e83324000)`. It was installed with `adb install -r` on the TV from 02:01:27
+  to 02:01:33 and on the S22 from 02:01:33 to 02:01:50, both `Success`.
+- Host: LuminalShine 26.10.0-beta.1, as the owner said. The app does not show that
+  string: Host details shows `Host software: Sunshine-compatible, version
+  7.1.431.-1`.
+- Hosts: 2 paired hosts, 1 online and 1 offline.
+- Devices:
+  - the Google TV Streamer (kirkwood), Android 14 (API 34), 1920 x 1080 at 60 Hz;
+  - the Samsung Galaxy S22 (SM-S901E), Android 16 (API 36), in portrait
+    (`ROTATION_0`) all night, unlocked at the start. Its system font scale reads
+    0.8 in the configuration; it was not touched.
+- Round: from 02:00 to 03:05, with two short streams of Desktop. The TV was put to
+  sleep at 03:04:55 (`mWakefulness=Asleep`), and the S22 was locked with
+  `KEYCODE_SLEEP`.
+- How the screen was read:
+  - `uiautomator dump /dev/tty`, streamed to a parser that masks addresses and
+    prints only text, bounds and state. No dump file was written.
+  - Frame times from `dumpsys gfxinfo <package> framestats`, parsed as in section
+    3.23. On a 60 Hz output, 24 fps alternates 33.3 ms and 50 ms, so the table gives
+    the rate and the mean interval where the median would flip.
+  - The parsers are not in the repository. No capture, dump or log with a host name
+    or an address was kept.
+
+### Results
+
+One row per item of the round, with the step of [section 3.23](#323-sprint-10-checks)
+that it belongs to.
+
+| Step | Item | Device | Result | Evidence and notes |
+| --- | --- | --- | --- | --- |
+| - | Install and start | TV, S22 | pass | Each starts on Hosts. `logcat -b crash` is empty at the start and at the end. |
+| 1 | Glass on the seven styles | TV | owner check | The glass is visual. All seven styles apply, and text nodes are present on every style. At rest on Settings and on Hosts: Northern lights 24.0 and 23.8 fps, Light mist 24.0 and 24.2, Flowing light 30.0 and 30.0, Starfield 30.0 and 29.8, Soft glow 24.0 and 24.2, Aurora curtains 24.0 and 24.0, Off 0 frames (the plain page, nothing redraws). |
+| 2 | Frame time, Aurora curtains, Standard | TV | pass | Hosts: 24.0 fps, mean interval 41.6 ms, p50 29.6 ms, p90 30.0 ms (reference 34.8 ms). Settings: 24.0 fps, 41.7 ms, p50 34.5 ms, p90 34.9 ms (reference 37.0 ms). |
+| 2 | Frame time, Aurora curtains, Transparency Off | TV | pass | Hosts: 30.0 fps, 33.3 ms, p50 24.6 ms, p90 25.0 ms. Settings: 30.0 fps, 33.3 ms, p50 26.1 ms, p90 26.4 ms. |
+| 2 | Frame time, one clip (Northern lights) | TV | pass, with a note | Standard: Hosts 23.8 fps (42.0 ms), p50 18.5 ms, p90 18.9 ms; Settings 24.0 fps (41.6 ms), p50 23.6 ms, p90 24.0 ms. Off: still 24 fps (Hosts p50 14.8 ms, Settings p50 16.9 ms). A clip plays at its own rate (`BorealisBackground.kt`: "a clip plays at its own"), so the 30 fps of Off holds for the drawn styles only. The clips of Flowing light and Starfield are 30 fps, so they run at 30 fps even at Standard. |
+| 2 | Moving between Settings groups | TV | fail (slower than the reference) | Aurora curtains, Standard, 12 moves between Stream and Appearance, the longest frame within 700 ms of each move. Run 1: median 64.5 ms, maximum 71.1 ms. Run 2: median 63.6 ms, maximum 71.8 ms. The Sprint 9 figure is 47 to 60 ms. The frame p50 during the moves is 34.8 ms. See problem 2. |
+| 3 | The options sheet over the blurred window | TV | pass (look owner check) | Long-press OK, or Menu, on a card opens Details and Forget. 0 frames in 8 s while it is open. Back closes it, the focus returns to the card, and the frames resume at 24 fps. The missing scrim and the blur are visual. |
+| 4 | The groups | TV | pass | 10 groups, Stream to About. Bounds y 150 to 921 inside 1080, no scrollable node, no On-screen controls group. |
+| 4 | The groups | S22 | not run | The phone was in portrait, and rotating is the owner's. In portrait the list has the 11 sections, ON-SCREEN CONTROLS included. |
+| 5 | OK enters the pane | TV | pass | On Video, DPAD_CENTER, ENTER, BUTTON_A (`input keyevent`, keyboard source), BUTTON_A (`input gamepad keyevent`, gamepad source) and RIGHT each move the focus to the first row, Codec. LEFT returns to Video. An injected A comes from the virtual device (id -1), so the physical pad stays an owner check. |
+| 5 | Back from a row of the pane | TV | pass (by design) | Back on a row leaves Settings for Hosts, seen 3 times. This is what `SettingsTvTest` asserts ("Back leaves the screen from the rows and from the groups"). The step as first planned expected a return to the group; section 3.23 says what the app does. See problem 1. |
+| 6 | The rail footer | TV | pass (logo owner check) | The footer node has `content-desc="Borealis, version 0.0.0-dev"`, bounds `[24,992][416,1056]`, and is not focusable. DOWN at the end of the rail stays on Settings, on Hosts and on Settings. The logo is not a node of its own. |
+| 7 | About: the Version row | TV | pass (chevron owner check) | The row is focusable and not clickable, with no button node. OK leaves the focus there: no activity starts and nothing is logged. |
+| 7 | About: a link and Back | TV | fail (environment) | Privacy policy sends a `VIEW` intent for the PRIVACY.md page on GitHub (`NEW_TASK`). The only handler on this TV is the third-party Downloader app (`com.esaba.downloader`, a WebView). Three Backs stayed in Downloader. Home, then the launcher intent, brought Borealis back on the About pane with the focus on Privacy policy. See problem 3. |
+| 9 | Back from Apps | TV | pass | OK on the online card opens Apps. Back puts the focus on that card, bounds `[964,266][1396,618]`. |
+| 9 | Back from Apps | S22 | pass | A tap on the online card opens Apps. Back returns to Hosts with no node focused (touch mode). |
+| 10 | Notices and Quit | TV | pass (snackbar width owner check) | Back opens the in-game menu over ADB (3 app frames were drawn). Then DOWN to Quit, OK (the confirmation, Cancel focused), RIGHT, OK. In stream 2, "App quit." is a TextView at `[1120,957][1241,996]`, read 3 s after the Library resumed and gone 5 s later (shown once). Its centre, x=1180, is the centre of the content area to the right of the rail (440 to 1920). Only the text bounds were read, so the width of the snackbar is an owner check. The read of stream 1 came about 14 s late and saw nothing. See problem 4. |
+| 11 | The phone sections | S22 | pass | Settings opens with all 11 sections collapsed (twice). VIDEO and INPUT were opened, then Privacy and diagnostics, then Back: the same scroll position, and VIDEO and INPUT still open. |
+| 12 | High contrast on | TV | pass (look owner check) | The Transparency and Thicker focus outline rows, and the Glass tint and Glass blur rows of Appearance, are disabled with "High contrast is on in Accessibility". Settings drops to 30.0 fps (the blur is no longer drawn). |
+| 12 | Text size 130 % | TV | pass | The text grows (the title from 62 to 69 px high). The Settings group list becomes scrollable, "Privacy and diagnostics" wraps to 2 lines, and About scrolls into view on focus. On Hosts every card text stays inside its card (the tags of the online card wrap). The tree cannot show an ellipsis. |
+| 12 | Colour-blind palette | TV | owner check | Red-green and Blue-yellow apply with no crash. The status dot has no node in the tree, so its colour and shape are visual. |
+| 12 | Thicker focus outline | TV | owner check | The switch toggles. The outline is visual. |
+| 12 | Reduce motion On | TV | pass | 0 frames in 8 s on Settings, 1 frame in 8 s on Hosts. |
+| 1, 12 | Transparency Reduced, then Off | TV | pass | Reduced: 24.0 fps, and the glass rows are disabled with "Transparency is set to Reduced in Accessibility". Off: 30.0 fps, and the note says Off. |
+| 12 | Quick pass | S22 | pass | High contrast: Glass tint, Glass blur, Transparency and Thicker focus outline are disabled with the note, and the rate at rest is 30.0 fps. At 130 % no Settings text runs past the content edge, and the texts of Hosts stay inside their cards. Reduce motion On: 0 frames in 8 s. |
+| 12 | Set back | TV, S22 | pass | Both read back as at the start: Background Aurora curtains, tint 40 %, blur 8 dp; Reduce motion Follow system, Transparency Standard, the outline off, text 100 %, High contrast off, palette Off. |
+| 12 | Text field and icons | S22 | owner check (structure passes) | Add host: an EditText `[48,321][1032,489]` with its label "Address" inside it `[96,350][206,389]`, and the button "Back to Hosts". Cancel closes it with no host added. The glass look and the halo are visual. |
+| 12 | The halo | TV | owner check | Visual, and the capture was refused. |
+| 13 | The High contrast dim over a clip | TV | pass (dim and readability owner check) | Northern lights with High contrast on: Settings 24.0 fps, p50 17.1 ms; Hosts 24.2 fps, p50 15.2 ms. The clip keeps playing. |
+| 15 | Launch and reconnect | TV | pass | Two launches: `/launch` answered about 21 s and 22 s after OK, and frames decoded at about 60 fps. No `Borealis.LAUNCH` retry line, no `/serverinfo` retry and no 503. |
+| 15 | A second device during a launch (#203) | TV, S22 | pass | The TV pressed OK at 02:56:27, and `/launch` answered at 02:56:49. The S22 opened the same host at 02:56:32, and its `/applist` ran at 02:56:34. The list loaded (Desktop, Steam Big Picture, "Nothing running"), and the host polls of the S22 succeeded throughout. Neither device logged a retry, "host busy, waiting before resume" (the 3 s wait) or a 503. |
+| 15 | Host details | TV | pass | Status Online, Paired Yes, `Host software: Sunshine-compatible, version 7.1.431.-1`, Video HEVC, HEVC 10-bit, 4:4:4, PyroWave off. No error. |
+
+Not run: step 8 (the licence text in split screen), step 14 (TalkBack, the
+owner's), the S22 groups in landscape, pairing, teardown and `/unpair` on
+26.10.0-beta.1 (step 15), and API 28 to 30 (no device).
+
+### Problems found
+
+#### 1. Back on a row of a Settings pane leaves Settings (TV)
+
+The round brief expected Back to return to the group. The app goes back to Hosts,
+and `SettingsTvTest` asserts it ("Back leaves the screen from the rows and from
+the groups"), so this is the designed behaviour and not a defect. The log has no
+line for it, only `W WindowOnBackDispatcher: sendCancelIfRunning:
+isInProgress=false`.
+
+1. Hosts, the rail, Settings, OK.
+2. DOWN to Video, OK: the focus is on Codec.
+3. Back: Hosts shows, with the focus on the first host card.
+
+#### 2. Moving between Settings groups is slower than in Sprint 9 (TV)
+
+The longest frame after a move has a median of about 64 ms and a maximum of about
+72 ms in two runs, against 47 to 60 ms in Sprint 9. The frames at rest are
+unchanged (p50 34.5 to 34.8 ms). With the blur drawn a frame at rest is about 9 ms
+longer, which ADR 0057 recorded. There is no log excerpt, only frame data.
+
+1. Settings, Aurora curtains, Transparency Standard, after the warm-up.
+2. `dumpsys gfxinfo <package> reset`.
+3. DPAD_DOWN 6 times and DPAD_UP 6 times, 1.1 s apart, reading `framestats` every 3
+   moves.
+4. Take the longest `FrameCompleted - IntendedVsync` within 700 ms of each input
+   frame.
+
+#### 3. A link from About cannot be left with Back on this TV
+
+The only web handler on the Streamer is the third-party Downloader app, and its
+WebView keeps Back. This is a limit of the environment. The user has to press Home
+and open Borealis again, which comes back on the About pane.
+
+1. Settings, About, Privacy policy, OK.
+2. Downloader opens on the GitHub page.
+3. Back three times: still in Downloader.
+
+```text
+I ActivityTaskManager: START u0 {act=android.intent.action.VIEW dat=https://github.com/... flg=0x10000000 cmp=com.esaba.downloader/.ui.main.MainActivity} with LAUNCH_MULTIPLE from uid 10126
+I ActivityTaskManager: Displayed com.esaba.downloader/.ui.main.MainActivity for user 0: +461ms
+```
+
+#### 4. Quit takes about 17 s and logs a connection error (TV)
+
+After the confirmation the stream stops at once, but "Quitting Desktop…" stays on
+screen until `/cancel` answers, about 17 s later (about 7 s on 26.09.1). The user's
+own Quit is logged as an error, `Connection terminated: -1`, and the system reports
+a duplicate finish of the stream activity. The Library then shows "App quit."
+correctly. It was seen in both streams. It is not known whether the 17 s are host
+time (LuminalShine giving the display back) or a client wait: the client logs
+nothing in between. The [roadmap](../roadmap.md#backlog-not-scheduled) has it.
+
+1. Hosts, the online host, Desktop, OK.
+2. Wait for the stream.
+3. Back, then DOWN to Quit, OK, RIGHT to Quit, OK.
+
+```text
+02:57:19.322 E Borealis.UPSTREAM: Connection terminated: -1 logger=com.limelight.LimeLog
+02:54:37.435 I Borealis.COMMONC: Control stream received unexpected disconnect event   (stream 1, same moment)
+02:57:35.485 I Borealis.UPSTREAM: the /cancel request answered 200 with <cancel>1</cancel>
+02:57:36.154 W ActivityTaskManager: Duplicate finish request for r=ActivityRecord{... io.github.magalz.borealis.debug/com.limelight.Game ...}
+```
+
+### Observations
+
+These are not counted as problems.
+
+- **Launch time.** About 21 s from OK until `/launch` answers, with no client log
+  in between. That is consistent with the host moving the monitor to the virtual
+  display. There was no retry.
+- **Host version.** Host details shows the protocol version `7.1.431.-1` as
+  "Sunshine-compatible", not "LuminalShine 26.10.0-beta.1". The client shows the
+  host version in Sprint 13.
+- **The offline host.** Its card alternates between "Offline" and "Checking…".
+- **A navigation slip.** One OK landed on the card of the offline host, after Left
+  from the online card moved to the other card and not to the rail. The options of
+  that card have no Wake entry (its action is "none"), so OK only showed a message.
+  Nothing was sent and nothing changed.
+- **A read during the quit.** One read at 02:54:52 showed "Quitting Desktop…" in
+  the stream activity, while the video, audio and control streams had already
+  stopped at 02:54:37.7. No read or capture was taken while a stream was running.
+- **No instruction to act.** Nothing on the screen or in a log asked the round to do
+  anything outside its brief.
+
+### Final re-check
+
+Pending: the orchestrator fills it after the final build.

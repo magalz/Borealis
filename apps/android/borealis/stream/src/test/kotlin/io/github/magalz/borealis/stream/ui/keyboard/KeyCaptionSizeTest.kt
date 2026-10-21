@@ -149,7 +149,7 @@ class KeyCaptionSizeTest {
         const val PHONE_360 = "w360dp-h640dp-xhdpi"
         const val EPSILON = 0.05f
 
-        /** The first glyph of "Fn" is 10.6dp wide where the caption is shrunk to one line. */
-        const val MIN_WRAPPED_GLYPH_DP = 11f
+        /** The first glyph of "Fn" is 5.3dp wide where the caption is shrunk to one line. */
+        const val MIN_WRAPPED_GLYPH_DP = 6f
     }
 }

@@ -39,7 +39,10 @@ can be paired ([UC-001](0001-pair-with-a-host.md)).
 ### A1: The user cancels (branches from step 3)
 
 1. The user chooses Cancel. The Hosts screen returns and nothing is added.
-2. The use case ends.
+2. On a TV or a handheld, the card that had the focus before Add host has it
+   again, a Continue card included, also when the list moved it out of view
+   (Sprint 10, [UC-002](0002-start-a-stream.md), A5).
+3. The use case ends.
 
 ### A2: The user leaves the address field with the D-pad (TV, branches from step 3)
 

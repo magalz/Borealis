@@ -6,10 +6,12 @@
 ## Summary
 
 A user changes the global Borealis settings for streams, input, gamepads,
-on-screen controls, audio, advanced behaviour and appearance. A change is stored
-at once and applies to the next stream, except the background, which changes
-behind the screen at once. The screen shows only the rows that the device can
-use.
+on-screen controls, audio, advanced behaviour, appearance and accessibility. A
+change is stored at once and applies to the next stream. The exceptions are the
+settings of the Appearance and Accessibility groups (the background, the glass
+and the accessibility choices): they change the Library and Settings at once,
+and the stream reads them when it starts. The screen shows only the rows that the
+device can use.
 
 ## Actors
 
@@ -25,10 +27,11 @@ use.
 
 1. The user opens Settings. On a phone, the user taps the gear in the top bar.
    On a TV or a handheld, the user chooses Settings in the rail.
-2. The system shows the settings in groups, in this order: Stream, Video, Input,
-   Gamepad, On-screen controls, Audio, Advanced, Appearance, Privacy and
-   diagnostics, and About. The user picks a row. The groups and rows are listed
-   in [the Phase 2 proposal](../ux/phase-2-proposal.md#settings-groups).
+2. The system shows the settings in 11 groups, in this order: Stream, Video,
+   Input, Gamepad, On-screen controls, Audio, Advanced, Appearance,
+   Accessibility, Privacy and diagnostics, and About. The user picks a row. The
+   groups and rows are listed in
+   [the Phase 2 proposal](../ux/phase-2-proposal.md#settings-groups).
 3. The user changes the row. A switch changes at once. A list opens a choice
    sheet. A slider moves with touch, or with D-pad Left and Right.
 4. The system stores the value at once. Each row shows its current value. There
@@ -37,10 +40,10 @@ use.
 
 ## Layout
 
-- A phone shows one list.
+- A phone shows one list in which every group is a collapsible section (A8).
 - A TV or a handheld shows two panes: the groups on the left and the rows on the
-  right. D-pad Right moves into the rows. D-pad Left returns to the groups, and
-  Left again returns to the rail.
+  right. D-pad Right, or OK, moves into the rows (A9). D-pad Left returns to the
+  groups, and Left again returns to the rail.
 - Opening Settings from the rail puts focus on the selected group.
 - Moving focus from group to group changes the pane at once, in the same frame,
   with no wait. Every group has its own pane, built once and stacked with the
@@ -49,9 +52,16 @@ use.
   diagnostics is built only while it is selected.
 - A pane that is not shown takes no focus, touch or accessibility. A group opens
   at its top whenever it is shown.
-- The list fits a 540 dp TV window without scrolling, even with all ten groups
-  (the On-screen controls group needs a touchscreen, so a TV shows nine). On a
-  handheld the list may scroll.
+- The list fits a 540 dp TV window without scrolling, even with all eleven groups
+  (the On-screen controls group needs a touchscreen, so the Google TV Streamer
+  shows ten). On a handheld the list scrolls, because its entries are 48 dp.
+
+The 48 dp touch targets of Sprint 10 have effects that are pending the owner's
+review: only 6 of the eleven groups are visible at once on a handheld, and the
+docked keyboard of a phone is 24 dp taller, because its shortcut chips have 48 dp
+cells. The keys of the phone keyboard stay under
+48 dp, which is an accepted finding of the accessibility checks
+([accessibility](../ux/accessibility.md#accepted-findings)).
 
 ## Alternative flows
 
@@ -67,7 +77,14 @@ use.
 1. The row stays focusable. It is shown disabled, with a note that says why.
    Examples: Analog scrolling and Gamepad mouse speed while Gamepad mouse is off,
    and Vibration strength while Vibrate fallback is off.
-2. The user cannot change a disabled row.
+   - Glass tint and Glass blur are disabled while High contrast is on ("High
+     contrast is on in Accessibility"), and while Transparency is Reduced or Off
+     ("Transparency is set to Reduced in Accessibility", and the same for Off).
+     High contrast is the reason given first.
+   - Transparency and Thicker focus outline are disabled while High contrast is
+     on, because it sets solid panels and the thicker outline itself.
+2. The user cannot change a disabled row. A disabled row still shows the value
+   that is stored.
 
 ### A3: The native resolution is chosen (branches from step 3)
 
@@ -106,18 +123,82 @@ check.
    Soft glow, Northern lights, Light mist, Flowing light, Starfield and Off.
 2. The user chooses a style. The system stores its id under `borealis_background`.
    The background behind Settings changes at once, with no restart.
-3. While the system removes animations or the battery saver is on, a style shows
-   one still frame and nothing plays.
+3. While Reduce motion removes animations (Follow system follows the system
+   setting that removes them) or the battery saver is on, a style shows one still
+   frame and nothing plays.
 4. A stored value that no style has shows Aurora curtains, the default.
 
 The background shows behind every Library and Settings screen. It never shows in a
 stream ([ADR 0056](../adr/0056-add-an-animated-background-and-the-appearance-group.md)).
 
+### A8: A phone shows the groups as sections (Sprint 10; branches from step 2)
+
+1. On a phone, every group is a collapsible section with a header of at least
+   48 dp. All sections start collapsed, and the header says Collapsed or
+   Expanded to a screen reader.
+2. A tap on a header opens its section in place, and the next tap closes it.
+   Several sections can be open at once, and opening one does not scroll the
+   list.
+3. The open sections survive a rotation, and a trip to Privacy and diagnostics
+   and back, which leaves the scroll position as it was.
+4. About is a section. Privacy and diagnostics stays a row between the groups and
+   About, and it opens its own screen.
+5. With Reduce motion removing animations, a section opens and closes at once.
+
+### A9: OK enters the pane of a group (Sprint 10; TV and handheld, branches from step 2)
+
+1. A group has the focus. The user presses OK, Enter, the numpad Enter or the
+   A button of a gamepad.
+2. The system selects the group, if another one was selected, and moves the focus
+   to the first row of its pane, as Right does. Left returns to the group.
+3. This holds in the keyboard input mode only. A tap on a group, in the touch
+   mode, selects it and leaves the focus where it is. Moving the focus to
+   another group before the pane has taken it cancels the entry.
+
+### A10: The user changes the glass (Sprint 10; branches from step 3)
+
+1. In Appearance, after Background, the user opens Glass tint (30, 40, 50, 60, 70
+   or 85 %; 40 % is the default) or Glass blur (8, 16, 24, 32 or 48 dp; 8 dp is
+   the default). They set the Standard level of Transparency.
+2. The system stores the id of the choice, the percent or the dp, under
+   `borealis_glass_tint` or `borealis_glass_blur`. The panels, the cards and
+   the rail of the Library and Settings change at once.
+3. A background that needs a more opaque glass raises the tint above the choice:
+   Northern lights is raised to 70 % at 8 dp. A stored value that is not offered
+   shows the default.
+4. The rows are disabled with a note while High contrast is on, or Transparency
+   is Reduced or Off (A2).
+
+### A11: The user changes an Accessibility row (Sprint 10; branches from step 3)
+
+1. The Accessibility group, after Appearance, has six rows: Reduce motion
+   (Follow system, On or Off), Transparency (Standard, Reduced or Off), Thicker
+   focus outline (a switch), Text size (100, 115 or 130 %), High contrast (a
+   switch) and Colour-blind palette (Off, Red-green or Blue-yellow). The defaults
+   are Follow system, Standard, off, 100 %, off and Off.
+2. The system stores the choice at once under a stable id and applies it to the
+   Library and Settings with no restart. A stored value that no choice has shows
+   the default.
+3. The stream reads these choices when it starts. [UC-010](0010-adjust-accessibility.md)
+   describes each one.
+
+### A12: The About links and the Version row (Sprint 10; branches from step 2)
+
+1. The Version row of About shows the version and the commit. It has no chevron
+   and opens nothing. It is a stop for the D-pad and is read as one sentence, not
+   as a button.
+2. Source code and Privacy policy open their link in a task of their own, so Back
+   from the browser returns to Borealis. A link that no app takes shows its
+   address in a dialog.
+3. Open-source licences opens a dialog whose text is above Close, also in a short
+   window. On a TV the D-pad Up and Down scroll the text.
+
 ## Postconditions
 
 - On success: the changed value is stored, and it applies to the next stream.
-  The current stream is not changed. The background is the exception: it changes
-  at once.
+  The current stream is not changed. The Appearance and Accessibility settings
+  are the exception: they change the Library and Settings at once, and a stream
+  reads them when it starts.
 - On failure to store a value: the previous value stays, and the row shows it.
   The error is logged; no message is shown.
 
@@ -127,6 +208,8 @@ UC-009-T1 to T8 exist (Sprint 6). UC-009-T9 and T10 were checked on a device in
 the Sprint 6 device round (see [device validation](../development/device-validation.md),
 section 11). UC-009-T11 to T21 are Sprint 9 rows. The Compose tests run on
 Robolectric. T22 is checked in the Sprint 9 device round (section 3.22).
+UC-009-T23 to T31 are Sprint 10 rows, and T32 is the Sprint 10 device round
+(section 3.23).
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
@@ -150,8 +233,18 @@ Robolectric. T22 is checked in the Sprint 9 device round (section 3.22).
 | UC-009-T18 | Given a group that was scrolled, when it is shown again, then it opens at its top. | UI | exists (Sprint 9, UI): `SettingsTwoPaneSwitchingTest` |
 | UC-009-T19 | Given one setting changes, then the rows of the other settings are not recomposed. | UI, unit | exists (Sprint 9): `SettingsRowSkippingTest`, `SettingsRowValueTest` |
 | UC-009-T20 | Given the user chooses Settings in the rail with the D-pad, then focus is on the selected group, and Left from the group returns to the rail. | UI | exists (Sprint 9, UI): `LibrarySettingsTvTest` |
-| UC-009-T21 | Given a 540 dp TV window with all ten groups, when Settings opens, then every group is whole inside the window, and Down from Stream to About focuses each group in turn without the list scrolling. | UI | exists (Sprint 9, UI): `SettingsTvTest` |
+| UC-009-T21 | Given a 540 dp TV window with all eleven groups (ten without On-screen controls, as on the Streamer), when Settings opens, then every group is whole inside the window, and Down from Stream to About focuses each group in turn without the list scrolling. | UI | exists (Sprint 9 for ten groups, Sprint 10 for eleven, UI): `SettingsTvTest` |
 | UC-009-T22 | Given the Google TV Streamer, when the user moves between groups, then focus and the pane change together without a wait. | device | planned (Sprint 9 device round, section 3.22); measured with atrace in section 14 |
+| UC-009-T23 | Given a phone, when Settings opens, then every group is a collapsed section; a tap opens a section and the next tap closes it, several can be open, the open ones survive a recreation and a trip to Privacy and diagnostics, About is a section, and Privacy and diagnostics is a link row. | UI | exists (Sprint 10, UI): `SettingsPhoneSectionsTest`, `CollapsibleSectionTest` |
+| UC-009-T24 | Given a TV or a handheld and a group with the focus, when the user presses OK, Enter, the numpad Enter or the gamepad A, then the focus is on the first row of its pane and Left returns to the group; given a tap, then the group is selected and the focus stays. | UI | exists (Sprint 10, UI): `SettingsTwoPaneTest`, `SettingsTvTest` |
+| UC-009-T25 | Given the Appearance group, when it opens, then it has Background, Glass tint (30 to 85 %) and Glass blur (8 to 48 dp), each stored as a stable id, and a stored value that is not offered shows the default. | unit, UI | exists (Sprint 10): `BorealisLooksTest`, `SettingsAccessibilityTest`, `DataStoreBackingTest` |
+| UC-009-T26 | Given the Accessibility group, when it opens, then it has its six rows at their defaults, each stores a stable id, and a stored value that no choice has shows the default. | unit, UI | exists (Sprint 10): `SettingsAccessibilityTest`, `BorealisLooksTest` |
+| UC-009-T27 | Given High contrast is on, then Glass tint, Glass blur, Transparency and Thicker focus outline are disabled with the note, and the other rows can be changed; given Transparency is Reduced or Off, then the two glass rows are disabled with their note. | unit, UI | exists (Sprint 10): `DefaultSettingsOptionsTest`, `SettingsAccessibilityTest` |
+| UC-009-T28 | Given the Library shows Settings, when an Appearance or Accessibility setting changes, then the Library changes at once with no restart. | UI | exists (Sprint 10, UI): `LibraryActivityLookTest`, `LibraryActivityBackgroundTest` |
+| UC-009-T29 | Given About, when the Version row shows, then it is read as text and not as a button, it has no click; a link opens in a task of its own; a link that no app takes shows its address. | UI | exists (Sprint 10, UI): `SettingsRowFixesTest`, `SettingsSystemTest`, `SettingsRowsTest` |
+| UC-009-T30 | Given a short window, when the licence dialog opens, then the text is wholly above Close, Up from Close reaches it and Down scrolls it. | UI | exists (Sprint 10, UI): `LicensesDialogShortWindowTest`, `LicensesDialogTvTest` |
+| UC-009-T31 | Given the Settings screens at a font scale of 2.0, then no text is cut or ends in an ellipsis. | UI | exists (Sprint 10, UI): `SettingsLargeTextFitTest`, `AuditLargeTextFitTest` |
+| UC-009-T32 | Given the Google TV Streamer and the S22, when the user runs the Sprint 10 checks (glass, frame time, 11 groups, OK entering a pane, the phone sections, the About links), then each holds. | device | checked in the Sprint 10 round of 2026-10-21, build `8d5e8332` (section 3.23, results in section 15); the visual items are the owner's |
 
 ## Host dependency
 
@@ -164,8 +257,11 @@ LuminalShine capability.
 - ADRs: [0055](../adr/0055-settings-storage-and-the-phase-2-settings-screen.md),
   [0052](../adr/0052-structure-the-phase-2-ui.md) (settings are global, D7),
   [0056](../adr/0056-add-an-animated-background-and-the-appearance-group.md)
-  (the Appearance group and the background).
-- Use cases: [UC-006](0006-send-diagnostics-from-a-tv-to-a-phone.md) and
+  (the Appearance group and the background),
+  [0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md) (the glass
+  and the Accessibility group).
+- Use cases: [UC-010](0010-adjust-accessibility.md) (the Accessibility settings),
+  [UC-006](0006-send-diagnostics-from-a-tv-to-a-phone.md) and
   [UC-007](0007-review-and-erase-the-audit-trail.md) (the Privacy and diagnostics
   screen, reached from Settings).
 - Proposal: [Settings](../ux/phase-2-proposal.md#settings) and

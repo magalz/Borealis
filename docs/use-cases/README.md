@@ -57,3 +57,4 @@ lists the tests that prove it, and those tests are written first (see
 | UC-007 | [Review and erase the audit trail](0007-review-and-erase-the-audit-trail.md) | Accepted |
 | UC-008 | [Add a host by address](0008-add-a-host-by-address.md) | Accepted |
 | UC-009 | [Change settings](0009-change-settings.md) | Accepted |
+| UC-010 | [Adjust accessibility](0010-adjust-accessibility.md) | Accepted |

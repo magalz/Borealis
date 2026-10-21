@@ -36,7 +36,10 @@ host, and it is the only way a host becomes trusted.
    name must not contain `xbox` or `webos`.
 5. The host accepts the PIN. The system stores the pairing and writes
    PAIRING_SUCCESS.
-6. The Pairing screen shows "Paired" and opens the apps of the host.
+6. The Pairing screen shows "Paired" and opens the apps of the host. When the
+   user then presses Back from the apps on a TV or a handheld, the Hosts screen
+   puts the focus on the card of the host that was paired (Sprint 10,
+   [UC-002](0002-start-a-stream.md), A5).
 
 ## Alternative flows
 

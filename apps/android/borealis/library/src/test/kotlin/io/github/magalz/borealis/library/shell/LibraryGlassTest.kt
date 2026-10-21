@@ -37,7 +37,7 @@ import io.github.magalz.borealis.library.testing.FakeLegacyBridge
 import io.github.magalz.borealis.library.testing.FakePairingService
 import io.github.magalz.borealis.library.testing.FakeStreamLauncher
 import io.github.magalz.borealis.library.testing.TV
-import io.github.magalz.borealis.settings.appearance.rememberBorealisLook
+import io.github.magalz.borealis.settings.appearance.rememberLooks
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.repository.SettingsRepository
 import javax.inject.Inject
@@ -90,7 +90,7 @@ class LibraryGlassTest {
                 RailSelection.Hosts,
                 RailActions({}, {}, {}),
                 backgroundStyle = BackgroundStyle.FlowingLight,
-                look = rememberBorealisLook(settings),
+                look = rememberLooks(settings).look,
             ) {
                 Box(Modifier.size(100.dp).testTag(PANEL).glassSurface(RoundedCornerShape(8.dp)))
             }

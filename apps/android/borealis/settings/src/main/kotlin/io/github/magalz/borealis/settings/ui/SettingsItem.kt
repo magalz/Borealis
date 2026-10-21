@@ -3,7 +3,6 @@ package io.github.magalz.borealis.settings.ui
 import androidx.annotation.Keep
 import androidx.annotation.StringRes
 import io.github.magalz.borealis.settings.R
-import io.github.magalz.borealis.settings.appearance.BackgroundChoices
 import io.github.magalz.borealis.settings.appearance.LookLists
 import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.catalog.Settings
@@ -470,10 +469,7 @@ fun SettingsItem.selectedChoiceKey(snapshot: SettingsSnapshot): String =
             } else {
                 FixedChoices.TOUCH_DIRECT
             }
-        // A stored value that no style has is drawn as the default, so the list shows that one.
-        Settings.BACKGROUND ->
-            BackgroundChoices.idOf(BackgroundChoices.styleOf(snapshot[Settings.BACKGROUND]))
-        // The same for the choices of the look.
+        // A stored value that no choice has is drawn as the default, so the list shows that one.
         is StringSetting -> LookLists.of(stored)?.shownId(snapshot[stored]) ?: snapshot[stored]
         else -> error("$this is not a list")
     }

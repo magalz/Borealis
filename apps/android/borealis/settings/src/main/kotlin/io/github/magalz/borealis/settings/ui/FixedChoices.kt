@@ -64,7 +64,7 @@ object FixedChoices {
         )
 
     /** Background: the styles of the Appearance setting, with their stable ids. */
-    val BACKGROUND = BackgroundChoices.all.map { FixedChoice(it.id, it.style.label) }
+    val BACKGROUND = BackgroundChoices.all.choices.map { FixedChoice(it.id, it.value.label) }
 
     /** Glass tint: 30 to 85 percent, with the percent as the stored id. */
     val GLASS_TINT =

@@ -1,10 +1,12 @@
 package io.github.magalz.borealis.settings.appearance
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.ColourVision
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion
@@ -16,7 +18,7 @@ import io.github.magalz.borealis.settings.catalog.StringSetting
 import io.github.magalz.borealis.settings.repository.SettingsRepository
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot
 
-/** A stored id and the value of the look that it stands for. */
+/** A stored id and the value that it stands for. */
 internal class LookChoice<T>(val id: String, val value: T)
 
 /**
@@ -39,7 +41,7 @@ internal class LookList<T>(val setting: StringSetting, val choices: List<LookCho
     }
 }
 
-/** Every list of the look. */
+/** Every list of the look, and the list of backgrounds. */
 internal object LookLists {
     val REDUCE_MOTION =
         LookList(
@@ -96,9 +98,17 @@ internal object LookLists {
         )
 
     private val all: List<LookList<*>> =
-        listOf(REDUCE_MOTION, TRANSPARENCY, TEXT_SIZE, COLOUR_VISION, GLASS_TINT, GLASS_BLUR)
+        listOf(
+            BackgroundChoices.all,
+            REDUCE_MOTION,
+            TRANSPARENCY,
+            TEXT_SIZE,
+            COLOUR_VISION,
+            GLASS_TINT,
+            GLASS_BLUR,
+        )
 
-    /** The list that [setting] stores a choice of, or `null` when it is not a list of the look. */
+    /** The list that [setting] stores a choice of, or `null` when it is not one of these lists. */
     fun of(setting: Setting<*>): LookList<*>? = all.firstOrNull { it.setting == setting }
 }
 
@@ -116,17 +126,27 @@ fun borealisLook(snapshot: SettingsSnapshot): BorealisLook =
     )
 
 /**
- * The look that the screens of the Library draw with: the one that [settings] stores now, and the
- * next one as soon as the user changes a setting of it.
+ * What the screens of the Library draw with: the [look] of their text, colours and glass, and the
+ * [background] behind them.
+ */
+@Immutable data class Looks(val look: BorealisLook, val background: BackgroundStyle)
+
+/** The looks that [snapshot] stores: the defaults for what is not stored. */
+fun looksOf(snapshot: SettingsSnapshot): Looks =
+    Looks(borealisLook(snapshot), BackgroundChoices.all.valueIn(snapshot))
+
+/**
+ * The looks that the screens of the Library draw with: the ones that [settings] stores now, and the
+ * next ones as soon as the user changes a setting of them. The snapshot is collected once for both.
  */
 @Composable
-fun rememberBorealisLook(settings: SettingsRepository): BorealisLook {
+fun rememberLooks(settings: SettingsRepository): Looks {
     val snapshot = settings.snapshot.collectAsStateWithLifecycle()
-    // A change of a setting that is not in the look makes a new snapshot but not a new look: it
+    // A change of a setting that is not in the looks makes a new snapshot but not new looks: it
     // recomposes nothing.
-    val look =
+    val looks =
         remember(snapshot) {
-            derivedStateOf(structuralEqualityPolicy()) { borealisLook(snapshot.value) }
+            derivedStateOf(structuralEqualityPolicy()) { looksOf(snapshot.value) }
         }
-    return look.value
+    return looks.value
 }

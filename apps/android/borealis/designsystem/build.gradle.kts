@@ -1,3 +1,6 @@
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.testing.Test
+
 plugins {
     id("borealis.android.library")
     id("borealis.android.compose")
@@ -17,6 +20,15 @@ android {
         // design/tokens.json: four levels above this module, two above the Gradle root.
         getByName("main") { res.directories.add("../../../../design/fonts/ibm-plex/res") }
     }
+}
+
+// A test reads the halo that docs/ux/accessibility.md chooses (two levels above the Gradle
+// root), so the notes are an input of the unit tests: a change of the notes runs them again.
+tasks.withType<Test>().configureEach {
+    inputs
+        .file(rootDir.resolve("../../docs/ux/accessibility.md"))
+        .withPathSensitivity(PathSensitivity.NONE)
+        .withPropertyName("accessibilityNotes")
 }
 
 dependencies {

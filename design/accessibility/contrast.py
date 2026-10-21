@@ -28,8 +28,10 @@ The library has no state; the tests are in `test_contrast.py`.
 from __future__ import annotations
 
 import argparse
+import collections
 import concurrent.futures
 import datetime
+import functools
 import json
 import math
 import re
@@ -39,7 +41,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 REPO = Path(__file__).resolve().parents[2]
 TOKENS_JSON = REPO / "design" / "tokens.json"
@@ -505,8 +507,8 @@ def measure_sources(sources, colors, jobs=1):
     return result
 
 
-def measure_folder(root, colors, jobs=1):
-    """Measures the frames in `root/<Style>-<device>/*.png`; other folders are left alone."""
+def _folder_sources(root):
+    """The frames in `root/<Style>-<device>/*.png`, by style and device; other folders are left."""
     sources = {}
     for folder in sorted(Path(root).iterdir()):
         style, _, device = folder.name.rpartition("-")
@@ -515,7 +517,12 @@ def measure_folder(root, colors, jobs=1):
             sources[(style, device)] = frames
     if not sources:
         raise SystemExit(f"no <Style>-tv or <Style>-phone folder of PNG frames in {root}")
-    return measure_sources(sources, colors, jobs)
+    return sources
+
+
+def measure_folder(root, colors, jobs=1):
+    """Measures the frames in `root/<Style>-<device>/*.png`; other folders are left alone."""
+    return measure_sources(_folder_sources(root), colors, jobs)
 
 
 # The tables
@@ -832,6 +839,708 @@ def glass_colour_tables(table):
     )
 
 
+# The halo of text straight on the background
+#
+# Text that sits on the animated background, outside any glass, gets a soft dark halo (issue #33).
+# The model is how the app draws it: the glyphs are widened by a stroke, blurred, laid in `page` at
+# an opacity over the frame, and the text is drawn on top. The contrast measured is that of the text
+# colour against what is around the strokes, over every frame and a grid of places on the frame.
+
+HALO_TINT = "page"
+# Ink is the text, and ink-2 is what the secondary text becomes where there is a halo.
+HALO_TOKENS = ("ink", "ink-2")
+HALO_STROKES_DP = (0, 1, 2, 3)
+HALO_BLURS_DP = (2, 4, 8)
+HALO_OPACITIES = (0.6, 0.8, 1.0)
+# No halo at all, which is Table A's case, measured around the strokes only.
+HALO_NONE = (0, 0, 0.0)
+# The pixels that count are those not in a glyph and within this many pixels of one.
+HALO_RING_PX = 2
+# p1 and p5 are taken with the sample text in this many columns and rows of places over the frame.
+# The worst case does not depend on them: it is over every place.
+HALO_PLACEMENTS = (6, 4)
+HALO_SAMPLE = "Living room PC, 4 apps"
+# A ratio must clear its limit by this much, for the difference between the model and a device.
+HALO_MARGIN = 1.02
+# How far the blur of the halo is followed, in sigmas, beyond the widest stroke.
+HALO_REACH_SIGMAS = 4
+FONTS_DIR = REPO / "design" / "fonts" / "ibm-plex" / "res" / "font"
+
+# The text styles of the app that stand on the background, with the size token of each device. They
+# are the styles of `borealisTypography`: the title is `titleLarge`, the label is the kicker (its
+# capitals set 0.07 em apart), the body is `bodyMedium` and the small text is `bodySmall`. Large
+# text is 24 sp regular or 18.66 sp bold and over: the title of a TV is, the title of a phone (18 sp
+# semibold) is not.
+HALO_TEXTS = {
+    "title": {
+        "sizes": {"tv": ("tv", "title"), "phone": ("phone", "title")},
+        "font": "ibm_plex_sans_semibold",
+        "tracking": 0.0,
+        "upper": False,
+        "large": ("tv",),
+    },
+    "label": {
+        "sizes": {"tv": ("tv", "minimum"), "phone": ("phone", "kicker")},
+        "font": "ibm_plex_sans_semibold",
+        "tracking": 0.07,
+        "upper": True,
+        "large": (),
+    },
+    "body": {
+        "sizes": {"tv": ("tv", "body"), "phone": ("phone", "body")},
+        "font": "ibm_plex_sans_regular",
+        "tracking": 0.0,
+        "upper": False,
+        "large": (),
+    },
+    "small": {
+        "sizes": {"tv": ("tv", "rail"), "phone": ("phone", "secondary")},
+        "font": "ibm_plex_sans_regular",
+        "tracking": 0.0,
+        "upper": False,
+        "large": (),
+    },
+}
+
+
+def halo_configs():
+    """The candidates of the grid, from the smallest halo to the largest: stroke, blur, opacity."""
+    return sorted(
+        (stroke, blur, opacity)
+        for stroke in HALO_STROKES_DP
+        for blur in HALO_BLURS_DP
+        for opacity in HALO_OPACITIES
+    )
+
+
+@functools.lru_cache(maxsize=None)
+def _text_sizes(path):
+    """The sizes of `design/tokens.json` in sp: `{(device, name): sp}`."""
+    sizes = json.loads(Path(path).read_text(encoding="utf-8"))["size"]
+    return {
+        (device, name): float(entry["$value"].removesuffix("sp"))
+        for device in ("tv", "phone")
+        for name, entry in sizes[device].items()
+        if str(entry.get("$value", "")).endswith("sp")
+    }
+
+
+def device_density(device):
+    """The density of a device: its frame width in pixels over its width in dp."""
+    return frame_density(DEVICE_SIZE_PX[device][0], device)
+
+
+def text_size_px(text, device, tokens=TOKENS_JSON):
+    """The size in pixels of a text style on a device: its sp from the tokens, at the density."""
+    return _text_sizes(tokens)[HALO_TEXTS[text]["sizes"][device]] * device_density(device)
+
+
+def halo_limit(text, device, high_contrast=False):
+    """The ratio that a text style needs on a device.
+
+    3 for large text and 4.5 for the rest, and 7 for all of it under high contrast.
+    """
+    if high_contrast:
+        return WCAG_LIMITS[2]
+    return WCAG_LIMITS[0] if device in HALO_TEXTS[text]["large"] else WCAG_LIMITS[1]
+
+
+def load_high_contrast(path=TOKENS_JSON):
+    """The colours that high contrast puts in the place of the roles of the same name, and its dim.
+
+    The dim is the opacity of the `page` colour that lies over the animated background.
+    """
+    section = json.loads(Path(path).read_text(encoding="utf-8"))["high-contrast"]
+    return {
+        name: entry["$value"]
+        for name, entry in section.items()
+        if isinstance(entry, dict) and "$value" in entry
+    }
+
+
+def halo_veil(frame, tint, dim):
+    """The frame under the veil that high contrast lays over the background.
+
+    `tint` lies over the frame at `dim`, in the encoded values as the platform composites, and the
+    result is an 8 bit picture, as the screen is. No dim leaves the frame as it is.
+    """
+    if dim <= 0:
+        return np.asarray(frame, dtype=np.float32)
+    return (np.rint(composite(frame, tint, dim) * 255) / 255).astype(np.float32)
+
+
+@functools.lru_cache(maxsize=None)
+def _font(name, size):
+    return ImageFont.truetype(
+        str(FONTS_DIR / f"{name}.ttf"), size, layout_engine=ImageFont.Layout.BASIC
+    )
+
+
+# The sample text is set at this many times its size, and what is wanted of it is cut from that:
+# its coverage by averaging, and its widening by a stroke on the hard edge of the big picture.
+# Android does not hint the text, so the big picture, whose hinting is a fourth of a pixel, is
+# nearer it than a picture at the size of the text.
+HALO_SUPERSAMPLE = 4
+
+
+def _set_sample(text, device, pad):
+    """The sample text of a style at `HALO_SUPERSAMPLE` times its size, as coverage, 0 to 1.
+
+    The picture is that many times as large as the text with `pad` pixels round it. A label is in
+    capitals, with its letters spaced.
+    """
+    style = HALO_TEXTS[text]
+    size = text_size_px(text, device)
+    scale = HALO_SUPERSAMPLE
+    sample = HALO_SAMPLE.upper() if style["upper"] else HALO_SAMPLE
+    ascent, descent = _font(style["font"], size).getmetrics()
+    font = _font(style["font"], size * scale)
+    starts = [
+        font.getlength(sample[:index]) + index * style["tracking"] * size * scale
+        for index in range(len(sample))
+    ]
+    width = math.ceil(starts[-1] / scale + font.getlength(sample[-1]) / scale) + 1
+    image = Image.new("L", ((width + 2 * pad) * scale, (ascent + descent + 2 * pad) * scale), 0)
+    draw = ImageDraw.Draw(image)
+    for letter, start in zip(sample, starts):
+        draw.text((pad * scale + start, pad * scale), letter, font=font, fill=255)
+    return np.asarray(image, dtype=np.float32) / 255
+
+
+def _widen(covered, radius):
+    """`covered`, a mask of booleans, with every pixel within `radius` pixels of it added.
+
+    It is the convolution of the mask with a disc, done in the frequency domain: a pixel is added
+    when the disc round it touches the mask. The widening is the same all round, so it is how a
+    stroke of round joins widens a glyph, and it is the same where the glyphs are closer than the
+    stroke, which an outline stroker does not get right.
+    """
+    height, width = covered.shape
+    reach = math.ceil(radius)
+    disc = np.zeros((height, width), np.float32)
+    for dy in range(-reach, reach + 1):
+        for dx in range(-reach, reach + 1):
+            if dx * dx + dy * dy <= radius * radius:
+                disc[dy % height, dx % width] = 1.0
+    shape = (height, width)
+    touched = np.fft.irfft2(np.fft.rfft2(covered.astype(np.float32)) * np.fft.rfft2(disc), s=shape)
+    return touched > 0.5
+
+
+def _reduce(big):
+    """A picture at `HALO_SUPERSAMPLE` times the size, brought down by the mean of each block."""
+    scale = HALO_SUPERSAMPLE
+    height, width = big.shape[0] // scale, big.shape[1] // scale
+    return big.reshape(height, scale, width, scale).mean(axis=(1, 3))
+
+
+def glyph_mask(text, device, stroke_dp=0.0, pad=0):
+    """The coverage, 0 to 1, of the sample text of a style, with each glyph widened by a stroke.
+
+    The text is set in the font of the style at its size on the device. A label is in capitals, with
+    its letters spaced. `stroke_dp` widens each glyph by that much on every side, as a fill under a
+    stroke of twice the width does, with round joins. The picture is as large as the text with `pad`
+    pixels on each side, whatever the stroke, so that masks of different strokes line up, and `pad`
+    must be at least the stroke.
+    """
+    big = _set_sample(text, device, pad)
+    plain = _reduce(big)
+    stroke = stroke_dp * device_density(device)
+    if stroke <= 0:
+        return plain.astype(np.float32)
+    widened = _reduce(_widen(big >= 0.5, stroke * HALO_SUPERSAMPLE).astype(np.float32))
+    return np.maximum(plain, widened).astype(np.float32)
+
+
+def ring_mask(mask, radius=HALO_RING_PX):
+    """The pixels that are not in a glyph and are within `radius` pixels of one.
+
+    A pixel that a glyph covers in part is a glyph pixel. The distance is the Euclidean one, so the
+    ring is a disc round each glyph pixel.
+    """
+    glyph = np.asarray(mask) > 0
+    height, width = glyph.shape
+    padded = np.pad(glyph, radius)
+    near = np.zeros_like(glyph)
+    for dy in range(-radius, radius + 1):
+        for dx in range(-radius, radius + 1):
+            if dx * dx + dy * dy <= radius * radius:
+                rows = slice(radius + dy, radius + dy + height)
+                columns = slice(radius + dx, radius + dx + width)
+                near |= padded[rows, columns]
+    return near & ~glyph
+
+
+def halo_alpha(mask, blur_dp, opacity, density):
+    """The alpha of a halo: the mask blurred by `blur_dp`, at `opacity`.
+
+    The blur is the Gaussian that Skia gives a blur radius, of `blur_dp * density` pixels. A radius
+    of 0 is no blur: the mask itself.
+    """
+    mask = np.asarray(mask, dtype=np.float32)
+    if blur_dp > 0:
+        mask = gaussian_blur(mask[..., None], blur_sigma(blur_dp * density))[..., 0]
+    return np.clip(opacity * mask, 0.0, 1.0).astype(np.float32)
+
+
+def halo_over(image, alpha, tint):
+    """`tint` over `image`, as much as `alpha` says at each pixel, mixed in the encoded values."""
+    alpha = np.asarray(alpha, dtype=np.float32)[..., None]
+    return alpha * np.asarray(tint, dtype=np.float32) + (1 - alpha) * np.asarray(
+        image, dtype=np.float32
+    )
+
+
+def halo_contrast(pixels, alpha, tint, text_luminance):
+    """The contrast ratio of a text over pixels that have the halo `alpha` laid over them."""
+    return contrast_ratio(relative_luminance(halo_over(pixels, alpha, tint)), text_luminance)
+
+
+def frame_colours(frame):
+    """The colours of an 8 bit frame, each once, as floats from 0 to 1, one colour to a row.
+
+    A frame of a video or of the drawn backgrounds has tens of thousands of them, where it has
+    millions of pixels, so what is asked of every pixel can be asked of every colour.
+    """
+    levels = np.rint(np.asarray(frame).reshape(-1, 3) * 255).astype(np.uint32)
+    packed = np.unique((levels[:, 0] << 16) | (levels[:, 1] << 8) | levels[:, 2])
+    colours = np.stack([(packed >> 16) & 255, (packed >> 8) & 255, packed & 255], axis=1)
+    return colours.astype(np.float32) / 255
+
+
+def _halo_ends(colours, alphas, tint):
+    """The luminance of each colour with the thinnest and with the thickest halo of `alphas`."""
+    return [
+        relative_luminance(halo_over(colours, np.full(len(colours), alpha, np.float32), tint))
+        for alpha in alphas
+    ]
+
+
+def _worst_of_ends(ends, text_luminance):
+    """The lowest ratio of a text over colours that a halo of any alpha between two ends covers.
+
+    The luminance of a colour moves one way as the alpha grows, and the ratio of a text over it is
+    lowest where it is nearest to the text. So the lowest ratio is at one of the two ends, unless
+    the range of luminances reaches the text, where the pixel is as bright as the text and the
+    ratio is 1:1. The alphas of a ring are many, so the range is taken to be whole.
+    """
+    darkest, brightest = np.minimum(*ends), np.maximum(*ends)
+    if np.any((darkest <= text_luminance) & (text_luminance <= brightest)):
+        return 1.0
+    return float(min(contrast_ratio(seen, text_luminance).min() for seen in ends))
+
+
+def halo_worst_ratio(colours, alphas, tint, text_luminance):
+    """The lowest ratio of a text over `colours` with a halo of any alpha from `alphas` laid on.
+
+    `alphas` is the least and the greatest alpha of the halo. It is the worst case of the text with
+    every colour of a frame at every pixel of the ring, which is the worst case over every place of
+    the text on the frame, and a little more at its edges.
+    """
+    return _worst_of_ends(_halo_ends(colours, alphas, tint), text_luminance)
+
+
+def halo_placements(frame_shape, size):
+    """The top left corners of the places that the sample text takes over a frame.
+
+    `frame_shape` is the (height, width) of the frame and `size` the (height, width) of the text.
+    There are `HALO_PLACEMENTS` columns and rows of them, spread from one corner to the other, the
+    first at the top left and the last at the bottom right, row by row.
+    """
+    columns, rows = HALO_PLACEMENTS
+    (height, width), (text_height, text_width) = frame_shape[:2], size
+    reach_x, reach_y = max(width - text_width, 0), max(height - text_height, 0)
+    xs = [round(reach_x * index / (columns - 1)) for index in range(columns)]
+    ys = [round(reach_y * index / (rows - 1)) for index in range(rows)]
+    return [(x, y) for y in ys for x in xs]
+
+
+HaloGeometry = collections.namedtuple("HaloGeometry", "configs alphas ring size")
+
+
+@functools.lru_cache(maxsize=None)
+def halo_geometry(text, device):
+    """The ring around the glyphs of a style and the alpha of each candidate on it.
+
+    None of it depends on the frame. `ring` is the ring as a mask of its bounding box, `size` the
+    (height, width) of that box and `alphas` has a row for each of `configs` (no halo first, then
+    the grid) and a column for each pixel of the ring.
+    """
+    density = device_density(device)
+    sigma = blur_sigma(max(HALO_BLURS_DP) * density)
+    pad = math.ceil(max(HALO_STROKES_DP) * density + HALO_REACH_SIGMAS * sigma) + HALO_RING_PX + 1
+    ring = ring_mask(glyph_mask(text, device, pad=pad))
+    rows, columns = np.nonzero(ring)
+    box = (slice(rows.min(), rows.max() + 1), slice(columns.min(), columns.max() + 1))
+    ring = ring[box]
+    configs = [HALO_NONE] + halo_configs()
+    alphas = {HALO_NONE: np.zeros(int(ring.sum()), np.float32)}
+    for stroke in HALO_STROKES_DP:
+        widened = glyph_mask(text, device, stroke_dp=stroke, pad=pad)
+        for blur in HALO_BLURS_DP:
+            full = halo_alpha(widened, blur, 1.0, density)[box][ring]
+            for opacity in HALO_OPACITIES:
+                alphas[(stroke, blur, opacity)] = opacity * full
+    return HaloGeometry(configs, np.stack([alphas[config] for config in configs]), ring, ring.shape)
+
+
+def _halo_place(pixels, geometry, tint, lights):
+    """The p1 and p5 of each candidate and token, for the ring pixels of one place."""
+    stats = {}
+    for token, light in lights.items():
+        ratios = halo_contrast(pixels[None], geometry.alphas, tint, light)
+        stats[token] = tuple(np.percentile(ratios, [1, 5], axis=1))
+    return stats
+
+
+def measure_halo_frame(frame, device, colors, texts=None, dim=0.0):
+    """The stats of each text style, candidate and token over one frame.
+
+    The worst case ("min") is over every colour of the frame with every alpha of the ring, which is
+    every place that the text can take, as `halo_worst_ratio` says. p1 and p5 are for information:
+    in each of the six by four places of the sample over the frame, the ratio of each token over the
+    ring pixels with the halo on them, the ratio below which 1% and 5% of them are, and the lowest
+    of those over the places. It returns `{text: {config: {token: stats}}}`, where `stats` has
+    "min", "p1" and "p5". `frame` is an array or the path of a PNG. A `dim` is the veil of the page
+    colour that high contrast lays over the frame, which the text is measured under.
+    """
+    if not isinstance(frame, np.ndarray):
+        frame = load_frame(frame)
+    tint = parse_hex(colors[HALO_TINT])
+    frame = halo_veil(frame, tint, dim)
+    lights = {token: float(relative_luminance(parse_hex(colors[token]))) for token in HALO_TOKENS}
+    colours = frame_colours(frame)
+    result = {}
+    for text in texts or HALO_TEXTS:
+        geometry = halo_geometry(text, device)
+        worst = {token: None for token in HALO_TOKENS}
+        for x, y in halo_placements(frame.shape, geometry.size):
+            height, width = geometry.size
+            pixels = frame[y : y + height, x : x + width][geometry.ring]
+            for token, found in _halo_place(pixels, geometry, tint, lights).items():
+                previous = worst[token]
+                merged = found if previous is None else tuple(map(np.minimum, previous, found))
+                worst[token] = merged
+        result[text] = {}
+        for index, config in enumerate(geometry.configs):
+            alphas = (geometry.alphas[index].min(), geometry.alphas[index].max())
+            ends = _halo_ends(colours, alphas, tint)
+            result[text][config] = {
+                token: {
+                    "min": _worst_of_ends(ends, lights[token]),
+                    "p1": float(worst[token][0][index]),
+                    "p5": float(worst[token][1][index]),
+                }
+                for token in HALO_TOKENS
+            }
+    return result
+
+
+def measure_halo_source(frames, style, device, colors, jobs=1, texts=None, dim=0.0):
+    """The rows of one background style on one device, over its frames.
+
+    A row is a text style, a token and a candidate, with the lowest ratio over the frames ("min"),
+    p1 and p5 (their lowest) and the number of the worst frame. The rows are plain data.
+    """
+    if jobs > 1:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=jobs) as pool:
+            measured = list(
+                pool.map(
+                    measure_halo_frame,
+                    frames,
+                    [device] * len(frames),
+                    [colors] * len(frames),
+                    [texts] * len(frames),
+                    [dim] * len(frames),
+                )
+            )
+    else:
+        measured = [measure_halo_frame(frame, device, colors, texts, dim) for frame in frames]
+    rows = []
+    for text in texts or HALO_TEXTS:
+        for config in [HALO_NONE] + halo_configs():
+            for token in HALO_TOKENS:
+                folded = _fold([m[text][config][token] for m in measured])
+                folded.pop("per_frame_min")
+                rows.append(
+                    {
+                        "style": style,
+                        "device": device,
+                        "text": text,
+                        "token": token,
+                        "stroke_dp": config[0],
+                        "blur_dp": config[1],
+                        "opacity": config[2],
+                        **folded,
+                    }
+                )
+    return rows
+
+
+def measure_halo_sources(sources, colors, jobs=1, texts=None, dim=0.0):
+    """The halo over `sources`, which maps (style, device) to its frames."""
+    result = {
+        "meta": {
+            "statistic": (
+                "WCAG 2.x contrast ratio of ink and ink-2 over the pixels not in a glyph and "
+                f"within {HALO_RING_PX} px of one, with the halo on them; the worst case is the "
+                "lowest ratio over every colour of the frame with every alpha of the ring, which "
+                "is every place of the sample text on the frame, and then over the frames. p1 and "
+                "p5 are for information, over the places of a grid of the columns and rows of "
+                "`placements`."
+            ),
+            "model": (
+                "The glyphs of the sample text, widened by the stroke, blurred by a Gaussian of "
+                "sigma 0.57735 * radius_px + 0.5 (Skia), laid in page at the opacity over the "
+                "frame in the encoded values, and the text on top."
+            ),
+            "colors": colors,
+            "tokens": list(HALO_TOKENS),
+            "tint": HALO_TINT,
+            "sample": HALO_SAMPLE,
+            "texts": {
+                name: {
+                    "sizes_sp": {
+                        device: _text_sizes(TOKENS_JSON)[size]
+                        for device, size in style["sizes"].items()
+                    },
+                    "font": style["font"],
+                }
+                for name, style in HALO_TEXTS.items()
+            },
+            "strokes_dp": list(HALO_STROKES_DP),
+            "blurs_dp": list(HALO_BLURS_DP),
+            "opacities": list(HALO_OPACITIES),
+            "placements": list(HALO_PLACEMENTS),
+            "ring_px": HALO_RING_PX,
+            "margin": HALO_MARGIN,
+            "high_contrast": {"dim": dim} if dim else None,
+        },
+        "sources": [],
+        "halo": [],
+    }
+    for (style, device), frames in sorted(sources.items()):
+        result["sources"].append({"style": style, "device": device, "frames": len(frames)})
+        result["halo"] += measure_halo_source(frames, style, device, colors, jobs, texts, dim)
+    return result
+
+
+def measure_halo_folder(root, colors, jobs=1, texts=None, dim=0.0):
+    """Measures the halo over the frames in `root/<Style>-<device>/*.png`."""
+    return measure_halo_sources(_folder_sources(root), colors, jobs, texts, dim)
+
+
+def _halo_required(row):
+    """A row that has to keep its limit: a title is ink only, the rest has both tokens."""
+    return row["token"] == "ink" or row["text"] != "title"
+
+
+def _halo_keeps(row):
+    return row["min"] >= halo_limit(row["text"], row["device"]) * HALO_MARGIN
+
+
+def _halo_config(row):
+    return (row["stroke_dp"], row["blur_dp"], row["opacity"])
+
+
+def halo_passing(rows):
+    """The candidates of the grid, from the smallest, that keep every ratio over every row."""
+    keeps = {}
+    for row in rows:
+        config = _halo_config(row)
+        if config != HALO_NONE and _halo_required(row):
+            keeps[config] = keeps.get(config, True) and _halo_keeps(row)
+    return sorted(config for config, kept in keeps.items() if kept)
+
+
+def choose_halo(rows):
+    """The smallest candidate of the grid that keeps every ratio, or None.
+
+    Smallest is the least stroke, then the least blur, then the least opacity. A ratio is kept when
+    it reaches its limit (4.5 for text, 3 for large text) with the margin of the model. A title is
+    measured with ink only, because ink is the colour of a title.
+    """
+    passing = halo_passing(rows)
+    return passing[0] if passing else None
+
+
+def halo_choice_text(config):
+    stroke, blur, opacity = config
+    return f"stroke {stroke} dp, blur {blur} dp, opacity {round(opacity * 100)} %"
+
+
+def _is_large(row):
+    """Whether a row is large text, which needs 3:1 where the rest needs 4.5:1."""
+    return halo_limit(row["text"], row["device"]) < WCAG_LIMITS[1]
+
+
+def _halo_worst(rows, token, large):
+    """The lowest ratio of `token` over the rows of text of one kind, large or not, as printed."""
+    found = [
+        row["min"]
+        for row in rows
+        if row["token"] == token and _halo_required(row) and _is_large(row) == large
+    ]
+    return format_ratio(min(found)) if found else "-"
+
+
+def _grid_line(config, rows, kept):
+    """A line of Table D: a candidate, its lowest ratios and whether it keeps them."""
+    stroke, blur, opacity = config
+    if config == HALO_NONE:
+        head, verdict = ["none", "-", "-"], "-"
+    else:
+        head = [str(stroke), str(blur), f"{round(opacity * 100)} %"]
+        verdict = "yes" if config in kept else "no"
+    return head + [
+        _halo_worst(rows, "ink", False),
+        _halo_worst(rows, "ink-2", False),
+        _halo_worst(rows, "ink", True),
+        verdict,
+    ]
+
+
+def _text_lines(rows, high_contrast=False):
+    """The lines of Table E: for each text style and device, the worst of the rows given."""
+    worst = {}
+    for row in rows:
+        key = (row["text"], row["device"], row["token"])
+        if key not in worst or row["min"] < worst[key]["min"]:
+            worst[key] = row
+    lines = []
+    for text in HALO_TEXTS:
+        for device in ("tv", "phone"):
+            found = [worst.get((text, device, token)) for token in HALO_TOKENS]
+            if None in found:
+                continue
+            limit = halo_limit(text, device, high_contrast)
+            line = [text, DEVICE_LABELS[device], format_ratio(limit)]
+            for row in found:
+                background = STYLE_LABELS.get(row["style"], row["style"])
+                line += [f"{format_ratio(row['min'])} ({background})"]
+                line += [format_ratio(row["p1"]), format_ratio(row["p5"])]
+            lines.append(line)
+    return lines
+
+
+def _background_lines(rows, choice):
+    """The lines of Table F: for each background, no halo and the choice, over the text styles."""
+    worst = {}
+    for row in rows:
+        config = _halo_config(row)
+        if _halo_required(row) and config in (HALO_NONE, choice):
+            key = (row["style"], row["device"], row["token"], config == choice)
+            worst[key] = min(worst.get(key, math.inf), row["min"])
+    backgrounds = sorted({(row["style"], row["device"]) for row in rows})
+    return [
+        [_label(*background)]
+        + [
+            format_ratio(worst[(*background, token, with_halo)])
+            if (*background, token, with_halo) in worst
+            else "-"
+            for token in HALO_TOKENS
+            for with_halo in (False, True)
+        ]
+        for background in backgrounds
+    ]
+
+
+def halo_tables(result):
+    """The halo tables of `docs/ux/accessibility.md`, and the choice.
+
+    Table D is every candidate: its lowest ratios over every background, device and text style.
+    Table E is the chosen candidate, by text style and device, with p1 and p5. Table F is the
+    chosen candidate and no halo, by background.
+    """
+    rows = result["halo"]
+    names = [f"`{token}`" for token in HALO_TOKENS]
+    kept = set(halo_passing(rows))
+    by_config = {}
+    for row in rows:
+        by_config.setdefault(_halo_config(row), []).append(row)
+    heads = ["Stroke dp", "Blur dp", "Opacity", f"{names[0]}, small", f"{names[1]}, small"]
+    grid = [
+        _grid_line(config, by_config[config], kept)
+        for config in [HALO_NONE] + halo_configs()
+        if config in by_config
+    ]
+    tables = [
+        "Table D. Text on the background with a halo: the lowest ratio over every background, "
+        "device and text style, for each candidate. Small text is the label, the body, the small "
+        "text and the title of a phone, which need 4.5:1. The title of a TV is large text and "
+        "needs 3:1. A candidate keeps the ratios when every one clears its limit by 2%.",
+        _table(heads + [f"{names[0]}, large", "Keeps"], grid),
+    ]
+    choice = choose_halo(rows)
+    if choice is None:
+        return "\n\n".join(tables + ["No candidate of the grid keeps every ratio."])
+    heads = ["Text", "Device", "Needs"]
+    for name in names:
+        heads += [f"{name} min", f"{name} p1", f"{name} p5"]
+    chosen = [row for row in rows if _halo_config(row) == choice]
+    tables += [
+        f"Table E. The chosen halo ({halo_choice_text(choice)}) by text style and device: the "
+        "lowest ratio over the backgrounds, with the background it is in, and the lowest p1 "
+        "and p5.",
+        _table(heads, _text_lines(chosen)),
+        "Table F. The lowest ratio over the text styles, by background, with no halo and with "
+        "the chosen one.",
+        _table(
+            ["Background"]
+            + [f"{name}, {kind}" for name in names for kind in ("none", "halo")],
+            _background_lines(rows, choice),
+        ),
+        f"The choice: {halo_choice_text(choice)}.",
+    ]
+    return "\n\n".join(tables)
+
+
+def halo_high_contrast_tables(result, config):
+    """The tables of loose text under high contrast, for the halo `config`, and their verdict.
+
+    The result is a measurement made with the dim and the colours of high contrast. Table G is the
+    lowest ratio over the text styles, by background, with the dim alone and with the dim and the
+    halo. Table H is the halo by text style and device. Every text needs 7:1, with no margin.
+    """
+    rows = result["halo"]
+    names = [f"`{token}`" for token in HALO_TOKENS]
+    dim = (result.get("meta", {}).get("high_contrast") or {}).get("dim")
+    veil = "the page colour over it" + (f" at {dim}" if dim else "")
+    chosen = [row for row in rows if _halo_config(row) == config and _halo_required(row)]
+    heads = ["Text", "Device", "Needs"]
+    for name in names:
+        heads += [f"{name} min", f"{name} p1", f"{name} p5"]
+    short = [row for row in chosen if row["min"] < halo_limit(row["text"], row["device"], True)]
+    tables = [
+        f"Table G. Loose text under high contrast, with {veil} and the ink of high contrast: the "
+        "lowest ratio over the text styles, by background, with the dim alone and with the dim and "
+        f"the halo ({halo_choice_text(config)}).",
+        _table(
+            ["Background"] + [f"{name}, {kind}" for name in names for kind in ("dim only", "halo")],
+            _background_lines(rows, config),
+        ),
+        "Table H. The same halo by text style and device: the lowest ratio over the backgrounds, "
+        "with the background it is in, and the lowest p1 and p5.",
+        _table(heads, _text_lines([r for r in rows if _halo_config(r) == config], True)),
+    ]
+    worst = min(chosen, key=lambda row: row["min"])
+    where = (
+        f"`{worst['token']}`, {worst['text']}, {DEVICE_LABELS[worst['device']]}, "
+        f"{STYLE_LABELS.get(worst['style'], worst['style'])}"
+    )
+    if not short:
+        tables.append(
+            "Under high contrast every text keeps 7:1 over every background: the lowest is "
+            f"{format_ratio(worst['min'])} ({where})."
+        )
+    else:
+        tables.append(
+            f"Under high contrast the text falls short of 7:1 in {len(short)} of {len(chosen)} "
+            f"cases; the lowest is {format_ratio(worst['min'])} ({where})."
+        )
+    return "\n\n".join(tables)
+
+
 # The command line
 
 
@@ -871,7 +1580,43 @@ def main(argv=None):
     colours = commands.add_parser("glass-colours", help="print the floors and colours of the glass")
     colours.add_argument("--table", type=Path, default=GLASS_TABLE_KT, help="the Kotlin table")
 
+    halo = commands.add_parser("halo", help="measure the halo of text on the background")
+    halo.add_argument("frames", type=Path, help="the folder of <Style>-<tv|phone>/NN.png")
+    halo.add_argument("--json", type=Path, required=True, help="where the result goes")
+    halo.add_argument("--jobs", type=int, default=4, help="processes, one frame each")
+    halo.add_argument("--texts", nargs="+", choices=sorted(HALO_TEXTS), help="the text styles")
+    halo.add_argument("--revision", help="the revision measured (default: HEAD)")
+    halo.add_argument("--high-contrast", action="store_true", help="measure under high contrast")
+    halo.add_argument(
+        "--halo",
+        type=float,
+        nargs=3,
+        metavar=("STROKE_DP", "BLUR_DP", "OPACITY_PERCENT"),
+        help="the halo to check under high contrast",
+    )
+
     args = parser.parse_args(argv)
+    if args.command == "halo":
+        if args.high_contrast != (args.halo is not None):
+            parser.error("--high-contrast and --halo go together: the halo to check is named")
+        colors = load_colors(TOKENS_JSON, TEXT_TOKENS + SURFACE_TOKENS)
+        dim = 0.0
+        if args.high_contrast:
+            found = load_high_contrast()
+            colors = {**colors, "ink": found["ink"], "ink-2": found["ink-2"]}
+            dim = found["dim"]
+        result = measure_halo_folder(args.frames, colors, args.jobs, args.texts, dim)
+        result["meta"]["date"] = datetime.date.today().isoformat()
+        result["meta"]["revision"] = args.revision or _revision()
+        args.json.parent.mkdir(parents=True, exist_ok=True)
+        args.json.write_text(json.dumps(result, indent=1) + "\n", encoding="utf-8")
+        if args.high_contrast:
+            stroke, blur, percent = args.halo
+            config = (int(stroke), int(blur), round(percent / 100, 2))
+            print(halo_high_contrast_tables(result, config))
+        else:
+            print(halo_tables(result))
+        return 0
     if args.command == "glass-colours":
         table = read_glass_table_kotlin(args.table.read_text(encoding="utf-8"))
         print(glass_colour_tables(table))

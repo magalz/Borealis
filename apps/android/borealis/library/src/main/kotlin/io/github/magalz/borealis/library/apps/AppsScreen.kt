@@ -19,7 +19,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -32,6 +31,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.adaptive.appGridColumns
 import io.github.magalz.borealis.designsystem.components.AuroraLoader
+import io.github.magalz.borealis.designsystem.components.BackdropInk
+import io.github.magalz.borealis.designsystem.components.BackdropText
 import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
@@ -45,7 +46,6 @@ import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
-import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
 
@@ -143,10 +143,9 @@ private fun toggleLabel(state: AppsUiState) =
 /** The host name with what runs on it. */
 @Composable
 private fun Title(state: AppsUiState, modifier: Modifier = Modifier) {
-    val colors = LocalBorealisColors.current
     val running = state.runningAppId != null
     Column(modifier, verticalArrangement = Arrangement.spacedBy(BorealisDimens.stackedTextGap)) {
-        Text(
+        BackdropText(
             state.hostName.orEmpty(),
             style = MaterialTheme.typography.titleLarge,
             maxLines = 1,
@@ -157,7 +156,7 @@ private fun Title(state: AppsUiState, modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (running) StatusDot(DotStatus.Online, contentDescription = null)
-            Text(
+            BackdropText(
                 when {
                     state.runningAppName != null ->
                         stringResource(R.string.apps_status_running, state.runningAppName)
@@ -165,7 +164,7 @@ private fun Title(state: AppsUiState, modifier: Modifier = Modifier) {
                     else -> stringResource(R.string.apps_status_idle)
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = colors.ink3,
+                ink = BackdropInk.Ink3,
             )
         }
     }

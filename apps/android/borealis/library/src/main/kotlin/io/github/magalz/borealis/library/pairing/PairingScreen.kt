@@ -22,7 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -38,6 +37,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.AnimatedCheck
 import io.github.magalz.borealis.designsystem.components.AuroraLoader
+import io.github.magalz.borealis.designsystem.components.BackdropInk
+import io.github.magalz.borealis.designsystem.components.BackdropText
 import io.github.magalz.borealis.designsystem.components.BorealisBackButton
 import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
@@ -116,7 +117,7 @@ fun PairingScreen(
 private fun Header(title: String, showBack: Boolean, onBack: () -> Unit, modifier: Modifier) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         if (showBack) BorealisBackButton(onBack, stringResource(R.string.pairing_back))
-        Text(title, style = MaterialTheme.typography.titleLarge)
+        BackdropText(title, style = MaterialTheme.typography.titleLarge)
     }
 }
 
@@ -182,10 +183,10 @@ private fun Waiting(state: PairingUiState.Waiting, wide: Boolean, onCancel: () -
                 )
             }
             PinDisplay(state.pin)
-            Text(
+            BackdropText(
                 stringResource(R.string.pairing_pin_valid),
                 style = MaterialTheme.typography.bodyMedium,
-                color = LocalBorealisColors.current.ink3,
+                ink = BackdropInk.Ink3,
                 textAlign = TextAlign.Center,
             )
         }
@@ -242,19 +243,20 @@ private fun Step(number: Int, text: String, address: String?) {
             Modifier.size(STEP_NUMBER_SIZE).border(1.dp, colors.lineStrong, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
+            BackdropText(
                 number.toString(),
-                style = LocalBorealisType.current.kicker.copy(color = colors.ink3),
+                style = LocalBorealisType.current.kicker,
+                ink = BackdropInk.Ink3,
             )
         }
         Column(Modifier.weight(1f)) {
-            Text(text, style = MaterialTheme.typography.bodyMedium, color = colors.ink2)
+            BackdropText(text, style = MaterialTheme.typography.bodyMedium, ink = BackdropInk.Ink2)
             if (address != null) {
-                Text(
+                BackdropText(
                     address,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontFamily = BorealisFonts.Mono,
-                    color = colors.ink3,
+                    style =
+                        MaterialTheme.typography.bodySmall.copy(fontFamily = BorealisFonts.Mono),
+                    ink = BackdropInk.Ink3,
                 )
             }
         }
@@ -265,7 +267,7 @@ private fun Step(number: Int, text: String, address: String?) {
 private fun Note(text: String, modifier: Modifier = Modifier) {
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.medium
-    Text(
+    BackdropText(
         text,
         modifier
             .background(colors.accentTint, shape)
@@ -284,7 +286,10 @@ private fun Paired(modifier: Modifier) {
         verticalArrangement = Arrangement.spacedBy(SECTION_GAP),
     ) {
         AnimatedCheck(Modifier.size(CHECK_SIZE).testTag("paired-check"))
-        Text(stringResource(R.string.pairing_paired), style = MaterialTheme.typography.titleLarge)
+        BackdropText(
+            stringResource(R.string.pairing_paired),
+            style = MaterialTheme.typography.titleLarge,
+        )
     }
 }
 
@@ -292,7 +297,7 @@ private fun Paired(modifier: Modifier) {
 @Composable
 private fun Outcome(message: String, buttons: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(SECTION_GAP)) {
-        Text(message, style = MaterialTheme.typography.bodyLarge)
+        BackdropText(message, style = MaterialTheme.typography.bodyLarge)
         buttons()
     }
 }

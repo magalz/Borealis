@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.designsystem.PIXELS_PER_DP
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.pixelAt
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -59,6 +60,13 @@ abstract class GlassSurfaceCases {
 
     /** What the surface draws over its own colour at a probe, such as the tint of a card. */
     protected open fun over(base: Color): Color = base
+
+    /**
+     * The part of the specimen, from its top left corner, that is the surface. What lies outside
+     * it, such as a text that stands on the background, is not the glass and may differ in a host.
+     * Null is the whole specimen.
+     */
+    protected open val surfaceSize: DpSize? = null
 
     /** The surface. It is shown at the top left of the host. */
     @Composable protected abstract fun Specimen()
@@ -138,13 +146,20 @@ abstract class GlassSurfaceCases {
         val outside = composeRule.onNodeWithTag(OUTSIDE).captureToImage().toPixelMap()
         // The anti-aliased corner of an opaque border (high contrast) differs by a few levels
         // between a layer and a plain draw, so a pixel is the same within SAME_LEVELS of 255 in a
-        // channel.
+        // channel. Only the surface is compared: what lies outside it may differ in a host.
+        val size = surfaceSize
+        val width = if (size == null) inHost.width else size.width.value.toInt() * PIXELS_PER_DP
+        val height = if (size == null) inHost.height else size.height.value.toInt() * PIXELS_PER_DP
         val apart =
-            inHost.buffer.indices.count { i ->
-                CHANNEL_SHIFTS.any {
-                    abs(
-                        ((inHost.buffer[i] shr it) and 0xFF) - ((outside.buffer[i] shr it) and 0xFF)
-                    ) > SAME_LEVELS
+            (0 until height).sumOf { y ->
+                (0 until width).count { x ->
+                    val i = y * inHost.width + x
+                    CHANNEL_SHIFTS.any {
+                        abs(
+                            ((inHost.buffer[i] shr it) and 0xFF) -
+                                ((outside.buffer[i] shr it) and 0xFF)
+                        ) > SAME_LEVELS
+                    }
                 }
             }
         assertWithMessage("the surface in a host and outside one are not the same pixels")

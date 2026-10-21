@@ -44,6 +44,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.BackdropInk
+import io.github.magalz.borealis.designsystem.components.BackdropText
 import io.github.magalz.borealis.designsystem.components.BorealisPhoneBar
 import io.github.magalz.borealis.designsystem.components.EmptyState
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
@@ -138,16 +140,16 @@ private fun Header() {
 @Composable
 private fun Title(modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(BorealisDimens.stackedTextGap)) {
-        Text(
+        BackdropText(
             stringResource(R.string.audit_ui_screen_title),
             style = MaterialTheme.typography.titleLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Text(
+        BackdropText(
             stringResource(R.string.audit_ui_retention),
             style = MaterialTheme.typography.bodySmall,
-            color = LocalBorealisColors.current.ink3,
+            ink = BackdropInk.Ink3,
         )
     }
 }

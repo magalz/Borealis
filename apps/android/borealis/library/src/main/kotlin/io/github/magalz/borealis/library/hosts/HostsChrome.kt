@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,6 +17,8 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.BackdropInk
+import io.github.magalz.borealis.designsystem.components.BackdropText
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
@@ -38,7 +39,7 @@ internal fun PhoneTopBar(onAddHost: () -> Unit, onSettings: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(ACTION_GAP),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
+        BackdropText(
             stringResource(R.string.hosts_title),
             Modifier.weight(1f),
             style = MaterialTheme.typography.titleLarge,
@@ -83,12 +84,15 @@ internal fun TvHeader(state: HostsUiState) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Bottom,
     ) {
-        Text(stringResource(R.string.hosts_title), style = MaterialTheme.typography.titleLarge)
+        BackdropText(
+            stringResource(R.string.hosts_title),
+            style = MaterialTheme.typography.titleLarge,
+        )
         if (!state.loading && !state.searching) {
-            Text(
+            BackdropText(
                 pluralStringResource(R.plurals.hosts_count, state.items.size, state.items.size),
                 style = MaterialTheme.typography.bodySmall,
-                color = LocalBorealisColors.current.ink3,
+                ink = BackdropInk.Ink3,
             )
         }
     }

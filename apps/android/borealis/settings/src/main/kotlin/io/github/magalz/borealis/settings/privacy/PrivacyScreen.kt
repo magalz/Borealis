@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -16,6 +15,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import io.github.magalz.borealis.designsystem.adaptive.rememberFormFactor
+import io.github.magalz.borealis.designsystem.components.BackdropText
 import io.github.magalz.borealis.designsystem.components.BorealisPhoneBar
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -60,7 +60,7 @@ internal fun PrivacyScreenContent(
 ) {
     Column(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
         BorealisPhoneBar(onBack, stringResource(R.string.borealis_privacy_back)) {
-            Text(
+            BackdropText(
                 stringResource(R.string.borealis_privacy_title),
                 Modifier.semantics { heading() },
                 style = MaterialTheme.typography.titleLarge,

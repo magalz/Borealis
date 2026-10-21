@@ -5,6 +5,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onFirst
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.components.BackdropTextHalo
+import io.github.magalz.borealis.designsystem.testing.assertHalo
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.settings.testing.InGlassHost
 import org.junit.Test
@@ -24,7 +25,7 @@ class SettingsBackdropTextTest : SettingsScreenTestBase() {
         asTelevision()
         show { content -> InGlassHost(FormFactor.Tv, content = content) }
 
-        assertHalo("Settings", drawn = true)
+        composeRule.assertHalo("Settings", drawn = true)
     }
 
     @Test
@@ -47,7 +48,7 @@ class SettingsBackdropTextTest : SettingsScreenTestBase() {
     fun `the title in the bar of the phone settings is on the background`() {
         show { content -> InGlassHost(FormFactor.Phone, content = content) }
 
-        assertHalo("Settings", drawn = true)
+        composeRule.assertHalo("Settings", drawn = true)
     }
 
     @Test
@@ -56,15 +57,6 @@ class SettingsBackdropTextTest : SettingsScreenTestBase() {
         asTelevision()
         show()
 
-        assertHalo("Settings", drawn = false)
-    }
-
-    private fun assertHalo(text: String, drawn: Boolean) {
-        composeRule
-            .onNode(
-                hasText(text) and SemanticsMatcher.expectValue(BackdropTextHalo, drawn),
-                useUnmergedTree = true,
-            )
-            .assertExists()
+        composeRule.assertHalo("Settings", drawn = false)
     }
 }

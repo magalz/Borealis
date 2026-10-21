@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -24,12 +25,12 @@ import io.github.magalz.borealis.designsystem.components.BackdropText
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
 
 private val ACTION_SIZE = 48.dp
-private val ACTION_GAP = 10.dp
 private val ACTION_ICON_SIZE = 24.dp
 private val TOP_BAR_PADDING = 8.dp
 
@@ -38,7 +39,8 @@ internal fun PhoneTopBar(onAddHost: () -> Unit, onSettings: () -> Unit) {
     Row(
         Modifier.fillMaxWidth()
             .padding(horizontal = LocalBorealisSpacing.current.gutter, vertical = TOP_BAR_PADDING),
-        horizontalArrangement = Arrangement.spacedBy(ACTION_GAP),
+        // The actions are focus stops: the gap of a list keeps their outlines apart.
+        horizontalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         BackdropText(
@@ -50,6 +52,7 @@ internal fun PhoneTopBar(onAddHost: () -> Unit, onSettings: () -> Unit) {
             BorealisIcons.Add,
             stringResource(R.string.hosts_add_host),
             onAddHost,
+            Modifier.testTag("hosts-add-host"),
         )
         IconAction(
             BorealisIcons.Gear,
@@ -60,10 +63,16 @@ internal fun PhoneTopBar(onAddHost: () -> Unit, onSettings: () -> Unit) {
 }
 
 @Composable
-private fun IconAction(icon: ImageVector, description: String, onClick: () -> Unit) {
+private fun IconAction(
+    icon: ImageVector,
+    description: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val shape = MaterialTheme.shapes.medium
     Box(
-        Modifier.size(ACTION_SIZE)
+        modifier
+            .size(ACTION_SIZE)
             .borealisFocusIndication(shape)
             .clip(shape)
             .optionsClickable(onClick, role = Role.Button),

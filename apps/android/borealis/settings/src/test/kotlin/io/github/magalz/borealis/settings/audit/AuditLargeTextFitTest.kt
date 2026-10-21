@@ -1,13 +1,17 @@
 package io.github.magalz.borealis.settings.audit
 
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
+import io.github.magalz.borealis.designsystem.testing.textLayout
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.TextSize
 import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
-import io.github.magalz.borealis.settings.testing.InGlassHost
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -58,24 +62,34 @@ class AuditLargeTextFitTest {
             ),
         )
 
+    /**
+     * A narrow window (split screen) at the largest text: the title of the screen takes the lines
+     * it needs and is not shortened. The summaries of the entries are shortened on purpose, so this
+     * reads the title only.
+     */
+    @Test
+    @Config(qualifiers = NARROW_WINDOW, fontScale = SCALE)
+    fun `the title wraps in a narrow window and does not end in an ellipsis`() {
+        composeRule.showAudit(
+            entries,
+            FormFactor.Phone,
+            BorealisLook(textSize = TextSize.Largest),
+            BackgroundStyle.Off,
+        )
+
+        val title = composeRule.onNodeWithText("Audit trail", useUnmergedTree = true).textLayout()
+        assertThat(title.lineCount).isGreaterThan(1)
+        assertThat((0 until title.lineCount).none(title::isLineEllipsized)).isTrue()
+    }
+
     private fun assertFits(formFactor: FormFactor, state: AuditUiState) {
-        composeRule.setContent {
-            InGlassHost(formFactor, style = BackgroundStyle.Off) {
-                AuditScreen(
-                    state,
-                    formFactor,
-                    onEntrySelected = {},
-                    onDetailDismissed = {},
-                    onBack = {},
-                )
-            }
-        }
-        composeRule.waitForIdle()
+        composeRule.showAudit(state, formFactor, style = BackgroundStyle.Off)
 
         composeRule.assertNoClippedText()
     }
 
     private companion object {
         const val SCALE = 2f
+        const val NARROW_WINDOW = "w240dp-h568dp-xhdpi"
     }
 }

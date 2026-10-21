@@ -6,10 +6,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
@@ -21,6 +18,7 @@ import io.github.magalz.borealis.designsystem.components.settings.SettingsValueR
 import io.github.magalz.borealis.designsystem.glass.GlassHostOver
 import io.github.magalz.borealis.designsystem.glass.GlassSpec
 import io.github.magalz.borealis.designsystem.glass.onGlass
+import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -51,7 +49,7 @@ class GlassTextOnSurfacesTest {
     fun `the address of a Host card is the glass ink-3`() {
         showOverFlowingLight(FormFactor.Phone) { Card() }
 
-        assertThat(textColor("192.168.1.20")).isEqualTo(ink3)
+        assertThat(composeRule.textColor("192.168.1.20")).isEqualTo(ink3)
     }
 
     @Test
@@ -60,7 +58,7 @@ class GlassTextOnSurfacesTest {
             Card()
         }
 
-        assertThat(textColor("192.168.1.20")).isEqualTo(BorealisColors().ink3)
+        assertThat(composeRule.textColor("192.168.1.20")).isEqualTo(BorealisColors().ink3)
     }
 
     // The rail
@@ -69,14 +67,15 @@ class GlassTextOnSurfacesTest {
     fun `the version in the footer of the rail is the glass ink-3`() {
         showOverFlowingLight(FormFactor.Tv) { Rail() }
 
-        assertThat(textColor("0.1.0")).isEqualTo(ink3)
+        assertThat(composeRule.textColor("0.1.0")).isEqualTo(ink3)
     }
 
     @Test
     fun `the version in the footer of the rail is the ink-3 of high contrast where the glass is off`() {
         showOverFlowingLight(FormFactor.Tv, BorealisLook(highContrast = true)) { Rail() }
 
-        assertThat(textColor("0.1.0")).isEqualTo(BorealisColors().withHighContrast().ink3)
+        assertThat(composeRule.textColor("0.1.0"))
+            .isEqualTo(BorealisColors().withHighContrast().ink3)
     }
 
     // The settings
@@ -87,15 +86,15 @@ class GlassTextOnSurfacesTest {
 
         val expected =
             BorealisColors().onGlass(BackgroundStyle.FlowingLight, standardOverFlowingLight)
-        assertThat(textColor("STREAM")).isEqualTo(expected.ink4)
-        assertThat(textColor("STREAM")).isNotEqualTo(BorealisColors().ink4)
+        assertThat(composeRule.textColor("STREAM")).isEqualTo(expected.ink4)
+        assertThat(composeRule.textColor("STREAM")).isNotEqualTo(BorealisColors().ink4)
     }
 
     @Test
     fun `the summary of a row in a section of the phone settings is the glass ink-3`() {
         showOverFlowingLight(FormFactor.Phone) { Section() }
 
-        assertThat(textColor("Pixels per frame")).isEqualTo(ink3)
+        assertThat(composeRule.textColor("Pixels per frame")).isEqualTo(ink3)
     }
 
     @Test
@@ -104,14 +103,14 @@ class GlassTextOnSurfacesTest {
             Section()
         }
 
-        assertThat(textColor("STREAM")).isEqualTo(BorealisColors().ink4)
+        assertThat(composeRule.textColor("STREAM")).isEqualTo(BorealisColors().ink4)
     }
 
     @Test
     fun `the summary of a row in the pane of the TV settings is the glass ink-3`() {
         showOverFlowingLight(FormFactor.Tv) { Panes() }
 
-        assertThat(textColor("Pixels per frame")).isEqualTo(ink3)
+        assertThat(composeRule.textColor("Pixels per frame")).isEqualTo(ink3)
     }
 
     @Test
@@ -120,7 +119,7 @@ class GlassTextOnSurfacesTest {
             Panes()
         }
 
-        assertThat(textColor("Pixels per frame")).isEqualTo(BorealisColors().ink3)
+        assertThat(composeRule.textColor("Pixels per frame")).isEqualTo(BorealisColors().ink3)
     }
 
     // Helpers
@@ -140,17 +139,6 @@ class GlassTextOnSurfacesTest {
             }
         }
         composeRule.waitForIdle()
-    }
-
-    private fun textColor(text: String): Color {
-        val results = mutableListOf<TextLayoutResult>()
-        composeRule
-            .onNodeWithText(text, useUnmergedTree = true)
-            .fetchSemanticsNode()
-            .config[SemanticsActions.GetTextLayoutResult]
-            .action
-            ?.invoke(results)
-        return results.single().layoutInput.style.color
     }
 
     @Composable

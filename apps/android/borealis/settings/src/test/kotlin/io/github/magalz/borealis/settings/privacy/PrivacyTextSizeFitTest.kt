@@ -1,6 +1,5 @@
 package io.github.magalz.borealis.settings.privacy
 
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
@@ -8,8 +7,6 @@ import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
-import io.github.magalz.borealis.settings.testing.InGlassHost
-import java.io.File
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,24 +31,7 @@ class PrivacyTextSizeFitTest {
 
     private fun assertFits(formFactor: FormFactor) {
         val largest = BorealisLook(textSize = TextSize.Largest)
-        composeRule.setContent {
-            InGlassHost(formFactor, largest, BackgroundStyle.Off) {
-                PrivacyScreenContent(
-                    PrivacyUiState(),
-                    SnackbarHostState(),
-                    PrivacyActions(
-                        {},
-                        {},
-                        {},
-                        {},
-                        {},
-                        PrivacyDialogActions({}, {}, {}, { _: File, _: String -> }),
-                    ),
-                    onBack = {},
-                )
-            }
-        }
-        composeRule.waitForIdle()
+        composeRule.showPrivacy(formFactor, largest, BackgroundStyle.Off)
 
         composeRule.assertNoClippedText()
     }

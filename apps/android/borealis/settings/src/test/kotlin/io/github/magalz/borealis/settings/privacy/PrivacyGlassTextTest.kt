@@ -1,19 +1,14 @@
 package io.github.magalz.borealis.settings.privacy
 
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
-import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.noAnimations
+import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
-import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.Transparency
-import io.github.magalz.borealis.settings.testing.InGlassHost
-import io.github.magalz.borealis.settings.testing.noAnimations
-import io.github.magalz.borealis.settings.testing.textColorOf
-import java.io.File
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -36,37 +31,20 @@ class PrivacyGlassTextTest {
     @Before fun theBackgroundIsItsStill() = noAnimations()
 
     private fun show(look: BorealisLook) {
-        composeRule.setContent {
-            InGlassHost(FormFactor.Phone, look, BackgroundStyle.FlowingLight) {
-                PrivacyScreenContent(
-                    PrivacyUiState(),
-                    SnackbarHostState(),
-                    PrivacyActions(
-                        {},
-                        {},
-                        {},
-                        {},
-                        {},
-                        PrivacyDialogActions({}, {}, {}, { _: File, _: String -> }),
-                    ),
-                    onBack = {},
-                )
-            }
-        }
-        composeRule.waitForIdle()
+        composeRule.showPrivacy(look = look)
     }
 
     @Test
     fun `the footer and the summary of a row are the glass ink-3`() {
         show(BorealisLook())
 
-        assertThat(composeRule.textColorOf(footer)).isEqualTo(glassInk3)
+        assertThat(composeRule.textColor(footer)).isEqualTo(glassInk3)
     }
 
     @Test
     fun `the footer is the token ink-3 where the glass is off`() {
         show(BorealisLook(transparency = Transparency.Off))
 
-        assertThat(composeRule.textColorOf(footer)).isEqualTo(BorealisColors().ink3)
+        assertThat(composeRule.textColor(footer)).isEqualTo(BorealisColors().ink3)
     }
 }

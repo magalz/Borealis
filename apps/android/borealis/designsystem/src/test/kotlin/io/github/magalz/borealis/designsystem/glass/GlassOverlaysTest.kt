@@ -11,10 +11,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -25,6 +23,7 @@ import io.github.magalz.borealis.designsystem.background.BackgroundTags
 import io.github.magalz.borealis.designsystem.background.FakeBackgroundPlayers
 import io.github.magalz.borealis.designsystem.background.LocalBackgroundPlayerFactory
 import io.github.magalz.borealis.designsystem.background.TestLifecycle
+import io.github.magalz.borealis.designsystem.testing.frame
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.Transparency
@@ -234,21 +233,21 @@ class GlassOverlaysTest {
         composeRule.mainClock.autoAdvance = false
         showHost(BackgroundStyle.AuroraCurtains, useBackground = true) { Overlays() }
         composeRule.mainClock.advanceTimeBy(1_000)
-        val running = frame()
+        val running = composeRule.frame(ROOT)
         composeRule.mainClock.advanceTimeBy(5_000)
-        assertThat(frame().buffer).isNotEqualTo(running.buffer)
+        assertThat(composeRule.frame(ROOT).buffer).isNotEqualTo(running.buffer)
 
         composeRule.runOnUiThread { first = true }
         composeRule.mainClock.advanceTimeBy(1_000)
-        val frozen = frame()
+        val frozen = composeRule.frame(ROOT)
         composeRule.mainClock.advanceTimeBy(5_000)
-        assertThat(frame().buffer).isEqualTo(frozen.buffer)
+        assertThat(composeRule.frame(ROOT).buffer).isEqualTo(frozen.buffer)
 
         composeRule.runOnUiThread { first = false }
         composeRule.mainClock.advanceTimeBy(1_000)
-        val again = frame()
+        val again = composeRule.frame(ROOT)
         composeRule.mainClock.advanceTimeBy(5_000)
-        assertThat(frame().buffer).isNotEqualTo(again.buffer)
+        assertThat(composeRule.frame(ROOT).buffer).isNotEqualTo(again.buffer)
     }
 
     @Test
@@ -329,11 +328,9 @@ class GlassOverlaysTest {
         }
     }
 
-    private fun frame() = composeRule.onNodeWithTag(ROOT).captureToImage().toPixelMap()
-
     /** The largest step in red between two neighbouring pixels of a row across the middle. */
     private fun edgeStep(): Float {
-        val map = frame()
+        val map = composeRule.frame(ROOT)
         val y = map.height / 2
         return (map.width / 2 - EDGE_REACH until map.width / 2 + EDGE_REACH).maxOf { x ->
             abs(map[x + 1, y].red - map[x, y].red)

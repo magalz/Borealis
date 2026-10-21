@@ -1,7 +1,5 @@
 package io.github.magalz.borealis.settings.ui
 
-import android.content.Context
-import android.provider.Settings
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
@@ -19,9 +17,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.systemAnimationScale
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion
@@ -41,15 +39,6 @@ class DpadScrollTest {
 
     private val focus = FocusRequester()
     private lateinit var scroll: ScrollState
-
-    private fun systemAnimationScale(scale: Float) {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        Settings.Global.putFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            scale,
-        )
-    }
 
     /** Presses Down on the text and says how far it has scrolled two frames later. */
     private fun scrolledTwoFramesAfterDown(look: BorealisLook): Int {

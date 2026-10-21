@@ -12,7 +12,6 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.ComposeView
@@ -79,9 +78,6 @@ class StreamChromeHost(
     private val onReleased: Runnable,
     look: BorealisLook = BorealisLook(),
 ) : FrameLayout(activity) {
-    /** More content for the chrome, composed with its screens; a test reads the theme there. */
-    internal var chromeExtra: @Composable () -> Unit = {}
-
     /** The time the guard reads, in the [SystemClock.uptimeMillis] timebase. */
     internal var clock: () -> Long = SystemClock::uptimeMillis
     private var mode: ChromeMode? = null
@@ -103,7 +99,7 @@ class StreamChromeHost(
 
     private val composeView =
         ComposeView(activity).apply {
-            setContent { StreamChromeRoot(session, ::setMenuHandleBounds, look) { chromeExtra() } }
+            setContent { StreamChromeRoot(session, ::setMenuHandleBounds, look) }
             // Compose cannot take the focus before its first layout (its root nodes are not
             // attached
             // yet), so the focus waits for it.

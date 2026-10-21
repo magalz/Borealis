@@ -1,6 +1,5 @@
 package io.github.magalz.borealis.library.hosts
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,7 +41,6 @@ import io.github.magalz.borealis.designsystem.components.AuroraLoader
 import io.github.magalz.borealis.designsystem.components.BackdropKicker
 import io.github.magalz.borealis.designsystem.components.BorealisSnackbarHost
 import io.github.magalz.borealis.designsystem.components.ContinueCard
-import io.github.magalz.borealis.designsystem.components.DotStatus
 import io.github.magalz.borealis.designsystem.components.EmptyState
 import io.github.magalz.borealis.designsystem.components.EmptyStateAction
 import io.github.magalz.borealis.designsystem.components.HostCard
@@ -53,11 +51,10 @@ import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
-import io.github.magalz.borealis.library.domain.Reachability
 
 /**
- * An outline sits 5dp outside its card, 7dp when it is the thicker one, so neighbouring cards need
- * 10dp between them.
+ * An outline reaches BorealisDimens.outlineReach outside its card, thickOutlineReach when it is the
+ * thicker one, so neighbouring cards need BorealisDimens.listGap between them.
  */
 private val GRID_GAP = 12.dp
 private val SECTION_PADDING = 6.dp
@@ -182,7 +179,12 @@ private class HostsHandlers(
     val onAddHost: () -> Unit,
     /** Null on a phone, which starts with no focus. */
     val focusedCard: FocusedCard?,
-)
+) {
+    /** Remembers the card [key] as the one to focus when the screen comes back. */
+    fun remember(key: String) {
+        focusedCard?.key = key
+    }
+}
 
 /**
  * The element that starts with focus on a TV or handheld, and the guard that lets the screen take
@@ -219,10 +221,10 @@ private fun HostsBody(
         val requester = remember { FocusRequester() }
         val initialFocus = rememberInitialFocusState(state.loading || state.searching)
         // Read when the guard starts, so a card that takes the focus later is not chased.
-        val restoredCard = remember(initialFocus) { handlers.focusedCard?.key }
+        val savedCard = remember(initialFocus) { handlers.focusedCard?.key }
         val startFocus =
             if (formFactor != FormFactor.Phone) {
-                StartFocus(requester, initialFocus, restoredCard)
+                StartFocus(requester, initialFocus, savedCard)
             } else {
                 null
             }
@@ -269,15 +271,16 @@ private fun HostGrid(
     val optionsLabel = stringResource(R.string.hosts_options)
     val unnamedApp = stringResource(R.string.hosts_app_running)
     // The card that had focus before wins over the first card, unless its host is gone.
-    val restoredCard = startFocus?.cardKey?.takeIf { it in state.cardKeys() }
+    val cardKeys = remember(state.continueItems, state.items) { state.cardKeys() }
+    val restoredCard = startFocus?.cardKey?.takeIf { it in cardKeys }
     val gridState = rememberLazyGridState()
     ScrollToCard(gridState, state, restoredCard, startFocus?.state)
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
         state = gridState,
         modifier = Modifier.fillMaxSize(),
-        // The padding and the gaps keep the focus outline, 5dp outside a card (7dp when it is the
-        // thicker one), from being clipped.
+        // The padding and the gaps keep the focus outline, BorealisDimens.outlineReach outside a
+        // card (thickOutlineReach when it is the thicker one), from being clipped.
         contentPadding = PaddingValues(LocalBorealisSpacing.current.gutter),
         verticalArrangement = Arrangement.spacedBy(GRID_GAP),
         horizontalArrangement = Arrangement.spacedBy(GRID_GAP),
@@ -297,7 +300,7 @@ private fun HostGrid(
                     detail = stringResource(R.string.hosts_continue_detail, item.hostName),
                     resumeLabel = stringResource(R.string.hosts_continue_resume),
                     onClick = {
-                        handlers.focusedCard?.key = key
+                        handlers.remember(key)
                         handlers.onContinue(item.hostId)
                     },
                     modifier =
@@ -340,7 +343,7 @@ private fun HostItem(
         status = item.dotStatus(),
         statusText = stringResource(item.statusTextRes()),
         onClick = {
-            handlers.focusedCard?.key = key
+            handlers.remember(key)
             if (item.action == HostAction.WAKE) {
                 handlers.onWake(item.id)
             } else {
@@ -354,35 +357,9 @@ private fun HostItem(
         runningLabel = runningLabel,
         onClickLabel = item.action.labelRes()?.let { stringResource(it) },
         onOptions = {
-            handlers.focusedCard?.key = key
+            handlers.remember(key)
             handlers.onOptions(item.id)
         },
         optionsLabel = optionsLabel,
     )
 }
-
-/** An online host that is not paired needs the user, so its dot is the warning one. */
-private fun HostItemUiState.dotStatus(): DotStatus =
-    when (reachability) {
-        Reachability.ONLINE -> if (paired) DotStatus.Online else DotStatus.Attention
-        Reachability.OFFLINE -> DotStatus.Offline
-        Reachability.UNKNOWN -> DotStatus.Unknown
-    }
-
-@StringRes
-private fun HostItemUiState.statusTextRes(): Int =
-    when (reachability) {
-        Reachability.ONLINE ->
-            if (paired) R.string.hosts_status_online else R.string.hosts_status_not_paired
-        Reachability.OFFLINE -> R.string.hosts_status_offline
-        Reachability.UNKNOWN -> R.string.hosts_status_checking
-    }
-
-@StringRes
-private fun HostAction.labelRes(): Int? =
-    when (this) {
-        HostAction.OPEN -> R.string.hosts_action_open
-        HostAction.PAIR -> R.string.hosts_action_pair
-        HostAction.WAKE -> R.string.hosts_action_wake
-        HostAction.NONE -> null
-    }

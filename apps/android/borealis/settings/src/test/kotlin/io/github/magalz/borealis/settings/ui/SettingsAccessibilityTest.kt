@@ -3,6 +3,7 @@ package io.github.magalz.borealis.settings.ui
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
@@ -365,6 +366,40 @@ abstract class SettingsLookTestBase : SettingsScreenTestBase() {
 
         listOf("Transparency", "Thicker focus outline").forEach { row(it).assertIsNotEnabled() }
         composeRule.onAllNodesWithText(NOTE_CONTRAST).assertCountEquals(2)
+    }
+
+    @Test
+    fun `Thicker focus outline shows on while High contrast is on, whatever is stored`() {
+        stored(Settings.HIGH_CONTRAST to true, Settings.THICK_FOCUS to false)
+        show(keyboard = keyboard)
+        open("Accessibility")
+
+        row("Thicker focus outline")
+            .assertIsNotEnabled()
+            .assertIsOn()
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ToggleableState,
+                    ToggleableState.On,
+                )
+            )
+        assertThat(snapshot[Settings.THICK_FOCUS]).isFalse()
+    }
+
+    @Test
+    fun `Thicker focus outline shows what is stored again when High contrast is turned off`() {
+        show(keyboard = keyboard)
+        open("Accessibility")
+        row("Thicker focus outline").assertIsOff()
+
+        row("High contrast").performClick()
+        composeRule.waitForIdle()
+        row("Thicker focus outline").assertIsOn()
+
+        row("High contrast").performClick()
+        composeRule.waitForIdle()
+        row("Thicker focus outline").assertIsOff()
+        assertThat(snapshot[Settings.THICK_FOCUS]).isFalse()
     }
 
     @Test

@@ -143,6 +143,9 @@ enum class DisabledReason {
     /** The glass settings have no effect: Transparency is Off. */
     TRANSPARENCY_OFF,
 
-    /** The glass settings have no effect: High contrast is on. */
+    /**
+     * High contrast is on and overrides this row: the glass rows, Transparency and Thicker focus
+     * outline.
+     */
     HIGH_CONTRAST_ON,
 }

@@ -1,7 +1,5 @@
 package io.github.magalz.borealis.library.shell
 
-import android.content.Context
-import android.provider.Settings
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.input.key.Key
@@ -14,11 +12,11 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.testing.settleWindows
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.hosts.HostsScreen
@@ -44,12 +42,7 @@ class LibraryGlassScreenshotTest {
 
     @Before
     fun theBackgroundIsItsStill() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        Settings.Global.putFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            0f,
-        )
+        noAnimations()
     }
 
     @Test

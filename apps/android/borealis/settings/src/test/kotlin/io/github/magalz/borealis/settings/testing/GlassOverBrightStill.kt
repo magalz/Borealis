@@ -1,24 +1,20 @@
 package io.github.magalz.borealis.settings.testing
 
-import android.content.Context
-import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.text.TextLayoutResult
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.glass.GlassHost
+import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -32,16 +28,6 @@ import org.junit.runner.RunWith
 
 /** The tests run at xhdpi, where one dp is two pixels. */
 private const val PIXELS_PER_DP = 2
-
-/**
- * Takes the animation from the system, so that a host of a video style shows the still of its first
- * frame, which is the same at every run. The still of Flowing light is bright: a tint of the dark
- * `surface` colour over it is far from `surface`, and a solid surface is exactly it.
- */
-fun noAnimations() {
-    val context = ApplicationProvider.getApplicationContext<Context>()
-    Settings.Global.putFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 0f)
-}
 
 /**
  * [content] in a glass host of [style] under [look], as the shell of the Library draws a screen.
@@ -69,17 +55,6 @@ fun ComposeTestRule.colorBeside(text: String, xDp: Float): Color {
         .toPixelMap()[(xDp * PIXELS_PER_DP).toInt(), (middle * PIXELS_PER_DP).toInt()]
 }
 
-/** The colour of the text that [text] is in the unmerged tree of the screen. */
-fun ComposeTestRule.textColorOf(text: String): Color {
-    val results = mutableListOf<TextLayoutResult>()
-    onNodeWithText(text, useUnmergedTree = true)
-        .fetchSemanticsNode()
-        .config[SemanticsActions.GetTextLayoutResult]
-        .action
-        ?.invoke(results)
-    return results.single().layoutInput.style.color
-}
-
 /**
  * Where to read a surface: beside the node with [title], [x] dp across, in the padding of the
  * surface that it is on; and [outside] dp across, at the same height, where the background shows
@@ -93,7 +68,10 @@ data class Probe(val title: String, val x: Float, val outside: Float)
  * read beside the surface. A colour's distance is how far it is from the `surface` colour, in the
  * sum of its three channels. A glass of tint t over a background shows (1 - t) of the distance of
  * the background: Standard is 40 percent, so about 0.6 of it; Reduced is 85 percent, so about 0.15;
- * and a solid surface is the `surface` colour, which is no distance at all.
+ * and a solid surface is the `surface` colour, which is no distance at all. It reads these
+ * fractions over the bright still, and not the exact tint of each pixel: the blur and the gradient
+ * of the still move a colour a little from one place to the next, but the fractions of the three
+ * levels stay far apart, so a band for each tells them apart with room to spare.
  */
 class GlassProbes(private val rule: ComposeTestRule, private val probes: List<Probe>) {
     private val surface = BorealisTokens.Color.Surface

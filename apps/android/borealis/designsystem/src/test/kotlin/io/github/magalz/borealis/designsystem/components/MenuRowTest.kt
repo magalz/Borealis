@@ -6,10 +6,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -23,12 +21,12 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
@@ -123,8 +121,8 @@ class MenuRowTest {
             }
         }
 
-        assertThat(titleColor("Quit")).isEqualTo(BorealisTokens.Color.DangerInk)
-        assertThat(titleColor("Resume")).isEqualTo(BorealisTokens.Color.Ink)
+        assertThat(composeRule.textColor("Quit")).isEqualTo(BorealisTokens.Color.DangerInk)
+        assertThat(composeRule.textColor("Resume")).isEqualTo(BorealisTokens.Color.Ink)
     }
 
     @Test
@@ -235,22 +233,6 @@ class MenuRowTest {
             pressKey(Key.DirectionLeft)
         }
         composeRule.onNodeWithText("Codec").assertIsFocused()
-    }
-
-    private fun titleColor(title: String) =
-        textLayout(composeRule.onNodeWithText(title, useUnmergedTree = true))
-            .layoutInput
-            .style
-            .color
-
-    private fun textLayout(node: SemanticsNodeInteraction): TextLayoutResult {
-        val results = mutableListOf<TextLayoutResult>()
-        node
-            .fetchSemanticsNode()
-            .config[SemanticsActions.GetTextLayoutResult]
-            .action
-            ?.invoke(results)
-        return results.first()
     }
 
     @Composable

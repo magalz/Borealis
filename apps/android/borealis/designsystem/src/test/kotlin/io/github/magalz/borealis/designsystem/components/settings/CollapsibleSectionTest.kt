@@ -1,7 +1,5 @@
 package io.github.magalz.borealis.designsystem.components.settings
 
-import android.content.Context
-import android.provider.Settings
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -13,10 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
@@ -30,15 +26,15 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.noAnimations
+import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
@@ -241,7 +237,7 @@ class CollapsibleSectionTest {
 
     @Test
     fun `with animations removed opening shows the rows at their full height at once`() {
-        removeAnimations()
+        noAnimations()
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent { Hosted() }
         val collapsed = sectionHeight()
@@ -257,7 +253,7 @@ class CollapsibleSectionTest {
 
     @Test
     fun `with animations removed closing removes the rows at once`() {
-        removeAnimations()
+        noAnimations()
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent { Hosted(startOpen = true) }
 
@@ -279,32 +275,13 @@ class CollapsibleSectionTest {
                 .onNodeWithTag(CollapsibleSectionTags.CHEVRON, useUnmergedTree = true)
                 .getBoundsInRoot()
         val title = composeRule.onNodeWithText(shown, useUnmergedTree = true)
-        val layout = textLayout(title)
+        val layout = title.textLayout()
 
         assertThat(chevron.width.value).isWithin(0.5f).of(20f)
         assertThat(chevron.height.value).isWithin(0.5f).of(20f)
         assertThat(layout.lineCount).isGreaterThan(1)
         assertThat(layout.hasVisualOverflow).isFalse()
         assertThat(title.getBoundsInRoot().right.value).isAtMost(chevron.left.value)
-    }
-
-    private fun textLayout(node: SemanticsNodeInteraction): TextLayoutResult {
-        val results = mutableListOf<TextLayoutResult>()
-        node
-            .fetchSemanticsNode()
-            .config[SemanticsActions.GetTextLayoutResult]
-            .action
-            ?.invoke(results)
-        return results.first()
-    }
-
-    private fun removeAnimations() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        Settings.Global.putFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            0f,
-        )
     }
 
     private fun stateDescription(state: String) =

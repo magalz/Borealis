@@ -4,16 +4,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.PixelMap
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.designsystem.testing.frame
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -44,8 +43,6 @@ class BackgroundPowerSaveTest {
         composeRule.waitForIdle()
     }
 
-    private fun frame(): PixelMap = composeRule.onNodeWithTag(BG).captureToImage().toPixelMap()
-
     private fun assertSame(first: PixelMap, second: PixelMap, what: String) =
         assertWithMessage(what).that(first.buffer.contentEquals(second.buffer)).isTrue()
 
@@ -57,11 +54,11 @@ class BackgroundPowerSaveTest {
         setPowerSave(true)
         composeRule.mainClock.autoAdvance = false
         show(BackgroundStyle.AuroraCurtains)
-        val first = frame()
+        val first = composeRule.frame(BG)
 
         composeRule.mainClock.advanceTimeBy(5_000)
 
-        assertSame(first, frame(), "the picture")
+        assertSame(first, composeRule.frame(BG), "the picture")
     }
 
     @Test
@@ -79,21 +76,21 @@ class BackgroundPowerSaveTest {
         composeRule.mainClock.autoAdvance = false
         show(BackgroundStyle.SoftGlow)
         composeRule.mainClock.advanceTimeBy(1_000)
-        val running = frame()
+        val running = composeRule.frame(BG)
         composeRule.mainClock.advanceTimeBy(5_000)
-        assertMoved(running, frame(), "the picture before the saver")
+        assertMoved(running, composeRule.frame(BG), "the picture before the saver")
 
         composeRule.runOnUiThread { setPowerSave(true) }
         composeRule.mainClock.advanceTimeBy(1_000)
-        val resting = frame()
+        val resting = composeRule.frame(BG)
         composeRule.mainClock.advanceTimeBy(5_000)
-        assertSame(resting, frame(), "the picture with the saver")
+        assertSame(resting, composeRule.frame(BG), "the picture with the saver")
 
         composeRule.runOnUiThread { setPowerSave(false) }
         composeRule.mainClock.advanceTimeBy(1_000)
-        val again = frame()
+        val again = composeRule.frame(BG)
         composeRule.mainClock.advanceTimeBy(5_000)
-        assertMoved(again, frame(), "the picture after the saver")
+        assertMoved(again, composeRule.frame(BG), "the picture after the saver")
     }
 
     @Test

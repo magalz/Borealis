@@ -108,7 +108,7 @@
     <string name="settings_reduce_motion_title">Reduce motion</string>
     <string name="settings_reduce_motion_summary">On removes animations; Off keeps them even when the device removes them. Follow system uses the device\'s animation setting.</string>
     <string name="settings_transparency_title">Transparency</string>
-    <string name="settings_transparency_summary">Reduced and Off override Glass tint and Glass blur.</string>
+    <string name="settings_transparency_summary">%1$s and %2$s override %3$s and %4$s.</string>
     <string name="settings_thick_focus_title">Thicker focus outline</string>
     <string name="settings_thick_focus_summary">Draws a thicker, lighter outline around the focused item.</string>
     <string name="settings_text_size_title">Text size</string>
@@ -121,9 +121,8 @@
     <!-- Disabled notes -->
     <string name="settings_note_turn_on_first">Turn on %1$s first</string>
     <string name="settings_note_hdr_firmware">HDR crashes on the firmware of this device. Update the firmware to use it.</string>
-    <string name="settings_note_transparency_off">Transparency is set to Off in Accessibility</string>
-    <string name="settings_note_transparency_reduced">Transparency is set to Reduced in Accessibility</string>
-    <string name="settings_note_high_contrast">High contrast is on in Accessibility</string>
+    <string name="settings_note_transparency_level">%1$s is set to %2$s in %3$s</string>
+    <string name="settings_note_high_contrast">%1$s is on in %2$s</string>
 
     <!-- Values -->
     <string name="settings_value_frame_rate">%1$d fps</string>

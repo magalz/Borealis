@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.settings.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import io.github.magalz.borealis.designsystem.components.settings.ChoiceOption
@@ -95,9 +96,15 @@ internal fun disabledNote(disabled: RowState.Disabled?): String? =
         null -> null
         DisabledReason.HDR_BROKEN_ON_FIRMWARE -> stringResource(R.string.settings_note_hdr_firmware)
         DisabledReason.TRANSPARENCY_REDUCED ->
-            stringResource(R.string.settings_note_transparency_reduced)
-        DisabledReason.TRANSPARENCY_OFF -> stringResource(R.string.settings_note_transparency_off)
-        DisabledReason.HIGH_CONTRAST_ON -> stringResource(R.string.settings_note_high_contrast)
+            transparencyNote(R.string.settings_choice_transparency_reduced)
+        DisabledReason.TRANSPARENCY_OFF ->
+            transparencyNote(R.string.settings_choice_transparency_off)
+        DisabledReason.HIGH_CONTRAST_ON ->
+            stringResource(
+                R.string.settings_note_high_contrast,
+                stringResource(R.string.settings_high_contrast_title),
+                stringResource(R.string.settings_group_accessibility),
+            )
         DisabledReason.DEPENDS_ON_SETTING ->
             disabled.dependency
                 ?.let { SettingsItem.forSetting(it) }
@@ -109,7 +116,35 @@ internal fun disabledNote(disabled: RowState.Disabled?): String? =
                 }
     }
 
-/** The label of an entry of a fixed list: `Larger`, or `115 %` when the label has a number. */
+/** The note that says Transparency is set to the level [level], with the names of the rows. */
+@Composable
+private fun transparencyNote(@StringRes level: Int): String =
+    stringResource(
+        R.string.settings_note_transparency_level,
+        stringResource(R.string.settings_transparency_title),
+        stringResource(level),
+        stringResource(R.string.settings_group_accessibility),
+    )
+
+/**
+ * The summary under the row of [this] item, or `null` when it has none. The Transparency summary
+ * names the levels and the glass rows that it overrides by their own labels.
+ */
+@Composable
+internal fun SettingsItem.summaryText(): String? =
+    when (this) {
+        SettingsItem.TRANSPARENCY ->
+            stringResource(
+                R.string.settings_transparency_summary,
+                stringResource(R.string.settings_choice_transparency_reduced),
+                stringResource(R.string.settings_choice_transparency_off),
+                stringResource(R.string.settings_glass_tint_title),
+                stringResource(R.string.settings_glass_blur_title),
+            )
+        else -> summaryRes?.let { stringResource(it) }
+    }
+
+/** The label of an entry of a fixed list: `Follow system`, or `115 %` when it has a number. */
 @Composable
 private fun FixedChoice.label(): String =
     labelArg?.let { stringResource(labelRes, it) } ?: stringResource(labelRes)

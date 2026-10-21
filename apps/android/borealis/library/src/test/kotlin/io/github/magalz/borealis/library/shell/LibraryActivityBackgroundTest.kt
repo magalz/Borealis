@@ -3,7 +3,6 @@ package io.github.magalz.borealis.library.shell
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.provider.Settings as AndroidSettings
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -19,6 +18,7 @@ import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
+import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.domain.AppRepository
@@ -73,11 +73,7 @@ class LibraryActivityBackgroundTest {
     fun inject() {
         hiltRule.inject()
         shadowOf(context.packageManager).setSystemFeature(PackageManager.FEATURE_LEANBACK, true)
-        AndroidSettings.Global.putFloat(
-            context.contentResolver,
-            AndroidSettings.Global.ANIMATOR_DURATION_SCALE,
-            0f,
-        )
+        noAnimations()
     }
 
     @After

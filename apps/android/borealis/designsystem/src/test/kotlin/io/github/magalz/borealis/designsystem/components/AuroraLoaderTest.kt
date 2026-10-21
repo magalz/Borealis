@@ -1,7 +1,5 @@
 package io.github.magalz.borealis.designsystem.components
 
-import android.content.Context
-import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
@@ -10,10 +8,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.pixelAt
+import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import kotlin.math.abs
@@ -73,22 +71,13 @@ class AuroraLoaderTest {
 
     @Test
     fun `with animations removed the bands are full and static from the first frame`() {
-        removeAnimations()
+        noAnimations()
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent { Specimen() }
 
         assertDrawn(GREEN_LEFT, GREEN_RIGHT, VIOLET_LEFT, VIOLET_RIGHT)
         composeRule.mainClock.advanceTimeBy(RESTARTED_MILLIS)
         assertDrawn(GREEN_LEFT, GREEN_RIGHT, VIOLET_LEFT, VIOLET_RIGHT)
-    }
-
-    private fun removeAnimations() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        Settings.Global.putFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            0f,
-        )
     }
 
     private fun assertDrawn(vararg probes: Pair<Float, Float>) = probes.forEach {

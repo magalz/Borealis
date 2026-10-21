@@ -11,7 +11,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
@@ -25,11 +24,12 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.textColor
+import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
@@ -187,8 +187,9 @@ class SettingsRowsTest {
             }
         }
 
-        assertThat(textColor("Erase audit trail")).isEqualTo(BorealisTokens.Color.DangerInk)
-        assertThat(textColor("Audit trail")).isEqualTo(BorealisTokens.Color.Ink)
+        assertThat(composeRule.textColor("Erase audit trail"))
+            .isEqualTo(BorealisTokens.Color.DangerInk)
+        assertThat(composeRule.textColor("Audit trail")).isEqualTo(BorealisTokens.Color.Ink)
     }
 
     @Test
@@ -228,19 +229,16 @@ class SettingsRowsTest {
         }
 
         val title =
-            textLayout(
-                composeRule.onNodeWithText(
+            composeRule
+                .onNodeWithText(
                     "Mouse back and forward buttons for the remote desktop",
                     useUnmergedTree = true,
                 )
-            )
+                .textLayout()
         val value =
-            textLayout(
-                composeRule.onNodeWithText(
-                    "Send them to the host as they are pressed",
-                    useUnmergedTree = true,
-                )
-            )
+            composeRule
+                .onNodeWithText("Send them to the host as they are pressed", useUnmergedTree = true)
+                .textLayout()
         assertThat(title.lineCount).isGreaterThan(1)
         assertThat(title.hasVisualOverflow).isFalse()
         assertThat(value.lineCount).isGreaterThan(1)
@@ -285,9 +283,9 @@ class SettingsRowsTest {
         }
 
         val title =
-            textLayout(
-                composeRule.onNodeWithText("Mouse back and forward buttons", useUnmergedTree = true)
-            )
+            composeRule
+                .onNodeWithText("Mouse back and forward buttons", useUnmergedTree = true)
+                .textLayout()
         assertThat(title.lineCount).isEqualTo(1)
     }
 
@@ -349,19 +347,6 @@ class SettingsRowsTest {
 
     private fun toggleState(state: ToggleableState) =
         SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, state)
-
-    private fun textColor(text: String) =
-        textLayout(composeRule.onNodeWithText(text, useUnmergedTree = true)).layoutInput.style.color
-
-    private fun textLayout(node: SemanticsNodeInteraction): TextLayoutResult {
-        val results = mutableListOf<TextLayoutResult>()
-        node
-            .fetchSemanticsNode()
-            .config[SemanticsActions.GetTextLayoutResult]
-            .action
-            ?.invoke(results)
-        return results.first()
-    }
 
     @Composable
     private fun Specimen(modifier: Modifier = Modifier, content: @Composable () -> Unit) {

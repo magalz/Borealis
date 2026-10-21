@@ -17,9 +17,9 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
@@ -72,10 +72,8 @@ class KeyboardCaptionTest {
         assertThat(captions).isNotEmpty()
         return captions
             .filter { caption ->
-                val layouts = mutableListOf<TextLayoutResult>()
-                caption.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
                 // hasVisualOverflow is also true for centred text that is narrower than its slot.
-                layouts.single().multiParagraph.didExceedMaxLines
+                caption.textLayout().multiParagraph.didExceedMaxLines
             }
             .map { checkNotNull(it.keyTag()) }
     }

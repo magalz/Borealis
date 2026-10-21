@@ -34,6 +34,7 @@ import io.github.magalz.borealis.designsystem.components.MenuRow
 import io.github.magalz.borealis.designsystem.components.MenuRowStyle
 import io.github.magalz.borealis.designsystem.components.SidePanel
 import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.stream.PerfSnapshot
 import io.github.magalz.borealis.stream.R
@@ -46,10 +47,6 @@ import io.github.magalz.borealis.stream.ui.common.onGamepadB
 private val HEADER_PADDING_HORIZONTAL = 16.dp
 private val HEADER_PADDING_TOP = 14.dp
 private val HEADER_PADDING_BOTTOM = 8.dp
-// The focus outline of a row reaches 5dp outside it, 7dp when it is the thicker one: 8dp around the
-// rows and 10dp between them.
-private val ROWS_PADDING = 8.dp
-private val ROWS_GAP = 10.dp
 
 /**
  * The in-game menu (UC-004): a side panel over the stream with the header "<app> · <host>" (the
@@ -141,8 +138,10 @@ private fun MenuRows(
 ) {
     val firstFocus = remember { FocusRequester() }
     Column(
-        Modifier.hiddenWhen(hidden).padding(ROWS_PADDING),
-        verticalArrangement = Arrangement.spacedBy(ROWS_GAP),
+        // The focus outline of a row reaches BorealisDimens.outlineReach outside it,
+        // thickOutlineReach when it is the thicker one: the padding and the gap of a list hold it.
+        Modifier.hiddenWhen(hidden).padding(BorealisDimens.listPadding),
+        verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
     ) {
         MenuRow(
             stringResource(R.string.stream_menu_back_to_stream),

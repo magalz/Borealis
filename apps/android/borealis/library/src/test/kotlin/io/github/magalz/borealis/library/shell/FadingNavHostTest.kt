@@ -1,7 +1,5 @@
 package io.github.magalz.borealis.library.shell
 
-import android.content.Context
-import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,9 +15,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.systemAnimationScale
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion
@@ -56,15 +54,6 @@ class FadingNavHostTest {
             }
         }
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
-    }
-
-    private fun systemAnimationScale(scale: Float) {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        Settings.Global.putFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            scale,
-        )
     }
 
     private fun pixel(x: Int, y: Int): Color =

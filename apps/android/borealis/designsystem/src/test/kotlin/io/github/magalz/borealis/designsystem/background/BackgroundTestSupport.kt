@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Looper
 import android.os.PowerManager
-import android.provider.Settings
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -13,12 +12,6 @@ import io.github.magalz.borealis.logging.LogRecord
 import io.github.magalz.borealis.logging.LogSink
 import java.util.concurrent.CopyOnWriteArrayList
 import org.robolectric.Shadows.shadowOf
-
-/** The system setting "Remove animations": the animator scale is zero. */
-internal fun removeAnimations() {
-    val context = ApplicationProvider.getApplicationContext<Context>()
-    Settings.Global.putFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 0f)
-}
 
 /** Turns the battery saver on or off, and tells the app the way the system does. */
 internal fun setPowerSave(on: Boolean) {

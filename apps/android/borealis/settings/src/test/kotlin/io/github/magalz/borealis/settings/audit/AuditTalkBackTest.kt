@@ -7,7 +7,6 @@ import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.headings
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.logging.AuditType
-import io.github.magalz.borealis.settings.testing.InGlassHost
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,24 +36,14 @@ class AuditTalkBackTest {
         assertThat(composeRule.headings()).containsExactly("Audit trail")
     }
 
-    private fun show(formFactor: FormFactor) {
-        composeRule.setContent {
-            InGlassHost(formFactor, style = BackgroundStyle.Off) {
-                AuditScreen(
-                    AuditUiState(
-                        loading = false,
-                        entries =
-                            listOf(
-                                AuditRow("end", AuditType.SESSION_END, "20:42", "Desk PC · Desktop")
-                            ),
-                    ),
-                    formFactor,
-                    onEntrySelected = {},
-                    onDetailDismissed = {},
-                    onBack = {},
-                )
-            }
-        }
-        composeRule.waitForIdle()
-    }
+    private fun show(formFactor: FormFactor) =
+        composeRule.showAudit(
+            AuditUiState(
+                loading = false,
+                entries =
+                    listOf(AuditRow("end", AuditType.SESSION_END, "20:42", "Desk PC · Desktop")),
+            ),
+            formFactor,
+            style = BackgroundStyle.Off,
+        )
 }

@@ -1,7 +1,5 @@
 package io.github.magalz.borealis.designsystem.focus
 
-import android.content.Context
-import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
@@ -24,12 +22,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.assertPixel
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.testing.FakeInputModeManager
+import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion
@@ -156,12 +154,7 @@ class FocusIndicationTest {
 
     @Test
     fun `the scale is instant when the system removes animations`() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        Settings.Global.putFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            0f,
-        )
+        noAnimations()
         composeRule.setContentInKeyboardMode { Specimen(scaleOnFocus = true) }
         clearFocus()
         composeRule.mainClock.autoAdvance = false
@@ -188,12 +181,7 @@ class FocusIndicationTest {
 
     @Test
     fun `the scale animates when Reduce motion is Off, though the system removes animations`() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        Settings.Global.putFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            0f,
-        )
+        noAnimations()
         composeRule.setContentInKeyboardMode {
             Specimen(scaleOnFocus = true, look = BorealisLook(reduceMotion = ReduceMotion.Off))
         }

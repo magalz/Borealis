@@ -59,11 +59,6 @@ class StreamAccessibilityChecksTest {
         )
 
     /**
-     * Ten letters in a row of the keyboard are as wide as the screen allows, and five rows are as
-     * high as a phone held sideways allows, so a key is smaller than 48dp. The System keyboard chip
-     * opens the keyboard of the device, whose keys are the size of a finger.
-     */
-    /**
      * The chips of the shortcut row scroll sideways, and the last one that shows is cut by the edge
      * of the row. The check reads the contrast of the sliver that is left, which has hardly any
      * text in it; the chip itself has ink-2 text on the surface, 10:1.
@@ -76,6 +71,11 @@ class StreamAccessibilityChecksTest {
             taggedWith("chip:"),
         )
 
+    /**
+     * Ten letters in a row of the keyboard are as wide as the screen allows, and five rows are as
+     * high as a phone held sideways allows, so a key is smaller than 48dp. The System keyboard chip
+     * opens the keyboard of the device, whose keys are the size of a finger.
+     */
     private val smallKeys =
         AcceptedFinding(
             TouchTargetSizeCheck::class.java,

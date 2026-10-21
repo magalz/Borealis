@@ -2,13 +2,13 @@ package io.github.magalz.borealis.settings.ui
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.settings.testing.GlassProbes
 import io.github.magalz.borealis.settings.testing.InGlassHost
 import io.github.magalz.borealis.settings.testing.Probe
-import io.github.magalz.borealis.settings.testing.noAnimations
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith

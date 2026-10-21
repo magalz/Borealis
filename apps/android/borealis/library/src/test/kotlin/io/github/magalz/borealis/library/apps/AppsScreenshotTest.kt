@@ -1,16 +1,14 @@
 package io.github.magalz.borealis.library.apps
 
-import android.content.Context
-import android.provider.Settings
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.testing.settleWindows
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.shell.LibraryScaffold
@@ -198,7 +196,7 @@ class AppsScreenshotTest {
     @Test
     @Config(qualifiers = TV)
     fun appsTvGlass() {
-        removeAnimations()
+        noAnimations()
         shoot(
             "appsglass_tv_desktop-running",
             FormFactor.Tv,
@@ -211,21 +209,12 @@ class AppsScreenshotTest {
     @Test
     @Config(qualifiers = PHONE)
     fun appActionsPhoneGlass() {
-        removeAnimations()
+        noAnimations()
         shoot(
             "appsglass_phone_actions-sheet",
             FormFactor.Phone,
             runningSheet(),
             BackgroundStyle.NorthernLights,
-        )
-    }
-
-    private fun removeAnimations() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        Settings.Global.putFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            0f,
         )
     }
 

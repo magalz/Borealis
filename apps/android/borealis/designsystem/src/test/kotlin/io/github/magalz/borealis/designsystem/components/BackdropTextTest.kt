@@ -16,7 +16,6 @@ import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -25,13 +24,14 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.glass.GlassHostOver
+import io.github.magalz.borealis.designsystem.testing.frame
+import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -102,8 +102,8 @@ class BackdropTextTest {
             BackdropText("Ink two", ink = BackdropInk.Ink2)
         }
 
-        assertThat(textColor("Ink")).isEqualTo(colors.ink)
-        assertThat(textColor("Ink two")).isEqualTo(colors.ink2)
+        assertThat(composeRule.textColor("Ink")).isEqualTo(colors.ink)
+        assertThat(composeRule.textColor("Ink two")).isEqualTo(colors.ink2)
     }
 
     @Test
@@ -113,8 +113,8 @@ class BackdropTextTest {
             BackdropText("Four", ink = BackdropInk.Ink4)
         }
 
-        assertThat(textColor("Three")).isEqualTo(colors.ink2)
-        assertThat(textColor("Four")).isEqualTo(colors.ink2)
+        assertThat(composeRule.textColor("Three")).isEqualTo(colors.ink2)
+        assertThat(composeRule.textColor("Four")).isEqualTo(colors.ink2)
     }
 
     @Test
@@ -124,8 +124,8 @@ class BackdropTextTest {
             BackdropText("Four", ink = BackdropInk.Ink4)
         }
 
-        assertThat(textColor("Three")).isEqualTo(colors.ink3)
-        assertThat(textColor("Four")).isEqualTo(colors.ink4)
+        assertThat(composeRule.textColor("Three")).isEqualTo(colors.ink3)
+        assertThat(composeRule.textColor("Four")).isEqualTo(colors.ink4)
     }
 
     @Test
@@ -138,9 +138,9 @@ class BackdropTextTest {
             BackdropKicker("Four")
         }
 
-        assertThat(textColor("Title")).isEqualTo(high.ink)
-        assertThat(textColor("Three")).isEqualTo(high.ink2)
-        assertThat(textColor("FOUR")).isEqualTo(high.ink2)
+        assertThat(composeRule.textColor("Title")).isEqualTo(high.ink)
+        assertThat(composeRule.textColor("Three")).isEqualTo(high.ink2)
+        assertThat(composeRule.textColor("FOUR")).isEqualTo(high.ink2)
         // The inks of high contrast are not the tokens, and the halo is drawn there too.
         assertThat(high.ink2).isNotEqualTo(colors.ink2)
         assertThat(haloOf("Three")).isTrue()
@@ -149,11 +149,11 @@ class BackdropTextTest {
     @Test
     fun `a kicker is capitals in ink-2 over a background and ink-4 on the plain page`() {
         show(BackgroundStyle.NorthernLights) { BackdropKicker("Hosts") }
-        assertThat(textColor("HOSTS")).isEqualTo(colors.ink2)
+        assertThat(composeRule.textColor("HOSTS")).isEqualTo(colors.ink2)
         assertThat(haloOf("HOSTS")).isTrue()
 
         change(style = BackgroundStyle.Off)
-        assertThat(textColor("HOSTS")).isEqualTo(colors.ink4)
+        assertThat(composeRule.textColor("HOSTS")).isEqualTo(colors.ink4)
         assertThat(haloOf("HOSTS")).isFalse()
     }
 
@@ -163,7 +163,7 @@ class BackdropTextTest {
 
         assertThat(haloOf("Nothing here")).isTrue()
         assertThat(haloOf("Add a host")).isTrue()
-        assertThat(textColor("Add a host")).isEqualTo(colors.ink2)
+        assertThat(composeRule.textColor("Add a host")).isEqualTo(colors.ink2)
     }
 
     @Test
@@ -238,11 +238,11 @@ class BackdropTextTest {
         // The stem of a capital I on black, with no halo: where its edges are, to a fraction of
         // a pixel.
         showStem(BackgroundStyle.Off, Color.Black)
-        val stem = Stem.of(hostPixels())
+        val stem = Stem.of(composeRule.frame(HOST))
         // The same stem over white, with the halo: the alpha of the halo at a few distances
         // from it.
         change(BackgroundStyle.Starfield, backdrop = Color.White)
-        val pixels = hostPixels()
+        val pixels = composeRule.frame(HOST)
 
         for (distance in DISTANCES_PX) {
             val at = stem.left - distance
@@ -312,8 +312,6 @@ class BackdropTextTest {
         }
     }
 
-    private fun hostPixels() = composeRule.onNodeWithTag(HOST).captureToImage().toPixelMap()
-
     /** The alpha of `page` that makes [green] of white. */
     private fun alphaOver(green: Float) = (1f - green) / (1f - colors.page.green)
 
@@ -366,17 +364,6 @@ class BackdropTextTest {
         val node = composeRule.onNodeWithText(text, useUnmergedTree = true)
         node.assert(SemanticsMatcher.keyIsDefined(BackdropTextHalo))
         return node.fetchSemanticsNode().config[BackdropTextHalo]
-    }
-
-    private fun textColor(text: String): Color {
-        val results = mutableListOf<TextLayoutResult>()
-        composeRule
-            .onNodeWithText(text, useUnmergedTree = true)
-            .fetchSemanticsNode()
-            .config[SemanticsActions.GetTextLayoutResult]
-            .action
-            ?.invoke(results)
-        return results.single().layoutInput.style.color
     }
 
     private fun PixelMap.count(test: (Color) -> Boolean): Int {

@@ -16,23 +16,21 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.glass.GlassHostOver
+import io.github.magalz.borealis.designsystem.testing.frame
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -129,7 +127,7 @@ class BackdropIconTest {
             Box(Modifier.padding(PAD.dp)) { BackdropIcon(Stem, "Stem") }
         }
 
-        assertThat(pixelAtStem(hostPixels()).near(colors.ink)).isTrue()
+        assertThat(pixelAtStem(composeRule.frame(HOST)).near(colors.ink)).isTrue()
     }
 
     @Test
@@ -138,7 +136,7 @@ class BackdropIconTest {
             Box(Modifier.padding(PAD.dp)) { BackdropIcon(Stem, "Stem", tint = Color.Yellow) }
         }
 
-        assertThat(pixelAtStem(hostPixels()).near(Color.Yellow)).isTrue()
+        assertThat(pixelAtStem(composeRule.frame(HOST)).near(Color.Yellow)).isTrue()
     }
 
     // The drawing
@@ -149,7 +147,7 @@ class BackdropIconTest {
             Box(Modifier.padding(PAD.dp)) { BackdropIcon(Stem, "Stem") }
         }
 
-        val pixels = hostPixels()
+        val pixels = composeRule.frame(HOST)
 
         assertThat(pixels.count { it.luminance() < DARK }).isGreaterThan(MIN_HALO_PIXELS)
         assertThat(pixels.count { it.near(colors.ink) }).isGreaterThan(MIN_ICON_PIXELS)
@@ -161,7 +159,7 @@ class BackdropIconTest {
             Box(Modifier.padding(PAD.dp)) { BackdropIcon(Stem, "Stem") }
         }
 
-        val pixels = hostPixels()
+        val pixels = composeRule.frame(HOST)
 
         assertThat(pixels.count { it.luminance() < DARK }).isEqualTo(0)
         assertThat(pixels.count { it.near(colors.ink) }).isGreaterThan(MIN_ICON_PIXELS)
@@ -173,7 +171,7 @@ class BackdropIconTest {
         show(BackgroundStyle.Starfield, host = HOST) {
             Box(Modifier.padding(PAD.dp)) { BackdropIcon(Stem, "Stem") }
         }
-        val pixels = hostPixels()
+        val pixels = composeRule.frame(HOST)
 
         for (distance in DISTANCES_PX) {
             val at = STEM_LEFT_PX - distance
@@ -194,7 +192,7 @@ class BackdropIconTest {
         show(BackgroundStyle.Starfield, host = HOST) {
             Box(Modifier.padding(PAD.dp)) { BackdropIcon(Stem, "Stem") }
         }
-        val pixels = hostPixels()
+        val pixels = composeRule.frame(HOST)
 
         // The stroke is 3 dp from the left edge of the icon, so 12 px of halo are 6 px outside it.
         val outside = ICON_LEFT_PX - 1
@@ -239,8 +237,6 @@ class BackdropIconTest {
         }
         composeRule.waitForIdle()
     }
-
-    private fun hostPixels() = composeRule.onNodeWithTag(HOST).captureToImage().toPixelMap()
 
     private fun pixelAtStem(pixels: PixelMap) =
         pixels[STEM_LEFT_PX + STEM_WIDTH_PX / 2, STEM_ROW_PX]

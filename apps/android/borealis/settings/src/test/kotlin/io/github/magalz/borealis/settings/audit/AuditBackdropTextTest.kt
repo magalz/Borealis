@@ -8,7 +8,6 @@ import io.github.magalz.borealis.designsystem.components.BackdropTextHalo
 import io.github.magalz.borealis.designsystem.testing.assertHalo
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.logging.AuditType
-import io.github.magalz.borealis.settings.testing.InGlassHost
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -69,18 +68,6 @@ class AuditBackdropTextTest {
             .assertExists()
     }
 
-    private fun show(state: AuditUiState, formFactor: FormFactor) {
-        composeRule.setContent {
-            InGlassHost(formFactor) {
-                AuditScreen(
-                    state = state,
-                    formFactor = formFactor,
-                    onEntrySelected = {},
-                    onDetailDismissed = {},
-                    onBack = {},
-                )
-            }
-        }
-        composeRule.waitForIdle()
-    }
+    private fun show(state: AuditUiState, formFactor: FormFactor) =
+        composeRule.showAudit(state, formFactor)
 }

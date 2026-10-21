@@ -3,33 +3,12 @@ package io.github.magalz.borealis.settings.audit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
-import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.settings.testing.FlowingLightGlassCases
-import io.github.magalz.borealis.settings.testing.InGlassHost
 import io.github.magalz.borealis.settings.testing.Probe
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-
-private fun FlowingLightGlassCases.showAudit(
-    state: AuditUiState,
-    look: BorealisLook,
-    style: BackgroundStyle,
-) {
-    composeRule.setContent {
-        InGlassHost(FormFactor.Phone, look, style) {
-            AuditScreen(
-                state = state,
-                formFactor = FormFactor.Phone,
-                onEntrySelected = {},
-                onDetailDismissed = {},
-                onBack = {},
-            )
-        }
-    }
-    composeRule.waitForIdle()
-}
 
 /** The list of the Audit trail is on one glass panel. */
 @RunWith(AndroidJUnit4::class)
@@ -40,7 +19,7 @@ class AuditListGlassTest : FlowingLightGlassCases() {
     override val probes = listOf(Probe("Desk PC · Desktop", 10f, outside = 6f))
 
     override fun showScreen(look: BorealisLook, style: BackgroundStyle) =
-        showAudit(
+        composeRule.showAudit(
             AuditUiState(
                 loading = false,
                 entries =
@@ -49,8 +28,8 @@ class AuditListGlassTest : FlowingLightGlassCases() {
                         AuditRow("start", AuditType.SESSION_START, "20:34", "Desk PC · HEVC"),
                     ),
             ),
-            look,
-            style,
+            look = look,
+            style = style,
         )
 }
 
@@ -64,7 +43,7 @@ class AuditDetailGlassTest : FlowingLightGlassCases() {
     override val probes = listOf(Probe("12 Oct 2026 18:02:09", 18f, outside = 14f))
 
     override fun showScreen(look: BorealisLook, style: BackgroundStyle) =
-        showAudit(
+        composeRule.showAudit(
             AuditUiState(
                 loading = false,
                 detail =
@@ -76,7 +55,7 @@ class AuditDetailGlassTest : FlowingLightGlassCases() {
                         "Host answered 401 after the PIN",
                     ),
             ),
-            look,
-            style,
+            look = look,
+            style = style,
         )
 }

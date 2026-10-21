@@ -7,7 +7,6 @@ import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
-import io.github.magalz.borealis.settings.testing.InGlassHost
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -59,18 +58,7 @@ class AuditLargeTextFitTest {
         )
 
     private fun assertFits(formFactor: FormFactor, state: AuditUiState) {
-        composeRule.setContent {
-            InGlassHost(formFactor, style = BackgroundStyle.Off) {
-                AuditScreen(
-                    state,
-                    formFactor,
-                    onEntrySelected = {},
-                    onDetailDismissed = {},
-                    onBack = {},
-                )
-            }
-        }
-        composeRule.waitForIdle()
+        composeRule.showAudit(state, formFactor, style = BackgroundStyle.Off)
 
         composeRule.assertNoClippedText()
     }

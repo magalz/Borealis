@@ -8,7 +8,6 @@ import io.github.magalz.borealis.designsystem.testing.assertAccessible
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
-import io.github.magalz.borealis.settings.testing.InGlassHost
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -74,18 +73,6 @@ class AuditAccessibilityChecksTest {
         composeRule.assertAccessible()
     }
 
-    private fun show(formFactor: FormFactor, state: AuditUiState) {
-        composeRule.setContent {
-            InGlassHost(formFactor, style = BackgroundStyle.Off) {
-                AuditScreen(
-                    state,
-                    formFactor,
-                    onEntrySelected = {},
-                    onDetailDismissed = {},
-                    onBack = {},
-                )
-            }
-        }
-        composeRule.waitForIdle()
-    }
+    private fun show(formFactor: FormFactor, state: AuditUiState) =
+        composeRule.showAudit(state, formFactor, style = BackgroundStyle.Off)
 }

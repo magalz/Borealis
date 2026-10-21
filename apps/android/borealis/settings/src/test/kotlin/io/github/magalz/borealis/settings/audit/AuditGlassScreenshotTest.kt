@@ -6,11 +6,9 @@ import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.noAnimations
-import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
-import io.github.magalz.borealis.settings.testing.InGlassHost
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -79,18 +77,7 @@ class AuditGlassScreenshotTest {
     fun auditTvFilled() = shoot("auditglass_tv_filled", FormFactor.Tv, AuditUiState(false, rows))
 
     private fun shoot(name: String, formFactor: FormFactor, state: AuditUiState) {
-        composeRule.setContent {
-            InGlassHost(formFactor, BorealisLook(), BackgroundStyle.NorthernLights) {
-                AuditScreen(
-                    state = state,
-                    formFactor = formFactor,
-                    onEntrySelected = {},
-                    onDetailDismissed = {},
-                    onBack = {},
-                )
-            }
-        }
-        composeRule.waitForIdle()
+        composeRule.showAudit(state, formFactor, style = BackgroundStyle.NorthernLights)
         captureScreenRoboImage("src/test/screenshots/$name.png")
     }
 }

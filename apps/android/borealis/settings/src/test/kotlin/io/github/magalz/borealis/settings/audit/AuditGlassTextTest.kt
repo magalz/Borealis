@@ -4,16 +4,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
-import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
-import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
-import io.github.magalz.borealis.settings.testing.InGlassHost
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -39,20 +36,8 @@ class AuditGlassTextTest {
     private fun showDetail(look: BorealisLook) =
         show(AuditUiState(loading = false, detail = DETAIL), look)
 
-    private fun show(state: AuditUiState, look: BorealisLook) {
-        composeRule.setContent {
-            InGlassHost(FormFactor.Phone, look, BackgroundStyle.FlowingLight) {
-                AuditScreen(
-                    state = state,
-                    formFactor = FormFactor.Phone,
-                    onEntrySelected = {},
-                    onDetailDismissed = {},
-                    onBack = {},
-                )
-            }
-        }
-        composeRule.waitForIdle()
-    }
+    private fun show(state: AuditUiState, look: BorealisLook) =
+        composeRule.showAudit(state, look = look)
 
     @Test
     fun `the time of an entry of the list is the glass ink-3`() {

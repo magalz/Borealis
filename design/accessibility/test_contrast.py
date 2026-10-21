@@ -2246,7 +2246,7 @@ def candidate(color=None, high_contrast=None, **extra):
         "color": colors,
         "high-contrast": high,
         "notes": notes,
-        "cannot_pass": [],
+        "known_fails": {},
         **extra,
     }
 
@@ -2411,12 +2411,18 @@ class AccentFileTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "teal.*high-contrast.accent"):
             self.load(teal=broken)
 
-    def test_a_candidate_with_no_label_or_cannot_pass_has_the_defaults(self):
+    def test_a_candidate_with_no_label_or_known_fails_has_the_defaults(self):
         bare = candidate()
-        del bare["label"], bare["cannot_pass"]
+        del bare["label"], bare["known_fails"]
         loaded = self.load(teal=bare)
         self.assertEqual(loaded["teal"]["label"], "teal")
-        self.assertEqual(loaded["teal"]["cannot_pass"], [])
+        self.assertEqual(loaded["teal"]["known_fails"], {})
+
+    def test_a_known_failure_has_a_reason(self):
+        known = candidate(known_fails={"distance:ink": "a reason"})
+        self.assertEqual(self.load(teal=known)["teal"]["known_fails"], {"distance:ink": "a reason"})
+        with self.assertRaisesRegex(ValueError, "teal.*distance:ink.*reason"):
+            self.load(teal=candidate(known_fails={"distance:ink": " "}))
 
     def test_a_file_with_no_candidates_is_reported(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -3002,26 +3008,49 @@ class ShippedAccentsTest(unittest.TestCase):
                 with self.subTest(candidate=name, role=role):
                     self.assertGreater(len(found["notes"][role]), 20)
 
-    def test_each_set_passes_every_check_that_needs_no_frame_but_those_it_cannot(self):
+    def test_each_set_passes_every_check_that_needs_no_frame_but_the_ones_it_names(self):
         for name, found in self.accents.items():
             with self.subTest(candidate=name):
-                self.assertEqual(sorted(self.report[name]["fails"]), sorted(found["cannot_pass"]))
+                self.assertEqual(sorted(self.report[name]["fails"]), sorted(found["known_fails"]))
 
-    def test_violet_passes_all_of_them(self):
-        self.assertEqual(self.accents["violet"]["cannot_pass"], [])
+    def test_green_and_teal_pass_all_of_them(self):
+        self.assertEqual(self.accents["green"]["known_fails"], {})
+        self.assertEqual(self.accents["teal"]["known_fails"], {})
 
-    def test_white_cannot_be_told_from_the_ink(self):
+    def test_violet_is_not_told_from_the_sky_blue_of_the_red_green_palette_by_a_dichromat(self):
+        # Today's accent is a violet that a protanope and a deuteranope see as blue, and a tritanope
+        # sees as grey: it is 9, 5 and 15 from the success and offline colours that they have.
         self.assertEqual(
-            sorted(self.accents["white"]["cannot_pass"]), ["distance:ink", "distance:ink-2"]
+            sorted(self.accents["violet"]["known_fails"]),
+            [
+                "distance:blue-yellow:tritanopia",
+                "distance:red-green:deuteranopia",
+                "distance:red-green:protanopia",
+            ],
         )
 
-    def test_a_check_that_a_set_cannot_pass_is_one_of_its_checks(self):
+    def test_white_cannot_be_told_from_the_ink_whatever_its_value(self):
+        known = self.accents["white"]["known_fails"]
+        self.assertEqual(sorted(known), ["distance:ink", "distance:ink-2"])
+        for reason in known.values():
+            self.assertIn("Whatever its value", reason)
+
+    def test_the_known_failures_are_checks_of_the_set_with_a_reason_that_says_something(self):
         for name, found in self.accents.items():
             report = self.report[name]
             ids = {c["id"] for key in ("fills", "high_contrast", "distance") for c in report[key]}
-            for check in found["cannot_pass"]:
+            for check, reason in found["known_fails"].items():
                 with self.subTest(candidate=name, check=check):
                     self.assertIn(check, ids)
+                    self.assertGreater(len(reason), 40)
+
+    def test_the_sets_that_pass_keep_a_margin_over_the_distance_that_they_need(self):
+        # The model of colour vision is an approximation, so a set is proposed with more than 20.
+        for name in ("green", "teal", "white"):
+            for entry in self.report[name]["distance"]:
+                if entry["relevant"] and entry["id"] not in self.accents[name]["known_fails"]:
+                    with self.subTest(candidate=name, check=entry["id"]):
+                        self.assertGreaterEqual(entry["least"], 20.4)
 
 
 if __name__ == "__main__":

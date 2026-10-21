@@ -33,6 +33,10 @@ RIDGE_PATH = [('M', 0, 84), ('L', 22, 74), ('L', 34, 80), ('L', 50, 66), ('L', 6
               ('L', 86, 80), ('L', 108, 74), ('L', 108, 108), ('L', 0, 108), ('Z',)]
 STARS = [(38, 27, 0.9), (70, 24, 0.7), (29, 42, 0.6), (78, 52, 0.6), (48, 46, 0.5)]
 
+# The layers of the one-colour mark, back to front, each as its path and its opacity. The themed icon, the
+# mark of the design system and the monochrome raster of the preview draw these, so they cannot drift apart.
+MONOCHROME_LAYERS = [(GREEN, 1), (VIOLET, 0.6), (RIDGE_PATH, 1)]
+
 # A launcher shows the centred 72 x 72 of the 108 x 108 geometry: its offset and size, which the mark keeps.
 SAFE_ZONE_OFFSET, SAFE_ZONE_SIZE = 18, 72
 
@@ -113,6 +117,11 @@ def even_odd(color, path):
             f'        android:pathData="{path}" />\n')
 
 
+def monochrome_paths():
+    """The paths of the one-colour mark as vector-drawable elements: white, each at its opacity."""
+    return ''.join(solid(argb((0xFF, 0xFF, 0xFF, a)), path_data(path)) for path, a in MONOCHROME_LAYERS)
+
+
 def vectors(drawable_dir):
     background = HEADER.format(what='background') + (
         '    <path android:pathData="M0,0h108v108h-108z">\n'
@@ -128,12 +137,7 @@ def vectors(drawable_dir):
         f'{gradient(GREEN_TOP, GREEN_BOTTOM, 14, 80)}\n    </path>\n'
         + solid(argb(RIDGE), path_data(RIDGE_PATH)) + '</vector>\n'
     )
-    monochrome = HEADER.format(what='monochrome') + (
-        solid('#FFFFFFFF', path_data(GREEN))
-        + solid('#99FFFFFF', path_data(VIOLET))
-        + solid('#FFFFFFFF', path_data(RIDGE_PATH))
-        + '</vector>\n'
-    )
+    monochrome = HEADER.format(what='monochrome') + monochrome_paths() + '</vector>\n'
     shortcut_header = HEADER.replace('Borealis launcher icon, {what} layer', 'Borealis shortcut icon, {what} layer')
     frame = rect_data(*MONITOR) + rect_data(*MONITOR_SCREEN)
     stand = rect_data(*MONITOR_NECK) + rect_data(*MONITOR_BASE)
@@ -164,11 +168,6 @@ def mark(drawable_dir):
     Its paths are the ones of the themed icon, so the two cannot drift apart. A screen tints it.
     """
     o, n = SAFE_ZONE_OFFSET, SAFE_ZONE_SIZE
-    paths = (
-        solid('#FFFFFFFF', path_data(GREEN))
-        + solid('#99FFFFFF', path_data(VIOLET))
-        + solid('#FFFFFFFF', path_data(RIDGE_PATH))
-    )
     body = (
         '<?xml version="1.0" encoding="utf-8"?>\n'
         '<!-- Borealis mark: the monochrome launcher layer, cropped to what a launcher shows.'
@@ -182,7 +181,7 @@ def mark(drawable_dir):
         f'        android:translateX="{-o}"\n'
         f'        android:translateY="{-o}">\n'
         f'        <clip-path android:pathData="{rect_data(o, o, n, n, 0)}" />\n'
-        + textwrap.indent(paths, '    ')
+        + textwrap.indent(monochrome_paths(), '    ')
         + '    </group>\n</vector>\n'
     )
     with open(os.path.join(drawable_dir, 'borealis_mark.xml'), 'w', encoding='utf-8', newline='\n') as f:
@@ -235,9 +234,8 @@ def icon(size, monochrome=False):
     if monochrome:
         img = Image.new('RGBA', (w, w), (0x2B, 0x29, 0x30, 255))
         light = (0xE6, 0xE0, 0xE9)
-        fill(img, GREEN, light, light, 0, 108, s, s, 0, 0)
-        fill(img, VIOLET, light + (0.6,), light + (0.6,), 0, 108, s, s, 0, 0)
-        fill(img, RIDGE_PATH, light, light, 0, 108, s, s, 0, 0)
+        for path, a in MONOCHROME_LAYERS:
+            fill(img, path, light + (a,), light + (a,), 0, 108, s, s, 0, 0)
     else:
         img = vertical_gradient(w, w, BG_TOP, BG_BOTTOM, 0, w)
         draw = ImageDraw.Draw(img)

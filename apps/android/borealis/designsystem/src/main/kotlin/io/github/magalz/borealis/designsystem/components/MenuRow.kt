@@ -6,7 +6,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -66,6 +66,9 @@ private val TRAILING_GAP = 12.dp
  * does not dim or disable its [trailing] control: the caller passes `enabled = false` to the
  * control itself, or leaves it out, so a control is dimmed once and by the one that owns it.
  *
+ * The control at the end sits beside the title. When the title and the control do not fit side by
+ * side, as with a large text size, the control goes under the title instead of squeezing it.
+ *
  * The outline of a focused row reaches 5dp outside it, so a list of rows needs 8dp of padding
  * around it and 10dp between rows, as in the [ActionSheet].
  */
@@ -88,7 +91,7 @@ fun MenuRow(
     val dim = if (enabled) 1f else DISABLED_ALPHA
     val rowFocus = remember { FocusRequester() }
     val trailingFocus = remember { FocusRequester() }
-    Row(
+    FlowRow(
         modifier
             .focusRequester(rowFocus)
             .then(
@@ -105,7 +108,8 @@ fun MenuRow(
             .heightIn(min = minHeight)
             .padding(horizontal = PADDING_HORIZONTAL, vertical = PADDING_VERTICAL),
         horizontalArrangement = Arrangement.spacedBy(TRAILING_GAP),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(PADDING_VERTICAL, Alignment.CenterVertically),
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         RowText(title, consequence, note, style, dim, Modifier.weight(1f))
         if (trailing != null) TrailingSlot(rowFocus, trailingFocus, trailing)

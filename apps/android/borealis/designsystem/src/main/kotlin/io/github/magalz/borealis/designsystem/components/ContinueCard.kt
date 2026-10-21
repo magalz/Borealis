@@ -67,13 +67,9 @@ fun ContinueCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                detail,
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.ink2,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            // No limit on the lines: at a large text size the Resume button leaves the detail a
+            // narrow column, and the card grows to hold it rather than cut it off.
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = colors.ink2)
         }
         ButtonFace(
             resumeLabel,

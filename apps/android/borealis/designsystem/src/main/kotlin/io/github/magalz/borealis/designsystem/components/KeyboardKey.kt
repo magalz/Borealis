@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.github.magalz.borealis.designsystem.R
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
@@ -44,6 +46,7 @@ enum class KeyStyle(internal val maxWidth: Dp) {
 private val NORMAL_KEY_WIDTH = 44.dp
 private val PHONE_HEIGHT = 32.dp
 private val TV_HEIGHT = 40.dp
+private val MIN_CAPTION_SIZE = 6.sp
 
 /**
  * One key of the in-stream keyboard: a [label] on a raised surface, 32dp high on a phone and 40dp
@@ -84,6 +87,12 @@ fun KeyboardKey(
             .height(height),
         contentAlignment = Alignment.Center,
     ) {
+        val textStyle =
+            if (style == KeyStyle.Normal) {
+                MaterialTheme.typography.bodyMedium
+            } else {
+                MaterialTheme.typography.bodySmall
+            }
         Text(
             label,
             color =
@@ -93,14 +102,18 @@ fun KeyboardKey(
                     else -> colors.ink2
                 },
             textAlign = TextAlign.Center,
+            softWrap = false,
             maxLines = 1,
             overflow = TextOverflow.Clip,
-            style =
-                if (style == KeyStyle.Normal) {
-                    MaterialTheme.typography.bodyMedium
-                } else {
-                    MaterialTheme.typography.bodySmall
-                },
+            style = textStyle,
+            // A key is as wide as its style allows, and a row shrinks it on a narrow screen. At a
+            // large text size the caption would not fit its key, so it shrinks with the key: the
+            // narrowest wide key of a phone, at 1.69 times the text, holds "Fn 123" at about 10sp.
+            autoSize =
+                TextAutoSize.StepBased(
+                    minFontSize = MIN_CAPTION_SIZE,
+                    maxFontSize = textStyle.fontSize,
+                ),
         )
     }
 }

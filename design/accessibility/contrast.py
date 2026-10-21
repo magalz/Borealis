@@ -2245,14 +2245,15 @@ def colour_distance(first, second, kind=None):
 
 def _check_accent_candidate(name, found):
     """A candidate of `accents.json` made valid: every role there, every colour well formed, the
-    alpha only where it is drawn with one, and a note on how each value was derived."""
+    alpha only where it is drawn with one, a note on how each value was derived, and a reason for
+    each check that is known to fail (`known_fails`, which maps the id of a check to why)."""
     candidate = {
         "label": found.get("label", name),
         "source": found.get("source", ""),
         "color": found.get("color", {}),
         "high-contrast": found.get("high-contrast", {}),
         "notes": found.get("notes", {}),
-        "cannot_pass": list(found.get("cannot_pass", [])),
+        "known_fails": dict(found.get("known_fails", {})),
     }
     sections = (
         ("color", "", ACCENT_ROLES, ACCENT_ALPHA_ROLES),
@@ -2276,6 +2277,9 @@ def _check_accent_candidate(name, found):
                 )
             if f"{prefix}{role}" not in candidate["notes"]:
                 raise ValueError(f"{name}: {prefix}{role} has no note on how it was derived")
+    for check, reason in candidate["known_fails"].items():
+        if not isinstance(reason, str) or not reason.strip():
+            raise ValueError(f"{name}: known_fails of {check} has no reason")
     return candidate
 
 

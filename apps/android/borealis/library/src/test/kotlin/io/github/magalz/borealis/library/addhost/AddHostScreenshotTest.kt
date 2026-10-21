@@ -1,8 +1,11 @@
 package io.github.magalz.borealis.library.addhost
 
+import android.content.Context
+import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
@@ -18,7 +21,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
-/** Screenshots of the Add host screen, named `<screen>_<device>_<state>.png`. */
+/**
+ * Screenshots of the Add host screen, named `<screen>_<device>_<state>.png`. `addhostglass_` is the
+ * screen over an animated background, with the glass field and the halo of the arrow and the texts.
+ */
 @RunWith(AndroidJUnit4::class)
 class AddHostScreenshotTest {
     @get:Rule val composeRule = createComposeRule()
@@ -52,14 +58,65 @@ class AddHostScreenshotTest {
         shoot("addhost_phone_wrong-subnet")
     }
 
+    @Test
+    @Config(qualifiers = PHONE)
+    fun addHostPhoneOverTheBackground() {
+        stillBackground()
+        composeRule.setContent {
+            Screen(AddHostUiState(address = "10.0.5.20"), FormFactor.Phone, STYLE)
+        }
+
+        shoot("addhostglass_phone_aurora-curtains")
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun addHostPhoneWrongSubnetOverTheBackground() {
+        stillBackground()
+        composeRule.setContent {
+            Screen(
+                AddHostUiState(address = "10.0.5.20", error = AddHostError.WRONG_SUBNET),
+                FormFactor.Phone,
+                STYLE,
+            )
+        }
+
+        shoot("addhostglass_phone_wrong-subnet")
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun addHostTvOverTheBackground() {
+        stillBackground()
+        composeRule.setContentInKeyboardMode {
+            Screen(AddHostUiState(address = "10.0.5.20"), FormFactor.Tv, STYLE)
+        }
+
+        shoot("addhostglass_tv_aurora-curtains")
+    }
+
+    /** The still frame of a system without animations, which is the same at every run. */
+    private fun stillBackground() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        Settings.Global.putFloat(
+            context.contentResolver,
+            Settings.Global.ANIMATOR_DURATION_SCALE,
+            0f,
+        )
+    }
+
     @Composable
-    private fun Screen(state: AddHostUiState, formFactor: FormFactor) {
+    private fun Screen(
+        state: AddHostUiState,
+        formFactor: FormFactor,
+        style: BackgroundStyle = BackgroundStyle.Off,
+    ) {
         // The shell draws the rail beside Add host on a TV and a handheld.
         LibraryScaffold(
             formFactor,
             actions = RailActions({}, {}, {}),
             selected = RailSelection.AddHost,
-            backgroundStyle = BackgroundStyle.Off,
+            backgroundStyle = style,
         ) {
             AddHostScreen(
                 state = state,
@@ -74,5 +131,9 @@ class AddHostScreenshotTest {
     private fun shoot(name: String) {
         composeRule.waitForIdle()
         composeRule.onRoot().captureRoboImage("src/test/screenshots/$name.png")
+    }
+
+    private companion object {
+        val STYLE = BackgroundStyle.AuroraCurtains
     }
 }

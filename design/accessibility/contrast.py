@@ -903,6 +903,194 @@ HALO_TEXTS = {
 }
 
 
+# The icons that the app draws straight on the background (issue #33): the back arrow of the bars,
+# the actions of the Hosts bar and the toggle of the Apps bar. Each is measured as a glyph mask, the
+# paths of `BorealisIcons.kt` stroked 2 units wide on the grid of 24 units, drawn at 24 dp.
+BOREALIS_ICONS_KT = (
+    REPO
+    / "apps/android/borealis/designsystem/src/main/kotlin/io/github/magalz/borealis/designsystem"
+    / "components/BorealisIcons.kt"
+)
+HALO_ICONS = ("Back", "Add", "Gear", "Visibility", "VisibilityOff")
+HALO_ICON_SIZE_DP = 24
+HALO_ICON_GRID = 24
+
+IconSet = collections.namedtuple("IconSet", "stroke paths")
+
+# A string of the Kotlin source, and the constants that icons are made of: `const val NAME = "..."`,
+# one string or several added together.
+_KT_STRING = re.compile(r'"([^"]*)"')
+_KT_CONSTANT = re.compile(r'const val (\w+) =\s*((?:"[^"]*"\s*\+?\s*)+)')
+_KT_STROKE = re.compile(r"const val STROKE = ([\d.]+)f")
+_KT_ICON = re.compile(r'val (\w+): ImageVector by lazy \{ icon\("\w+",(.*?)\) \}', re.DOTALL)
+_KT_ARGUMENT = re.compile(r'"([^"]*)"|\b([A-Z][A-Z_]+)\b')
+
+
+@functools.lru_cache(maxsize=None)
+def read_icons(path=BOREALIS_ICONS_KT):
+    """The stroke width and the paths of the icons of `BorealisIcons.kt`, read from its source.
+
+    The result has the `stroke` in units of the grid and `paths`, which maps the name of each icon
+    to its path data, a string for each path. The paths are literals of the source or the constants
+    that it defines, so the tool measures the icons that the app draws and not a copy of them.
+    """
+    text = Path(path).read_text(encoding="utf-8")
+    constants = {
+        name: "".join(_KT_STRING.findall(value)) for name, value in _KT_CONSTANT.findall(text)
+    }
+    stroke = float(_KT_STROKE.search(text).group(1))
+    paths = {}
+    for name, arguments in _KT_ICON.findall(text):
+        paths[name] = tuple(
+            literal or constants[constant] for literal, constant in _KT_ARGUMENT.findall(arguments)
+        )
+    return IconSet(stroke, paths)
+
+
+_PATH_TOKEN = re.compile(r"([MmLlHhVvCcSsAaZz])|([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)")
+# How many numbers each command of the path data takes.
+_PATH_ARITY = {"M": 2, "L": 2, "H": 1, "V": 1, "C": 6, "S": 4, "A": 7, "Z": 0}
+# A curve is cut into this many segments, and an arc into one for every few degrees.
+_CURVE_STEPS = 32
+_ARC_STEP = math.radians(3)
+
+
+def _arc_points(start, rx, ry, rotation, large, sweep, end):
+    """The points of an arc from `start` to `end`, the first one after `start`.
+
+    The centre follows from the two points, the radii and the two flags, as the notes on the
+    implementation of SVG 1.1 (F.6.5) work it out. The arc is cut into steps of a few degrees.
+    """
+    if (rx == 0 or ry == 0) or tuple(start) == tuple(end):
+        return [end]
+    rx, ry = abs(rx), abs(ry)
+    cos, sin = math.cos(math.radians(rotation)), math.sin(math.radians(rotation))
+    half_x, half_y = (start[0] - end[0]) / 2, (start[1] - end[1]) / 2
+    x1, y1 = cos * half_x + sin * half_y, -sin * half_x + cos * half_y
+    grown = x1 * x1 / (rx * rx) + y1 * y1 / (ry * ry)
+    if grown > 1:
+        rx, ry = rx * math.sqrt(grown), ry * math.sqrt(grown)
+    square = rx * rx * y1 * y1 + ry * ry * x1 * x1
+    factor = math.sqrt(max(0.0, (rx * rx * ry * ry - square) / square))
+    if bool(large) == bool(sweep):
+        factor = -factor
+    cx1, cy1 = factor * rx * y1 / ry, -factor * ry * x1 / rx
+    cx = cos * cx1 - sin * cy1 + (start[0] + end[0]) / 2
+    cy = sin * cx1 + cos * cy1 + (start[1] + end[1]) / 2
+    first = math.atan2((y1 - cy1) / ry, (x1 - cx1) / rx)
+    last = math.atan2((-y1 - cy1) / ry, (-x1 - cx1) / rx)
+    turn = last - first
+    if not sweep and turn > 0:
+        turn -= 2 * math.pi
+    elif sweep and turn < 0:
+        turn += 2 * math.pi
+    steps = max(2, math.ceil(abs(turn) / _ARC_STEP))
+    points = []
+    for index in range(1, steps + 1):
+        angle = first + turn * index / steps
+        x, y = rx * math.cos(angle), ry * math.sin(angle)
+        points.append((cos * x - sin * y + cx, sin * x + cos * y + cy))
+    points[-1] = tuple(end)
+    return points
+
+
+def _cubic_points(start, first, second, end):
+    """The points of a cubic curve from `start` to `end`, the first one after `start`."""
+    points = []
+    for index in range(1, _CURVE_STEPS + 1):
+        t = index / _CURVE_STEPS
+        a, b, c, d = (1 - t) ** 3, 3 * (1 - t) ** 2 * t, 3 * (1 - t) * t**2, t**3
+        points.append(
+            tuple(a * start[i] + b * first[i] + c * second[i] + d * end[i] for i in range(2))
+        )
+    return points
+
+
+def icon_polylines(data):
+    """The polylines, in units of the grid, that the path data of an icon draws.
+
+    It reads the commands that the icons use: move, line, horizontal and vertical line, cubic curve,
+    smooth cubic curve, arc and close, absolute or relative. A move starts a polyline and a close
+    ends one at its start. Curves and arcs are cut into short segments.
+    """
+    lines, line = [], []
+    at, begin, reflected = (0.0, 0.0), (0.0, 0.0), None
+    command, numbers = None, []
+    tokens = [(word, number) for word, number in _PATH_TOKEN.findall(data)]
+    index = 0
+
+    def start_line(point):
+        nonlocal line
+        if len(line) > 1:
+            lines.append(np.array(line, np.float64))
+        line = [point]
+
+    while index < len(tokens):
+        word, number = tokens[index]
+        if word:
+            command, index = word, index + 1
+            if command in "Zz":
+                if line:
+                    line.append(begin)
+                    lines.append(np.array(line, np.float64))
+                    line = []
+                at, reflected = begin, None
+                continue
+        elif command is None:
+            raise ValueError(f"path data does not start with a command: {data!r}")
+        arity = _PATH_ARITY[command.upper()]
+        numbers = [float(n) for _, n in tokens[index : index + arity]]
+        if len(numbers) < arity or any(w for w, _ in tokens[index : index + arity]):
+            raise ValueError(f"path data ends in the middle of a command: {data!r}")
+        index += arity
+        relative = command.islower()
+        kind = command.upper()
+        ox, oy = at if relative else (0.0, 0.0)
+        if kind == "M":
+            at = (numbers[0] + ox, numbers[1] + oy)
+            begin = at
+            start_line(at)
+            # More pairs after a move are lines.
+            command = "l" if relative else "L"
+            reflected = None
+            continue
+        if not line:
+            line = [at]
+        if kind == "L":
+            at = (numbers[0] + ox, numbers[1] + oy)
+            line.append(at)
+            reflected = None
+        elif kind == "H":
+            at = (numbers[0] + (at[0] if relative else 0.0), at[1])
+            line.append(at)
+            reflected = None
+        elif kind == "V":
+            at = (at[0], numbers[0] + (at[1] if relative else 0.0))
+            line.append(at)
+            reflected = None
+        elif kind in "CS":
+            if kind == "C":
+                first = (numbers[0] + ox, numbers[1] + oy)
+                rest = numbers[2:]
+            else:
+                first = at
+                if reflected is not None:
+                    first = (2 * at[0] - reflected[0], 2 * at[1] - reflected[1])
+                rest = numbers
+            second = (rest[0] + ox, rest[1] + oy)
+            end = (rest[2] + ox, rest[3] + oy)
+            line.extend(_cubic_points(at, first, second, end))
+            at, reflected = end, second
+        else:
+            end = (numbers[5] + ox, numbers[6] + oy)
+            radius_x, radius_y, rotation, large, sweep = numbers[:5]
+            line.extend(_arc_points(at, radius_x, radius_y, rotation, large, sweep, end))
+            at, reflected = end, None
+    if len(line) > 1:
+        lines.append(np.array(line, np.float64))
+    return lines
+
+
 def halo_configs():
     """The candidates of the grid, from the smallest halo to the largest: stroke, blur, opacity."""
     return sorted(
@@ -938,8 +1126,11 @@ def text_size_px(text, device, tokens=TOKENS_JSON):
 def halo_limit(text, device, high_contrast=False):
     """The ratio that a text style needs on a device.
 
-    3 for large text and 4.5 for the rest, and 7 for all of it under high contrast.
+    3 for large text and 4.5 for the rest, and 7 for all of it under high contrast. An icon is a
+    non-text indicator, which WCAG 1.4.11 asks 3:1 for, high contrast or not.
     """
+    if text in HALO_ICONS:
+        return WCAG_LIMITS[0]
     if high_contrast:
         return WCAG_LIMITS[2]
     return WCAG_LIMITS[0] if device in HALO_TEXTS[text]["large"] else WCAG_LIMITS[1]
@@ -989,6 +1180,8 @@ def _set_sample(text, device, pad):
     The picture is that many times as large as the text with `pad` pixels round it. A label is in
     capitals, with its letters spaced.
     """
+    if text in HALO_ICONS:
+        return _set_icon(text, device, pad)
     style = HALO_TEXTS[text]
     size = text_size_px(text, device)
     scale = HALO_SUPERSAMPLE
@@ -1005,6 +1198,46 @@ def _set_sample(text, device, pad):
     for letter, start in zip(sample, starts):
         draw.text((pad * scale + start, pad * scale), letter, font=font, fill=255)
     return np.asarray(image, dtype=np.float32) / 255
+
+
+def _stroked(lines, size, radius):
+    """The pixels of a square picture whose centre is within `radius` of one of the `lines`, a mask.
+
+    The distance is to the segments of the polylines, so the ends and the corners are round, as the
+    round caps and joins of the icons make them.
+    """
+    covered = np.zeros((size, size), bool)
+    for line in lines:
+        for first, second in zip(line[:-1], line[1:]):
+            low = np.maximum(np.floor(np.minimum(first, second) - radius).astype(int), 0)
+            high = np.minimum(np.ceil(np.maximum(first, second) + radius).astype(int), size - 1)
+            ys, xs = np.mgrid[low[1] : high[1] + 1, low[0] : high[0] + 1]
+            px, py = xs + 0.5 - first[0], ys + 0.5 - first[1]
+            along = second - first
+            length = float(along @ along)
+            t = np.clip((px * along[0] + py * along[1]) / length, 0.0, 1.0) if length else 0.0
+            near = (px - t * along[0]) ** 2 + (py - t * along[1]) ** 2 <= radius * radius
+            covered[low[1] : high[1] + 1, low[0] : high[0] + 1] |= near
+    return covered
+
+
+def _set_icon(name, device, pad):
+    """The icon at `HALO_SUPERSAMPLE` times its size, as coverage, 0 to 1, with `pad` pixels round.
+
+    The icon is its paths, read from the source of the app, stroked as wide as the app strokes them
+    and drawn at `HALO_ICON_SIZE_DP` on a device. The picture is that many times as large as the
+    icon with `pad` pixels round it, as for a text.
+    """
+    icons = read_icons()
+    scale = HALO_SUPERSAMPLE
+    side = round(HALO_ICON_SIZE_DP * device_density(device))
+    unit = side * scale / HALO_ICON_GRID
+    origin = pad * scale
+    lines = [
+        origin + line * unit for data in icons.paths[name] for line in icon_polylines(data)
+    ]
+    size = (side + 2 * pad) * scale
+    return _stroked(lines, size, icons.stroke / 2 * unit).astype(np.float32)
 
 
 def _widen(covered, radius):
@@ -1308,6 +1541,11 @@ def measure_halo_sources(sources, colors, jobs=1, texts=None, dim=0.0):
                 }
                 for name, style in HALO_TEXTS.items()
             },
+            "icons": {
+                "names": list(HALO_ICONS),
+                "size_dp": HALO_ICON_SIZE_DP,
+                "stroke_units": read_icons().stroke,
+            },
             "strokes_dp": list(HALO_STROKES_DP),
             "blurs_dp": list(HALO_BLURS_DP),
             "opacities": list(HALO_OPACITIES),
@@ -1408,7 +1646,7 @@ def _text_lines(rows, high_contrast=False):
         if key not in worst or row["min"] < worst[key]["min"]:
             worst[key] = row
     lines = []
-    for text in HALO_TEXTS:
+    for text in [*HALO_TEXTS, *HALO_ICONS]:
         for device in ("tv", "phone"):
             found = [worst.get((text, device, token)) for token in HALO_TOKENS]
             if None in found:
@@ -1452,7 +1690,7 @@ def halo_tables(result):
     Table E is the chosen candidate, by text style and device, with p1 and p5. Table F is the
     chosen candidate and no halo, by background.
     """
-    rows = result["halo"]
+    rows = [row for row in result["halo"] if row["text"] in HALO_TEXTS]
     names = [f"`{token}`" for token in HALO_TOKENS]
     kept = set(halo_passing(rows))
     by_config = {}
@@ -1502,7 +1740,7 @@ def halo_high_contrast_tables(result, config):
     lowest ratio over the text styles, by background, with the dim alone and with the dim and the
     halo. Table H is the halo by text style and device. Every text needs 7:1, with no margin.
     """
-    rows = result["halo"]
+    rows = [row for row in result["halo"] if row["text"] in HALO_TEXTS]
     names = [f"`{token}`" for token in HALO_TOKENS]
     dim = (result.get("meta", {}).get("high_contrast") or {}).get("dim")
     veil = "the page colour over it" + (f" at {dim}" if dim else "")
@@ -1537,6 +1775,68 @@ def halo_high_contrast_tables(result, config):
         tables.append(
             f"Under high contrast the text falls short of 7:1 in {len(short)} of {len(chosen)} "
             f"cases; the lowest is {format_ratio(worst['min'])} ({where})."
+        )
+    return "\n\n".join(tables)
+
+
+def halo_icon_tables(result, config):
+    """The tables of the icons with the halo `config`, and their verdict.
+
+    Table I is each icon on each device: the lowest ratio over the backgrounds, with the background
+    it is in, and the lowest p1 and p5. Table J is the lowest ratio over the icons, by background,
+    with no halo and with the halo. An icon is a non-text indicator and needs 3:1 (WCAG 1.4.11):
+    with 2% to spare for the difference between the model and a device, as the text has, and with
+    none under high contrast, where the veil of the page is laid over the background first.
+    """
+    rows = [row for row in result["halo"] if row["text"] in HALO_ICONS]
+    dim = (result.get("meta", {}).get("high_contrast") or {}).get("dim")
+    margin = 1.0 if dim else HALO_MARGIN
+    names = [f"`{token}`" for token in HALO_TOKENS]
+    chosen = [row for row in rows if _halo_config(row) == config]
+    limit = f"{WCAG_LIMITS[0]:g}"
+    under = (
+        f", under high contrast, with the page colour over the background at {dim} and the ink of "
+        "high contrast"
+        if dim
+        else ""
+    )
+    heads = ["Icon", "Device", "Needs"]
+    for name in names:
+        heads += [f"{name} min", f"{name} p1", f"{name} p5"]
+    tables = [
+        f"Table I. The icons with the halo ({halo_choice_text(config)}){under}, by icon and "
+        "device: the lowest ratio over the backgrounds, with the background it is in, and the "
+        "lowest p1 and p5.",
+        _table(heads, _text_lines(chosen, high_contrast=bool(dim))),
+        "Table J. The lowest ratio over the icons, by background, with no halo and with the halo.",
+        _table(
+            ["Background"] + [f"{name}, {kind}" for name in names for kind in ("none", "halo")],
+            _background_lines(rows, config),
+        ),
+    ]
+    worst = min(chosen, key=lambda row: row["min"])
+    where = (
+        f"`{worst['token']}`, {worst['text']}, {DEVICE_LABELS[worst['device']]}, "
+        f"{STYLE_LABELS.get(worst['style'], worst['style'])}"
+    )
+    short = [row for row in chosen if row["min"] < WCAG_LIMITS[0] * margin]
+    spare = "" if dim else ", with 2% to spare"
+    if short:
+        tables.append(
+            f"With this halo the icon falls short of {limit}:1 in {len(short)} of {len(chosen)} "
+            f"cases; the lowest is {format_ratio(worst['min'])} ({where})."
+        )
+    else:
+        lead = "Under high contrast" if dim else "With this halo"
+        tables.append(
+            f"{lead} every icon keeps {limit}:1 over every background{spare}: the lowest is "
+            f"{format_ratio(worst['min'])} ({where})."
+        )
+    alone = None if dim else choose_halo(rows)
+    if alone is not None:
+        tables.append(
+            f"On their own the icons need no more than the smallest candidate of the grid that "
+            f"keeps {limit}:1: {halo_choice_text(alone)}. The app draws the halo of the text."
         )
     return "\n\n".join(tables)
 
@@ -1586,6 +1886,7 @@ def main(argv=None):
     halo.add_argument("--jobs", type=int, default=4, help="processes, one frame each")
     halo.add_argument("--texts", nargs="+", choices=sorted(HALO_TEXTS), help="the text styles")
     halo.add_argument("--revision", help="the revision measured (default: HEAD)")
+    halo.add_argument("--icons", action="store_true", help="measure the icons, not the text")
     halo.add_argument("--high-contrast", action="store_true", help="measure under high contrast")
     halo.add_argument(
         "--halo",
@@ -1597,8 +1898,12 @@ def main(argv=None):
 
     args = parser.parse_args(argv)
     if args.command == "halo":
-        if args.high_contrast != (args.halo is not None):
-            parser.error("--high-contrast and --halo go together: the halo to check is named")
+        if args.icons and args.texts:
+            parser.error("--icons and --texts are not asked together")
+        if (args.high_contrast or args.icons) != (args.halo is not None):
+            parser.error("--high-contrast and --icons go with --halo: the halo to check is named")
+        if args.icons:
+            args.texts = list(HALO_ICONS)
         colors = load_colors(TOKENS_JSON, TEXT_TOKENS + SURFACE_TOKENS)
         dim = 0.0
         if args.high_contrast:
@@ -1610,10 +1915,13 @@ def main(argv=None):
         result["meta"]["revision"] = args.revision or _revision()
         args.json.parent.mkdir(parents=True, exist_ok=True)
         args.json.write_text(json.dumps(result, indent=1) + "\n", encoding="utf-8")
-        if args.high_contrast:
+        if args.halo is not None:
             stroke, blur, percent = args.halo
             config = (int(stroke), int(blur), round(percent / 100, 2))
-            print(halo_high_contrast_tables(result, config))
+            if args.icons:
+                print(halo_icon_tables(result, config))
+            else:
+                print(halo_high_contrast_tables(result, config))
         else:
             print(halo_tables(result))
         return 0

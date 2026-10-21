@@ -3,8 +3,9 @@
 Sprint 10 aims at WCAG 2.2 level AA on every screen, and at 7:1 (AAA) for text
 when high contrast is on. This page records how the contrast of text over the
 animated background is measured, the baseline measured before any fix, how the
-table that the glass of the app reads comes out of that measurement, and the halo
-of the text that stands on the background. The tool is in
+table that the glass of the app reads comes out of that measurement, the halo
+of the text that stands on the background, and what the icons and the text field
+on it keep. The tool is in
 [`design/accessibility/`](../../design/accessibility/README.md); its README says
 how to run it again. The decisions that follow from the numbers are in
 [ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md).
@@ -606,3 +607,181 @@ equal. `BackdropKicker` is a label in it, and `EmptyState` and the name under a 
 - **The ink.** `BackdropInk` says what the text was: `Ink3` and `Ink4` are `ink-2` where there is
   a halo and the tokens, as they were, where there is not. `Ink` and `Ink2` are the tokens. The
   colours are those of the theme, so under High contrast they are the high contrast ones.
+
+### Icons on the background
+
+The back arrow of the bars, the actions of the Hosts bar (Add host and Settings) and the toggle of
+the Apps bar stand on the background with no surface behind them, as the text did. An icon is a
+non-text indicator, which WCAG 1.4.11 asks 3:1 for. The icon colour is `ink` (the arrow and the
+toggle) or `ink-2` (the actions), and the halo of the text keeps both over every background and
+device, so the icons have the same halo and not one of their own.
+
+- Revision measured: `d9c8b027`, on 2026-10-21, with the 288 frames of the halo above.
+- `python -I design/accessibility/contrast.py halo <frames> --json <result.json> --jobs 4 --icons
+  --halo 3 2 80` measures them in under a minute and prints Tables I and J and the verdict. With
+  `--high-contrast` as well, the frame is put under the veil of high contrast first, as for the loose
+  text.
+
+**Method.** An icon is a glyph mask, as a letter of the sample text is, and the rest is the method
+of the halo: the same ring, the same grid of candidates, the same worst case over every place of the
+icon on the frame, and a limit of 3:1 with 2% to spare (none under high contrast).
+
+- **The icon.** `contrast.py` reads the paths of `BorealisIcons.kt` itself (`read_icons`), so it
+  measures the icons that the app draws and not a copy of them: the back arrow, the plus, the gear
+  and the eye with and without its slash. Each is drawn on the grid of 24 units, 2 units wide with
+  round caps and joins, at 24 dp, which is 48 px on a TV and 72 px on a phone. The picture is four
+  times that size: a pixel is covered when its centre is within one unit of a segment of the path,
+  and the mask is the mean of each block. The curves and the arcs of the paths are cut into short
+  segments.
+- **The halo.** The mask is widened by the stroke of the halo (3 dp), blurred by the Gaussian of
+  Skia for its radius (2 dp) and laid in `page` at its opacity (80 %), exactly as for a text. The
+  ring is the pixels that are not in the icon and are within 2 px of it. The stroke of an icon is
+  2 dp, thicker than the stem of a letter, so its ring lies well inside the halo: the mean alpha of
+  the halo on the ring is above 0.7 for every icon.
+
+Table I. The icons with the halo (stroke 3 dp, blur 2 dp, opacity 80 %), by icon and device: the lowest ratio over the backgrounds, with the background it is in, and the lowest p1 and p5. An icon needs 3:1.
+
+| Icon | Device | Needs | `ink` min | `ink` p1 | `ink` p5 | `ink-2` min | `ink-2` p1 | `ink-2` p5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Back | TV | 3.00 | 8.36 (Northern lights) | 12.60 | 13.34 | 5.93 (Northern lights) | 8.94 | 9.46 |
+| Back | phone | 3.00 | 9.37 (Northern lights) | 13.94 | 14.13 | 6.65 (Northern lights) | 9.89 | 10.02 |
+| Add | TV | 3.00 | 8.36 (Northern lights) | 12.68 | 13.33 | 5.93 (Northern lights) | 9.00 | 9.46 |
+| Add | phone | 3.00 | 9.37 (Northern lights) | 13.95 | 14.12 | 6.65 (Northern lights) | 9.90 | 10.02 |
+| Gear | TV | 3.00 | 8.04 (Northern lights) | 12.83 | 13.79 | 5.71 (Northern lights) | 9.11 | 9.78 |
+| Gear | phone | 3.00 | 9.29 (Northern lights) | 13.58 | 14.14 | 6.59 (Northern lights) | 9.63 | 10.03 |
+| Visibility | TV | 3.00 | 8.52 (Northern lights) | 12.94 | 13.72 | 6.05 (Northern lights) | 9.18 | 9.73 |
+| Visibility | phone | 3.00 | 9.42 (Northern lights) | 13.38 | 14.04 | 6.68 (Northern lights) | 9.50 | 9.96 |
+| VisibilityOff | TV | 3.00 | 8.36 (Northern lights) | 12.88 | 13.73 | 5.93 (Northern lights) | 9.14 | 9.74 |
+| VisibilityOff | phone | 3.00 | 9.38 (Northern lights) | 13.43 | 14.00 | 6.65 (Northern lights) | 9.53 | 9.94 |
+
+Table J. The lowest ratio over the icons, by background, with no halo and with the halo.
+
+| Background | `ink`, none | `ink`, halo | `ink-2`, none | `ink-2`, halo |
+| --- | --- | --- | --- | --- |
+| Aurora curtains, phone | 9.66 | 14.45 | 6.86 | 10.25 |
+| Aurora curtains, TV | 9.68 | 14.13 | 6.86 | 10.03 |
+| Flowing light, phone | 5.72 | 13.13 | 4.06 | 9.32 |
+| Flowing light, TV | 5.34 | 12.28 | 3.79 | 8.71 |
+| Light mist, phone | 5.77 | 13.13 | 4.10 | 9.32 |
+| Light mist, TV | 2.04 | 8.95 | 1.45 | 6.35 |
+| Northern lights, phone | 1.57 | 9.29 | 1.11 | 6.59 |
+| Northern lights, TV | 1.56 | 8.04 | 1.11 | 5.71 |
+| Soft glow, phone | 10.72 | 14.71 | 7.60 | 10.44 |
+| Soft glow, TV | 11.37 | 14.62 | 8.07 | 10.37 |
+| Starfield, phone | 2.09 | 10.16 | 1.48 | 7.21 |
+| Starfield, TV | 1.99 | 8.85 | 1.41 | 6.28 |
+
+With this halo every icon keeps 3:1 over every background, with 2% to spare: the lowest is 5.71
+(`ink-2`, the gear, on a TV over Northern lights), 87 % above 3.06, which is 3:1 with 2% to spare.
+With no halo the icons are in the case of Table A: 1.11 (`ink-2`) and 1.56 (`ink`) over Northern
+lights. On their own the icons would need no more than the smallest candidate that keeps 3:1, a
+stroke of 2 dp, a blur of 2 dp and an opacity of 80 %; the app draws the halo of the text, so the
+screen has one halo.
+
+**Under high contrast** the icons are `ink` white and `ink-2` `#E8EAED` over the background with the
+page colour laid over it at 0.85, with the halo. Every icon keeps 3:1 over every background, and
+the lowest is 14.79 (`ink-2`, the gear, on a TV over Northern lights). The dim alone gives 12.00
+and the halo raises every case. Table K is Table J under high contrast, the lowest ratio over the
+icons by background, with the dim alone and with the dim and the halo (the tool prints it as
+Table J when it is run with `--high-contrast`):
+
+Table K. The icons under high contrast, with the page colour over the background at 0.85 and the ink of high contrast.
+
+| Background | `ink`, none | `ink`, halo | `ink-2`, none | `ink-2`, halo |
+| --- | --- | --- | --- | --- |
+| Aurora curtains, phone | 18.12 | 18.83 | 15.03 | 15.63 |
+| Aurora curtains, TV | 18.12 | 18.79 | 15.03 | 15.59 |
+| Flowing light, phone | 17.18 | 18.63 | 14.25 | 15.45 |
+| Flowing light, TV | 17.16 | 18.53 | 14.24 | 15.37 |
+| Light mist, phone | 17.20 | 18.63 | 14.27 | 15.46 |
+| Light mist, TV | 15.04 | 17.97 | 12.48 | 14.91 |
+| Northern lights, phone | 14.49 | 18.06 | 12.02 | 14.99 |
+| Northern lights, TV | 14.46 | 17.83 | 12.00 | 14.79 |
+| Soft glow, phone | 18.28 | 18.87 | 15.17 | 15.66 |
+| Soft glow, TV | 18.36 | 18.85 | 15.24 | 15.64 |
+| Starfield, phone | 15.09 | 18.18 | 12.52 | 15.08 |
+| Starfield, TV | 15.02 | 17.96 | 12.46 | 14.90 |
+
+### The text field on the glass
+
+The Address field of Add host had a transparent container, so its label, its text and its outline
+stood on the background: the text reached the 2:1 of Table A over Northern lights, Light mist and
+Starfield, and the outline, `line-strong` at 12 % white, reached about 1.3:1 over the page. It is now
+a glass surface of its shape, which is the glass of the panels: it shows the blurred background under
+the tint, and it is the `surface` colour where the glass is Off, under High contrast and on the plain
+page. The glass is one surface from the top of the field to the end of its message, with the outline
+on it.
+
+- **The text.** The label of a field at rest is `ink-3` as the glass has it, the colour that keeps
+  4.5:1 with 2% to spare over the brightest pixel behind the glass of the style (the table of the
+  tint floors). The typed text is `ink`. The label of a focused field is `accent-soft`, which the
+  glass keeps at 4.5:1 and `accent` does not: `accent` reaches 4.39 over Northern lights at the
+  default. The message of an error is `danger-ink`.
+- **The outline.** A non-text indicator needs 3:1 (WCAG 1.4.11). It is `ink-3` of the glass at rest
+  (the colour that keeps 4.5:1, so more than 3:1), `accent` on focus (the colour of the focus of the
+  field as it was) and `danger-ink` with an error. At rest it is 1 dp and on focus 2 dp. On the solid
+  surface `ink-3` is 5.59:1 and `accent` 6.61:1.
+
+**Over the glass.** The ratio of each colour over the brightest pixel behind a glass of each style,
+in the table that the tint floors come from (`(L + 0.05) / (backdrop + 0.05)`), at the default look
+and at Reduced:
+
+Table L. The colours of the text field over the brightest pixel behind its glass, Standard (40 %, 8 dp, raised to the floor of the style).
+
+| Style | Tint | Brightest pixel | Typed text `ink` | Label and outline, glass `ink-3` | Focused label `accent-soft` | Error text `danger-ink` | Focused outline `accent` |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Aurora curtains | 40 % | 0.0222 | 12.06 | 4.63 | 7.87 | 6.37 | 5.34 |
+| Soft glow | 40 % | 0.0190 | 12.63 | 4.73 | 8.24 | 6.67 | 5.59 |
+| Northern lights | 70 % | 0.0378 | 9.92 | 4.60 | 6.47 | 5.24 | 4.39 |
+| Light mist | 40 % | 0.0307 | 10.80 | 4.64 | 7.05 | 5.70 | 4.78 |
+| Flowing light | 40 % | 0.0495 | 8.75 | 4.62 | 5.71 | 4.62 | 3.88 |
+| Starfield | 40 % | 0.0155 | 13.31 | 4.99 | 8.69 | 7.03 | 5.89 |
+
+Table M. The same at Reduced (85 %, 48 dp).
+
+| Style | Tint | Brightest pixel | Typed text `ink` | Label and outline, glass `ink-3` | Focused label `accent-soft` | Error text `danger-ink` | Focused outline `accent` |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Aurora curtains | 85 % | 0.0103 | 14.44 | 5.41 | 9.42 | 7.62 | 6.39 |
+| Soft glow | 85 % | 0.0104 | 14.42 | 5.40 | 9.41 | 7.61 | 6.39 |
+| Northern lights | 85 % | 0.0141 | 13.59 | 5.09 | 8.88 | 7.18 | 6.02 |
+| Light mist | 85 % | 0.0101 | 14.49 | 5.43 | 9.46 | 7.65 | 6.42 |
+| Flowing light | 85 % | 0.0143 | 13.54 | 5.07 | 8.84 | 7.15 | 6.00 |
+| Starfield | 85 % | 0.0089 | 14.80 | 5.55 | 9.66 | 7.82 | 6.56 |
+
+The tests of `BorealisTextField` read what the field draws, the label, the text, the message and the
+pixel of the outline, and fail under 4.5:1 for the text and 3:1 for the outlines, at the default and
+at Reduced, over every style.
+
+- **The label floats inside the glass.** The field is a filled field of Material 3 with no container,
+  indicator or outline of its own. An outlined field floats its label over the top of its outline,
+  where the outline is cut to make room for it: half of the label would stand on the background and
+  not on the glass.
+- **Not covered.**
+  - The outside of the outline faces the background. The glass is what makes the field stand out, and
+    the ratio is that of the outline with the glass inside it.
+  - `danger-ink` is not one of the colours that the tint floor keeps at 4.5:1. At the default and at
+    Reduced it keeps it over every style (the lowest is 4.62 over Flowing light), but a viewer who
+    chooses a tint and a blur of Settings that leave a brighter backdrop than those could see the
+    message of an error under 4.5:1.
+
+### How the app draws an icon
+
+`BackdropIcon` in `:borealis:designsystem` (`components/BackdropIcon.kt`) is the one place that
+draws an icon on the background, and it uses the constants of `BackdropHalo`: they are the choice
+above, for the text and for the icons.
+
+- **One path, one blur.** Behind the icon the node draws the strokes of its vector as one path. The
+  paint has a stroke of the width of the icon's own and twice the halo's, which widens it by the
+  halo's 3 dp, a mask filter of the halo's 2 dp radius, which blurs it (Skia gives it the sigma that
+  it gives the shadow of a text, which the model has), and the `page` colour at the opacity. It is
+  one path and one draw, and not one for each stroke of the icon, because two halos that meet would
+  be darker than the union that the model has.
+- **When.** Over a background of any style, which is every one but the plain page, with the glass
+  Off and under High contrast too, and none outside a host. The node says through `BackdropIconHalo`
+  whether the halo is drawn, as `BackdropTextHalo` does for the text.
+- **Pinned by pixels.** A test reads the alpha of the halo beside a stroke of an icon at 2, 5, 8 and
+  12 px from its edge, against the model within 0.07, with the stroke near the edge of the icon so
+  that 12 px are outside its bounds: it fails for a halo that is thinner or wider, fainter, over the
+  icon, or cut at its bounds.
+- **API level.** The blur of a mask is a part of every paint, so it needs no blur effect (API 31),
+  but the halo has not been seen on a device below API 31: the tests draw it with Robolectric.

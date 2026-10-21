@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -17,6 +16,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.BackdropIcon
 import io.github.magalz.borealis.designsystem.components.BackdropInk
 import io.github.magalz.borealis.designsystem.components.BackdropText
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
@@ -67,7 +67,7 @@ private fun IconAction(icon: ImageVector, description: String, onClick: () -> Un
             .optionsClickable(onClick, role = Role.Button),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
+        BackdropIcon(
             icon,
             contentDescription = description,
             modifier = Modifier.size(ACTION_ICON_SIZE),

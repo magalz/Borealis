@@ -2,13 +2,16 @@ package io.github.magalz.borealis.designsystem.components
 
 import android.view.View
 import android.view.inputmethod.InputMethodManager
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.FocusInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.KeyboardActionHandler
@@ -17,9 +20,9 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,14 +56,27 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.glass.GlassTextColors
+import io.github.magalz.borealis.designsystem.glass.glassSurface
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 
+private val OUTLINE = 1.dp
+private val FOCUSED_OUTLINE = 2.dp
+
+/** The room that the glass leaves under the message of an error, which the field leaves none of. */
+private val ERROR_ROOM = 6.dp
+
 /**
- * A single-line text field: the input radius, a line-strong border that turns accent on focus, and
- * [error] under it in danger-ink (it also turns the border and label to danger-ink). The keyboard
- * action is Done: it calls [onDone] if there is one and then does what Done does by default, which
- * is to hide the keyboard and clear focus. [keyboardType] picks the keyboard layout, such as Uri
- * for a host address.
+ * A single-line text field on a glass surface of the input radius (issue #33). Over the animated
+ * background it shows the background blurred under the tint; where the glass is Off, under High
+ * contrast and on the plain page it is the `surface` colour, as the panels are. The text keeps
+ * 4.5:1 on the glass: the label is the glass ink-3, the typed text is ink and the label of a
+ * focused field is accent-soft. The outline keeps 3:1 (WCAG 1.4.11): ink-3, accent on focus and
+ * danger-ink with an [error], whose message is under the field in danger-ink, inside the glass. The
+ * label floats up inside the glass. The keyboard action is Done: it calls [onDone] if there is one
+ * and then does what Done does by default, which is to hide the keyboard and clear focus.
+ * [keyboardType] picks the keyboard layout, such as Uri for a host address.
  *
  * A text field keeps the D-pad for its caret, so a remote cannot leave it. With [leaveWithDpad], Up
  * and Down move the focus to the neighbour above and below, and Left moves it to the neighbour on
@@ -276,6 +292,12 @@ private fun wrapperKey(event: KeyEvent, startEditing: () -> Unit, onDone: () -> 
         else -> false
     }
 
+/**
+ * The field on its glass surface. It is a filled [TextField] with no container, outline or
+ * indicator of its own, and the glass, with the outline on it, is drawn here round the field and
+ * its message. An outlined field would float its label over the top of its outline, where the
+ * outline is cut and the glass would not show: half of the label would stand on the background.
+ */
 @Composable
 private fun TextFieldBody(
     content: FieldContent,
@@ -283,45 +305,63 @@ private fun TextFieldBody(
     interactionSource: MutableInteractionSource?,
     onKeyboardAction: KeyboardActionHandler,
 ) {
-    val colors = LocalBorealisColors.current
-    OutlinedTextField(
-        state = content.state,
-        modifier = modifier,
-        label = { Text(content.label) },
-        supportingText = content.error?.let { message -> { Text(message) } },
-        isError = content.error != null,
-        lineLimits = TextFieldLineLimits.SingleLine,
-        shape = MaterialTheme.shapes.medium,
-        inputTransformation = content.transformation,
-        keyboardOptions =
-            KeyboardOptions(
-                keyboardType = content.keyboardType,
-                imeAction = ImeAction.Done,
-                // The keyboard opens as the field gains the focus. A field that must not do it
-                // never has the focus until it is edited, so the wrapper decides.
-                showKeyboardOnFocus = true,
-            ),
-        onKeyboardAction = onKeyboardAction,
-        interactionSource = interactionSource,
-        colors =
-            OutlinedTextFieldDefaults.colors(
-                focusedTextColor = colors.ink,
-                unfocusedTextColor = colors.ink,
-                errorTextColor = colors.ink,
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                errorContainerColor = Color.Transparent,
-                cursorColor = colors.accent,
-                errorCursorColor = colors.dangerInk,
-                focusedBorderColor = colors.accent,
-                unfocusedBorderColor = colors.lineStrong,
-                errorBorderColor = colors.dangerInk,
-                focusedLabelColor = colors.accent,
-                unfocusedLabelColor = colors.ink3,
-                errorLabelColor = colors.dangerInk,
-                errorSupportingTextColor = colors.dangerInk,
-            ),
-    )
+    val shape = MaterialTheme.shapes.medium
+    val source = interactionSource ?: remember { MutableInteractionSource() }
+    val focused by source.collectIsFocusedAsState()
+    // The colours of the field are read inside the glass: its ink-3 is the one that keeps 4.5:1.
+    GlassTextColors {
+        val colors = LocalBorealisColors.current
+        val outline =
+            when {
+                content.error != null -> colors.dangerInk
+                focused -> colors.accent
+                else -> colors.ink3
+            }
+        Box(
+            Modifier.glassSurface(shape)
+                .border(if (focused) FOCUSED_OUTLINE else OUTLINE, outline, shape)
+                .padding(bottom = if (content.error != null) ERROR_ROOM else 0.dp)
+        ) {
+            TextField(
+                state = content.state,
+                modifier = modifier,
+                label = { Text(content.label) },
+                supportingText = content.error?.let { message -> { Text(message) } },
+                isError = content.error != null,
+                lineLimits = TextFieldLineLimits.SingleLine,
+                shape = shape,
+                inputTransformation = content.transformation,
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType = content.keyboardType,
+                        imeAction = ImeAction.Done,
+                        // The keyboard opens as the field gains the focus. A field that must not do
+                        // it never has the focus until it is edited, so the wrapper decides.
+                        showKeyboardOnFocus = true,
+                    ),
+                onKeyboardAction = onKeyboardAction,
+                interactionSource = source,
+                colors =
+                    TextFieldDefaults.colors(
+                        focusedTextColor = colors.ink,
+                        unfocusedTextColor = colors.ink,
+                        errorTextColor = colors.ink,
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        errorContainerColor = Color.Transparent,
+                        cursorColor = colors.accent,
+                        errorCursorColor = colors.dangerInk,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        errorIndicatorColor = Color.Transparent,
+                        focusedLabelColor = colors.accentSoft,
+                        unfocusedLabelColor = colors.ink3,
+                        errorLabelColor = colors.dangerInk,
+                        errorSupportingTextColor = colors.dangerInk,
+                    ),
+            )
+        }
+    }
 }
 
 /**

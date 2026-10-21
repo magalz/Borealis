@@ -39,7 +39,8 @@ private const val SOURCE_CODE_URL = "https://github.com/magalz/Borealis"
 private const val PRIVACY_POLICY_URL = "https://github.com/magalz/Borealis/blob/main/PRIVACY.md"
 private const val HINT = "Scan with your phone to open this link."
 private const val MIN_QR_DP = 200f
-private const val MIN_QUIET_MODULES = 2f
+private const val MIN_QUIET_MODULES = 4f
+private const val CENTRE_TOLERANCE_DP = 2f
 private const val FINDER_MODULES = 7
 
 /**
@@ -140,22 +141,30 @@ class AboutLinksTvTest : SettingsScreenTestBase() {
     }
 
     @Test
-    fun `the QR code is dark on light and keeps a quiet zone around its modules`() {
+    fun `the QR code of Source code is dark on light with the quiet zone of the specification`() {
+        open(SOURCE_CODE)
+
+        assertDarkOnLightWithQuietZone(qrOf(SOURCE_CODE))
+    }
+
+    @Test
+    fun `the QR code of Privacy policy is dark on light with the quiet zone of the specification`() {
         open(PRIVACY_POLICY)
 
-        val image = qrOf(PRIVACY_POLICY).captureToImage().asAndroidBitmap()
-        val dark = image.darkBounds()
-        // The first dark run along the top edge of the code is a finder pattern, 7 modules wide.
-        var run = 0
-        while (image.getPixel(dark.left + run, dark.top) == Color.BLACK) run++
-        val module = run.toFloat() / FINDER_MODULES
+        assertDarkOnLightWithQuietZone(qrOf(PRIVACY_POLICY))
+    }
 
-        assertThat(image.getPixel(0, 0)).isEqualTo(Color.WHITE)
-        assertThat(image.getPixel(image.width - 1, image.height - 1)).isEqualTo(Color.WHITE)
-        assertThat(dark.left / module).isAtLeast(MIN_QUIET_MODULES)
-        assertThat(dark.top / module).isAtLeast(MIN_QUIET_MODULES)
-        assertThat((image.width - 1 - dark.right) / module).isAtLeast(MIN_QUIET_MODULES)
-        assertThat((image.height - 1 - dark.bottom) / module).isAtLeast(MIN_QUIET_MODULES)
+    @Test
+    fun `the text is centred beside the QR code, not at its top`() {
+        open(SOURCE_CODE)
+
+        val qr = qrOf(SOURCE_CODE).getUnclippedBoundsInRoot()
+        val hint = inDialog(HINT).getUnclippedBoundsInRoot()
+        val address = inDialog(SOURCE_CODE_URL).getUnclippedBoundsInRoot()
+
+        val textMiddle = (hint.top.value + address.bottom.value) / 2
+        val qrMiddle = (qr.top.value + qr.bottom.value) / 2
+        assertThat(textMiddle).isWithin(CENTRE_TOLERANCE_DP).of(qrMiddle)
     }
 
     @Test
@@ -215,6 +224,23 @@ class AboutLinksTvTest : SettingsScreenTestBase() {
             )
 
         assertThat(sayingTheAddress.fetchSemanticsNodes()).hasSize(1)
+    }
+
+    /** The image is black on white, and every side of the code has [MIN_QUIET_MODULES] of white. */
+    private fun assertDarkOnLightWithQuietZone(qr: SemanticsNodeInteraction) {
+        val image = qr.captureToImage().asAndroidBitmap()
+        val dark = image.darkBounds()
+        // The first dark run along the top edge of the code is a finder pattern, 7 modules wide.
+        var run = 0
+        while (image.getPixel(dark.left + run, dark.top) == Color.BLACK) run++
+        val module = run.toFloat() / FINDER_MODULES
+
+        assertThat(image.getPixel(0, 0)).isEqualTo(Color.WHITE)
+        assertThat(image.getPixel(image.width - 1, image.height - 1)).isEqualTo(Color.WHITE)
+        assertThat(dark.left / module).isAtLeast(MIN_QUIET_MODULES)
+        assertThat(dark.top / module).isAtLeast(MIN_QUIET_MODULES)
+        assertThat((image.width - 1 - dark.right) / module).isAtLeast(MIN_QUIET_MODULES)
+        assertThat((image.height - 1 - dark.bottom) / module).isAtLeast(MIN_QUIET_MODULES)
     }
 
     /** The smallest box that holds every black pixel: left, top, right and bottom, inclusive. */

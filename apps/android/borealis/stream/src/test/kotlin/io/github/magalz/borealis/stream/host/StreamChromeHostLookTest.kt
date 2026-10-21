@@ -12,8 +12,13 @@ import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
+import io.github.magalz.borealis.designsystem.theme.ColourVision
 import io.github.magalz.borealis.designsystem.theme.TextSize
 import io.github.magalz.borealis.designsystem.theme.borealisColors
+import io.github.magalz.borealis.host.launch.LaunchProgressText
+import io.github.magalz.borealis.nativecore.LaunchCategory
+import io.github.magalz.borealis.stream.LaunchRetry
+import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.testing.aSession
 import org.junit.Rule
 import org.junit.Test
@@ -28,17 +33,17 @@ import org.junit.runner.RunWith
 class StreamChromeHostLookTest {
     @get:Rule val composeRule = createAndroidComposeRule<ComponentActivity>()
 
-    /** The Starting screen of the session [aSession] makes, in a host built with [look]. */
-    private fun showChrome(look: BorealisLook?) {
+    /** The Starting screen of [session], in a host built with [look]. */
+    private fun showChrome(look: BorealisLook?, session: StreamSession = aSession()) {
         composeRule.runOnUiThread {
             val activity = composeRule.activity
             val stream = View(activity)
             activity.addContentView(stream, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
             val host =
                 if (look == null) {
-                    StreamChromeHost(activity, aSession(), stream, {}, {})
+                    StreamChromeHost(activity, session, stream, {}, {})
                 } else {
-                    StreamChromeHost(activity, aSession(), stream, {}, {}, look)
+                    StreamChromeHost(activity, session, stream, {}, {}, look)
                 }
             activity.addContentView(host, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         }
@@ -68,6 +73,27 @@ class StreamChromeHostLookTest {
         showChrome(BorealisLook(textSize = TextSize.Larger))
 
         assertThat(fontScale()).isWithin(EPSILON).of(TextSize.Larger.scale)
+    }
+
+    @Test
+    fun `the screens of the chrome have the status colours of the palette that the host was built with`() {
+        val retry =
+            LaunchRetry(LaunchCategory.PENDING, attempt = 1, maxAttempts = 3, delayMs = 2000)
+        val chosen = BorealisLook(colourVision = ColourVision.RedGreen)
+
+        showChrome(chosen, aSession().also { it.onLaunchRetry(retry) })
+
+        // The note of a host that asks for a retry is drawn in the ink of the warning status.
+        val note =
+            LaunchProgressText.format(
+                composeRule.activity,
+                retry.category?.ordinal ?: -1,
+                retry.attempt,
+                retry.maxAttempts,
+                retry.delayMs,
+            )
+        assertThat(composeRule.textColor(note)).isEqualTo(borealisColors(chosen).warningInk)
+        assertThat(composeRule.textColor(note)).isNotEqualTo(BorealisColors().warningInk)
     }
 
     @Test

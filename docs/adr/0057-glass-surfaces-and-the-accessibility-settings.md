@@ -98,9 +98,9 @@ Decision details:
    * Phones are unchanged, and a clip plays at its own rate.
 
    The rule is `glassFrameRate` in `GlassRules.kt`.
-10. **The stream** has no glass, because the video is behind the chrome. Sprint 11 adds the
+10. **The stream** has no glass, because the video is behind the chrome. Sprint 15 adds the
     background and a glass panel to the Starting screen. The glass on the Quitting screen, and
-    any glass in the stream (the in-game menu), are decided in Sprint 11, because they change
+    any glass in the stream (the in-game menu), are decided in Sprint 15, because they change
     this rule (see More Information).
 11. **The Accessibility group** holds these settings:
     * **Reduce motion:** Follow system, On or Off. Follow system tracks the animation scale of the
@@ -309,7 +309,7 @@ page is private, so it is not linked here.
   * the decisions that were pending the owner's verdict are now decided, the filled Add
     host field among them;
   * the glass in the stream and the glass on the Starting and Quitting screens are decided
-    in Sprint 11, because they change decision 10: the stream has no glass today. The
+    in Sprint 15, because they change decision 10: the stream has no glass today. The
     in-game menu takes the Library's glass style only after a spike, which compares a
     blurred `PixelCopy` snapshot of the video with tint only.
 * Related: [0053](0053-material-3-with-borealis-focus-on-tv.md) (the focus indication on TV),

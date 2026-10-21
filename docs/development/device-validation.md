@@ -100,7 +100,7 @@ capture that is committed.
    version `7.1.431.-1`, not `26.09.1`. On 26.10.0-beta.1 the HTTPS
    `/serverinfo` carries `LuminalShineVersion` (#199; reported in its release
    notes, not yet verified in the source). The client does not show it yet
-   (Sprint 13), so Host details still shows `7.1.431.-1` there too, and must
+   (Sprint 17), so Host details still shows `7.1.431.-1` there too, and must
    show no error because of the new field. The Sprint 10 checks (section 3.23)
    run against 26.10.0-beta.1, which has no fixtures folder yet.
 3. Open `https://<host>:47990` (the Web UI) in a browser on the PC and check
@@ -2714,8 +2714,8 @@ Findings:
    URL in a dialog. This goes to Sprint 11.
 2. **The Hosts list after Forget.** After Forget, the Hosts list does not update
    until the app is restarted. The owner wants a refresh button on Hosts, and a
-   look at why the list does not update by itself. Schedule: after Sprint 12
-   (SecOps), or post-MVP. See the [roadmap backlog](../roadmap.md#backlog-not-scheduled).
+   look at why the list does not update by itself. Schedule: after SecOps
+   (Sprint 16), or post-MVP. See the [roadmap backlog](../roadmap.md#backlog-not-scheduled).
 3. **A wrong PIN locks pairing for 5 minutes on LuminalShine 26.10.0-beta.1.**
    Seen live on the S22. It was checked in the host source at `e2662a44`, the
    commit of the beta tag. `src/nvhttp.cpp` there is the same as upstream `main`
@@ -2735,8 +2735,8 @@ Findings:
    - **What Borealis shows:** "the host holds another session (it expires after
      5 minutes)", with no restart.
    - **Decision:** the owner chose to leave Borealis as it is, and to fix the host
-     in Sprint 12 (proposed), as a contribution to LuminalShine. Fix A and Fix C
-     are in the [roadmap](../roadmap.md#sprint-12-secops). An independent review
+     in Sprint 16 (proposed), as a contribution to LuminalShine. Fix A and Fix C
+     are in the [roadmap](../roadmap.md#sprint-16-secops). An independent review
      recommended against a `/unpair` cancel route. Option D, sending phase 4 with
      an invalid secret after a wrong PIN, is not chosen.
    - **Not filed upstream yet.** The host-side table of the roadmap has the row.

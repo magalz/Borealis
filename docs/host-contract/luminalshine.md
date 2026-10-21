@@ -30,7 +30,7 @@ runtime behaviour that the source alone cannot establish are marked
   **Changed in 26.10.0-beta.1** (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source): the HTTPS `/serverinfo`
   appends `LuminalShineVersion` (#199), and keeps `appversion` (`7.1.431.-1`) and
   `GfeVersion`; the HTTP response is unchanged. The Borealis client does not read
-  the field yet (Sprint 13), so Host details still shows `7.1.431.-1`.
+  the field yet (Sprint 17), so Host details still shows `7.1.431.-1`.
 - `/serverinfo` reports `state` as `SUNSHINE_SERVER_BUSY` while an app is
   running and `SUNSHINE_SERVER_FREE` otherwise, and `currentgame` as the running
   app id (`src/nvhttp.cpp:2578-2581`). Moonlight therefore classifies the host
@@ -242,7 +242,7 @@ dialog instead of a raw error.
   "No restart" (the table above). The user waits up to 5 minutes, or restarts
   LuminalShine, before pairing again.
 
-The decision on this finding is in the roadmap, under Sprint 12.
+The decision on this finding is in the roadmap, under Sprint 16 (SecOps).
 
 ## 5. Client identity and per-client host settings
 

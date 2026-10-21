@@ -158,24 +158,21 @@ class SettingsTvTest : SettingsScreenTestBase() {
     fun `the groups are on the left, Privacy and diagnostics and About among them`() {
         show(keyboard = true)
 
-        // At rest, with no scroll: the first ten groups are not too tall for the window, and About,
-        // the eleventh, shows too: the list scrolls a few dp to bring all of it in (see below).
-        GROUP_TITLES.forEach { group(it).assertIsDisplayed() }
-        GROUP_TITLES.dropLast(1).forEach { assertWholeInWindow(group(it)) }
+        // At rest, with no scroll: the eleven groups are not too tall for the window.
+        GROUP_TITLES.forEach {
+            group(it).assertIsDisplayed()
+            assertWholeInWindow(group(it))
+        }
     }
 
     @Test
-    fun `Down from Stream to About focuses each group in turn, and the list scrolls only for the last ones`() {
+    fun `Down from Stream to About focuses each group in turn, and the list never scrolls`() {
         show(keyboard = true)
         val top = group("Stream").getUnclippedBoundsInRoot().top
 
         walkDownTheGroups()
 
-        // Eleven groups are a little taller than the 540dp window leaves for them, so the list
-        // scrolls to keep the focused group whole: by less than one group, and only for the last.
-        val stream = group("Stream").getUnclippedBoundsInRoot()
-        assertThat((top - stream.top).value).isGreaterThan(0f)
-        assertThat((top - stream.top).value).isLessThan((stream.bottom - stream.top).value)
+        assertThat(group("Stream").getUnclippedBoundsInRoot().top).isEqualTo(top)
     }
 
     @Test

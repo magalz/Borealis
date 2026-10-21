@@ -95,9 +95,9 @@ fun CoverTile(
 }
 
 /**
- * The stand-in for a cover until the host serves covers (Phase 3): the app initials on a raised
- * surface with the cover radius. [interaction] comes after the clip, so a ripple keeps the radius;
- * [content] draws over the cover (a badge).
+ * The stand-in for a cover until the host serves covers (Phase 3): the app initials on a glass
+ * surface with the cover radius (the raised surface colour where the glass is solid). [interaction]
+ * comes after the clip, so a ripple keeps the radius; [content] draws over the cover (a badge).
  */
 @Composable
 internal fun CoverPlaceholder(
@@ -113,7 +113,7 @@ internal fun CoverPlaceholder(
     val initialsStyle = remember(style) { style.copy(fontFamily = BorealisFonts.Mono) }
     Box(
         modifier
-            .background(colors.surfaceRaised, shape)
+            .glassOrSolid(shape, colors.surfaceRaised)
             .border(1.dp, colors.line, shape)
             .clip(shape)
             .then(interaction)

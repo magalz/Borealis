@@ -34,10 +34,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
+import io.github.magalz.borealis.designsystem.components.NoPlatformDim
+import io.github.magalz.borealis.designsystem.components.OverlayTextColors
+import io.github.magalz.borealis.designsystem.components.overlayPanel
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.ignoreKeysHeldOnOpen
 import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.glass.OverlayOpen
+import io.github.magalz.borealis.designsystem.glass.rememberOverlayGlass
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
@@ -52,12 +57,9 @@ import io.github.magalz.borealis.designsystem.theme.sheetWidth
 class ChoiceOption<out T>(val key: T, val label: String, val summary: String? = null)
 
 private val CONTENT_PADDING = 20.dp
-/** The list sits 8dp from the edge, so the 12dp padding of a row puts its text at 20dp. */
-private val LIST_PADDING = 8.dp
-/** An outline sits 5dp outside its row, so neighbouring rows need 10dp between them. */
-private val OPTION_GAP = 10.dp
 /** The first option's outline reaches 5dp above it: leave room under the title for it. */
 private val LIST_TOP_PADDING = 16.dp
+/** The list sits 8dp from the edge, so the 12dp padding of a row puts its text at 20dp. */
 private val OPTION_PADDING_HORIZONTAL = 12.dp
 private val OPTION_PADDING_VERTICAL = 10.dp
 private val MARK_GAP = 12.dp
@@ -68,7 +70,8 @@ private val MARK_GAP = 12.dp
  * option when none is selected). On a phone it is a bottom sheet; on a TV or handheld a centred
  * dialog, 420dp wide on a TV and a fraction of the window on a handheld (see
  * [BorealisDimens.sheetWidth]). The list scrolls and the title stays when the window is too short
- * for all of it.
+ * for all of it. Over a glass host that blurs its window the sheet draws no scrim, its surface is
+ * the tint of the glass over the blurred window, and its text has the glass colours.
  *
  * A tap or OK on an option calls [onSelect] with its key and then [onDismiss]: the screen takes the
  * choice and closes the sheet. Back, or a tap outside the sheet, calls [onDismiss] alone, so
@@ -87,32 +90,36 @@ fun <T> ChoiceSheet(
         onSelect(it.key)
         onDismiss()
     }
+    val glass = rememberOverlayGlass()
+    OverlayOpen()
     if (LocalFormFactor.current == FormFactor.Phone) {
         val colors = LocalBorealisColors.current
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             shape = LocalBorealisShapes.current.sheet,
-            containerColor = colors.surface,
+            containerColor = colors.surface.copy(alpha = glass?.tint ?: 1f),
             contentColor = colors.ink,
-            scrimColor = colors.scrim,
+            scrimColor = if (glass == null) colors.scrim else Color.Transparent,
         ) {
-            OptionList(title, options, selected, choose)
+            OverlayTextColors(glass) { OptionList(title, options, selected, choose) }
         }
     } else {
         Dialog(
             onDismissRequest = onDismiss,
             properties = DialogProperties(usePlatformDefaultWidth = false),
         ) {
+            // Over a blurred window there is no dim: the glass is the dimmer.
+            if (glass != null) NoPlatformDim()
             val colors = LocalBorealisColors.current
             val shape = MaterialTheme.shapes.extraLarge
             Column(
                 Modifier.width(sheetWidth())
-                    .background(colors.surface, shape)
+                    .overlayPanel(shape, glass)
                     .border(1.dp, colors.line, shape)
                     .clip(shape)
             ) {
-                OptionList(title, options, selected, choose)
+                OverlayTextColors(glass) { OptionList(title, options, selected, choose) }
             }
         }
     }
@@ -146,12 +153,12 @@ private fun <T> OptionList(
                 .verticalScroll(rememberScrollState())
                 .selectableGroup()
                 .padding(
-                    start = LIST_PADDING,
+                    start = BorealisDimens.listPadding,
                     top = LIST_TOP_PADDING,
-                    end = LIST_PADDING,
+                    end = BorealisDimens.listPadding,
                     bottom = CONTENT_PADDING,
                 ),
-            verticalArrangement = Arrangement.spacedBy(OPTION_GAP),
+            verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
         ) {
             options.forEachIndexed { index, option ->
                 OptionRow(

@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
+import io.github.magalz.borealis.designsystem.glass.glassSurface
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 
@@ -28,7 +29,7 @@ private val CONTENT_GAP = 14.dp
  * The session to continue (decision D2): the app, a [detail] line that says where it runs and since
  * when, and a resume affordance. The whole card is the target: [onClick] resumes, and every way of
  * asking for options runs [onOptions]. The resume button only looks like one, so the card is a
- * single focus stop.
+ * single focus stop. The card is a glass surface with the accent tint over it.
  */
 @Composable
 fun ContinueCard(
@@ -45,7 +46,7 @@ fun ContinueCard(
     Row(
         modifier
             .borealisFocusIndication(shape)
-            .background(colors.surface, shape)
+            .glassSurface(shape)
             .background(colors.accentTint, shape)
             .border(1.dp, colors.accentLine, shape)
             .clip(shape)

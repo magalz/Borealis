@@ -27,7 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
@@ -51,6 +50,8 @@ import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
+import io.github.magalz.borealis.designsystem.glass.GlassTextColors
+import io.github.magalz.borealis.designsystem.glass.glassSurface
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
@@ -60,17 +61,18 @@ import kotlinx.coroutines.flow.collectLatest
 class SettingsGroup<out K>(val key: K, val title: String)
 
 private val PANE_GAP = 12.dp
-/** An outline sits 5dp outside its item, so neighbours need 10dp between them. */
-internal val ITEM_GAP = 10.dp
-internal val AREA_PADDING = 8.dp
 private val GROUP_PADDING_HORIZONTAL = 12.dp
-/** Small enough that the ten groups of Settings, [ITEM_GAP] apart, fit a 540dp TV unscrolled. */
-private val GROUP_PADDING_VERTICAL = 5.dp
+/**
+ * Small enough that the eleven groups of Settings, [BorealisDimens.listGap] apart, fit a 540dp TV
+ * unscrolled.
+ */
+private val GROUP_PADDING_VERTICAL = 4.dp
 
 /**
  * The settings of a TV or handheld in two panes: the [groups] by title in a list on the left, and
- * on the right whatever [content] shows for the group whose key is [selected]. The pane scrolls and
- * spaces its rows 10dp apart; [content] puts the rows of the group in it, with 8dp of padding
+ * on the right whatever [content] shows for the group whose key is [selected]. The list is a glass
+ * panel and the stack of panes another, and [content] has the glass text colours. The pane scrolls
+ * and spaces its rows 10dp apart; [content] puts the rows of the group in it, with 8dp of padding
  * around them already given. A group for which [selfScrolling] is true brings its own scroll and
  * padding: its [content] fills the pane, which does not wrap it in a scroll that would give it an
  * unbounded height.
@@ -127,22 +129,25 @@ fun <K> SettingsTwoPane(
     }
     val navigation = rememberGroupNavigation(current, onSelect, pane, selectedGroup)
     val composed = rememberComposedGroups(groups, current, selfScrolling)
-    Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(PANE_GAP)) {
-        GroupList(groups, current, navigation, selectedGroup, focusOnOpen)
-        GroupPanes(
-            groups,
-            composed,
-            current,
-            selfScrolling,
-            pane,
-            Modifier.weight(1f).fillMaxHeight().onKeyEvent { event ->
-                // No row used Left: go back to the selected group.
-                val left = event.key == Key.DirectionLeft
-                if (left && event.type == KeyEventType.KeyDown) selectedGroup.requestFocus()
-                left
-            },
-            content,
-        )
+    val shape = MaterialTheme.shapes.large
+    GlassTextColors {
+        Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(PANE_GAP)) {
+            GroupList(groups, current, navigation, selectedGroup, focusOnOpen)
+            GroupPanes(
+                groups,
+                composed,
+                current,
+                selfScrolling,
+                pane,
+                Modifier.weight(1f).fillMaxHeight().glassSurface(shape).onKeyEvent { event ->
+                    // No row used Left: go back to the selected group.
+                    val left = event.key == Key.DirectionLeft
+                    if (left && event.type == KeyEventType.KeyDown) selectedGroup.requestFocus()
+                    left
+                },
+                content,
+            )
+        }
     }
 }
 
@@ -228,7 +233,6 @@ private fun <K> rememberGroupNavigation(
  * The groups by title, the one that is [selected] marked. [navigation] hears of focus, of the keys
  * and of a tap. [selectedGroup] is where an entry of the list by the D-pad lands.
  */
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun <K> GroupList(
     groups: List<SettingsGroup<K>>,
@@ -244,8 +248,9 @@ private fun <K> GroupList(
     Column(
         Modifier.width(BorealisDimens.navWidth(LocalFormFactor.current))
             .fillMaxHeight()
+            .glassSurface(MaterialTheme.shapes.large)
             .verticalScroll(rememberScrollState())
-            .padding(AREA_PADDING)
+            .padding(BorealisDimens.listPadding)
             .selectableGroup()
             .onKeyEvent { event ->
                 val right = event.key == Key.DirectionRight
@@ -257,12 +262,13 @@ private fun <K> GroupList(
             // Entering the list by the D-pad lands on the selected group, not the nearest. A
             // request for one group (a tap, an initial focus) is not an entry and stays on it.
             .focusProperties {
-                enter = { direction ->
-                    if (direction != FocusDirection.Enter) selectedGroup else FocusRequester.Default
+                onEnter = {
+                    if (requestedFocusDirection != FocusDirection.Enter)
+                        selectedGroup.requestFocus()
                 }
             }
             .focusGroup(),
-        verticalArrangement = Arrangement.spacedBy(ITEM_GAP),
+        verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
     ) {
         for (group in groups) {
             GroupEntry(

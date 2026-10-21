@@ -2,7 +2,6 @@ package io.github.magalz.borealis.settings.audit
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -50,6 +49,8 @@ import io.github.magalz.borealis.designsystem.components.EmptyState
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
+import io.github.magalz.borealis.designsystem.glass.GlassTextColors
+import io.github.magalz.borealis.designsystem.glass.glassSurface
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -61,9 +62,6 @@ import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.settings.R
 import io.github.magalz.borealis.settings.ui.dpadScroll
 
-/** An outline sits 5dp outside a row, so the list keeps 8dp around it and 10dp between rows. */
-private val LIST_PADDING = 8.dp
-private val ROW_GAP = 10.dp
 private val ROW_PADDING_HORIZONTAL = 12.dp
 private val ROW_PADDING_VERTICAL = 10.dp
 private val COLUMN_GAP = 12.dp
@@ -76,11 +74,11 @@ private val SUMMARY_GAP = 2.dp
 private const val SUMMARY_MAX_LINES = 3
 
 /**
- * The audit trail (UC-007): [AuditUiState.entries] as a list, newest first, and in its place the
- * [AuditUiState.detail] of the entry that the user opened. A tap or OK on an entry runs
- * [onEntrySelected] with its [AuditRow.key]. Back, and the arrow of the phone bar, run
- * [onDetailDismissed] while an entry is open and [onBack] otherwise; a TV or handheld has no arrow.
- * Provides its own theme for [formFactor].
+ * The audit trail (UC-007): [AuditUiState.entries] as a list on a glass panel, newest first, and in
+ * its place the [AuditUiState.detail] of the entry that the user opened, on a glass card. A tap or
+ * OK on an entry runs [onEntrySelected] with its [AuditRow.key]. Back, and the arrow of the phone
+ * bar, run [onDetailDismissed] while an entry is open and [onBack] otherwise; a TV or handheld has
+ * no arrow. Provides its own theme for [formFactor].
  */
 @Composable
 fun AuditScreen(
@@ -175,20 +173,33 @@ private fun Entries(
             listState.scrollToItem(index)
         }
     }
-    LazyColumn(
-        modifier = Modifier.widthIn(max = BorealisDimens.contentMaxWidth).fillMaxSize(),
-        state = listState,
-        contentPadding = PaddingValues(horizontal = gutter, vertical = LIST_PADDING),
-        verticalArrangement = Arrangement.spacedBy(ROW_GAP),
-    ) {
-        itemsIndexed(entries, key = { _, row -> row.key }) { index, row ->
-            val tag = Modifier.testTag("audit:entry:$index")
-            val starts = if (focusKey == null) index == 0 else row.key == focusKey
-            EntryRow(
-                row,
-                onClick = { onSelected(row.key) },
-                modifier = if (starts) tag.initialFocus(focusRequester, focusState) else tag,
-            )
+    // The panel is the room of the list, 8dp wider than its rows on each side, so the rows are at
+    // the gutter and the panel holds their outlines.
+    val outside = gutter - BorealisDimens.listPadding
+    GlassTextColors {
+        Box(
+            Modifier.widthIn(max = BorealisDimens.contentMaxWidth)
+                .fillMaxSize()
+                .padding(start = outside, end = outside, bottom = outside)
+                .glassSurface(MaterialTheme.shapes.large)
+        ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = listState,
+                contentPadding = PaddingValues(BorealisDimens.listPadding),
+                verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
+            ) {
+                itemsIndexed(entries, key = { _, row -> row.key }) { index, row ->
+                    val tag = Modifier.testTag("audit:entry:$index")
+                    val starts = if (focusKey == null) index == 0 else row.key == focusKey
+                    EntryRow(
+                        row,
+                        onClick = { onSelected(row.key) },
+                        modifier =
+                            if (starts) tag.initialFocus(focusRequester, focusState) else tag,
+                    )
+                }
+            }
         }
     }
 }
@@ -262,12 +273,12 @@ private fun Detail(detail: AuditDetail) {
     Column(
         Modifier.widthIn(max = BorealisDimens.contentMaxWidth)
             .fillMaxWidth()
-            .padding(horizontal = spacing.gutter, vertical = LIST_PADDING)
+            .padding(horizontal = spacing.gutter, vertical = BorealisDimens.listPadding)
             .initialFocus(focusRequester)
             .dpadScroll(scroll)
             .borealisFocusIndication(shape)
             .clip(shape)
-            .background(LocalBorealisColors.current.surface, shape)
+            .glassSurface(shape)
             // Before verticalScroll: a focusable after it takes the size of the whole entry, not
             // of the viewport, and the focus search does not find it where it is shown.
             .focusable()
@@ -275,16 +286,20 @@ private fun Detail(detail: AuditDetail) {
             .padding(spacing.cardPadding),
         verticalArrangement = Arrangement.spacedBy(FIELD_GAP),
     ) {
-        Text(
-            stringResource(detail.type.titleRes()),
-            color = titleColor(detail.type),
-            style = MaterialTheme.typography.titleLarge,
-        )
-        Field(R.string.audit_ui_label_event, detail.type.name, mono = true)
-        Field(R.string.audit_ui_label_time, detail.time)
-        Field(R.string.audit_ui_label_result, stringResource(detail.outcome.labelRes()))
-        if (!detail.host.isNullOrBlank()) Field(R.string.audit_ui_label_host, detail.host)
-        if (!detail.detail.isNullOrBlank()) Field(R.string.audit_ui_label_detail, detail.detail)
+        GlassTextColors {
+            Text(
+                stringResource(detail.type.titleRes()),
+                color = titleColor(detail.type),
+                style = MaterialTheme.typography.titleLarge,
+            )
+            Field(R.string.audit_ui_label_event, detail.type.name, mono = true)
+            Field(R.string.audit_ui_label_time, detail.time)
+            Field(R.string.audit_ui_label_result, stringResource(detail.outcome.labelRes()))
+            if (!detail.host.isNullOrBlank()) Field(R.string.audit_ui_label_host, detail.host)
+            if (!detail.detail.isNullOrBlank()) {
+                Field(R.string.audit_ui_label_detail, detail.detail)
+            }
+        }
     }
 }
 

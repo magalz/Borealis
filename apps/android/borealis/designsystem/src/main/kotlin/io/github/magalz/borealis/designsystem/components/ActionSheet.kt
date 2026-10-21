@@ -1,6 +1,5 @@
 package io.github.magalz.borealis.designsystem.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -28,6 +28,8 @@ import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.ignoreKeysHeldOnOpen
 import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.glass.OverlayOpen
+import io.github.magalz.borealis.designsystem.glass.rememberOverlayGlass
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
@@ -54,9 +56,6 @@ class ActionSheetAction<out T>(
 
 private val CONTENT_PADDING = 20.dp
 /** The list sits 8dp from the edge, so the 12dp padding of a row puts its text at 20dp. */
-private val LIST_PADDING = 8.dp
-/** An outline sits 5dp outside its row, so neighbouring rows need 10dp between them. */
-private val ACTION_GAP = 10.dp
 private val ACTION_PADDING_HORIZONTAL = 12.dp
 private val ACTION_PADDING_VERTICAL = 10.dp
 
@@ -66,6 +65,9 @@ private val ACTION_PADDING_VERTICAL = 10.dp
  * handheld a fraction of the window (see [BorealisDimens.sheetWidth]). Back dismisses either.
  * Choosing an action calls [onAction] and leaves the sheet open: the screen closes it. The title
  * stays and the actions scroll when the window is too short for all of them.
+ *
+ * Over a glass host that blurs its window the sheet draws no scrim, its surface is the tint of the
+ * glass over the blurred window, and its text has the glass colours.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,32 +77,36 @@ fun <T> ActionSheet(
     onAction: (ActionSheetAction<T>) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val glass = rememberOverlayGlass()
+    OverlayOpen()
     if (LocalFormFactor.current == FormFactor.Phone) {
         val colors = LocalBorealisColors.current
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             shape = LocalBorealisShapes.current.sheet,
-            containerColor = colors.surface,
+            containerColor = colors.surface.copy(alpha = glass?.tint ?: 1f),
             contentColor = colors.ink,
-            scrimColor = colors.scrim,
+            scrimColor = if (glass == null) colors.scrim else Color.Transparent,
         ) {
-            ActionList(title, actions, onAction, focusFirst = false)
+            OverlayTextColors(glass) { ActionList(title, actions, onAction, focusFirst = false) }
         }
     } else {
         Dialog(
             onDismissRequest = onDismiss,
             properties = DialogProperties(usePlatformDefaultWidth = false),
         ) {
+            // Over a blurred window there is no dim: the glass is the dimmer.
+            if (glass != null) NoPlatformDim()
             val colors = LocalBorealisColors.current
             val shape = MaterialTheme.shapes.extraLarge
             Column(
                 Modifier.width(sheetWidth())
-                    .background(colors.surface, shape)
+                    .overlayPanel(shape, glass)
                     .border(1.dp, colors.line, shape)
                     .clip(shape)
             ) {
-                ActionList(title, actions, onAction, focusFirst = true)
+                OverlayTextColors(glass) { ActionList(title, actions, onAction, focusFirst = true) }
             }
         }
     }
@@ -132,12 +138,12 @@ private fun <T> ActionList(
             Modifier.weight(1f, fill = false)
                 .verticalScroll(rememberScrollState())
                 .padding(
-                    start = LIST_PADDING,
-                    top = ACTION_GAP,
-                    end = LIST_PADDING,
+                    start = BorealisDimens.listPadding,
+                    top = BorealisDimens.listGap,
+                    end = BorealisDimens.listPadding,
                     bottom = CONTENT_PADDING,
                 ),
-            verticalArrangement = Arrangement.spacedBy(ACTION_GAP),
+            verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
         ) {
             actions.forEachIndexed { index, action ->
                 ActionRow(

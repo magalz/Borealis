@@ -39,6 +39,8 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import io.github.magalz.borealis.designsystem.focus.ignoreKeysHeldOnOpen
 import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.glass.OverlayOpen
+import io.github.magalz.borealis.designsystem.glass.rememberOverlayGlass
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
@@ -68,6 +70,9 @@ private val BUTTON_GAP = 12.dp
  * row. Padding is 24dp all round. The content scrolls and the title and actions stay in view when
  * the window is too short.
  *
+ * Over a glass host that blurs its window the dialog draws no scrim, its surface is the tint of the
+ * glass over the blurred window, and its text has the glass colours.
+ *
  * The confirm action has focus when the dialog opens, so a D-pad or a gamepad works at once. Set
  * [focusDismiss] when the safe choice is the dismiss action (Cancel on an erase) and it has focus
  * instead; without a dismiss action the confirm action keeps it. An action calls its callback and
@@ -90,6 +95,8 @@ fun BorealisDialog(
     val shape = MaterialTheme.shapes.extraLarge
     val windowWidth = windowWidth()
     val margin = BorealisTokens.Space.DialogMargin
+    val glass = rememberOverlayGlass()
+    OverlayOpen()
     Dialog(
         onDismissRequest = onDismissRequest,
         // The window draws under the system bars, so the scrim covers the whole screen; the
@@ -101,7 +108,8 @@ fun BorealisDialog(
         Box(
             Modifier.fillMaxSize()
                 .ignoreKeysHeldOnOpen()
-                .background(colors.scrim)
+                // Over a blurred window there is no scrim: the glass is the dimmer.
+                .then(if (glass == null) Modifier.background(colors.scrim) else Modifier)
                 // A tap on the scrim dismisses. It is not a clickable: that would be a focus stop.
                 .pointerInput(onDismissRequest) { detectTapGestures { onDismissRequest() } }
                 .windowInsetsPadding(WindowInsets.safeDrawing)
@@ -111,7 +119,7 @@ fun BorealisDialog(
             Column(
                 modifier
                     .width(BorealisDimens.dialogWidth(width, windowWidth))
-                    .background(colors.surface, shape)
+                    .overlayPanel(shape, glass)
                     .border(1.dp, colors.line, shape)
                     .clip(shape)
                     // A tap on the dialog is not a tap on the scrim.
@@ -119,8 +127,10 @@ fun BorealisDialog(
                     .padding(BorealisTokens.Space.DialogPadding)
                     .semantics { paneTitle = title }
             ) {
-                DialogBody(title, content)
-                DialogFooter(confirm, dismiss, extraActions, focusDismiss)
+                OverlayTextColors(glass) {
+                    DialogBody(title, content)
+                    DialogFooter(confirm, dismiss, extraActions, focusDismiss)
+                }
             }
         }
     }
@@ -128,7 +138,7 @@ fun BorealisDialog(
 
 /** The scrim is the theme's, so the platform's dim of the dialog window goes. */
 @Composable
-private fun NoPlatformDim() {
+internal fun NoPlatformDim() {
     val view = LocalView.current
     SideEffect {
         (view as? DialogWindowProvider ?: view.parent as? DialogWindowProvider)

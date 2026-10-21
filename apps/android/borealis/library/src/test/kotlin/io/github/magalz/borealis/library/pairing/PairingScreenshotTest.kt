@@ -5,6 +5,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.shell.LibraryScaffold
 import io.github.magalz.borealis.library.shell.RailActions
@@ -87,6 +88,7 @@ class PairingScreenshotTest {
                 formFactor,
                 selected = RailSelection.Hosts,
                 actions = RailActions({}, {}, {}),
+                backgroundStyle = BackgroundStyle.Off,
             ) {
                 PairingScreen(
                     state = state,

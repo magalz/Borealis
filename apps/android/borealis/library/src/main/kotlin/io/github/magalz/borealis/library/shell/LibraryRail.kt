@@ -48,9 +48,10 @@ internal enum class RailSelection {
  * on every screen, with [selected] marked. A phone has no rail.
  *
  * The frame is a [GlassHost]: it draws the [backgroundStyle] once, behind the rail and the screen,
- * and the glass surfaces on the screens show it blurred. The screens have no page of their own, so
- * it shows through them, and the rail keeps its own colour. [BackgroundStyle.Off] is the plain
- * page. It gives the screens the [look] that the viewer chose, and the host reads it too: the
+ * and the glass surfaces on the screens and the rail show it blurred. The screens have no page of
+ * their own, so it shows through them. [BackgroundStyle.Off] is the plain page, and the surfaces
+ * are solid over it. Where none is given the style is [BackgroundStyle.Default], the one that
+ * ships. It gives the screens the [look] that the viewer chose, and the host reads it too: the
  * Transparency, the tint, the blur and High contrast make its glass; the theme that each screen
  * wears inside it keeps that look.
  *
@@ -64,7 +65,7 @@ internal fun LibraryScaffold(
     selected: RailSelection,
     actions: RailActions,
     modifier: Modifier = Modifier,
-    backgroundStyle: BackgroundStyle = BackgroundStyle.Off,
+    backgroundStyle: BackgroundStyle = BackgroundStyle.Default,
     look: BorealisLook = BorealisLook(),
     content: @Composable () -> Unit,
 ) {

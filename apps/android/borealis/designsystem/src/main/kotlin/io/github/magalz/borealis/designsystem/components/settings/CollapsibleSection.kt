@@ -31,11 +31,10 @@ import io.github.magalz.borealis.designsystem.R
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.Kicker
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.rememberAnimationsRemoved
 
-/** An outline sits 5dp outside its row, so neighbouring rows need 10dp between them. */
-private val ROW_GAP = 10.dp
 private const val ANIMATION_MILLIS = 250
 private const val OPEN_DEGREES = 180f
 
@@ -48,10 +47,11 @@ internal object CollapsibleSectionTags {
 }
 
 /**
- * A section of the phone list of settings that opens and closes: a header with the [title] and a
- * chevron, and under it the rows of [content], shown while [expanded]. The component is stateless:
- * a tap or OK on the header calls [onExpandedChange] with the opposite state, and the caller keeps
- * what is open, so it can survive a recreation or a trip to another screen.
+ * A section of the phone list of settings that opens and closes: a [SettingsCard] with a header
+ * with the [title] and a chevron, and under it the rows of [content], shown while [expanded]. The
+ * header and the open rows are one glass card. The component is stateless: a tap or OK on the
+ * header calls [onExpandedChange] with the opposite state, and the caller keeps what is open, so it
+ * can survive a recreation or a trip to another screen.
  *
  * The header is a full-width button of at least 48dp on a phone, announced as a heading with its
  * state, Expanded or Collapsed; the chevron beside the title is only drawn. A collapsed section
@@ -60,8 +60,9 @@ internal object CollapsibleSectionTags {
  * when the system removes animations they snap. A long title wraps beside the chevron, which keeps
  * its size.
  *
- * The outline of a focused header reaches 5dp outside it, so a list of sections needs 8dp of
- * padding around it and 10dp between sections. The rows are spaced by 10dp, as a list of rows is.
+ * The outline of a focused header or row reaches 5dp outside it, and the card clips it, so the card
+ * has 8dp of padding inside. A list of sections is spaced by [BorealisDimens.listGap], and so are
+ * the rows of one.
  */
 @Composable
 fun CollapsibleSection(
@@ -72,7 +73,7 @@ fun CollapsibleSection(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val removed = rememberAnimationsRemoved()
-    Column(modifier) {
+    SettingsCard(modifier) {
         SectionHeader(title, expanded, removed) { onExpandedChange(!expanded) }
         AnimatedVisibility(
             visible = expanded,
@@ -80,8 +81,8 @@ fun CollapsibleSection(
             exit = shrinkVertically(motion(removed), shrinkTowards = Alignment.Top),
         ) {
             Column(
-                Modifier.padding(top = ROW_GAP),
-                verticalArrangement = Arrangement.spacedBy(ROW_GAP),
+                Modifier.padding(top = BorealisDimens.listGap),
+                verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
                 content = content,
             )
         }

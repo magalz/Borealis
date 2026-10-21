@@ -26,27 +26,24 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.BorealisPhoneBar
 import io.github.magalz.borealis.designsystem.components.settings.CollapsibleSection
+import io.github.magalz.borealis.designsystem.components.settings.SettingsCard
 import io.github.magalz.borealis.designsystem.components.settings.SettingsGroup
 import io.github.magalz.borealis.designsystem.components.settings.SettingsTwoPane
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.settings.R
 
-/** An outline sits 5dp outside its row, so a list of rows needs 8dp around it. */
-private val LIST_PADDING = 8.dp
-
-/** An outline sits 5dp outside its row, so neighbouring rows need 10dp between them. */
-private val LIST_GAP = 10.dp
 private val TITLE_GAP = 12.dp
 
 /**
- * The settings screen (UC-009), stateless. A phone shows one list: each group is a section that
- * opens and closes its rows, all collapsed at first, then a Privacy and diagnostics link row and
- * About as a last section. A TV or a handheld shows two panes: the groups on the left, Privacy and
- * diagnostics and About among them, and the rows of the selected group on the right. Back calls
- * [onBack].
+ * The settings screen (UC-009), stateless. A phone shows one list: each group is a glass card that
+ * opens and closes its rows, all collapsed at first, then a Privacy and diagnostics link row, in a
+ * glass card too, and About as a last section. A TV or a handheld shows two glass panels: the
+ * groups on the left, Privacy and diagnostics and About among them, and the rows of the selected
+ * group on the right. Back calls [onBack].
  *
  * A change is reported through [actions] and stored at once, so there is no Save. Lists open a
  * choice sheet; Reset layout and a native resolution or frame rate ask or warn first.
@@ -115,8 +112,11 @@ private fun PhoneSettings(
         Column(
             Modifier.weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = gutter - LIST_PADDING, vertical = LIST_PADDING),
-            verticalArrangement = Arrangement.spacedBy(LIST_GAP),
+                .padding(
+                    horizontal = gutter - BorealisDimens.listPadding,
+                    vertical = BorealisDimens.listPadding,
+                ),
+            verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
         ) {
             for (group in state.groups) {
                 CollapsibleSection(
@@ -129,12 +129,14 @@ private fun PhoneSettings(
                     }
                 }
             }
-            SettingsValueRow(
-                title = stringResource(R.string.settings_group_privacy),
-                value = null,
-                summary = stringResource(R.string.settings_privacy_link_summary),
-                onClick = onOpenPrivacy,
-            )
+            SettingsCard {
+                SettingsValueRow(
+                    title = stringResource(R.string.settings_group_privacy),
+                    value = null,
+                    summary = stringResource(R.string.settings_privacy_link_summary),
+                    onClick = onOpenPrivacy,
+                )
+            }
             CollapsibleSection(
                 title = stringResource(R.string.settings_group_about),
                 expanded = SettingsGroupId.ABOUT in open,

@@ -48,6 +48,21 @@ object BorealisDimens {
      */
     val stackedTextGap: Dp = 4.dp
 
+    /** How far the focus outline reaches outside its element: its offset and its stroke, 5dp. */
+    val outlineReach: Dp = BorealisTokens.Focus.Offset + BorealisTokens.Focus.Outline
+
+    /**
+     * The padding around a list of focusable rows, 8dp: a scroll area or a panel clips what is
+     * outside it, and the outline of the first and the last row reaches [outlineReach] beyond them.
+     */
+    val listPadding: Dp = 8.dp
+
+    /**
+     * The gap between two focusable rows, 10dp: the outlines of neighbours, each [outlineReach]
+     * wide, would overlap in a smaller one.
+     */
+    val listGap: Dp = outlineReach * 2
+
     /**
      * The width of the navigation rail and of the settings group list: 220dp on a TV, 200dp on a
      * handheld. A phone has no rail; it gets the handheld value, for a layout that borrows it.

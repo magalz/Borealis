@@ -18,16 +18,26 @@ import kotlin.math.floor
  * number of pixels so the code stays sharp, centred in the [side] by [side] square. A screen reader
  * says [description] for it. The screen shows the text that the code holds, so the description says
  * what the image is and does not repeat that text.
+ *
+ * [extraQuietModules] is white that the box adds to each side beyond the margin of [qr], in whole
+ * modules, for a code that is read from afar over a dark surface; with 0 the code fills the box.
  */
 @Composable
-internal fun QrCode(qr: QrMatrix, side: Dp, description: String, modifier: Modifier = Modifier) {
+internal fun QrCode(
+    qr: QrMatrix,
+    side: Dp,
+    description: String,
+    modifier: Modifier = Modifier,
+    extraQuietModules: Int = 0,
+) {
     Canvas(modifier.size(side).semantics { contentDescription = description }) {
         drawRect(Color.White)
         // The shorter side, so the code stays square and centred if the box is ever narrower.
         val extent = minOf(size.width, size.height)
-        val module = floor(extent / qr.size)
-        val originX = floor((size.width - module * qr.size) / 2)
-        val originY = floor((size.height - module * qr.size) / 2)
+        val modulesAcross = qr.size + 2 * extraQuietModules
+        val module = floor(extent / modulesAcross)
+        val originX = floor((size.width - module * modulesAcross) / 2) + extraQuietModules * module
+        val originY = floor((size.height - module * modulesAcross) / 2) + extraQuietModules * module
         for (y in 0 until qr.size) {
             for (x in 0 until qr.size) {
                 if (qr[x, y]) {

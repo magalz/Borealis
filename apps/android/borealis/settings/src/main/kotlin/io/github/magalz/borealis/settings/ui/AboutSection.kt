@@ -45,6 +45,11 @@ private val LICENSE_TEXT_PADDING = 12.dp
 
 /** The side of the QR code of a link: a TV is read across a room, so the code is large. */
 private val LINK_QR_SIDE = 240.dp
+
+/**
+ * The matrix has a margin of 2 modules; with these the quiet zone is the 4 of the QR specification.
+ */
+private const val LINK_QR_EXTRA_QUIET_MODULES = 2
 private val LINK_COLUMN_GAP = 24.dp
 private val LINK_TEXT_GAP = 12.dp
 
@@ -133,6 +138,7 @@ private fun LinkQrDialog(link: AboutLink, onDismiss: () -> Unit) {
                 qr,
                 LINK_QR_SIDE,
                 stringResource(R.string.settings_about_link_qr_description, link.title),
+                extraQuietModules = LINK_QR_EXTRA_QUIET_MODULES,
             )
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LINK_TEXT_GAP)) {
                 Text(

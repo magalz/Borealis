@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import java.io.File
 import java.security.MessageDigest
+import java.util.HexFormat
 import org.junit.Test
 
 /**
@@ -18,9 +19,7 @@ class GlassContrastTableClipsTest {
     private val clips = File("src/main/res/raw")
 
     private fun sha256(file: File): String =
-        MessageDigest.getInstance("SHA-256").digest(file.readBytes()).joinToString("") {
-            "%02x".format(it)
-        }
+        HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(file.readBytes()))
 
     @Test
     fun `the table holds the hash of every clip of the app`() {

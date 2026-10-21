@@ -35,11 +35,54 @@ private val ACCESSIBILITY_ROWS =
         "Transparency",
         "Thicker focus outline",
         "Text size",
+        "Text spacing",
         "High contrast",
         "Colour-blind palette",
     )
 
-private val APPEARANCE_ROWS = listOf("Background", "Glass tint", "Glass blur")
+private val APPEARANCE_ROWS =
+    listOf(
+        "Font",
+        "Accent colour",
+        "Background",
+        "Background intensity",
+        "Card density",
+        "Glass tint",
+        "Glass blur",
+    )
+
+/** The fonts of the Font row, each with the purpose line that is its summary. */
+private val FONTS =
+    listOf(
+        "IBM Plex Sans" to "Default. Clear at small sizes, covers many languages.",
+        "Atkinson Hyperlegible Next" to
+            "Made for low vision: letters that look alike are drawn to differ.",
+        "Luciole" to "Made with readers with low vision and tested in a published study.",
+        "Lexend" to "Wider spacing built into the letters, for text that feels crowded.",
+        "Andika" to "Made for new readers: mirror letters such as b and d look different.",
+        "B612" to "Made for cockpit screens: quick to read at a glance and from a distance.",
+        "System font" to "Uses your device's font.",
+    )
+
+private val CARD_DENSITIES =
+    listOf(
+        "Comfortable" to null,
+        "Compact" to "More cards in each row.",
+        "Dense" to "More cards in each row, with less padding.",
+    )
+
+private val TEXT_SPACINGS =
+    listOf(
+        "Normal" to null,
+        "Wide" to "More space between letters, words and lines.",
+        "Wider" to "Even more space, for text that feels crowded.",
+    )
+
+/** The texts that a screen reader reads for the node: its [labels] and no other. */
+private fun hasTexts(vararg labels: String) =
+    SemanticsMatcher("has the texts ${labels.toList()}") { node ->
+        node.config.getOrNull(SemanticsProperties.Text)?.map { it.text } == labels.toList()
+    }
 
 private val ACCESSIBILITY_SUMMARIES =
     listOf(
@@ -96,7 +139,8 @@ abstract class SettingsLookTestBase : SettingsScreenTestBase() {
     private fun choose(title: String, label: String) {
         row(title).performClick()
         composeRule.waitForIdle()
-        sheetOption(label).performClick()
+        // A long list, such as the fonts with their lines, scrolls in the window of a TV.
+        sheetOption(label).performScrollTo().performClick()
         composeRule.waitForIdle()
     }
 
@@ -131,17 +175,22 @@ abstract class SettingsLookTestBase : SettingsScreenTestBase() {
     }
 
     @Test
-    fun `Appearance has the Background row, then the glass tint and the glass blur`() {
+    fun `Appearance has the Font and Accent colour rows first, the glass rows last`() {
         show(keyboard = keyboard)
         open("Appearance")
 
         assertInOrder(APPEARANCE_ROWS)
+        row("IBM Plex Sans").assertExists()
+        row("Violet").assertExists()
+        row("Aurora curtains").assertExists()
+        row("100 %").assertExists()
+        row("Comfortable").assertExists()
         row("40 %").assertExists()
         row("8 dp").assertExists()
     }
 
     @Test
-    fun `the Accessibility group has its six rows`() {
+    fun `the Accessibility group has its seven rows`() {
         show(keyboard = keyboard)
         open("Accessibility")
 
@@ -158,6 +207,7 @@ abstract class SettingsLookTestBase : SettingsScreenTestBase() {
         row("Follow system").assertExists()
         row("Standard").assertExists()
         row("100 %").assertExists()
+        row("Normal").assertExists()
         row("Thicker focus outline").assertIsOff()
         row("High contrast").assertIsOff()
         row("Off").assertExists()
@@ -177,6 +227,143 @@ abstract class SettingsLookTestBase : SettingsScreenTestBase() {
         open("Appearance")
 
         APPEARANCE_SUMMARIES.forEach { row(it).assertExists() }
+    }
+
+    @Test
+    fun `Font offers the seven fonts, each with its purpose line as the summary`() {
+        show(keyboard = keyboard)
+        open("Appearance")
+
+        row("Font").performClick()
+        composeRule.waitForIdle()
+
+        FONTS.forEach { (name, line) -> sheetOption(name).assert(hasTexts(name, line)) }
+        composeRule
+            .onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
+            .assertCountEquals(FONTS.size)
+        sheetOption("IBM Plex Sans")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Selected, true))
+    }
+
+    @Test
+    fun `Font stores the stable id of the font that is chosen`() {
+        show(keyboard = keyboard)
+        open("Appearance")
+
+        choose("Font", "Lexend")
+        assertThat(snapshot[Settings.FONT]).isEqualTo("lexend")
+        row("Lexend").assertExists()
+        choose("Font", "Atkinson Hyperlegible Next")
+        assertThat(snapshot[Settings.FONT]).isEqualTo("atkinson_next")
+        choose("Font", "System font")
+        assertThat(snapshot[Settings.FONT]).isEqualTo("system")
+        choose("Font", "IBM Plex Sans")
+        assertThat(snapshot[Settings.FONT]).isEqualTo("plex")
+    }
+
+    @Test
+    fun `Accent colour offers Violet, Teal and White, and stores the id`() {
+        show(keyboard = keyboard)
+        open("Appearance")
+        assertOffers("Accent colour", listOf("Violet", "Teal", "White"))
+
+        choose("Accent colour", "Teal")
+        assertThat(snapshot[Settings.ACCENT]).isEqualTo("teal")
+        row("Teal").assertExists()
+        choose("Accent colour", "White")
+        assertThat(snapshot[Settings.ACCENT]).isEqualTo("white")
+    }
+
+    @Test
+    fun `Background intensity offers 100, 75, 50 and 25 percent, and stores the id`() {
+        show(keyboard = keyboard)
+        open("Appearance")
+        assertOffers("Background intensity", listOf("100 %", "75 %", "50 %", "25 %"))
+
+        choose("Background intensity", "50 %")
+
+        assertThat(snapshot[Settings.BACKGROUND_INTENSITY]).isEqualTo("50")
+        row("50 %").assertExists()
+    }
+
+    @Test
+    fun `Card density offers Comfortable, Compact and Dense, with a line under the last two`() {
+        show(keyboard = keyboard)
+        open("Appearance")
+        assertOffers("Card density", CARD_DENSITIES.map { it.first })
+
+        row("Card density").performClick()
+        composeRule.waitForIdle()
+        CARD_DENSITIES.forEach { (name, line) ->
+            sheetOption(name).assert(hasTexts(*listOfNotNull(name, line).toTypedArray()))
+        }
+        sheetOption("Comfortable").performClick()
+        composeRule.waitForIdle()
+        choose("Card density", "Dense")
+        assertThat(snapshot[Settings.CARD_DENSITY]).isEqualTo("dense")
+        choose("Card density", "Compact")
+        assertThat(snapshot[Settings.CARD_DENSITY]).isEqualTo("compact")
+    }
+
+    @Test
+    fun `Text spacing offers Normal, Wide and Wider, with a line under the last two`() {
+        show(keyboard = keyboard)
+        open("Accessibility")
+        assertOffers("Text spacing", TEXT_SPACINGS.map { it.first })
+
+        row("Text spacing").performClick()
+        composeRule.waitForIdle()
+        TEXT_SPACINGS.forEach { (name, line) ->
+            sheetOption(name).assert(hasTexts(*listOfNotNull(name, line).toTypedArray()))
+        }
+        sheetOption("Normal").performClick()
+        composeRule.waitForIdle()
+        choose("Text spacing", "Wide")
+        assertThat(snapshot[Settings.TEXT_SPACING]).isEqualTo("wide")
+        row("Wide").assertExists()
+        choose("Text spacing", "Wider")
+        assertThat(snapshot[Settings.TEXT_SPACING]).isEqualTo("wider")
+    }
+
+    @Test
+    fun `a stored id that nothing has shows the default of Sprint 11 as the chosen one`() {
+        stored(
+            Settings.FONT to "bogus",
+            Settings.ACCENT to "bogus",
+            Settings.BACKGROUND_INTENSITY to "60",
+            Settings.CARD_DENSITY to "bogus",
+            Settings.TEXT_SPACING to "bogus",
+        )
+        show(keyboard = keyboard)
+        open("Appearance")
+
+        row("IBM Plex Sans").assertExists()
+        row("Violet").assertExists()
+        row("100 %").assertExists()
+        row("Comfortable").assertExists()
+        listOf("bogus", "60 %").forEach { composeRule.onNodeWithText(it).assertDoesNotExist() }
+        row("Font").performClick()
+        composeRule.waitForIdle()
+        sheetOption("IBM Plex Sans")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Selected, true))
+        sheetOption("IBM Plex Sans").performClick()
+        composeRule.waitForIdle()
+
+        open("Accessibility")
+        row("Normal").assertExists()
+        composeRule.onNodeWithText("bogus").assertDoesNotExist()
+    }
+
+    @Test
+    fun `High contrast and Transparency Off leave the new Appearance rows to change`() {
+        stored(Settings.HIGH_CONTRAST to true, Settings.TRANSPARENCY to "off")
+        show(keyboard = keyboard)
+        open("Appearance")
+
+        listOf("Font", "Accent colour", "Background intensity", "Card density").forEach {
+            row(it).assertIsEnabled()
+        }
+        composeRule.onAllNodesWithText(NOTE_CONTRAST).assertCountEquals(2)
     }
 
     @Test
@@ -408,9 +595,14 @@ abstract class SettingsLookTestBase : SettingsScreenTestBase() {
         show(keyboard = keyboard)
         open("Accessibility")
 
-        listOf("Reduce motion", "Text size", "High contrast", "Colour-blind palette").forEach {
-            row(it).assertIsEnabled()
-        }
+        listOf(
+                "Reduce motion",
+                "Text size",
+                "Text spacing",
+                "High contrast",
+                "Colour-blind palette",
+            )
+            .forEach { row(it).assertIsEnabled() }
     }
 
     @Test

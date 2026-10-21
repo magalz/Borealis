@@ -133,6 +133,95 @@ object FixedChoices {
             ),
         )
 
+    /** Font: the name of each font, with its purpose as the summary. */
+    val FONT =
+        listOf(
+            FixedChoice(
+                Settings.FONT_PLEX,
+                R.string.settings_choice_font_plex,
+                R.string.settings_choice_font_plex_summary,
+            ),
+            FixedChoice(
+                Settings.FONT_ATKINSON_NEXT,
+                R.string.settings_choice_font_atkinson_next,
+                R.string.settings_choice_font_atkinson_next_summary,
+            ),
+            FixedChoice(
+                Settings.FONT_LUCIOLE,
+                R.string.settings_choice_font_luciole,
+                R.string.settings_choice_font_luciole_summary,
+            ),
+            FixedChoice(
+                Settings.FONT_LEXEND,
+                R.string.settings_choice_font_lexend,
+                R.string.settings_choice_font_lexend_summary,
+            ),
+            FixedChoice(
+                Settings.FONT_ANDIKA,
+                R.string.settings_choice_font_andika,
+                R.string.settings_choice_font_andika_summary,
+            ),
+            FixedChoice(
+                Settings.FONT_B612,
+                R.string.settings_choice_font_b612,
+                R.string.settings_choice_font_b612_summary,
+            ),
+            FixedChoice(
+                Settings.FONT_SYSTEM,
+                R.string.settings_choice_font_system,
+                R.string.settings_choice_font_system_summary,
+            ),
+        )
+
+    /** Accent colour. */
+    val ACCENT =
+        listOf(
+            FixedChoice(Settings.ACCENT_VIOLET, R.string.settings_choice_accent_violet),
+            FixedChoice(Settings.ACCENT_TEAL, R.string.settings_choice_accent_teal),
+            FixedChoice(Settings.ACCENT_WHITE, R.string.settings_choice_accent_white),
+        )
+
+    /** Background intensity: 100 to 25 percent, with the percent as the stored id. */
+    val BACKGROUND_INTENSITY =
+        LookLists.BACKGROUND_INTENSITY.choices.map {
+            FixedChoice(it.id, R.string.settings_value_percent, labelArg = it.id.toInt())
+        }
+
+    /** Card density. */
+    val CARD_DENSITY =
+        listOf(
+            FixedChoice(
+                Settings.CARD_DENSITY_COMFORTABLE,
+                R.string.settings_choice_density_comfortable,
+            ),
+            FixedChoice(
+                Settings.CARD_DENSITY_COMPACT,
+                R.string.settings_choice_density_compact,
+                R.string.settings_choice_density_compact_summary,
+            ),
+            FixedChoice(
+                Settings.CARD_DENSITY_DENSE,
+                R.string.settings_choice_density_dense,
+                R.string.settings_choice_density_dense_summary,
+            ),
+        )
+
+    /** Text spacing. */
+    val TEXT_SPACING =
+        listOf(
+            FixedChoice(Settings.TEXT_SPACING_NORMAL, R.string.settings_choice_spacing_normal),
+            FixedChoice(
+                Settings.TEXT_SPACING_WIDE,
+                R.string.settings_choice_spacing_wide,
+                R.string.settings_choice_spacing_wide_summary,
+            ),
+            FixedChoice(
+                Settings.TEXT_SPACING_WIDER,
+                R.string.settings_choice_spacing_wider,
+                R.string.settings_choice_spacing_wider_summary,
+            ),
+        )
+
     /** Touch. */
     val TOUCH =
         listOf(

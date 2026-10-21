@@ -98,7 +98,7 @@ class SettingsScreenshotTest : SettingsScreenTestBase() {
     fun phoneAppearance() {
         show()
         openSection("APPEARANCE")
-        composeRule.onNodeWithText("Background").performScrollTo()
+        composeRule.onNodeWithText("Glass blur").performScrollTo()
 
         shoot("settingsscreen_phone_appearance")
     }

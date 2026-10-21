@@ -26,7 +26,9 @@ enum class SettingsGroupId(@StringRes val titleRes: Int) {
     /** The visual options of the app. It follows the stream groups and precedes the app groups. */
     APPEARANCE(R.string.settings_group_appearance),
 
-    /** Reduce motion, transparency, focus, text size, contrast and palette (ADR 0057). */
+    /**
+     * Reduce motion, transparency, focus, text size and spacing, contrast and palette (ADR 0057).
+     */
     ACCESSIBILITY(R.string.settings_group_accessibility),
 
     /** Has no rows here: the Privacy and diagnostics screen provides its content. */
@@ -382,12 +384,40 @@ enum class SettingsItem(
         R.string.settings_pip_title,
         R.string.settings_pip_summary,
     ),
+    FONT(
+        SettingsGroupId.APPEARANCE,
+        SettingsItemKind.CHOICE,
+        Settings.FONT,
+        R.string.settings_font_title,
+        input = ItemInput(fixedChoices = FixedChoices.FONT),
+    ),
+    ACCENT(
+        SettingsGroupId.APPEARANCE,
+        SettingsItemKind.CHOICE,
+        Settings.ACCENT,
+        R.string.settings_accent_title,
+        input = ItemInput(fixedChoices = FixedChoices.ACCENT),
+    ),
     BACKGROUND(
         SettingsGroupId.APPEARANCE,
         SettingsItemKind.CHOICE,
         Settings.BACKGROUND,
         R.string.settings_background_title,
         input = ItemInput(fixedChoices = FixedChoices.BACKGROUND),
+    ),
+    BACKGROUND_INTENSITY(
+        SettingsGroupId.APPEARANCE,
+        SettingsItemKind.CHOICE,
+        Settings.BACKGROUND_INTENSITY,
+        R.string.settings_background_intensity_title,
+        input = ItemInput(fixedChoices = FixedChoices.BACKGROUND_INTENSITY),
+    ),
+    CARD_DENSITY(
+        SettingsGroupId.APPEARANCE,
+        SettingsItemKind.CHOICE,
+        Settings.CARD_DENSITY,
+        R.string.settings_card_density_title,
+        input = ItemInput(fixedChoices = FixedChoices.CARD_DENSITY),
     ),
     GLASS_TINT(
         SettingsGroupId.APPEARANCE,
@@ -435,6 +465,13 @@ enum class SettingsItem(
         R.string.settings_text_size_title,
         R.string.settings_text_size_summary,
         input = ItemInput(fixedChoices = FixedChoices.TEXT_SIZE),
+    ),
+    TEXT_SPACING(
+        SettingsGroupId.ACCESSIBILITY,
+        SettingsItemKind.CHOICE,
+        Settings.TEXT_SPACING,
+        R.string.settings_text_spacing_title,
+        input = ItemInput(fixedChoices = FixedChoices.TEXT_SPACING),
     ),
     HIGH_CONTRAST(
         SettingsGroupId.ACCESSIBILITY,

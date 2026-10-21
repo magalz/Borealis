@@ -98,7 +98,11 @@
     <string name="settings_pip_summary">Watch the stream, without controlling it, while you use other apps.</string>
 
     <!-- Rows: Appearance -->
+    <string name="settings_font_title">Font</string>
+    <string name="settings_accent_title">Accent colour</string>
     <string name="settings_background_title">Background</string>
+    <string name="settings_background_intensity_title">Background intensity</string>
+    <string name="settings_card_density_title">Card density</string>
     <string name="settings_glass_tint_title">Glass tint</string>
     <string name="settings_glass_tint_summary">How much the panels tint the background. Higher is more opaque.</string>
     <string name="settings_glass_blur_title">Glass blur</string>
@@ -113,6 +117,7 @@
     <string name="settings_thick_focus_summary">Draws a thicker, lighter outline around the focused item.</string>
     <string name="settings_text_size_title">Text size</string>
     <string name="settings_text_size_summary">Scales the text of Borealis on top of the system font size.</string>
+    <string name="settings_text_spacing_title">Text spacing</string>
     <string name="settings_high_contrast_title">High contrast</string>
     <string name="settings_high_contrast_summary">Uses solid panels, brighter text, a dimmed background and the thicker outline.</string>
     <string name="settings_colour_vision_title">Colour-blind palette</string>
@@ -174,6 +179,33 @@
     <string name="settings_choice_palette_off">Off</string>
     <string name="settings_choice_palette_red_green">Red-green</string>
     <string name="settings_choice_palette_blue_yellow">Blue-yellow</string>
+    <string name="settings_choice_font_plex">IBM Plex Sans</string>
+    <string name="settings_choice_font_plex_summary">Default. Clear at small sizes, covers many languages.</string>
+    <string name="settings_choice_font_atkinson_next">Atkinson Hyperlegible Next</string>
+    <string name="settings_choice_font_atkinson_next_summary">Made for low vision: letters that look alike are drawn to differ.</string>
+    <string name="settings_choice_font_luciole" tools:ignore="Typos">Luciole</string>
+    <string name="settings_choice_font_luciole_summary">Made with readers with low vision and tested in a published study.</string>
+    <string name="settings_choice_font_lexend" tools:ignore="Typos">Lexend</string>
+    <string name="settings_choice_font_lexend_summary">Wider spacing built into the letters, for text that feels crowded.</string>
+    <string name="settings_choice_font_andika" tools:ignore="Typos">Andika</string>
+    <string name="settings_choice_font_andika_summary">Made for new readers: mirror letters such as b and d look different.</string>
+    <string name="settings_choice_font_b612" tools:ignore="Typos">B612</string>
+    <string name="settings_choice_font_b612_summary">Made for cockpit screens: quick to read at a glance and from a distance.</string>
+    <string name="settings_choice_font_system">System font</string>
+    <string name="settings_choice_font_system_summary">Uses your device\'s font.</string>
+    <string name="settings_choice_accent_violet">Violet</string>
+    <string name="settings_choice_accent_teal">Teal</string>
+    <string name="settings_choice_accent_white">White</string>
+    <string name="settings_choice_density_comfortable">Comfortable</string>
+    <string name="settings_choice_density_compact">Compact</string>
+    <string name="settings_choice_density_compact_summary">More cards in each row.</string>
+    <string name="settings_choice_density_dense">Dense</string>
+    <string name="settings_choice_density_dense_summary">More cards in each row, with less padding.</string>
+    <string name="settings_choice_spacing_normal">Normal</string>
+    <string name="settings_choice_spacing_wide">Wide</string>
+    <string name="settings_choice_spacing_wide_summary">More space between letters, words and lines.</string>
+    <string name="settings_choice_spacing_wider">Wider</string>
+    <string name="settings_choice_spacing_wider_summary">Even more space, for text that feels crowded.</string>
 
     <!-- Native warnings -->
     <string name="settings_native_resolution_title">Native resolution</string>

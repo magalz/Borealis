@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.testing.OnPage
+import io.github.magalz.borealis.designsystem.testing.headings
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -24,6 +25,30 @@ import org.robolectric.annotation.Config
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = PHONE)
 class SettingsPhoneSectionsTest : PhoneSettingsTestBase() {
+    @Test
+    fun `the phone list has exactly these sections, in this order`() {
+        show()
+
+        val sections =
+            listOf(
+                "STREAM",
+                "VIDEO",
+                "INPUT",
+                "GAMEPAD",
+                "ON-SCREEN CONTROLS",
+                "AUDIO",
+                "ADVANCED",
+                "APPEARANCE",
+                "ACCESSIBILITY",
+                "ABOUT",
+            )
+        // PHONE_SECTIONS is derived from the groups, so this is what pins the list itself.
+        assertThat(PHONE_SECTIONS).containsExactlyElementsIn(sections).inOrder()
+        assertThat(composeRule.headings())
+            .containsExactly("Settings", *sections.toTypedArray())
+            .inOrder()
+    }
+
     @Test
     fun `every section starts collapsed`() {
         show()

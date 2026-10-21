@@ -9,11 +9,14 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.sp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.Panel
+import io.github.magalz.borealis.stream.testing.HANDHELD
 import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.TV
@@ -159,6 +162,33 @@ class PerfOverlayTest {
 
         assertThat(overlayBounds().right).isAtMost(half - minGap)
     }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the overlay is 13 sp on a TV`() {
+        layer(FormFactor.Tv, OverlayMode.COMPACT)
+
+        assertThat(textSize(compact)).isEqualTo(13.sp)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the overlay stays 11 sp on a phone`() {
+        layer(FormFactor.Phone, OverlayMode.COMPACT)
+
+        assertThat(textSize(compact)).isEqualTo(11.sp)
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun `the overlay stays 12 sp on a handheld`() {
+        layer(FormFactor.Handheld, OverlayMode.COMPACT)
+
+        assertThat(textSize(compact)).isEqualTo(12.sp)
+    }
+
+    private fun textSize(text: String) =
+        composeRule.onNodeWithText(text).textLayout().layoutInput.style.fontSize
 
     private fun overlayBounds() =
         composeRule.onNodeWithTag(PERF_OVERLAY_TAG).fetchSemanticsNode().boundsInRoot

@@ -33,6 +33,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.assertPixel
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -159,6 +160,55 @@ class ChipTest {
         assertThat(chip.height - plain.height).isEqualTo(8.dp)
     }
 
+    @Test
+    @Config(qualifiers = TV)
+    fun `a chip is 13 sp on a TV`() {
+        composeRule.setContent { Specimen(FormFactor.Tv) { Chip("Win+D") } }
+
+        assertThat(textSize("Win+D")).isEqualTo(13.sp)
+    }
+
+    @Test
+    fun `a chip stays 12 sp on a phone`() {
+        composeRule.setContent { Specimen(FormFactor.Phone) { Chip("Win+D") } }
+
+        assertThat(textSize("Win+D")).isEqualTo(12.sp)
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun `a chip stays 12 sp on a handheld`() {
+        composeRule.setContent { Specimen(FormFactor.Handheld) { Chip("Win+D") } }
+
+        assertThat(textSize("Win+D")).isEqualTo(12.sp)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `a tag is 13 sp on a TV`() {
+        composeRule.setContent { Specimen(FormFactor.Tv) { Tag("HDR") } }
+
+        assertThat(textSize("HDR")).isEqualTo(13.sp)
+    }
+
+    @Test
+    fun `a tag stays 11 sp on a phone`() {
+        composeRule.setContent { Specimen(FormFactor.Phone) { Tag("HDR") } }
+
+        assertThat(textSize("HDR")).isEqualTo(11.sp)
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun `a tag stays 12 sp on a handheld`() {
+        composeRule.setContent { Specimen(FormFactor.Handheld) { Tag("HDR") } }
+
+        assertThat(textSize("HDR")).isEqualTo(12.sp)
+    }
+
+    private fun textSize(text: String) =
+        composeRule.onNodeWithText(text).textLayout().layoutInput.style.fontSize
+
     private fun tintOverPage() =
         BorealisTokens.Color.AccentTint.compositeOver(BorealisTokens.Color.Page)
 
@@ -176,5 +226,7 @@ class ChipTest {
 
     private companion object {
         const val FRAME = "frame"
+        const val TV = "w960dp-h540dp-land-television-xhdpi"
+        const val HANDHELD = "w800dp-h360dp-land-xhdpi"
     }
 }

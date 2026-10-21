@@ -99,7 +99,9 @@ Decision details:
 
    The rule is `glassFrameRate` in `GlassRules.kt`.
 10. **The stream** has no glass, because the video is behind the chrome. Sprint 11 adds the
-    background and a glass panel to the Starting screen.
+    background and a glass panel to the Starting screen. The glass on the Quitting screen, and
+    any glass in the stream (the in-game menu), are decided in Sprint 11, because they change
+    this rule (see More Information).
 11. **The Accessibility group** holds these settings:
     * **Reduce motion:** Follow system, On or Off. Follow system tracks the animation scale of the
       system while the app runs.
@@ -146,8 +148,8 @@ Decision details:
     TV, Northern lights), and 14.79:1 or more under High contrast. The Address field of Add host is
     a filled glass field with its own outline, so its label never stands on the raw background. Its
     lowest ratios over every background are 4.60:1 for the label, 3.88:1 for the focused outline
-    and 4.62:1 for the error text. **The owner has not yet given a verdict on the switch from an
-    outlined field to a filled one.** An outlined field cuts its outline behind the floating label,
+    and 4.62:1 for the error text. **The owner accepted the switch from an outlined field to a
+    filled one on 2026-10-21 (Sprint 10 UAT).** An outlined field cuts its outline behind the floating label,
     so half of the label stood on the background and not on the glass. Tables I to M of the
     accessibility page have the numbers.
 15. **High contrast.** The colours are the `high-contrast` group of `design/tokens.json`.
@@ -296,8 +298,20 @@ page is private, so it is not linked here.
   * decision 11 now says that High contrast overrides four rows and not "the other settings", and
     that the thicker outline is 5 dp in ink;
   * decision 8 records the 24 dp of the window blur;
-  * the switch from an outlined to a filled Add host field (decision 14) waits for the owner's
-    verdict.
+  * the switch from an outlined to a filled Add host field (decision 14) was decided on
+    2026-10-21, see below.
+* Amended on 2026-10-21 (Sprint 10 UAT):
+  * the owner accepted the Sprint 10 trade-offs as they are: the filled Add host field
+    (decision 14); the handheld Settings group list that scrolls, with 6 of the 11 groups
+    at 800 × 480 dp; the docked phone keyboard, 24 dp taller, with its keys under 48 dp;
+    phone buttons at 40 dp and menu rows at 44 dp; and the glass cost of a move between
+    Settings groups on the TV, about 65 ms against 50 to 54 ms with Transparency Off;
+  * the decisions that were pending the owner's verdict are now decided, the filled Add
+    host field among them;
+  * the glass in the stream and the glass on the Starting and Quitting screens are decided
+    in Sprint 11, because they change decision 10: the stream has no glass today. The
+    in-game menu takes the Library's glass style only after a spike, which compares a
+    blurred `PixelCopy` snapshot of the video with tint only.
 * Related: [0053](0053-material-3-with-borealis-focus-on-tv.md) (the focus indication on TV),
   [0044](0044-design-tokens-pipeline.md) (the design tokens that the text colours come from) and
   [0055](0055-settings-storage-and-the-phase-2-settings-screen.md) (the settings storage).

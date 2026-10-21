@@ -44,7 +44,7 @@ Decision details:
    * Step 1: `PreferenceConfiguration.readPreferences` becomes a one-line delegate that builds the same object from the repository's snapshot. The legacy migrations move into the repository.
    * Step 2: after step 1, any key can move to DataStore on its own, with a `SharedPreferencesMigration` for that key and no Java change. `Game.onCreate` keeps reading the snapshot, which is primed at app start and never blocks.
 6. **The settings screen.**
-   * It ports 39 of the 41 upstream settings into the approved groups, plus three extra groups: Gamepad, On-screen controls and Advanced. The groups and rows are listed in [the Phase 2 proposal](../ux/phase-2-proposal.md#settings-groups).
+   * It ports 39 of the 41 upstream settings into the approved groups, plus three extra groups: Gamepad, On-screen controls and Advanced. Appearance ([0056](0056-add-an-animated-background-and-the-appearance-group.md)) and Accessibility ([0057](0057-glass-surfaces-and-the-accessibility-settings.md)) came later. The groups and rows are listed in [the Phase 2 proposal](../ux/phase-2-proposal.md#settings-groups).
    * It drops the language setting and the small icon mode.
    * It deletes `StreamSettings` and the interim screen of [0050](0050-diagnostics-audit-and-interim-settings.md).
    * The performance overlay setting becomes Off, Compact or Detailed, as in the in-game menu. It uses a new key, `borealis_perf_overlay`. The old `true` value becomes Detailed.
@@ -93,3 +93,5 @@ This ADR amends [0050](0050-diagnostics-audit-and-interim-settings.md) section 3
 * Policy: [privacy and logging](../policies/privacy-and-logging.md) (where settings are stored).
 
 Amended by [0056](0056-add-an-animated-background-and-the-appearance-group.md): the DataStore file `borealis_settings` also holds the Appearance setting `borealis_background`, so it no longer holds only the two logging switches. The Settings screen has one more group, Appearance.
+
+Amended by [0057](0057-glass-surfaces-and-the-accessibility-settings.md): eight more settings are in the same DataStore file, `borealis_glass_tint`, `borealis_glass_blur`, `borealis_reduce_motion`, `borealis_transparency`, `borealis_thick_focus`, `borealis_text_size`, `borealis_high_contrast` and `borealis_colour_vision`. The file `borealis_settings` now holds 11 settings: the two logging switches (`borealis_verbose_logging`, `borealis_mask_addresses`), `borealis_background` and these eight. The Settings screen has 11 groups: Stream, Video, Input, Gamepad, On-screen controls, Audio, Advanced, Appearance, Accessibility, Privacy and diagnostics, and About (ten on a device with no touch screen, which has no On-screen controls).

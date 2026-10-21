@@ -34,6 +34,25 @@ once on a TV and a handheld, and it has a new Appearance group. An animated
 background sits behind the Library and Settings screens
 ([ADR 0056](../adr/0056-add-an-animated-background-and-the-appearance-group.md)).
 
+Sprint 10 added glass and the accessibility work
+([ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md)). Cards,
+panels and the rail show the background through a tint and a blur, text that
+stands on the background has a soft halo, and a dialog or a sheet blurs the
+window behind it. Settings has 11 groups: Accessibility is new (Reduce motion,
+Transparency, Thicker focus outline, Text size, High contrast and a Colour-blind
+palette), and Appearance has Glass tint and Glass blur. The stream reads that
+look when it starts. On a phone every Settings group is a collapsible section;
+on a TV and a handheld OK enters the pane of a group. The rail ends in a footer
+with the logo, the name and the version, and Back from Apps returns to the card
+that was opened. Snackbars are as wide as their text, a Quit in the stream
+leaves "App quit." in the Library, and an About link opens in a task of its own.
+The screens work with TalkBack, and touch targets are 48dp on a phone and a
+handheld ([accessibility](accessibility.md)).
+
+The prototype predates the Sprint 10 look: it has no glass, halo, rail footer or
+Accessibility settings. It shows the approved Phase 2 design, not the built
+screens.
+
 The screens below are the approved design; where the built screen differs, the
 section says so. Screenshots use
 Roborazzi ([ADR 0034](../adr/0034-screenshot-testing-with-roborazzi.md)), and
@@ -70,7 +89,9 @@ The same navigation map serves the phone (touch), the TV (D-pad and remote)
 and the handheld (gamepad). The rules are the same in every mode:
 
 - Focus: a 3dp accent-soft outline with a 2dp offset, on TV and gamepad. A
-  focused cover tile scales to 1.04.
+  focused cover tile scales to 1.04, unless Reduce motion removes animations.
+  With Thicker focus outline, and with High contrast, the outline is 5dp and in
+  ink ([ADR 0053](../adr/0053-material-3-with-borealis-focus-on-tv.md)).
 - Back: one step up the [navigation map](#navigation-map). During a stream,
   Back opens the in-game menu instead of leaving the stream.
 - Options (the actions of an item, such as an app or a host):
@@ -158,7 +179,11 @@ States:
 - Touch: a tap on a card runs its action.
 - D-pad (TV): left rail plus a host grid. Focus starts on Continue. OK runs the
   card's action; hold OK, or a long press, opens the host options (details,
-  wake, forget).
+  wake, forget). When Back brings the screen back from Apps, the focus goes to
+  the card that was opened, found by its host (a Continue card too), and to the
+  first card when that host is gone. The rail ends in a footer with the
+  Borealis mark, the name and the version. It takes no focus, it hides when the
+  rail is short, and a screen reader reads it as one sentence.
 - Gamepad: as the TV. A runs the card's action and X shows the options. Menu
   also shows the options. B does nothing at the top level.
 - Card height: on a TV a card is at least 176dp high, so the cards of a grid
@@ -433,15 +458,20 @@ Decisions: none.
 ### Settings
 
 Purpose: global settings in groups (Stream, Video, Input, Gamepad, On-screen
-controls, Audio, Advanced, Appearance and About), plus Privacy and diagnostics,
-which is a link row on a phone and a group on TV and handheld. On a TV and a
-handheld the groups are in this order: Stream, Video, Input, Gamepad, On-screen
-controls, Audio, Advanced, Appearance, Privacy and diagnostics, and About. Each
-row shows its current value. Per-host overrides come later.
+controls, Audio, Advanced, Appearance, Accessibility and About), plus Privacy and
+diagnostics, which is a link row on a phone and a group on TV and handheld. On a
+TV and a handheld the groups are in this order: Stream, Video, Input, Gamepad,
+On-screen controls, Audio, Advanced, Appearance, Accessibility, Privacy and
+diagnostics, and About. That is 11 groups, and 10 on a device with no
+touchscreen, such as the Google TV Streamer, which has no On-screen controls.
+Each row shows its current value. Per-host overrides come later.
 
 States: none.
 
-- Touch: one list.
+- Touch: one list. Every group is a collapsible section. All start collapsed,
+  several can be open, and the open ones survive a rotation and a trip to
+  Privacy and diagnostics. About is a section, and Privacy and diagnostics stays
+  a row that opens its own screen.
 - D-pad (TV): two panes. Categories are on the left and items on the right.
 - Gamepad: as the TV.
 
@@ -459,11 +489,12 @@ The two panes of a TV and a handheld work like stacked tabs:
   nearest first. Privacy and diagnostics is built only while it is selected.
 - A pane that is not shown takes no focus, touch or accessibility. A group opens
   at its top.
-- Opening Settings from the rail puts focus on the selected group. Right enters
-  the rows of the group. Left returns to the group, and from the group to the
-  rail.
-- On a TV the group list fits the window without scrolling. On a handheld it may
-  scroll.
+- Opening Settings from the rail puts focus on the selected group. Right, or OK
+  (Enter, the numpad Enter and gamepad A), enters the rows of the group. A touch
+  tap only selects the group. Left returns to the group, and from the group to
+  the rail.
+- On a TV the 11 groups fit a 540dp window without scrolling (10 on the
+  Streamer). On a handheld the list scrolls, because its entries are 48dp.
 
 The groups and their rows are listed in [Settings groups](#settings-groups).
 
@@ -651,19 +682,30 @@ The prototype's figures are examples. The overlay is off by default
 | | Latency summary after a stream | switch | |
 | | Picture-in-picture | switch | Hidden without picture-in-picture, and on Fire OS. |
 | Appearance | Background | list | Aurora curtains (the default), Soft glow, Northern lights, Light mist, Flowing light, Starfield or Off. Stored as `borealis_background`. The Library follows the choice at once. |
+| | Glass tint | list | 30, 40 (the default), 50, 60, 70 or 85 %. Sets the Standard level of Transparency. Disabled while High contrast is on, and while Transparency is Reduced or Off. |
+| | Glass blur | list | 8 (the default), 16, 24, 32 or 48 dp. Sets the Standard level of Transparency. Disabled like Glass tint. |
+| Accessibility | Reduce motion | list | Follow system (the default), On or Off. Follow system tracks the animation scale of the system while the app runs. |
+| | Transparency | list | Standard (the default), Reduced or Off. Reduced and Off override Glass tint and Glass blur. Disabled while High contrast is on. |
+| | Thicker focus outline | switch | Off by default. A 5dp outline in ink. Disabled while High contrast is on, which draws it. |
+| | Text size | list | 100 % (the default), 115 or 130 %, times the system font scale. |
+| | High contrast | switch | Off by default. Solid panels, text at 7:1 or more, opaque borders, a dimmed background and the thicker outline. |
+| | Colour-blind palette | list | Off (the default), Red-green or Blue-yellow. Changes the status colours. |
 | Privacy and diagnostics | Verbose logging, Mask addresses in logs and diagnostics, Export diagnostic bundle, Audit trail, Erase audit trail | | On a phone it is a link row to its own screen; on TV and handheld it is a group. |
-| About | Borealis version and commit, Source code, Open-source licences, Privacy policy | | A link with no browser shows the address in a dialog. |
+| About | Borealis version and commit, Source code, Open-source licences, Privacy policy | | The Version row has no chevron and opens nothing. A link opens in a task of its own, so Back returns to the app. A link with no browser shows the address in a dialog. |
 
 The extra groups (Gamepad, On-screen controls and Advanced) and the dropped
 settings (Language and Small icon mode) come from
 [ADR 0055](../adr/0055-settings-storage-and-the-phase-2-settings-screen.md). The
-Appearance group comes from [ADR 0056](../adr/0056-add-an-animated-background-and-the-appearance-group.md).
+Appearance group comes from [ADR 0056](../adr/0056-add-an-animated-background-and-the-appearance-group.md),
+and its glass rows and the Accessibility group come from
+[ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md).
 
 The prototype fills the rows with example values, not defaults. Phase 2 keeps
 the current defaults: 1280 x 720, 60 fps, automatic bitrate, lowest-latency
 frame pacing, automatic codec, HDR off, full range off, overlay off,
 trackpad on, stereo audio, audio on the PC off, Verbose logging off, Mask
-addresses in logs and diagnostics off and the background Aurora curtains.
+addresses in logs and diagnostics off, the background Aurora curtains, a glass
+tint of 40 % and a blur of 8dp, and the Accessibility defaults in the table.
 
 ### Audit event names
 
@@ -738,9 +780,20 @@ is the source. The dark palette:
 | success-ink | #7BD389 | Success text |
 | warning-ink | #FFC857 | Warning text |
 | danger-ink | #FF8A80 | Danger text and destructive actions |
+| offline | #686E75 | Status ring of an offline or unknown host |
 
 Status colours (success #4CAF50, warning #FFA726, danger #F44336) are reserved
-for state. They are never decorative.
+for state. They are never decorative. A status is never told by colour alone:
+the dot is a filled circle for online, a filled triangle for attention and a
+hollow ring for offline and unknown.
+
+The file has two more groups of colours. `high-contrast` replaces the text, the
+accent and the border roles while High contrast is on: text at 7:1 or more
+(`ink` #FFFFFF, `ink-2` #E8EAED, `ink-3` #D0D3D7, `ink-4` #BEC1C4, and the
+`accent` #C8B7FC), opaque borders (`line` #80868D, `line-strong` #9CA2A8), and a
+dim of 0.85 over the background. `colour-vision` holds the status colours of the
+Red-green and Blue-yellow palettes. [Accessibility](accessibility.md) lists
+both.
 
 ### Changes from Mission Control
 
@@ -748,6 +801,9 @@ for state. They are never decorative.
   and 3.86:1 on surface (computed), which fails 4.5:1 for hint text. The new
   value gives 4.78:1 on page and 4.51:1 on surface.
 - On `surface-raised`, use `ink-3`, not `ink-4`.
+- The offline colour is #686E75 instead of #4B5158. The old value gave 2.2:1 on
+  surface; the new one gives 3.7:1 on page, 3.5:1 on surface and 3.25:1 on
+  surface-raised, which a non-text indicator needs (WCAG 1.4.11).
 
 ### Contrast
 
@@ -770,7 +826,11 @@ Dark palette, WCAG 2.x, computed:
 | danger-ink on surface | 7.88 | Danger text |
 
 These ratios are for the plain page and the surfaces. Over the animated
-background, see [Background](#background).
+background and the glass panels, the contrast is measured over real frames and
+the numbers are in [accessibility](accessibility.md); the decisions are in
+[ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md). The
+target is WCAG 2.2 AA on every screen, and 7:1 for text with High contrast on.
+See also [Background](#background).
 
 ### Type
 
@@ -803,13 +863,22 @@ screens have no page colour of their own. It is never shown in a stream.
   is the plain page colour. The user chooses in Settings, Appearance, Background.
 - A navigation removes the old screen at once and fades the new one in over
   150ms.
-- Reduced motion (the system setting that removes animations) and the battery
-  saver give one still frame, and no video player is made.
+- Reduce motion (the Accessibility setting, which follows the system setting
+  that removes animations by default) and the battery saver give one still frame,
+  and no video player is made.
 - The Compose styles use the `page`, `accent-strong` and `accent` tokens, and
   one teal that has no token.
-- Over the brightest bands of the aurora, the small ink-3 and ink-4 texts fall to
-  3.0 to 3.7:1. A review of the contrast is on the
-  [roadmap](../roadmap.md#next-ux-and-accessibility).
+- Since Sprint 10 the clips play in a `TextureView`, so the glass can sample
+  them. Cards, panels and the rail are glass: a shared copy of the background,
+  blurred at a quarter of its size, under a tint. A dialog or a sheet blurs the
+  whole window and freezes the background. Transparency (Standard, Reduced or
+  Off) and High contrast change the glass, and the stream has none.
+- Text that stands on the background outside any glass has a soft dark halo, and
+  its secondary text is ink-2.
+- Over the brightest bands of the aurora, the small ink-3 and ink-4 texts fell
+  to 3.0 to 3.7:1. The review of the contrast was done in Sprint 10: see
+  [accessibility](accessibility.md) and
+  [ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md).
 
 ## Phase 3 extension points
 
@@ -846,9 +915,9 @@ items or placeholders. The host endpoints are in
 6. Sprint 9 polished the screens and the handheld, and added the Appearance group
    and the animated background. See the
    [roadmap](../roadmap.md#sprint-9-ux-polish-and-the-handheld).
-7. Next, the UX and accessibility items on the
-   [roadmap](../roadmap.md#next-ux-and-accessibility): a WCAG review and the
-   phone portrait Settings navigation.
+7. Sprint 10 added glass, the Accessibility group, the WCAG 2.2 review, TalkBack
+   support and the phone Settings sections. See the
+   [roadmap](../roadmap.md#sprint-10-ux-and-accessibility).
 
 Each screen comes with the acceptance tests of its use case first
 ([TDD](../development/tdd.md)).

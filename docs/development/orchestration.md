@@ -48,6 +48,14 @@ The impact tools (`get_impact`, `preflight_check`, `detect_changes`) are the mai
 
 Tasks without shared files and with satisfied dependencies run in parallel in one wave. Shared declarations (Gradle settings, version catalog, CI, the wiring in inherited files) have exactly one owner per wave; a task needing such a file it does not own stops and reports. A later wave starts only after its dependencies are merged into the phase branch, or when it depends only on a frozen contract document.
 
+## Lessons from Sprint 10
+
+- **Scratch files.** Each agent works in a scratch folder of its own, named after its task, and never deletes, moves or overwrites anything outside it: not another task's folder, not the briefs or the notes, and nothing at the root of the scratch area. The session scratch area lives under `%TEMP%`, and the owner's monthly cleanup wipes `%TEMP%`; it was also wiped once during a run (2026-10-20), so nothing there is a record. Keep results in the repository or in the report. Never run a recursive delete on a folder that holds links or junctions, or on a path built from a variable that could be empty.
+- **Mutation tests.** To test a mutation of the code, an agent uses `git worktree add --detach` under `D:\Repos\Borealis-worktrees\zz-<name>`, and removes it with `git worktree remove --force`.
+- **Remove merged worktrees promptly.** Each worktree holds a full checkout and its Gradle build output, which is large. After a task is merged, the orchestrator runs `git worktree remove` for it and `git worktree prune` at once, and does not wait for the end of the phase, so the disk does not fill.
+- **Gradle file locks can leave a worktree folder behind.** On Windows a Gradle daemon or an IDE can hold a file open, so `git worktree remove --force` may fail or leave the folder. An agent does not delete such a folder: it reports it, and the orchestrator deletes it once the lock is gone.
+- **Several builds at once.** Tasks build on the same machine in parallel. If a daemon dies for lack of memory, wait and run the command again; never kill processes. On the KSP error "different roots", run the task again with `--rerun`.
+
 ## Reporting to the owner
 
 The orchestrator reports, per phase and honestly: behaviour changed, commits and their test-first order, checks run and the exact revision tested, remaining limitations and open decisions, and any blocked publication. It asks before any push to `main`, any repository setting change and any message to other people.

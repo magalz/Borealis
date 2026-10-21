@@ -130,15 +130,15 @@ widened by a stroke, blurred, and laid in `page` at an opacity, and the ratio of
 is taken at the pixels that are not in a glyph and are within 2 px of one. The grid is a stroke of
 0 to 3 dp, a blur of 2, 4 or 8 dp and an opacity of 60, 80 or 100 %, and no halo.
 
-The worst case is over every place of the sample on the frame, a pixel apart. It is the lowest
-ratio over every colour of the frame with every alpha of the ring, which takes a few seconds for a
-set of frames, and with no halo it is Table A. p1 and p5 are over 6 x 4 places, for information.
-The whole run, 12 sets of 24 frames, takes about two minutes with 8 jobs. The command prints Tables
-D, E and F of `docs/ux/accessibility.md` and the smallest candidate that keeps 4.5:1 (3:1 for the
-title of a TV), with 2% to spare. `--texts body title` measures only some of the styles. The JSON
-has the worst case, p1, p5 and the worst frame of every text style, token and candidate.
-`BackdropHalo` in `:borealis:designsystem` has the choice, and a test keeps it equal to the line
-"The choice: ..." of the notes.
+The worst case is over every place of the sample on the frame, a pixel apart. It is the lowest ratio
+over every colour of the frame with every alpha of the ring, which takes a few seconds for a set of
+frames, and with no halo it is Table A. p1 and p5 are over 6 x 4 places, for information. The whole
+run, 12 sets of 24 frames, takes about two minutes with `--jobs 4`, as in the command above. The
+command prints Tables D, E and F of `docs/ux/accessibility.md` and the smallest candidate that keeps
+4.5:1 (3:1 for the title of a TV), with 2% to spare. `--texts body title` measures only some of the
+styles. The JSON has the worst case, p1, p5 and the worst frame of every text style, token and
+candidate. `BackdropHalo` in `:borealis:designsystem` has the choice, and a test keeps it equal to
+the line "The choice: ..." of the notes.
 
 With `--high-contrast --halo 3 2 80` the frames are put under the veil of high contrast (the `page`
 colour at the dim of the tokens, 0.85) and `ink` and `ink-2` are those of high contrast. It checks

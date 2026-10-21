@@ -48,11 +48,11 @@ import kotlinx.coroutines.launch
  *
  * The outline reaches about 5dp outside the element (2dp offset plus 3dp stroke), 7dp when it is
  * the thicker one, and a scaled tile grows by 2% of its size on each side more. A parent that clips
- * (a lazy grid or list, a scroll area) cuts it unless it has `contentPadding` of at least 10dp
- * (12dp for a scaled tile), and neighbours closer than 10dp have outlines that overlap: use at
- * least 10dp of spacing between focusable items.
+ * (a lazy grid or list, a scroll area) cuts it unless it has `contentPadding` of at least 8dp,
+ * which holds the 7dp of the thicker outline (12dp for a scaled tile), and neighbours closer than
+ * 10dp have outlines that overlap: use at least 10dp of spacing between focusable items.
  * [io.github.magalz.borealis.designsystem.theme.BorealisDimens] has the padding and the gap of a
- * list.
+ * list: `listPadding` is the 8dp.
  *
  * Put this modifier before the one that makes the element focusable (`clickable`, `focusable`): it
  * reads the focus of what follows it.

@@ -179,7 +179,7 @@ class StatusDotTest {
         const val FRAME = "frame"
         const val MARGIN = 8f
         const val DOT = 10f
-        const val COVERED = 0.15f
+        const val COVERED = 0.4f
         const val MIN_DIFFERENCE = 12
         const val SAME_SHAPE = 4
     }

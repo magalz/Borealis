@@ -81,6 +81,9 @@ private const val VIBRATION_KEY_STEP = 10
  * Every row of the settings screen, in the order of UC-009: the group it belongs to, how it is
  * changed and the [setting] that it stores ([SettingsItem.RESET_LAYOUT] stores nothing). The titles
  * and summaries are the wording of UC-009.
+ *
+ * [summaryRes] is the template of the summary: a row reads it through `summaryText()`, never as a
+ * plain string, because the one of [TRANSPARENCY] takes the labels of other rows as arguments.
  */
 enum class SettingsItem(
     val group: SettingsGroupId,

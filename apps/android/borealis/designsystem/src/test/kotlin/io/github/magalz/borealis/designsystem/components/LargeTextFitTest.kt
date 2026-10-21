@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -111,7 +113,12 @@ class LargeTextFitTest {
 
     @Composable
     private fun Cards() {
-        Column(Modifier.width(360.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // The two cards are in a list that scrolls, as they are on Hosts: stacked in a window of
+        // 540dp that does not scroll, a TV at 200 percent runs out of height for the second card.
+        Column(
+            Modifier.width(360.dp).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             HostCard(
                 name = "Living Room PC",
                 status = DotStatus.Online,

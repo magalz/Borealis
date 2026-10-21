@@ -679,9 +679,9 @@ class HaloGridTest(unittest.TestCase):
         sizes = {
             ("title", "tv"): 24 * 2.0,
             ("title", "phone"): 18 * 3.0,
-            ("label", "tv"): 12 * 2.0,
+            ("label", "tv"): 13 * 2.0,
             ("label", "phone"): 11 * 3.0,
-            ("body", "tv"): 15 * 2.0,
+            ("body", "tv"): 16 * 2.0,
             ("body", "phone"): 14 * 3.0,
             ("small", "tv"): 14.5 * 2.0,
             ("small", "phone"): 12.5 * 3.0,
@@ -730,9 +730,9 @@ class HaloModelTest(unittest.TestCase):
 
     def test_a_label_is_set_in_capitals_with_the_spacing_of_the_kicker(self):
         spaced = contrast.glyph_mask("label", "tv")
-        # 12 sp are 24 px on a TV, and capitals are wider than the lower case of the same size.
+        # 13 sp are 26 px on a TV, and capitals are wider than the lower case of the same size.
         self.assertGreater(spaced.shape[1], contrast.glyph_mask("small", "tv").shape[1] * 0.8)
-        self.assertGreater(spaced.shape[1], 24 * 0.55 * len(contrast.HALO_SAMPLE))
+        self.assertGreater(spaced.shape[1], 26 * 0.55 * len(contrast.HALO_SAMPLE))
 
     def test_the_ring_is_the_pixels_within_two_pixels_of_a_glyph_and_not_the_glyph(self):
         mask = np.zeros((9, 9), np.float32)
@@ -1291,7 +1291,7 @@ class HaloTokensTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             written = self.run_command(folder)
         self.assertEqual(written["meta"]["colors"]["ink"], tokens()["ink"])
-        self.assertEqual(written["meta"]["texts"]["body"]["sizes_sp"]["tv"], 15.0)
+        self.assertEqual(written["meta"]["texts"]["body"]["sizes_sp"]["tv"], 16.0)
 
 
 class HaloIconPathTest(unittest.TestCase):
@@ -1864,13 +1864,15 @@ class HaloFontsTest(unittest.TestCase):
 
     def test_the_default_reproduces_the_masks_and_the_rings_of_ibm_plex(self):
         # Characterization: these are the figures that the tool gave before it took a font set, and
-        # `docs/ux/accessibility.md` has the tables that come from them.
+        # `docs/ux/accessibility.md` has the tables that come from them. The label and the body of a
+        # TV are at the sizes of Sprint 11 (13 and 16 sp), which `design/tokens.json` has now; the
+        # tool as it was before the font set gives these figures at those sizes too.
         pinned = {
             ("title", "tv"): ((80, 522), 6130.316, (51, 504), 4409),
             ("title", "phone"): ((87, 586), 7749.765, (56, 567), 5015),
-            ("label", "tv"): ((48, 343), 1914.605, (26, 327), 2395),
+            ("label", "tv"): ((51, 369), 2258.541, (27, 353), 2666),
             ("label", "phone"): ((60, 464), 3622.095, (33, 447), 3399),
-            ("body", "tv"): ((56, 322), 1607.156, (33, 306), 2638),
+            ("body", "tv"): ((58, 343), 1815.597, (35, 326), 2876),
             ("body", "phone"): ((72, 445), 3127.875, (45, 427), 3901),
             ("small", "tv"): ((54, 312), 1494.114, (32, 295), 2542),
             ("small", "phone"): ((66, 399), 2502.756, (41, 381), 3424),

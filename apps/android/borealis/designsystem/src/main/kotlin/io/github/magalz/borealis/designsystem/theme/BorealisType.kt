@@ -21,7 +21,10 @@ private fun text(
     family: FontFamily = BorealisFonts.Sans,
 ) = TextStyle(fontFamily = family, fontSize = size, fontWeight = weight)
 
-/** The Material type scale of a form factor; handheld uses the TV scale. */
+/**
+ * The Material type scale of a form factor. A handheld has the title and the rail of the TV and the
+ * body and the minimum of its own: a TV is read at 3 m, a handheld in the hands.
+ */
 fun borealisTypography(formFactor: FormFactor): Typography {
     val base = Typography()
     val semibold = BorealisTokens.FontWeight.Semibold
@@ -45,16 +48,20 @@ fun borealisTypography(formFactor: FormFactor): Typography {
             FormFactor.Tv,
             FormFactor.Handheld -> {
                 val tv = BorealisTokens.Size.Tv
+                val handheld = BorealisTokens.Size.Handheld
+                val onTv = formFactor == FormFactor.Tv
+                val body = if (onTv) tv.Body else handheld.Body
+                val minimum = if (onTv) tv.Minimum else handheld.Minimum
                 base.copy(
                     titleLarge = text(tv.Title, semibold),
-                    titleMedium = text(tv.Body, semibold),
+                    titleMedium = text(body, semibold),
                     titleSmall = text(tv.Rail, medium),
-                    bodyLarge = text(tv.Body),
-                    bodyMedium = text(tv.Body),
+                    bodyLarge = text(body),
+                    bodyMedium = text(body),
                     bodySmall = text(tv.Rail),
-                    labelLarge = text(tv.Body, medium),
+                    labelLarge = text(body, medium),
                     labelMedium = text(tv.Rail, medium),
-                    labelSmall = text(tv.Minimum, semibold).copy(letterSpacing = KICKER_SPACING),
+                    labelSmall = text(minimum, semibold).copy(letterSpacing = KICKER_SPACING),
                 )
             }
         }
@@ -69,12 +76,16 @@ fun borealisTypography(formFactor: FormFactor): Typography {
     )
 }
 
+/**
+ * The kicker is the minimum text of a form factor: 11sp on a phone, 12sp on a handheld and 13sp on
+ * a TV.
+ */
 fun borealisType(formFactor: FormFactor): BorealisType {
     val kickerSize =
-        if (formFactor == FormFactor.Phone) {
-            BorealisTokens.Size.Phone.Kicker
-        } else {
-            BorealisTokens.Size.Tv.Minimum
+        when (formFactor) {
+            FormFactor.Phone -> BorealisTokens.Size.Phone.Kicker
+            FormFactor.Tv -> BorealisTokens.Size.Tv.Minimum
+            FormFactor.Handheld -> BorealisTokens.Size.Handheld.Minimum
         }
     return BorealisType(
         kicker =

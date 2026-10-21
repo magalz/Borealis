@@ -13,7 +13,7 @@ protocol library under `core/third_party/moonlight-common-c/`).
 
 An area that the Java to Kotlin migration has converted no longer takes
 upstream cherry-picks directly. Its upstream fixes are ported by hand into the
-Kotlin code. See the [roadmap](../roadmap.md#sprint-15-onward-java-to-kotlin-migration).
+Kotlin code. See the [roadmap](../roadmap.md#kotlin-migration-sprints-12-to-14).
 
 ## 1. Prepare
 

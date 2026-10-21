@@ -115,14 +115,26 @@ class BorealisThemeTest {
     }
 
     @Test
-    fun `the TV scale is 24 sp title 15 sp body and 14 point 5 sp rail`() {
+    fun `the TV scale is 24 sp title 16 sp body and 14 point 5 sp rail`() {
         val typography = borealisTypography(FormFactor.Tv)
 
         assertThat(typography.titleLarge.fontSize).isEqualTo(24.sp)
         assertThat(typography.titleLarge.fontWeight).isEqualTo(FontWeight.SemiBold)
-        assertThat(typography.bodyMedium.fontSize).isEqualTo(15.sp)
+        assertThat(typography.bodyMedium.fontSize).isEqualTo(16.sp)
         assertThat(borealisType(FormFactor.Tv).rail.fontSize).isEqualTo(14.5.sp)
         assertThat(borealisType(FormFactor.Tv).rail.fontWeight).isEqualTo(FontWeight.Medium)
+    }
+
+    @Test
+    fun `the TV minimum is 13 sp in the small label and the kicker`() {
+        val smallLabel = borealisTypography(FormFactor.Tv).labelSmall
+        val kicker = borealisType(FormFactor.Tv).kicker
+
+        assertThat(smallLabel.fontSize).isEqualTo(13.sp)
+        assertThat(smallLabel.fontWeight).isEqualTo(FontWeight.SemiBold)
+        assertThat(kicker.fontSize).isEqualTo(13.sp)
+        assertThat(kicker.fontWeight).isEqualTo(FontWeight.SemiBold)
+        assertThat(kicker.letterSpacing).isEqualTo(0.07.em)
     }
 
     @Test
@@ -137,22 +149,59 @@ class BorealisThemeTest {
     }
 
     @Test
-    fun `no TV text style is below 12 sp`() {
+    fun `no TV text style is below 13 sp`() {
         val type = borealisType(FormFactor.Tv)
         val styles =
             borealisTypography(FormFactor.Tv).allStyles() + type.kicker + type.pin + type.rail
 
         for (style in styles) {
-            assertThat(style.fontSize.value).isAtLeast(BorealisTokens.Size.Tv.Minimum.value)
+            assertThat(style.fontSize.value).isAtLeast(13f)
         }
     }
 
     @Test
-    fun `handheld uses the TV scale and spacing`() {
-        assertThat(borealisTypography(FormFactor.Handheld))
-            .isEqualTo(borealisTypography(FormFactor.Tv))
+    fun `the handheld keeps 24 sp title 15 sp body 14 point 5 sp rail and the 12 sp minimum`() {
+        val typography = borealisTypography(FormFactor.Handheld)
+        val type = borealisType(FormFactor.Handheld)
+
+        assertThat(typography.titleLarge.fontSize).isEqualTo(24.sp)
+        assertThat(typography.bodyMedium.fontSize).isEqualTo(15.sp)
+        assertThat(typography.titleMedium.fontSize).isEqualTo(15.sp)
+        assertThat(typography.labelLarge.fontSize).isEqualTo(15.sp)
+        assertThat(type.rail.fontSize).isEqualTo(14.5.sp)
+        assertThat(typography.labelSmall.fontSize).isEqualTo(12.sp)
+        assertThat(type.kicker.fontSize).isEqualTo(12.sp)
+    }
+
+    @Test
+    fun `no handheld text style is below 12 sp`() {
+        val type = borealisType(FormFactor.Handheld)
+        val styles =
+            borealisTypography(FormFactor.Handheld).allStyles() + type.kicker + type.pin + type.rail
+
+        for (style in styles) {
+            assertThat(style.fontSize.value).isAtLeast(12f)
+        }
+    }
+
+    @Test
+    fun `the phone scale keeps its sizes down to the small label`() {
+        val typography = borealisTypography(FormFactor.Phone)
+
+        assertThat(typography.titleLarge.fontSize).isEqualTo(18.sp)
+        assertThat(typography.bodyLarge.fontSize).isEqualTo(14.sp)
+        assertThat(typography.bodySmall.fontSize).isEqualTo(12.5.sp)
+        assertThat(typography.labelSmall.fontSize).isEqualTo(11.sp)
+        assertThat(borealisType(FormFactor.Phone).kicker.fontSize).isEqualTo(11.sp)
+        assertThat(borealisType(FormFactor.Phone).rail.fontSize).isEqualTo(14.5.sp)
+    }
+
+    @Test
+    fun `the handheld has the spacing of a TV`() {
         assertThat(borealisSpacing(FormFactor.Handheld).gutter)
             .isEqualTo(borealisSpacing(FormFactor.Tv).gutter)
+        assertThat(borealisSpacing(FormFactor.Handheld).cardPadding)
+            .isEqualTo(borealisSpacing(FormFactor.Tv).cardPadding)
     }
 
     @Test

@@ -15,6 +15,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
@@ -22,6 +23,7 @@ import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisShapes
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisType
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 
@@ -72,26 +74,32 @@ fun Chip(
             )
             .padding(horizontal = CHIP_PADDING_HORIZONTAL, vertical = CHIP_PADDING_VERTICAL),
         color = if (selected) colors.accent else colors.ink2,
-        // 12sp is the floor of a TV (the token), and the chip uses it on every device.
-        style =
-            TextStyle(fontFamily = BorealisFonts.Mono, fontSize = BorealisTokens.Size.Tv.Minimum),
+        style = TextStyle(fontFamily = BorealisFonts.Mono, fontSize = monoMinimumSize()),
     )
 }
 
 /**
+ * The size of the small monospace text of a chip or of the number of a step: the minimum of a TV
+ * (13sp) on a TV, and 12sp, the minimum of a handheld, on a handheld and on a phone.
+ */
+@Composable
+internal fun monoMinimumSize(): TextUnit =
+    if (LocalFormFactor.current == FormFactor.Tv) {
+        BorealisTokens.Size.Tv.Minimum
+    } else {
+        BorealisTokens.Size.Handheld.Minimum
+    }
+
+/**
  * A pill-shaped label for a capability of a host (HDR, HEVC, Wake on LAN). It only informs: it is
- * not focusable. It is 11sp on a phone and 12sp on a TV or handheld, which has no smaller text.
+ * not focusable. It is the kicker size of the device: 11sp on a phone, 12sp on a handheld and 13sp
+ * on a TV, which have no smaller text.
  */
 @Composable
 fun Tag(text: String, modifier: Modifier = Modifier) {
     val colors = LocalBorealisColors.current
     val shape = LocalBorealisShapes.current.pill
-    val size =
-        if (LocalFormFactor.current == FormFactor.Phone) {
-            BorealisTokens.Size.Phone.Kicker
-        } else {
-            BorealisTokens.Size.Tv.Minimum
-        }
+    val size = LocalBorealisType.current.kicker.fontSize
     Text(
         text,
         modifier

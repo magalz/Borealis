@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.R
 import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
-import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 
 private val MARKER_SIZE = 22.dp
 private val STEP_GAP = 10.dp
@@ -148,12 +147,9 @@ private fun StepMarker(number: Int, state: StepState) {
                     number.toString(),
                     color = ink,
                     textAlign = TextAlign.Center,
-                    // 12sp is the floor of a TV (the token); a mono digit centres in the circle.
+                    // A mono digit centres in the circle.
                     style =
-                        TextStyle(
-                            fontFamily = BorealisFonts.Mono,
-                            fontSize = BorealisTokens.Size.Tv.Minimum,
-                        ),
+                        TextStyle(fontFamily = BorealisFonts.Mono, fontSize = monoMinimumSize()),
                 )
         }
     }

@@ -16,6 +16,16 @@ Files and directories this task may create, change, or delete.
 ## Consumes
 Interfaces, documents, and decisions this task relies on (with paths). Do not change them; report if they are wrong.
 
+## Memtrace
+Load the `memtrace-skills:memtrace-first` skill before you explore code.
+- **Index:** `repo_id: "Borealis"`, `branch: "main"`, at `<phase head sha>` (indexed <date and time>). Pass `repo_id` on every call. Pass `branch: "main"` on every tool that takes a branch (`get_symbol_context`, `analyze_relationships`, `get_impact`, `detect_changes` and the quality tools); a call without it can come back empty. `find_symbol`, `find_code` and `preflight_check` take no branch.
+- **Your overlay:** pass `worktree: "Borealis:<worktree folder>"` to `find_code` when `list_worktrees` lists it. It shows your uncommitted edits; the graph tools do not.
+- **Paths:** Memtrace returns `d:/Repos/Borealis/<path>`. Replace that prefix with your worktree root before you read or edit.
+- **Order:** `find_symbol` (exact name) or `find_code` to locate; `get_symbol_context` for callers and callees; `get_impact` with `direction: "upstream"` and `depth: 2` for the blast radius before you edit a symbol this task did not write (`preflight_check` can return a very large answer; use it on small symbols); `detect_changes` at the end with your unified diff as `diff` (a list of relative paths came back empty).
+- **An empty result is not proof that code is absent.** Check the `repo_id`, `branch` and `worktree` you passed, retry once with the exact name or a broader query, then use Grep or a ranged read.
+- **Not in the graph:** `**/*.gradle.kts`, the design tokens, the prebuilt OpenSSL and Opus headers and `core/third_party/`. Use Grep there.
+- **Report** the Memtrace calls you made (tool, key parameters, empty or not) and where you fell back to Grep.
+
 ## Acceptance
 - Behaviour scenarios that must hold, each expressed as a test that must exist and pass.
 - Removals or documentation outcomes, stated so a reviewer can check them.
@@ -30,5 +40,7 @@ Inherited-code rule: the implementer lists every inherited file it touched and c
 ## Notes
 Known pitfalls, related files, and the order of commits when it matters.
 ```
+
+The orchestrator fills the Memtrace section in every brief for `br-implementer`, `br-reviewer`, `br-scout` and the Explore agents, after it has indexed the checkout and the task worktree (see [orchestration](orchestration.md)). `br-scribe` has no Memtrace tools and gets the facts in its brief.
 
 The implementer's final report follows the format in `.claude/agents/br-implementer.md`. The reviewer reports with the format in `.claude/agents/br-reviewer.md`. A `br-scribe` brief names the text files to write (or the text to return), the source notes, and the template to follow.

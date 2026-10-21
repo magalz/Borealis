@@ -68,7 +68,7 @@ private val GROUP_PADDING_HORIZONTAL = 12.dp
  * Small enough that the eleven groups of Settings, [BorealisDimens.listGap] apart, fit a 540dp TV
  * unscrolled.
  */
-private val GROUP_PADDING_VERTICAL = 4.dp
+private val GROUP_PADDING_VERTICAL = 3.dp
 /** The height that a finger needs (WCAG 2.5.8); a TV has no touch screen and keeps the padding. */
 private val GROUP_MIN_TOUCH = 48.dp
 

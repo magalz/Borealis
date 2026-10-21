@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.settings.testing.assertDialogWidth
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -78,5 +79,17 @@ class AboutLinksOtherDevicesTest : PhoneSettingsTestBase() {
             .onNode(hasText(SOURCE_CODE_URL) and hasAnyAncestor(isDialog()))
             .assertIsDisplayed()
         assertNoQrCode("Source code")
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun `on a handheld the dialog of a link that no app takes is a standard one, 560dp`() {
+        browserAvailable = false
+        show(keyboard = true, initialGroup = SettingsGroupId.ABOUT)
+
+        composeRule.onNodeWithText("Source code").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.assertDialogWidth("No app can open this link", 560f)
     }
 }

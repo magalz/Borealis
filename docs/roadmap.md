@@ -226,7 +226,7 @@ re-check of the follow-ups passed on 2026-10-20.
    - Seven styles: Aurora curtains (the default, the owner's choice), Soft glow,
      Northern lights, Light mist, Flowing light, Starfield and Off. The first two
      are drawn in Compose. The next four are looping clips played with Media3
-     ExoPlayer on a SurfaceView.
+     ExoPlayer on a SurfaceView (a TextureView since Sprint 10).
    - Reduced motion and the battery saver give a still frame and no player.
    - Navigating removes the old screen at once and fades the new one in.
    - Settings has a new Appearance group, after Advanced and before Privacy and
@@ -241,7 +241,9 @@ re-check of the follow-ups passed on 2026-10-20.
     10 dp to 5 dp, with the focus outline gap unchanged at 10 dp. All ten groups
     fit a 960 x 540 dp TV window without scrolling. The Google TV Streamer shows
     nine, because it has no touchscreen and so no On-screen controls group. The
-    handheld list may still scroll.
+    handheld list may still scroll. Sprint 10 added Accessibility: there are
+    eleven groups, ten on the Streamer, since Sprint 10, and they still fit a
+    540 dp TV (see Sprint 10, item 11).
 11. **The "preparing the display" text.** Done (issue #31, merge `75dbf7be`). Found
     during the sprint. The message on the stream's notification overlay predates
     the Sprint 5 Starting screen, which is opaque and covers the overlay from the
@@ -294,7 +296,7 @@ re-check of the follow-ups passed on 2026-10-20.
     Found in the device round on the Streamer: Up from Close never reached the
     licence text. `focusable()` now comes before `verticalScroll()`, and the text
     shows the focus outline ([ADR 0053](adr/0053-material-3-with-borealis-focus-on-tv.md)). Windows shorter
-    than about 320 dp are a known limit.
+    than about 320 dp were a known limit, fixed in Sprint 10 (#44).
 19. **The stream keyboard is decided when it opens.** Done (merge `5025614e`). Found
     in the device re-check on the S22: with a pad on the USB driver, or a system pad
     switched on after the stream started, the Keyboard of the in-game menu opened
@@ -318,71 +320,103 @@ to 13 close Phase 2.
 ### Sprint 10: UX and accessibility
 
 The work for this sprint is on the phase branch `phase/s10-ux-accessibility`,
-which starts at `109e7dff`. Each item has an issue, #33 to #44.
+which starts at `109e7dff`. Each item has an issue, #33 to #44. All twelve items
+are done on the phase branch, and the phase pull request is not merged yet. The
+decisions are in [ADR 0057](adr/0057-glass-surfaces-and-the-accessibility-settings.md).
+The device round of 2026-10-21 ran on `8d5e8332`
+([section 15](development/device-validation.md#15-results-sprint-10)).
 
-1. **Text contrast over the animated background (WCAG 2.2).** Issue #33.
-   A tool in `design/accessibility/` measures the contrast of every text token
-   over real frames of the four clips and the two drawn styles, with the glass
-   modelled. The worst case of each token counts. The baseline and the final
-   numbers go to `docs/ux/accessibility.md`. The target is AA on every screen,
-   and 7:1 with high contrast on. Today ink-3 and ink-4 fall to 3.0 to 3.7:1
-   over the brightest aurora bands.
-2. **Glass panels and cards.** Issue #34. Owner request of 2026-10-19:
-   panels and cards become transparent with a heavy blur, so the background
-   stays visible. The owner picks the look from a measured comparison of tint,
-   blur, how the clips are handled, and the dialogs. Three transparency levels
-   ship: Standard, Reduced and Off. The glass also works outside the Library,
-   because Sprint 11 uses it on the Starting screen.
-3. **Accessibility group in Settings.** Issue #35. A new group after
-   Appearance:
+1. **Text contrast over the animated background (WCAG 2.2).** Done (issue #33,
+   merges `186ebff0`, `e8834bbc` and `8d5e8332`; the tool runs in CI since
+   `5fe33a63`). A tool in `design/accessibility/` measures the contrast of every
+   text token over real frames of the four clips and the two drawn styles, with
+   the glass modelled. The worst case of each token counts. The baseline and the
+   final numbers are in `docs/ux/accessibility.md`. The target is AA on every
+   screen, and 7:1 with high contrast on. Before the sprint ink-3 and ink-4 fell
+   to 3.0 to 3.7:1 over the brightest aurora bands.
+   - Text that stands on the background has a halo (a stroke of 3 dp, a blur of
+     2 dp, `page` at 80 %) and uses ink-2: the lowest result is 5.32:1, and
+     14.70:1 under High contrast.
+   - The bare icons share that halo: 5.71:1 at the worst, 14.79:1 under High
+     contrast, against the 3:1 that they need.
+   - The Add host field is a filled glass field with its own outline: label
+     4.60:1, focused outline 3.88:1, error text 4.62:1. The switch from an
+     outlined field waits for the owner's verdict.
+   - CI runs the tests of the tool (the "Design tools" job), and a test fails
+     when a clip changes without a new measurement.
+2. **Glass panels and cards.** Done (issue #34, merges `07602b1a` and
+   `3803117a`). Owner request of 2026-10-19: panels and cards become transparent
+   with a heavy blur, so the background stays visible. The owner picked the look
+   from a measured comparison of tint, blur, how the clips are handled, and the
+   dialogs. Three transparency levels ship: Standard, Reduced and Off. Appearance
+   has two more rows, Glass tint (30, 40, 50, 60, 70 or 85 %) and Glass blur
+   (8, 16, 24, 32 or 48 dp), which set the Standard level. The glass also works
+   outside the Library, because Sprint 11 uses it on the Starting screen.
+3. **Accessibility group in Settings.** Done (issue #35, merges `cfe86b84` and
+   `947fd5f6`). A new group after Appearance:
    - **Reduce motion:** Follow system, On or Off. It follows changes to the
      system animation scale while the app runs.
    - **Transparency:** Standard, Reduced or Off.
-   - **Thicker focus outline:** 3 to 5 dp, in a lighter colour.
+   - **Thicker focus outline:** a switch. On, the outline is 5 dp, in ink.
    - **Text size:** 100, 115 or 130 %, times the system scale.
    - **High contrast:** solid panels, text at 7:1 or more, opaque borders at
      3:1 or more, a dimmed background and the thicker outline. While it is on,
-     it overrides the other settings.
+     it overrides only Transparency, Thicker focus outline, Glass tint and Glass
+     blur, which are disabled with the reason. Text size, the palette and Reduce
+     motion still apply.
    - **Colour-blind palette:** Off, Red-green or Blue-yellow, for the status
      colours. Every status also gets a shape or a text, not colour alone.
 
    The stream follows the text size, the focus outline, high contrast, the
-   palette and reduce motion. The stream gets no glass, because the video is
-   behind it.
-4. **TalkBack.** Issue #36. The app works with TalkBack on a phone and on a
-   TV:
+   palette and reduce motion, read once when the stream starts. The stream gets
+   no glass, because the video is behind it.
+4. **TalkBack.** Done (issue #36, merge `c6e4b92a`). The app works with
+   TalkBack on a phone and on a TV:
    - labels, headings and traversal order;
    - accessibility checks in the Robolectric tests;
    - font scale 2.0 tests;
-   - 48 dp touch targets.
-5. **Phone portrait Settings.** Issue #37. Collapsible sections (option A,
-   owner decision of 2026-10-20):
+   - 48 dp touch targets on phones and handhelds. A TV keeps its sizes.
+
+   Three trade-offs of the 48 dp targets are pending the owner's review:
+   - on a handheld the Settings group list now scrolls (about 6 of the 11 groups
+     show at once), because its entries are 48 dp;
+   - the docked phone keyboard is 24 dp taller, because its shortcut chips have
+     48 dp cells;
+   - the keys of the phone keyboard stay under 48 dp, which is an accepted
+     finding of the checks.
+5. **Phone portrait Settings.** Done (issue #37, merge `787b1aab`). Collapsible
+   sections (option A, owner decision of 2026-10-20):
    - all sections start collapsed, and several can be open;
    - the state survives rotation;
    - About becomes a section, and Privacy and diagnostics stays a row that
      navigates.
-6. **OK on a Settings group enters its pane.** Issue #38. On a TV or a
-   handheld, OK on a group (Input, Video and so on) moves the focus to the first
-   option of its pane. Today only Right does. Reported by the owner on
-   2026-10-20.
-7. **Notices.** Issue #39.
+6. **OK on a Settings group enters its pane.** Done (issue #38, merge
+   `73c76844`). On a TV or a handheld, OK, Enter, the numpad Enter and gamepad
+   A on a group move the focus to the first option of its pane, in keyboard
+   input mode. Before, only Right did. Reported by the owner on 2026-10-20.
+7. **Notices.** Done (issue #39, merge `3a419f4e`).
    - Snackbars are as wide as their text and centred, not full width (owner
      request of 2026-10-19).
    - After a Quit in the stream, the Library shows the same notice as a Quit
      from Apps, "App quit.". This answers the request that "Quitting `<app>`…"
      is too quick to read.
-8. **Rail footer.** Issue #40. The app logo, name and version at the bottom
-   of the rail, on a TV and a handheld. Owner request of 2026-10-20.
-9. **About fixes.** Issue #41. The About links open in a new task, so Back
-   returns to the app. The Version row loses its chevron, which opened nothing.
-10. **Focus after Back from Apps.** Issue #42. Focus goes to the host card
-    that was opened, not to the first one.
-11. **Design system cleanup.** Issue #43. The copied spacing constants move
-    to `BorealisDimens`, `FocusProperties.enter` is replaced, and the background
-    has one default.
-12. **Keyboard reach in short windows.** Issue #44. The licence text can be
-    reached from Close on windows shorter than about 320 dp. The Audit detail
-    gets the `focusable()` before `verticalScroll()` order.
+8. **Rail footer.** Done (issue #40, merge `2dc9933d`). The app logo, name and
+   version at the bottom of the rail, on a TV and a handheld. Owner request of
+   2026-10-20.
+9. **About fixes.** Done (issue #41, merge `1fc7fc0c`). The About links open in a
+   new task, so Back returns to the app. The Version row loses its chevron,
+   which opened nothing.
+10. **Focus after Back from Apps.** Done (issue #42, merge `b0faf022`). Focus
+    goes to the host card that was opened, not to the first one. Hosts keeps the
+    card by key, a Continue card too, and the first card gets the focus again
+    only when the host is gone.
+11. **Design system cleanup.** Done (issue #43, merge `3803117a`). The copied
+    spacing constants move to `BorealisDimens`, `FocusProperties.enter` is
+    replaced, and the background has one default. The Settings group padding is
+    4 dp, so the 11 groups fit a 540 dp TV (10 on the Streamer).
+12. **Keyboard reach in short windows.** Done (issue #44, merge `1fc7fc0c`). The
+    licence text stays above Close in short windows and scrolls with the D-pad.
+    The Audit detail gets the `focusable()` before `verticalScroll()` order.
 
 ### Sprint 11: Appearance
 
@@ -412,7 +446,10 @@ on the `RiskyLibrary` lint check (see
 
 - The root and Android READMEs.
 - An install (Obtainium) and pairing guide.
-- The compatibility note.
+- The compatibility note. It cites LuminalShine 26.10.x once that is stable.
+- Show `LuminalShineVersion` from the HTTPS `/serverinfo` in Host details. The
+  26.10.0-beta.1 host sends it (#199), and the client still shows the protocol
+  version `7.1.431.-1`.
 - [PRIVACY.md](../PRIVACY.md).
 - The release certificate fingerprint.
 - [CONTRIBUTING.md](../CONTRIBUTING.md) and the release docs.
@@ -496,6 +533,8 @@ Java to Kotlin, one area at a time.
     Apps screen shows the initials of each app. App covers are one of the
     [Phase 3 extension points](ux/phase-2-proposal.md#phase-3-extension-points).
 - **Phase 4: PyroWave.** See the [host contract](host-contract/pyrowave.md).
+  The official LuminalShine build ships experimental PyroWave, opt-in and
+  needing Vulkan 1.3, in 26.10.0-beta.1 (according to its release notes).
 - **Phase 5: stores.** Google Play and Amazon Appstore. See the
   [release policy](policies/release.md) and
   [ADR 0045](adr/0045-store-publishing-automation.md), which is proposed.
@@ -508,7 +547,7 @@ Java to Kotlin, one area at a time.
   deferred by the owner. See the [third-party notes](../core/third_party/README.md).
 
 From the Sprint 9 quality review. None of these changes behaviour. Sprint 10
-(item 11) takes the deprecated `FocusProperties.enter`, the copied spacing
+(item 11) took the deprecated `FocusProperties.enter`, the copied spacing
 constants and the two background defaults. The rest is not scheduled yet.
 
 - **Quit wording in three places.** The choice between the Desktop text and the
@@ -528,11 +567,8 @@ constants and the two background defaults. The rest is not scheduled yet.
   against about 590 lines of implementation, with repeated group lists and
   helpers. They belong in shared test support (the `testFixtures` of
   `:borealis:designsystem`).
-- **Two background defaults for one concept.** `LibraryNavHost` defaults to
-  `BackgroundStyle.Default` and `LibraryScaffold` (in `LibraryRail.kt`) defaults
-  to `BackgroundStyle.Off`.
 
-From the Sprint 9 device round, 2026-10-19. Sprint 10 takes the Back from Apps
+From the Sprint 9 device round, 2026-10-19. Sprint 10 took the Back from Apps
 focus, the About Version row and links (items 9 and 10), and the licence text
 and the `AuditScreen.kt` `Detail` order (item 12). The rest is not scheduled
 yet.
@@ -557,21 +593,57 @@ yet.
   no code change, like the version checks that were turned off (owner,
   2026-10-20). Review it in Sprint 12, before the release.
 
+From the Sprint 10 reviews and its device round (2026-10-21). None is scheduled
+yet.
+
+- **A `RailFooter` screenshot with a version string.** The references show the
+  footer without one.
+- **The mark paths are listed twice** in `design/icon/generate.py`.
+- **Indeterminate progress indicators ignore Reduce motion.** `QuittingScreen`,
+  `AddHostScreen` and `PrivacyPane` draw Material's indicators, which do not ask
+  `rememberAnimationsRemoved`.
+- **Segments and keyboard keys still lift when focused.** `SegmentedControl` and
+  `KeyboardKey` use `liftedWhenFocused`, so the merged tree lists the focused
+  one last. Robolectric cannot see TalkBack's traversal links: check it with
+  TalkBack on a device.
+- **Joined strings for the translation sprint (Sprint 14).** The `groupLabel` of
+  `SegmentedControl`, the `HostCard` sentence and the description of a text
+  field join their parts with ", " and ". ".
+- **No ATF check covers a visible snackbar.**
+- **The halo and the tint-only glass have not been seen on API 28 to 30.** No
+  device is available; the tests draw them with Robolectric.
+- **A UAT note:** "Fn 123" wraps on narrow phones at the default look.
+- **Re-verify the 26.10.0-beta.1 host changes in the source,** and capture a
+  fixture folder for them. See the [host contract](host-contract/README.md).
+- **Quit takes about 17 s on 26.10.0-beta.1.** "Quitting `<app>`…" stays on
+  screen until `/cancel` answers, about 17 s, against about 7 s on 26.09.1. It
+  looks host-side. Measure it a second time, then report it upstream.
+- **A Quit from the user logs an error.** The user's own Quit logs
+  `E Borealis.UPSTREAM: Connection terminated: -1`, and the system logs
+  `Duplicate finish request` for `com.limelight.Game`.
+- **Moving between Settings groups is slower on the Streamer.** With the glass
+  at Standard it measured 64 ms at the median (72 ms at the most), against 47 to
+  60 ms in Sprint 9. A frame at rest is about 9 ms longer with the blur.
+- **The Streamer's only web handler is the third-party Downloader app,** which
+  keeps Back after an About link. It is a limit of that environment, not a bug
+  of the app.
+
 ## Host-side items (LuminalShine)
 
 These are proposals and known issues in the LuminalShine host. The client works
 without them. The states are as of 2026-10-20. #199, #200 and #203 were merged
-on 2026-10-20, with no LuminalShine release yet. #194 and #202 are closed.
-The open ones are #198, #201, #204 and #205.
+on 2026-10-20, and 26.10.0-beta.1 (a prerelease of 2026-10-20) ships them,
+according to its release notes. #194 and #202 are fixed on the host. The open
+ones are #198, #201, #204 and #205.
 
 | Item | Kind | Summary |
 | --- | --- | --- |
-| [NortheBridge/luminalshine#194](https://github.com/NortheBridge/luminalshine/issues/194) | Issue | Stray bytes after a 404 response. See the [host contract](host-contract/README.md). |
+| [NortheBridge/luminalshine#194](https://github.com/NortheBridge/luminalshine/issues/194) | Issue | Stray bytes after a 404 response. Fixed on the host by #200, in 26.10.0-beta.1. See the [host contract](host-contract/README.md). |
 | [NortheBridge/luminalshine#198](https://github.com/NortheBridge/luminalshine/issues/198) | Issue | Teardown hang after a disconnect. See the [host contract](host-contract/README.md). |
-| [NortheBridge/luminalshine#199](https://github.com/NortheBridge/luminalshine/pull/199) | PR | Reports the LuminalShine release in `/serverinfo`, so the client can show the host version. |
-| [NortheBridge/luminalshine#200](https://github.com/NortheBridge/luminalshine/pull/200) | PR | Sends a single response for unknown GameStream paths. Proposed fix for #194. |
+| [NortheBridge/luminalshine#199](https://github.com/NortheBridge/luminalshine/pull/199) | PR | Reports the LuminalShine release in `/serverinfo`, so the client can show the host version. Shipped in 26.10.0-beta.1. The client shows it in Sprint 13. |
+| [NortheBridge/luminalshine#200](https://github.com/NortheBridge/luminalshine/pull/200) | PR | Sends a single response for unknown GameStream paths. Fix for #194. Shipped in 26.10.0-beta.1. |
 | [NortheBridge/luminalshine#201](https://github.com/NortheBridge/luminalshine/issues/201) | Issue | A second client leaving a shared app ends the first client's session (per-client virtual display). See [UC-003](use-cases/0003-join-or-replace-a-running-app.md). |
-| [NortheBridge/luminalshine#202](https://github.com/NortheBridge/luminalshine/issues/202) | Issue | A long `/launch` blocks every other HTTPS GameStream request until it finishes. See the [host contract](host-contract/luminalshine.md). |
-| [NortheBridge/luminalshine#203](https://github.com/NortheBridge/luminalshine/pull/203) | PR | Proposed fix for #202. Merged on 2026-10-20. |
+| [NortheBridge/luminalshine#202](https://github.com/NortheBridge/luminalshine/issues/202) | Issue | A long `/launch` blocks every other HTTPS GameStream request until it finishes. Fixed on the host by #203, in 26.10.0-beta.1. See the [host contract](host-contract/luminalshine.md). |
+| [NortheBridge/luminalshine#203](https://github.com/NortheBridge/luminalshine/pull/203) | PR | Fix for #202. Merged on 2026-10-20 and shipped in 26.10.0-beta.1. |
 | [NortheBridge/luminalshine#204](https://github.com/NortheBridge/luminalshine/issues/204) | Issue | The host process crashes after the virtual display cleanup of an ended session. See the [host contract](host-contract/luminalshine.md). |
 | [NortheBridge/luminalshine#205](https://github.com/NortheBridge/luminalshine/issues/205) | Issue | A second client's resume fails the RTSP tag check while the first client's launch is still setting up. See the [host contract](host-contract/luminalshine.md). |

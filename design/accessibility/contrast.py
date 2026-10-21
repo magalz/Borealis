@@ -856,7 +856,8 @@ HALO_OPACITIES = (0.6, 0.8, 1.0)
 HALO_NONE = (0, 0, 0.0)
 # The pixels that count are those not in a glyph and within this many pixels of one.
 HALO_RING_PX = 2
-# The sample text goes in this many columns and rows of places over the frame.
+# p1 and p5 are taken with the sample text in this many columns and rows of places over the frame.
+# The worst case does not depend on them: it is over every place.
 HALO_PLACEMENTS = (6, 4)
 HALO_SAMPLE = "Living room PC, 4 apps"
 # A ratio must clear its limit by this much, for the difference between the model and a device.
@@ -1067,13 +1068,47 @@ def halo_contrast(pixels, alpha, tint, text_luminance):
 
 
 def frame_colours(frame):
-    """The colours of an 8 bit frame, each once, as floats from 0 to 1, one colour to a row."""
-    return np.zeros((0, 3), np.float32)
+    """The colours of an 8 bit frame, each once, as floats from 0 to 1, one colour to a row.
+
+    A frame of a video or of the drawn backgrounds has tens of thousands of them, where it has
+    millions of pixels, so what is asked of every pixel can be asked of every colour.
+    """
+    levels = np.rint(np.asarray(frame).reshape(-1, 3) * 255).astype(np.uint32)
+    packed = np.unique((levels[:, 0] << 16) | (levels[:, 1] << 8) | levels[:, 2])
+    colours = np.stack([(packed >> 16) & 255, (packed >> 8) & 255, packed & 255], axis=1)
+    return colours.astype(np.float32) / 255
+
+
+def _halo_ends(colours, alphas, tint):
+    """The luminance of each colour with the thinnest and with the thickest halo of `alphas`."""
+    return [
+        relative_luminance(halo_over(colours, np.full(len(colours), alpha, np.float32), tint))
+        for alpha in alphas
+    ]
+
+
+def _worst_of_ends(ends, text_luminance):
+    """The lowest ratio of a text over colours that a halo of any alpha between two ends covers.
+
+    The luminance of a colour moves one way as the alpha grows, and the ratio of a text over it is
+    lowest where it is nearest to the text. So the lowest ratio is at one of the two ends, unless
+    the range of luminances reaches the text, where the pixel is as bright as the text and the
+    ratio is 1:1. The alphas of a ring are many, so the range is taken to be whole.
+    """
+    darkest, brightest = np.minimum(*ends), np.maximum(*ends)
+    if np.any((darkest <= text_luminance) & (text_luminance <= brightest)):
+        return 1.0
+    return float(min(contrast_ratio(seen, text_luminance).min() for seen in ends))
 
 
 def halo_worst_ratio(colours, alphas, tint, text_luminance):
-    """The lowest ratio of a text over `colours` with a halo of any alpha from `alphas` laid on."""
-    return 0.0
+    """The lowest ratio of a text over `colours` with a halo of any alpha from `alphas` laid on.
+
+    `alphas` is the least and the greatest alpha of the halo. It is the worst case of the text with
+    every colour of a frame at every pixel of the ring, which is the worst case over every place of
+    the text on the frame, and a little more at its edges.
+    """
+    return _worst_of_ends(_halo_ends(colours, alphas, tint), text_luminance)
 
 
 def halo_placements(frame_shape, size):
@@ -1121,31 +1156,29 @@ def halo_geometry(text, device):
 
 
 def _halo_place(pixels, geometry, tint, lights):
-    """The lowest ratio, p1 and p5 of each candidate and token, for the ring pixels of one place."""
+    """The p1 and p5 of each candidate and token, for the ring pixels of one place."""
     stats = {}
-    seen = relative_luminance(
-        geometry.alphas[..., None] * np.asarray(tint, np.float32)
-        + (1 - geometry.alphas[..., None]) * pixels
-    )
     for token, light in lights.items():
-        ratios = contrast_ratio(seen, light)
-        p1, p5 = np.percentile(ratios, [1, 5], axis=1)
-        stats[token] = (ratios.min(axis=1), p1, p5)
+        ratios = halo_contrast(pixels[None], geometry.alphas, tint, light)
+        stats[token] = tuple(np.percentile(ratios, [1, 5], axis=1))
     return stats
 
 
 def measure_halo_frame(frame, device, colors, texts=None):
     """The stats of each text style, candidate and token over one frame.
 
-    The sample text is put in each of the places of the grid. For the ring round its glyphs the
-    ratio of each token over the frame with the halo on it is taken, and the lowest over the places
-    is kept, with p1 and p5 (their lowest too). It returns `{text: {config: {token: stats}}}`, where
-    `stats` has "min", "p1" and "p5". `frame` is an array or the path of a PNG.
+    The worst case ("min") is over every colour of the frame with every alpha of the ring, which is
+    every place that the text can take, as `halo_worst_ratio` says. p1 and p5 are for information:
+    in each of the six by four places of the sample over the frame, the ratio of each token over the
+    ring pixels with the halo on them, the ratio below which 1% and 5% of them are, and the lowest
+    of those over the places. It returns `{text: {config: {token: stats}}}`, where `stats` has
+    "min", "p1" and "p5". `frame` is an array or the path of a PNG.
     """
     if not isinstance(frame, np.ndarray):
         frame = load_frame(frame)
     tint = parse_hex(colors[HALO_TINT])
     lights = {token: float(relative_luminance(parse_hex(colors[token]))) for token in HALO_TOKENS}
+    colours = frame_colours(frame)
     result = {}
     for text in texts or HALO_TEXTS:
         geometry = halo_geometry(text, device)
@@ -1157,17 +1190,18 @@ def measure_halo_frame(frame, device, colors, texts=None):
                 previous = worst[token]
                 merged = found if previous is None else tuple(map(np.minimum, previous, found))
                 worst[token] = merged
-        result[text] = {
-            config: {
+        result[text] = {}
+        for index, config in enumerate(geometry.configs):
+            alphas = (geometry.alphas[index].min(), geometry.alphas[index].max())
+            ends = _halo_ends(colours, alphas, tint)
+            result[text][config] = {
                 token: {
-                    "min": float(worst[token][0][index]),
-                    "p1": float(worst[token][1][index]),
-                    "p5": float(worst[token][2][index]),
+                    "min": _worst_of_ends(ends, lights[token]),
+                    "p1": float(worst[token][0][index]),
+                    "p5": float(worst[token][1][index]),
                 }
                 for token in HALO_TOKENS
             }
-            for index, config in enumerate(geometry.configs)
-        }
     return result
 
 
@@ -1218,8 +1252,10 @@ def measure_halo_sources(sources, colors, jobs=1, texts=None):
             "statistic": (
                 "WCAG 2.x contrast ratio of ink and ink-2 over the pixels not in a glyph and "
                 f"within {HALO_RING_PX} px of one, with the halo on them; the worst case is the "
-                "lowest ratio over the places of the sample text on the frame, and then over the "
-                "frames."
+                "lowest ratio over every colour of the frame with every alpha of the ring, which "
+                "is every place of the sample text on the frame, and then over the frames. p1 and "
+                "p5 are for information, over the places of a grid of the columns and rows of "
+                "`placements`."
             ),
             "model": (
                 "The glyphs of the sample text, widened by the stroke, blurred by a Gaussian of "

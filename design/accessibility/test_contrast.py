@@ -911,7 +911,7 @@ class HaloMeasureTest(unittest.TestCase):
 
     def test_with_no_halo_a_flat_frame_gives_the_ratio_of_the_text_on_that_colour(self):
         # The case of Table A: no halo and no opacity leave the background as it is.
-        colour = np.array([0.35, 0.5, 0.65], np.float32)
+        colour = np.array([90, 128, 166], np.float32) / 255
         stats = self.measure(uniform(1920, 1080, colour))["body"][contrast.HALO_NONE]["ink"]
         expected = contrast.contrast_stats(contrast.relative_luminance(colour)[None], self.ink)
         for key in ("min", "p1", "p5"):

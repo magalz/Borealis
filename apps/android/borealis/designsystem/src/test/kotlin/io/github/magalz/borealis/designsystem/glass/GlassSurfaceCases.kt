@@ -137,8 +137,8 @@ abstract class GlassSurfaceCases {
         val inHost = composeRule.onNodeWithTag(IN_HOST).captureToImage().toPixelMap()
         val outside = composeRule.onNodeWithTag(OUTSIDE).captureToImage().toPixelMap()
         // The anti-aliased corner of an opaque border (high contrast) differs by a few levels
-        // between
-        // a layer and a plain draw, so a pixel is the same within SAME_LEVELS of 255 in a channel.
+        // between a layer and a plain draw, so a pixel is the same within SAME_LEVELS of 255 in a
+        // channel.
         val apart =
             inHost.buffer.indices.count { i ->
                 CHANNEL_SHIFTS.any {

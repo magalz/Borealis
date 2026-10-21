@@ -57,7 +57,9 @@ import io.github.magalz.borealis.designsystem.theme.sheetWidth
 class ChoiceOption<out T>(val key: T, val label: String, val summary: String? = null)
 
 private val CONTENT_PADDING = 20.dp
-/** The first option's outline reaches 5dp above it: leave room under the title for it. */
+/**
+ * The first option's outline reaches 5dp above it, 7dp when thicker: leave room under the title.
+ */
 private val LIST_TOP_PADDING = 16.dp
 /** The list sits 8dp from the edge, so the 12dp padding of a row puts its text at 20dp. */
 private val OPTION_PADDING_HORIZONTAL = 12.dp

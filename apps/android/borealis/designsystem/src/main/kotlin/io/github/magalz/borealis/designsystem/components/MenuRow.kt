@@ -69,8 +69,8 @@ private val TRAILING_GAP = 12.dp
  * The control at the end sits beside the title. When the title and the control do not fit side by
  * side, as with a large text size, the control goes under the title instead of squeezing it.
  *
- * The outline of a focused row reaches 5dp outside it, so a list of rows needs 8dp of padding
- * around it and 10dp between rows, as in the [ActionSheet].
+ * The outline of a focused row reaches 5dp outside it, 7dp when it is the thicker one, so a list of
+ * rows needs 8dp of padding around it and 10dp between rows, as in the [ActionSheet].
  */
 @Composable
 fun MenuRow(

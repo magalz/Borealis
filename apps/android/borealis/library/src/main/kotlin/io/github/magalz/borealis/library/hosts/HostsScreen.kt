@@ -55,7 +55,10 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
 import io.github.magalz.borealis.library.domain.Reachability
 
-/** An outline sits 5dp outside its card, so neighbouring cards need 10dp between them. */
+/**
+ * An outline sits 5dp outside its card, 7dp when it is the thicker one, so neighbouring cards need
+ * 10dp between them.
+ */
 private val GRID_GAP = 12.dp
 private val SECTION_PADDING = 6.dp
 private val LOADING_SIZE = 64.dp

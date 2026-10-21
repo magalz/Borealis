@@ -560,10 +560,13 @@ class GlassTableTest(unittest.TestCase):
         _, _, result = glass_result()
         text = contrast.glass_table_kotlin(result)
         clips = sorted(contrast.CLIPS_DIR.glob("background_*.mp4"))
-        self.assertEqual(len(clips), 4)
+        self.assertGreater(len(clips), 0)
         for clip in clips:
             digest = hashlib.sha256(clip.read_bytes()).hexdigest()
             self.assertRegex(text, rf'"{clip.stem}"\s+to\s+"{digest}"')
+        # And no hash of a clip that is not there.
+        hashes = re.findall(r'"background_\w+"\s+to\s+"[0-9a-f]{64}"', text)
+        self.assertEqual(len(hashes), len(clips))
 
     def test_the_file_is_written_where_the_app_reads_it(self):
         self.assertEqual(

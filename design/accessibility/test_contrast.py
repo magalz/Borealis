@@ -2151,14 +2151,21 @@ class HaloFontTablesTest(unittest.TestCase):
             meta = contrast.fonts_meta(contrast.font_set(path, PLEX_SEMIBOLD))
         self.assertEqual(meta["x_height"], {"drawn": 0.516, "os2": None})
 
-    def test_the_weight_of_a_variable_face_is_in_the_meta(self):
+    def test_the_weight_of_a_variable_face_is_that_of_its_wght_axis(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "variable.ttf"
             path.write_bytes(sfnt({"fvar": fvar_table([("wght", 100.0, 400.0, 900.0)])}))
-            face = contrast.font_face(path, 600)
-            fonts = contrast.FontSet("Variable", face, face, 1.0)
-            meta = contrast.fonts_meta(fonts)
-        self.assertEqual(meta["regular"], {"file": "variable.ttf", "wght": 600.0})
+            self.assertEqual(contrast._face_weight(contrast.font_face(path, 600)), 600.0)
+            self.assertIsNone(contrast._face_weight(contrast.font_face(PLEX_REGULAR, 400)))
+
+    @unittest.skipUnless(
+        Path("C:/Windows/Fonts/bahnschrift.ttf").is_file(), "a variable font is not installed"
+    )
+    def test_the_weights_of_a_real_variable_font_are_in_the_meta(self):
+        path = Path("C:/Windows/Fonts/bahnschrift.ttf")
+        meta = contrast.fonts_meta(contrast.font_set(path, path))
+        self.assertEqual(meta["regular"], {"file": "bahnschrift.ttf", "wght": 400.0})
+        self.assertEqual(meta["semibold"], {"file": "bahnschrift.ttf", "wght": 600.0})
 
 
 class HaloIconTablesTest(unittest.TestCase):

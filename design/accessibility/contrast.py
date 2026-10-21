@@ -882,9 +882,6 @@ FontSet = collections.namedtuple("FontSet", "name regular semibold scale")
 FONT_WEIGHTS = {"regular": 400, "semibold": 600}
 # The size at which the height of an x is measured, in pixels: a thousandth of it is a unit of Plex.
 X_HEIGHT_SIZE = 1000
-# The x-height of a Latin font is between these parts of the em. The sxHeight of a table outside
-# them is a mistake of the font (OpenDyslexic Mono has the em, 1000 of 1000), and the x is measured.
-X_HEIGHT_RANGE = (0.3, 0.8)
 
 # IBM Plex Sans is the reference of the scale, so its own scale is one by definition.
 PLEX_SANS = FontSet(
@@ -895,27 +892,48 @@ PLEX_SANS = FontSet(
 )
 
 
-def _sfnt_tables(data):
-    """The tables of a font file, `{tag: (offset, length)}`, from its table directory."""
+# The version at the start of a TrueType or OpenType file: TrueType outlines, CFF outlines, and the
+# `true` of some old Apple fonts.
+SFNT_VERSIONS = (b"\x00\x01\x00\x00", b"OTTO", b"true")
+
+
+def _read_sfnt(path):
+    """The bytes of a font file and its table directory, `{tag: (offset, length)}`.
+
+    A file that is not a font, a collection, and a directory that the file is too short for are a
+    `ValueError` that names the file, and not an error of `struct`.
+    """
+    data = Path(path).read_bytes()
     if data[:4] == b"ttcf":
-        raise ValueError("a font collection is not a font file: name one of its fonts")
-    count = struct.unpack_from(">H", data, 4)[0]
+        raise ValueError(f"{path} is a font collection, not a font file: name one of its fonts")
+    if data[:4] not in SFNT_VERSIONS:
+        raise ValueError(f"{path} is not a font file: it is not TrueType or OpenType")
+    count = _unpack(path, ">H", data, 4)[0]
+    if len(data) < 12 + 16 * count:
+        raise ValueError(f"{path} is cut short: its table directory is not all there")
     entries = struct.iter_unpack(">4sIII", data[12 : 12 + 16 * count])
-    return {tag.decode("latin-1"): (offset, length) for tag, _, offset, length in entries}
+    return data, {tag.decode("latin-1"): (offset, length) for tag, _, offset, length in entries}
+
+
+def _unpack(path, form, data, offset):
+    """`struct.unpack_from`, with a table that runs past the end of the file as a `ValueError`."""
+    try:
+        return struct.unpack_from(form, data, offset)
+    except struct.error:
+        raise ValueError(f"{path} is cut short: a table runs past the end of the file") from None
 
 
 def font_axes(path):
     """The axes of a variable font, each `(tag, minimum, default, maximum)`, in the order of its
     `fvar` table. A static font has none."""
-    data = Path(path).read_bytes()
-    tables = _sfnt_tables(data)
+    data, tables = _read_sfnt(path)
     if "fvar" not in tables:
         return []
     offset = tables["fvar"][0]
-    _, _, first, _, count, size, _, _ = struct.unpack_from(">HHHHHHHH", data, offset)
+    _, _, first, _, count, size, _, _ = _unpack(path, ">HHHHHHHH", data, offset)
     axes = []
     for index in range(count):
-        tag, low, default, high = struct.unpack_from(">4siii", data, offset + first + index * size)
+        tag, low, default, high = _unpack(path, ">4siii", data, offset + first + index * size)
         axes.append((tag.decode("ascii"), low / 65536, default / 65536, high / 65536))
     return axes
 
@@ -972,26 +990,34 @@ def _measured_x_height(face):
 
 
 def x_height_ratio(face):
-    """The x-height of a face as a part of the em: `sxHeight` of its OS/2 table over the units per
-    em, or, where the table has none (before version 2, or zero) or a value that no x has
-    (`X_HEIGHT_RANGE`), the height of an x as drawn."""
-    data = Path(face.path).read_bytes()
-    tables = _sfnt_tables(data)
+    """The x-height of a face as a part of the em: the height of its x as drawn.
+
+    It is the drawn x and not the `sxHeight` of the OS/2 table, because the app draws the x: the
+    table of Andika and of B612 is 1.6 to 1.8 % off it, and that of OpenDyslexic Mono is the em.
+    `os2_x_height` is the table, for a cross-check.
+    """
+    return _measured_x_height(face)
+
+
+def os2_x_height(face):
+    """`sxHeight` of the OS/2 table of a face as a part of the em, for a cross-check of the x as
+    drawn, or None where the table has none: it is absent, before version 2, or zero."""
+    data, tables = _read_sfnt(face.path)
     if "head" not in tables:
         raise ValueError(f"{face.path} has no head table: it is not a TrueType or OpenType font")
-    units = struct.unpack_from(">H", data, tables["head"][0] + 18)[0]
-    if "OS/2" in tables:
-        offset, length = tables["OS/2"]
-        if length >= 90 and struct.unpack_from(">H", data, offset)[0] >= 2:
-            x_height = struct.unpack_from(">h", data, offset + 86)[0] / units
-            if X_HEIGHT_RANGE[0] <= x_height <= X_HEIGHT_RANGE[1]:
-                return x_height
-    return _measured_x_height(face)
+    units = _unpack(face.path, ">H", data, tables["head"][0] + 18)[0]
+    if "OS/2" not in tables:
+        return None
+    offset, length = tables["OS/2"]
+    if length < 90 or _unpack(face.path, ">H", data, offset)[0] < 2:
+        return None
+    x_height = _unpack(face.path, ">h", data, offset + 86)[0]
+    return x_height / units if x_height > 0 else None
 
 
 def x_height_scale(face, reference=PLEX_SANS.regular):
     """The scale that makes the x-height of `face` that of `reference` (IBM Plex Sans) at the same
-    size: a font with a taller x is drawn smaller, by the ratio of the two x-heights."""
+    size: a font with a taller x is drawn smaller, by the ratio of the two drawn x-heights."""
     return x_height_ratio(reference) / x_height_ratio(face)
 
 
@@ -1041,15 +1067,19 @@ def fonts_meta(fonts):
             weight: {"file": Path(face.path).name, "wght": _face_weight(face)}
             for weight, face in faces.items()
         },
+        "x_height": {
+            "drawn": x_height_ratio(fonts.regular),
+            "os2": os2_x_height(fonts.regular),
+        },
         "scale": fonts.scale,
     }
 
+
 # The text styles of the app that stand on the background, with the size token of each device and
-# the weight of the face that sets them (`FontSet`). They
-# are the styles of `borealisTypography`: the title is `titleLarge`, the label is the kicker (its
-# capitals set 0.07 em apart), the body is `bodyMedium` and the small text is `bodySmall`. Large
-# text is 24 sp regular or 18.66 sp bold and over: the title of a TV is, the title of a phone (18 sp
-# semibold) is not.
+# the weight of the face that sets them (`FontSet`). They are the styles of `borealisTypography`:
+# the title is `titleLarge`, the label is the kicker (its capitals set 0.07 em apart), the body is
+# `bodyMedium` and the small text is `bodySmall`. Large text is 24 sp regular or 18.66 sp bold and
+# over: the title of a TV is, the title of a phone (18 sp semibold) is not.
 HALO_TEXTS = {
     "title": {
         "sizes": {"tv": ("tv", "title"), "phone": ("phone", "title")},
@@ -2109,8 +2139,6 @@ DICHROMACIES = {
     ),
 }
 VISIONS = ("normal", *DICHROMACIES)
-# An accent whose CIELAB chroma is under this is a neutral, and tells from the ink by its distance.
-ACCENT_NEUTRAL_CHROMA = 10.0
 # Each palette is made for some vision, and the distance is held to 20 where it is made for it:
 # the status colours of today for normal vision, the red-green palette for protanopia and
 # deuteranopia, the blue-yellow palette for tritanopia, and each of them for normal vision too.
@@ -2126,6 +2154,14 @@ ACCENT_CLAIMED = {
 _RGBA = re.compile(r"#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?\Z")
 LAB_WHITE_X, LAB_WHITE_Z = 0.95047, 1.08883
 LAB_EPSILON, LAB_KAPPA = 216.0 / 24389.0, 24389.0 / 27.0
+# Linear sRGB to XYZ (D65), and where the encoding of sRGB turns from the line to the power: they
+# are the numbers of `ColourMeasures.kt`, and a test keeps the two equal.
+SRGB_TO_XYZ = (
+    (0.4124564, 0.3575761, 0.1804375),
+    (0.2126729, 0.7151522, 0.0721750),
+    (0.0193339, 0.1191920, 0.9503041),
+)
+SRGB_ENCODE_THRESHOLD = 0.0031308
 
 
 def parse_rgba(value):
@@ -2162,16 +2198,16 @@ def seen_by(rgb, kind):
     """
     linear = srgb_to_linear(np.asarray(rgb, np.float64))
     seen = np.clip(np.asarray(DICHROMACIES[kind]) @ linear, 0.0, 1.0)
-    encoded = np.where(seen <= 0.0031308, seen * 12.92, 1.055 * seen ** (1 / 2.4) - 0.055)
+    encoded = np.where(
+        seen <= SRGB_ENCODE_THRESHOLD, seen * 12.92, 1.055 * seen ** (1 / 2.4) - 0.055
+    )
     return np.floor(encoded * 255 + 0.5) / 255
 
 
 def srgb_to_lab(rgb):
     """CIELAB under D65, as a tuple of the lightness and a and b, of an sRGB colour of floats."""
-    r, g, b = srgb_to_linear(np.asarray(rgb, np.float64))
-    x = (0.4124564 * r + 0.3575761 * g + 0.1804375 * b) / LAB_WHITE_X
-    y = 0.2126729 * r + 0.7151522 * g + 0.0721750 * b
-    z = (0.0193339 * r + 0.1191920 * g + 0.9503041 * b) / LAB_WHITE_Z
+    x, y, z = np.asarray(SRGB_TO_XYZ) @ srgb_to_linear(np.asarray(rgb, np.float64))
+    x, z = x / LAB_WHITE_X, z / LAB_WHITE_Z
 
     def f(t):
         return math.cbrt(t) if t > LAB_EPSILON else (LAB_KAPPA * t + 16) / 116
@@ -2511,8 +2547,8 @@ def _accent_high_contrast(roles, high, colors):
 
 def _accent_distance(accent, context):
     """The least CIEDE2000 distance of the accent from the status colours of each palette as each
-    vision sees them, and from `ink` and `ink-2`, which only a neutral accent has to keep (an accent
-    with chroma has a hue to tell it by, and the distance is for information)."""
+    vision sees them, and from `ink` and `ink-2` as normal vision sees them: the accent of a
+    selected label is told from the ink beside it by its colour, whatever the colour is."""
     found = []
     for palette, colours in context["status"].items():
         for vision in VISIONS:
@@ -2531,8 +2567,6 @@ def _accent_distance(accent, context):
                     "relevant": (palette, vision) in ACCENT_CLAIMED,
                 }
             )
-    _, a, b = srgb_to_lab(parse_hex(accent))
-    neutral = math.hypot(a, b) < ACCENT_NEUTRAL_CHROMA
     for ink in ("ink", "ink-2"):
         found.append(
             {
@@ -2543,7 +2577,7 @@ def _accent_distance(accent, context):
                 "least": colour_distance(accent, context["colors"][ink]),
                 "nearest": ink,
                 "limit": ACCENT_DISTANCE,
-                "relevant": neutral,
+                "relevant": True,
             }
         )
     return found

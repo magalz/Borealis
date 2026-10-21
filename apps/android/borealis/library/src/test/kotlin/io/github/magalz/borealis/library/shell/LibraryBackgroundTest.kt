@@ -5,15 +5,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.PixelMap
-import androidx.compose.ui.graphics.toPixelMap
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.noAnimations
+import io.github.magalz.borealis.designsystem.testing.rootFrame
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.Transparency
@@ -61,7 +59,7 @@ class LibraryBackgroundTest {
         noAnimations()
         show(FormFactor.Tv, BackgroundStyle.AuroraCurtains)
 
-        val shot = frame()
+        val shot = composeRule.rootFrame()
         // The screen is right of the 220dp rail: from pixel 440 at xhdpi.
         assertThat(shot.maxLift(RAIL_END_PX, shot.width, 0f, 0.5f)).isIn(LIT)
         assertThat(shot.maxLift(RAIL_END_PX, shot.width, 0.75f, 1f)).isLessThan(NONE)
@@ -86,7 +84,7 @@ class LibraryBackgroundTest {
             BorealisLook(transparency = Transparency.Off),
         )
 
-        val shot = frame()
+        val shot = composeRule.rootFrame()
         assertThat(shot.maxLift(RAIL_END_PX, shot.width, 0f, 0.5f)).isIn(LIT)
         assertThat(shot[RAIL_PROBE_PX, shot.height / 2]).isEqualTo(BorealisTokens.Color.Chrome)
     }
@@ -97,7 +95,7 @@ class LibraryBackgroundTest {
         noAnimations()
         show(FormFactor.Phone, BackgroundStyle.SoftGlow)
 
-        val shot = frame()
+        val shot = composeRule.rootFrame()
         assertThat(shot.maxLift(0, shot.width / 4, 0f, 0.5f)).isIn(LIT)
         assertThat(shot.maxLift(shot.width * 3 / 4, shot.width, 0f, 0.5f)).isIn(LIT)
     }
@@ -111,7 +109,7 @@ class LibraryBackgroundTest {
         }
         composeRule.waitForIdle()
 
-        val shot = frame()
+        val shot = composeRule.rootFrame()
         assertThat(BackgroundStyle.Default).isEqualTo(BackgroundStyle.AuroraCurtains)
         assertThat(shot.maxLift(RAIL_END_PX, shot.width, 0f, 0.5f)).isIn(LIT)
     }
@@ -121,12 +119,10 @@ class LibraryBackgroundTest {
     fun `a frame given the plain page draws the plain page colour`() {
         show(FormFactor.Tv, BackgroundStyle.Off)
 
-        val shot = frame()
+        val shot = composeRule.rootFrame()
         assertThat(shot.maxLift(RAIL_END_PX, shot.width, 0f, 1f)).isLessThan(NONE)
         assertThat(shot.minLift(RAIL_END_PX, shot.width, 0f, 1f)).isGreaterThan(-NONE)
     }
-
-    private fun frame(): PixelMap = composeRule.onRoot().captureToImage().toPixelMap()
 
     private companion object {
         const val RAIL_END_PX = 440

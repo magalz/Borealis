@@ -30,6 +30,7 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.glass.GlassHostOver
+import io.github.magalz.borealis.designsystem.testing.frame
 import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -237,11 +238,11 @@ class BackdropTextTest {
         // The stem of a capital I on black, with no halo: where its edges are, to a fraction of
         // a pixel.
         showStem(BackgroundStyle.Off, Color.Black)
-        val stem = Stem.of(hostPixels())
+        val stem = Stem.of(composeRule.frame(HOST))
         // The same stem over white, with the halo: the alpha of the halo at a few distances
         // from it.
         change(BackgroundStyle.Starfield, backdrop = Color.White)
-        val pixels = hostPixels()
+        val pixels = composeRule.frame(HOST)
 
         for (distance in DISTANCES_PX) {
             val at = stem.left - distance
@@ -310,8 +311,6 @@ class BackdropTextTest {
             }
         }
     }
-
-    private fun hostPixels() = composeRule.onNodeWithTag(HOST).captureToImage().toPixelMap()
 
     /** The alpha of `page` that makes [green] of white. */
     private fun alphaOver(green: Float) = (1f - green) / (1f - colors.page.green)

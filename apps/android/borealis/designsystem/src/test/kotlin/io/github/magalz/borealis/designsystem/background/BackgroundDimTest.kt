@@ -9,14 +9,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PixelMap
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.frame
 import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -43,11 +41,11 @@ class BackgroundDimTest {
     fun `with high contrast a drawn background shows its light at the dim that is left`() {
         noAnimations()
         start(BackgroundStyle.SoftGlow)
-        val normal = frame().brightest()
+        val normal = composeRule.frame(BG).brightest()
 
         look = BorealisLook(highContrast = true)
         composeRule.waitForIdle()
-        val dimmed = frame().brightest()
+        val dimmed = composeRule.frame(BG).brightest()
 
         // The light above the page is what the page colour over it leaves: 1 less the dim.
         val kept = 1f - BorealisTokens.HighContrast.Dim
@@ -60,18 +58,18 @@ class BackgroundDimTest {
         noAnimations()
         start(BackgroundStyle.SoftGlow, BorealisLook(thickFocus = true))
 
-        assertThat(frame().brightest()).isGreaterThan(0.3f)
+        assertThat(composeRule.frame(BG).brightest()).isGreaterThan(0.3f)
     }
 
     @Test
     fun `the dim reaches the still of a video style`() {
         noAnimations()
         start(BackgroundStyle.NorthernLights)
-        val normal = frame().brightest()
+        val normal = composeRule.frame(BG).brightest()
 
         look = BorealisLook(highContrast = true)
         composeRule.waitForIdle()
-        val dimmed = frame().brightest()
+        val dimmed = composeRule.frame(BG).brightest()
 
         assertThat(normal).isGreaterThan(0.3f)
         assertThat(dimmed).isLessThan(normal * 0.25f)
@@ -81,7 +79,7 @@ class BackgroundDimTest {
     fun `the plain page is as it is with high contrast`() {
         start(BackgroundStyle.Off, BorealisLook(highContrast = true))
 
-        val frame = frame()
+        val frame = composeRule.frame(BG)
         assertThat(frame.brightest()).isLessThan(0.01f)
         assertThat(frame[0, 0]).isEqualTo(BorealisTokens.Color.Page)
     }
@@ -120,8 +118,6 @@ class BackgroundDimTest {
             }
         }
     }
-
-    private fun frame(): PixelMap = composeRule.onNodeWithTag(BG).captureToImage().toPixelMap()
 
     /** The most light above the page, as the sum of red, green and blue, of the lit top half. */
     private fun PixelMap.brightest(): Float =

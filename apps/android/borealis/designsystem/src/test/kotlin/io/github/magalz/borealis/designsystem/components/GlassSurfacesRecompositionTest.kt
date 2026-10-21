@@ -4,8 +4,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
-import androidx.compose.runtime.ExperimentalComposeApi
-import androidx.compose.runtime.Recomposer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
@@ -22,6 +20,7 @@ import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.components.settings.CollapsibleSection
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
 import io.github.magalz.borealis.designsystem.glass.GlassHost
+import io.github.magalz.borealis.designsystem.testing.recompositions
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
@@ -97,11 +96,6 @@ class GlassSurfacesRecompositionTest {
 
     private fun card(): IntArray =
         composeRule.onNodeWithTag(CARD).captureToImage().toPixelMap().buffer
-
-    /** How many changes the recomposers of the test have taken: a count of recompositions. */
-    @OptIn(ExperimentalComposeApi::class)
-    private fun recompositions(): Long =
-        Recomposer.runningRecomposers.value.sumOf { it.changeCount }
 
     private companion object {
         const val ROOT = "root"

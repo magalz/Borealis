@@ -13,12 +13,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -32,6 +29,7 @@ import io.github.magalz.borealis.designsystem.glass.backdropLuminance
 import io.github.magalz.borealis.designsystem.glass.contrast
 import io.github.magalz.borealis.designsystem.glass.glassSpec
 import io.github.magalz.borealis.designsystem.glass.luminance as wcagLuminance
+import io.github.magalz.borealis.designsystem.testing.frame
 import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -231,9 +229,9 @@ class BorealisTextFieldOnGlassTest {
 
         // The corner of the rounded field is outside it, so it shows the backdrop and not the
         // glass.
-        val corner = hostPixels()[CORNER_PX, CORNER_PX]
+        val corner = composeRule.frame(HOST)[CORNER_PX, CORNER_PX]
         assertThat(corner.luminance()).isGreaterThan(0.9f)
-        assertThat(hostPixels()[CENTRE_PX, MIDDLE_PX].luminance()).isLessThan(0.9f)
+        assertThat(composeRule.frame(HOST)[CENTRE_PX, MIDDLE_PX].luminance()).isLessThan(0.9f)
     }
 
     // Helpers
@@ -291,10 +289,8 @@ class BorealisTextFieldOnGlassTest {
         )
     }
 
-    private fun hostPixels() = composeRule.onNodeWithTag(HOST).captureToImage().toPixelMap()
-
     /** The colour of the outline at the middle of its left side, which is its own pixel. */
-    private fun outline(): Color = hostPixels()[OUTLINE_PX, MIDDLE_PX]
+    private fun outline(): Color = composeRule.frame(HOST)[OUTLINE_PX, MIDDLE_PX]
 
     /** The luminance of the brightest pixel behind the glass of [style] under [look]. */
     private fun backdropOf(style: BackgroundStyle, look: BorealisLook = BorealisLook()): Double {

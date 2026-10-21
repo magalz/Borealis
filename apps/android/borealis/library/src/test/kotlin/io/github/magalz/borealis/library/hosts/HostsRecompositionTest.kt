@@ -3,8 +3,6 @@ package io.github.magalz.borealis.library.hosts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.runtime.ExperimentalComposeApi
-import androidx.compose.runtime.Recomposer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
@@ -17,6 +15,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.recompositions
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.testing.TV
 import io.github.magalz.borealis.library.testing.setContentInKeyboardMode
@@ -79,11 +78,6 @@ class HostsRecompositionTest {
             }
         }
     }
-
-    /** How many changes the recomposers of the test have taken: a count of recompositions. */
-    @OptIn(ExperimentalComposeApi::class)
-    private fun recompositions(): Long =
-        Recomposer.runningRecomposers.value.sumOf { it.changeCount }
 
     private companion object {
         const val MOVES = 6

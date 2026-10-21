@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.ExperimentalComposeApi
-import androidx.compose.runtime.Recomposer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -16,10 +14,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PixelMap
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.lifecycle.Lifecycle
@@ -28,7 +24,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.designsystem.testing.frame
 import io.github.magalz.borealis.designsystem.testing.noAnimations
+import io.github.magalz.borealis.designsystem.testing.recompositions
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import kotlin.math.abs
 import org.junit.Rule
@@ -55,7 +53,7 @@ class BorealisBackgroundTest {
     fun `Off paints the plain page colour everywhere`() {
         show(BackgroundStyle.Off)
 
-        val shot = frame()
+        val shot = composeRule.frame(BG)
         assertThat(shot.maxLift(0f, 1f)).isLessThan(NONE)
         assertThat(shot.minLift(0f, 1f)).isGreaterThan(-NONE)
     }
@@ -65,7 +63,7 @@ class BorealisBackgroundTest {
         noAnimations()
         show(BackgroundStyle.AuroraCurtains)
 
-        val shot = frame()
+        val shot = composeRule.frame(BG)
         assertThat(shot.maxLift(0f, 0.5f)).isIn(LIT_RANGE)
         assertThat(shot.maxLift(0.75f, 1f)).isLessThan(NONE)
         assertThat(shot.minLift(0f, 1f)).isGreaterThan(-NONE)
@@ -76,7 +74,7 @@ class BorealisBackgroundTest {
         noAnimations()
         show(BackgroundStyle.SoftGlow)
 
-        val shot = frame()
+        val shot = composeRule.frame(BG)
         assertThat(shot.maxLift(0f, 0.5f)).isIn(LIT_RANGE)
         assertThat(shot.maxLift(0.75f, 1f)).isIn(FAINT_RANGE)
         assertThat(shot.minLift(0f, 1f)).isGreaterThan(-NONE)
@@ -94,7 +92,7 @@ class BorealisBackgroundTest {
             composeRule.runOnIdle { style = next }
             composeRule.waitForIdle()
 
-            val shot = frame()
+            val shot = composeRule.frame(BG)
             assertWithMessage("$next fills the screen").that(shot.width).isEqualTo(WIDTH)
             assertWithMessage("$next fills the screen").that(shot.height).isEqualTo(HEIGHT)
             when {
@@ -115,12 +113,12 @@ class BorealisBackgroundTest {
     @Test
     fun `the frame loop is an infinite animation, which the policy of a test on auto advance cancels`() {
         show(BackgroundStyle.AuroraCurtains)
-        val first = frame()
+        val first = composeRule.frame(BG)
         assertThat(first.maxLift(0f, 0.5f)).isIn(LIT_RANGE)
 
         composeRule.mainClock.advanceTimeBy(5_000)
 
-        assertThat(frame().differingPixels(first)).isEqualTo(0)
+        assertThat(composeRule.frame(BG).differingPixels(first)).isEqualTo(0)
     }
 
     @Test
@@ -162,11 +160,11 @@ class BorealisBackgroundTest {
         assertThat(recompositions()).isGreaterThan(settled)
 
         val before = recompositions()
-        val shotBefore = frame()
+        val shotBefore = composeRule.frame(BG)
         composeRule.mainClock.advanceTimeBy(5_000)
         settle()
 
-        assertThat(frame().differingPixels(shotBefore)).isGreaterThan(0)
+        assertThat(composeRule.frame(BG).differingPixels(shotBefore)).isGreaterThan(0)
         assertThat(recompositions()).isEqualTo(before)
     }
 
@@ -329,11 +327,11 @@ class BorealisBackgroundTest {
         composeRule.mainClock.autoAdvance = false
         show(style)
         composeRule.mainClock.advanceTimeBy(1_000)
-        val start = frame()
+        val start = composeRule.frame(BG)
         composeRule.mainClock.advanceTimeBy(5_000)
 
         assertThat(start.maxLift(0f, 0.5f)).isIn(LIT_RANGE)
-        assertThat(frame().differingPixels(start)).isGreaterThan(0)
+        assertThat(composeRule.frame(BG).differingPixels(start)).isGreaterThan(0)
     }
 
     /**
@@ -346,13 +344,13 @@ class BorealisBackgroundTest {
             Specimen { DrawnBackground(style, cycle, Modifier.fillMaxSize().testTag(BG)) }
         }
         composeRule.waitForIdle()
-        val start = frame()
+        val start = composeRule.frame(BG)
         composeRule.runOnIdle { cycle.floatValue = 0.5f }
         composeRule.waitForIdle()
-        val middle = frame()
+        val middle = composeRule.frame(BG)
         composeRule.runOnIdle { cycle.floatValue = 0.99999f }
         composeRule.waitForIdle()
-        val end = frame()
+        val end = composeRule.frame(BG)
 
         assertThat(start.maxLift(0f, 0.5f)).isIn(LIT_RANGE)
         assertThat(middle.differingPixels(start)).isGreaterThan(0)
@@ -364,12 +362,12 @@ class BorealisBackgroundTest {
         noAnimations()
         composeRule.mainClock.autoAdvance = false
         show(style)
-        val first = frame()
+        val first = composeRule.frame(BG)
         assertThat(first.maxLift(0f, 0.5f)).isIn(LIT_RANGE)
 
         composeRule.mainClock.advanceTimeBy(5_000)
 
-        assertThat(frame().differingPixels(first)).isEqualTo(0)
+        assertThat(composeRule.frame(BG).differingPixels(first)).isEqualTo(0)
     }
 
     /**
@@ -379,13 +377,6 @@ class BorealisBackgroundTest {
     private fun settle() {
         repeat(2) { composeRule.mainClock.advanceTimeBy(100) }
     }
-
-    private fun frame(): PixelMap = composeRule.onNodeWithTag(BG).captureToImage().toPixelMap()
-
-    /** How many changes the recomposers of the test have taken: a count of recompositions. */
-    @OptIn(ExperimentalComposeApi::class)
-    private fun recompositions(): Long =
-        Recomposer.runningRecomposers.value.sumOf { it.changeCount }
 
     private companion object {
         const val BG = "background"

@@ -2275,11 +2275,17 @@ class ColourMathTest(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 contrast.parse_rgba(value)
 
-    def test_a_colour_laid_over_another_is_mixed_in_the_encoded_values(self):
-        out = contrast.over("#A78BFA21", contrast.parse_hex("#14171B"))
+    def test_a_colour_laid_over_another_is_mixed_in_the_encoded_values_to_8_bits(self):
+        # Compose holds an sRGB colour in 8 bits a channel and rounds half up: the tint on the
+        # raised surface is (44.25, 44.11, 63.69) of 255, which is (44, 44, 64).
+        out = contrast.over("#A78BFA21", contrast.parse_hex("#1A1E24"))
+        np.testing.assert_allclose(out * 255, [44, 44, 64], atol=1e-9)
         alpha = 0x21 / 255
         below, above = contrast.parse_hex("#14171B"), contrast.parse_hex("#A78BFA")
-        np.testing.assert_allclose(out, alpha * above + (1 - alpha) * below, atol=1e-9)
+        mixed = alpha * above + (1 - alpha) * below
+        np.testing.assert_allclose(
+            contrast.over("#A78BFA21", below), np.floor(mixed * 255 + 0.5) / 255, atol=1e-9
+        )
 
     def test_an_opaque_colour_over_another_is_itself(self):
         np.testing.assert_allclose(
@@ -2603,6 +2609,7 @@ class AccentReportTest(unittest.TestCase):
         for surface in ("surface", "surface-raised"):
             below = contrast.parse_hex(SURFACE_HEX[surface])
             tint = alpha * contrast.parse_hex("#A78BFA") + (1 - alpha) * below
+            tint = np.floor(tint * 255 + 0.5) / 255
             for role in ("accent", "accent-soft"):
                 with self.subTest(role=role, surface=surface):
                     found = self.fill(report, f"{role}/tint-on-{surface}")
@@ -2675,8 +2682,6 @@ class AccentReportTest(unittest.TestCase):
                 "distance:red-green:deuteranopia",
                 "distance:blue-yellow:normal",
                 "distance:blue-yellow:tritanopia",
-                "distance:ink",
-                "distance:ink-2",
             },
         )
         for entry in found.values():
@@ -2705,16 +2710,28 @@ class AccentReportTest(unittest.TestCase):
         self.assertLess(entry["least"], 20.0)
         self.assertNotIn("distance:default:deuteranopia", report["fails"])
 
-    def test_the_accent_is_also_kept_apart_from_ink_and_ink_2(self):
+    def test_a_neutral_accent_is_also_kept_apart_from_ink_and_ink_2(self):
         white = self.report(candidate(color={"accent": "#F5F3FF"}))
         found = {d["id"]: d for d in white["distance"]}
+        self.assertTrue(found["distance:ink"]["relevant"])
         self.assertLess(found["distance:ink"]["least"], 20.0)
         self.assertLess(found["distance:ink-2"]["least"], 20.0)
+        self.assertAlmostEqual(
+            found["distance:ink"]["least"], contrast.colour_distance("#F5F3FF", "#E8EAED"), 9
+        )
         self.assertIn("distance:ink", white["fails"])
         self.assertIn("distance:ink-2", white["fails"])
-        violet = {d["id"]: d for d in self.report()["distance"]}
-        self.assertGreater(violet["distance:ink"]["least"], 20.0)
-        self.assertGreater(violet["distance:ink-2"]["least"], 20.0)
+
+    def test_an_accent_with_a_hue_has_the_distance_from_the_ink_for_information(self):
+        # Violet is 22 from ink-2 as a trichromat sees it and 29 from ink; a tritanope sees it
+        # nearer, and that is not claimed.
+        violet = self.report()
+        found = {d["id"]: d for d in violet["distance"]}
+        self.assertFalse(found["distance:ink"]["relevant"])
+        self.assertFalse(found["distance:ink-2"]["relevant"])
+        self.assertGreater(found["distance:ink"]["least"], 20.0)
+        self.assertGreater(found["distance:ink-2"]["least"], 20.0)
+        self.assertNotIn("distance:ink-2", violet["fails"])
 
     def test_the_glass_has_no_rows_without_a_backdrop(self):
         report = self.report()
@@ -2788,7 +2805,7 @@ class AccentGlassTest(unittest.TestCase):
         # 4.39 and 3.88 are outlines that keep 3:1 and text that does not keep 4.5:1.
         self.assertIn("glass:standard:NorthernLights:accent-text", fails)
         self.assertIn("glass:standard:FlowingLight:accent-text", fails)
-        self.assertIn("glass:standard:LightMist:accent-text", fails)
+        self.assertNotIn("glass:standard:LightMist:accent-text", fails)
         self.assertNotIn("glass:standard:AuroraCurtains:accent-text", fails)
         self.assertNotIn("glass:standard:FlowingLight:accent-outline", fails)
         self.assertNotIn("glass:standard:FlowingLight:accent-soft-text", fails)

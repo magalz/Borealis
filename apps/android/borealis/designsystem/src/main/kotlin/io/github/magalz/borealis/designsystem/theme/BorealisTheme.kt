@@ -65,3 +65,20 @@ fun BorealisTheme(
         )
     }
 }
+
+/**
+ * Gives the content of a window of its own, a dialog or a sheet, the text size of the theme. A
+ * window takes the font scale of the system from its own view, not the one that the theme gave the
+ * composition of the screen below it, so the text size is applied again here, from the factor that
+ * the theme left behind.
+ */
+@Composable
+internal fun TextSizeInWindow(content: @Composable () -> Unit) {
+    val system = LocalDensity.current
+    val applied = LocalAppliedTextSize.current
+    val density =
+        remember(system, applied) {
+            if (applied == 1f) system else Density(system.density, system.fontScale * applied)
+        }
+    CompositionLocalProvider(LocalDensity provides density, content = content)
+}

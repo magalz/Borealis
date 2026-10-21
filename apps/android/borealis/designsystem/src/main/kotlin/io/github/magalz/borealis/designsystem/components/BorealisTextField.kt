@@ -80,6 +80,10 @@ private val ERROR_ROOM = 6.dp
  * and then does what Done does by default, which is to hide the keyboard and clear focus.
  * [keyboardType] picks the keyboard layout, such as Uri for a host address.
  *
+ * [modifier] is on the outside of the field, glass included, with the keyboard on focus and
+ * without: a margin of the caller is outside the glass, and the focus requester and the focus
+ * properties of the caller apply to the field, or to its wrapper when that holds the focus.
+ *
  * A text field keeps the D-pad for its caret, so a remote cannot leave it. With [leaveWithDpad], Up
  * and Down move the focus to the neighbour above and below, and Left moves it to the neighbour on
  * the left while the caret is at the start (an empty field has no caret to move). Left and Right
@@ -137,7 +141,8 @@ fun BorealisTextField(
     if (showKeyboardOnFocus) {
         TextFieldBody(
             content,
-            modifier.fillMaxWidth().fieldKeys(leaveWithDpad, keyboardOnOk = false, state),
+            modifier.fillMaxWidth(),
+            Modifier.fillMaxWidth().fieldKeys(leaveWithDpad, keyboardOnOk = false, state),
             interactionSource = null,
             onKeyboardAction = { performDefaultAction ->
                 currentOnDone?.invoke()
@@ -203,6 +208,7 @@ private fun EditOnOkField(
     Box(modifier.fillMaxWidth()) {
         TextFieldBody(
             content,
+            Modifier,
             Modifier.fillMaxWidth()
                 // The wrapper is the one node that a screen reader meets until the field is edited.
                 .then(if (editing) Modifier else Modifier.semantics { hideFromAccessibility() })
@@ -307,11 +313,14 @@ private fun wrapperKey(event: KeyEvent, startEditing: () -> Unit, onDone: () -> 
  * indicator of its own, and the glass, with the outline on it, is drawn here round the field and
  * its message. An outlined field would float its label over the top of its outline, where the
  * outline is cut and the glass would not show: half of the label would stand on the background.
+ * [modifier] is for the glass, so that what the caller gives lays out the whole field, and
+ * [fieldModifier] is for the [TextField] inside it.
  */
 @Composable
 private fun TextFieldBody(
     content: FieldContent,
     modifier: Modifier,
+    fieldModifier: Modifier,
     interactionSource: MutableInteractionSource?,
     onKeyboardAction: KeyboardActionHandler,
 ) {
@@ -328,13 +337,14 @@ private fun TextFieldBody(
                 else -> colors.ink3
             }
         Box(
-            Modifier.glassSurface(shape)
+            modifier
+                .glassSurface(shape)
                 .border(if (focused) FOCUSED_OUTLINE else OUTLINE, outline, shape)
                 .padding(bottom = if (content.error != null) ERROR_ROOM else 0.dp)
         ) {
             TextField(
                 state = content.state,
-                modifier = modifier,
+                modifier = fieldModifier,
                 label = { Text(content.label) },
                 // The error is announced when it appears: focus stays on the button that asked for
                 // it. It goes with the first edit, so the field is not announced as the text

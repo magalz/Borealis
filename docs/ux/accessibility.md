@@ -5,17 +5,24 @@ when high contrast is on. This page records how the contrast of text over the
 animated background is measured, the baseline measured before any fix, how the
 table that the glass of the app reads comes out of that measurement, the halo
 of the text that stands on the background, and what the icons and the text field
-on it keep. The tool is in
+on it keep. It then records the high contrast and colour-blind palettes, what the
+screen readers and the touch targets need, and a WCAG 2.2 checklist. The tool is in
 [`design/accessibility/`](../../design/accessibility/README.md); its README says
 how to run it again. The decisions that follow from the numbers are in
 [ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md).
 
-- Date: 2026-10-20.
+- Date: 2026-10-20. The sections on the halo, the icons and the text field, which
+  came later, carry their own date and revision. The glass table of the app was
+  regenerated on 2026-10-21 at `cdd48edc`, with identical numbers: it now also
+  holds the hash of each clip.
 - Revision measured: `fedc4ce0`. It widens the grid of the glass candidates of
   `fec048bb`, the first measurement. The frames are those of that first
   measurement, taken with the app code of `109e7dff`, the Sprint 9 merge: the
   drawn backgrounds and the clips have not changed since. So Tables A and B are
   as they were, and Table C is new.
+- This page is a test input of `:borealis:designsystem`: a test reads the halo
+  that it chooses (see Halo). Every edit of it runs the unit tests of that
+  module again.
 
 ## Method
 
@@ -516,6 +523,9 @@ Table F. The lowest ratio over the text styles, by background, with no halo and 
 
 The choice: stroke 3 dp, blur 2 dp, opacity 80 %.
 
+A test reads the line above and keeps `BackdropHalo` equal to it (`NotesChoice` in the tests of
+`:borealis:designsystem`). The line has to stay as it is, once and on one line, or the test fails.
+
 With no halo the lowest ratios are those of Table A: `ink` is 1.56 and `ink-2` is 1.11 over
 Northern lights. The title of a TV needs 3:1 and keeps 7.26 over Northern lights, its worst
 background. The worst small text is `ink-2` at 5.32, for the body of a TV over Northern lights, 16%
@@ -785,3 +795,183 @@ above, for the text and for the icons.
   icon, or cut at its bounds.
 - **API level.** The blur of a mask is a part of every paint, so it needs no blur effect (API 31),
   but the halo has not been seen on a device below API 31: the tests draw it with Robolectric.
+
+## High contrast, the colour-blind palettes and the offline colour
+
+These are not measurements over the background, so they have no frames. Their figures come from
+[`design/tokens.json`](../../design/tokens.json) at `c6e4b92a` and are pinned by tests, which are
+named in each part. The decisions are in
+[ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md), decisions 15 to 17.
+
+### High contrast
+
+The `high-contrast` group of the tokens replaces the roles of the same name while the setting is on
+(`BorealisColors.withHighContrast`, `HighContrastColorsTest`). The ratio is the lowest over `page`,
+`chrome`, `surface` and `surface-raised`, and under the accent tint of a selected row and the hover,
+each over the three surfaces.
+
+| Role | Colour | Lowest ratio |
+| --- | --- | --- |
+| `ink` | `#FFFFFF` | 13.62 |
+| `ink-2` | `#E8EAED` | 11.30 |
+| `ink-3` | `#D0D3D7` | 9.07 |
+| `ink-4` | `#BEC1C4` | 7.54 |
+| `accent` | `#C8B7FC` | 7.55 (`on-accent` keeps 10:1 on it) |
+| `accent-soft` | `#D6CCFE` | 9.04 |
+| `success-ink` | `#7ED48B` | 7.58 |
+| `danger-ink` | `#FFABA4` | 7.53 |
+| `line`, opaque | `#80868D` | 3.71 |
+| `line-strong`, opaque | `#9CA2A8` | 5.29 |
+| `offline` | `#848B92` | 3.95 |
+
+- **The dim.** The `page` colour lies over the animated background at 0.85. Over the brightest pixel
+  of the 12 sets of frames of the six backgrounds every text role keeps 8:1 or more, and the lowest
+  is `ink-4` at 8.00:1. For the loose text the dim and the halo give the numbers of Tables G and H.
+  `BackgroundDimTest` pins the veil over a drawn style and over the still of a clip.
+- **The outline** is 5 dp and drawn in `ink` (in the white of High contrast there): with the usual
+  `ink` it is 15.8:1 on `page`, 14.9:1 on `surface` and 6.9:1 on the brightest backdrop that a glass
+  panel is allowed. `ThickFocusOutlineTest` keeps it at 3:1 or more over all of them. The thicker
+  outline of the Accessibility group is the same outline.
+- **What it overrides.** Only Transparency, Thicker focus outline, Glass tint and Glass blur. Their
+  rows are disabled and say "High contrast is on in Accessibility". Text size, the palette and
+  Reduce motion still apply, and a palette is applied after High contrast: the status inks of both
+  palettes keep 7.5:1, so the two compose.
+
+### The offline colour and the status shapes
+
+The offline colour was `#4B5158`, 2.1 to 2.4:1 over the fills (2.2:1 on `surface`), which fails the
+3:1 that a non-text indicator needs (WCAG 1.4.11). It is `#686E75`: 3.70:1 on `page`, 3.49:1 on
+`surface` and 3.25:1 on `surface-raised` (owner, 2026-10-20). Under High contrast it is `#848B92`,
+3.95:1 or more.
+
+Colour is not the only signal of a status (WCAG 1.4.1). The dot of a host has a shape for each state
+(`StatusDot`, `StatusDotTest`): a filled circle for online, a filled triangle for attention and a
+hollow ring for offline and unknown. The card says the status in words too, and a screen reader
+reads it in one sentence with the name.
+
+### The colour-blind palettes
+
+The palettes take their colours from the Okabe and Ito set, which is safe for colour vision
+deficiency. Each replaces the status roles only (`BorealisColors.withColourVision`):
+
+| Role | Red-green | Blue-yellow |
+| --- | --- | --- |
+| `success` | `#56B4E9` | `#009E73` |
+| `success-ink` | `#85C9EF` | `#82CFBA` |
+| `warning`, `warning-ink` | `#F0E442` | `#F0E442` |
+| `danger` | `#D55E00` | `#D55E00` |
+| `danger-ink` | `#ECB78C` | `#ECB78C` |
+| `offline` | `#808080` | `#808080` |
+
+- **The check is in Kotlin**: `ColourMeasures` and `ColourVisionPaletteTest` in the tests of
+  `:borealis:designsystem`. It simulates the dichromacies with the Machado matrices at severity 1.0
+  and measures the distance of two colours in CIEDE2000. Every pair of the four status colours is
+  20 or more apart for the dichromacies that the palette is for. The least distance is 23.7 for
+  red-green (protanopia and deuteranopia) and 23.9 for blue-yellow (tritanopia). The colours of
+  today fail that bar for a red-green dichromat.
+- Each status colour keeps 3:1 on `page`, `surface` and `surface-raised`, and each status ink keeps
+  7.5:1 as text, so High contrast can keep the palette.
+- The Python contrast tool does not model this: it had a copy until `5fe33a63` removed it, and the
+  Kotlin check is the only one.
+
+## Screen readers and touch targets
+
+The checks run in the unit tests, on Robolectric, so they find what a person reviewing by hand
+misses on every screen; they are not TalkBack on a device (see the runbook, section 3.23).
+
+### Touch targets
+
+A touch target is 48 dp on a phone and on a handheld. WCAG 2.5.8 asks 24 by 24 px; the app keeps
+to the 48 dp of the Android guidance, which the checks of the Accessibility Test Framework (ATF)
+enforce. A TV has no touch screen, so it keeps its sizes: the D-pad reaches the targets and the
+focus outline shows them. `TouchTargetTest` pins these:
+
+- a segment of a segmented control is 48 dp wide and high, and the 48 dp of a chip is a cell around
+  it, so the chip keeps its look;
+- a group of the settings list is 48 dp high on a handheld, and the header of a phone section is a
+  48 dp button;
+- the handle of a bottom sheet is 48 dp wide and high;
+- a button (40 dp) and a menu row (44 dp) keep their size: Compose gives them 48 dp of touch where
+  no neighbour is in the way, and the checks pass.
+
+Three effects of the rule wait for the owner's review. A handheld shows about half of the 11
+Settings groups at once, so its group list scrolls. The docked keyboard of a phone is 24 dp taller,
+because its shortcut chips have 48 dp cells. The keys of the phone keyboard stay under 48 dp
+(an accepted finding, below).
+
+### Headings, pane titles and what is said
+
+- **Headings**, which a screen reader jumps between: the titles of Hosts (phone and TV), Apps (the
+  host name), Add host, Pairing and the Audit trail, the title of Settings on a TV, the title and
+  every section of Settings on a phone, the section labels (`BackdropKicker`) and the title of an
+  empty state. The tests are `HostsTalkBackTest`, `LibraryScreensTalkBackTest`,
+  `AuditTalkBackTest`, `SettingsTalkBackTest` and `ComponentTalkBackTest`.
+- **Pane titles**, which a screen reader announces when a window opens: a sheet or a dialog says its
+  title, the options of a host say the name of the host, the in-game menu says its header, the
+  keyboard says "Keyboard" (`StreamTalkBackTest`).
+- **Names and states.** A host card is one sentence: name, status, address, capabilities and "Running
+  Desktop"; the status dot says nothing of its own. A pairing step is one thing to read, with its
+  number, its text and its address. `SegmentedControl` says its group label after the name of a
+  segment, so that the Off of one row is not the Off of another. The rows of the menu and the
+  groups of the settings are read in the order that they are drawn.
+- **Live regions.** A wrong, expired or failed PIN and the other outcomes of pairing, and the error
+  under the address of Add host, are announced when they appear, because the focus stays on the
+  button. Snackbars are polite live regions.
+- **Large text** (WCAG 1.4.4). The `LargeTextFitTest` classes of the design system and of the
+  Library, and `SettingsLargeTextFitTest` and `AuditLargeTextFitTest`, run the screens at a font
+  scale of 2.0 and fail on a text that is cut or ends in an ellipsis.
+
+### What the ATF does not see
+
+- **The background.** The checks run with the background Off (`BackgroundStyle.Off`), so their
+  contrast checks see the colours that the text really has. Over the animated background the
+  contrast is owned by the tool in `design/accessibility/`, which this page describes.
+- **TalkBack itself.** Robolectric cannot see the traversal links that TalkBack follows. The
+  segments and the keys of the keyboard are still lifted over their neighbours while they have the
+  focus, so the merged tree lists the focused one last.
+- **A visible snackbar**: no check covers it.
+
+### Accepted findings
+
+A check is never switched off without a reason. `AcceptedFinding` in the test fixtures of
+`:borealis:designsystem` takes the class of the check, a reason that is not blank and, optionally,
+the elements it applies to; `assertAccessible` fails on any other error or warning. The accepted
+findings are:
+
+| Check | Where | Reason |
+| --- | --- | --- |
+| Touch target | Every screen on a TV (`NoTouchOnTv`) | A TV has no touch screen; its targets are reached by the D-pad and a focus outline. |
+| Touch target | The keys of the phone keyboard (`StreamAccessibilityChecksTest`) | The keys of a full keyboard are narrower than 48 dp on a phone, ten to a row, and five rows fit the height of a phone held sideways. The System keyboard chip opens the keyboard of the device. |
+| Text contrast | The disabled Display row of the in-game menu | The title is dimmed to 38 %, and WCAG 1.4.3 leaves an inactive component out of the contrast. The note under it keeps full strength. |
+| Text contrast | The last chip of the scrolling shortcut row | The check reads the sliver of a chip that the edge of the row cuts off. Whole, the chip is `ink-2` on the surface at 10:1. |
+| Text contrast | The buttons of Add host while the host is added | They are disabled, and WCAG 1.4.3 exempts an inactive component. |
+| Duplicate name | The Add host button, the title and the rail item (`LibraryAccessibilityChecksTest`) | They carry one name, the role tells them apart, and the label of the button has to be the visible one (WCAG 2.5.3). |
+| Duplicate name | The Add host action of the top bar and the button of the empty state of Hosts | They do the same thing, so hearing the name twice costs nothing. |
+
+## WCAG 2.2 checklist
+
+The criteria that Sprint 10 touched, and how each is met. Level AA is the target of every screen,
+and AAA (1.4.6) for the text of High contrast.
+
+| Criterion | Level | How it is met |
+| --- | --- | --- |
+| 1.3.1 Info and Relationships | A | Headings, pane titles, one sentence for a host card and a pairing step, a role and an Expanded or Collapsed state for the sections of the phone Settings (`*TalkBackTest`). |
+| 1.4.1 Use of Color | A | A shape for each status of the dot, and a text beside it. The palettes keep the colours apart for dichromats (`StatusDotTest`, `ColourVisionPaletteTest`). |
+| 1.4.3 Contrast (Minimum) | AA | Text on the opaque surfaces (Table B), on glass through the tint floors and the adapted secondary ink (Table C and the floors), on the background through the halo (Tables D to F), and in the Add host field (Tables L and M). |
+| 1.4.4 Resize Text | AA | Text size 100, 115 or 130 % times the system scale, and tests at a font scale of 2.0 (`LargeTextFitTest`). |
+| 1.4.6 Contrast (Enhanced) | AAA | High contrast: 7:1 or more for the text roles on every fill, and for the loose text over every background (Tables G and H). |
+| 1.4.11 Non-text Contrast | AA | The offline ring at 3.25:1 or more, the icons on the background through the halo (Tables I to K), the outlines of the text field (Tables L and M), the opaque borders of High contrast. |
+| 2.1.1 Keyboard | A | The D-pad and a gamepad reach every control; OK on a Settings group enters its pane, and the licence text and the Audit detail scroll with the D-pad. |
+| 2.2.2 Pause, Stop, Hide | A | The animated background is the only moving content. Reduce motion On, the system's Remove animations and the battery saver make it a still frame, and the background Off is the plain page. |
+| 2.4.3 Focus Order | A | The traversal order of every screen is tested (`readingOrder`), and the focus goes back to the card that had it after Back from Apps. |
+| 2.4.6 Headings and Labels | AA | Headings on every screen title and section label. |
+| 2.4.7 Focus Visible | AA | The Borealis focus outline, 3 dp in accent-soft, and 5 dp in `ink` with Thicker focus outline and High contrast. |
+| 2.5.3 Label in Name | A | The accessible name of a control is its visible label (the Add host button, an accepted duplicate name). |
+| 2.5.8 Target Size (Minimum) | AA | 48 dp targets on a phone and a handheld (`TouchTargetTest`). A TV has no touch screen. |
+| 3.3.1 Error Identification | A | The error under a text field is in text, in `danger-ink`, inside the glass of the field, and is announced when it appears. |
+| 4.1.2 Name, Role, Value | A | The ATF checks every main screen for names, roles and duplicate names; the groups of Settings are tabs, and the segments have the label of their group. |
+| 4.1.3 Status Messages | AA | Polite live regions for pairing outcomes, Add host errors, the notices of the snackbars and the Quitting text. |
+
+Not assessed here: 1.4.10 Reflow, 1.4.12 Text Spacing and 2.4.11 Focus Not Obscured. TalkBack on a
+device is a step of the runbook, and the halo and the tint-only glass have not been seen on API 28
+to 30.

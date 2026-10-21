@@ -136,9 +136,20 @@ abstract class GlassSurfaceCases {
         assertProbes(inHost = false) { over(solid) }
         val inHost = composeRule.onNodeWithTag(IN_HOST).captureToImage().toPixelMap()
         val outside = composeRule.onNodeWithTag(OUTSIDE).captureToImage().toPixelMap()
+        // The anti-aliased corner of an opaque border (high contrast) differs by a few levels
+        // between
+        // a layer and a plain draw, so a pixel is the same within SAME_LEVELS of 255 in a channel.
+        val apart =
+            inHost.buffer.indices.count { i ->
+                CHANNEL_SHIFTS.any {
+                    abs(
+                        ((inHost.buffer[i] shr it) and 0xFF) - ((outside.buffer[i] shr it) and 0xFF)
+                    ) > SAME_LEVELS
+                }
+            }
         assertWithMessage("the surface in a host and outside one are not the same pixels")
-            .that(inHost.buffer)
-            .isEqualTo(outside.buffer)
+            .that(apart)
+            .isEqualTo(0)
     }
 
     private fun assertProbes(inHost: Boolean, expected: () -> Color) {
@@ -160,5 +171,7 @@ abstract class GlassSurfaceCases {
         const val IN_HOST = "glass-in-host"
         const val OUTSIDE = "glass-outside"
         const val TOLERANCE = 0.04f
+        const val SAME_LEVELS = 4
+        val CHANNEL_SHIFTS = listOf(0, 8, 16)
     }
 }

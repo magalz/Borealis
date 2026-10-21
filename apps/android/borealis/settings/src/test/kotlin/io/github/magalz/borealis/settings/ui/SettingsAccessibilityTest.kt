@@ -139,7 +139,8 @@ abstract class SettingsLookTestBase : SettingsScreenTestBase() {
     private fun choose(title: String, label: String) {
         row(title).performClick()
         composeRule.waitForIdle()
-        sheetOption(label).performClick()
+        // A long list, such as the fonts with their lines, scrolls in the window of a TV.
+        sheetOption(label).performScrollTo().performClick()
         composeRule.waitForIdle()
     }
 

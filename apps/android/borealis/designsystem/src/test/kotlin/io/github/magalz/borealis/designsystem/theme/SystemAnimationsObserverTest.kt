@@ -26,6 +26,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.assertPixel
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.systemAnimationScale
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import org.junit.Rule
 import org.junit.Test
@@ -48,14 +49,6 @@ class SystemAnimationsObserverTest {
     private val focus = FocusRequester()
     private val elsewhere = FocusRequester()
     private var removed = emptyList<Boolean>()
-
-    private fun systemScale(scale: Float) {
-        Settings.Global.putFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            scale,
-        )
-    }
 
     private fun observers() = shadowOf(context.contentResolver).getContentObservers(scale)
 
@@ -95,28 +88,28 @@ class SystemAnimationsObserverTest {
 
     @Test
     fun `readers under the theme follow a change of the system scale while composed`() {
-        systemScale(1f)
+        systemAnimationScale(1f)
         composeRule.setContent { BorealisTheme { Readers(count = 2) } }
         composeRule.waitForIdle()
         assertThat(removed).containsExactly(false, false)
 
-        systemScale(0f)
+        systemAnimationScale(0f)
         composeRule.waitForIdle()
         assertThat(removed).containsExactly(true, true)
 
-        systemScale(1f)
+        systemAnimationScale(1f)
         composeRule.waitForIdle()
         assertThat(removed).containsExactly(false, false)
     }
 
     @Test
     fun `a reader outside any theme still follows the system scale`() {
-        systemScale(1f)
+        systemAnimationScale(1f)
         composeRule.setContent { Readers(count = 1) }
         composeRule.waitForIdle()
         assertThat(removed).containsExactly(false)
 
-        systemScale(0f)
+        systemAnimationScale(0f)
         composeRule.waitForIdle()
 
         assertThat(removed).containsExactly(true)
@@ -124,7 +117,7 @@ class SystemAnimationsObserverTest {
 
     @Test
     fun `a tile that takes focus after the system removed the animations scales at once`() {
-        systemScale(1f)
+        systemAnimationScale(1f)
         composeRule.setContentInKeyboardMode {
             BorealisTheme {
                 Column {
@@ -146,7 +139,7 @@ class SystemAnimationsObserverTest {
         }
         composeRule.runOnIdle { elsewhere.requestFocus() }
         composeRule.waitForIdle()
-        systemScale(0f)
+        systemAnimationScale(0f)
         composeRule.waitForIdle()
         composeRule.mainClock.autoAdvance = false
 

@@ -219,3 +219,25 @@ page is private, so it is not linked here.
   [0055](0055-settings-storage-and-the-phase-2-settings-screen.md) (the settings storage).
 * Accessibility method and baseline: [docs/ux/accessibility.md](../ux/accessibility.md).
 * Roadmap: [Sprint 10](../roadmap.md#sprint-10-ux-and-accessibility).
+* Test dependency for the screen reader work of Sprint 10 (task `s10-talkback`):
+  `io.github.takahirom.roborazzi:roborazzi-accessibility-check`, at the version of Roborazzi in the
+  version catalog (1.76.0), in the test fixtures of `:borealis:designsystem`. It runs the
+  Accessibility Test Framework of Google over a Compose screen in a Robolectric test. The five
+  items of the [dependency policy](../policies/dependencies.md):
+  1. **Reason:** the checks find what a person reviewing by hand misses on every screen: a control
+     with no name, two controls with one name, a touch target below 48dp, a traversal that loops. A
+     few lines of our own would repeat a small part of them and none of the contrast and
+     duplicate-name logic. The tests of the screens assert the headings, the order and the states
+     besides, as the checks cannot know what a heading is.
+  2. **Licence:** Apache-2.0 for the module and for the framework (both POMs), on the allowlist.
+  3. **Maintenance:** the module 1.76.0 was released on 2026-09-29 by the Roborazzi project, which
+     the build already uses; the framework 4.1.1 (2024-03-29) is the latest release, by Google.
+  4. **Footprint:** a 21 KB module and the 773 KB framework, with Material Components 1.2.0-rc01,
+     Espresso, the AndroidX test runner, Guava and protobuf-javalite behind it. It is a test
+     dependency of the fixtures: it is not on the release classpath of the app (checked with
+     `:app:dependencies`), has no permissions and no native code.
+  5. **Alternatives:** our own assertions only (rejected for the reason in 1); Espresso
+     `AccessibilityChecks.enable()` (needs a device or an emulator, which the CI does not run, and
+     looks at views, not at Compose); the Accessibility Scanner app (by hand, not in the CI).
+  The findings that a screen cannot fix are accepted in its test with a reason each; the contrast of
+  text over the animated background is measured by the tool in `design/accessibility/` instead.

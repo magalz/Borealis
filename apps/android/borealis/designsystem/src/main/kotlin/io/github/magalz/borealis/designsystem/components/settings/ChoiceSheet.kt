@@ -36,6 +36,7 @@ import androidx.compose.ui.window.DialogProperties
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.NoPlatformDim
 import io.github.magalz.borealis.designsystem.components.OverlayTextColors
+import io.github.magalz.borealis.designsystem.components.SheetHandle
 import io.github.magalz.borealis.designsystem.components.overlayPanel
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
@@ -103,6 +104,7 @@ fun <T> ChoiceSheet(
             containerColor = colors.surface.copy(alpha = glass?.tint ?: 1f),
             contentColor = colors.ink,
             scrimColor = if (glass == null) colors.scrim else Color.Transparent,
+            dragHandle = { SheetHandle() },
         ) {
             OverlayTextColors(glass) { OptionList(title, options, selected, choose) }
         }

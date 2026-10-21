@@ -47,5 +47,6 @@ dependencies {
     testFixturesImplementation(libs.androidx.compose.foundation)
     testFixturesImplementation(libs.androidx.compose.material3)
     testFixturesImplementation(libs.robolectric)
+    testFixturesApi(libs.roborazzi.accessibility.check)
     testFixturesImplementation(libs.truth)
 }

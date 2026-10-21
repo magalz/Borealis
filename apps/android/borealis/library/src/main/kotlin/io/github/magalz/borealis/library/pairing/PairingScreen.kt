@@ -27,10 +27,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -117,7 +119,11 @@ fun PairingScreen(
 private fun Header(title: String, showBack: Boolean, onBack: () -> Unit, modifier: Modifier) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         if (showBack) BorealisBackButton(onBack, stringResource(R.string.pairing_back))
-        BackdropText(title, style = MaterialTheme.typography.titleLarge)
+        BackdropText(
+            title,
+            Modifier.semantics { heading() },
+            style = MaterialTheme.typography.titleLarge,
+        )
     }
 }
 
@@ -234,13 +240,21 @@ private fun Steps(state: PairingUiState.Waiting) {
     }
 }
 
-/** A numbered step, with the address it refers to under the text. */
+/**
+ * A numbered step, with the address it refers to under the text. A screen reader reads it as one
+ * thing, the number, the text and the address, and not as three. The number is as large as the text
+ * that it holds, so a large text size does not cut it.
+ */
 @Composable
 private fun Step(number: Int, text: String, address: String?) {
     val colors = LocalBorealisColors.current
-    Row(horizontalArrangement = Arrangement.spacedBy(STEP_GAP)) {
+    val numberSize = STEP_NUMBER_SIZE * maxOf(1f, LocalDensity.current.fontScale)
+    Row(
+        Modifier.semantics(mergeDescendants = true) {},
+        horizontalArrangement = Arrangement.spacedBy(STEP_GAP),
+    ) {
         Box(
-            Modifier.size(STEP_NUMBER_SIZE).border(1.dp, colors.lineStrong, CircleShape),
+            Modifier.size(numberSize).border(1.dp, colors.lineStrong, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             BackdropText(
@@ -297,7 +311,12 @@ private fun Paired(modifier: Modifier) {
 @Composable
 private fun Outcome(message: String, buttons: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(SECTION_GAP)) {
-        BackdropText(message, style = MaterialTheme.typography.bodyLarge)
+        // What went wrong is announced when it appears, for focus stays where it was.
+        BackdropText(
+            message,
+            Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            style = MaterialTheme.typography.bodyLarge,
+        )
         buttons()
     }
 }

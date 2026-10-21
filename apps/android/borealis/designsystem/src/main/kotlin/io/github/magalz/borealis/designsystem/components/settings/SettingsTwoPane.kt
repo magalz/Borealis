@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -27,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
@@ -45,7 +47,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import io.github.magalz.borealis.designsystem.components.liftedWhenFocused
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.initialFocus
@@ -53,6 +54,7 @@ import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
 import io.github.magalz.borealis.designsystem.glass.GlassTextColors
 import io.github.magalz.borealis.designsystem.glass.glassSurface
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
+import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import kotlinx.coroutines.flow.collectLatest
@@ -67,6 +69,8 @@ private val GROUP_PADDING_HORIZONTAL = 12.dp
  * unscrolled.
  */
 private val GROUP_PADDING_VERTICAL = 4.dp
+/** The height that a finger needs (WCAG 2.5.8); a TV has no touch screen and keeps the padding. */
+private val GROUP_MIN_TOUCH = 48.dp
 
 /**
  * The settings of a TV or handheld in two panes: the [groups] by title in a list on the left, and
@@ -305,10 +309,10 @@ private fun GroupEntry(
 ) {
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.medium
+    val touch = LocalFormFactor.current != FormFactor.Tv
     Box(
         modifier
             .fillMaxWidth()
-            .liftedWhenFocused()
             .onFocusChanged { if (it.isFocused) onSelect() }
             .borealisFocusIndication(shape)
             .background(if (selected) colors.accentTint else Color.Transparent, shape)
@@ -320,7 +324,9 @@ private fun GroupEntry(
                 role = Role.Tab,
                 onClick = onClick,
             )
-            .padding(horizontal = GROUP_PADDING_HORIZONTAL, vertical = GROUP_PADDING_VERTICAL)
+            .heightIn(min = if (touch) GROUP_MIN_TOUCH else 0.dp)
+            .padding(horizontal = GROUP_PADDING_HORIZONTAL, vertical = GROUP_PADDING_VERTICAL),
+        contentAlignment = Alignment.CenterStart,
     ) {
         Text(
             title,

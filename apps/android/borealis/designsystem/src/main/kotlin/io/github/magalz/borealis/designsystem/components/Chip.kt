@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,7 +34,8 @@ private val TAG_PADDING_VERTICAL = 2.dp
  * A small monospace label: a key shortcut, a codec, a value. [selected] gives it the accent tint,
  * line and ink. With an [onClick] it is a button that is focusable with the Borealis focus
  * indication, and it is announced as selected or not; without it, it is a static label that is
- * announced as selected only when it is.
+ * announced as selected only when it is. A button has the 48dp that a finger needs, around the chip
+ * and not in it, so the chip keeps its look; a TV has no touch screen and adds nothing.
  */
 @Composable
 fun Chip(
@@ -44,9 +46,11 @@ fun Chip(
 ) {
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.small
+    val finger = onClick != null && LocalFormFactor.current != FormFactor.Tv
     Text(
         text,
         modifier
+            .then(if (finger) Modifier.minimumInteractiveComponentSize() else Modifier)
             .then(if (onClick != null) Modifier.borealisFocusIndication(shape) else Modifier)
             .background(if (selected) colors.accentTint else Color.Transparent, shape)
             .border(1.dp, if (selected) colors.accentLine else colors.lineStrong, shape)

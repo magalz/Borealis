@@ -134,6 +134,7 @@ private fun <T> OptionRow(
                 selected = selected,
                 label = label,
                 onSelect = onSelect,
+                groupLabel = title,
             )
         },
     )

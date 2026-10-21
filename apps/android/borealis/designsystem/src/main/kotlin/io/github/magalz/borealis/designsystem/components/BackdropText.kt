@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
@@ -147,9 +148,14 @@ fun BackdropText(
 
 /**
  * A section label as a [BackdropText]: capitals in the kicker style, in ink-4, which is ink-2 where
- * the halo is drawn.
+ * the halo is drawn. It is a heading, which a screen reader jumps between.
  */
 @Composable
 fun BackdropKicker(text: String, modifier: Modifier = Modifier) {
-    BackdropText(text.uppercase(), modifier, LocalBorealisType.current.kicker, BackdropInk.Ink4)
+    BackdropText(
+        text.uppercase(),
+        modifier.semantics { heading() },
+        LocalBorealisType.current.kicker,
+        BackdropInk.Ink4,
+    )
 }

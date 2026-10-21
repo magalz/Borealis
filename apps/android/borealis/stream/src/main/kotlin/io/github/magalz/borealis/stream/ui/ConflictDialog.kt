@@ -26,6 +26,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.BorealisButton
@@ -80,8 +81,10 @@ fun ConflictDialog(phase: StreamPhase.Conflict, intents: StreamIntents) {
     ) {
         // The padding is inside the scroll area: the area clips, and a focus outline reaches
         // outside its button.
+        val title = stringResource(R.string.stream_conflict_title)
         Column(
             Modifier.testTag(CONFLICT_PANEL_TAG)
+                .semantics { paneTitle = title }
                 .width(BorealisDimens.dialogWidth(DialogWidth.Compact, maxWidth))
                 .background(colors.surface, shape)
                 .border(1.dp, colors.line, shape)
@@ -91,7 +94,7 @@ fun ConflictDialog(phase: StreamPhase.Conflict, intents: StreamIntents) {
             verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
         ) {
             Text(
-                stringResource(R.string.stream_conflict_title),
+                title,
                 Modifier.semantics { heading() },
                 style = MaterialTheme.typography.titleLarge,
             )

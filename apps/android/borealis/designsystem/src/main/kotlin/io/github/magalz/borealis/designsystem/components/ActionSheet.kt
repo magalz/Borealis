@@ -9,10 +9,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -21,6 +23,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.paneTitle
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -88,6 +93,7 @@ fun <T> ActionSheet(
             containerColor = colors.surface.copy(alpha = glass?.tint ?: 1f),
             contentColor = colors.ink,
             scrimColor = if (glass == null) colors.scrim else Color.Transparent,
+            dragHandle = { SheetHandle() },
         ) {
             OverlayTextColors(glass) { ActionList(title, actions, onAction, focusFirst = false) }
         }
@@ -112,6 +118,16 @@ fun <T> ActionSheet(
     }
 }
 
+/**
+ * The handle of a bottom sheet, which a screen reader uses to expand and dismiss it. The default is
+ * 32dp wide; this one has the 48dp that a finger needs (WCAG 2.5.8), around the bar and not in it.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SheetHandle() {
+    BottomSheetDefaults.DragHandle(Modifier.minimumInteractiveComponentSize())
+}
+
 @Composable
 private fun <T> ActionList(
     title: String,
@@ -120,15 +136,16 @@ private fun <T> ActionList(
     focusFirst: Boolean,
 ) {
     val firstAction = remember { FocusRequester() }
-    Column(Modifier.fillMaxWidth().ignoreKeysHeldOnOpen()) {
+    Column(Modifier.fillMaxWidth().ignoreKeysHeldOnOpen().semantics { paneTitle = title }) {
         Text(
             title,
             modifier =
                 Modifier.padding(
-                    start = CONTENT_PADDING,
-                    top = CONTENT_PADDING,
-                    end = CONTENT_PADDING,
-                ),
+                        start = CONTENT_PADDING,
+                        top = CONTENT_PADDING,
+                        end = CONTENT_PADDING,
+                    )
+                    .semantics { heading() },
             style = MaterialTheme.typography.titleLarge,
         )
         // The title stays in view and the actions scroll, so a long list is reachable in a short

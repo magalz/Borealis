@@ -36,6 +36,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.Chip
@@ -105,9 +106,11 @@ fun StreamKeyboard(docked: Boolean, intents: StreamIntents) {
     }
 
     val colors = LocalBorealisColors.current
+    val title = stringResource(R.string.stream_menu_keyboard)
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Column(
             Modifier.testTag("keyboard")
+                .semantics { paneTitle = title }
                 .fillMaxWidth()
                 // A tap between two keys must not reach the stream below.
                 .pointerInput(Unit) { detectTapGestures {} }

@@ -334,6 +334,7 @@ private fun HostItem(
     // decides between apps and pairing. Wake wakes it. The label tells a screen reader which. A tap
     // keeps the card too, for the touch mode of a handheld, where a card cannot take focus.
     val key = hostKey(item.id)
+    val runningLabel = item.runningApp?.name?.let { stringResource(R.string.hosts_running_app, it) }
     HostCard(
         name = item.name,
         status = item.dotStatus(),
@@ -350,6 +351,7 @@ private fun HostItem(
         detail = item.detailLine(),
         tags = item.tags.map { stringResource(it.labelRes()) },
         runningApp = item.runningApp?.let { it.name ?: unnamedApp },
+        runningLabel = runningLabel,
         onClickLabel = item.action.labelRes()?.let { stringResource(it) },
         onOptions = {
             handlers.focusedCard?.key = key

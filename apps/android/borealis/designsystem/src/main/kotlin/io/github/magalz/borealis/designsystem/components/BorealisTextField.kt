@@ -141,13 +141,13 @@ fun BorealisTextField(
     if (showKeyboardOnFocus) {
         TextFieldBody(
             content,
-            modifier.fillMaxWidth(),
             Modifier.fillMaxWidth().fieldKeys(leaveWithDpad, keyboardOnOk = false, state),
             interactionSource = null,
             onKeyboardAction = { performDefaultAction ->
                 currentOnDone?.invoke()
                 performDefaultAction()
             },
+            modifier = modifier.fillMaxWidth(),
         )
     } else {
         EditOnOkField(content, modifier, leaveWithDpad) { currentOnDone?.invoke() }
@@ -208,7 +208,6 @@ private fun EditOnOkField(
     Box(modifier.fillMaxWidth()) {
         TextFieldBody(
             content,
-            Modifier,
             Modifier.fillMaxWidth()
                 // The wrapper is the one node that a screen reader meets until the field is edited.
                 .then(if (editing) Modifier else Modifier.semantics { hideFromAccessibility() })
@@ -319,10 +318,10 @@ private fun wrapperKey(event: KeyEvent, startEditing: () -> Unit, onDone: () -> 
 @Composable
 private fun TextFieldBody(
     content: FieldContent,
-    modifier: Modifier,
     fieldModifier: Modifier,
     interactionSource: MutableInteractionSource?,
     onKeyboardAction: KeyboardActionHandler,
+    modifier: Modifier = Modifier,
 ) {
     val shape = MaterialTheme.shapes.medium
     val source = interactionSource ?: remember { MutableInteractionSource() }

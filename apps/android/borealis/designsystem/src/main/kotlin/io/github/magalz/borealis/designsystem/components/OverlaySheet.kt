@@ -27,8 +27,8 @@ import io.github.magalz.borealis.designsystem.theme.sheetWidth
 /**
  * The shell of a modal list that opens over a screen, for the sheets of the design system: on a
  * phone a bottom sheet, on a TV or handheld a centred dialog of [sheetWidth]. Back, or a tap
- * outside it, calls [onDismiss]. [content] is the list, and is told whether the shell is the one
- * of a phone, for what the focus does differently there.
+ * outside it, calls [onDismiss]. [content] is the list, and is told whether the shell is the one of
+ * a phone, for what the focus does differently there.
  *
  * Over a glass host that blurs its window the sheet draws no scrim, its surface is the tint of the
  * glass over the blurred window, and [content] has the glass text colours ([OverlayOpen],

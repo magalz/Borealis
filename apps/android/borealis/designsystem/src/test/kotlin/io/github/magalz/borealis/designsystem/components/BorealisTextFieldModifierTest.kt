@@ -22,9 +22,9 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
- * Where the caller's modifier lands on a [BorealisTextField]: on the whole field, glass included, as
- * it does for any component, with or without the keyboard on focus. A margin that the caller gives
- * is outside the glass and its outline.
+ * Where the caller's modifier lands on a [BorealisTextField]: on the whole field, glass included,
+ * as it does for any component, with or without the keyboard on focus. A margin that the caller
+ * gives is outside the glass and its outline.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w360dp-h640dp-xhdpi")

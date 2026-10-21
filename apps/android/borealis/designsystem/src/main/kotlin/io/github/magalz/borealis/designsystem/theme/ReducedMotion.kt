@@ -36,8 +36,8 @@ fun rememberAnimationsRemoved(): Boolean =
 
 /**
  * Whether the system removes animations, as the [BorealisTheme] around the reader found it: the
- * theme watches the setting once and every piece under it reads that. Null outside a theme, where
- * a reader watches the setting itself.
+ * theme watches the setting once and every piece under it reads that. Null outside a theme, where a
+ * reader watches the setting itself.
  */
 internal val LocalSystemAnimationsRemoved = compositionLocalOf<Boolean?> { null }
 

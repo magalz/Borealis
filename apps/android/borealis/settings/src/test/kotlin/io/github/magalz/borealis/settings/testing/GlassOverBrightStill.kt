@@ -81,18 +81,21 @@ fun ComposeTestRule.textColorOf(text: String): Color {
 }
 
 /**
- * Reads the surfaces of a screen over the still of Flowing light, which is what a glass host draws
- * with no animation. Each of the [probes] is a title and how far across, in dp: the colour is read
- * beside the title, in the padding of the surface that it is on, and compared with the background
- * itself at the same height in the margin of the window. A colour's distance is how far it is from
- * the `surface` colour, in the sum of its three channels. Over a background that shows through,
- * Standard is about 0.6 of the distance of the margin and Reduced about 0.15 of it, and a solid
- * surface is the `surface` colour, which is no distance at all.
+ * Where to read a surface: beside the node with [title], [x] dp across, in the padding of the
+ * surface that it is on; and [outside] dp across, at the same height, where the background shows
+ * bare beside that surface.
  */
-class GlassProbes(
-    private val rule: ComposeTestRule,
-    private val probes: List<Pair<String, Float>>,
-) {
+data class Probe(val title: String, val x: Float, val outside: Float)
+
+/**
+ * Reads the surfaces of a screen over the still of Flowing light, which is what a glass host draws
+ * with no animation. The colour of each of the [probes] is compared with the background itself,
+ * read beside the surface. A colour's distance is how far it is from the `surface` colour, in the
+ * sum of its three channels. A glass of tint t over a background shows (1 - t) of the distance of
+ * the background: Standard is 40 percent, so about 0.6 of it; Reduced is 85 percent, so about 0.15;
+ * and a solid surface is the `surface` colour, which is no distance at all.
+ */
+class GlassProbes(private val rule: ComposeTestRule, private val probes: List<Probe>) {
     private val surface = BorealisTokens.Color.Surface
 
     private fun distance(colour: Color): Float =
@@ -100,33 +103,35 @@ class GlassProbes(
             abs(colour.green - surface.green) +
             abs(colour.blue - surface.blue)
 
-    private fun fractions(): List<Float> = probes.map { (title, x) ->
-        distance(rule.colorBeside(title, x)) / distance(rule.colorBeside(title, MARGIN_X))
+    private fun fractions(): List<Float> = probes.map { (title, x, outside) ->
+        distance(rule.colorBeside(title, x)) / distance(rule.colorBeside(title, outside))
     }
 
-    /** Each probe is the surface under the Standard tint, which shows the background through. */
+    /** Each probe is the surface under the Standard tint: about 0.6 of the background. */
     fun assertStandard() =
-        fractions().forEach { assertThat(it).isIn(Range.open(SOLID, STANDARD_AT_MOST)) }
+        fractions().forEach { assertThat(it).isIn(Range.closed(STANDARD_MIN, STANDARD_MAX)) }
 
-    /** Each probe is under the Reduced tint, which shows the background through less. */
+    /** Each probe is under the Reduced tint: about 0.15 of the background. */
     fun assertReduced() =
-        fractions().forEach { assertThat(it).isIn(Range.open(SOLID, REDUCED_AT_MOST)) }
+        fractions().forEach { assertThat(it).isIn(Range.closed(REDUCED_MIN, REDUCED_MAX)) }
 
     /** Each probe is the surface colour. */
     fun assertSolid() = fractions().forEach { assertThat(it).isLessThan(SOLID) }
 
     private companion object {
-        /** In the margin, which the surfaces leave to the background. */
-        const val MARGIN_X = 1f
-
-        /** Less than this is the surface colour, and more is a surface that shows through. */
+        /** Less than this is the surface colour. */
         const val SOLID = 0.05f
 
-        /** The Standard glass is 0.6 of the margin; a screen with no surface at all is 1. */
-        const val STANDARD_AT_MOST = 0.8f
+        /** The Standard glass is 0.6 of the background, with a little room for the blur. */
+        const val STANDARD_MIN = 0.5f
+        const val STANDARD_MAX = 0.7f
 
-        /** The Reduced glass is 0.15 of the margin, and Standard is 0.6. */
-        const val REDUCED_AT_MOST = 0.3f
+        /**
+         * The Reduced glass is 0.15 of the background; what is read at 8 bits is 0.115 to 0.134, so
+         * the floor leaves room for a step of a channel (about 0.013) at the other end of a screen.
+         */
+        const val REDUCED_MIN = 0.08f
+        const val REDUCED_MAX = 0.2f
     }
 }
 
@@ -140,7 +145,7 @@ abstract class FlowingLightGlassCases {
     @get:Rule val composeRule = createComposeRule()
 
     /** The title beside which the surface is read, and how far across, in dp. */
-    protected abstract val probes: List<Pair<String, Float>>
+    protected abstract val probes: List<Probe>
 
     /** Shows the screen in a glass host of [style] under [look]. */
     protected abstract fun showScreen(look: BorealisLook, style: BackgroundStyle)

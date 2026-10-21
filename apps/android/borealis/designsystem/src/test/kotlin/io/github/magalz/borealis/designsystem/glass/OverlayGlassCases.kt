@@ -110,8 +110,8 @@ abstract class OverlayGlassCases {
     }
 
     @Test
-    fun `High contrast keeps the scrim and the solid panel and the plain colours`() =
-        assertAsBefore {
+    fun `High contrast keeps the scrim and the solid panel and its own colours`() =
+        assertAsBefore(BorealisColors().withHighContrast()) {
             show(BorealisLook(highContrast = true))
         }
 
@@ -130,13 +130,13 @@ abstract class OverlayGlassCases {
     // Helpers
 
     /** Runs [shown], and says that the overlay it shows is what it was before the glass. */
-    private fun assertAsBefore(shown: () -> Unit) {
+    private fun assertAsBefore(colors: BorealisColors = BorealisColors(), shown: () -> Unit) {
         shown()
 
         assertThat(scrim()).isGreaterThan(NO_SCRIM)
         assertThat(panel().alpha).isWithin(TOLERANCE).of(1f)
-        assertThat(panel().red).isWithin(TOLERANCE).of(BorealisColors().surface.red)
-        assertThat(textColor(secondaryText)).isEqualTo(BorealisColors().ink3)
+        assertThat(panel().red).isWithin(TOLERANCE).of(colors.surface.red)
+        assertThat(textColor(secondaryText)).isEqualTo(colors.ink3)
     }
 
     private fun show(

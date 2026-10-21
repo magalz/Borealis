@@ -7,6 +7,7 @@ import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.settings.testing.FlowingLightGlassCases
 import io.github.magalz.borealis.settings.testing.InGlassHost
+import io.github.magalz.borealis.settings.testing.Probe
 import java.io.File
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -15,8 +16,9 @@ import org.robolectric.annotation.Config
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = PHONE)
 class PrivacyPhoneGlassTest : FlowingLightGlassCases() {
-    // In the padding of the card, 4dp from its edge, beside the first row.
-    override val probes = listOf("Verbose logging" to 12f)
+    // In the padding of the card, which is at 8dp, 2dp in from its edge, beside the first row; the
+    // background is read 2dp outside the card.
+    override val probes = listOf(Probe("Verbose logging", 10f, outside = 6f))
 
     override fun showScreen(look: BorealisLook, style: BackgroundStyle) {
         composeRule.setContent {

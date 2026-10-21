@@ -120,7 +120,8 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
                 }
                 .dpadScroll(scroll)
                 .heightIn(max = maxHeight)
-                // The dialog clips what is outside its content, and the outline reaches about 5dp.
+                // The dialog clips what is outside its content, and the outline reaches 5dp, 7dp
+                // when it is the thicker one.
                 .padding(LICENSE_OUTLINE_ROOM)
                 .borealisFocusIndication(MaterialTheme.shapes.medium)
                 // Before verticalScroll: a focusable after it takes the size of the whole text, not

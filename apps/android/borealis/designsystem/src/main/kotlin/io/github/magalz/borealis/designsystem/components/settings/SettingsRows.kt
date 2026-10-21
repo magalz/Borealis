@@ -50,8 +50,8 @@ private const val VALUE_MAX_SHARE = 0.4f
  * A disabled row is dimmed and does not react, but it stays a focus stop: on a TV the user can
  * still land on it and read [disabledNote], which says why it is disabled and shows only then.
  *
- * The outline of a focused row reaches 5dp outside it, so a list of rows needs 8dp of padding
- * around it and 10dp between rows.
+ * The outline of a focused row reaches 5dp outside it, 7dp when it is the thicker one, so a list of
+ * rows needs 8dp of padding around it and 10dp between rows.
  */
 @Composable
 fun SettingsSwitchRow(
@@ -132,8 +132,8 @@ fun SettingsSwitchRow(
  * A disabled row is dimmed and does not react, but it stays a focus stop: on a TV the user can
  * still land on it and read [disabledNote], which says why it is disabled and shows only then.
  *
- * The outline of a focused row reaches 5dp outside it, so a list of rows needs 8dp of padding
- * around it and 10dp between rows.
+ * The outline of a focused row reaches 5dp outside it, 7dp when it is the thicker one, so a list of
+ * rows needs 8dp of padding around it and 10dp between rows.
  */
 @Composable
 fun SettingsValueRow(

@@ -7,6 +7,7 @@ import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.settings.testing.GlassProbes
 import io.github.magalz.borealis.settings.testing.InGlassHost
+import io.github.magalz.borealis.settings.testing.Probe
 import io.github.magalz.borealis.settings.testing.noAnimations
 import org.junit.Before
 import org.junit.Test
@@ -20,7 +21,7 @@ import org.robolectric.annotation.Config
  */
 abstract class SettingsGlassCases : SettingsScreenTestBase() {
     /** The title beside which the surface is read, and how far across, in dp. */
-    protected abstract val probes: List<Pair<String, Float>>
+    protected abstract val probes: List<Probe>
 
     /** Shows the screen in a glass host of [style] under [look]. */
     protected abstract fun showScreen(look: BorealisLook, style: BackgroundStyle)
@@ -69,15 +70,12 @@ abstract class SettingsGlassCases : SettingsScreenTestBase() {
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = PHONE)
 class PhoneSettingsGlassTest : SettingsGlassCases() {
-    // In the padding of the card, 4dp from its edge, beside the title of the first section.
-    override val probes = listOf("STREAM" to CARD_PADDING_X)
+    // In the padding of the card, which is at 8dp, 2dp in from its edge, beside the title of the
+    // first section; the background is read 2dp outside the card.
+    override val probes = listOf(Probe("STREAM", 10f, outside = 6f))
 
     override fun showScreen(look: BorealisLook, style: BackgroundStyle) {
         show { content -> InGlassHost(FormFactor.Phone, look, style, content) }
-    }
-
-    private companion object {
-        const val CARD_PADDING_X = 12f
     }
 }
 
@@ -85,8 +83,8 @@ class PhoneSettingsGlassTest : SettingsGlassCases() {
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = PHONE)
 class PhonePrivacyRowGlassTest : SettingsGlassCases() {
-    // Beside the row, in the padding of its card.
-    override val probes = listOf("Privacy and diagnostics" to CARD_PADDING_X)
+    // Beside the row, in the padding of its card, which is at 8dp: 2dp in, and 2dp outside.
+    override val probes = listOf(Probe("Privacy and diagnostics", 10f, outside = 6f))
 
     // With no group, the row is the first thing under the bar, where the still is bright.
     override fun showScreen(look: BorealisLook, style: BackgroundStyle) {
@@ -106,10 +104,6 @@ class PhonePrivacyRowGlassTest : SettingsGlassCases() {
         }
         composeRule.waitForIdle()
     }
-
-    private companion object {
-        const val CARD_PADDING_X = 12f
-    }
 }
 
 /** The group list and the pane of the TV Settings are a glass panel each. */
@@ -117,8 +111,10 @@ class PhonePrivacyRowGlassTest : SettingsGlassCases() {
 @Config(qualifiers = TV)
 class TvSettingsGlassTest : SettingsGlassCases() {
     // In the padding of the group list, which is at the 34dp gutter, beside a group; and in the
-    // padding of the pane, which is 12dp on from the 220dp list, beside the first row.
-    override val probes = listOf("Video" to 38f, "Resolution" to 270f)
+    // padding of the pane, which is 12dp on from the 220dp list, at 266dp, beside the first row.
+    // Each is read 2dp in from the edge of its panel, and the background 2dp outside it.
+    override val probes =
+        listOf(Probe("Video", 36f, outside = 32f), Probe("Resolution", 268f, outside = 264f))
 
     override fun showScreen(look: BorealisLook, style: BackgroundStyle) {
         asTelevision()

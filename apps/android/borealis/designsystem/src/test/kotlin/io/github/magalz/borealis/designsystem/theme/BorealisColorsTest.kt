@@ -2,6 +2,7 @@ package io.github.magalz.borealis.designsystem.theme
 
 import androidx.compose.ui.graphics.Color
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import org.junit.Test
 
@@ -20,6 +21,24 @@ class BorealisColorsTest {
         assertThat(colors.accentSoft).isEqualTo(tokens.AccentSoft)
         assertThat(colors.success).isEqualTo(tokens.Success)
         assertThat(colors.offline).isEqualTo(tokens.Offline)
+    }
+
+    @Test
+    fun `the offline colour keeps 3 to 1 on the page and the surfaces`() {
+        // The ring of an offline host is an indicator that WCAG 1.4.11 asks 3:1 for.
+        val colors = BorealisColors()
+
+        for ((name, surface) in
+            mapOf(
+                "page" to colors.page,
+                "chrome" to colors.chrome,
+                "surface" to colors.surface,
+                "surface-raised" to colors.surfaceRaised,
+            )) {
+            assertWithMessage("offline on $name")
+                .that(contrastRatio(colors.offline, surface))
+                .isAtLeast(3.0)
+        }
     }
 
     @Test

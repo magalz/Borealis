@@ -35,6 +35,17 @@ class BorealisDimensTest {
     }
 
     @Test
+    fun `the thicker focus outline reaches 7dp outside its element`() {
+        assertThat(BorealisDimens.thickOutlineReach).isEqualTo(7.dp)
+    }
+
+    @Test
+    fun `the padding and the gap of a list hold the thicker outline too`() {
+        assertThat(BorealisDimens.listPadding).isAtLeast(BorealisDimens.thickOutlineReach)
+        assertThat(BorealisDimens.listGap).isAtLeast(BorealisDimens.thickOutlineReach)
+    }
+
+    @Test
     fun `the navigation is 220 wide on a TV and 200 on a handheld`() {
         assertThat(BorealisDimens.navWidth(FormFactor.Tv)).isEqualTo(220.dp)
         assertThat(BorealisDimens.navWidth(FormFactor.Handheld)).isEqualTo(200.dp)

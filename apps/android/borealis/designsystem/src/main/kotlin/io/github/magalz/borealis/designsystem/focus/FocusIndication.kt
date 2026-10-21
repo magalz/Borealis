@@ -35,17 +35,23 @@ import kotlinx.coroutines.launch
 /**
  * The Borealis focus indication (ADR 0053): while the element has focus, an accent-soft outline
  * ([BorealisTokens.Focus.Outline] wide, [BorealisTokens.Focus.Offset] outside [shape]) is drawn
- * around it. With [scaleOnFocus] the element also grows to [BorealisTokens.Focus.TileScale],
- * animated unless animations are removed (Reduce motion, or the system when that follows it).
+ * around it. With the Thicker focus setting, and with high contrast, it is
+ * [BorealisTokens.Focus.OutlineThick] wide and in the ink colour, which keeps 3:1 on the page, the
+ * surface and the brightest backdrop of a glass panel (ADR 0057). With [scaleOnFocus] the element
+ * also grows to [BorealisTokens.Focus.TileScale], animated unless animations are removed (Reduce
+ * motion, or the system when that follows it).
  *
  * The outline shows only when focus did not come from touch (keyboard input mode), so a tap on a
  * phone never leaves an outline behind. It is [shape] laid out on the rectangle grown by the offset
  * and half the stroke, so it keeps the corner radii of [shape].
  *
- * The outline reaches about 5dp outside the element (2dp offset plus 3dp stroke), and a scaled tile
- * grows by 2% of its size on each side more. A parent that clips (a lazy grid or list, a scroll
- * area) cuts it unless it has `contentPadding` of at least 10dp, and neighbours closer than 10dp
- * have outlines that overlap: use at least 10dp of spacing between focusable items.
+ * The outline reaches about 5dp outside the element (2dp offset plus 3dp stroke), 7dp when it is
+ * the thicker one, and a scaled tile grows by 2% of its size on each side more. A parent that clips
+ * (a lazy grid or list, a scroll area) cuts it unless it has `contentPadding` of at least 10dp
+ * (12dp for a scaled tile), and neighbours closer than 10dp have outlines that overlap: use at
+ * least 10dp of spacing between focusable items.
+ * [io.github.magalz.borealis.designsystem.theme.BorealisDimens] has the padding and the gap of a
+ * list.
  *
  * Put this modifier before the one that makes the element focusable (`clickable`, `focusable`): it
  * reads the focus of what follows it.

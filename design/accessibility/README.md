@@ -7,8 +7,9 @@ after the fixes.
 
 ## What it needs
 
-- Python 3.9 or later with `numpy` and `Pillow` (tried with Python 3.14, numpy 2.4 and Pillow 12.2).
-  Nothing else: the tests are `unittest`.
+- Python 3.11 or later with `numpy` and `Pillow`. CI runs Python 3.14 with numpy 2.4.6 and Pillow
+  12.2.0, which are the versions it was tried with (`.github/workflows/ci.yml`). Nothing else: the
+  tests are `unittest`.
 - `ffmpeg` and `ffprobe` on `PATH`, to take the frames of the four clips.
 - The Gradle build of `apps/android`, to take the frames of the two styles that are drawn in
   Compose.
@@ -49,7 +50,11 @@ Use one folder for the frames, outside the repository. Its sub-folders are named
    python -I design/accessibility/contrast.py measure <frames> --json <result.json> --jobs 4
    ```
 
-Run the tests from the repository root:
+`measure` and `halo` read the colours (and `halo` the text sizes) from `design/tokens.json`;
+`--tokens <file>` names another token file for either.
+
+Run the tests from the repository root. The "Design tools" job of CI runs them too, with
+`python -I -m unittest discover -s design/accessibility -v`, when anything under `design/` changes:
 
 ```sh
 python -m unittest discover -s design/accessibility
@@ -94,6 +99,12 @@ It is the contrast of `ink` turned back into a luminance, `Lb = (L(ink) + 0.05) 
 rounded up. The tint floors and the text colours of the glass are worked out from it in Kotlin
 (`GlassRules`), so that rule lives in one tested place. Commit the file with the measurement it
 came from, and do not edit it by hand.
+
+The file also holds `clipSha256`, the SHA-256 of each clip in `designsystem/src/main/res/raw` as it
+was when the file was written. `GlassContrastTableClipsTest` in `:borealis:designsystem` hashes the
+clips again and compares, so a clip that is encoded again fails the test until the frames are taken
+again and the table is written again. The two styles that are drawn in code have no clip, and nothing
+detects a change to them: see [the backgrounds](../backgrounds/README.md#what-the-glass-table-depends-on).
 
 ```sh
 python -I design/accessibility/contrast.py glass-colours
@@ -153,9 +164,3 @@ The halo's JSON has the same `meta` and `sources`, and rows in `halo`; the icons
 `background` (a) and `glass` (c) have a row for each style, device, token (and alpha and `blur_dp`):
 `min`, `p1`, `p5`, `worst_frame` and `per_frame_min`. `surfaces` (b) has a `ratio` for each
 surface and token.
-
-## Colour vision
-
-`contrast.simulate_cvd(rgb, kind)` and `simulate_hex(value, kind)` give a colour as someone with
-`protanopia`, `deuteranopia` or `tritanopia` sees it (Machado, Oliveira and Fernandes, 2009,
-severity 1.0). A later task uses it to check that the status colours differ without hue.

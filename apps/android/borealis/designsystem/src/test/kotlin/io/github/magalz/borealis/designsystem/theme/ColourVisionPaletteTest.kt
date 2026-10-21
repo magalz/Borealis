@@ -7,8 +7,8 @@ import org.junit.Test
 
 /**
  * The colour-blind palettes of ADR 0057 (decision 11). A palette replaces the status colours, and
- * is measured the way the contrast tool of `design/accessibility/` simulates colour vision: the
- * model of Machado, Oliveira and Fernandes (2009) at severity 1.0.
+ * is measured with the model of colour vision of [Dichromacy] in `ColourMeasures.kt`: Machado,
+ * Oliveira and Fernandes (2009) at severity 1.0. This test is the check of the palettes.
  *
  * The measure of "distinct" is the colour difference CIEDE2000 of 20 or more, between every pair of
  * the four status colours as the viewer with that dichromacy sees them. The status colours are also
@@ -174,5 +174,36 @@ class ColourVisionPaletteTest {
         // A check of the measure: CIEDE2000 of black against white is 100.
         assertThat(deltaE2000(Color.Red, Color.Red)).isEqualTo(0.0)
         assertThat(deltaE2000(Color.Black, Color.White)).isWithin(0.01).of(100.0)
+    }
+
+    @Test
+    fun `each row of a dichromacy matrix adds up to 1, so white and the greys keep their light`() {
+        // The published matrices have six places, and two of their rows are off by one in the last.
+        for (kind in Dichromacy.entries) {
+            for (row in kind.matrix) {
+                assertWithMessage("$kind $row").that(row.sum()).isWithin(2e-6).of(1.0)
+            }
+        }
+    }
+
+    @Test
+    fun `white and a mid grey are seen as they are by every kind of dichromat`() {
+        val grey = Color(128, 128, 128)
+
+        for (kind in Dichromacy.entries) {
+            assertWithMessage("$kind white").that(Color.White.seenBy(kind)).isEqualTo(Color.White)
+            assertWithMessage("$kind grey").that(grey.seenBy(kind)).isEqualTo(grey)
+        }
+    }
+
+    @Test
+    fun `red is seen by a protanope as the first column of its matrix, encoded`() {
+        // The linear red (1, 0, 0) becomes (0.152286, 0.114503, -0.003882); the last is clipped to
+        // 0, and the three are encoded to (0.42661, 0.37265, 0), here to 8 bits a channel.
+        val seen = Color.Red.seenBy(Dichromacy.Protanopia)
+
+        assertThat(seen.red).isWithin(0.002f).of(0.42661f)
+        assertThat(seen.green).isWithin(0.002f).of(0.37265f)
+        assertThat(seen.blue).isEqualTo(0f)
     }
 }

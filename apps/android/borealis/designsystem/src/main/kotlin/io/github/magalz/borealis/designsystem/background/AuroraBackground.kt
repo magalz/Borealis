@@ -143,6 +143,7 @@ private class Band(
     val phase: Float,
 )
 
+/** The curtains. A change needs the glass table measured again: see [DrawnBackground]. */
 private val BANDS =
     listOf(
         Band(
@@ -195,6 +196,7 @@ private class Spot(
     val phase: Float,
 )
 
+/** The glows. A change needs the glass table measured again: see [DrawnBackground]. */
 private val SPOTS =
     listOf(
         Spot(
@@ -244,6 +246,12 @@ private val SPOTS =
  * redraws this layer and nothing is recomposed. The layer is at most 480 pixels wide and scaled up
  * to the screen: the light is soft, so the smoothing of the scale hides the strips of a curtain,
  * and a frame costs a sixteenth of the fill on a TV.
+ *
+ * `GlassContrastTable` is measured over frames of these two styles, and nothing detects a change to
+ * them (the four clips are hashed into it). After a change to [Hues], [BANDS], [SPOTS] or the
+ * constants of the drawing, export the frames again with `BackgroundFrameExport`, run `measure` and
+ * `glass-table` of `design/accessibility/contrast.py`, and commit the table: see
+ * `design/backgrounds/README.md`.
  */
 @Composable
 internal fun DrawnBackground(

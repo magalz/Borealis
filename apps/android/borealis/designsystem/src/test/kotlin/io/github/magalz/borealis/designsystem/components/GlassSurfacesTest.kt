@@ -47,6 +47,10 @@ class CoverTileGlassTest : GlassSurfaceCases() {
     override val probes = listOf(DpOffset(100.dp, 80.dp))
     override val solid = BorealisTokens.Color.SurfaceRaised
 
+    // The cover is 3 by 4. The name under it stands on the background and has the halo in a host,
+    // where the glass is Off too, for the background is still behind it.
+    override val surfaceSize = DpSize(120.dp, 160.dp)
+
     @Composable
     override fun Specimen() {
         CoverTile(name = "Desktop", onClick = {}, modifier = Modifier.width(120.dp))

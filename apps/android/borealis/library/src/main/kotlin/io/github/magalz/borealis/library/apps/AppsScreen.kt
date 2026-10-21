@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
@@ -31,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.adaptive.appGridColumns
 import io.github.magalz.borealis.designsystem.components.AuroraLoader
+import io.github.magalz.borealis.designsystem.components.BackdropIcon
 import io.github.magalz.borealis.designsystem.components.BackdropInk
 import io.github.magalz.borealis.designsystem.components.BackdropText
 import io.github.magalz.borealis.designsystem.components.BorealisButton
@@ -113,7 +113,7 @@ fun AppsScreen(
 @Composable
 private fun ShowHiddenToggle(state: AppsUiState, onToggleShowHidden: () -> Unit) {
     IconButton(onClick = onToggleShowHidden) {
-        Icon(
+        BackdropIcon(
             // The icon shows what the toggle does: open eye shows them, crossed eye hides.
             if (state.showHidden) BorealisIcons.VisibilityOff else BorealisIcons.Visibility,
             stringResource(toggleLabel(state)),

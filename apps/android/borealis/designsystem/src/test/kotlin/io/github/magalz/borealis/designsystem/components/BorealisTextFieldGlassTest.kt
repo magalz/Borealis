@@ -69,10 +69,10 @@ class BorealisTextFieldGlassTest : GlassSurfaceCases() {
 }
 
 /**
- * The text and the outline of the field on the glass keep their contrast with the backdrop behind it
- * (WCAG 1.4.3 and 1.4.11): the label and the typed text 4.5:1, the outline 3:1. The backdrop is the
- * brightest pixel behind a glass of that style, in the table that the tint floors come from; the
- * colours are what the field draws.
+ * The text and the outline of the field on the glass keep their contrast with the backdrop behind
+ * it (WCAG 1.4.3 and 1.4.11): the label and the typed text 4.5:1, the outline 3:1. The backdrop is
+ * the brightest pixel behind a glass of that style, in the table that the tint floors come from;
+ * the colours are what the field draws.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = PHONE)
@@ -221,7 +221,8 @@ class BorealisTextFieldOnGlassTest {
     fun `the glass of the field is clipped to the shape of the field`() {
         show(BackgroundStyle.AuroraCurtains) { Field() }
 
-        // The corner of the rounded field is outside it, so it shows the backdrop and not the glass.
+        // The corner of the rounded field is outside it, so it shows the backdrop and not the
+        // glass.
         val corner = hostPixels()[CORNER_PX, CORNER_PX]
         assertThat(corner.luminance()).isGreaterThan(0.9f)
         assertThat(hostPixels()[CENTRE_PX, MIDDLE_PX].luminance()).isLessThan(0.9f)

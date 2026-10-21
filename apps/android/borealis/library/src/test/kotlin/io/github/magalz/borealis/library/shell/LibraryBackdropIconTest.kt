@@ -139,7 +139,8 @@ class LibraryBackdropIconTest {
     @Composable
     private fun Pairing() {
         PairingScreen(
-            state = PairingUiState.Waiting("4817", "https://192.168.1.20:47990", "Galaxy S22", false),
+            state =
+                PairingUiState.Waiting("4817", "https://192.168.1.20:47990", "Galaxy S22", false),
             formFactor = FormFactor.Phone,
             onGetNewPin = {},
             onCancel = {},

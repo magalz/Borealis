@@ -644,8 +644,9 @@ internal object GlassContrastTable {
 
     /**
      * The SHA-256 of each clip the table was measured over, by the name of its file in
-     * `designsystem/src/main/res/raw`. A test compares them with the clips, so a clip that is
-     * encoded again says that the table is stale. The two styles that are drawn have no clip.
+     * `designsystem/src/main/res/raw` without the `.mp4`. A test compares them with the clips, so a
+     * clip that is encoded again says that the table is stale. The two styles that are drawn have
+     * no clip.
      */
     val clipSha256: Map<String, String> =
         mapOf(

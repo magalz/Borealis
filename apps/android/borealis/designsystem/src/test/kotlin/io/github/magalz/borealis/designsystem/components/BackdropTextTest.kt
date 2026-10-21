@@ -37,6 +37,7 @@ import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.Transparency
+import io.github.magalz.borealis.designsystem.theme.borealisColors
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -125,6 +126,24 @@ class BackdropTextTest {
 
         assertThat(textColor("Three")).isEqualTo(colors.ink3)
         assertThat(textColor("Four")).isEqualTo(colors.ink4)
+    }
+
+    @Test
+    fun `under high contrast the inks are those of high contrast, and ink-3 and ink-4 are its ink-2`() {
+        val look = BorealisLook(highContrast = true)
+        val high = borealisColors(look)
+        show(BackgroundStyle.AuroraCurtains, look) {
+            BackdropText("Title")
+            BackdropText("Three", ink = BackdropInk.Ink3)
+            BackdropKicker("Four")
+        }
+
+        assertThat(textColor("Title")).isEqualTo(high.ink)
+        assertThat(textColor("Three")).isEqualTo(high.ink2)
+        assertThat(textColor("FOUR")).isEqualTo(high.ink2)
+        // The inks of high contrast are not the tokens, and the halo is drawn there too.
+        assertThat(high.ink2).isNotEqualTo(colors.ink2)
+        assertThat(haloOf("Three")).isTrue()
     }
 
     @Test

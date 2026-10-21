@@ -73,6 +73,20 @@ says what happened and what to do next.
 1. The host reports a running app and the system shows the conflict dialog.
 2. The flow continues in [UC-003](0003-join-or-replace-a-running-app.md).
 
+### A5: The user goes back from Apps (Sprint 10; branches from step 1)
+
+1. The user opens a host on the Hosts screen, so the Apps screen shows, and then
+   presses Back. On a TV or a handheld the Hosts screen comes back with the focus
+   on the card that was opened, found by its host, a Continue card included. It
+   does not go to the first card.
+2. The focus is also restored after Pairing, so the card of the host that was
+   paired has it; on a rotation; after a tap on a handheld, where a card cannot
+   take the focus but a tap chooses it; and after Cancel on Add host.
+3. When the list moved the card out of view, the grid scrolls to it first. When
+   the host changed its status or its place meanwhile, the card is still found
+   by the host. When the host is gone, the first card has the focus.
+4. A phone does not restore the focus: its screen starts with none, in touch mode.
+
 ### E1: The host is offline (branches from step 3)
 
 1. The Connection error screen says the host is offline and offers Wake PC.
@@ -143,6 +157,11 @@ says what happened and what to do next.
 | UC-002-T8 | Given a picture is shown, when the session ends, then SESSION_START holds the codec, resolution, frame rate and HDR state, and SESSION_END holds the duration and the reason. | unit | exists (Sprint 3, unit) |
 | UC-002-T9 | Given a stream that ran ends with error -1 from the host, when the error screen shows, then its title is "`<app>` stopped" and SESSION_END holds `reason=error code=-1`. | unit | exists (Sprint 5, unit; device round) |
 | UC-002-T10 | Given the host does not answer `/serverinfo` yet, when the retries run, then the connecting stage stays current and the 15 s note does not show. | emulator | exists (Sprint 5, device round) |
+| UC-002-T11 | Given a TV or a handheld and the Apps screen of the second host, when the user presses Back, then the card of that host has the focus, and not a Continue card above it or the first card. | UI | exists (Sprint 10, UI): `LibraryAppsBackFocusTest` |
+| UC-002-T12 | Given the host went offline, or the list was refreshed or moved the card out of view, when the user presses Back from Apps, then the card still has the focus, found by its host. | UI | exists (Sprint 10, UI): `LibraryAppsBackFocusTest` |
+| UC-002-T13 | Given the host is gone when the user presses Back from Apps, then the first card has the focus. | UI | exists (Sprint 10, UI): `LibraryAppsBackFocusTest` |
+| UC-002-T14 | Given the user paired a host, opened its apps, and presses Back, or rotated the screen, or tapped a card on a handheld, or cancelled Add host, then the card that had the focus has it again. | UI | exists (Sprint 10, UI): `LibraryAppsBackFocusTest` |
+| UC-002-T15 | Given the focus moves between cards, then no card is recomposed. | UI | exists (Sprint 10, UI): `HostsRecompositionTest` |
 
 Sprint 5 built the stream screens and their logic. A test marked "exists
 (Sprint 5, unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a
@@ -187,4 +206,5 @@ cannot be resolved ([section 7.3](../host-contract/luminalshine.md)).
   Connection error screens exist from Sprint 5, in `:borealis:stream`.
 - Existing tests: `ServerInfoRetryTest`, `LaunchRetriesTest`,
   `LaunchRetryRunnerTest`, `SessionAuditTest`, `StreamFailureClassifierTest`,
-  `StartingScreenTest`, `ConnectionErrorScreenTest`, `StreamSessionTest`.
+  `StartingScreenTest`, `ConnectionErrorScreenTest`, `StreamSessionTest`,
+  `LibraryAppsBackFocusTest`, `HostsRecompositionTest`.

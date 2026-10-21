@@ -137,11 +137,11 @@ private fun SliderHeader(
     ) {
         SettingsRowText(
             title,
-            summary,
-            disabledNote,
-            enabled,
-            SettingsRowTone.Normal,
-            Modifier.weight(1f),
+            summary = summary,
+            note = disabledNote,
+            enabled = enabled,
+            tone = SettingsRowTone.Normal,
+            modifier = Modifier.weight(1f),
         )
         Text(
             valueLabel,

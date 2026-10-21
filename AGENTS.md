@@ -33,6 +33,7 @@ Run the checks for what you touched before finishing:
 
 - Android: `./gradlew spotlessCheck detekt lint testDebugUnitTest :build-logic:test assembleDebug licensee koverXmlReportBorealis` from `apps/android`.
 - Compose screens: also `./gradlew :borealis:designsystem:testDebugUnitTest :borealis:library:testDebugUnitTest :borealis:stream:testDebugUnitTest :borealis:settings:testDebugUnitTest -Proborazzi.test.verify=true` from `apps/android`; record references on Windows (see [building](docs/development/building.md)).
+- Design tools: `python -m unittest discover -s design/accessibility` from the repository root (Python 3.11 or later, `numpy` and `Pillow`; see [building](docs/development/building.md#contrast-tool-and-the-glass-table)), for a change under `design/`, or to the glass table, the icons or the clips. CI runs it in the "Design tools" job.
 - Core: `cmake --preset dev && cmake --build --preset dev && ctest --preset dev` from `core`, plus the format check CI runs, also from `core`: `find include src tests fuzz -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.cpp' \) -print0 | xargs -0 clang-format --dry-run --Werror`. Use clang-format 22; CI pins the exact version in `.github/workflows/ci.yml`.
 
 ## GitHub and merges

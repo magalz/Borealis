@@ -1,9 +1,9 @@
 # Animated backgrounds
 
 The Library and Settings screens sit on one animated background, chosen from seven styles
-(issue #30, owner decision of 2026-10-18). `BorealisBackground` in `:borealis:designsystem` draws it
-and `BackgroundStyle` names the styles. The Compose styles have no files; the four video styles
-are the clips below.
+(issue #30, owner decision of 2026-10-18). `GlassHost` in `:borealis:designsystem` draws it, through
+`BorealisBackground`, which is internal to that module, and `BackgroundStyle` names the styles. The
+Compose styles have no files; the four video styles are the clips below.
 
 | Style | Working name | Kind | Source |
 | --- | --- | --- | --- |

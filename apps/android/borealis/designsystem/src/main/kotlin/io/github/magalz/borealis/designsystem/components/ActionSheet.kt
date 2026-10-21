@@ -1,46 +1,30 @@
 package io.github.magalz.borealis.designsystem.components
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.minimumInteractiveComponentSize
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.ignoreKeysHeldOnOpen
 import io.github.magalz.borealis.designsystem.focus.initialFocus
-import io.github.magalz.borealis.designsystem.glass.OverlayOpen
-import io.github.magalz.borealis.designsystem.glass.rememberOverlayGlass
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
-import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
-import io.github.magalz.borealis.designsystem.theme.LocalBorealisShapes
-import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
-import io.github.magalz.borealis.designsystem.theme.sheetWidth
 
 /** How an action of the sheet looks: danger for what loses something. */
 enum class ActionStyle {
@@ -74,7 +58,6 @@ private val ACTION_PADDING_VERTICAL = 10.dp
  * Over a glass host that blurs its window the sheet draws no scrim, its surface is the tint of the
  * glass over the blurred window, and its text has the glass colours.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> ActionSheet(
     title: String,
@@ -82,50 +65,10 @@ fun <T> ActionSheet(
     onAction: (ActionSheetAction<T>) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val glass = rememberOverlayGlass()
-    OverlayOpen()
-    if (LocalFormFactor.current == FormFactor.Phone) {
-        val colors = LocalBorealisColors.current
-        ModalBottomSheet(
-            onDismissRequest = onDismiss,
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            shape = LocalBorealisShapes.current.sheet,
-            containerColor = colors.surface.copy(alpha = glass?.tint ?: 1f),
-            contentColor = colors.ink,
-            scrimColor = if (glass == null) colors.scrim else Color.Transparent,
-            dragHandle = { SheetHandle() },
-        ) {
-            OverlayTextColors(glass) { ActionList(title, actions, onAction, focusFirst = false) }
-        }
-    } else {
-        Dialog(
-            onDismissRequest = onDismiss,
-            properties = DialogProperties(usePlatformDefaultWidth = false),
-        ) {
-            // Over a blurred window there is no dim: the glass is the dimmer.
-            if (glass != null) NoPlatformDim()
-            val colors = LocalBorealisColors.current
-            val shape = MaterialTheme.shapes.extraLarge
-            Column(
-                Modifier.width(sheetWidth())
-                    .overlayPanel(shape, glass)
-                    .border(1.dp, colors.line, shape)
-                    .clip(shape)
-            ) {
-                OverlayTextColors(glass) { ActionList(title, actions, onAction, focusFirst = true) }
-            }
-        }
+    // The first action has focus in the dialog; the bottom sheet of a phone is for touch.
+    OverlaySheet(onDismiss) { onPhone ->
+        ActionList(title, actions, onAction, focusFirst = !onPhone)
     }
-}
-
-/**
- * The handle of a bottom sheet, which a screen reader uses to expand and dismiss it. The default is
- * 32dp wide; this one has the 48dp that a finger needs (WCAG 2.5.8), around the bar and not in it.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun SheetHandle() {
-    BottomSheetDefaults.DragHandle(Modifier.minimumInteractiveComponentSize())
 }
 
 @Composable

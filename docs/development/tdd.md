@@ -76,9 +76,10 @@ Not enough:
 | Area | Tools |
 | --- | --- |
 | Kotlin unit | JUnit 4, Turbine (flows), Truth. MockK is planned and not used yet; the tests use fakes. |
-| Android UI | Robolectric, Compose UI tests. |
+| Android UI | Robolectric, Compose UI tests, and the Accessibility Test Framework of Google through `roborazzi-accessibility-check` (`assertAccessible` in the test fixtures of `:borealis:designsystem`; each accepted finding carries a reason, see [accessibility](../ux/accessibility.md#screen-readers-and-touch-targets)). |
 | Emulator | Gradle Managed Devices, planned and not set up. |
 | Screenshots | Roborazzi. |
+| Design tools | Python `unittest` for the contrast tool in `design/accessibility/` (see [building](building.md#contrast-tool-and-the-glass-table)). |
 | core (C++) | GoogleTest, ASan/UBSan, libFuzzer for parsers. |
 | Host contract | Golden fixtures with contract tests. |
 

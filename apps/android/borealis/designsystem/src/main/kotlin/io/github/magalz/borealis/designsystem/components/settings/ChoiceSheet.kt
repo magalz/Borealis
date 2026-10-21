@@ -1,24 +1,19 @@
 package io.github.magalz.borealis.designsystem.components.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -31,25 +26,14 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
-import io.github.magalz.borealis.designsystem.components.NoPlatformDim
-import io.github.magalz.borealis.designsystem.components.OverlayTextColors
-import io.github.magalz.borealis.designsystem.components.SheetHandle
-import io.github.magalz.borealis.designsystem.components.overlayPanel
+import io.github.magalz.borealis.designsystem.components.OverlaySheet
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.ignoreKeysHeldOnOpen
 import io.github.magalz.borealis.designsystem.focus.initialFocus
-import io.github.magalz.borealis.designsystem.glass.OverlayOpen
-import io.github.magalz.borealis.designsystem.glass.rememberOverlayGlass
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
-import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
-import io.github.magalz.borealis.designsystem.theme.LocalBorealisShapes
-import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
-import io.github.magalz.borealis.designsystem.theme.sheetWidth
 
 /**
  * One choice of a [ChoiceSheet]: the [key] it returns, its [label] and an optional [summary] under
@@ -80,7 +64,6 @@ private val MARK_GAP = 12.dp
  * choice and closes the sheet. Back, or a tap outside the sheet, calls [onDismiss] alone, so
  * nothing changes.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> ChoiceSheet(
     title: String,
@@ -93,40 +76,7 @@ fun <T> ChoiceSheet(
         onSelect(it.key)
         onDismiss()
     }
-    val glass = rememberOverlayGlass()
-    OverlayOpen()
-    if (LocalFormFactor.current == FormFactor.Phone) {
-        val colors = LocalBorealisColors.current
-        ModalBottomSheet(
-            onDismissRequest = onDismiss,
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            shape = LocalBorealisShapes.current.sheet,
-            containerColor = colors.surface.copy(alpha = glass?.tint ?: 1f),
-            contentColor = colors.ink,
-            scrimColor = if (glass == null) colors.scrim else Color.Transparent,
-            dragHandle = { SheetHandle() },
-        ) {
-            OverlayTextColors(glass) { OptionList(title, options, selected, choose) }
-        }
-    } else {
-        Dialog(
-            onDismissRequest = onDismiss,
-            properties = DialogProperties(usePlatformDefaultWidth = false),
-        ) {
-            // Over a blurred window there is no dim: the glass is the dimmer.
-            if (glass != null) NoPlatformDim()
-            val colors = LocalBorealisColors.current
-            val shape = MaterialTheme.shapes.extraLarge
-            Column(
-                Modifier.width(sheetWidth())
-                    .overlayPanel(shape, glass)
-                    .border(1.dp, colors.line, shape)
-                    .clip(shape)
-            ) {
-                OverlayTextColors(glass) { OptionList(title, options, selected, choose) }
-            }
-        }
-    }
+    OverlaySheet(onDismiss) { OptionList(title, options, selected, choose) }
 }
 
 @Composable

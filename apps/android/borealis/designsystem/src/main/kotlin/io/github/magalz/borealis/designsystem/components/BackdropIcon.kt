@@ -31,9 +31,7 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 /** Set on the node of a [BackdropIcon]: true where the halo is drawn behind its icon. */
 val BackdropIconHalo = SemanticsPropertyKey<Boolean>("BackdropIconHalo")
 
-var SemanticsPropertyReceiver.backdropIconHalo by BackdropIconHalo
-
-private const val PERCENT = 100f
+private var SemanticsPropertyReceiver.backdropIconHalo by BackdropIconHalo
 
 /**
  * An icon that stands straight on the animated background, outside any glass: the arrow back of a
@@ -111,7 +109,7 @@ private fun Modifier.iconHalo(icon: ImageVector, strokes: IconStrokes, page: Col
                 strokeWidth = strokes.width * scale + 2 * BackdropHalo.STROKE_DP.dp.toPx()
                 strokeCap = StrokeCap.Round
                 strokeJoin = StrokeJoin.Round
-                color = page.copy(alpha = BackdropHalo.OPACITY_PERCENT / PERCENT)
+                color = BackdropHalo.color(page)
                 asFrameworkPaint().maskFilter =
                     BlurMaskFilter(BackdropHalo.BLUR_DP.dp.toPx(), BlurMaskFilter.Blur.NORMAL)
             }

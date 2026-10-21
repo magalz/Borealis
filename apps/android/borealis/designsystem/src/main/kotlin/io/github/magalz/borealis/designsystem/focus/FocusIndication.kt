@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
+import io.github.magalz.borealis.designsystem.theme.LocalSystemAnimationsRemoved
 import io.github.magalz.borealis.designsystem.theme.animationsRemoved
 import io.github.magalz.borealis.designsystem.theme.systemAnimationsRemoved
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
@@ -47,11 +48,11 @@ import kotlinx.coroutines.launch
  *
  * The outline reaches about 5dp outside the element (2dp offset plus 3dp stroke), 7dp when it is
  * the thicker one, and a scaled tile grows by 2% of its size on each side more. A parent that clips
- * (a lazy grid or list, a scroll area) cuts it unless it has `contentPadding` of at least 10dp
- * (12dp for a scaled tile), and neighbours closer than 10dp have outlines that overlap: use at
- * least 10dp of spacing between focusable items.
+ * (a lazy grid or list, a scroll area) cuts it unless it has `contentPadding` of at least 8dp,
+ * which holds the 7dp of the thicker outline (12dp for a scaled tile), and neighbours closer than
+ * 10dp have outlines that overlap: use at least 10dp of spacing between focusable items.
  * [io.github.magalz.borealis.designsystem.theme.BorealisDimens] has the padding and the gap of a
- * list.
+ * list: `listPadding` is the 8dp.
  *
  * Put this modifier before the one that makes the element focusable (`clickable`, `focusable`): it
  * reads the focus of what follows it.
@@ -107,11 +108,15 @@ private class BorealisFocusNode(var shape: Shape, var scaleOnFocus: Boolean) :
         }
     }
 
-    /** Reduce motion, now: the setting of the app, or the system when that follows it. */
+    /**
+     * Reduce motion, now: the setting of the app, or the system when that follows it. The system is
+     * what the theme watches, or, outside a theme, what the setting says at this moment.
+     */
     private fun motionRemoved(): Boolean =
         animationsRemoved(
             currentValueOf(LocalBorealisLook).reduceMotion,
-            systemAnimationsRemoved(currentValueOf(LocalContext).contentResolver),
+            currentValueOf(LocalSystemAnimationsRemoved)
+                ?: systemAnimationsRemoved(currentValueOf(LocalContext).contentResolver),
         )
 
     override fun ContentDrawScope.draw() {

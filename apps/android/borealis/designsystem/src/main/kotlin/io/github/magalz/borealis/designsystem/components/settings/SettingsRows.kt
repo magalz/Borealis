@@ -91,11 +91,11 @@ fun SettingsSwitchRow(
     ) {
         SettingsRowText(
             title,
-            summary,
-            disabledNote,
-            enabled,
-            SettingsRowTone.Normal,
-            Modifier.weight(1f),
+            summary = summary,
+            note = disabledNote,
+            enabled = enabled,
+            tone = SettingsRowTone.Normal,
+            modifier = Modifier.weight(1f),
         )
         Switch(
             checked = checked,
@@ -171,7 +171,14 @@ fun SettingsValueRow(
         horizontalArrangement = Arrangement.spacedBy(CONTENT_GAP),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SettingsRowText(title, summary, disabledNote, enabled, tone, Modifier.weight(1f))
+        SettingsRowText(
+            title,
+            summary = summary,
+            note = disabledNote,
+            enabled = enabled,
+            tone = tone,
+            modifier = Modifier.weight(1f),
+        )
         if (value != null) ValueText(value, enabled)
         if (tone == SettingsRowTone.Normal) {
             Icon(
@@ -201,7 +208,14 @@ fun SettingsInfoRow(title: String, value: String, modifier: Modifier = Modifier)
         horizontalArrangement = Arrangement.spacedBy(CONTENT_GAP),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SettingsRowText(title, null, null, true, SettingsRowTone.Normal, Modifier.weight(1f))
+        SettingsRowText(
+            title,
+            summary = null,
+            note = null,
+            enabled = true,
+            tone = SettingsRowTone.Normal,
+            modifier = Modifier.weight(1f),
+        )
         ValueText(value, enabled = true)
     }
 }

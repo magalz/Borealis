@@ -34,7 +34,7 @@ internal object BackgroundTags {
  * it. [framesPerSecond] is the pace of the Compose styles; a clip plays at its own.
  */
 @Composable
-fun BorealisBackground(
+internal fun BorealisBackground(
     style: BackgroundStyle,
     modifier: Modifier = Modifier,
     frozen: Boolean = false,

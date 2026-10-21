@@ -63,6 +63,19 @@ Implementation requirements:
   same DataStore file, so the file is excluded from backup too. It holds the id
   of a background style, such as `aurora_curtains` or `off`, and nothing
   personal ([ADR 0056](../adr/0056-add-an-animated-background-and-the-appearance-group.md)).
+- The glass and accessibility settings are stored in the same DataStore file too,
+  so the file is excluded from backup: Glass tint and Glass blur
+  (`borealis_glass_tint`, `borealis_glass_blur`), Reduce motion
+  (`borealis_reduce_motion`), Transparency (`borealis_transparency`), Thicker
+  focus outline (`borealis_thick_focus`), Text size (`borealis_text_size`), High
+  contrast (`borealis_high_contrast`) and Colour-blind palette
+  (`borealis_colour_vision`). They hold stable ids and switches, and nothing
+  else ([ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md)).
+  Together with the three settings above, the file holds 11 settings.
+- Accessibility choices can reveal a disability, so they are never uploaded and
+  never put in diagnostics: they are not in a log line, in the audit trail or in
+  the diagnostic bundle. The `manifest.json` of the bundle lists only the two
+  logging switches.
 - The other settings stay in the app's private SharedPreferences, as before.
   They are not backed up either: the app's backup rules exclude its
   SharedPreferences from cloud backup and from device transfer.

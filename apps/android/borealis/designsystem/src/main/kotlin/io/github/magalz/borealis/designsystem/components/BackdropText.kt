@@ -16,12 +16,12 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -74,7 +74,17 @@ internal object BackdropHalo {
             Shadow(page.copy(alpha = OPACITY_PERCENT / PERCENT), Offset.Zero, BLUR_DP.dp.toPx())
         val stroke =
             Stroke(BOTH_SIDES * STROKE_DP.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-        drawText(layout, color = Color.Transparent, shadow = shadow, drawStyle = stroke)
+        // The paragraph is painted and not drawn with drawText, which clips to the size of the
+        // layout
+        // unless its overflow is visible, and the halo is outside it.
+        drawIntoCanvas { canvas ->
+            layout.multiParagraph.paint(
+                canvas,
+                color = Color.Transparent,
+                shadow = shadow,
+                drawStyle = stroke,
+            )
+        }
     }
 }
 
@@ -120,9 +130,11 @@ fun BackdropText(
         } else {
             Modifier
         }
+    // The semantics come first in the chain, so that a modifier that clears them, as the one of a
+    // label under a cover does, leaves the halo in them.
     Text(
         text,
-        modifier.semantics { backdropTextHalo = halo }.then(behind),
+        Modifier.semantics { backdropTextHalo = halo }.then(modifier).then(behind),
         color = colors.backdropInk(ink, halo),
         textAlign = textAlign,
         overflow = overflow,

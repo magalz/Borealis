@@ -846,6 +846,59 @@ class HaloGeometryTest(unittest.TestCase):
         self.assertGreater(float(phone.alphas[phone.configs.index((1, 2, 1.0))].mean()), 0.5)
 
 
+class HaloWorstTest(unittest.TestCase):
+    """The worst ratio over every pixel of a frame, with every alpha of the ring laid on it."""
+
+    def setUp(self):
+        self.colors = tokens()
+        self.page = contrast.parse_hex(self.colors["page"])
+        self.ink = float(contrast.relative_luminance(contrast.parse_hex(self.colors["ink"])))
+        self.ink2 = float(contrast.relative_luminance(contrast.parse_hex(self.colors["ink-2"])))
+
+    def test_the_colours_of_a_frame_are_listed_once_each(self):
+        frame = uniform(8, 6, (0.2, 0.4, 0.6))
+        frame[2, 3] = (1.0, 1.0, 1.0)
+        frame[4, 4] = (1.0, 1.0, 1.0)
+        found = contrast.frame_colours(frame)
+        self.assertEqual(found.shape, (2, 3))
+        rows = sorted(tuple(np.round(row * 255).astype(int)) for row in found)
+        self.assertEqual(rows, [(51, 102, 153), (255, 255, 255)])
+
+    def test_the_colours_are_the_ones_of_the_8_bit_picture(self):
+        frame = uniform(4, 4, (0.2, 0.4, 0.6))
+        frame[0, 0] = (0.2 + 0.0004, 0.4, 0.6)
+        self.assertEqual(contrast.frame_colours(frame).shape, (1, 3))
+
+    def test_the_worst_ratio_of_a_bright_colour_is_at_the_thinnest_part_of_the_halo(self):
+        white = np.ones((1, 3), np.float32)
+        worst = contrast.halo_worst_ratio(white, (0.5, 0.9), self.page, self.ink)
+        at = lambda alpha: float(
+            contrast.halo_contrast(white, np.array([alpha], np.float32), self.page, self.ink)[0]
+        )
+        self.assertAlmostEqual(worst, at(0.5), places=5)
+        self.assertLess(worst, at(0.9))
+
+    def test_the_worst_colour_counts_and_not_the_average(self):
+        colours = np.array([[0.05, 0.05, 0.05], [0.9, 0.9, 0.9], [0.1, 0.2, 0.1]], np.float32)
+        worst = contrast.halo_worst_ratio(colours, (0.6, 0.6), self.page, self.ink)
+        bright = contrast.halo_contrast(
+            colours[1:2], np.array([0.6], np.float32), self.page, self.ink
+        )
+        self.assertAlmostEqual(worst, float(bright[0]), places=5)
+
+    def test_a_range_of_alphas_that_darkens_a_pixel_to_the_text_is_one_to_one(self):
+        # White at an alpha of 0 is brighter than ink-2, and at 0.9 it is darker: in between there
+        # is an alpha at which it is as bright as the text, and the ratio there is 1:1.
+        white = np.ones((1, 3), np.float32)
+        self.assertEqual(contrast.halo_worst_ratio(white, (0.0, 0.9), self.page, self.ink2), 1.0)
+
+    def test_no_halo_is_the_ratio_of_the_frame_itself(self):
+        colours = np.array([[0.3, 0.5, 0.7], [0.1, 0.1, 0.1]], np.float32)
+        worst = contrast.halo_worst_ratio(colours, (0.0, 0.0), self.page, self.ink)
+        expected = contrast.contrast_ratio(contrast.relative_luminance(colours), self.ink).min()
+        self.assertAlmostEqual(worst, float(expected), places=5)
+
+
 class HaloMeasureTest(unittest.TestCase):
     def setUp(self):
         self.colors = tokens()
@@ -882,18 +935,35 @@ class HaloMeasureTest(unittest.TestCase):
         self.assertGreater(ratios[1], none)
         self.assertGreater(ratios[2], 5.0)
 
-    def test_a_bright_pixel_on_the_ring_counts_and_one_off_the_ring_does_not(self):
-        ring = np.argwhere(self.geometry.ring)[0]
-        off_ring = np.argwhere(~self.geometry.ring)[0]
-        on = uniform(1920, 1080, self.page)
-        on[ring[0], ring[1]] = 1.0
-        off = uniform(1920, 1080, self.page)
-        off[off_ring[0], off_ring[1]] = 1.0
-        flat = self.measure(uniform(1920, 1080, self.page))["body"][contrast.HALO_NONE]["ink"]
-        seen_on = self.measure(on)["body"][contrast.HALO_NONE]["ink"]
-        seen_off = self.measure(off)["body"][contrast.HALO_NONE]["ink"]
-        self.assertAlmostEqual(seen_off["min"], flat["min"], places=4)
-        self.assertLess(seen_on["min"], 1.3)
+    def test_a_bright_pixel_counts_wherever_it_is_on_the_frame(self):
+        # The place of the pixel is none of the six by four places of the grid, and no halo is
+        # laid on it, so it is the ratio of ink over it as it is.
+        frame = uniform(1920, 1080, self.page)
+        frame[523, 877] = 1.0
+        stats = self.measure(frame)["body"][contrast.HALO_NONE]["ink"]
+        self.assertAlmostEqual(
+            stats["min"], contrast.hex_contrast(self.colors["ink"], "#FFFFFF"), places=3
+        )
+
+    def test_the_worst_case_with_a_halo_is_a_bright_pixel_under_the_thinnest_part_of_it(self):
+        config = (3, 2, 1.0)
+        thinnest = float(self.geometry.alphas[self.geometry.configs.index(config)].min())
+        frame = uniform(1920, 1080, self.page)
+        frame[731, 1203] = 1.0
+        stats = self.measure(frame)["body"][config]["ink"]
+        expected = contrast.halo_contrast(
+            np.ones((1, 3), np.float32), np.array([thinnest], np.float32), self.page, self.ink
+        )
+        self.assertAlmostEqual(stats["min"], float(expected[0]), places=3)
+
+    def test_the_minimum_does_not_move_with_the_place_of_a_pixel_by_a_pixel(self):
+        found = []
+        r, c = np.argwhere(self.geometry.ring)[0]
+        for y, x in ((r, c), (r + 1, c), (r, c + 1), (r + 3, c + 5)):
+            frame = uniform(1920, 1080, self.page)
+            frame[y, x] = (0.8, 0.8, 0.9)
+            found.append(self.measure(frame)["body"][(2, 2, 0.8)]["ink-2"]["min"])
+        self.assertAlmostEqual(max(found), min(found), places=6)
 
     def test_the_halo_hides_a_bright_pixel_on_the_ring_in_part(self):
         ring = np.argwhere(self.geometry.ring)[0]
@@ -904,15 +974,14 @@ class HaloMeasureTest(unittest.TestCase):
             by_config[(3, 2, 1.0)]["ink"]["min"], by_config[contrast.HALO_NONE]["ink"]["min"] * 5
         )
 
-    def test_the_worst_case_is_the_lowest_over_every_placement_of_the_text(self):
-        # The last placement of the grid is the one in the bottom right corner of the frame.
-        x, y = contrast.halo_placements((1080, 1920), self.geometry.size)[-1]
+    def test_p1_and_p5_are_not_moved_by_one_bright_pixel(self):
+        # One pixel in a thousand is not the 1% that p1 and p5 report.
         ring = np.argwhere(self.geometry.ring)[0]
+        x, y = contrast.halo_placements((1080, 1920), self.geometry.size)[-1]
         frame = uniform(1920, 1080, self.page)
         frame[y + ring[0], x + ring[1]] = 1.0
         stats = self.measure(frame)["body"][contrast.HALO_NONE]["ink"]
         self.assertLess(stats["min"], 1.3)
-        # One pixel in a thousand is not the 1% that p1 and p5 report.
         self.assertGreater(stats["p1"], 10.0)
         self.assertGreater(stats["p5"], 10.0)
 

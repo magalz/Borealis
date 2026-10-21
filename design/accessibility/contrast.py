@@ -1066,6 +1066,16 @@ def halo_contrast(pixels, alpha, tint, text_luminance):
     return contrast_ratio(relative_luminance(halo_over(pixels, alpha, tint)), text_luminance)
 
 
+def frame_colours(frame):
+    """The colours of an 8 bit frame, each once, as floats from 0 to 1, one colour to a row."""
+    return np.zeros((0, 3), np.float32)
+
+
+def halo_worst_ratio(colours, alphas, tint, text_luminance):
+    """The lowest ratio of a text over `colours` with a halo of any alpha from `alphas` laid on."""
+    return 0.0
+
+
 def halo_placements(frame_shape, size):
     """The top left corners of the places that the sample text takes over a frame.
 

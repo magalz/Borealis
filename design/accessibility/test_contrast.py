@@ -2218,5 +2218,794 @@ class HaloIconTablesTest(unittest.TestCase):
                 contrast.main(args)
 
 
+# The accent candidates (Sprint 11, issue #50)
+
+# Today's accent tokens, and a candidate of `accents.json` made of them.
+VIOLET_COLOR = {
+    "accent": "#A78BFA",
+    "accent-soft": "#C4B5FD",
+    "accent-strong": "#7C3AED",
+    "on-accent": "#160B2E",
+    "accent-tint": "#A78BFA21",
+    "accent-line": "#A78BFA66",
+}
+VIOLET_HIGH_CONTRAST = {"accent": "#C8B7FC", "accent-soft": "#D6CCFE", "accent-line": "#C8B7FC"}
+SURFACE_HEX = {"page": "#0E1013", "surface": "#14171B", "surface-raised": "#1A1E24"}
+STYLES = ("AuroraCurtains", "SoftGlow", "NorthernLights", "LightMist", "FlowingLight", "Starfield")
+
+
+def candidate(color=None, high_contrast=None, **extra):
+    """A valid candidate of `accents.json`: today's violet with some values changed."""
+    colors = {**VIOLET_COLOR, **(color or {})}
+    high = {**VIOLET_HIGH_CONTRAST, **(high_contrast or {})}
+    notes = {role: f"how {role} was derived" for role in colors}
+    notes.update({f"high-contrast.{role}": f"how {role} is derived" for role in high})
+    return {
+        "label": "Test",
+        "source": "a test",
+        "color": colors,
+        "high-contrast": high,
+        "notes": notes,
+        "cannot_pass": [],
+        **extra,
+    }
+
+
+def write_accents(folder, **candidates):
+    path = Path(folder) / "accents.json"
+    path.write_text(json.dumps({"candidates": candidates}), encoding="utf-8")
+    return path
+
+
+class ColourMathTest(unittest.TestCase):
+    """RGBA colours, CIEDE2000 and the dichromacies: the maths of the accent checks."""
+
+    def test_an_rgba_colour_is_rgb_and_an_alpha_in_the_order_of_the_tokens(self):
+        rgb, alpha = contrast.parse_rgba("#A78BFA21")
+        np.testing.assert_allclose(rgb, [167 / 255, 139 / 255, 250 / 255])
+        self.assertAlmostEqual(alpha, 0x21 / 255)
+
+    def test_a_colour_with_no_alpha_is_opaque(self):
+        rgb, alpha = contrast.parse_rgba("#0E1013")
+        self.assertEqual(alpha, 1.0)
+        np.testing.assert_allclose(rgb, contrast.parse_hex("#0E1013"))
+
+    def test_a_colour_that_is_not_hex_is_reported(self):
+        for value in ("A78BFA", "#A78B", "#A78BFAF", "#GGGGGG"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                contrast.parse_rgba(value)
+
+    def test_a_colour_laid_over_another_is_mixed_in_the_encoded_values(self):
+        out = contrast.over("#A78BFA21", contrast.parse_hex("#14171B"))
+        alpha = 0x21 / 255
+        below, above = contrast.parse_hex("#14171B"), contrast.parse_hex("#A78BFA")
+        np.testing.assert_allclose(out, alpha * above + (1 - alpha) * below, atol=1e-9)
+
+    def test_an_opaque_colour_over_another_is_itself(self):
+        np.testing.assert_allclose(
+            contrast.over("#336699", contrast.parse_hex("#14171B")), contrast.parse_hex("#336699")
+        )
+
+    def test_the_ratio_of_two_colours_is_the_one_of_their_hex_values(self):
+        a, b = contrast.parse_hex("#A78BFA"), contrast.parse_hex("#14171B")
+        expected = contrast.hex_contrast("#A78BFA", "#14171B")
+        self.assertAlmostEqual(contrast.rgb_contrast(a, b), expected)
+        self.assertAlmostEqual(contrast.rgb_contrast(b, a), expected)
+
+    def test_ciede2000_gives_the_test_data_of_sharma_wu_and_dalal(self):
+        pairs = [
+            ((50.0, 2.6772, -79.7751), (50.0, 0.0, -82.7485), 2.0425),
+            ((50.0, 3.1571, -77.2803), (50.0, 0.0, -82.7485), 2.8615),
+            ((50.0, 2.8361, -74.0200), (50.0, 0.0, -82.7485), 3.4412),
+            ((50.0, 0.0, 0.0), (50.0, -1.0, 2.0), 2.3669),
+            ((50.0, 2.49, -0.001), (50.0, -2.49, 0.0009), 7.1792),
+            ((50.0, -0.001, 2.49), (50.0, 0.0009, -2.49), 4.8045),
+            ((50.0, 2.5, 0.0), (50.0, 0.0, -2.5), 4.3065),
+            ((50.0, 2.5, 0.0), (73.0, 25.0, -18.0), 27.1492),
+            ((50.0, 2.5, 0.0), (61.0, -5.0, 29.0), 22.8977),
+            ((50.0, 2.5, 0.0), (56.0, -27.0, -3.0), 31.9030),
+            ((50.0, 2.5, 0.0), (58.0, 24.0, 15.0), 19.4535),
+        ]
+        for first, second, expected in pairs:
+            with self.subTest(first=first, second=second):
+                self.assertAlmostEqual(contrast.delta_e2000(first, second), expected, places=4)
+                self.assertAlmostEqual(contrast.delta_e2000(second, first), expected, places=4)
+
+    def test_the_distance_of_two_colours_is_the_one_the_kotlin_check_pins(self):
+        # ColourVisionPaletteTest pins these two pairs, from a second implementation.
+        self.assertAlmostEqual(contrast.colour_distance("#009E73", "#808080"), 24.975, delta=0.01)
+        self.assertAlmostEqual(contrast.colour_distance("#56B4E9", "#F0E442"), 57.529, delta=0.01)
+        self.assertAlmostEqual(contrast.colour_distance("#000000", "#FFFFFF"), 100.0, delta=0.01)
+        self.assertEqual(contrast.colour_distance("#FF0000", "#FF0000"), 0.0)
+
+    def test_the_lab_of_white_and_black_are_the_ends_of_the_lightness(self):
+        np.testing.assert_allclose(contrast.srgb_to_lab(np.ones(3)), [100, 0, 0], atol=0.01)
+        np.testing.assert_allclose(contrast.srgb_to_lab(np.zeros(3)), [0, 0, 0], atol=1e-6)
+
+    def test_each_row_of_a_dichromacy_adds_up_to_one(self):
+        kinds = sorted(contrast.DICHROMACIES)
+        self.assertEqual(kinds, ["deuteranopia", "protanopia", "tritanopia"])
+        for kind, matrix in contrast.DICHROMACIES.items():
+            for row in matrix:
+                with self.subTest(kind=kind, row=row):
+                    self.assertAlmostEqual(sum(row), 1.0, delta=2e-6)
+
+    def test_white_and_a_grey_are_seen_as_they_are_by_every_dichromat(self):
+        for kind in contrast.DICHROMACIES:
+            for grey in (np.ones(3), np.full(3, 128 / 255)):
+                with self.subTest(kind=kind):
+                    np.testing.assert_allclose(contrast.seen_by(grey, kind), grey, atol=1e-9)
+
+    def test_red_is_seen_by_a_protanope_as_the_first_column_of_its_matrix_encoded(self):
+        seen = contrast.seen_by(np.array([1.0, 0.0, 0.0]), "protanopia")
+        np.testing.assert_allclose(seen, [0.42661, 0.37265, 0.0], atol=0.002)
+
+    def test_what_a_dichromat_sees_is_whole_8_bit_values(self):
+        seen = contrast.seen_by(contrast.parse_hex("#A78BFA"), "deuteranopia")
+        np.testing.assert_allclose(seen * 255, np.round(seen * 255), atol=1e-9)
+
+    def test_a_distance_as_a_dichromat_sees_it_is_that_of_the_seen_colours(self):
+        a, b = "#56B4E9", "#009E73"
+        seen = [contrast.seen_by(contrast.parse_hex(c), "tritanopia") for c in (a, b)]
+        expected = contrast.delta_e2000(*(contrast.srgb_to_lab(c) for c in seen))
+        self.assertAlmostEqual(contrast.colour_distance(a, b, "tritanopia"), expected, places=9)
+        self.assertNotAlmostEqual(
+            contrast.colour_distance(a, b, "tritanopia"), contrast.colour_distance(a, b), places=2
+        )
+
+
+class AccentFileTest(unittest.TestCase):
+    """The candidates of `accents.json` are checked as they are read."""
+
+    def load(self, **candidates):
+        with tempfile.TemporaryDirectory() as folder:
+            return contrast.load_accents(write_accents(folder, **candidates))
+
+    def test_a_valid_file_gives_its_candidates_in_order(self):
+        loaded = self.load(one=candidate(), two=candidate())
+        self.assertEqual(list(loaded), ["one", "two"])
+        self.assertEqual(loaded["one"]["color"]["accent"], "#A78BFA")
+        self.assertEqual(loaded["one"]["high-contrast"]["accent-line"], "#C8B7FC")
+
+    def test_a_role_that_is_missing_is_reported_with_the_candidate(self):
+        color = dict(VIOLET_COLOR)
+        del color["on-accent"]
+        with self.assertRaisesRegex(ValueError, "teal.*on-accent"):
+            self.load(teal=dict(candidate(), color=color))
+
+    def test_a_high_contrast_role_that_is_missing_is_reported(self):
+        broken = dict(candidate(), **{"high-contrast": {"accent": "#C8B7FC"}})
+        with self.assertRaisesRegex(ValueError, "teal.*accent-soft"):
+            self.load(teal=broken)
+
+    def test_a_colour_that_is_not_hex_is_reported_with_its_role(self):
+        with self.assertRaisesRegex(ValueError, "teal.*accent-strong.*purple"):
+            self.load(teal=candidate(color={"accent-strong": "purple"}))
+
+    def test_only_the_tint_and_the_line_may_have_an_alpha(self):
+        with self.assertRaisesRegex(ValueError, "teal.*accent.*opaque"):
+            self.load(teal=candidate(color={"accent": "#A78BFA80"}))
+        with self.assertRaisesRegex(ValueError, "teal.*on-accent.*opaque"):
+            self.load(teal=candidate(color={"on-accent": "#160B2E80"}))
+        faint = {"accent-line": "#A78BFA", "accent-tint": "#A78BFA10"}
+        loaded = self.load(teal=candidate(color=faint))
+        self.assertEqual(loaded["teal"]["color"]["accent-tint"], "#A78BFA10")
+
+    def test_the_colours_of_high_contrast_are_opaque(self):
+        with self.assertRaisesRegex(ValueError, "teal.*accent-line.*opaque"):
+            self.load(teal=candidate(high_contrast={"accent-line": "#C8B7FC66"}))
+
+    def test_a_value_with_no_note_on_how_it_was_derived_is_reported(self):
+        broken = candidate()
+        del broken["notes"]["accent-soft"]
+        with self.assertRaisesRegex(ValueError, "teal.*accent-soft.*how"):
+            self.load(teal=broken)
+        broken = candidate()
+        del broken["notes"]["high-contrast.accent"]
+        with self.assertRaisesRegex(ValueError, "teal.*high-contrast.accent"):
+            self.load(teal=broken)
+
+    def test_a_candidate_with_no_label_or_cannot_pass_has_the_defaults(self):
+        bare = candidate()
+        del bare["label"], bare["cannot_pass"]
+        loaded = self.load(teal=bare)
+        self.assertEqual(loaded["teal"]["label"], "teal")
+        self.assertEqual(loaded["teal"]["cannot_pass"], [])
+
+    def test_a_file_with_no_candidates_is_reported(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with self.assertRaisesRegex(ValueError, "no candidate"):
+                contrast.load_accents(write_accents(folder))
+
+
+class AccentContextTest(unittest.TestCase):
+    """The colours of the tokens that the accents are checked against."""
+
+    def setUp(self):
+        self.context = contrast.accent_context(TOKENS)
+
+    def test_the_surfaces_and_the_ink_are_the_tokens(self):
+        colors = self.context["colors"]
+        self.assertEqual(colors["page"], "#0E1013")
+        self.assertEqual(colors["chrome"], "#0B0D10")
+        self.assertEqual(colors["surface-raised"], "#1A1E24")
+        self.assertEqual(colors["ink"], "#E8EAED")
+        self.assertEqual(colors["ink-2"], "#C3C7CC")
+        self.assertEqual(colors["ink-3"], "#8B9096")
+        self.assertEqual(colors["hover"], "#FFFFFF0A")
+
+    def test_the_status_colours_are_the_default_and_the_two_palettes(self):
+        status = self.context["status"]
+        self.assertEqual(list(status), ["default", "red-green", "blue-yellow"])
+        self.assertEqual(status["default"]["success"], "#4CAF50")
+        self.assertEqual(status["default"]["offline"], "#686E75")
+        self.assertEqual(status["red-green"]["success"], "#56B4E9")
+        self.assertEqual(status["blue-yellow"]["success"], "#009E73")
+        for palette in status.values():
+            self.assertEqual(sorted(palette), ["danger", "offline", "success", "warning"])
+
+
+class AccentBackdropTest(unittest.TestCase):
+    """The brightest pixel behind each glass, with the accent tint on it, over a set of frames."""
+
+    def setUp(self):
+        self.context = contrast.accent_context(TOKENS)
+        self.candidates = {"one": candidate(), "two": candidate(color={"accent-tint": "#33CC9940"})}
+
+    def expected(self, colour, alpha, tint=None, tint_alpha=0.0):
+        """The luminance of a flat frame under the glass of `alpha` and then a tint."""
+        surface = contrast.parse_hex(self.context["colors"]["surface"])
+        panel = alpha * surface + (1 - alpha) * np.asarray(colour)
+        if tint is not None:
+            panel = tint_alpha * contrast.parse_hex(tint) + (1 - tint_alpha) * panel
+        return float(contrast.relative_luminance(panel))
+
+    def rows(self, frames):
+        sources = {("Starfield", "tv"): frames}
+        return contrast.measure_backdrops(sources, self.candidates, self.context)
+
+    def row(self, rows, blur, alpha, overlay=None, device="tv"):
+        found = [
+            r
+            for r in rows
+            if (r["blur_dp"], r["alpha"], r["overlay"], r["device"])
+            == (blur, alpha, overlay, device)
+        ]
+        self.assertEqual(len(found), 1, (blur, alpha, overlay))
+        return found[0]["luminance"]
+
+    def test_the_glass_of_a_flat_frame_is_the_surface_over_it_at_the_tint(self):
+        colour = (0.5, 0.4, 0.8)
+        rows = self.rows([uniform(192, 108, colour)])
+        for alpha in contrast.GLASS_ALPHAS:
+            with self.subTest(alpha=alpha):
+                self.assertAlmostEqual(
+                    self.row(rows, 8, alpha), self.expected(colour, alpha), places=5
+                )
+        self.assertAlmostEqual(self.row(rows, 48, 0.85), self.expected(colour, 0.85), places=5)
+
+    def test_the_panels_are_the_grid_of_8_dp_and_the_reduced_glass(self):
+        rows = self.rows([uniform(192, 108, (0.2, 0.2, 0.2))])
+        panels = {(r["blur_dp"], r["alpha"]) for r in rows}
+        self.assertEqual(panels, {(8, a) for a in contrast.GLASS_ALPHAS} | {(48, 0.85)})
+        self.assertEqual({r["style"] for r in rows}, {"Starfield"})
+        self.assertEqual({r["device"] for r in rows}, {"tv"})
+        self.assertEqual({r["overlay"] for r in rows}, {None, "one", "two"})
+
+    def test_each_candidate_has_its_tint_laid_on_the_glass(self):
+        colour = (0.5, 0.4, 0.8)
+        rows = self.rows([uniform(192, 108, colour)])
+        for name, tint in (("one", "#A78BFA"), ("two", "#33CC99")):
+            alpha = contrast.parse_rgba(self.candidates[name]["color"]["accent-tint"])[1]
+            with self.subTest(name=name):
+                self.assertAlmostEqual(
+                    self.row(rows, 8, 0.4, name), self.expected(colour, 0.4, tint, alpha), places=5
+                )
+        self.assertNotAlmostEqual(self.row(rows, 8, 0.4, "one"), self.row(rows, 8, 0.4, "two"), 3)
+
+    def test_the_brightest_pixel_counts_and_not_the_average(self):
+        # Half the frame is bright: with a blur of 8 dp, 1.6 px here, the middle of the bright half
+        # is as bright as a flat frame of that colour.
+        frame = uniform(192, 108, (0.1, 0.1, 0.1))
+        frame[:, 96:] = (0.9, 0.9, 0.9)
+        rows = self.rows([frame])
+        self.assertAlmostEqual(self.row(rows, 8, 0.4), self.expected((0.9, 0.9, 0.9), 0.4), 3)
+
+    def test_the_worst_of_the_frames_is_kept(self):
+        dark, bright = uniform(192, 108, (0.1, 0.1, 0.1)), uniform(192, 108, (0.7, 0.7, 0.7))
+        rows = self.rows([dark, bright, dark])
+        self.assertAlmostEqual(self.row(rows, 8, 0.6), self.expected((0.7, 0.7, 0.7), 0.6), 5)
+
+    def test_each_device_has_its_own_rows(self):
+        sources = {
+            ("Starfield", "tv"): [uniform(192, 108, (0.1, 0.1, 0.1))],
+            ("Starfield", "phone"): [uniform(123, 267, (0.8, 0.8, 0.8))],
+        }
+        rows = contrast.measure_backdrops(sources, self.candidates, self.context)
+        self.assertLess(self.row(rows, 8, 0.4, device="tv"), self.row(rows, 8, 0.4, device="phone"))
+
+    def test_a_folder_of_frames_is_measured_with_its_sources_and_the_candidates(self):
+        colour = (0.5, 0.4, 0.8)
+        with tempfile.TemporaryDirectory() as folder:
+            (Path(folder) / "Starfield-tv").mkdir()
+            pixels = np.uint8(np.round(uniform(192, 108, colour) * 255))
+            Image.fromarray(pixels).save(Path(folder) / "Starfield-tv" / "00.png")
+            result = contrast.measure_accents(folder, self.candidates, self.context)
+        self.assertEqual(result["sources"], [{"style": "Starfield", "device": "tv", "frames": 1}])
+        self.assertEqual(sorted(result["candidates"]), ["one", "two"])
+        self.assertIn("backdrops", result)
+        self.assertEqual(result["meta"]["glass_tint"], "surface")
+        json.dumps(result)
+
+
+def backdrop_rows_of_the_table():
+    """The rows of the glass table of the app, as a measurement gives them, with no tint on them."""
+    text = contrast.GLASS_TABLE_KT.read_text(encoding="utf-8")
+    table = contrast.read_glass_table_kotlin(text)
+    return [
+        {
+            "style": style,
+            "device": "tv",
+            "blur_dp": blur,
+            "alpha": alpha,
+            "overlay": None,
+            "luminance": luminance,
+        }
+        for style, cell in table.items()
+        for (blur, alpha), luminance in cell.items()
+    ]
+
+
+class AccentReportTest(unittest.TestCase):
+    """What the report says of a candidate, for the checks that need no frame."""
+
+    def setUp(self):
+        self.context = contrast.accent_context(TOKENS)
+
+    def report(self, one=None):
+        found = contrast.accent_report({"one": one or candidate()}, self.context, [])
+        return found["one"]
+
+    def fill(self, report, name):
+        return next(f for f in report["fills"] if f["id"] == name)
+
+    def test_the_text_of_an_accent_fill_has_4_5_to_1_on_it(self):
+        found = self.fill(self.report(), "on-accent/accent")
+        expected = contrast.hex_contrast("#160B2E", "#A78BFA")
+        self.assertAlmostEqual(found["ratio"], expected, places=9)
+        self.assertEqual(found["limit"], 4.5)
+
+    def test_accent_and_accent_soft_are_checked_as_text_on_the_three_surfaces(self):
+        report = self.report()
+        for role in ("accent", "accent-soft"):
+            for surface, hex_value in SURFACE_HEX.items():
+                with self.subTest(role=role, surface=surface):
+                    found = self.fill(report, f"{role}/{surface}")
+                    expected = contrast.hex_contrast(VIOLET_COLOR[role], hex_value)
+                    self.assertAlmostEqual(found["ratio"], expected, places=9)
+                    self.assertEqual(found["limit"], 4.5)
+
+    def test_the_figures_of_violet_are_those_of_the_notes(self):
+        # Table B has accent-soft at 10.32, 9.74 and 9.06, and the text field says accent is 6.61.
+        report = self.report()
+        for name, expected in (
+            ("accent-soft/page", 10.32),
+            ("accent-soft/surface", 9.74),
+            ("accent-soft/surface-raised", 9.06),
+            ("accent/surface", 6.61),
+        ):
+            with self.subTest(name=name):
+                self.assertAlmostEqual(self.fill(report, name)["ratio"], expected, delta=0.006)
+
+    def test_the_text_on_the_tint_of_a_selected_row_is_over_the_surface_and_the_raised_one(self):
+        report = self.report()
+        alpha = 0x21 / 255
+        for surface in ("surface", "surface-raised"):
+            below = contrast.parse_hex(SURFACE_HEX[surface])
+            tint = alpha * contrast.parse_hex("#A78BFA") + (1 - alpha) * below
+            for role in ("accent", "accent-soft"):
+                with self.subTest(role=role, surface=surface):
+                    found = self.fill(report, f"{role}/tint-on-{surface}")
+                    expected = contrast.rgb_contrast(contrast.parse_hex(VIOLET_COLOR[role]), tint)
+                    self.assertAlmostEqual(found["ratio"], expected, places=9)
+                    self.assertLess(found["ratio"], self.fill(report, f"{role}/{surface}")["ratio"])
+
+    def test_the_strong_accent_is_reported_for_information_with_no_limit(self):
+        found = self.fill(self.report(), "accent-strong/page")
+        self.assertIsNone(found["limit"])
+        self.assertAlmostEqual(found["ratio"], contrast.hex_contrast("#7C3AED", "#0E1013"), 9)
+        self.assertNotIn("accent-strong/page", self.report()["fails"])
+
+    def test_a_pair_that_falls_short_is_a_failure_by_the_id_of_the_check(self):
+        weak = candidate(color={"on-accent": "#8B6FE0"})
+        self.assertIn("on-accent/accent", self.report(weak)["fails"])
+        self.assertNotIn("on-accent/accent", self.report()["fails"])
+
+    def test_a_ratio_that_reaches_its_limit_is_not_a_failure(self):
+        strong = candidate(color={"on-accent": "#000000", "accent": "#FFFFFF"})
+        self.assertNotIn("on-accent/accent", self.report(strong)["fails"])
+
+    def test_the_roles_and_the_label_are_in_the_report(self):
+        report = self.report(candidate(label="Violet"))
+        self.assertEqual(report["label"], "Violet")
+        self.assertEqual(report["roles"]["color"], VIOLET_COLOR)
+        self.assertEqual(report["roles"]["high-contrast"], VIOLET_HIGH_CONTRAST)
+
+    def high(self, report):
+        return {h["id"]: h for h in report["high_contrast"]}
+
+    def test_high_contrast_text_has_7_to_1_on_every_fill_and_the_lowest_is_reported(self):
+        found = self.high(self.report())
+        self.assertEqual(found["hc:accent"]["limit"], 7.0)
+        self.assertEqual(found["hc:accent-soft"]["limit"], 7.0)
+        self.assertEqual(found["hc:accent-line"]["limit"], 3.0)
+        self.assertEqual(found["hc:on-accent/accent"]["limit"], 7.0)
+        # The notes: 7.55 and 9.04 are the lowest, and the label keeps 10:1 on the accent fill.
+        self.assertAlmostEqual(found["hc:accent"]["ratio"], 7.55, delta=0.006)
+        self.assertAlmostEqual(found["hc:accent-soft"]["ratio"], 9.04, delta=0.006)
+        self.assertGreater(found["hc:on-accent/accent"]["ratio"], 10.0)
+
+    def test_the_fills_of_high_contrast_include_the_selected_rows_and_the_hover(self):
+        # The lowest ratio is where the fill is lightest, and the tint and the hover lighten it.
+        found = self.high(self.report(candidate(high_contrast={"accent": "#7C6BC0"})))
+        plain = ("page", "chrome", "surface", "surface-raised")
+        self.assertNotIn(found["hc:accent"]["on"], plain)
+        worst = min(
+            contrast.hex_contrast("#7C6BC0", hex_value)
+            for hex_value in ("#0E1013", "#0B0D10", "#14171B", "#1A1E24")
+        )
+        self.assertLess(found["hc:accent"]["ratio"], worst)
+
+    def test_a_high_contrast_accent_under_7_to_1_is_a_failure(self):
+        report = self.report(candidate(high_contrast={"accent": "#7C6BC0"}))
+        self.assertIn("hc:accent", report["fails"])
+        self.assertIn("hc:on-accent/accent", report["fails"])
+        self.assertNotIn("hc:accent", self.report()["fails"])
+
+    def test_the_distance_from_the_status_colours_is_taken_where_the_palettes_are_for(self):
+        found = {d["id"]: d for d in self.report()["distance"]}
+        self.assertEqual(len(found), 14)
+        relevant = {key for key, entry in found.items() if entry["relevant"]}
+        self.assertEqual(
+            relevant,
+            {
+                "distance:default:normal",
+                "distance:red-green:normal",
+                "distance:red-green:protanopia",
+                "distance:red-green:deuteranopia",
+                "distance:blue-yellow:normal",
+                "distance:blue-yellow:tritanopia",
+                "distance:ink",
+                "distance:ink-2",
+            },
+        )
+        for entry in found.values():
+            self.assertEqual(entry["limit"], 20.0)
+
+    def test_the_nearest_status_colour_and_its_distance_are_the_least_of_the_four(self):
+        # An accent that is a status colour is at no distance from it.
+        report = self.report(candidate(color={"accent": "#4CAF50"}))
+        entry = {d["id"]: d for d in report["distance"]}["distance:default:normal"]
+        self.assertEqual(entry["nearest"], "success")
+        self.assertAlmostEqual(entry["least"], 0.0, places=9)
+        self.assertIn("distance:default:normal", report["fails"])
+
+    def test_the_distance_in_a_palette_is_that_of_the_colours_as_the_dichromat_sees_them(self):
+        found = {d["id"]: d for d in self.report()["distance"]}
+        expected = min(
+            contrast.colour_distance("#A78BFA", status, "deuteranopia")
+            for status in ("#56B4E9", "#F0E442", "#D55E00", "#808080")
+        )
+        self.assertAlmostEqual(found["distance:red-green:deuteranopia"]["least"], expected, 9)
+
+    def test_a_vision_that_a_palette_is_not_for_has_a_row_that_does_not_fail(self):
+        report = self.report(candidate(color={"accent": "#4CAF50"}))
+        entry = {d["id"]: d for d in report["distance"]}["distance:default:deuteranopia"]
+        self.assertFalse(entry["relevant"])
+        self.assertLess(entry["least"], 20.0)
+        self.assertNotIn("distance:default:deuteranopia", report["fails"])
+
+    def test_the_accent_is_also_kept_apart_from_ink_and_ink_2(self):
+        white = self.report(candidate(color={"accent": "#F5F3FF"}))
+        found = {d["id"]: d for d in white["distance"]}
+        self.assertLess(found["distance:ink"]["least"], 20.0)
+        self.assertLess(found["distance:ink-2"]["least"], 20.0)
+        self.assertIn("distance:ink", white["fails"])
+        self.assertIn("distance:ink-2", white["fails"])
+        violet = {d["id"]: d for d in self.report()["distance"]}
+        self.assertGreater(violet["distance:ink"]["least"], 20.0)
+        self.assertGreater(violet["distance:ink-2"]["least"], 20.0)
+
+    def test_the_glass_has_no_rows_without_a_backdrop(self):
+        report = self.report()
+        self.assertEqual(report["glass"], [])
+        self.assertEqual(report["floors"], {})
+
+
+class AccentGlassTest(unittest.TestCase):
+    """Over the glass, with the figures of the notes: Tables L and M, the text field."""
+
+    def setUp(self):
+        self.context = contrast.accent_context(TOKENS)
+        self.rows = backdrop_rows_of_the_table()
+        self.report = self.make(candidate(), self.rows)
+
+    def make(self, one, rows):
+        return contrast.accent_report({"one": one}, self.context, rows)["one"]
+
+    def glass(self, report, style, spec):
+        return next(g for g in report["glass"] if (g["style"], g["spec"]) == (style, spec))
+
+    def test_the_floor_of_each_style_is_the_one_of_the_notes(self):
+        # The floors at 8 dp in the notes; the default tint of 40 % is raised to them.
+        self.assertEqual(
+            self.report["floors"],
+            {
+                "AuroraCurtains": 30,
+                "SoftGlow": 30,
+                "NorthernLights": 70,
+                "LightMist": 30,
+                "FlowingLight": 40,
+                "Starfield": 30,
+            },
+        )
+
+    def test_a_row_is_a_style_at_the_default_and_at_reduced(self):
+        self.assertEqual(len(self.report["glass"]), 12)
+        for style, tint in zip(STYLES, (40, 40, 70, 40, 40, 40)):
+            with self.subTest(style=style):
+                self.assertEqual(self.glass(self.report, style, "standard")["tint"], tint)
+                self.assertEqual(self.glass(self.report, style, "reduced")["tint"], 85)
+
+    def test_the_ratios_of_violet_are_those_of_tables_l_and_m(self):
+        standard = {
+            # style: accent-soft (the focused label) and accent (the focused outline)
+            "AuroraCurtains": (7.87, 5.34),
+            "SoftGlow": (8.24, 5.59),
+            "NorthernLights": (6.47, 4.39),
+            "LightMist": (7.05, 4.78),
+            "FlowingLight": (5.71, 3.88),
+            "Starfield": (8.69, 5.89),
+        }
+        reduced = {
+            "AuroraCurtains": (9.42, 6.39),
+            "SoftGlow": (9.41, 6.39),
+            "NorthernLights": (8.88, 6.02),
+            "LightMist": (9.46, 6.42),
+            "FlowingLight": (8.84, 6.00),
+            "Starfield": (9.66, 6.56),
+        }
+        for spec, expected in (("standard", standard), ("reduced", reduced)):
+            for style, (soft, accent) in expected.items():
+                with self.subTest(spec=spec, style=style):
+                    row = self.glass(self.report, style, spec)
+                    self.assertAlmostEqual(row["accent-soft"], soft, delta=0.006)
+                    self.assertAlmostEqual(row["accent"], accent, delta=0.006)
+                    self.assertIsNone(row["selected"])
+
+    def test_accent_as_text_falls_short_where_the_outline_does_not(self):
+        fails = set(self.report["fails"])
+        # 4.39 and 3.88 are outlines that keep 3:1 and text that does not keep 4.5:1.
+        self.assertIn("glass:standard:NorthernLights:accent-text", fails)
+        self.assertIn("glass:standard:FlowingLight:accent-text", fails)
+        self.assertIn("glass:standard:LightMist:accent-text", fails)
+        self.assertNotIn("glass:standard:AuroraCurtains:accent-text", fails)
+        self.assertNotIn("glass:standard:FlowingLight:accent-outline", fails)
+        self.assertNotIn("glass:standard:FlowingLight:accent-soft-text", fails)
+        self.assertNotIn("glass:reduced:FlowingLight:accent-text", fails)
+
+    def test_a_dark_enough_accent_falls_short_as_an_outline_too(self):
+        report = self.make(candidate(color={"accent": "#4B3F8A"}), self.rows)
+        self.assertIn("glass:standard:NorthernLights:accent-outline", report["fails"])
+
+    def test_the_floor_follows_the_accent_soft_of_the_candidate(self):
+        # accent-soft is one of the colours that the floor keeps at 4.5:1: a dim one raises it.
+        report = self.make(candidate(color={"accent-soft": "#7A6AC0"}), self.rows)
+        self.assertGreater(report["floors"]["Starfield"], 30)
+        self.assertGreater(self.glass(report, "Starfield", "standard")["tint"], 40)
+
+    def test_the_selected_label_is_accent_over_the_tint_on_the_glass(self):
+        # The rows of the tint on the glass are brighter than the glass alone by a little.
+        rows = list(self.rows) + [
+            {**row, "overlay": "one", "luminance": row["luminance"] + 0.01}
+            for row in self.rows
+            if row["blur_dp"] in (8, 48)
+        ]
+        report = self.make(candidate(), rows)
+        found = self.glass(report, "NorthernLights", "standard")
+        accent = float(contrast.relative_luminance(contrast.parse_hex("#A78BFA")))
+        expected = (accent + 0.05) / (found["backdrop"] + 0.01 + 0.05)
+        self.assertAlmostEqual(found["selected"], expected, places=6)
+        self.assertLess(found["selected"], found["accent"])
+        self.assertIn("glass:standard:NorthernLights:selected", report["fails"])
+        self.assertNotIn("glass:standard:AuroraCurtains:selected", report["fails"])
+
+    def test_the_worst_of_two_devices_is_the_brightest_backdrop(self):
+        brighter = [
+            {**row, "device": "phone", "luminance": row["luminance"] + 0.02}
+            for row in self.rows
+            if row["style"] == "Starfield" and (row["blur_dp"], row["alpha"]) == (8, 0.4)
+        ]
+        report = self.make(candidate(), self.rows + brighter)
+        found = self.glass(report, "Starfield", "standard")
+        self.assertAlmostEqual(found["backdrop"], brighter[0]["luminance"], places=9)
+
+
+class AccentTablesTest(unittest.TestCase):
+    """The Markdown tables of the accents, and the failures that they name."""
+
+    def setUp(self):
+        context = contrast.accent_context(TOKENS)
+        self.candidates = {
+            "violet": candidate(label="Violet"),
+            "pale": candidate(
+                label="Pale",
+                color={"accent": "#F5F3FF", "accent-soft": "#FFFFFF"},
+                high_contrast={"accent": "#FFFFFF"},
+            ),
+        }
+        report = contrast.accent_report(self.candidates, context, backdrop_rows_of_the_table())
+        self.result = {"meta": {"date": "2026-10-21", "revision": "abc"}, "candidates": report}
+        self.text = contrast.accent_tables(self.result)
+
+    def test_there_is_a_table_for_each_part_of_the_checks(self):
+        for title in ("N", "O", "P", "Q", "R", "S", "T"):
+            with self.subTest(title=title):
+                self.assertIn(f"Table {title}.", self.text)
+
+    def test_the_role_sets_are_listed_by_candidate(self):
+        self.assertIn("`#A78BFA`", self.text)
+        self.assertIn("`#F5F3FF`", self.text)
+        self.assertIn("| Role | Violet | Pale |", self.text)
+
+    def test_a_ratio_just_short_of_a_limit_is_not_read_as_the_limit(self):
+        self.assertEqual(contrast.format_ratio(4.496), "4.496")
+        self.assertIn("5.34", self.text)
+
+    def test_a_cell_short_of_its_limit_says_so(self):
+        self.assertRegex(self.text, r"4\.39 \(outline only\)")
+        self.assertRegex(self.text, r"3\.88 \(outline only\)")
+        self.assertNotRegex(self.text, r"5\.34 \(")
+
+    def test_the_failures_of_each_candidate_are_named(self):
+        self.assertIn("Violet fails", self.text)
+        self.assertIn("Pale fails", self.text)
+        self.assertIn("glass:standard:NorthernLights:accent-text", self.text)
+        self.assertIn("distance:ink", self.text)
+
+    def test_a_candidate_that_passes_everything_says_so(self):
+        context = contrast.accent_context(TOKENS)
+        report = contrast.accent_report({"ok": candidate(label="Ok")}, context, [])
+        report["ok"]["fails"] = []
+        text = contrast.accent_tables({"meta": {}, "candidates": report})
+        self.assertIn("Ok fails no check.", text)
+
+    def test_the_part_that_needs_no_frame_is_printed_with_no_rows_of_glass(self):
+        context = contrast.accent_context(TOKENS)
+        report = contrast.accent_report({"ok": candidate(label="Ok")}, context, [])
+        text = contrast.accent_tables({"meta": {}, "candidates": report})
+        self.assertIn("Table N.", text)
+        self.assertIn("Table O.", text)
+
+
+class AccentCommandTest(unittest.TestCase):
+    """`accents <frames>` reads accents.json and the frames and prints the tables."""
+
+    def run_command(self, folder, *extra):
+        frames = Path(folder) / "frames"
+        (frames / "Starfield-tv").mkdir(parents=True)
+        (frames / "Starfield-phone").mkdir(parents=True)
+        Image.new("RGB", (192, 108), (40, 60, 90)).save(frames / "Starfield-tv" / "00.png")
+        Image.new("RGB", (123, 267), (40, 60, 90)).save(frames / "Starfield-phone" / "00.png")
+        accents = write_accents(folder, one=candidate(label="One"), two=candidate(label="Two"))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = contrast.main(["accents", str(frames), "--accents", str(accents), *extra])
+        return code, out.getvalue()
+
+    def test_the_command_prints_the_tables(self):
+        with tempfile.TemporaryDirectory() as folder:
+            code, out = self.run_command(folder, "--jobs", "1")
+        self.assertEqual(code, 0)
+        self.assertIn("Table N.", out)
+        self.assertIn("| Role | One | Two |", out)
+        self.assertIn("Starfield", out)
+
+    def test_the_json_is_written_when_it_is_asked_for(self):
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder) / "accents-result.json"
+            code, _ = self.run_command(folder, "--jobs", "1", "--json", str(target))
+            written = json.loads(target.read_text(encoding="utf-8"))
+        self.assertEqual(code, 0)
+        self.assertEqual(sorted(written["candidates"]), ["one", "two"])
+        self.assertEqual(written["sources"][0]["style"], "Starfield")
+        self.assertEqual(written["meta"]["revision"], contrast._revision())
+        self.assertEqual(len(written["meta"]["date"]), 10)
+        self.assertIn("backdrops", written)
+        self.assertEqual(written["candidates"]["one"]["floors"]["Starfield"], 30)
+
+    def test_no_json_is_written_when_it_is_not_asked_for(self):
+        with tempfile.TemporaryDirectory() as folder:
+            self.run_command(folder, "--jobs", "1")
+            self.assertEqual(list(Path(folder).glob("*.json")), [Path(folder) / "accents.json"])
+
+    def test_the_command_reads_the_tokens_it_is_given(self):
+        with tempfile.TemporaryDirectory() as folder:
+            data = json.loads(TOKENS.read_text(encoding="utf-8"))
+            data["color"]["surface"]["$value"] = "#FFFFFF"
+            tokens_file = Path(folder) / "tokens.json"
+            tokens_file.write_text(json.dumps(data), encoding="utf-8")
+            target = Path(folder) / "accents-result.json"
+            args = ("--tokens", str(tokens_file), "--json", str(target), "--jobs", "1")
+            self.run_command(folder, *args)
+            written = json.loads(target.read_text(encoding="utf-8"))
+        self.assertEqual(written["meta"]["colors"]["surface"], "#FFFFFF")
+
+    def test_an_accents_file_that_is_wrong_is_reported(self):
+        with tempfile.TemporaryDirectory() as folder:
+            frames = Path(folder) / "frames"
+            (frames / "Starfield-tv").mkdir(parents=True)
+            Image.new("RGB", (192, 108), (40, 60, 90)).save(frames / "Starfield-tv" / "00.png")
+            accents = write_accents(folder, one=candidate(color={"accent": "purple"}))
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as stop:
+                contrast.main(["accents", str(frames), "--accents", str(accents)])
+        self.assertEqual(stop.exception.code, 2)
+        self.assertIn("one", err.getvalue())
+        self.assertIn("purple", err.getvalue())
+
+
+class ShippedAccentsTest(unittest.TestCase):
+    """The candidates that `design/accessibility/accents.json` proposes for the gate."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.accents = contrast.load_accents(contrast.ACCENTS_JSON)
+        cls.context = contrast.accent_context(TOKENS)
+        cls.report = contrast.accent_report(cls.accents, cls.context, [])
+
+    def test_the_candidates_are_violet_green_teal_and_white(self):
+        self.assertEqual(list(self.accents), ["violet", "green", "teal", "white"])
+
+    def test_violet_is_the_accent_tokens_of_sprint_10(self):
+        violet = self.accents["violet"]
+        self.assertEqual(violet["color"], VIOLET_COLOR)
+        self.assertEqual(violet["high-contrast"], VIOLET_HIGH_CONTRAST)
+
+    def test_the_others_start_from_the_colours_of_the_icon(self):
+        sources = {name: self.accents[name]["source"] for name in ("green", "teal", "white")}
+        self.assertIn("#6EE7B7", sources["green"])
+        self.assertIn("#14B8A6", sources["teal"])
+        self.assertIn("#F5F3FF", sources["white"])
+
+    def test_every_role_has_a_note_on_how_its_value_was_derived(self):
+        for name, found in self.accents.items():
+            roles = (*found["color"], *(f"high-contrast.{r}" for r in found["high-contrast"]))
+            for role in roles:
+                with self.subTest(candidate=name, role=role):
+                    self.assertGreater(len(found["notes"][role]), 20)
+
+    def test_each_set_passes_every_check_that_needs_no_frame_but_those_it_cannot(self):
+        for name, found in self.accents.items():
+            with self.subTest(candidate=name):
+                self.assertEqual(sorted(self.report[name]["fails"]), sorted(found["cannot_pass"]))
+
+    def test_violet_passes_all_of_them(self):
+        self.assertEqual(self.accents["violet"]["cannot_pass"], [])
+
+    def test_white_cannot_be_told_from_the_ink(self):
+        self.assertEqual(
+            sorted(self.accents["white"]["cannot_pass"]), ["distance:ink", "distance:ink-2"]
+        )
+
+    def test_a_check_that_a_set_cannot_pass_is_one_of_its_checks(self):
+        for name, found in self.accents.items():
+            report = self.report[name]
+            ids = {c["id"] for key in ("fills", "high_contrast", "distance") for c in report[key]}
+            for check in found["cannot_pass"]:
+                with self.subTest(candidate=name, check=check):
+                    self.assertIn(check, ids)
+
+
 if __name__ == "__main__":
     unittest.main()

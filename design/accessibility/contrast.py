@@ -930,9 +930,9 @@ _KT_ARGUMENT = re.compile(r'"([^"]*)"|\b([A-Z][A-Z_]+)\b')
 def read_icons(path=BOREALIS_ICONS_KT):
     """The stroke width and the paths of the icons of `BorealisIcons.kt`, read from its source.
 
-    The result has the `stroke` in units of the grid and `paths`, which maps the name of each icon to
-    its path data, a string for each path. The paths are literals of the source or the constants that
-    it defines, so the tool measures the icons that the app draws and not a copy of them.
+    The result has the `stroke` in units of the grid and `paths`, which maps the name of each icon
+    to its path data, a string for each path. The paths are literals of the source or the constants
+    that it defines, so the tool measures the icons that the app draws and not a copy of them.
     """
     text = Path(path).read_text(encoding="utf-8")
     constants = {
@@ -956,8 +956,11 @@ _ARC_STEP = math.radians(3)
 
 
 def _arc_points(start, rx, ry, rotation, large, sweep, end):
-    """The points of an elliptical arc from `start` to `end`, as the SVG notes of 1.1 turn it into
-    an arc of a circle of the centre that the two points and the radii make."""
+    """The points of an arc from `start` to `end`, the first one after `start`.
+
+    The centre follows from the two points, the radii and the two flags, as the notes on the
+    implementation of SVG 1.1 (F.6.5) work it out. The arc is cut into steps of a few degrees.
+    """
     if (rx == 0 or ry == 0) or tuple(start) == tuple(end):
         return [end]
     rx, ry = abs(rx), abs(ry)
@@ -1070,7 +1073,9 @@ def icon_polylines(data):
                 first = (numbers[0] + ox, numbers[1] + oy)
                 rest = numbers[2:]
             else:
-                first = at if reflected is None else (2 * at[0] - reflected[0], 2 * at[1] - reflected[1])
+                first = at
+                if reflected is not None:
+                    first = (2 * at[0] - reflected[0], 2 * at[1] - reflected[1])
                 rest = numbers
             second = (rest[0] + ox, rest[1] + oy)
             end = (rest[2] + ox, rest[3] + oy)
@@ -1078,7 +1083,8 @@ def icon_polylines(data):
             at, reflected = end, second
         else:
             end = (numbers[5] + ox, numbers[6] + oy)
-            line.extend(_arc_points(at, numbers[0], numbers[1], numbers[2], numbers[3], numbers[4], end))
+            radius_x, radius_y, rotation, large, sweep = numbers[:5]
+            line.extend(_arc_points(at, radius_x, radius_y, rotation, large, sweep, end))
             at, reflected = end, None
     if len(line) > 1:
         lines.append(np.array(line, np.float64))
@@ -1219,8 +1225,8 @@ def _set_icon(name, device, pad):
     """The icon at `HALO_SUPERSAMPLE` times its size, as coverage, 0 to 1, with `pad` pixels round.
 
     The icon is its paths, read from the source of the app, stroked as wide as the app strokes them
-    and drawn at `HALO_ICON_SIZE_DP` on a device. The picture is that many times as large as the icon
-    with `pad` pixels round it, as for a text.
+    and drawn at `HALO_ICON_SIZE_DP` on a device. The picture is that many times as large as the
+    icon with `pad` pixels round it, as for a text.
     """
     icons = read_icons()
     scale = HALO_SUPERSAMPLE
@@ -1778,9 +1784,9 @@ def halo_icon_tables(result, config):
 
     Table I is each icon on each device: the lowest ratio over the backgrounds, with the background
     it is in, and the lowest p1 and p5. Table J is the lowest ratio over the icons, by background,
-    with no halo and with the halo. An icon is a non-text indicator and needs 3:1 (WCAG 1.4.11): with
-    2% to spare for the difference between the model and a device, as the text has, and with none
-    under high contrast, where the veil of the page is laid over the background first.
+    with no halo and with the halo. An icon is a non-text indicator and needs 3:1 (WCAG 1.4.11):
+    with 2% to spare for the difference between the model and a device, as the text has, and with
+    none under high contrast, where the veil of the page is laid over the background first.
     """
     rows = [row for row in result["halo"] if row["text"] in HALO_ICONS]
     dim = (result.get("meta", {}).get("high_contrast") or {}).get("dim")

@@ -59,6 +59,16 @@ class LargeTextFitTest {
 
     @Test
     @Config(qualifiers = PHONE, fontScale = SCALE)
+    fun `Apps on a phone fit with a long host name`() =
+        assertFits(FormFactor.Phone) { Apps(it, LONG_HOST_NAME) }
+
+    @Test
+    @Config(qualifiers = TV, fontScale = SCALE)
+    fun `Apps on a TV fit with a long host name`() =
+        assertFits(FormFactor.Tv) { Apps(it, LONG_HOST_NAME) }
+
+    @Test
+    @Config(qualifiers = PHONE, fontScale = SCALE)
     fun `Add host on a phone fits`() =
         assertFits(FormFactor.Phone, RailSelection.AddHost) {
             AddHost(it, AddHostUiState("abc", error = AddHostError.UNREACHABLE))
@@ -135,13 +145,13 @@ class LargeTextFitTest {
     }
 
     @Composable
-    private fun Apps(formFactor: FormFactor) {
+    private fun Apps(formFactor: FormFactor, hostName: String = "Desk PC") {
         val names = listOf("Desktop", "Steam Big Picture", "Playnite", "Hades II", "Elden Ring")
         AppsScreen(
             state =
                 AppsUiState(
                     loading = false,
-                    hostName = "Desk PC",
+                    hostName = hostName,
                     runningAppId = 1,
                     runningAppName = "Desktop",
                     items =
@@ -185,5 +195,6 @@ class LargeTextFitTest {
 
     private companion object {
         const val SCALE = 2f
+        const val LONG_HOST_NAME = "Living Room Gaming PC in the Basement Next to the Router"
     }
 }

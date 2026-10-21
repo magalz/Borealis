@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -51,6 +52,7 @@ internal fun PhoneTopBar(onAddHost: () -> Unit, onSettings: () -> Unit) {
             BorealisIcons.Add,
             stringResource(R.string.hosts_add_host),
             onAddHost,
+            Modifier.testTag("hosts-add-host"),
         )
         IconAction(
             BorealisIcons.Gear,
@@ -61,10 +63,16 @@ internal fun PhoneTopBar(onAddHost: () -> Unit, onSettings: () -> Unit) {
 }
 
 @Composable
-private fun IconAction(icon: ImageVector, description: String, onClick: () -> Unit) {
+private fun IconAction(
+    icon: ImageVector,
+    description: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val shape = MaterialTheme.shapes.medium
     Box(
-        Modifier.size(ACTION_SIZE)
+        modifier
+            .size(ACTION_SIZE)
             .borealisFocusIndication(shape)
             .clip(shape)
             .optionsClickable(onClick, role = Role.Button),

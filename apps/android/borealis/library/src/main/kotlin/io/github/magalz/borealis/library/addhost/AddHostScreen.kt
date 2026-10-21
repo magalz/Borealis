@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -149,12 +150,13 @@ private fun AddHostButtons(
         BorealisButton(
             stringResource(R.string.addhost_submit),
             onSubmit,
-            modifier = Modifier.focusRequester(submitFocus),
+            modifier = Modifier.focusRequester(submitFocus).testTag("addhost-submit"),
             enabled = !busy,
         )
         BorealisButton(
             stringResource(R.string.addhost_cancel),
             onCancel,
+            modifier = Modifier.testTag("addhost-cancel"),
             style = BorealisButtonStyle.Secondary,
             enabled = !busy,
         )

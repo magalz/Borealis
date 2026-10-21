@@ -17,6 +17,8 @@ import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.AcceptedFinding
 import io.github.magalz.borealis.designsystem.testing.NoTouchOnTv
 import io.github.magalz.borealis.designsystem.testing.assertAccessible
+import io.github.magalz.borealis.designsystem.testing.showing
+import io.github.magalz.borealis.designsystem.testing.taggedWith
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.addhost.AddHostError
 import io.github.magalz.borealis.library.addhost.AddHostScreen
@@ -36,6 +38,7 @@ import io.github.magalz.borealis.library.testing.HANDHELD
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.TV
 import io.github.magalz.borealis.library.testing.setContentInKeyboardMode
+import org.hamcrest.CoreMatchers.anyOf
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -62,6 +65,7 @@ class LibraryAccessibilityChecksTest {
             DuplicateSpeakableTextCheck::class.java,
             "the Add host button, the title and the rail item of the screen carry one name; the " +
                 "role tells them apart, and the label must stay the visible one (WCAG 2.5.3)",
+            taggedWith("addhost-submit"),
         )
 
     /** The top bar and the empty state of Hosts both offer Add host, and do the same thing. */
@@ -70,6 +74,7 @@ class LibraryAccessibilityChecksTest {
             DuplicateSpeakableTextCheck::class.java,
             "the Add host action of the top bar and the Add host button of the empty state do " +
                 "the same thing, so hearing the name twice costs nothing",
+            taggedWith("hosts-add-host"),
         )
 
     private val names = listOf("Desktop", "Steam Big Picture", "Playnite", "Hades II", "Elden Ring")
@@ -211,6 +216,7 @@ class LibraryAccessibilityChecksTest {
                 TextContrastCheck::class.java,
                 "the buttons are disabled while the host is added, and WCAG 1.4.3 exempts an " +
                     "inactive component from the contrast",
+                anyOf(showing("Add host"), showing("Cancel")),
             ),
         )
     }

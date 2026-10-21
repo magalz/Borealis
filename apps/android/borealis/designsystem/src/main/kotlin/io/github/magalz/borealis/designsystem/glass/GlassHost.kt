@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -21,8 +20,6 @@ import androidx.compose.ui.graphics.layer.CompositingStrategy
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -38,22 +35,16 @@ internal const val BACKDROP_DOWNSCALE = 4
 /** The blur of the whole window while a dialog or a sheet is open over it, in dp. */
 private const val WINDOW_BLUR_DP = 24
 
-private const val PERCENT = 100f
-
 /**
  * What the glass surfaces under a [GlassHost] draw from: how they look ([spec]) over which
  * background ([style]), and, where there is a blur to draw, the one [backdrop] that every surface
- * takes its region of. [origin] is where the host is in the root, which a surface subtracts from
- * its own position to find its region.
+ * takes its region of.
  */
-@Stable
 internal class GlassScene(
     val spec: GlassSpec,
     val style: BackgroundStyle,
     val backdrop: GraphicsLayer? = null,
-) {
-    var origin = Offset.Zero
-}
+)
 
 /** A surface outside any host is solid. */
 internal val LocalGlassScene = staticCompositionLocalOf {
@@ -68,7 +59,8 @@ internal val LocalGlassScene = staticCompositionLocalOf {
  * The background is recorded into one layer. A copy at a fourth of the size is blurred once per
  * frame, and each surface draws its own region of that copy, scaled up, with its tint over it.
  * Where the glass is solid, or the device cannot blur (below API 31), there is no copy and a
- * surface is its tint, or its solid colour.
+ * surface is its tint, or its solid colour. The host fills the window, from its corner: a surface
+ * takes its position in the root as its position in the host.
  *
  * While a dialog or a sheet is open over the host ([OverlayOpen]) and the device can blur, the host
  * blurs all of its content and holds the background still: no frame of it is drawn while the sheet
@@ -116,8 +108,7 @@ internal fun GlassHostOver(
     val sdk = Build.VERSION.SDK_INT
     val spec = remember(look, style, sdk) { glassSpec(look, style, sdk) }
     val overlayGlass =
-        if (!spec.solid && sdk >= Build.VERSION_CODES.S) OverlayGlass(spec.tintPercent / PERCENT)
-        else null
+        if (!spec.solid && sdk >= Build.VERSION_CODES.S) OverlayGlass(spec.tint) else null
     val glass = rememberUpdatedState(overlayGlass)
     val overlays = remember { GlassOverlays(glass) }
     val source = rememberGraphicsLayer()
@@ -128,14 +119,24 @@ internal fun GlassHostOver(
             GlassScene(spec, style, backdrop = small.takeIf { spec.blurDp > 0 })
         }
     val radiusPx = with(LocalDensity.current) { spec.blurDp.dp.toPx() }
+    val blur = remember(radiusPx) { backdropBlur(radiusPx) }
     CompositionLocalProvider(LocalGlassOverlays provides overlays, LocalGlassScene provides scene) {
         Box(modifier.fillMaxSize().windowBlur(overlays)) {
-            Box(Modifier.fillMaxSize().recordBackdrop(scene, source, blurred, radiusPx)) {
+            Box(Modifier.fillMaxSize().recordBackdrop(scene, source, blurred, blur)) {
                 background()
             }
             content()
         }
     }
+}
+
+/**
+ * The blur of the copy at a fourth of the size. The radius shrinks with the size, so the blur
+ * reaches as far as it would at full size.
+ */
+private fun backdropBlur(radiusPx: Float): BlurEffect {
+    val sigma = radiusPx / BACKDROP_DOWNSCALE
+    return BlurEffect(sigma, sigma, TileMode.Clamp)
 }
 
 /**
@@ -147,36 +148,33 @@ private fun Modifier.recordBackdrop(
     scene: GlassScene,
     source: GraphicsLayer,
     blurred: GraphicsLayer,
-    radiusPx: Float,
+    blur: BlurEffect,
 ): Modifier {
     val small = scene.backdrop ?: return this
-    return onGloballyPositioned { scene.origin = it.positionInRoot() }
-        .drawWithContent {
-            source.record { this@drawWithContent.drawContent() }
-            blurBackdrop(source, blurred, small, radiusPx)
-            drawLayer(source)
-        }
+    return drawWithContent {
+        source.record { this@drawWithContent.drawContent() }
+        blurBackdrop(source, blurred, small, blur)
+        drawLayer(source)
+    }
 }
 
 /**
  * Records the blurred copy of [source] into [small]. [blurred] holds [source] at a fourth of the
- * size with the blur on it, and the effect is applied when its layer is drawn, at the resolution of
- * the layer it is drawn into: that is why [small] is rendered offscreen at that size. The radius
- * shrinks with the size, so the blur reaches as far as it would at full size.
+ * size with [blur] on it, and the effect is applied when its layer is drawn, at the resolution of
+ * the layer it is drawn into: that is why [small] is rendered offscreen at that size.
  */
 private fun DrawScope.blurBackdrop(
     source: GraphicsLayer,
     blurred: GraphicsLayer,
     small: GraphicsLayer,
-    radiusPx: Float,
+    blur: BlurEffect,
 ) {
     val reduced =
         IntSize(
             (size.width / BACKDROP_DOWNSCALE).roundToInt().coerceAtLeast(1),
             (size.height / BACKDROP_DOWNSCALE).roundToInt().coerceAtLeast(1),
         )
-    val sigma = radiusPx / BACKDROP_DOWNSCALE
-    blurred.renderEffect = BlurEffect(sigma, sigma, TileMode.Clamp)
+    blurred.renderEffect = blur
     blurred.record(size = reduced) {
         scale(1f / BACKDROP_DOWNSCALE, Offset.Zero) { drawLayer(source) }
     }

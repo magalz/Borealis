@@ -36,6 +36,10 @@ private val SECONDARY_BOUND = luminance(Color(0xFFA8ACB1))
  */
 @Immutable
 internal data class GlassSpec(val solid: Boolean, val tintPercent: Int, val blurDp: Int) {
+    /** [tintPercent] as the alpha of the `surface` colour: 0 to 1. */
+    val tint: Float
+        get() = tintPercent.toFloat() / PERCENT
+
     companion object {
         /** Today's opaque `surface`. */
         val Solid = GlassSpec(solid = true, tintPercent = PERCENT, blurDp = NO_BLUR_DP)
@@ -60,10 +64,18 @@ internal fun glassSpec(look: BorealisLook, style: BackgroundStyle, sdk: Int): Gl
     }
     val canBlur = sdk >= Build.VERSION_CODES.S
     return if (look.transparency == Transparency.Reduced || !canBlur) {
-        GlassSpec(false, REDUCED_TINT_PERCENT, if (canBlur) REDUCED_BLUR_DP else NO_BLUR_DP)
+        GlassSpec(
+            solid = false,
+            tintPercent = REDUCED_TINT_PERCENT,
+            blurDp = if (canBlur) REDUCED_BLUR_DP else NO_BLUR_DP,
+        )
     } else {
         val tint = look.glassTintPercent.coerceIn(0, PERCENT)
-        GlassSpec(false, max(tint, tintFloor(style, look.glassBlurDp)), look.glassBlurDp)
+        GlassSpec(
+            solid = false,
+            tintPercent = max(tint, tintFloor(style, look.glassBlurDp)),
+            blurDp = look.glassBlurDp,
+        )
     }
 }
 

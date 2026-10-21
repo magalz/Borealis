@@ -469,10 +469,11 @@ Planned, not started. Owner decisions of 2026-10-21. Every font in the font
 choice is there for an accessibility reason, from a survey of primary sources
 that ADR 0058 will record.
 
-- **TV text size.** On the TV, body text goes from 15 to 16 sp, and secondary
-  and minimum text from 12 to 12.5 sp to 13 sp. About 16 sp is the suggested
-  minimum for text read at 3 m. The handheld keeps its scale. The TV screenshot
-  references are recorded again.
+- **TV text size.** On the TV, body text goes from 15 to 16 sp, and the minimum
+  text (small labels and section kickers) from 12 to 13 sp. The secondary text,
+  at the rail size, stays 14.5 sp. About 16 sp is the suggested minimum for text
+  read at 3 m. The handheld keeps its scale. The TV screenshot references are
+  recorded again.
 - **Font choice.** Replaces the old "Fonts" item.
   - Each font has a one-line purpose under its name in the picker, and the name
     is drawn in its own font.
@@ -500,15 +501,17 @@ that ADR 0058 will record.
   A spike first checks how Compose can widen word spacing.
 - **Accent colour:** purple, green or white, the Borealis colours. The drawn
   backgrounds stop taking their violets from the accent, so the glass table stays
-  valid. Selected labels on glass keep 4.5:1; today the violet is 3.88:1 over
-  Flowing light and 4.39:1 over Northern lights.
+  valid. Selected labels on glass keep 4.5:1. The selected segment, chip and rail
+  item draw their label in `accent`, which is 3.88:1 over Flowing light and
+  4.39:1 over Northern lights today (measured as the focused outline in
+  [accessibility, Table L](ux/accessibility.md)).
 - **Card density:** Comfortable or Compact.
 - **Background intensity.** A veil that only darkens, so the glass floors stay
   valid.
 - **About links on the TV show the link in Borealis.** Added at the Sprint 10 UAT
-  (2026-10-21). A QR code or the URL in a dialog, instead of opening another
-  app. A dialog with the URL and a QR code. ZXing is already in the project for
-  Send to phone. See the finding on the Streamer in
+  (2026-10-21). A dialog with the URL and a QR code, instead of opening another
+  app. ZXing is already in the project for Send to phone. See the finding on the
+  Streamer in
   [device validation, section 15](development/device-validation.md#owner-checks-uat-2026-10-21).
 - **The licences screen shows the font licences.** `OFL.txt` ships in the APK,
   but the licences dialog shows only NOTICE and LICENSE (`LegalTexts.kt`).

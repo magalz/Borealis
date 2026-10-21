@@ -2581,9 +2581,9 @@ These are not counted as problems.
 ### Final re-check
 
 This is the smoke of the morning of 2026-10-21 on build `20861a28`, the phase
-head. The S22 steps were not run, because the owner was using the phone. No
-capture, dump or log with a host name or an address was kept, and the raw frame
-data is not in the repository.
+head. The S22 steps ran at 07:00 to 07:04, over USB, in portrait, after the owner
+freed the phone (see the S22 rows). No capture, dump or log with a host name or
+an address was kept, and the raw frame data is not in the repository.
 
 - Build: `app-debug.apk` from `20861a28`. The startup log reads
   `commit=20861a286ded`. `adb install -r` ran on the TV from 06:26:38 to 06:26:43
@@ -2599,7 +2599,7 @@ data is not in the repository.
 | Step | Item | Device | Result | Evidence and notes |
 | --- | --- | --- | --- | --- |
 | 1 | Install and start | TV | pass | Starts on Hosts. `logcat -b crash` is empty before and after the round. |
-| 1 | Install and start | S22 | install pass, start not run | `install -r` succeeded. The app was not launched. |
+| 1 | Install and start | S22 | pass | `install -r` succeeded. The app was started at 07:00 for the steps below, and `logcat -b crash` is empty at the end. |
 | 2 | Group moves, Aurora curtains, Standard, warm | TV | fail against Sprint 9 (see problem 1) | Median 80.8 ms (maximum 84.8) on the first warm run, then 65.1 (77.1) and 65.7 (74.1). Night round: 64 and 72. Sprint 9 range: 47 to 60 ms. |
 | 2 | Group moves, Transparency Off | TV | pass | Medians 51.8, 49.9 and 54.1 ms over three runs, inside the Sprint 9 range. Run 1 read 10 of 12 moves, because the buffer overflowed at 30 fps. |
 | 2 | Glass cost | TV | measured | About 12 to 15 ms per move (65 against 50 to 54 ms at the median). Layout (about 17 ms) and draw recording (about 15 ms) are the same in both modes. The difference is GPU time (about 25 ms against 17 ms) and swap-to-complete (about 13 ms against 7 ms). |
@@ -2610,11 +2610,11 @@ data is not in the repository.
 | 1, 12 | Transparency notes | TV | pass | Reduced: Glass tint and Glass blur are disabled with "Transparency is set to Reduced in Accessibility". Off: the same with "...set to Off...". The row summary reads "Reduced and Off override Glass tint and Glass blur." At Standard both rows are enabled with no note. |
 | 10 | Stream 1 | TV | fail (procedure, see problem 3) | First video packet 10.2 s after OK. The stream ran about 3.5 min. Quit: `/cancel` answered 200 5.2 s after the confirmation, and the Library resumed at 5.5 s. "App quit." was not seen, because the read came 15 s late. |
 | 10 | Stream 2 | TV | pass | OK at 06:50:10.5, first video packet 10.7 s later. Menu: Back, DOWN 14 times to Quit, OK, RIGHT, OK. Quit confirmed at 06:50:37.1; `/cancel` answered 200 at 06:50:42.9 (5.8 s); the Library was focused at 06:50:43.9 (6.7 s). "App quit." was seen once, 3.3 s after the Library came back, and not again in 30 s. Apps showed "Nothing running" after the stream. |
-| 9, 11 | Settings groups and sections | S22 | not run | The owner was using the phone. |
-| 9 | Add host | S22 | not run | The owner was using the phone. No key, tap or launch was sent. |
+| 4, 11 | Settings sections | S22 | pass (count to verify) | Portrait, over USB, at 07:00 to 07:04. The list opens with every section collapsed: the headers from Stream to Accessibility are listed in order, with nothing between them. TODO(verify): the orchestrator's note counts ten headers from Stream to Accessibility, but the group list has nine up to Accessibility and eleven with Privacy and diagnostics and About, so check the count in the dump. A tap on the Stream header opens it (Resolution, Frame rate, Bitrate and Frame pacing appear), and a second tap closes it. The expanded or collapsed state is not visible in a uiautomator dump, so it stays covered by `CollapsibleSectionTest`. |
+| 9 | Add host | S22 | pass | Over USB, in portrait, at 07:00 to 07:04. The editable field has focus when the screen opens, the "Address" label sits inside the field's bounds, and the keyboard is shown (`mInputShown=true`). Cancel returns to Hosts. |
 | End | Settings set back | TV | pass | Read back as at the start: Background Aurora curtains, Glass tint 40 %, Glass blur 8 dp; Reduce motion Follow system, Transparency Standard, outline off, text 100 %, High contrast off, palette Off. |
 | End | Home and sleep | TV | pass | The launcher showed on Home. `KEYCODE_SLEEP`; `mWakefulness=Asleep` at 06:57:42. |
-| End | Home and lock | S22 | not done | The owner was using the phone. |
+| End | Home and lock | S22 | Home pass; lock not done | The phone was returned to its home screen. It was not locked, because the owner was using it. |
 
 ### Problems in the final re-check
 

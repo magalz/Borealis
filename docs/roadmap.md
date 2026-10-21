@@ -627,9 +627,12 @@ yet.
 - **A Quit from the user logs an error.** The user's own Quit logs
   `E Borealis.UPSTREAM: Connection terminated: -1`, and the system logs
   `Duplicate finish request` for `com.limelight.Game`.
-- **Moving between Settings groups is slower on the Streamer.** With the glass
-  at Standard it measured 64 ms at the median (72 ms at the most), against 47 to
-  60 ms in Sprint 9. A frame at rest is about 9 ms longer with the blur.
+- **Moving between Settings groups is slower on the Streamer.** Warm, with the
+  glass at Standard, the median was about 65 ms (74 to 77 ms at the most) in the
+  morning smoke of 2026-10-21, and 64 ms (72 ms at the most) in the night round,
+  against 47 to 60 ms in Sprint 9. With Transparency Off the median was 50 to
+  54 ms, within that range, so the glass costs about 12 to 15 ms of GPU and swap
+  time per move. A frame at rest is about 9 ms longer with the blur.
 - **The Streamer's only web handler is the third-party Downloader app,** which
   keeps Back after an About link. It is a limit of that environment, not a bug
   of the app.

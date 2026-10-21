@@ -200,10 +200,10 @@ that worked leaves the notice and a failed one leaves none (T32). The Sprint 10
 device round saw "App quit." once on the Streamer, 3 s after the Library came
 back and gone 5 s later
 ([device validation](../development/device-validation.md#15-results-sprint-10)).
-That round also saw "Quitting `<app>`…" stay on screen about 17 s until the host
-answered `/cancel`, which looks like host time, and the Quit logged
-`Connection terminated: -1` as an error; the [roadmap](../roadmap.md#backlog-not-scheduled)
-has both.
+That round also saw "Quitting `<app>`…" stay on screen about 17 s once, in the
+night round, and 5.5 to 6.7 s in the morning smoke, until the host answered
+`/cancel`. The cause is not known. The Quit logged `Connection terminated: -1`
+as an error; the [roadmap](../roadmap.md#backlog-not-scheduled) has both.
 
 Partly covered:
 

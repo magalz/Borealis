@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
@@ -15,7 +16,6 @@ import io.github.magalz.borealis.settings.options.FrameRateChoice
 import io.github.magalz.borealis.settings.options.ResolutionChoice
 import io.github.magalz.borealis.settings.options.ResolutionKind
 import io.github.magalz.borealis.settings.testing.InGlassHost
-import io.github.magalz.borealis.settings.testing.noAnimations
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith

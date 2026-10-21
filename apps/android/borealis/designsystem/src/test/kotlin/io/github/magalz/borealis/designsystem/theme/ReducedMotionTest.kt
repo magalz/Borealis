@@ -11,6 +11,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.systemAnimationScale
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -27,14 +28,6 @@ class ReducedMotionTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private var removed: Boolean? = null
 
-    private fun systemScale(scale: Float) {
-        Settings.Global.putFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            scale,
-        )
-    }
-
     private fun show(reduceMotion: ReduceMotion) {
         composeRule.setContent { Under(BorealisLook(reduceMotion = reduceMotion)) }
         composeRule.waitForIdle()
@@ -49,7 +42,7 @@ class ReducedMotionTest {
 
     @Test
     fun `following the system, a scale of zero removes the animations`() {
-        systemScale(0f)
+        systemAnimationScale(0f)
 
         show(ReduceMotion.FollowSystem)
 
@@ -58,7 +51,7 @@ class ReducedMotionTest {
 
     @Test
     fun `following the system, a scale of one keeps the animations`() {
-        systemScale(1f)
+        systemAnimationScale(1f)
 
         show(ReduceMotion.FollowSystem)
 
@@ -67,7 +60,7 @@ class ReducedMotionTest {
 
     @Test
     fun `following the system, a scale that only slows the animations keeps them`() {
-        systemScale(0.5f)
+        systemAnimationScale(0.5f)
 
         show(ReduceMotion.FollowSystem)
 
@@ -83,7 +76,7 @@ class ReducedMotionTest {
 
     @Test
     fun `On removes the animations when the system keeps them`() {
-        systemScale(1f)
+        systemAnimationScale(1f)
 
         show(ReduceMotion.On)
 
@@ -92,7 +85,7 @@ class ReducedMotionTest {
 
     @Test
     fun `On removes the animations when the system removes them too`() {
-        systemScale(0f)
+        systemAnimationScale(0f)
 
         show(ReduceMotion.On)
 
@@ -101,7 +94,7 @@ class ReducedMotionTest {
 
     @Test
     fun `Off keeps the animations also when the system removes them`() {
-        systemScale(0f)
+        systemAnimationScale(0f)
 
         show(ReduceMotion.Off)
 
@@ -110,7 +103,7 @@ class ReducedMotionTest {
 
     @Test
     fun `Off keeps the animations when the system keeps them`() {
-        systemScale(1f)
+        systemAnimationScale(1f)
 
         show(ReduceMotion.Off)
 
@@ -119,27 +112,27 @@ class ReducedMotionTest {
 
     @Test
     fun `a change of the system scale while composed changes the answer`() {
-        systemScale(1f)
+        systemAnimationScale(1f)
         show(ReduceMotion.FollowSystem)
         assertThat(removed).isFalse()
 
-        systemScale(0f)
+        systemAnimationScale(0f)
         composeRule.waitForIdle()
         assertThat(removed).isTrue()
 
-        systemScale(1f)
+        systemAnimationScale(1f)
         composeRule.waitForIdle()
         assertThat(removed).isFalse()
     }
 
     @Test
     fun `a change of the system scale does not move On`() {
-        systemScale(1f)
+        systemAnimationScale(1f)
         show(ReduceMotion.On)
 
-        systemScale(0f)
+        systemAnimationScale(0f)
         composeRule.waitForIdle()
-        systemScale(1f)
+        systemAnimationScale(1f)
         composeRule.waitForIdle()
 
         assertThat(removed).isTrue()
@@ -147,10 +140,10 @@ class ReducedMotionTest {
 
     @Test
     fun `a change of the system scale does not move Off`() {
-        systemScale(1f)
+        systemAnimationScale(1f)
         show(ReduceMotion.Off)
 
-        systemScale(0f)
+        systemAnimationScale(0f)
         composeRule.waitForIdle()
 
         assertThat(removed).isFalse()
@@ -158,7 +151,7 @@ class ReducedMotionTest {
 
     @Test
     fun `a change of the setting while composed changes the answer`() {
-        systemScale(0f)
+        systemAnimationScale(0f)
         var reduceMotion by mutableStateOf(ReduceMotion.FollowSystem)
         composeRule.setContent { Under(BorealisLook(reduceMotion = reduceMotion)) }
         composeRule.waitForIdle()

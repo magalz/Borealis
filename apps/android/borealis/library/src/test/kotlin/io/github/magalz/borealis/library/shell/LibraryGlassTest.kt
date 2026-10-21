@@ -1,7 +1,5 @@
 package io.github.magalz.borealis.library.shell
 
-import android.content.Context
-import android.provider.Settings as AndroidSettings
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,7 +11,6 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import dagger.hilt.android.testing.BindValue
@@ -22,6 +19,7 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.glass.glassSurface
+import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import io.github.magalz.borealis.library.domain.AppRepository
@@ -75,12 +73,7 @@ class LibraryGlassTest {
     fun inject() {
         hiltRule.inject()
         // The still of Flowing light, which is bright: a tint over it is far from the surface.
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        AndroidSettings.Global.putFloat(
-            context.contentResolver,
-            AndroidSettings.Global.ANIMATOR_DURATION_SCALE,
-            0f,
-        )
+        noAnimations()
     }
 
     private fun show() {

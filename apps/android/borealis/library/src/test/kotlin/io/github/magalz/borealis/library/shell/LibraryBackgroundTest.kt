@@ -1,7 +1,5 @@
 package io.github.magalz.borealis.library.shell
 
-import android.content.Context
-import android.provider.Settings
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -11,11 +9,11 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.Transparency
@@ -60,7 +58,7 @@ class LibraryBackgroundTest {
     @Test
     @Config(qualifiers = TV)
     fun `a TV frame draws the style behind the screen, and the rail is glass over it`() {
-        removeAnimations()
+        noAnimations()
         show(FormFactor.Tv, BackgroundStyle.AuroraCurtains)
 
         val shot = frame()
@@ -81,7 +79,7 @@ class LibraryBackgroundTest {
     @Test
     @Config(qualifiers = TV)
     fun `a TV frame with the transparency Off leaves the rail its own colour`() {
-        removeAnimations()
+        noAnimations()
         show(
             FormFactor.Tv,
             BackgroundStyle.AuroraCurtains,
@@ -96,7 +94,7 @@ class LibraryBackgroundTest {
     @Test
     @Config(qualifiers = PHONE)
     fun `a phone frame draws the style across the whole width`() {
-        removeAnimations()
+        noAnimations()
         show(FormFactor.Phone, BackgroundStyle.SoftGlow)
 
         val shot = frame()
@@ -107,7 +105,7 @@ class LibraryBackgroundTest {
     @Test
     @Config(qualifiers = TV)
     fun `a frame with no style given draws the style that ships, the one of the settings default`() {
-        removeAnimations()
+        noAnimations()
         composeRule.setContent {
             LibraryScaffold(FormFactor.Tv, RailSelection.Hosts, actions, content = screen)
         }
@@ -129,15 +127,6 @@ class LibraryBackgroundTest {
     }
 
     private fun frame(): PixelMap = composeRule.onRoot().captureToImage().toPixelMap()
-
-    private fun removeAnimations() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        Settings.Global.putFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            0f,
-        )
-    }
 
     private companion object {
         const val RAIL_END_PX = 440

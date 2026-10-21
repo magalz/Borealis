@@ -28,6 +28,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import kotlin.math.abs
 import org.junit.Rule
@@ -61,7 +62,7 @@ class BorealisBackgroundTest {
 
     @Test
     fun `the curtains light the top of the screen and leave the bottom quarter to the page`() {
-        removeAnimations()
+        noAnimations()
         show(BackgroundStyle.AuroraCurtains)
 
         val shot = frame()
@@ -72,7 +73,7 @@ class BorealisBackgroundTest {
 
     @Test
     fun `the glow lights the top of the screen and, fainter, the bottom`() {
-        removeAnimations()
+        noAnimations()
         show(BackgroundStyle.SoftGlow)
 
         val shot = frame()
@@ -83,7 +84,7 @@ class BorealisBackgroundTest {
 
     @Test
     fun `every style fills the screen with a fixed frame and none crashes`() {
-        removeAnimations()
+        noAnimations()
         var style by mutableStateOf(BackgroundStyle.Off)
         composeRule.setContent {
             Specimen { BorealisBackground(style, Modifier.fillMaxSize().testTag(BG)) }
@@ -285,7 +286,7 @@ class BorealisBackgroundTest {
 
     @Test
     fun `with animations removed a video style shows its still and makes no player`() {
-        removeAnimations()
+        noAnimations()
         show(BackgroundStyle.NorthernLights)
 
         composeRule.onNodeWithTag(BackgroundTags.STILL).assertIsDisplayed()
@@ -360,7 +361,7 @@ class BorealisBackgroundTest {
     }
 
     private fun assertStill(style: BackgroundStyle) {
-        removeAnimations()
+        noAnimations()
         composeRule.mainClock.autoAdvance = false
         show(style)
         val first = frame()

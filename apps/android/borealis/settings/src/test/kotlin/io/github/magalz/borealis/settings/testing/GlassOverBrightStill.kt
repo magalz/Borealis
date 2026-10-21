@@ -1,7 +1,5 @@
 package io.github.magalz.borealis.settings.testing
 
-import android.content.Context
-import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
@@ -11,12 +9,12 @@ import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.glass.GlassHost
+import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -30,16 +28,6 @@ import org.junit.runner.RunWith
 
 /** The tests run at xhdpi, where one dp is two pixels. */
 private const val PIXELS_PER_DP = 2
-
-/**
- * Takes the animation from the system, so that a host of a video style shows the still of its first
- * frame, which is the same at every run. The still of Flowing light is bright: a tint of the dark
- * `surface` colour over it is far from `surface`, and a solid surface is exactly it.
- */
-fun noAnimations() {
-    val context = ApplicationProvider.getApplicationContext<Context>()
-    Settings.Global.putFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 0f)
-}
 
 /**
  * [content] in a glass host of [style] under [look], as the shell of the Library draws a screen.

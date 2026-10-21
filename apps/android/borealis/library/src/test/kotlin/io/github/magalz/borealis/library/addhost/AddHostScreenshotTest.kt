@@ -1,14 +1,12 @@
 package io.github.magalz.borealis.library.addhost
 
-import android.content.Context
-import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.shell.LibraryScaffold
 import io.github.magalz.borealis.library.shell.RailActions
@@ -61,7 +59,7 @@ class AddHostScreenshotTest {
     @Test
     @Config(qualifiers = PHONE)
     fun addHostPhoneOverTheBackground() {
-        stillBackground()
+        noAnimations()
         composeRule.setContent {
             Screen(AddHostUiState(address = "10.0.5.20"), FormFactor.Phone, STYLE)
         }
@@ -72,7 +70,7 @@ class AddHostScreenshotTest {
     @Test
     @Config(qualifiers = PHONE)
     fun addHostPhoneWrongSubnetOverTheBackground() {
-        stillBackground()
+        noAnimations()
         composeRule.setContent {
             Screen(
                 AddHostUiState(address = "10.0.5.20", error = AddHostError.WRONG_SUBNET),
@@ -87,22 +85,12 @@ class AddHostScreenshotTest {
     @Test
     @Config(qualifiers = TV)
     fun addHostTvOverTheBackground() {
-        stillBackground()
+        noAnimations()
         composeRule.setContentInKeyboardMode {
             Screen(AddHostUiState(address = "10.0.5.20"), FormFactor.Tv, STYLE)
         }
 
         shoot("addhostglass_tv_aurora-curtains")
-    }
-
-    /** The still frame of a system without animations, which is the same at every run. */
-    private fun stillBackground() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        Settings.Global.putFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            0f,
-        )
     }
 
     @Composable

@@ -1,9 +1,7 @@
 package io.github.magalz.borealis.library.shell
 
 import android.app.Application
-import android.content.Context
 import android.content.pm.PackageInfo
-import android.provider.Settings
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -31,6 +29,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import io.github.magalz.borealis.library.testing.HANDHELD
@@ -83,12 +82,7 @@ class LibraryRailFooterTest {
 
     /** The glass rail: the Standard look over the still frame of the curtains. */
     private fun showOnGlass(keyboard: Boolean = false) {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        Settings.Global.putFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            0f,
-        )
+        noAnimations()
         if (keyboard) {
             composeRule.setContentInKeyboardMode { Frame(FormFactor.Tv, GLASS_STYLE) }
         } else {

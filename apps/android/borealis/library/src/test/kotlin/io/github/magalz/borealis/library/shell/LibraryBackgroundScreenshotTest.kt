@@ -1,14 +1,12 @@
 package io.github.magalz.borealis.library.shell
 
-import android.content.Context
-import android.provider.Settings
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.hosts.HostsScreen
 import io.github.magalz.borealis.library.hosts.withHosts
@@ -63,12 +61,7 @@ class LibraryBackgroundScreenshotTest {
         )
 
     private fun shoot(name: String, formFactor: FormFactor, style: BackgroundStyle) {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        Settings.Global.putFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            0f,
-        )
+        noAnimations()
         composeRule.setContent {
             LibraryScaffold(
                 formFactor,

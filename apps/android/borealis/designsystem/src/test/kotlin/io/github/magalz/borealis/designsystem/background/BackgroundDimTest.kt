@@ -17,6 +17,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
@@ -40,7 +41,7 @@ class BackgroundDimTest {
 
     @Test
     fun `with high contrast a drawn background shows its light at the dim that is left`() {
-        removeAnimations()
+        noAnimations()
         start(BackgroundStyle.SoftGlow)
         val normal = frame().brightest()
 
@@ -56,7 +57,7 @@ class BackgroundDimTest {
 
     @Test
     fun `without high contrast the background is not dimmed`() {
-        removeAnimations()
+        noAnimations()
         start(BackgroundStyle.SoftGlow, BorealisLook(thickFocus = true))
 
         assertThat(frame().brightest()).isGreaterThan(0.3f)
@@ -64,7 +65,7 @@ class BackgroundDimTest {
 
     @Test
     fun `the dim reaches the still of a video style`() {
-        removeAnimations()
+        noAnimations()
         start(BackgroundStyle.NorthernLights)
         val normal = frame().brightest()
 

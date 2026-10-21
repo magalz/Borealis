@@ -45,6 +45,9 @@ fun ComposeTestRule.clippedTexts(): List<String> =
 
 private const val HALF_PIXEL = 0.5f
 
+/** PNG is lossless: the quality is ignored. */
+private const val PNG_QUALITY = 100
+
 /**
  * The width the text was given to lay its lines out in; a text with no limit has an infinite one.
  */
@@ -66,5 +69,7 @@ fun ComposeTestRule.dumpFrame(name: String) {
     val folder = System.getenv("BOREALIS_FRAMES_OUT")?.takeIf { it.isNotBlank() } ?: return
     val image = onRoot().captureToImage().asAndroidBitmap()
     val file = java.io.File(folder, "$name.png").also { it.parentFile?.mkdirs() }
-    file.outputStream().use { image.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+    file.outputStream().use {
+        image.compress(android.graphics.Bitmap.CompressFormat.PNG, PNG_QUALITY, it)
+    }
 }

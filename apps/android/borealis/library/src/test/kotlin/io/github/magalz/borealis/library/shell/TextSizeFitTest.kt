@@ -2,7 +2,12 @@ package io.github.magalz.borealis.library.shell
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
@@ -18,6 +23,7 @@ import io.github.magalz.borealis.library.hosts.withHosts
 import io.github.magalz.borealis.library.testing.HANDHELD
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.TV
+import io.github.magalz.borealis.library.testing.setContentInKeyboardMode
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -60,12 +66,30 @@ class TextSizeFitTest {
     @Config(qualifiers = HANDHELD, fontScale = SYSTEM_SCALE)
     fun `Apps on a handheld fit`() = assertFits("apps_handheld", FormFactor.Handheld) { Apps(it) }
 
+    @Test
+    @Config(qualifiers = TV, fontScale = SYSTEM_SCALE)
+    fun `the options of a host on a TV fit`() =
+        assertFits(
+            "hosts_tv_options",
+            FormFactor.Tv,
+            keyboard = true,
+            before = {
+                composeRule.onNodeWithTag("host:living").requestFocus()
+                composeRule.onNodeWithTag("host:living").performKeyInput { pressKey(Key.ButtonX) }
+                composeRule.waitForIdle()
+            },
+        ) {
+            Hosts(it)
+        }
+
     private fun assertFits(
         name: String,
         formFactor: FormFactor,
+        keyboard: Boolean = false,
+        before: () -> Unit = {},
         screen: @Composable (FormFactor) -> Unit,
     ) {
-        composeRule.setContent {
+        val content: @Composable () -> Unit = {
             LibraryScaffold(
                 formFactor,
                 selected = RailSelection.Hosts,
@@ -76,7 +100,10 @@ class TextSizeFitTest {
                 screen(formFactor)
             }
         }
+        if (keyboard) composeRule.setContentInKeyboardMode(content)
+        else composeRule.setContent(content)
         composeRule.waitForIdle()
+        before()
 
         composeRule.dumpFrame("fit_$name")
         composeRule.assertNoClippedText()

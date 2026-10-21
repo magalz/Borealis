@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.settings.ui
 
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -95,6 +96,16 @@ class SettingsTextSizeFitTest : SettingsScreenTestBase() {
         showLargest(FormFactor.Handheld, SettingsGroupId.ACCESSIBILITY)
 
         assertFits("settings_handheld_accessibility")
+    }
+
+    @Test
+    @Config(qualifiers = TV, fontScale = SYSTEM_SCALE)
+    fun `a choice sheet on a TV fits`() {
+        showLargest(FormFactor.Tv, SettingsGroupId.STREAM)
+        composeRule.onNodeWithText("Frame pacing").performClick()
+        composeRule.waitForIdle()
+
+        assertFits("settings_tv_choice-sheet")
     }
 
     @Test

@@ -1,6 +1,9 @@
 package io.github.magalz.borealis.settings.ui
 
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -26,6 +29,12 @@ import io.github.magalz.borealis.designsystem.components.settings.SettingsInfoRo
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
+import io.github.magalz.borealis.designsystem.theme.BorealisFonts
+import io.github.magalz.borealis.designsystem.theme.DialogWidth
+import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
+import io.github.magalz.borealis.diagnostics.transfer.QrMatrix
 import io.github.magalz.borealis.settings.R
 import kotlin.math.roundToInt
 
@@ -34,15 +43,33 @@ private const val PRIVACY_POLICY_URL = "https://github.com/magalz/Borealis/blob/
 private const val LICENSE_HEIGHT_SHARE = 0.6f
 private val LICENSE_TEXT_PADDING = 12.dp
 
+/** The side of the QR code of a link: a TV is read across a room, so the code is large. */
+private val LINK_QR_SIDE = 240.dp
+private val LINK_COLUMN_GAP = 24.dp
+private val LINK_TEXT_GAP = 12.dp
+
+/** A link of the About group: the [title] of its row and the [url] that it opens. */
+private data class AboutLink(val title: String, val url: String)
+
 /**
  * The rows of the About group: the version and commit, the source code, the open-source licences
- * and the privacy policy. A link that no app can open shows its address in a dialog.
+ * and the privacy policy. A link opens in an app, and one that no app can open shows its address in
+ * a dialog. A TV does not hand a link to an app: the one app there that takes it keeps Back, so the
+ * dialog shows the address and a QR code, and a phone reads it from there.
  */
 @Composable
 internal fun AboutRows(about: AboutSource) {
+    val television = LocalFormFactor.current == FormFactor.Tv
     var linkAddress by remember { mutableStateOf<String?>(null) }
+    var shownLink by remember { mutableStateOf<AboutLink?>(null) }
     var showLicenses by remember { mutableStateOf(false) }
-    val openLink: (String) -> Unit = { url -> if (!about.openLink(url)) linkAddress = url }
+    val openLink: (AboutLink) -> Unit = { link ->
+        if (television) shownLink = link else if (!about.openLink(link.url)) linkAddress = link.url
+    }
+    val sourceCode =
+        AboutLink(stringResource(R.string.settings_about_source_code_title), SOURCE_CODE_URL)
+    val privacyPolicy =
+        AboutLink(stringResource(R.string.settings_about_privacy_policy_title), PRIVACY_POLICY_URL)
 
     SettingsInfoRow(
         title = stringResource(R.string.settings_about_version_title),
@@ -54,10 +81,10 @@ internal fun AboutRows(about: AboutSource) {
             ),
     )
     SettingsValueRow(
-        title = stringResource(R.string.settings_about_source_code_title),
+        title = sourceCode.title,
         value = null,
-        summary = SOURCE_CODE_URL,
-        onClick = { openLink(SOURCE_CODE_URL) },
+        summary = sourceCode.url,
+        onClick = { openLink(sourceCode) },
     )
     SettingsValueRow(
         title = stringResource(R.string.settings_about_licenses_title),
@@ -66,11 +93,12 @@ internal fun AboutRows(about: AboutSource) {
         onClick = { showLicenses = true },
     )
     SettingsValueRow(
-        title = stringResource(R.string.settings_about_privacy_policy_title),
+        title = privacyPolicy.title,
         value = null,
-        onClick = { openLink(PRIVACY_POLICY_URL) },
+        onClick = { openLink(privacyPolicy) },
     )
 
+    shownLink?.let { link -> LinkQrDialog(link, onDismiss = { shownLink = null }) }
     linkAddress?.let { address ->
         SettingsMessageDialog(
             title = stringResource(R.string.settings_about_link_dialog_title),
@@ -81,6 +109,45 @@ internal fun AboutRows(about: AboutSource) {
     }
     if (showLicenses) {
         LicensesDialog(about, onDismiss = { showLicenses = false })
+    }
+}
+
+/**
+ * The address of [link] and a QR code that holds it, for a phone to scan, in a dialog titled with
+ * the link. The address is a code, so it is set in the code font, and the screen reader says it
+ * once: the image is described as a QR code for the link and does not repeat it. Close has the
+ * focus.
+ */
+@Composable
+private fun LinkQrDialog(link: AboutLink, onDismiss: () -> Unit) {
+    val colors = LocalBorealisColors.current
+    val qr = remember(link.url) { QrMatrix.encode(link.url) }
+    SettingsDialog(
+        title = link.title,
+        confirm = DialogButton(stringResource(R.string.settings_close), onDismiss),
+        onDismiss = onDismiss,
+        width = DialogWidth.Wide,
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(LINK_COLUMN_GAP)) {
+            QrCode(
+                qr,
+                LINK_QR_SIDE,
+                stringResource(R.string.settings_about_link_qr_description, link.title),
+            )
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LINK_TEXT_GAP)) {
+                Text(
+                    stringResource(R.string.settings_about_link_scan_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.ink2,
+                )
+                Text(
+                    link.url,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = BorealisFonts.Mono,
+                    color = colors.ink2,
+                )
+            }
+        }
     }
 }
 

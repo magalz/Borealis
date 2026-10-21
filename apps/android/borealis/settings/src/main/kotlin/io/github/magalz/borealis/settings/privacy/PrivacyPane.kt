@@ -1,9 +1,5 @@
 package io.github.magalz.borealis.settings.privacy
 
-import android.app.Activity
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -49,8 +44,6 @@ import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
-import io.github.magalz.borealis.logging.BorealisLog
-import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.settings.R
 import java.io.File
 import kotlinx.coroutines.launch
@@ -140,50 +133,11 @@ internal fun rememberPrivacyBinding(
     return PrivacyBinding(state, snackbarHostState, actions)
 }
 
-/**
- * False when the system refused the share sheet: nothing handles the chooser, or the system does
- * not allow it. Any other failure is a bug and is not hidden.
- */
-internal fun tryShare(startShare: (Intent) -> Unit, chooser: Intent): Boolean =
-    try {
-        startShare(chooser)
-        true
-    } catch (e: ActivityNotFoundException) {
-        BorealisLog.e(LogTag.APP, "could not start the diagnostic share", e)
-        false
-    } catch (e: SecurityException) {
-        BorealisLog.e(LogTag.APP, "could not start the diagnostic share", e)
-        false
-    }
-
 private fun PrivacyMessage.text(): Int =
     when (this) {
         PrivacyMessage.ExportFailed -> R.string.borealis_privacy_export_failed
         PrivacyMessage.EraseDone -> R.string.borealis_privacy_erased
         PrivacyMessage.EraseFailed -> R.string.borealis_privacy_erase_failed
-    }
-
-/** Starts the share sheet from the current context. */
-@Composable
-internal fun rememberShareStarter(): (Intent) -> Unit {
-    val context = LocalContext.current
-    return remember(context) { { chooser -> context.startShareSheet(chooser) } }
-}
-
-/**
- * Starts [chooser] from the activity behind this context, if there is one; a context with no
- * activity needs a task of its own.
- */
-internal fun Context.startShareSheet(chooser: Intent) {
-    if (findActivity() == null) chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    startActivity(chooser)
-}
-
-private tailrec fun Context.findActivity(): Activity? =
-    when (this) {
-        is Activity -> this
-        is ContextWrapper -> baseContext.findActivity()
-        else -> null
     }
 
 /**

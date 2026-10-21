@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.designsystem.theme
 
 import androidx.compose.ui.graphics.Color
+import io.github.magalz.borealis.designsystem.glass.contrast
 import io.github.magalz.borealis.designsystem.glass.luminance
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -9,7 +10,6 @@ import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.hypot
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -20,14 +20,12 @@ import kotlin.math.sqrt
  * as someone with a dichromacy sees it, and the colour difference CIEDE2000.
  */
 
-/** The WCAG 2.x contrast ratio of two opaque colours, the same whichever is the lighter. */
-internal fun contrastRatio(a: Color, b: Color): Double {
-    val la = luminance(a)
-    val lb = luminance(b)
-    return (max(la, lb) + NEAR_BLACK) / (min(la, lb) + NEAR_BLACK)
-}
-
-private const val NEAR_BLACK = 0.05
+/**
+ * The WCAG 2.x contrast ratio of two opaque colours, the same whichever is the lighter, worked out
+ * by the contrast function of the glass rules of the app, which is for the lighter text.
+ */
+internal fun contrastRatio(a: Color, b: Color): Double =
+    max(contrast(a, luminance(b)), contrast(b, luminance(a)))
 
 /**
  * The kinds of dichromacy of the Machado, Oliveira and Fernandes (2009) model at severity 1.0, the

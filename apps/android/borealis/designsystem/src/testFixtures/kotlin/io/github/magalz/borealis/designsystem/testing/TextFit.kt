@@ -1,12 +1,9 @@
 package io.github.magalz.borealis.designsystem.testing
 
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.ComposeTestRule
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Constraints
 import com.google.common.truth.Truth.assertWithMessage
@@ -45,9 +42,6 @@ fun ComposeTestRule.clippedTexts(): List<String> =
 
 private const val HALF_PIXEL = 0.5f
 
-/** PNG is lossless: the quality is ignored. */
-private const val PNG_QUALITY = 100
-
 /**
  * The width the text was given to lay its lines out in; a text with no limit has an infinite one.
  */
@@ -58,18 +52,4 @@ private fun maxWidth(layout: TextLayoutResult): Float =
 /** Fails, naming each text, when [clippedTexts] is not empty. */
 fun ComposeTestRule.assertNoClippedText() {
     assertWithMessage("texts that do not fit").that(clippedTexts()).isEmpty()
-}
-
-/**
- * A tool, not a behaviour: writes the frame of the root as `<folder>/<name>.png` when the
- * environment variable `BOREALIS_FRAMES_OUT` names a folder, so that a person can look at what a
- * fit test saw. Without the variable it does nothing.
- */
-fun ComposeTestRule.dumpFrame(name: String) {
-    val folder = System.getenv("BOREALIS_FRAMES_OUT")?.takeIf { it.isNotBlank() } ?: return
-    val image = onRoot().captureToImage().asAndroidBitmap()
-    val file = java.io.File(folder, "$name.png").also { it.parentFile?.mkdirs() }
-    file.outputStream().use {
-        image.compress(android.graphics.Bitmap.CompressFormat.PNG, PNG_QUALITY, it)
-    }
 }

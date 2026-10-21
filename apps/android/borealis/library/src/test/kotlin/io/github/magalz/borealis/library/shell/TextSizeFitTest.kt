@@ -11,7 +11,6 @@ import androidx.compose.ui.test.requestFocus
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
-import io.github.magalz.borealis.designsystem.testing.dumpFrame
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
@@ -105,7 +104,6 @@ class TextSizeFitTest {
         composeRule.waitForIdle()
         before()
 
-        composeRule.dumpFrame("fit_$name")
         composeRule.assertNoClippedText()
     }
 

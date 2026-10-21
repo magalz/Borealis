@@ -25,13 +25,13 @@ import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.settings.SettingsInfoRow
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.settings.R
 import kotlin.math.roundToInt
 
 private const val SOURCE_CODE_URL = "https://github.com/magalz/Borealis"
 private const val PRIVACY_POLICY_URL = "https://github.com/magalz/Borealis/blob/main/PRIVACY.md"
 private const val LICENSE_HEIGHT_SHARE = 0.6f
-private val LICENSE_OUTLINE_ROOM = 8.dp
 private val LICENSE_TEXT_PADDING = 12.dp
 
 /**
@@ -120,9 +120,10 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
                 }
                 .dpadScroll(scroll)
                 .heightIn(max = maxHeight)
-                // The dialog clips what is outside its content, and the outline reaches 5dp, 7dp
-                // when it is the thicker one.
-                .padding(LICENSE_OUTLINE_ROOM)
+                // The dialog clips what is outside its content, and the outline reaches
+                // BorealisDimens.outlineReach, thickOutlineReach when it is the thicker one: the
+                // padding of a list holds both.
+                .padding(BorealisDimens.listPadding)
                 .borealisFocusIndication(MaterialTheme.shapes.medium)
                 // Before verticalScroll: a focusable after it takes the size of the whole text, not
                 // of the viewport, and the focus search from Close then does not find it above

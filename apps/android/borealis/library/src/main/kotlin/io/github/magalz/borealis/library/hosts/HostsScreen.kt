@@ -53,8 +53,8 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
 
 /**
- * An outline sits 5dp outside its card, 7dp when it is the thicker one, so neighbouring cards need
- * 10dp between them.
+ * An outline reaches BorealisDimens.outlineReach outside its card, thickOutlineReach when it is the
+ * thicker one, so neighbouring cards need BorealisDimens.listGap between them.
  */
 private val GRID_GAP = 12.dp
 private val SECTION_PADDING = 6.dp
@@ -279,8 +279,8 @@ private fun HostGrid(
         columns = GridCells.Fixed(columns),
         state = gridState,
         modifier = Modifier.fillMaxSize(),
-        // The padding and the gaps keep the focus outline, 5dp outside a card (7dp when it is the
-        // thicker one), from being clipped.
+        // The padding and the gaps keep the focus outline, BorealisDimens.outlineReach outside a
+        // card (thickOutlineReach when it is the thicker one), from being clipped.
         contentPadding = PaddingValues(LocalBorealisSpacing.current.gutter),
         verticalArrangement = Arrangement.spacedBy(GRID_GAP),
         horizontalArrangement = Arrangement.spacedBy(GRID_GAP),

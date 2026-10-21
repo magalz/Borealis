@@ -69,7 +69,8 @@ private val KEY_GAP = 5.dp
 private val CHIP_GAP = 6.dp
 
 // Room for the focus outline of a chip inside a row that scrolls, which clips what it draws: the
-// outline reaches 7dp when it is the thicker one, and the padding of a list is 8dp.
+// padding of a list holds BorealisDimens.outlineReach, and thickOutlineReach when it is the
+// thicker one.
 private val CHIP_ROW_PADDING = BorealisDimens.listPadding
 
 private const val VK_BACKSPACE = 0x08

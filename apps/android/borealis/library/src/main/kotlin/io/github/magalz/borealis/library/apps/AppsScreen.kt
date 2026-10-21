@@ -51,8 +51,9 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
 
 /**
- * An outline sits 5dp outside a tile, 7dp when it is the thicker one, and a focused tile grows by 2
- * percent: the grid keeps 12dp or more at its edges and 10dp or more between tiles.
+ * An outline reaches BorealisDimens.outlineReach outside a tile, thickOutlineReach when it is the
+ * thicker one, and a focused tile grows by 2 percent: the grid keeps 12dp or more at its edges and
+ * BorealisDimens.listGap or more between tiles.
  */
 private val TILE_GAP = 12.dp
 private val ROW_GAP = 16.dp

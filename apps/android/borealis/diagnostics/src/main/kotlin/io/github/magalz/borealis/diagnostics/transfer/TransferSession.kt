@@ -33,7 +33,7 @@ class QrMatrix internal constructor(val size: Int, modules: BooleanArray) {
     companion object {
         /**
          * The QR code of [text], at error correction M and the smallest size that holds it, with
-         * the margin of the transfer link.
+         * a margin of 2 modules.
          */
         fun encode(text: String): QrMatrix = TransferQr.encode(text).toQrMatrix()
     }

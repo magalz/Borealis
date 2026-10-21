@@ -24,12 +24,12 @@ import io.github.magalz.borealis.designsystem.components.BackdropText
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
 
 private val ACTION_SIZE = 48.dp
-private val ACTION_GAP = 10.dp
 private val ACTION_ICON_SIZE = 24.dp
 private val TOP_BAR_PADDING = 8.dp
 
@@ -38,7 +38,8 @@ internal fun PhoneTopBar(onAddHost: () -> Unit, onSettings: () -> Unit) {
     Row(
         Modifier.fillMaxWidth()
             .padding(horizontal = LocalBorealisSpacing.current.gutter, vertical = TOP_BAR_PADDING),
-        horizontalArrangement = Arrangement.spacedBy(ACTION_GAP),
+        // The actions are focus stops: the gap of a list keeps their outlines apart.
+        horizontalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         BackdropText(

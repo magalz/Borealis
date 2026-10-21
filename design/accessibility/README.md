@@ -3,7 +3,8 @@
 Measures the contrast of text over the animated backgrounds, and over the glass panels drawn on
 them, as WCAG 2.x defines it. `docs/ux/accessibility.md` has the method and the baseline numbers.
 Sprint 10 uses it to choose the glass look of a panel and the text colours on it, and runs it again
-after the fixes.
+after the fixes. Sprint 11 uses it to measure the halo of the text in each candidate font, and the
+candidates of the accent colour (`accents.json`).
 
 ## What it needs
 
@@ -156,11 +157,135 @@ and the smallest candidate that keeps 3:1 for the icons alone; `--high-contrast`
 frames under the veil first. It takes under a minute for 12 sets of 24 frames with 4 jobs.
 `--icons` and `--texts` are not asked together.
 
+### The halo in another font
+
+The text is set in IBM Plex Sans unless a font is named, and then the tables are those of
+`docs/ux/accessibility.md`, to the row. A font set is the regular face (the body and the small text)
+and the semibold face (the title and the label), as two options or as a small JSON manifest:
+
+```sh
+python -I design/accessibility/contrast.py halo <frames> --json <halo.json> --jobs 4 \
+  --font <regular.ttf> --font-semibold <semibold.ttf>
+python -I design/accessibility/contrast.py halo <frames> --json <halo.json> --jobs 4 --fonts <font.json>
+```
+
+```json
+{ "name": "Atkinson Hyperlegible Next", "regular": "AtkinsonHyperlegibleNext-Regular.ttf",
+  "semibold": "AtkinsonHyperlegibleNext-SemiBold.ttf" }
+```
+
+The files of a manifest are by the manifest, or by absolute path, and `name` is optional (the stem of
+the regular file). Pass the files by path, and do not copy a font into the repository for this.
+
+- **A font with no SemiBold** (B612, Luciole) takes its Bold for the semibold face, which is the
+  face that Compose picks for a weight of 600. A font with a Regular only takes it for both:
+  Compose would make a bold of it, a little heavier than the model.
+- **A variable font** is given as the same file twice. The tool reads its `fvar` table and sets the
+  `wght` axis to 400 and 600 with Pillow's variation API, and every other axis to its default. A
+  font with no weight axis, one that does not have the weight, and a FreeType older than 2.9.1 are
+  reported, and nothing is measured at the wrong weight.
+- **The x-height scale.** Fonts differ in how tall their lowercase is, so the app draws each at a
+  size that sets its x-height to that of IBM Plex Sans at the same size. The scale is Plex's x-height
+  over the font's, and the x-height is the height of the x as it is drawn (measured at 1000 px, so
+  to a thousandth of the em), because the app draws the x. The `sxHeight` of the OS/2 table is only
+  a cross-check: it is read (`os2_x_height`) and `meta.fonts.x_height` has the two, `drawn` and
+  `os2`. They agree for most fonts and differ by 1.6 to 1.8 % for Andika and B612, whose scale
+  follows the x. The text is measured at the size of the tokens times that scale, the ring and the
+  halo follow it, and `meta.fonts.scale` has it. The limits of the styles, 3:1 for the title of a
+  TV and 4.5:1 for the rest, are those of the token sizes: a scale does not turn a small text into
+  a large one. The scale is the one of the regular face, for both.
+- **A monospaced companion** is a font set like any other: pass its Regular and its SemiBold (or
+  Bold). The sample text is the same, "Living room PC, 4 apps".
+- **The tables of another font** begin with a line "Font: ..." with the font, its files and its
+  scale, and they say "The smallest candidate for" and the name of the font where the tables of
+  Plex say "The choice:". `docs/ux/accessibility.md` has the line "The choice: ..." once, for the font of
+  the app, and `NotesChoice` in the tests of `:borealis:designsystem` reads it: never paste that
+  sentence for another font.
+
+### Measuring the candidate fonts (Sprint 11, issue #48)
+
+The candidate fonts are not in the repository: they are downloaded to a folder of their own, with
+the licence and the checksum of each file. To measure them again:
+
+1. Make a manifest for each font (the sans fonts, and the monospaced companion of each that has one),
+   with the Regular and the SemiBold, or the Bold where there is no SemiBold.
+2. Take the 288 frames as above (`extract` for the clips and the `BackgroundFrameExport` test for the
+   two drawn styles, on the revision of the backgrounds that you mean).
+3. Run `halo <frames> --json <font.json> --fonts <manifest.json> --jobs 4` for each manifest: about
+   three minutes each.
+4. The tool prints Tables D, E and F of the font, the scale and the smallest candidate that keeps
+   the ratios (or says that none of the grid does). The JSON has `meta.fonts` and the rows of every
+   candidate of the grid, so the verdict of the halo of the app is at
+   `(stroke 3, blur 2, opacity 80 %)` in it.
+5. Put the verdicts in "Halo per font (Sprint 11)" of `docs/ux/accessibility.md`.
+
+## Accent candidates
+
+Sprint 11 lets the viewer choose the accent colour (issue #50). `accents.json` is a set of
+candidates, each a full set of the accent roles of `design/tokens.json`, and
+
+```sh
+python -I design/accessibility/contrast.py accents <frames> [--json <accents.json>] [--jobs 4]
+```
+
+measures each over the frames and prints the tables N to U of `docs/ux/accessibility.md`.
+`--accents <file>` names another set of candidates and `--tokens <file>` another token file (the
+surfaces, the ink and the status colours come from it). Without `--json` nothing is written. It
+takes about nine minutes for the 288 frames with 4 jobs: each frame is blurred twice and each of
+seven glass panels is laid under each candidate's tint.
+
+`accents.json` holds `candidates`, each with:
+
+- `label` and `source`, the colour of the icon that the set starts from;
+- `color`: `accent`, `accent-soft`, `accent-strong`, `on-accent` (all `#RRGGBB`), `accent-tint` and
+  `accent-line` (`#RRGGBB` or `#RRGGBBAA`, drawn with an alpha);
+- `high-contrast`: the opaque `accent`, `accent-soft` and `accent-line` that high contrast puts in
+  their place;
+- `notes`: for each value (`accent`, ..., `high-contrast.accent-line`) how it was derived. The file
+  is refused when a value has none;
+- `known_fails`: the checks that need no frame that the set fails, each with why. A test keeps it
+  equal to what the tool says, so a value that is changed has to be reflected here.
+
+What is checked, for each candidate (a limit is met at or over it, with no margin):
+
+- **On the surfaces.** `on-accent` on `accent` (4.5:1), and `accent` and `accent-soft` as text on
+  `page`, `surface` and `surface-raised`, and on the tint of a selected row over `surface` and over
+  `surface-raised` (4.5:1). The tint is laid over the surface in whole 8 bit values, as Compose
+  draws it. `accent-strong` on the three surfaces is given for information: it carries no text.
+- **Over the glass.** The brightest pixel behind the text of the glass of each style, over every
+  frame of both devices, at the default of Settings (a tint of 40 % raised to the floor of the style
+  at 8 dp) and at Reduced (85 %, 48 dp). The floor is worked out with the `accent-soft` of the
+  candidate, as it is one of the colours that the floor keeps at 4.5:1. `accent` and `accent-soft`
+  are read there as text (4.5:1) and as an outline (3:1), and the selected label, `accent` over its
+  own tint laid on that glass, as text. The backgrounds are those that are drawn today, with their
+  fixed violet: Sprint 11 stops the drawn backgrounds from taking the accent, so the glass table of
+  the app (`GlassContrastTable.kt`) stays valid.
+- **High contrast.** The opaque `accent` and `accent-soft` keep 7:1 and `accent-line` 3:1 over
+  every fill that text lies on: the four surfaces, the tint of a selected row on `surface` and on
+  `surface-raised`, and the hover on `surface-raised` (the fills of `HighContrastColorsTest`), and
+  `on-accent` keeps 7:1 on the high contrast `accent`.
+- **Distance from the status colours.** The least CIEDE2000 distance of `accent` from the four
+  status colours (success, warning, danger, offline) of each of the three palettes, as normal
+  vision and each dichromacy sees them (the Machado matrices of `ColourMeasures.kt`). 20 or more is
+  distinct, as in `ColourVisionPaletteTest`. It is held where a palette is for the vision: today's
+  colours for normal vision, the red-green palette for normal vision, protanopia and deuteranopia,
+  the blue-yellow palette for normal vision and tritanopia. The other rows are for information.
+  Every accent is also held to 20 from `ink` and `ink-2` as normal vision sees them, whatever its
+  chroma: a selected label is told from the text beside it by its colour.
+
+The result has `meta`, `sources`, `backdrops` (the brightest pixel of each glass and tint, by style
+and device) and `candidates`, with every check as a row: `id`, `ratio` (or `least`), `limit` and,
+where it applies, where it is lowest. `fails` lists the ids of the checks that are short of their
+limit. The tables are made from that and not from the frames: the function `accent_tables` prints
+them from a saved result.
+
 ## The JSON
 
 `meta` has the date, the revision, the colours and the grid. `sources` lists the folders read.
 The halo's JSON has the same `meta` and `sources`, and rows in `halo`; the icons are rows of
-`halo` too, with the name of the icon in `text`, and `meta.icons` says which they are.
+`halo` too, with the name of the icon in `text`, and `meta.icons` says which they are. `meta.fonts`
+has the font set that the text was set in (its name, the file and the weight of each face, and the
+scale), and `meta.texts` the weight and the file of each text style.
 `background` (a) and `glass` (c) have a row for each style, device, token (and alpha and `blur_dp`):
 `min`, `p1`, `p5`, `worst_frame` and `per_frame_min`. `surfaces` (b) has a `ratio` for each
 surface and token.

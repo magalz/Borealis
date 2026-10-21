@@ -11,6 +11,7 @@ import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
 import io.github.magalz.borealis.settings.testing.InGlassHost
+import io.github.magalz.borealis.settings.testing.dialogFrame
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -76,6 +77,17 @@ class SettingsTextSizeFitTest : SettingsScreenTestBase() {
     @Config(qualifiers = TV, fontScale = SYSTEM_SCALE)
     fun `About on a TV fits`() {
         showLargest(FormFactor.Tv, SettingsGroupId.ABOUT)
+
+        assertFits()
+    }
+
+    @Test
+    @Config(qualifiers = TV, fontScale = SYSTEM_SCALE)
+    fun `the link dialog with its QR code on a TV fits`() {
+        showLargest(FormFactor.Tv, SettingsGroupId.ABOUT)
+        composeRule.onNodeWithText("Privacy policy").performClick()
+        composeRule.waitForIdle()
+        composeRule.dialogFrame("Privacy policy").assertExists()
 
         assertFits()
     }

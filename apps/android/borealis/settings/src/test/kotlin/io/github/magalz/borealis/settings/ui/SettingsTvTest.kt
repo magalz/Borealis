@@ -418,10 +418,6 @@ class SettingsTvTest : SettingsScreenTestBase() {
         composeRule.onNodeWithText("Source code").assertIsDisplayed()
         composeRule.onNodeWithText("Open-source licences").assertIsDisplayed()
         composeRule.onNodeWithText("Privacy policy").assertIsDisplayed()
-
-        composeRule.onNodeWithText("Privacy policy").performClick()
-        assertThat(openedLinks)
-            .containsExactly("https://github.com/magalz/Borealis/blob/main/PRIVACY.md")
     }
 
     @Test

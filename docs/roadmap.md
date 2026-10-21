@@ -618,15 +618,21 @@ yet.
 - **A UAT note:** "Fn 123" wraps on narrow phones at the default look.
 - **Re-verify the 26.10.0-beta.1 host changes in the source,** and capture a
   fixture folder for them. See the [host contract](host-contract/README.md).
-- **Quit takes about 17 s on 26.10.0-beta.1.** "Quitting `<app>`…" stays on
-  screen until `/cancel` answers, about 17 s, against 5 to 7 s on 26.09.1. It
-  looks host-side. Measure it a second time, then report it upstream.
+- **Quit took about 17 s once on 26.10.0-beta.1.** "Quitting `<app>`…" stayed on
+  screen until `/cancel` answered: about 17 s once in the night round of
+  2026-10-21, and 5.5 to 6.7 s in the morning smoke of the same day, against 5 to
+  7 s on 26.09.1. The cause is not known, because the client logs nothing in
+  between. Measure it again in the next round, and report it upstream if it
+  repeats.
 - **A Quit from the user logs an error.** The user's own Quit logs
   `E Borealis.UPSTREAM: Connection terminated: -1`, and the system logs
   `Duplicate finish request` for `com.limelight.Game`.
-- **Moving between Settings groups is slower on the Streamer.** With the glass
-  at Standard it measured 64 ms at the median (72 ms at the most), against 47 to
-  60 ms in Sprint 9. A frame at rest is about 9 ms longer with the blur.
+- **Moving between Settings groups is slower on the Streamer.** Warm, with the
+  glass at Standard, the median was about 65 ms (74 to 77 ms at the most) in the
+  morning smoke of 2026-10-21, and 64 ms (72 ms at the most) in the night round,
+  against 47 to 60 ms in Sprint 9. With Transparency Off the median was 50 to
+  54 ms, within that range, so the glass costs about 12 to 15 ms of GPU and swap
+  time per move. A frame at rest is about 9 ms longer with the blur.
 - **The Streamer's only web handler is the third-party Downloader app,** which
   keeps Back after an About link. It is a limit of that environment, not a bug
   of the app.

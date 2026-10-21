@@ -1149,7 +1149,10 @@ or PC screen (section 5). If a capture is refused, mark the item `owner check`.
 
 A debug build that was just installed runs slower until the JIT has warmed up.
 Before the frame-time steps, open Settings and move through every group a few
-times.
+times. After a fresh install, walk the groups about 12 times (some 200 moves)
+before reading the group-move figures of step 2. The morning smoke of section 15
+had a median of about 100 ms after two walks, and it settled near 65 ms only
+after about 12.
 
 **Frame-time method.** The steps that name a frame rate or a frame time use
 `gfxinfo` on the debug package, `io.github.magalz.borealis.debug`:
@@ -1208,7 +1211,9 @@ Steps:
      ([design/backgrounds](../../design/backgrounds/README.md)).
    - Move between Settings groups with Down and Up, 6 and 6, 1.1 s apart.
      Expected: the longest frame after a move is about the Sprint 9 figure of 47
-     to 60 ms. Section 15 measured 64 ms at the median.
+     to 60 ms. Section 15 measured 64 ms at the median in the night round, and
+     about 65 ms at Standard in the morning smoke, against 50 to 54 ms with
+     Transparency Off.
 3. Dialogs and sheets over the blurred window (Streamer, S22).
    - Open the options of a host (hold OK, or long-press). Expected: no scrim, the
      window behind it is blurred, the panel is in the glass tint, and the
@@ -1249,10 +1254,14 @@ Steps:
      touch mode no card is focused.
 10. Notices (Streamer, S22).
     - A snackbar is as wide as its text, centred, not full width.
-    - Start Desktop, open the menu, choose Quit and confirm. Expected: "Quitting
-      Desktop…" shows, the stream ends, and the Library shows "App quit." once. It
-      is shown once and not again. "Quitting `<app>`…" can take about 17 s on
-      26.10.0-beta.1 (5 to 7 s on 26.09.1) until `/cancel` answers.
+    - Start Desktop and open the menu. Quit is the last row of the menu, which
+      opens with the focus on "Back to stream": reach Quit with repeated DOWN, or
+      select it by its label, and do not count on a fixed number of presses. Then
+      OK. The confirmation opens with Cancel focused, so RIGHT and OK confirm.
+      Expected: "Quitting Desktop…" shows, the stream ends, and the Library shows
+      "App quit." once. It is shown once and not again. "Quitting `<app>`…" stays
+      on screen until `/cancel` answers: about 17 s once in the night round of
+      2026-10-21, and 5.5 to 6.7 s in the morning smoke (5 to 7 s on 26.09.1).
 11. The phone sections (S22, portrait).
     - Settings opens with all 11 sections collapsed. Open two, go into Privacy and
       diagnostics and press Back. Expected: the same scroll position, and the two
@@ -2533,7 +2542,9 @@ own Quit is logged as an error, `Connection terminated: -1`, and the system repo
 a duplicate finish of the stream activity. The Library then shows "App quit."
 correctly. It was seen in both streams. It is not known whether the 17 s are host
 time (LuminalShine giving the display back) or a client wait: the client logs
-nothing in between. The [roadmap](../roadmap.md#backlog-not-scheduled) has it.
+nothing in between. The [roadmap](../roadmap.md#backlog-not-scheduled) has it. The
+final re-check of this section measured 5.5 and 6.7 s to the Library in the
+morning smoke of the same day, so the 17 s did not repeat.
 
 1. Hosts, the online host, Desktop, OK.
 2. Wait for the stream.
@@ -2569,4 +2580,93 @@ These are not counted as problems.
 
 ### Final re-check
 
-Pending: the orchestrator fills it after the final build.
+This is the smoke of the morning of 2026-10-21 on build `20861a28`, the phase
+head. The S22 steps ran at 07:00 to 07:04, over USB, in portrait, after the owner
+freed the phone (see the S22 rows). No capture, dump or log with a host name or
+an address was kept, and the raw frame data is not in the repository.
+
+- Build: `app-debug.apk` from `20861a28`. The startup log reads
+  `commit=20861a286ded`. `adb install -r` ran on the TV from 06:26:38 to 06:26:43
+  and on the S22 from 06:53:30 to 06:55:57, both `Success`. The round ran from
+  06:25 to 06:58.
+- The S22 had moved to a new wireless-debugging port, so the serial of the brief
+  did not answer. The device was found again over mDNS. Its address is not
+  recorded.
+- The TV was asleep at the start and woken with `KEYCODE_WAKEUP`. Frame data came
+  from `dumpsys gfxinfo framestats`, parsed as in section 3.23, and the tree from
+  `uiautomator dump`, with no screenshot.
+
+| Step | Item | Device | Result | Evidence and notes |
+| --- | --- | --- | --- | --- |
+| 1 | Install and start | TV | pass | Starts on Hosts. `logcat -b crash` is empty before and after the round. |
+| 1 | Install and start | S22 | pass | `install -r` succeeded. The app was started at 07:00 for the steps below, and `logcat -b crash` is empty at the end. |
+| 2 | Group moves, Aurora curtains, Standard, warm | TV | fail against Sprint 9 (see problem 1) | Median 80.8 ms (maximum 84.8) on the first warm run, then 65.1 (77.1) and 65.7 (74.1). Night round: 64 and 72. Sprint 9 range: 47 to 60 ms. |
+| 2 | Group moves, Transparency Off | TV | pass | Medians 51.8, 49.9 and 54.1 ms over three runs, inside the Sprint 9 range. Run 1 read 10 of 12 moves, because the buffer overflowed at 30 fps. |
+| 2 | Glass cost | TV | measured | About 12 to 15 ms per move (65 against 50 to 54 ms at the median). Layout (about 17 ms) and draw recording (about 15 ms) are the same in both modes. The difference is GPU time (about 25 ms against 17 ms) and swap-to-complete (about 13 ms against 7 ms). |
+| 2 | Frames at rest, Hosts, Aurora curtains, Standard | TV | pass | Two windows of 4.5 s: 24.0 and 23.9 fps; mean interval 41.6 and 41.9 ms; p50 29.8 and 29.7 ms; p90 30.2 and 30.1 ms. |
+| 3 | The options sheet over the window | TV | pass | Long-press OK on a host card opens Details and Forget. 0 frames in 8 s while it is open. Back closes it, the focus returns to the same card, and frames resume at 24.1 fps. |
+| 1, 12 | High contrast on | TV | pass | The thicker outline, Transparency, Glass tint and Glass blur rows are disabled with "High contrast is on in Accessibility". The disabled rows still take D-pad focus. |
+| 12 | High contrast off | TV | pass | The outline and Transparency are enabled again. The outline reads as its stored value, not checked. |
+| 1, 12 | Transparency notes | TV | pass | Reduced: Glass tint and Glass blur are disabled with "Transparency is set to Reduced in Accessibility". Off: the same with "...set to Off...". The row summary reads "Reduced and Off override Glass tint and Glass blur." At Standard both rows are enabled with no note. |
+| 10 | Stream 1 | TV | fail (procedure, see problem 3) | First video packet 10.2 s after OK. The stream ran about 3.5 min. Quit: `/cancel` answered 200 5.2 s after the confirmation, and the Library resumed at 5.5 s. "App quit." was not seen, because the read came 15 s late. |
+| 10 | Stream 2 | TV | pass | OK at 06:50:10.5, first video packet 10.7 s later. Menu: Back, DOWN 14 times to Quit, OK, RIGHT, OK. Quit confirmed at 06:50:37.1; `/cancel` answered 200 at 06:50:42.9 (5.8 s); the Library was focused at 06:50:43.9 (6.7 s). "App quit." was seen once, 3.3 s after the Library came back, and not again in 30 s. Apps showed "Nothing running" after the stream. |
+| 4, 11 | Settings sections | S22 | pass | Portrait, over USB, at 07:00 to 07:04. The list opens with every section collapsed: the nine headers that fit the window (Stream, Video, Input, Gamepad, On-screen controls, Audio, Advanced, Appearance and Accessibility) are listed in order, with nothing between them; Privacy and diagnostics and About are below them. A tap on the Stream header opens it (Resolution, Frame rate, Bitrate and Frame pacing appear), and a second tap closes it. The expanded or collapsed state is not visible in a uiautomator dump, so it stays covered by `CollapsibleSectionTest`. |
+| 9 | Add host | S22 | pass | Over USB, in portrait, at 07:00 to 07:04. The editable field has focus when the screen opens, the "Address" label sits inside the field's bounds, and the keyboard is shown (`mInputShown=true`). Cancel returns to Hosts. |
+| End | Settings set back | TV | pass | Read back as at the start: Background Aurora curtains, Glass tint 40 %, Glass blur 8 dp; Reduce motion Follow system, Transparency Standard, outline off, text 100 %, High contrast off, palette Off. |
+| End | Home and sleep | TV | pass | The launcher showed on Home. `KEYCODE_SLEEP`; `mWakefulness=Asleep` at 06:57:42. |
+| End | Home and lock | S22 | Home pass; lock not done | The phone was returned to its home screen. It was not locked, because the owner was using it. |
+
+### Problems in the final re-check
+
+#### 1. Moving between Settings groups is still slower with the glass (TV)
+
+Warm, at Standard, the longest frame after a move has a median of about 65 ms and
+a maximum of 74 to 77 ms. That is above the Sprint 9 range of 47 to 60 ms, and
+it matches the night round. With Transparency Off the median is 50 to 54 ms,
+inside the range, so the glass costs about 12 to 15 ms per move. The phase split
+puts the cost in GPU and swap time; layout and drawing are the same in both
+modes. There is no log excerpt, only frame data.
+
+The method is the one of problem 2 of section 15: after the warm-up, six DOWN and
+six UP from Stream, 1.1 s apart, with the framestats read every 3 moves (every 2
+at Transparency Off).
+
+#### 2. The warm-up of step 2 is too short for a fresh install
+
+After a fresh `install -r` and two walks of the groups, a move measured about
+100 ms at the median. The figure settled near 65 ms only after about 12 walks
+(about 200 moves). The app runs from the APK, so this is the JIT. Step 2 of
+section 3.23 now asks for the longer warm-up.
+
+#### 3. Stream 1 broke the procedure (TV)
+
+The menu opens with the focus on "Back to stream", and Quit is the last row. One
+DOWN reached "Keyboard", so the next OK opened the stream keyboard. Then:
+
+- RIGHT and OK, at 06:45:21 and 06:45:22, went to the on-screen keyboard. One key
+  may have reached the PC. Which key is not known, and the client logs nothing for
+  it. The owner may want to check the PC desktop.
+- Six `uiautomator dump` reads ran from 06:46:15 to 06:46:37 while the stream was
+  still in front. That breaks the rule of section 15, Observations: no read or
+  capture while a stream runs. Nothing was saved to disk.
+- The stream ran about 3.5 min (first frame 06:44:54, stopped 06:48:22), over the
+  one-minute limit of the smoke.
+
+Stream 2 used the menu sequence of step 10 and kept within the rules. Step 10 now
+says where Quit is.
+
+#### 4. Quit timing and logs (TV)
+
+Quit to the Library took 5.5 s in stream 1 and 6.7 s in stream 2, against about
+17 s once in the night round. The 17 s did not repeat, and its cause is still not
+known. Both quits log the following:
+
+```text
+E Borealis.UPSTREAM: Connection terminated: -1
+W ActivityTaskManager: Duplicate finish request for r=ActivityRecord{... com.limelight.Game ...}
+```
+
+Stream 1 also logs `I Borealis.COMMONC: Control stream received unexpected disconnect event`
+at the moment of the quit. Both streams log `I Borealis.COMMONC: No audio traffic was ever received from the host!`
+when they stop. The night results do not say whether that line appeared then, so
+compare the next round before treating it as new.

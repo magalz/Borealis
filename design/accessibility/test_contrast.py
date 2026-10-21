@@ -1657,46 +1657,67 @@ def patched_plex(folder, name, os2_version=None, x_height=None):
 class FontReadingTest(unittest.TestCase):
     """What the tool reads of a font file: its x-height, and the axes of a variable font."""
 
-    def test_the_x_height_of_plex_sans_is_its_os2_value_over_the_units_per_em(self):
+    def test_the_x_height_is_the_height_of_the_x_as_drawn(self):
         face = contrast.font_face(PLEX_REGULAR, 400)
-        self.assertAlmostEqual(contrast.x_height_ratio(face), 0.516, places=6)
+        self.assertAlmostEqual(contrast.x_height_ratio(face), 0.516, places=9)
+        semibold = contrast.font_face(PLEX_SEMIBOLD, 600)
+        self.assertAlmostEqual(contrast.x_height_ratio(semibold), 0.522, places=9)
 
-    def test_the_x_height_comes_from_the_os2_table_of_the_file(self):
+    def test_the_os2_table_is_read_as_a_cross_check(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "made.ttf"
             path.write_bytes(sfnt({"head": head_table(2048), "OS/2": os2_table(4, 1024)}))
-            self.assertAlmostEqual(contrast.x_height_ratio(contrast.font_face(path, 400)), 0.5)
+            self.assertAlmostEqual(contrast.os2_x_height(contrast.font_face(path, 400)), 0.5)
+        self.assertAlmostEqual(contrast.os2_x_height(contrast.font_face(PLEX_REGULAR, 400)), 0.516)
 
-    def test_a_table_without_an_x_height_gives_the_measured_height_of_an_x(self):
-        # Version 1 of the OS/2 table has no sxHeight. Plex Sans has a flat x, 516 units high.
+    def test_a_table_with_no_x_height_has_none_to_cross_check(self):
+        # Version 1 of the OS/2 table has no sxHeight, and zero is none.
         with tempfile.TemporaryDirectory() as folder:
-            path = patched_plex(folder, "old.ttf", os2_version=1, x_height=0)
-            ratio = contrast.x_height_ratio(contrast.font_face(path, 400))
-        self.assertAlmostEqual(ratio, 0.516, delta=0.005)
+            old = patched_plex(folder, "old.ttf", os2_version=1, x_height=0)
+            zero = patched_plex(folder, "zero.ttf", x_height=0)
+            for path in (old, zero):
+                with self.subTest(path=path.name):
+                    face = contrast.font_face(path, 400)
+                    self.assertIsNone(contrast.os2_x_height(face))
+                    self.assertAlmostEqual(contrast.x_height_ratio(face), 0.516, places=9)
 
-    def test_a_table_that_says_zero_gives_the_measured_height_too(self):
+    def test_the_drawn_x_is_the_height_whatever_the_table_says(self):
+        # The sxHeight of a font may be off by a few percent (Andika and B612 are) or be nonsense
+        # (OpenDyslexic Mono has the em, 1000 of 1000). The app draws the x, so the x is measured.
         with tempfile.TemporaryDirectory() as folder:
-            path = patched_plex(folder, "zero.ttf", x_height=0)
-            ratio = contrast.x_height_ratio(contrast.font_face(path, 400))
-        self.assertAlmostEqual(ratio, 0.516, delta=0.005)
-
-    def test_a_table_that_gives_an_x_as_tall_as_the_em_is_a_mistake_of_the_font(self):
-        # The sxHeight of OpenDyslexic Mono is 1000 units of 1000: it is the em, not an x. A value
-        # that no Latin x has (under 0.3 of the em, or over 0.8) is measured instead.
-        with tempfile.TemporaryDirectory() as folder:
-            for units in (1000, 100):
-                path = patched_plex(folder, f"wrong{units}.ttf", x_height=units)
-                with self.subTest(units=units):
-                    ratio = contrast.x_height_ratio(contrast.font_face(path, 400))
-                    self.assertAlmostEqual(ratio, 0.516, delta=0.005)
-
-    def test_a_table_with_an_x_taller_or_shorter_than_plex_is_believed(self):
-        with tempfile.TemporaryDirectory() as folder:
-            for units in (320, 790):
+            for units in (600, 1000, 100):
                 path = patched_plex(folder, f"font{units}.ttf", x_height=units)
                 with self.subTest(units=units):
-                    ratio = contrast.x_height_ratio(contrast.font_face(path, 400))
-                    self.assertAlmostEqual(ratio, units / 1000, places=9)
+                    face = contrast.font_face(path, 400)
+                    self.assertAlmostEqual(contrast.os2_x_height(face), units / 1000, places=9)
+                    self.assertAlmostEqual(contrast.x_height_ratio(face), 0.516, places=9)
+
+    def test_a_file_that_is_not_a_font_is_reported_and_not_a_struct_error(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "notes.txt"
+            path.write_text("This is a text file, long enough to have a header but no font.\n" * 4)
+            for read in (contrast.font_axes, lambda p: contrast.font_face(p, 400)):
+                with self.subTest(read=read), self.assertRaisesRegex(ValueError, "not a font"):
+                    read(path)
+            with self.assertRaisesRegex(ValueError, "not a font"):
+                contrast.font_set(path, PLEX_SEMIBOLD)
+
+    def test_a_font_cut_short_is_reported_too(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "cut.ttf"
+            path.write_bytes(PLEX_REGULAR.read_bytes()[:300])
+            with self.assertRaisesRegex(ValueError, "cut short"):
+                contrast.font_axes(path)
+            with self.assertRaisesRegex(ValueError, "cut short"):
+                contrast.os2_x_height(contrast.FontFace(str(path), None))
+
+    def test_a_table_that_runs_past_the_end_of_the_file_is_reported(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "cut.ttf"
+            data = bytearray(sfnt({"head": head_table(1000), "OS/2": os2_table(4, 500)}))
+            path.write_bytes(bytes(data[:-60]))
+            with self.assertRaisesRegex(ValueError, "cut short"):
+                contrast.os2_x_height(contrast.FontFace(str(path), None))
 
     def test_a_static_font_has_no_axes_and_is_used_at_the_weight_of_its_file(self):
         self.assertEqual(contrast.font_axes(PLEX_REGULAR), [])
@@ -1770,36 +1791,27 @@ class XHeightScaleTest(unittest.TestCase):
         self.assertEqual(contrast.PLEX_SANS.scale, 1.0)
 
     def test_a_font_with_a_taller_x_has_a_scale_below_one_and_a_shorter_one_above(self):
-        with tempfile.TemporaryDirectory() as folder:
-            tall = patched_plex(folder, "tall.ttf", x_height=600)
-            short = patched_plex(folder, "short.ttf", x_height=430)
-            tall_scale = contrast.x_height_scale(contrast.font_face(tall, 400))
-            short_scale = contrast.x_height_scale(contrast.font_face(short, 400))
-        self.assertAlmostEqual(tall_scale, 0.516 / 0.600, places=9)
-        self.assertAlmostEqual(short_scale, 0.516 / 0.430, places=9)
+        # The Semibold of Plex Sans has an x of 0.522 of the em against 0.516 of the Regular.
+        semibold = contrast.font_face(PLEX_SEMIBOLD, 600)
+        regular = contrast.font_face(PLEX_REGULAR, 400)
+        self.assertAlmostEqual(contrast.x_height_scale(semibold), 0.516 / 0.522, places=9)
+        self.assertAlmostEqual(contrast.x_height_scale(regular, semibold), 0.522 / 0.516, places=9)
 
-    def test_the_scale_is_measured_from_the_height_of_an_x_when_the_table_has_none(self):
+    def test_the_scale_is_that_of_the_drawn_x_and_the_table_does_not_move_it(self):
         with tempfile.TemporaryDirectory() as folder:
-            path = patched_plex(folder, "old.ttf", os2_version=1, x_height=0)
-            scale = contrast.x_height_scale(contrast.font_face(path, 400))
-        self.assertAlmostEqual(scale, 1.0, delta=0.01)
+            wrong = patched_plex(folder, "wrong.ttf", x_height=600)
+            self.assertEqual(contrast.x_height_scale(contrast.font_face(wrong, 400)), 1.0)
 
     def test_a_scaled_font_has_the_x_height_of_plex_at_the_size_of_the_text(self):
-        # The font set of a font with an x of 600 units is drawn at 0.86 of the size, and its x is
-        # 600 * 0.86 = 516 units of that size, as tall as the x of Plex.
-        with tempfile.TemporaryDirectory() as folder:
-            tall = patched_plex(folder, "tall.ttf", x_height=600)
-            fonts = contrast.font_set(tall, tall)
-            drawn = contrast.x_height_ratio(fonts.regular) * fonts.scale
+        fonts = contrast.font_set(PLEX_SEMIBOLD, PLEX_SEMIBOLD)
+        drawn = contrast.x_height_ratio(fonts.regular) * fonts.scale
         self.assertAlmostEqual(
             drawn, contrast.x_height_ratio(contrast.PLEX_SANS.regular), places=9
         )
 
     def test_the_scale_of_a_set_is_that_of_its_regular_face(self):
-        with tempfile.TemporaryDirectory() as folder:
-            tall = patched_plex(folder, "tall.ttf", x_height=600)
-            fonts = contrast.font_set(tall, PLEX_SEMIBOLD)
-        self.assertAlmostEqual(fonts.scale, 0.516 / 0.600, places=9)
+        fonts = contrast.font_set(PLEX_SEMIBOLD, PLEX_REGULAR)
+        self.assertAlmostEqual(fonts.scale, 0.516 / 0.522, places=9)
 
 
 class FontSetTest(unittest.TestCase):
@@ -2001,13 +2013,12 @@ class HaloFontsCommandTest(unittest.TestCase):
 
     def test_the_scale_of_the_font_is_in_the_meta_and_changes_the_rows(self):
         with tempfile.TemporaryDirectory() as folder:
-            tall = patched_plex(folder, "tall.ttf", x_height=600)
             result = self.run_command(
-                folder, "--font", str(tall), "--font-semibold", str(PLEX_SEMIBOLD)
+                folder, "--font", str(PLEX_SEMIBOLD), "--font-semibold", str(PLEX_SEMIBOLD)
             )
         with tempfile.TemporaryDirectory() as folder:
             default = self.run_command(folder)
-        self.assertAlmostEqual(result["meta"]["fonts"]["scale"], 0.516 / 0.6, places=9)
+        self.assertAlmostEqual(result["meta"]["fonts"]["scale"], 0.516 / 0.522, places=9)
         self.assertNotEqual(result["halo"], default["halo"])
 
     def test_a_manifest_gives_the_same_set_as_the_two_options(self):
@@ -2067,6 +2078,15 @@ class HaloFontsCommandTest(unittest.TestCase):
             *("--font", "none.ttf", "--font-semibold", str(PLEX_SEMIBOLD)),
         )
 
+    def test_a_file_that_is_not_a_font_is_reported_with_its_name(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "notes.txt"
+            path.write_text("This is a text file, long enough to have a header but no font.\n" * 4)
+            self.refuses(
+                "not a font",
+                "--font", str(path), "--font-semibold", str(PLEX_SEMIBOLD),
+            )
+
     def test_a_manifest_that_is_not_there_is_reported(self):
         self.refuses("No such file or directory: 'none.json'", "--fonts", "none.json")
 
@@ -2113,9 +2133,23 @@ class HaloFontTablesTest(unittest.TestCase):
                 "name": "IBM Plex Sans",
                 "regular": {"file": "ibm_plex_sans_regular.ttf", "wght": None},
                 "semibold": {"file": "ibm_plex_sans_semibold.ttf", "wght": None},
+                "x_height": {"drawn": 0.516, "os2": 0.516},
                 "scale": 1.0,
             },
         )
+
+    def test_the_meta_has_the_drawn_x_and_the_table_when_they_differ(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = patched_plex(folder, "wrong.ttf", x_height=600)
+            meta = contrast.fonts_meta(contrast.font_set(path, PLEX_SEMIBOLD))
+        self.assertEqual(meta["x_height"], {"drawn": 0.516, "os2": 0.6})
+        self.assertEqual(meta["scale"], 1.0)
+
+    def test_a_table_with_no_x_height_is_none_in_the_meta(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = patched_plex(folder, "old.ttf", os2_version=1, x_height=0)
+            meta = contrast.fonts_meta(contrast.font_set(path, PLEX_SEMIBOLD))
+        self.assertEqual(meta["x_height"], {"drawn": 0.516, "os2": None})
 
     def test_the_weight_of_a_variable_face_is_in_the_meta(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -2378,6 +2412,74 @@ class ColourMathTest(unittest.TestCase):
         self.assertNotAlmostEqual(
             contrast.colour_distance(a, b, "tritanopia"), contrast.colour_distance(a, b), places=2
         )
+
+
+COLOUR_MEASURES_KT = (
+    contrast.REPO
+    / "apps/android/borealis/designsystem/src/test/kotlin/io/github/magalz/borealis"
+    / "designsystem/theme/ColourMeasures.kt"
+)
+
+
+def read_dichromacies_kotlin(text):
+    """The matrices of `enum class Dichromacy` of ColourMeasures.kt, by the name of each in lower
+    case: three rows of three numbers."""
+    enum = text[text.index("enum class Dichromacy") :]
+    found = {}
+    for entry in re.finditer(r"^    (\w+)\(\n(.*?)^    \),", enum, re.S | re.M):
+        rows = re.findall(r"listOf\(\s*(-?[\d.]+(?:\s*,\s*-?[\d.]+)+)\s*\)", entry[2])
+        found[entry[1].lower()] = tuple(tuple(float(n) for n in row.split(",")) for row in rows)
+    return found
+
+
+def read_constant_kotlin(text, name):
+    """The number of `const val NAME = 0.95047` or of `NAME = 216.0 / 24389.0` in Kotlin."""
+    found = re.search(name + r" = ([\d.]+)(?: / ([\d.]+))?", text)
+    return float(found[1]) / float(found[2]) if found[2] else float(found[1])
+
+
+def read_xyz_kotlin(text):
+    """The rows of linear sRGB to XYZ in `Color.toLab`: the x, y and z lines, three numbers each."""
+    rows = re.findall(r"val [xyz] = \(?(\d\.\d+) \* r \+ (\d\.\d+) \* g \+ (\d\.\d+) \* b", text)
+    return tuple(tuple(float(n) for n in row) for row in rows)
+
+
+class KotlinColourMeasuresTest(unittest.TestCase):
+    """The tool and `ColourMeasures.kt` measure with the same numbers.
+
+    The Kotlin file is the check of the colour-blind palettes (`ColourVisionPaletteTest`) and the
+    tool is the check of the accents: a number that moves in one has to move in the other.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.kotlin = COLOUR_MEASURES_KT.read_text(encoding="utf-8")
+
+    def test_the_matrices_of_the_dichromacies_are_those_of_the_kotlin_check(self):
+        found = read_dichromacies_kotlin(self.kotlin)
+        self.assertEqual(sorted(found), ["deuteranopia", "protanopia", "tritanopia"])
+        self.assertEqual(found, contrast.DICHROMACIES)
+
+    def test_a_matrix_that_differs_is_found(self):
+        moved = self.kotlin.replace("0.152286, 1.052583", "0.152287, 1.052583")
+        self.assertNotEqual(moved, self.kotlin)
+        self.assertNotEqual(read_dichromacies_kotlin(moved), contrast.DICHROMACIES)
+
+    def test_the_white_point_and_the_lab_constants_are_those_of_the_kotlin_check(self):
+        self.assertEqual(read_constant_kotlin(self.kotlin, "WHITE_X"), contrast.LAB_WHITE_X)
+        self.assertEqual(read_constant_kotlin(self.kotlin, "WHITE_Z"), contrast.LAB_WHITE_Z)
+        self.assertEqual(read_constant_kotlin(self.kotlin, "LAB_EPSILON"), contrast.LAB_EPSILON)
+        self.assertEqual(read_constant_kotlin(self.kotlin, "LAB_KAPPA"), contrast.LAB_KAPPA)
+
+    def test_the_transfer_function_thresholds_are_those_of_the_kotlin_check(self):
+        decode = read_constant_kotlin(self.kotlin, "SRGB_THRESHOLD")
+        encode = read_constant_kotlin(self.kotlin, "SRGB_LINEAR_THRESHOLD")
+        self.assertEqual(decode, contrast.SRGB_THRESHOLD)
+        self.assertEqual(encode, contrast.SRGB_ENCODE_THRESHOLD)
+
+    def test_the_matrix_from_linear_srgb_to_xyz_is_that_of_the_kotlin_check(self):
+        self.assertEqual(len(read_xyz_kotlin(self.kotlin)), 3)
+        self.assertEqual(read_xyz_kotlin(self.kotlin), contrast.SRGB_TO_XYZ)
 
 
 class AccentFileTest(unittest.TestCase):
@@ -2708,6 +2810,8 @@ class AccentReportTest(unittest.TestCase):
                 "distance:red-green:deuteranopia",
                 "distance:blue-yellow:normal",
                 "distance:blue-yellow:tritanopia",
+                "distance:ink",
+                "distance:ink-2",
             },
         )
         for entry in found.values():
@@ -2736,7 +2840,7 @@ class AccentReportTest(unittest.TestCase):
         self.assertLess(entry["least"], 20.0)
         self.assertNotIn("distance:default:deuteranopia", report["fails"])
 
-    def test_a_neutral_accent_is_also_kept_apart_from_ink_and_ink_2(self):
+    def test_every_accent_is_kept_apart_from_ink_and_ink_2(self):
         white = self.report(candidate(color={"accent": "#F5F3FF"}))
         found = {d["id"]: d for d in white["distance"]}
         self.assertTrue(found["distance:ink"]["relevant"])
@@ -2748,16 +2852,20 @@ class AccentReportTest(unittest.TestCase):
         self.assertIn("distance:ink", white["fails"])
         self.assertIn("distance:ink-2", white["fails"])
 
-    def test_an_accent_with_a_hue_has_the_distance_from_the_ink_for_information(self):
-        # Violet is 22 from ink-2 as a trichromat sees it and 29 from ink; a tritanope sees it
-        # nearer, and that is not claimed.
+    def test_an_accent_with_a_hue_is_held_to_it_too_and_violet_keeps_it(self):
+        # Violet is 29 from ink and 22 from ink-2 as a trichromat sees them. No chroma lets an
+        # accent off: a pale lilac of chroma 21 is 16 from both, and fails.
         violet = self.report()
         found = {d["id"]: d for d in violet["distance"]}
-        self.assertFalse(found["distance:ink"]["relevant"])
-        self.assertFalse(found["distance:ink-2"]["relevant"])
+        self.assertTrue(found["distance:ink"]["relevant"])
+        self.assertTrue(found["distance:ink-2"]["relevant"])
         self.assertGreater(found["distance:ink"]["least"], 20.0)
         self.assertGreater(found["distance:ink-2"]["least"], 20.0)
+        self.assertNotIn("distance:ink", violet["fails"])
         self.assertNotIn("distance:ink-2", violet["fails"])
+        pale = self.report(candidate(color={"accent": "#E5D0F5"}))
+        self.assertIn("distance:ink", pale["fails"])
+        self.assertIn("distance:ink-2", pale["fails"])
 
     def test_the_glass_has_no_rows_without_a_backdrop(self):
         report = self.report()
@@ -2846,6 +2954,24 @@ class AccentGlassTest(unittest.TestCase):
         report = self.make(candidate(color={"accent-soft": "#7A6AC0"}), self.rows)
         self.assertGreater(report["floors"]["Starfield"], 30)
         self.assertGreater(self.glass(report, "Starfield", "standard")["tint"], 40)
+
+    def test_a_tint_off_the_grid_is_read_as_the_next_one_below_it(self):
+        # No tint of the grid keeps this accent-soft, so the floor is 100 %, which is off the grid:
+        # the backdrop is that of 85 %, the brightest of the next one below, as the app reads it.
+        report = self.make(candidate(color={"accent-soft": "#4A3F8A"}), self.rows)
+        row = self.glass(report, "Starfield", "standard")
+        self.assertEqual(report["floors"]["Starfield"], 100)
+        self.assertEqual(row["tint"], 100)
+        text = contrast.GLASS_TABLE_KT.read_text(encoding="utf-8")
+        table = contrast.read_glass_table_kotlin(text)
+        self.assertEqual(row["backdrop"], table["Starfield"][(8, 0.85)])
+
+    def test_the_grid_reads_a_tint_between_two_as_the_lower(self):
+        cell = {(8, alpha): 0.0 for alpha in contrast.GLASS_ALPHAS}
+        self.assertEqual(contrast._grid_alpha(cell, 0.55), 0.5)
+        self.assertEqual(contrast._grid_alpha(cell, 0.5), 0.5)
+        self.assertEqual(contrast._grid_alpha(cell, 1.0), 0.85)
+        self.assertEqual(contrast._grid_alpha(cell, 0.2), 0.3)
 
     def test_the_selected_label_is_accent_over_the_tint_on_the_glass(self):
         # The rows of the tint on the glass are brighter than the glass alone by a little.

@@ -51,6 +51,11 @@ host, and it is the only way a host becomes trusted.
 2. The system writes PAIRING_RESTART and shows a note and the new PIN.
 3. Rejoins the main flow at step 3.
 
+On LuminalShine 26.10.0-beta.1, this restart does not run after a wrong PIN.
+The host keeps the session and answers 409, which has no restart. The user waits
+up to 5 minutes, or restarts LuminalShine, before pairing again
+([host contract, section 4.3](../host-contract/luminalshine.md)).
+
 ### A2: The user cancels (branches from step 2)
 
 1. The user chooses Cancel. The screen closes and nothing is stored.

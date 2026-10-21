@@ -216,12 +216,33 @@ by status and case-insensitive message text:
 | 403 `Pairing request peer mismatch`, 409 `Pairing request superseded by retry` | A message per error, no restart |
 | anything else | The upstream text |
 
-**After a wrong PIN.** LuminalShine has no `/unpair` route, so it keeps the
+**After a wrong PIN (LuminalShine 26.09.1).** LuminalShine has no `/unpair` route, so it keeps the
 session of the failed attempt. The next attempt's phase 1 is held until the PIN is
 typed in the Web UI, then fails with 400 `Out of order call to getservercert`;
 that failure deletes the session (`fail_pair`, `src/nvhttp.cpp:1929-1945`), so the
 attempt after it succeeds. The automatic restart turns this into one extra PIN
 dialog instead of a raw error.
+
+**Changed in 26.10.0-beta.1.** Seen live on 2026-10-21 and checked in source at
+`e2662a44`, the commit of the beta tag. `src/nvhttp.cpp` is the same as upstream
+`main` at `236aff9a`.
+
+- The client runs phases 1 to 3, detects the wrong PIN after phase 3
+  (`serverchallengeresp`), and stops, as every Moonlight client does. It then
+  sends `/unpair`, which LuminalShine does not route, so it gets a 404.
+- The host keeps the session at `last_phase == SERVERCHALLENGERESP`. Its log ends
+  at "Pairing PIN delivered; awaiting client proof" (`src/nvhttp.cpp:2499`).
+  Phase 4 never arrives, so `fail_pair` (`src/nvhttp.cpp:1953-1959`), which
+  removes a session on a failure, does not run.
+- Every new phase 1 from the same client gets 409 `Pairing exchange already in
+  progress` at once (`src/nvhttp.cpp:2227-2250`). The session expires 5 minutes
+  after its last update (`kPairingSessionTtl`, `src/nvhttp.cpp:918`). Restarting
+  Borealis does not clear it; restarting LuminalShine does.
+- The automatic restart of Borealis never runs on that host, because 409 maps to
+  "No restart" (the table above). The user waits up to 5 minutes, or restarts
+  LuminalShine, before pairing again.
+
+The decision on this finding is in the roadmap, under Sprint 12.
 
 ## 5. Client identity and per-client host settings
 

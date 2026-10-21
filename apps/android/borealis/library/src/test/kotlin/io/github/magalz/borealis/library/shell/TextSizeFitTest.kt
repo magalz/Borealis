@@ -42,34 +42,32 @@ class TextSizeFitTest {
 
     @Test
     @Config(qualifiers = PHONE, fontScale = SYSTEM_SCALE)
-    fun `Hosts on a phone fit`() = assertFits("hosts_phone", FormFactor.Phone) { Hosts(it) }
+    fun `Hosts on a phone fit`() = assertFits(FormFactor.Phone) { Hosts(it) }
 
     @Test
     @Config(qualifiers = TV, fontScale = SYSTEM_SCALE)
-    fun `Hosts on a TV fit`() = assertFits("hosts_tv", FormFactor.Tv) { Hosts(it) }
+    fun `Hosts on a TV fit`() = assertFits(FormFactor.Tv) { Hosts(it) }
 
     @Test
     @Config(qualifiers = HANDHELD, fontScale = SYSTEM_SCALE)
-    fun `Hosts on a handheld fit`() =
-        assertFits("hosts_handheld", FormFactor.Handheld) { Hosts(it) }
+    fun `Hosts on a handheld fit`() = assertFits(FormFactor.Handheld) { Hosts(it) }
 
     @Test
     @Config(qualifiers = PHONE, fontScale = SYSTEM_SCALE)
-    fun `Apps on a phone fit`() = assertFits("apps_phone", FormFactor.Phone) { Apps(it) }
+    fun `Apps on a phone fit`() = assertFits(FormFactor.Phone) { Apps(it) }
 
     @Test
     @Config(qualifiers = TV, fontScale = SYSTEM_SCALE)
-    fun `Apps on a TV fit`() = assertFits("apps_tv", FormFactor.Tv) { Apps(it) }
+    fun `Apps on a TV fit`() = assertFits(FormFactor.Tv) { Apps(it) }
 
     @Test
     @Config(qualifiers = HANDHELD, fontScale = SYSTEM_SCALE)
-    fun `Apps on a handheld fit`() = assertFits("apps_handheld", FormFactor.Handheld) { Apps(it) }
+    fun `Apps on a handheld fit`() = assertFits(FormFactor.Handheld) { Apps(it) }
 
     @Test
     @Config(qualifiers = TV, fontScale = SYSTEM_SCALE)
     fun `the options of a host on a TV fit`() =
         assertFits(
-            "hosts_tv_options",
             FormFactor.Tv,
             keyboard = true,
             before = {
@@ -82,7 +80,6 @@ class TextSizeFitTest {
         }
 
     private fun assertFits(
-        name: String,
         formFactor: FormFactor,
         keyboard: Boolean = false,
         before: () -> Unit = {},

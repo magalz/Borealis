@@ -36,7 +36,7 @@ class SettingsTextSizeFitTest : SettingsScreenTestBase() {
         }
     }
 
-    private fun assertFits(name: String) {
+    private fun assertFits() {
         composeRule.assertNoClippedText()
     }
 
@@ -45,7 +45,7 @@ class SettingsTextSizeFitTest : SettingsScreenTestBase() {
     fun `Stream settings on a TV fit`() {
         showLargest(FormFactor.Tv, SettingsGroupId.STREAM)
 
-        assertFits("settings_tv_stream")
+        assertFits()
     }
 
     @Test
@@ -53,7 +53,7 @@ class SettingsTextSizeFitTest : SettingsScreenTestBase() {
     fun `Advanced settings on a TV fit`() {
         showLargest(FormFactor.Tv, SettingsGroupId.ADVANCED)
 
-        assertFits("settings_tv_advanced")
+        assertFits()
     }
 
     @Test
@@ -61,7 +61,7 @@ class SettingsTextSizeFitTest : SettingsScreenTestBase() {
     fun `Appearance settings on a TV fit`() {
         showLargest(FormFactor.Tv, SettingsGroupId.APPEARANCE)
 
-        assertFits("settings_tv_appearance")
+        assertFits()
     }
 
     @Test
@@ -69,7 +69,7 @@ class SettingsTextSizeFitTest : SettingsScreenTestBase() {
     fun `Accessibility settings on a TV fit`() {
         showLargest(FormFactor.Tv, SettingsGroupId.ACCESSIBILITY)
 
-        assertFits("settings_tv_accessibility")
+        assertFits()
     }
 
     @Test
@@ -77,7 +77,7 @@ class SettingsTextSizeFitTest : SettingsScreenTestBase() {
     fun `About on a TV fits`() {
         showLargest(FormFactor.Tv, SettingsGroupId.ABOUT)
 
-        assertFits("settings_tv_about")
+        assertFits()
     }
 
     @Test
@@ -85,7 +85,7 @@ class SettingsTextSizeFitTest : SettingsScreenTestBase() {
     fun `Stream settings on a handheld fit`() {
         showLargest(FormFactor.Handheld, SettingsGroupId.STREAM)
 
-        assertFits("settings_handheld_stream")
+        assertFits()
     }
 
     @Test
@@ -93,7 +93,7 @@ class SettingsTextSizeFitTest : SettingsScreenTestBase() {
     fun `Accessibility settings on a handheld fit`() {
         showLargest(FormFactor.Handheld, SettingsGroupId.ACCESSIBILITY)
 
-        assertFits("settings_handheld_accessibility")
+        assertFits()
     }
 
     @Test
@@ -103,7 +103,7 @@ class SettingsTextSizeFitTest : SettingsScreenTestBase() {
         composeRule.onNodeWithText("Frame pacing").performClick()
         composeRule.waitForIdle()
 
-        assertFits("settings_tv_choice-sheet")
+        assertFits()
     }
 
     @Test
@@ -115,7 +115,7 @@ class SettingsTextSizeFitTest : SettingsScreenTestBase() {
             composeRule.waitForIdle()
         }
 
-        assertFits("settings_phone_sections")
+        assertFits()
     }
 
     private companion object {

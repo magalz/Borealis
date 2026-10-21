@@ -26,13 +26,13 @@ class PrivacyTextSizeFitTest {
 
     @Test
     @Config(qualifiers = PHONE, fontScale = SYSTEM_SCALE)
-    fun `Privacy on a phone fits`() = assertFits("privacy_phone", FormFactor.Phone)
+    fun `Privacy on a phone fits`() = assertFits(FormFactor.Phone)
 
     @Test
     @Config(qualifiers = TV, fontScale = SYSTEM_SCALE)
-    fun `Privacy on a TV fits`() = assertFits("privacy_tv", FormFactor.Tv)
+    fun `Privacy on a TV fits`() = assertFits(FormFactor.Tv)
 
-    private fun assertFits(name: String, formFactor: FormFactor) {
+    private fun assertFits(formFactor: FormFactor) {
         val largest = BorealisLook(textSize = TextSize.Largest)
         composeRule.setContent {
             InGlassHost(formFactor, largest, BackgroundStyle.Off) {

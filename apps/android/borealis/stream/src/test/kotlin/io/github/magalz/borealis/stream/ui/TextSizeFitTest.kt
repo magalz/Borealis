@@ -42,38 +42,37 @@ class TextSizeFitTest {
 
     @Test
     @Config(qualifiers = PHONE_LANDSCAPE, fontScale = SYSTEM_SCALE)
-    fun `the in-game menu on a phone fits`() = assertFits("menu_phone", FormFactor.Phone) { Menu() }
+    fun `the in-game menu on a phone fits`() = assertFits(FormFactor.Phone) { Menu() }
 
     @Test
     @Config(qualifiers = TV, fontScale = SYSTEM_SCALE)
-    fun `the in-game menu on a TV fits`() = assertFits("menu_tv", FormFactor.Tv) { Menu() }
+    fun `the in-game menu on a TV fits`() = assertFits(FormFactor.Tv) { Menu() }
 
     @Test
     @Config(qualifiers = HANDHELD, fontScale = SYSTEM_SCALE)
-    fun `the in-game menu on a handheld fits`() =
-        assertFits("menu_handheld", FormFactor.Handheld) { Menu() }
+    fun `the in-game menu on a handheld fits`() = assertFits(FormFactor.Handheld) { Menu() }
 
     @Test
     @Config(qualifiers = PHONE, fontScale = SYSTEM_SCALE)
     fun `the keyboard on a phone fits`() =
-        assertFits("keyboard_phone", FormFactor.Phone) { StreamKeyboard(true, RecordingIntents()) }
+        assertFits(FormFactor.Phone) { StreamKeyboard(true, RecordingIntents()) }
 
     @Test
     @Config(qualifiers = TV, fontScale = SYSTEM_SCALE)
     fun `the keyboard on a TV fits`() =
-        assertFits("keyboard_tv", FormFactor.Tv) { StreamKeyboard(false, RecordingIntents()) }
+        assertFits(FormFactor.Tv) { StreamKeyboard(false, RecordingIntents()) }
 
     @Test
     @Config(qualifiers = PHONE, fontScale = SYSTEM_SCALE)
     fun `the connection error screen on a phone fits`() =
-        assertFits("error_phone", FormFactor.Phone) { ErrorScreen(FailureKind.CERTIFICATE_CHANGED) }
+        assertFits(FormFactor.Phone) { ErrorScreen(FailureKind.CERTIFICATE_CHANGED) }
 
     @Test
     @Config(qualifiers = TV, fontScale = SYSTEM_SCALE)
     fun `the connection error screen on a TV fits`() =
-        assertFits("error_tv", FormFactor.Tv) { ErrorScreen(FailureKind.HOST_OFFLINE) }
+        assertFits(FormFactor.Tv) { ErrorScreen(FailureKind.HOST_OFFLINE) }
 
-    private fun assertFits(name: String, formFactor: FormFactor, screen: @Composable () -> Unit) {
+    private fun assertFits(formFactor: FormFactor, screen: @Composable () -> Unit) {
         composeRule.setContent {
             BorealisTheme(formFactor, largest) { Box(Modifier.fillMaxSize()) { screen() } }
         }

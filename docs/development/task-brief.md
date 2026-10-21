@@ -18,10 +18,10 @@ Interfaces, documents, and decisions this task relies on (with paths). Do not ch
 
 ## Memtrace
 Load the `memtrace-skills:memtrace-first` skill before you explore code.
-- **Index:** `repo_id: "Borealis"`, `branch: "main"`, at `<phase head sha>` (indexed <date and time>). Pass both on every graph, impact and quality call (`find_symbol`, `get_symbol_context`, `analyze_relationships`, `get_impact`, `preflight_check`, `detect_changes`). A call without the branch can come back empty.
-- **Your overlay:** pass `worktree: "Borealis:<worktree folder>"` to `find_code`. It shows your uncommitted edits; the graph tools do not.
+- **Index:** `repo_id: "Borealis"`, `branch: "main"`, at `<phase head sha>` (indexed <date and time>). Pass `repo_id` on every call. Pass `branch: "main"` on every tool that takes a branch (`get_symbol_context`, `analyze_relationships`, `get_impact`, `detect_changes` and the quality tools); a call without it can come back empty. `find_symbol`, `find_code` and `preflight_check` take no branch.
+- **Your overlay:** pass `worktree: "Borealis:<worktree folder>"` to `find_code` when `list_worktrees` lists it. It shows your uncommitted edits; the graph tools do not.
 - **Paths:** Memtrace returns `d:/Repos/Borealis/<path>`. Replace that prefix with your worktree root before you read or edit.
-- **Order:** `find_symbol` (exact name) or `find_code` to locate; `get_symbol_context` for callers and callees; `preflight_check` before you edit a symbol this task did not write; `get_impact` with `direction: "upstream"` for the blast radius; `detect_changes` with your diff at the end.
+- **Order:** `find_symbol` (exact name) or `find_code` to locate; `get_symbol_context` for callers and callees; `get_impact` with `direction: "upstream"` and `depth: 2` for the blast radius before you edit a symbol this task did not write (`preflight_check` can return a very large answer; use it on small symbols); `detect_changes` at the end with your unified diff as `diff` (a list of relative paths came back empty).
 - **An empty result is not proof that code is absent.** Check the `repo_id`, `branch` and `worktree` you passed, retry once with the exact name or a broader query, then use Grep or a ranged read.
 - **Not in the graph:** `**/*.gradle.kts`, the design tokens, the prebuilt OpenSSL and Opus headers and `core/third_party/`. Use Grep there.
 - **Report** the Memtrace calls you made (tool, key parameters, empty or not) and where you fell back to Grep.

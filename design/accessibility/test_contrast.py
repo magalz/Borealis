@@ -2012,6 +2012,21 @@ class HaloFontsCommandTest(unittest.TestCase):
         self.assertEqual(by_manifest["halo"], by_options["halo"])
         self.assertEqual(by_manifest["meta"]["fonts"]["name"], "Plex Mono")
 
+    def test_the_tables_say_the_font_when_it_is_not_plex(self):
+        def printed(*extra):
+            with tempfile.TemporaryDirectory() as folder:
+                target = Path(folder) / "halo.json"
+                args = ["halo", str(self.frames(folder)), "--json", str(target)]
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    contrast.main([*args, "--texts", "body", *extra])
+            return out.getvalue()
+
+        other = printed("--font", str(PLEX_MONO_REGULAR), "--font-semibold", str(PLEX_MONO_SEMIBOLD))
+        self.assertTrue(other.startswith("Font: ibm_plex_mono_regular"))
+        self.assertIn("x-height scale 1.000", other.splitlines()[0])
+        self.assertNotIn("Font:", printed())
+
     def test_one_face_alone_is_not_a_font_set(self):
         self.refuses("--font and --font-semibold go together", "--font", str(PLEX_REGULAR))
         self.refuses("--font and --font-semibold go together", "--font-semibold", str(PLEX_SEMIBOLD))
@@ -2038,6 +2053,54 @@ class HaloFontsCommandTest(unittest.TestCase):
             *("--icons", "--halo", "3", "2", "80"),
             *("--font", str(PLEX_REGULAR), "--font-semibold", str(PLEX_SEMIBOLD)),
         )
+
+
+class HaloFontTablesTest(unittest.TestCase):
+    """The choice of the halo is that of the font of the app, and the notes have it once."""
+
+    def result(self, fonts):
+        rows = halo_rows({(2, 2, 0.8)}, devices=("tv", "phone"))
+        return {"meta": {"fonts": fonts}, "halo": rows}
+
+    def test_the_font_of_the_app_has_its_choice_as_the_notes_have_it(self):
+        text = contrast.halo_tables(self.result(contrast.fonts_meta(contrast.PLEX_SANS)))
+        self.assertIn("The choice: stroke 2 dp, blur 2 dp, opacity 80 %.", text)
+
+    def test_a_result_with_no_fonts_is_the_font_of_the_app(self):
+        text = contrast.halo_tables(self.result(None))
+        self.assertIn("The choice: stroke 2 dp, blur 2 dp, opacity 80 %.", text)
+
+    def test_another_font_has_the_smallest_candidate_and_not_the_choice(self):
+        # NotesChoice reads the line "The choice: ..." of the notes, which must be there once.
+        other = dict(contrast.fonts_meta(contrast.PLEX_SANS), name="Lexend")
+        text = contrast.halo_tables(self.result(other))
+        self.assertNotIn("The choice:", text)
+        self.assertIn("The smallest candidate for Lexend: stroke 2 dp, blur 2 dp, opacity 80 %.", text)
+
+    def test_the_same_files_under_another_scale_are_another_font(self):
+        scaled = dict(contrast.fonts_meta(contrast.PLEX_SANS), scale=1.1)
+        self.assertNotIn("The choice:", contrast.halo_tables(self.result(scaled)))
+
+    def test_the_meta_of_a_font_set_names_its_files_weights_and_scale(self):
+        meta = contrast.fonts_meta(contrast.PLEX_SANS)
+        self.assertEqual(
+            meta,
+            {
+                "name": "IBM Plex Sans",
+                "regular": {"file": "ibm_plex_sans_regular.ttf", "wght": None},
+                "semibold": {"file": "ibm_plex_sans_semibold.ttf", "wght": None},
+                "scale": 1.0,
+            },
+        )
+
+    def test_the_weight_of_a_variable_face_is_in_the_meta(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "variable.ttf"
+            path.write_bytes(sfnt({"fvar": fvar_table([("wght", 100.0, 400.0, 900.0)])}))
+            face = contrast.font_face(path, 600)
+            fonts = contrast.FontSet("Variable", face, face, 1.0)
+            meta = contrast.fonts_meta(fonts)
+        self.assertEqual(meta["regular"], {"file": "variable.ttf", "wght": 600.0})
 
 
 class HaloIconTablesTest(unittest.TestCase):

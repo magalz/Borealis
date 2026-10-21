@@ -132,7 +132,7 @@ fun borealisLook(snapshot: SettingsSnapshot): BorealisLook =
 @Immutable data class Looks(val look: BorealisLook, val background: BackgroundStyle)
 
 /** The looks that [snapshot] stores: the defaults for what is not stored. */
-fun looksOf(snapshot: SettingsSnapshot): Looks =
+private fun looksOf(snapshot: SettingsSnapshot): Looks =
     Looks(borealisLook(snapshot), BackgroundChoices.all.valueIn(snapshot))
 
 /**

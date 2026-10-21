@@ -73,10 +73,10 @@ class GlassTextOnSurfacesTest {
     }
 
     @Test
-    fun `the version in the footer of the rail is the token ink-3 where the glass is off`() {
+    fun `the version in the footer of the rail is the ink-3 of high contrast where the glass is off`() {
         showOverFlowingLight(FormFactor.Tv, BorealisLook(highContrast = true)) { Rail() }
 
-        assertThat(textColor("0.1.0")).isEqualTo(BorealisColors().ink3)
+        assertThat(textColor("0.1.0")).isEqualTo(BorealisColors().withHighContrast().ink3)
     }
 
     // The settings

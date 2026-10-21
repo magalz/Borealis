@@ -45,7 +45,8 @@ import io.github.magalz.borealis.stream.ui.common.onGamepadB
 private val HEADER_PADDING_HORIZONTAL = 16.dp
 private val HEADER_PADDING_TOP = 14.dp
 private val HEADER_PADDING_BOTTOM = 8.dp
-// The focus outline of a row reaches 5dp outside it: 8dp around the rows and 10dp between them.
+// The focus outline of a row reaches 5dp outside it, 7dp when it is the thicker one: 8dp around the
+// rows and 10dp between them.
 private val ROWS_PADDING = 8.dp
 private val ROWS_GAP = 10.dp
 

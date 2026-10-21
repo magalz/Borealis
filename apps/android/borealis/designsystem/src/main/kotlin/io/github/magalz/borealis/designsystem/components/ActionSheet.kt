@@ -133,7 +133,7 @@ private fun <T> ActionList(
         )
         // The title stays in view and the actions scroll, so a long list is reachable in a short
         // window. The padding is inside the scroll area: the area clips, and an outline reaches 5dp
-        // outside its row.
+        // outside its row, 7dp when it is the thicker one.
         Column(
             Modifier.weight(1f, fill = false)
                 .verticalScroll(rememberScrollState())

@@ -7,9 +7,12 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
@@ -40,6 +43,7 @@ import io.github.magalz.borealis.designsystem.components.KeyboardKey
 import io.github.magalz.borealis.designsystem.focus.InitialFocusState
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
+import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.StreamIntents
@@ -63,8 +67,9 @@ private val PANEL_PADDING_BOTTOM = 10.dp
 private val KEY_GAP = 5.dp
 private val CHIP_GAP = 6.dp
 
-// Room for the focus outline of a chip inside a row that scrolls, which clips what it draws.
-private val CHIP_ROW_PADDING = 6.dp
+// Room for the focus outline of a chip inside a row that scrolls, which clips what it draws: the
+// outline reaches 7dp when it is the thicker one, and the padding of a list is 8dp.
+private val CHIP_ROW_PADDING = BorealisDimens.listPadding
 
 private const val VK_BACKSPACE = 0x08
 
@@ -219,14 +224,16 @@ private class FirstKeyFocus(val requester: FocusRequester, val state: InitialFoc
 private fun KeyRow(keys: List<KeySpec>, actions: KeyActions, firstKeyFocus: FirstKeyFocus?) {
     val rowStart = remember { FocusRequester() }
     val rowEnd = remember { FocusRequester() }
+    // The keys of a row are as high as the highest: a caption that wraps makes its key grow.
     Row(
-        Modifier.fillMaxWidth(),
+        Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(KEY_GAP, Alignment.CenterHorizontally),
     ) {
         for ((index, key) in keys.withIndex()) {
             val name = key.label.name()
             val caption = key.label.onCap(key.label.resolve(), SHIFT in actions.latch.latched)
-            var modifier = Modifier.weight(key.style.weight, fill = false).testTag("key:$name")
+            var modifier =
+                Modifier.weight(key.style.weight, fill = false).fillMaxHeight().testTag("key:$name")
             // A symbol on the cap is read out as the name of the key.
             if (!name.equals(caption, ignoreCase = true))
                 modifier = modifier.semantics { contentDescription = name }

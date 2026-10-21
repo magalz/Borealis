@@ -48,18 +48,29 @@ object BorealisDimens {
      */
     val stackedTextGap: Dp = 4.dp
 
-    /** How far the focus outline reaches outside its element: its offset and its stroke, 5dp. */
+    /**
+     * How far the focus outline reaches outside its element: its offset and its stroke, 5dp. The
+     * thicker outline reaches [thickOutlineReach].
+     */
     val outlineReach: Dp = BorealisTokens.Focus.Offset + BorealisTokens.Focus.Outline
 
     /**
+     * How far the thicker focus outline (the Thicker focus setting, and high contrast) reaches
+     * outside its element: its offset and its stroke, 7dp.
+     */
+    val thickOutlineReach: Dp = BorealisTokens.Focus.Offset + BorealisTokens.Focus.OutlineThick
+
+    /**
      * The padding around a list of focusable rows, 8dp: a scroll area or a panel clips what is
-     * outside it, and the outline of the first and the last row reaches [outlineReach] beyond them.
+     * outside it, and the outline of the first and the last row reaches [outlineReach] beyond them,
+     * or [thickOutlineReach] when it is the thicker one.
      */
     val listPadding: Dp = 8.dp
 
     /**
      * The gap between two focusable rows, 10dp: the outlines of neighbours, each [outlineReach]
-     * wide, would overlap in a smaller one.
+     * wide, would overlap in a smaller one. The thicker outline, [thickOutlineReach] wide, still
+     * does not reach the next row.
      */
     val listGap: Dp = outlineReach * 2
 

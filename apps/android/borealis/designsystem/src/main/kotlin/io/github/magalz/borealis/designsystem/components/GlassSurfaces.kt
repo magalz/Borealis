@@ -12,6 +12,7 @@ import io.github.magalz.borealis.designsystem.glass.OverlayGlass
 import io.github.magalz.borealis.designsystem.glass.glassSurface
 import io.github.magalz.borealis.designsystem.glass.onGlass
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.TextSizeInWindow
 
 /**
  * A glass surface of [shape] for a surface that was not the `surface` colour before the glass: it
@@ -32,7 +33,8 @@ internal fun Modifier.overlayPanel(shape: Shape, glass: OverlayGlass?): Modifier
 /**
  * Gives [content], which is on the panel of a dialog or a sheet, the glass text colours where the
  * window behind it is blurred ([glass] is not null), and the colours as they are where the panel is
- * solid. The tree is the same either way.
+ * solid. The tree is the same either way. The panel is a window of its own, so [content] also gets
+ * the text size of the theme ([TextSizeInWindow]).
  */
 @Composable
 internal fun OverlayTextColors(glass: OverlayGlass?, content: @Composable () -> Unit) {
@@ -42,5 +44,5 @@ internal fun OverlayTextColors(glass: OverlayGlass?, content: @Composable () -> 
         remember(glass != null, scene, colors) {
             if (glass != null) colors.onGlass(scene.style, scene.spec) else colors
         }
-    CompositionLocalProvider(LocalBorealisColors provides shown, content = content)
+    CompositionLocalProvider(LocalBorealisColors provides shown) { TextSizeInWindow(content) }
 }

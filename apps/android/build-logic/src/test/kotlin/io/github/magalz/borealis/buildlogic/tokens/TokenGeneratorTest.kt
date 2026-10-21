@@ -343,6 +343,18 @@ class TokenGeneratorTest {
     }
 
     @Test
+    fun `the high contrast and the colour vision groups of the real file are generated`() {
+        val kotlin = TokenGenerator.generate(realTokens()).kotlin
+
+        assertThat(kotlin).contains("object HighContrast {")
+        assertThat(kotlin).contains("object ColourVision {")
+        assertThat(kotlin).contains("object RedGreen {")
+        assertThat(kotlin).contains("object BlueYellow {")
+        assertThat(kotlin).contains("val OutlineThick = 5.dp")
+        assertThat(kotlin).contains("const val Dim = ")
+    }
+
+    @Test
     fun `the output is identical for the same input`() {
         val json = realTokens()
 

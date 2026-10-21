@@ -14,8 +14,10 @@ private const val HOST_COLUMNS_NARROW_PHONE = 1
  * gamepad layout of the proposal). A phone has 3, and 4 from [WIDE_WINDOW_DP] so a tablet keeps the
  * cover size.
  *
- * Focused items draw an outline about 5dp outside themselves (a scaled tile a little more), so the
- * grid needs `contentPadding` and spacing of at least 10dp or the outline is clipped and overlaps.
+ * Focused items draw an outline about 5dp outside themselves, 7dp with the thicker outline, and a
+ * scaled tile a little more (2 percent of its size on each side), so the grid needs
+ * `contentPadding` of at least 12dp and spacing of at least 10dp or the outline is clipped and
+ * overlaps.
  */
 fun appGridColumns(formFactor: FormFactor, widthDp: Int): Int =
     when (formFactor) {
@@ -29,8 +31,9 @@ fun appGridColumns(formFactor: FormFactor, widthDp: Int): Int =
  * Columns of the host grid: 3 on a TV (the capture shows three cards beside the rail), 2 on a
  * handheld, and on a phone 1, or 2 from [WIDE_WINDOW_DP].
  *
- * Focused items draw an outline about 5dp outside themselves, so the grid needs `contentPadding`
- * and spacing of at least 10dp or the outline is clipped and overlaps.
+ * Focused items draw an outline about 5dp outside themselves, 7dp with the thicker outline, so the
+ * grid needs `contentPadding` of at least 8dp and spacing of at least 10dp or the outline is
+ * clipped and overlaps.
  */
 fun hostGridColumns(formFactor: FormFactor, widthDp: Int): Int =
     when (formFactor) {

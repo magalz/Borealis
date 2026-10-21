@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.BackdropText
 import io.github.magalz.borealis.designsystem.components.BorealisPhoneBar
 import io.github.magalz.borealis.designsystem.components.settings.CollapsibleSection
 import io.github.magalz.borealis.designsystem.components.settings.SettingsCard
@@ -82,7 +82,7 @@ internal fun SettingsScreen(
 
 @Composable
 private fun ScreenTitle(modifier: Modifier = Modifier) {
-    Text(
+    BackdropText(
         stringResource(R.string.settings_title),
         modifier.semantics { heading() },
         style = MaterialTheme.typography.titleLarge,

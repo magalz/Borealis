@@ -39,13 +39,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.adaptive.hostGridColumns
 import io.github.magalz.borealis.designsystem.components.AuroraLoader
+import io.github.magalz.borealis.designsystem.components.BackdropKicker
 import io.github.magalz.borealis.designsystem.components.BorealisSnackbarHost
 import io.github.magalz.borealis.designsystem.components.ContinueCard
 import io.github.magalz.borealis.designsystem.components.DotStatus
 import io.github.magalz.borealis.designsystem.components.EmptyState
 import io.github.magalz.borealis.designsystem.components.EmptyStateAction
 import io.github.magalz.borealis.designsystem.components.HostCard
-import io.github.magalz.borealis.designsystem.components.Kicker
 import io.github.magalz.borealis.designsystem.focus.InitialFocusState
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
@@ -280,7 +280,7 @@ private fun HostGrid(
     ) {
         if (state.continueItems.isNotEmpty()) {
             item(key = "continue-section", span = { fullWidth() }) {
-                Kicker(stringResource(R.string.hosts_section_continue))
+                BackdropKicker(stringResource(R.string.hosts_section_continue))
             }
             itemsIndexed(
                 state.continueItems,
@@ -305,7 +305,7 @@ private fun HostGrid(
             }
         }
         item(key = "hosts-section", span = { fullWidth() }) {
-            Kicker(
+            BackdropKicker(
                 stringResource(R.string.hosts_section_hosts),
                 Modifier.padding(top = SECTION_PADDING),
             )

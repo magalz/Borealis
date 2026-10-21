@@ -7,8 +7,8 @@ import org.junit.Test
 
 /**
  * The colour-blind palettes of ADR 0057 (decision 11). A palette replaces the status colours, and
- * is measured the way the contrast tool of `design/accessibility/` simulates colour vision: the
- * model of Machado, Oliveira and Fernandes (2009) at severity 1.0.
+ * is measured with the model of colour vision of [Dichromacy] in `ColourMeasures.kt`: Machado,
+ * Oliveira and Fernandes (2009) at severity 1.0. This test is the check of the palettes.
  *
  * The measure of "distinct" is the colour difference CIEDE2000 of 20 or more, between every pair of
  * the four status colours as the viewer with that dichromacy sees them. The status colours are also

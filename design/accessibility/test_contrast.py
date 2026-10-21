@@ -1,5 +1,5 @@
-"""Tests of the contrast tool: the WCAG maths, the blur and glass model, the colour-vision
-simulation and the measurement of a folder of frames. Run from the repository root:
+"""Tests of the contrast tool: the WCAG maths, the blur and glass model, the halo and the
+measurement of a folder of frames. Run from the repository root:
 
     python -m unittest discover -s design/accessibility
 """
@@ -174,50 +174,6 @@ class BlurAndGlassTest(unittest.TestCase):
         sigma = contrast.blur_sigma(5)
         expected = contrast.composite(contrast.gaussian_blur(image, sigma), tint, 0.5)
         np.testing.assert_allclose(contrast.glass(image, tint, 0.5, 5), expected, atol=1e-6)
-
-
-class ColourVisionTest(unittest.TestCase):
-    def test_the_three_kinds_are_the_ones_of_machado(self):
-        self.assertEqual(
-            set(contrast.CVD_MATRICES), {"protanopia", "deuteranopia", "tritanopia"}
-        )
-
-    def test_white_stays_white_and_black_stays_black(self):
-        for kind in contrast.CVD_MATRICES:
-            with self.subTest(kind=kind):
-                np.testing.assert_allclose(
-                    contrast.simulate_cvd(np.array([1.0, 1.0, 1.0]), kind), 1.0, atol=1e-5
-                )
-                np.testing.assert_allclose(
-                    contrast.simulate_cvd(np.array([0.0, 0.0, 0.0]), kind), 0.0, atol=1e-9
-                )
-
-    def test_a_grey_stays_grey(self):
-        for kind in contrast.CVD_MATRICES:
-            with self.subTest(kind=kind):
-                out = contrast.simulate_cvd(np.array([0.5, 0.5, 0.5]), kind)
-                np.testing.assert_allclose(out, 0.5, atol=1e-4)
-
-    def test_every_row_of_a_matrix_adds_up_to_one(self):
-        for kind, matrix in contrast.CVD_MATRICES.items():
-            with self.subTest(kind=kind):
-                np.testing.assert_allclose(np.asarray(matrix).sum(axis=1), 1.0, atol=2e-6)
-
-    def test_red_under_protanopia_is_the_first_column_of_the_matrix(self):
-        # Linear (1, 0, 0) -> (0.152286, 0.114503, -0.003882), the last clipped to 0, then encoded.
-        out = contrast.simulate_cvd(np.array([1.0, 0.0, 0.0]), "protanopia")
-        np.testing.assert_allclose(out, [0.42661, 0.37265, 0.0], atol=1e-4)
-
-    def test_an_image_is_simulated_pixel_by_pixel(self):
-        image = np.zeros((3, 4, 3))
-        image[1, 2] = (1.0, 0.0, 0.0)
-        out = contrast.simulate_cvd(image, "deuteranopia")
-        self.assertEqual(out.shape, image.shape)
-        np.testing.assert_allclose(out[1, 2], contrast.simulate_cvd(image[1, 2], "deuteranopia"))
-
-    def test_the_simulated_colour_is_given_back_as_hex(self):
-        self.assertEqual(contrast.simulate_hex("#FFFFFF", "tritanopia"), "#FFFFFF")
-        self.assertEqual(contrast.simulate_hex("#000000", "protanopia"), "#000000")
 
 
 class ClipFramesTest(unittest.TestCase):

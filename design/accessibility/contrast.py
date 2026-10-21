@@ -101,33 +101,6 @@ WCAG_LIMITS = (3.0, 4.5, 7.0)
 # convolution of the FFT never wraps anything in: exp(-25/2) is 4e-6.
 KERNEL_SIGMAS = 5
 
-# Machado, Oliveira and Fernandes, "A Physiologically-based Model for Simulation of Color Vision
-# Deficiency" (2009), severity 1.0. They act on linear RGB. A row adds up to 1, so white and the
-# greys stay as they are.
-CVD_MATRICES = {
-    "protanopia": np.array(
-        [
-            [0.152286, 1.052583, -0.204868],
-            [0.114503, 0.786281, 0.099216],
-            [-0.003882, -0.048116, 1.051998],
-        ]
-    ),
-    "deuteranopia": np.array(
-        [
-            [0.367322, 0.860646, -0.227968],
-            [0.280085, 0.672501, 0.047413],
-            [-0.011820, 0.042940, 0.968881],
-        ]
-    ),
-    "tritanopia": np.array(
-        [
-            [1.255528, -0.076749, -0.178779],
-            [-0.078411, 0.930809, 0.147602],
-            [0.004733, 0.691367, 0.303900],
-        ]
-    ),
-}
-
 
 # Colours and the WCAG maths
 
@@ -159,12 +132,6 @@ def srgb_to_linear(c):
     c = _floats(c)
     power = ((np.maximum(c, SRGB_THRESHOLD) + 0.055) / 1.055) ** 2.4
     return np.where(c <= SRGB_THRESHOLD, c / 12.92, power)
-
-
-def linear_to_srgb(c):
-    c = np.clip(_floats(c), 0.0, 1.0)
-    power = 1.055 * np.maximum(c, 0.0031308) ** (1 / 2.4) - 0.055
-    return np.where(c <= 0.0031308, c * 12.92, power)
 
 
 def relative_luminance(rgb):
@@ -280,21 +247,6 @@ def composite(image, tint, alpha):
 def glass(image, tint, alpha, radius_px):
     """A glass panel over `image`: the image blurred by `radius_px`, the tint on it at `alpha`."""
     return composite(gaussian_blur(image, blur_sigma(radius_px)), tint, alpha)
-
-
-# Colour-vision simulation
-
-
-def simulate_cvd(rgb, kind):
-    """sRGB colours (0 to 1, along the last axis) as someone with `kind` of dichromacy sees them."""
-    linear = srgb_to_linear(rgb)
-    seen = np.clip(linear @ CVD_MATRICES[kind].T, 0.0, 1.0)
-    return linear_to_srgb(seen)
-
-
-def simulate_hex(value, kind):
-    seen = np.rint(simulate_cvd(parse_hex(value), kind) * 255).astype(int)
-    return "#" + "".join(f"{channel:02X}" for channel in seen)
 
 
 # Frames

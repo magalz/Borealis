@@ -153,9 +153,3 @@ The halo's JSON has the same `meta` and `sources`, and rows in `halo`; the icons
 `background` (a) and `glass` (c) have a row for each style, device, token (and alpha and `blur_dp`):
 `min`, `p1`, `p5`, `worst_frame` and `per_frame_min`. `surfaces` (b) has a `ratio` for each
 surface and token.
-
-## Colour vision
-
-`contrast.simulate_cvd(rgb, kind)` and `simulate_hex(value, kind)` give a colour as someone with
-`protanopia`, `deuteranopia` or `tritanopia` sees it (Machado, Oliveira and Fernandes, 2009,
-severity 1.0). A later task uses it to check that the status colours differ without hue.

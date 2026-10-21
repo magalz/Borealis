@@ -28,9 +28,10 @@ internal fun contrastRatio(a: Color, b: Color): Double =
     max(contrast(a, luminance(b)), contrast(b, luminance(a)))
 
 /**
- * The kinds of dichromacy of the Machado, Oliveira and Fernandes (2009) model at severity 1.0, the
- * one that `simulate_cvd` in `design/accessibility/contrast.py` has. A matrix acts on linear RGB;
- * each row adds up to 1, so white and the greys are seen as they are.
+ * The kinds of dichromacy of the Machado, Oliveira and Fernandes (2009) model at severity 1.0. This
+ * is the only copy of the model in the repository: the contrast tool of `design/accessibility/` has
+ * none. A matrix acts on linear RGB; each row adds up to 1, so white and the greys are seen as they
+ * are.
  */
 internal enum class Dichromacy(val matrix: List<List<Double>>) {
     Protanopia(

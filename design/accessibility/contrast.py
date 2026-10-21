@@ -882,6 +882,9 @@ FontSet = collections.namedtuple("FontSet", "name regular semibold scale")
 FONT_WEIGHTS = {"regular": 400, "semibold": 600}
 # The size at which the height of an x is measured, in pixels: a thousandth of it is a unit of Plex.
 X_HEIGHT_SIZE = 1000
+# The x-height of a Latin font is between these parts of the em. The sxHeight of a table outside
+# them is a mistake of the font (OpenDyslexic Mono has the em, 1000 of 1000), and the x is measured.
+X_HEIGHT_RANGE = (0.3, 0.8)
 
 # IBM Plex Sans is the reference of the scale, so its own scale is one by definition.
 PLEX_SANS = FontSet(
@@ -970,7 +973,8 @@ def _measured_x_height(face):
 
 def x_height_ratio(face):
     """The x-height of a face as a part of the em: `sxHeight` of its OS/2 table over the units per
-    em, or, where the table has none (before version 2, or zero), the height of an x as drawn."""
+    em, or, where the table has none (before version 2, or zero) or a value that no x has
+    (`X_HEIGHT_RANGE`), the height of an x as drawn."""
     data = Path(face.path).read_bytes()
     tables = _sfnt_tables(data)
     if "head" not in tables:
@@ -979,9 +983,9 @@ def x_height_ratio(face):
     if "OS/2" in tables:
         offset, length = tables["OS/2"]
         if length >= 90 and struct.unpack_from(">H", data, offset)[0] >= 2:
-            x_height = struct.unpack_from(">h", data, offset + 86)[0]
-            if x_height > 0:
-                return x_height / units
+            x_height = struct.unpack_from(">h", data, offset + 86)[0] / units
+            if X_HEIGHT_RANGE[0] <= x_height <= X_HEIGHT_RANGE[1]:
+                return x_height
     return _measured_x_height(face)
 
 

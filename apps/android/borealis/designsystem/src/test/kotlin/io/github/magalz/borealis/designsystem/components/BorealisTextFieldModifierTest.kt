@@ -1,19 +1,32 @@
 package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.assertPixel
+import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import org.junit.Rule
@@ -30,6 +43,8 @@ import org.robolectric.annotation.Config
 @Config(qualifiers = "w360dp-h640dp-xhdpi")
 class BorealisTextFieldModifierTest {
     @get:Rule val composeRule = createComposeRule()
+    private val initial = FocusRequester()
+    private val far = FocusRequester()
 
     @Test
     fun `with the keyboard on focus a margin of the caller is outside the glass`() {
@@ -43,6 +58,34 @@ class BorealisTextFieldModifierTest {
         show(showKeyboardOnFocus = false)
 
         assertMarginOutsideGlass()
+    }
+
+    @Test
+    fun `on a phone the initial focus and the focus properties of the caller reach the field`() {
+        composeRule.setContent {
+            BorealisTheme {
+                Column {
+                    BorealisTextField(
+                        value = "192.168.1.20",
+                        onValueChange = {},
+                        label = "Address",
+                        modifier = Modifier.initialFocus(initial).focusProperties { down = far },
+                        leaveWithDpad = true,
+                    )
+                    Box(Modifier.size(40.dp).testTag(NEAR).focusable())
+                    Box(Modifier.size(40.dp).testTag(FAR).focusRequester(far).focusable())
+                }
+            }
+        }
+        composeRule.waitForIdle()
+
+        // The field has the focus when the screen opens, as the requester asked.
+        composeRule.onNode(hasSetTextAction()).assertIsFocused()
+
+        // Down goes where the caller said, not to the focusable that lies nearer.
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.onNodeWithTag(FAR).assertIsFocused()
     }
 
     private fun show(showKeyboardOnFocus: Boolean) {
@@ -77,6 +120,8 @@ class BorealisTextFieldModifierTest {
 
     private companion object {
         const val FRAME = "frame"
+        const val NEAR = "near"
+        const val FAR = "far"
         val MARGIN = Color.Magenta
         val GLASS = BorealisTokens.Color.Surface
     }

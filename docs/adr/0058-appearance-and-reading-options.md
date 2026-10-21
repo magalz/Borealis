@@ -94,8 +94,11 @@ Decision details:
    * **Normal:** the spacing of the design.
    * **Wide:** letter spacing 0.12 em, word spacing 0.16 em and line height 1.5. These are the minimums
      of WCAG 1.4.12.
-   * **Wider:** letter spacing 0.18 em and word spacing 0.5 em. The spike found that 0.35 em for the
-     word spacing fits about as well. See Open points.
+   * **Wider:** letter spacing 0.18 em and word spacing 0.5 em. At 0.35 em the words ran together on the
+     spike sheets: with 0.18 em between letters, a 0.35 em word gap did not read as clearly larger than
+     the letter gaps. 0.5 em kept the words apart. The fit counts were similar (37 failures at 0.35 em
+     and 39 at 0.5 em), so fit was not the reason. The choice is visual, the owner's, made from the spike
+     sheets.
 
    * **How:** the word spacing goes through one design-system `Text`. It adds the letter spacing of
      each space as a span of the annotated string.
@@ -139,9 +142,17 @@ Decision details:
    * The five items of the dependency policy for each font are in
      [More Information](#more-information).
 
-7. **Card density was considered and rejected.** Every layout stays Comfortable. In the spike, the
-   Compact variants cut the host detail line at the largest text size. With 4 columns on a phone, they
-   also cut the Running badge.
+7. **Card density.** The viewer chooses one of three densities:
+   * **Comfortable:** today's layout, and the default.
+   * **Compact:** one more column. TV: 4 hosts and 6 apps per row. Handheld: 3 hosts and 5 apps. Phone:
+     2 hosts and 4 apps.
+   * **Dense:** the same columns as Compact, with less padding: 12 dp on the TV and the handheld, and
+     10 dp on the phone.
+
+   * **The fixes:** the spike cut two things in the denser variants, and the density work fixes both.
+     * The host detail line was cut at the largest text size. It now wraps.
+     * The Running badge of a cover tile was cut on a phone with 4 columns. It now fits.
+   * Touch targets, gaps and the TV focus scale stay the same in every density.
 
 8. **Background intensity.**
    * The options are 100, 75, 50 and 25 %.
@@ -166,7 +177,7 @@ Decision details:
 * Good, because the word spacing is applied in one component, and the semantics text stays the original.
 * Good, because the fonts are bundled, so the app works offline and makes no font request.
 * Good, because the licences of the fonts are recorded, and the credit is shown in the app.
-* Bad, because the bundled fonts add about 2.2 MB to the APK in the spike build (see More Information).
+* Bad, because the bundled fonts add about 1.5 MB to the APK (an estimate for the shipped set; see More Information).
 * Bad, because the layouts that do not fit at Wide or Wider need work, and each layout change needs a fit
   test.
 * Bad, because the halo and the new fonts have been measured by the model of the tool, not on a device.
@@ -228,12 +239,12 @@ Decision details:
 * Good, because the whole screen follows the accent.
 * Bad, because the glass table would need to be measured again for each accent.
 
-### Card density
+### Card density: three densities, with the fixes (chosen)
 
-* Good, because more cards fit on a screen.
-* Bad, because at the largest text size the host detail line is cut, and the Running badge is cut on
-  a phone with 4 columns.
-* Rejected by the owner. Every layout stays Comfortable.
+* Good, because a viewer can fit more cards on a screen, or keep the roomier layout.
+* Good, because the fixes keep the host detail line readable at the largest text size, and the Running
+  badge visible on a 4-column phone.
+* Bad, because each denser variant needs its own layout checks at every text size.
 
 ### Background intensity: a veil (chosen)
 
@@ -254,8 +265,9 @@ Decision details:
 * Dyslexia fonts. Controlled studies found no benefit for these fonts:
   * OpenDyslexic: Wery and Diliberto, 2017, [PMC5629233](https://pmc.ncbi.nlm.nih.gov/articles/PMC5629233).
   * Dyslexie: Kuster et al., 2018, [PMC5934461](https://pmc.ncbi.nlm.nih.gov/articles/PMC5934461/).
-  * Marinus et al., 2016: the spacing, not the letter shapes, explained the small gain.
-    TODO(verify): the URL of Marinus et al. 2016 is not in the brief.
+  * Marinus et al., 2016, "A Special Font for People with Dyslexia: Does it Work and, if so, why?",
+    Dyslexia: the spacing, not the letter shapes, explained the small gain,
+    [doi:10.1002/dys.1527](https://doi.org/10.1002/dys.1527).
 * Spacing:
   * Zorzi et al., 2012: wider letter spacing together with word spacing helped children with dyslexia,
     [PMC3396504](https://pmc.ncbi.nlm.nih.gov/articles/PMC3396504).
@@ -264,8 +276,10 @@ Decision details:
 * Choice of font: Wallace et al., 2022. Individual readers read up to about 35 % faster in their best
   font, and their preference did not predict it: [PDF](https://jeffhuang.com/papers/Readability_TOCHI22.pdf).
   This supports offering a choice.
-* Luciole: the only candidate with a peer-reviewed study with low-vision readers. Galiano et al.,
-  [hal-04086507](https://hal.univ-lyon2.fr/hal-04086507). TODO(verify): the year is not in the brief.
+* Luciole: the only candidate with a peer-reviewed study with low-vision readers. Galiano, Augereau-Depoix,
+  Baltenneck, Latour and Drissi, "Luciole, a new font for people with low vision", Acta Psychologica, 2023,
+  [doi:10.1016/j.actpsy.2023.103926](https://doi.org/10.1016/j.actpsy.2023.103926). A second link is the
+  [HAL record](https://hal.univ-lyon2.fr/hal-04086507).
 * Atkinson Hyperlegible Next, B612 and Andika are designed for legibility. No published outcome data was
   found for them.
 * Lexend: the claims rest on one vendor study with 20 children, [lexend.com](https://www.lexend.com/).
@@ -302,51 +316,58 @@ full. In that build, Andika had three weights; the shipped Andika has two (see O
 * **Atkinson Hyperlegible Next 2.001 and Atkinson Hyperlegible Mono 2.001**
   * Reason: the purpose of low vision, with letters that look alike drawn to differ.
   * Licence: OFL 1.1.
-  * Maintenance: the release of Google Fonts (Atkinson Hyperlegible Next, version 2.001). TODO(verify):
-    the date of the last release.
-  * Footprint: 96 KB (Next) and 86 KB (Mono). No permissions, no native code.
+  * Maintenance: version 2.001 of both, released 2024-11-20, from the Google Fonts projects
+    ([Next](https://github.com/googlefonts/atkinson-hyperlegible-next), [Mono](https://github.com/googlefonts/atkinson-hyperlegible-next-mono)).
+  * Footprint: 96 KB (Next) and 86 KB (Mono) in the spike build. No permissions, no native code.
   * Alternatives: the other fonts of the choice, and the system font.
 * **Luciole** (Regular and Bold)
   * Reason: a peer-reviewed study with low-vision readers.
   * Licence: CC BY 4.0. The credit is "Luciole, Laurent Bourcellier, Jonathan Perez", from its LICENSE file.
-    Allowed for fonts by decision 6.
-  * Maintenance: the release on [luciole-vision.com](https://www.luciole-vision.com/fonts/Luciole.zip).
-    TODO(verify): the version and the date of the last release.
+    Allowed for fonts by decision 6. The licence check does not change: `licensee` reads only Gradle
+    dependencies, and the fonts are resource files, so `BorealisLicenses.kt` is not changed.
+  * Maintenance: the official site, [luciole-vision.com](https://www.luciole-vision.com/fonts/Luciole.zip),
+    states no version. The archive used was last modified on 2026-09-21.
   * Footprint: 112 KB. No permissions, no native code.
   * Alternatives: the other fonts of the choice.
 * **Lexend 1.008** (Regular, Medium and SemiBold)
   * Reason: wider spacing built into the letters, for text that feels crowded.
   * Licence: OFL 1.1. Reserved font name "RevReading Lexend".
-  * Maintenance: the Google Fonts project, version 1.008. TODO(verify): the date of the last release.
+  * Maintenance: version 1.008, built 2022-09-22, from [github.com/googlefonts/lexend](https://github.com/googlefonts/lexend).
+    The repository's head is dated 2023-03-02, and the repository is archived.
   * Footprint: 150 KB. No permissions, no native code.
   * Alternatives: the other fonts of the choice.
 * **Andika 7.000** (Regular and SemiBold, shipped)
   * Reason: for new readers. Mirror letters such as b and d look different.
   * Licence: OFL 1.1. Reserved font names "Andika" and "SIL".
-  * Maintenance: the SIL release v7.000, [github.com/silnrsi/font-andika](https://github.com/silnrsi/font-andika/releases/tag/v7.000). TODO(verify): the date of the release.
+  * Maintenance: version 7.000, released 2025-06-02, [github.com/silnrsi/font-andika](https://github.com/silnrsi/font-andika/releases/tag/v7.000).
   * Footprint: 1,249 KB in the spike build with three weights. The shipped build drops Medium, which
-    saves about 0.42 MB. TODO(verify): the size of the shipped build.
+    saves about 0.42 MB (see the APK estimate below).
   * Alternatives: the other fonts of the choice. OpenDyslexic was rejected (decision 3).
 * **B612 1.008 and B612 Mono 1.008** (Regular and Bold)
   * Reason: designed for reading at a glance and from a distance.
   * Licence: OFL 1.1, also EPL 2.0 and EDL 1.0. The name "B612" is a trademark of the Eclipse Foundation.
-  * Maintenance: the PolarSys project of the Eclipse Foundation, [github.com/polarsys/b612](https://github.com/polarsys/b612/tree/1.008),
-    version 1.008. TODO(verify): the date of the last release.
+  * Maintenance: version 1.008, released 2019-03-14, from the PolarSys project of the Eclipse Foundation,
+    [github.com/polarsys/b612](https://github.com/polarsys/b612/tree/1.008). No commits since.
   * Footprint: 121 KB (B612) and 124 KB (B612 Mono).
   * Alternatives: the other fonts of the choice.
 * **System font.** Uses the font of the device. No file is bundled and no licence applies.
 * **OpenDyslexic 0.92** (rejected, not bundled): the spike measured 246 KB for OpenDyslexic and 36 KB for
   OpenDyslexic Mono.
 
-The spike measured that the fonts add 2.22 MB compressed to the APK, which included OpenDyslexic. The
-release APK does not shrink its resources, so the fonts count in full there too. TODO(verify): the
-APK size with the shipped set.
+The spike measured that the fonts add 2,219,755 bytes (2.22 MB) compressed to the APK. That figure
+includes OpenDyslexic (245,865 bytes) and OpenDyslexic Mono (36,033 bytes), which are not shipped, and
+it includes three Andika weights. The release APK does not shrink its resources, so the fonts count in
+full there too.
+
+The estimate for the shipped set is about 1.52 MB compressed: 2,219,755 bytes, minus the two
+OpenDyslexic files, minus one Andika weight of about 416,000 bytes. This is an estimate from the spike
+build. The fonts task measures the real number.
 
 ### Related
 
-* Amends [0056](0056-add-an-animated-background-and-the-appearance-group.md) and
-  [0057](0057-glass-surfaces-and-the-accessibility-settings.md) by adding the choices, which
-  do not change their decisions.
+* Related: [0056](0056-add-an-animated-background-and-the-appearance-group.md) and
+  [0057](0057-glass-surfaces-and-the-accessibility-settings.md), which this ADR adds choices to without
+  changing their decisions.
 * Accessibility method and baseline: [docs/ux/accessibility.md](../ux/accessibility.md).
 * [Dependency policy](../policies/dependencies.md): the licence allowlist, amended by this ADR.
 * [0051](0051-send-the-diagnostic-bundle-to-a-phone-with-a-qr-code.md): the QR code and ZXing.
@@ -357,9 +378,5 @@ APK size with the shipped set.
 * The spike found that the sizes below the token minimums need a floor. The owner decided that a scaled
   size never goes below the minimum sizes. The spike asked whether the floor is on the size or on the
   x-height. This ADR follows the owner.
-* The spike sheets showed Wider at 0.35 em with the words running together. The spike report says that
-  0.35 em fits about as well as 0.5 em, and the decision uses 0.5 em. TODO(verify): the owner's
-  reason for 0.5 em over 0.35 em.
-* The per-font APK sizes are from the spike build (see the dependency items above). TODO(verify): the
-  APK size with the shipped fonts.
-* The brief does not give the URL of Marinus et al. 2016 and the year of Galiano et al. TODO(verify).
+* The per-font APK sizes are from the spike build, and the shipped total is an estimate (see the APK
+  paragraph above). The fonts task measures the real number.

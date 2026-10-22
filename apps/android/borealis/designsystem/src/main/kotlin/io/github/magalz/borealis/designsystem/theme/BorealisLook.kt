@@ -53,7 +53,9 @@ enum class AccentChoice {
  * How strongly the animated background shows: [Full] is 100 %, [ThreeQuarters] 75 %, [Half] 50 %
  * and [Quarter] 25 %. The rest is a [veil]: the alpha of the page colour that lies over the
  * background, so that the glass panels, whose floors assume the background at full strength, stay
- * legible. A veil only darkens.
+ * legible. A veil pulls each pixel toward the page colour: a pixel brighter than the page gets
+ * darker, and one darker than the page, as some pixels of a clip are, gets lighter. So a veil never
+ * raises the brightest pixel of the background, which is what the floors of the glass assume.
  */
 enum class BackgroundIntensity(val veil: Float) {
     Full(0f),

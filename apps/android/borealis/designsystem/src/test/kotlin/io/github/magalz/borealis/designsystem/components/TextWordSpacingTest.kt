@@ -1,8 +1,8 @@
 package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text as MaterialText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -17,6 +17,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
@@ -35,6 +36,17 @@ import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+
+/**
+ * Material's own text, which the design-system [Text] must draw at Normal. It is called by its full
+ * name, because the app's code does not import it (the ForbiddenImport rule of detekt).
+ */
+@Composable
+private fun MaterialText(
+    text: String,
+    modifier: Modifier = Modifier,
+    style: TextStyle = LocalTextStyle.current,
+) = androidx.compose.material3.Text(text, modifier, style = style)
 
 /**
  * The design-system [Text] adds the word spacing of the look (ADR 0058, decision 4): on each space,

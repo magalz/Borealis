@@ -97,9 +97,7 @@ class LargeTextFitTest(font: FontChoice) {
                     confirm = DialogAction("Forget", BorealisButtonStyle.Danger) {},
                     dismiss = DialogAction("Cancel") {},
                 ) {
-                    androidx.compose.material3.Text(
-                        "Its pairing is removed from this device. The PC may keep trusting it."
-                    )
+                    Text("Its pairing is removed from this device. The PC may keep trusting it.")
                 }
             }
         }

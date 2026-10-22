@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.settings.ui
 
 import androidx.compose.foundation.focusable
-import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.InputMode
@@ -28,6 +27,7 @@ import androidx.compose.ui.test.requestFocus
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.testing.FakeInputModeManager
 import io.github.magalz.borealis.designsystem.testing.OnPage
 import io.github.magalz.borealis.settings.catalog.Settings

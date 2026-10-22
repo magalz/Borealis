@@ -21,6 +21,7 @@ import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSpacing
+import java.util.Locale
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,7 +48,8 @@ class WordGapTest(private val font: FontChoice) {
         val ratio: Float
             get() = word.toFloat() / letter
 
-        override fun toString() = "letter $letter px, word $word px, ratio ${"%.2f".format(ratio)}"
+        override fun toString() =
+            "letter $letter px, word $word px, ratio ${String.format(Locale.ROOT, "%.2f", ratio)}"
     }
 
     /** The gaps of "nn nn" at [level]: the layout is one composition, whose level changes. */

@@ -72,14 +72,16 @@ Decision details:
      * Andika: "Made for new readers: mirror letters such as b and d look different."
      * B612: "Made for cockpit screens: quick to read at a glance and from a distance."
      * System font: "Uses your device's font."
-   * The codes (the PIN, addresses, keyboard keys, chips and the performance overlay) use the monospaced
-     companion of the font where one exists: IBM Plex Mono, Atkinson Hyperlegible Mono or B612 Mono.
-     Otherwise they use IBM Plex Mono.
+   * The codes (the PIN, addresses, chips, the performance overlay, the adb command and the licence text)
+     use the monospaced companion of the font where one exists: IBM Plex Mono, Atkinson Hyperlegible Mono
+     or B612 Mono. Otherwise they use IBM Plex Mono. The key shortcut chips use the codes font. The
+     on-screen keyboard keys use the text font.
    * Each font is scaled so that its x-height matches that of IBM Plex Sans. The scales are Atkinson
      Hyperlegible Next 1.04, Luciole 0.95, Lexend 0.98, Andika 1.03 and B612 0.92. A scaled size never
-     goes below the minimum sizes of the tokens, so the scale cannot make text smaller than today's
-     minimum.
-   * Andika ships Regular and SemiBold only. Luciole and B612 ship Regular and Bold.
+     goes below the minimum sizes of the tokens: 13 sp on a TV, 12 sp on a handheld, and 11 sp for the
+     phone kicker.
+   * Andika 7.000 has a Medium, but the app bundles only Regular and SemiBold, to save about 0.4 MB.
+     Luciole and B612 ship Regular and Bold.
    * All fonts are bundled from their official releases, with no subsetting or other change. No font
      is downloaded at run time.
    * The licences screen shows the licence of every font.
@@ -125,8 +127,11 @@ Decision details:
        accents cannot use as text.
    * **White** marks a selection with an indicator bar on the segment, the rail item and the Settings
      group list. Its colour alone is too close to the text colour to show a selection.
-   * **Icon and status:** the green of the icon becomes the teal. The Online status gets a glow or a
-     drop shadow, so that it stands apart from the teal accent.
+   * **Icon and status:** the green band of the icon becomes the teal (`#4BECD0` to `#06AF97`). The
+     Online dot gets a soft dark shadow in the page colour, not a glow, because a glow that touches the
+     dot breaks 3:1 over bright glass. The owner chose the shadow on 2026-10-22. Over the brightest
+     host-card glass it raises the contrast of the dot from 3.79:1 to 5.68:1 in today's palette (see
+     [the offline colour and the status shapes](../ux/accessibility.md#the-offline-colour-and-the-status-shapes)).
    * **Evidence:** the measurements are in
      [Accent candidates](../ux/accessibility.md#accent-candidates-sprint-11), from the `accents` command
      of the contrast tool.
@@ -155,11 +160,13 @@ Decision details:
    * Touch targets, gaps and the TV focus scale stay the same in every density.
 
 8. **Background intensity.**
-   * The options are 100, 75, 50 and 25 %.
-   * A veil of the page colour lowers the brightness of the background. High contrast draws a dim of its
-     own, which is 0.85.
-   * The veil only darkens, so the glass floors and the glass table stay valid.
-   * With High contrast on, its 0.85 dim wins over the veil.
+   * The options are 100, 75, 50 and 25 %. The veil of the page colour is 0, 25, 50 and 75 % of the
+     background.
+   * The page colour lies over the background at the veil. High contrast draws a dim of its own, which
+     is 0.85.
+   * The veil never raises the brightest pixel, so the glass floors and the glass table stay valid.
+     Clip pixels darker than the page are lifted toward it.
+   * Under High contrast, the stronger of the veil and the dim wins.
 
 9. **About links on a TV.** On a TV, an About link opens a dialog with the URL and a QR code. This reuses
    ZXing, which is already used by Send to phone (ADR 0051). Phones and handhelds open the browser.
@@ -177,7 +184,7 @@ Decision details:
 * Good, because the word spacing is applied in one component, and the semantics text stays the original.
 * Good, because the fonts are bundled, so the app works offline and makes no font request.
 * Good, because the licences of the fonts are recorded, and the credit is shown in the app.
-* Bad, because the bundled fonts add about 1.5 MB to the APK (an estimate for the shipped set; see More Information).
+* Bad, because the bundled fonts add 1,549,487 bytes to the debug APK, of which the compressed fonts are 1,517,543 bytes (from 3,040,504 bytes raw; see More Information).
 * Bad, because the layouts that do not fit at Wide or Wider need work, and each layout change needs a fit
   test.
 * Bad, because the halo and the new fonts have been measured by the model of the tool, not on a device.
@@ -340,8 +347,8 @@ full. In that build, Andika had three weights; the shipped Andika has two (see O
   * Reason: for new readers. Mirror letters such as b and d look different.
   * Licence: OFL 1.1. Reserved font names "Andika" and "SIL".
   * Maintenance: version 7.000, released 2025-06-02, [github.com/silnrsi/font-andika](https://github.com/silnrsi/font-andika/releases/tag/v7.000).
-  * Footprint: 1,249 KB in the spike build with three weights. The shipped build drops Medium, which
-    saves about 0.42 MB (see the APK estimate below).
+  * Footprint: 1,249 KB in the spike build with three weights. The release (7.000) has a Medium too, but
+    the shipped build drops it, which saves about 0.42 MB (see the APK paragraph below).
   * Alternatives: the other fonts of the choice. OpenDyslexic was rejected (decision 3).
 * **B612 1.008 and B612 Mono 1.008** (Regular and Bold)
   * Reason: designed for reading at a glance and from a distance.
@@ -359,9 +366,10 @@ includes OpenDyslexic (245,865 bytes) and OpenDyslexic Mono (36,033 bytes), whic
 it includes three Andika weights. The release APK does not shrink its resources, so the fonts count in
 full there too.
 
-The estimate for the shipped set is about 1.52 MB compressed: 2,219,755 bytes, minus the two
-OpenDyslexic files, minus one Andika weight of about 416,000 bytes. This is an estimate from the spike
-build. The fonts task measures the real number.
+The spike estimate for the shipped set was about 1.52 MB compressed: 2,219,755 bytes, minus the two
+OpenDyslexic files, minus one Andika weight of about 416,000 bytes. The measured APK of the shipped
+build replaces it. The debug APK grows by 1,549,487 bytes, and the compressed fonts are 1,517,543 bytes
+of that, from 3,040,504 bytes raw.
 
 ### Related
 
@@ -378,5 +386,5 @@ build. The fonts task measures the real number.
 * The spike found that the sizes below the token minimums need a floor. The owner decided that a scaled
   size never goes below the minimum sizes. The spike asked whether the floor is on the size or on the
   x-height. This ADR follows the owner.
-* The per-font APK sizes are from the spike build, and the shipped total is an estimate (see the APK
-  paragraph above). The fonts task measures the real number.
+* The per-font APK sizes are from the spike build. The shipped total is the measured debug APK growth
+  (see the APK paragraph above).

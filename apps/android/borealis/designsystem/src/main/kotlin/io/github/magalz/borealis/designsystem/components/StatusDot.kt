@@ -11,9 +11,12 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
+import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 
 /**
  * The reachability of a host as the dot shows it. [Attention] is a host that answers but needs the
@@ -34,10 +37,16 @@ private val RING_STROKE = 2.dp
  * the glass of a card lies on. It is strongest at the edge of the dot, where it is
  * [SHADOW_PEAK_ALPHA] of the page colour, and fades to nothing at [SHADOW_RADIUS] from the centre
  * of the dot: 5dp outside its box, and short of the 6dp that a host card leaves between the dot and
- * its status text. Each stop is a fraction of [SHADOW_RADIUS] and the share of the peak there. A
- * darker neighbour raises the contrast of the dot (WCAG 1.4.11), so the shadow touches the dot.
+ * its status text. Each stop is a fraction of the radius and the share of the peak there. A darker
+ * neighbour raises the contrast of the dot (WCAG 1.4.11), so the shadow touches the dot.
+ *
+ * On a TV the glass is darker, only a little above the page colour (luma 22 against 16), so a
+ * shadow in the page colour read as a faint ring (the device round of Sprint 11). The shadow of a
+ * TV is black, which darkens the glass about as clearly as the phone's does, and reaches
+ * [SHADOW_RADIUS_TV] from the centre: 5.75dp outside the box, still short of the 6dp to the text.
  */
 private val SHADOW_RADIUS = 10.dp
+private val SHADOW_RADIUS_TV = 10.75.dp
 private const val SHADOW_PEAK_ALPHA = 0.85f
 private val SHADOW_STOPS =
     arrayOf(0.5f to 1f, 0.6f to 0.7f, 0.7f to 0.45f, 0.8f to 0.22f, 0.9f to 0.07f, 1f to 0f)
@@ -56,15 +65,16 @@ private const val TRIANGLE_APEX = 0.5f
  * grey. Pass a [contentDescription] when the dot is not next to a text that says the same; with
  * null it is decorative.
  *
- * An online dot also has a soft dark shadow in the page colour, so that it stands out from the card
- * it is on. It is drawn outside the box of the dot, which stays 10dp square and moves nothing, it
- * is still, so Reduce motion has nothing to remove, and High contrast draws none: it draws solid,
- * crisp shapes.
+ * An online dot also has a soft dark shadow, in the page colour on a phone and a handheld and black
+ * on a TV, so that it stands out from the card it is on. It is drawn outside the box of the dot,
+ * which stays 10dp square and moves nothing, it is still, so Reduce motion has nothing to remove,
+ * and High contrast draws none: it draws solid, crisp shapes.
  */
 @Composable
 fun StatusDot(status: DotStatus, contentDescription: String?, modifier: Modifier = Modifier) {
     val colors = LocalBorealisColors.current
     val shadows = !LocalBorealisLook.current.highContrast
+    val onTv = LocalFormFactor.current == FormFactor.Tv
     Canvas(
         modifier
             .size(DOT_SIZE)
@@ -78,7 +88,10 @@ fun StatusDot(status: DotStatus, contentDescription: String?, modifier: Modifier
     ) {
         when (status) {
             DotStatus.Online -> {
-                if (shadows) drawShadow(colors.page)
+                if (shadows) {
+                    if (onTv) drawShadow(Color.Black, SHADOW_RADIUS_TV)
+                    else drawShadow(colors.page, SHADOW_RADIUS)
+                }
                 drawCircle(colors.success)
             }
             DotStatus.Attention -> drawPath(triangle(), colors.warning)
@@ -96,8 +109,8 @@ fun StatusDot(status: DotStatus, contentDescription: String?, modifier: Modifier
     }
 }
 
-private fun DrawScope.drawShadow(color: Color) {
-    val radius = SHADOW_RADIUS.toPx()
+private fun DrawScope.drawShadow(color: Color, shadowRadius: Dp) {
+    val radius = shadowRadius.toPx()
     val stops =
         Array(SHADOW_STOPS.size) {
             SHADOW_STOPS[it].first to

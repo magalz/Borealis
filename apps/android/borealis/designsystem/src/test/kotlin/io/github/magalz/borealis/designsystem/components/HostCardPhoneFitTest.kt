@@ -19,6 +19,7 @@ import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
+import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -28,10 +29,11 @@ import org.robolectric.annotation.Config
 /**
  * The host card in the 2 columns that Compact and Dense give a phone of 360dp: 158dp wide, which is
  * 130dp of text in Compact and 138dp in Dense. At the largest text, 130 percent over a system font
- * scale of 1.3, in every font and at Normal and Wider, no text of the card runs past its width, is
- * cut off or ends in an ellipsis. The name "Living Room PC" at Wider in Andika, the widest case,
- * has a line that Android wraps 2.5 px wider than the box and that the letter spacing at its end
- * does not cover.
+ * scale of 1.3, in every font at Normal, no text of the card runs past its width, is cut off or
+ * ends in an ellipsis. At Wider the denser layouts keep the column of Comfortable, so there is no
+ * run of it here: the card of 158dp at Wider is in `HostCardInkEdgeTest`, where the name "Living
+ * Room PC" in Andika, the widest case, has a line that Android wraps 2.5 px wider than the box and
+ * that the letter spacing at its end does not cover.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(qualifiers = "w360dp-h640dp-xhdpi")
@@ -99,6 +101,9 @@ class HostCardPhoneFitTest(case: FitCase) {
 
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun cases(): List<FitCase> = cardFitCases().filter { it.density != CardDensity.Comfortable }
+        fun cases(): List<FitCase> =
+            cardFitCases().filter {
+                it.density != CardDensity.Comfortable && it.spacing != TextSpacing.Wider
+            }
     }
 }

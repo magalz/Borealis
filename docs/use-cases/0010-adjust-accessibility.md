@@ -103,9 +103,10 @@ targets of 48 dp on a phone and a handheld.
 2. Whatever the palette, a status is not told by colour alone: the dot of a host
    is a filled circle for online, a filled triangle for attention, and a hollow
    ring for offline and unknown. The card says it in words too.
-3. The Online dot has a soft dark shadow in the page colour (Sprint 11). It is static,
-   and it is not drawn under High contrast. It keeps the dot apart from the glass
-   under it ([accessibility](../ux/accessibility.md#the-offline-colour-and-the-status-shapes)).
+3. The Online dot has a soft dark shadow in the page colour (Sprint 11), and a black
+   one, a little wider, on a TV, where the glass is darker. It is static, and it is
+   not drawn under High contrast. It keeps the dot apart from the glass under it
+   ([accessibility](../ux/accessibility.md#the-offline-colour-and-the-status-shapes)).
 
 ### A7: The user uses TalkBack (Sprint 10; any step)
 
@@ -139,7 +140,8 @@ targets of 48 dp on a phone and a handheld.
    spacing, and the labels of text fields do. Where a layout does not fit at Wide or
    Wider, it is changed rather than cut: a value row stacks its value under the text
    when the longest word does not fit, a slider's value is limited to 40 % of its row,
-   the host detail line wraps, and the key captions keep a lower floor at Wider. The
+   the host detail line wraps, the key captions are drawn with the spacing of Wide at
+   Wider, and Compact and Dense keep the columns of Comfortable at Wider. The
    known limits are in [accessibility](../ux/accessibility.md#text-spacing-known-limitations).
 
 ## Postconditions

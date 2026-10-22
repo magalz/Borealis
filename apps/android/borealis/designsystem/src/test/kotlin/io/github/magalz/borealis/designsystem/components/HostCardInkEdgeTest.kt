@@ -69,7 +69,8 @@ class HostCardInkEdgeTest(private val case: InkCase) {
 
     /** A card of two columns in a phone of 360dp, and a card of the grid of a TV of 960dp. */
     private val width: Dp =
-        if (case.formFactor == FormFactor.Tv) tvHostCardWidth(case.density) else PHONE_CARD_WIDTH
+        if (case.formFactor == FormFactor.Tv) tvHostCardWidth(case.density, TextSpacing.Wider)
+        else PHONE_CARD_WIDTH
 
     @Test
     fun `no text of a host card is drawn at its border`() {

@@ -35,6 +35,7 @@ import io.github.magalz.borealis.designsystem.theme.AccentChoice
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.ColourVision
+import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.designsystem.theme.borealisColors
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
@@ -55,7 +56,11 @@ import org.robolectric.annotation.Config
  * and Offline a ring that is hollow. Unknown looks like Offline. Online also has a soft dark shadow
  * in the page colour (issue #50, ADR 0058, decision 5), outside the box, so that an online dot
  * stands out from the card: it is not drawn in High contrast, and it is darkest next to the dot, so
- * that the dot keeps 3:1 against what is next to it (WCAG 1.4.11), more than it does without it.
+ * that the dot keeps 3:1 against what is next to it (WCAG 1.4.11), more than it does without it. On
+ * a TV the glass is darker, and a shadow in the page colour read as a faint ring there (the device
+ * round: luma 22 down to 17, where a phone goes from 30 to 18): the shadow of a TV is stronger and
+ * reaches farther, so that it is as clear on the TV as the phone's is on a phone, and it still ends
+ * before the status text. A handheld has the phone's.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w360dp-h640dp-xhdpi")
@@ -197,14 +202,18 @@ class StatusDotTest {
     }
 
     @Test
-    fun `high contrast draws the dot solid, with no shadow`() {
+    fun `high contrast draws the dot solid, with no shadow, on every form factor`() {
         val look = BorealisLook(highContrast = true)
-        show(DotStatus.Online, look, backdrop = LIGHT)
+        for (formFactor in FormFactor.entries) {
+            show(DotStatus.Online, look, backdrop = LIGHT, formFactor = formFactor)
 
-        assertAt(5f, 5f, borealisColors(look).success)
-        val frame = frame()
-        for (radius in listOf(EDGE_SHADOW, NEAR_SHADOW, MIDDLE_SHADOW, FAR_SHADOW)) {
-            for ((x, y) in ring(radius)) assertPixelIs(frame[x, y], LIGHT, "$radius dp")
+            assertAt(5f, 5f, borealisColors(look).success)
+            val frame = frame()
+            for (radius in listOf(EDGE_SHADOW, NEAR_SHADOW, MIDDLE_SHADOW, FAR_SHADOW)) {
+                for ((x, y) in ring(radius)) {
+                    assertPixelIs(frame[x, y], LIGHT, "$radius dp on a $formFactor")
+                }
+            }
         }
     }
 
@@ -223,11 +232,82 @@ class StatusDotTest {
     }
 
     @Test
-    fun `the dot keeps 3 to 1 against its shadow on the brightest glass, more than without it`() {
+    fun `the dot keeps 3 to 1 against its shadow on the brightest glass, more than without it`() =
+        assertDotContrast(FormFactor.Phone)
+
+    // The shadow of an online host on a TV
+
+    @Test
+    fun `on a TV the dot keeps 3 to 1 against its shadow on the brightest glass, too`() =
+        assertDotContrast(FormFactor.Tv)
+
+    @Test
+    fun `a handheld has the shadow of a phone`() {
+        show(DotStatus.Online, backdrop = LIGHT)
+        val phone = frame()
+        show(DotStatus.Online, backdrop = LIGHT, formFactor = FormFactor.Handheld)
+        val handheld = frame()
+
+        val different =
+            (0 until phone.width)
+                .flatMap { x -> (0 until phone.height).map { y -> x to y } }
+                .count { (x, y) -> distance(phone[x, y], handheld[x, y]) > PIXEL_TOLERANCE }
+        assertWithMessage("$different pixels of the dot of a handheld differ from a phone's")
+            .that(different)
+            .isEqualTo(0)
+    }
+
+    @Test
+    fun `on a TV the shadow is as clear over its darker glass as the phone's is over its own`() {
+        val phone = drops(FormFactor.Phone, PHONE_GLASS)
+        val tv = drops(FormFactor.Tv, TV_GLASS)
+
+        for (radius in listOf(EDGE_SHADOW, NEAR_SHADOW, MIDDLE_SHADOW)) {
+            assertWithMessage(
+                    "the shadow at $radius dp darkens the glass of a TV by ${tv[radius]} lightness" +
+                        " and the glass of a phone by ${phone[radius]}"
+                )
+                .that(tv.getValue(radius))
+                .isAtLeast(phone.getValue(radius))
+        }
+    }
+
+    @Test
+    fun `on a TV the shadow reaches farther than on a phone, and ends before the status text`() {
+        val phoneReach = reach(FormFactor.Phone, PHONE_GLASS)
+        val tvReach = reach(FormFactor.Tv, TV_GLASS)
+        assertWithMessage(
+                "the shadow shows $tvReach dp from the centre on a TV, $phoneReach on a phone"
+            )
+            .that(tvReach)
+            .isGreaterThan(phoneReach)
+
+        // The status text of a host card starts 6dp past the box, 11dp from the centre.
+        show(DotStatus.Online, backdrop = TV_GLASS, formFactor = FormFactor.Tv)
+        val frame = frame()
+        for (radius in listOf(TEXT_EDGE, PAST_SHADOW)) {
+            for ((x, y) in ring(radius)) {
+                assertWithMessage("the shadow at $radius dp from the centre of the dot on a TV")
+                    .that(lightness(TV_GLASS) - lightness(frame[x, y]))
+                    .isLessThan(NO_DROP)
+            }
+        }
+    }
+
+    /**
+     * The contrast of the dot of a [formFactor] against the lightest pixels next to it, over the
+     * brightest glass of a host card, is 3 to 1 and more than it is without the shadow.
+     */
+    private fun assertDotContrast(formFactor: FormFactor) {
         for (vision in ColourVision.entries) {
             val brightest = brightestHostGlass(vision)
             val backdrop = grey(brightest)
-            show(DotStatus.Online, BorealisLook(colourVision = vision), backdrop = backdrop)
+            show(
+                DotStatus.Online,
+                BorealisLook(colourVision = vision),
+                backdrop = backdrop,
+                formFactor = formFactor,
+            )
             val frame = frame()
 
             // What is next to the dot is the lightest of the pixels just outside its edge: the
@@ -237,15 +317,47 @@ class StatusDotTest {
             val ratio = ratio(dot, next)
             val without = ratio(dot, luminance(backdrop))
             assertWithMessage(
-                    "$vision: the dot is $dot and its shadow $next, over glass of $brightest, " +
-                        "$ratio to 1 (without the shadow $without to 1)"
+                    "$formFactor, $vision: the dot is $dot and its shadow $next, over glass of " +
+                        "$brightest, $ratio to 1 (without the shadow $without to 1)"
                 )
                 .that(ratio)
                 .isAtLeast(NON_TEXT_RATIO)
-            assertWithMessage("$vision: $ratio to 1 with the shadow, $without to 1 without it")
+            assertWithMessage(
+                    "$formFactor, $vision: $ratio to 1 with the shadow, $without to 1 without it"
+                )
                 .that(ratio)
                 .isAtLeast(without)
         }
+    }
+
+    /**
+     * How much the shadow of the dot of a [formFactor] darkens the [glass], as a loss of lightness
+     * (CIE L*), at each distance from the centre of the dot that the tests look at.
+     */
+    private fun drops(formFactor: FormFactor, glass: Color): Map<Float, Double> {
+        show(DotStatus.Online, backdrop = glass, formFactor = formFactor)
+        val frame = frame()
+        return listOf(EDGE_SHADOW, NEAR_SHADOW, MIDDLE_SHADOW).associateWith { radius ->
+            ring(radius).map { (x, y) -> lightness(glass) - lightness(frame[x, y]) }.average()
+        }
+    }
+
+    /**
+     * The farthest distance from the centre of the dot, in steps of 0.5dp, where the shadow still
+     * darkens the [glass] by a visible step of lightness all round.
+     */
+    private fun reach(formFactor: FormFactor, glass: Color): Float {
+        show(DotStatus.Online, backdrop = glass, formFactor = formFactor)
+        val frame = frame()
+        return REACH_RADII.lastOrNull { radius ->
+            ring(radius).all { (x, y) -> lightness(glass) - lightness(frame[x, y]) >= VISIBLE_DROP }
+        } ?: 0f
+    }
+
+    /** CIE L* of [color]: what an eye sees as a step of brightness, where the luminance is not. */
+    private fun lightness(color: Color): Double {
+        val y = luminance(color)
+        return if (y <= LINEAR_PART) y * LINEAR_SLOPE else 116 * y.pow(1 / 3.0) - 16
     }
 
     /** The pixel at ([x], [y]) dp of the dot, which is 8dp into the frame. */
@@ -394,7 +506,8 @@ class StatusDotTest {
     private fun distance(a: Color, b: Color) =
         abs(a.red - b.red) + abs(a.green - b.green) + abs(a.blue - b.blue)
 
-    private var shown by mutableStateOf(Dot(DotStatus.Online, null, BorealisLook(), PAGE))
+    private var shown by
+        mutableStateOf(Dot(DotStatus.Online, null, BorealisLook(), PAGE, FormFactor.Phone))
     private var started = false
 
     private class Dot(
@@ -402,6 +515,7 @@ class StatusDotTest {
         val description: String?,
         val look: BorealisLook,
         val backdrop: Color,
+        val formFactor: FormFactor,
     )
 
     /** Shows the dot of [status]; the first call sets the content, the others change it. */
@@ -410,8 +524,9 @@ class StatusDotTest {
         look: BorealisLook = BorealisLook(),
         description: String? = null,
         backdrop: Color = PAGE,
+        formFactor: FormFactor = FormFactor.Phone,
     ) {
-        shown = Dot(status, description, look, backdrop)
+        shown = Dot(status, description, look, backdrop, formFactor)
         if (!started) {
             started = true
             composeRule.setContent { Specimen(shown) }
@@ -421,7 +536,7 @@ class StatusDotTest {
 
     @Composable
     private fun Specimen(dot: Dot) {
-        BorealisTheme(look = dot.look) {
+        BorealisTheme(dot.formFactor, dot.look) {
             Box(Modifier.testTag(FRAME).background(dot.backdrop).padding(MARGIN.dp)) {
                 StatusDot(
                     dot.status,
@@ -457,6 +572,25 @@ class StatusDotTest {
         const val MIDDLE_SHADOW = 8.75f
         const val FAR_SHADOW = 9.75f
         const val PAST_SHADOW = 11.75f
+
+        /** The status text of a host card starts 6dp past the box: 11dp from the centre. */
+        const val TEXT_EDGE = 11f
+
+        /**
+         * The glass behind the dot as the device round measured it, in the capture of a TV (luma
+         * 22) and of a phone (luma 30), where the shadow of a TV read as a faint ring.
+         */
+        val TV_GLASS = Color(22, 22, 22)
+        val PHONE_GLASS = Color(30, 30, 30)
+
+        /** The distances, in dp from the centre, that the reach of a shadow is looked for at. */
+        val REACH_RADII = (0..13).map { 5.25f + it * 0.5f }
+
+        /** A step of lightness (CIE L*) that shows, and a loss of it that is none. */
+        const val VISIBLE_DROP = 0.5
+        const val NO_DROP = 0.1
+        const val LINEAR_PART = 216.0 / 24389
+        const val LINEAR_SLOPE = 24389.0 / 27
 
         const val MIN_DIFFERENCE = 12
         const val SAME_SHAPE = 4

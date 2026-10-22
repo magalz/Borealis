@@ -217,14 +217,16 @@ stream ([ADR 0056](../adr/0056-add-an-animated-background-and-the-appearance-gro
    and `25`. The background is dimmed under the glass.
 5. Card density has three choices: Comfortable (the default), Compact and Dense. The
    system stores them under `borealis_card_density` as `comfortable`, `compact` and
-   `dense`. Compact and Dense add one column on every device. The hosts and apps in a
+   `dense`. Compact and Dense add one column on every device, except with Text spacing
+   at Wider, where they keep the columns of Comfortable. The hosts and apps in a
    row are 4 and 6 on a TV (3 and 5 in Comfortable), 3 and 5 on a handheld (2 and 4),
    2 and 4 on a phone (1 and 3), and 3 and 5 on a wide phone (2 and 4). Dense also cuts
    the card padding from 18 to 12 dp on a TV and a handheld, and from 14 to 10 dp on a
    phone. It cuts the Continue cover from 56 to 44 dp and the least height of a TV host
-   card from 176 to 164 dp. The gutter of the screen does not change. A Running badge
-   with no room for its label shows its dot alone, in a 20 dp ring. A change re-lays out
-   the screen at once and keeps the focus.
+   card from 176 to 164 dp, and it does this at Wider too. The gutter of the screen does
+   not change. The host cards of a row are as high as the tallest of them. A Running
+   badge with no room for its label shows its dot alone, in a 20 dp ring. A change
+   re-lays out the screen at once and keeps the focus.
 6. Each choice applies to the Library and Settings at once, with no restart, and the
    stream reads it when it starts, as in A11.
 
@@ -284,7 +286,7 @@ UC-009-T33 to T37 are Sprint 11 rows.
 | UC-009-T33 | Given the Appearance group, when the user chooses a Font (IBM Plex Sans, Atkinson Hyperlegible Next, Luciole, Lexend, Andika, B612 or the system font), then the choice is stored under `borealis_font` as its id, the text of the Library and Settings is drawn in it at once, the codes use its monospaced companion (IBM Plex Mono where it has none), and a stored id that is not offered shows IBM Plex Sans. | UI, unit | exists (Sprint 11, UI and unit): `SettingsFontTest`, `FontChoiceTypographyTest`, `BorealisLooksTest` |
 | UC-009-T34 | Given the Appearance group, when the user chooses an Accent colour (Violet, Teal or White), then the choice is stored under `borealis_accent` as its id, the Library changes at once, the selected labels keep 4.5:1 or more over the glass, and a stored id that is not offered shows Violet. Under a colour-blind palette Violet, and the soft accent of White, are drawn as the variants that keep 20 or more from the status colours. | UI, unit | exists (Sprint 11, UI and unit): `AccentColorsTest`, `AccentPaletteVariantsTest`, `AccentTextContrastTest`, `BorealisLooksTest` |
 | UC-009-T35 | Given the Appearance group, when the user chooses a Background intensity (100, 75, 50 or 25 %), then the choice is stored under `borealis_background_intensity` as `100`, `75`, `50` or `25`, the background is veiled by 0, 25, 50 or 75 % of the page colour, the Library changes at once, and under High contrast the stronger of the veil and the dim wins. | UI, unit | exists (Sprint 11, UI and unit): `BackgroundIntensityTest`, `LibraryBackgroundIntensityTest`, `BorealisLooksTest` |
-| UC-009-T36 | Given the Appearance group, when the user chooses a Card density (Comfortable, Compact or Dense), then the choice is stored under `borealis_card_density` as its id, Compact and Dense add one column to the hosts and apps rows, Dense cuts the card padding, the gutter, the gaps, the touch targets and the TV focus scale stay the same, a Running badge with no room for its label shows its dot alone, and the screen re-lays out at once and keeps the focus. | UI, unit | exists (Sprint 11, UI and unit): `CardDensityPaddingTest`, `CardDensityLayoutTest`, `CardDensityInvariantsTest`, `LibraryActivityCardDensityTest` |
+| UC-009-T36 | Given the Appearance group, when the user chooses a Card density (Comfortable, Compact or Dense), then the choice is stored under `borealis_card_density` as its id, Compact and Dense add one column to the hosts and apps rows (not with Text spacing at Wider, where they keep the columns of Comfortable), Dense cuts the card padding, the gutter, the gaps, the touch targets and the TV focus scale stay the same, a Running badge with no room for its label shows its dot alone, and the screen re-lays out at once and keeps the focus. | UI, unit | exists (Sprint 11, UI and unit): `CardDensityPaddingTest`, `CardDensityLayoutTest`, `CardDensityInvariantsTest`, `LibraryActivityCardDensityTest` |
 | UC-009-T37 | Given a TV, when the user chooses Source code or Privacy policy in About, then a dialog shows the address of the link and a 240 dp QR code that decodes to that address, Close and Back dismiss the dialog and the focus returns to the row, and a phone or a handheld opens the browser instead. | UI | exists (Sprint 11, UI): `AboutLinksTvTest` |
 
 ## Host dependency

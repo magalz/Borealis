@@ -2085,7 +2085,15 @@ def halo_icon_tables(result, config):
 
 ACCENTS_JSON = REPO / "design" / "accessibility" / "accents.json"
 
-ACCENT_ROLES = ("accent", "accent-soft", "accent-strong", "on-accent", "accent-tint", "accent-line")
+ACCENT_ROLES = (
+    "accent",
+    "accent-soft",
+    "accent-strong",
+    "on-accent",
+    "accent-tint",
+    "accent-line",
+    "accent-inverse",
+)
 # The tint and the line are drawn with an alpha. The other roles are opaque colours.
 ACCENT_ALPHA_ROLES = ("accent-tint", "accent-line")
 ACCENT_HIGH_CONTRAST_ROLES = ("accent", "accent-soft", "accent-line")
@@ -2410,8 +2418,8 @@ def _luminance(value):
 
 
 def _accent_fills(roles, colors):
-    """The checks on the opaque fills: the label on the accent, and the accent and accent-soft as
-    text on the surfaces and on the tint of a selected row."""
+    """The checks on the opaque fills: the label on the accent, the accent and accent-soft as text
+    on the surfaces and on the tint of a selected row, and the action of a snackbar on `ink`."""
     fills = [
         {
             "id": "on-accent/accent",
@@ -2441,6 +2449,15 @@ def _accent_fills(roles, colors):
                     "limit": ACCENT_TEXT,
                 }
             )
+    # The action of a snackbar is drawn in `accent-inverse` on the inverse surface, which is `ink`.
+    fills.append(
+        {
+            "id": "accent-inverse/ink",
+            "label": "`accent-inverse` on `ink` (the action of a snackbar)",
+            "ratio": rgb_contrast(parse_hex(roles["accent-inverse"]), parse_hex(colors["ink"])),
+            "limit": ACCENT_TEXT,
+        }
+    )
     strong = parse_hex(roles["accent-strong"])
     for surface in SURFACE_TOKENS:
         fills.append(
@@ -2465,7 +2482,11 @@ def _grid_alpha(cell, tint):
 def _accent_glass(name, roles, colors, worst):
     """The rows over the glass of each style at the default and at Reduced, the floors, and the
     failures. The default is the tint of Settings raised to the floor of the style, which is worked
-    out with the accent-soft of the candidate, as it is one of the colours that the floor keeps."""
+    out with the accent-soft of the candidate, as it is one of the colours that the floor keeps.
+
+    The label of a selected item is checked in two roles: `selected` is `accent` over its tint, the
+    label of Sprint 10, and `selected-soft` is `accent-soft` over it, which the app draws since
+    Sprint 11 because `accent` falls short of 4.5:1 there."""
     floor_colors = {**colors, "accent-soft": roles["accent-soft"]}
     text = {role: _luminance(roles[role]) for role in ("accent", "accent-soft")}
     rows, floors, fails = [], {}, []
@@ -2497,6 +2518,9 @@ def _accent_glass(name, roles, colors, worst):
                 "accent": float(contrast_ratio(text["accent"], backdrop)),
                 "accent-soft": float(contrast_ratio(text["accent-soft"], backdrop)),
                 "selected": None if laid is None else float(contrast_ratio(text["accent"], laid)),
+                "selected-soft": (
+                    None if laid is None else float(contrast_ratio(text["accent-soft"], laid))
+                ),
             }
             rows.append(row)
             where = f"glass:{spec}:{style}"
@@ -2507,6 +2531,8 @@ def _accent_glass(name, roles, colors, worst):
                     fails.append(f"{where}:{role}-outline")
             if row["selected"] is not None and row["selected"] < ACCENT_TEXT:
                 fails.append(f"{where}:selected")
+            if row["selected-soft"] is not None and row["selected-soft"] < ACCENT_TEXT:
+                fails.append(f"{where}:selected-soft")
     return rows, floors, fails
 
 
@@ -2700,8 +2726,8 @@ def accent_tables(result):
 
     N is the role sets, O the checks on the opaque fills, P the glass of each candidate (its tint
     and the brightest pixel), Q and R the accent and the accent-soft over the glass, S the selected
-    label over the glass, T high contrast and U the distances. A line for each candidate says which
-    checks it fails.
+    label in `accent` over the glass, T high contrast, U the distances and V the selected label of
+    the app, `accent-soft`, over the glass. A line for each candidate says which checks it fails.
     """
     reports = result["candidates"]
     names = list(reports)
@@ -2742,7 +2768,12 @@ def accent_tables(result):
         for title, key, outline in (
             ("Table Q. `accent` over the glass: text needs 4.5:1, an outline 3:1.", "accent", 3.0),
             ("Table R. `accent-soft` over the glass: text 4.5:1, outline 3:1.", "accent-soft", 3.0),
-            ("Table S. The selected label, `accent` over its tint on the glass.", "selected", None),
+            (
+                "Table S. The selected label of Sprint 10, `accent` over its tint on the glass: "
+                "the app draws `accent-soft` now (Table V).",
+                "selected",
+                None,
+            ),
         ):
             sections.append(title)
             sections.append(_glass_table(reports, names, _glass_ratio(key, outline)))
@@ -2778,6 +2809,13 @@ def accent_tables(result):
         ["Check"] + heads,
         lines,
     )
+
+    if any(reports[name]["glass"] for name in names):
+        sections.append(
+            "Table V. The selected label of the app, `accent-soft` over its tint on the glass: "
+            "text needs 4.5:1."
+        )
+        sections.append(_glass_table(reports, names, _glass_ratio("selected-soft", None)))
 
     for name in names:
         label, fails = reports[name]["label"], reports[name]["fails"]

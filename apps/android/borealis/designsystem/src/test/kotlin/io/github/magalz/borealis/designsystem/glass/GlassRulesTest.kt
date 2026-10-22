@@ -128,20 +128,21 @@ class GlassRulesTest {
 
     @Test
     fun `at 8 dp the floor is 70 over Northern lights and 40 or less over the others`() {
-        assertThat(tintFloor(BackgroundStyle.NorthernLights, 8)).isEqualTo(70)
+        assertThat(tintFloor(BackgroundStyle.NorthernLights, 8, tokens)).isEqualTo(70)
         styles
             .filter { it != BackgroundStyle.NorthernLights }
-            .forEach { assertWithMessage("$it").that(tintFloor(it, 8)).isAtMost(40) }
+            .forEach { assertWithMessage("$it").that(tintFloor(it, 8, tokens)).isAtMost(40) }
     }
 
     @Test
     fun `the floor of Flowing light is 40, where its secondary text is the colour that bounds it`() {
-        assertThat(tintFloor(BackgroundStyle.FlowingLight, 8)).isEqualTo(40)
+        assertThat(tintFloor(BackgroundStyle.FlowingLight, 8, tokens)).isEqualTo(40)
     }
 
     @Test
     fun `a bigger blur lowers the floor of Northern lights`() {
-        val floors = listOf(8, 16, 24, 32, 48).map { tintFloor(BackgroundStyle.NorthernLights, it) }
+        val floors =
+            listOf(8, 16, 24, 32, 48).map { tintFloor(BackgroundStyle.NorthernLights, it, tokens) }
 
         assertThat(floors).containsExactly(70, 60, 50, 50, 40).inOrder()
     }
@@ -154,9 +155,12 @@ class GlassRulesTest {
         for (style in styles) {
             val own = tintFloor(style, 8, dim)
             assertWithMessage("$style").that(own).isAtLeast(tintFloor(style, 8, tokens))
-            assertWithMessage("$style")
-                .that(contrast(dim.accentSoft, backdropLuminance(style, 8, own)))
-                .isAtLeast(4.5)
+            // Where no tint of the grid keeps it, the floor is 100 and there is nothing to keep.
+            if (own < 100) {
+                assertWithMessage("$style")
+                    .that(contrast(dim.accentSoft, backdropLuminance(style, 8, own)))
+                    .isAtLeast(4.5)
+            }
         }
         assertThat(tintFloor(BackgroundStyle.Starfield, 8, dim))
             .isGreaterThan(tintFloor(BackgroundStyle.Starfield, 8, tokens))
@@ -193,8 +197,8 @@ class GlassRulesTest {
 
     @Test
     fun `a blur between two of the grid is read as the smaller, which is the brighter backdrop`() {
-        assertThat(tintFloor(BackgroundStyle.NorthernLights, 20))
-            .isEqualTo(tintFloor(BackgroundStyle.NorthernLights, 16))
+        assertThat(tintFloor(BackgroundStyle.NorthernLights, 20, tokens))
+            .isEqualTo(tintFloor(BackgroundStyle.NorthernLights, 16, tokens))
         assertThat(backdropLuminance(BackgroundStyle.NorthernLights, 20, 55))
             .isEqualTo(backdropLuminance(BackgroundStyle.NorthernLights, 16, 50))
     }

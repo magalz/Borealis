@@ -1,6 +1,6 @@
 package io.github.magalz.borealis.designsystem.background
 
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -9,6 +9,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
@@ -49,7 +51,7 @@ class AccentBackgroundTest {
     private fun showBackground() {
         composeRule.setContent {
             CompositionLocalProvider(LocalBorealisColors provides colors) {
-                DrawnBackground(style, animated = false, Modifier.fillMaxSize().testTag(BG))
+                DrawnBackground(style, animated = false, Modifier.size(SIZE).testTag(BG))
             }
         }
     }
@@ -114,5 +116,8 @@ class AccentBackgroundTest {
 
     private companion object {
         const val BG = "background"
+
+        /** Small, so that a test holds the pixels of a dozen frames. */
+        val SIZE = DpSize(160.dp, 280.dp)
     }
 }

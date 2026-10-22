@@ -11,7 +11,11 @@ import androidx.compose.ui.unit.em
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 
 /** The text styles Material's [Typography] has no slot for. */
-@Immutable class BorealisType(val kicker: TextStyle, val pin: TextStyle, val rail: TextStyle)
+@Immutable
+class BorealisType(val kicker: TextStyle, val pin: TextStyle, val rail: TextStyle) {
+    /** [style], a style of the type scale, in the font of the codes. */
+    fun codes(style: TextStyle): TextStyle = style
+}
 
 private val KICKER_SPACING = 0.07.em
 

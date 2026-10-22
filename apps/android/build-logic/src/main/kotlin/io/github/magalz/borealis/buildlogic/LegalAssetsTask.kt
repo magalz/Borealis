@@ -32,5 +32,8 @@ abstract class LegalAssetsTask : DefaultTask() {
     internal companion object {
         const val ASSET_DIR = "legal"
         val FILES = listOf("NOTICE", "LICENSE", "design/fonts/ibm-plex/OFL.txt")
+
+        /** The name that the asset of the repository-relative [path] has under `legal/`. */
+        fun assetName(path: String): String = path.substringAfterLast('/')
     }
 }

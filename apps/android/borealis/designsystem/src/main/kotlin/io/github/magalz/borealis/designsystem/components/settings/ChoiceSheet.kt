@@ -33,13 +33,19 @@ import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.ignoreKeysHeldOnOpen
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
+import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 
 /**
  * One choice of a [ChoiceSheet]: the [key] it returns, its [label] and an optional [summary] under
- * the label.
+ * the label. A [labelFont] draws the label in that font.
  */
-class ChoiceOption<out T>(val key: T, val label: String, val summary: String? = null)
+class ChoiceOption<out T>(
+    val key: T,
+    val label: String,
+    val summary: String? = null,
+    val labelFont: FontChoice? = null,
+)
 
 private val CONTENT_PADDING = 20.dp
 /**

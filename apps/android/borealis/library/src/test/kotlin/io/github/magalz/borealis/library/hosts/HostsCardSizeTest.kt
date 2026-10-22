@@ -7,11 +7,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.width
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.tvHostCardMinHeight
 import io.github.magalz.borealis.designsystem.testing.tvHostCardWidth
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.FormFactor
-import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import io.github.magalz.borealis.library.domain.HostCapability
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.RunningApp
@@ -90,7 +90,7 @@ class HostsCardSizeTest(private val density: CardDensity) {
         show(FormFactor.Tv)
 
         val heights = (listOf("a") + (2..perRow).map { "h$it" }).map(::height)
-        assertThat(heights.first().value).isGreaterThan(BorealisTokens.Size.HostCard.HeightTv.value)
+        assertThat(heights.first().value).isGreaterThan(tvHostCardMinHeight(density).value)
         for (height in heights) assertThat(height.value).isWithin(HALF_DP).of(heights.first().value)
     }
 
@@ -100,7 +100,7 @@ class HostsCardSizeTest(private val density: CardDensity) {
         show(FormFactor.Tv)
 
         val below = height("h${perRow + 1}")
-        assertThat(below.value).isWithin(HALF_DP).of(BorealisTokens.Size.HostCard.HeightTv.value)
+        assertThat(below.value).isWithin(HALF_DP).of(tvHostCardMinHeight(density).value)
     }
 
     @Test

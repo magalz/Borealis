@@ -16,7 +16,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.tvHostCardMinHeight
 import io.github.magalz.borealis.designsystem.testing.tvHostCardWidth
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -100,12 +102,10 @@ class HostCardSizeTest {
      * token is still the least that any card has: the cards that need less keep it.
      */
     private fun assertNoCardLowerThanToken(density: CardDensity) {
-        showAll(FormFactor.Tv, tvHostCardWidth(density))
+        showAll(FormFactor.Tv, tvHostCardWidth(density), density)
 
-        Variant.entries.forEach {
-            assertThat(height(it)).isAtLeast(BorealisTokens.Size.HostCard.HeightTv)
-        }
-        assertThat(height(Variant.Bare)).isEqualTo(BorealisTokens.Size.HostCard.HeightTv)
+        Variant.entries.forEach { assertThat(height(it)).isAtLeast(tvHostCardMinHeight(density)) }
+        assertThat(height(Variant.Bare)).isEqualTo(tvHostCardMinHeight(density))
     }
 
     @Test fun `the fullest card fits within the token`() = assertFullestCardFits()
@@ -150,8 +150,12 @@ class HostCardSizeTest {
         assertThat(name.top - card.top).isEqualTo(18.dp)
     }
 
-    private fun showAll(formFactor: FormFactor, width: Dp) {
-        composeRule.setContent { Specimen(formFactor, width) }
+    private fun showAll(
+        formFactor: FormFactor,
+        width: Dp,
+        density: CardDensity = CardDensity.Comfortable,
+    ) {
+        composeRule.setContent { Specimen(formFactor, width, density) }
         composeRule.waitForIdle()
     }
 
@@ -188,8 +192,8 @@ class HostCardSizeTest {
     }
 
     @Composable
-    private fun Specimen(formFactor: FormFactor, width: Dp) {
-        BorealisTheme(formFactor) {
+    private fun Specimen(formFactor: FormFactor, width: Dp, density: CardDensity) {
+        BorealisTheme(formFactor, BorealisLook(cardDensity = density)) {
             Column(
                 Modifier.width(width).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp),

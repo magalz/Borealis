@@ -20,13 +20,13 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.testing.FitCase
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.testing.cardFitCases
+import io.github.magalz.borealis.designsystem.testing.tvHostCardMinHeight
 import io.github.magalz.borealis.designsystem.testing.tvHostCardWidth
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
-import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -48,7 +48,8 @@ class HostCardFontFitTest(case: FitCase) {
     @get:Rule val composeRule = createComposeRule()
 
     /** The denser layouts have narrower cards, which are tried at the largest text. */
-    private val denser = case.density != CardDensity.Comfortable
+    private val density = case.density
+    private val denser = density != CardDensity.Comfortable
     private val look =
         BorealisLook(
             font = case.font,
@@ -69,9 +70,10 @@ class HostCardFontFitTest(case: FitCase) {
                 .onNodeWithText("Desktop running", useUnmergedTree = true)
                 .getUnclippedBoundsInRoot()
 
-        assertThat(card.bottom - card.top).isAtLeast(BorealisTokens.Size.HostCard.HeightTv)
+        assertThat(card.bottom - card.top).isAtLeast(tvHostCardMinHeight(density))
         // The card padding and the 2dp padding of the chip are all that is under the last line.
-        assertThat(card.bottom - runningApp.bottom).isAtLeast(20.dp)
+        val padding = if (density == CardDensity.Dense) DENSE_PADDING else CARD_PADDING
+        assertThat(card.bottom - runningApp.bottom).isAtLeast(padding + 2.dp)
     }
 
     @Test
@@ -130,6 +132,8 @@ class HostCardFontFitTest(case: FitCase) {
 
     companion object {
         private const val FULLEST = "fullest"
+        private val CARD_PADDING = 18.dp
+        private val DENSE_PADDING = 12.dp
 
         /** The system font scale that goes with the largest text of the app: 1.69 in all. */
         private const val SYSTEM_SCALE = 1.3f

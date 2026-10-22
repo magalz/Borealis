@@ -29,9 +29,10 @@ import org.robolectric.annotation.Config
 /**
  * The Card density of Appearance on Hosts and Apps (ADR 0058, decision 7): how many cards sit in a
  * row on each device, and how much padding the grid keeps around them. Comfortable is the layout of
- * before the setting. Compact adds one column everywhere, the wide phone of 600dp included, and
- * Dense adds the same column and takes the padding of the grid down from the gutter (34dp on a TV
- * and a handheld, 16dp on a phone) to 12dp and 10dp. The screens are drawn alone, with no rail, so
+ * before the setting. Compact and Dense add one column everywhere, the wide phone of 600dp
+ * included, and every density keeps the gutter of the screen (34dp on a TV and a handheld, 16dp on
+ * a phone) as the padding of the grids, so that the cards line up with the title. Dense takes less
+ * padding inside the cards: `CardDensityPaddingTest`. The screens are drawn alone, with no rail, so
  * that the padding is the distance of a card from the edge of the window.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
@@ -47,17 +48,13 @@ class CardDensityLayoutTest(private val density: CardDensity) {
     private fun columns(comfortable: Int) =
         if (density == CardDensity.Comfortable) comfortable else comfortable + 1
 
-    /** The padding of the grid: [gutter] until Dense, which has [dense]. */
-    private fun padding(gutter: Float, dense: Float) =
-        if (density == CardDensity.Dense) dense else gutter
-
     @Test
     @Config(qualifiers = TV)
     fun `Hosts on a TV have the columns and the padding of the density`() {
         showHosts(FormFactor.Tv)
 
         expect.that(hostsPerRow()).isEqualTo(columns(3))
-        assertHostPadding(padding(TV_GUTTER, TV_DENSE))
+        assertHostPadding(TV_GUTTER)
     }
 
     @Test
@@ -66,7 +63,7 @@ class CardDensityLayoutTest(private val density: CardDensity) {
         showHosts(FormFactor.Handheld)
 
         expect.that(hostsPerRow()).isEqualTo(columns(2))
-        assertHostPadding(padding(TV_GUTTER, TV_DENSE))
+        assertHostPadding(TV_GUTTER)
     }
 
     @Test
@@ -75,7 +72,7 @@ class CardDensityLayoutTest(private val density: CardDensity) {
         showHosts(FormFactor.Phone)
 
         expect.that(hostsPerRow()).isEqualTo(columns(1))
-        assertHostPadding(padding(PHONE_GUTTER, PHONE_DENSE))
+        assertHostPadding(PHONE_GUTTER)
     }
 
     @Test
@@ -84,7 +81,7 @@ class CardDensityLayoutTest(private val density: CardDensity) {
         showHosts(FormFactor.Phone)
 
         expect.that(hostsPerRow()).isEqualTo(columns(2))
-        assertHostPadding(padding(PHONE_GUTTER, PHONE_DENSE))
+        assertHostPadding(PHONE_GUTTER)
     }
 
     @Test
@@ -93,7 +90,7 @@ class CardDensityLayoutTest(private val density: CardDensity) {
         showApps(FormFactor.Tv)
 
         expect.that(appsPerRow()).isEqualTo(columns(5))
-        assertAppPadding(padding(TV_GUTTER, TV_DENSE))
+        assertAppPadding(TV_GUTTER)
     }
 
     @Test
@@ -102,7 +99,7 @@ class CardDensityLayoutTest(private val density: CardDensity) {
         showApps(FormFactor.Handheld)
 
         expect.that(appsPerRow()).isEqualTo(columns(4))
-        assertAppPadding(padding(TV_GUTTER, TV_DENSE))
+        assertAppPadding(TV_GUTTER)
     }
 
     @Test
@@ -111,7 +108,7 @@ class CardDensityLayoutTest(private val density: CardDensity) {
         showApps(FormFactor.Phone)
 
         expect.that(appsPerRow()).isEqualTo(columns(3))
-        assertAppPadding(padding(PHONE_GUTTER, PHONE_DENSE))
+        assertAppPadding(PHONE_GUTTER)
     }
 
     @Test
@@ -120,7 +117,7 @@ class CardDensityLayoutTest(private val density: CardDensity) {
         showApps(FormFactor.Phone)
 
         expect.that(appsPerRow()).isEqualTo(columns(4))
-        assertAppPadding(padding(PHONE_GUTTER, PHONE_DENSE))
+        assertAppPadding(PHONE_GUTTER)
     }
 
     private fun showHosts(formFactor: FormFactor) {
@@ -165,13 +162,10 @@ class CardDensityLayoutTest(private val density: CardDensity) {
         /** The cards on screen, more than the widest row, so that the first row is a full one. */
         const val CARDS = 12
 
-        /** The gutter tokens, which the grids have as their padding today. */
+        /** The gutter tokens, which the grids have as their padding in every density. */
         const val TV_GUTTER = 34f
         const val PHONE_GUTTER = 16f
 
-        /** The padding of Dense (ADR 0058, decision 7). */
-        const val TV_DENSE = 12f
-        const val PHONE_DENSE = 10f
         const val EPSILON = 0.5f
 
         @JvmStatic

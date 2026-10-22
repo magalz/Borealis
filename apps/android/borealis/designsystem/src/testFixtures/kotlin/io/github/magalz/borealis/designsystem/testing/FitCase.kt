@@ -5,6 +5,7 @@ import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.TextSpacing
+import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 
 /**
  * One run of a fit test: the screens in [font] at [spacing] (ADR 0058, decisions 2 and 4), with the
@@ -44,18 +45,25 @@ fun cardFitCases(): List<FitCase> =
 
 /**
  * The width of a host card on a TV 960dp wide, where the rail has 220dp: what the grid of Hosts has
- * left of the other 740dp, after its padding and the 12dp gaps, over its columns. A test of the
- * Library keeps it equal to what the screen lays out.
+ * left of the other 740dp, after the 34dp gutter on each side and the 12dp gaps, over its columns.
+ * A test of the Library keeps it equal to what the screen lays out.
  */
 fun tvHostCardWidth(density: CardDensity): Dp {
-    val padding = if (density == CardDensity.Dense) DENSE_PADDING else GUTTER
     val columns = if (density == CardDensity.Comfortable) COMFORTABLE_COLUMNS else DENSER_COLUMNS
-    return (CONTENT_WIDTH - padding * 2 - GAP * (columns - 1)) / columns
+    return (CONTENT_WIDTH - GUTTER * 2 - GAP * (columns - 1)) / columns
 }
+
+/**
+ * The least height of a host card on a TV: the height token, less what the smaller padding of Dense
+ * takes from the top and the bottom of the fullest card (12dp, 6dp each).
+ */
+fun tvHostCardMinHeight(density: CardDensity): Dp =
+    if (density == CardDensity.Dense) HOST_CARD_HEIGHT - DENSE_SAVING else HOST_CARD_HEIGHT
 
 private val CONTENT_WIDTH = 740.dp
 private val GUTTER = 34.dp
-private val DENSE_PADDING = 12.dp
 private val GAP = 12.dp
+private val HOST_CARD_HEIGHT = BorealisTokens.Size.HostCard.HeightTv
+private val DENSE_SAVING = 12.dp
 private const val COMFORTABLE_COLUMNS = 3
 private const val DENSER_COLUMNS = 4

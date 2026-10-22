@@ -24,10 +24,10 @@ import org.robolectric.annotation.Config
 
 /**
  * The row of shortcuts of the keyboard and the chips after it (System keyboard and Close): beside
- * the shortcuts, which scroll, while the chips take no more than half of the row; under them when
- * they take more, which the text at the largest size with the letters spaced out does on a narrow
- * phone, so that the shortcuts keep a width in which they can be seen and scrolled, and no chip is
- * squeezed to a sliver in which its caption breaks letter by letter.
+ * the shortcuts, which scroll, while the chips leave them a quarter of the row or more; under them
+ * when they leave less, which the text at the largest size with the letters spaced out does on a
+ * narrow phone, so that the shortcuts keep a width in which they can be seen and scrolled, and no
+ * chip is squeezed to a sliver in which its caption breaks letter by letter.
  */
 @RunWith(AndroidJUnit4::class)
 class ShortcutRowTest {
@@ -49,7 +49,7 @@ class ShortcutRowTest {
 
     @Test
     @Config(qualifiers = NARROW_PHONE, fontScale = 1.3f)
-    fun `the chips go under the shortcuts when they take more than half of the row`() {
+    fun `the chips go under the shortcuts when they would leave them less than a quarter of the row`() {
         show(
             FormFactor.Phone,
             BorealisLook(textSize = TextSize.Largest, textSpacing = TextSpacing.Wider),
@@ -62,7 +62,7 @@ class ShortcutRowTest {
 
     @Test
     @Config(qualifiers = TV)
-    fun `the chips are beside the shortcuts when they take no more than half of the row`() {
+    fun `the chips are beside the shortcuts when they leave them a quarter of the row or more`() {
         show(FormFactor.Tv, BorealisLook(textSpacing = TextSpacing.Wider))
 
         assertThat(top("chip:Close")).isLessThan(bottom("chip:Esc"))

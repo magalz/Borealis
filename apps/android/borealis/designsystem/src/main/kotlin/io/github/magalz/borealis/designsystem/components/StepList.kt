@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,13 +25,10 @@ import androidx.compose.ui.semantics.collectionItemInfo
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.R
-import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
-import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 
 private val MARKER_SIZE = 22.dp
 private val STEP_GAP = 10.dp
@@ -128,7 +124,7 @@ private fun StepMarker(number: Int, state: StepState) {
     val (fill, line, ink) =
         when (state) {
             StepState.Done -> Triple(Color.Transparent, colors.success, colors.successInk)
-            StepState.Current -> Triple(colors.accentTint, colors.accentLine, colors.accent)
+            StepState.Current -> Triple(colors.accentTint, colors.accentLine, colors.accentSoft)
             StepState.Later -> Triple(Color.Transparent, colors.lineStrong, colors.ink4)
             StepState.Failed -> Triple(Color.Transparent, colors.danger, colors.dangerInk)
         }
@@ -148,12 +144,8 @@ private fun StepMarker(number: Int, state: StepState) {
                     number.toString(),
                     color = ink,
                     textAlign = TextAlign.Center,
-                    // 12sp is the floor of a TV (the token); a mono digit centres in the circle.
-                    style =
-                        TextStyle(
-                            fontFamily = BorealisFonts.Mono,
-                            fontSize = BorealisTokens.Size.Tv.Minimum,
-                        ),
+                    // A mono digit centres in the circle.
+                    style = smallCodesStyle(),
                 )
         }
     }

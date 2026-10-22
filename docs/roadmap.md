@@ -465,21 +465,24 @@ Why this order:
 
 ### Sprint 11: Appearance
 
-Planned, not started. Owner decisions of 2026-10-21. Every font in the font
+In progress, not merged. Owner decisions of 2026-10-21. Every font in the font
 choice is there for an accessibility reason, from a survey of primary sources
-that ADR 0058 will record.
+that [ADR 0058](adr/0058-appearance-and-reading-options.md) records.
 
-- **TV text size.** On the TV, body text goes from 15 to 16 sp, and the minimum
+- **TV text size.** Done (issue #47, [ADR 0058](adr/0058-appearance-and-reading-options.md),
+  decision 1). On the TV, body text goes from 15 to 16 sp, and the minimum
   text (small labels and section kickers) from 12 to 13 sp. The secondary text,
   at the rail size, stays 14.5 sp. About 16 sp is the suggested minimum for text
   read at 3 m. The handheld keeps its scale. The TV screenshot references are
   recorded again.
-- **Font choice.** Replaces the old "Fonts" item.
+- **Font choice.** Done (issue #48, [ADR 0058](adr/0058-appearance-and-reading-options.md),
+  decision 2). Replaces the old "Fonts" item.
   - Each font has a one-line purpose under its name in the picker, and the name
     is drawn in its own font.
-  - The codes (the PIN, addresses, keyboard keys, chips and the performance
-    overlay) use the font's own monospaced companion where one exists, and IBM
-    Plex Mono otherwise.
+  - The codes (the PIN, addresses, chips, the performance overlay, the adb command
+    and the licence text) use the font's own monospaced companion where one exists,
+    and IBM Plex Mono otherwise. The key shortcut chips use the codes font, and the
+    on-screen keyboard keys use the text font.
   - The candidates, confirmed at the gate after the screens are drawn:
     - IBM Plex Sans, the default, with IBM Plex Mono;
     - Atkinson Hyperlegible Next, for low vision: letters that look alike are
@@ -489,36 +492,43 @@ that ADR 0058 will record.
     - Lexend, with wider spacing built into the letters;
     - Andika, for new readers: mirror letters such as b and d look different;
     - B612, made for cockpit screens: quick to read at a glance. With B612 Mono;
-    - OpenDyslexic, made for dyslexia. Its purpose line says that controlled
-      studies have not shown that it helps. With OpenDyslexic Mono;
+    - OpenDyslexic was considered and not offered (ADR 0058, decision 3);
     - the system font.
   - All fonts are bundled in the APK, from their official releases, with no
     subsetting. The survey checks the licence and the size of each.
-- **Text spacing.** A new row in the Accessibility group: Normal, Wide or Wider.
+- **Text spacing.** Done (issue #49, [ADR 0058](adr/0058-appearance-and-reading-options.md),
+  decision 4). A new row in the Accessibility group: Normal, Wide or Wider.
   It widens the spacing between letters, between words and between lines, after
   WCAG 1.4.12. More space between letters and words together is what helped
   readers with dyslexia in controlled studies; fonts made for dyslexia did not.
-  A spike first checks how Compose can widen word spacing.
-- **Accent colour:** purple, green or white, the Borealis colours. The drawn
-  backgrounds stop taking their violets from the accent, so the glass table stays
-  valid. Selected labels on glass keep 4.5:1. The selected segment, chip and rail
-  item draw their label in `accent`, which is 3.88:1 over Flowing light and
-  4.39:1 over Northern lights today (measured as the focused outline in
-  [accessibility, Table L](ux/accessibility.md)).
-- **Card density:** Comfortable or Compact.
-- **Background intensity.** A veil that only darkens, so the glass floors stay
-  valid.
-- **About links on the TV show the link in Borealis.** Added at the Sprint 10 UAT
+  A spike first checked how Compose can widen word spacing.
+- **Accent colour:** Done (issue #50, [ADR 0058](adr/0058-appearance-and-reading-options.md),
+  decision 5). The app offers violet, teal and white. Green was measured and not offered.
+  The drawn backgrounds stop taking their violets from the accent, so the glass table stays
+  valid. Selected labels on glass keep 4.5:1. Before Sprint 11 the selected segment,
+  chip and rail item drew their label in `accent`, which was 3.21:1 over Flowing
+  light and 3.62:1 over Northern lights as text ([accessibility, Table S](ux/accessibility.md)); they
+  now use `accent-soft` ([accessibility, Table W](ux/accessibility.md)).
+- **Card density:** Done (issue #51, [ADR 0058](adr/0058-appearance-and-reading-options.md),
+  decision 7). Comfortable, Compact or Dense: one column more in Compact and Dense, and less
+  card padding in Dense.
+- **Background intensity.** Done (issue #52, [ADR 0058](adr/0058-appearance-and-reading-options.md),
+  decision 8). A page-coloured veil under the glass, at 0, 25, 50 or 75 %. It never
+  raises the brightest pixel, so the glass floors stay valid.
+- **About links on the TV show the link in Borealis.** Done (issue #53,
+  [ADR 0058](adr/0058-appearance-and-reading-options.md), decision 9). Added at the Sprint 10 UAT
   (2026-10-21). A dialog with the URL and a QR code, instead of opening another
   app. ZXing is already in the project for Send to phone. See the finding on the
   Streamer in
   [device validation, section 15](development/device-validation.md#owner-checks-uat-2026-10-21).
-- **The licences screen shows the font licences.** `OFL.txt` ships in the APK,
-  but the licences dialog shows only NOTICE and LICENSE (`LegalTexts.kt`).
-- **A `RailFooter` screenshot with a version string.** The references show the
+- **The licences screen shows the font licences.** Done (issue #48). The licences dialog
+  shows the licence of every font. Before, `OFL.txt` shipped in the APK, but the dialog
+  showed only NOTICE and LICENSE (`LegalTexts.kt`).
+- **A `RailFooter` screenshot with a version string.** Done (issue #54). The references show the
   footer without one.
-- **The mark paths are listed twice** in `design/icon/generate.py`.
-- **No ATF check covers a visible snackbar.**
+- **The mark paths are listed twice** in `design/icon/generate.py`. Done (issue #54).
+- **No ATF check covers a visible snackbar.** Done (issue #54): an ATF check of Hosts
+  with a snackbar.
 
 The last three items come from the Sprint 10 reviews. They fit here because
 Sprint 11 records the screenshot references again.
@@ -783,6 +793,9 @@ The owner creates the tag. See the [release procedure](development/release.md).
 
 - **Deferred RTSP parser rework.** The moonlight-common-c rework `aeba988` is
   deferred by the owner. See the [third-party notes](../core/third_party/README.md).
+
+- **Text spacing at the 200 % system font size.** 18 fit failures at Wider in a probe, tested at
+  Normal only. See [accessibility, text spacing](ux/accessibility.md#text-spacing-known-limitations).
 
 From the Sprint 9 quality review. None of these changes behaviour. Sprint 10
 (item 11) took the deprecated `FocusProperties.enter`, the copied spacing

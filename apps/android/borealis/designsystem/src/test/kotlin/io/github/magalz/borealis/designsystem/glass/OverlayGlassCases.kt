@@ -22,6 +22,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.PIXELS_PER_DP
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.textColor
+import io.github.magalz.borealis.designsystem.theme.AccentChoice
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -110,7 +111,7 @@ abstract class OverlayGlassCases {
 
     @Test
     fun `High contrast keeps the scrim and the solid panel and its own colours`() =
-        assertAsBefore(BorealisColors().withHighContrast()) {
+        assertAsBefore(BorealisColors().withHighContrast(AccentChoice.Violet)) {
             show(BorealisLook(highContrast = true))
         }
 

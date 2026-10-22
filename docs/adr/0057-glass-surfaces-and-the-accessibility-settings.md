@@ -345,3 +345,4 @@ page is private, so it is not linked here.
      looks at views, not at Compose); the Accessibility Scanner app (by hand, not in the CI).
   The findings that a screen cannot fix are accepted in its test with a reason each; the contrast of
   text over the animated background is measured by the tool in `design/accessibility/` instead.
+* Related: [0058](0058-appearance-and-reading-options.md) adds the font, accent, background intensity and text spacing choices, which build on the glass and the contrast of this ADR.

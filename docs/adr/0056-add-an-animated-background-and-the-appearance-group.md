@@ -115,3 +115,4 @@ This is the record that the [dependency policy](../policies/dependencies.md#addi
 * Related: [0011](0011-datastore-room-and-keystore-for-new-persistence.md) (new settings start in DataStore), [0052](0052-structure-the-phase-2-ui.md) (Phase 2 UI, dark only) and [0044](0044-design-tokens-pipeline.md) (the tokens that the drawn styles use).
 * Use case: [UC-009, change settings](../use-cases/0009-change-settings.md).
 * Provenance of the clips: [design/backgrounds](../../design/backgrounds/README.md). Roadmap: [Sprint 9](../roadmap.md#sprint-9-ux-polish-and-the-handheld).
+* Related: [0058](0058-appearance-and-reading-options.md) adds the font, accent and background intensity choices to the Appearance group.

@@ -24,5 +24,7 @@ dependencies {
     testImplementation(testFixtures(project(":borealis:designsystem")))
     testImplementation(libs.hilt.android.testing)
     testImplementation(libs.kotlinx.coroutines.test)
+    // The tests of the About links decode the QR code that the dialog draws.
+    testImplementation(libs.zxing.core)
     add("kspTest", libs.hilt.compiler)
 }

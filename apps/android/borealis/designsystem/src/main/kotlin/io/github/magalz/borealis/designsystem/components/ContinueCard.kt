@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,17 +17,23 @@ import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
 import io.github.magalz.borealis.designsystem.glass.glassSurface
+import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 
 private val COVER_SIZE = 56.dp
+
+/** The cover in Dense (ADR 0058, decision 7). */
+private val COVER_SIZE_DENSE = 44.dp
 private val CONTENT_GAP = 14.dp
 
 /**
  * The session to continue (decision D2): the app, a [detail] line that says where it runs and since
  * when, and a resume affordance. The whole card is the target: [onClick] resumes, and every way of
  * asking for options runs [onOptions]. The resume button only looks like one, so the card is a
- * single focus stop. The card is a glass surface with the accent tint over it.
+ * single focus stop. The card is a glass surface with the accent tint over it. Dense gives it less
+ * padding and a smaller cover (ADR 0058, decision 7).
  */
 @Composable
 fun ContinueCard(
@@ -56,7 +61,10 @@ fun ContinueCard(
     ) {
         CoverPlaceholder(
             appName,
-            Modifier.size(COVER_SIZE),
+            Modifier.size(
+                if (LocalBorealisLook.current.cardDensity == CardDensity.Dense) COVER_SIZE_DENSE
+                else COVER_SIZE
+            ),
             initialsAlignment = Alignment.Center,
         )
         Column(Modifier.weight(1f)) {

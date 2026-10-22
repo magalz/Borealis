@@ -5,22 +5,26 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.unit.dp
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.components.settings.SettingsInfoRow
 import io.github.magalz.borealis.designsystem.components.settings.SettingsSliderRow
 import io.github.magalz.borealis.designsystem.components.settings.SettingsSwitchRow
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
 import io.github.magalz.borealis.designsystem.testing.OnPage
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
+import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
@@ -28,10 +32,12 @@ import org.robolectric.annotation.Config
  * resizes to 200 percent without loss of content). Every text must fit where it is, or the
  * component grows: none runs past its width, is cut off at the bottom or ends in an ellipsis.
  */
-@RunWith(AndroidJUnit4::class)
+@RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(fontScale = SCALE)
-class LargeTextFitTest {
+class LargeTextFitTest(font: FontChoice) {
     @get:Rule val composeRule = createComposeRule()
+
+    private val look = BorealisLook(font = font)
 
     @Test
     @Config(qualifiers = TV)
@@ -84,16 +90,14 @@ class LargeTextFitTest {
     @Config(qualifiers = TV)
     fun `a dialog fits`() {
         composeRule.setContent {
-            BorealisTheme(FormFactor.Tv) {
+            BorealisTheme(FormFactor.Tv, look) {
                 BorealisDialog(
                     title = "Forget this host?",
                     onDismissRequest = {},
                     confirm = DialogAction("Forget", BorealisButtonStyle.Danger) {},
                     dismiss = DialogAction("Cancel") {},
                 ) {
-                    androidx.compose.material3.Text(
-                        "Its pairing is removed from this device. The PC may keep trusting it."
-                    )
+                    Text("Its pairing is removed from this device. The PC may keep trusting it.")
                 }
             }
         }
@@ -103,7 +107,7 @@ class LargeTextFitTest {
     }
 
     private fun assertFits(formFactor: FormFactor, content: @Composable () -> Unit) {
-        composeRule.setContent { BorealisTheme(formFactor) { OnPage { content() } } }
+        composeRule.setContent { BorealisTheme(formFactor, look) { OnPage { content() } } }
         composeRule.waitForIdle()
 
         composeRule.assertNoClippedText()
@@ -111,7 +115,12 @@ class LargeTextFitTest {
 
     @Composable
     private fun Cards() {
-        Column(Modifier.width(360.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // The two cards are in a list that scrolls, as they are on Hosts: stacked in a window of
+        // 540dp that does not scroll, a TV at 200 percent runs out of height for the second card.
+        Column(
+            Modifier.width(360.dp).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             HostCard(
                 name = "Living Room PC",
                 status = DotStatus.Online,
@@ -172,7 +181,7 @@ class LargeTextFitTest {
 
     @Composable
     private fun Sheet(formFactor: FormFactor) {
-        BorealisTheme(formFactor) {
+        BorealisTheme(formFactor, look) {
             ActionSheet(
                 title = "Living Room PC",
                 actions =
@@ -195,9 +204,13 @@ class LargeTextFitTest {
         }
     }
 
-    private companion object {
-        const val PHONE = "w360dp-h640dp-xhdpi"
-        const val TV = "w960dp-h540dp-land-television-xhdpi"
+    companion object {
+        @JvmStatic
+        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun fonts(): List<FontChoice> = FontChoice.entries
+
+        private const val PHONE = "w360dp-h640dp-xhdpi"
+        private const val TV = "w960dp-h540dp-land-television-xhdpi"
     }
 }
 

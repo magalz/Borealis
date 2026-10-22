@@ -5,7 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -18,10 +17,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
-import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisShapes
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisType
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 
@@ -31,11 +30,12 @@ private val TAG_PADDING_HORIZONTAL = 8.dp
 private val TAG_PADDING_VERTICAL = 2.dp
 
 /**
- * A small monospace label: a key shortcut, a codec, a value. [selected] gives it the accent tint,
- * line and ink. With an [onClick] it is a button that is focusable with the Borealis focus
- * indication, and it is announced as selected or not; without it, it is a static label that is
- * announced as selected only when it is. A button has the 48dp that a finger needs, around the chip
- * and not in it, so the chip keeps its look; a TV has no touch screen and adds nothing.
+ * A small monospace label: a key shortcut, a codec, a value. [selected] gives it the accent tint
+ * and line, and the soft accent for its label, which keeps 4.5:1 over the tint on the glass. With
+ * an [onClick] it is a button that is focusable with the Borealis focus indication, and it is
+ * announced as selected or not; without it, it is a static label that is announced as selected only
+ * when it is. A button has the 48dp that a finger needs, around the chip and not in it, so the chip
+ * keeps its look; a TV has no touch screen and adds nothing.
  */
 @Composable
 fun Chip(
@@ -71,27 +71,39 @@ fun Chip(
                 }
             )
             .padding(horizontal = CHIP_PADDING_HORIZONTAL, vertical = CHIP_PADDING_VERTICAL),
-        color = if (selected) colors.accent else colors.ink2,
-        // 12sp is the floor of a TV (the token), and the chip uses it on every device.
-        style =
-            TextStyle(fontFamily = BorealisFonts.Mono, fontSize = BorealisTokens.Size.Tv.Minimum),
+        color = if (selected) colors.accentSoft else colors.ink2,
+        style = smallCodesStyle(),
+    )
+}
+
+/**
+ * The style of the small text in the font of the codes, for a chip or the number of a step: the
+ * kicker of the device in the codes font, and never below 12sp, the minimum of a handheld. With the
+ * default font that is 13sp on a TV and 12sp on a handheld and on a phone.
+ */
+@Composable
+internal fun smallCodesStyle(): TextStyle {
+    val type = LocalBorealisType.current
+    val codes = type.codes(type.kicker)
+    val least = BorealisTokens.Size.Handheld.Minimum
+    return type.spaced(
+        TextStyle(
+            fontFamily = codes.fontFamily,
+            fontSize = if (codes.fontSize < least) least else codes.fontSize,
+        )
     )
 }
 
 /**
  * A pill-shaped label for a capability of a host (HDR, HEVC, Wake on LAN). It only informs: it is
- * not focusable. It is 11sp on a phone and 12sp on a TV or handheld, which has no smaller text.
+ * not focusable. It is the kicker size of the device: 11sp on a phone, 12sp on a handheld and 13sp
+ * on a TV, which have no smaller text.
  */
 @Composable
 fun Tag(text: String, modifier: Modifier = Modifier) {
     val colors = LocalBorealisColors.current
     val shape = LocalBorealisShapes.current.pill
-    val size =
-        if (LocalFormFactor.current == FormFactor.Phone) {
-            BorealisTokens.Size.Phone.Kicker
-        } else {
-            BorealisTokens.Size.Tv.Minimum
-        }
+    val size = LocalBorealisType.current.kicker.fontSize
     Text(
         text,
         modifier

@@ -9,6 +9,7 @@ import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.Transparency
+import io.github.magalz.borealis.designsystem.theme.borealisColors
 import kotlin.math.max
 
 /**
@@ -53,7 +54,7 @@ internal data class GlassSpec(val solid: Boolean, val tintPercent: Int, val blur
  * - High contrast, the transparency Off and the plain page are solid.
  * - Reduced is 85 percent at 48 dp.
  * - Standard is the tint and the blur of the look, with the tint raised to the floor of the
- *   background.
+ *   background, worked out with the colours of the look (its accent-soft).
  * - Below API 31 there is no blur to draw, so every level but Off is 85 percent with none.
  */
 internal fun glassSpec(look: BorealisLook, style: BackgroundStyle, sdk: Int): GlassSpec {
@@ -73,7 +74,7 @@ internal fun glassSpec(look: BorealisLook, style: BackgroundStyle, sdk: Int): Gl
         val tint = look.glassTintPercent.coerceIn(0, PERCENT)
         GlassSpec(
             solid = false,
-            tintPercent = max(tint, tintFloor(style, look.glassBlurDp)),
+            tintPercent = max(tint, tintFloor(style, look.glassBlurDp, borealisColors(look))),
             blurDp = look.glassBlurDp,
         )
     }
@@ -81,18 +82,18 @@ internal fun glassSpec(look: BorealisLook, style: BackgroundStyle, sdk: Int): Gl
 
 /**
  * The lowest tint of the grid at which a glass of [blurDp] over [style] keeps `ink`, `ink-2` and
- * `accent-soft` at 4.5:1 as they are, and keeps the adjusted `ink-3` no lighter than `#A8ACB1`. The
- * glass is never more transparent than this. It is 100 where no tint of the grid does.
+ * `accent-soft` of [colors] at 4.5:1 as they are, and keeps the adjusted `ink-3` no lighter than
+ * `#A8ACB1`. [colors] are those of the look, so it is the accent-soft of the chosen accent that the
+ * floor keeps. The glass is never more transparent than this. It is 100 where no tint of the grid
+ * does.
  */
-internal fun tintFloor(style: BackgroundStyle, blurDp: Int): Int {
-    val tokens = BorealisColors()
-    return GlassContrastTable.tintsPercent.firstOrNull { tint ->
+internal fun tintFloor(style: BackgroundStyle, blurDp: Int, colors: BorealisColors): Int =
+    GlassContrastTable.tintsPercent.firstOrNull { tint ->
         val backdrop = backdropLuminance(style, blurDp, tint)
-        val unchanged = listOf(tokens.ink, tokens.ink2, tokens.accentSoft)
+        val unchanged = listOf(colors.ink, colors.ink2, colors.accentSoft)
         unchanged.all { contrast(it, backdrop) >= AA_RATIO } &&
-            luminance(walk(tokens.ink3, tokens.ink, secondaryTarget(backdrop))) <= SECONDARY_BOUND
+            luminance(walk(colors.ink3, colors.ink, secondaryTarget(backdrop))) <= SECONDARY_BOUND
     } ?: PERCENT
-}
 
 /**
  * The luminance of the brightest pixel behind the text of a glass of [style], [blurDp] and

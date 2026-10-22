@@ -15,7 +15,6 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -71,9 +70,11 @@ private val FOOTER_GAP =
 /**
  * The TV and handheld navigation rail: a glass surface (the chrome colour where the glass is solid)
  * with one item per destination, an icon and a label in the rail text style. The selected item has
- * the accent tint and accent text. Every item is focusable with the Borealis focus indication. It
- * is as wide as [BorealisDimens.navWidth] says, so a screen does not give it a width. A D-pad that
- * enters the rail from the content lands on the selected item, not on the nearest one.
+ * the accent tint and the soft accent for its icon and label, which keeps 4.5:1 over the tint on
+ * the glass; with the white accent it also has an indicator bar ([selectionBar]). Every item is
+ * focusable with the Borealis focus indication. It is as wide as [BorealisDimens.navWidth] says, so
+ * a screen does not give it a width. A D-pad that enters the rail from the content lands on the
+ * selected item, not on the nearest one.
  *
  * The [footer], when there is one, sits at the bottom of the room the items leave, and the items do
  * not move for it. It takes no focus, whatever it holds. A rail too short for it does not show it,
@@ -185,10 +186,14 @@ fun RailFooter(
             if (version != null) {
                 Text(
                     version,
+                    // A version is not a kicker, so it has no letter spacing of its own; the level
+                    // of the Text spacing is given on top of it.
                     style =
-                        label.copy(
-                            fontWeight = BorealisTokens.FontWeight.Regular,
-                            letterSpacing = 0.sp,
+                        LocalBorealisType.current.spaced(
+                            label.copy(
+                                fontWeight = BorealisTokens.FontWeight.Regular,
+                                letterSpacing = 0.sp,
+                            )
                         ),
                     color = colors.ink3,
                     maxLines = 2,
@@ -208,13 +213,14 @@ private fun RailEntry(
 ) {
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.medium
-    val content = if (selected) colors.accent else colors.ink2
+    val content = if (selected) colors.accentSoft else colors.ink2
     Row(
         modifier
             .fillMaxWidth()
             .borealisFocusIndication(shape)
             .background(if (selected) colors.accentTint else Color.Transparent, shape)
             .clip(shape)
+            .selectionBar(selected, vertical = true)
             .selectable(
                 selected = selected,
                 interactionSource = null,

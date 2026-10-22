@@ -2,10 +2,15 @@ package io.github.magalz.borealis.settings.appearance
 
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.designsystem.theme.AccentChoice
+import io.github.magalz.borealis.designsystem.theme.BackgroundIntensity
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
+import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.ColourVision
+import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.designsystem.theme.TextSize
+import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.settings.catalog.BooleanSetting
 import io.github.magalz.borealis.settings.catalog.Setting
@@ -25,7 +30,8 @@ class BorealisLooksTest {
     private fun look(vararg values: Pair<Setting<*>, Any?>): BorealisLook =
         borealisLook(SettingsSnapshot.fromStored(values.toMap()))
 
-    private val unknownIds = listOf("", "bogus", "ON", "Standard", "FOLLOW_SYSTEM", "2", " on")
+    private val unknownIds =
+        listOf("", "bogus", "ON", "Standard", "FOLLOW_SYSTEM", "2", " on", "Plex", "PLEX", "plex ")
 
     @Test
     fun `nothing stored gives the look of the app with nothing changed`() {
@@ -42,6 +48,11 @@ class BorealisLooksTest {
                 Settings.COLOUR_VISION to ("borealis_colour_vision" to "off"),
                 Settings.GLASS_TINT to ("borealis_glass_tint" to "40"),
                 Settings.GLASS_BLUR to ("borealis_glass_blur" to "8"),
+                Settings.FONT to ("borealis_font" to "plex"),
+                Settings.ACCENT to ("borealis_accent" to "violet"),
+                Settings.BACKGROUND_INTENSITY to ("borealis_background_intensity" to "100"),
+                Settings.CARD_DENSITY to ("borealis_card_density" to "comfortable"),
+                Settings.TEXT_SPACING to ("borealis_text_spacing" to "normal"),
             )
         for ((setting, expected) in strings) {
             assertThat(setting).isInstanceOf(StringSetting::class.java)
@@ -72,6 +83,11 @@ class BorealisLooksTest {
         assertThat(Settings.GLASS_BLUR.default).isEqualTo(defaults.glassBlurDp.toString())
         assertThat(Settings.THICK_FOCUS.default).isEqualTo(defaults.thickFocus)
         assertThat(Settings.HIGH_CONTRAST.default).isEqualTo(defaults.highContrast)
+        assertThat(defaults.font).isEqualTo(FontChoice.Plex)
+        assertThat(defaults.accent).isEqualTo(AccentChoice.Violet)
+        assertThat(defaults.backgroundIntensity).isEqualTo(BackgroundIntensity.Full)
+        assertThat(defaults.cardDensity).isEqualTo(CardDensity.Comfortable)
+        assertThat(defaults.textSpacing).isEqualTo(TextSpacing.Normal)
     }
 
     @Test
@@ -105,6 +121,61 @@ class BorealisLooksTest {
             .isEqualTo(ColourVision.RedGreen)
         assertThat(look(Settings.COLOUR_VISION to "blue_yellow").colourVision)
             .isEqualTo(ColourVision.BlueYellow)
+    }
+
+    @Test
+    fun `Font is stored as plex, atkinson_next, luciole, lexend, andika, b612 or system`() {
+        val stored =
+            mapOf(
+                "plex" to FontChoice.Plex,
+                "atkinson_next" to FontChoice.AtkinsonNext,
+                "luciole" to FontChoice.Luciole,
+                "lexend" to FontChoice.Lexend,
+                "andika" to FontChoice.Andika,
+                "b612" to FontChoice.B612,
+                "system" to FontChoice.System,
+            )
+
+        for ((id, font) in stored) {
+            assertWithMessage("the id \"$id\"").that(look(Settings.FONT to id).font).isEqualTo(font)
+        }
+    }
+
+    @Test
+    fun `Accent colour is stored as violet, teal or white`() {
+        assertThat(look(Settings.ACCENT to "violet").accent).isEqualTo(AccentChoice.Violet)
+        assertThat(look(Settings.ACCENT to "teal").accent).isEqualTo(AccentChoice.Teal)
+        assertThat(look(Settings.ACCENT to "white").accent).isEqualTo(AccentChoice.White)
+    }
+
+    @Test
+    fun `Background intensity is stored as its percent and stands for a veil that darkens`() {
+        val veils = mapOf("100" to 0f, "75" to 0.25f, "50" to 0.5f, "25" to 0.75f)
+
+        for ((percent, veil) in veils) {
+            val intensity = look(Settings.BACKGROUND_INTENSITY to percent).backgroundIntensity
+            assertWithMessage("the id \"$percent\"").that(intensity.veil).isEqualTo(veil)
+        }
+        assertThat(look(Settings.BACKGROUND_INTENSITY to "100").backgroundIntensity)
+            .isEqualTo(BackgroundIntensity.Full)
+        assertThat(BackgroundIntensity.entries.map { it.veil }).isInStrictOrder()
+    }
+
+    @Test
+    fun `Card density is stored as comfortable, compact or dense`() {
+        assertThat(look(Settings.CARD_DENSITY to "comfortable").cardDensity)
+            .isEqualTo(CardDensity.Comfortable)
+        assertThat(look(Settings.CARD_DENSITY to "compact").cardDensity)
+            .isEqualTo(CardDensity.Compact)
+        assertThat(look(Settings.CARD_DENSITY to "dense").cardDensity).isEqualTo(CardDensity.Dense)
+    }
+
+    @Test
+    fun `Text spacing is stored as normal, wide or wider`() {
+        assertThat(look(Settings.TEXT_SPACING to "normal").textSpacing)
+            .isEqualTo(TextSpacing.Normal)
+        assertThat(look(Settings.TEXT_SPACING to "wide").textSpacing).isEqualTo(TextSpacing.Wide)
+        assertThat(look(Settings.TEXT_SPACING to "wider").textSpacing).isEqualTo(TextSpacing.Wider)
     }
 
     @Test
@@ -143,6 +214,10 @@ class BorealisLooksTest {
                     Settings.TRANSPARENCY to id,
                     Settings.TEXT_SIZE to id,
                     Settings.COLOUR_VISION to id,
+                    Settings.FONT to id,
+                    Settings.ACCENT to id,
+                    Settings.CARD_DENSITY to id,
+                    Settings.TEXT_SPACING to id,
                 )
             assertWithMessage("the id \"$id\"").that(unknown).isEqualTo(BorealisLook())
         }
@@ -161,20 +236,32 @@ class BorealisLooksTest {
     }
 
     @Test
-    fun `every entry of a list is an id that maps to its own value, and every value has an entry`() {
-        fun <T> assertOneEntryPerValue(
-            setting: StringSetting,
-            entries: List<FixedChoice>,
-            values: List<T>,
-            read: (BorealisLook) -> T,
-        ) {
-            val seen = entries.map { read(look(setting to it.key)) }
+    fun `a background intensity that is not offered stands for the default`() {
+        val notOffered = listOf("", "bogus", "0", "10", "90", "125", "-50", "50.0", " 50", "50 %")
 
-            assertThat(entries.map { it.key }).containsNoDuplicates()
-            assertThat(seen).containsExactlyElementsIn(values).inOrder()
-            assertThat(entries.map { it.key }).contains(setting.default)
+        for (id in notOffered) {
+            val unknown = look(Settings.BACKGROUND_INTENSITY to id)
+            assertWithMessage("the id \"$id\"").that(unknown).isEqualTo(BorealisLook())
         }
+        assertThat(look(Settings.BACKGROUND_INTENSITY to "60").backgroundIntensity)
+            .isEqualTo(BackgroundIntensity.Full)
+    }
 
+    private fun <T> assertOneEntryPerValue(
+        setting: StringSetting,
+        entries: List<FixedChoice>,
+        values: List<T>,
+        read: (BorealisLook) -> T,
+    ) {
+        val seen = entries.map { read(look(setting to it.key)) }
+
+        assertThat(entries.map { it.key }).containsNoDuplicates()
+        assertThat(seen).containsExactlyElementsIn(values).inOrder()
+        assertThat(entries.map { it.key }).contains(setting.default)
+    }
+
+    @Test
+    fun `every entry of a list is an id that maps to its own value, and every value has an entry`() {
         assertOneEntryPerValue(
             Settings.REDUCE_MOTION,
             FixedChoices.REDUCE_MOTION,
@@ -216,6 +303,35 @@ class BorealisLooksTest {
     }
 
     @Test
+    fun `every entry of a list of Sprint 11 is an id that maps to its own value`() {
+        assertOneEntryPerValue(Settings.FONT, FixedChoices.FONT, FontChoice.entries) { it.font }
+        assertOneEntryPerValue(Settings.ACCENT, FixedChoices.ACCENT, AccentChoice.entries) {
+            it.accent
+        }
+        assertOneEntryPerValue(
+            Settings.BACKGROUND_INTENSITY,
+            FixedChoices.BACKGROUND_INTENSITY,
+            BackgroundIntensity.entries,
+        ) {
+            it.backgroundIntensity
+        }
+        assertOneEntryPerValue(
+            Settings.CARD_DENSITY,
+            FixedChoices.CARD_DENSITY,
+            CardDensity.entries,
+        ) {
+            it.cardDensity
+        }
+        assertOneEntryPerValue(
+            Settings.TEXT_SPACING,
+            FixedChoices.TEXT_SPACING,
+            TextSpacing.entries,
+        ) {
+            it.textSpacing
+        }
+    }
+
+    @Test
     fun `each setting changes its own field and nothing else`() {
         val look =
             look(
@@ -225,6 +341,11 @@ class BorealisLooksTest {
                 Settings.COLOUR_VISION to "blue_yellow",
                 Settings.GLASS_TINT to "70",
                 Settings.GLASS_BLUR to "32",
+                Settings.FONT to "lexend",
+                Settings.ACCENT to "teal",
+                Settings.BACKGROUND_INTENSITY to "50",
+                Settings.CARD_DENSITY to "dense",
+                Settings.TEXT_SPACING to "wider",
             )
 
         assertThat(look)
@@ -238,6 +359,11 @@ class BorealisLooksTest {
                     textSize = TextSize.Largest,
                     highContrast = false,
                     colourVision = ColourVision.BlueYellow,
+                    font = FontChoice.Lexend,
+                    accent = AccentChoice.Teal,
+                    backgroundIntensity = BackgroundIntensity.Half,
+                    cardDensity = CardDensity.Dense,
+                    textSpacing = TextSpacing.Wider,
                 )
             )
     }

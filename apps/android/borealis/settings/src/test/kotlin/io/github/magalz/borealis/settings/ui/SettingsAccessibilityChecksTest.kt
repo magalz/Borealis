@@ -10,13 +10,14 @@ import io.github.magalz.borealis.designsystem.testing.NoTouchOnTv
 import io.github.magalz.borealis.designsystem.testing.assertAccessible
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.settings.testing.InGlassHost
+import io.github.magalz.borealis.settings.testing.dialogFrame
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
  * Google's Accessibility Test Framework over the Settings screen on a TV, a handheld and a phone,
- * with the choice sheet and the licences dialog over it. The glass is off here
+ * with the choice sheet, the licences dialog and the link dialog over it. The glass is off here
  * (`BackgroundStyle.Off`), so the contrast checks see the colours that the text really has; over
  * the animated background the contrast is measured by the tool in `design/accessibility/`, which
  * docs/ux/accessibility.md describes.
@@ -98,6 +99,17 @@ class SettingsAccessibilityChecksTest : SettingsScreenTestBase() {
         showSettings(FormFactor.Tv, SettingsGroupId.STREAM)
         composeRule.onNodeWithText("Frame pacing").performClick()
         composeRule.waitForIdle()
+
+        composeRule.assertAccessible(NoTouchOnTv)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the link dialog with its QR code on a TV`() {
+        showSettings(FormFactor.Tv, SettingsGroupId.ABOUT)
+        composeRule.onNodeWithText("Source code").performClick()
+        composeRule.waitForIdle()
+        composeRule.dialogFrame("Source code").assertExists()
 
         composeRule.assertAccessible(NoTouchOnTv)
     }

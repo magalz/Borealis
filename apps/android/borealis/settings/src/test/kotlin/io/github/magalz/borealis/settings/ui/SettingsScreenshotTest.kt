@@ -9,6 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import io.github.magalz.borealis.designsystem.testing.settleWindows
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.options.DisabledReason
 import io.github.magalz.borealis.settings.options.FrameRateChoice
@@ -97,7 +98,7 @@ class SettingsScreenshotTest : SettingsScreenTestBase() {
     fun phoneAppearance() {
         show()
         openSection("APPEARANCE")
-        composeRule.onNodeWithText("Background").performScrollTo()
+        composeRule.onNodeWithText("Glass blur").performScrollTo()
 
         shoot("settingsscreen_phone_appearance")
     }
@@ -122,6 +123,18 @@ class SettingsScreenshotTest : SettingsScreenTestBase() {
         composeRule.waitForIdle()
 
         captureScreenRoboImage("src/test/screenshots/settingsscreen_tv_choice-sheet.png")
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun tvLinkDialog() {
+        asTelevision()
+        show(keyboard = true, initialGroup = SettingsGroupId.ABOUT)
+        composeRule.onNodeWithText("Source code").performClick()
+        composeRule.waitForIdle()
+        composeRule.settleWindows()
+
+        captureScreenRoboImage("src/test/screenshots/settingsscreen_tv_link-dialog.png")
     }
 
     @Test

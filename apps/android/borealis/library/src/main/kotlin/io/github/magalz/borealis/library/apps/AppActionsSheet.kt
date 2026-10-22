@@ -2,7 +2,6 @@ package io.github.magalz.borealis.library.apps
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -15,9 +14,10 @@ import io.github.magalz.borealis.designsystem.components.ActionStyle
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.BorealisDialog
 import io.github.magalz.borealis.designsystem.components.DialogAction
-import io.github.magalz.borealis.designsystem.theme.BorealisFonts
+import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisType
 import io.github.magalz.borealis.library.R
 import io.github.magalz.borealis.library.hosts.DialogMessage
 
@@ -201,12 +201,9 @@ internal fun AppDetailsDialog(app: AppItemUiState, onDismiss: () -> Unit) {
 @Composable
 private fun Detail(label: String, value: String, mono: Boolean = false) {
     val colors = LocalBorealisColors.current
+    val style = MaterialTheme.typography.bodyLarge
     Column {
         Text(label, style = MaterialTheme.typography.bodySmall, color = colors.ink3)
-        Text(
-            value,
-            style = MaterialTheme.typography.bodyLarge,
-            fontFamily = if (mono) BorealisFonts.Mono else null,
-        )
+        Text(value, style = if (mono) LocalBorealisType.current.codes(style) else style)
     }
 }

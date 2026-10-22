@@ -2,10 +2,13 @@ package io.github.magalz.borealis.library.shell
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
@@ -16,6 +19,7 @@ import com.google.android.apps.common.testing.accessibility.framework.checks.Tex
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.AcceptedFinding
 import io.github.magalz.borealis.designsystem.testing.NoTouchOnTv
+import io.github.magalz.borealis.designsystem.testing.StaysAsSnackbar
 import io.github.magalz.borealis.designsystem.testing.assertAccessible
 import io.github.magalz.borealis.designsystem.testing.showing
 import io.github.magalz.borealis.designsystem.testing.taggedWith
@@ -102,6 +106,24 @@ class LibraryAccessibilityChecksTest {
     fun `Hosts on a TV`() {
         show(FormFactor.Tv, RailSelection.Hosts) { Hosts(it) }
 
+        composeRule.assertAccessible(NoTouchOnTv)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `Hosts with a snackbar on a phone`() {
+        show(FormFactor.Phone, RailSelection.Hosts) { HostsWithSnackbar(it) }
+
+        composeRule.onNodeWithText(SNACKBAR).assertIsDisplayed()
+        composeRule.assertAccessible()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `Hosts with a snackbar on a TV`() {
+        show(FormFactor.Tv, RailSelection.Hosts) { HostsWithSnackbar(it) }
+
+        composeRule.onNodeWithText(SNACKBAR).assertIsDisplayed()
         composeRule.assertAccessible(NoTouchOnTv)
     }
 
@@ -291,12 +313,24 @@ class LibraryAccessibilityChecksTest {
         composeRule.waitForIdle()
     }
 
+    /** Hosts with the notice that a Quit leaves, on screen for as long as the test. */
     @Composable
-    private fun Hosts(formFactor: FormFactor, state: HostsUiState = withHosts) {
+    private fun HostsWithSnackbar(formFactor: FormFactor) {
+        val snackbars = remember { SnackbarHostState() }
+        StaysAsSnackbar(snackbars, SNACKBAR)
+        Hosts(formFactor, snackbars = snackbars)
+    }
+
+    @Composable
+    private fun Hosts(
+        formFactor: FormFactor,
+        state: HostsUiState = withHosts,
+        snackbars: SnackbarHostState = SnackbarHostState(),
+    ) {
         HostsScreen(
             state = state,
             formFactor = formFactor,
-            snackbarHostState = SnackbarHostState(),
+            snackbarHostState = snackbars,
             onHostSelected = {},
             onContinue = {},
             onWake = {},
@@ -360,5 +394,9 @@ class LibraryAccessibilityChecksTest {
             onCancel = {},
             hostName = "Studio",
         )
+    }
+
+    private companion object {
+        const val SNACKBAR = "App quit."
     }
 }

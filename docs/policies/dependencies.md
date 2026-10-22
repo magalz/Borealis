@@ -16,6 +16,7 @@ release must use one of these licences (SPDX identifiers):
 | ISC | |
 | Zlib | |
 | OFL-1.1 | Fonts and font-like assets only. |
+| CC-BY-4.0 | Fonts only, with the credit shown in the app and in [NOTICE](../../NOTICE). Allowed by [ADR 0058](../adr/0058-appearance-and-reading-options.md) (Luciole). |
 | GPL-3.0-only, GPL-3.0-or-later | Same licence as the project. |
 | LGPL-2.1-or-later, LGPL-3.0-only, LGPL-3.0-or-later | Dynamic or replaceable linking only; check the specific terms. |
 | MPL-2.0 | File-level copyleft; allowed. |

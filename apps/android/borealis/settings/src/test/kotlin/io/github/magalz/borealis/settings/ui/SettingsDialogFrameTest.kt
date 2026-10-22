@@ -87,13 +87,12 @@ class SettingsDialogFrameTest : SettingsScreenTestBase() {
     }
 
     @Test
-    fun `the link dialog of About stays a standard dialog`() {
-        browserAvailable = false
+    fun `the link dialog of About is a wide dialog, 720dp, the one of Send to phone`() {
         show(keyboard = true)
         composeRule.onNodeWithText("About").performClick()
         composeRule.onNodeWithText("Source code").performClick()
         composeRule.waitForIdle()
 
-        composeRule.assertDialogWidth("No app can open this link", 560f)
+        composeRule.assertDialogWidth("Source code", 720f)
     }
 }

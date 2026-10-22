@@ -7,6 +7,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -33,11 +35,14 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.Chip
 import io.github.magalz.borealis.designsystem.components.KeyboardKey
@@ -169,6 +174,7 @@ private fun Modifier.gamepadKeys(onClose: () -> Unit, onBackspace: () -> Unit): 
         isY
     }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ShortcutRow(
     shortcuts: List<NamedChord>,
@@ -176,34 +182,87 @@ private fun ShortcutRow(
     onClose: () -> Unit,
     onSystemKeyboard: () -> Unit,
 ) {
-    Row(
+    ShortcutsAndChips(
         Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(CHIP_GAP, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(
-            Modifier.weight(1f, fill = false)
-                .horizontalScroll(rememberScrollState())
-                .padding(CHIP_ROW_PADDING),
-            horizontalArrangement = Arrangement.spacedBy(CHIP_GAP),
-        ) {
-            for (shortcut in shortcuts) {
-                val label = stringResource(shortcut.label)
-                Chip(
-                    label,
-                    Modifier.testTag("chip:$label"),
-                    onClick = { onShortcut(shortcut.chord) },
+        shortcuts = {
+            Row(
+                Modifier.horizontalScroll(rememberScrollState()).padding(CHIP_ROW_PADDING),
+                horizontalArrangement = Arrangement.spacedBy(CHIP_GAP),
+            ) {
+                for (shortcut in shortcuts) {
+                    val label = stringResource(shortcut.label)
+                    Chip(
+                        label,
+                        Modifier.testTag("chip:$label"),
+                        onClick = { onShortcut(shortcut.chord) },
+                    )
+                }
+            }
+        },
+        chips = {
+            FlowRow(
+                Modifier.padding(CHIP_ROW_PADDING),
+                horizontalArrangement = Arrangement.spacedBy(CHIP_GAP),
+                verticalArrangement = Arrangement.spacedBy(CHIP_GAP),
+            ) {
+                val system = stringResource(R.string.stream_keyboard_system)
+                val close = stringResource(R.string.stream_keyboard_close)
+                Chip(system, Modifier.testTag("chip:$system"), onClick = onSystemKeyboard)
+                Chip(close, Modifier.testTag("chip:$close"), onClick = onClose)
+            }
+        },
+    )
+}
+
+/**
+ * The [shortcuts], which scroll, and the [chips] that follow them, centred in the row. The chips
+ * are beside the shortcuts, which take what they leave, while that is a quarter of the row or more;
+ * when the chips would leave less (the text at the largest size with the letters spaced out, on a
+ * narrow phone) they go under the shortcuts, so that these keep a width in which to be seen and
+ * scrolled, and the chips keep theirs.
+ */
+@Composable
+private fun ShortcutsAndChips(
+    modifier: Modifier,
+    shortcuts: @Composable () -> Unit,
+    chips: @Composable () -> Unit,
+) {
+    Layout(
+        content = {
+            shortcuts()
+            chips()
+        },
+        modifier = modifier,
+    ) { measurables, constraints ->
+        val width = constraints.maxWidth
+        val gap = CHIP_GAP.roundToPx()
+        val chipsRow = measurables[1].measure(Constraints(maxWidth = width))
+        val beside = (width - chipsRow.width - gap).coerceAtLeast(0)
+        val under = beside < width / 4
+        val room = if (under) width else beside
+        val shortcutsRow = measurables[0].measure(Constraints(maxWidth = room))
+        val center = Alignment.CenterHorizontally
+        val vertical = Alignment.CenterVertically
+        if (under) {
+            val height = constraints.constrainHeight(shortcutsRow.height + gap + chipsRow.height)
+            layout(width, height) {
+                shortcutsRow.place(center.align(shortcutsRow.width, width, layoutDirection), 0)
+                chipsRow.place(
+                    center.align(chipsRow.width, width, layoutDirection),
+                    shortcutsRow.height + gap,
                 )
             }
-        }
-        Row(
-            Modifier.padding(CHIP_ROW_PADDING),
-            horizontalArrangement = Arrangement.spacedBy(CHIP_GAP),
-        ) {
-            val system = stringResource(R.string.stream_keyboard_system)
-            val close = stringResource(R.string.stream_keyboard_close)
-            Chip(system, Modifier.testTag("chip:$system"), onClick = onSystemKeyboard)
-            Chip(close, Modifier.testTag("chip:$close"), onClick = onClose)
+        } else {
+            val height = constraints.constrainHeight(maxOf(shortcutsRow.height, chipsRow.height))
+            val total = shortcutsRow.width + gap + chipsRow.width
+            layout(width, height) {
+                val start = center.align(total, width, layoutDirection)
+                shortcutsRow.place(start, vertical.align(shortcutsRow.height, height))
+                chipsRow.place(
+                    start + shortcutsRow.width + gap,
+                    vertical.align(chipsRow.height, height),
+                )
+            }
         }
     }
 }

@@ -25,7 +25,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,17 +49,18 @@ import io.github.magalz.borealis.designsystem.components.BackdropInk
 import io.github.magalz.borealis.designsystem.components.BackdropText
 import io.github.magalz.borealis.designsystem.components.BorealisPhoneBar
 import io.github.magalz.borealis.designsystem.components.EmptyState
+import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
 import io.github.magalz.borealis.designsystem.glass.GlassTextColors
 import io.github.magalz.borealis.designsystem.glass.glassSurface
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
-import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisType
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.settings.R
@@ -234,7 +234,7 @@ private fun EntryRow(row: AuditRow, onClick: () -> Unit, modifier: Modifier) {
             row.time,
             Modifier.widthIn(min = timeWidth),
             color = colors.ink3,
-            style = MaterialTheme.typography.labelMedium.copy(fontFamily = BorealisFonts.Mono),
+            style = LocalBorealisType.current.codes(MaterialTheme.typography.labelMedium),
         )
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(SUMMARY_GAP)) {
             FlowRow(
@@ -249,8 +249,7 @@ private fun EntryRow(row: AuditRow, onClick: () -> Unit, modifier: Modifier) {
                 Text(
                     row.type.name,
                     color = colors.ink3,
-                    style =
-                        MaterialTheme.typography.labelMedium.copy(fontFamily = BorealisFonts.Mono),
+                    style = LocalBorealisType.current.codes(MaterialTheme.typography.labelMedium),
                 )
             }
             if (row.summary != null) {
@@ -315,7 +314,7 @@ private fun Field(@StringRes label: Int, value: String, mono: Boolean = false) {
         Text(
             value,
             color = colors.ink,
-            style = if (mono) body.copy(fontFamily = BorealisFonts.Mono) else body,
+            style = if (mono) LocalBorealisType.current.codes(body) else body,
         )
     }
 }

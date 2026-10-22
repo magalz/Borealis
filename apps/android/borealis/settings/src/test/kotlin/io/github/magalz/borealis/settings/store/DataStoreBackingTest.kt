@@ -69,6 +69,11 @@ class DataStoreBackingTest {
             Settings.TEXT_SIZE,
             Settings.HIGH_CONTRAST,
             Settings.COLOUR_VISION,
+            Settings.FONT,
+            Settings.ACCENT,
+            Settings.BACKGROUND_INTENSITY,
+            Settings.CARD_DENSITY,
+            Settings.TEXT_SPACING,
         )
 
     @Before
@@ -120,6 +125,36 @@ class DataStoreBackingTest {
             first.coroutineContext[Job]!!.cancelAndJoin()
 
             assertThat(backing().read()[Settings.BACKGROUND]).isEqualTo("northern_lights")
+        }
+
+    @Test
+    fun `every id of the font, accent, intensity, density and spacing reads back as written`() =
+        runBlocking<Unit> {
+            val ids =
+                mapOf(
+                    Settings.FONT to
+                        listOf(
+                            "plex",
+                            "atkinson_next",
+                            "luciole",
+                            "lexend",
+                            "andika",
+                            "b612",
+                            "system",
+                        ),
+                    Settings.ACCENT to listOf("violet", "teal", "white"),
+                    Settings.BACKGROUND_INTENSITY to listOf("100", "75", "50", "25"),
+                    Settings.CARD_DENSITY to listOf("comfortable", "compact", "dense"),
+                    Settings.TEXT_SPACING to listOf("normal", "wide", "wider"),
+                )
+            val backing = backing()
+
+            for ((setting, values) in ids) {
+                for (id in values) {
+                    backing.write(setting, id)
+                    assertThat(backing.read()[setting]).isEqualTo(id)
+                }
+            }
         }
 
     @Test

@@ -18,7 +18,6 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -47,6 +46,8 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.Text
+import io.github.magalz.borealis.designsystem.components.selectionBar
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.initialFocus
@@ -68,7 +69,7 @@ private val GROUP_PADDING_HORIZONTAL = 12.dp
  * Small enough that the eleven groups of Settings, [BorealisDimens.listGap] apart, fit a 540dp TV
  * unscrolled.
  */
-private val GROUP_PADDING_VERTICAL = 4.dp
+private val GROUP_PADDING_VERTICAL = 3.dp
 /** The height that a finger needs (WCAG 2.5.8); a TV has no touch screen and keeps the padding. */
 private val GROUP_MIN_TOUCH = 48.dp
 
@@ -317,6 +318,7 @@ private fun GroupEntry(
             .borealisFocusIndication(shape)
             .background(if (selected) colors.accentTint else Color.Transparent, shape)
             .clip(shape)
+            .selectionBar(selected, vertical = true)
             .selectable(
                 selected = selected,
                 interactionSource = null,
@@ -330,7 +332,7 @@ private fun GroupEntry(
     ) {
         Text(
             title,
-            color = if (selected) colors.accent else colors.ink2,
+            color = if (selected) colors.accentSoft else colors.ink2,
             style = MaterialTheme.typography.labelLarge,
         )
     }

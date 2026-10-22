@@ -9,15 +9,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
@@ -25,9 +25,11 @@ import io.github.magalz.borealis.designsystem.glass.GlassTextColors
 import io.github.magalz.borealis.designsystem.glass.glassSurface
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisShapes
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
+import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 
 private val LINE_GAP = 4.dp
@@ -35,6 +37,8 @@ private val DOT_GAP = 6.dp
 private val TAG_GAP = 6.dp
 private val CHIP_PADDING_HORIZONTAL = 8.dp
 private val CHIP_PADDING_VERTICAL = 2.dp
+private val SPACED_LINE_ROOM = 2.dp
+private val INK_CLEARANCE = 4.dp
 
 /**
  * A host: its [name], a status dot with [statusText], a secondary [detail] line (an address or a
@@ -54,10 +58,12 @@ private val CHIP_PADDING_VERTICAL = 2.dp
  *
  * On a TV a card is at least as high as its height token, which is the height of the fullest card
  * (online, with one row of tags and the app it runs, plus a few dp of margin), so the cards of a
- * grid are the same size whatever they show; the text stays at the top. The equal height assumes
- * one row of tags: a card whose tags wrap, or whose text needs more room (a large font), grows
- * rather than cutting it and is then taller than its neighbours. On a handheld or a phone a card is
- * as high as its content, so a short screen is not left with empty space in each card.
+ * grid are the same size whatever they show; the text stays at the top. Dense (ADR 0058, decision
+ * 7) pads the card less, and its least height is the token less what that gives back. A card whose
+ *    tags wrap, or whose text needs more room (a large font, or a narrower card in a denser
+ *    layout), grows rather than cutting it, and the Hosts screen then makes the other cards of its
+ *    row as high, so that a row has one height. On a handheld or a phone a card is as high as its
+ *    content, so a short screen is not left with empty space in each card.
  */
 @Composable
 fun HostCard(
@@ -89,8 +95,15 @@ fun HostCard(
     // Only the TV grid has its cards all the same height; a phone or a handheld, which has little
     // room to spare, sizes each card by its content.
     val height =
-        if (LocalFormFactor.current == FormFactor.Tv) BorealisTokens.Size.HostCard.HeightTv
-        else 0.dp
+        if (LocalFormFactor.current == FormFactor.Tv) {
+            // The token is the height of the fullest card with the padding of Comfortable; a
+            // smaller
+            // padding gives back its share at the top and at the bottom.
+            BorealisTokens.Size.HostCard.HeightTv -
+                (BorealisTokens.Space.CardPaddingTv - padding) * 2
+        } else {
+            0.dp
+        }
     GlassTextColors {
         HostInfo(
             name,
@@ -123,18 +136,21 @@ private fun HostInfo(
     modifier: Modifier,
 ) {
     val colors = LocalBorealisColors.current
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(LINE_GAP)) {
+    // At Wide and Wider Android breaks a line as if the spans on its spaces were not there, and the
+    // ink of a line runs past its box (see spacedLineRoom). The column keeps that much room free at
+    // its end, so that the ink stays off the border of the card.
+    val room = spacedLineRoom()
+    Column(
+        if (room > 0.dp) modifier.padding(end = room) else modifier,
+        verticalArrangement = Arrangement.spacedBy(LINE_GAP),
+    ) {
         // No limit on the lines: at a large text size a long name wraps and the card grows, where
         // an ellipsis would cut it.
         Text(name, style = MaterialTheme.typography.titleMedium)
         if (detail != null) {
-            Text(
-                detail,
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.ink3,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            // No limit on the lines, as for the name: at Wider, with the words spaced out, the
+            // detail needs a third line, and the card grows where an ellipsis would cut it.
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = colors.ink3)
         }
         if (tags.isNotEmpty()) {
             FlowRow(
@@ -170,5 +186,27 @@ private fun HostInfo(
                         ),
             )
         }
+    }
+}
+
+/**
+ * The room that the text of a card keeps free at its end, at Wide and Wider. Android wraps a spaced
+ * line as if the spans on its spaces were not there, so the ink of a line runs past its box by up
+ * to one word spacing of its style, and that grows with the text size: 12dp at Wider in the name of
+ * a phone at the largest text. The padding of the card holds part of it, and the ink keeps
+ * [INK_CLEARANCE] from the border, so the room is what the padding cannot hold, in the largest
+ * style of the card (the name's). It is never less than [SPACED_LINE_ROOM], the pixel or two that a
+ * line wraps wider than its box whatever its spacing, and it is 0 at Normal.
+ */
+@Composable
+private fun spacedLineRoom(): Dp {
+    val spacing = LocalBorealisLook.current.textSpacing
+    if (spacing == TextSpacing.Normal) return 0.dp
+    val typography = MaterialTheme.typography
+    val padding = LocalBorealisSpacing.current.cardPadding
+    return with(LocalDensity.current) {
+        val largest =
+            maxOf(typography.titleMedium.fontSize.toDp(), typography.bodySmall.fontSize.toDp())
+        maxOf(SPACED_LINE_ROOM, largest * spacing.wordEm + INK_CLEARANCE - padding)
     }
 }

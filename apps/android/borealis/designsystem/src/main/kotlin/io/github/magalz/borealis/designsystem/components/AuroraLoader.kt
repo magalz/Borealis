@@ -23,8 +23,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.theme.rememberAnimationsRemoved
 
-/** The two bands, in the 108-unit geometry of `design/icon/generate.py` (`GREEN` and `VIOLET`). */
-private const val GREEN_BAND =
+/** The two bands, in the 108-unit geometry of `design/icon/generate.py` (`TEAL` and `VIOLET`). */
+private const val TEAL_BAND =
     "M0 66C20 44 38 62 54 36C64 20 80 30 108 14L108 30C84 42 68 32 57 50C42 72 22 54 0 80Z"
 private const val VIOLET_BAND =
     "M0 76C22 56 42 74 58 52C70 38 84 46 108 36L108 48C86 56 72 50 61 62C46 80 24 64 0 88Z"
@@ -37,13 +37,16 @@ private const val GEOMETRY_HEIGHT = 82f
 private const val FILL_MILLIS = 1100
 private const val CYCLE_MILLIS = 1400
 
-private val GREEN_TOP = Color(0x6E, 0xE7, 0xB7).copy(alpha = 0.95f)
-private val GREEN_BOTTOM = Color(0x14, 0xB8, 0xA6).copy(alpha = 0.10f)
+// The teal of the accent, as the icon has it: its accent and accent-strong (`TEAL_TOP` and
+// `TEAL_BOTTOM` of `generate.py`). The loader and the icon are drawn in these colours, whatever
+// accent the viewer chooses.
+private val TEAL_TOP = Color(0x4B, 0xEC, 0xD0).copy(alpha = 0.95f)
+private val TEAL_BOTTOM = Color(0x06, 0xAF, 0x97).copy(alpha = 0.10f)
 private val VIOLET_TOP = Color(0xC4, 0xB5, 0xFD).copy(alpha = 0.85f)
 private val VIOLET_BOTTOM = Color(0x7C, 0x3A, 0xED).copy(alpha = 0.10f)
 
 /**
- * The Borealis loading indicator: the two aurora bands of the app icon, green and violet, filling
+ * The Borealis loading indicator: the two aurora bands of the app icon, teal and violet, filling
  * from the left edge to the right and starting again. It is [size] wide and as high as the bands
  * need (82/108 of the width). When the system removes animations the bands are shown full and
  * still.
@@ -51,10 +54,10 @@ private val VIOLET_BOTTOM = Color(0x7C, 0x3A, 0xED).copy(alpha = 0.10f)
 @Composable
 fun AuroraLoader(modifier: Modifier = Modifier, size: Dp = 48.dp) {
     val fill: State<Float>? = if (rememberAnimationsRemoved()) null else rememberFill()
-    val green = remember { PathParser().parsePathString(GREEN_BAND).toPath() }
+    val teal = remember { PathParser().parsePathString(TEAL_BAND).toPath() }
     val violet = remember { PathParser().parsePathString(VIOLET_BAND).toPath() }
-    val greenBrush = remember {
-        Brush.verticalGradient(listOf(GREEN_TOP, GREEN_BOTTOM), startY = 14f, endY = 80f)
+    val tealBrush = remember {
+        Brush.verticalGradient(listOf(TEAL_TOP, TEAL_BOTTOM), startY = 14f, endY = 80f)
     }
     val violetBrush = remember {
         Brush.verticalGradient(listOf(VIOLET_TOP, VIOLET_BOTTOM), startY = 36f, endY = 88f)
@@ -66,7 +69,7 @@ fun AuroraLoader(modifier: Modifier = Modifier, size: Dp = 48.dp) {
             translate(top = -GEOMETRY_TOP) {
                 clipRect(0f, 0f, filled, GEOMETRY_WIDTH) {
                     drawPath(violet, violetBrush)
-                    drawPath(green, greenBrush)
+                    drawPath(teal, tealBrush)
                 }
             }
         }

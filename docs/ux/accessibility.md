@@ -6,15 +6,19 @@ animated background is measured, the baseline measured before any fix, how the
 table that the glass of the app reads comes out of that measurement, the halo
 of the text that stands on the background, and what the icons and the text field
 on it keep. It then records the high contrast and colour-blind palettes, what the
-screen readers and the touch targets need, and a WCAG 2.2 checklist. The tool is in
-[`design/accessibility/`](../../design/accessibility/README.md); its README says
-how to run it again. The decisions that follow from the numbers are in
+screen readers and the touch targets need, and a WCAG 2.2 checklist. Sprint 11
+adds two sections before the checklist: the candidates of the accent colour
+(Accent candidates) and the halo in each candidate font (Halo per font). The
+tool is in [`design/accessibility/`](../../design/accessibility/README.md); its
+README says how to run it again. The decisions that follow from the numbers are in
 [ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md).
 
 - Date: 2026-10-20. The sections on the halo, the icons and the text field, which
   came later, carry their own date and revision. The glass table of the app was
   regenerated on 2026-10-21 at `cdd48edc`, with identical numbers: it now also
-  holds the hash of each clip.
+  holds the hash of each clip. The two sections of Sprint 11, on the accent
+  candidates and on the halo per font, were measured on 2026-10-21 and carry
+  their own revision.
 - Revision measured: `fedc4ce0`. It widens the grid of the glass candidates of
   `fec048bb`, the first measurement. The frames are those of that first
   measurement, taken with the app code of `109e7dff`, the Sprint 9 merge: the
@@ -335,6 +339,12 @@ keep 4.5:1 as they are, and the adjusted `ink-3` is no lighter than `#A8ACB1`.
 That colour is what Flowing light needs at 40%. It keeps `ink-3` clearly below
 `ink-2` (`#C3C7CC`). The effective tint of a Standard glass is the larger of the
 tint chosen in Settings and this floor.
+
+**Background intensity (Sprint 11).** A page-coloured veil is drawn under the glass, at 0, 25, 50 or
+75 % of the page colour, for the Background intensity of 100, 75, 50 or 25 %. Under High contrast the
+stronger of the veil and the dim (0.85) wins. The veil never raises the brightest pixel, so the glass
+table and the floors above stay valid. Clip pixels darker than the page are lifted toward it, so the
+veil does not only darken.
 
 | Style | 8 dp | 16 dp | 24 dp | 32 dp | 48 dp |
 | --- | --- | --- | --- | --- | --- |
@@ -850,6 +860,24 @@ Colour is not the only signal of a status (WCAG 1.4.1). The dot of a host has a 
 hollow ring for offline and unknown. The card says the status in words too, and a screen reader
 reads it in one sentence with the name.
 
+The Online dot has a soft dark shadow in the page colour, drawn outside its 10 dp box (`StatusDot`).
+It is strongest at the edge of the dot, at 85 % of the page colour, and is gone 5 dp outside the box.
+It is static, and it is not drawn under High contrast. The shadow is dark, not a glow, because a glow
+that touches the dot breaks 3:1 over bright glass. The owner chose it on 2026-10-22. Contrast of the
+dot against what is next to it, over the brightest host-card glass (luminance 0.0495), without and
+then with the shadow:
+
+| Palette | Without the shadow | With the shadow |
+| --- | --- | --- |
+| Today's | 3.79 | 5.68 |
+| Red-green | 4.56 | 6.84 |
+| Blue-yellow | 3.08 | 4.61 |
+
+On a dark card the shadow is faint. On the Apps title, which sits on the page, it does not show.
+Known limitation: the Apps title dot sits on the animated background with no glass. Its 3:1 there is
+not measured, and nothing in Sprint 11 makes it worse. The shadow is drawn round that dot too
+(`AppsScreen.kt`, the dot of a running app), so it helps there, but this is not measured.
+
 ### The colour-blind palettes
 
 The palettes take their colours from the Okabe and Ito set, which is safe for colour vision
@@ -953,6 +981,515 @@ findings are:
 | Duplicate name | The Add host button, the title and the rail item (`LibraryAccessibilityChecksTest`) | They carry one name, the role tells them apart, and the label of the button has to be the visible one (WCAG 2.5.3). |
 | Duplicate name | The Add host action of the top bar and the button of the empty state of Hosts | They do the same thing, so hearing the name twice costs nothing. |
 
+## Accent candidates (Sprint 11)
+
+Sprint 11 lets the viewer choose the accent colour (issue #50), and the owner chooses at the gate G1
+from these numbers. There are four candidate sets of the accent roles: `violet`, which is today's
+accent, and `green`, `teal` and `white`, which start from the colours of the icon (`#6EE7B7`,
+`#14B8A6` and `#F5F3FF`). [`design/accessibility/accents.json`](../../design/accessibility/accents.json)
+has the sets, with a note on how each value was derived, and `contrast.py accents` measures them.
+The tokens are not changed: the sets are proposals, and the values may still move at the gate.
+
+**Sprint 11 update.** The icon's green band became the teal in Sprint 11: `#4BECD0` at 95 % to
+`#06AF97` at 10 % ([`design/icon/README.md`](../../design/icon/README.md)). The app offers violet,
+teal and white. The `green` set is not offered. The measurements below are kept as they were taken.
+
+- Date: 2026-10-21. Revision measured: `c5e91653`, the tool; the colours of `accents.json` are
+  those of `d67fe661`, and a note of white has changed since. The frames are the 288 of the
+  baseline: the drawn backgrounds and the clips have not changed since.
+- The backgrounds are measured as they are drawn today, with their fixed violet. Sprint 11 stops
+  the drawn backgrounds from taking the accent (`AuroraBackground` draws its curtains with the
+  accent and the strong accent of the tokens), so they keep that violet, and the glass table of
+  the app (`GlassContrastTable.kt`) stays valid whichever accent is chosen.
+- `python -I design/accessibility/contrast.py accents <frames> --json <result.json> --jobs 4`
+  measures it in about nine minutes and prints Tables N to U and the checks that each set fails.
+
+### Method of the accents
+
+- **Where the accent is text.** The selected segment of a segmented control, the selected chip and
+  the selected item of the navigation rail draw their label in `accent`, on `accent-tint`, over the
+  glass. The focused outline of a text field is `accent` and its label is `accent-soft`. The accent
+  fill of a button carries `on-accent`.
+- **On the surfaces (Table O).** `on-accent` on `accent` needs 4.5:1. `accent` and `accent-soft`
+  as text need 4.5:1 on `page`, `surface` and `surface-raised` and on the tint of a selected row
+  over `surface` and over `surface-raised`. The tint is laid in whole 8 bit values, as Compose
+  draws it: that is how violet gives the 7.55 and 9.04 of the table of high contrast above and
+  of Table T.
+  `accent-strong` is given for information: it carries no text.
+- **Over the glass (Tables P to S).** The glass of each style at the default of Settings and at
+  Reduced, over every frame of both devices, and the luminance of the brightest pixel behind the
+  text. At the default the tint is the 40 % of Settings raised to the floor of the style, which
+  is worked out with the `accent-soft` of the candidate, as it is one of the colours that the
+  floor keeps at 4.5:1 (it is the same for the four: Table P). At Reduced it is 85 % at 48 dp.
+  `accent` and `accent-soft` are read as text (4.5:1) and as an outline (3:1), and the selected
+  label, `accent` over its own tint laid on that glass, as text (4.5:1). A ratio is held to its
+  limit with no margin. The glass of API 28 to 30 (85 %, no blur) is not in these tables: its
+  brightest backdrop, 0.0287 (Northern lights), is under the 0.0495 of the Standard glass over
+  Flowing light, where each proposal has its lowest ratio, and the proposals have 19 % or more
+  to spare there, so a measure of it is not likely to change a verdict.
+- **High contrast (Table T).** The opaque `accent` and `accent-soft` need 7:1 and `accent-line`
+  3:1 over every fill that text lies on: `page`, `chrome`, `surface`, `surface-raised`, the tint of
+  a selected row on `surface` and on `surface-raised`, and the hover on `surface-raised`. These
+  are the fills of `HighContrastColorsTest`. `on-accent` needs 7:1 on the high contrast accent.
+- **Distance (Table U).** The least CIEDE2000 distance of `accent` from the status colours
+  (success, warning, danger, offline), as normal vision, protanopia, deuteranopia and tritanopia
+  see them (the matrices of `ColourMeasures.kt`), for today's colours and for the red-green and
+  blue-yellow palettes. 20 or more is distinct, as in `ColourVisionPaletteTest`. It is held where
+  a palette is for the vision: today's colours for normal vision, the red-green palette for normal
+  vision, protanopia and deuteranopia, the blue-yellow palette for normal vision and tritanopia.
+  The other rows are for information. Every accent is also held to 20 from `ink` and `ink-2` as
+  normal vision sees them, whatever its chroma.
+
+### The candidates
+
+Table N. The role sets of the candidates.
+
+| Role | Violet (today) | Green | Teal | White |
+| --- | --- | --- | --- | --- |
+| `accent` | `#A78BFA` | `#78EFC7` | `#4BECD0` | `#EFF3FF` |
+| `accent-soft` | `#C4B5FD` | `#B9FFE4` | `#A2FCE8` | `#FFFFFF` |
+| `accent-strong` | `#7C3AED` | `#36B48F` | `#06AF97` | `#B4B8C4` |
+| `on-accent` | `#160B2E` | `#001710` | `#001713` | `#0E1013` |
+| `accent-tint` | `#A78BFA21` | `#78EFC721` | `#4BECD021` | `#EFF3FF21` |
+| `accent-line` | `#A78BFA66` | `#78EFC766` | `#4BECD066` | `#EFF3FF66` |
+| high contrast `accent` | `#C8B7FC` | `#78EFC7` | `#4BECD0` | `#EFF3FF` |
+| high contrast `accent-soft` | `#D6CCFE` | `#B9FFE4` | `#A2FCE8` | `#FFFFFF` |
+| high contrast `accent-line` | `#C8B7FC` | `#78EFC7` | `#4BECD0` | `#EFF3FF` |
+
+Table O. Text on the opaque fills: the contrast ratio, and the label on an accent fill. The limit of each is in its first column.
+
+| Check | Violet (today) | Green | Teal | White |
+| --- | --- | --- | --- | --- |
+| `on-accent` on `accent`, 4.50:1 | 6.88 | 13.25 | 12.55 | 17.18 |
+| `accent` on `page`, 4.50:1 | 7.00 | 13.58 | 12.89 | 17.18 |
+| `accent` on `surface`, 4.50:1 | 6.61 | 12.82 | 12.16 | 16.21 |
+| `accent` on `surface-raised`, 4.50:1 | 6.15 | 11.93 | 11.32 | 15.09 |
+| `accent` on the tint over `surface`, 4.50:1 | 5.43 | 9.46 | 9.07 | 11.42 |
+| `accent` on the tint over `surface-raised`, 4.50:1 | 5.01 | 8.67 | 8.32 | 10.31 |
+| `accent-soft` on `page`, 4.50:1 | 10.32 | 16.77 | 15.99 | 19.05 |
+| `accent-soft` on `surface`, 4.50:1 | 9.74 | 15.83 | 15.09 | 17.98 |
+| `accent-soft` on `surface-raised`, 4.50:1 | 9.06 | 14.73 | 14.04 | 16.73 |
+| `accent-soft` on the tint over `surface`, 4.50:1 | 8.01 | 11.68 | 11.25 | 12.66 |
+| `accent-soft` on the tint over `surface-raised`, 4.50:1 | 7.38 | 10.71 | 10.32 | 11.44 |
+| `accent-strong` on `page` (information) | 3.34 | 7.33 | 6.88 | 9.61 |
+| `accent-strong` on `surface` (information) | 3.15 | 6.92 | 6.49 | 9.07 |
+| `accent-strong` on `surface-raised` (information) | 2.94 | 6.44 | 6.04 | 8.44 |
+
+Table P. The glass: its tint, which is the 40 % of Settings raised to the floor of the style for the accent-soft of the candidate (85 % at Reduced), and the luminance of the brightest pixel behind the text over every frame of both devices.
+
+| Style | Glass | Violet (today) | Green | Teal | White |
+| --- | --- | --- | --- | --- | --- |
+| Aurora curtains | Standard | 40 %, 0.0222 | 40 %, 0.0222 | 40 %, 0.0222 | 40 %, 0.0222 |
+| Aurora curtains | Reduced | 85 %, 0.0103 | 85 %, 0.0103 | 85 %, 0.0103 | 85 %, 0.0103 |
+| Soft glow | Standard | 40 %, 0.0190 | 40 %, 0.0190 | 40 %, 0.0190 | 40 %, 0.0190 |
+| Soft glow | Reduced | 85 %, 0.0104 | 85 %, 0.0104 | 85 %, 0.0104 | 85 %, 0.0104 |
+| Northern lights | Standard | 70 %, 0.0378 | 70 %, 0.0378 | 70 %, 0.0378 | 70 %, 0.0378 |
+| Northern lights | Reduced | 85 %, 0.0141 | 85 %, 0.0141 | 85 %, 0.0141 | 85 %, 0.0141 |
+| Light mist | Standard | 40 %, 0.0307 | 40 %, 0.0307 | 40 %, 0.0307 | 40 %, 0.0307 |
+| Light mist | Reduced | 85 %, 0.0101 | 85 %, 0.0101 | 85 %, 0.0101 | 85 %, 0.0101 |
+| Flowing light | Standard | 40 %, 0.0495 | 40 %, 0.0495 | 40 %, 0.0495 | 40 %, 0.0495 |
+| Flowing light | Reduced | 85 %, 0.0143 | 85 %, 0.0143 | 85 %, 0.0143 | 85 %, 0.0143 |
+| Starfield | Standard | 40 %, 0.0155 | 40 %, 0.0155 | 40 %, 0.0155 | 40 %, 0.0155 |
+| Starfield | Reduced | 85 %, 0.0088 | 85 %, 0.0088 | 85 %, 0.0088 | 85 %, 0.0088 |
+
+Table Q. `accent` over the glass: text needs 4.5:1, an outline 3:1.
+
+| Style | Glass | Violet (today) | Green | Teal | White |
+| --- | --- | --- | --- | --- | --- |
+| Aurora curtains | Standard | 5.34 | 10.36 | 9.83 | 13.10 |
+| Aurora curtains | Reduced | 6.39 | 12.40 | 11.77 | 15.69 |
+| Soft glow | Standard | 5.59 | 10.85 | 10.30 | 13.72 |
+| Soft glow | Reduced | 6.39 | 12.39 | 11.76 | 15.67 |
+| Northern lights | Standard | 4.39 (outline only) | 8.52 | 8.09 | 10.78 |
+| Northern lights | Reduced | 6.02 | 11.68 | 11.09 | 14.77 |
+| Light mist | Standard | 4.78 | 9.28 | 8.81 | 11.74 |
+| Light mist | Reduced | 6.42 | 12.45 | 11.82 | 15.75 |
+| Flowing light | Standard | 3.88 (outline only) | 7.52 | 7.14 | 9.51 |
+| Flowing light | Reduced | 6.00 | 11.64 | 11.05 | 14.72 |
+| Starfield | Standard | 5.89 | 11.44 | 10.85 | 14.46 |
+| Starfield | Reduced | 6.56 | 12.72 | 12.07 | 16.09 |
+
+Table R. `accent-soft` over the glass: text 4.5:1, outline 3:1.
+
+| Style | Glass | Violet (today) | Green | Teal | White |
+| --- | --- | --- | --- | --- | --- |
+| Aurora curtains | Standard | 7.87 | 12.79 | 12.20 | 14.53 |
+| Aurora curtains | Reduced | 9.43 | 15.32 | 14.61 | 17.40 |
+| Soft glow | Standard | 8.24 | 13.40 | 12.77 | 15.22 |
+| Soft glow | Reduced | 9.42 | 15.30 | 14.59 | 17.38 |
+| Northern lights | Standard | 6.47 | 10.52 | 10.03 | 11.95 |
+| Northern lights | Reduced | 8.88 | 14.43 | 13.75 | 16.39 |
+| Light mist | Standard | 7.05 | 11.46 | 10.92 | 13.02 |
+| Light mist | Reduced | 9.46 | 15.37 | 14.66 | 17.46 |
+| Flowing light | Standard | 5.71 | 9.29 | 8.85 | 10.55 |
+| Flowing light | Reduced | 8.84 | 14.37 | 13.70 | 16.33 |
+| Starfield | Standard | 8.69 | 14.12 | 13.46 | 16.04 |
+| Starfield | Reduced | 9.67 | 15.71 | 14.98 | 17.84 |
+
+Table S. The selected label, `accent` over its tint on the glass.
+
+| Style | Glass | Violet (today) | Green | Teal | White |
+| --- | --- | --- | --- | --- | --- |
+| Aurora curtains | Standard | 4.31 (short) | 7.52 | 7.26 | 8.93 |
+| Aurora curtains | Reduced | 5.22 | 9.09 | 8.76 | 10.88 |
+| Soft glow | Standard | 4.51 | 7.89 | 7.61 | 9.36 |
+| Soft glow | Reduced | 5.21 | 9.09 | 8.76 | 10.87 |
+| Northern lights | Standard | 3.62 (short) | 6.15 | 5.92 | 7.41 |
+| Northern lights | Reduced | 4.88 | 8.49 | 8.18 | 10.13 |
+| Light mist | Standard | 3.88 (short) | 6.81 | 6.58 | 8.06 |
+| Light mist | Reduced | 5.24 | 9.14 | 8.80 | 10.94 |
+| Flowing light | Standard | 3.21 (short) | 5.55 | 5.35 | 6.63 |
+| Flowing light | Reduced | 4.86 | 8.43 | 8.12 | 10.09 |
+| Starfield | Standard | 4.77 | 8.29 | 7.99 | 9.88 |
+| Starfield | Reduced | 5.38 | 9.38 | 9.03 | 11.24 |
+
+Table T. High contrast: the lowest ratio over the fills that text lies on, the surfaces, the tint of a selected row on them and the hover, and the fill it is on. Text needs 7:1 and a border 3:1.
+
+| Check | Violet (today) | Green | Teal | White |
+| --- | --- | --- | --- | --- |
+| high contrast `accent`, 7.00:1 | 7.55 (selected row on surface-raised) | 8.67 (selected row on surface-raised) | 8.32 (selected row on surface-raised) | 10.31 (selected row on surface-raised) |
+| high contrast `accent-soft`, 7.00:1 | 9.04 (selected row on surface-raised) | 10.71 (selected row on surface-raised) | 10.32 (selected row on surface-raised) | 11.44 (selected row on surface-raised) |
+| high contrast `accent-line`, 3.00:1 | 7.55 (selected row on surface-raised) | 8.67 (selected row on surface-raised) | 8.32 (selected row on surface-raised) | 10.31 (selected row on surface-raised) |
+| `on-accent` on high contrast `accent`, 7.00:1 | 10.38 (accent) | 13.25 (accent) | 12.55 (accent) | 17.18 (accent) |
+
+Table U. The least CIEDE2000 distance of `accent` from the status colours as each vision sees them, and from the ink. 20 or more apart is distinct. A row that its palette is not for is given for information.
+
+| Check | Violet (today) | Green | Teal | White |
+| --- | --- | --- | --- | --- |
+| `accent` from the default status colours, normal vision | 23.9, offline | 21.3, success | 23.5, success | 36.1, warning |
+| `accent` from the default status colours, protanopia vision | 27.8, offline (not claimed) | 21.7, success (not claimed) | 24.0, success (not claimed) | 36.1, success (not claimed) |
+| `accent` from the default status colours, deuteranopia vision | 26.4, offline (not claimed) | 22.9, success (not claimed) | 27.7, success (not claimed) | 35.9, success (not claimed) |
+| `accent` from the default status colours, tritanopia vision | 21.0, offline (not claimed) | 17.4, success (not claimed) | 17.4, success (not claimed) | 29.8, warning (not claimed) |
+| `accent` from the red-green status colours, normal vision | 24.7, success | 30.8, warning | 29.5, success | 26.2, success |
+| `accent` from the red-green status colours, protanopia vision | 9.3, success (short) | 21.2, warning | 24.6, warning | 20.6, success |
+| `accent` from the red-green status colours, deuteranopia vision | 5.0, success (short) | 24.7, warning | 21.6, success | 24.7, success |
+| `accent` from the red-green status colours, tritanopia vision | 14.8, offline (not claimed) | 12.1, success (not claimed) | 12.0, success (not claimed) | 20.5, warning (not claimed) |
+| `accent` from the blue-yellow status colours, normal vision | 27.9, offline | 22.1, success | 21.7, success | 31.5, offline |
+| `accent` from the blue-yellow status colours, protanopia vision | 26.6, offline (not claimed) | 21.2, warning (not claimed) | 21.7, success (not claimed) | 31.6, offline (not claimed) |
+| `accent` from the blue-yellow status colours, deuteranopia vision | 25.9, offline (not claimed) | 22.6, success (not claimed) | 23.0, offline (not claimed) | 31.4, offline (not claimed) |
+| `accent` from the blue-yellow status colours, tritanopia vision | 14.8, offline (short) | 21.3, success | 21.1, success | 20.5, warning |
+| `accent` from `ink`, normal vision | 28.9, ink | 24.9, ink | 25.4, ink | 4.5, ink (short) |
+| `accent` from `ink-2`, normal vision | 21.9, ink-2 | 25.1, ink-2 | 25.0, ink-2 | 10.6, ink-2 (short) |
+
+### What the tables show
+
+- **Violet, today's accent.**
+  - It keeps the text and the high contrast checks: the lowest on the surfaces is 5.01:1 (`accent`
+    on its tint over `surface-raised`), and high contrast is 7.55 for `accent` and 9.04 for
+    `accent-soft`, the figures of the table of high contrast above.
+  - Over the glass `accent-soft` keeps 5.71:1 or more everywhere, and `accent` keeps its 3:1 as an
+    outline everywhere, but as text at the default it is 4.39:1 over Northern lights and 3.88:1
+    over Flowing light, short of 4.5:1. The selected label is short at the default over four of the
+    six styles: 4.31 over Aurora curtains, 3.62 over Northern lights, 3.88 over Light mist and
+    3.21 over Flowing light. Soft glow (4.51) and Starfield (4.77) keep it, and at Reduced it is
+    4.86 or more over all.
+  - It is not told from the status colours by a dichromat: a protanope and a deuteranope see
+    it 9.3 and 5.0 from the sky blue success of the red-green palette, and a tritanope 14.8 from
+    the grey offline of the blue-yellow palette. Those three rows fail the 20.
+- **The icon's band is the teal now.** In Sprint 11 the green band of the app icon became the teal
+  (`#4BECD0` at 95 % to `#06AF97` at 10 %). The figures of this bullet are the record of the
+  candidates as they were measured, and they are not changed.
+- **The icon colours as they are do not pass.** Measured with the tool, with the same ladder of
+  roles and over the Flowing light frames (the brightest glass), the icon green `#6EE7B7` is 18.5
+  from the success green of today's palette, 19.2 from the warning yellow of the red-green palette
+  as a protanope sees it, and 19.3 from the success of the blue-yellow palette as a tritanope sees
+  it. The icon teal
+  `#14B8A6` is 4.24:1 as text over the Flowing light glass at the default and 3.52:1 as a selected
+  label, its high contrast `accent` and `accent-soft` are 5.45 and 6.97:1, and it is 19.7, 15.2,
+  11.5, 11.7 and 8.9 from the status colours in the default palette, the red-green palette as a
+  protanope and a deuteranope sees it, and the blue-yellow palette as normal vision and a tritanope
+  sees it. The icon star `#F5F3FF` is 17.3 from the warning yellow of the blue-yellow palette as a
+  tritanope sees it, which sees that yellow as a pale pink.
+- **Green, teal and white are the nearest colours of each hue that pass.** Green `#78EFC7` is 2.9
+  CIEDE2000 from the icon green; teal `#4BECD0` is lightened to L\* 85 (13.0 from the icon teal),
+  and the white is `#EFF3FF`, 2.9 from the star. The soft, strong, on-accent and the tint and
+  line follow the ladder of violet, and `accents.json` says how for each. The floors of the glass
+  do not change.
+  - **Green** fails no check. Over the glass the lowest is 7.52:1 for `accent`, 9.29:1 for
+    `accent-soft` and 5.55:1 for the selected label, all over Flowing light at the default. High
+    contrast keeps 8.67:1. The least distance is 21.2, from the warning yellow of the red-green
+    palette as a protanope sees it.
+  - **Teal** fails no check. The lowest over the glass is 7.14, 8.85 and 5.35:1, high contrast keeps
+    8.32:1, and the least distance is 21.1, from the success of the blue-yellow palette as a
+    tritanope sees it.
+  - **White** fails two checks, which no value passes (below). The lowest over the glass is 9.51,
+    10.55 and 6.63:1, high contrast keeps 10.31:1 and its least distance from a status colour is
+    20.5.
+- **The distances have the least to spare.** Over the glass every ratio of the three proposals is
+  at least 19 % over its limit, and on the surfaces at least 85 %, but the distances are 20.5 to
+  21.2 against 20. The model of colour vision is an approximation, so a value that moves at the gate
+  should keep the distance in sight (`contrast.py accents` with another `accents.json`).
+- **Why the proposals are light.** An accent has to be read as text over the brightest glass of
+  the Standard default, 0.0495 (Flowing light), at 4.5:1, which needs a luminance of 0.40
+  (L\* 69.5), and as the label of a selected item over its own tint, which makes that backdrop
+  about 40 % brighter and needs about 0.5 (L\* 76). The distances from the status colours push it
+  higher still: a search of the hues from green to cyan (124 to 216 degrees) found colours that
+  pass every check only at L\* 80 and over.
+
+### Checks that no value can pass
+
+- **White and the ink.** An accent with no chroma is told from `ink` (`#E8EAED`) and `ink-2`
+  (`#C3C7CC`) by its lightness alone. A neutral that is light enough to be read as text over the
+  Standard glass (L\* 69.5, and 4.5:1 over Flowing light) is at most 19.7 from `ink` and 16.6 from
+  `ink-2`, and none is more than 15.0 from both, so `distance:ink` and `distance:ink-2` fail for any
+  white. The bounds are sampled: every colour of CIELAB chroma under 10 and L\* 69.5 or more, each
+  channel of sRGB from 130 to 255 in steps of 1. The accent of such a set is told from the ink by
+  its fill, with the label on it at 17.18:1, and by its tint, and not by its colour. They are the
+  `known_fails` of the set.
+- **Violet and the dichromats.** The three rows that violet fails (`distance:red-green:protanopia`,
+  `distance:red-green:deuteranopia` and `distance:blue-yellow:tritanopia`) are the violet of
+  today, which a protanope and a deuteranope see as blue and a tritanope as grey. They are the
+  `known_fails` of violet, and green and teal pass them.
+- **The checks that need a frame** are not in `known_fails`: a test keeps the other checks of each
+  set equal to the file, and the glass ones of violet are in the tables above.
+
+### What the app draws (Sprint 11)
+
+- **Selected labels use `accent-soft`.** The selected label of a segment, a chip, a rail item, a
+  Settings group and a choice sheet, the text button label, the current step number and the latched
+  key label use `accent-soft`, not `accent`. Over the glass it keeps 4.5:1 in every accent. The lowest
+  is 4.74:1, violet over Flowing light at the default (Table W). The old violet `accent` gave 3.21:1
+  there (Table S).
+- **White marks the selection.** Its colour alone is too close to the text colour to show a selection,
+  so the selected item has a 3 dp indicator bar. The bar is at the start edge: the left in
+  left-to-right layouts and the right in right-to-left layouts.
+- **`accent-inverse`.** The snackbar action is drawn in `accent-inverse` on the light inverse surface
+  (`ink`). Violet `#7C3AED`, teal `#027464` and white `#636671` are each 4.73:1 or more on `ink`. In
+  High contrast, `#5744A9`, `#026053` and `#51555F` are each 7.46:1 or more on white.
+
+### Table W: the selected label (`selected-soft`)
+
+Table W. The selected label of the app: `accent-soft` over its tint on the glass, as text. Text needs
+4.5:1. Green is a candidate that the app does not offer.
+
+| Style | Glass | Violet (today) | Green | Teal | White |
+| --- | --- | --- | --- | --- | --- |
+| Aurora curtains | Standard | 6.35 | 9.28 | 9.00 | 9.90 |
+| Aurora curtains | Reduced | 7.69 | 11.23 | 10.86 | 12.07 |
+| Soft glow | Standard | 6.65 | 9.74 | 9.45 | 10.38 |
+| Soft glow | Reduced | 7.68 | 11.22 | 10.86 | 12.06 |
+| Northern lights | Standard | 5.33 | 7.60 | 7.34 | 8.22 |
+| Northern lights | Reduced | 7.19 | 10.48 | 10.15 | 11.24 |
+| Light mist | Standard | 5.71 | 8.41 | 8.16 | 8.93 |
+| Light mist | Reduced | 7.72 | 11.28 | 10.92 | 12.13 |
+| Flowing light | Standard | 4.74 | 6.86 | 6.64 | 7.35 |
+| Flowing light | Reduced | 7.17 | 10.41 | 10.08 | 11.19 |
+| Starfield | Standard | 7.03 | 10.23 | 9.92 | 10.96 |
+| Starfield | Reduced | 7.93 | 11.59 | 11.21 | 12.47 |
+
+## Halo per font (Sprint 11)
+
+Sprint 11 adds a choice of font in which every font has an accessibility purpose (issue #48), and
+the halo of [Halo](#halo-text-straight-on-the-background) is one for all of them. This section
+measures whether it keeps the contrast of the text in each candidate font, and in the monospaced
+companion of each that has one, as the app will draw them: the text set at the size of the tokens
+times the scale that sets the x-height of the font to that of IBM Plex Sans.
+
+- Date: 2026-10-21. Revision measured: `c5e91653`, the tool and `design/tokens.json` as they are
+  after the merge of the TV text size (#47) and the change of the scale to the drawn x. The frames
+  are the 288 of the baseline. Andika, B612 and B612 Mono were measured at that revision, and Lexend
+  again as a control, which gave the same rows. The other five sets are those of `84c85c96`: the
+  scale of each is the same under the drawn x, so a new run would give the same rows. The fonts are
+  in a folder of their own and not in the repository: the files below were passed to the tool by
+  path, and the SHA-256 of each is given by its first 12 digits.
+- **The text sizes are those of Sprint 11.** On a TV the body is 16 sp and the label, the least text
+  of a TV, is 13 sp, and the title (24 sp) and the small text (14.5 sp) are as they were; on a phone
+  the sizes are as they were (18, 14, 11 and 12.5 sp). The older Tables D to F above are the record
+  of Sprint 10, measured at 15 and 12 sp for the body and the label of a TV, and they stay as they
+  are: the row of IBM Plex Sans in Table V is the same halo at the new sizes, so it is not Table E.
+  At the old sizes the lowest case of Plex was 5.32:1 (the body of a TV), and at the new sizes it is
+  5.16:1 (the label of a TV).
+- `python -I design/accessibility/contrast.py halo <frames> --json <font.json> --fonts <manifest.json> --jobs 4` measures one font in about two to three minutes. The README of the tool says how to make the manifest and what the options do.
+- The halo is the one that the app draws, stroke 3 dp, blur 2 dp and opacity 80 %, and the question
+  is whether it keeps `ink` and `ink-2` at 4.5:1 for the label, the body, the small text and the
+  title of a phone, and `ink` at 3:1 for the title of a TV, with 2 % to spare, over every
+  background, as the section Halo has it.
+- The sets are the owner's: IBM Plex Sans as the baseline and five more sans fonts, and three
+  monospaced fonts, with IBM Plex Mono as the baseline of the monospaced ones. OpenDyslexic and
+  OpenDyslexic Mono were measured at the Sprint 10 sizes and are out of the set (owner, 2026-10-21):
+  they are not in this section.
+
+### The fonts and their scale
+
+| Font | Kind | Regular and SHA-256 (first 12) | Semibold and SHA-256 | Licence |
+| --- | --- | --- | --- | --- |
+| IBM Plex Sans 1.1.0 | sans | `ibm_plex_sans_regular.ttf` `975dcda37d80` | `ibm_plex_sans_semibold.ttf` `a20caf828602` | OFL 1.1 (in the repository) |
+| Atkinson Hyperlegible Next 2.001 | sans | `AtkinsonHyperlegibleNext-Regular.ttf` `88ed5c31a715` | `AtkinsonHyperlegibleNext-SemiBold.ttf` `8e2fff779f35` | OFL 1.1 |
+| Lexend 1.008 | sans | `Lexend-Regular.ttf` `e2082c28389e` | `Lexend-SemiBold.ttf` `204875848cc7` | OFL 1.1 |
+| Andika 7.000 | sans | `Andika-Regular.ttf` `27484fdc98d0` | `Andika-SemiBold.ttf` `73c4df767769` | OFL 1.1 |
+| B612 1.008 | sans | `B612-Regular.ttf` `139dce659100` | `B612-Bold.ttf` `91749541ac7b` | OFL 1.1 |
+| Luciole | sans | `Luciole-Regular.ttf` `4c75513464f2` | `Luciole-Bold.ttf` `254e958919dd` | CC BY 4.0 |
+| IBM Plex Mono 2.5.0 | mono | `ibm_plex_mono_regular.ttf` `7c6fbddca4b7` | `ibm_plex_mono_semibold.ttf` `f04d7c488ddf` | OFL 1.1 (in the repository) |
+| Atkinson Hyperlegible Mono 2.001 | mono | `AtkinsonHyperlegibleMono-Regular.ttf` `2c9a7b9fabeb` | `AtkinsonHyperlegibleMono-SemiBold.ttf` `6dafae0d4cd6` | OFL 1.1 |
+| B612 Mono 1.008 | mono | `B612Mono-Regular.ttf` `b98cb96cc8a6` | `B612Mono-Bold.ttf` `b467b1d19fda` | OFL 1.1 |
+
+The semibold roles (the title and the label) use the SemiBold where the font has one, and the Bold
+where it has not (B612, B612 Mono and Luciole), which is the face that Compose picks for a weight
+of 600. None of the fonts is a variable font; the tool sets the weight of one with `fvar`, but no
+number below depends on it.
+
+The scale is the x-height of IBM Plex Sans (0.516 of the em) over that of the regular face, both as
+drawn: the tool measures the height of the x at 1000 px, because the app draws the x. The
+`sxHeight` of the OS/2 table is given as a cross-check. It agrees to the thousandth for six of the
+nine fonts. The drawn x of Andika is 1.7 % under its table, and those of B612 and B612 Mono are
+1.6 and 1.8 % over theirs, and their scales follow the x (1.034, 0.923 and 0.921, where the table
+would give 1.016, 0.938 and 0.938). The scale is the same at any text size, so it does not change
+with the sizes of Sprint 11.
+
+| Font | Drawn x (em) | OS/2 sxHeight (em) | Drawn against table | Scale | Semibold face |
+| --- | --- | --- | --- | --- | --- |
+| IBM Plex Sans 1.1.0 | 0.516 | 0.516 | +0.0 % | 1.000 | SemiBold |
+| Atkinson Hyperlegible Next 2.001 | 0.496 | 0.496 | +0.0 % | 1.040 | SemiBold |
+| Lexend 1.008 | 0.525 | 0.525 | +0.0 % | 0.983 | SemiBold |
+| Andika 7.000 | 0.499 | 0.508 | -1.7 % | 1.034 | SemiBold |
+| B612 1.008 | 0.559 | 0.550 | +1.6 % | 0.923 | Bold |
+| Luciole | 0.545 | 0.545 | +0.0 % | 0.947 | Bold |
+| IBM Plex Mono 2.5.0 | 0.516 | 0.516 | +0.0 % | 1.000 | SemiBold |
+| Atkinson Hyperlegible Mono 2.001 | 0.496 | 0.496 | +0.0 % | 1.040 | SemiBold |
+| B612 Mono 1.008 | 0.560 | 0.550 | +1.8 % | 0.921 | Bold |
+
+### The halo of the app in each font
+
+Table V. The halo of the app (stroke 3 dp, blur 2 dp, opacity 80 %) in each font at the Sprint 11
+sizes: the lowest ratio over every background, device and text style, as Table D has it for Plex:
+`ink` and `ink-2` for small text (4.5:1) and `ink` for large text (the title of a TV, 3:1). Then the
+lowest case, how far it is over its limit, whether the halo keeps every ratio with 2 % to spare, and
+the smallest candidate of the grid that does for that font alone.
+
+| Font | `ink`, small | `ink-2`, small | `ink`, large | Lowest case | Over its limit | Keeps | Smallest for the font |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| IBM Plex Sans 1.1.0 | 7.27 | 5.16 | 7.26 | 5.16, `ink-2`, label, TV, Northern lights | 15 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| Atkinson Hyperlegible Next 2.001 | 7.44 | 5.28 | 7.61 | 5.28, `ink-2`, body, TV, Northern lights | 17 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| Lexend 1.008 | 7.27 | 5.16 | 7.18 | 5.16, `ink-2`, body, TV, Northern lights | 15 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| Andika 7.000 | 7.20 | 5.11 | 7.60 | 5.11, `ink-2`, label, TV, Northern lights | 14 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| B612 1.008 | 7.02 | 4.98 | 7.24 | 4.98, `ink-2`, body, TV, Northern lights | 11 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| Luciole | 7.42 | 5.27 | 7.54 | 5.27, `ink-2`, small, TV, Northern lights | 17 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| IBM Plex Mono 2.5.0 | 7.17 | 5.09 | 7.16 | 5.09, `ink-2`, label, TV, Northern lights | 13 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| Atkinson Hyperlegible Mono 2.001 | 7.15 | 5.07 | 7.44 | 5.07, `ink-2`, body, TV, Northern lights | 13 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+| B612 Mono 1.008 | 7.08 | 5.02 | 7.37 | 5.02, `ink-2`, body, TV, Northern lights | 12 % | yes | stroke 3 dp, blur 2 dp, opacity 80 % |
+
+### What it shows
+
+- **The halo of the app still keeps the contrast in every font.** All 9 sets, 6 sans and 3
+  monospaced, keep every ratio at stroke 3 dp, blur 2 dp and opacity 80 % with 2 % to spare, and so
+  with none. The lowest case is 4.98:1, `ink-2` in the body of a TV over Northern lights in B612
+  1.008, 11 % over its limit, and the highest of the lowest cases is 5.28:1 in Atkinson Hyperlegible
+  Next 2.001. Every set has `ink-2` over Northern lights as its lowest case. The lowest `ink-2` of
+  small text is 4.98 to 5.28:1 over the sets, `ink` for small text is 7.0:1 or more, and the title
+  of a TV in `ink`, which needs 3:1, is 7.1:1 or more.
+- **No smaller halo works for any of them.** The smallest candidate of the grid that keeps the
+  ratios is the same as Plex's for each font, stroke 3 dp, blur 2 dp, opacity 80 %, so it is also
+  the smallest that keeps every font at once. The halo of the app does not have to change for any
+  font of the list, at the sizes of Sprint 10 or of Sprint 11.
+- **The sizes of Sprint 11 move the lowest case by a few points, either way.** The label of a TV is
+  13 sp and the body 16 sp, so the ring that the halo has to cover is not the same. The lowest case
+  of Plex is 5.16:1 against 5.32:1 at the old sizes, 15 % against 18 % over the limit. Over the 9
+  sets the margin over the limit moved by -6.7 to +1.5 points of that percentage (the lowest `ink-2`
+  of a font is not always in the same text style, and the scales of Andika and B612 changed), and it
+  is 10.7 % or more everywhere.
+- **High contrast does not depend on the font or on the size.** Under it the dim of the page at 0.85
+  gives 12.00:1 for `ink-2` and 14.46:1 for `ink` over every pixel of every background with no halo
+  at all (Tables G and H), which is a property of the pixels and not of the glyphs, and a halo only
+  raises them, so no font or size can bring the loose text under 7:1. The icons do not use a font.
+
+### Not covered
+
+- The Medium (500) of Atkinson, Lexend and Andika: the model sets the small text, which has the size
+  of the rail items, in the regular face.
+- Hinting and rasterising: as in the section Halo, the sample is drawn at four times its size and
+  brought down by the mean of each block, as Android does not hint it. The FreeType 2.14.3 of Pillow
+  12.2.0 draws every face; Android draws with Skia, so a small difference at the edge of a glyph is
+  possible, which the 2 % to spare is for.
+- The numbers are the model of the halo and not a device: the halo has not been seen with these
+  fonts.
+
+## Text spacing (Sprint 11)
+
+Sprint 11 adds the Text spacing row, with the levels Normal, Wide and Wider, to the Accessibility
+group (issue #49, [ADR 0058](../adr/0058-appearance-and-reading-options.md), decision 4). Wide
+meets the minimums of WCAG 1.4.12. Wider goes beyond them for the spaces between words.
+
+### Text spacing: the values
+
+| Level | Letter spacing | Word spacing | Line height |
+| --- | --- | --- | --- |
+| Normal | the design | the design | the design |
+| Wide | 0.12 em | 0.16 em | 1.5 |
+| Wider | 0.18 em | 0.5 em | 1.5 |
+
+Each value is a minimum, in em of the font size of the style. A style that has more of its own
+keeps it, so the unit does not matter. The gap at a space is the letter spacing of the space plus
+the word spacing of the level. The values are in `TextSpacing` (`theme/BorealisLook.kt`), and
+`TextStyle.spaced` in `theme/BorealisType.kt` applies them.
+
+### Text spacing: how the spacing is drawn
+
+- The design-system `Text` (`components/Text.kt`) adds a span on each space of the text. The
+  semantics text stays the original string, so TalkBack reads the words as before.
+- A detekt `ForbiddenImport` (`apps/android/config/detekt/detekt.yml`) keeps Material's `Text`
+  out of the code. Only `Text.kt` imports it.
+- A text that a component builds itself takes the level too, through `BorealisType.spaced(style)`:
+  the chips, the step numbers, the performance overlay, the rail version and the font picker
+  preview.
+- Typed text in a text field gets no word spacing. The labels of the field do.
+- A non-breaking space gets no word spacing, and no app string uses one.
+
+### Text spacing: word-to-letter gap ratios
+
+The gap at a space, over the gap between two letters, by font and level. The values are from the
+s11-text-spacing measurement; they were not run again for this document.
+
+| Font | Normal | Wide | Wider |
+| --- | --- | --- | --- |
+| IBM Plex Sans | 2.42 | 2.81 | 3.65 |
+| Atkinson Hyperlegible Next | 3.00 | 3.15 | 4.00 |
+| Luciole | 2.97 | 3.12 | 3.88 |
+| Lexend | 3.07 | 3.20 | 4.05 |
+| Andika | 3.35 | 3.34 | 4.22 |
+| B612 | 3.67 | 3.52 | 4.27 |
+| System font | 2.85 | 3.08 | 3.95 |
+
+### Text spacing: fit coverage
+
+- Every font at Normal and at Wider, and IBM Plex Sans at Wide, at 130 % text size times the
+  system font scale of 1.3: 540 runs, no failure.
+- The 200 % system font size is tested at Normal only. See the known limitations below.
+
+### Text spacing: layout changes
+
+A layout that does not fit at Wide or Wider is changed rather than cut:
+
+- a value row stacks its value under the text when the longest word does not fit;
+- a slider's value takes at most 40 % of its row;
+- the host detail line wraps;
+- the key captions keep a lower floor at Wider.
+
+### Text spacing: known limitations
+
+- The 200 % system font size is tested at Normal only. A probe at Wider found 18 fit failures: one
+  in IBM Plex Sans (Pairing on a TV), and the rest in the other fonts, on Hosts, Apps and
+  Appearance among others. It is a backlog item in the roadmap.
+- At Wide and Wider, the line ends of a wrapped text can draw up to one word spacing past their
+  box: about 12 px in IBM Plex Sans at Wider, and up to 23 px at the largest TV text in the system
+  font. The review found no text cut. The ink lands in the padding or in the gaps.
+- The key caption floor can reach about 6.8 sp at Wider on a 320 dp phone, so that "Enter" and
+  "Shift" fit. The owner has not yet decided whether to keep it.
+- A non-breaking space gets no word spacing, and no app string uses one.
+
+### Card density
+
+Card density (issue #51, [ADR 0058](../adr/0058-appearance-and-reading-options.md), decision 7)
+adds one column to the hosts and apps in Compact and in Dense, and cuts the card padding in Dense.
+The invariants hold in every density: the touch targets, the gaps between the cards, the gutter of
+the screen and the TV focus scale do not change.
+
+Known limitations of the density:
+
+- App names under a cover are one line with an ellipsis, as before Sprint 11. The fit tests cannot
+  see them, because the name hides its own semantics (`CoverTile.kt`). At the largest text in
+  Compact or Dense on a phone, only a few letters remain: "Des…" or "Stea…" on a 4-column phone.
+- The Continue card breaks words by character at the largest text with Wider on a phone.
+
 ## WCAG 2.2 checklist
 
 The criteria that Sprint 10 touched, and how each is met. Level AA is the target of every screen,
@@ -961,11 +1498,12 @@ and AAA (1.4.6) for the text of High contrast.
 | Criterion | Level | How it is met |
 | --- | --- | --- |
 | 1.3.1 Info and Relationships | A | Headings, pane titles, one sentence for a host card and a pairing step, a role and an Expanded or Collapsed state for the sections of the phone Settings (`*TalkBackTest`). |
-| 1.4.1 Use of Color | A | A shape for each status of the dot, and a text beside it. The palettes keep the colours apart for dichromats (`StatusDotTest`, `ColourVisionPaletteTest`). |
+| 1.4.1 Use of Color | A | A shape for each status of the dot, and a text beside it. The palettes keep the colours apart for dichromats (`StatusDotTest`, `ColourVisionPaletteTest`). The Online shadow of Sprint 11 is a contrast aid, not a status cue. The Running badge of a cover is the dot and its label when the label fits on one line. On a phone with 4 columns the label never fits, so the badge is the dot alone: its shape and presence, the tile's TalkBack state "Running" and the Apps header "`<app>` running" carry the status. |
 | 1.4.3 Contrast (Minimum) | AA | Text on the opaque surfaces (Table B), on glass through the tint floors and the adapted secondary ink (Table C and the floors), on the background through the halo (Tables D to F), and in the Add host field (Tables L and M). |
 | 1.4.4 Resize Text | AA | Text size 100, 115 or 130 % times the system scale, and tests at a font scale of 2.0 (`LargeTextFitTest`). |
 | 1.4.6 Contrast (Enhanced) | AAA | High contrast: 7:1 or more for the text roles on every fill, and for the loose text over every background (Tables G and H). |
-| 1.4.11 Non-text Contrast | AA | The offline ring at 3.25:1 or more, the icons on the background through the halo (Tables I to K), the outlines of the text field (Tables L and M), the opaque borders of High contrast. |
+| 1.4.12 Text Spacing | AA | The Text spacing row: Wide sets 0.12 em of letter spacing, 0.16 em of word spacing and a line height of 1.5, the minimums of the criterion, and Wider sets 0.5 em of word spacing. The spaces are drawn apart in every font (`WordGapTest`, `TextWordSpacingTest`), and the layouts that do not fit at Wide or Wider are changed (`TextFitTest`). The 200 % system font size is tested at Normal only (see text spacing: known limitations). |
+| 1.4.11 Non-text Contrast | AA | The offline ring at 3.25:1 or more, the icons on the background through the halo (Tables I to K), the outlines of the text field (Tables L and M), the opaque borders of High contrast, and the Online dot with its shadow: 5.68:1 over the brightest host-card glass (3.79:1 without it, today's palette). The Apps title dot on the animated background is not measured (a known limitation, see the status dot). |
 | 2.1.1 Keyboard | A | The D-pad and a gamepad reach every control; OK on a Settings group enters its pane, and the licence text and the Audit detail scroll with the D-pad. |
 | 2.2.2 Pause, Stop, Hide | A | The animated background is the only decorative moving content; it stops with Reduce motion On, the system's Remove animations or the battery saver, and the background Off is the plain page. Progress indicators are not covered yet (roadmap backlog). |
 | 2.4.3 Focus Order | A | The traversal order of every screen is tested (`readingOrder`), and the focus goes back to the card that had it after Back from Apps. |
@@ -977,6 +1515,6 @@ and AAA (1.4.6) for the text of High contrast.
 | 4.1.2 Name, Role, Value | A | The ATF checks every main screen for names, roles and duplicate names; the groups of Settings are tabs, and the segments have the label of their group. |
 | 4.1.3 Status Messages | AA | Polite live regions for pairing outcomes, Add host errors, the notices of the snackbars and the Quitting text. |
 
-Not assessed here: 1.4.10 Reflow, 1.4.12 Text Spacing and 2.4.11 Focus Not Obscured. TalkBack on a
+Not assessed here: 1.4.10 Reflow and 2.4.11 Focus Not Obscured. TalkBack on a
 device is a step of the runbook, and the halo and the tint-only glass have not been seen on API 28
 to 30.

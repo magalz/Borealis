@@ -4,15 +4,18 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.FitCase
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
+import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
 import io.github.magalz.borealis.settings.testing.InGlassHost
+import io.github.magalz.borealis.settings.testing.dialogFrame
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
@@ -21,9 +24,10 @@ import org.robolectric.annotation.Config
  * Every text must fit where it is, or the pane scrolls: none runs past its width, is cut off at the
  * bottom or ends in an ellipsis.
  */
-@RunWith(AndroidJUnit4::class)
-class SettingsTextSizeFitTest : SettingsScreenTestBase() {
-    private val largest = BorealisLook(textSize = TextSize.Largest)
+@RunWith(ParameterizedRobolectricTestRunner::class)
+class SettingsTextSizeFitTest(case: FitCase) : SettingsScreenTestBase() {
+    private val largest =
+        BorealisLook(textSize = TextSize.Largest, font = case.font, textSpacing = case.spacing)
 
     private fun showLargest(
         formFactor: FormFactor,
@@ -81,6 +85,17 @@ class SettingsTextSizeFitTest : SettingsScreenTestBase() {
     }
 
     @Test
+    @Config(qualifiers = TV, fontScale = SYSTEM_SCALE)
+    fun `the link dialog with its QR code on a TV fits`() {
+        showLargest(FormFactor.Tv, SettingsGroupId.ABOUT)
+        composeRule.onNodeWithText("Privacy policy").performClick()
+        composeRule.waitForIdle()
+        composeRule.dialogFrame("Privacy policy").assertExists()
+
+        assertFits()
+    }
+
+    @Test
     @Config(qualifiers = HANDHELD, fontScale = SYSTEM_SCALE)
     fun `Stream settings on a handheld fit`() {
         showLargest(FormFactor.Handheld, SettingsGroupId.STREAM)
@@ -118,7 +133,11 @@ class SettingsTextSizeFitTest : SettingsScreenTestBase() {
         assertFits()
     }
 
-    private companion object {
-        const val SYSTEM_SCALE = 1.3f
+    companion object {
+        @JvmStatic
+        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun cases(): List<FitCase> = fitCases()
+
+        private const val SYSTEM_SCALE = 1.3f
     }
 }

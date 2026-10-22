@@ -7,10 +7,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.theme.AccentChoice
+import io.github.magalz.borealis.designsystem.theme.BackgroundIntensity
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
+import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.ColourVision
+import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.designsystem.theme.TextSize
+import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.catalog.Settings
@@ -83,6 +88,64 @@ internal object LookLists {
             ),
         )
 
+    val FONT =
+        LookList(
+            Settings.FONT,
+            listOf(
+                LookChoice(Settings.FONT_PLEX, FontChoice.Plex),
+                LookChoice(Settings.FONT_ATKINSON_NEXT, FontChoice.AtkinsonNext),
+                LookChoice(Settings.FONT_LUCIOLE, FontChoice.Luciole),
+                LookChoice(Settings.FONT_LEXEND, FontChoice.Lexend),
+                LookChoice(Settings.FONT_ANDIKA, FontChoice.Andika),
+                LookChoice(Settings.FONT_B612, FontChoice.B612),
+                LookChoice(Settings.FONT_SYSTEM, FontChoice.System),
+            ),
+        )
+
+    val ACCENT =
+        LookList(
+            Settings.ACCENT,
+            listOf(
+                LookChoice(Settings.ACCENT_VIOLET, AccentChoice.Violet),
+                LookChoice(Settings.ACCENT_TEAL, AccentChoice.Teal),
+                LookChoice(Settings.ACCENT_WHITE, AccentChoice.White),
+            ),
+        )
+
+    /**
+     * The intensities of the background: the id is the percent, from the strongest to the least.
+     */
+    val BACKGROUND_INTENSITY =
+        LookList(
+            Settings.BACKGROUND_INTENSITY,
+            listOf(
+                LookChoice("100", BackgroundIntensity.Full),
+                LookChoice("75", BackgroundIntensity.ThreeQuarters),
+                LookChoice("50", BackgroundIntensity.Half),
+                LookChoice("25", BackgroundIntensity.Quarter),
+            ),
+        )
+
+    val CARD_DENSITY =
+        LookList(
+            Settings.CARD_DENSITY,
+            listOf(
+                LookChoice(Settings.CARD_DENSITY_COMFORTABLE, CardDensity.Comfortable),
+                LookChoice(Settings.CARD_DENSITY_COMPACT, CardDensity.Compact),
+                LookChoice(Settings.CARD_DENSITY_DENSE, CardDensity.Dense),
+            ),
+        )
+
+    val TEXT_SPACING =
+        LookList(
+            Settings.TEXT_SPACING,
+            listOf(
+                LookChoice(Settings.TEXT_SPACING_NORMAL, TextSpacing.Normal),
+                LookChoice(Settings.TEXT_SPACING_WIDE, TextSpacing.Wide),
+                LookChoice(Settings.TEXT_SPACING_WIDER, TextSpacing.Wider),
+            ),
+        )
+
     /** The glass tints in percent, from the most see-through to the most opaque. */
     val GLASS_TINT =
         LookList(
@@ -104,6 +167,11 @@ internal object LookLists {
             TRANSPARENCY,
             TEXT_SIZE,
             COLOUR_VISION,
+            FONT,
+            ACCENT,
+            BACKGROUND_INTENSITY,
+            CARD_DENSITY,
+            TEXT_SPACING,
             GLASS_TINT,
             GLASS_BLUR,
         )
@@ -123,6 +191,11 @@ fun borealisLook(snapshot: SettingsSnapshot): BorealisLook =
         textSize = LookLists.TEXT_SIZE.valueIn(snapshot),
         highContrast = snapshot[Settings.HIGH_CONTRAST],
         colourVision = LookLists.COLOUR_VISION.valueIn(snapshot),
+        font = LookLists.FONT.valueIn(snapshot),
+        accent = LookLists.ACCENT.valueIn(snapshot),
+        backgroundIntensity = LookLists.BACKGROUND_INTENSITY.valueIn(snapshot),
+        cardDensity = LookLists.CARD_DENSITY.valueIn(snapshot),
+        textSpacing = LookLists.TEXT_SPACING.valueIn(snapshot),
     )
 
 /**

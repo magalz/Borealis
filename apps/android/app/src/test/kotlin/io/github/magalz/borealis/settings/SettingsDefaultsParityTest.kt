@@ -69,6 +69,11 @@ class SettingsDefaultsParityTest {
                 Settings.TEXT_SIZE,
                 Settings.HIGH_CONTRAST,
                 Settings.COLOUR_VISION,
+                Settings.FONT,
+                Settings.ACCENT,
+                Settings.BACKGROUND_INTENSITY,
+                Settings.CARD_DENSITY,
+                Settings.TEXT_SPACING,
             )
     }
 

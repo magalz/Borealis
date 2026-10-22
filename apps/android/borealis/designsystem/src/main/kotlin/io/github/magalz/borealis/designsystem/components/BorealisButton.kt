@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,7 +79,7 @@ internal fun ButtonFace(
             BorealisButtonStyle.Primary -> colors.onAccent
             BorealisButtonStyle.Secondary -> colors.ink
             BorealisButtonStyle.Danger -> colors.dangerInk
-            BorealisButtonStyle.Text -> colors.accent
+            BorealisButtonStyle.Text -> colors.accentSoft
         }
     Box(
         modifier

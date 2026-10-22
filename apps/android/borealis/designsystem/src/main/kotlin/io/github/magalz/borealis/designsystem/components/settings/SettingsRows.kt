@@ -10,7 +10,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.MenuRow
+import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import kotlin.math.roundToInt
@@ -36,7 +36,7 @@ enum class SettingsRowTone {
 }
 
 private val CONTENT_GAP = 12.dp
-private const val VALUE_MAX_SHARE = 0.4f
+internal const val VALUE_MAX_SHARE = 0.4f
 
 /**
  * A row with a [title], an optional [summary] and a switch at the end. A tap or OK toggles it by
@@ -147,7 +147,8 @@ fun SettingsValueRow(
     tone: SettingsRowTone = SettingsRowTone.Normal,
     onClickLabel: String? = null,
 ) {
-    Row(
+    RowTextWithTrailing(
+        CONTENT_GAP,
         modifier
             .settingsRowSurface()
             .then(
@@ -168,8 +169,22 @@ fun SettingsValueRow(
                 }
             )
             .settingsRowSize(),
-        horizontalArrangement = Arrangement.spacedBy(CONTENT_GAP),
-        verticalAlignment = Alignment.CenterVertically,
+        trailing =
+            listOfNotNull<@Composable () -> Unit>(
+                value?.let { { ValueText(it, enabled) } },
+                if (tone == SettingsRowTone.Normal) {
+                    {
+                        Icon(
+                            BorealisIcons.ChevronRight,
+                            contentDescription = null,
+                            modifier = Modifier.size(ROW_ICON_SIZE),
+                            tint = LocalBorealisColors.current.ink3,
+                        )
+                    }
+                } else {
+                    null
+                },
+            ),
     ) {
         SettingsRowText(
             title,
@@ -177,17 +192,7 @@ fun SettingsValueRow(
             note = disabledNote,
             enabled = enabled,
             tone = tone,
-            modifier = Modifier.weight(1f),
         )
-        if (value != null) ValueText(value, enabled)
-        if (tone == SettingsRowTone.Normal) {
-            Icon(
-                BorealisIcons.ChevronRight,
-                contentDescription = null,
-                modifier = Modifier.size(ROW_ICON_SIZE),
-                tint = LocalBorealisColors.current.ink3,
-            )
-        }
     }
 }
 
@@ -199,14 +204,14 @@ fun SettingsValueRow(
  */
 @Composable
 fun SettingsInfoRow(title: String, value: String, modifier: Modifier = Modifier) {
-    Row(
+    RowTextWithTrailing(
+        CONTENT_GAP,
         modifier
             .settingsRowSurface()
             .focusable()
             .semantics(mergeDescendants = true) {}
             .settingsRowSize(),
-        horizontalArrangement = Arrangement.spacedBy(CONTENT_GAP),
-        verticalAlignment = Alignment.CenterVertically,
+        trailing = listOf { ValueText(value, enabled = true) },
     ) {
         SettingsRowText(
             title,
@@ -214,9 +219,7 @@ fun SettingsInfoRow(title: String, value: String, modifier: Modifier = Modifier)
             note = null,
             enabled = true,
             tone = SettingsRowTone.Normal,
-            modifier = Modifier.weight(1f),
         )
-        ValueText(value, enabled = true)
     }
 }
 
@@ -237,7 +240,7 @@ private fun ValueText(value: String, enabled: Boolean) {
  * Limits the width to [share] of what the parent offers. A Row measures a child without weight
  * first, with all of its width on offer, so the value is limited before the title takes the rest.
  */
-private fun Modifier.maxWidthShare(share: Float): Modifier = layout { measurable, constraints ->
+internal fun Modifier.maxWidthShare(share: Float): Modifier = layout { measurable, constraints ->
     val limit = (constraints.maxWidth * share).roundToInt().coerceAtLeast(constraints.minWidth)
     val placeable = measurable.measure(constraints.copy(maxWidth = limit))
     layout(placeable.width, placeable.height) { placeable.place(0, 0) }

@@ -98,6 +98,9 @@ targets of 48 dp on a phone and a handheld.
 2. Whatever the palette, a status is not told by colour alone: the dot of a host
    is a filled circle for online, a filled triangle for attention, and a hollow
    ring for offline and unknown. The card says it in words too.
+3. The Online dot has a soft dark shadow in the page colour (Sprint 11). It is static,
+   and it is not drawn under High contrast. It keeps the dot apart from the glass
+   under it ([accessibility](../ux/accessibility.md#the-offline-colour-and-the-status-shapes)).
 
 ### A7: The user uses TalkBack (Sprint 10; any step)
 
@@ -119,6 +122,21 @@ targets of 48 dp on a phone and a handheld.
    settings list, a chip and the handle of a sheet. A TV has no touch screen, so
    it keeps its sizes.
 
+### A8: Text spacing (Sprint 11; branches from step 3)
+
+1. The Accessibility group has a Text spacing row, after Text size, with three
+   choices: Normal (the default), Wide and Wider. The system stores the id under
+   `borealis_text_spacing` (`normal`, `wide` or `wider`).
+2. Wide sets the letter spacing to 0.12 em, the word spacing to 0.16 em and the line
+   height to 1.5. Wider sets 0.18 em, 0.5 em and 1.5. A style keeps its own spacing
+   where it is larger. The word spacing is drawn by the design-system `Text`, which
+   adds a span on each space. TalkBack reads the original text. Typed text gets no word
+   spacing, and the labels of text fields do. Where a layout does not fit at Wide or
+   Wider, it is changed rather than cut: a value row stacks its value under the text
+   when the longest word does not fit, a slider's value is limited to 40 % of its row,
+   the host detail line wraps, and the key captions keep a lower floor at Wider. The
+   known limits are in [accessibility](../ux/accessibility.md#text-spacing-known-limitations).
+
 ## Postconditions
 
 - On success: the choice is stored and shown in the Library and Settings at once.
@@ -130,6 +148,7 @@ targets of 48 dp on a phone and a handheld.
 
 UC-010-T1 to T14 are Sprint 10 tests (Compose tests run on Robolectric).
 UC-010-T15 is the Sprint 10 device round.
+UC-010-T16 and T17 are Sprint 11 rows.
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
@@ -138,7 +157,7 @@ UC-010-T15 is the Sprint 10 device round.
 | UC-010-T3 | Given Reduce motion Follow system, On or Off, when the system animation scale or the setting changes, then the animations are removed or kept as the rule says, while the content is shown. | UI | exists (Sprint 10, UI): `ReducedMotionTest` |
 | UC-010-T4 | Given High contrast, when the colours are read, then every text role is 7:1 or more on the page, the surfaces and the selected rows, the borders are opaque and 3:1 or more, and a palette composes with it. | unit | exists (Sprint 10, unit): `HighContrastColorsTest` |
 | UC-010-T5 | Given a colour-blind palette, when the status colours are read, then every pair is 20 or more apart in CIEDE2000 for the dichromacies it is for, each colour is 3:1 or more, and the status inks are 7:1 or more (the bar of the test; 9.2:1 measured). | unit | exists (Sprint 10, unit): `ColourVisionPaletteTest` |
-| UC-010-T6 | Given a status, when the dot is drawn, then it is a filled circle, a filled triangle or a hollow ring, whatever the colour. | UI | exists (Sprint 10, UI): `StatusDotTest` |
+| UC-010-T6 | Given a status, when the dot is drawn, then it is a filled circle, a filled triangle or a hollow ring, whatever the colour. | UI | exists (Sprint 10, UI): `StatusDotTest`; the Online shadow (Sprint 11) is in the same test class |
 | UC-010-T7 | Given Thicker focus outline or High contrast, when an item has the focus, then the outline is 5 dp, starts 2 dp outside the item, is in ink, and keeps 3:1 over the page, the surface and the brightest backdrop of every glass. | UI | exists (Sprint 10, UI): `ThickFocusOutlineTest` |
 | UC-010-T8 | Given a look, a background and an API level, when the glass is made, then Standard, Reduced, Off, High contrast and the plain page give the glass of ADR 0057, and a TV runs the drawn background at 24 frames a second only while the blur is drawn. | unit | exists (Sprint 10, unit): `GlassRulesTest` |
 | UC-010-T9 | Given a stream starts, when the look is read, then it is the look that the settings store, and the chrome screens draw with the look that the host was built with. | unit, UI | exists (Sprint 10): `StreamSessionFactoryLookTest`, `StreamChromeHostLookTest` |
@@ -148,6 +167,8 @@ UC-010-T15 is the Sprint 10 device round.
 | UC-010-T13 | Given a phone or a handheld, when the segments, the groups, the chips and the sheet handle are measured, then they are 48 dp; given a TV, then they keep their sizes. | UI | exists (Sprint 10, UI): `TouchTargetTest` |
 | UC-010-T14 | Given a font scale of 2.0, when the Library, Settings, Privacy, the Audit trail and the components are shown, then no text is cut or ends in an ellipsis. | UI | exists (Sprint 10, UI): `LargeTextFitTest`, `SettingsLargeTextFitTest`, `AuditLargeTextFitTest` |
 | UC-010-T15 | Given the Streamer and the S22, when the user changes each Accessibility setting and uses TalkBack, then each holds. | device | checked in part in the Sprint 10 round of 2026-10-21 (section 3.23, results in section 15); the visual items and TalkBack are the owner's |
+| UC-010-T16 | Given the Accessibility group, when the user chooses Text spacing (Normal, Wide or Wider), then the choice is stored under `borealis_text_spacing` as `normal`, `wide` or `wider`, the text draws the letter and word spacing of A8 (Wide 0.12 em and 0.16 em, Wider 0.18 em and 0.5 em), the line height is at least 1.5 at Wide and Wider, TalkBack reads the original text, and a layout that does not fit at Wide or Wider is changed rather than cut, as in A8. | UI, unit | exists (Sprint 11, UI and unit): `TextSpacingTypographyTest`, `TextSpacingThemeTest`, `TextWordSpacingTest`, `WordGapTest`, `SettingsTextSpacingTest` |
+| UC-010-T17 | Given an Online host, when its dot is drawn, then a soft dark shadow in the page colour lies round the dot, outside its box, it is static, and it is not drawn under High contrast. | UI | exists (Sprint 11, UI): `StatusDotTest` |
 
 Not covered by a test: the traversal links that TalkBack follows (Robolectric
 cannot see them), a visible snackbar (no check covers it), and the halo and the

@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,10 +22,11 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
-import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisType
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.stream.StreamIntents
@@ -101,10 +101,9 @@ fun ConnectionErrorScreen(
 @Composable
 private fun SupportLines(failure: StreamFailure) {
     val style =
-        MaterialTheme.typography.bodySmall.copy(
-            fontFamily = BorealisFonts.Mono,
-            color = LocalBorealisColors.current.ink3,
-        )
+        LocalBorealisType.current
+            .codes(MaterialTheme.typography.bodySmall)
+            .copy(color = LocalBorealisColors.current.ink3)
     Column(verticalArrangement = Arrangement.spacedBy(SUPPORT_LINE_GAP)) {
         Text(failure.rawCode, style = style)
         failure.portHint?.let { Text(it, style = style) }

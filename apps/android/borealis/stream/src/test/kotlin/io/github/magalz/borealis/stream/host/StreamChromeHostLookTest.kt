@@ -4,12 +4,14 @@ import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.testing.textLayout
+import io.github.magalz.borealis.designsystem.theme.AccentChoice
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.ColourVision
@@ -97,6 +99,18 @@ class StreamChromeHostLookTest {
     }
 
     @Test
+    fun `the screens of the chrome have the accent that the host was built with`() {
+        val chosen = BorealisLook(accent = AccentChoice.Teal)
+
+        showChrome(chosen)
+
+        // The number of the step that is under way is drawn in the soft accent, on the accent tint.
+        assertThat(composeRule.textColor(CURRENT_STEP)).isEqualTo(Color(0xFFA2FCE8))
+        assertThat(composeRule.textColor(CURRENT_STEP)).isEqualTo(borealisColors(chosen).accentSoft)
+        assertThat(composeRule.textColor(CURRENT_STEP)).isNotEqualTo(BorealisColors().accentSoft)
+    }
+
+    @Test
     fun `a host built with no look draws its screens with the default look`() {
         showChrome(null)
 
@@ -106,6 +120,7 @@ class StreamChromeHostLookTest {
 
     private companion object {
         const val HOST_NAME = "Gaming PC"
+        const val CURRENT_STEP = "1"
         const val EPSILON = 0.001f
     }
 }

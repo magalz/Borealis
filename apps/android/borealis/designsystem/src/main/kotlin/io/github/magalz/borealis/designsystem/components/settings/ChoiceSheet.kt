@@ -13,7 +13,6 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -28,18 +27,30 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.OverlaySheet
+import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.ignoreKeysHeldOnOpen
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
+import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
+import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
+import io.github.magalz.borealis.designsystem.theme.borealisTypography
 
 /**
  * One choice of a [ChoiceSheet]: the [key] it returns, its [label] and an optional [summary] under
- * the label.
+ * the label. A [labelFont] draws the label in that font, at the size that the app has in it, so a
+ * choice of fonts shows each name as the app would draw it. The summary stays in the font of the
+ * app.
  */
-class ChoiceOption<out T>(val key: T, val label: String, val summary: String? = null)
+class ChoiceOption<out T>(
+    val key: T,
+    val label: String,
+    val summary: String? = null,
+    val labelFont: FontChoice? = null,
+)
 
 private val CONTENT_PADDING = 20.dp
 /**
@@ -53,9 +64,10 @@ private val MARK_GAP = 12.dp
 
 /**
  * A modal list of choices for one setting, such as Resolution or Frame rate: [options] under a
- * [title], with the one whose key is [selected] marked and holding the initial focus (the first
- * option when none is selected). On a phone it is a bottom sheet; on a TV or handheld a centred
- * dialog, 420dp wide on a TV and a fraction of the window on a handheld (see
+ * [title], with the one whose key is [selected] marked, by the accent tint and by its label and a
+ * check in the soft accent (which keep 4.5:1 over the tint on the glass), and holding the initial
+ * focus (the first option when none is selected). On a phone it is a bottom sheet; on a TV or
+ * handheld a centred dialog, 420dp wide on a TV and a fraction of the window on a handheld (see
  * [BorealisDimens.sheetWidth]). The list scrolls and the title stays when the window is too short
  * for all of it. Over a glass host that blurs its window the sheet draws no scrim, its surface is
  * the tint of the glass over the blurred window, and its text has the glass colours.
@@ -136,6 +148,12 @@ private fun <T> OptionRow(
 ) {
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.medium
+    val formFactor = LocalFormFactor.current
+    val spacing = LocalBorealisLook.current.textSpacing
+    val labelStyle =
+        remember(option.labelFont, formFactor, spacing) {
+            option.labelFont?.let { borealisTypography(formFactor, it, spacing).titleMedium }
+        } ?: MaterialTheme.typography.titleMedium
     Row(
         modifier
             .fillMaxWidth()
@@ -156,8 +174,8 @@ private fun <T> OptionRow(
         Column(Modifier.weight(1f)) {
             Text(
                 option.label,
-                style = MaterialTheme.typography.titleMedium,
-                color = if (selected) colors.accent else colors.ink,
+                style = labelStyle,
+                color = if (selected) colors.accentSoft else colors.ink,
             )
             if (option.summary != null) {
                 Text(
@@ -172,7 +190,7 @@ private fun <T> OptionRow(
                 BorealisIcons.Check,
                 contentDescription = null,
                 modifier = Modifier.size(ROW_ICON_SIZE),
-                tint = colors.accent,
+                tint = colors.accentSoft,
             )
         }
     }

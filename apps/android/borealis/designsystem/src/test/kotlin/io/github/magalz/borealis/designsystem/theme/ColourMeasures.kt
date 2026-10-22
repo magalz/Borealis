@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.designsystem.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import io.github.magalz.borealis.designsystem.glass.contrast
 import io.github.magalz.borealis.designsystem.glass.luminance
 import kotlin.math.abs
@@ -28,10 +29,32 @@ internal fun contrastRatio(a: Color, b: Color): Double =
     max(contrast(a, luminance(b)), contrast(b, luminance(a)))
 
 /**
- * The kinds of dichromacy of the Machado, Oliveira and Fernandes (2009) model at severity 1.0. This
- * is the only copy of the model in the repository: the contrast tool of `design/accessibility/` has
- * none. A matrix acts on linear RGB; each row adds up to 1, so white and the greys are seen as they
- * are.
+ * The fills that text lies on, as the contrast tests of the colours check them: the page, the
+ * chrome and the surfaces, the same under the tint of a selected row (on a surface and on a raised
+ * one), and a hover on a raised surface.
+ */
+internal fun textBackdrops(colors: BorealisColors): Map<String, Color> {
+    val surfaces =
+        mapOf(
+            "page" to colors.page,
+            "chrome" to colors.chrome,
+            "surface" to colors.surface,
+            "surface-raised" to colors.surfaceRaised,
+        )
+    val selected =
+        mapOf("surface" to colors.surface, "surface-raised" to colors.surfaceRaised).mapKeys {
+            "selected row on ${it.key}"
+        }
+    return surfaces +
+        selected.mapValues { colors.accentTint.compositeOver(it.value) } +
+        mapOf("hover on surface-raised" to colors.hover.compositeOver(colors.surfaceRaised))
+}
+
+/**
+ * The kinds of dichromacy of the Machado, Oliveira and Fernandes (2009) model at severity 1.0. The
+ * contrast tool of `design/accessibility/` has a copy of the model (`contrast.py`), and
+ * `KotlinColourMeasuresTest` in its tests keeps the matrices and the constants of the two equal. A
+ * matrix acts on linear RGB; each row adds up to 1, so white and the greys are seen as they are.
  */
 internal enum class Dichromacy(val matrix: List<List<Double>>) {
     Protanopia(

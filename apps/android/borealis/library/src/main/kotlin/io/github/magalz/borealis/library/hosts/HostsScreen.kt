@@ -49,6 +49,7 @@ import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
 
@@ -253,8 +254,9 @@ private fun HostsBody(
                 )
             }
         } else {
-            val columns = hostGridColumns(formFactor, maxWidth.value.toInt())
-            HostGrid(state, columns, startFocus, handlers)
+            val density = LocalBorealisLook.current.cardDensity
+            val columns = hostGridColumns(formFactor, maxWidth.value.toInt(), density)
+            HostGrid(state, formFactor, columns, startFocus, handlers)
         }
     }
 }
@@ -264,6 +266,7 @@ private fun LazyGridItemSpanScope.fullWidth() = GridItemSpan(maxLineSpan)
 @Composable
 private fun HostGrid(
     state: HostsUiState,
+    formFactor: FormFactor,
     columns: Int,
     startFocus: StartFocus?,
     handlers: HostsHandlers,
@@ -274,6 +277,7 @@ private fun HostGrid(
     val cardKeys = remember(state.continueItems, state.items) { state.cardKeys() }
     val restoredCard = startFocus?.cardKey?.takeIf { it in cardKeys }
     val gridState = rememberLazyGridState()
+    val rows = rememberHostRows(state.items, formFactor, columns)
     ScrollToCard(gridState, state, restoredCard, startFocus?.state)
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
@@ -320,7 +324,8 @@ private fun HostGrid(
         itemsIndexed(state.items, key = { _, item -> item.id }) { index, item ->
             val first = index == 0 && state.continueItems.isEmpty()
             val start = startFocus.startingAt(hostKey(item.id), restoredCard, first)
-            HostItem(item, handlers, optionsLabel, unnamedApp, Modifier.withStartFocus(start))
+            val modifier = Modifier.inHostRow(rows, index, item.id).withStartFocus(start)
+            HostItem(item, handlers, optionsLabel, unnamedApp, modifier)
         }
     }
 }

@@ -257,6 +257,73 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `each list of Sprint 11 stores the stable id of the chosen entry`() = runTest {
+        val viewModel = viewModel()
+        val ids =
+            mapOf(
+                SettingsItem.FONT to listOf("atkinson_next", "luciole", "lexend", "system"),
+                SettingsItem.ACCENT to listOf("teal", "white"),
+                SettingsItem.BACKGROUND_INTENSITY to listOf("75", "50", "25"),
+                SettingsItem.CARD_DENSITY to listOf("compact", "dense"),
+                SettingsItem.TEXT_SPACING to listOf("wide", "wider"),
+            )
+
+        for ((item, values) in ids) {
+            for (id in values) {
+                viewModel.onChoiceSelected(item, id)
+                advanceUntilIdle()
+
+                assertThat(repository.writes).contains(Write(item.setting!!, id))
+                assertThat(item.selectedChoiceKey(viewModel.uiState.value.snapshot)).isEqualTo(id)
+            }
+        }
+    }
+
+    @Test
+    fun `an entry that a list of Sprint 11 does not offer is not stored`() = runTest {
+        val viewModel = viewModel()
+        val items =
+            listOf(
+                SettingsItem.FONT,
+                SettingsItem.ACCENT,
+                SettingsItem.BACKGROUND_INTENSITY,
+                SettingsItem.CARD_DENSITY,
+                SettingsItem.TEXT_SPACING,
+            )
+
+        for (item in items) {
+            viewModel.onChoiceSelected(item, "bogus")
+            viewModel.onChoiceSelected(item, "")
+        }
+        viewModel.onChoiceSelected(SettingsItem.FONT, "Lexend")
+        viewModel.onChoiceSelected(SettingsItem.BACKGROUND_INTENSITY, "60")
+        advanceUntilIdle()
+
+        assertThat(repository.writes).isEmpty()
+    }
+
+    @Test
+    fun `an unknown stored id of a list of Sprint 11 shows the default as the chosen one`() =
+        runTest {
+            stored(
+                Settings.FONT to "bogus",
+                Settings.ACCENT to "bogus",
+                Settings.BACKGROUND_INTENSITY to "60",
+                Settings.CARD_DENSITY to "bogus",
+                Settings.TEXT_SPACING to "bogus",
+            )
+            val snapshot = viewModel().uiState.value.snapshot
+
+            assertThat(SettingsItem.FONT.selectedChoiceKey(snapshot)).isEqualTo("plex")
+            assertThat(SettingsItem.ACCENT.selectedChoiceKey(snapshot)).isEqualTo("violet")
+            assertThat(SettingsItem.BACKGROUND_INTENSITY.selectedChoiceKey(snapshot))
+                .isEqualTo("100")
+            assertThat(SettingsItem.CARD_DENSITY.selectedChoiceKey(snapshot))
+                .isEqualTo("comfortable")
+            assertThat(SettingsItem.TEXT_SPACING.selectedChoiceKey(snapshot)).isEqualTo("normal")
+        }
+
+    @Test
     fun `changing the resolution stores it and then returns the bitrate to automatic`() = runTest {
         stored(Settings.BITRATE_KBPS to 30_000)
         val viewModel = viewModel()
@@ -563,8 +630,9 @@ class SettingsViewModelTest {
 
 /**
  * The groups and rows of the table in `docs/ux/phase-2-proposal.md#settings-groups`, the Appearance
- * group that Sprint 9 added after Advanced, the glass rows that Sprint 10 added to it and the
- * Accessibility group after it.
+ * group that Sprint 9 added after Advanced, the glass rows that Sprint 10 added to it, the
+ * Accessibility group after it, and the font, accent colour, background intensity, card density and
+ * text spacing rows of Sprint 11.
  */
 private val UC_009_ROWS =
     linkedMapOf(
@@ -630,13 +698,22 @@ private val UC_009_ROWS =
                 SettingsItem.PICTURE_IN_PICTURE,
             ),
         SettingsGroupId.APPEARANCE to
-            listOf(SettingsItem.BACKGROUND, SettingsItem.GLASS_TINT, SettingsItem.GLASS_BLUR),
+            listOf(
+                SettingsItem.FONT,
+                SettingsItem.ACCENT,
+                SettingsItem.BACKGROUND,
+                SettingsItem.BACKGROUND_INTENSITY,
+                SettingsItem.CARD_DENSITY,
+                SettingsItem.GLASS_TINT,
+                SettingsItem.GLASS_BLUR,
+            ),
         SettingsGroupId.ACCESSIBILITY to
             listOf(
                 SettingsItem.REDUCE_MOTION,
                 SettingsItem.TRANSPARENCY,
                 SettingsItem.THICK_FOCUS,
                 SettingsItem.TEXT_SIZE,
+                SettingsItem.TEXT_SPACING,
                 SettingsItem.HIGH_CONTRAST,
                 SettingsItem.COLOUR_VISION,
             ),

@@ -127,8 +127,15 @@ targets of 48 dp on a phone and a handheld.
 1. The Accessibility group has a Text spacing row, after Text size, with three
    choices: Normal (the default), Wide and Wider. The system stores the id under
    `borealis_text_spacing` (`normal`, `wide` or `wider`).
-2. What each choice changes is not described here yet (TODO(verify): pass 2 of
-   Sprint 11).
+2. Wide sets the letter spacing to 0.12 em, the word spacing to 0.16 em and the line
+   height to 1.5. Wider sets 0.18 em, 0.5 em and 1.5. A style keeps its own spacing
+   where it is larger. The word spacing is drawn by the design-system `Text`, which
+   adds a span on each space. TalkBack reads the original text. Typed text gets no word
+   spacing, and the labels of text fields do. Where a layout does not fit at Wide or
+   Wider, it is changed rather than cut: a value row stacks its value under the text
+   when the longest word does not fit, a slider's value is limited to 40 % of its row,
+   the host detail line wraps, and the key captions keep a lower floor at Wider. The
+   known limits are in [accessibility](../ux/accessibility.md#text-spacing-known-limitations).
 
 ## Postconditions
 

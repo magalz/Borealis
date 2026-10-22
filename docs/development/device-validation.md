@@ -1324,8 +1324,8 @@ Steps:
 
 Run these with the Sprint 11 build on the Google TV Streamer and on the S22. Sprint 11
 changed the TV text size, the fonts, the accent colour, the Online dot, the background
-intensity, the About links on a TV and the Sprint 10 follow-ups. The Text spacing and
-Card density steps are a placeholder at the end of this section; they are added later.
+intensity, the About links on a TV, the text spacing, the card density and the Sprint 10
+follow-ups. Steps 8 and 9 cover the text spacing and the card density.
 Record each item as `pass`, `fail`, `owner check` or `not applicable`, with a short
 note for each `fail`. Where a step names one device, run it there only.
 
@@ -1396,10 +1396,34 @@ Steps:
    - The rail footer with the version: section 3.23, step 6.
    - The repeated paths in `design/icon/generate.py` are build tooling. They have no
      device step.
-8. Text spacing and card density (placeholder, pass 2).
-   - TODO(verify): steps for the Text spacing row (Normal, Wide, Wider) and for the Card
-     density row (Comfortable, Compact, Dense). Pass 2 of Sprint 11 fills them.
-9. End with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the Streamer.
+8. Text spacing (Streamer, S22).
+   - Settings, Accessibility, Text spacing: Normal, Wide and Wider. Choose Wide, then
+     Wider. Expected: the words of Hosts, Settings and Privacy sit further apart than
+     their letters, and the chips, the step numbers, the performance overlay, the rail
+     version and the font picker preview take the spacing too. No text is cut or ends in
+     an ellipsis. Owner check.
+   - Expected at Wider: a value row of Settings stacks its value under the text when the
+     longest word does not fit, and a slider value takes at most 40 % of its row.
+   - Stream on a narrow phone at Wider, at the largest text: the keyboard's chips go under
+     the shortcuts when they would leave less than a quarter of the row, and the
+     performance overlay scales down to the room it has. Both stay readable. Owner check.
+   - Expected: the text fields show no word spacing while typing; their labels do.
+   - Set Text spacing back to Normal.
+9. Card density (Streamer, S22).
+   - Settings, Appearance, Card density: Comfortable, Compact and Dense. Expected: Hosts
+     and Apps show one column more at Compact and at Dense: 4 hosts and 6 apps on the
+     TV, against 3 and 5 at Comfortable.
+   - Dense: the card padding is smaller, the Continue cover on Hosts is 44 dp, and the
+     cards of a row on the TV have the same height. The gutter of the screen is the same.
+     Owner check.
+   - Change the density with a card focused. Expected: the screen re-lays out at once and
+     the focus stays on the same card.
+   - S22 at the largest text in Dense: the host detail line wraps, and a Running badge
+     with no room for its label shows its dot alone. Known limitation, not a fail: an app
+     name under a cover stays one line with an ellipsis, so a long name is cut at the
+     largest text on a 4-column phone.
+   - Set Card density back to Comfortable.
+10. End with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the Streamer.
 
 ## 4. Results templates
 

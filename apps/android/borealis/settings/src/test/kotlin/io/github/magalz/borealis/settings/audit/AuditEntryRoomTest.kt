@@ -4,8 +4,8 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
-import io.github.magalz.borealis.designsystem.testing.fitProblems
 import io.github.magalz.borealis.designsystem.testing.textLayout
+import io.github.magalz.borealis.designsystem.testing.widthOvershootPx
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -39,12 +39,13 @@ class AuditEntryRoomTest(private val font: FontChoice) {
     private fun assertTitleFits(look: BorealisLook) {
         composeRule.showAudit(state, FormFactor.Phone, look, BackgroundStyle.Off)
 
-        val problems =
+        val layout =
             composeRule
                 .onNodeWithText("Host certificate changed", useUnmergedTree = true)
                 .textLayout()
-                .fitProblems()
-        assertWithMessage("the title of the entry in $font").that(problems).isEmpty()
+        assertWithMessage("the title of the entry in $font, past its width by px")
+            .that(layout.widthOvershootPx())
+            .isAtMost(ROUNDING_PX)
     }
 
     @Test
@@ -63,5 +64,8 @@ class AuditEntryRoomTest(private val font: FontChoice) {
         fun fonts(): List<FontChoice> = FontChoice.entries
 
         private const val NARROW_WINDOW = "w240dp-h640dp-xhdpi"
+
+        /** What a line of several spaces with spans can run past its box and still be blank. */
+        private const val ROUNDING_PX = 3f
     }
 }

@@ -16,7 +16,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.tvHostCardWidth
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
+import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import org.junit.Rule
@@ -83,6 +85,27 @@ class HostCardSizeTest {
         assertThat(offline).isLessThan(online)
         assertThat(bare).isLessThan(offline)
         assertThat(online).isLessThan(BorealisTokens.Size.HostCard.HeightTv)
+    }
+
+    @Test
+    fun `in the Compact layout no card is lower than the token`() =
+        assertNoCardLowerThanToken(CardDensity.Compact)
+
+    @Test
+    fun `in the Dense layout no card is lower than the token`() =
+        assertNoCardLowerThanToken(CardDensity.Dense)
+
+    /**
+     * The cards of a denser layout are narrower, so the fullest one needs more than the token. The
+     * token is still the least that any card has: the cards that need less keep it.
+     */
+    private fun assertNoCardLowerThanToken(density: CardDensity) {
+        showAll(FormFactor.Tv, tvHostCardWidth(density))
+
+        Variant.entries.forEach {
+            assertThat(height(it)).isAtLeast(BorealisTokens.Size.HostCard.HeightTv)
+        }
+        assertThat(height(Variant.Bare)).isEqualTo(BorealisTokens.Size.HostCard.HeightTv)
     }
 
     @Test fun `the fullest card fits within the token`() = assertFullestCardFits()

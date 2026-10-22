@@ -11,7 +11,7 @@ import androidx.compose.ui.test.requestFocus
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.FitCase
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
-import io.github.magalz.borealis.designsystem.testing.fitCases
+import io.github.magalz.borealis.designsystem.testing.cardFitCases
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
@@ -34,14 +34,20 @@ import org.robolectric.annotation.Config
  * The Library screens at the largest text: the Text size setting at 130 percent over a system font
  * scale of 1.3, which is 1.69 of the text that the screens are laid out for (ADR 0057, decision
  * 11). Every text must fit where it is: none runs past its width, is cut off at the bottom or ends
- * in an ellipsis, where the screen has the room for it or scrolls.
+ * in an ellipsis, where the screen has the room for it or scrolls. The cards of Hosts and Apps are
+ * also at each Card density, in IBM Plex and in Andika (ADR 0058, decision 7).
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 class TextSizeFitTest(case: FitCase) {
     @get:Rule val composeRule = createComposeRule()
 
     private val largest =
-        BorealisLook(textSize = TextSize.Largest, font = case.font, textSpacing = case.spacing)
+        BorealisLook(
+            textSize = TextSize.Largest,
+            font = case.font,
+            textSpacing = case.spacing,
+            cardDensity = case.density,
+        )
 
     @Test
     @Config(qualifiers = PHONE, fontScale = SYSTEM_SCALE)
@@ -160,7 +166,7 @@ class TextSizeFitTest(case: FitCase) {
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun cases(): List<FitCase> = fitCases()
+        fun cases(): List<FitCase> = cardFitCases()
 
         private const val SYSTEM_SCALE = 1.3f
     }

@@ -496,7 +496,8 @@ that [ADR 0058](adr/0058-appearance-and-reading-options.md) records.
     - the system font.
   - All fonts are bundled in the APK, from their official releases, with no
     subsetting. The survey checks the licence and the size of each.
-- **Text spacing.** A new row in the Accessibility group: Normal, Wide or Wider.
+- **Text spacing.** Done (issue #49, [ADR 0058](adr/0058-appearance-and-reading-options.md),
+  decision 4). A new row in the Accessibility group: Normal, Wide or Wider.
   It widens the spacing between letters, between words and between lines, after
   WCAG 1.4.12. More space between letters and words together is what helped
   readers with dyslexia in controlled studies; fonts made for dyslexia did not.
@@ -508,8 +509,9 @@ that [ADR 0058](adr/0058-appearance-and-reading-options.md) records.
   chip and rail item drew their label in `accent`, which was 3.88:1 over Flowing
   light and 4.39:1 over Northern lights; they now use `accent-soft` (measured as the focused outline in
   [accessibility, Table L](ux/accessibility.md)).
-- **Card density:** Comfortable, Compact or Dense. Not done (issue #51): the row and its
-  three choices exist; the behaviour is pass 2.
+- **Card density:** Done (issue #51, [ADR 0058](adr/0058-appearance-and-reading-options.md),
+  decision 7). Comfortable, Compact or Dense: one column more in Compact and Dense, and less
+  card padding in Dense.
 - **Background intensity.** Done (issue #52, [ADR 0058](adr/0058-appearance-and-reading-options.md),
   decision 8). A page-coloured veil under the glass, at 0, 25, 50 or 75 %. It never
   raises the brightest pixel, so the glass floors stay valid.
@@ -791,6 +793,9 @@ The owner creates the tag. See the [release procedure](development/release.md).
 
 - **Deferred RTSP parser rework.** The moonlight-common-c rework `aeba988` is
   deferred by the owner. See the [third-party notes](../core/third_party/README.md).
+
+- **Text spacing at the 200 % system font size.** 18 fit failures at Wider in a probe, tested at
+  Normal only. See [accessibility, text spacing](ux/accessibility.md#text-spacing-known-limitations).
 
 From the Sprint 9 quality review. None of these changes behaviour. Sprint 10
 (item 11) took the deprecated `FocusProperties.enter`, the copied spacing

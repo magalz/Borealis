@@ -73,7 +73,7 @@ class AccentBackgroundTest {
     @Test
     fun `a drawn background has the same pixels with high contrast as the violet of the tokens`() {
         showBackground()
-        val high = BorealisColors().withHighContrast()
+        val high = BorealisColors().withHighContrast(AccentChoice.Violet)
 
         for (shown in drawn) {
             assertWithMessage("$shown")

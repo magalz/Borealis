@@ -60,7 +60,7 @@ class BorealisThemeLookEffectsTest {
     fun `high contrast gives the content the high contrast colours`() {
         show(BorealisLook(highContrast = true))
 
-        val high = BorealisColors().withHighContrast()
+        val high = BorealisColors().withHighContrast(AccentChoice.Violet)
         assertThat(colors).isEqualTo(high)
         assertThat(contentColor).isEqualTo(high.ink)
     }
@@ -69,7 +69,7 @@ class BorealisThemeLookEffectsTest {
     fun `high contrast gives the Material components the high contrast colours too`() {
         show(BorealisLook(highContrast = true))
 
-        val high = BorealisColors().withHighContrast()
+        val high = BorealisColors().withHighContrast(AccentChoice.Violet)
         assertThat(scheme?.onSurface).isEqualTo(high.ink)
         assertThat(scheme?.onSurfaceVariant).isEqualTo(high.ink2)
         assertThat(scheme?.primary).isEqualTo(high.accent)

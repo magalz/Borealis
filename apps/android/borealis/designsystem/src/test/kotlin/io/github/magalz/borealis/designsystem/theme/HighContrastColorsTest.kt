@@ -12,7 +12,7 @@ import org.junit.Test
  */
 class HighContrastColorsTest {
     private val base = BorealisColors()
-    private val high = base.withHighContrast()
+    private val high = base.withHighContrast(AccentChoice.Violet)
 
     private fun textRoles(colors: BorealisColors) =
         mapOf(
@@ -108,7 +108,7 @@ class HighContrastColorsTest {
     fun `high contrast composes with the roles that another variant changed`() {
         val variant = base.copy(success = Color.Magenta, ink3 = Color.Red)
 
-        val composed = variant.withHighContrast()
+        val composed = variant.withHighContrast(AccentChoice.Violet)
 
         // The roles that high contrast does not own are kept; the ones it owns are its own.
         assertThat(composed.success).isEqualTo(Color.Magenta)

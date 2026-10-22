@@ -10,13 +10,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
@@ -52,6 +55,7 @@ class SelectionMarkTest {
     @get:Rule val composeRule = createComposeRule()
 
     private var look by mutableStateOf(BorealisLook())
+    private var direction by mutableStateOf(LayoutDirection.Ltr)
 
     private val rail =
         listOf("Hosts", "Add host", "Settings").map { RailItem(it, BorealisIcons.Gear) }
@@ -60,6 +64,11 @@ class SelectionMarkTest {
     /** Every control of the selection marks, with the first of each selected. */
     @Composable
     private fun Specimen() {
+        CompositionLocalProvider(LocalLayoutDirection provides direction) { Marks() }
+    }
+
+    @Composable
+    private fun Marks() {
         BorealisTheme(FormFactor.Tv, look) {
             Row(Modifier.fillMaxSize().background(BorealisTokens.Color.Page)) {
                 NavigationRail(rail, selectedIndex = 0, onSelect = {})
@@ -90,14 +99,16 @@ class SelectionMarkTest {
     /**
      * Whether the item named [label] has the accent where its bar is: 1.5 dp in from the leading
      * edge and half way down for a rail item or a group, and 3.5 dp up from the bottom edge, half
-     * way across, for a segment.
+     * way across, for a segment. With [trailing] a vertical bar is looked for 1.5 dp in from the
+     * trailing edge of a right to left layout, which is the right one.
      */
-    private fun hasBar(label: String, vertical: Boolean): Boolean {
+    private fun hasBar(label: String, vertical: Boolean, trailing: Boolean = false): Boolean {
         val node = composeRule.onNodeWithText(label)
         val size = node.getUnclippedBoundsInRoot()
         val (x, y) =
             if (vertical) {
-                BAR_MIDDLE_DP to size.height.value / 2
+                val x = if (trailing) size.width.value - BAR_MIDDLE_DP else BAR_MIDDLE_DP
+                x to size.height.value / 2
             } else {
                 size.width.value / 2 to size.height.value - BAR_BOTTOM_DP
             }
@@ -183,6 +194,37 @@ class SelectionMarkTest {
                     .that(hasBar(label, vertical))
                     .isFalse()
             }
+        }
+    }
+
+    @Test
+    fun `in a right to left layout the vertical bar of white is on the trailing edge`() {
+        composeRule.setContent { Specimen() }
+        direction = LayoutDirection.Rtl
+
+        show(AccentChoice.White)
+
+        for (label in listOf("Hosts", "Stream")) {
+            assertWithMessage("trailing bar of $label")
+                .that(hasBar(label, vertical = true, trailing = true))
+                .isTrue()
+            assertWithMessage("no bar on the left of $label")
+                .that(hasBar(label, vertical = true))
+                .isFalse()
+        }
+        assertThat(hasBar("60 fps", vertical = false)).isTrue()
+    }
+
+    @Test
+    fun `in a left to right layout there is no bar on the trailing edge`() {
+        composeRule.setContent { Specimen() }
+
+        show(AccentChoice.White)
+
+        for (label in listOf("Hosts", "Stream")) {
+            assertWithMessage("trailing edge of $label")
+                .that(hasBar(label, vertical = true, trailing = true))
+                .isFalse()
         }
     }
 

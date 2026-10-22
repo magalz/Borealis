@@ -3098,7 +3098,7 @@ class AccentTablesTest(unittest.TestCase):
         self.text = contrast.accent_tables(self.result)
 
     def test_there_is_a_table_for_each_part_of_the_checks(self):
-        for title in ("N", "O", "P", "Q", "R", "S", "T", "U", "V"):
+        for title in ("N", "O", "P", "Q", "R", "S", "T", "U", "W"):
             with self.subTest(title=title):
                 self.assertIn(f"Table {title}.", self.text)
 
@@ -3114,8 +3114,8 @@ class AccentTablesTest(unittest.TestCase):
             self.candidates, context, backdrop_rows_of_the_table() + rows
         )
         text = contrast.accent_tables({"meta": {}, "candidates": report})
-        self.assertRegex(text, r"Table V\. The selected label of the app, `accent-soft`")
-        table = text[text.index("Table V.") :]
+        self.assertRegex(text, r"Table W\. The selected label of the app, `accent-soft`")
+        table = text[text.index("Table W.") :]
         self.assertIn("| Aurora curtains | Standard |", table)
 
     def test_the_role_sets_are_listed_by_candidate(self):

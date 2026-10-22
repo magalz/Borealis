@@ -4,6 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -25,11 +28,17 @@ import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.assertPixel
 import io.github.magalz.borealis.designsystem.pixelAt
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.textColor
+import io.github.magalz.borealis.designsystem.theme.AccentChoice
+import io.github.magalz.borealis.designsystem.theme.BorealisColors
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.borealisColors
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import org.junit.Rule
 import org.junit.Test
@@ -41,6 +50,8 @@ import org.robolectric.annotation.Config
 class BorealisButtonTest {
     @get:Rule val composeRule = createComposeRule()
     private var clicks = 0
+    private var look by mutableStateOf(BorealisLook())
+    private var buttonStyle by mutableStateOf(BorealisButtonStyle.Primary)
 
     @Test
     fun `a tap clicks`() {
@@ -102,6 +113,39 @@ class BorealisButtonTest {
     }
 
     @Test
+    fun `the label of a text button is accent-soft for every accent, which is safe on the glass`() {
+        buttonStyle = BorealisButtonStyle.Text
+        composeRule.setContent { Specimen(style = buttonStyle, look = look) }
+
+        for (accent in AccentChoice.entries) {
+            look = BorealisLook(accent = accent)
+            composeRule.waitForIdle()
+
+            assertWithMessage("$accent")
+                .that(composeRule.textColor("Open"))
+                .isEqualTo(borealisColors(look).accentSoft)
+        }
+    }
+
+    @Test
+    fun `the labels of the other styles are as they were`() {
+        composeRule.setContent { Specimen(style = buttonStyle, look = look) }
+        val colors = BorealisColors()
+
+        for ((style, expected) in
+            listOf(
+                BorealisButtonStyle.Primary to colors.onAccent,
+                BorealisButtonStyle.Secondary to colors.ink,
+                BorealisButtonStyle.Danger to colors.dangerInk,
+            )) {
+            buttonStyle = style
+            composeRule.waitForIdle()
+
+            assertWithMessage("$style").that(composeRule.textColor("Open")).isEqualTo(expected)
+        }
+    }
+
+    @Test
     fun `a pressed button gets a faint wash that goes when it is released`() {
         composeRule.setContent { Specimen(style = BorealisButtonStyle.Secondary) }
         val unpressed = composeRule.onNodeWithTag(FRAME).pixelAt(x = 27f, y = 44f)
@@ -136,8 +180,9 @@ class BorealisButtonTest {
         formFactor: FormFactor = FormFactor.Phone,
         style: BorealisButtonStyle = BorealisButtonStyle.Primary,
         enabled: Boolean = true,
+        look: BorealisLook = BorealisLook(),
     ) {
-        BorealisTheme(formFactor) {
+        BorealisTheme(formFactor, look) {
             Box(Modifier.testTag(FRAME).background(BorealisTokens.Color.Page).padding(24.dp)) {
                 BorealisButton("Open", onClick = { clicks++ }, style = style, enabled = enabled)
             }

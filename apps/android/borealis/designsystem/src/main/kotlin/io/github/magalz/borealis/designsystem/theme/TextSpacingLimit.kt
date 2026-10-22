@@ -1,16 +1,16 @@
 package io.github.magalz.borealis.designsystem.theme
 
 /**
- * The font scale from which [TextSpacing.Wider] is drawn as [TextSpacing.Wide]: the lowest of the
- * measured scales (1.5, 1.7, 1.8 and 2.0, with the Text size at its default) at which a fit test of
- * the screens fails at Wider. Below it Wider fits, bar the Pairing screen of a TV (see
- * [effectiveTextSpacing]).
+ * The font scale from which [TextSpacing.Wider] is drawn as [TextSpacing.Wide]. It is the lowest of
+ * the scales of the ladder 1.5, 1.7, 1.8 and 2.0 at which a 200 % fit test fails at Wider (every
+ * font, Text size at its default): 9 runs at 1.5, 8 at 1.7, 19 at 1.8 and 16 at 2.0.
  */
 private const val WIDER_LIMIT_FONT_SCALE = 1.5f
 
 /**
  * The font scale from which [TextSpacing.Wide] and [TextSpacing.Wider] are drawn as
- * [TextSpacing.Normal]: the lowest measured scale at which a fit test of the screens fails at Wide.
+ * [TextSpacing.Normal]. It is the lowest of the same ladder at which a 200 % fit test fails at Wide:
+ * 1 run at 1.7, 1 at 1.8 and 8 at 2.0. Normal passes at every scale of the ladder.
  */
 private const val WIDE_LIMIT_FONT_SCALE = 1.7f
 
@@ -22,15 +22,13 @@ private const val WIDE_LIMIT_FONT_SCALE = 1.7f
  * drawn as it is.
  *
  * The scale is the one that the text is drawn at: the font scale of the system times the Text size
- * of the look, which is what `LocalDensity.current.fontScale` holds under [BorealisTheme]. The text
- * that overflows is the text at the size that is drawn, so the Text size counts as much as the
- * system does. Where the user chose a smaller font, the level that was chosen comes back, because
- * what was chosen is never changed.
+ * of the look, which is what `LocalDensity.current.fontScale` holds under [BorealisTheme]. What
+ * overflows is the text at the size that is drawn, so the Text size counts as much as the system
+ * does. What was chosen is never changed, so it comes back when the scale falls again.
  *
- * The thresholds are the lowest scale of the measured ladder at which a fit test fails at each
- * level, tried at 1.5, 1.7, 1.8 and 2.0 in every font. Wider also fails in the Pairing screen of a
- * TV from a scale of 1.3, and once at 1.15; those are layout faults of their own and the limit does
- * not cover them. Android offers a font scale of 2.0 at most, and Normal fits there.
+ * Below 1.5 the limit does nothing, and Wider is not clean there: the Pairing screen of a TV fails
+ * from 1.3 (4 of 7 fonts at 1.3, all 7 at 1.4), and one run of the Settings fails at 1.15. They are
+ * faults of those layouts, found by the same fit tests, and the limit does not hide them.
  */
 fun effectiveTextSpacing(chosen: TextSpacing, fontScale: Float): TextSpacing {
     val allowed =

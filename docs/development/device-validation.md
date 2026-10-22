@@ -1371,9 +1371,13 @@ Steps:
      check.
    - Set the accent back to Violet.
 4. The Online dot shadow (Streamer, S22).
-   - Hosts with an online host: the dot has a soft dark shadow in the page colour,
-     round the dot and on the card glass. Expected: the shadow shows on the glass and
-     not on the Apps title, where the dot sits on the page. The shadow does not move.
+   - Hosts with an online host: the dot has a soft dark shadow round the dot and on
+     the card glass. On the S22 it is in the page colour and shows on the glass, and
+     not on the Apps title, where the dot sits on the page. On the Streamer it is
+     black and a little wider (10.75 dp from the centre of the dot), because the TV
+     glass is darker, and it shows faintly on the Apps title over the page. Expected
+     on the Streamer: a dark ring about as clear as the S22's, that ends before the
+     "Online" text. The shadow does not move. The owner confirms the look by eye.
    - Set High contrast on. Expected: the shadow is not drawn. Set it off again. Owner
      check.
    - Known limitation to note, not a fail: the Apps title dot on the animated background

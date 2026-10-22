@@ -115,6 +115,12 @@ Decision details:
    * **Layout work:** the layouts that do not fit at Wide or Wider are fixed as part of this work. The
      spike found 22 fit failures at Wide and 39 at Wider with 0.5 em. A test keeps the word gap clearly
      larger than the letter gap in every font.
+   * **Key captions:** a key is only so wide, so at Wider its caption is drawn with the spacing of
+     Wide. The caption floor is 8 sp at Normal, and 8 sp over 1.12 (one plus the 0.12 em of letter
+     spacing) at Wide and at Wider, which is drawn as Wide. The plain 8 sp fits at the largest text
+     size, but at a system font scale of 2.0 the captions are cut off at Wide in all seven fonts, so
+     the floor is lowered by the spacing. The owner decided the captions on the UAT of 2026-10-22.
+     At a system font scale of 2.0, Luciole at Normal is cut off whatever the floor, as before.
    * **Known limitations:** the 200 % system font size is tested at Normal only, and the line ends of a
      wrapped text can draw past their box at Wide and Wider. See
      [accessibility, text spacing: known limitations](../ux/accessibility.md#text-spacing-known-limitations).
@@ -136,6 +142,10 @@ Decision details:
      dot breaks 3:1 over bright glass. The owner chose the shadow on 2026-10-22. Over the brightest
      host-card glass it raises the contrast of the dot from 3.79:1 to 5.68:1 in today's palette (see
      [the offline colour and the status shapes](../ux/accessibility.md#the-offline-colour-and-the-status-shapes)).
+     On a TV the glass is darker (luma 22, against 30 on a phone), and the shadow in the page colour
+     read as a faint ring there. On a TV the shadow is black and reaches 10.75 dp from the centre of
+     the dot instead of 10, so that it reads at least as clearly as the phone's. The owner decided this
+     on the UAT of 2026-10-22.
    * **Evidence:** the measurements are in
      [Accent candidates](../ux/accessibility.md#accent-candidates-sprint-11), from the `accents` command
      of the contrast tool.
@@ -158,6 +168,13 @@ Decision details:
    * **Dense:** the same columns as Compact, with less card padding: 12 dp on the TV and the handheld
      (from 18 dp), and 10 dp on the phone (from 14 dp). The Continue cover is 44 dp (from 56 dp), and
      the least height of a TV host card is 164 dp (from 176 dp).
+   * **At Wider:** Compact and Dense keep the columns of Comfortable, on every device. On a TV with
+     Wider and Compact or Dense, host names broke inside a word, the address wrapped before its last
+     digit and the "HEVC 10-bit" chip took two lines. Dense still takes its card padding, the Continue
+     cover and the TV card height. The layout follows the spacing that is drawn. Normal and Wide add
+     the column. The owner decided this on the UAT of 2026-10-22.
+   * **Row height:** the host cards of a row are as high as the tallest of them, on every device
+     wherever a row has more than one card. It was a TV only. A phone in one column changes nothing.
 
    * **The fixes:** the spike cut two things in the denser variants, and the density work fixes both.
      * The host detail line was cut at the largest text size. It now wraps.

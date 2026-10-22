@@ -44,10 +44,11 @@ private val SEGMENT_PADDING_HORIZONTAL = 9.dp
 private val SEGMENT_PADDING_VERTICAL = 4.dp
 
 /**
- * An inline group of exclusive [options] with [selected] one tinted in the accent. Each segment is
- * a radio button and a focus stop with the Borealis focus indication: the D-pad moves between them
- * and OK selects. [label] names an option; [onSelect] gets the one the user chose. A disabled
- * control is dimmed and takes neither focus nor input.
+ * An inline group of exclusive [options] with [selected] one tinted in the accent, and its label in
+ * the soft accent, which keeps 4.5:1 over the tint on the glass where the accent does not. Each
+ * segment is a radio button and a focus stop with the Borealis focus indication: the D-pad moves
+ * between them and OK selects. [label] names an option; [onSelect] gets the one the user chose. A
+ * disabled control is dimmed and takes neither focus nor input.
  *
  * A segment is 48dp wide and high at least, except on a TV, which has no touch screen and keeps its
  * 32dp. [groupLabel] names what the control sets, and a screen reader says it after the name of a
@@ -115,7 +116,7 @@ fun <T> SegmentedControl(
             ) {
                 Text(
                     label(option),
-                    color = if (isSelected) colors.accent else colors.ink3,
+                    color = if (isSelected) colors.accentSoft else colors.ink3,
                     style = MaterialTheme.typography.labelMedium,
                 )
             }

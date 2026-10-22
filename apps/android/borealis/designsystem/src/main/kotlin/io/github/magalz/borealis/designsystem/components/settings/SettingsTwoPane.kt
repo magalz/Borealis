@@ -330,7 +330,7 @@ private fun GroupEntry(
     ) {
         Text(
             title,
-            color = if (selected) colors.accent else colors.ink2,
+            color = if (selected) colors.accentSoft else colors.ink2,
             style = MaterialTheme.typography.labelLarge,
         )
     }

@@ -33,11 +33,12 @@ private val TAG_PADDING_HORIZONTAL = 8.dp
 private val TAG_PADDING_VERTICAL = 2.dp
 
 /**
- * A small monospace label: a key shortcut, a codec, a value. [selected] gives it the accent tint,
- * line and ink. With an [onClick] it is a button that is focusable with the Borealis focus
- * indication, and it is announced as selected or not; without it, it is a static label that is
- * announced as selected only when it is. A button has the 48dp that a finger needs, around the chip
- * and not in it, so the chip keeps its look; a TV has no touch screen and adds nothing.
+ * A small monospace label: a key shortcut, a codec, a value. [selected] gives it the accent tint
+ * and line, and the soft accent for its label, which keeps 4.5:1 over the tint on the glass. With
+ * an [onClick] it is a button that is focusable with the Borealis focus indication, and it is
+ * announced as selected or not; without it, it is a static label that is announced as selected only
+ * when it is. A button has the 48dp that a finger needs, around the chip and not in it, so the chip
+ * keeps its look; a TV has no touch screen and adds nothing.
  */
 @Composable
 fun Chip(
@@ -73,7 +74,7 @@ fun Chip(
                 }
             )
             .padding(horizontal = CHIP_PADDING_HORIZONTAL, vertical = CHIP_PADDING_VERTICAL),
-        color = if (selected) colors.accent else colors.ink2,
+        color = if (selected) colors.accentSoft else colors.ink2,
         style = TextStyle(fontFamily = BorealisFonts.Mono, fontSize = monoMinimumSize()),
     )
 }

@@ -53,9 +53,10 @@ private val MARK_GAP = 12.dp
 
 /**
  * A modal list of choices for one setting, such as Resolution or Frame rate: [options] under a
- * [title], with the one whose key is [selected] marked and holding the initial focus (the first
- * option when none is selected). On a phone it is a bottom sheet; on a TV or handheld a centred
- * dialog, 420dp wide on a TV and a fraction of the window on a handheld (see
+ * [title], with the one whose key is [selected] marked, by the accent tint and by its label and a
+ * check in the soft accent (which keep 4.5:1 over the tint on the glass), and holding the initial
+ * focus (the first option when none is selected). On a phone it is a bottom sheet; on a TV or
+ * handheld a centred dialog, 420dp wide on a TV and a fraction of the window on a handheld (see
  * [BorealisDimens.sheetWidth]). The list scrolls and the title stays when the window is too short
  * for all of it. Over a glass host that blurs its window the sheet draws no scrim, its surface is
  * the tint of the glass over the blurred window, and its text has the glass colours.
@@ -157,7 +158,7 @@ private fun <T> OptionRow(
             Text(
                 option.label,
                 style = MaterialTheme.typography.titleMedium,
-                color = if (selected) colors.accent else colors.ink,
+                color = if (selected) colors.accentSoft else colors.ink,
             )
             if (option.summary != null) {
                 Text(
@@ -172,7 +173,7 @@ private fun <T> OptionRow(
                 BorealisIcons.Check,
                 contentDescription = null,
                 modifier = Modifier.size(ROW_ICON_SIZE),
-                tint = colors.accent,
+                tint = colors.accentSoft,
             )
         }
     }

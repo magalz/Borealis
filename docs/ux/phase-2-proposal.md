@@ -188,7 +188,8 @@ States:
   also shows the options. B does nothing at the top level.
 - Card height: on a TV a card is at least 176dp high, so the cards of a grid
   match. On a handheld, which is short, and on a phone, a card is as high as its
-  content.
+  content, and the cards of a row are as high as the tallest of them (UAT of
+  2026-10-22).
 - Details, in the host options, lists what the client knows of the host in plain
   lines: name, status, address, other addresses, paired, MAC address (for wake)
   and the running app. An unknown value leaves its line out, except the status,

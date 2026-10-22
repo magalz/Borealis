@@ -863,7 +863,15 @@ reads it in one sentence with the name.
 The Online dot has a soft dark shadow in the page colour, drawn outside its 10 dp box (`StatusDot`).
 It is strongest at the edge of the dot, at 85 % of the page colour, and is gone 5 dp outside the box.
 It is static, and it is not drawn under High contrast. The shadow is dark, not a glow, because a glow
-that touches the dot breaks 3:1 over bright glass. The owner chose it on 2026-10-22. Contrast of the
+that touches the dot breaks 3:1 over bright glass. The owner chose it on 2026-10-22.
+
+On a TV the glass is darker, only a little above the page colour (luma 22 in the device round,
+against 30 on a phone), and the shadow in the page colour read as a faint ring there. On a TV the
+shadow is black, at the same 85 % peak, and is gone 5.75 dp outside the box, still short of the 6 dp
+to the status text. In CIE lightness it takes 5.8 off the glass next to the dot on a TV (1.8 with the
+page colour), where the phone's takes 4.7 off its own, and it still shows 9.25 dp from the centre
+(7.75 before) where the phone's shows 8.25 (`StatusDotTest`). A handheld has the phone's shadow. The
+owner decided this on the UAT of 2026-10-22. Contrast of the
 dot against what is next to it, over the brightest host-card glass (luminance 0.0495), without and
 then with the shadow:
 
@@ -1462,7 +1470,9 @@ A layout that does not fit at Wide or Wider is changed rather than cut:
 - a value row stacks its value under the text when the longest word does not fit;
 - a slider's value takes at most 40 % of its row;
 - the host detail line wraps;
-- the key captions keep a lower floor at Wider.
+- the key captions are drawn with the spacing of Wide at Wider, and keep the plain floor of 8 sp at
+  every level (`KeyCaptionSizeTest`, `KeyboardKeyCaptionSpacingTest`);
+- Compact and Dense keep the columns of Comfortable at Wider (`CardDensityLayoutTest`).
 
 ### Text spacing: known limitations
 
@@ -1472,8 +1482,6 @@ A layout that does not fit at Wide or Wider is changed rather than cut:
 - At Wide and Wider, the line ends of a wrapped text can draw up to one word spacing past their
   box: about 12 px in IBM Plex Sans at Wider, and up to 23 px at the largest TV text in the system
   font. The review found no text cut. The ink lands in the padding or in the gaps.
-- The key caption floor can reach about 6.8 sp at Wider on a 320 dp phone, so that "Enter" and
-  "Shift" fit. The owner has not yet decided whether to keep it.
 - A non-breaking space gets no word spacing, and no app string uses one.
 
 ### Card density
@@ -1481,7 +1489,11 @@ A layout that does not fit at Wide or Wider is changed rather than cut:
 Card density (issue #51, [ADR 0058](../adr/0058-appearance-and-reading-options.md), decision 7)
 adds one column to the hosts and apps in Compact and in Dense, and cuts the card padding in Dense.
 The invariants hold in every density: the touch targets, the gaps between the cards, the gutter of
-the screen and the TV focus scale do not change.
+the screen and the TV focus scale do not change. With Text spacing at Wider the column is not added:
+Compact and Dense keep the columns of Comfortable, because the words of a card need the room (host
+names broke inside a word on a TV in the device round). Dense still takes its card padding. The host
+cards of a row are as high as the tallest of them on every device, where a row has more than one
+card.
 
 Known limitations of the density:
 

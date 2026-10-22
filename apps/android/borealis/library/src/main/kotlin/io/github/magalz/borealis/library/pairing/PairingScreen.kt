@@ -62,7 +62,12 @@ private val BUTTON_GAP = 12.dp
 private val CHECK_SIZE = 64.dp
 private val LOADER_SIZE = 64.dp
 
-/** The note about a restart wraps at this width, so it does not widen the PIN column. */
+/**
+ * The note about a restart, and on a wide screen the line under the PIN, wrap at this width, so
+ * that they do not widen the PIN column: it is as wide as the longest of them, and the steps take
+ * what it leaves. At a large text the line under the PIN is the longest by far, and the steps would
+ * have no room for a word.
+ */
 private val NOTE_MAX_WIDTH = 280.dp
 
 /**
@@ -175,7 +180,7 @@ private fun Content(
  */
 @Composable
 private fun Waiting(state: PairingUiState.Waiting, wide: Boolean, onCancel: () -> Unit) {
-    val pin: @Composable (Modifier) -> Unit = { modifier ->
+    val pin: @Composable (Modifier, Modifier) -> Unit = { modifier, validModifier ->
         Column(
             modifier,
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -190,6 +195,7 @@ private fun Waiting(state: PairingUiState.Waiting, wide: Boolean, onCancel: () -
             PinDisplay(state.pin)
             BackdropText(
                 stringResource(R.string.pairing_pin_valid),
+                validModifier,
                 style = MaterialTheme.typography.bodyMedium,
                 ink = BackdropInk.Ink3,
                 textAlign = TextAlign.Center,
@@ -206,7 +212,7 @@ private fun Waiting(state: PairingUiState.Waiting, wide: Boolean, onCancel: () -
     }
     if (wide) {
         Row(horizontalArrangement = Arrangement.spacedBy(WIDE_COLUMN_GAP)) {
-            pin(Modifier.width(IntrinsicSize.Max))
+            pin(Modifier.width(IntrinsicSize.Max), Modifier.widthIn(max = NOTE_MAX_WIDTH))
             Column(
                 Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(SECTION_GAP),
@@ -215,7 +221,7 @@ private fun Waiting(state: PairingUiState.Waiting, wide: Boolean, onCancel: () -
         }
     } else {
         Column(verticalArrangement = Arrangement.spacedBy(SECTION_GAP)) {
-            pin(Modifier.fillMaxWidth())
+            pin(Modifier.fillMaxWidth(), Modifier)
             steps()
         }
     }

@@ -24,7 +24,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.settings.SettingsInfoRow
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
@@ -207,8 +206,7 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
                 .focusable()
                 .verticalScroll(scroll)
                 .padding(LICENSE_TEXT_PADDING),
-            fontFamily = FontFamily.Monospace,
-            style = MaterialTheme.typography.bodySmall,
+            style = LocalBorealisType.current.codes(MaterialTheme.typography.bodySmall),
         )
     }
 }

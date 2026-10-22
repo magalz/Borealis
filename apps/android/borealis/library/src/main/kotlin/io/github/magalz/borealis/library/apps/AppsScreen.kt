@@ -27,10 +27,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.adaptive.appGridColumns
-import io.github.magalz.borealis.designsystem.adaptive.gridPadding
 import io.github.magalz.borealis.designsystem.components.AuroraLoader
 import io.github.magalz.borealis.designsystem.components.BackdropIcon
 import io.github.magalz.borealis.designsystem.components.BackdropInk
@@ -188,7 +186,6 @@ private fun Content(
                 Grid(
                     state.items,
                     appGridColumns(formFactor, maxWidth.value.toInt(), density),
-                    gridPadding(formFactor, LocalBorealisSpacing.current.gutter, density),
                     onAppSelected,
                     onActions,
                 )
@@ -214,10 +211,10 @@ private fun Content(
 private fun Grid(
     items: List<AppItemUiState>,
     columns: Int,
-    padding: Dp,
     onAppSelected: (Int) -> Unit,
     onActions: (Int) -> Unit,
 ) {
+    val gutter = LocalBorealisSpacing.current.gutter
     val running = stringResource(R.string.apps_running)
     val hidden = stringResource(R.string.apps_hidden)
     val options = stringResource(R.string.apps_options)
@@ -228,7 +225,7 @@ private fun Grid(
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = padding, vertical = GRID_VERTICAL_PADDING),
+        contentPadding = PaddingValues(horizontal = gutter, vertical = GRID_VERTICAL_PADDING),
         horizontalArrangement = Arrangement.spacedBy(TILE_GAP),
         verticalArrangement = Arrangement.spacedBy(ROW_GAP),
     ) {

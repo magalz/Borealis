@@ -1,6 +1,5 @@
 package io.github.magalz.borealis.designsystem.adaptive
 
-import androidx.compose.ui.unit.dp
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -37,22 +36,6 @@ class GridColumnsTest {
         }
     }
 
-    @Test
-    fun `Comfortable and Compact keep the gutter as the padding of the grid`() {
-        for (density in listOf(CardDensity.Comfortable, CardDensity.Compact)) {
-            assertThat(gridPadding(FormFactor.Tv, GUTTER, density)).isEqualTo(GUTTER)
-            assertThat(gridPadding(FormFactor.Handheld, GUTTER, density)).isEqualTo(GUTTER)
-            assertThat(gridPadding(FormFactor.Phone, GUTTER, density)).isEqualTo(GUTTER)
-        }
-    }
-
-    @Test
-    fun `Dense has 12dp of padding on a TV and a handheld and 10dp on a phone`() {
-        assertThat(gridPadding(FormFactor.Tv, GUTTER, CardDensity.Dense)).isEqualTo(12.dp)
-        assertThat(gridPadding(FormFactor.Handheld, GUTTER, CardDensity.Dense)).isEqualTo(12.dp)
-        assertThat(gridPadding(FormFactor.Phone, GUTTER, CardDensity.Dense)).isEqualTo(10.dp)
-    }
-
     /** The host columns of a TV, a handheld, a phone and a wide phone, then the app columns. */
     private fun columns(density: CardDensity): List<Int> =
         listOf(
@@ -65,8 +48,4 @@ class GridColumnsTest {
             appGridColumns(FormFactor.Phone, 360, density),
             appGridColumns(FormFactor.Phone, 600, density),
         )
-
-    private companion object {
-        val GUTTER = 34.dp
-    }
 }

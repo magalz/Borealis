@@ -52,11 +52,12 @@ private val CHIP_PADDING_VERTICAL = 2.dp
  *
  * On a TV a card is at least as high as its height token, which is the height of the fullest card
  * (online, with one row of tags and the app it runs, plus a few dp of margin), so the cards of a
- * grid are the same size whatever they show; the text stays at the top. A card whose tags wrap, or
- * whose text needs more room (a large font, or a narrower card in a denser layout), grows rather
- * than cutting it, and the Hosts screen then makes the other cards of its row as high, so that a
- * row has one height. On a handheld or a phone a card is as high as its content, so a short screen
- * is not left with empty space in each card.
+ * grid are the same size whatever they show; the text stays at the top. Dense (ADR 0058, decision
+ * 7) pads the card less, and its least height is the token less what that gives back. A card whose
+ *    tags wrap, or whose text needs more room (a large font, or a narrower card in a denser
+ *    layout), grows rather than cutting it, and the Hosts screen then makes the other cards of its
+ *    row as high, so that a row has one height. On a handheld or a phone a card is as high as its
+ *    content, so a short screen is not left with empty space in each card.
  */
 @Composable
 fun HostCard(
@@ -88,8 +89,15 @@ fun HostCard(
     // Only the TV grid has its cards all the same height; a phone or a handheld, which has little
     // room to spare, sizes each card by its content.
     val height =
-        if (LocalFormFactor.current == FormFactor.Tv) BorealisTokens.Size.HostCard.HeightTv
-        else 0.dp
+        if (LocalFormFactor.current == FormFactor.Tv) {
+            // The token is the height of the fullest card with the padding of Comfortable; a
+            // smaller
+            // padding gives back its share at the top and at the bottom.
+            BorealisTokens.Size.HostCard.HeightTv -
+                (BorealisTokens.Space.CardPaddingTv - padding) * 2
+        } else {
+            0.dp
+        }
     GlassTextColors {
         HostInfo(
             name,

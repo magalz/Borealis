@@ -35,9 +35,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import io.github.magalz.borealis.designsystem.adaptive.gridPadding
 import io.github.magalz.borealis.designsystem.adaptive.hostGridColumns
 import io.github.magalz.borealis.designsystem.components.AuroraLoader
 import io.github.magalz.borealis.designsystem.components.BackdropKicker
@@ -258,8 +256,7 @@ private fun HostsBody(
         } else {
             val density = LocalBorealisLook.current.cardDensity
             val columns = hostGridColumns(formFactor, maxWidth.value.toInt(), density)
-            val padding = gridPadding(formFactor, LocalBorealisSpacing.current.gutter, density)
-            HostGrid(state, formFactor, columns, padding, startFocus, handlers)
+            HostGrid(state, formFactor, columns, startFocus, handlers)
         }
     }
 }
@@ -271,7 +268,6 @@ private fun HostGrid(
     state: HostsUiState,
     formFactor: FormFactor,
     columns: Int,
-    padding: Dp,
     startFocus: StartFocus?,
     handlers: HostsHandlers,
 ) {
@@ -289,7 +285,7 @@ private fun HostGrid(
         modifier = Modifier.fillMaxSize(),
         // The padding and the gaps keep the focus outline, BorealisDimens.outlineReach outside a
         // card (thickOutlineReach when it is the thicker one), from being clipped.
-        contentPadding = PaddingValues(padding),
+        contentPadding = PaddingValues(LocalBorealisSpacing.current.gutter),
         verticalArrangement = Arrangement.spacedBy(GRID_GAP),
         horizontalArrangement = Arrangement.spacedBy(GRID_GAP),
     ) {

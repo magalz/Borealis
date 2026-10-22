@@ -124,7 +124,7 @@ private fun StepMarker(number: Int, state: StepState) {
     val (fill, line, ink) =
         when (state) {
             StepState.Done -> Triple(Color.Transparent, colors.success, colors.successInk)
-            StepState.Current -> Triple(colors.accentTint, colors.accentLine, colors.accent)
+            StepState.Current -> Triple(colors.accentTint, colors.accentLine, colors.accentSoft)
             StepState.Later -> Triple(Color.Transparent, colors.lineStrong, colors.ink4)
             StepState.Failed -> Triple(Color.Transparent, colors.danger, colors.dangerInk)
         }

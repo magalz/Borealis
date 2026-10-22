@@ -22,8 +22,9 @@ import org.robolectric.annotation.Config
 /**
  * Screenshots of the dialog that Settings opens when the user chooses a Text spacing that the font
  * scale draws as a smaller level (ADR 0058, decision 4), named
- * `settingsspacinglimit_<device>_<state>.png`: Wider drawn as Wide on a TV and on a phone at a font
- * scale of 1.6, and Wider drawn as Normal on a phone at 2.0, the largest that Android offers.
+ * `settingsspacinglimit_<device>_<state>.png`: Wider drawn as Wide on a TV at a font scale of 1.6
+ * and on a phone at 1.5, where the limit starts, and Wider drawn as Normal on a phone at 2.0, the
+ * largest that Android offers.
  */
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalRoborazziApi::class)
@@ -42,7 +43,7 @@ class SpacingLimitScreenshotTest : SettingsScreenTestBase() {
     }
 
     @Test
-    @Config(qualifiers = PHONE, fontScale = 1.6f)
+    @Config(qualifiers = PHONE, fontScale = 1.5f)
     fun phoneWiderDrawnAsWide() {
         show { content ->
             InGlassHost(FormFactor.Phone, BorealisLook(), BackgroundStyle.AuroraCurtains, content)

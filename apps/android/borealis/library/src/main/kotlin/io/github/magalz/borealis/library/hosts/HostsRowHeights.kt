@@ -50,24 +50,22 @@ internal fun Modifier.asHighAsItsRow(heights: RowHeights, id: String, row: List<
     }
 
 /**
- * The rows that the host cards make in a grid of `columns`, and what makes the cards of a row one
+ * The rows that the host cards make in a grid of [columns], and what makes the cards of a row one
  * height: on a TV each card is as high as the tallest of its row ([asHighAsItsRow]); on a handheld
  * or a phone, which have little room to spare, a card is as high as its content.
  */
 internal class HostRows(
-    private val heights: RowHeights,
-    private val formFactor: FormFactor,
-    private val columns: Int,
-    private val ids: List<List<String>>,
-) {
-    /** The modifier of the host card [id], which is the [index]th of the grid. */
-    fun modifier(index: Int, id: String): Modifier =
-        if (formFactor == FormFactor.Tv) {
-            Modifier.asHighAsItsRow(heights, id, ids[index / columns])
-        } else {
-            Modifier
-        }
-}
+    val heights: RowHeights,
+    val sameHeight: Boolean,
+    val columns: Int,
+    val ids: List<List<String>>,
+)
+
+/**
+ * Gives the host card [id], the [index]th of the grid, the height of its row where rows share one.
+ */
+internal fun Modifier.inHostRow(rows: HostRows, index: Int, id: String): Modifier =
+    if (rows.sameHeight) asHighAsItsRow(rows.heights, id, rows.ids[index / rows.columns]) else this
 
 @Composable
 internal fun rememberHostRows(
@@ -77,6 +75,11 @@ internal fun rememberHostRows(
 ): HostRows {
     val heights = remember { RowHeights() }
     return remember(items, formFactor, columns) {
-        HostRows(heights, formFactor, columns, items.map { it.id }.chunked(columns))
+        HostRows(
+            heights,
+            formFactor == FormFactor.Tv,
+            columns,
+            items.map { it.id }.chunked(columns),
+        )
     }
 }

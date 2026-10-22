@@ -328,7 +328,7 @@ private fun HostGrid(
         itemsIndexed(state.items, key = { _, item -> item.id }) { index, item ->
             val first = index == 0 && state.continueItems.isEmpty()
             val start = startFocus.startingAt(hostKey(item.id), restoredCard, first)
-            val modifier = rows.modifier(index, item.id).withStartFocus(start)
+            val modifier = Modifier.inHostRow(rows, index, item.id).withStartFocus(start)
             HostItem(item, handlers, optionsLabel, unnamedApp, modifier)
         }
     }

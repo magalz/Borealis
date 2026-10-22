@@ -11,9 +11,14 @@ import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.theme.AccentChoice
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
+import io.github.magalz.borealis.designsystem.theme.ColourVision
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.hosts.HostsScreen
 import io.github.magalz.borealis.library.hosts.HostsUiState
+import io.github.magalz.borealis.library.hosts.checkingPc
+import io.github.magalz.borealis.library.hosts.deskPc
+import io.github.magalz.borealis.library.hosts.livingRoomPc
+import io.github.magalz.borealis.library.hosts.studio
 import io.github.magalz.borealis.library.hosts.withHosts
 import io.github.magalz.borealis.library.testing.TV
 import io.github.magalz.borealis.library.testing.setContentInKeyboardMode
@@ -28,6 +33,11 @@ import org.robolectric.annotation.Config
  * 5), named `accent_tv_hosts-<accent>.png`: the selected rail item, the buttons and the focus in
  * the accent, the background still violet, and, with white, the indicator bar on the rail item. The
  * animated background is held on its still frame.
+ *
+ * The accents that have a variant under a colour-blind palette (violet under Red-green and
+ * Blue-yellow, white under Blue-yellow) are named `accent_tv_hosts-<accent>-<palette>.png`, with a
+ * host of every status, so that the status colours of the palette are on the screen beside the
+ * accent that the palette gives.
  */
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalRoborazziApi::class)
@@ -47,9 +57,52 @@ class AccentScreenshotTest {
     @Config(qualifiers = TV)
     fun hostsTvWhite() = hostsTv(AccentChoice.White, "accent_tv_hosts-white")
 
-    private fun hostsTv(accent: AccentChoice, name: String) {
+    @Test
+    @Config(qualifiers = TV)
+    fun hostsTvVioletRedGreen() =
+        hostsTv(
+            AccentChoice.Violet,
+            "accent_tv_hosts-violet-red-green",
+            ColourVision.RedGreen,
+            everyStatus,
+        )
+
+    @Test
+    @Config(qualifiers = TV)
+    fun hostsTvVioletBlueYellow() =
+        hostsTv(
+            AccentChoice.Violet,
+            "accent_tv_hosts-violet-blue-yellow",
+            ColourVision.BlueYellow,
+            everyStatus,
+        )
+
+    @Test
+    @Config(qualifiers = TV)
+    fun hostsTvWhiteBlueYellow() =
+        hostsTv(
+            AccentChoice.White,
+            "accent_tv_hosts-white-blue-yellow",
+            ColourVision.BlueYellow,
+            everyStatus,
+        )
+
+    /** Every state of the status dot: online, needs attention, offline and not known. */
+    private val everyStatus =
+        HostsUiState(
+            loading = false,
+            searching = false,
+            items = listOf(deskPc, studio, livingRoomPc, checkingPc),
+        )
+
+    private fun hostsTv(
+        accent: AccentChoice,
+        name: String,
+        colourVision: ColourVision = ColourVision.Off,
+        state: HostsUiState = withHosts,
+    ) {
         composeRule.setContentInKeyboardMode {
-            Hosts(withHosts, FormFactor.Tv, BorealisLook(accent = accent))
+            Hosts(state, FormFactor.Tv, BorealisLook(accent = accent, colourVision = colourVision))
         }
 
         composeRule.waitForIdle()

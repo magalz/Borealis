@@ -36,7 +36,8 @@ import org.robolectric.annotation.Config
  * 0.16 em between the words (UAT of 2026-10-22). At Normal and at Wide it has what the level says.
  * A key of the widest style holds the caption without shrinking it, so that its width is the width
  * of the text and the spacing is all that tells two runs apart. The least that a caption shrinks to
- * is 8sp at every spacing: the spacing is drawn as Wide at most, and the caption still fits.
+ * is 8sp at Normal, and at Wide, which Wider is drawn as, that less the letter spacing: 8sp over
+ * 1.12.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(qualifiers = "w360dp-h640dp-xhdpi")
@@ -81,16 +82,16 @@ class KeyboardKeyCaptionSpacingTest(private val font: FontChoice) {
     }
 
     @Test
-    fun `a caption that does not fit its key shrinks to 8sp and no lower, at every spacing`() {
-        for (spacing in TextSpacing.entries) {
+    fun `a caption that does not fit shrinks to 8sp at Normal and less the spacing at Wide`() {
+        for ((spacing, floor) in FLOORS) {
             val shrunk = captionOf("Backspace", spacing, NARROW_ROOM)
-            // The same text at 8sp, with the style of the caption: the width of a line follows the
-            // size, and the layout input keeps the size of the style, not the one that it shrank
-            // to.
+            // The same text at the floor, with the style of the caption: the width of a line
+            // follows the size, and the layout input keeps the size of the style, not the one that
+            // it shrank to.
             val atTheFloor =
                 measurer.measure(
                     "Backspace",
-                    shrunk.layoutInput.style.copy(fontSize = FLOOR_SP.sp),
+                    shrunk.layoutInput.style.copy(fontSize = floor.sp),
                     softWrap = false,
                     maxLines = 1,
                 )
@@ -147,8 +148,20 @@ class KeyboardKeyCaptionSpacingTest(private val font: FontChoice) {
         val WIDE_ROOM = 300.dp
         val NARROW_ROOM = 20.dp
 
-        /** The floor of a caption, in sp. */
+        /**
+         * The floor of a caption, in sp. It is 8sp at Normal. The caption is drawn with the 0.12 em
+         * of letter spacing of Wide at most, and at Wide the floor is lowered by it, so that the
+         * keys still hold their captions at a system font scale of 2.0 (`KeyCaptionScaleTest`, in
+         * the stream module). Wider has the floor of Wide because it is drawn as Wide.
+         */
         const val FLOOR_SP = 8f
+        val WIDE_FLOOR_SP = FLOOR_SP / (1 + TextSpacing.Wide.letterEm)
+        val FLOORS =
+            mapOf(
+                TextSpacing.Normal to FLOOR_SP,
+                TextSpacing.Wide to WIDE_FLOOR_SP,
+                TextSpacing.Wider to WIDE_FLOOR_SP,
+            )
         const val ONE_PIXEL = 1f
 
         @JvmStatic

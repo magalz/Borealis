@@ -89,7 +89,8 @@ class FontFoldersTest {
         assertThat(names("luciole")).containsExactly("luciole_regular", "luciole_bold")
         assertThat(names("lexend"))
             .containsExactly("lexend_regular", "lexend_medium", "lexend_semibold")
-        // Andika ships Regular and SemiBold only: Compose takes the nearest weight for Medium.
+        // Andika 7.000 ships a Medium too; the app bundles Regular and SemiBold only, to save about
+        // 0.4 MB, and Compose takes the nearest weight for Medium.
         assertThat(names("andika")).containsExactly("andika_regular", "andika_semibold")
         assertThat(names("b612"))
             .containsExactly("b612_regular", "b612_bold", "b612_mono_regular", "b612_mono_bold")

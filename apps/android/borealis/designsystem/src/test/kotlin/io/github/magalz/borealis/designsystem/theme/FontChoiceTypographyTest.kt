@@ -147,7 +147,8 @@ class FontChoiceTypographyTest {
                 0.983f,
                 1f,
             ),
-            // Andika has no Medium: Compose takes the nearest weight for it.
+            // The app bundles Regular and SemiBold of Andika only: Compose takes the nearest weight
+            // for Medium.
             Expected(
                 FontChoice.Andika,
                 listOf(400 to "andika_regular", 600 to "andika_semibold"),

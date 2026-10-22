@@ -23,8 +23,9 @@ class BorealisFontSet(
 
 /**
  * Every font of the app, for the choice of the look (ADR 0058, decision 2). The files and licences
- * are in `design/fonts/<font>`. A weight that a font does not have is taken by Compose from the
+ * are in `design/fonts/<font>`. A weight that a font does not bundle is taken by Compose from the
  * nearest one: Medium is Regular in Andika, Luciole and B612, and SemiBold is Bold in the last two.
+ * Andika 7.000 ships a Medium, and the app does not bundle it, to save about 0.4 MB.
  *
  * The scales are the drawn x-height of IBM Plex Sans (0.516 em) over that of the font, measured by
  * the contrast tool (docs/ux/accessibility.md, "The fonts and their scale"). The codes use the
@@ -93,7 +94,8 @@ object BorealisFonts {
             codesScale = 1f,
         )
 
-    // Andika has no Medium: it ships Regular and SemiBold only.
+    // Andika 7.000 ships a Medium too; the app bundles Regular and SemiBold only, to save about 0.4
+    // MB.
     private val andika =
         BorealisFontSet(
             text =

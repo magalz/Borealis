@@ -182,10 +182,15 @@ private fun Content(
     BoxWithConstraints(modifier.fillMaxWidth()) {
         when {
             state.items.isNotEmpty() -> {
-                val density = LocalBorealisLook.current.cardDensity
+                val look = LocalBorealisLook.current
                 Grid(
                     state.items,
-                    appGridColumns(formFactor, maxWidth.value.toInt(), density),
+                    appGridColumns(
+                        formFactor,
+                        maxWidth.value.toInt(),
+                        look.cardDensity,
+                        look.textSpacing,
+                    ),
                     onAppSelected,
                     onActions,
                 )

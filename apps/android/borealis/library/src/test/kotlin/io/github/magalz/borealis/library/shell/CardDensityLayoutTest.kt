@@ -11,6 +11,7 @@ import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import io.github.magalz.borealis.library.testing.AppsOf
 import io.github.magalz.borealis.library.testing.HANDHELD
 import io.github.magalz.borealis.library.testing.HostsOf
@@ -32,21 +33,33 @@ import org.robolectric.annotation.Config
  * before the setting. Compact and Dense add one column everywhere, the wide phone of 600dp
  * included, and every density keeps the gutter of the screen (34dp on a TV and a handheld, 16dp on
  * a phone) as the padding of the grids, so that the cards line up with the title. Dense takes less
- * padding inside the cards: `CardDensityPaddingTest`. The screens are drawn alone, with no rail, so
- * that the padding is the distance of a card from the edge of the window.
+ * padding inside the cards: `CardDensityPaddingTest`. With Text spacing at Wider the cards keep the
+ * columns of Comfortable in every density: the words of a card need the room that the extra column
+ * would take (device round P2: host names broke inside a word, an address wrapped before its last
+ * digit and a chip took two lines). Normal and Wide add the column. The screens are drawn alone,
+ * with no rail, so that the padding is the distance of a card from the edge of the window.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-class CardDensityLayoutTest(private val density: CardDensity) {
+class CardDensityLayoutTest(private val case: Case) {
     @get:Rule val composeRule = createComposeRule()
 
     /** The columns and the padding are both told, when both are wrong. */
     @get:Rule val expect: Expect = Expect.create()
 
-    private val look = BorealisLook(cardDensity = density)
+    /** What a run changes: the density of the cards and the Text spacing. */
+    class Case(val density: CardDensity, val spacing: TextSpacing) {
+        override fun toString() = "$density-$spacing"
+    }
 
-    /** The columns of [comfortable], one more for each denser layout. */
+    private val look = BorealisLook(cardDensity = case.density, textSpacing = case.spacing)
+
+    /** The columns of [comfortable], one more for each denser layout, but at Wider. */
     private fun columns(comfortable: Int) =
-        if (density == CardDensity.Comfortable) comfortable else comfortable + 1
+        if (case.density == CardDensity.Comfortable || case.spacing == TextSpacing.Wider) {
+            comfortable
+        } else {
+            comfortable + 1
+        }
 
     @Test
     @Config(qualifiers = TV)
@@ -170,6 +183,9 @@ class CardDensityLayoutTest(private val density: CardDensity) {
 
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun densities(): List<CardDensity> = CardDensity.entries
+        fun cases(): List<Case> =
+            CardDensity.entries.flatMap { density ->
+                TextSpacing.entries.map { spacing -> Case(density, spacing) }
+            }
     }
 }

@@ -32,7 +32,8 @@ fun fitCases(): List<FitCase> =
 
 /**
  * The runs of the fit tests of the card grids: [fitCases], and the denser layouts (Compact and
- * Dense) in IBM Plex and in Andika, the widest font, at Normal and at Wider. The tests of the other
+ * Dense) in IBM Plex and in Andika, the widest font, at Normal and at Wider. At Wider the denser
+ * layouts have the columns of Comfortable and the padding of their density. The tests of the other
  * screens have no use for the density, so they keep [fitCases].
  */
 fun cardFitCases(): List<FitCase> =
@@ -45,11 +46,13 @@ fun cardFitCases(): List<FitCase> =
 
 /**
  * The width of a host card on a TV 960dp wide, where the rail has 220dp: what the grid of Hosts has
- * left of the other 740dp, after the 34dp gutter on each side and the 12dp gaps, over its columns.
- * A test of the Library keeps it equal to what the screen lays out.
+ * left of the other 740dp, after the 34dp gutter on each side and the 12dp gaps, over its columns:
+ * 3 in Comfortable and at Wider, and 4 in Compact and Dense at Normal and Wide. A test of the
+ * Library keeps it equal to what the screen lays out.
  */
-fun tvHostCardWidth(density: CardDensity): Dp {
-    val columns = if (density == CardDensity.Comfortable) COMFORTABLE_COLUMNS else DENSER_COLUMNS
+fun tvHostCardWidth(density: CardDensity, spacing: TextSpacing = TextSpacing.Normal): Dp {
+    val denser = density != CardDensity.Comfortable && spacing != TextSpacing.Wider
+    val columns = if (denser) DENSER_COLUMNS else COMFORTABLE_COLUMNS
     return (CONTENT_WIDTH - GUTTER * 2 - GAP * (columns - 1)) / columns
 }
 

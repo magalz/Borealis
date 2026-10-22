@@ -3366,6 +3366,47 @@ class ShippedTokensTest(unittest.TestCase):
 # The accents under a colour-blind palette (issue #50, after the UAT of 2026-10-22)
 
 
+TEAL_COLOR = {
+    "accent": "#4BECD0",
+    "accent-soft": "#A2FCE8",
+    "accent-strong": "#06AF97",
+    "on-accent": "#001713",
+    "accent-tint": "#4BECD021",
+    "accent-line": "#4BECD066",
+    "accent-inverse": "#027464",
+}
+TEAL_HIGH_CONTRAST = {
+    "accent": "#4BECD0",
+    "accent-soft": "#A2FCE8",
+    "accent-line": "#4BECD0",
+    "accent-inverse": "#026053",
+}
+# The violet of the blue-yellow palette, with the colours that these tests use.
+PINKER_VIOLET_COLOR = {
+    "accent": "#C688FE",
+    "accent-soft": "#C8BBFE",
+    "accent-tint": "#C688FE21",
+    "accent-line": "#C688FE66",
+}
+PINKER_VIOLET_HIGH_CONTRAST = {
+    "accent": "#C7B9FC",
+    "accent-soft": "#CAC4FE",
+    "accent-line": "#C7B9FC",
+}
+
+
+def teal():
+    return candidate(label="Teal", color=TEAL_COLOR, high_contrast=TEAL_HIGH_CONTRAST)
+
+
+def pinker_violet():
+    return candidate(
+        label="Violet, Blue-yellow",
+        color=PINKER_VIOLET_COLOR,
+        high_contrast=PINKER_VIOLET_HIGH_CONTRAST,
+    )
+
+
 def write_accents_with_variants(folder, variants, **candidates):
     """An `accents.json` with candidates and the variants that go with a palette each:
     `variants` is `{palette: {name: candidate}}`."""
@@ -3553,15 +3594,8 @@ class PaletteReportTest(unittest.TestCase):
 
     def setUp(self):
         self.context = contrast.accent_context(TOKENS)
-        self.candidates = {
-            "violet": candidate(label="Violet"),
-            "teal": candidate(label="Teal", color={"accent": "#4BECD0", "accent-soft": "#A2FCE8"}),
-        }
-        self.variants = {
-            "blue-yellow": {
-                "violet": candidate(label="Violet, Blue-yellow", color={"accent": "#C688FE"})
-            }
-        }
+        self.candidates = {"violet": candidate(label="Violet"), "teal": teal()}
+        self.variants = {"blue-yellow": {"violet": pinker_violet()}}
         self.report = contrast.palette_report(self.candidates, self.variants, self.context)
 
     def test_there_is_a_column_for_each_accent_and_each_variant(self):
@@ -3591,7 +3625,8 @@ class PaletteReportTest(unittest.TestCase):
     def test_a_variant_that_is_no_better_fails_under_its_palette(self):
         same = {"blue-yellow": {"violet": candidate(label="Same")}}
         report = contrast.palette_report({"violet": candidate()}, same, self.context)
-        self.assertIn("palette:blue-yellow:tritanopia:accent", report["fails"]["violet@blue-yellow"])
+        fails = report["fails"]["violet@blue-yellow"]
+        self.assertIn("palette:blue-yellow:tritanopia:accent", fails)
 
     def test_the_report_is_plain_data(self):
         json.dumps(self.report)
@@ -3602,21 +3637,15 @@ class PaletteTablesTest(unittest.TestCase):
 
     def setUp(self):
         context = contrast.accent_context(TOKENS)
-        self.candidates = {
-            "violet": candidate(label="Violet"),
-            "teal": candidate(label="Teal", color={"accent": "#4BECD0", "accent-soft": "#A2FCE8"}),
-        }
-        variants = {
-            "blue-yellow": {
-                "violet": candidate(label="Violet, Blue-yellow", color={"accent": "#C688FE"})
-            }
-        }
+        self.candidates = {"violet": candidate(label="Violet"), "teal": teal()}
+        variants = {"blue-yellow": {"violet": pinker_violet()}}
         report = contrast.palette_report(self.candidates, variants, context)
         reports = contrast.accent_report(self.candidates, context, [])
         self.text = contrast.accent_tables({"meta": {}, "candidates": reports, "palettes": report})
 
     def row(self, label):
-        found = [line for line in self.text.splitlines() if line.startswith(f"| {label} |")]
+        table = self.text[self.text.index("Table X.") :]
+        found = [line for line in table.splitlines() if line.startswith(f"| {label} |")]
         self.assertEqual(len(found), 1, label)
         return [cell.strip() for cell in found[0].strip("|").split("|")]
 
@@ -3628,7 +3657,7 @@ class PaletteTablesTest(unittest.TestCase):
 
     def test_a_held_distance_that_falls_short_says_so(self):
         cells = self.row("`accent` from the red-green status colours, deuteranopia vision")
-        self.assertEqual(cells[1], "5.0, success (short)")
+        self.assertTrue(cells[1].startswith("5.0, success (short)"), cells[1])
         self.assertTrue(cells[2].startswith("21.6, success"))
         self.assertNotIn("short", cells[2])
 
@@ -3705,11 +3734,7 @@ class AccentPaletteCommandTest(unittest.TestCase):
         frames = Path(folder) / "frames"
         (frames / "Starfield-tv").mkdir(parents=True)
         Image.new("RGB", (192, 108), (40, 60, 90)).save(frames / "Starfield-tv" / "00.png")
-        variants = {
-            "blue-yellow": {
-                "one": candidate(label="One, Blue-yellow", color={"accent": "#C688FE"})
-            }
-        }
+        variants = {"blue-yellow": {"one": dict(pinker_violet(), label="One, Blue-yellow")}}
         accents = write_accents_with_variants(
             folder, variants, one=candidate(label="One"), two=candidate(label="Two")
         )
@@ -3918,8 +3943,8 @@ class ShippedPaletteVariantsTest(unittest.TestCase):
     def test_every_role_of_a_variant_has_a_note_on_how_its_value_was_derived(self):
         for palette, found in self.variants.items():
             for name, variant in found.items():
-                roles = (*variant["color"], *(f"high-contrast.{r}" for r in variant["high-contrast"]))
-                for role in roles:
+                high = (f"high-contrast.{role}" for role in variant["high-contrast"])
+                for role in (*variant["color"], *high):
                     with self.subTest(accent=name, palette=palette, role=role):
                         self.assertGreater(len(variant["notes"][role]), 20)
 

@@ -140,5 +140,114 @@
         "distance:ink-2": "Whatever its value: ink-2 (#C3C7CC, L* 80) lies in the lightness of a neutral that can be read as text over the glass (L* 69.5 and over), and none of those is 20 from it: the furthest is 16.6, and no neutral is 20 from both ink and ink-2 (the best is 15.0)."
       }
     }
+  },
+  "palette_variants": {
+    "$description": "The accents under the colour-blind palettes (issue #50, the UAT of 2026-10-22). A palette changes the status colours and the accent did not change, so an accent could be told from a status colour by nobody the palette is for: violet is 9.3 and 5.0 from the sky blue success of the red-green palette as a protanope and a deuteranope see it. A variant is the full set of roles of an accent under one palette, for the accents whose own set is short of the palette rule: the `accent`, the `accent-soft` and the colours of high contrast are 20 or more (CIEDE2000) from each of the four status colours as normal vision and the vision of the palette see them (the Machado matrices of ColourMeasures.kt), and the variant keeps every contrast rule that its accent keeps. A pair that keeps the 20 has no variant and keeps its accent. A variant is chosen to be 21 or more from them where it can be, as the sets that pass have 20.5 or more to spare and the model of colour vision is an approximation. The strong accent and the line are measured and not held (PALETTE_HELD_ROLES in contrast.py). `contrast.py accents` prints the distances as Table X, and `--palette` measures the accents as that palette draws them. The variants are proposals: the tokens and the app do not have them yet.",
+    "red-green": {
+      "violet": {
+        "label": "Violet, Red-green palette",
+        "source": "No violet variant exists for this palette. To a protanope and a deuteranope violet is a blue, as the sky blue of the success colour (#56B4E9) is: the colours within 45 degrees of the hue of violet (OKLCH 293.5) that are 20 from the four status colours and from the ink are all darker than L 0.57 (Y 0.17), where an accent has 3.5:1 or less on surface-raised and under 4.5:1 on the tint of a selected row (#755AD8, the nearest, is 3.35:1 and 2.96:1), and none of them is light enough to carry text over the glass as the soft accent does (Y 0.49 or more). The nearest colour of any hue that keeps the 20 and every contrast rule that violet keeps is this pale rose. The other ways are to leave violet as it is under this palette, which fails the 20 for a protanope and a deuteranope, and to draw the teal set under it, which keeps the 20: the owner chooses.",
+        "color": {
+          "accent": "#F4BCBC",
+          "accent-soft": "#FCC3C8",
+          "accent-strong": "#B88484",
+          "on-accent": "#200E0D",
+          "accent-tint": "#F4BCBC21",
+          "accent-line": "#F4BCBC66",
+          "accent-inverse": "#8A5A5A"
+        },
+        "high-contrast": {
+          "accent": "#F4BCBC",
+          "accent-soft": "#FCC3C8",
+          "accent-line": "#F4BCBC",
+          "accent-inverse": "#774849"
+        },
+        "notes": {
+          "accent": "A pale rose, the nearest colour in OKLCH that keeps the 20 here and every contrast rule that violet keeps: L 0.846, chroma 0.065, hue 18.5 degrees against 0.709, 0.159 and 293.5. It is 0.215 from violet in OKLab and 30.5 in CIEDE2000. It is 28.6 from the status colours of the palette as normal vision sees them, 21.0 as a protanope sees them (offline) and 22.3 as a deuteranope sees them (warning), and 20.6 from ink and 20.4 from ink-2. It keeps 10.17:1 on surface-raised, and over the glass at the default 6.41:1 or more as text where violet is 3.88.",
+          "accent-soft": "The soft accent, lighter than the accent as violet-300 is lighter than violet-400: L* 83.9 with the hue of the accent and a chroma of 21.7. It is 30.1, 21.5 and 23.5 from the status colours as normal vision, a protanope and a deuteranope see them, and 20.1 and 20.7 from ink and ink-2, so that a selected label is told from the text beside it. It keeps 6.92:1 or more over the glass as text and 5.28:1 or more as the selected label (Table W), where violet keeps 4.74:1.",
+          "accent-strong": "The accent 21 L* lower with the hue and the chroma kept, as violet-600 is below violet-400: L* 60.2. It carries no text and no part of the app draws it, and it is 5.32:1 on surface-raised. It is not held to the 20: it is 5.6 from the grey offline colour as a protanope sees it, to whom a rose of that lightness is a grey.",
+          "on-accent": "The deepest colour of the hue of the accent at L* 5.9, with 0.41 of its chroma as the deep violet has of violet. It keeps 11.30:1 on the accent.",
+          "accent-tint": "The accent at an alpha of 0x21, which is 13 %, as in violet.",
+          "accent-line": "The accent at an alpha of 0x66, which is 40 %, as in violet. Over surface it is #6E595B, and its least distance from the status colours is 13.0: it is not held, and no accent that is light enough for its text keeps the line 20 from them in this palette (Table X).",
+          "accent-inverse": "The accent at L* 43.4, as violet-600 is, with the hue and the chroma of the accent kept (21.4 of 21.6): a dark rose that keeps 4.72:1 on ink.",
+          "high-contrast.accent": "The accent as it is: it keeps 7.64:1 on the worst fill (selected row on surface-raised), over the 7:1 of high contrast, so there is nothing to lighten as there is in violet. It is 21.0 from the status colours as a protanope sees them.",
+          "high-contrast.accent-soft": "The soft accent as it is: it keeps 8.25:1 on the worst fill, and is 21.5 from the status colours as a protanope sees them.",
+          "high-contrast.accent-line": "The accent as an opaque border colour: 7.64:1 on the worst fill, over the 3:1 of a border.",
+          "high-contrast.accent-inverse": "The accent-inverse of the colour group darkened to L* 36 with the hue and the chroma kept: it keeps 7.48:1 on the white ink of high contrast, the inverse surface of the snackbar, over the 7:1 that high contrast asks of text."
+        },
+        "known_fails": {}
+      }
+    },
+    "blue-yellow": {
+      "violet": {
+        "label": "Violet, Blue-yellow palette",
+        "source": "Today's violet #A78BFA, moved a little: a tritanope sees violet as a grey, and the grey offline colour of the palette is 14.8 from it. This is the nearest colour in OKLCH that is 21 or more from the four status colours and keeps every rule that violet keeps, and it is still a violet, lighter and pinker (hue 306.9 against 293.5).",
+        "color": {
+          "accent": "#C688FE",
+          "accent-soft": "#C8BBFE",
+          "accent-strong": "#934BBA",
+          "on-accent": "#1D092E",
+          "accent-tint": "#C688FE21",
+          "accent-line": "#C688FE66",
+          "accent-inverse": "#834BBA"
+        },
+        "high-contrast": {
+          "accent": "#C7B9FC",
+          "accent-soft": "#CAC4FE",
+          "accent-line": "#C7B9FC",
+          "accent-inverse": "#6F38A6"
+        },
+        "notes": {
+          "accent": "Today's violet, moved to the nearest colour in OKLCH that is 21 or more from the four status colours of the palette as a tritanope sees them and keeps every contrast rule that violet keeps: L 0.735, chroma 0.174, hue 306.9 degrees against 0.709, 0.159 and 293.5, a lighter and pinker violet. It is 0.049 from violet in OKLab and 6.2 in CIEDE2000. Violet is 14.8 from the grey offline colour as a tritanope sees it, which is grey to them, and this is 21.1 (offline); as normal vision sees it it is 29.4 from them. It is 28.1 from ink and 21.5 from ink-2. It keeps 6.66:1 on surface-raised and 4.20:1 or more over the glass as text, where violet keeps 3.88:1, and every check that it falls short of over the glass is one that violet falls short of too.",
+          "accent-soft": "Today's violet-300 moved by 1.6 CIEDE2000 to the hue of the accent with its distance from the warning yellow and the grey kept at 21 or more: L* 79.0 and a chroma of 36.2 (0.54 of the accent). It is 21.4 from the status colours as a tritanope sees them (warning), and 20.5 and 17.1 from ink and ink-2. It keeps 6.03:1 or more over the glass as text and 4.95:1 or more as the selected label (Table W), where violet keeps 5.71 and 4.74.",
+          "accent-strong": "A colour of the hue of the accent that is 21 or more from the four status colours as a tritanope sees them, nearest to the ladder of violet (the accent 21 L* lower with the hue and the chroma kept) and at least 8 hundredths of L darker than the accent: L* 45.3. It carries no text and no part of the app draws it. It is 21.1 from the status colours as a tritanope sees them and 3.15:1 on surface-raised.",
+          "on-accent": "The deepest colour of the hue of the accent at L* 5.9, with 0.41 of its chroma as the deep violet has of violet. It keeps 7.39:1 on the accent.",
+          "accent-tint": "The accent at an alpha of 0x21, which is 13 %, as in violet.",
+          "accent-line": "The accent at an alpha of 0x66, which is 40 %, as in violet. Over surface it is #5B4476, 20.5 from the status colours as a tritanope sees them (offline); it is not held.",
+          "accent-inverse": "The accent at L* 43.4, as violet-600 is, with the hue and the chroma of the accent kept (67.2 of 67.5): a dark violet that keeps 4.73:1 on ink.",
+          "high-contrast.accent": "The accent of high contrast, the colour nearest to violet's #C8B7FC that is 21 or more from the four status colours as a tritanope sees them. Violet's own is 19.7 from the warning yellow, which a tritanope sees as a pale pink. It keeps 7.55:1 on the worst fill (selected row on surface-raised), over the 7:1 of high contrast, and is 21.1 from the status colours.",
+          "high-contrast.accent-soft": "The soft accent of high contrast, lighter than its accent: it keeps 8.23:1 on the worst fill and is 23.4 from the status colours as a tritanope sees them.",
+          "high-contrast.accent-line": "The accent of high contrast as an opaque border colour: 7.55:1 on the worst fill, over the 3:1 of a border.",
+          "high-contrast.accent-inverse": "The accent-inverse of the colour group darkened to L* 36 with the hue and the chroma kept: it keeps 7.52:1 on the white ink of high contrast, the inverse surface of the snackbar, over the 7:1 that high contrast asks of text."
+        },
+        "known_fails": {}
+      },
+      "white": {
+        "label": "White, Blue-yellow palette",
+        "source": "The white set with its soft accent changed: the pure white #FFFFFF of the soft accent is 16.8 from the warning yellow (#F0E442) as a tritanope sees it, which is a pale pink to them. The accent (20.5), the strong accent and every other value stay as they are.",
+        "color": {
+          "accent": "#EFF3FF",
+          "accent-soft": "#F3FCFF",
+          "accent-strong": "#B4B8C4",
+          "on-accent": "#0E1013",
+          "accent-tint": "#EFF3FF21",
+          "accent-line": "#EFF3FF66",
+          "accent-inverse": "#636671"
+        },
+        "high-contrast": {
+          "accent": "#EFF3FF",
+          "accent-soft": "#F3FCFF",
+          "accent-line": "#EFF3FF",
+          "accent-inverse": "#51555F"
+        },
+        "notes": {
+          "accent": "The accent of the white set, as it is: it is 20.5 from the warning yellow as a tritanope sees it (warning), over the 20, so it keeps its value.",
+          "accent-soft": "A white with a trace of cyan (L* 98.4, chroma 3.4, hue 226 degrees) in place of the pure white of the white set, which is 16.8 from the warning yellow as a tritanope sees it, and that sees it as a pale pink: this is 22.9 (warning), 4.1 CIEDE2000 from pure white. It is still the lightest step, as the accent-soft of a white set is. It keeps 10.14:1 over the glass as text and 7.07:1 as the selected label (Table W), where pure white keeps 10.55 and 7.35.",
+          "accent-strong": "As in the white set: the accent 21 L* lower with the hue and the chroma kept. It carries no text and is not held to the 20 under a palette.",
+          "on-accent": "As in the white set: the page colour #0E1013, the black of the page. It keeps 17.18:1 on the accent.",
+          "accent-tint": "The accent at an alpha of 0x21, which is 13 %, as in the white set.",
+          "accent-line": "As in the white set: the accent at an alpha of 0x66, which is 40 %. It is not held to the 20 under a palette.",
+          "accent-inverse": "As in the white set: the accent at L* 43.4 with its hue and its chroma of 6 kept, a dark neutral that keeps 4.75:1 on ink.",
+          "high-contrast.accent": "The accent as it is, as in the white set: it keeps 10.31:1 on the worst fill (selected row on surface-raised), over the 7:1 of high contrast.",
+          "high-contrast.accent-soft": "The soft accent of the variant, as it is: it keeps 10.99:1 on the worst fill and is 22.9 from the status colours as a tritanope sees them.",
+          "high-contrast.accent-line": "The accent as an opaque border colour, as in the white set: 10.31:1 on the worst fill, over the 3:1 of a border.",
+          "high-contrast.accent-inverse": "As in the white set: the accent-inverse darkened to L* 36 with its hue and its chroma of 6 kept, 7.46:1 on the white ink of high contrast."
+        },
+        "known_fails": {
+          "distance:ink": "Whatever its value: a neutral that keeps 4.5:1 as text over the Standard glass is at L* 69.5 or more, and none of them is 20 from ink (#E8EAED, L* 92): the furthest is 19.7, and a white is under 6 (sampled over every colour of chroma under 10, each channel from 130 to 255). The accent is told from the ink by its fill and its tint.",
+          "distance:ink-2": "Whatever its value: ink-2 (#C3C7CC, L* 80) lies in the lightness of a neutral that can be read as text over the glass (L* 69.5 and over), and none of those is 20 from it: the furthest is 16.6, and no neutral is 20 from both ink and ink-2 (the best is 15.0)."
+        }
+      }
+    }
   }
 }

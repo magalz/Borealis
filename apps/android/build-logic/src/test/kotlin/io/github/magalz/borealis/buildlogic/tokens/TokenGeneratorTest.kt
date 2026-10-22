@@ -15,7 +15,7 @@ class TokenGeneratorTest {
 
         val generated = TokenGenerator.generate(json)
 
-        assertThat(names).hasSize(25)
+        assertThat(names).hasSize(26)
         for (name in names) {
             assertThat(generated.kotlin).contains("val ${pascal(name)} = Color(0x")
             assertThat(generated.colorsXml)
@@ -352,6 +352,35 @@ class TokenGeneratorTest {
         assertThat(kotlin).contains("object BlueYellow {")
         assertThat(kotlin).contains("val OutlineThick = 5.dp")
         assertThat(kotlin).contains("const val Dim = ")
+    }
+
+    @Test
+    fun `the teal and white accent sets of the real file are generated with their high contrast`() {
+        val generated = TokenGenerator.generate(realTokens())
+
+        val teal =
+            generated.kotlin
+                .substringAfter("object AccentTeal {")
+                .substringBefore("object AccentWhite")
+        val white = generated.kotlin.substringAfter("object AccentWhite {")
+        assertThat(teal).contains("val Accent = Color(0xFF4BECD0)")
+        assertThat(teal).contains("val AccentSoft = Color(0xFFA2FCE8)")
+        assertThat(teal).contains("val AccentInverse = Color(0xFF027464)")
+        assertThat(teal).contains("val AccentTint = Color(0x214BECD0)")
+        assertThat(teal).contains("object HighContrast {")
+        assertThat(white).contains("val Accent = Color(0xFFEFF3FF)")
+        assertThat(white).contains("val AccentSoft = Color(0xFFFFFFFF)")
+        assertThat(white).contains("val AccentInverse = Color(0xFF636671)")
+        assertThat(white).contains("object HighContrast {")
+    }
+
+    @Test
+    fun `only the colour group becomes colour resources, so the accent sets do not`() {
+        val xml = TokenGenerator.generate(realTokens()).colorsXml
+
+        assertThat(xml).contains("""<color name="borealis_accent_inverse">#FF7C3AED</color>""")
+        assertThat(xml).doesNotContain("teal")
+        assertThat(xml).doesNotContain("white")
     }
 
     @Test

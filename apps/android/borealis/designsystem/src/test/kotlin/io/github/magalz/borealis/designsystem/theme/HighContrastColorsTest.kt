@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.designsystem.theme
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.glass.luminance
@@ -14,24 +13,6 @@ import org.junit.Test
 class HighContrastColorsTest {
     private val base = BorealisColors()
     private val high = base.withHighContrast()
-
-    /** The fills that text lies on, and the same under the tint of a selected row and a hover. */
-    private fun backdrops(colors: BorealisColors): Map<String, Color> {
-        val surfaces =
-            mapOf(
-                "page" to colors.page,
-                "chrome" to colors.chrome,
-                "surface" to colors.surface,
-                "surface-raised" to colors.surfaceRaised,
-            )
-        val selected =
-            mapOf("surface" to colors.surface, "surface-raised" to colors.surfaceRaised).mapKeys {
-                "selected row on ${it.key}"
-            }
-        return surfaces +
-            selected.mapValues { colors.accentTint.compositeOver(it.value) } +
-            mapOf("hover on surface-raised" to colors.hover.compositeOver(colors.surfaceRaised))
-    }
 
     private fun textRoles(colors: BorealisColors) =
         mapOf(
@@ -49,7 +30,7 @@ class HighContrastColorsTest {
     @Test
     fun `every text role reaches 7 to 1 on the page, the surfaces and the selected rows`() {
         for ((role, color) in textRoles(high)) {
-            for ((backdrop, fill) in backdrops(high)) {
+            for ((backdrop, fill) in textBackdrops(high)) {
                 assertWithMessage("$role on $backdrop")
                     .that(contrastRatio(color, fill))
                     .isAtLeast(7.0)
@@ -89,7 +70,7 @@ class HighContrastColorsTest {
 
         for ((role, color) in borders) {
             assertWithMessage("$role is opaque").that(color.alpha).isEqualTo(1f)
-            for ((backdrop, fill) in backdrops(high)) {
+            for ((backdrop, fill) in textBackdrops(high)) {
                 assertWithMessage("$role on $backdrop")
                     .that(contrastRatio(color, fill))
                     .isAtLeast(3.0)
@@ -107,7 +88,7 @@ class HighContrastColorsTest {
 
     @Test
     fun `the offline indicator keeps 3 to 1 on the page and the surfaces`() {
-        for ((backdrop, fill) in backdrops(high)) {
+        for ((backdrop, fill) in textBackdrops(high)) {
             assertWithMessage("offline on $backdrop")
                 .that(contrastRatio(high.offline, fill))
                 .isAtLeast(3.0)

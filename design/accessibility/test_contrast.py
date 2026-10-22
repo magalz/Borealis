@@ -2289,6 +2289,7 @@ VIOLET_COLOR = {
     "on-accent": "#160B2E",
     "accent-tint": "#A78BFA21",
     "accent-line": "#A78BFA66",
+    "accent-inverse": "#7C3AED",
 }
 VIOLET_HIGH_CONTRAST = {"accent": "#C8B7FC", "accent-soft": "#D6CCFE", "accent-line": "#C8B7FC"}
 SURFACE_HEX = {"page": "#0E1013", "surface": "#14171B", "surface-raised": "#1A1E24"}
@@ -2506,6 +2507,12 @@ class AccentFileTest(unittest.TestCase):
         color = dict(VIOLET_COLOR)
         del color["on-accent"]
         with self.assertRaisesRegex(ValueError, "teal.*on-accent"):
+            self.load(teal=dict(candidate(), color=color))
+
+    def test_the_role_of_the_snackbar_action_is_required(self):
+        color = dict(VIOLET_COLOR)
+        del color["accent-inverse"]
+        with self.assertRaisesRegex(ValueError, "teal.*accent-inverse"):
             self.load(teal=dict(candidate(), color=color))
 
     def test_a_high_contrast_role_that_is_missing_is_reported(self):
@@ -2752,6 +2759,21 @@ class AccentReportTest(unittest.TestCase):
                     self.assertAlmostEqual(found["ratio"], expected, places=9)
                     self.assertLess(found["ratio"], self.fill(report, f"{role}/{surface}")["ratio"])
 
+    def test_the_snackbar_action_is_checked_as_text_on_the_light_ink_surface(self):
+        # The action of a snackbar is drawn in accent-inverse on `ink`, the inverse surface.
+        found = self.fill(self.report(), "accent-inverse/ink")
+        self.assertAlmostEqual(found["ratio"], contrast.hex_contrast("#7C3AED", "#E8EAED"), 9)
+        self.assertAlmostEqual(found["ratio"], 4.73, delta=0.006)
+        self.assertEqual(found["limit"], 4.5)
+        self.assertNotIn("accent-inverse/ink", self.report()["fails"])
+
+    def test_an_action_colour_that_is_too_light_for_the_ink_is_a_failure(self):
+        # accent-strong of teal is 2.30:1 on ink: it is why the role exists.
+        light = candidate(color={"accent-inverse": "#06AF97"})
+        found = self.fill(self.report(light), "accent-inverse/ink")
+        self.assertAlmostEqual(found["ratio"], 2.30, delta=0.006)
+        self.assertIn("accent-inverse/ink", self.report(light)["fails"])
+
     def test_the_strong_accent_is_reported_for_information_with_no_limit(self):
         found = self.fill(self.report(), "accent-strong/page")
         self.assertIsNone(found["limit"])
@@ -2996,6 +3018,27 @@ class AccentGlassTest(unittest.TestCase):
         self.assertIn("glass:standard:NorthernLights:selected", report["fails"])
         self.assertNotIn("glass:standard:AuroraCurtains:selected", report["fails"])
 
+    def test_the_selected_label_of_the_app_is_accent_soft_over_the_tint_on_the_glass(self):
+        # The app draws the selected label in accent-soft: it keeps 4.5:1 where accent does not.
+        rows = list(self.rows) + [
+            {**row, "overlay": "one", "luminance": row["luminance"] + 0.01}
+            for row in self.rows
+            if row["blur_dp"] in (8, 48)
+        ]
+        report = self.make(candidate(), rows)
+        found = self.glass(report, "NorthernLights", "standard")
+        soft = float(contrast.relative_luminance(contrast.parse_hex("#C4B5FD")))
+        expected = (soft + 0.05) / (found["backdrop"] + 0.01 + 0.05)
+        self.assertAlmostEqual(found["selected-soft"], expected, places=6)
+        self.assertGreater(found["selected-soft"], found["selected"])
+        self.assertNotIn("glass:standard:NorthernLights:selected-soft", report["fails"])
+        dark = self.make(candidate(color={"accent-soft": "#7A6AC0"}), rows)
+        self.assertIn("glass:standard:NorthernLights:selected-soft", dark["fails"])
+
+    def test_the_selected_label_has_no_row_where_no_tint_was_laid_on_the_glass(self):
+        for row in self.report["glass"]:
+            self.assertIsNone(row["selected-soft"])
+
     def test_the_worst_of_two_devices_is_the_brightest_backdrop(self):
         brighter = [
             {**row, "device": "phone", "luminance": row["luminance"] + 0.02}
@@ -3025,9 +3068,25 @@ class AccentTablesTest(unittest.TestCase):
         self.text = contrast.accent_tables(self.result)
 
     def test_there_is_a_table_for_each_part_of_the_checks(self):
-        for title in ("N", "O", "P", "Q", "R", "S", "T"):
+        for title in ("N", "O", "P", "Q", "R", "S", "T", "U", "V"):
             with self.subTest(title=title):
                 self.assertIn(f"Table {title}.", self.text)
+
+    def test_the_selected_label_of_the_app_has_its_own_table_over_the_glass(self):
+        rows = [
+            {**row, "overlay": name, "luminance": row["luminance"] + 0.01}
+            for row in backdrop_rows_of_the_table()
+            for name in self.candidates
+            if row["blur_dp"] in (8, 48)
+        ]
+        context = contrast.accent_context(TOKENS)
+        report = contrast.accent_report(
+            self.candidates, context, backdrop_rows_of_the_table() + rows
+        )
+        text = contrast.accent_tables({"meta": {}, "candidates": report})
+        self.assertRegex(text, r"Table V\. The selected label of the app, `accent-soft`")
+        table = text[text.index("Table V.") :]
+        self.assertIn("| Aurora curtains | Standard |", table)
 
     def test_the_role_sets_are_listed_by_candidate(self):
         self.assertIn("`#A78BFA`", self.text)
@@ -3188,6 +3247,18 @@ class ShippedAccentsTest(unittest.TestCase):
         for reason in known.values():
             self.assertIn("Whatever its value", reason)
 
+    def test_every_set_has_a_snackbar_role_that_keeps_4_5_to_1_on_ink(self):
+        for name, found in self.accents.items():
+            with self.subTest(candidate=name):
+                fills = self.report[name]["fills"]
+                check = next(c for c in fills if c["id"] == "accent-inverse/ink")
+                self.assertGreaterEqual(check["ratio"], 4.5)
+                self.assertNotIn("accent-inverse/ink", found["known_fails"])
+
+    def test_violet_keeps_its_strong_accent_as_the_snackbar_role(self):
+        colors = self.accents["violet"]["color"]
+        self.assertEqual(colors["accent-inverse"], colors["accent-strong"])
+
     def test_the_known_failures_are_checks_of_the_set_with_a_reason_that_says_something(self):
         for name, found in self.accents.items():
             report = self.report[name]
@@ -3204,6 +3275,54 @@ class ShippedAccentsTest(unittest.TestCase):
                 if entry["relevant"] and entry["id"] not in self.accents[name]["known_fails"]:
                     with self.subTest(candidate=name, check=entry["id"]):
                         self.assertGreaterEqual(entry["least"], 20.4)
+
+
+def role_set(group):
+    """The roles of a group of `tokens.json`, `{role: value}`, with no `$` keys."""
+    return {
+        role: found["$value"]
+        for role, found in group.items()
+        if not role.startswith("$") and role != "high-contrast"
+    }
+
+
+class ShippedTokensTest(unittest.TestCase):
+    """`design/tokens.json` carries the sets of `accents.json` that the owner chose (ADR 0058,
+    decision 5): violet in the colour groups, teal and white in a group of their own."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tokens = json.loads(TOKENS.read_text(encoding="utf-8"))
+        cls.accents = contrast.load_accents(contrast.ACCENTS_JSON)
+
+    def test_violet_is_the_colour_and_high_contrast_groups(self):
+        violet = self.accents["violet"]
+        colors = {role: self.tokens["color"][role]["$value"] for role in violet["color"]}
+        high = self.tokens["high-contrast"]
+        high = {role: high[role]["$value"] for role in violet["high-contrast"]}
+        self.assertEqual(colors, violet["color"])
+        self.assertEqual(high, violet["high-contrast"])
+
+    def test_teal_and_white_are_a_group_each_with_a_high_contrast_group(self):
+        for name in ("teal", "white"):
+            with self.subTest(set=name):
+                group = self.tokens[f"accent-{name}"]
+                self.assertEqual(role_set(group), self.accents[name]["color"])
+                high = {r: f["$value"] for r, f in group["high-contrast"].items() if r[0] != "$"}
+                self.assertEqual(high, self.accents[name]["high-contrast"])
+
+    def test_the_groups_are_colours_and_each_role_says_what_it_is_for(self):
+        for name in ("teal", "white"):
+            group = self.tokens[f"accent-{name}"]
+            self.assertEqual(group["$type"], "color")
+            for role, found in group.items():
+                if role.startswith("$") or role == "high-contrast":
+                    continue
+                with self.subTest(set=name, role=role):
+                    self.assertGreater(len(found["$description"]), 10)
+
+    def test_the_green_candidate_is_not_a_set_of_the_tokens(self):
+        self.assertNotIn("accent-green", self.tokens)
 
 
 if __name__ == "__main__":

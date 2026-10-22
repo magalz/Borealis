@@ -87,6 +87,33 @@ class BorealisThemeLookEffectsTest {
     }
 
     @Test
+    fun `an accent gives the content and Material the colours of its set`() {
+        show(BorealisLook(accent = AccentChoice.Teal))
+
+        assertThat(colors).isEqualTo(borealisColors(BorealisLook(accent = AccentChoice.Teal)))
+        assertThat(colors?.accent).isEqualTo(Color(0xFF4BECD0))
+        assertThat(scheme?.primary).isEqualTo(Color(0xFF4BECD0))
+        assertThat(scheme?.onPrimary).isEqualTo(Color(0xFF001713))
+        assertThat(scheme?.secondary).isEqualTo(Color(0xFFA2FCE8))
+        assertThat(scheme?.inversePrimary).isEqualTo(Color(0xFF027464))
+    }
+
+    @Test
+    fun `a change of the accent reaches the colours of content that is already shown`() {
+        var look by mutableStateOf(BorealisLook())
+        composeRule.setContent { BorealisTheme(look = look) { Probe() } }
+        composeRule.waitForIdle()
+        assertThat(colors?.accent).isEqualTo(BorealisColors().accent)
+
+        look = BorealisLook(accent = AccentChoice.White)
+        composeRule.waitForIdle()
+
+        assertThat(colors?.accent).isEqualTo(Color(0xFFEFF3FF))
+        assertThat(scheme?.primary).isEqualTo(Color(0xFFEFF3FF))
+        assertThat(contentColor).isEqualTo(colors?.ink)
+    }
+
+    @Test
     fun `a change of look reaches the colours of content that is already shown`() {
         var look by mutableStateOf(BorealisLook())
         composeRule.setContent { BorealisTheme(look = look) { Probe() } }

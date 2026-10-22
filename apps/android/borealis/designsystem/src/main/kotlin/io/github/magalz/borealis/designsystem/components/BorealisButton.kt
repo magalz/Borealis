@@ -80,7 +80,7 @@ internal fun ButtonFace(
             BorealisButtonStyle.Primary -> colors.onAccent
             BorealisButtonStyle.Secondary -> colors.ink
             BorealisButtonStyle.Danger -> colors.dangerInk
-            BorealisButtonStyle.Text -> colors.accent
+            BorealisButtonStyle.Text -> colors.accentSoft
         }
     Box(
         modifier

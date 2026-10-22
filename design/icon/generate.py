@@ -20,13 +20,15 @@ LEGACY_SIZES = {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 1
 
 BG_TOP, BG_BOTTOM = (0x1B, 0x0E, 0x3A), (0x3D, 0x1E, 0x7E)
 RIDGE = (0x0E, 0x10, 0x13)
-GREEN_TOP, GREEN_BOTTOM = (0x6E, 0xE7, 0xB7, 0.95), (0x14, 0xB8, 0xA6, 0.10)
+# The upper band is the teal of the accent (issue #50): the accent and the accent-strong of the teal set of
+# design/accessibility/accents.json, which design/accessibility/test_icon_colours.py keeps equal.
+TEAL_TOP, TEAL_BOTTOM = (0x4B, 0xEC, 0xD0, 0.95), (0x06, 0xAF, 0x97, 0.10)
 VIOLET_TOP, VIOLET_BOTTOM = (0xC4, 0xB5, 0xFD, 0.85), (0x7C, 0x3A, 0xED, 0.10)
 STAR = (0xF5, 0xF3, 0xFF, 0.9)
 
 # 108 x 108 adaptive-icon geometry: launchers show the centred 72 x 72.
-GREEN = [('M', 0, 66), ('C', 20, 44, 38, 62, 54, 36), ('C', 64, 20, 80, 30, 108, 14), ('L', 108, 30),
-         ('C', 84, 42, 68, 32, 57, 50), ('C', 42, 72, 22, 54, 0, 80), ('Z',)]
+TEAL = [('M', 0, 66), ('C', 20, 44, 38, 62, 54, 36), ('C', 64, 20, 80, 30, 108, 14), ('L', 108, 30),
+        ('C', 84, 42, 68, 32, 57, 50), ('C', 42, 72, 22, 54, 0, 80), ('Z',)]
 VIOLET = [('M', 0, 76), ('C', 22, 56, 42, 74, 58, 52), ('C', 70, 38, 84, 46, 108, 36), ('L', 108, 48),
           ('C', 86, 56, 72, 50, 61, 62), ('C', 46, 80, 24, 64, 0, 88), ('Z',)]
 RIDGE_PATH = [('M', 0, 84), ('L', 22, 74), ('L', 34, 80), ('L', 50, 66), ('L', 60, 75), ('L', 70, 69),
@@ -35,7 +37,7 @@ STARS = [(38, 27, 0.9), (70, 24, 0.7), (29, 42, 0.6), (78, 52, 0.6), (48, 46, 0.
 
 # The layers of the one-colour mark, back to front, each as its path and its opacity. The themed icon, the
 # mark of the design system and the monochrome raster of the preview draw these, so they cannot drift apart.
-MONOCHROME_LAYERS = [(GREEN, 1), (VIOLET, 0.6), (RIDGE_PATH, 1)]
+MONOCHROME_LAYERS = [(TEAL, 1), (VIOLET, 0.6), (RIDGE_PATH, 1)]
 
 # A launcher shows the centred 72 x 72 of the 108 x 108 geometry: its offset and size, which the mark keeps.
 SAFE_ZONE_OFFSET, SAFE_ZONE_SIZE = 18, 72
@@ -133,8 +135,8 @@ def vectors(drawable_dir):
     ) + (
         f'    <path android:pathData="{path_data(VIOLET)}">\n'
         f'{gradient(VIOLET_TOP, VIOLET_BOTTOM, 36, 88)}\n    </path>\n'
-        f'    <path android:pathData="{path_data(GREEN)}">\n'
-        f'{gradient(GREEN_TOP, GREEN_BOTTOM, 14, 80)}\n    </path>\n'
+        f'    <path android:pathData="{path_data(TEAL)}">\n'
+        f'{gradient(TEAL_TOP, TEAL_BOTTOM, 14, 80)}\n    </path>\n'
         + solid(argb(RIDGE), path_data(RIDGE_PATH)) + '</vector>\n'
     )
     monochrome = HEADER.format(what='monochrome') + monochrome_paths() + '</vector>\n'
@@ -145,7 +147,7 @@ def vectors(drawable_dir):
         even_odd(argb(STAR[:3]), frame)
         + solid(argb(STAR[:3]), stand)
         + f'    <path android:pathData="{path_data(MONITOR_AURORA)}">\n'
-        f'{gradient(GREEN_TOP, GREEN_BOTTOM, 38, 66)}\n    </path>\n</vector>\n'
+        f'{gradient(TEAL_TOP, TEAL_BOTTOM, 38, 66)}\n    </path>\n</vector>\n'
     )
     shortcut_monochrome = shortcut_header.format(what='monochrome') + (
         even_odd('#FFFFFFFF', frame)
@@ -242,7 +244,7 @@ def icon(size, monochrome=False):
         for x, y, r in STARS:
             draw.ellipse([(x - r) * s, (y - r) * s, (x + r) * s, (y + r) * s], fill=(0xF5, 0xF3, 0xFF, 230))
         fill(img, VIOLET, VIOLET_TOP, VIOLET_BOTTOM, 36, 88, s, s, 0, 0)
-        fill(img, GREEN, GREEN_TOP, GREEN_BOTTOM, 14, 80, s, s, 0, 0)
+        fill(img, TEAL, TEAL_TOP, TEAL_BOTTOM, 14, 80, s, s, 0, 0)
         fill(img, RIDGE_PATH, RIDGE, RIDGE, 0, 108, s, s, 0, 0)
     return img.crop((18 * s, 18 * s, 90 * s, 90 * s)).resize((size, size), Image.Resampling.LANCZOS)
 
@@ -274,7 +276,7 @@ def banner(out, font_path):
         cx, cy, rr = x * sx + ox, y * sy * 0.8 + oy, r * 6 * s / 4
         draw.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], fill=(STAR[0], STAR[1], STAR[2], int(STAR[3] * 255)))
     fill(img, VIOLET, VIOLET_TOP, VIOLET_BOTTOM, 36, 88, sx, sy, ox, oy)
-    fill(img, GREEN, GREEN_TOP, GREEN_BOTTOM, 14, 80, sx, sy, ox, oy)
+    fill(img, TEAL, TEAL_TOP, TEAL_BOTTOM, 14, 80, sx, sy, ox, oy)
     fill(img, RIDGE_PATH, RIDGE, RIDGE, 0, 108, sx, sy, ox, oy)
     # The stretched ridge stops short of the bottom edge: extend it.
     draw.rectangle([0, 108 * sy + oy - 1, w, h], fill=RIDGE + (255,))

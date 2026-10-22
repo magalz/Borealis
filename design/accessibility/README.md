@@ -304,7 +304,9 @@ Table X for it, from the distances that need no frame:
 - **The variants.** `palette_variants` of `accents.json` maps a palette to the accents that have a
   full set of roles of their own under it, as a candidate has (`label`, `source`, `color`,
   `high-contrast`, `notes`, `known_fails`). An accent that keeps the rule has no variant and keeps
-  its set. `known_fails` of a variant is what `accent_report(..., palette=...)` says that it fails
+  its set. `design/tokens.json` carries each variant as a group, `accent-<accent>-<palette>` with its
+  `high-contrast` group (`accent-violet-red-green`, and so on), `ShippedTokensTest` keeps the two
+  equal, and `BorealisColors.withColourVision` draws them. `known_fails` of a variant is what `accent_report(..., palette=...)` says that it fails
   with no frame.
 - **`--palette red-green|blue-yellow`** measures the accents as that palette draws them: each
   accent that has a variant under it is replaced by the variant, and its status colours are held as

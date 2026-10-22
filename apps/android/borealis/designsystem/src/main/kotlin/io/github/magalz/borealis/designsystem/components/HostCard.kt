@@ -62,8 +62,9 @@ private val INK_CLEARANCE = 4.dp
  * 7) pads the card less, and its least height is the token less what that gives back. A card whose
  *    tags wrap, or whose text needs more room (a large font, or a narrower card in a denser
  *    layout), grows rather than cutting it, and the Hosts screen then makes the other cards of its
- *    row as high, so that a row has one height. On a handheld or a phone a card is as high as its
- *    content, so a short screen is not left with empty space in each card.
+ *    row as high, so that a row has one height. On a handheld or a phone there is no token: a card
+ *    is as high as its content, or as the tallest card of its row, so a short screen is not left
+ *    with empty space in each card.
  */
 @Composable
 fun HostCard(
@@ -92,8 +93,9 @@ fun HostCard(
                 runningLabel ?: runningApp,
             )
             .joinToString(", ")
-    // Only the TV grid has its cards all the same height; a phone or a handheld, which has little
-    // room to spare, sizes each card by its content.
+    // Only a TV has the height token; a phone or a handheld, which has little room to spare, sizes
+    // each card by its content, and the Hosts screen makes the cards of a row as high as the
+    // tallest.
     val height =
         if (LocalFormFactor.current == FormFactor.Tv) {
             // The token is the height of the fullest card with the padding of Comfortable; a

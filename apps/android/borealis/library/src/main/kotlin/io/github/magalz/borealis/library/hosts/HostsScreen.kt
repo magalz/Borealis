@@ -262,7 +262,7 @@ private fun HostsBody(
                     look.cardDensity,
                     look.textSpacing,
                 )
-            HostGrid(state, formFactor, columns, startFocus, handlers)
+            HostGrid(state, columns, startFocus, handlers)
         }
     }
 }
@@ -272,7 +272,6 @@ private fun LazyGridItemSpanScope.fullWidth() = GridItemSpan(maxLineSpan)
 @Composable
 private fun HostGrid(
     state: HostsUiState,
-    formFactor: FormFactor,
     columns: Int,
     startFocus: StartFocus?,
     handlers: HostsHandlers,
@@ -283,7 +282,7 @@ private fun HostGrid(
     val cardKeys = remember(state.continueItems, state.items) { state.cardKeys() }
     val restoredCard = startFocus?.cardKey?.takeIf { it in cardKeys }
     val gridState = rememberLazyGridState()
-    val rows = rememberHostRows(state.items, formFactor, columns)
+    val rows = rememberHostRows(state.items, columns)
     ScrollToCard(gridState, state, restoredCard, startFocus?.state)
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),

@@ -5,14 +5,13 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.layout
-import io.github.magalz.borealis.designsystem.theme.FormFactor
 
 /**
- * The heights that the host cards of a TV need, so that the cards of a row are as high as the
- * tallest of them. A grid sizes each of its items on its own, and the only place where a card can
- * learn what its neighbours need is here: each card tells what it needs for its width ([need]), and
- * asks for the tallest of its row ([tallest]). The state is read when a card is laid out, so a card
- * that is laid out before its neighbours are known is laid out again, in the next frame, with their
+ * The heights that the host cards need, so that the cards of a row are as high as the tallest of
+ * them. A grid sizes each of its items on its own, and the only place where a card can learn what
+ * its neighbours need is here: each card tells what it needs for its width ([need]), and asks for
+ * the tallest of its row ([tallest]). The state is read when a card is laid out, so a card that is
+ * laid out before its neighbours are known is laid out again, in the next frame, with their
  * heights. The intrinsic height of a card is not what it needs (the tags that wrap are not in it),
  * so a card is measured as it is first.
  */
@@ -28,7 +27,7 @@ internal class RowHeights {
 
 /**
  * Makes the card [id] as high as the tallest of the cards of its [row] ([heights]), and no lower
- * than what it needs itself, which keeps the height token as its least.
+ * than what it needs itself, which keeps the height token of a TV as its least.
  */
 internal fun Modifier.asHighAsItsRow(heights: RowHeights, id: String, row: List<String>): Modifier =
     layout { measurable, constraints ->
@@ -50,36 +49,27 @@ internal fun Modifier.asHighAsItsRow(heights: RowHeights, id: String, row: List<
     }
 
 /**
- * The rows that the host cards make in a grid of [columns], and what makes the cards of a row one
- * height: on a TV each card is as high as the tallest of its row ([asHighAsItsRow]); on a handheld
- * or a phone, which have little room to spare, a card is as high as its content.
+ * The rows that the host cards make in a grid of [columns]. On every form factor each card is as
+ * high as the tallest of its row ([asHighAsItsRow]); a grid of one column, such as a phone has, has
+ * no row to share a height in, and a card is as high as its content.
  */
 internal class HostRows(
     val heights: RowHeights,
-    val sameHeight: Boolean,
     val columns: Int,
     val ids: List<List<String>>,
 )
 
 /**
- * Gives the host card [id], the [index]th of the grid, the height of its row where rows share one.
+ * Gives the host card [id], the [index]th of the grid, the height of its row where a row has more
+ * than one card.
  */
 internal fun Modifier.inHostRow(rows: HostRows, index: Int, id: String): Modifier =
-    if (rows.sameHeight) asHighAsItsRow(rows.heights, id, rows.ids[index / rows.columns]) else this
+    if (rows.columns > 1) asHighAsItsRow(rows.heights, id, rows.ids[index / rows.columns]) else this
 
 @Composable
-internal fun rememberHostRows(
-    items: List<HostItemUiState>,
-    formFactor: FormFactor,
-    columns: Int,
-): HostRows {
+internal fun rememberHostRows(items: List<HostItemUiState>, columns: Int): HostRows {
     val heights = remember { RowHeights() }
-    return remember(items, formFactor, columns) {
-        HostRows(
-            heights,
-            formFactor == FormFactor.Tv,
-            columns,
-            items.map { it.id }.chunked(columns),
-        )
+    return remember(items, columns) {
+        HostRows(heights, columns, items.map { it.id }.chunked(columns))
     }
 }

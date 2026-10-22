@@ -24,10 +24,11 @@ private val LocalAppliedTextSize = compositionLocalOf { 1f }
  * [look] that the viewer chose. A theme given no look keeps the one of the theme around it, so the
  * screens that wear their own theme inside the shell do not undo what the shell provides.
  *
- * The theme applies the look in two ways. High contrast and the colour-blind palette make the
+ * The theme applies the look in three ways. High contrast and the colour-blind palette make the
  * colours ([borealisColors]), for the Borealis components and for Material. The text size
  * multiplies the font scale of the system, so every `sp` follows it, and `dp` stay as they are. The
- * rest of the look (the transparency, Reduce motion and the thicker focus) is read from
+ * font gives the type its families and its sizes ([borealisTypography], [borealisType]). The rest
+ * of the look (the transparency, Reduce motion and the thicker focus) is read from
  * [LocalBorealisLook] by the pieces that use it; for Reduce motion the theme also watches the
  * system animation scale once, for all of them ([rememberAnimationsRemoved]).
  */
@@ -37,14 +38,16 @@ fun BorealisTheme(
     look: BorealisLook = LocalBorealisLook.current,
     content: @Composable () -> Unit,
 ) {
-    // The accent, the font and the text spacing are keys already, for the effects that follow: they
-    // change nothing that is drawn yet.
+    // The accent and the text spacing are keys already, for the effects that follow: they change
+    // nothing that is drawn yet. The font is drawn: it is the family and the scale of every size.
     val colors =
         remember(look.highContrast, look.colourVision, look.accent) { borealisColors(look) }
     val colorScheme = remember(colors) { borealisColorScheme(colors) }
     val shapes = remember { borealisShapes() }
     val typography =
-        remember(formFactor, look.font, look.textSpacing) { borealisTypography(formFactor) }
+        remember(formFactor, look.font, look.textSpacing) {
+            borealisTypography(formFactor, look.font)
+        }
     // One observer of the animator scale for all that is under the theme, and none in a theme that
     // is inside another one.
     val systemAnimationsRemoved = rememberSystemAnimationsRemoved()
@@ -65,7 +68,9 @@ fun BorealisTheme(
         // Material leaves the content colour black; text and icons outside a Surface need ink.
         LocalContentColor provides colors.ink,
         LocalBorealisType provides
-            remember(formFactor, look.font, look.textSpacing) { borealisType(formFactor) },
+            remember(formFactor, look.font, look.textSpacing) {
+                borealisType(formFactor, look.font)
+            },
         LocalBorealisShapes provides remember { borealisExtraShapes() },
         LocalBorealisSpacing provides remember(formFactor) { borealisSpacing(formFactor) },
     ) {

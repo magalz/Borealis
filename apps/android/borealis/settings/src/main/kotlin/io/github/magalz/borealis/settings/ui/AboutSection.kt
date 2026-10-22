@@ -30,10 +30,10 @@ import io.github.magalz.borealis.designsystem.components.settings.SettingsInfoRo
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
-import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisType
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.diagnostics.transfer.QrMatrix
 import io.github.magalz.borealis.settings.R
@@ -152,8 +152,7 @@ private fun LinkQrDialog(link: AboutLink, onDismiss: () -> Unit) {
                 )
                 Text(
                     link.url,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontFamily = BorealisFonts.Mono,
+                    style = LocalBorealisType.current.codes(MaterialTheme.typography.bodySmall),
                     color = colors.ink2,
                 )
             }

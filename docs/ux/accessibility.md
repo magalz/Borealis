@@ -340,6 +340,12 @@ That colour is what Flowing light needs at 40%. It keeps `ink-3` clearly below
 `ink-2` (`#C3C7CC`). The effective tint of a Standard glass is the larger of the
 tint chosen in Settings and this floor.
 
+**Background intensity (Sprint 11).** A page-coloured veil is drawn under the glass, at 0, 25, 50 or
+75 % of the page colour, for the Background intensity of 100, 75, 50 or 25 %. Under High contrast the
+stronger of the veil and the dim (0.85) wins. The veil never raises the brightest pixel, so the glass
+table and the floors above stay valid. Clip pixels darker than the page are lifted toward it, so the
+veil does not only darken.
+
 | Style | 8 dp | 16 dp | 24 dp | 32 dp | 48 dp |
 | --- | --- | --- | --- | --- | --- |
 | Aurora curtains | 30 % | 30 % | 30 % | 30 % | 30 % |
@@ -854,6 +860,23 @@ Colour is not the only signal of a status (WCAG 1.4.1). The dot of a host has a 
 hollow ring for offline and unknown. The card says the status in words too, and a screen reader
 reads it in one sentence with the name.
 
+The Online dot has a soft dark shadow in the page colour, drawn outside its 10 dp box (`StatusDot`).
+It is strongest at the edge of the dot, at 85 % of the page colour, and is gone 5 dp outside the box.
+It is static, and it is not drawn under High contrast. The shadow is dark, not a glow, because a glow
+that touches the dot breaks 3:1 over bright glass. The owner chose it on 2026-10-22. Contrast of the
+dot against what is next to it, over the brightest host-card glass (luminance 0.0495), without and
+then with the shadow:
+
+| Palette | Without the shadow | With the shadow |
+| --- | --- | --- |
+| Today's | 3.79 | 5.68 |
+| Red-green | 4.56 | 6.84 |
+| Blue-yellow | 3.08 | 4.61 |
+
+On a dark card the shadow is faint. On the Apps title, which sits on the page, it does not show.
+Known limitation: the Apps title dot sits on the animated background with no glass. Its 3:1 there is
+not measured, and nothing in Sprint 11 makes it worse.
+
 ### The colour-blind palettes
 
 The palettes take their colours from the Okabe and Ito set, which is safe for colour vision
@@ -965,6 +988,10 @@ accent, and `green`, `teal` and `white`, which start from the colours of the ico
 `#14B8A6` and `#F5F3FF`). [`design/accessibility/accents.json`](../../design/accessibility/accents.json)
 has the sets, with a note on how each value was derived, and `contrast.py accents` measures them.
 The tokens are not changed: the sets are proposals, and the values may still move at the gate.
+
+**Sprint 11 update.** The icon's green band became the teal in Sprint 11: `#4BECD0` at 95 % to
+`#06AF97` at 10 % ([`design/icon/README.md`](../../design/icon/README.md)). The app offers violet,
+teal and white. The `green` set is not offered. The measurements below are kept as they were taken.
 
 - Date: 2026-10-21. Revision measured: `c5e91653`, the tool; the colours of `accents.json` are
   those of `d67fe661`, and a note of white has changed since. The frames are the 288 of the
@@ -1158,6 +1185,9 @@ Table U. The least CIEDE2000 distance of `accent` from the status colours as eac
   - It is not told from the status colours by a dichromat: a protanope and a deuteranope see
     it 9.3 and 5.0 from the sky blue success of the red-green palette, and a tritanope 14.8 from
     the grey offline of the blue-yellow palette. Those three rows fail the 20.
+- **The icon's band is the teal now.** In Sprint 11 the green band of the app icon became the teal
+  (`#4BECD0` at 95 % to `#06AF97` at 10 %). The figures of this bullet are the record of the
+  candidates as they were measured, and they are not changed.
 - **The icon colours as they are do not pass.** Measured with the tool, with the same ladder of
   roles and over the Flowing light frames (the brightest glass), the icon green `#6EE7B7` is 18.5
   from the success green of today's palette, 19.2 from the warning yellow of the red-green palette
@@ -1211,6 +1241,40 @@ Table U. The least CIEDE2000 distance of `accent` from the status colours as eac
   `known_fails` of violet, and green and teal pass them.
 - **The checks that need a frame** are not in `known_fails`: a test keeps the other checks of each
   set equal to the file, and the glass ones of violet are in the tables above.
+
+### What the app draws (Sprint 11)
+
+- **Selected labels use `accent-soft`.** The selected label of a segment, a chip, a rail item, a
+  Settings group and a choice sheet, the text button label, the current step number and the latched
+  key label use `accent-soft`, not `accent`. Over the glass it keeps 4.5:1 in every accent. The lowest
+  is 4.74:1, violet over Flowing light at the default (Table W). The old violet `accent` gave 3.21:1
+  there (Table S).
+- **White marks the selection.** Its colour alone is too close to the text colour to show a selection,
+  so the selected item has a 3 dp indicator bar. The bar is at the start edge: the left in
+  left-to-right layouts and the right in right-to-left layouts.
+- **`accent-inverse`.** The snackbar action is drawn in `accent-inverse` on the light inverse surface
+  (`ink`). Violet `#7C3AED`, teal `#027464` and white `#636671` are each 4.73:1 or more on `ink`. In
+  High contrast, `#5744A9`, `#026053` and `#51555F` are each 7.46:1 or more on white.
+
+### Table W: the selected label (`selected-soft`)
+
+Table W. The selected label of the app: `accent-soft` over its tint on the glass, as text. Text needs
+4.5:1. Green is a candidate that the app does not offer.
+
+| Style | Glass | Violet (today) | Green | Teal | White |
+| --- | --- | --- | --- | --- | --- |
+| Aurora curtains | Standard | 6.35 | 9.28 | 9.00 | 9.90 |
+| Aurora curtains | Reduced | 7.69 | 11.23 | 10.86 | 12.07 |
+| Soft glow | Standard | 6.65 | 9.74 | 9.45 | 10.38 |
+| Soft glow | Reduced | 7.68 | 11.22 | 10.86 | 12.06 |
+| Northern lights | Standard | 5.33 | 7.60 | 7.34 | 8.22 |
+| Northern lights | Reduced | 7.19 | 10.48 | 10.15 | 11.24 |
+| Light mist | Standard | 5.71 | 8.41 | 8.16 | 8.93 |
+| Light mist | Reduced | 7.72 | 11.28 | 10.92 | 12.13 |
+| Flowing light | Standard | 4.74 | 6.86 | 6.64 | 7.35 |
+| Flowing light | Reduced | 7.17 | 10.41 | 10.08 | 11.19 |
+| Starfield | Standard | 7.03 | 10.23 | 9.92 | 10.96 |
+| Starfield | Reduced | 7.93 | 11.59 | 11.21 | 12.47 |
 
 ## Halo per font (Sprint 11)
 
@@ -1346,11 +1410,11 @@ and AAA (1.4.6) for the text of High contrast.
 | Criterion | Level | How it is met |
 | --- | --- | --- |
 | 1.3.1 Info and Relationships | A | Headings, pane titles, one sentence for a host card and a pairing step, a role and an Expanded or Collapsed state for the sections of the phone Settings (`*TalkBackTest`). |
-| 1.4.1 Use of Color | A | A shape for each status of the dot, and a text beside it. The palettes keep the colours apart for dichromats (`StatusDotTest`, `ColourVisionPaletteTest`). |
+| 1.4.1 Use of Color | A | A shape for each status of the dot, and a text beside it. The palettes keep the colours apart for dichromats (`StatusDotTest`, `ColourVisionPaletteTest`). The Online shadow of Sprint 11 is a contrast aid, not a status cue. |
 | 1.4.3 Contrast (Minimum) | AA | Text on the opaque surfaces (Table B), on glass through the tint floors and the adapted secondary ink (Table C and the floors), on the background through the halo (Tables D to F), and in the Add host field (Tables L and M). |
 | 1.4.4 Resize Text | AA | Text size 100, 115 or 130 % times the system scale, and tests at a font scale of 2.0 (`LargeTextFitTest`). |
 | 1.4.6 Contrast (Enhanced) | AAA | High contrast: 7:1 or more for the text roles on every fill, and for the loose text over every background (Tables G and H). |
-| 1.4.11 Non-text Contrast | AA | The offline ring at 3.25:1 or more, the icons on the background through the halo (Tables I to K), the outlines of the text field (Tables L and M), the opaque borders of High contrast. |
+| 1.4.11 Non-text Contrast | AA | The offline ring at 3.25:1 or more, the icons on the background through the halo (Tables I to K), the outlines of the text field (Tables L and M), the opaque borders of High contrast, and the Online dot with its shadow: 5.68:1 over the brightest host-card glass (3.79:1 without it, today's palette). The Apps title dot on the animated background is not measured (a known limitation, see the status dot). |
 | 2.1.1 Keyboard | A | The D-pad and a gamepad reach every control; OK on a Settings group enters its pane, and the licence text and the Audit detail scroll with the D-pad. |
 | 2.2.2 Pause, Stop, Hide | A | The animated background is the only decorative moving content; it stops with Reduce motion On, the system's Remove animations or the battery saver, and the background Off is the plain page. Progress indicators are not covered yet (roadmap backlog). |
 | 2.4.3 Focus Order | A | The traversal order of every screen is tested (`readingOrder`), and the focus goes back to the card that had it after Back from Apps. |

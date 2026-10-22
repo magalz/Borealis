@@ -1483,6 +1483,12 @@ adds one column to the hosts and apps in Compact and in Dense, and cuts the card
 The invariants hold in every density: the touch targets, the gaps between the cards, the gutter of
 the screen and the TV focus scale do not change.
 
+Known limitations of the density:
+
+- App names under a cover are one line with an ellipsis, as before. At the largest text on a
+  4-column phone only "Des…" or "Stea…" remain.
+- The Continue card breaks words by character at the largest text with Wider on a phone.
+
 ## WCAG 2.2 checklist
 
 The criteria that Sprint 10 touched, and how each is met. Level AA is the target of every screen,

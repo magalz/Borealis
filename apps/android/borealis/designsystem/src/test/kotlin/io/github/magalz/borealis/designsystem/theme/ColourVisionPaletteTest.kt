@@ -133,11 +133,12 @@ class ColourVisionPaletteTest {
 
     @Test
     fun `a palette composes with high contrast, which keeps the 7 to 1 of the text`() {
-        val both = base.withHighContrast().withColourVision(ColourVision.RedGreen)
+        val both =
+            base.withHighContrast(AccentChoice.Violet).withColourVision(ColourVision.RedGreen)
 
         assertThat(both.success).isEqualTo(base.withColourVision(ColourVision.RedGreen).success)
         assertThat(both.success).isNotEqualTo(base.success)
-        assertThat(both.ink).isEqualTo(base.withHighContrast().ink)
+        assertThat(both.ink).isEqualTo(base.withHighContrast(AccentChoice.Violet).ink)
         assertThat(both.ink).isNotEqualTo(base.ink)
         for (ink in listOf(both.successInk, both.warningInk, both.dangerInk)) {
             assertThat(contrastRatio(ink, both.surfaceRaised)).isAtLeast(7.0)
@@ -151,13 +152,15 @@ class ColourVisionPaletteTest {
         val both = BorealisLook(highContrast = true, colourVision = ColourVision.BlueYellow)
 
         assertThat(borealisColors(BorealisLook())).isEqualTo(base)
-        assertThat(borealisColors(high)).isEqualTo(base.withHighContrast())
+        assertThat(borealisColors(high)).isEqualTo(base.withHighContrast(AccentChoice.Violet))
         assertThat(borealisColors(high)).isNotEqualTo(base)
         assertThat(borealisColors(blueYellow))
             .isEqualTo(base.withColourVision(ColourVision.BlueYellow))
         assertThat(borealisColors(blueYellow)).isNotEqualTo(base)
         assertThat(borealisColors(both))
-            .isEqualTo(base.withHighContrast().withColourVision(ColourVision.BlueYellow))
+            .isEqualTo(
+                base.withHighContrast(AccentChoice.Violet).withColourVision(ColourVision.BlueYellow)
+            )
         assertThat(borealisColors(both)).isNotEqualTo(borealisColors(high))
     }
 

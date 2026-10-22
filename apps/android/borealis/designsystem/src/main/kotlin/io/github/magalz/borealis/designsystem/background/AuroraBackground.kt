@@ -22,8 +22,8 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.InfiniteAnimationPolicy
 import androidx.compose.ui.unit.Constraints
-import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import kotlin.coroutines.coroutineContext
 import kotlin.math.PI
 import kotlin.math.cos
@@ -34,7 +34,7 @@ import kotlinx.coroutines.delay
 
 /**
  * The deep teal of the aurora. It has no design token: the Library's palette is the page, the
- * violet accent and a violet that is stronger, and only the aurora wants a third hue.
+ * violet and a violet that is stronger, and only the aurora wants a third hue.
  */
 private val TEAL = Color(0xFF1F8A8A)
 
@@ -75,9 +75,11 @@ private const val RENDER_WIDTH = 480
 private const val COLUMNS = 160
 
 /**
- * The four colours of the aurora: the page and three hues, the strong accent (`#7C3AED`), the
- * accent (`#A78BFA`) and the teal. The page and the accents are taken from the tokens of [colors];
- * the teal has none. It holds the brush of each curtain and each glow too.
+ * The four colours of the aurora: the [page] and three hues, the strong violet (`#7C3AED`), the
+ * violet (`#A78BFA`) and the teal. The page is that of the theme. The violets are the fixed tokens
+ * of Borealis, whatever the accent the viewer chose and with High contrast (ADR 0058, decision 5),
+ * so the glass contrast table, which is measured over these backgrounds, stays valid. It holds the
+ * brush of each curtain and each glow too.
  *
  * A brush is made once, for a unit length, and a frame moves and stretches it with the canvas: a
  * brush made for every strip of every frame would also make a shader for each. The gradient of a
@@ -85,10 +87,9 @@ private const val COLUMNS = 160
  * to nothing at its bottom; that of a glow from its brightness at the centre, over a shoulder, to
  * nothing at its edge.
  */
-private class Hues(colors: BorealisColors) {
-    val page = colors.page
-    private val deep = colors.accentStrong
-    private val violet = colors.accent
+private class Hues(val page: Color) {
+    private val deep = BorealisTokens.Color.AccentStrong
+    private val violet = BorealisTokens.Color.Accent
 
     fun of(hue: Hue): Color =
         when (hue) {
@@ -266,8 +267,8 @@ internal fun DrawnBackground(
 /** The same, at the position in the loop that [cycle] says: a test sets it to any point. */
 @Composable
 internal fun DrawnBackground(style: BackgroundStyle, cycle: FloatState, modifier: Modifier) {
-    val colors = LocalBorealisColors.current
-    val hues = remember(colors) { Hues(colors) }
+    val page = LocalBorealisColors.current.page
+    val hues = remember(page) { Hues(page) }
     Layout(
         content = {
             Box(

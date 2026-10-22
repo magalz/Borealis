@@ -88,6 +88,7 @@ private fun Swatches() {
             "on-accent" to colors.onAccent,
             "accent-tint" to colors.accentTint,
             "accent-line" to colors.accentLine,
+            "accent-inverse" to colors.accentInverse,
             "success" to colors.success,
             "success-ink" to colors.successInk,
             "warning" to colors.warning,

@@ -24,8 +24,8 @@ private val LocalAppliedTextSize = compositionLocalOf { 1f }
  * [look] that the viewer chose. A theme given no look keeps the one of the theme around it, so the
  * screens that wear their own theme inside the shell do not undo what the shell provides.
  *
- * The theme applies the look in three ways. High contrast and the colour-blind palette make the
- * colours ([borealisColors]), for the Borealis components and for Material. The text size
+ * The theme applies the look in three ways. The accent, High contrast and the colour-blind palette
+ * make the colours ([borealisColors]), for the Borealis components and for Material. The text size
  * multiplies the font scale of the system, so every `sp` follows it, and `dp` stay as they are. The
  * font gives the type its families and its sizes ([borealisTypography], [borealisType]). The rest
  * of the look (the transparency, Reduce motion and the thicker focus) is read from
@@ -38,8 +38,8 @@ fun BorealisTheme(
     look: BorealisLook = LocalBorealisLook.current,
     content: @Composable () -> Unit,
 ) {
-    // The accent and the text spacing are keys already, for the effects that follow: they change
-    // nothing that is drawn yet. The font is drawn: it is the family and the scale of every size.
+    // The text spacing is a key already, for the effect that follows: it changes nothing that is
+    // drawn yet.
     val colors =
         remember(look.highContrast, look.colourVision, look.accent) { borealisColors(look) }
     val colorScheme = remember(colors) { borealisColorScheme(colors) }

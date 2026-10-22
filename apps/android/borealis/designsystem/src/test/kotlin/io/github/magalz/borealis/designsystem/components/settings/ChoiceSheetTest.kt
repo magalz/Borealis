@@ -1,7 +1,15 @@
 package io.github.magalz.borealis.designsystem.components.settings
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.InternalComposeUiApi
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.ViewRootForTest
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -9,6 +17,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -19,8 +28,14 @@ import androidx.compose.ui.unit.dp
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.designsystem.testing.textColor
+import io.github.magalz.borealis.designsystem.theme.AccentChoice
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.borealisColors
+import kotlin.math.abs
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -63,6 +78,69 @@ class ChoiceSheetTest {
         composeRule
             .onNodeWithText("1280 x 720")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Selected, false))
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the label of the selected option is accent-soft and the others are ink`() {
+        var look by mutableStateOf(BorealisLook())
+        composeRule.setContent { Specimen(FormFactor.Tv, selected = "1080p", look = look) }
+
+        for (accent in AccentChoice.entries) {
+            look = BorealisLook(accent = accent)
+            composeRule.waitForIdle()
+            val colors = borealisColors(look)
+
+            assertWithMessage("$accent")
+                .that(composeRule.textColor("1920 x 1080"))
+                .isEqualTo(colors.accentSoft)
+            assertThat(composeRule.textColor("1280 x 720")).isEqualTo(colors.ink)
+        }
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the check of the selected option is accent-soft and not the accent`() {
+        var look by mutableStateOf(BorealisLook())
+        composeRule.setContent { Specimen(FormFactor.Tv, selected = "1080p", look = look) }
+
+        for (accent in AccentChoice.entries) {
+            look = BorealisLook(accent = accent)
+            composeRule.waitForIdle()
+            val colors = borealisColors(look)
+
+            val soft = checkPixels(colors.accentSoft)
+            val plain = checkPixels(colors.accent)
+            assertWithMessage("$accent: pixels of accent-soft").that(soft).isAtLeast(CHECK_PIXELS)
+            assertWithMessage("$accent: pixels of the accent").that(plain).isLessThan(CHECK_PIXELS)
+        }
+    }
+
+    /**
+     * How many pixels of [colour] the right end of the selected row has, where its check is. A
+     * screenshot of a node does not show a dialog, so the view of its window is drawn on a bitmap.
+     */
+    @OptIn(InternalComposeUiApi::class)
+    private fun checkPixels(colour: Color): Int {
+        val view =
+            (composeRule.onAllNodes(isRoot())[1].fetchSemanticsNode().root as ViewRootForTest).view
+        val image = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        view.draw(Canvas(image))
+        val row = composeRule.onNodeWithText("1920 x 1080").getUnclippedBoundsInRoot()
+        var count = 0
+        for (y in (row.top.value * DENSITY).toInt() until (row.bottom.value * DENSITY).toInt()) {
+            for (x in
+                ((row.right.value - CHECK_ZONE_DP) * DENSITY).toInt() until
+                    (row.right.value * DENSITY).toInt()) {
+                val pixel = Color(image.getPixel(x, y))
+                val distance =
+                    abs(pixel.red - colour.red) +
+                        abs(pixel.green - colour.green) +
+                        abs(pixel.blue - colour.blue)
+                if (distance < TOLERANCE) count++
+            }
+        }
+        return count
     }
 
     @Test
@@ -191,8 +269,12 @@ class ChoiceSheetTest {
     }
 
     @Composable
-    private fun Specimen(formFactor: FormFactor, selected: String = "720p") {
-        BorealisTheme(formFactor) {
+    private fun Specimen(
+        formFactor: FormFactor,
+        selected: String = "720p",
+        look: BorealisLook = BorealisLook(),
+    ) {
+        BorealisTheme(formFactor, look) {
             ChoiceSheet(
                 title = "Resolution",
                 options = options,
@@ -207,5 +289,15 @@ class ChoiceSheetTest {
         const val HANDHELD = "w800dp-h360dp-land-xhdpi"
         const val PHONE = "w360dp-h640dp-xhdpi"
         const val TV = "w960dp-h540dp-land-television-xhdpi"
+
+        // The tests run at xhdpi, where one dp is two pixels.
+        const val DENSITY = 2
+
+        /** The width at the right end of a row, in dp, where its check is. */
+        const val CHECK_ZONE_DP = 48f
+
+        /** The pixels of one colour that a check fills, and the edges of a label do not reach. */
+        const val CHECK_PIXELS = 8
+        const val TOLERANCE = 0.02f
     }
 }

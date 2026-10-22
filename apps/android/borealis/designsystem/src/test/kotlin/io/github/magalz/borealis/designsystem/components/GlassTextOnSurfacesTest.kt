@@ -19,6 +19,7 @@ import io.github.magalz.borealis.designsystem.glass.GlassHostOver
 import io.github.magalz.borealis.designsystem.glass.GlassSpec
 import io.github.magalz.borealis.designsystem.glass.onGlass
 import io.github.magalz.borealis.designsystem.testing.textColor
+import io.github.magalz.borealis.designsystem.theme.AccentChoice
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -75,7 +76,7 @@ class GlassTextOnSurfacesTest {
         showOverFlowingLight(FormFactor.Tv, BorealisLook(highContrast = true)) { Rail() }
 
         assertThat(composeRule.textColor("0.1.0"))
-            .isEqualTo(BorealisColors().withHighContrast().ink3)
+            .isEqualTo(BorealisColors().withHighContrast(AccentChoice.Violet).ink3)
     }
 
     // The settings

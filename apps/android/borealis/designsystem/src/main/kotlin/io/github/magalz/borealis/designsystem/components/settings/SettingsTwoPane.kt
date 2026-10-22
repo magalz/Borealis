@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.selectionBar
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.initialFocus
@@ -317,6 +318,7 @@ private fun GroupEntry(
             .borealisFocusIndication(shape)
             .background(if (selected) colors.accentTint else Color.Transparent, shape)
             .clip(shape)
+            .selectionBar(selected, vertical = true)
             .selectable(
                 selected = selected,
                 interactionSource = null,

@@ -6,6 +6,9 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.TextUnitType
+import androidx.compose.ui.unit.isSpecified
 import com.google.common.truth.Truth.assertWithMessage
 
 /**
@@ -39,7 +42,7 @@ fun ComposeTestRule.clippedTexts(): List<String> =
 fun TextLayoutResult.fitProblems(): List<String> {
     val lines = 0 until lineCount
     return buildList {
-        if (lines.any { getLineRight(it) > maxWidth(this@fitProblems) + HALF_PIXEL }) {
+        if (lines.any { visibleRight(it) > maxWidth(this@fitProblems) + HALF_PIXEL }) {
             add("runs past its width")
         }
         if (didOverflowHeight) add("is cut off at the bottom")
@@ -49,6 +52,35 @@ fun TextLayoutResult.fitProblems(): List<String> {
 }
 
 private const val HALF_PIXEL = 0.5f
+
+/**
+ * The right edge of [line], less the extra spacing of a space that ends it. Android breaks a line
+ * at a space and lets that space hang past the width, and it wraps the line as if the extra spacing
+ * of the space (the word spacing of the Text spacing setting, a span on it) were not there, so the
+ * box of the last letter ends past the width by up to that spacing. That is not text that runs past
+ * its width: the spacing above the letter spacing of the style is blank.
+ */
+private fun TextLayoutResult.visibleRight(line: Int): Float {
+    val right = getLineRight(line)
+    val last = getLineEnd(line) - 1
+    if (last < getLineStart(line) || layoutInput.text.text[last] != ' ') return right
+    val span =
+        layoutInput.text.spanStyles.lastOrNull {
+            it.item.letterSpacing.isSpecified && last >= it.start && last < it.end
+        } ?: return right
+    val hang =
+        with(layoutInput.density) {
+            val size = layoutInput.style.fontSize.toPx()
+            fun TextUnit.px() =
+                when {
+                    !isSpecified -> 0f
+                    type == TextUnitType.Em -> value * size
+                    else -> toPx()
+                }
+            span.item.letterSpacing.px() - layoutInput.style.letterSpacing.px()
+        }
+    return right - maxOf(hang, 0f)
+}
 
 /**
  * The width the text was given to lay its lines out in; a text with no limit has an infinite one.

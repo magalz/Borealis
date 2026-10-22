@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -57,7 +59,8 @@ private val PROGRESS_STROKE = 3.dp
  * The field has focus when the screen opens. On a phone the keyboard opens with the focus. On a TV
  * or handheld it does not, so a remote can move through the screen, and the user opens it with OK
  * on the field. Done submits. While [AddHostUiState.busy] a progress indicator shows and both
- * buttons are disabled. Back is Cancel.
+ * buttons are disabled. Back is Cancel. The content scrolls when the text is too large for the
+ * window (a large font at the largest text size), so the hint and the buttons are never cut off.
  */
 @Composable
 fun AddHostScreen(
@@ -77,6 +80,7 @@ fun AddHostScreen(
             Column(
                 Modifier.widthIn(max = BorealisDimens.contentMaxWidth)
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(LocalBorealisSpacing.current.gutter),
                 verticalArrangement = Arrangement.spacedBy(CONTENT_GAP),
             ) {

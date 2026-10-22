@@ -3362,6 +3362,45 @@ class ShippedTokensTest(unittest.TestCase):
     def test_the_green_candidate_is_not_a_set_of_the_tokens(self):
         self.assertNotIn("accent-green", self.tokens)
 
+    def test_each_variant_under_a_palette_is_a_group_with_a_high_contrast_group(self):
+        variants = contrast.load_palette_variants(contrast.ACCENTS_JSON)
+        for palette, found in variants.items():
+            for name, variant in found.items():
+                with self.subTest(accent=name, palette=palette):
+                    group = self.tokens[f"accent-{name}-{palette}"]
+                    self.assertEqual(role_set(group), variant["color"])
+                    found = group["high-contrast"].items()
+                    high = {role: token["$value"] for role, token in found if role[0] != "$"}
+                    self.assertEqual(high, variant["high-contrast"])
+
+    def test_there_is_a_group_for_each_variant_and_for_no_other_pair(self):
+        variants = contrast.load_palette_variants(contrast.ACCENTS_JSON)
+        expected = {f"accent-{n}-{p}" for p, found in variants.items() for n in found}
+        groups = {
+            key
+            for key in self.tokens
+            for palette in contrast.PALETTES
+            if key.startswith("accent-") and key.endswith(f"-{palette}")
+        }
+        self.assertEqual(groups, expected)
+        self.assertEqual(
+            expected,
+            {"accent-violet-red-green", "accent-violet-blue-yellow", "accent-white-blue-yellow"},
+        )
+
+    def test_the_groups_of_the_variants_say_which_palette_they_are_for(self):
+        keys = ("accent-violet-red-green", "accent-violet-blue-yellow", "accent-white-blue-yellow")
+        for key in keys:
+            group = self.tokens[key]
+            palette = "Red-green" if key.endswith("red-green") else "Blue-yellow"
+            with self.subTest(group=key):
+                self.assertEqual(group["$type"], "color")
+                self.assertIn(palette, group["$description"])
+                for role, found in group.items():
+                    if role.startswith("$") or role == "high-contrast":
+                        continue
+                    self.assertGreater(len(found["$description"]), 10, role)
+
 
 # The accents under a colour-blind palette (issue #50, after the UAT of 2026-10-22)
 

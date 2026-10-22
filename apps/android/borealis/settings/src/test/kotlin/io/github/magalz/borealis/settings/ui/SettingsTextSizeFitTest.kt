@@ -5,9 +5,10 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.FitCase
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
+import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
-import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
 import io.github.magalz.borealis.settings.testing.InGlassHost
@@ -24,8 +25,9 @@ import org.robolectric.annotation.Config
  * bottom or ends in an ellipsis.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-class SettingsTextSizeFitTest(font: FontChoice) : SettingsScreenTestBase() {
-    private val largest = BorealisLook(textSize = TextSize.Largest, font = font)
+class SettingsTextSizeFitTest(case: FitCase) : SettingsScreenTestBase() {
+    private val largest =
+        BorealisLook(textSize = TextSize.Largest, font = case.font, textSpacing = case.spacing)
 
     private fun showLargest(
         formFactor: FormFactor,
@@ -134,7 +136,7 @@ class SettingsTextSizeFitTest(font: FontChoice) : SettingsScreenTestBase() {
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun fonts(): List<FontChoice> = FontChoice.entries
+        fun cases(): List<FitCase> = fitCases()
 
         private const val SYSTEM_SCALE = 1.3f
     }

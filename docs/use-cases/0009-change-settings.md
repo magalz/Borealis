@@ -173,11 +173,12 @@ stream ([ADR 0056](../adr/0056-add-an-animated-background-and-the-appearance-gro
 
 ### A11: The user changes an Accessibility row (Sprint 10; branches from step 3)
 
-1. The Accessibility group, after Appearance, has six rows: Reduce motion
+1. The Accessibility group, after Appearance, has seven rows: Reduce motion
    (Follow system, On or Off), Transparency (Standard, Reduced or Off), Thicker
-   focus outline (a switch), Text size (100, 115 or 130 %), High contrast (a
-   switch) and Colour-blind palette (Off, Red-green or Blue-yellow). The defaults
-   are Follow system, Standard, off, 100 %, off and Off.
+   focus outline (a switch), Text size (100, 115 or 130 %), Text spacing (Normal,
+   Wide or Wider), High contrast (a switch) and Colour-blind palette (Off,
+   Red-green or Blue-yellow). The defaults are Follow system, Standard, off, 100 %,
+   Normal, off and Off. Text spacing is a Sprint 11 row ([UC-010](0010-adjust-accessibility.md), A8).
 2. The system stores the choice at once under a stable id and applies it to the
    Library and Settings with no restart. A stored value that no choice has shows
    the default.
@@ -194,6 +195,38 @@ stream ([ADR 0056](../adr/0056-add-an-animated-background-and-the-appearance-gro
    address in a dialog.
 3. Open-source licences opens a dialog whose text is above Close, also in a short
    window. On a TV the D-pad Up and Down scroll the text.
+4. On a TV, a link in About opens a dialog instead of the browser (Sprint 11). The
+   dialog shows the URL and a QR code, 240 dp square with a quiet zone of four
+   modules, so that a phone can open the same link. Back closes the dialog. A
+   phone or a handheld opens the browser, as in step 2.
+
+### A13: The user changes the font, the accent, the background intensity or the card density (Sprint 11; branches from step 3)
+
+1. In Appearance, the rows are Font, Accent colour, Background (A7), Background
+   intensity, Card density, and then Glass tint and Glass blur (A10).
+2. Font has seven choices: IBM Plex Sans (the default), Atkinson Hyperlegible Next,
+   Luciole, Lexend, Andika, B612 and the system font. Each has a purpose line under
+   its name, and each name is drawn in its own font. The system stores the id under
+   `borealis_font` (`plex`, `atkinson_next`, `luciole`, `lexend`, `andika`, `b612` or
+   `system`). The codes, such as the PIN and the addresses, use the monospaced
+   companion of the font where it has one, and IBM Plex Mono otherwise.
+3. Accent colour has three choices: Violet (the default), Teal and White. The system
+   stores the id under `borealis_accent` (`violet`, `teal` or `white`).
+4. Background intensity has four choices: 100 % (the default), 75 %, 50 % and 25 %.
+   The system stores them under `borealis_background_intensity` as `100`, `75`, `50`
+   and `25`. The background is dimmed under the glass.
+5. Card density has three choices: Comfortable (the default), Compact and Dense. The
+   system stores them under `borealis_card_density` as `comfortable`, `compact` and
+   `dense`. Compact and Dense add one column on every device. The hosts and apps in a
+   row are 4 and 6 on a TV (3 and 5 in Comfortable), 3 and 5 on a handheld (2 and 4),
+   2 and 4 on a phone (1 and 3), and 3 and 5 on a wide phone (2 and 4). Dense also cuts
+   the card padding from 18 to 12 dp on a TV and a handheld, and from 14 to 10 dp on a
+   phone. It cuts the Continue cover from 56 to 44 dp and the least height of a TV host
+   card from 176 to 164 dp. The gutter of the screen does not change. A Running badge
+   with no room for its label shows its dot alone, in a 20 dp ring. A change re-lays out
+   the screen at once and keeps the focus.
+6. Each choice applies to the Library and Settings at once, with no restart, and the
+   stream reads it when it starts, as in A11.
 
 ## Postconditions
 
@@ -239,8 +272,8 @@ UC-009-T23 to T31 are Sprint 10 rows, and T32 is the Sprint 10 device round
 | UC-009-T22 | Given the Google TV Streamer, when the user moves between groups, then focus and the pane change together without a wait. | device | planned (Sprint 9 device round, section 3.22); measured with atrace in section 14 |
 | UC-009-T23 | Given a phone, when Settings opens, then every group is a collapsed section; a tap opens a section and the next tap closes it, several can be open, the open ones survive a recreation and a trip to Privacy and diagnostics, About is a section, and Privacy and diagnostics is a link row. | UI | exists (Sprint 10, UI): `SettingsPhoneSectionsTest`, `CollapsibleSectionTest` |
 | UC-009-T24 | Given a TV or a handheld and a group with the focus, when the user presses OK, Enter, the numpad Enter or the gamepad A, then the focus is on the first row of its pane and Left returns to the group; given a tap, then the group is selected and the focus stays. | UI | exists (Sprint 10, UI): `SettingsTwoPaneTest`, `SettingsTvTest` |
-| UC-009-T25 | Given the Appearance group, when it opens, then it has Background, Glass tint (30 to 85 %) and Glass blur (8 to 48 dp), each stored as a stable id, and a stored value that is not offered shows the default. | unit, UI | exists (Sprint 10): `BorealisLooksTest`, `SettingsAccessibilityTest`, `DataStoreBackingTest` |
-| UC-009-T26 | Given the Accessibility group, when it opens, then it has its six rows at their defaults, each stores a stable id, and a stored value that no choice has shows the default. | unit, UI | exists (Sprint 10): `SettingsAccessibilityTest`, `BorealisLooksTest` |
+| UC-009-T25 | Given the Appearance group, when it opens, then it has Font, Accent colour, Background, Background intensity, Card density, Glass tint (30 to 85 %) and Glass blur (8 to 48 dp), in that order, each stored as a stable id, and a stored value that is not offered shows the default. | unit, UI | exists (Sprint 10; the Sprint 11 rows and their order: `SettingsAccessibilityTest`): `BorealisLooksTest`, `DataStoreBackingTest` |
+| UC-009-T26 | Given the Accessibility group, when it opens, then it has its seven rows, in order (Text spacing among them), at their defaults, each stores a stable id, and a stored value that no choice has shows the default. | unit, UI | exists (Sprint 10; seven rows since Sprint 11: `SettingsAccessibilityTest`): `BorealisLooksTest` |
 | UC-009-T27 | Given High contrast is on, then Glass tint, Glass blur, Transparency and Thicker focus outline are disabled with the note, and the other rows can be changed; given Transparency is Reduced or Off, then the two glass rows are disabled with their note. | unit, UI | exists (Sprint 10): `DefaultSettingsOptionsTest`, `SettingsAccessibilityTest` |
 | UC-009-T28 | Given the Library shows Settings, when an Appearance or Accessibility setting changes, then the Library changes at once with no restart. | UI | exists (Sprint 10, UI): `LibraryActivityLookTest`, `LibraryActivityBackgroundTest` |
 | UC-009-T29 | Given About, when the Version row shows, then it is read as text and not as a button, it has no click; a link opens in a task of its own; a link that no app takes shows its address. | UI | exists (Sprint 10, UI): `SettingsRowFixesTest`, `SettingsSystemTest`, `SettingsRowsTest` |

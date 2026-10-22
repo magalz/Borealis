@@ -3,7 +3,7 @@
   <!-- Don't sync preferences because it often contains device-specific data -->
   <cloud-backup disableIfNoEncryptionCapabilities="true">
     <exclude domain="sharedpref" path="."/>
-    <!-- The DataStore (borealis_settings) holds the Borealis settings stored there (the logging switches, the background, the glass and the accessibility settings); it is settings too -->
+    <!-- The DataStore (borealis_settings) holds the Borealis settings stored there (the logging switches, the background, the five Appearance settings (font, accent colour, background intensity, card density and text spacing), the glass and the accessibility settings); it is settings too -->
     <exclude domain="file" path="datastore/"/>
   </cloud-backup>
   <device-transfer>

@@ -1320,6 +1320,111 @@ Steps:
 16. End with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the
     Streamer.
 
+### 3.24 Sprint 11 checks
+
+Run these with the Sprint 11 build on the Google TV Streamer and on the S22. Sprint 11
+changed the TV text size, the fonts, the accent colour, the Online dot, the background
+intensity, the About links on a TV, the text spacing, the card density and the Sprint 10
+follow-ups. Steps 8 and 9 cover the text spacing and the card density.
+Record each item as `pass`, `fail`, `owner check` or `not applicable`, with a short
+note for each `fail`. Where a step names one device, run it there only.
+
+Not runnable: API 28 to 30 (no device). A visual item (the look of a font, the accent,
+the dot shadow, the dimming of the background) needs a capture or the owner's eyes. A
+capture is taken only where it shows no address, host name, PIN or PC screen (section
+5). If a capture is refused, mark the item `owner check`. The frame-time method of
+section 3.23 applies to any step that names a frame rate.
+
+Steps:
+
+1. TV text size (Streamer).
+   - Expected: on the TV, body text is 16 sp and the smallest text is 13 sp. Hosts,
+     Settings and the rail read at those sizes.
+   - Settings on the TV: the list scrolls with the focus where the groups do not fit
+     the window, and the focused group stays in view. Down from Stream to About moves
+     through every group.
+   - Handheld (S22 in landscape with a pad): the text keeps the handheld sizes, 15 sp
+     for body text and 12 sp for the smallest. Owner check.
+2. Font choice (Streamer, S22).
+   - Settings, Appearance, Font. Expected: seven choices, IBM Plex Sans (the default),
+     Atkinson Hyperlegible Next, Luciole, Lexend, Andika, B612 and the system font.
+     Each has a purpose line under its name, and each name is drawn in its own font.
+   - Choose each font in turn. Expected: the Library and Settings change font at once,
+     with no restart, and no text is cut or ends in an ellipsis.
+   - The codes use the font's monospaced companion (Atkinson Hyperlegible Mono,
+     B612 Mono, or IBM Plex Mono for the others): the PIN on Pairing, the host
+     addresses, the chips, the performance overlay and the adb command. Owner check.
+   - The on-screen keyboard (S22, Add host): the keys use the text font, and the key
+     shortcut chips use the codes font.
+   - Open About, Open-source licences. Expected: the licence of every font is listed,
+     and NOTICE credits them.
+   - Set the font back to IBM Plex Sans.
+3. Accent colour (Streamer, S22).
+   - Settings, Appearance, Accent colour. Expected: Violet (the default), Teal and
+     White. Choose Teal, then White, then Violet.
+   - Expected: the selected labels (segment, chip, rail item, Settings group, choice
+     sheet), the text button label, the current step number, the latched key label and
+     the focus outline follow the accent. The drawn backgrounds keep the violet.
+   - White: the selected item has a 3 dp bar at its start edge (left in left-to-right
+     layouts, right in right-to-left). Owner check.
+   - Where a snackbar with an action shows, its action is in `accent-inverse`. Owner
+     check.
+   - Set the accent back to Violet.
+4. The Online dot shadow (Streamer, S22).
+   - Hosts with an online host: the dot has a soft dark shadow in the page colour,
+     round the dot and on the card glass. Expected: the shadow shows on the glass and
+     not on the Apps title, where the dot sits on the page. The shadow does not move.
+   - Set High contrast on. Expected: the shadow is not drawn. Set it off again. Owner
+     check.
+   - Known limitation to note, not a fail: the Apps title dot on the animated background
+     has no glass, and its 3:1 there is not measured.
+5. Background intensity (Streamer, S22).
+   - Settings, Appearance, Background intensity: 100, 75, 50 and 25 %. Expected: the
+     background darkens at each step, at once, with no restart.
+   - At 25 %, text on the background and on the glass is readable. Owner check.
+   - With High contrast on, the steps change nothing: its dim of 0.85 is stronger than
+     every veil.
+   - Set the intensity back to 100 %.
+6. About links on a TV (Streamer).
+   - About, then a link (Source code or Privacy policy). Expected: a dialog opens with
+     the URL and a QR code. No browser opens on the TV.
+   - Read the QR code with a phone camera (S22). Expected: it opens the same URL.
+   - Back closes the dialog, and the focus returns to the link.
+   - Owner check for the size and the quiet zone of the code.
+7. Sprint 10 follow-ups (Streamer, S22).
+   - The ATF check of Hosts with a snackbar is in the test suite. It has no device step.
+   - The rail footer with the version: section 3.23, step 6.
+   - The repeated paths in `design/icon/generate.py` are build tooling. They have no
+     device step.
+8. Text spacing (Streamer, S22).
+   - Settings, Accessibility, Text spacing: Normal, Wide and Wider. Choose Wide, then
+     Wider. Expected: the words of Hosts, Settings and Privacy sit further apart than
+     their letters, and the chips, the step numbers, the performance overlay, the rail
+     version and the font picker preview take the spacing too. No text is cut or ends in
+     an ellipsis. Owner check.
+   - Expected at Wider: a value row of Settings stacks its value under the text when the
+     longest word does not fit, and a slider value takes at most 40 % of its row.
+   - Stream on a narrow phone at Wider, at the largest text: the keyboard's chips go under
+     the shortcuts when they would leave less than a quarter of the row, and the
+     performance overlay scales down to the room it has. Both stay readable. Owner check.
+   - Expected: the text fields show no word spacing while typing; their labels do.
+   - Set Text spacing back to Normal.
+9. Card density (Streamer, S22).
+   - Settings, Appearance, Card density: Comfortable, Compact and Dense. Expected: Hosts
+     and Apps show one column more at Compact and at Dense: 4 hosts and 6 apps on the
+     TV, against 3 and 5 at Comfortable.
+   - Dense: the card padding is smaller, the Continue cover on Hosts is 44 dp, and the
+     cards of a row on the TV have the same height. The gutter of the screen is the same.
+     Owner check.
+   - Change the density with a card focused. Expected: the screen re-lays out at once and
+     the focus stays on the same card.
+   - S22 at the largest text in Dense: the host detail line wraps, and a Running badge
+     with no room for its label shows its dot alone. Known limitation, not a fail: an app
+     name under a cover stays one line with an ellipsis, so a long name is cut at the
+     largest text on a 4-column phone.
+   - Set Card density back to Comfortable.
+10. End with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the Streamer.
+
 ## 4. Results templates
 
 Copy one table per device. Use `pass`, `fail` or `not applicable`, and add a

@@ -53,7 +53,7 @@ class CoverTileRunningBadgeTest {
         show(WIDE)
 
         assertThat(labelLines()).isEqualTo(1)
-        composeRule.onNodeWithTag(BADGE, useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag(RUNNING_BADGE_TAG, useUnmergedTree = true).assertExists()
     }
 
     @Test
@@ -61,7 +61,7 @@ class CoverTileRunningBadgeTest {
         show(NARROW, TextSize.Largest, SYSTEM_SCALE)
 
         composeRule.onNodeWithText(LABEL, useUnmergedTree = true).assertDoesNotExist()
-        composeRule.onNodeWithTag(BADGE, useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag(RUNNING_BADGE_TAG, useUnmergedTree = true).assertExists()
     }
 
     /** The lines of the label, or 0 where the badge has no label. */
@@ -84,7 +84,9 @@ class CoverTileRunningBadgeTest {
             assertThat(label.bottom.value).isAtMost(cover.bottom.value)
         }
         val badge =
-            composeRule.onNodeWithTag(BADGE, useUnmergedTree = true).getUnclippedBoundsInRoot()
+            composeRule
+                .onNodeWithTag(RUNNING_BADGE_TAG, useUnmergedTree = true)
+                .getUnclippedBoundsInRoot()
         assertThat(badge.left.value).isAtLeast(cover.left.value)
         assertThat(badge.right.value).isAtMost(cover.right.value)
         assertThat(badge.top.value).isAtLeast(cover.top.value)
@@ -117,7 +119,6 @@ class CoverTileRunningBadgeTest {
         val PHONE_COVER = 101.dp
         val WIDE = 160.dp
         const val SYSTEM_SCALE = 1.3f
-        const val BADGE = "running-badge"
         const val LABEL = "Running"
     }
 }

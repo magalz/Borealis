@@ -13,9 +13,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
@@ -33,9 +35,10 @@ import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 private val LINE_GAP = 4.dp
 private val DOT_GAP = 6.dp
 private val TAG_GAP = 6.dp
-private val SPACED_LINE_ROOM = 2.dp
 private val CHIP_PADDING_HORIZONTAL = 8.dp
 private val CHIP_PADDING_VERTICAL = 2.dp
+private val SPACED_LINE_ROOM = 2.dp
+private val INK_CLEARANCE = 4.dp
 
 /**
  * A host: its [name], a status dot with [statusText], a secondary [detail] line (an address or a
@@ -133,12 +136,12 @@ private fun HostInfo(
     modifier: Modifier,
 ) {
     val colors = LocalBorealisColors.current
-    // At Wide and Wider Android breaks a line as if the spans on its spaces were not there, and
-    // wraps it a pixel or two wider than the box. The card keeps that much of its padding free of
-    // text, so that the ink of a line does not reach into it (2dp is 4 px at 2.0 density).
-    val spaced = LocalBorealisLook.current.textSpacing != TextSpacing.Normal
+    // At Wide and Wider Android breaks a line as if the spans on its spaces were not there, and the
+    // ink of a line runs past its box (see spacedLineRoom). The column keeps that much room free at
+    // its end, so that the ink stays off the border of the card.
+    val room = spacedLineRoom()
     Column(
-        if (spaced) modifier.padding(end = SPACED_LINE_ROOM) else modifier,
+        if (room > 0.dp) modifier.padding(end = room) else modifier,
         verticalArrangement = Arrangement.spacedBy(LINE_GAP),
     ) {
         // No limit on the lines: at a large text size a long name wraps and the card grows, where
@@ -183,5 +186,27 @@ private fun HostInfo(
                         ),
             )
         }
+    }
+}
+
+/**
+ * The room that the text of a card keeps free at its end, at Wide and Wider. Android wraps a spaced
+ * line as if the spans on its spaces were not there, so the ink of a line runs past its box by up
+ * to one word spacing of its style, and that grows with the text size: 12dp at Wider in the name of
+ * a phone at the largest text. The padding of the card holds part of it, and the ink keeps
+ * [INK_CLEARANCE] from the border, so the room is what the padding cannot hold, in the largest
+ * style of the card (the name's). It is never less than [SPACED_LINE_ROOM], the pixel or two that a
+ * line wraps wider than its box whatever its spacing, and it is 0 at Normal.
+ */
+@Composable
+private fun spacedLineRoom(): Dp {
+    val spacing = LocalBorealisLook.current.textSpacing
+    if (spacing == TextSpacing.Normal) return 0.dp
+    val typography = MaterialTheme.typography
+    val padding = LocalBorealisSpacing.current.cardPadding
+    return with(LocalDensity.current) {
+        val largest =
+            maxOf(typography.titleMedium.fontSize.toDp(), typography.bodySmall.fontSize.toDp())
+        maxOf(SPACED_LINE_ROOM, largest * spacing.wordEm + INK_CLEARANCE - padding)
     }
 }

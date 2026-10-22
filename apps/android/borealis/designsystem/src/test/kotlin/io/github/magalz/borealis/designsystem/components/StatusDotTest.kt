@@ -52,10 +52,10 @@ import org.robolectric.annotation.Config
 /**
  * The status dot of a host (WCAG 1.4.1, colour is not the only cue): each state has a shape of its
  * own, besides its colour. In a 10dp box: Online is a filled circle, Attention a filled triangle
- * and Offline a ring that is hollow. Unknown looks like Offline. Online also has a soft glow in the
- * success colour (issue #50, ADR 0058, decision 5), outside the box, so that an online host stands
- * out: it is not drawn in High contrast, and it leaves a gap round the dot, so that the dot keeps
- * 3:1 against what is next to it (WCAG 1.4.11).
+ * and Offline a ring that is hollow. Unknown looks like Offline. Online also has a soft dark shadow
+ * in the page colour (issue #50, ADR 0058, decision 5), outside the box, so that an online dot
+ * stands out from the card: it is not drawn in High contrast, and it is darkest next to the dot, so
+ * that the dot keeps 3:1 against what is next to it (WCAG 1.4.11), more than it does without it.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w360dp-h640dp-xhdpi")
@@ -68,11 +68,9 @@ class StatusDotTest {
 
         assertAt(5f, 5f, BorealisTokens.Color.Success)
         assertAt(1.5f, 5f, BorealisTokens.Color.Success)
-        // The corners of the box are outside a circle: the dot does not reach them, and the glow is
-        // fainter than the dot.
-        for ((x, y) in listOf(0.5f to 0.5f, 9.5f to 9.5f)) {
-            assertThat(glowAt(frame(), x, y)).isLessThan(HALF)
-        }
+        // The corners of the box are outside a circle.
+        assertAt(0.5f, 0.5f, BorealisTokens.Color.Page)
+        assertAt(9.5f, 9.5f, BorealisTokens.Color.Page)
     }
 
     @Test
@@ -147,48 +145,51 @@ class StatusDotTest {
         composeRule.onNodeWithContentDescription("Online").assertContentDescriptionEquals("Online")
     }
 
-    // The glow of an online host
+    // The shadow of an online host
 
     @Test
-    fun `an online host has a soft glow in the success colour outside the box of the dot`() {
-        show(DotStatus.Online)
+    fun `an online host has a soft shadow in the page colour round the dot, outside its box`() {
+        show(DotStatus.Online, backdrop = LIGHT)
         val frame = frame()
 
-        // The glow is round: the same in the four directions, 2dp outside the box and more.
-        for (radius in listOf(NEAR_GLOW, MIDDLE_GLOW)) {
-            val strengths = ring(radius).map { glowAt(frame, it) }
-            assertWithMessage("the glow at $radius dp is $strengths")
+        // On a lighter backdrop the shadow shows. It is round, the same in the four directions, and
+        // reaches 2dp outside the box and more.
+        for (radius in listOf(EDGE_SHADOW, NEAR_SHADOW, MIDDLE_SHADOW)) {
+            val strengths = ring(radius).map { shadowAt(frame, it) }
+            assertWithMessage("the shadow at $radius dp is $strengths")
                 .that(strengths.min())
                 .isGreaterThan(VISIBLE)
-            assertWithMessage("the glow at $radius dp is $strengths")
+            assertWithMessage("the shadow at $radius dp is $strengths")
                 .that(strengths.max() - strengths.min())
                 .isLessThan(ROUND)
-            assertWithMessage("the glow at $radius dp is fainter than the dot")
-                .that(strengths.max())
-                .isLessThan(HALF)
         }
-        // It is a glow in the success colour: the pixels are the page lit by it, not another hue.
-        for (pixel in ring(NEAR_GLOW).map { frame[it.first, it.second] }) {
-            assertThat(offTheLine(pixel, BorealisTokens.Color.Success)).isLessThan(HUE)
+        // It is the backdrop darkened towards the page, and not another colour.
+        for (radius in listOf(EDGE_SHADOW, NEAR_SHADOW)) {
+            for (pixel in ring(radius).map { frame[it.first, it.second] }) {
+                assertThat(offTheLine(pixel)).isLessThan(HUE)
+            }
         }
     }
 
     @Test
-    fun `the glow fades with the distance and is gone 5dp past the box`() {
-        show(DotStatus.Online)
+    fun `the shadow is strongest at the dot, fades with the distance and is gone 5dp past the box`() {
+        show(DotStatus.Online, backdrop = LIGHT)
         val frame = frame()
 
-        val near = ring(NEAR_GLOW).map { glowAt(frame, it) }.average()
-        val middle = ring(MIDDLE_GLOW).map { glowAt(frame, it) }.average()
-        val far = ring(FAR_GLOW).map { glowAt(frame, it) }.average()
-        assertThat(middle).isLessThan(near)
-        assertThat(far).isLessThan(middle)
-        // The status text of a host card is 6dp from the box: the glow does not reach it.
-        for (pixel in ring(PAST_GLOW)) assertThat(glowAt(frame, pixel)).isLessThan(NONE)
+        val strengths =
+            listOf(EDGE_SHADOW, NEAR_SHADOW, MIDDLE_SHADOW, FAR_SHADOW).map { radius ->
+                ring(radius).map { shadowAt(frame, it) }.average()
+            }
+        assertWithMessage("the shadow from the edge outwards is $strengths")
+            .that(strengths.zipWithNext().all { (nearer, farther) -> farther < nearer })
+            .isTrue()
+        assertThat(strengths.first()).isGreaterThan(STRONG)
+        // The status text of a host card is 6dp from the box: the shadow does not reach it.
+        for (pixel in ring(PAST_SHADOW)) assertThat(shadowAt(frame, pixel)).isLessThan(NONE)
     }
 
     @Test
-    fun `the glow changes neither the size of the dot nor the box that holds it`() {
+    fun `the shadow changes neither the size of the dot nor the box that holds it`() {
         show(DotStatus.Online)
 
         composeRule.onNodeWithTag(DOT_TAG).assertWidthIsEqualTo(10.dp).assertHeightIsEqualTo(10.dp)
@@ -196,59 +197,54 @@ class StatusDotTest {
     }
 
     @Test
-    fun `the glow follows the colour of a colour-blind palette`() {
-        val look = BorealisLook(colourVision = ColourVision.RedGreen)
-        show(DotStatus.Online, look)
-
-        val success = borealisColors(look).success
-        val frame = frame()
-        for (pixel in ring(NEAR_GLOW).map { frame[it.first, it.second] }) {
-            assertThat(offTheLine(pixel, success)).isLessThan(HUE)
-            assertThat(glowAt(pixel, success)).isGreaterThan(VISIBLE)
-        }
-    }
-
-    @Test
-    fun `high contrast draws the dot solid, with no glow`() {
+    fun `high contrast draws the dot solid, with no shadow`() {
         val look = BorealisLook(highContrast = true)
-        show(DotStatus.Online, look)
+        show(DotStatus.Online, look, backdrop = LIGHT)
 
         assertAt(5f, 5f, borealisColors(look).success)
         val frame = frame()
-        for (radius in listOf(NEAR_GLOW, MIDDLE_GLOW, FAR_GLOW)) {
-            for ((x, y) in ring(radius)) assertPixelIsPage(frame[x, y], "$radius dp")
+        for (radius in listOf(EDGE_SHADOW, NEAR_SHADOW, MIDDLE_SHADOW, FAR_SHADOW)) {
+            for ((x, y) in ring(radius)) assertPixelIs(frame[x, y], LIGHT, "$radius dp")
         }
     }
 
     @Test
-    fun `attention, offline and unknown have no glow`() {
+    fun `attention, offline and unknown have no shadow`() {
         for (status in listOf(DotStatus.Attention, DotStatus.Offline, DotStatus.Unknown)) {
-            show(status)
+            show(status, backdrop = LIGHT)
             val frame = frame()
 
-            for (radius in listOf(NEAR_GLOW, MIDDLE_GLOW, FAR_GLOW)) {
-                for ((x, y) in ring(radius)) assertPixelIsPage(frame[x, y], "$status at $radius dp")
+            for (radius in listOf(EDGE_SHADOW, NEAR_SHADOW, MIDDLE_SHADOW, FAR_SHADOW)) {
+                for ((x, y) in ring(radius)) {
+                    assertPixelIs(frame[x, y], LIGHT, "$status at $radius dp")
+                }
             }
         }
     }
 
     @Test
-    fun `the dot keeps 3 to 1 against what is next to it on the brightest glass of every palette`() {
+    fun `the dot keeps 3 to 1 against its shadow on the brightest glass, more than without it`() {
         for (vision in ColourVision.entries) {
             val brightest = brightestHostGlass(vision)
-            val look = BorealisLook(colourVision = vision)
-            show(DotStatus.Online, look, backdrop = grey(brightest))
+            val backdrop = grey(brightest)
+            show(DotStatus.Online, BorealisLook(colourVision = vision), backdrop = backdrop)
             val frame = frame()
 
+            // What is next to the dot is the lightest of the pixels just outside its edge: the
+            // innermost colour of the shadow, which is the darkest of it.
             val dot = luminance(frame[CENTRE, CENTRE])
             val next = nextToTheDot(frame).maxOf { luminance(it) }
-            val ratio = (max(dot, next) + NEAR_BLACK) / (min(dot, next) + NEAR_BLACK)
+            val ratio = ratio(dot, next)
+            val without = ratio(dot, luminance(backdrop))
             assertWithMessage(
-                    "$vision: the dot is $dot and what is next to it $next, over glass of " +
-                        "$brightest, $ratio to 1"
+                    "$vision: the dot is $dot and its shadow $next, over glass of $brightest, " +
+                        "$ratio to 1 (without the shadow $without to 1)"
                 )
                 .that(ratio)
                 .isAtLeast(NON_TEXT_RATIO)
+            assertWithMessage("$vision: $ratio to 1 with the shadow, $without to 1 without it")
+                .that(ratio)
+                .isAtLeast(without)
         }
     }
 
@@ -259,46 +255,41 @@ class StatusDotTest {
 
     private fun frame(): PixelMap = composeRule.onNodeWithTag(FRAME).captureToImage().toPixelMap()
 
-    /** The pixel at ([x], [y]) dp of the dot, as a [glowAt] strength: 0 is the page, 1 the dot. */
-    private fun glowAt(frame: PixelMap, x: Float, y: Float): Float =
-        glowAt(
-            frame[((MARGIN + x) * PIXELS_PER_DP).toInt(), ((MARGIN + y) * PIXELS_PER_DP).toInt()],
-            BorealisTokens.Color.Success,
-        )
+    /** The contrast ratio of two luminances, as WCAG 2.x has it. */
+    private fun ratio(a: Double, b: Double) = (max(a, b) + NEAR_BLACK) / (min(a, b) + NEAR_BLACK)
 
-    private fun glowAt(frame: PixelMap, pixel: Pair<Int, Int>): Float =
-        glowAt(frame[pixel.first, pixel.second], BorealisTokens.Color.Success)
+    private fun shadowAt(frame: PixelMap, pixel: Pair<Int, Int>): Float =
+        shadowAt(frame[pixel.first, pixel.second])
 
-    /** How far [pixel] is from the page towards [colour]: 0 is the page, 1 is [colour]. */
-    private fun glowAt(pixel: Color, colour: Color): Float {
-        val page = BorealisTokens.Color.Page
+    /**
+     * How far [pixel] is from the [LIGHT] backdrop towards the page: 0 is the backdrop, 1 the page.
+     */
+    private fun shadowAt(pixel: Color): Float {
         val along =
-            (pixel.red - page.red) * (colour.red - page.red) +
-                (pixel.green - page.green) * (colour.green - page.green) +
-                (pixel.blue - page.blue) * (colour.blue - page.blue)
+            (LIGHT.red - pixel.red) * (LIGHT.red - PAGE.red) +
+                (LIGHT.green - pixel.green) * (LIGHT.green - PAGE.green) +
+                (LIGHT.blue - pixel.blue) * (LIGHT.blue - PAGE.blue)
         val whole =
-            (colour.red - page.red).pow(2) +
-                (colour.green - page.green).pow(2) +
-                (colour.blue - page.blue).pow(2)
+            (LIGHT.red - PAGE.red).pow(2) +
+                (LIGHT.green - PAGE.green).pow(2) +
+                (LIGHT.blue - PAGE.blue).pow(2)
         return along / whole
     }
 
-    /** How far [pixel] is from the line from the page to [colour], as the sum of its channels. */
-    private fun offTheLine(pixel: Color, colour: Color): Float {
-        val page = BorealisTokens.Color.Page
-        val strength = glowAt(pixel, colour)
-        return abs(pixel.red - (page.red + strength * (colour.red - page.red))) +
-            abs(pixel.green - (page.green + strength * (colour.green - page.green))) +
-            abs(pixel.blue - (page.blue + strength * (colour.blue - page.blue)))
+    /**
+     * How far [pixel] is from the line from the [LIGHT] backdrop to the page, as a sum of channels.
+     */
+    private fun offTheLine(pixel: Color): Float {
+        val strength = shadowAt(pixel)
+        return abs(pixel.red - (LIGHT.red + strength * (PAGE.red - LIGHT.red))) +
+            abs(pixel.green - (LIGHT.green + strength * (PAGE.green - LIGHT.green))) +
+            abs(pixel.blue - (LIGHT.blue + strength * (PAGE.blue - LIGHT.blue)))
     }
 
-    private fun assertPixelIsPage(pixel: Color, where: String) {
-        val page = BorealisTokens.Color.Page
-        val distance =
-            abs(pixel.red - page.red) + abs(pixel.green - page.green) + abs(pixel.blue - page.blue)
-        assertWithMessage("the pixel $where from the centre is $pixel, not the page")
-            .that(distance)
-            .isLessThan(PAGE_TOLERANCE)
+    private fun assertPixelIs(pixel: Color, expected: Color, where: String) {
+        assertWithMessage("the pixel $where from the centre is $pixel, not $expected")
+            .that(distance(pixel, expected))
+            .isLessThan(PIXEL_TOLERANCE)
     }
 
     /**
@@ -453,21 +444,28 @@ class StatusDotTest {
         const val CENTRE = 26
 
         /**
-         * Distances from the centre of the dot, in dp: the edge is at 5, the box ends at 5 to 7.
+         * A backdrop lighter than the page, so that a shadow in the page colour shows: the grey of
+         * the brightest glass behind a host card (luminance 0.0497).
          */
-        const val NEAR_GLOW = 7.25f
-        const val MIDDLE_GLOW = 8.75f
-        const val FAR_GLOW = 9.75f
-        const val PAST_GLOW = 11.75f
+        val LIGHT = Color(63, 63, 63)
+
+        /**
+         * Distances from the centre of the dot, in dp: its edge is at 5, the box ends at 5 to 7.
+         */
+        const val EDGE_SHADOW = 5.75f
+        const val NEAR_SHADOW = 7.25f
+        const val MIDDLE_SHADOW = 8.75f
+        const val FAR_SHADOW = 9.75f
+        const val PAST_SHADOW = 11.75f
 
         const val MIN_DIFFERENCE = 12
         const val SAME_SHAPE = 4
         const val VISIBLE = 0.04f
+        const val STRONG = 0.4
         const val ROUND = 0.03f
-        const val HALF = 0.5f
         const val HUE = 0.03f
         const val NONE = 0.01f
-        const val PAGE_TOLERANCE = 0.02f
+        const val PIXEL_TOLERANCE = 0.02f
         const val NEAR_BLACK = 0.05
         const val NON_TEXT_RATIO = 3.0
     }

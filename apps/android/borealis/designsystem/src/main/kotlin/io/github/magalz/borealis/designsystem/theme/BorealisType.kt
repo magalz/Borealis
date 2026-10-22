@@ -52,7 +52,7 @@ private fun minimumSize(formFactor: FormFactor): TextUnit =
     }
 
 /** [value] in em of [size], or `null` when it has none or [size] does not allow the conversion. */
-private fun emOf(value: TextUnit, size: TextUnit): Float? =
+internal fun emOf(value: TextUnit, size: TextUnit): Float? =
     when {
         value.isUnspecified -> null
         value.type == TextUnitType.Em -> value.value

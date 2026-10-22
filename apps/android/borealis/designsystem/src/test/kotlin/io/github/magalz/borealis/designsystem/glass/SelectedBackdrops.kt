@@ -9,7 +9,7 @@ internal class Laid(val standard: Double, val reduced: Double)
 /**
  * The brightest pixel behind the label of a selected item, which is the glass with the tint of the
  * accent laid on it, over every frame of both devices, as `contrast.py accents` measured it (Table
- * V of `docs/ux/accessibility.md`), rounded up. A sheet is a glass panel over the blurred window,
+ * W of `docs/ux/accessibility.md`), rounded up. A sheet is a glass panel over the blurred window,
  * so the label of its selected option has the same backdrop.
  */
 internal val LAID: Map<AccentChoice, Map<BackgroundStyle, Laid>> =

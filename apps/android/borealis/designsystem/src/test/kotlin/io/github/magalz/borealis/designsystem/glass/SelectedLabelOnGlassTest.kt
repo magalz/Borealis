@@ -14,7 +14,7 @@ import org.junit.Test
  * The label of a selected item is accent-soft over the accent tint over the glass (ADR 0058,
  * decision 5): it keeps 4.5:1 for every accent, where the accent that it replaces is 3.21:1 at
  * worst for violet. `contrast.py accents` measured the brightest pixel behind the label, which is
- * the glass with the tint of the accent laid on it, over every frame of both devices (Table V of
+ * the glass with the tint of the accent laid on it, over every frame of both devices (Table W of
  * `docs/ux/accessibility.md`); [LAID], in `SelectedBackdrops.kt`, pins those luminances, rounded
  * up, and this is the check of the app against them. The white indicator bar is the accent over the
  * same backdrop, and keeps 3:1 as a non-text indicator.

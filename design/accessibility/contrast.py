@@ -2739,7 +2739,7 @@ def accent_tables(result):
 
     N is the role sets, O the checks on the opaque fills, P the glass of each candidate (its tint
     and the brightest pixel), Q and R the accent and the accent-soft over the glass, S the selected
-    label in `accent` over the glass, T high contrast, U the distances and V the selected label of
+    label in `accent` over the glass, T high contrast, U the distances and W the selected label of
     the app, `accent-soft`, over the glass. A line for each candidate says which checks it fails.
     """
     reports = result["candidates"]
@@ -2783,7 +2783,7 @@ def accent_tables(result):
             ("Table R. `accent-soft` over the glass: text 4.5:1, outline 3:1.", "accent-soft", 3.0),
             (
                 "Table S. The selected label of Sprint 10, `accent` over its tint on the glass: "
-                "the app draws `accent-soft` now (Table V).",
+                "the app draws `accent-soft` now (Table W).",
                 "selected",
                 None,
             ),
@@ -2825,7 +2825,7 @@ def accent_tables(result):
 
     if any(reports[name]["glass"] for name in names):
         sections.append(
-            "Table V. The selected label of the app, `accent-soft` over its tint on the glass: "
+            "Table W. The selected label of the app, `accent-soft` over its tint on the glass: "
             "text needs 4.5:1."
         )
         sections.append(_glass_table(reports, names, _glass_ratio("selected-soft", None)))

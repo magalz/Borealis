@@ -118,6 +118,38 @@ class SettingsFontTest : SettingsScreenTestBase() {
     }
 
     @Test
+    fun `the licence text is a code in the monospaced companion of the font`() {
+        licenses = "Licence text of the test"
+        show(
+            keyboard = true,
+            initialGroup = SettingsGroupId.ABOUT,
+            backdrop = withLook(BorealisLook(font = FontChoice.B612)),
+        )
+        composeRule.onNodeWithText("Open-source licences").performClick()
+        composeRule.waitForIdle()
+
+        assertThat(files("Licence text of the test", inDialog = true))
+            .containsExactly("b612_mono_regular", "b612_mono_bold")
+            .inOrder()
+    }
+
+    @Test
+    fun `the licence text is IBM Plex Mono in the default look, not the monospace of the system`() {
+        licenses = "Licence text of the test"
+        show(keyboard = true, initialGroup = SettingsGroupId.ABOUT)
+        composeRule.onNodeWithText("Open-source licences").performClick()
+        composeRule.waitForIdle()
+
+        assertThat(files("Licence text of the test", inDialog = true))
+            .containsExactly(
+                "ibm_plex_mono_regular",
+                "ibm_plex_mono_medium",
+                "ibm_plex_mono_semibold",
+            )
+            .inOrder()
+    }
+
+    @Test
     fun `the address of an About link is a code in the monospaced companion of the font`() {
         show(
             keyboard = true,

@@ -114,6 +114,9 @@ Decision details:
    * **Layout work:** the layouts that do not fit at Wide or Wider are fixed as part of this work. The
      spike found 22 fit failures at Wide and 39 at Wider with 0.5 em. A test keeps the word gap clearly
      larger than the letter gap in every font.
+   * **Known limitations:** the 200 % system font size is tested at Normal only, and the line ends of a
+     wrapped text can draw past their box at Wide and Wider. See
+     [accessibility, text spacing: known limitations](../ux/accessibility.md#text-spacing-known-limitations).
 
 5. **Accent colour.**
    * **The set:** violet (today's colour, the default), teal `#4BECD0` and white `#EFF3FF`. The role
@@ -151,8 +154,9 @@ Decision details:
    * **Comfortable:** today's layout, and the default.
    * **Compact:** one more column. TV: 4 hosts and 6 apps per row. Handheld: 3 hosts and 5 apps. Phone:
      2 hosts and 4 apps.
-   * **Dense:** the same columns as Compact, with less padding: 12 dp on the TV and the handheld, and
-     10 dp on the phone.
+   * **Dense:** the same columns as Compact, with less card padding: 12 dp on the TV and the handheld
+     (from 18 dp), and 10 dp on the phone (from 14 dp). The Continue cover is 44 dp (from 56 dp), and
+     the least height of a TV host card is 164 dp (from 176 dp).
 
    * **The fixes:** the spike cut two things in the denser variants, and the density work fixes both.
      * The host detail line was cut at the largest text size. It now wraps.

@@ -2643,7 +2643,7 @@ def _accent_distance(accent, context, under=None):
                     "nearest": nearest,
                     "limit": ACCENT_DISTANCE,
                     "relevant": under is None and (palette, vision) in ACCENT_CLAIMED,
-                    "claimed": (palette, vision) in ACCENT_CLAIMED,
+                    "claimed": under == palette and (palette, vision) in ACCENT_CLAIMED,
                 }
             )
     for ink in ("ink", "ink-2"):

@@ -55,9 +55,11 @@ private val TV_HEIGHT = 40.dp
 /**
  * The least that a caption shrinks to with the default look. At a larger text size the floor is the
  * same size on the screen, not the same number of sp, so a caption is never smaller than the same
- * key shows it with the default look. The Text spacing does not lower it: a caption is drawn with
- * the spacing of Wide at most, and at that spacing the captions still fit their keys on a phone of
- * 320dp in every font, so a caption of one word is never broken (`KeyCaptionSizeTest`).
+ * key shows it with the default look. A spacing that widens the letters lowers the floor by the
+ * same factor, so that the caption still fits its key: a caption of one word is never broken. The
+ * caption is drawn with the spacing of Wide at most (Wider is drawn as Wide), so the floor is 8sp
+ * over 1.12 at the lowest. With the plain 8sp the captions are cut off at Wide at a system font
+ * scale of 2.0 (`KeyCaptionScaleTest`).
  */
 private val MIN_CAPTION_SIZE = 8.sp
 
@@ -159,7 +161,7 @@ private fun KeyCaption(label: String, color: Color, style: KeyStyle) {
             // caption that does not fit its key wraps where it can, then shrinks with the key.
             autoSize =
                 TextAutoSize.StepBased(
-                    minFontSize = MIN_CAPTION_SIZE / look.textSize.scale,
+                    minFontSize = MIN_CAPTION_SIZE / look.textSize.scale / (1 + spacing.letterEm),
                     maxFontSize = textStyle.fontSize,
                 ),
         )

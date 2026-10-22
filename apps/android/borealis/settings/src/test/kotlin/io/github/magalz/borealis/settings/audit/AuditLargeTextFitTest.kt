@@ -2,12 +2,12 @@ package io.github.magalz.borealis.settings.audit
 
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
+import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
 import io.github.magalz.borealis.logging.AuditOutcome
@@ -15,6 +15,7 @@ import io.github.magalz.borealis.logging.AuditType
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
@@ -22,9 +23,11 @@ import org.robolectric.annotation.Config
  * resizes to 200 percent without loss of content). Every text must fit where it is, or the list
  * scrolls: none runs past its width, is cut off at the bottom or ends in an ellipsis.
  */
-@RunWith(AndroidJUnit4::class)
-class AuditLargeTextFitTest {
+@RunWith(ParameterizedRobolectricTestRunner::class)
+class AuditLargeTextFitTest(font: FontChoice) {
     @get:Rule val composeRule = createComposeRule()
+
+    private val look = BorealisLook(font = font)
 
     private val entries =
         AuditUiState(
@@ -73,7 +76,7 @@ class AuditLargeTextFitTest {
         composeRule.showAudit(
             entries,
             FormFactor.Phone,
-            BorealisLook(textSize = TextSize.Largest),
+            look.copy(textSize = TextSize.Largest),
             BackgroundStyle.Off,
         )
 
@@ -83,13 +86,17 @@ class AuditLargeTextFitTest {
     }
 
     private fun assertFits(formFactor: FormFactor, state: AuditUiState) {
-        composeRule.showAudit(state, formFactor, style = BackgroundStyle.Off)
+        composeRule.showAudit(state, formFactor, look, BackgroundStyle.Off)
 
         composeRule.assertNoClippedText()
     }
 
-    private companion object {
-        const val SCALE = 2f
-        const val NARROW_WINDOW = "w240dp-h568dp-xhdpi"
+    companion object {
+        @JvmStatic
+        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun fonts(): List<FontChoice> = FontChoice.entries
+
+        private const val SCALE = 2f
+        private const val NARROW_WINDOW = "w240dp-h568dp-xhdpi"
     }
 }

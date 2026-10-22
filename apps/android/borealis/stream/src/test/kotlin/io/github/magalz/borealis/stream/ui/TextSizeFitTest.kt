@@ -5,10 +5,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
+import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
 import io.github.magalz.borealis.host.failure.FailureKind
@@ -26,6 +26,7 @@ import io.github.magalz.borealis.stream.testing.aSession
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
@@ -34,11 +35,11 @@ import org.robolectric.annotation.Config
  * 11). Every text must fit where it is, or the panel scrolls: none runs past its width, is cut off
  * at the bottom or ends in an ellipsis. The chrome wears the look that the stream started with.
  */
-@RunWith(AndroidJUnit4::class)
-class TextSizeFitTest {
+@RunWith(ParameterizedRobolectricTestRunner::class)
+class TextSizeFitTest(font: FontChoice) {
     @get:Rule val composeRule = createComposeRule()
 
-    private val largest = BorealisLook(textSize = TextSize.Largest)
+    private val largest = BorealisLook(textSize = TextSize.Largest, font = font)
 
     @Test
     @Config(qualifiers = PHONE_LANDSCAPE, fontScale = SYSTEM_SCALE)
@@ -102,7 +103,11 @@ class TextSizeFitTest {
         )
     }
 
-    private companion object {
-        const val SYSTEM_SCALE = 1.3f
+    companion object {
+        @JvmStatic
+        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun fonts(): List<FontChoice> = FontChoice.entries
+
+        private const val SYSTEM_SCALE = 1.3f
     }
 }

@@ -5,9 +5,10 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
+import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.settings.privacy.PrivacyActions
 import io.github.magalz.borealis.settings.privacy.PrivacyDialogActions
@@ -17,6 +18,7 @@ import io.github.magalz.borealis.settings.testing.InGlassHost
 import java.io.File
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
@@ -25,12 +27,14 @@ import org.robolectric.annotation.Config
  * where it is, or the pane scrolls: none runs past its width, is cut off at the bottom or ends in
  * an ellipsis.
  */
-@RunWith(AndroidJUnit4::class)
-class SettingsLargeTextFitTest : SettingsScreenTestBase() {
+@RunWith(ParameterizedRobolectricTestRunner::class)
+class SettingsLargeTextFitTest(font: FontChoice) : SettingsScreenTestBase() {
+    private val look = BorealisLook(font = font)
+
     private fun showSettings(formFactor: FormFactor, group: SettingsGroupId) {
         if (formFactor == FormFactor.Tv) asTelevision()
         show(keyboard = formFactor != FormFactor.Phone, initialGroup = group) { content ->
-            InGlassHost(formFactor, style = BackgroundStyle.Off, content = content)
+            InGlassHost(formFactor, look, BackgroundStyle.Off, content)
         }
     }
 
@@ -110,7 +114,7 @@ class SettingsLargeTextFitTest : SettingsScreenTestBase() {
 
     private fun showPrivacy(formFactor: FormFactor) {
         composeRule.setContent {
-            InGlassHost(formFactor, style = BackgroundStyle.Off) {
+            InGlassHost(formFactor, look, BackgroundStyle.Off) {
                 PrivacyScreenContent(
                     PrivacyUiState(),
                     SnackbarHostState(),
@@ -129,7 +133,11 @@ class SettingsLargeTextFitTest : SettingsScreenTestBase() {
         composeRule.waitForIdle()
     }
 
-    private companion object {
-        const val SCALE = 2f
+    companion object {
+        @JvmStatic
+        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun fonts(): List<FontChoice> = FontChoice.entries
+
+        private const val SCALE = 2f
     }
 }

@@ -1,15 +1,16 @@
 package io.github.magalz.borealis.settings.privacy
 
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
+import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
@@ -17,8 +18,8 @@ import org.robolectric.annotation.Config
  * is 1.69 of the text that the screen is laid out for (ADR 0057, decision 11). Every text must fit
  * where it is, or the screen scrolls.
  */
-@RunWith(AndroidJUnit4::class)
-class PrivacyTextSizeFitTest {
+@RunWith(ParameterizedRobolectricTestRunner::class)
+class PrivacyTextSizeFitTest(private val font: FontChoice) {
     @get:Rule val composeRule = createComposeRule()
 
     @Test
@@ -30,13 +31,17 @@ class PrivacyTextSizeFitTest {
     fun `Privacy on a TV fits`() = assertFits(FormFactor.Tv)
 
     private fun assertFits(formFactor: FormFactor) {
-        val largest = BorealisLook(textSize = TextSize.Largest)
+        val largest = BorealisLook(textSize = TextSize.Largest, font = font)
         composeRule.showPrivacy(formFactor, largest, BackgroundStyle.Off)
 
         composeRule.assertNoClippedText()
     }
 
-    private companion object {
-        const val SYSTEM_SCALE = 1.3f
+    companion object {
+        @JvmStatic
+        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun fonts(): List<FontChoice> = FontChoice.entries
+
+        private const val SYSTEM_SCALE = 1.3f
     }
 }

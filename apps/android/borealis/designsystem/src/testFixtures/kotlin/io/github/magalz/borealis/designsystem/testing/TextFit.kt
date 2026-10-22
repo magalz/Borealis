@@ -26,19 +26,27 @@ fun ComposeTestRule.clippedTexts(): List<String> =
             val layouts = mutableListOf<TextLayoutResult>()
             node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(layouts)
             val layout = layouts.firstOrNull() ?: return@mapNotNull null
-            val lines = 0 until layout.lineCount
-            val reasons = buildList {
-                if (lines.any { layout.getLineRight(it) > maxWidth(layout) + HALF_PIXEL }) {
-                    add("runs past its width")
-                }
-                if (layout.didOverflowHeight) add("is cut off at the bottom")
-                if (lines.any(layout::isLineEllipsized)) add("ends in an ellipsis")
-                if (layout.multiParagraph.didExceedMaxLines) add("has more lines than it may show")
-            }
-            reasons
+            layout
+                .fitProblems()
                 .takeIf { it.isNotEmpty() }
                 ?.let { "\"${layout.layoutInput.text.text}\" ${it.joinToString()}" }
         }
+
+/**
+ * What is wrong with how this layout fits the room it was given: the same four things as
+ * [clippedTexts], one entry for each that applies, and none when the text fits.
+ */
+fun TextLayoutResult.fitProblems(): List<String> {
+    val lines = 0 until lineCount
+    return buildList {
+        if (lines.any { getLineRight(it) > maxWidth(this@fitProblems) + HALF_PIXEL }) {
+            add("runs past its width")
+        }
+        if (didOverflowHeight) add("is cut off at the bottom")
+        if (lines.any { isLineEllipsized(it) }) add("ends in an ellipsis")
+        if (multiParagraph.didExceedMaxLines) add("has more lines than it may show")
+    }
+}
 
 private const val HALF_PIXEL = 0.5f
 

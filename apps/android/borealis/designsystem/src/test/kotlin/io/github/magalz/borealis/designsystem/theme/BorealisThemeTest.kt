@@ -46,9 +46,11 @@ class BorealisThemeTest {
 
         assertThat(scheme.primaryContainer).isEqualTo(colors.SurfaceRaised)
         assertThat(scheme.onPrimaryContainer).isEqualTo(colors.AccentSoft)
-        // Inverse primary is text on the light inverse surface, where accent soft would be 1.5:1.
+        // Inverse primary is text on the light inverse surface, where accent soft would be 1.5:1:
+        // it is accent-inverse, which for violet is the value of accent-strong.
         assertThat(scheme.inverseSurface).isEqualTo(colors.Ink)
-        assertThat(scheme.inversePrimary).isEqualTo(colors.AccentStrong)
+        assertThat(scheme.inversePrimary).isEqualTo(colors.AccentInverse)
+        assertThat(colors.AccentInverse).isEqualTo(colors.AccentStrong)
     }
 
     @Test

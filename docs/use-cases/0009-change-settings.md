@@ -245,6 +245,7 @@ section 11). UC-009-T11 to T21 are Sprint 9 rows. The Compose tests run on
 Robolectric. T22 is checked in the Sprint 9 device round (section 3.22).
 UC-009-T23 to T31 are Sprint 10 rows, and T32 is the Sprint 10 device round
 (section 3.23).
+UC-009-T33 to T37 are Sprint 11 rows.
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
@@ -280,6 +281,11 @@ UC-009-T23 to T31 are Sprint 10 rows, and T32 is the Sprint 10 device round
 | UC-009-T30 | Given a short window, when the licence dialog opens, then the text is wholly above Close, Up from Close reaches it and Down scrolls it. | UI | exists (Sprint 10, UI): `LicensesDialogShortWindowTest`, `LicensesDialogTvTest` |
 | UC-009-T31 | Given the Settings screens at a font scale of 2.0, then no text is cut or ends in an ellipsis. | UI | exists (Sprint 10, UI): `SettingsLargeTextFitTest`, `AuditLargeTextFitTest` |
 | UC-009-T32 | Given the Google TV Streamer and the S22, when the user runs the Sprint 10 checks (glass, frame time, 11 groups, OK entering a pane, the phone sections, the About links), then each holds. | device | checked in the Sprint 10 round of 2026-10-21, build `8d5e8332` (section 3.23, results in section 15); the visual items are the owner's |
+| UC-009-T33 | Given the Appearance group, when the user chooses a Font (IBM Plex Sans, Atkinson Hyperlegible Next, Luciole, Lexend, Andika, B612 or the system font), then the choice is stored under `borealis_font` as its id, the text of the Library and Settings is drawn in it at once, the codes use its monospaced companion (IBM Plex Mono where it has none), and a stored id that is not offered shows IBM Plex Sans. | UI, unit | exists (Sprint 11, UI and unit): `SettingsFontTest`, `FontChoiceTypographyTest`, `BorealisLooksTest` |
+| UC-009-T34 | Given the Appearance group, when the user chooses an Accent colour (Violet, Teal or White), then the choice is stored under `borealis_accent` as its id, the Library changes at once, the selected labels keep 4.5:1 or more over the glass, and a stored id that is not offered shows Violet. | UI, unit | exists (Sprint 11, UI and unit): `AccentColorsTest`, `AccentTextContrastTest`, `BorealisLooksTest` |
+| UC-009-T35 | Given the Appearance group, when the user chooses a Background intensity (100, 75, 50 or 25 %), then the choice is stored under `borealis_background_intensity` as `100`, `75`, `50` or `25`, the background is veiled by 0, 25, 50 or 75 % of the page colour, the Library changes at once, and under High contrast the stronger of the veil and the dim wins. | UI, unit | exists (Sprint 11, UI and unit): `BackgroundIntensityTest`, `LibraryBackgroundIntensityTest`, `BorealisLooksTest` |
+| UC-009-T36 | Given the Appearance group, when the user chooses a Card density (Comfortable, Compact or Dense), then the choice is stored under `borealis_card_density` as its id, Compact and Dense add one column to the hosts and apps rows, Dense cuts the card padding, the gutter, the gaps, the touch targets and the TV focus scale stay the same, a Running badge with no room for its label shows its dot alone, and the screen re-lays out at once and keeps the focus. | UI, unit | exists (Sprint 11, UI and unit): `CardDensityPaddingTest`, `CardDensityLayoutTest`, `CardDensityInvariantsTest`, `LibraryActivityCardDensityTest` |
+| UC-009-T37 | Given a TV, when the user chooses Source code or Privacy policy in About, then a dialog shows the address of the link and a 240 dp QR code that decodes to that address, Close and Back dismiss the dialog and the focus returns to the row, and a phone or a handheld opens the browser instead. | UI | exists (Sprint 11, UI): `AboutLinksTvTest` |
 
 ## Host dependency
 

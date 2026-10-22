@@ -96,7 +96,8 @@ Decision details:
    * **Normal:** the spacing of the design.
    * **Wide:** letter spacing 0.12 em, word spacing 0.16 em and line height 1.5. These are the minimums
      of WCAG 1.4.12.
-   * **Wider:** letter spacing 0.18 em and word spacing 0.5 em. At 0.35 em the words ran together on the
+   * **Wider:** letter spacing 0.18 em, word spacing 0.5 em and, as at Wide, a line height of at least 1.5.
+     At 0.35 em the words ran together on the
      spike sheets: with 0.18 em between letters, a 0.35 em word gap did not read as clearly larger than
      the letter gaps. 0.5 em kept the words apart. The fit counts were similar (37 failures at 0.35 em
      and 39 at 0.5 em), so fit was not the reason. The choice is visual, the owner's, made from the spike
@@ -160,7 +161,11 @@ Decision details:
 
    * **The fixes:** the spike cut two things in the denser variants, and the density work fixes both.
      * The host detail line was cut at the largest text size. It now wraps.
-     * The Running badge of a cover tile was cut on a phone with 4 columns. It now fits.
+     * The Running badge of a cover tile was cut on a phone with 4 columns. It now falls back to the dot
+       alone, a 20 dp circle with an 8 dp dot, when the label does not fit on one line. At 4 columns the
+       label never fits (a cover of 73 dp has no room for it at any text size), so the dot alone is the
+       normal look there. WCAG 1.4.1 still holds: the badge keeps its shape and its presence, the tile's
+       TalkBack state is "Running", and the Apps header reads "`<app>` running".
    * Touch targets, gaps and the TV focus scale stay the same in every density.
 
 8. **Background intensity.**
@@ -260,7 +265,8 @@ Decision details:
 ### Background intensity: a veil (chosen)
 
 * Good, because it darkens the background in four steps.
-* Good, because it only darkens, so the glass floors and the glass table stay valid.
+* Good, because it never raises the brightest pixel, so the glass floors and the glass table stay valid.
+  Clip pixels darker than the page are lifted toward it.
 * Bad, because it does not change the background shape or motion.
 
 ### About links on a TV: a QR code (chosen)

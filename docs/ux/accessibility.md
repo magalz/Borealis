@@ -1485,8 +1485,9 @@ the screen and the TV focus scale do not change.
 
 Known limitations of the density:
 
-- App names under a cover are one line with an ellipsis, as before. At the largest text on a
-  4-column phone only "Des…" or "Stea…" remain.
+- App names under a cover are one line with an ellipsis, as before Sprint 11. The fit tests cannot
+  see them, because the name hides its own semantics (`CoverTile.kt`). At the largest text in
+  Compact or Dense on a phone, only a few letters remain: "Des…" or "Stea…" on a 4-column phone.
 - The Continue card breaks words by character at the largest text with Wider on a phone.
 
 ## WCAG 2.2 checklist
@@ -1497,7 +1498,7 @@ and AAA (1.4.6) for the text of High contrast.
 | Criterion | Level | How it is met |
 | --- | --- | --- |
 | 1.3.1 Info and Relationships | A | Headings, pane titles, one sentence for a host card and a pairing step, a role and an Expanded or Collapsed state for the sections of the phone Settings (`*TalkBackTest`). |
-| 1.4.1 Use of Color | A | A shape for each status of the dot, and a text beside it. The palettes keep the colours apart for dichromats (`StatusDotTest`, `ColourVisionPaletteTest`). The Online shadow of Sprint 11 is a contrast aid, not a status cue. |
+| 1.4.1 Use of Color | A | A shape for each status of the dot, and a text beside it. The palettes keep the colours apart for dichromats (`StatusDotTest`, `ColourVisionPaletteTest`). The Online shadow of Sprint 11 is a contrast aid, not a status cue. The Running badge of a cover is the dot and its label when the label fits on one line. On a phone with 4 columns the label never fits, so the badge is the dot alone: its shape and presence, the tile's TalkBack state "Running" and the Apps header "`<app>` running" carry the status. |
 | 1.4.3 Contrast (Minimum) | AA | Text on the opaque surfaces (Table B), on glass through the tint floors and the adapted secondary ink (Table C and the floors), on the background through the halo (Tables D to F), and in the Add host field (Tables L and M). |
 | 1.4.4 Resize Text | AA | Text size 100, 115 or 130 % times the system scale, and tests at a font scale of 2.0 (`LargeTextFitTest`). |
 | 1.4.6 Contrast (Enhanced) | AAA | High contrast: 7:1 or more for the text roles on every fill, and for the loose text over every background (Tables G and H). |

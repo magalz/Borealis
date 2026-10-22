@@ -4,7 +4,7 @@ The Borealis Font setting offers Luciole, made with readers with low vision and 
 
 - Licence: Creative Commons Attribution 4.0 International (CC BY 4.0). The release ships
   [LICENSE.txt](LICENSE.txt), which names the licence and the authors. The credit is
-  "Luciole © Laurent Bourcellier & Jonathan Perez, CC BY 4.0, https://www.luciole-vision.com".
+  "Luciole © Laurent Bourcellier & Jonathan Perez, CC BY 4.0, <https://www.luciole-vision.com>".
   The licences of About show it and `NOTICE` has it. CC BY 4.0 is allowed for fonts only
   ([ADR 0058](../../../docs/adr/0058-appearance-and-reading-options.md), decision 6).
 - Source: <https://www.luciole-vision.com/fonts/Luciole.zip>, downloaded on 2026-10-21. The

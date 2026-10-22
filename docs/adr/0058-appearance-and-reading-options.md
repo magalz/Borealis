@@ -116,8 +116,11 @@ Decision details:
      spike found 22 fit failures at Wide and 39 at Wider with 0.5 em. A test keeps the word gap clearly
      larger than the letter gap in every font.
    * **Key captions:** a key is only so wide, so at Wider its caption is drawn with the spacing of
-     Wide. The caption floor is the plain 8 sp at every level: the captions fit their keys at that
-     size on a 320 dp phone in all seven fonts. The owner decided this on the UAT of 2026-10-22.
+     Wide. The caption floor is 8 sp at Normal, and 8 sp over 1.12 (one plus the 0.12 em of letter
+     spacing) at Wide and at Wider, which is drawn as Wide. The plain 8 sp fits at the largest text
+     size, but at a system font scale of 2.0 the captions are cut off at Wide in all seven fonts, so
+     the floor is lowered by the spacing. The owner decided the captions on the UAT of 2026-10-22.
+     At a system font scale of 2.0, Luciole at Normal is cut off whatever the floor, as before.
    * **Known limitations:** the 200 % system font size is tested at Normal only, and the line ends of a
      wrapped text can draw past their box at Wide and Wider. See
      [accessibility, text spacing: known limitations](../ux/accessibility.md#text-spacing-known-limitations).
@@ -168,8 +171,8 @@ Decision details:
    * **At Wider:** Compact and Dense keep the columns of Comfortable, on every device. On a TV with
      Wider and Compact or Dense, host names broke inside a word, the address wrapped before its last
      digit and the "HEVC 10-bit" chip took two lines. Dense still takes its card padding, the Continue
-     cover and the TV card height. The layout reads the level that the viewer chose. Normal and Wide
-     add the column. The owner decided this on the UAT of 2026-10-22.
+     cover and the TV card height. The layout follows the spacing that is drawn. Normal and Wide add
+     the column. The owner decided this on the UAT of 2026-10-22.
    * **Row height:** the host cards of a row are as high as the tallest of them, on every device
      wherever a row has more than one card. It was a TV only. A phone in one column changes nothing.
 

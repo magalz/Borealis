@@ -1470,8 +1470,10 @@ A layout that does not fit at Wide or Wider is changed rather than cut:
 - a value row stacks its value under the text when the longest word does not fit;
 - a slider's value takes at most 40 % of its row;
 - the host detail line wraps;
-- the key captions are drawn with the spacing of Wide at Wider, and keep the plain floor of 8 sp at
-  every level (`KeyCaptionSizeTest`, `KeyboardKeyCaptionSpacingTest`);
+- the key captions are drawn with the spacing of Wide at Wider; their floor is 8 sp at Normal and
+  8 sp over 1.12 at Wide and Wider, because the plain 8 sp is cut off at Wide at a system font scale
+  of 2.0 (`KeyCaptionSizeTest`, `KeyCaptionScaleTest`, `KeyboardKeyCaptionSpacingTest`). Luciole at
+  Normal is cut off at 2.0 whatever the floor, as it was before;
 - Compact and Dense keep the columns of Comfortable at Wider (`CardDensityLayoutTest`).
 
 ### Text spacing: known limitations

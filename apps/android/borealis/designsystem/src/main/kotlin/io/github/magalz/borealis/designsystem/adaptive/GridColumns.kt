@@ -17,7 +17,8 @@ private const val HOST_COLUMNS_NARROW_PHONE = 1
  * em apart there, and the card needs the width of the column that Comfortable keeps (in the device
  * round, host names broke inside a word, an address wrapped before its last digit and a chip took
  * two lines). Dense keeps its other changes: the padding of a card, the cover of the Continue card
- * and the height of a card on a TV. [textSpacing] is the level that the viewer chose.
+ * and the height of a card on a TV. [textSpacing] is the spacing that is drawn: the layout follows
+ * it, whatever level the viewer chose in Settings.
  */
 private fun extraColumns(density: CardDensity, textSpacing: TextSpacing): Int =
     if (density == CardDensity.Comfortable || textSpacing == TextSpacing.Wider) 0 else 1

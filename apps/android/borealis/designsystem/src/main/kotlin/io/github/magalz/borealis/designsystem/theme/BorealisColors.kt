@@ -121,12 +121,13 @@ data class BorealisColors(
     /**
      * These colours as high contrast has them: the text at 7:1 or more on the page and the
      * surfaces, the borders opaque and at 3:1 or more, and the offline indicator at 3:1. The accent
-     * is the variant of [accent], which has to be the accent these colours have: the accent, the
-     * soft accent, the accent line and the action of a snackbar, which is text on the white ink.
-     * The page, the surfaces and the roles that it does not name stay as they are. Apply a palette
-     * after it: the palettes keep the status text at 7:1 too.
+     * is the variant of [accent], which has to be the accent these colours have and has no default,
+     * so that no caller gets the roles of violet on another accent: the accent, the soft accent,
+     * the accent line and the action of a snackbar, which is text on the white ink. The page, the
+     * surfaces and the roles that it does not name stay as they are. Apply a palette after it: the
+     * palettes keep the status text at 7:1 too.
      */
-    fun withHighContrast(accent: AccentChoice = AccentChoice.Violet): BorealisColors {
+    fun withHighContrast(accent: AccentChoice): BorealisColors {
         val variant =
             when (accent) {
                 AccentChoice.Violet ->

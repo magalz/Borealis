@@ -78,6 +78,7 @@
     <string name="settings_reset_layout_dialog_message">The on-screen controls go back to their default size and position. Cannot be undone.</string>
     <string name="settings_reset_layout_confirm">Reset</string>
     <string name="settings_cancel">Cancel</string>
+    <string name="settings_ok">OK</string>
 
     <!-- Rows: Audio -->
     <string name="settings_audio_channels_title">Channels</string>
@@ -118,6 +119,7 @@
     <string name="settings_text_size_title">Text size</string>
     <string name="settings_text_size_summary">Scales the text of Borealis on top of the system font size.</string>
     <string name="settings_text_spacing_title">Text spacing</string>
+    <string name="settings_text_spacing_limited_summary">Drawn as %1$s at this text size, so that nothing is cut off.</string>
     <string name="settings_high_contrast_title">High contrast</string>
     <string name="settings_high_contrast_summary">Uses solid panels, brighter text, a dimmed background and the thicker outline.</string>
     <string name="settings_colour_vision_title">Colour-blind palette</string>
@@ -213,6 +215,8 @@
     <string name="settings_native_warning_message">The PC must support this mode. Borealis cannot read the modes of the PC, so it cannot check. If the PC does not support it, the stream can fail to start or look wrong. You may need to add a matching custom display mode on the PC.</string>
     <string name="settings_native_keep">Keep</string>
     <string name="settings_native_change">Change</string>
+    <string name="settings_spacing_limit_title">%1$s spacing is limited</string>
+    <string name="settings_spacing_limit_message">At this text size, Borealis uses %2$s spacing instead of %1$s, so that nothing is cut off. Your choice stays: %1$s comes back when the system font size or the Text size is smaller.</string>
 
     <!-- About -->
     <string name="settings_about_version_title">Version</string>

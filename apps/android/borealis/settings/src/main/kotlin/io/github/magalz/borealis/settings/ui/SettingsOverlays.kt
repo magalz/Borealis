@@ -5,6 +5,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.settings.ChoiceSheet
@@ -12,7 +13,8 @@ import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.settings.R
 
 /**
- * What is open over the settings screen: a choice sheet, the native warning or the Reset question.
+ * What is open over the settings screen: a choice sheet, the native warning, the Text spacing limit
+ * or the Reset question.
  */
 @Stable
 internal class SettingsOverlays {
@@ -21,6 +23,9 @@ internal class SettingsOverlays {
 
     /** The list (Resolution or Frame rate) whose native entry was just chosen. */
     var nativeWarning by mutableStateOf<SettingsItem?>(null)
+
+    /** The Text spacing that was just chosen and that the font scale draws as a smaller level. */
+    var spacingLimit by mutableStateOf<SpacingLimit?>(null)
 
     /** Whether the Reset layout question is open. */
     var confirmReset by mutableStateOf(false)
@@ -31,7 +36,8 @@ internal class SettingsOverlays {
 }
 
 /**
- * The choice sheet, the native warning and the Reset layout question that [overlays] holds open.
+ * The choice sheet, the native warning, the Text spacing limit and the Reset layout question that
+ * [overlays] holds open.
  */
 @Composable
 internal fun SettingsOverlayHost(
@@ -39,6 +45,8 @@ internal fun SettingsOverlayHost(
     state: SettingsUiState,
     actions: SettingsActions,
 ) {
+    // The font scale that the text of the screen is drawn at, which is what the limit reads.
+    val fontScale = LocalDensity.current.fontScale
     overlays.choice?.let { item ->
         ChoiceSheet(
             title = stringResource(item.titleRes),
@@ -47,11 +55,17 @@ internal fun SettingsOverlayHost(
             onSelect = { key ->
                 actions.onChoiceSelected(item, key)
                 if (isNativeChoice(item, key, state)) overlays.nativeWarning = item
+                if (item == SettingsItem.TEXT_SPACING) {
+                    overlays.spacingLimit = spacingLimit(key, fontScale)
+                }
             },
             onDismiss = { overlays.choice = null },
         )
     }
     overlays.nativeWarning?.let { item -> NativeWarning(item, overlays) }
+    overlays.spacingLimit?.let { limit ->
+        SpacingLimitDialog(limit, onDismiss = { overlays.spacingLimit = null })
+    }
     if (overlays.confirmReset) ResetLayoutQuestion(overlays, actions)
 }
 

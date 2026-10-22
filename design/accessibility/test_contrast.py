@@ -8,6 +8,7 @@ import contextlib
 import hashlib
 import io
 import json
+import math
 import re
 import struct
 import tempfile
@@ -3360,6 +3361,645 @@ class ShippedTokensTest(unittest.TestCase):
 
     def test_the_green_candidate_is_not_a_set_of_the_tokens(self):
         self.assertNotIn("accent-green", self.tokens)
+
+    def test_each_variant_under_a_palette_is_a_group_with_a_high_contrast_group(self):
+        variants = contrast.load_palette_variants(contrast.ACCENTS_JSON)
+        for palette, found in variants.items():
+            for name, variant in found.items():
+                with self.subTest(accent=name, palette=palette):
+                    group = self.tokens[f"accent-{name}-{palette}"]
+                    self.assertEqual(role_set(group), variant["color"])
+                    found = group["high-contrast"].items()
+                    high = {role: token["$value"] for role, token in found if role[0] != "$"}
+                    self.assertEqual(high, variant["high-contrast"])
+
+    def test_there_is_a_group_for_each_variant_and_for_no_other_pair(self):
+        variants = contrast.load_palette_variants(contrast.ACCENTS_JSON)
+        expected = {f"accent-{n}-{p}" for p, found in variants.items() for n in found}
+        groups = {
+            key
+            for key in self.tokens
+            for palette in contrast.PALETTES
+            if key.startswith("accent-") and key.endswith(f"-{palette}")
+        }
+        self.assertEqual(groups, expected)
+        self.assertEqual(
+            expected,
+            {"accent-violet-red-green", "accent-violet-blue-yellow", "accent-white-blue-yellow"},
+        )
+
+    def test_the_groups_of_the_variants_say_which_palette_they_are_for(self):
+        keys = ("accent-violet-red-green", "accent-violet-blue-yellow", "accent-white-blue-yellow")
+        for key in keys:
+            group = self.tokens[key]
+            palette = "Red-green" if key.endswith("red-green") else "Blue-yellow"
+            with self.subTest(group=key):
+                self.assertEqual(group["$type"], "color")
+                self.assertIn(palette, group["$description"])
+                for role, found in group.items():
+                    if role.startswith("$") or role == "high-contrast":
+                        continue
+                    self.assertGreater(len(found["$description"]), 10, role)
+
+
+# The accents under a colour-blind palette (issue #50, after the UAT of 2026-10-22)
+
+
+TEAL_COLOR = {
+    "accent": "#4BECD0",
+    "accent-soft": "#A2FCE8",
+    "accent-strong": "#06AF97",
+    "on-accent": "#001713",
+    "accent-tint": "#4BECD021",
+    "accent-line": "#4BECD066",
+    "accent-inverse": "#027464",
+}
+TEAL_HIGH_CONTRAST = {
+    "accent": "#4BECD0",
+    "accent-soft": "#A2FCE8",
+    "accent-line": "#4BECD0",
+    "accent-inverse": "#026053",
+}
+# The violet of the blue-yellow palette, with the colours that these tests use.
+PINKER_VIOLET_COLOR = {
+    "accent": "#C688FE",
+    "accent-soft": "#C8BBFE",
+    "accent-tint": "#C688FE21",
+    "accent-line": "#C688FE66",
+}
+PINKER_VIOLET_HIGH_CONTRAST = {
+    "accent": "#C7B9FC",
+    "accent-soft": "#CAC4FE",
+    "accent-line": "#C7B9FC",
+}
+
+
+def teal():
+    return candidate(label="Teal", color=TEAL_COLOR, high_contrast=TEAL_HIGH_CONTRAST)
+
+
+def pinker_violet():
+    return candidate(
+        label="Violet, Blue-yellow",
+        color=PINKER_VIOLET_COLOR,
+        high_contrast=PINKER_VIOLET_HIGH_CONTRAST,
+    )
+
+
+def write_accents_with_variants(folder, variants, **candidates):
+    """An `accents.json` with candidates and the variants that go with a palette each:
+    `variants` is `{palette: {name: candidate}}`."""
+    path = Path(folder) / "accents.json"
+    path.write_text(
+        json.dumps({"candidates": candidates, "palette_variants": variants}), encoding="utf-8"
+    )
+    return path
+
+
+class PaletteChecksTest(unittest.TestCase):
+    """How far the roles of an accent are from the status colours of a palette."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.context = contrast.accent_context(TOKENS)
+        cls.accents = contrast.load_accents(contrast.ACCENTS_JSON)
+
+    def checks(self, name, palette):
+        found = self.accents[name]
+        checks = contrast.palette_checks(
+            found["color"], found["high-contrast"], self.context, palette
+        )
+        return {check["id"]: check for check in checks}
+
+    def test_a_palette_is_measured_for_normal_vision_and_for_the_vision_it_is_for(self):
+        def visions(palette):
+            return {c["vision"] for c in self.checks("teal", palette).values()}
+
+        self.assertEqual(visions("red-green"), {"normal", "protanopia", "deuteranopia"})
+        self.assertEqual(visions("blue-yellow"), {"normal", "tritanopia"})
+        self.assertEqual(visions("default"), {"normal"})
+
+    def test_the_roles_that_mark_an_accent_are_measured_with_those_of_high_contrast(self):
+        roles = {c["role"] for c in self.checks("teal", "red-green").values()}
+        self.assertEqual(
+            roles,
+            {
+                "accent",
+                "accent-soft",
+                "accent-strong",
+                "accent-line",
+                "hc:accent",
+                "hc:accent-soft",
+                "hc:accent-line",
+            },
+        )
+
+    def test_a_check_is_named_by_its_palette_its_vision_and_its_role(self):
+        found = self.checks("teal", "red-green")
+        self.assertIn("palette:red-green:protanopia:accent-soft", found)
+        self.assertIn("palette:red-green:normal:hc:accent-line", found)
+        self.assertEqual(found["palette:red-green:protanopia:accent-soft"]["limit"], 20.0)
+
+    def test_the_line_is_measured_as_it_lies_over_the_surface(self):
+        # The line is the accent at 40 %: over `surface` it is a dark tone, as the border is seen.
+        surface = contrast.parse_hex("#14171B")
+        colours = contrast.palette_role_colours(VIOLET_COLOR, VIOLET_HIGH_CONTRAST, surface)
+        np.testing.assert_allclose(colours["accent-line"] * 255, [0x4F, 0x45, 0x74], atol=1e-9)
+        np.testing.assert_allclose(colours["accent"], contrast.parse_hex("#A78BFA"))
+        np.testing.assert_allclose(colours["hc:accent-line"], contrast.parse_hex("#C8B7FC"))
+
+    def test_violet_is_5_from_the_sky_blue_of_the_red_green_palette_as_a_deuteranope_sees_it(self):
+        found = self.checks("violet", "red-green")["palette:red-green:deuteranopia:accent"]
+        self.assertAlmostEqual(found["least"], 5.0, delta=0.05)
+        self.assertEqual(found["nearest"], "success")
+
+    def test_the_soft_accent_of_violet_is_3_5_from_the_sky_blue_as_a_protanope_sees_it(self):
+        found = self.checks("violet", "red-green")["palette:red-green:protanopia:accent-soft"]
+        self.assertAlmostEqual(found["least"], 3.5, delta=0.05)
+        self.assertEqual(found["nearest"], "success")
+
+    def test_the_distance_is_the_least_of_the_four_status_colours_of_the_palette(self):
+        found = self.checks("teal", "red-green")["palette:red-green:deuteranopia:accent"]
+        expected = {
+            status: contrast.colour_distance("#4BECD0", colour, "deuteranopia")
+            for status, colour in self.context["status"]["red-green"].items()
+        }
+        self.assertEqual(sorted(expected), ["danger", "offline", "success", "warning"])
+        self.assertAlmostEqual(found["least"], min(expected.values()), places=9)
+        self.assertEqual(found["nearest"], min(expected, key=expected.get))
+
+    def test_the_inks_are_given_for_information_and_the_figures_of_sprint_11_are_there(self):
+        # Teal is 23.5 from the success green of today's palette and 15.3 from its text colour.
+        found = self.checks("teal", "default")["palette:default:normal:accent"]
+        self.assertAlmostEqual(found["least"], 23.5, delta=0.05)
+        self.assertEqual(found["nearest"], "success")
+        self.assertAlmostEqual(found["ink_least"], 15.3, delta=0.05)
+        self.assertEqual(found["ink_nearest"], "success-ink")
+
+    def test_the_inks_do_not_count_toward_the_distance_that_is_held(self):
+        # Every colour light enough to be read as text is within 20 of a light ink in the red-green
+        # palette, so the rule is held to the four status colours, as the palettes are.
+        found = self.checks("teal", "red-green")
+        check = found["palette:red-green:protanopia:accent"]
+        self.assertLess(check["ink_least"], 20.0)
+        self.assertGreaterEqual(check["least"], 20.0)
+        self.assertEqual(contrast.palette_fails(found.values()), [])
+
+    def test_the_accent_the_soft_accent_and_their_high_contrast_colours_are_held(self):
+        held = {c["role"] for c in self.checks("teal", "red-green").values() if c["held"]}
+        self.assertEqual(
+            held, {"accent", "accent-soft", "hc:accent", "hc:accent-soft", "hc:accent-line"}
+        )
+
+    def test_the_strong_accent_and_the_line_are_measured_and_not_held(self):
+        # Teal's line over the surface is 10.5 from the grey of the palette as a protanope sees it.
+        found = self.checks("teal", "red-green")
+        line = found["palette:red-green:protanopia:accent-line"]
+        self.assertAlmostEqual(line["least"], 10.5, delta=0.05)
+        self.assertEqual(line["nearest"], "offline")
+        self.assertFalse(line["held"])
+        self.assertFalse(found["palette:red-green:normal:accent-strong"]["held"])
+
+    def test_a_palette_that_is_not_for_a_vision_holds_nothing(self):
+        for name in ("violet", "teal", "white"):
+            with self.subTest(accent=name):
+                self.assertFalse(any(c["held"] for c in self.checks(name, "default").values()))
+
+    def test_the_failures_are_the_held_checks_that_fall_short_of_20(self):
+        fails = contrast.palette_fails(self.checks("violet", "red-green").values())
+        self.assertIn("palette:red-green:protanopia:accent", fails)
+        self.assertIn("palette:red-green:deuteranopia:accent-soft", fails)
+        self.assertNotIn("palette:red-green:normal:accent", fails)
+        self.assertNotIn("palette:red-green:protanopia:accent-line", fails)
+        self.assertEqual(contrast.palette_fails(self.checks("teal", "blue-yellow").values()), [])
+
+
+class PaletteVariantFileTest(unittest.TestCase):
+    """The variants of `accents.json` are read and checked as the candidates are."""
+
+    def load(self, variants, **candidates):
+        with tempfile.TemporaryDirectory() as folder:
+            path = write_accents_with_variants(folder, variants, **candidates)
+            return contrast.load_palette_variants(path), contrast.load_accents(path)
+
+    def test_a_file_with_no_variants_has_none(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = write_accents(folder, violet=candidate())
+            self.assertEqual(contrast.load_palette_variants(path), {})
+
+    def test_a_variant_is_a_candidate_of_the_palette_it_is_for(self):
+        variants, _ = self.load(
+            {"blue-yellow": {"violet": candidate(color={"accent": "#C688FE"})}}, violet=candidate()
+        )
+        self.assertEqual(list(variants), ["blue-yellow"])
+        self.assertEqual(variants["blue-yellow"]["violet"]["color"]["accent"], "#C688FE")
+        self.assertEqual(variants["blue-yellow"]["violet"]["label"], "Test")
+
+    def test_only_the_colour_blind_palettes_have_variants(self):
+        with self.assertRaisesRegex(ValueError, "default"):
+            self.load({"default": {"violet": candidate()}}, violet=candidate())
+
+    def test_a_variant_of_an_accent_that_is_not_a_candidate_is_refused(self):
+        with self.assertRaisesRegex(ValueError, "teal.*red-green.*no candidate"):
+            self.load({"red-green": {"teal": candidate()}}, violet=candidate())
+
+    def test_a_variant_is_checked_like_a_candidate_and_reported_with_its_palette(self):
+        broken = candidate()
+        del broken["notes"]["accent-soft"]
+        with self.assertRaisesRegex(ValueError, "violet.*blue-yellow.*accent-soft.*how"):
+            self.load({"blue-yellow": {"violet": broken}}, violet=candidate())
+        with self.assertRaisesRegex(ValueError, "violet.*red-green.*accent.*purple"):
+            self.load(
+                {"red-green": {"violet": candidate(color={"accent": "purple"})}},
+                violet=candidate(),
+            )
+
+    def test_the_accents_as_a_palette_draws_them_are_the_variants_or_themselves(self):
+        variants, accents = self.load(
+            {"blue-yellow": {"white": candidate(color={"accent": "#EFF3FF"})}},
+            violet=candidate(),
+            white=candidate(color={"accent": "#EFF3FF", "accent-soft": "#FFFFFF"}),
+        )
+        under = contrast.palette_candidates(accents, variants, "blue-yellow")
+        self.assertEqual(list(under), ["violet", "white"])
+        self.assertIs(under["violet"], accents["violet"])
+        self.assertIs(under["white"], variants["blue-yellow"]["white"])
+        again = contrast.palette_candidates(accents, variants, "red-green")
+        self.assertIs(again["white"], accents["white"])
+
+
+class PaletteReportTest(unittest.TestCase):
+    """The checks of the accents as they are and of their variants, with no frames."""
+
+    def setUp(self):
+        self.context = contrast.accent_context(TOKENS)
+        self.candidates = {"violet": candidate(label="Violet"), "teal": teal()}
+        self.variants = {"blue-yellow": {"violet": pinker_violet()}}
+        self.report = contrast.palette_report(self.candidates, self.variants, self.context)
+
+    def test_there_is_a_column_for_each_accent_and_each_variant(self):
+        columns = [(c["key"], c["label"], c["palette"]) for c in self.report["columns"]]
+        self.assertEqual(
+            columns,
+            [
+                ("violet", "Violet", None),
+                ("teal", "Teal", None),
+                ("violet@blue-yellow", "Violet, Blue-yellow", "blue-yellow"),
+            ],
+        )
+
+    def test_an_accent_has_its_checks_under_every_palette_and_a_variant_under_its_own(self):
+        checks = self.report["checks"]
+        self.assertEqual(list(checks["violet"]), ["default", "red-green", "blue-yellow"])
+        self.assertEqual(list(checks["violet@blue-yellow"]), ["blue-yellow"])
+
+    def test_the_failures_are_those_of_the_held_checks_of_each_column(self):
+        fails = self.report["fails"]
+        self.assertIn("palette:red-green:protanopia:accent", fails["violet"])
+        self.assertIn("palette:blue-yellow:tritanopia:accent", fails["violet"])
+        self.assertEqual(fails["teal"], [])
+        # A variant is held to its own palette alone.
+        self.assertEqual(fails["violet@blue-yellow"], [])
+
+    def test_a_variant_that_is_no_better_fails_under_its_palette(self):
+        same = {"blue-yellow": {"violet": candidate(label="Same")}}
+        report = contrast.palette_report({"violet": candidate()}, same, self.context)
+        fails = report["fails"]["violet@blue-yellow"]
+        self.assertIn("palette:blue-yellow:tritanopia:accent", fails)
+
+    def test_the_report_is_plain_data(self):
+        json.dumps(self.report)
+
+
+class PaletteTablesTest(unittest.TestCase):
+    """Table X: the distances of the roles, as the palettes and the visions see them."""
+
+    def setUp(self):
+        context = contrast.accent_context(TOKENS)
+        self.candidates = {"violet": candidate(label="Violet"), "teal": teal()}
+        variants = {"blue-yellow": {"violet": pinker_violet()}}
+        report = contrast.palette_report(self.candidates, variants, context)
+        reports = contrast.accent_report(self.candidates, context, [])
+        self.text = contrast.accent_tables({"meta": {}, "candidates": reports, "palettes": report})
+
+    def row(self, label):
+        table = self.text[self.text.index("Table X.") :]
+        found = [line for line in table.splitlines() if line.startswith(f"| {label} |")]
+        self.assertEqual(len(found), 1, label)
+        return [cell.strip() for cell in found[0].strip("|").split("|")]
+
+    def test_table_x_follows_table_u_and_names_the_columns(self):
+        self.assertIn("Table X.", self.text)
+        self.assertLess(self.text.index("Table U."), self.text.index("Table X."))
+        header = self.row("Check")
+        self.assertEqual(header[-3:], ["Violet", "Teal", "Violet, Blue-yellow"])
+
+    def test_a_held_distance_that_falls_short_says_so(self):
+        cells = self.row("`accent` from the red-green status colours, deuteranopia vision")
+        self.assertTrue(cells[1].startswith("5.0, success (short)"), cells[1])
+        self.assertTrue(cells[2].startswith("21.6, success"))
+        self.assertNotIn("short", cells[2])
+
+    def test_a_variant_has_cells_only_under_its_own_palette(self):
+        under_red_green = self.row("`accent` from the red-green status colours, normal vision")
+        under_tritanopia = self.row(
+            "`accent` from the blue-yellow status colours, tritanopia vision"
+        )
+        self.assertEqual(under_red_green[-1], "-")
+        self.assertNotEqual(under_tritanopia[-1], "-")
+        self.assertIn("short", under_tritanopia[1])
+        self.assertNotIn("short", under_tritanopia[-1])
+
+    def test_the_strong_accent_and_the_line_that_fall_short_are_not_held(self):
+        cells = self.row("`accent-line` from the red-green status colours, protanopia vision")
+        self.assertIn("(not held)", cells[2])
+        self.assertNotIn("short", cells[2])
+
+    def test_the_high_contrast_colours_have_rows_of_their_own(self):
+        cells = self.row(
+            "high contrast `accent` from the red-green status colours, protanopia vision"
+        )
+        self.assertIn("short", cells[1])
+
+    def test_the_inks_that_are_near_are_given_for_information(self):
+        # Teal is 15.3 from the success text colour of today's palette: the 20 is held to the fills.
+        cells = self.row("`accent` from the default status colours, normal vision")
+        self.assertIn("23.5, success", cells[2])
+        self.assertIn("ink 15.3, success-ink", cells[2])
+
+    def test_a_result_with_no_palette_report_has_no_table_x(self):
+        context = contrast.accent_context(TOKENS)
+        reports = contrast.accent_report(self.candidates, context, [])
+        text = contrast.accent_tables({"meta": {}, "candidates": reports})
+        self.assertNotIn("Table X.", text)
+
+
+class PaletteAccentReportTest(unittest.TestCase):
+    """`accent_report` for the accents as a palette draws them."""
+
+    def setUp(self):
+        self.context = contrast.accent_context(TOKENS)
+
+    def report(self, one, palette):
+        return contrast.accent_report({"one": one}, self.context, [], palette=palette)["one"]
+
+    def test_the_failures_under_a_palette_are_the_held_checks_of_that_palette(self):
+        report = self.report(candidate(), "red-green")
+        self.assertIn("palette:red-green:protanopia:accent", report["fails"])
+        self.assertNotIn("palette:blue-yellow:tritanopia:accent", report["fails"])
+        self.assertEqual(report["palette"], "red-green")
+        self.assertTrue(report["palette_checks"])
+
+    def test_the_status_colours_of_the_other_palettes_are_not_held(self):
+        report = self.report(candidate(), "blue-yellow")
+        self.assertNotIn("distance:red-green:deuteranopia", report["fails"])
+        self.assertNotIn("distance:default:normal", report["fails"])
+        self.assertIn("distance:ink", [d["id"] for d in report["distance"]])
+
+    def test_the_ink_is_held_under_a_palette_as_it_is_without_one(self):
+        white = candidate(color={"accent": "#F5F3FF"})
+        self.assertIn("distance:ink", self.report(white, "red-green")["fails"])
+
+    def test_table_u_sends_only_the_rows_of_the_palette_that_is_asked_to_table_x(self):
+        # The accent of the red-green palette is not drawn under the blue-yellow one, so its rows
+        # of the red-green palette are not claimed there.
+        reports = contrast.accent_report({"one": candidate()}, self.context, [], "blue-yellow")
+        text = contrast.accent_tables({"meta": {}, "candidates": reports})
+
+        def row(palette, vision):
+            start = f"| `accent` from the {palette} status colours, {vision} vision |"
+            return next(line for line in text.splitlines() if line.startswith(start))
+
+        self.assertIn("(Table X)", row("blue-yellow", "tritanopia"))
+        self.assertIn("(not claimed)", row("red-green", "protanopia"))
+        self.assertNotIn("(Table X)", row("default", "normal"))
+
+    def test_a_report_with_no_palette_is_as_it_was(self):
+        report = contrast.accent_report({"one": candidate()}, self.context, [])["one"]
+        self.assertNotIn("palette", report)
+        self.assertFalse([f for f in report["fails"] if f.startswith("palette:")])
+
+
+class AccentPaletteCommandTest(unittest.TestCase):
+    """`accents <frames> --palette` measures the accents as that palette draws them."""
+
+    def run_command(self, folder, *extra):
+        frames = Path(folder) / "frames"
+        (frames / "Starfield-tv").mkdir(parents=True)
+        Image.new("RGB", (192, 108), (40, 60, 90)).save(frames / "Starfield-tv" / "00.png")
+        variants = {"blue-yellow": {"one": dict(pinker_violet(), label="One, Blue-yellow")}}
+        accents = write_accents_with_variants(
+            folder, variants, one=candidate(label="One"), two=candidate(label="Two")
+        )
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = contrast.main(
+                ["accents", str(frames), "--accents", str(accents), "--jobs", "1", *extra]
+            )
+        return code, out.getvalue()
+
+    def test_without_a_palette_the_accents_are_as_they_are_and_table_x_is_there(self):
+        with tempfile.TemporaryDirectory() as folder:
+            code, out = self.run_command(folder)
+        self.assertEqual(code, 0)
+        self.assertIn("| Role | One | Two |", out)
+        self.assertIn("Table X.", out)
+        self.assertIn("One, Blue-yellow", out)
+
+    def test_a_palette_measures_the_variant_in_place_of_the_accent_it_is_for(self):
+        with tempfile.TemporaryDirectory() as folder:
+            code, out = self.run_command(folder, "--palette", "blue-yellow")
+        self.assertEqual(code, 0)
+        self.assertIn("| Role | One, Blue-yellow | Two |", out)
+        self.assertIn("`#C688FE`", out)
+        self.assertIn("Table X.", out)
+
+    def test_a_palette_with_no_variant_measures_the_accents_as_they_are(self):
+        with tempfile.TemporaryDirectory() as folder:
+            code, out = self.run_command(folder, "--palette", "red-green")
+        self.assertEqual(code, 0)
+        self.assertIn("| Role | One | Two |", out)
+
+    def test_the_palette_is_in_the_json(self):
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder) / "result.json"
+            self.run_command(folder, "--palette", "blue-yellow", "--json", str(target))
+            written = json.loads(target.read_text(encoding="utf-8"))
+        self.assertEqual(written["meta"]["palette"], "blue-yellow")
+        self.assertIn("palettes", written)
+        self.assertEqual(written["candidates"]["one"]["palette"], "blue-yellow")
+
+    def test_a_palette_that_is_not_colour_blind_is_refused(self):
+        with tempfile.TemporaryDirectory() as folder:
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as stop:
+                self.run_command(folder, "--palette", "default")
+        self.assertEqual(stop.exception.code, 2)
+        self.assertIn("default", err.getvalue())
+
+    def test_a_variant_file_that_is_wrong_is_reported(self):
+        with tempfile.TemporaryDirectory() as folder:
+            frames = Path(folder) / "frames"
+            (frames / "Starfield-tv").mkdir(parents=True)
+            Image.new("RGB", (192, 108), (40, 60, 90)).save(frames / "Starfield-tv" / "00.png")
+            variants = {"blue-yellow": {"nobody": candidate()}}
+            accents = write_accents_with_variants(folder, variants, one=candidate())
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as stop:
+                contrast.main(["accents", str(frames), "--accents", str(accents)])
+        self.assertEqual(stop.exception.code, 2)
+        self.assertIn("nobody", err.getvalue())
+
+
+# The variants that design/accessibility/accents.json proposes, by (accent, palette): the accent and
+# the soft accent, and the same two of high contrast.
+PROPOSED_VARIANTS = {
+    ("violet", "red-green"): {
+        "accent": "#F4BCBC",
+        "accent-soft": "#FCC3C8",
+        "high-contrast": {"accent": "#F4BCBC", "accent-soft": "#FCC3C8"},
+    },
+    ("violet", "blue-yellow"): {
+        "accent": "#C688FE",
+        "accent-soft": "#C8BBFE",
+        "high-contrast": {"accent": "#C7B9FC", "accent-soft": "#CAC4FE"},
+    },
+    ("white", "blue-yellow"): {
+        "accent": "#EFF3FF",
+        "accent-soft": "#F3FCFF",
+        "high-contrast": {"accent": "#EFF3FF", "accent-soft": "#F3FCFF"},
+    },
+}
+
+
+class ShippedPaletteVariantsTest(unittest.TestCase):
+    """The variants of the accents under the colour-blind palettes (ADR 0057 and 0058)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.accents = contrast.load_accents(contrast.ACCENTS_JSON)
+        cls.variants = contrast.load_palette_variants(contrast.ACCENTS_JSON)
+        cls.context = contrast.accent_context(TOKENS)
+        cls.report = contrast.palette_report(cls.accents, cls.variants, cls.context)
+
+    def found(self, name, palette):
+        return self.variants[palette][name]
+
+    def test_there_is_a_variant_for_each_pair_that_falls_short_and_for_no_other(self):
+        short = {
+            (name, palette)
+            for name in self.accents
+            for palette in contrast.PALETTES
+            if any(f.startswith(f"palette:{palette}:") for f in self.report["fails"][name])
+        }
+        proposed = {(name, palette) for palette, found in self.variants.items() for name in found}
+        self.assertEqual(proposed, set(PROPOSED_VARIANTS))
+        self.assertEqual(short, set(PROPOSED_VARIANTS))
+
+    def test_the_pairs_that_fall_short_are_those_of_the_measurement(self):
+        fails = self.report["fails"]
+        violet = set(fails["violet"])
+        # Violet is the blue of the success colour to a protanope and a deuteranope, whatever it is
+        # drawn as, and its high contrast colours are no better.
+        for vision in ("protanopia", "deuteranopia"):
+            for role in ("accent", "accent-soft", "hc:accent", "hc:accent-soft", "hc:accent-line"):
+                self.assertIn(f"palette:red-green:{vision}:{role}", violet)
+        for role in ("accent", "hc:accent", "hc:accent-soft", "hc:accent-line"):
+            self.assertIn(f"palette:blue-yellow:tritanopia:{role}", violet)
+        self.assertNotIn("palette:blue-yellow:tritanopia:accent-soft", violet)
+        # Teal and green keep the 20 under both palettes. White falls short with its soft accent
+        # alone, which a tritanope sees as the pale pink of the warning yellow.
+        self.assertEqual(fails["teal"], [])
+        self.assertEqual(fails["green"], [])
+        self.assertEqual(
+            sorted(fails["white"]),
+            [
+                "palette:blue-yellow:tritanopia:accent-soft",
+                "palette:blue-yellow:tritanopia:hc:accent-soft",
+            ],
+        )
+
+    def test_a_variant_is_what_it_is_proposed_to_be(self):
+        for (name, palette), expected in PROPOSED_VARIANTS.items():
+            with self.subTest(accent=name, palette=palette):
+                variant = self.found(name, palette)
+                self.assertEqual(variant["color"]["accent"], expected["accent"])
+                self.assertEqual(variant["color"]["accent-soft"], expected["accent-soft"])
+                for role, value in expected["high-contrast"].items():
+                    self.assertEqual(variant["high-contrast"][role], value)
+
+    def test_every_variant_keeps_the_20_under_its_palette_with_something_to_spare(self):
+        for name, palette in PROPOSED_VARIANTS:
+            key = f"{name}@{palette}"
+            with self.subTest(variant=key):
+                self.assertEqual(self.report["fails"][key], [])
+                held = [c for c in self.report["checks"][key][palette] if c["held"]]
+                self.assertTrue(held)
+                for check in held:
+                    self.assertGreaterEqual(check["least"], 20.4, check["id"])
+
+    def test_every_variant_is_measured_for_the_visions_of_its_palette_and_no_other(self):
+        for name, palette in PROPOSED_VARIANTS:
+            with self.subTest(accent=name, palette=palette):
+                checks = self.report["checks"][f"{name}@{palette}"]
+                self.assertEqual(list(checks), [palette])
+                visions = {c["vision"] for c in checks[palette]}
+                self.assertEqual(visions, set(contrast.PALETTE_VISIONS[palette]))
+
+    def test_a_variant_fails_no_check_that_its_accent_passes(self):
+        # The opaque fills and high contrast, which need no frame, and the glass that the app
+        # measured (`GlassContrastTable.kt`). The selected label over its tint needs frames: the
+        # `accents --palette` command measures it, and the notes have the figures.
+        rows = backdrop_rows_of_the_table()
+        for name, palette in PROPOSED_VARIANTS:
+            with self.subTest(accent=name, palette=palette):
+                base = contrast.accent_report({name: self.accents[name]}, self.context, rows)
+                found = self.found(name, palette)
+                under = contrast.accent_report({name: found}, self.context, rows, palette=palette)
+                new = [
+                    f
+                    for f in under[name]["fails"]
+                    if not f.startswith("palette:") and f not in base[name]["fails"]
+                ]
+                self.assertEqual(new, [])
+
+    def test_a_variant_fails_only_the_checks_that_it_names(self):
+        for name, palette in PROPOSED_VARIANTS:
+            found = self.found(name, palette)
+            under = contrast.accent_report({name: found}, self.context, [], palette=palette)[name]
+            with self.subTest(accent=name, palette=palette):
+                self.assertEqual(sorted(under["fails"]), sorted(found["known_fails"]))
+
+    def test_the_violet_of_the_blue_yellow_palette_is_the_violet_a_little_pinker(self):
+        accent = self.found("violet", "blue-yellow")["color"]["accent"]
+        today = self.accents["violet"]["color"]["accent"]
+        self.assertLess(contrast.colour_distance(accent, today), 8.0)
+
+        def hue(value):
+            _, a, b = contrast.srgb_to_lab(contrast.parse_hex(value))
+            return math.degrees(math.atan2(b, a)) % 360
+
+        self.assertLess(abs(hue(accent) - hue(today)), 20.0)
+
+    def test_the_variant_of_white_changes_the_soft_accent_alone(self):
+        variant, today = self.found("white", "blue-yellow"), self.accents["white"]
+        for role in contrast.ACCENT_ROLES:
+            if role != "accent-soft":
+                self.assertEqual(variant["color"][role], today["color"][role], role)
+        self.assertNotEqual(variant["color"]["accent-soft"], today["color"]["accent-soft"])
+        self.assertEqual(variant["known_fails"].keys(), today["known_fails"].keys())
+
+    def test_the_variant_of_violet_for_the_red_green_palette_is_not_a_violet_and_says_so(self):
+        found = self.found("violet", "red-green")
+        self.assertIn("no violet", found["source"].lower())
+
+    def test_every_role_of_a_variant_has_a_note_on_how_its_value_was_derived(self):
+        for palette, found in self.variants.items():
+            for name, variant in found.items():
+                high = (f"high-contrast.{role}" for role in variant["high-contrast"])
+                for role in (*variant["color"], *high):
+                    with self.subTest(accent=name, palette=palette, role=role):
+                        self.assertGreater(len(variant["notes"][role]), 20)
 
 
 if __name__ == "__main__":

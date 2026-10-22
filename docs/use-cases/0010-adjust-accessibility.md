@@ -94,7 +94,12 @@ targets of 48 dp on a phone and a handheld.
 
 1. The user chooses Red-green or Blue-yellow. The status colours (success,
    warning, danger and offline) change to the colours of that palette, which keep
-   apart for the colour vision it is for.
+   apart for the colour vision it is for. The accent adapts too (Sprint 11): where
+   Violet, or the soft accent of White, would come within 20 of a status colour
+   under the vision of the palette, it is drawn as a variant (a pale rose for
+   Violet under Red-green, a lighter and pinker violet for Violet under
+   Blue-yellow, and a soft accent with a trace of cyan for White under
+   Blue-yellow). Teal keeps its colour.
 2. Whatever the palette, a status is not told by colour alone: the dot of a host
    is a filled circle for online, a filled triangle for attention, and a hollow
    ring for offline and unknown. The card says it in words too.
@@ -158,7 +163,7 @@ UC-010-T16 and T17 are Sprint 11 rows.
 | UC-010-T2 | Given each Accessibility setting, when it is stored, then `BorealisLook` holds the value of its stable id, and an id that no choice has stands for the default. | unit | exists (Sprint 10, unit): `BorealisLooksTest` |
 | UC-010-T3 | Given Reduce motion Follow system, On or Off, when the system animation scale or the setting changes, then the animations are removed or kept as the rule says, while the content is shown. | UI | exists (Sprint 10, UI): `ReducedMotionTest` |
 | UC-010-T4 | Given High contrast, when the colours are read, then every text role is 7:1 or more on the page, the surfaces and the selected rows, the borders are opaque and 3:1 or more, and a palette composes with it. | unit | exists (Sprint 10, unit): `HighContrastColorsTest` |
-| UC-010-T5 | Given a colour-blind palette, when the status colours are read, then every pair is 20 or more apart in CIEDE2000 for the dichromacies it is for, each colour is 3:1 or more, and the status inks are 7:1 or more (the bar of the test; 9.2:1 measured). | unit | exists (Sprint 10, unit): `ColourVisionPaletteTest` |
+| UC-010-T5 | Given a colour-blind palette, when the status colours are read, then every pair is 20 or more apart in CIEDE2000 for the dichromacies it is for, each colour is 3:1 or more, and the status inks are 7:1 or more (the bar of the test; 9.2:1 measured); and the accent and the soft accent, and their High contrast colours, are 20 or more apart from the four status colours under the vision of the palette, as the variants of Violet and White make them (Sprint 11). | unit | exists (Sprint 10 and 11, unit): `ColourVisionPaletteTest`, `AccentPaletteVariantsTest` |
 | UC-010-T6 | Given a status, when the dot is drawn, then it is a filled circle, a filled triangle or a hollow ring, whatever the colour. | UI | exists (Sprint 10, UI): `StatusDotTest`; the Online shadow (Sprint 11) is in the same test class |
 | UC-010-T7 | Given Thicker focus outline or High contrast, when an item has the focus, then the outline is 5 dp, starts 2 dp outside the item, is in ink, and keeps 3:1 over the page, the surface and the brightest backdrop of every glass. | UI | exists (Sprint 10, UI): `ThickFocusOutlineTest` |
 | UC-010-T8 | Given a look, a background and an API level, when the glass is made, then Standard, Reduced, Off, High contrast and the plain page give the glass of ADR 0057, and a TV runs the drawn background at 24 frames a second only while the blur is drawn. | unit | exists (Sprint 10, unit): `GlassRulesTest` |

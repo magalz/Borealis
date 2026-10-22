@@ -17,6 +17,14 @@ import org.junit.Test
 class ColourVisionPaletteTest {
     private val base = BorealisColors()
 
+    /**
+     * The colours of [base] under [vision], as teal has them: teal keeps the 20 of CIEDE2000 from
+     * the status colours under both palettes and has no variant, so only the status roles change.
+     * What the palettes do to the accents that have a variant is in `AccentPaletteVariantsTest`.
+     */
+    private fun BorealisColors.under(vision: ColourVision) =
+        withColourVision(vision, AccentChoice.Teal, highContrast = false)
+
     private fun fills(colors: BorealisColors) =
         mapOf(
             "success" to colors.success,
@@ -51,7 +59,7 @@ class ColourVisionPaletteTest {
 
     @Test
     fun `the red-green palette keeps every pair of status colours distinct to a protanope and a deuteranope`() {
-        val palette = base.withColourVision(ColourVision.RedGreen)
+        val palette = base.under(ColourVision.RedGreen)
 
         assertThat(leastDifference(palette, Dichromacy.Protanopia)).isAtLeast(20.0)
         assertThat(leastDifference(palette, Dichromacy.Deuteranopia)).isAtLeast(20.0)
@@ -59,7 +67,7 @@ class ColourVisionPaletteTest {
 
     @Test
     fun `the blue-yellow palette keeps every pair of status colours distinct to a tritanope`() {
-        val palette = base.withColourVision(ColourVision.BlueYellow)
+        val palette = base.under(ColourVision.BlueYellow)
 
         assertThat(leastDifference(palette, Dichromacy.Tritanopia)).isAtLeast(20.0)
     }
@@ -67,18 +75,18 @@ class ColourVisionPaletteTest {
     @Test
     fun `each palette differs from the colours of today`() {
         for (vision in listOf(ColourVision.RedGreen, ColourVision.BlueYellow)) {
-            val palette = base.withColourVision(vision)
+            val palette = base.under(vision)
 
             assertWithMessage("$vision").that(fills(palette)).isNotEqualTo(fills(base))
         }
-        assertThat(base.withColourVision(ColourVision.RedGreen).success)
-            .isNotEqualTo(base.withColourVision(ColourVision.BlueYellow).success)
+        assertThat(base.under(ColourVision.RedGreen).success)
+            .isNotEqualTo(base.under(ColourVision.BlueYellow).success)
     }
 
     @Test
     fun `every status colour of a palette keeps 3 to 1 on the page and the surfaces`() {
         for (vision in listOf(ColourVision.RedGreen, ColourVision.BlueYellow)) {
-            val palette = base.withColourVision(vision)
+            val palette = base.under(vision)
             for ((status, color) in fills(palette)) {
                 for ((surface, fill) in surfaces(palette)) {
                     assertWithMessage("$vision $status on $surface")
@@ -92,7 +100,7 @@ class ColourVisionPaletteTest {
     @Test
     fun `the text of a status keeps 7 to 1 in a palette, so high contrast can keep the palette`() {
         for (vision in listOf(ColourVision.RedGreen, ColourVision.BlueYellow)) {
-            val palette = base.withColourVision(vision)
+            val palette = base.under(vision)
             val inks =
                 mapOf(
                     "success-ink" to palette.successInk,
@@ -110,8 +118,8 @@ class ColourVisionPaletteTest {
     }
 
     @Test
-    fun `a palette changes the status roles and keeps every other role`() {
-        val palette = base.withColourVision(ColourVision.RedGreen)
+    fun `a palette changes the status roles and keeps every other role of an accent with no variant`() {
+        val palette = base.under(ColourVision.RedGreen)
 
         val kept =
             palette.copy(
@@ -128,17 +136,25 @@ class ColourVisionPaletteTest {
 
     @Test
     fun `no palette is the colours as they are`() {
-        assertThat(base.withColourVision(ColourVision.Off)).isEqualTo(base)
+        for (accent in AccentChoice.entries) {
+            for (high in listOf(false, true)) {
+                assertWithMessage("$accent high contrast $high")
+                    .that(base.withColourVision(ColourVision.Off, accent, high))
+                    .isEqualTo(base)
+            }
+        }
     }
 
     @Test
     fun `a palette composes with high contrast, which keeps the 7 to 1 of the text`() {
         val both =
-            base.withHighContrast(AccentChoice.Violet).withColourVision(ColourVision.RedGreen)
+            base
+                .withHighContrast(AccentChoice.Teal)
+                .withColourVision(ColourVision.RedGreen, AccentChoice.Teal, highContrast = true)
 
-        assertThat(both.success).isEqualTo(base.withColourVision(ColourVision.RedGreen).success)
+        assertThat(both.success).isEqualTo(base.under(ColourVision.RedGreen).success)
         assertThat(both.success).isNotEqualTo(base.success)
-        assertThat(both.ink).isEqualTo(base.withHighContrast(AccentChoice.Violet).ink)
+        assertThat(both.ink).isEqualTo(base.withHighContrast(AccentChoice.Teal).ink)
         assertThat(both.ink).isNotEqualTo(base.ink)
         for (ink in listOf(both.successInk, both.warningInk, both.dangerInk)) {
             assertThat(contrastRatio(ink, both.surfaceRaised)).isAtLeast(7.0)
@@ -147,19 +163,24 @@ class ColourVisionPaletteTest {
 
     @Test
     fun `the colours of a look are those of its high contrast and its palette`() {
-        val high = BorealisLook(highContrast = true)
-        val blueYellow = BorealisLook(colourVision = ColourVision.BlueYellow)
-        val both = BorealisLook(highContrast = true, colourVision = ColourVision.BlueYellow)
+        val teal = AccentChoice.Teal
+        val high = BorealisLook(accent = teal, highContrast = true)
+        val blueYellow = BorealisLook(accent = teal, colourVision = ColourVision.BlueYellow)
+        val both =
+            BorealisLook(accent = teal, highContrast = true, colourVision = ColourVision.BlueYellow)
+        val tealBase = base.withAccent(teal)
 
         assertThat(borealisColors(BorealisLook())).isEqualTo(base)
-        assertThat(borealisColors(high)).isEqualTo(base.withHighContrast(AccentChoice.Violet))
-        assertThat(borealisColors(high)).isNotEqualTo(base)
+        assertThat(borealisColors(high)).isEqualTo(tealBase.withHighContrast(teal))
+        assertThat(borealisColors(high)).isNotEqualTo(tealBase)
         assertThat(borealisColors(blueYellow))
-            .isEqualTo(base.withColourVision(ColourVision.BlueYellow))
-        assertThat(borealisColors(blueYellow)).isNotEqualTo(base)
+            .isEqualTo(tealBase.withColourVision(ColourVision.BlueYellow, teal, false))
+        assertThat(borealisColors(blueYellow)).isNotEqualTo(tealBase)
         assertThat(borealisColors(both))
             .isEqualTo(
-                base.withHighContrast(AccentChoice.Violet).withColourVision(ColourVision.BlueYellow)
+                tealBase
+                    .withHighContrast(teal)
+                    .withColourVision(ColourVision.BlueYellow, teal, highContrast = true)
             )
         assertThat(borealisColors(both)).isNotEqualTo(borealisColors(high))
     }

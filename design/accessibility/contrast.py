@@ -24,6 +24,8 @@ styles. `README.md` has the whole procedure.
     python -I contrast.py halo <frames> --json <halo.json> [--tokens <tokens.json>] [--jobs N]
         [--texts <style> ...] [--icons] [--high-contrast] [--halo <stroke dp> <blur dp> <opacity %>]
         [--font <sans regular> --font-semibold <sans semibold> | --fonts <font.json>]
+    python -I contrast.py accents <frames> [--accents <accents.json>] [--tokens <tokens.json>]
+        [--palette red-green|blue-yellow] [--json <accents.json>] [--jobs N]
 
 `measure` is cases (a) to (c) and `halo` is case (d), in IBM Plex Sans unless a font is named: two
 files, the regular and the semibold face (a variable font is set to 400 and 600), or a JSON manifest
@@ -2159,6 +2161,28 @@ ACCENT_CLAIMED = {
     ("blue-yellow", "tritanopia"),
 }
 
+# The accents under a colour-blind palette (issue #50, after the UAT of 2026-10-22). The palette
+# changes the status colours and the accent stays, so an accent can be told from a status colour by
+# nobody the palette is for. An accent may have a variant for a palette (`palette_variants` of
+# `accents.json`), and the rule that holds is the one of the palettes: 20 or more of CIEDE2000 from
+# each of the four status colours, as normal vision and the vision of the palette see them.
+PALETTES = STATUS_PALETTES[1:]
+PALETTE_VISIONS = {
+    palette: tuple(vision for vision in VISIONS if (palette, vision) in ACCENT_CLAIMED)
+    for palette in STATUS_PALETTES
+}
+# The roles of high contrast that replace the ones that mark a selection or an accent.
+PALETTE_HIGH_CONTRAST_ROLES = ("accent", "accent-soft", "accent-line")
+# What is held to the 20: the accent and the soft accent, and the colours of high contrast. The
+# strong accent carries no text and no part of the app draws it. The line is the accent at 40 %
+# over a surface, a dark tone: for an accent that is light enough to carry its text (4.5:1) it is
+# 20 from the four status colours of the red-green palette for no colour of the sRGB gamut, and of
+# the blue-yellow palette for a magenta alone. Both are measured and not held.
+PALETTE_HELD_ROLES = ("accent", "accent-soft")
+# The text colours of the status roles. They are lightened to be read as text, so every accent that
+# can be read as text is near one of them: they are given for information and are not held.
+STATUS_INKS = ("success-ink", "warning-ink", "danger-ink")
+
 _RGBA = re.compile(r"#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?\Z")
 LAB_WHITE_X, LAB_WHITE_Z = 0.95047, 1.08883
 LAB_EPSILON, LAB_KAPPA = 216.0 / 24389.0, 24389.0 / 27.0
@@ -2282,13 +2306,19 @@ def delta_e2000(lab1, lab2):
     )
 
 
-def colour_distance(first, second, kind=None):
-    """CIEDE2000 of two `#RRGGBB` colours, as someone with the dichromacy `kind` sees them, or as
-    anyone does when `kind` is None."""
-    colours = [parse_hex(value) for value in (first, second)]
+def rgb_distance(first, second, kind=None):
+    """CIEDE2000 of two colours given as sRGB floats, as someone with the dichromacy `kind` sees
+    them, or as anyone does when `kind` is None."""
+    colours = [first, second]
     if kind is not None:
         colours = [seen_by(colour, kind) for colour in colours]
     return delta_e2000(*(srgb_to_lab(colour) for colour in colours))
+
+
+def colour_distance(first, second, kind=None):
+    """CIEDE2000 of two `#RRGGBB` colours, as someone with the dichromacy `kind` sees them, or as
+    anyone does when `kind` is None."""
+    return rgb_distance(parse_hex(first), parse_hex(second), kind)
 
 
 def _check_accent_candidate(name, found):
@@ -2346,13 +2376,18 @@ def accent_context(tokens=TOKENS_JSON):
     data = json.loads(Path(tokens).read_text(encoding="utf-8"))
     colors = load_colors(tokens, ACCENT_NEUTRALS)
     status = {"default": {name: data["color"][name]["$value"] for name in STATUS_COLOURS}}
+    inks = {"default": {name: data["color"][name]["$value"] for name in STATUS_INKS}}
     for palette in STATUS_PALETTES[1:]:
         status[palette] = {
             name: data["colour-vision"][palette][name]["$value"] for name in STATUS_COLOURS
         }
+        inks[palette] = {
+            name: data["colour-vision"][palette][name]["$value"] for name in STATUS_INKS
+        }
     return {
         "colors": colors,
         "status": status,
+        "inks": inks,
         "high_contrast_ink": data["high-contrast"]["ink"]["$value"],
     }
 
@@ -2584,10 +2619,14 @@ def _accent_high_contrast(roles, high, colors, ink):
     ]
 
 
-def _accent_distance(accent, context):
+def _accent_distance(accent, context, under=None):
     """The least CIEDE2000 distance of the accent from the status colours of each palette as each
     vision sees them, and from `ink` and `ink-2` as normal vision sees them: the accent of a
-    selected label is told from the ink beside it by its colour, whatever the colour is."""
+    selected label is told from the ink beside it by its colour, whatever the colour is.
+
+    When the accent is drawn under a colour-blind palette (`under`) the status colours are held by
+    `palette_checks`, for every role, and these rows are for information: the ink is held as it is
+    without a palette."""
     found = []
     for palette, colours in context["status"].items():
         for vision in VISIONS:
@@ -2603,7 +2642,8 @@ def _accent_distance(accent, context):
                     "least": apart[nearest],
                     "nearest": nearest,
                     "limit": ACCENT_DISTANCE,
-                    "relevant": (palette, vision) in ACCENT_CLAIMED,
+                    "relevant": under is None and (palette, vision) in ACCENT_CLAIMED,
+                    "claimed": under == palette and (palette, vision) in ACCENT_CLAIMED,
                 }
             )
     for ink in ("ink", "ink-2"):
@@ -2622,13 +2662,154 @@ def _accent_distance(accent, context):
     return found
 
 
-def accent_report(candidates, context, rows):
+def palette_role_colours(roles, high, surface):
+    """The colours of the roles that mark a selection or an accent, as they are drawn, by role: the
+    accent, the soft accent, the strong accent and the line, and `hc:` the accent, the soft accent
+    and the line of high contrast. They are sRGB floats.
+
+    The line is the accent at an alpha, so it is measured over `surface`, where a border is seen.
+    """
+    colours = {
+        "accent": parse_hex(roles["accent"]),
+        "accent-soft": parse_hex(roles["accent-soft"]),
+        "accent-strong": parse_hex(roles["accent-strong"]),
+        "accent-line": over(roles["accent-line"], surface),
+    }
+    for role in PALETTE_HIGH_CONTRAST_ROLES:
+        colours[f"hc:{role}"] = parse_hex(high[role])
+    return colours
+
+
+def _least_distance(colour, others, kind):
+    """The least CIEDE2000 distance of `colour` from the colours `others` (`{name: #RRGGBB}`) as the
+    vision `kind` sees them, and the name of the nearest."""
+    apart = {name: rgb_distance(colour, parse_hex(hue), kind) for name, hue in others.items()}
+    nearest = min(apart, key=apart.get)
+    return apart[nearest], nearest
+
+
+def palette_checks(roles, high, context, palette):
+    """The distance of each role that marks a selection or an accent from the status colours of
+    `palette` (`default` or a colour-blind one), as normal vision and the vision of the palette see
+    them: a check for each vision and each role, in that order.
+
+    A check has an `id` (`palette:red-green:protanopia:accent-soft`), a `label`, the `palette`, the
+    `vision` and the `role`, the `least` distance from the four status colours and the `nearest` of
+    them, `limit` (20), and `held`: the accent and the soft accent and the colours of high contrast
+    are held to the limit under a colour-blind palette, and the rest are given for information.
+    `ink_least` and `ink_nearest` are the same for the text colours of the status roles, which are
+    never held.
+    """
+    colours = palette_role_colours(roles, high, parse_hex(context["colors"]["surface"]))
+    status, inks = context["status"][palette], context["inks"][palette]
+    checks = []
+    for vision in PALETTE_VISIONS[palette]:
+        kind = None if vision == "normal" else vision
+        for role, colour in colours.items():
+            least, nearest = _least_distance(colour, status, kind)
+            ink_least, ink_nearest = _least_distance(colour, inks, kind)
+            high_contrast = role.startswith("hc:")
+            name = role.removeprefix("hc:")
+            checks.append(
+                {
+                    "id": f"palette:{palette}:{vision}:{role}",
+                    "label": (
+                        f"{'high contrast ' if high_contrast else ''}`{name}` from the "
+                        f"{palette} status colours, {vision} vision"
+                    ),
+                    "palette": palette,
+                    "vision": vision,
+                    "role": role,
+                    "least": least,
+                    "nearest": nearest,
+                    "ink_least": ink_least,
+                    "ink_nearest": ink_nearest,
+                    "limit": ACCENT_DISTANCE,
+                    "held": palette in PALETTES and (high_contrast or role in PALETTE_HELD_ROLES),
+                }
+            )
+    return checks
+
+
+def palette_fails(checks):
+    """The ids of the held checks that are short of their limit."""
+    return [c["id"] for c in checks if c["held"] and c["least"] < c["limit"]]
+
+
+def load_palette_variants(path=ACCENTS_JSON):
+    """The variants of `accents.json`: `{palette: {name: candidate}}`, each read as a candidate.
+
+    A variant is the set of roles that an accent has under a colour-blind palette, when they are not
+    the roles of the accent itself. `palette_variants` of the file maps a palette to the accents
+    that have one; a file with none gives `{}`.
+    """
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    names = set(data.get("candidates") or {})
+    variants = {}
+    for palette, found in (data.get("palette_variants") or {}).items():
+        if palette.startswith("$"):
+            continue
+        if palette not in PALETTES:
+            raise ValueError(
+                f"{path}: palette_variants has {palette}, which is not a colour-blind palette "
+                f"({', '.join(PALETTES)})"
+            )
+        variants[palette] = {}
+        for name, entry in found.items():
+            if name.startswith("$"):
+                continue
+            if name not in names:
+                raise ValueError(f"{name} ({palette}) is a variant of no candidate of {path}")
+            variants[palette][name] = _check_accent_candidate(f"{name} ({palette})", entry)
+    return variants
+
+
+def palette_candidates(candidates, variants, palette):
+    """The candidates as `palette` draws them: the variant of each that has one, else itself."""
+    found = variants.get(palette) or {}
+    return {name: found.get(name, candidate) for name, candidate in candidates.items()}
+
+
+def palette_report(candidates, variants, context):
+    """The distances of the roles of the accents, and of their variants, from the status colours.
+
+    There is a column for each accent, which is measured under the default status colours and both
+    palettes, and for each variant, which is measured under its own palette alone. The report has
+    the `columns` (`key`, `label` and `palette`, which is None for an accent), the `checks` of each
+    column by palette (`palette_checks`) and the `fails` of each: the ids of its held checks that
+    are short of 20.
+    """
+    columns = [{"key": n, "label": c["label"], "palette": None} for n, c in candidates.items()]
+    found = dict(candidates)
+    for palette in PALETTES:
+        for name, variant in (variants.get(palette) or {}).items():
+            key = f"{name}@{palette}"
+            columns.append({"key": key, "label": variant["label"], "palette": palette})
+            found[key] = variant
+    checks, fails = {}, {}
+    for column in columns:
+        key, own = column["key"], column["palette"]
+        roles, high = found[key]["color"], found[key]["high-contrast"]
+        checks[key] = {
+            palette: palette_checks(roles, high, context, palette)
+            for palette in ((own,) if own else STATUS_PALETTES)
+        }
+        fails[key] = [i for each in checks[key].values() for i in palette_fails(each)]
+    return {"columns": columns, "checks": checks, "fails": fails}
+
+
+def accent_report(candidates, context, rows, palette=None):
     """For each candidate (`{name: candidate}`), the checks that issue #50 asks for.
 
     `rows` are those of `measure_backdrops`, and may be empty: the checks over the glass are then
     left out. Each check is a dict with an `id`, a `label`, a ratio (or a `least` distance) and its
     `limit`; `fails` lists the ids of the checks that are short of their limit, in the order of
     fills, glass, high contrast and distance.
+
+    With a colour-blind `palette` the candidates are those that the palette draws (a variant, or
+    the accent itself): the status colours of that palette are held for every role, as
+    `palette_checks` has them (they are in `palette_checks` of the report, and in `fails`, after the
+    rest, when short), and the status colours of the other palettes are not held.
     """
     worst = _worst_backdrops(rows)
     colors = context["colors"]
@@ -2638,7 +2819,7 @@ def accent_report(candidates, context, rows):
         fills = _accent_fills(roles, colors)
         glass, floors, glass_fails = _accent_glass(name, roles, colors, worst)
         hc = _accent_high_contrast(roles, high, colors, context["high_contrast_ink"])
-        distance = _accent_distance(roles["accent"], context)
+        distance = _accent_distance(roles["accent"], context, palette)
         fails = [c["id"] for c in fills if c["limit"] is not None and c["ratio"] < c["limit"]]
         fails += glass_fails
         fails += [c["id"] for c in hc if c["ratio"] < c["limit"]]
@@ -2653,15 +2834,25 @@ def accent_report(candidates, context, rows):
             "distance": distance,
             "fails": fails,
         }
+        if palette is not None:
+            checks = palette_checks(roles, high, context, palette)
+            report[name]["palette"] = palette
+            report[name]["palette_checks"] = checks
+            report[name]["fails"] = fails + palette_fails(checks)
     return report
 
 
-def measure_accents(root, candidates, context, jobs=1):
+def measure_accents(root, candidates, context, jobs=1, palette=None, palettes=None):
     """The accents over the frames in `root/<Style>-<device>/*.png`: the rows of the backdrops and
-    the report of each candidate, as plain data."""
+    the report of each candidate, as plain data.
+
+    `palette` is a colour-blind palette: the candidates are then those that it draws and are held
+    to its status colours (`accent_report`). `palettes` is the `palette_report` of the accents and
+    their variants, which goes in the result for Table X.
+    """
     sources = _folder_sources(root)
     rows = measure_backdrops(sources, candidates, context, jobs)
-    return {
+    result = {
         "meta": {
             "statistic": (
                 "The luminance of the brightest pixel behind the text of a glass panel, over every "
@@ -2688,8 +2879,13 @@ def measure_accents(root, candidates, context, jobs=1):
             for (style, device), frames in sorted(sources.items())
         ],
         "backdrops": rows,
-        "candidates": accent_report(candidates, context, rows),
+        "candidates": accent_report(candidates, context, rows, palette),
     }
+    if palette is not None:
+        result["meta"]["palette"] = palette
+    if palettes is not None:
+        result["palettes"] = palettes
+    return result
 
 
 def _ratio_cell(ratio, text=ACCENT_TEXT, outline=None):
@@ -2734,13 +2930,72 @@ def _limit_label(label, limit):
     return label if limit is None else f"{label}, {format_ratio(limit)}:1"
 
 
+def _palette_cell(check):
+    """A cell of Table X: the least distance and the status colour it is from, with a word when it
+    is short of 20 (`short` where it is held, `not held` where its palette is for the vision and the
+    role is not held, and `information` for the default colours), and the same for the text colours
+    of the status roles when one of them is nearer than 20."""
+    cell = f"{check['least']:.1f}, {check['nearest']}"
+    if check["least"] < check["limit"]:
+        if check["held"]:
+            cell += " (short)"
+        elif check["palette"] in PALETTES:
+            cell += " (not held)"
+        else:
+            cell += " (information)"
+    if check["ink_least"] < check["limit"]:
+        cell += f"; ink {check['ink_least']:.1f}, {check['ink_nearest']}"
+    return cell
+
+
+def palette_tables(report):
+    """Table X for `docs/ux/accessibility.md`, from a `palette_report`, as a list of paragraphs.
+
+    The table has a line for each palette, vision and role, and a column for each accent and each
+    variant. A variant has cells under its own palette alone. A line after it names what falls short
+    of 20 for each column.
+    """
+    columns = report["columns"]
+    bases = [column for column in columns if column["palette"] is None]
+    lines = []
+    for palette in STATUS_PALETTES:
+        for index, check in enumerate(report["checks"][bases[0]["key"]][palette]):
+            cells = []
+            for column in columns:
+                found = report["checks"][column["key"]].get(palette)
+                cells.append("-" if found is None else _palette_cell(found[index]))
+            lines.append([check["label"]] + cells)
+    sections = [
+        "Table X. The least CIEDE2000 distance of each role that marks a selection or an accent "
+        "from the four status colours of each palette, as each vision sees them, for the accents "
+        "and for their variants under a colour-blind palette (a variant has cells under its own "
+        "palette alone). 20 or more apart is distinct. The accent and the soft accent and the "
+        "colours of high contrast are held to 20 under the colour-blind palettes (`short` when "
+        "they are not); the strong accent and the line (over `surface`) are measured and "
+        "`not held`, and the colours of today's palette are given for information. `ink` is the "
+        "least distance from the text colours of the status roles, given when it is under 20 and "
+        "never held.",
+        _table(["Check"] + [column["label"] for column in columns], lines),
+    ]
+    for column in columns:
+        fails = report["fails"][column["key"]]
+        sections.append(
+            f"{column['label']} keeps the palette rule."
+            if not fails
+            else f"{column['label']} falls short of the palette rule: {', '.join(fails)}."
+        )
+    return sections
+
+
 def accent_tables(result):
     """The tables of the accent candidates for `docs/ux/accessibility.md`, from a result.
 
     N is the role sets, O the checks on the opaque fills, P the glass of each candidate (its tint
     and the brightest pixel), Q and R the accent and the accent-soft over the glass, S the selected
     label in `accent` over the glass, T high contrast, U the distances and W the selected label of
-    the app, `accent-soft`, over the glass. A line for each candidate says which checks it fails.
+    the app, `accent-soft`, over the glass. X, when the result has the report of the palettes, is
+    the distance of each role from the status colours of each palette (`palette_tables`). A line
+    for each candidate says which checks it fails.
     """
     reports = result["candidates"]
     names = list(reports)
@@ -2806,7 +3061,8 @@ def accent_tables(result):
 
     def distance_cell(one):
         if not one["relevant"]:
-            note = " (not claimed)"
+            # Under a palette the status colours are held by Table X.
+            note = " (Table X)" if one.get("claimed") else " (not claimed)"
         else:
             note = " (short)" if one["least"] < one["limit"] else ""
         return f"{one['least']:.1f}, {one['nearest']}{note}"
@@ -2829,6 +3085,9 @@ def accent_tables(result):
             "text needs 4.5:1."
         )
         sections.append(_glass_table(reports, names, _glass_ratio("selected-soft", None)))
+
+    if result.get("palettes"):
+        sections.extend(palette_tables(result["palettes"]))
 
     for name in names:
         label, fails = reports[name]["label"], reports[name]["fails"]
@@ -2922,7 +3181,10 @@ def _run_halo(args, log):
 
 
 def _run_accents(args, log):
-    result = measure_accents(args.frames, args.candidates, args.context, args.jobs)
+    palettes = palette_report(args.accents_as_they_are, args.variants, args.context)
+    result = measure_accents(
+        args.frames, args.candidates, args.context, args.jobs, args.palette, palettes
+    )
     _save_result(result, args)
     print(accent_tables(result))
     return 0
@@ -2985,6 +3247,11 @@ def _parser():
     accents = commands.add_parser("accents", help="measure the accent colour candidates")
     accents.add_argument("frames", type=Path, help="the folder of <Style>-<tv|phone>/NN.png")
     accents.add_argument("--accents", type=Path, default=ACCENTS_JSON, help="the candidates")
+    accents.add_argument(
+        "--palette",
+        choices=PALETTES,
+        help="measure the accents as this colour-blind palette draws them (their variants)",
+    )
     accents.add_argument("--tokens", type=Path, default=TOKENS_JSON, help="the design tokens")
     accents.add_argument("--json", type=Path, help="where the result goes (default: nowhere)")
     accents.add_argument("--jobs", type=int, default=4, help="processes, one frame each")
@@ -3021,10 +3288,12 @@ def _check_halo(parser, args):
 def _check_accents(parser, args):
     """Reads the candidates and the colours that `accents` is asked to measure, or says why not."""
     try:
-        args.candidates = load_accents(args.accents)
+        args.accents_as_they_are = load_accents(args.accents)
+        args.variants = load_palette_variants(args.accents)
         args.context = accent_context(args.tokens)
     except (OSError, ValueError) as error:
         parser.error(str(error))
+    args.candidates = palette_candidates(args.accents_as_they_are, args.variants, args.palette)
 
 
 def main(argv=None, log=None):

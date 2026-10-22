@@ -19,7 +19,8 @@ private val highContrast = BorealisTokens.HighContrast
  * Four things change roles, and they compose because each is a [copy]: the accent colour replaces
  * the accent family ([withAccent]); the glass surface replaces [ink3] and [ink4], to keep 4.5:1
  * over the background that shows through it ([withSecondaryInk]); high contrast replaces the text
- * and the borders ([withHighContrast]); and a colour-blind palette replaces the status roles
+ * and the borders ([withHighContrast]); and a colour-blind palette replaces the status roles, and
+ * the accent family of an accent that the palette would not tell from a status colour
  * ([withColourVision]). [borealisColors] gives those of a look.
  */
 @Immutable
@@ -163,8 +164,48 @@ data class BorealisColors(
         )
     }
 
-    /** These colours with the status roles of the palette [vision]; [ColourVision.Off] is none. */
-    fun withColourVision(vision: ColourVision): BorealisColors =
+    /**
+     * These colours with the status roles of the palette [vision]; [ColourVision.Off] is none.
+     *
+     * A palette changes the status colours and not the accent, so an accent can be one that a
+     * viewer of the palette does not tell from a status colour: violet is the blue of the success
+     * colour of the Red-green palette to a protanope and a deuteranope (ADR 0058, decision 5). For
+     * such an accent the palette has the accent family of a variant, which is 20 or more of
+     * CIEDE2000 from the four status colours under the vision of the palette
+     * (`design/accessibility/accents.json`). The variant replaces the seven roles of [withAccent]
+     * and, when [highContrast] is on, the four of [withHighContrast]. [accent] and [highContrast]
+     * have to be those that these colours were made with, and have no default, so that no caller
+     * gets the roles of another accent. Apply the palette after them.
+     */
+    fun withColourVision(
+        vision: ColourVision,
+        accent: AccentChoice,
+        highContrast: Boolean,
+    ): BorealisColors {
+        val palette = withStatusColours(vision)
+        val variant = accentVariant(accent, vision) ?: return palette
+        val family =
+            palette.withAccentRoles(
+                variant.accent,
+                variant.accentSoft,
+                variant.accentStrong,
+                variant.onAccent,
+                variant.accentTint,
+                variant.accentLine,
+                variant.accentInverse,
+            )
+        return if (highContrast) family.withHighContrastAccent(variant.high) else family
+    }
+
+    private fun withHighContrastAccent(variant: HighContrastAccent) =
+        copy(
+            accent = variant.accent,
+            accentSoft = variant.accentSoft,
+            accentLine = variant.accentLine,
+            accentInverse = variant.accentInverse,
+        )
+
+    private fun withStatusColours(vision: ColourVision): BorealisColors =
         when (vision) {
             ColourVision.Off -> this
             ColourVision.RedGreen ->
@@ -223,14 +264,82 @@ private class HighContrastAccent(
     val accentInverse: Color,
 )
 
+/** The accent family of an accent under a colour-blind palette, and its high contrast roles. */
+@Suppress("LongParameterList") // the seven roles of an accent family
+private class AccentVariant(
+    val accent: Color,
+    val accentSoft: Color,
+    val accentStrong: Color,
+    val onAccent: Color,
+    val accentTint: Color,
+    val accentLine: Color,
+    val accentInverse: Color,
+    val high: HighContrastAccent,
+)
+
+/**
+ * The variant of [accent] under the palette [vision], or null where the accent keeps the 20 of
+ * CIEDE2000 from the status colours as it is: teal under both palettes and white under Red-green.
+ */
+private fun accentVariant(accent: AccentChoice, vision: ColourVision): AccentVariant? =
+    when {
+        accent == AccentChoice.Violet && vision == ColourVision.RedGreen ->
+            with(BorealisTokens.AccentVioletRedGreen) {
+                AccentVariant(
+                    Accent,
+                    AccentSoft,
+                    AccentStrong,
+                    OnAccent,
+                    AccentTint,
+                    AccentLine,
+                    AccentInverse,
+                    with(BorealisTokens.AccentVioletRedGreen.HighContrast) {
+                        HighContrastAccent(Accent, AccentSoft, AccentLine, AccentInverse)
+                    },
+                )
+            }
+        accent == AccentChoice.Violet && vision == ColourVision.BlueYellow ->
+            with(BorealisTokens.AccentVioletBlueYellow) {
+                AccentVariant(
+                    Accent,
+                    AccentSoft,
+                    AccentStrong,
+                    OnAccent,
+                    AccentTint,
+                    AccentLine,
+                    AccentInverse,
+                    with(BorealisTokens.AccentVioletBlueYellow.HighContrast) {
+                        HighContrastAccent(Accent, AccentSoft, AccentLine, AccentInverse)
+                    },
+                )
+            }
+        accent == AccentChoice.White && vision == ColourVision.BlueYellow ->
+            with(BorealisTokens.AccentWhiteBlueYellow) {
+                AccentVariant(
+                    Accent,
+                    AccentSoft,
+                    AccentStrong,
+                    OnAccent,
+                    AccentTint,
+                    AccentLine,
+                    AccentInverse,
+                    with(BorealisTokens.AccentWhiteBlueYellow.HighContrast) {
+                        HighContrastAccent(Accent, AccentSoft, AccentLine, AccentInverse)
+                    },
+                )
+            }
+        else -> null
+    }
+
 /**
  * The colours that a [look] gives: its accent, then the high contrast ones with the variant of that
- * accent when it is on, then its palette.
+ * accent when it is on, then its palette, which also gives an accent that it would not tell from a
+ * status colour its variant under the palette (ADR 0058, decision 5).
  */
 fun borealisColors(look: BorealisLook): BorealisColors {
     val colors = BorealisColors().withAccent(look.accent)
     val contrasted = if (look.highContrast) colors.withHighContrast(look.accent) else colors
-    return contrasted.withColourVision(look.colourVision)
+    return contrasted.withColourVision(look.colourVision, look.accent, look.highContrast)
 }
 
 val LocalBorealisColors = staticCompositionLocalOf { BorealisColors() }

@@ -226,11 +226,13 @@ candidates, each a full set of the accent roles of `design/tokens.json`, and
 
 ```sh
 python -I design/accessibility/contrast.py accents <frames> [--json <accents.json>] [--jobs 4]
+  [--palette red-green|blue-yellow]
 ```
 
-measures each over the frames and prints the tables N to U of `docs/ux/accessibility.md`.
+measures each over the frames and prints the tables N to X of `docs/ux/accessibility.md`.
 `--accents <file>` names another set of candidates and `--tokens <file>` another token file (the
-surfaces, the ink and the status colours come from it). Without `--json` nothing is written. It
+surfaces, the ink and the status colours come from it). `--palette` measures the accents as a
+colour-blind palette draws them (see below). Without `--json` nothing is written. It
 takes about nine minutes for the 288 frames with 4 jobs: each frame is blurred twice and each of
 seven glass panels is laid under each candidate's tint.
 
@@ -278,6 +280,41 @@ and device) and `candidates`, with every check as a row: `id`, `ratio` (or `leas
 where it applies, where it is lowest. `fails` lists the ids of the checks that are short of their
 limit. The tables are made from that and not from the frames: the function `accent_tables` prints
 them from a saved result.
+
+### The accents under a colour-blind palette
+
+A colour-blind palette (ADR 0057) replaces the status colours and leaves the accent as it is, so an
+accent can look like a status colour to the viewer the palette is for: violet is 9.3 and 5.0 from
+the sky blue success of the red-green palette as a protanope and a deuteranope see it. The owner
+decided (the UAT of 2026-10-22) that the accent adapts to the palette (issue #50). `accents` prints
+Table X for it, from the distances that need no frame:
+
+- **The rule.** For each colour-blind palette, `accent`, `accent-soft` and the colours of high
+  contrast (`accent`, `accent-soft`, `accent-line`) are 20 or more of CIEDE2000 from each of the four
+  status colours (success, warning, danger, offline), as normal vision and the vision the palette is
+  for see them: protanopia and deuteranopia for the red-green palette, tritanopia for the blue-yellow
+  one. That is the rule of `ColourVisionPaletteTest` for the status colours among themselves.
+- **Measured and not held.** `accent-strong` carries no text and no part of the app draws it. The
+  line is the accent at 40 % and is measured over `surface`: for an accent that is light enough to
+  carry its text (4.5:1) it is 20 from the four colours for no colour of the sRGB gamut in the
+  red-green palette, and for a magenta alone in the blue-yellow one. Today's colours are given for
+  information. The text colours of the status roles (`success-ink`, `warning-ink`, `danger-ink`)
+  are given when one is nearer than 20 (`ink 15.3, success-ink`) and are never held: a colour light
+  enough to be read as text is near one of them in the red-green palette whatever its hue is.
+- **The variants.** `palette_variants` of `accents.json` maps a palette to the accents that have a
+  full set of roles of their own under it, as a candidate has (`label`, `source`, `color`,
+  `high-contrast`, `notes`, `known_fails`). An accent that keeps the rule has no variant and keeps
+  its set. `design/tokens.json` carries each variant as a group, `accent-<accent>-<palette>` with its
+  `high-contrast` group (`accent-violet-red-green`, and so on), `ShippedTokensTest` keeps the two
+  equal, and `BorealisColors.withColourVision` draws them. `known_fails` of a variant is what `accent_report(..., palette=...)` says that it fails
+  with no frame.
+- **`--palette red-green|blue-yellow`** measures the accents as that palette draws them: each
+  accent that has a variant under it is replaced by the variant, and its status colours are held as
+  above, with the other palettes left out. Tables N to W are then those of the variants, over the
+  glass and high contrast as for a candidate. Table X always has a column for each accent and each
+  variant, whichever palette is asked for.
+- **The result** has `palettes` (`palette_report`: `columns`, `checks` and `fails` of each), and
+  `meta.palette` when one is asked for.
 
 ## The JSON
 

@@ -875,7 +875,8 @@ then with the shadow:
 
 On a dark card the shadow is faint. On the Apps title, which sits on the page, it does not show.
 Known limitation: the Apps title dot sits on the animated background with no glass. Its 3:1 there is
-not measured, and nothing in Sprint 11 makes it worse.
+not measured, and nothing in Sprint 11 makes it worse. The shadow is drawn round that dot too
+(`AppsScreen.kt`, the dot of a running app), so it helps there, but this is not measured.
 
 ### The colour-blind palettes
 
@@ -1402,6 +1403,86 @@ the smallest candidate of the grid that does for that font alone.
 - The numbers are the model of the halo and not a device: the halo has not been seen with these
   fonts.
 
+## Text spacing (Sprint 11)
+
+Sprint 11 adds the Text spacing row, with the levels Normal, Wide and Wider, to the Accessibility
+group (issue #49, [ADR 0058](../adr/0058-appearance-and-reading-options.md), decision 4). Wide
+meets the minimums of WCAG 1.4.12. Wider goes beyond them for the spaces between words.
+
+### Text spacing: the values
+
+| Level | Letter spacing | Word spacing | Line height |
+| --- | --- | --- | --- |
+| Normal | the design | the design | the design |
+| Wide | 0.12 em | 0.16 em | 1.5 |
+| Wider | 0.18 em | 0.5 em | 1.5 |
+
+Each value is a minimum, in em of the font size of the style. A style that has more of its own
+keeps it, so the unit does not matter. The gap at a space is the letter spacing of the space plus
+the word spacing of the level. The values are in `TextSpacing` (`theme/BorealisLook.kt`), and
+`TextStyle.spaced` in `theme/BorealisType.kt` applies them.
+
+### Text spacing: how the spacing is drawn
+
+- The design-system `Text` (`components/Text.kt`) adds a span on each space of the text. The
+  semantics text stays the original string, so TalkBack reads the words as before.
+- A detekt `ForbiddenImport` (`apps/android/config/detekt/detekt.yml`) keeps Material's `Text`
+  out of the code. Only `Text.kt` imports it.
+- A text that a component builds itself takes the level too, through `BorealisType.spaced(style)`:
+  the chips, the step numbers, the performance overlay, the rail version and the font picker
+  preview.
+- Typed text in a text field gets no word spacing. The labels of the field do.
+- A non-breaking space gets no word spacing, and no app string uses one.
+
+### Text spacing: word-to-letter gap ratios
+
+The gap at a space, over the gap between two letters, by font and level. The values are from the
+s11-text-spacing measurement; they were not run again for this document.
+
+| Font | Normal | Wide | Wider |
+| --- | --- | --- | --- |
+| IBM Plex Sans | 2.42 | 2.81 | 3.65 |
+| Atkinson Hyperlegible Next | 3.00 | 3.15 | 4.00 |
+| Luciole | 2.97 | 3.12 | 3.88 |
+| Lexend | 3.07 | 3.20 | 4.05 |
+| Andika | 3.35 | 3.34 | 4.22 |
+| B612 | 3.67 | 3.52 | 4.27 |
+| System font | 2.85 | 3.08 | 3.95 |
+
+### Text spacing: fit coverage
+
+- Every font at Normal and at Wider, and IBM Plex Sans at Wide, at 130 % text size times the
+  system font scale of 1.3: 540 runs, no failure.
+- The 200 % system font size is tested at Normal only. See the known limitations below.
+
+### Text spacing: layout changes
+
+A layout that does not fit at Wide or Wider is changed rather than cut:
+
+- a value row stacks its value under the text when the longest word does not fit;
+- a slider's value takes at most 40 % of its row;
+- the host detail line wraps;
+- the key captions keep a lower floor at Wider.
+
+### Text spacing: known limitations
+
+- The 200 % system font size is tested at Normal only. A probe at Wider found 18 fit failures: one
+  in IBM Plex Sans (Pairing on a TV), and the rest in the other fonts, on Hosts, Apps and
+  Appearance among others. It is a backlog item in the roadmap.
+- At Wide and Wider, the line ends of a wrapped text can draw up to one word spacing past their
+  box: about 12 px in IBM Plex Sans at Wider, and up to 23 px at the largest TV text in the system
+  font. The review found no text cut. The ink lands in the padding or in the gaps.
+- The key caption floor can reach about 6.8 sp at Wider on a 320 dp phone, so that "Enter" and
+  "Shift" fit. The owner has not yet decided whether to keep it.
+- A non-breaking space gets no word spacing, and no app string uses one.
+
+### Card density
+
+Card density (issue #51, [ADR 0058](../adr/0058-appearance-and-reading-options.md), decision 7)
+adds one column to the hosts and apps in Compact and in Dense, and cuts the card padding in Dense.
+The invariants hold in every density: the touch targets, the gaps between the cards, the gutter of
+the screen and the TV focus scale do not change.
+
 ## WCAG 2.2 checklist
 
 The criteria that Sprint 10 touched, and how each is met. Level AA is the target of every screen,
@@ -1414,6 +1495,7 @@ and AAA (1.4.6) for the text of High contrast.
 | 1.4.3 Contrast (Minimum) | AA | Text on the opaque surfaces (Table B), on glass through the tint floors and the adapted secondary ink (Table C and the floors), on the background through the halo (Tables D to F), and in the Add host field (Tables L and M). |
 | 1.4.4 Resize Text | AA | Text size 100, 115 or 130 % times the system scale, and tests at a font scale of 2.0 (`LargeTextFitTest`). |
 | 1.4.6 Contrast (Enhanced) | AAA | High contrast: 7:1 or more for the text roles on every fill, and for the loose text over every background (Tables G and H). |
+| 1.4.12 Text Spacing | AA | The Text spacing row: Wide sets 0.12 em of letter spacing, 0.16 em of word spacing and a line height of 1.5, the minimums of the criterion, and Wider sets 0.5 em of word spacing. The spaces are drawn apart in every font (`WordGapTest`, `TextWordSpacingTest`), and the layouts that do not fit at Wide or Wider are changed (`TextFitTest`). The 200 % system font size is tested at Normal only (see text spacing: known limitations). |
 | 1.4.11 Non-text Contrast | AA | The offline ring at 3.25:1 or more, the icons on the background through the halo (Tables I to K), the outlines of the text field (Tables L and M), the opaque borders of High contrast, and the Online dot with its shadow: 5.68:1 over the brightest host-card glass (3.79:1 without it, today's palette). The Apps title dot on the animated background is not measured (a known limitation, see the status dot). |
 | 2.1.1 Keyboard | A | The D-pad and a gamepad reach every control; OK on a Settings group enters its pane, and the licence text and the Audit detail scroll with the D-pad. |
 | 2.2.2 Pause, Stop, Hide | A | The animated background is the only decorative moving content; it stops with Reduce motion On, the system's Remove animations or the battery saver, and the background Off is the plain page. Progress indicators are not covered yet (roadmap backlog). |
@@ -1426,6 +1508,6 @@ and AAA (1.4.6) for the text of High contrast.
 | 4.1.2 Name, Role, Value | A | The ATF checks every main screen for names, roles and duplicate names; the groups of Settings are tabs, and the segments have the label of their group. |
 | 4.1.3 Status Messages | AA | Polite live regions for pairing outcomes, Add host errors, the notices of the snackbars and the Quitting text. |
 
-Not assessed here: 1.4.10 Reflow, 1.4.12 Text Spacing and 2.4.11 Focus Not Obscured. TalkBack on a
+Not assessed here: 1.4.10 Reflow and 2.4.11 Focus Not Obscured. TalkBack on a
 device is a step of the runbook, and the halo and the tint-only glass have not been seen on API 28
 to 30.

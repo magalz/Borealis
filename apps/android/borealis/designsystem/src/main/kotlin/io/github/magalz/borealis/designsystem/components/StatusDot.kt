@@ -30,13 +30,12 @@ private val DOT_SIZE = 10.dp
 private val RING_STROKE = 2.dp
 
 /**
- * The shadow of [DotStatus.Online] is a soft shadow in the page colour round the dot, the darkest
- * colour there is, which is what the glass of a card lies on. It is strongest at the edge of the
- * dot, where it is [SHADOW_PEAK_ALPHA] of the page colour, and fades to nothing at [SHADOW_RADIUS]
- * from the centre of the dot: 5dp outside its box, and short of the 6dp that a host card leaves
- * between the dot and its status text. Each stop is a fraction of [SHADOW_RADIUS] and the share of
- * the peak there. A darker neighbour raises the contrast of the dot (WCAG 1.4.11), so the shadow
- * touches the dot.
+ * The shadow of [DotStatus.Online] is a soft shadow round the dot in the page colour, which is what
+ * the glass of a card lies on. It is strongest at the edge of the dot, where it is
+ * [SHADOW_PEAK_ALPHA] of the page colour, and fades to nothing at [SHADOW_RADIUS] from the centre
+ * of the dot: 5dp outside its box, and short of the 6dp that a host card leaves between the dot and
+ * its status text. Each stop is a fraction of [SHADOW_RADIUS] and the share of the peak there. A
+ * darker neighbour raises the contrast of the dot (WCAG 1.4.11), so the shadow touches the dot.
  */
 private val SHADOW_RADIUS = 10.dp
 private const val SHADOW_PEAK_ALPHA = 0.85f

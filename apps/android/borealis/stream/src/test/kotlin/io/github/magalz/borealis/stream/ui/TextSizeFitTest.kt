@@ -5,10 +5,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import io.github.magalz.borealis.designsystem.testing.FitCase
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
+import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
-import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
 import io.github.magalz.borealis.host.failure.FailureKind
@@ -36,10 +37,11 @@ import org.robolectric.annotation.Config
  * at the bottom or ends in an ellipsis. The chrome wears the look that the stream started with.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-class TextSizeFitTest(font: FontChoice) {
+class TextSizeFitTest(case: FitCase) {
     @get:Rule val composeRule = createComposeRule()
 
-    private val largest = BorealisLook(textSize = TextSize.Largest, font = font)
+    private val largest =
+        BorealisLook(textSize = TextSize.Largest, font = case.font, textSpacing = case.spacing)
 
     @Test
     @Config(qualifiers = PHONE_LANDSCAPE, fontScale = SYSTEM_SCALE)
@@ -106,7 +108,7 @@ class TextSizeFitTest(font: FontChoice) {
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun fonts(): List<FontChoice> = FontChoice.entries
+        fun cases(): List<FitCase> = fitCases()
 
         private const val SYSTEM_SCALE = 1.3f
     }

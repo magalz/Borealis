@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.library.hosts
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import io.github.magalz.borealis.designsystem.components.ActionSheet
@@ -10,6 +9,7 @@ import io.github.magalz.borealis.designsystem.components.ActionStyle
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.BorealisDialog
 import io.github.magalz.borealis.designsystem.components.DialogAction
+import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.library.R

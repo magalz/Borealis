@@ -1,5 +1,12 @@
 # Borealis detekt overrides on top of the default config (buildUponDefaultConfig = true).
 style:
+  # Every text goes through the design-system Text, which adds the word spacing of the Text
+  # spacing setting (ADR 0058, decision 4). Its own file imports Material's and suppresses this.
+  ForbiddenImport:
+    active: true
+    forbiddenImports:
+      - value: 'androidx.compose.material3.Text'
+        reason: 'Use io.github.magalz.borealis.designsystem.components.Text: it adds the word spacing of the Text spacing setting.'
   ReturnCount:
     max: 3
   MagicNumber:

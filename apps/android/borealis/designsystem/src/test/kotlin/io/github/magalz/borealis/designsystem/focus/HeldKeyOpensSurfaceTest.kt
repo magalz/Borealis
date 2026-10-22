@@ -3,7 +3,6 @@ package io.github.magalz.borealis.designsystem.focus
 import android.os.SystemClock
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +28,7 @@ import io.github.magalz.borealis.designsystem.components.ActionSheet
 import io.github.magalz.borealis.designsystem.components.ActionSheetAction
 import io.github.magalz.borealis.designsystem.components.BorealisDialog
 import io.github.magalz.borealis.designsystem.components.DialogAction
+import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.components.settings.ChoiceOption
 import io.github.magalz.borealis.designsystem.components.settings.ChoiceSheet
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode

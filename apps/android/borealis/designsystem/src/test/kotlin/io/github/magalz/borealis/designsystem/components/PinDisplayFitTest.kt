@@ -9,12 +9,13 @@ import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.designsystem.testing.FitCase
 import io.github.magalz.borealis.designsystem.testing.OnPage
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
+import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
-import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
 import org.junit.Rule
@@ -30,7 +31,9 @@ import org.robolectric.annotation.Config
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(qualifiers = "w360dp-h640dp-xhdpi")
-class PinDisplayFitTest(private val font: FontChoice) {
+class PinDisplayFitTest(private val case: FitCase) {
+    private val font = case.font
+
     @get:Rule val composeRule = createComposeRule()
 
     private fun show(look: BorealisLook) {
@@ -43,7 +46,7 @@ class PinDisplayFitTest(private val font: FontChoice) {
     @Test
     @Config(fontScale = 1.3f)
     fun `at the largest text size every digit has the room that its glyph needs`() {
-        show(BorealisLook(font = font, textSize = TextSize.Largest))
+        show(BorealisLook(font = font, textSize = TextSize.Largest, textSpacing = case.spacing))
 
         assertDigitsHaveTheirRoom()
     }
@@ -91,6 +94,6 @@ class PinDisplayFitTest(private val font: FontChoice) {
 
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun fonts(): List<FontChoice> = FontChoice.entries
+        fun cases(): List<FitCase> = fitCases()
     }
 }

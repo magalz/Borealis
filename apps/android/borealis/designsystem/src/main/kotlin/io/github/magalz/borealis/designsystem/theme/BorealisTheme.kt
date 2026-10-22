@@ -27,10 +27,12 @@ private val LocalAppliedTextSize = compositionLocalOf { 1f }
  * The theme applies the look in three ways. The accent, High contrast and the colour-blind palette
  * make the colours ([borealisColors]), for the Borealis components and for Material. The text size
  * multiplies the font scale of the system, so every `sp` follows it, and `dp` stay as they are. The
- * font gives the type its families and its sizes ([borealisTypography], [borealisType]). The rest
- * of the look (the transparency, Reduce motion and the thicker focus) is read from
- * [LocalBorealisLook] by the pieces that use it; for Reduce motion the theme also watches the
- * system animation scale once, for all of them ([rememberAnimationsRemoved]).
+ * font and the text spacing give the type its families, its sizes, its letter spacing and its line
+ * height ([borealisTypography], [borealisType]); the word spacing is added by the design-system
+ * `Text`, which reads the look. The rest of the look (the transparency, Reduce motion and the
+ * thicker focus) is read from [LocalBorealisLook] by the pieces that use it; for Reduce motion the
+ * theme also watches the system animation scale once, for all of them
+ * ([rememberAnimationsRemoved]).
  */
 @Composable
 fun BorealisTheme(
@@ -38,15 +40,13 @@ fun BorealisTheme(
     look: BorealisLook = LocalBorealisLook.current,
     content: @Composable () -> Unit,
 ) {
-    // The text spacing is a key already, for the effect that follows: it changes nothing that is
-    // drawn yet.
     val colors =
         remember(look.highContrast, look.colourVision, look.accent) { borealisColors(look) }
     val colorScheme = remember(colors) { borealisColorScheme(colors) }
     val shapes = remember { borealisShapes() }
     val typography =
         remember(formFactor, look.font, look.textSpacing) {
-            borealisTypography(formFactor, look.font)
+            borealisTypography(formFactor, look.font, look.textSpacing)
         }
     // One observer of the animator scale for all that is under the theme, and none in a theme that
     // is inside another one.
@@ -69,7 +69,7 @@ fun BorealisTheme(
         LocalContentColor provides colors.ink,
         LocalBorealisType provides
             remember(formFactor, look.font, look.textSpacing) {
-                borealisType(formFactor, look.font)
+                borealisType(formFactor, look.font, look.textSpacing)
             },
         LocalBorealisShapes provides remember { borealisExtraShapes() },
         LocalBorealisSpacing provides remember(formFactor) { borealisSpacing(formFactor) },

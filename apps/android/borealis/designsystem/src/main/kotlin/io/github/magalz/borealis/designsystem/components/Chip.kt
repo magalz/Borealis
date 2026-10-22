@@ -5,7 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -87,9 +86,11 @@ internal fun smallCodesStyle(): TextStyle {
     val type = LocalBorealisType.current
     val codes = type.codes(type.kicker)
     val least = BorealisTokens.Size.Handheld.Minimum
-    return TextStyle(
-        fontFamily = codes.fontFamily,
-        fontSize = if (codes.fontSize < least) least else codes.fontSize,
+    return type.spaced(
+        TextStyle(
+            fontFamily = codes.fontFamily,
+            fontSize = if (codes.fontSize < least) least else codes.fontSize,
+        )
     )
 }
 

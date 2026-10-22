@@ -9,9 +9,10 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.FitCase
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
+import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
-import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
 import io.github.magalz.borealis.library.apps.AppItemUiState
@@ -36,10 +37,11 @@ import org.robolectric.annotation.Config
  * in an ellipsis, where the screen has the room for it or scrolls.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-class TextSizeFitTest(font: FontChoice) {
+class TextSizeFitTest(case: FitCase) {
     @get:Rule val composeRule = createComposeRule()
 
-    private val largest = BorealisLook(textSize = TextSize.Largest, font = font)
+    private val largest =
+        BorealisLook(textSize = TextSize.Largest, font = case.font, textSpacing = case.spacing)
 
     @Test
     @Config(qualifiers = PHONE, fontScale = SYSTEM_SCALE)
@@ -158,7 +160,7 @@ class TextSizeFitTest(font: FontChoice) {
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun fonts(): List<FontChoice> = FontChoice.entries
+        fun cases(): List<FitCase> = fitCases()
 
         private const val SYSTEM_SCALE = 1.3f
     }

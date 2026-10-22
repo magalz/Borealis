@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.designsystem.components.settings
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,6 +31,7 @@ import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.testing.textLayout

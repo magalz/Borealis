@@ -48,7 +48,7 @@ internal val LAID: Map<AccentChoice, Map<BackgroundStyle, Laid>> =
  * The same for the accents that have a variant under a colour-blind palette (ADR 0058, decision 5),
  * as `contrast.py accents --palette` measured them at `b327cd39`: the tint of a variant is not the
  * tint of its accent, so the backdrop behind its label is another one. The rose of violet under
- * Red-green is the brightest, 0.080 over Flowing light.
+ * Red-green is the brightest of the violet variants, 0.080 over Flowing light.
  */
 internal val LAID_UNDER_PALETTE: Map<Pair<AccentChoice, ColourVision>, Map<BackgroundStyle, Laid>> =
     mapOf(

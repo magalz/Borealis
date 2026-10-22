@@ -15,7 +15,6 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -187,10 +186,14 @@ fun RailFooter(
             if (version != null) {
                 Text(
                     version,
+                    // A version is not a kicker, so it has no letter spacing of its own; the level
+                    // of the Text spacing is given on top of it.
                     style =
-                        label.copy(
-                            fontWeight = BorealisTokens.FontWeight.Regular,
-                            letterSpacing = 0.sp,
+                        LocalBorealisType.current.spaced(
+                            label.copy(
+                                fontWeight = BorealisTokens.FontWeight.Regular,
+                                letterSpacing = 0.sp,
+                            )
                         ),
                     color = colors.ink3,
                     maxLines = 2,

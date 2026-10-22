@@ -15,11 +15,12 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.text.TextLayoutResult
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.designsystem.testing.FitCase
 import io.github.magalz.borealis.designsystem.testing.clippedTexts
+import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
-import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
 import io.github.magalz.borealis.stream.testing.RecordingIntents
@@ -40,10 +41,13 @@ private const val SYSTEM_SCALE = 1.3f
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(fontScale = SYSTEM_SCALE)
-class KeyCaptionSizeTest(private val font: FontChoice) {
+class KeyCaptionSizeTest(private val case: FitCase) {
     @get:Rule val composeRule = createComposeRule()
 
-    private var look by mutableStateOf(BorealisLook(font = font))
+    private var look by mutableStateOf(BorealisLook(font = case.font, textSpacing = case.spacing))
+
+    private val largest =
+        BorealisLook(textSize = TextSize.Largest, font = case.font, textSpacing = case.spacing)
 
     @Test
     @Config(qualifiers = PHONE_320)
@@ -59,7 +63,7 @@ class KeyCaptionSizeTest(private val font: FontChoice) {
     @Config(qualifiers = PHONE_320)
     fun `a caption with a space wraps to a second line at the largest text size, before it shrinks`() {
         show()
-        look = BorealisLook(textSize = TextSize.Largest, font = font)
+        look = largest
         composeRule.waitForIdle()
 
         val fn = checkNotNull(captions()["key:Fn 123"])
@@ -72,7 +76,7 @@ class KeyCaptionSizeTest(private val font: FontChoice) {
     @Config(qualifiers = PHONE_320)
     fun `a caption of one word stays on one line at the largest text size`() {
         show()
-        look = BorealisLook(textSize = TextSize.Largest, font = font)
+        look = largest
         composeRule.waitForIdle()
 
         for ((key, layout) in captions().filterKeys { " " !in it.removePrefix("key:") }) {
@@ -84,7 +88,7 @@ class KeyCaptionSizeTest(private val font: FontChoice) {
     @Config(qualifiers = PHONE_320)
     fun `on a 320dp phone no caption is cut off at the largest text size`() {
         show()
-        look = BorealisLook(textSize = TextSize.Largest, font = font)
+        look = largest
         composeRule.waitForIdle()
 
         assertThat(composeRule.clippedTexts()).isEmpty()
@@ -93,7 +97,7 @@ class KeyCaptionSizeTest(private val font: FontChoice) {
     private fun assertNoCaptionIsSmaller() {
         show()
         val byDefault = captionSizes()
-        look = BorealisLook(textSize = TextSize.Largest, font = font)
+        look = largest
         composeRule.waitForIdle()
         val largest = captionSizes()
 
@@ -145,7 +149,7 @@ class KeyCaptionSizeTest(private val font: FontChoice) {
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun fonts(): List<FontChoice> = FontChoice.entries
+        fun cases(): List<FitCase> = fitCases()
 
         private const val PHONE_320 = "w320dp-h568dp-xhdpi"
         private const val PHONE_360 = "w360dp-h640dp-xhdpi"

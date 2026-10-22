@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,7 +16,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
@@ -128,13 +126,9 @@ private fun HostInfo(
         // an ellipsis would cut it.
         Text(name, style = MaterialTheme.typography.titleMedium)
         if (detail != null) {
-            Text(
-                detail,
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.ink3,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            // No limit on the lines, as for the name: at Wider, with the words spaced out, the
+            // detail needs a third line, and the card grows where an ellipsis would cut it.
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = colors.ink3)
         }
         if (tags.isNotEmpty()) {
             FlowRow(

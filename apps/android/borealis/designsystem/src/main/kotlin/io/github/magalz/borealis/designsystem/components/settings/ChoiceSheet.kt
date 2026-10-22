@@ -13,7 +13,6 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -28,6 +27,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.OverlaySheet
+import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.ignoreKeysHeldOnOpen
@@ -35,6 +35,7 @@ import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.designsystem.theme.borealisTypography
 
@@ -148,9 +149,10 @@ private fun <T> OptionRow(
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.medium
     val formFactor = LocalFormFactor.current
+    val spacing = LocalBorealisLook.current.textSpacing
     val labelStyle =
-        remember(option.labelFont, formFactor) {
-            option.labelFont?.let { borealisTypography(formFactor, it).titleMedium }
+        remember(option.labelFont, formFactor, spacing) {
+            option.labelFont?.let { borealisTypography(formFactor, it, spacing).titleMedium }
         } ?: MaterialTheme.typography.titleMedium
     Row(
         modifier

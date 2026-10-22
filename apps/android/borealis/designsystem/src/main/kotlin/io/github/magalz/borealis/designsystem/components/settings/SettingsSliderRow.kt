@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -33,6 +32,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import kotlin.math.roundToInt
 
@@ -145,7 +145,10 @@ private fun SliderHeader(
         )
         Text(
             valueLabel,
-            modifier = Modifier.alpha(if (enabled) 1f else DISABLED_ALPHA),
+            // The value takes what it needs up to a share of the row, so that a long one wraps
+            // beside the title instead of leaving it no width.
+            modifier =
+                Modifier.maxWidthShare(VALUE_MAX_SHARE).alpha(if (enabled) 1f else DISABLED_ALPHA),
             color = LocalBorealisColors.current.ink3,
             style = MaterialTheme.typography.bodySmall,
         )

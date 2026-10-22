@@ -2,7 +2,6 @@ package io.github.magalz.borealis.settings.ui
 
 import android.app.Application
 import android.content.pm.PackageManager
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
@@ -15,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.core.app.ApplicationProvider
+import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.testing.OnPage
 import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot

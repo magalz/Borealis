@@ -20,8 +20,8 @@ import io.github.magalz.borealis.settings.R
  * @property versionName the version name of the app, or `null` when the system does not know it.
  * @property commit the commit that the app was built from.
  * @property openLink opens a link in an app and returns whether an app took it.
- * @property loadLicenses the bundled `NOTICE` and `LICENSE` texts, or `null` when the build has
- *   none.
+ * @property loadLicenses the bundled `NOTICE` and `LICENSE` texts and the licence of every font, or
+ *   `null` when the build has none.
  */
 @Immutable
 class AboutSource(

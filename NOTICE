@@ -148,6 +148,43 @@ Fonts (design/fonts/)
     License: SIL Open Font License 1.1 (design/fonts/ibm-plex/OFL.txt)
     https://github.com/IBM/plex
 
+  Atkinson Hyperlegible Next
+    Copyright 2020-2024 The Atkinson Hyperlegible Next Project Authors
+    License: SIL Open Font License 1.1 (design/fonts/atkinson-next/OFL.txt)
+    https://github.com/googlefonts/atkinson-hyperlegible-next
+
+  Atkinson Hyperlegible Mono
+    Copyright 2020-2024 The Atkinson Hyperlegible Mono Project Authors
+    License: SIL Open Font License 1.1 (design/fonts/atkinson-mono/OFL.txt)
+    https://github.com/googlefonts/atkinson-hyperlegible-next-mono
+
+  Luciole
+    Luciole © Laurent Bourcellier & Jonathan Perez, CC BY 4.0, https://www.luciole-vision.com
+    License: Creative Commons Attribution 4.0 International
+    (design/fonts/luciole/LICENSE.txt)
+    https://creativecommons.org/licenses/by/4.0/
+    The credit is shown in the licences of the app. The dependency policy allows
+    CC BY 4.0 for fonts only (docs/adr/0058-appearance-and-reading-options.md).
+
+  Lexend
+    Copyright 2018 The Lexend Project Authors, with Reserved Font Name
+    "RevReading Lexend"
+    License: SIL Open Font License 1.1 (design/fonts/lexend/OFL.txt)
+    https://github.com/googlefonts/lexend
+
+  Andika
+    Copyright (c) 2004-2025 SIL Global, with Reserved Font Names "Andika" and
+    "SIL"
+    License: SIL Open Font License 1.1 (design/fonts/andika/OFL.txt)
+    https://github.com/silnrsi/font-andika
+
+  B612 and B612 Mono
+    Copyright 2012 The B612 Project Authors
+    "B612" is a trademark of the Eclipse Foundation.
+    License: SIL Open Font License 1.1 (design/fonts/b612/OFL.txt); the project
+    is also licensed under EPL 2.0 and EDL 1.0
+    https://github.com/polarsys/b612
+
 ================================================================================
 Complete list
 ================================================================================

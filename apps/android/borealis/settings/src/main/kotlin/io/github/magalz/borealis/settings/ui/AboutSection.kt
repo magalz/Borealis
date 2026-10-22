@@ -161,9 +161,9 @@ private fun LinkQrDialog(link: AboutLink, onDismiss: () -> Unit) {
 }
 
 /**
- * The bundled `NOTICE` and `LICENSE` texts in a scrollable dialog. The text is a focus stop above
- * Close: Up from Close moves focus to it, the D-pad Up and Down then scroll it, and Down at its end
- * moves on to Close.
+ * The bundled `NOTICE`, `LICENSE` and font licence texts in a scrollable dialog. The text is a
+ * focus stop above Close: Up from Close moves focus to it, the D-pad Up and Down then scroll it,
+ * and Down at its end moves on to Close.
  */
 @Composable
 private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {

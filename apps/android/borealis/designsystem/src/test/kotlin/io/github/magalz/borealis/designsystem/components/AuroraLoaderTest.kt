@@ -189,8 +189,7 @@ class AuroraLoaderTest {
         const val MAX_EMPTY = 0.02f
 
         // The gradient of the upper band: its units from the top to the bottom, its opacities and
-        // the
-        // probe in it, near the top and the right end where the colour is still the top one.
+        // the probe in it, near the top and the right end where the colour is still the top one.
         const val BAND_TOP = 14f
         const val BAND_BOTTOM = 80f
         const val TOP_ALPHA = 0.95f

@@ -81,7 +81,7 @@ class TextFitTest {
     }
 
     @Test
-    fun `the rounding of the line breaker over the spans of a line is not reported`() {
+    fun `the letter spacing after the last letter of a spaced line is not reported`() {
         measuring()
         style = style.copy(letterSpacing = 0.12.em)
         val text =
@@ -89,7 +89,7 @@ class TextFitTest {
                 "aaa bbb ccc ddd eee fff ggg hhh iii jjj kkk lll mmm nnn ooo ppp qqq rrr sss ttt"
             )
         // A width at which the last line, which has no space at its end, ends past the room: the
-        // breaker rounds the width of each of the many runs that the spans make.
+        // breaker leaves out the letter spacing that follows its last letter.
         val room =
             (200..900).firstOrNull {
                 val wrapped = layout(text, it)

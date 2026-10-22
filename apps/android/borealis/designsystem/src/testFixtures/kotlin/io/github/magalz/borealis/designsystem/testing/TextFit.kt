@@ -57,14 +57,13 @@ private const val HALF_PIXEL = 0.5f
  * The right edge of [line], less what Android lets a spaced line end past the width. It breaks a
  * line at a space and lets that space hang past the width, wrapping the line as if the extra
  * spacing of the space (the word spacing of the Text spacing setting, a span on it) were not there:
- * the box of the last letter then ends past the width by up to that spacing, which is blank. And it
- * measures each run that a span makes when it breaks the line, so a line with a span on every space
- * ends past the width by a fraction of a pixel for each of them: half a pixel is the most.
+ * the box of the last letter then ends past the width by up to that spacing, which is blank. And in
+ * a text with such spans it wraps every line as if the letter spacing that follows its last letter,
+ * which is blank too, were not there, and up to a pixel of rounding more (measured: a line 2.15 px
+ * past a width, for a letter spacing of 4.3 px; 3.15 px for 6.4 px; 2.18 px for 1.7 px).
  */
 private fun TextLayoutResult.visibleRight(line: Int): Float {
     val spans = layoutInput.text.spanStyles.filter { it.item.letterSpacing.isSpecified }
-    val inLine = spans.count { it.start < getLineEnd(line) && it.end > getLineStart(line) }
-    val rounding = ROUNDING_PX * inLine
     val last = getLineEnd(line) - 1
     val hanging =
         if (last >= getLineStart(line) && layoutInput.text.text[last] == ' ') {
@@ -72,25 +71,27 @@ private fun TextLayoutResult.visibleRight(line: Int): Float {
         } else {
             null
         }
-    return getLineRight(line) -
-        rounding -
-        (hanging?.let { hangingSpacing(it.item.letterSpacing) } ?: 0f)
+    val trailing =
+        if (spans.isEmpty()) 0f else letterSpacingPx(layoutInput.style.letterSpacing) + ROUNDING_PX
+    val hang = hanging?.let { hangingSpacing(it.item.letterSpacing) } ?: 0f
+    return getLineRight(line) - trailing - hang
 }
+
+private const val ROUNDING_PX = 1f
+
+/** [spacing] of the text in px: an em is the size of its style. */
+private fun TextLayoutResult.letterSpacingPx(spacing: TextUnit): Float =
+    with(layoutInput.density) {
+        when {
+            !spacing.isSpecified -> 0f
+            spacing.type == TextUnitType.Em -> spacing.value * layoutInput.style.fontSize.toPx()
+            else -> spacing.toPx()
+        }
+    }
 
 /** The spacing of a hanging space above the letter spacing of the style, in px. */
 private fun TextLayoutResult.hangingSpacing(spacing: TextUnit): Float =
-    with(layoutInput.density) {
-        val size = layoutInput.style.fontSize.toPx()
-        fun TextUnit.px() =
-            when {
-                !isSpecified -> 0f
-                type == TextUnitType.Em -> value * size
-                else -> toPx()
-            }
-        maxOf(spacing.px() - layoutInput.style.letterSpacing.px(), 0f)
-    }
-
-private const val ROUNDING_PX = 0.5f
+    maxOf(letterSpacingPx(spacing) - letterSpacingPx(layoutInput.style.letterSpacing), 0f)
 
 /**
  * The width the text was given to lay its lines out in; a text with no limit has an infinite one.

@@ -38,42 +38,53 @@ fun ComposeTestRule.clippedTexts(): List<String> =
 /**
  * What is wrong with how this layout fits the room it was given: the same four things as
  * [clippedTexts], one entry for each that applies, and none when the text fits.
+ *
+ * A text that does not wrap (softWrap off) is laid out in the width it has and Compose reports what
+ * does not fit as an overflow of the height, and of the lines it may show; that is the width, and
+ * it is what the entry says.
  */
 fun TextLayoutResult.fitProblems(): List<String> {
     val lines = 0 until lineCount
+    val past = !layoutInput.softWrap && (didOverflowHeight || multiParagraph.didExceedMaxLines)
     return buildList {
-        if (lines.any { visibleRight(it) > maxWidth(this@fitProblems) + HALF_PIXEL }) {
+        if (past || lines.any { visibleRight(it) > maxWidth(this@fitProblems) + HALF_PIXEL }) {
             add("runs past its width")
         }
-        if (didOverflowHeight) add("is cut off at the bottom")
+        if (didOverflowHeight && !past) add("is cut off at the bottom")
         if (lines.any { isLineEllipsized(it) }) add("ends in an ellipsis")
-        if (multiParagraph.didExceedMaxLines) add("has more lines than it may show")
+        if (multiParagraph.didExceedMaxLines && !past) add("has more lines than it may show")
     }
 }
 
 private const val HALF_PIXEL = 0.5f
 
 /**
- * The right edge of [line], less what Android lets a spaced line end past the width. It breaks a
- * line at a space and lets that space hang past the width, wrapping the line as if the extra
- * spacing of the space (the word spacing of the Text spacing setting, a span on it) were not there:
- * the box of the last letter then ends past the width by up to that spacing, which is blank. And in
- * a text with such spans it wraps every line as if the letter spacing that follows its last letter,
- * which is blank too, were not there, and up to a pixel of rounding more (measured: a line 2.15 px
- * past a width, for a letter spacing of 4.3 px; 3.15 px for 6.4 px; 2.18 px for 1.7 px).
+ * The right edge of [line], less what Android lets a line end past the width when its text has the
+ * word spacing of the Text spacing setting.
+ *
+ * Android breaks a line at a space and lets that space hang past the end, and it wraps the line as
+ * if the extra spacing of that space (a span on it) were not there. So a line that ends in a spaced
+ * space ends past the width by up to that spacing: the box of its last letter does, and so does its
+ * ink. It is not blank. Measured: 12 px at Wider in IBM Plex, and up to 23 px at the largest text
+ * of a TV in the System font, which is one word spacing (0.5 em). None of it is cut today, because
+ * it lands in the padding or the gap that a text has at its end; a text that is clipped at its end
+ * needs that much room before the clip. This check allows that spacing, and a pixel, on a line that
+ * ends in a spaced space, and nothing else on it.
+ *
+ * A line that does not end in a space (the last line, or one broken inside a word) ends in the
+ * letter spacing that follows its last letter, which Android puts in the line and not always in the
+ * width that it wrapped to (2.15 px past a width for a letter spacing of 4.3 px, 3.15 px for 6.4
+ * px, 2.18 px for a word broken in a text of 6.4 px, and a key caption that was sized without it).
+ * That spacing is blank, and it is allowed there, with a pixel of rounding when the text has spans.
  */
 private fun TextLayoutResult.visibleRight(line: Int): Float {
     val spans = layoutInput.text.spanStyles.filter { it.item.letterSpacing.isSpecified }
     val last = getLineEnd(line) - 1
-    val hanging =
-        if (last >= getLineStart(line) && layoutInput.text.text[last] == ' ') {
-            spans.lastOrNull { last >= it.start && last < it.end }
-        } else {
-            null
-        }
+    val endsInSpace = last >= getLineStart(line) && layoutInput.text.text[last] == ' '
+    val hanging = if (endsInSpace) spans.lastOrNull { last >= it.start && last < it.end } else null
+    val hang = hanging?.let { hangingSpacing(it.item.letterSpacing) + ROUNDING_PX } ?: 0f
     val spacing = letterSpacingPx(layoutInput.style.letterSpacing)
-    val trailing = if (spans.isEmpty()) spacing else spacing + ROUNDING_PX
-    val hang = hanging?.let { hangingSpacing(it.item.letterSpacing) } ?: 0f
+    val trailing = if (endsInSpace) 0f else spacing + (if (spans.isEmpty()) 0f else ROUNDING_PX)
     return getLineRight(line) - trailing - hang
 }
 

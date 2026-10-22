@@ -14,6 +14,11 @@ import androidx.compose.ui.unit.isUnspecified
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 
 /**
+ * How the codes are drawn: in [family], at [ratio] of the size of the text, never below [floor].
+ */
+internal class CodesFont(val family: FontFamily, val ratio: Float, val floor: TextUnit)
+
+/**
  * The text styles Material's [Typography] has no slot for, and the [codes] of the font of the look.
  * The codes are the PIN, addresses, keyboard keys, chips and the performance overlay (ADR 0058,
  * decision 2).
@@ -24,9 +29,8 @@ internal constructor(
     val kicker: TextStyle,
     val pin: TextStyle,
     val rail: TextStyle,
-    private val codesFamily: FontFamily,
-    private val codesRatio: Float,
-    private val floor: TextUnit,
+    private val codesFont: CodesFont,
+    private val spacing: TextSpacing,
 ) {
     /**
      * [style], a style of the type scale, drawn in the font of the codes. Its size is that of
@@ -35,10 +39,21 @@ internal constructor(
      * factor. The rest of [style] (weight, spacing, colour) stays.
      */
     fun codes(style: TextStyle): TextStyle {
-        if (style.fontSize.isUnspecified) return style.copy(fontFamily = codesFamily)
-        val size = style.fontSize * codesRatio
-        return style.copy(fontFamily = codesFamily, fontSize = if (size < floor) floor else size)
+        if (style.fontSize.isUnspecified) return style.copy(fontFamily = codesFont.family)
+        val size = style.fontSize * codesFont.ratio
+        val floor = codesFont.floor
+        return style.copy(
+            fontFamily = codesFont.family,
+            fontSize = if (size < floor) floor else size,
+        )
     }
+
+    /**
+     * [style] with at least the letter spacing and the line height of the Text spacing of the look:
+     * for a style that a component builds itself, from the size and the family of another, so that
+     * it does not drop what the type scale gave. At Normal it is [style] itself.
+     */
+    fun spaced(style: TextStyle): TextStyle = style.spaced(spacing)
 }
 
 private val KICKER_SPACING = 0.07.em
@@ -222,9 +237,8 @@ fun borealisType(
             sizing
                 .text(BorealisTokens.Size.Tv.Rail, BorealisTokens.FontWeight.Medium)
                 .spaced(spacing),
-        codesFamily = fonts.codes,
-        codesRatio = fonts.codesScale / fonts.textScale,
-        floor = floor,
+        codesFont = CodesFont(fonts.codes, fonts.codesScale / fonts.textScale, floor),
+        spacing = spacing,
     )
 }
 

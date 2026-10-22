@@ -5,6 +5,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.constrainHeight
@@ -41,58 +45,67 @@ internal fun RowTextWithTrailing(
         },
         modifier = modifier,
     ) { measurables, constraints ->
-        val bounded = constraints.hasBoundedWidth
-        val width = constraints.maxWidth
-        val gapPx = gap.roundToPx()
-        var used = 0
-        val ending =
-            measurables.drop(1).map {
-                val available =
-                    if (bounded) (width - used).coerceAtLeast(0) else Constraints.Infinity
-                it.measure(Constraints(maxWidth = available)).also { part ->
-                    used += part.width + gapPx
-                }
-            }
-        val room = if (bounded) width - used else Constraints.Infinity
-        val beside =
-            ending.isEmpty() ||
-                !bounded ||
-                measurables[0].minIntrinsicWidth(Constraints.Infinity) <= room
-        val text =
-            measurables[0].measure(
-                when {
-                    !bounded -> Constraints()
-                    beside -> Constraints(room, room)
-                    else -> Constraints(width, width)
-                }
-            )
-        val rowWidth = constraints.constrainWidth(if (bounded) width else text.width + used)
-        val tallest = ending.maxOfOrNull { it.height } ?: 0
-        if (beside) {
-            val height = constraints.constrainHeight(maxOf(text.height, tallest))
-            layout(rowWidth, height) {
-                text.place(0, centre.align(text.height, height))
-                var x = rowWidth
-                for (part in ending.asReversed()) {
-                    x -= part.width
-                    part.place(x, centre.align(part.height, height))
-                    x -= gapPx
-                }
-            }
-        } else {
-            val stack = STACK_GAP.roundToPx()
-            val block = text.height + stack + tallest
-            val height = constraints.constrainHeight(block)
-            val top = centre.align(block, height)
-            layout(rowWidth, height) {
-                text.place(0, top)
-                var x = rowWidth
-                for (part in ending.asReversed()) {
-                    x -= part.width
-                    part.place(x, top + text.height + stack + centre.align(part.height, tallest))
-                    x -= gapPx
-                }
-            }
+        arrange(measurables, constraints, gap.roundToPx())
+    }
+}
+
+/** The parts that end a row, measured, and the room that they and the gaps between them take. */
+private class Ending(val parts: List<Placeable>, val used: Int)
+
+/** The [parts] of a row's end, each measured with what is left of [width], as a Row measures. */
+private fun measureEnding(parts: List<Measurable>, width: Int, gap: Int): Ending {
+    var used = 0
+    val measured = parts.map {
+        val available =
+            if (width == Constraints.Infinity) width else (width - used).coerceAtLeast(0)
+        it.measure(Constraints(maxWidth = available)).also { part -> used += part.width + gap }
+    }
+    return Ending(measured, used)
+}
+
+private fun MeasureScope.arrange(
+    measurables: List<Measurable>,
+    constraints: Constraints,
+    gap: Int,
+): MeasureResult {
+    val width = if (constraints.hasBoundedWidth) constraints.maxWidth else Constraints.Infinity
+    val ending = measureEnding(measurables.drop(1), width, gap)
+    val room = if (width == Constraints.Infinity) width else width - ending.used
+    val beside = fitsBeside(measurables[0], ending, width, room)
+    val body = measurables[0].measure(bodyConstraints(width, room, beside))
+    val rowWidth =
+        constraints.constrainWidth(
+            if (width == Constraints.Infinity) body.width + ending.used else width
+        )
+    val tallest = ending.parts.maxOfOrNull { it.height } ?: 0
+    val stack = if (beside) 0 else STACK_GAP.roundToPx()
+    val block = if (beside) maxOf(body.height, tallest) else body.height + stack + tallest
+    val height = constraints.constrainHeight(block)
+    return layout(rowWidth, height) {
+        val top = centre.align(block, height)
+        body.place(0, if (beside) centre.align(body.height, height) else top)
+        var x = rowWidth
+        for (part in ending.parts.asReversed()) {
+            x -= part.width
+            val y =
+                if (beside) centre.align(part.height, height)
+                else top + body.height + stack + centre.align(part.height, tallest)
+            part.place(x, y)
+            x -= gap
         }
     }
 }
+
+/** Whether the longest word of [text] fits in [room], beside the [ending] of a row [width] wide. */
+private fun fitsBeside(text: Measurable, ending: Ending, width: Int, room: Int): Boolean =
+    ending.parts.isEmpty() ||
+        width == Constraints.Infinity ||
+        text.minIntrinsicWidth(Constraints.Infinity) <= room
+
+/** The text fills [room] beside the ending, as a weighted child of a Row does, or the row. */
+private fun bodyConstraints(width: Int, room: Int, beside: Boolean): Constraints =
+    when {
+        width == Constraints.Infinity -> Constraints()
+        beside -> Constraints(room, room)
+        else -> Constraints(width, width)
+    }

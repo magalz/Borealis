@@ -93,6 +93,30 @@ class StreamChromeTextSpacingTest {
     }
 
     @Test
+    @Config(qualifiers = TV, fontScale = 1.6f)
+    fun `at a very large font Wider is drawn as Wide in the menu, as in the app`() {
+        look = BorealisLook(textSpacing = TextSpacing.Wider)
+        showMenu()
+
+        val label = layout("Session info")
+        assertThat(letterEm(label)).isWithin(EPSILON).of(TextSpacing.Wide.letterEm)
+        assertThat(spaceEm(label, SESSION_INFO_SPACE))
+            .isWithin(EPSILON)
+            .of(TextSpacing.Wide.letterEm + TextSpacing.Wide.wordEm)
+    }
+
+    @Test
+    @Config(qualifiers = TV, fontScale = 2f)
+    fun `at the largest font Wider is drawn as Normal in the menu`() {
+        look = BorealisLook(textSpacing = TextSpacing.Wider)
+        showMenu()
+
+        val label = layout("Session info")
+        assertThat(letterEm(label)).isWithin(EPSILON).of(0f)
+        assertThat(spaceEm(label, SESSION_INFO_SPACE)).isNull()
+    }
+
+    @Test
     fun `the error screen has the spacing that the stream started with`() {
         look = BorealisLook(textSpacing = TextSpacing.Wide)
         composeRule.setContent {

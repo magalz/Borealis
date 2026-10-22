@@ -11,6 +11,7 @@ import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
+import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import io.github.magalz.borealis.library.apps.AppItemUiState
 import io.github.magalz.borealis.library.apps.AppsUiState
 import io.github.magalz.borealis.library.domain.HostCapability
@@ -33,8 +34,10 @@ import org.robolectric.annotation.Config
  * Screenshots of Hosts and Apps in the denser layouts (ADR 0058, decision 7), in IBM Plex, named
  * `density_<device>_<screen>-<density>.png`: Compact and Dense on a TV and on a phone, and Apps on
  * a phone with 4 columns at the largest text, where the Running badge of the first cover is the dot
- * alone. The first host card of a TV is the fullest, and the cards of its row are as high as it;
- * Dense has the least padding. The background is the plain page.
+ * alone. The first host card of a TV is the fullest, and the cards of its row are as high as it, on
+ * a phone in two columns too; Dense has the least padding. Hosts at Wider, with `-wider` in the
+ * name, keep the columns of Comfortable: 3 on a TV and 1 on a phone. The background is the plain
+ * page.
  */
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalRoborazziApi::class)
@@ -96,6 +99,18 @@ class DensityScreenshotTest {
     @Config(qualifiers = PHONE)
     fun hostsPhoneDense() = hostsPhone(CardDensity.Dense, "density_phone_hosts-dense")
 
+    /** At Wider the denser layouts keep the columns of Comfortable: 3 hosts, with Dense padding. */
+    @Test
+    @Config(qualifiers = TV)
+    fun hostsTvDenseWider() =
+        hostsTv(CardDensity.Dense, "density_tv_hosts-dense-wider", TextSpacing.Wider)
+
+    /** One column, as in Comfortable, with the padding of Compact. */
+    @Test
+    @Config(qualifiers = PHONE)
+    fun hostsPhoneCompactWider() =
+        hostsPhone(CardDensity.Compact, "density_phone_hosts-compact-wider", TextSpacing.Wider)
+
     @Test
     @Config(qualifiers = TV)
     fun appsTvCompact() = appsTv(CardDensity.Compact, "density_tv_apps-compact")
@@ -120,13 +135,21 @@ class DensityScreenshotTest {
             "compact-largest",
         )
 
-    private fun hostsTv(density: CardDensity, name: String) =
-        shoot(FormFactor.Tv, BorealisLook(cardDensity = density), name) {
+    private fun hostsTv(
+        density: CardDensity,
+        name: String,
+        spacing: TextSpacing = TextSpacing.Normal,
+    ) =
+        shoot(FormFactor.Tv, BorealisLook(cardDensity = density, textSpacing = spacing), name) {
             HostsOf(hosts, FormFactor.Tv)
         }
 
-    private fun hostsPhone(density: CardDensity, name: String) =
-        shoot(FormFactor.Phone, BorealisLook(cardDensity = density), name) {
+    private fun hostsPhone(
+        density: CardDensity,
+        name: String,
+        spacing: TextSpacing = TextSpacing.Normal,
+    ) =
+        shoot(FormFactor.Phone, BorealisLook(cardDensity = density, textSpacing = spacing), name) {
             HostsOf(hosts, FormFactor.Phone)
         }
 

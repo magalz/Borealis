@@ -254,8 +254,14 @@ private fun HostsBody(
                 )
             }
         } else {
-            val density = LocalBorealisLook.current.cardDensity
-            val columns = hostGridColumns(formFactor, maxWidth.value.toInt(), density)
+            val look = LocalBorealisLook.current
+            val columns =
+                hostGridColumns(
+                    formFactor,
+                    maxWidth.value.toInt(),
+                    look.cardDensity,
+                    look.textSpacing,
+                )
             HostGrid(state, formFactor, columns, startFocus, handlers)
         }
     }

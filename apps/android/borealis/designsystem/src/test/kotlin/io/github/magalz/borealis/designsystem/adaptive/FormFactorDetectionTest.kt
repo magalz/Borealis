@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import org.junit.Test
 
 class FormFactorDetectionTest {
@@ -57,33 +58,89 @@ class FormFactorDetectionTest {
 
     @Test
     fun `app grids have 5 columns on a TV and 4 on a handheld`() {
-        assertThat(appGridColumns(FormFactor.Tv, widthDp = 960, CardDensity.Comfortable))
+        assertThat(
+                appGridColumns(
+                    FormFactor.Tv,
+                    widthDp = 960,
+                    CardDensity.Comfortable,
+                    TextSpacing.Normal,
+                )
+            )
             .isEqualTo(5)
-        assertThat(appGridColumns(FormFactor.Handheld, widthDp = 640, CardDensity.Comfortable))
+        assertThat(
+                appGridColumns(
+                    FormFactor.Handheld,
+                    widthDp = 640,
+                    CardDensity.Comfortable,
+                    TextSpacing.Normal,
+                )
+            )
             .isEqualTo(4)
     }
 
     @Test
     fun `app grids have 3 columns on a narrow phone and 4 from 600dp`() {
-        assertThat(appGridColumns(FormFactor.Phone, widthDp = 599, CardDensity.Comfortable))
+        assertThat(
+                appGridColumns(
+                    FormFactor.Phone,
+                    widthDp = 599,
+                    CardDensity.Comfortable,
+                    TextSpacing.Normal,
+                )
+            )
             .isEqualTo(3)
-        assertThat(appGridColumns(FormFactor.Phone, widthDp = 600, CardDensity.Comfortable))
+        assertThat(
+                appGridColumns(
+                    FormFactor.Phone,
+                    widthDp = 600,
+                    CardDensity.Comfortable,
+                    TextSpacing.Normal,
+                )
+            )
             .isEqualTo(4)
     }
 
     @Test
     fun `host grids have 3 columns on a TV and 2 on a handheld`() {
-        assertThat(hostGridColumns(FormFactor.Tv, widthDp = 960, CardDensity.Comfortable))
+        assertThat(
+                hostGridColumns(
+                    FormFactor.Tv,
+                    widthDp = 960,
+                    CardDensity.Comfortable,
+                    TextSpacing.Normal,
+                )
+            )
             .isEqualTo(3)
-        assertThat(hostGridColumns(FormFactor.Handheld, widthDp = 640, CardDensity.Comfortable))
+        assertThat(
+                hostGridColumns(
+                    FormFactor.Handheld,
+                    widthDp = 640,
+                    CardDensity.Comfortable,
+                    TextSpacing.Normal,
+                )
+            )
             .isEqualTo(2)
     }
 
     @Test
     fun `host grids have 1 column on a narrow phone and 2 from 600dp`() {
-        assertThat(hostGridColumns(FormFactor.Phone, widthDp = 599, CardDensity.Comfortable))
+        assertThat(
+                hostGridColumns(
+                    FormFactor.Phone,
+                    widthDp = 599,
+                    CardDensity.Comfortable,
+                    TextSpacing.Normal,
+                )
+            )
             .isEqualTo(1)
-        assertThat(hostGridColumns(FormFactor.Phone, widthDp = 600, CardDensity.Comfortable))
+        assertThat(
+                hostGridColumns(
+                    FormFactor.Phone,
+                    widthDp = 600,
+                    CardDensity.Comfortable,
+                    TextSpacing.Normal,
+                )
+            )
             .isEqualTo(2)
     }
 

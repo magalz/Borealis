@@ -3721,6 +3721,20 @@ class PaletteAccentReportTest(unittest.TestCase):
         white = candidate(color={"accent": "#F5F3FF"})
         self.assertIn("distance:ink", self.report(white, "red-green")["fails"])
 
+    def test_table_u_sends_only_the_rows_of_the_palette_that_is_asked_to_table_x(self):
+        # The accent of the red-green palette is not drawn under the blue-yellow one, so its rows
+        # of the red-green palette are not claimed there.
+        reports = contrast.accent_report({"one": candidate()}, self.context, [], "blue-yellow")
+        text = contrast.accent_tables({"meta": {}, "candidates": reports})
+
+        def row(palette, vision):
+            start = f"| `accent` from the {palette} status colours, {vision} vision |"
+            return next(line for line in text.splitlines() if line.startswith(start))
+
+        self.assertIn("(Table X)", row("blue-yellow", "tritanopia"))
+        self.assertIn("(not claimed)", row("red-green", "protanopia"))
+        self.assertNotIn("(Table X)", row("default", "normal"))
+
     def test_a_report_with_no_palette_is_as_it_was(self):
         report = contrast.accent_report({"one": candidate()}, self.context, [])["one"]
         self.assertNotIn("palette", report)

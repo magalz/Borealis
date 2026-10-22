@@ -9,8 +9,8 @@ private const val WIDER_LIMIT_FONT_SCALE = 1.5f
 
 /**
  * The font scale from which [TextSpacing.Wide] and [TextSpacing.Wider] are drawn as
- * [TextSpacing.Normal]. It is the lowest of the same ladder at which a 200 % fit test fails at Wide:
- * 1 run at 1.7, 1 at 1.8 and 8 at 2.0. Normal passes at every scale of the ladder.
+ * [TextSpacing.Normal]. It is the lowest of the same ladder at which a 200 % fit test fails at
+ * Wide: 1 run at 1.7, 1 at 1.8 and 8 at 2.0. Normal passes at every scale of the ladder.
  */
 private const val WIDE_LIMIT_FONT_SCALE = 1.7f
 

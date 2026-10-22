@@ -343,26 +343,23 @@ class AccentPaletteVariantsTest {
     @Test
     fun `the focus outline of every accent keeps 3 to 1 over the glass of every style under every palette`() {
         for (accent in AccentChoice.entries) {
-            for (vision in ColourVision.entries) {
-                val soft = colorsOf(accent, vision).accentSoft
-                for (style in BackgroundStyle.entries.filter { it != BackgroundStyle.Off }) {
-                    for (sdk in
-                        listOf(Build.VERSION_CODES.UPSIDE_DOWN_CAKE, Build.VERSION_CODES.R)) {
-                        for (level in listOf(Transparency.Standard, Transparency.Reduced)) {
-                            val look =
-                                BorealisLook(
-                                    accent = accent,
-                                    colourVision = vision,
-                                    transparency = level,
-                                )
-                            val glass = glassSpec(look, style, sdk)
-                            val backdrop = backdropLuminance(style, glass.blurDp, glass.tintPercent)
+            for (vision in ColourVision.entries) assertOutlineOverGlass(accent, vision)
+        }
+    }
 
-                            assertWithMessage("$accent $vision over $style, $level, API $sdk")
-                                .that(contrast(soft, backdrop))
-                                .isAtLeast(3.0)
-                        }
-                    }
+    private fun assertOutlineOverGlass(accent: AccentChoice, vision: ColourVision) {
+        val soft = colorsOf(accent, vision).accentSoft
+        for (style in BackgroundStyle.entries.filter { it != BackgroundStyle.Off }) {
+            for (sdk in listOf(Build.VERSION_CODES.UPSIDE_DOWN_CAKE, Build.VERSION_CODES.R)) {
+                for (level in listOf(Transparency.Standard, Transparency.Reduced)) {
+                    val look =
+                        BorealisLook(accent = accent, colourVision = vision, transparency = level)
+                    val glass = glassSpec(look, style, sdk)
+                    val backdrop = backdropLuminance(style, glass.blurDp, glass.tintPercent)
+
+                    assertWithMessage("$accent $vision over $style, $level, API $sdk")
+                        .that(contrast(soft, backdrop))
+                        .isAtLeast(3.0)
                 }
             }
         }

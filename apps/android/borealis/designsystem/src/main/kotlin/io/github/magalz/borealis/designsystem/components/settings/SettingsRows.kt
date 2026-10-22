@@ -36,7 +36,7 @@ enum class SettingsRowTone {
 }
 
 private val CONTENT_GAP = 12.dp
-private const val VALUE_MAX_SHARE = 0.4f
+internal const val VALUE_MAX_SHARE = 0.4f
 
 /**
  * A row with a [title], an optional [summary] and a switch at the end. A tap or OK toggles it by
@@ -237,7 +237,7 @@ private fun ValueText(value: String, enabled: Boolean) {
  * Limits the width to [share] of what the parent offers. A Row measures a child without weight
  * first, with all of its width on offer, so the value is limited before the title takes the rest.
  */
-private fun Modifier.maxWidthShare(share: Float): Modifier = layout { measurable, constraints ->
+internal fun Modifier.maxWidthShare(share: Float): Modifier = layout { measurable, constraints ->
     val limit = (constraints.maxWidth * share).roundToInt().coerceAtLeast(constraints.minWidth)
     val placeable = measurable.measure(constraints.copy(maxWidth = limit))
     layout(placeable.width, placeable.height) { placeable.place(0, 0) }

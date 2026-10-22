@@ -145,7 +145,10 @@ private fun SliderHeader(
         )
         Text(
             valueLabel,
-            modifier = Modifier.alpha(if (enabled) 1f else DISABLED_ALPHA),
+            // The value takes what it needs up to a share of the row, so that a long one wraps
+            // beside the title instead of leaving it no width.
+            modifier =
+                Modifier.maxWidthShare(VALUE_MAX_SHARE).alpha(if (enabled) 1f else DISABLED_ALPHA),
             color = LocalBorealisColors.current.ink3,
             style = MaterialTheme.typography.bodySmall,
         )

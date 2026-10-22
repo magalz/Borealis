@@ -46,7 +46,7 @@ import org.robolectric.annotation.Config
  * clipped in any density: `ThickFocusClippingTest` runs in each of them.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-class CardDensityInvariantsTest(private val density: CardDensity) {
+class CardDensityInvariantsTest(density: CardDensity) {
     @get:Rule val composeRule = createComposeRule()
 
     private val look = BorealisLook(cardDensity = density)

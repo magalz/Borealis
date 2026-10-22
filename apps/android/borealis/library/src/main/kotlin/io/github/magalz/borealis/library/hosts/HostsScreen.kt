@@ -35,7 +35,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.adaptive.gridPadding
 import io.github.magalz.borealis.designsystem.adaptive.hostGridColumns
 import io.github.magalz.borealis.designsystem.components.AuroraLoader
 import io.github.magalz.borealis.designsystem.components.BackdropKicker
@@ -49,6 +51,7 @@ import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
 
@@ -253,8 +256,10 @@ private fun HostsBody(
                 )
             }
         } else {
-            val columns = hostGridColumns(formFactor, maxWidth.value.toInt())
-            HostGrid(state, columns, startFocus, handlers)
+            val density = LocalBorealisLook.current.cardDensity
+            val columns = hostGridColumns(formFactor, maxWidth.value.toInt(), density)
+            val padding = gridPadding(formFactor, LocalBorealisSpacing.current.gutter, density)
+            HostGrid(state, columns, padding, startFocus, handlers)
         }
     }
 }
@@ -265,6 +270,7 @@ private fun LazyGridItemSpanScope.fullWidth() = GridItemSpan(maxLineSpan)
 private fun HostGrid(
     state: HostsUiState,
     columns: Int,
+    padding: Dp,
     startFocus: StartFocus?,
     handlers: HostsHandlers,
 ) {
@@ -281,7 +287,7 @@ private fun HostGrid(
         modifier = Modifier.fillMaxSize(),
         // The padding and the gaps keep the focus outline, BorealisDimens.outlineReach outside a
         // card (thickOutlineReach when it is the thicker one), from being clipped.
-        contentPadding = PaddingValues(LocalBorealisSpacing.current.gutter),
+        contentPadding = PaddingValues(padding),
         verticalArrangement = Arrangement.spacedBy(GRID_GAP),
         horizontalArrangement = Arrangement.spacedBy(GRID_GAP),
     ) {

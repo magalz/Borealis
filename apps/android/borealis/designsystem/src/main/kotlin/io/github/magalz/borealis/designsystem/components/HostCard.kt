@@ -52,10 +52,11 @@ private val CHIP_PADDING_VERTICAL = 2.dp
  *
  * On a TV a card is at least as high as its height token, which is the height of the fullest card
  * (online, with one row of tags and the app it runs, plus a few dp of margin), so the cards of a
- * grid are the same size whatever they show; the text stays at the top. The equal height assumes
- * one row of tags: a card whose tags wrap, or whose text needs more room (a large font), grows
- * rather than cutting it and is then taller than its neighbours. On a handheld or a phone a card is
- * as high as its content, so a short screen is not left with empty space in each card.
+ * grid are the same size whatever they show; the text stays at the top. A card whose tags wrap, or
+ * whose text needs more room (a large font, or a narrower card in a denser layout), grows rather
+ * than cutting it, and the Hosts screen then makes the other cards of its row as high, so that a
+ * row has one height. On a handheld or a phone a card is as high as its content, so a short screen
+ * is not left with empty space in each card.
  */
 @Composable
 fun HostCard(

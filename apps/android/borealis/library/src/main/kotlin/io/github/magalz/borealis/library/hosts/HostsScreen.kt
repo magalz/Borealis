@@ -259,7 +259,7 @@ private fun HostsBody(
             val density = LocalBorealisLook.current.cardDensity
             val columns = hostGridColumns(formFactor, maxWidth.value.toInt(), density)
             val padding = gridPadding(formFactor, LocalBorealisSpacing.current.gutter, density)
-            HostGrid(state, columns, padding, startFocus, handlers)
+            HostGrid(state, formFactor, columns, padding, startFocus, handlers)
         }
     }
 }
@@ -269,6 +269,7 @@ private fun LazyGridItemSpanScope.fullWidth() = GridItemSpan(maxLineSpan)
 @Composable
 private fun HostGrid(
     state: HostsUiState,
+    formFactor: FormFactor,
     columns: Int,
     padding: Dp,
     startFocus: StartFocus?,
@@ -280,6 +281,7 @@ private fun HostGrid(
     val cardKeys = remember(state.continueItems, state.items) { state.cardKeys() }
     val restoredCard = startFocus?.cardKey?.takeIf { it in cardKeys }
     val gridState = rememberLazyGridState()
+    val rows = rememberHostRows(state.items, formFactor, columns)
     ScrollToCard(gridState, state, restoredCard, startFocus?.state)
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
@@ -326,7 +328,8 @@ private fun HostGrid(
         itemsIndexed(state.items, key = { _, item -> item.id }) { index, item ->
             val first = index == 0 && state.continueItems.isEmpty()
             val start = startFocus.startingAt(hostKey(item.id), restoredCard, first)
-            HostItem(item, handlers, optionsLabel, unnamedApp, Modifier.withStartFocus(start))
+            val modifier = rows.modifier(index, item.id).withStartFocus(start)
+            HostItem(item, handlers, optionsLabel, unnamedApp, modifier)
         }
     }
 }

@@ -71,8 +71,8 @@ private fun TextLayoutResult.visibleRight(line: Int): Float {
         } else {
             null
         }
-    val trailing =
-        if (spans.isEmpty()) 0f else letterSpacingPx(layoutInput.style.letterSpacing) + ROUNDING_PX
+    val spacing = letterSpacingPx(layoutInput.style.letterSpacing)
+    val trailing = if (spans.isEmpty()) spacing else spacing + ROUNDING_PX
     val hang = hanging?.let { hangingSpacing(it.item.letterSpacing) } ?: 0f
     return getLineRight(line) - trailing - hang
 }

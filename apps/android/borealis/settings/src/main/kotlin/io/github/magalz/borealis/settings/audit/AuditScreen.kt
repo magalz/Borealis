@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -65,12 +66,19 @@ import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.settings.R
 import io.github.magalz.borealis.settings.ui.dpadScroll
+import kotlin.math.roundToInt
 
 private val ROW_PADDING_HORIZONTAL = 12.dp
 private val ROW_PADDING_VERTICAL = 10.dp
 private val COLUMN_GAP = 12.dp
 private val PHONE_TIME_WIDTH = 72.dp
 private val TV_TIME_WIDTH = 100.dp
+
+/**
+ * The time takes this share of the row at most, so that the title keeps its room. It wraps at its
+ * space ("Mon 17:00") when the text is large; at the default size it is far below it.
+ */
+private const val TIME_MAX_SHARE = 0.35f
 private val HEADER_PADDING = 16.dp
 private val CODE_GAP = 8.dp
 private val FIELD_GAP = 16.dp
@@ -232,7 +240,7 @@ private fun EntryRow(row: AuditRow, onClick: () -> Unit, modifier: Modifier) {
     ) {
         Text(
             row.time,
-            Modifier.widthIn(min = timeWidth),
+            Modifier.atMostShareOfWidth(TIME_MAX_SHARE).widthIn(min = timeWidth),
             color = colors.ink3,
             style = LocalBorealisType.current.codes(MaterialTheme.typography.labelMedium),
         )
@@ -325,3 +333,11 @@ private fun titleColor(type: AuditType): Color {
     val colors = LocalBorealisColors.current
     return if (type == AuditType.CERTIFICATE_CHANGED) colors.warningInk else colors.ink
 }
+
+/** This composable at most [share] of the width that it is given, and as wide as it needs below. */
+private fun Modifier.atMostShareOfWidth(share: Float): Modifier =
+    layout { measurable, constraints ->
+        val limit = (constraints.maxWidth * share).roundToInt().coerceAtLeast(constraints.minWidth)
+        val placeable = measurable.measure(constraints.copy(maxWidth = limit))
+        layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+    }

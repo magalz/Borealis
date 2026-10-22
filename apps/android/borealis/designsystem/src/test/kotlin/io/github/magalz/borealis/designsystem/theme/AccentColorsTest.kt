@@ -1,9 +1,14 @@
 package io.github.magalz.borealis.designsystem.theme
 
+import android.os.Build
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.glass.backdropLuminance
+import io.github.magalz.borealis.designsystem.glass.contrast
+import io.github.magalz.borealis.designsystem.glass.glassSpec
 import org.junit.Test
 
 /**
@@ -271,6 +276,27 @@ class AccentColorsTest {
                 assertWithMessage("$accent accent-soft on $backdrop")
                     .that(contrastRatio(colors.accentSoft, fill))
                     .isAtLeast(3.0)
+            }
+        }
+    }
+
+    @Test
+    fun `the focus outline of every accent keeps 3 to 1 over the glass of every style`() {
+        for (accent in AccentChoice.entries) {
+            val soft = colorsOf(accent).accentSoft
+            for (style in BackgroundStyle.entries.filter { it != BackgroundStyle.Off }) {
+                // The glass of Standard and of Reduced, and of an Android that cannot blur.
+                for (sdk in listOf(Build.VERSION_CODES.UPSIDE_DOWN_CAKE, Build.VERSION_CODES.R)) {
+                    for (level in listOf(Transparency.Standard, Transparency.Reduced)) {
+                        val look = BorealisLook(accent = accent, transparency = level)
+                        val glass = glassSpec(look, style, sdk)
+                        val backdrop = backdropLuminance(style, glass.blurDp, glass.tintPercent)
+
+                        assertWithMessage("$accent over $style, $level, API $sdk")
+                            .that(contrast(soft, backdrop))
+                            .isAtLeast(3.0)
+                    }
+                }
             }
         }
     }

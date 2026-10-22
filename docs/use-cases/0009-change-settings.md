@@ -173,11 +173,12 @@ stream ([ADR 0056](../adr/0056-add-an-animated-background-and-the-appearance-gro
 
 ### A11: The user changes an Accessibility row (Sprint 10; branches from step 3)
 
-1. The Accessibility group, after Appearance, has six rows: Reduce motion
+1. The Accessibility group, after Appearance, has seven rows: Reduce motion
    (Follow system, On or Off), Transparency (Standard, Reduced or Off), Thicker
-   focus outline (a switch), Text size (100, 115 or 130 %), High contrast (a
-   switch) and Colour-blind palette (Off, Red-green or Blue-yellow). The defaults
-   are Follow system, Standard, off, 100 %, off and Off.
+   focus outline (a switch), Text size (100, 115 or 130 %), Text spacing (Normal,
+   Wide or Wider), High contrast (a switch) and Colour-blind palette (Off,
+   Red-green or Blue-yellow). The defaults are Follow system, Standard, off, 100 %,
+   Normal, off and Off. Text spacing is a Sprint 11 row ([UC-010](0010-adjust-accessibility.md), A8).
 2. The system stores the choice at once under a stable id and applies it to the
    Library and Settings with no restart. A stored value that no choice has shows
    the default.
@@ -194,6 +195,32 @@ stream ([ADR 0056](../adr/0056-add-an-animated-background-and-the-appearance-gro
    address in a dialog.
 3. Open-source licences opens a dialog whose text is above Close, also in a short
    window. On a TV the D-pad Up and Down scroll the text.
+4. On a TV, a link in About opens a dialog instead of the browser (Sprint 11). The
+   dialog shows the URL and a QR code, 240 dp square with a quiet zone of four
+   modules, so that a phone can open the same link. Back closes the dialog. A
+   phone or a handheld opens the browser, as in step 2.
+
+### A13: The user changes the font, the accent, the background intensity or the card density (Sprint 11; branches from step 3)
+
+1. In Appearance, the rows are Font, Accent colour, Background (A7), Background
+   intensity, Card density, and then Glass tint and Glass blur (A10).
+2. Font has seven choices: IBM Plex Sans (the default), Atkinson Hyperlegible Next,
+   Luciole, Lexend, Andika, B612 and the system font. Each has a purpose line under
+   its name, and each name is drawn in its own font. The system stores the id under
+   `borealis_font` (`plex`, `atkinson_next`, `luciole`, `lexend`, `andika`, `b612` or
+   `system`). The codes, such as the PIN and the addresses, use the monospaced
+   companion of the font where it has one, and IBM Plex Mono otherwise.
+3. Accent colour has three choices: Violet (the default), Teal and White. The system
+   stores the id under `borealis_accent` (`violet`, `teal` or `white`).
+4. Background intensity has four choices: 100 % (the default), 75 %, 50 % and 25 %.
+   The system stores them under `borealis_background_intensity` as `100`, `75`, `50`
+   and `25`. The background is dimmed under the glass.
+5. Card density has three choices: Comfortable (the default), Compact and Dense. The
+   system stores them under `borealis_card_density` as `comfortable`, `compact` and
+   `dense`. What each choice changes is not described here yet (TODO(verify): pass 2
+   of Sprint 11).
+6. Each choice applies to the Library and Settings at once, with no restart, and the
+   stream reads it when it starts, as in A11.
 
 ## Postconditions
 

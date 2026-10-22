@@ -501,14 +501,14 @@ that [ADR 0058](adr/0058-appearance-and-reading-options.md) records.
   It widens the spacing between letters, between words and between lines, after
   WCAG 1.4.12. More space between letters and words together is what helped
   readers with dyslexia in controlled studies; fonts made for dyslexia did not.
-  A spike first checks how Compose can widen word spacing.
+  A spike first checked how Compose can widen word spacing.
 - **Accent colour:** Done (issue #50, [ADR 0058](adr/0058-appearance-and-reading-options.md),
   decision 5). The app offers violet, teal and white. Green was measured and not offered.
   The drawn backgrounds stop taking their violets from the accent, so the glass table stays
   valid. Selected labels on glass keep 4.5:1. Before Sprint 11 the selected segment,
-  chip and rail item drew their label in `accent`, which was 3.88:1 over Flowing
-  light and 4.39:1 over Northern lights; they now use `accent-soft` (measured as the focused outline in
-  [accessibility, Table L](ux/accessibility.md)).
+  chip and rail item drew their label in `accent`, which was 3.21:1 over Flowing
+  light and 3.62:1 over Northern lights as text ([accessibility, Table S](ux/accessibility.md)); they
+  now use `accent-soft` ([accessibility, Table W](ux/accessibility.md)).
 - **Card density:** Done (issue #51, [ADR 0058](adr/0058-appearance-and-reading-options.md),
   decision 7). Comfortable, Compact or Dense: one column more in Compact and Dense, and less
   card padding in Dense.

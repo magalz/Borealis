@@ -77,12 +77,14 @@ Implementation requirements:
   (`borealis_background_intensity`), Card density (`borealis_card_density`) and Text
   spacing (`borealis_text_spacing`). They hold stable ids and nothing personal
   ([ADR 0058](../adr/0058-appearance-and-reading-options.md)). They are not uploaded,
-  and they are not put in diagnostics: they are not in a log line, in the audit trail
-  or in the diagnostic bundle.
+  and they are not put in diagnostics: no value of them is in a log line, in the audit
+  trail or in the diagnostic bundle.
 - Accessibility choices can reveal a disability, so they are never uploaded and
-  never put in diagnostics: they are not in a log line, in the audit trail or in
+  never put in diagnostics: no value of them is in a log line, in the audit trail or in
   the diagnostic bundle. The `manifest.json` of the bundle lists only the two
   logging switches.
+- A failed write of any setting logs the key name and the error's class name
+  (`settings write failed`, in `StoreSettingsRepository`), never the value.
 - The other settings stay in the app's private SharedPreferences, as before.
   They are not backed up either: the app's backup rules exclude its
   SharedPreferences from cloud backup and from device transfer.

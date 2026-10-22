@@ -148,6 +148,7 @@ targets of 48 dp on a phone and a handheld.
 
 UC-010-T1 to T14 are Sprint 10 tests (Compose tests run on Robolectric).
 UC-010-T15 is the Sprint 10 device round.
+UC-010-T16 and T17 are Sprint 11 rows.
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
@@ -166,6 +167,8 @@ UC-010-T15 is the Sprint 10 device round.
 | UC-010-T13 | Given a phone or a handheld, when the segments, the groups, the chips and the sheet handle are measured, then they are 48 dp; given a TV, then they keep their sizes. | UI | exists (Sprint 10, UI): `TouchTargetTest` |
 | UC-010-T14 | Given a font scale of 2.0, when the Library, Settings, Privacy, the Audit trail and the components are shown, then no text is cut or ends in an ellipsis. | UI | exists (Sprint 10, UI): `LargeTextFitTest`, `SettingsLargeTextFitTest`, `AuditLargeTextFitTest` |
 | UC-010-T15 | Given the Streamer and the S22, when the user changes each Accessibility setting and uses TalkBack, then each holds. | device | checked in part in the Sprint 10 round of 2026-10-21 (section 3.23, results in section 15); the visual items and TalkBack are the owner's |
+| UC-010-T16 | Given the Accessibility group, when the user chooses Text spacing (Normal, Wide or Wider), then the choice is stored under `borealis_text_spacing` as `normal`, `wide` or `wider`, the text draws the letter and word spacing of A8 (Wide 0.12 em and 0.16 em, Wider 0.18 em and 0.5 em), the line height is at least 1.5 at Wide and Wider, TalkBack reads the original text, and a layout that does not fit at Wide or Wider is changed rather than cut, as in A8. | UI, unit | exists (Sprint 11, UI and unit): `TextSpacingTypographyTest`, `TextSpacingThemeTest`, `TextWordSpacingTest`, `WordGapTest`, `SettingsTextSpacingTest` |
+| UC-010-T17 | Given an Online host, when its dot is drawn, then a soft dark shadow in the page colour lies round the dot, outside its box, it is static, and it is not drawn under High contrast. | UI | exists (Sprint 11, UI): `StatusDotTest` |
 
 Not covered by a test: the traversal links that TalkBack follows (Robolectric
 cannot see them), a visible snackbar (no check covers it), and the halo and the

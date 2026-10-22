@@ -1354,7 +1354,7 @@ Steps:
    - The codes use the font's monospaced companion (Atkinson Hyperlegible Mono,
      B612 Mono, or IBM Plex Mono for the others): the PIN on Pairing, the host
      addresses, the chips, the performance overlay and the adb command. Owner check.
-   - The on-screen keyboard (S22, Add host): the keys use the text font, and the key
+   - The on-screen keyboard (S22, in a stream): the keys use the text font, and the key
      shortcut chips use the codes font.
    - Open About, Open-source licences. Expected: the licence of every font is listed,
      and NOTICE credits them.

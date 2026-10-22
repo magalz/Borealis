@@ -46,6 +46,7 @@ import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
 
@@ -180,13 +181,15 @@ private fun Content(
 ) {
     BoxWithConstraints(modifier.fillMaxWidth()) {
         when {
-            state.items.isNotEmpty() ->
+            state.items.isNotEmpty() -> {
+                val density = LocalBorealisLook.current.cardDensity
                 Grid(
                     state.items,
-                    appGridColumns(formFactor, maxWidth.value.toInt()),
+                    appGridColumns(formFactor, maxWidth.value.toInt(), density),
                     onAppSelected,
                     onActions,
                 )
+            }
             state.loading -> {
                 val description = stringResource(R.string.apps_loading)
                 AuroraLoader(

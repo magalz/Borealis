@@ -72,7 +72,10 @@ fun BorealisTheme(
                 borealisType(formFactor, look.font, look.textSpacing)
             },
         LocalBorealisShapes provides remember { borealisExtraShapes() },
-        LocalBorealisSpacing provides remember(formFactor) { borealisSpacing(formFactor) },
+        LocalBorealisSpacing provides
+            remember(formFactor, look.cardDensity) {
+                borealisSpacing(formFactor, look.cardDensity)
+            },
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

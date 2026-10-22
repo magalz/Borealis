@@ -23,14 +23,17 @@ import io.github.magalz.borealis.designsystem.glass.GlassTextColors
 import io.github.magalz.borealis.designsystem.glass.glassSurface
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisShapes
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
+import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 
 private val LINE_GAP = 4.dp
 private val DOT_GAP = 6.dp
 private val TAG_GAP = 6.dp
+private val SPACED_LINE_ROOM = 2.dp
 private val CHIP_PADDING_HORIZONTAL = 8.dp
 private val CHIP_PADDING_VERTICAL = 2.dp
 
@@ -52,10 +55,12 @@ private val CHIP_PADDING_VERTICAL = 2.dp
  *
  * On a TV a card is at least as high as its height token, which is the height of the fullest card
  * (online, with one row of tags and the app it runs, plus a few dp of margin), so the cards of a
- * grid are the same size whatever they show; the text stays at the top. The equal height assumes
- * one row of tags: a card whose tags wrap, or whose text needs more room (a large font), grows
- * rather than cutting it and is then taller than its neighbours. On a handheld or a phone a card is
- * as high as its content, so a short screen is not left with empty space in each card.
+ * grid are the same size whatever they show; the text stays at the top. Dense (ADR 0058, decision
+ * 7) pads the card less, and its least height is the token less what that gives back. A card whose
+ *    tags wrap, or whose text needs more room (a large font, or a narrower card in a denser
+ *    layout), grows rather than cutting it, and the Hosts screen then makes the other cards of its
+ *    row as high, so that a row has one height. On a handheld or a phone a card is as high as its
+ *    content, so a short screen is not left with empty space in each card.
  */
 @Composable
 fun HostCard(
@@ -87,8 +92,15 @@ fun HostCard(
     // Only the TV grid has its cards all the same height; a phone or a handheld, which has little
     // room to spare, sizes each card by its content.
     val height =
-        if (LocalFormFactor.current == FormFactor.Tv) BorealisTokens.Size.HostCard.HeightTv
-        else 0.dp
+        if (LocalFormFactor.current == FormFactor.Tv) {
+            // The token is the height of the fullest card with the padding of Comfortable; a
+            // smaller
+            // padding gives back its share at the top and at the bottom.
+            BorealisTokens.Size.HostCard.HeightTv -
+                (BorealisTokens.Space.CardPaddingTv - padding) * 2
+        } else {
+            0.dp
+        }
     GlassTextColors {
         HostInfo(
             name,
@@ -121,7 +133,14 @@ private fun HostInfo(
     modifier: Modifier,
 ) {
     val colors = LocalBorealisColors.current
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(LINE_GAP)) {
+    // At Wide and Wider Android breaks a line as if the spans on its spaces were not there, and
+    // wraps it a pixel or two wider than the box. The card keeps that much of its padding free of
+    // text, so that the ink of a line does not reach into it (2dp is 4 px at 2.0 density).
+    val spaced = LocalBorealisLook.current.textSpacing != TextSpacing.Normal
+    Column(
+        if (spaced) modifier.padding(end = SPACED_LINE_ROOM) else modifier,
+        verticalArrangement = Arrangement.spacedBy(LINE_GAP),
+    ) {
         // No limit on the lines: at a large text size a long name wraps and the card grows, where
         // an ellipsis would cut it.
         Text(name, style = MaterialTheme.typography.titleMedium)

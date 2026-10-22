@@ -9,9 +9,10 @@ import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 
 /**
  * The fonts of one [FontChoice]: the family of the [text] and the family of the [codes] (the PIN,
- * addresses, keyboard keys, chips and the performance overlay), and for each the scale that gives
- * it the x-height of IBM Plex Sans. A size drawn in the font is the size of the token times its
- * scale ([textScale] or [codesScale]), so that the fonts look equally large.
+ * addresses, chips, the key shortcut chips among them, and the performance overlay), and for each
+ * the scale that gives it the x-height of IBM Plex Sans. The keys of the on-screen keyboard use the
+ * [text] family, not the codes. A size drawn in the font is the size of the token times its scale
+ * ([textScale] or [codesScale]), so that the fonts look equally large.
  */
 @Immutable
 class BorealisFontSet(

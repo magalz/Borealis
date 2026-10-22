@@ -12,8 +12,11 @@ import org.junit.Test
 /**
  * The glass floors and the contrast table of the glass (ADR 0057) are worked out over the
  * background at full strength. The veil of the Background intensity (ADR 0058, decision 8) lies
- * under the glass, so they stay valid if the veil only darkens what the glass blurs: a colour over
- * the page colour at any veil is never brighter than the colour alone.
+ * under the glass and pulls each pixel toward the page colour: a pixel brighter than the page gets
+ * darker, and one darker than the page, as some pixels of a clip are, is lifted toward it. So the
+ * floors stay valid because the veil never raises the brightest pixel of the background: a colour
+ * as bright as a backdrop of the table is never brighter once the page colour is veiled over it, at
+ * any veil.
  */
 class BackgroundVeilFloorsTest {
     private val page = BorealisTokens.Color.Page

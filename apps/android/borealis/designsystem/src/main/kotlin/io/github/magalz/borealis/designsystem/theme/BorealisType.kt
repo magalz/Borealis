@@ -20,8 +20,8 @@ internal class CodesFont(val family: FontFamily, val ratio: Float, val floor: Te
 
 /**
  * The text styles Material's [Typography] has no slot for, and the [codes] of the font of the look.
- * The codes are the PIN, addresses, keyboard keys, chips and the performance overlay (ADR 0058,
- * decision 2).
+ * The codes are the PIN, addresses, chips (the key shortcut chips among them) and the performance
+ * overlay (ADR 0058, decision 2). The keys of the on-screen keyboard are in the text font.
  */
 @Immutable
 class BorealisType

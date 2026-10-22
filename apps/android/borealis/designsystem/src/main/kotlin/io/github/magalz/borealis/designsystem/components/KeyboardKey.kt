@@ -50,7 +50,8 @@ private val TV_HEIGHT = 40.dp
 /**
  * The least that a caption shrinks to with the default look. At a larger text size the floor is the
  * same size on the screen, not the same number of sp, so a caption is never smaller than the same
- * key shows it with the default look.
+ * key shows it with the default look. A Text spacing that widens the letters lowers the floor by
+ * the same factor, so that the caption still fits its key: a caption of one word is never broken.
  */
 private val MIN_CAPTION_SIZE = 8.sp
 
@@ -77,6 +78,7 @@ fun KeyboardKey(
     onLongClick: (() -> Unit)? = null,
 ) {
     val colors = LocalBorealisColors.current
+    val look = LocalBorealisLook.current
     val shape = MaterialTheme.shapes.small
     val height = if (LocalFormFactor.current == FormFactor.Phone) PHONE_HEIGHT else TV_HEIGHT
     val locked = stringResource(R.string.borealis_key_locked)
@@ -120,7 +122,8 @@ fun KeyboardKey(
             // caption that does not fit its key wraps where it can, then shrinks with the key.
             autoSize =
                 TextAutoSize.StepBased(
-                    minFontSize = MIN_CAPTION_SIZE / LocalBorealisLook.current.textSize.scale,
+                    minFontSize =
+                        MIN_CAPTION_SIZE / look.textSize.scale / (1 + look.textSpacing.letterEm),
                     maxFontSize = textStyle.fontSize,
                 ),
         )

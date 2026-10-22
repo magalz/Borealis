@@ -20,7 +20,6 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 private const val TITLE_WIDER = "Wider spacing is limited"
-private const val TITLE_WIDE = "Wide spacing is limited"
 
 private fun message(chosen: String, drawn: String) =
     "At this text size, Borealis uses $drawn spacing instead of $chosen, so that nothing is cut " +
@@ -62,8 +61,8 @@ class SettingsTextSpacingLimitTest : SettingsScreenTestBase() {
     }
 
     @Test
-    @Config(qualifiers = TV, fontScale = 1.6f)
-    fun `choosing Wider where Wide is drawn says so, and keeps Wider`() {
+    @Config(qualifiers = TV, fontScale = 2f)
+    fun `choosing Wider at the largest font says that Wide is drawn, and keeps Wider`() {
         showAccessibility()
 
         choose("Wider")
@@ -80,31 +79,7 @@ class SettingsTextSpacingLimitTest : SettingsScreenTestBase() {
     }
 
     @Test
-    @Config(qualifiers = TV, fontScale = 2f)
-    fun `choosing Wider at the largest font says that Normal is drawn`() {
-        showAccessibility()
-
-        choose("Wider")
-
-        composeRule.onNodeWithText(TITLE_WIDER).assertExists()
-        composeRule.onNodeWithText(message("Wider", "Normal")).assertExists()
-        assertThat(snapshot[Settings.TEXT_SPACING]).isEqualTo("wider")
-    }
-
-    @Test
-    @Config(qualifiers = TV, fontScale = 2f)
-    fun `choosing Wide at the largest font says that Normal is drawn`() {
-        showAccessibility()
-
-        choose("Wide")
-
-        composeRule.onNodeWithText(TITLE_WIDE).assertExists()
-        composeRule.onNodeWithText(message("Wide", "Normal")).assertExists()
-        assertThat(snapshot[Settings.TEXT_SPACING]).isEqualTo("wide")
-    }
-
-    @Test
-    @Config(qualifiers = TV, fontScale = 1.3f)
+    @Config(qualifiers = TV, fontScale = 1.69f)
     fun `choosing Wider below the limit shows no dialog`() {
         showAccessibility()
 
@@ -115,29 +90,19 @@ class SettingsTextSpacingLimitTest : SettingsScreenTestBase() {
     }
 
     @Test
-    @Config(qualifiers = TV, fontScale = 1.6f)
-    fun `choosing Wide or Normal where they are drawn as chosen shows no dialog`() {
+    @Config(qualifiers = TV, fontScale = 2f)
+    fun `choosing Wide or Normal at the largest font shows no dialog`() {
         showAccessibility()
 
         choose("Wide")
-        composeRule.onNodeWithText(TITLE_WIDE).assertDoesNotExist()
+        composeRule.onNodeWithText("Wide spacing is limited").assertDoesNotExist()
         choose("Normal")
         composeRule.onNodeWithText("Normal spacing is limited").assertDoesNotExist()
         assertThat(snapshot[Settings.TEXT_SPACING]).isEqualTo("normal")
     }
 
     @Test
-    @Config(qualifiers = TV, fontScale = 2f)
-    fun `choosing Normal at the largest font shows no dialog`() {
-        showAccessibility()
-
-        choose("Normal")
-
-        composeRule.onNodeWithText("Normal spacing is limited").assertDoesNotExist()
-    }
-
-    @Test
-    @Config(qualifiers = TV, fontScale = 1.2f)
+    @Config(qualifiers = TV, fontScale = 1.55f)
     fun `the Text size counts with the system font for the dialog`() {
         showAccessibility(TextSize.Largest)
 
@@ -147,7 +112,17 @@ class SettingsTextSpacingLimitTest : SettingsScreenTestBase() {
     }
 
     @Test
-    @Config(qualifiers = TV, fontScale = 1.6f)
+    @Config(qualifiers = TV, fontScale = 1.3f)
+    fun `Largest text over a system font of 1 point 3 is below the limit`() {
+        showAccessibility(TextSize.Largest)
+
+        choose("Wider")
+
+        composeRule.onNodeWithText(TITLE_WIDER).assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = TV, fontScale = 2f)
     fun `the dialog has OK in focus on a TV`() {
         showAccessibility()
 
@@ -157,7 +132,7 @@ class SettingsTextSpacingLimitTest : SettingsScreenTestBase() {
     }
 
     @Test
-    @Config(qualifiers = TV, fontScale = 1.6f)
+    @Config(qualifiers = TV, fontScale = 2f)
     fun `a screen reader reads the title of the dialog as the name of the window`() {
         showAccessibility()
 
@@ -167,7 +142,7 @@ class SettingsTextSpacingLimitTest : SettingsScreenTestBase() {
     }
 
     @Test
-    @Config(qualifiers = TV, fontScale = 1.6f)
+    @Config(qualifiers = TV, fontScale = 2f)
     fun `the row says that Wide is drawn for as long as Wider is limited`() {
         stored(Settings.TEXT_SPACING to "wider")
         showAccessibility()
@@ -177,28 +152,17 @@ class SettingsTextSpacingLimitTest : SettingsScreenTestBase() {
     }
 
     @Test
-    @Config(qualifiers = TV, fontScale = 2f)
-    fun `the row says that Normal is drawn at the largest font`() {
-        stored(Settings.TEXT_SPACING to "wide")
-        showAccessibility()
-
-        row("Text spacing")
-        composeRule.onNodeWithText(summary("Normal")).assertExists()
-    }
-
-    @Test
-    @Config(qualifiers = TV, fontScale = 1.3f)
+    @Config(qualifiers = TV, fontScale = 1.69f)
     fun `the row has no summary below the limit`() {
         stored(Settings.TEXT_SPACING to "wider")
         showAccessibility()
 
         row("Text spacing")
         composeRule.onNodeWithText(summary("Wide")).assertDoesNotExist()
-        composeRule.onNodeWithText(summary("Normal")).assertDoesNotExist()
     }
 
     @Test
-    @Config(qualifiers = TV, fontScale = 1.6f)
+    @Config(qualifiers = TV, fontScale = 2f)
     fun `the row has no summary for a level that is drawn as chosen`() {
         stored(Settings.TEXT_SPACING to "wide")
         showAccessibility()

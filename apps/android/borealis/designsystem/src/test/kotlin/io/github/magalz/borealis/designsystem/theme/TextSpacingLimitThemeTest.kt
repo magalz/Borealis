@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.TextUnitType
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.components.Text
+import io.github.magalz.borealis.designsystem.testing.cardFitCases
+import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.testing.textLayout
 import org.junit.Rule
 import org.junit.Test
@@ -28,10 +30,10 @@ import org.junit.runner.RunWith
 
 /**
  * The theme draws the Text spacing that the look chose only while the text is small enough for it:
- * Wider is drawn as Wide from a font scale of 1.5, and Wide and Wider as Normal from 1.7 (ADR 0058,
- * decision 4). The scale is the one that the text is drawn at, the system font scale times the Text
- * size of the look. What the look chose does not change, so the level comes back when the scale
- * falls again.
+ * Wider is drawn as Wide from a font scale of 2.0, and Wide and Normal are always drawn as chosen
+ * (ADR 0058, decision 4). The scale is the one that the text is drawn at, the system font scale
+ * times the Text size of the look. What the look chose does not change, so the level comes back
+ * when the scale falls again.
  */
 @RunWith(AndroidJUnit4::class)
 class TextSpacingLimitThemeTest {
@@ -100,8 +102,8 @@ class TextSpacingLimitThemeTest {
     }
 
     @Test
-    fun `every level is drawn as chosen below a font scale of 1 point 5`() {
-        for (scale in listOf(0.85f, 1f, 1.15f, 1.3f, 1.49f)) {
+    fun `every level is drawn as chosen below a font scale of 2 point 0`() {
+        for (scale in listOf(0.85f, 1f, 1.15f, 1.3f, 1.5f, 1.69f, 1.7f, 1.8f, 1.95f, 1.99f)) {
             for (level in TextSpacing.entries) {
                 show(level, scale)
 
@@ -111,8 +113,8 @@ class TextSpacingLimitThemeTest {
     }
 
     @Test
-    fun `Wider is drawn as Wide from a font scale of 1 point 5 up to 1 point 7, and the others stay`() {
-        for (scale in listOf(1.5f, 1.6f, 1.69f)) {
+    fun `Wider is drawn as Wide from a font scale of 2 point 0, and the others stay`() {
+        for (scale in listOf(2f, 2.2f, 2.6f)) {
             show(TextSpacing.Wider, scale)
             assertDrawnWith(TextSpacing.Wide)
 
@@ -125,22 +127,14 @@ class TextSpacingLimitThemeTest {
     }
 
     @Test
-    fun `Wide and Wider are drawn as Normal from a font scale of 1 point 7, 2 point 0 of Android among them`() {
-        for (scale in listOf(1.7f, 1.8f, 2f)) {
-            for (level in TextSpacing.entries) {
-                show(level, scale)
-
-                assertDrawnWith(TextSpacing.Normal)
-            }
-        }
-    }
-
-    @Test
     fun `the level that the look chose comes back when the font scale falls again`() {
         show(TextSpacing.Wider, 2f)
-        assertDrawnWith(TextSpacing.Normal)
+        assertDrawnWith(TextSpacing.Wide)
 
-        show(TextSpacing.Wider, 1.6f)
+        show(TextSpacing.Wider, 1.8f)
+        assertDrawnWith(TextSpacing.Wider)
+
+        show(TextSpacing.Wider, 2.6f)
         assertDrawnWith(TextSpacing.Wide)
 
         show(TextSpacing.Wider, 1f)
@@ -149,30 +143,46 @@ class TextSpacingLimitThemeTest {
 
     @Test
     fun `the Text size counts with the system font scale`() {
-        // 1.2 times 1.3 is 1.56, past 1.5 though the system font scale alone is not.
-        show(TextSpacing.Wider, 1.2f, TextSize.Largest)
+        // 1.55 times 1.3 is 2.015, past 2.0 though the system font scale alone is not.
+        show(TextSpacing.Wider, 1.55f, TextSize.Largest)
         assertDrawnWith(TextSpacing.Wide)
 
-        // 1.0 times 1.3 is 1.3, 1.3 times 1.15 is 1.495 and 1.1 times 1.15 is 1.265: all below 1.5.
+        // 1.0 times 1.3 is 1.3, 1.3 times 1.3 is 1.69 (Largest on the largest system font that the
+        // fit tests of the largest text use) and 1.5 times 1.3 is 1.95: all below 2.0.
         show(TextSpacing.Wider, 1f, TextSize.Largest)
+        assertDrawnWith(TextSpacing.Wider)
+        show(TextSpacing.Wider, 1.3f, TextSize.Largest)
+        assertDrawnWith(TextSpacing.Wider)
+        show(TextSpacing.Wider, 1.5f, TextSize.Largest)
         assertDrawnWith(TextSpacing.Wider)
         show(TextSpacing.Wider, 1.3f, TextSize.Larger)
         assertDrawnWith(TextSpacing.Wider)
-        show(TextSpacing.Wider, 1.1f, TextSize.Larger)
-        assertDrawnWith(TextSpacing.Wider)
+    }
 
-        // 1.3 times 1.3 is 1.69, still Wide; 1.5 times 1.3 is 1.95, Normal.
-        show(TextSpacing.Wider, 1.3f, TextSize.Largest)
-        assertDrawnWith(TextSpacing.Wide)
-        show(TextSpacing.Wider, 1.5f, TextSize.Largest)
-        assertDrawnWith(TextSpacing.Normal)
+    @Test
+    fun `the fit cases of the largest text are drawn as chosen, Wider among them`() {
+        // The fit tests of the largest text run every font at Wider, at the Text size Largest over
+        // a
+        // system font scale of 1.3. They test nothing of Wider if the theme draws it as Wide there.
+        for (case in fitCases() + cardFitCases()) {
+            chosen = case.spacing
+            systemScale = 1.3f
+            textSize = TextSize.Largest
+            if (!shown) {
+                shown = true
+                composeRule.setContent { Themed { Probe() } }
+            }
+            composeRule.waitForIdle()
+
+            assertThat(drawn).isEqualTo(case.spacing)
+        }
     }
 
     @Test
     fun `a theme inside another keeps the level that the outer one drew, and the Text size once`() {
         composeRule.setContent {
             val system = LocalDensity.current
-            CompositionLocalProvider(LocalDensity provides Density(system.density, 1.2f)) {
+            CompositionLocalProvider(LocalDensity provides Density(system.density, 1.6f)) {
                 BorealisTheme(
                     FormFactor.Tv,
                     BorealisLook(textSpacing = TextSpacing.Wider, textSize = TextSize.Largest),
@@ -184,7 +194,7 @@ class TextSpacingLimitThemeTest {
         composeRule.waitForIdle()
 
         assertDrawnWith(TextSpacing.Wide)
-        assertThat(checkNotNull(density).fontScale).isWithin(EPSILON).of(1.2f * 1.3f)
+        assertThat(checkNotNull(density).fontScale).isWithin(EPSILON).of(1.6f * 1.3f)
     }
 
     @Test
@@ -200,21 +210,13 @@ class TextSpacingLimitThemeTest {
                 }
             }
         }
-        for ((level, scale, spaceEm) in
-            listOf(
-                Triple(
-                    TextSpacing.Wider,
-                    1.6f,
-                    TextSpacing.Wide.letterEm + TextSpacing.Wide.wordEm,
-                ),
-                Triple(
-                    TextSpacing.Wider,
-                    1f,
-                    TextSpacing.Wider.letterEm + TextSpacing.Wider.wordEm,
-                ),
-                Triple(TextSpacing.Wider, 2f, null),
-            )) {
-            chosen = level
+        // Wider is chosen all along: its spaces have 0.68 em below a font scale of 2.0, and the
+        // 0.28
+        // em of Wide from it.
+        val wider = TextSpacing.Wider.letterEm + TextSpacing.Wider.wordEm
+        val wide = TextSpacing.Wide.letterEm + TextSpacing.Wide.wordEm
+        chosen = TextSpacing.Wider
+        for ((scale, spaceEm) in listOf(2f to wide, 1.6f to wider, 1f to wider, 2.6f to wide)) {
             systemScale = scale
             composeRule.waitForIdle()
 
@@ -229,11 +231,7 @@ class TextSpacingLimitThemeTest {
                     ?.item
                     ?.letterSpacing
                     ?.value
-            if (spaceEm == null) {
-                assertThat(span).isNull()
-            } else {
-                assertThat(span).isWithin(EPSILON).of(spaceEm)
-            }
+            assertThat(span).isWithin(EPSILON).of(spaceEm)
         }
     }
 

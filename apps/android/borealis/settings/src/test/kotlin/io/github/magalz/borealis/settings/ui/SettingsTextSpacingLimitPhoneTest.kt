@@ -15,7 +15,7 @@ import org.robolectric.annotation.Config
  * [SettingsTextSpacingLimitTest].
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = PHONE, fontScale = 1.6f)
+@Config(qualifiers = PHONE, fontScale = 2f)
 class SettingsTextSpacingLimitPhoneTest : PhoneSettingsTestBase() {
     private fun chooseWider() {
         row("Text spacing").performClick()
@@ -25,7 +25,7 @@ class SettingsTextSpacingLimitPhoneTest : PhoneSettingsTestBase() {
     }
 
     @Test
-    fun `choosing Wider where Wide is drawn opens the dialog, and OK closes it`() {
+    fun `choosing Wider at the largest font opens the dialog, and OK closes it`() {
         showOpen()
 
         chooseWider()

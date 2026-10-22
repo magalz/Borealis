@@ -81,7 +81,11 @@ private class Sizing(private val fonts: BorealisFontSet, private val floor: Text
  * handheld in the hands. Each size is scaled to the x-height of the font and never goes below the
  * minimum of the form factor.
  */
-fun borealisTypography(formFactor: FormFactor, font: FontChoice = FontChoice.Plex): Typography {
+fun borealisTypography(
+    formFactor: FormFactor,
+    font: FontChoice = FontChoice.Plex,
+    spacing: TextSpacing = TextSpacing.Normal,
+): Typography {
     val fonts = BorealisFonts.of(font)
     val sizing = Sizing(fonts, minimumSize(formFactor))
     val base = Typography()
@@ -141,7 +145,11 @@ fun borealisTypography(formFactor: FormFactor, font: FontChoice = FontChoice.Ple
  * a TV, scaled to the x-height of [font] and never below that minimum. The PIN is in the font of
  * the codes.
  */
-fun borealisType(formFactor: FormFactor, font: FontChoice = FontChoice.Plex): BorealisType {
+fun borealisType(
+    formFactor: FormFactor,
+    font: FontChoice = FontChoice.Plex,
+    spacing: TextSpacing = TextSpacing.Normal,
+): BorealisType {
     val fonts = BorealisFonts.of(font)
     val floor = minimumSize(formFactor)
     val sizing = Sizing(fonts, floor)
@@ -159,3 +167,6 @@ fun borealisType(formFactor: FormFactor, font: FontChoice = FontChoice.Plex): Bo
 }
 
 val LocalBorealisType = staticCompositionLocalOf { borealisType(FormFactor.Phone) }
+
+/** STUB, written with the tests: [style] with the letter spacing and line height of [spacing]. */
+internal fun TextStyle.spaced(spacing: TextSpacing): TextStyle = this

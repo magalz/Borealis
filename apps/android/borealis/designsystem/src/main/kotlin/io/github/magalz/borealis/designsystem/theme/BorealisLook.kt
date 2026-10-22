@@ -62,11 +62,19 @@ enum class BackgroundIntensity(val veil: Float) {
     Quarter(0.75f),
 }
 
-/** The space between the letters, words and lines of the text (WCAG 1.4.12). */
-enum class TextSpacing {
-    Normal,
-    Wide,
-    Wider,
+/**
+ * The space between the letters, words and lines of the text (WCAG 1.4.12; ADR 0058, decision 4).
+ * Each value is a minimum in em of the font size of the style that it is applied to: a style keeps
+ * what it has when that is more. [Normal] has no minimum, so it leaves the design as it is.
+ *
+ * @property letterEm the least letter spacing.
+ * @property wordEm the spacing that each space adds to the letter spacing.
+ * @property lineHeightEm the least line height, as a multiple of the font size.
+ */
+enum class TextSpacing(val letterEm: Float, val wordEm: Float, val lineHeightEm: Float) {
+    Normal(0f, 0f, 0f),
+    Wide(0.12f, 0.16f, 1.5f),
+    Wider(0.18f, 0.5f, 1.5f),
 }
 
 /** How close the cards of a screen sit. [Comfortable] is the layout that the app has today. */

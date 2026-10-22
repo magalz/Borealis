@@ -34,10 +34,11 @@ import org.robolectric.annotation.Config
  * the accent, the background still violet, and, with white, the indicator bar on the rail item. The
  * animated background is held on its still frame.
  *
- * The accents that have a variant under a colour-blind palette (violet under Red-green and
- * Blue-yellow, white under Blue-yellow) are named `accent_tv_hosts-<accent>-<palette>.png`, with a
- * host of every status, so that the status colours of the palette are on the screen beside the
- * accent that the palette gives.
+ * The accents that have a variant under a colour-blind palette are named
+ * `accent_tv_hosts-<accent>-<palette>.png`, with a host of every status, so that the status colours
+ * of the palette are on the screen beside the accent that the palette gives: violet under
+ * Blue-yellow and white under Blue-yellow. Violet under Red-green is the screenshot of the palette
+ * in `AccessibilityScreenshotTest` (`a11y_tv_palette-red-green.png`), the same screen.
  */
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalRoborazziApi::class)
@@ -56,16 +57,6 @@ class AccentScreenshotTest {
     @Test
     @Config(qualifiers = TV)
     fun hostsTvWhite() = hostsTv(AccentChoice.White, "accent_tv_hosts-white")
-
-    @Test
-    @Config(qualifiers = TV)
-    fun hostsTvVioletRedGreen() =
-        hostsTv(
-            AccentChoice.Violet,
-            "accent_tv_hosts-violet-red-green",
-            ColourVision.RedGreen,
-            everyStatus,
-        )
 
     @Test
     @Config(qualifiers = TV)

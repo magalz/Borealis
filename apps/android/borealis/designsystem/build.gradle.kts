@@ -7,6 +7,11 @@ plugins {
     id("borealis.design.tokens")
 }
 
+// The folders of design/fonts that the app bundles: IBM Plex and the fonts of the Font setting
+// (ADR 0058, decision 2), each with its monospaced companion where it has one.
+val bundledFonts =
+    listOf("ibm-plex", "atkinson-next", "atkinson-mono", "luciole", "lexend", "andika", "b612")
+
 android {
     namespace = "io.github.magalz.borealis.designsystem"
 
@@ -16,9 +21,11 @@ android {
     testFixtures { enable = true }
 
     sourceSets {
-        // IBM Plex lives with its licence under design/ at the repository root, next to
+        // Each font lives with its licence under design/fonts at the repository root, next to
         // design/tokens.json: four levels above this module, two above the Gradle root.
-        getByName("main") { res.directories.add("../../../../design/fonts/ibm-plex/res") }
+        getByName("main") {
+            for (font in bundledFonts) res.directories.add("../../../../design/fonts/$font/res")
+        }
     }
 }
 

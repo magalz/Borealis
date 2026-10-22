@@ -2096,7 +2096,7 @@ ACCENT_ROLES = (
 )
 # The tint and the line are drawn with an alpha. The other roles are opaque colours.
 ACCENT_ALPHA_ROLES = ("accent-tint", "accent-line")
-ACCENT_HIGH_CONTRAST_ROLES = ("accent", "accent-soft", "accent-line")
+ACCENT_HIGH_CONTRAST_ROLES = ("accent", "accent-soft", "accent-line", "accent-inverse")
 # The neutral tokens that the accents are checked against.
 ACCENT_NEUTRALS = (
     "page",
@@ -2340,8 +2340,9 @@ def load_accents(path=ACCENTS_JSON):
 
 
 def accent_context(tokens=TOKENS_JSON):
-    """The colours of the token file that the accents are checked against: the neutrals, and the
-    status colours of the default and of the two colour-blind palettes."""
+    """The colours of the token file that the accents are checked against: the neutrals, the status
+    colours of the default and of the two colour-blind palettes, and the ink of high contrast, which
+    is the inverse surface that the action of a snackbar is drawn on."""
     data = json.loads(Path(tokens).read_text(encoding="utf-8"))
     colors = load_colors(tokens, ACCENT_NEUTRALS)
     status = {"default": {name: data["color"][name]["$value"] for name in STATUS_COLOURS}}
@@ -2349,7 +2350,11 @@ def accent_context(tokens=TOKENS_JSON):
         status[palette] = {
             name: data["colour-vision"][palette][name]["$value"] for name in STATUS_COLOURS
         }
-    return {"colors": colors, "status": status}
+    return {
+        "colors": colors,
+        "status": status,
+        "high_contrast_ink": data["high-contrast"]["ink"]["$value"],
+    }
 
 
 def _backdrop_frame(frame, device, surface, overlays):
@@ -2536,9 +2541,10 @@ def _accent_glass(name, roles, colors, worst):
     return rows, floors, fails
 
 
-def _accent_high_contrast(roles, high, colors):
+def _accent_high_contrast(roles, high, colors, ink):
     """The checks of high contrast: text at 7:1 and borders at 3:1 over every fill that text lies
-    on, which are the surfaces, the tint of a selected row on them and the hover on the raised one.
+    on, which are the surfaces, the tint of a selected row on them and the hover on the raised one,
+    and the action of a snackbar at 7:1 on `ink`, the white inverse surface that it is drawn on.
     """
     surfaces = {name: parse_hex(colors[name]) for name in ACCENT_FILLS}
     fills = dict(surfaces)
@@ -2567,6 +2573,13 @@ def _accent_high_contrast(roles, high, colors):
             "ratio": rgb_contrast(parse_hex(roles["on-accent"]), parse_hex(high["accent"])),
             "limit": ACCENT_HIGH_CONTRAST_TEXT,
             "on": "accent",
+        },
+        {
+            "id": "hc:accent-inverse/ink",
+            "label": "high contrast `accent-inverse` on the high contrast `ink` (snackbar action)",
+            "ratio": rgb_contrast(parse_hex(high["accent-inverse"]), parse_hex(ink)),
+            "limit": ACCENT_HIGH_CONTRAST_TEXT,
+            "on": "ink",
         },
     ]
 
@@ -2624,7 +2637,7 @@ def accent_report(candidates, context, rows):
         roles, high = found["color"], found["high-contrast"]
         fills = _accent_fills(roles, colors)
         glass, floors, glass_fails = _accent_glass(name, roles, colors, worst)
-        hc = _accent_high_contrast(roles, high, colors)
+        hc = _accent_high_contrast(roles, high, colors, context["high_contrast_ink"])
         distance = _accent_distance(roles["accent"], context)
         fails = [c["id"] for c in fills if c["limit"] is not None and c["ratio"] < c["limit"]]
         fails += glass_fails

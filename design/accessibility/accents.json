@@ -16,7 +16,8 @@
       "high-contrast": {
         "accent": "#C8B7FC",
         "accent-soft": "#D6CCFE",
-        "accent-line": "#C8B7FC"
+        "accent-line": "#C8B7FC",
+        "accent-inverse": "#5744A9"
       },
       "notes": {
         "accent": "Today's token, violet-400 of the Tailwind scale: L* 64.6, chroma 62, hue 304 degrees. It is not changed.",
@@ -28,7 +29,8 @@
         "high-contrast.accent": "Today's token: the accent lightened until it keeps 7.5:1 on the worst fill; it keeps 7.55:1 (selected row on surface-raised).",
         "high-contrast.accent-soft": "Today's token: the accent-soft lightened as the accent is; it keeps 9.04:1 on the worst fill.",
         "high-contrast.accent-line": "Today's token: the opaque colour of the high contrast accent, for the borders of tags and chips, which need 3:1.",
-        "accent-inverse": "Today's accent-strong, violet-600, which Material's inversePrimary took until Sprint 11 and the action of a snackbar drew on the light ink surface: L* 43.4, and it keeps 4.73:1 on ink (#E8EAED). It is kept as it is, so the violet of today does not change."
+        "accent-inverse": "Today's accent-strong, violet-600, which Material's inversePrimary took until Sprint 11 and the action of a snackbar drew on the light ink surface: L* 43.4, and it keeps 4.73:1 on ink (#E8EAED). It is kept as it is, so the violet of today does not change.",
+        "high-contrast.accent-inverse": "The accent-inverse of the colour group darkened with its hue and chroma kept, to L* 36: it is 5.70:1 on the white ink of high contrast, which is the inverse surface of the snackbar, and this keeps 7.49:1 on it, over the 7:1 that high contrast asks of text."
       },
       "known_fails": {
         "distance:red-green:protanopia": "Violet is 9.3 from success in the red-green palette as protanopia vision sees it: a viewer of that vision sees the accent as a status colour.",
@@ -51,7 +53,8 @@
       "high-contrast": {
         "accent": "#78EFC7",
         "accent-soft": "#B9FFE4",
-        "accent-line": "#78EFC7"
+        "accent-line": "#78EFC7",
+        "accent-inverse": "#036149"
       },
       "notes": {
         "accent": "The icon green is 18.5 from the success green #4CAF50, 19.2 from the warning yellow as a protanope sees it in the red-green palette and 19.3 from the success of the blue-yellow palette as a tritanope sees it, all under the 20 that a status colour keeps from the accent. This is a colour of its hue that clears 20 from every status colour of the three palettes, as the viewers of each see them, with the least change. It is 2.9 CIEDE2000 from #6EE7B7 (L* 86.9, chroma 44, hue 168 degrees against L* 83.9, 47, 164), and its least distance from a status colour is 21.2 (warning, red-green palette, protanopia vision).",
@@ -63,7 +66,8 @@
         "high-contrast.accent": "The accent as it is: it keeps 8.67:1 on the worst fill (selected row on surface-raised), over the 7:1 of high contrast, so there is nothing to lighten as there is in violet.",
         "high-contrast.accent-soft": "The accent-soft as it is: it keeps 10.71:1 on the worst fill.",
         "high-contrast.accent-line": "The accent as an opaque border colour: 8.67:1 on the worst fill, over the 3:1 of a border.",
-        "accent-inverse": "The accent at L* 43.4, as violet-600 is, with the hue kept and the chroma the gamut has at that lightness (35.9 of 43.9): it keeps 4.72:1 on ink. The accent-strong of this set is 2.16:1 on ink, which is why the action of a snackbar has a role of its own."
+        "accent-inverse": "The accent at L* 43.4, as violet-600 is, with the hue kept and the chroma the gamut has at that lightness (35.9 of 43.9): it keeps 4.72:1 on ink. The accent-strong of this set is 2.16:1 on ink, which is why the action of a snackbar has a role of its own.",
+        "high-contrast.accent-inverse": "The accent-inverse of the colour group darkened to L* 36 with the hue kept and the chroma the gamut has there (31.4): it keeps 7.47:1 on the white ink of high contrast, the inverse surface of the snackbar, over the 7:1 that high contrast asks of text."
       },
       "known_fails": {}
     },
@@ -82,7 +86,8 @@
       "high-contrast": {
         "accent": "#4BECD0",
         "accent-soft": "#A2FCE8",
-        "accent-line": "#4BECD0"
+        "accent-line": "#4BECD0",
+        "accent-inverse": "#026053"
       },
       "notes": {
         "accent": "The icon teal is too dark for the accent: over the brightest Standard glass (Flowing light) it is 4.24:1 as text and 3.52:1 as a selected label, under the 4.5:1 that text needs, and its high contrast set is under 7:1. It is 19.7 from the success green of the default palette, 15.2 and 11.5 from the status colours as a protanope and a deuteranope sees them, and 11.7 and 8.9 from the bluish green of the blue-yellow palette as normal vision and a tritanope sees them. This is the colour of its hue (178 degrees) lightened to L* 85, where it clears all of them: the teal that sits furthest from the success greens without leaving the hue. It is 13.0 CIEDE2000 from #14B8A6 (L* 85.0, chroma 48, hue 178 degrees against L* 67.4, 42, 182), and its least distance from a status colour is 21.1 (success, blue-yellow palette, tritanopia vision).",
@@ -94,7 +99,8 @@
         "high-contrast.accent": "The accent as it is: it keeps 8.32:1 on the worst fill (selected row on surface-raised), over the 7:1 of high contrast, so there is nothing to lighten as there is in violet.",
         "high-contrast.accent-soft": "The accent-soft as it is: it keeps 10.32:1 on the worst fill.",
         "high-contrast.accent-line": "The accent as an opaque border colour: 8.32:1 on the worst fill, over the 3:1 of a border.",
-        "accent-inverse": "The accent at L* 43.4, as violet-600 is, with the hue kept and the chroma the gamut has at that lightness (31.8 of 47.8): a dark teal that keeps 4.73:1 on ink. The accent-strong of this set is 2.30:1 on ink, which is why the action of a snackbar has a role of its own."
+        "accent-inverse": "The accent at L* 43.4, as violet-600 is, with the hue kept and the chroma the gamut has at that lightness (31.8 of 47.8): a dark teal that keeps 4.73:1 on ink. The accent-strong of this set is 2.30:1 on ink, which is why the action of a snackbar has a role of its own.",
+        "high-contrast.accent-inverse": "The accent-inverse of the colour group darkened to L* 36 with the hue kept and the chroma the gamut has there (27.8): it keeps 7.50:1 on the white ink of high contrast, the inverse surface of the snackbar, over the 7:1 that high contrast asks of text."
       },
       "known_fails": {}
     },
@@ -113,7 +119,8 @@
       "high-contrast": {
         "accent": "#EFF3FF",
         "accent-soft": "#FFFFFF",
-        "accent-line": "#EFF3FF"
+        "accent-line": "#EFF3FF",
+        "accent-inverse": "#51555F"
       },
       "notes": {
         "accent": "The star of the icon is 17.3 from the warning yellow of the blue-yellow palette as a tritanope sees it (that yellow is a pale pink to them), under the 20 that a status colour keeps from the accent. A hair cooler (hue 278 degrees instead of 297) it clears 20 from every status colour. It is still a white: its chroma is under 10. It is 2.9 CIEDE2000 from #F5F3FF (L* 95.9, chroma 6, hue 278 degrees against L* 96.3, 6, 297), and its least distance from a status colour is 20.5 (warning, blue-yellow palette, tritanopia vision).",
@@ -125,7 +132,8 @@
         "high-contrast.accent": "The accent as it is: it keeps 10.31:1 on the worst fill (selected row on surface-raised), over the 7:1 of high contrast, so there is nothing to lighten as there is in violet.",
         "high-contrast.accent-soft": "Pure white, as the accent-soft is: it needs no change for 7:1.",
         "high-contrast.accent-line": "The accent as an opaque border colour: 10.31:1 on the worst fill, over the 3:1 of a border.",
-        "accent-inverse": "The accent at L* 43.4, as violet-600 is, with its hue and its chroma of 6 kept: a dark neutral that keeps 4.75:1 on ink. The accent-strong of this set is 1.64:1 on ink, which is why the action of a snackbar has a role of its own."
+        "accent-inverse": "The accent at L* 43.4, as violet-600 is, with its hue and its chroma of 6 kept: a dark neutral that keeps 4.75:1 on ink. The accent-strong of this set is 1.64:1 on ink, which is why the action of a snackbar has a role of its own.",
+        "high-contrast.accent-inverse": "The accent-inverse of the colour group darkened to L* 36 with its hue and its chroma of 6 kept, a dark neutral: it keeps 7.46:1 on the white ink of high contrast, the inverse surface of the snackbar, over the 7:1 that high contrast asks of text."
       },
       "known_fails": {
         "distance:ink": "Whatever its value: a neutral that keeps 4.5:1 as text over the Standard glass is at L* 69.5 or more, and none of them is 20 from ink (#E8EAED, L* 92): the furthest is 19.7, and a white is under 6 (sampled over every colour of chroma under 10, each channel from 130 to 255). The accent is told from the ink by its fill and its tint.",

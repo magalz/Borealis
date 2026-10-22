@@ -121,22 +121,28 @@ data class BorealisColors(
     /**
      * These colours as high contrast has them: the text at 7:1 or more on the page and the
      * surfaces, the borders opaque and at 3:1 or more, and the offline indicator at 3:1. The accent
-     * is the variant of [accent], which has to be the accent these colours have. The page, the
-     * surfaces and the roles that it does not name stay as they are. Apply a palette after it: the
-     * palettes keep the status text at 7:1 too.
+     * is the variant of [accent], which has to be the accent these colours have: the accent, the
+     * soft accent, the accent line and the action of a snackbar, which is text on the white ink.
+     * The page, the surfaces and the roles that it does not name stay as they are. Apply a palette
+     * after it: the palettes keep the status text at 7:1 too.
      */
     fun withHighContrast(accent: AccentChoice = AccentChoice.Violet): BorealisColors {
-        val (accentColor, accentSoft, accentLine) =
+        val variant =
             when (accent) {
                 AccentChoice.Violet ->
-                    Triple(highContrast.Accent, highContrast.AccentSoft, highContrast.AccentLine)
+                    HighContrastAccent(
+                        highContrast.Accent,
+                        highContrast.AccentSoft,
+                        highContrast.AccentLine,
+                        highContrast.AccentInverse,
+                    )
                 AccentChoice.Teal ->
                     with(BorealisTokens.AccentTeal.HighContrast) {
-                        Triple(Accent, AccentSoft, AccentLine)
+                        HighContrastAccent(Accent, AccentSoft, AccentLine, AccentInverse)
                     }
                 AccentChoice.White ->
                     with(BorealisTokens.AccentWhite.HighContrast) {
-                        Triple(Accent, AccentSoft, AccentLine)
+                        HighContrastAccent(Accent, AccentSoft, AccentLine, AccentInverse)
                     }
             }
         return copy(
@@ -144,13 +150,14 @@ data class BorealisColors(
             ink2 = highContrast.Ink2,
             ink3 = highContrast.Ink3,
             ink4 = highContrast.Ink4,
-            accent = accentColor,
-            accentSoft = accentSoft,
+            accent = variant.accent,
+            accentSoft = variant.accentSoft,
             successInk = highContrast.SuccessInk,
             dangerInk = highContrast.DangerInk,
             line = highContrast.Line,
             lineStrong = highContrast.LineStrong,
-            accentLine = accentLine,
+            accentLine = variant.accentLine,
+            accentInverse = variant.accentInverse,
             offline = highContrast.Offline,
         )
     }
@@ -207,6 +214,14 @@ data class BorealisColors(
         )
 }
 
+/** The roles of an accent that High contrast replaces. */
+private class HighContrastAccent(
+    val accent: Color,
+    val accentSoft: Color,
+    val accentLine: Color,
+    val accentInverse: Color,
+)
+
 /**
  * The colours that a [look] gives: its accent, then the high contrast ones with the variant of that
  * accent when it is on, then its palette.
@@ -227,7 +242,8 @@ val LocalBorealisColors = staticCompositionLocalOf { BorealisColors() }
  * Accent-strong carries no text (token rule), so the primary container is a raised surface with
  * accent-soft text. [ColorScheme.inversePrimary] is text on the light inverse surface (ink), the
  * action of a snackbar, where accent-soft would have 1.5:1: it is the role accent-inverse of each
- * accent, which keeps 4.5:1 there.
+ * accent, which keeps 4.5:1 there, and its variant of High contrast, which keeps 7:1 on the white
+ * ink.
  */
 fun borealisColorScheme(colors: BorealisColors): ColorScheme {
     return darkColorScheme(

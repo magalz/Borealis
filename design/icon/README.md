@@ -4,6 +4,16 @@
 purple night sky and a dark ridge in the LuminalShine page colour (`#0E1013`).
 The owner approved it on 2026-10-14.
 
+The upper band of the aurora is the teal of the accent (issue #50, ADR 0058,
+decision 5; it was the green `#6EE7B7` to `#14B8A6` until Sprint 11). It runs
+from the accent of the teal set of `design/accessibility/accents.json`
+(`#4BECD0`, at 95 % opacity) at the top to its accent-strong (`#06AF97`, at 10 %)
+at the bottom, and `design/accessibility/test_icon_colours.py` keeps the colours
+that the script writes equal to that file. The lower band is violet. The loader
+of the design system (`AuroraLoader.kt`) draws the same two bands, so a change
+of the colours of the icon is a change of the loader too. The drawn backgrounds
+keep their own fixed colours.
+
 It writes these files under `apps/android/app/src/main/res/`, and the mark under the
 resources of the design system:
 

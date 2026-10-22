@@ -49,11 +49,13 @@ jobs:
               - '.markdownlint.jsonc'
               - '.github/workflows/ci.yml'
             design:
-              # The tests of the contrast tool also read the glass table, the icons and the clips.
+              # The tests of the contrast tool also read the glass table, the icons, the clips and the
+              # launcher layers that design/icon/generate.py writes.
               - 'design/**'
               - 'apps/android/borealis/designsystem/src/main/kotlin/io/github/magalz/borealis/designsystem/glass/GlassContrastTable.kt'
               - 'apps/android/borealis/designsystem/src/main/kotlin/io/github/magalz/borealis/designsystem/components/BorealisIcons.kt'
               - 'apps/android/borealis/designsystem/src/main/res/raw/background_*.mp4'
+              - 'apps/android/app/src/main/res/drawable/borealis_*.xml'
               - '.github/workflows/ci.yml'
 
   android:

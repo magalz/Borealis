@@ -108,7 +108,7 @@ fun KeyboardKey(
             label,
             color =
                 when {
-                    latched -> colors.accent
+                    latched -> colors.accentSoft
                     style == KeyStyle.Normal -> colors.ink
                     else -> colors.ink2
                 },

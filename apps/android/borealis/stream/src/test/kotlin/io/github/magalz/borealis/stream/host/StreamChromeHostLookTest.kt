@@ -104,10 +104,10 @@ class StreamChromeHostLookTest {
 
         showChrome(chosen)
 
-        // The number of the step that is under way is drawn in the accent, on the accent tint.
-        assertThat(composeRule.textColor(CURRENT_STEP)).isEqualTo(Color(0xFF4BECD0))
-        assertThat(composeRule.textColor(CURRENT_STEP)).isEqualTo(borealisColors(chosen).accent)
-        assertThat(composeRule.textColor(CURRENT_STEP)).isNotEqualTo(BorealisColors().accent)
+        // The number of the step that is under way is drawn in the soft accent, on the accent tint.
+        assertThat(composeRule.textColor(CURRENT_STEP)).isEqualTo(Color(0xFFA2FCE8))
+        assertThat(composeRule.textColor(CURRENT_STEP)).isEqualTo(borealisColors(chosen).accentSoft)
+        assertThat(composeRule.textColor(CURRENT_STEP)).isNotEqualTo(BorealisColors().accentSoft)
     }
 
     @Test

@@ -23,14 +23,17 @@ import io.github.magalz.borealis.designsystem.glass.GlassTextColors
 import io.github.magalz.borealis.designsystem.glass.glassSurface
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisShapes
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
+import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 
 private val LINE_GAP = 4.dp
 private val DOT_GAP = 6.dp
 private val TAG_GAP = 6.dp
+private val SPACED_LINE_ROOM = 2.dp
 private val CHIP_PADDING_HORIZONTAL = 8.dp
 private val CHIP_PADDING_VERTICAL = 2.dp
 
@@ -130,7 +133,14 @@ private fun HostInfo(
     modifier: Modifier,
 ) {
     val colors = LocalBorealisColors.current
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(LINE_GAP)) {
+    // At Wide and Wider Android breaks a line as if the spans on its spaces were not there, and
+    // wraps it a pixel or two wider than the box. The card keeps that much of its padding free of
+    // text, so that the ink of a line does not reach into it (2dp is 4 px at 2.0 density).
+    val spaced = LocalBorealisLook.current.textSpacing != TextSpacing.Normal
+    Column(
+        if (spaced) modifier.padding(end = SPACED_LINE_ROOM) else modifier,
+        verticalArrangement = Arrangement.spacedBy(LINE_GAP),
+    ) {
         // No limit on the lines: at a large text size a long name wraps and the card grows, where
         // an ellipsis would cut it.
         Text(name, style = MaterialTheme.typography.titleMedium)

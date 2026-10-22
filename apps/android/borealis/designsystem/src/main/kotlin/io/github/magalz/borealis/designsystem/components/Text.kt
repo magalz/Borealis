@@ -39,6 +39,13 @@ import io.github.magalz.borealis.designsystem.theme.emOf
  * [AnnotatedString] is built. The parameters are those of Material's, except the ones that nothing
  * in the app uses (the inline content of an [AnnotatedString]): add one when a caller needs it.
  * Text fields have no word spacing: addresses and PINs have no spaces.
+ *
+ * Mind the end of a wrapped line. Android lets a space at the end of a line hang past the width,
+ * and it wraps the line as if the extra spacing of that space were not there, so a line that ends
+ * in a space at Wide or Wider can draw up to one word spacing (0.16 or 0.5 em) past the box of the
+ * text, ink included. A text that is clipped at its end, by a parent or by a fixed width, needs
+ * that much room before the clip. The text is not given padding for it: in the screens of the app
+ * it lands in the padding and the gaps that surround every text.
  */
 @Composable
 fun Text(

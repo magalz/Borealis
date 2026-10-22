@@ -129,7 +129,7 @@ class TextFitTest {
         )
 
     @Test
-    fun `a line that is not the last and does not end in a space is checked against the width`() {
+    fun `the letter spacing after the last letter of a line broken in a word is allowed, no more`() {
         measuring()
         style = style.copy(letterSpacing = 0.18.em)
         // A word that does not fit: the lines break inside it, and none of them ends in a space.
@@ -137,8 +137,23 @@ class TextFitTest {
         assertThat(wrapped.lineCount).isGreaterThan(2)
         val spacing = style.letterSpacing.value * style.fontSize.value
 
-        // A line of a word that ends past the room by about the letter spacing is no hang.
-        assertThat(wrapped.pastTheWidthBy(0, spacing * 0.8f).fitProblems())
+        assertThat(wrapped.pastTheWidthBy(0, spacing * 0.8f).fitProblems()).isEmpty()
+        assertThat(wrapped.pastTheWidthBy(0, spacing + 4f).fitProblems())
+            .containsExactly("runs past its width")
+    }
+
+    @Test
+    fun `a line that ends in a spaced space has the hang and not the letter spacing as well`() {
+        measuring()
+        style = style.copy(letterSpacing = 0.18.em)
+        val wrapped = layout(spaced("aaaa aaa aaa aaa"), 40)
+        assertThat(wrapped.lineCount).isGreaterThan(2)
+        val extra = (0.5f - 0.18f) * style.fontSize.value
+        val spacing = style.letterSpacing.value * style.fontSize.value
+
+        // The hang and a pixel of rounding are allowed; the letter spacing on top of them is not.
+        assertThat(wrapped.pastTheWidthBy(0, extra + 0.5f).fitProblems()).isEmpty()
+        assertThat(wrapped.pastTheWidthBy(0, extra + 1f + spacing * 0.8f).fitProblems())
             .containsExactly("runs past its width")
     }
 

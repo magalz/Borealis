@@ -368,10 +368,21 @@ class TokenGeneratorTest {
         assertThat(teal).contains("val AccentInverse = Color(0xFF027464)")
         assertThat(teal).contains("val AccentTint = Color(0x214BECD0)")
         assertThat(teal).contains("object HighContrast {")
+        assertThat(teal).contains("val AccentInverse = Color(0xFF026053)")
         assertThat(white).contains("val Accent = Color(0xFFEFF3FF)")
         assertThat(white).contains("val AccentSoft = Color(0xFFFFFFFF)")
         assertThat(white).contains("val AccentInverse = Color(0xFF636671)")
+        assertThat(white).contains("val AccentInverse = Color(0xFF51555F)")
         assertThat(white).contains("object HighContrast {")
+    }
+
+    @Test
+    fun `the high contrast group of the real file has the snackbar action of violet`() {
+        val kotlin = TokenGenerator.generate(realTokens()).kotlin
+
+        val high =
+            kotlin.substringAfter("object HighContrast {").substringBefore("object AccentTeal")
+        assertThat(high).contains("val AccentInverse = Color(0xFF5744A9)")
     }
 
     @Test

@@ -2291,7 +2291,12 @@ VIOLET_COLOR = {
     "accent-line": "#A78BFA66",
     "accent-inverse": "#7C3AED",
 }
-VIOLET_HIGH_CONTRAST = {"accent": "#C8B7FC", "accent-soft": "#D6CCFE", "accent-line": "#C8B7FC"}
+VIOLET_HIGH_CONTRAST = {
+    "accent": "#C8B7FC",
+    "accent-soft": "#D6CCFE",
+    "accent-line": "#C8B7FC",
+    "accent-inverse": "#5744A9",
+}
 SURFACE_HEX = {"page": "#0E1013", "surface": "#14171B", "surface-raised": "#1A1E24"}
 STYLES = ("AuroraCurtains", "SoftGlow", "NorthernLights", "LightMist", "FlowingLight", "Starfield")
 
@@ -2515,6 +2520,12 @@ class AccentFileTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "teal.*accent-inverse"):
             self.load(teal=dict(candidate(), color=color))
 
+    def test_the_high_contrast_role_of_the_snackbar_action_is_required(self):
+        high = dict(VIOLET_HIGH_CONTRAST)
+        del high["accent-inverse"]
+        with self.assertRaisesRegex(ValueError, "teal.*high-contrast.*accent-inverse"):
+            self.load(teal=dict(candidate(), **{"high-contrast": high}))
+
     def test_a_high_contrast_role_that_is_missing_is_reported(self):
         broken = dict(candidate(), **{"high-contrast": {"accent": "#C8B7FC"}})
         with self.assertRaisesRegex(ValueError, "teal.*accent-soft"):
@@ -2581,6 +2592,10 @@ class AccentContextTest(unittest.TestCase):
         self.assertEqual(colors["ink-2"], "#C3C7CC")
         self.assertEqual(colors["ink-3"], "#8B9096")
         self.assertEqual(colors["hover"], "#FFFFFF0A")
+
+    def test_the_ink_of_high_contrast_is_the_inverse_surface_of_the_snackbar(self):
+        # The snackbar is drawn on the ink: the ink of high contrast is white.
+        self.assertEqual(self.context["high_contrast_ink"], "#FFFFFF")
 
     def test_the_status_colours_are_the_default_and_the_two_palettes(self):
         status = self.context["status"]
@@ -2819,6 +2834,21 @@ class AccentReportTest(unittest.TestCase):
             for hex_value in ("#0E1013", "#0B0D10", "#14171B", "#1A1E24")
         )
         self.assertLess(found["hc:accent"]["ratio"], worst)
+
+    def test_the_snackbar_action_keeps_7_to_1_on_the_white_ink_of_high_contrast(self):
+        found = self.high(self.report())["hc:accent-inverse/ink"]
+        self.assertAlmostEqual(found["ratio"], contrast.hex_contrast("#5744A9", "#FFFFFF"), 9)
+        self.assertAlmostEqual(found["ratio"], 7.49, delta=0.006)
+        self.assertEqual(found["limit"], 7.0)
+        self.assertEqual(found["on"], "ink")
+        self.assertNotIn("hc:accent-inverse/ink", self.report()["fails"])
+
+    def test_the_snackbar_action_of_normal_contrast_is_short_of_7_to_1_on_that_ink(self):
+        # accent-inverse of the colour group is 5.70:1 on white: it is why high contrast has its own.
+        short = candidate(high_contrast={"accent-inverse": "#7C3AED"})
+        found = self.high(self.report(short))["hc:accent-inverse/ink"]
+        self.assertAlmostEqual(found["ratio"], 5.70, delta=0.006)
+        self.assertIn("hc:accent-inverse/ink", self.report(short)["fails"])
 
     def test_a_high_contrast_accent_under_7_to_1_is_a_failure(self):
         report = self.report(candidate(high_contrast={"accent": "#7C6BC0"}))
@@ -3254,6 +3284,13 @@ class ShippedAccentsTest(unittest.TestCase):
                 check = next(c for c in fills if c["id"] == "accent-inverse/ink")
                 self.assertGreaterEqual(check["ratio"], 4.5)
                 self.assertNotIn("accent-inverse/ink", found["known_fails"])
+
+    def test_every_set_has_a_high_contrast_snackbar_role_that_keeps_7_to_1_on_the_white_ink(self):
+        for name, found in self.accents.items():
+            with self.subTest(candidate=name):
+                checks = {c["id"]: c for c in self.report[name]["high_contrast"]}
+                self.assertGreaterEqual(checks["hc:accent-inverse/ink"]["ratio"], 7.0)
+                self.assertNotIn("hc:accent-inverse/ink", found["known_fails"])
 
     def test_violet_keeps_its_strong_accent_as_the_snackbar_role(self):
         colors = self.accents["violet"]["color"]

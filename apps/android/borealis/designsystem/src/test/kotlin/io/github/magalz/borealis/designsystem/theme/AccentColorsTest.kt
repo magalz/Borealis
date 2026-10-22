@@ -149,6 +149,33 @@ class AccentColorsTest {
     }
 
     @Test
+    fun `High contrast gives the snackbar action the variant of each accent`() {
+        val action =
+            mapOf(
+                AccentChoice.Violet to Color(0xFF5744A9),
+                AccentChoice.Teal to Color(0xFF026053),
+                AccentChoice.White to Color(0xFF51555F),
+            )
+
+        for ((accent, expected) in action) {
+            val scheme = borealisColorScheme(colorsOf(accent, highContrast = true))
+
+            assertWithMessage("$accent").that(scheme.inversePrimary).isEqualTo(expected)
+        }
+    }
+
+    @Test
+    fun `the snackbar action keeps 7 to 1 on the ink of High contrast for every accent`() {
+        for (accent in AccentChoice.entries) {
+            val scheme = borealisColorScheme(colorsOf(accent, highContrast = true))
+
+            assertWithMessage("$accent")
+                .that(contrastRatio(scheme.inversePrimary, scheme.inverseSurface))
+                .isAtLeast(7.0)
+        }
+    }
+
+    @Test
     fun `High contrast keeps the roles of its accent that it does not name`() {
         for (accent in AccentChoice.entries) {
             val plain = colorsOf(accent)
@@ -157,9 +184,6 @@ class AccentColorsTest {
             assertWithMessage("$accent").that(high.onAccent).isEqualTo(plain.onAccent)
             assertWithMessage("$accent").that(high.accentTint).isEqualTo(plain.accentTint)
             assertWithMessage("$accent").that(high.accentStrong).isEqualTo(plain.accentStrong)
-            assertWithMessage("$accent")
-                .that(borealisColorScheme(high).inversePrimary)
-                .isEqualTo(borealisColorScheme(plain).inversePrimary)
         }
     }
 

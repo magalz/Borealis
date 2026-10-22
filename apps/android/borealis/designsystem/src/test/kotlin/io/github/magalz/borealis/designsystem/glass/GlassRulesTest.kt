@@ -6,10 +6,13 @@ import androidx.compose.ui.graphics.toArgb
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.theme.AccentChoice
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.Transparency
+import io.github.magalz.borealis.designsystem.theme.borealisColors
+import kotlin.math.max
 import org.junit.Test
 
 /**
@@ -141,6 +144,51 @@ class GlassRulesTest {
         val floors = listOf(8, 16, 24, 32, 48).map { tintFloor(BackgroundStyle.NorthernLights, it) }
 
         assertThat(floors).containsExactly(70, 60, 50, 50, 40).inOrder()
+    }
+
+    @Test
+    fun `the floor keeps the accent-soft of the colours that it is given at 4_5 to 1`() {
+        // The measure can fail: a dim accent-soft needs more tint than the lilac of the tokens.
+        val dim = tokens.copy(accentSoft = Color(0xFF7A6AC0))
+
+        for (style in styles) {
+            val own = tintFloor(style, 8, dim)
+            assertWithMessage("$style").that(own).isAtLeast(tintFloor(style, 8, tokens))
+            assertWithMessage("$style")
+                .that(contrast(dim.accentSoft, backdropLuminance(style, 8, own)))
+                .isAtLeast(4.5)
+        }
+        assertThat(tintFloor(BackgroundStyle.Starfield, 8, dim))
+            .isGreaterThan(tintFloor(BackgroundStyle.Starfield, 8, tokens))
+    }
+
+    @Test
+    fun `the floor of every accent is worked out with its own colours`() {
+        for (accent in AccentChoice.entries) {
+            val colors = borealisColors(BorealisLook(accent = accent))
+            for (style in styles) {
+                for (blur in listOf(8, 16, 24, 32, 48)) {
+                    assertWithMessage("$accent $style $blur dp")
+                        .that(
+                            spec(BorealisLook(accent = accent, glassBlurDp = blur), style)
+                                .tintPercent
+                        )
+                        .isEqualTo(max(40, tintFloor(style, blur, colors)))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `the accents of the app are lighter than the lilac, so they keep the floors of the tokens`() {
+        for (accent in AccentChoice.entries) {
+            val colors = borealisColors(BorealisLook(accent = accent))
+            for (style in styles) {
+                assertWithMessage("$accent $style")
+                    .that(tintFloor(style, 8, colors))
+                    .isEqualTo(tintFloor(style, 8, tokens))
+            }
+        }
     }
 
     @Test

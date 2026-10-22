@@ -84,7 +84,11 @@ internal fun glassSpec(look: BorealisLook, style: BackgroundStyle, sdk: Int): Gl
  * `accent-soft` at 4.5:1 as they are, and keeps the adjusted `ink-3` no lighter than `#A8ACB1`. The
  * glass is never more transparent than this. It is 100 where no tint of the grid does.
  */
-internal fun tintFloor(style: BackgroundStyle, blurDp: Int): Int {
+internal fun tintFloor(
+    style: BackgroundStyle,
+    blurDp: Int,
+    colors: BorealisColors = BorealisColors(),
+): Int {
     val tokens = BorealisColors()
     return GlassContrastTable.tintsPercent.firstOrNull { tint ->
         val backdrop = backdropLuminance(style, blurDp, tint)

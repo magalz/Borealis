@@ -33,13 +33,23 @@ import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.ignoreKeysHeldOnOpen
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
+import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
+import io.github.magalz.borealis.designsystem.theme.borealisTypography
 
 /**
  * One choice of a [ChoiceSheet]: the [key] it returns, its [label] and an optional [summary] under
- * the label.
+ * the label. A [labelFont] draws the label in that font, at the size that the app has in it, so a
+ * choice of fonts shows each name as the app would draw it. The summary stays in the font of the
+ * app.
  */
-class ChoiceOption<out T>(val key: T, val label: String, val summary: String? = null)
+class ChoiceOption<out T>(
+    val key: T,
+    val label: String,
+    val summary: String? = null,
+    val labelFont: FontChoice? = null,
+)
 
 private val CONTENT_PADDING = 20.dp
 /**
@@ -136,6 +146,11 @@ private fun <T> OptionRow(
 ) {
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.medium
+    val formFactor = LocalFormFactor.current
+    val labelStyle =
+        remember(option.labelFont, formFactor) {
+            option.labelFont?.let { borealisTypography(formFactor, it).titleMedium }
+        } ?: MaterialTheme.typography.titleMedium
     Row(
         modifier
             .fillMaxWidth()
@@ -156,7 +171,7 @@ private fun <T> OptionRow(
         Column(Modifier.weight(1f)) {
             Text(
                 option.label,
-                style = MaterialTheme.typography.titleMedium,
+                style = labelStyle,
                 color = if (selected) colors.accent else colors.ink,
             )
             if (option.summary != null) {

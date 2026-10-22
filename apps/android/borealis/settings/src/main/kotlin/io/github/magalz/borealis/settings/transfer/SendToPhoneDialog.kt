@@ -26,9 +26,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.BorealisDialog
 import io.github.magalz.borealis.designsystem.components.DialogAction
-import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisType
 import io.github.magalz.borealis.diagnostics.transfer.TransferState
 import io.github.magalz.borealis.settings.R
 import io.github.magalz.borealis.settings.ui.QrCode
@@ -158,8 +158,7 @@ private fun Waiting(state: TransferState.Waiting, qrSide: Dp) {
             )
             Text(
                 state.link,
-                style = MaterialTheme.typography.bodySmall,
-                fontFamily = BorealisFonts.Mono,
+                style = LocalBorealisType.current.codes(MaterialTheme.typography.bodySmall),
                 color = colors.ink3,
             )
             Text(
@@ -185,8 +184,7 @@ private fun Outcome(
     if (command != null) {
         Text(
             command,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = BorealisFonts.Mono,
+            style = LocalBorealisType.current.codes(MaterialTheme.typography.bodySmall),
             color = LocalBorealisColors.current.ink3,
         )
     }

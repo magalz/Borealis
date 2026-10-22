@@ -15,11 +15,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
-import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisShapes
@@ -74,21 +72,25 @@ fun Chip(
             )
             .padding(horizontal = CHIP_PADDING_HORIZONTAL, vertical = CHIP_PADDING_VERTICAL),
         color = if (selected) colors.accent else colors.ink2,
-        style = TextStyle(fontFamily = BorealisFonts.Mono, fontSize = monoMinimumSize()),
+        style = smallCodesStyle(),
     )
 }
 
 /**
- * The size of the small monospace text of a chip or of the number of a step: the minimum of a TV
- * (13sp) on a TV, and 12sp, the minimum of a handheld, on a handheld and on a phone.
+ * The style of the small text in the font of the codes, for a chip or the number of a step: the
+ * kicker of the device in the codes font, and never below 12sp, the minimum of a handheld. With the
+ * default font that is 13sp on a TV and 12sp on a handheld and on a phone.
  */
 @Composable
-internal fun monoMinimumSize(): TextUnit =
-    if (LocalFormFactor.current == FormFactor.Tv) {
-        BorealisTokens.Size.Tv.Minimum
-    } else {
-        BorealisTokens.Size.Handheld.Minimum
-    }
+internal fun smallCodesStyle(): TextStyle {
+    val type = LocalBorealisType.current
+    val codes = type.codes(type.kicker)
+    val least = BorealisTokens.Size.Handheld.Minimum
+    return TextStyle(
+        fontFamily = codes.fontFamily,
+        fontSize = if (codes.fontSize < least) least else codes.fontSize,
+    )
+}
 
 /**
  * A pill-shaped label for a capability of a host (HDR, HEVC, Wake on LAN). It only informs: it is

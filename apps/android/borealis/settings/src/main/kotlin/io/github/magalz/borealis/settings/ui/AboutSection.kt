@@ -24,16 +24,15 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.settings.SettingsInfoRow
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
-import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisType
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.diagnostics.transfer.QrMatrix
 import io.github.magalz.borealis.settings.R
@@ -152,8 +151,7 @@ private fun LinkQrDialog(link: AboutLink, onDismiss: () -> Unit) {
                 )
                 Text(
                     link.url,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontFamily = BorealisFonts.Mono,
+                    style = LocalBorealisType.current.codes(MaterialTheme.typography.bodySmall),
                     color = colors.ink2,
                 )
             }
@@ -162,9 +160,9 @@ private fun LinkQrDialog(link: AboutLink, onDismiss: () -> Unit) {
 }
 
 /**
- * The bundled `NOTICE` and `LICENSE` texts in a scrollable dialog. The text is a focus stop above
- * Close: Up from Close moves focus to it, the D-pad Up and Down then scroll it, and Down at its end
- * moves on to Close.
+ * The bundled `NOTICE`, `LICENSE` and font licence texts in a scrollable dialog. The text is a
+ * focus stop above Close: Up from Close moves focus to it, the D-pad Up and Down then scroll it,
+ * and Down at its end moves on to Close.
  */
 @Composable
 private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
@@ -208,8 +206,7 @@ private fun LicensesDialog(about: AboutSource, onDismiss: () -> Unit) {
                 .focusable()
                 .verticalScroll(scroll)
                 .padding(LICENSE_TEXT_PADDING),
-            fontFamily = FontFamily.Monospace,
-            style = MaterialTheme.typography.bodySmall,
+            style = LocalBorealisType.current.codes(MaterialTheme.typography.bodySmall),
         )
     }
 }

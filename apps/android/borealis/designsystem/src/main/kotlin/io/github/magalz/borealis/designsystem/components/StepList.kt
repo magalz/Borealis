@@ -26,11 +26,9 @@ import androidx.compose.ui.semantics.collectionItemInfo
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.R
-import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 
 private val MARKER_SIZE = 22.dp
@@ -148,8 +146,7 @@ private fun StepMarker(number: Int, state: StepState) {
                     color = ink,
                     textAlign = TextAlign.Center,
                     // A mono digit centres in the circle.
-                    style =
-                        TextStyle(fontFamily = BorealisFonts.Mono, fontSize = monoMinimumSize()),
+                    style = smallCodesStyle(),
                 )
         }
     }

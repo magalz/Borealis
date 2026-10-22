@@ -13,13 +13,13 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.text.TextLayoutResult
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.testing.clippedTexts
 import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
+import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
 import io.github.magalz.borealis.stream.testing.RecordingIntents
@@ -27,6 +27,7 @@ import io.github.magalz.borealis.stream.ui.StreamKeyboard
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 
 private const val SYSTEM_SCALE = 1.3f
@@ -37,12 +38,12 @@ private const val SYSTEM_SCALE = 1.3f
  * shrinks, and it never renders smaller than the same key does with the default look. The system
  * font scale is 1.3, so the largest text size is 1.69 of the text that the keys are laid out for.
  */
-@RunWith(AndroidJUnit4::class)
+@RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(fontScale = SYSTEM_SCALE)
-class KeyCaptionSizeTest {
+class KeyCaptionSizeTest(private val font: FontChoice) {
     @get:Rule val composeRule = createComposeRule()
 
-    private var look by mutableStateOf(BorealisLook())
+    private var look by mutableStateOf(BorealisLook(font = font))
 
     @Test
     @Config(qualifiers = PHONE_320)
@@ -58,7 +59,7 @@ class KeyCaptionSizeTest {
     @Config(qualifiers = PHONE_320)
     fun `a caption with a space wraps to a second line at the largest text size, before it shrinks`() {
         show()
-        look = BorealisLook(textSize = TextSize.Largest)
+        look = BorealisLook(textSize = TextSize.Largest, font = font)
         composeRule.waitForIdle()
 
         val fn = checkNotNull(captions()["key:Fn 123"])
@@ -71,7 +72,7 @@ class KeyCaptionSizeTest {
     @Config(qualifiers = PHONE_320)
     fun `a caption of one word stays on one line at the largest text size`() {
         show()
-        look = BorealisLook(textSize = TextSize.Largest)
+        look = BorealisLook(textSize = TextSize.Largest, font = font)
         composeRule.waitForIdle()
 
         for ((key, layout) in captions().filterKeys { " " !in it.removePrefix("key:") }) {
@@ -83,7 +84,7 @@ class KeyCaptionSizeTest {
     @Config(qualifiers = PHONE_320)
     fun `on a 320dp phone no caption is cut off at the largest text size`() {
         show()
-        look = BorealisLook(textSize = TextSize.Largest)
+        look = BorealisLook(textSize = TextSize.Largest, font = font)
         composeRule.waitForIdle()
 
         assertThat(composeRule.clippedTexts()).isEmpty()
@@ -92,7 +93,7 @@ class KeyCaptionSizeTest {
     private fun assertNoCaptionIsSmaller() {
         show()
         val byDefault = captionSizes()
-        look = BorealisLook(textSize = TextSize.Largest)
+        look = BorealisLook(textSize = TextSize.Largest, font = font)
         composeRule.waitForIdle()
         val largest = captionSizes()
 
@@ -141,12 +142,16 @@ class KeyCaptionSizeTest {
             .associate { caption -> checkNotNull(caption.keyTag()) to caption.textLayout() }
     }
 
-    private companion object {
-        const val PHONE_320 = "w320dp-h568dp-xhdpi"
-        const val PHONE_360 = "w360dp-h640dp-xhdpi"
-        const val EPSILON = 0.05f
+    companion object {
+        @JvmStatic
+        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun fonts(): List<FontChoice> = FontChoice.entries
+
+        private const val PHONE_320 = "w320dp-h568dp-xhdpi"
+        private const val PHONE_360 = "w360dp-h640dp-xhdpi"
+        private const val EPSILON = 0.05f
 
         /** The first glyph of "Fn" is 5.3dp wide where the caption is shrunk to one line. */
-        const val MIN_WRAPPED_GLYPH_DP = 6f
+        private const val MIN_WRAPPED_GLYPH_DP = 6f
     }
 }

@@ -179,6 +179,7 @@ internal fun choiceOptions(item: SettingsItem, state: SettingsUiState): List<Cho
                     it.key,
                     it.label(),
                     it.summaryRes?.let { summary -> stringResource(summary) },
+                    it.font,
                 )
             }
     }

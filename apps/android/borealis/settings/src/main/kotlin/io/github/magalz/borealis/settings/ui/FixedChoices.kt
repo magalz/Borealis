@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.settings.ui
 
 import androidx.annotation.StringRes
+import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.settings.R
 import io.github.magalz.borealis.settings.appearance.BackgroundChoices
 import io.github.magalz.borealis.settings.appearance.LookLists
@@ -8,13 +9,14 @@ import io.github.magalz.borealis.settings.catalog.Settings
 
 /**
  * One entry of a list whose entries do not depend on the device. The label is [labelRes], with
- * [labelArg] as its number when it has one ("40 %").
+ * [labelArg] as its number when it has one ("40 %"). A [font] draws the label in that font.
  */
 class FixedChoice(
     val key: String,
     @StringRes val labelRes: Int,
     @StringRes val summaryRes: Int? = null,
     val labelArg: Int? = null,
+    val font: FontChoice? = null,
 )
 
 /** The lists of the settings screen whose entries are the same on every device. */
@@ -140,36 +142,43 @@ object FixedChoices {
                 Settings.FONT_PLEX,
                 R.string.settings_choice_font_plex,
                 R.string.settings_choice_font_plex_summary,
+                font = FontChoice.Plex,
             ),
             FixedChoice(
                 Settings.FONT_ATKINSON_NEXT,
                 R.string.settings_choice_font_atkinson_next,
                 R.string.settings_choice_font_atkinson_next_summary,
+                font = FontChoice.AtkinsonNext,
             ),
             FixedChoice(
                 Settings.FONT_LUCIOLE,
                 R.string.settings_choice_font_luciole,
                 R.string.settings_choice_font_luciole_summary,
+                font = FontChoice.Luciole,
             ),
             FixedChoice(
                 Settings.FONT_LEXEND,
                 R.string.settings_choice_font_lexend,
                 R.string.settings_choice_font_lexend_summary,
+                font = FontChoice.Lexend,
             ),
             FixedChoice(
                 Settings.FONT_ANDIKA,
                 R.string.settings_choice_font_andika,
                 R.string.settings_choice_font_andika_summary,
+                font = FontChoice.Andika,
             ),
             FixedChoice(
                 Settings.FONT_B612,
                 R.string.settings_choice_font_b612,
                 R.string.settings_choice_font_b612_summary,
+                font = FontChoice.B612,
             ),
             FixedChoice(
                 Settings.FONT_SYSTEM,
                 R.string.settings_choice_font_system,
                 R.string.settings_choice_font_system_summary,
+                font = FontChoice.System,
             ),
         )
 

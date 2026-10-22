@@ -46,7 +46,6 @@ import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.PinDisplay
 import io.github.magalz.borealis.designsystem.focus.initialFocus
-import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
@@ -268,8 +267,7 @@ private fun Step(number: Int, text: String, address: String?) {
             if (address != null) {
                 BackdropText(
                     address,
-                    style =
-                        MaterialTheme.typography.bodySmall.copy(fontFamily = BorealisFonts.Mono),
+                    style = LocalBorealisType.current.codes(MaterialTheme.typography.bodySmall),
                     ink = BackdropInk.Ink3,
                 )
             }

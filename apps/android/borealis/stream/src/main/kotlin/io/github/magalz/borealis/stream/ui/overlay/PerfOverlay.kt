@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisType
 import io.github.magalz.borealis.stream.OverlayMode
@@ -47,7 +46,8 @@ internal fun PerfOverlay(
             OverlayMode.DETAILED -> format.detailed(perf, info)
         }
     val colors = LocalBorealisColors.current
-    val size = LocalBorealisType.current.kicker.fontSize
+    val type = LocalBorealisType.current
+    val codes = type.codes(type.kicker)
     Column(
         modifier
             .testTag(PERF_OVERLAY_TAG)
@@ -59,7 +59,7 @@ internal fun PerfOverlay(
             Text(
                 line,
                 color = colors.ink,
-                style = TextStyle(fontFamily = BorealisFonts.Mono, fontSize = size),
+                style = TextStyle(fontFamily = codes.fontFamily, fontSize = codes.fontSize),
             )
         }
     }

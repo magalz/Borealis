@@ -29,9 +29,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
 import io.github.magalz.borealis.designsystem.focus.optionsClickable
-import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisShapes
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisType
 
 /** Covers are 3 by 4: the ratio of the captures, which have room for ten covers at 960dp. */
 private const val COVER_ASPECT_RATIO = 3f / 4f
@@ -110,8 +110,9 @@ internal fun CoverPlaceholder(
 ) {
     val colors = LocalBorealisColors.current
     val shape = LocalBorealisShapes.current.cover
+    val type = LocalBorealisType.current
     val style = MaterialTheme.typography.titleLarge
-    val initialsStyle = remember(style) { style.copy(fontFamily = BorealisFonts.Mono) }
+    val initialsStyle = remember(type, style) { type.codes(style) }
     Box(
         modifier
             .glassOrSolid(shape, colors.surfaceRaised)

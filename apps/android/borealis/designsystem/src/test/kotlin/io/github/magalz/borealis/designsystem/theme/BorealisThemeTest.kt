@@ -53,7 +53,7 @@ class BorealisThemeTest {
 
     @Test
     fun `Sans has regular medium and semibold`() {
-        val fonts = (BorealisFonts.Sans as? FontListFontFamily)?.fonts
+        val fonts = (BorealisFonts.of(FontChoice.Plex).text as? FontListFontFamily)?.fonts
 
         assertThat(fonts?.map { it.weight })
             .containsExactly(
@@ -66,7 +66,7 @@ class BorealisThemeTest {
 
     @Test
     fun `Mono has regular medium and semibold and differs from Sans`() {
-        val fonts = (BorealisFonts.Mono as? FontListFontFamily)?.fonts
+        val fonts = (BorealisFonts.of(FontChoice.Plex).codes as? FontListFontFamily)?.fonts
 
         assertThat(fonts?.map { it.weight })
             .containsExactly(
@@ -75,7 +75,8 @@ class BorealisThemeTest {
                 BorealisTokens.FontWeight.Semibold,
             )
             .inOrder()
-        assertThat(BorealisFonts.Mono).isNotEqualTo(BorealisFonts.Sans)
+        assertThat(BorealisFonts.of(FontChoice.Plex).codes)
+            .isNotEqualTo(BorealisFonts.of(FontChoice.Plex).text)
     }
 
     @Test
@@ -101,7 +102,8 @@ class BorealisThemeTest {
         assertThat(typography.titleLarge.fontWeight).isEqualTo(FontWeight.SemiBold)
         assertThat(typography.bodyMedium.fontSize).isEqualTo(14.sp)
         assertThat(typography.bodySmall.fontSize).isEqualTo(12.5.sp)
-        assertThat(typography.titleLarge.fontFamily).isEqualTo(BorealisFonts.Sans)
+        assertThat(typography.titleLarge.fontFamily)
+            .isEqualTo(BorealisFonts.of(FontChoice.Plex).text)
     }
 
     @Test
@@ -144,7 +146,7 @@ class BorealisThemeTest {
 
             assertThat(pin.fontSize).isEqualTo(34.sp)
             assertThat(pin.fontWeight).isEqualTo(FontWeight.SemiBold)
-            assertThat(pin.fontFamily).isEqualTo(BorealisFonts.Mono)
+            assertThat(pin.fontFamily).isEqualTo(BorealisFonts.of(FontChoice.Plex).codes)
         }
     }
 

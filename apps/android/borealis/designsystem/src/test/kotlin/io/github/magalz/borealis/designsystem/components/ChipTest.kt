@@ -36,6 +36,7 @@ import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisFonts
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
+import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import org.junit.Rule
@@ -148,7 +149,11 @@ class ChipTest {
                     Text(
                         "Win+D",
                         Modifier.testTag("plain"),
-                        style = TextStyle(fontFamily = BorealisFonts.Mono, fontSize = 12.sp),
+                        style =
+                            TextStyle(
+                                fontFamily = BorealisFonts.of(FontChoice.Plex).codes,
+                                fontSize = 12.sp,
+                            ),
                     )
                 }
             }

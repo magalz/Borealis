@@ -8,7 +8,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.BorealisDialog
@@ -16,6 +15,7 @@ import io.github.magalz.borealis.designsystem.components.DialogAction
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisType
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.settings.R
 
@@ -109,10 +109,7 @@ private fun Field(label: String, value: String, monospace: Boolean = false) {
             color = LocalBorealisColors.current.ink3,
             style = MaterialTheme.typography.bodySmall,
         )
-        Text(
-            value,
-            fontFamily = if (monospace) FontFamily.Monospace else null,
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        val style = MaterialTheme.typography.bodyMedium
+        Text(value, style = if (monospace) LocalBorealisType.current.codes(style) else style)
     }
 }

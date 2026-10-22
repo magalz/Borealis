@@ -8,9 +8,9 @@ package io.github.magalz.borealis.designsystem.theme
  * each of the scales 1.15 to 2.0, the Text size at its default):
  * - **Wide** fails nowhere, from 1.15 to 2.0.
  * - **Wider** has no failure that is more than rounding: 44 runs over the ladder run past their box
- *   by 0.5 to 2.6 px, on a line whose last space hangs, and none is cut or ends in an ellipsis. The
- *   fit check allows a pixel, so these are failures to it: 5 at 2.0, and the 200 % tests of the
- *   screens run at 2.0 with that check.
+ *   by 0.5 to 2.6 px, in a text whose spaces have the spans of the word spacing, and none is cut or
+ *   ends in an ellipsis. The fit check allows a pixel, so these are failures to it: 5 at 2.0, and
+ *   the 200 % tests of the screens run at 2.0 with that check.
  *
  * Before the Pairing screen of a TV, the footer of the rail and the time of an Audit entry were
  * fixed, Wide failed from 1.7 and Wider from 1.15 (see ADR 0058, decision 4).

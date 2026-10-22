@@ -121,9 +121,53 @@ Decision details:
      size, but at a system font scale of 2.0 the captions are cut off at Wide in all seven fonts, so
      the floor is lowered by the spacing. The owner decided the captions on the UAT of 2026-10-22.
      At a system font scale of 2.0, Luciole at Normal is cut off whatever the floor, as before.
-   * **Known limitations:** the 200 % system font size is tested at Normal only, and the line ends of a
-     wrapped text can draw past their box at Wide and Wider. See
-     [accessibility, text spacing: known limitations](../ux/accessibility.md#text-spacing-known-limitations).
+   * **The limit at a very large font:** Wider is drawn as Wide from a font scale of 2.0, the largest
+     that Android offers, and Wide and Normal are never limited. The owner decided on 2026-10-22 to
+     limit Wider and to warn, and then to raise the limit as far as the fit tests allow. The scale is
+     the one that the text is drawn at, the system font scale times the Text size
+     (`effectiveTextSpacing`, `theme/TextSpacingLimit.kt`), because what overflows is the text at the
+     size that is drawn: Largest text over a system font of 1.3 is 1.69 and still draws Wider.
+     * **What is stored:** the look keeps what the user chose, and Wider comes back when the font
+       scale falls. The theme gives the type, the design-system `Text` and everything under it, the
+       stream chrome among them, the level that is drawn, so the layouts that follow the level (the
+       card columns) follow it too: at 2.0 a Compact or Dense grid with Wider chosen has the columns
+       that Wide has.
+     * **Why 2.0:** the 200 % fit tests (the Library, the components, Settings and the Audit trail)
+       were run in every font at Wide and at Wider, at the font scales from 1.15 to 2.0, 462 runs at
+       each. Before the fixes below Wider failed from 1.15 (16 runs at 2.0) and Wide from 1.7 (8 runs
+       at 2.0). Three layouts caused it, and they are fixed:
+       * the Pairing screen of a TV: the PIN column is as wide as its longest line, and the line under
+         the PIN was one line of 421 dp at 2.0, which left the steps 149 dp. It wraps at the width of
+         the note about a restart now, and the steps have about 290 dp;
+       * the footer of the rail: the name was one line with an ellipsis, so "Borealis" was cut off
+         in a narrow rail. It wraps now, inside the word if it must;
+       * the time of an Audit entry on a phone: "Mon 17:00" took so much of a narrow row that a word
+         of the title ran past its box. The time takes 35 % of the row at most and wraps at its space.
+
+       After the fixes Wide fails in none of the runs at any of the scales, and Wider in none that
+       is more than rounding: 0 to 9 runs at a scale, 5 at 2.0, each 0.5 to 2.6 px past its box in a
+       text whose spaces have the spans of the word spacing, and none cut or ending in an ellipsis.
+       The fit check holds a line to 1 px, so the 200 % tests, which run with that check, draw
+       Wider as Wide at 2.0. The
+       table is in [accessibility, text spacing: the limit at a very large font](../ux/accessibility.md#text-spacing-the-limit-at-a-very-large-font).
+     * **The warning:** when the user chooses Wider while the limit is reached, a dialog says so: the
+       title is "Wider spacing is limited", and the text says that, at this text size, Borealis uses
+       Wide spacing instead of Wider so that nothing is cut off, that the choice stays, and that Wider
+       comes back when the system font size or the Text size is smaller. It has one OK button, which
+       has the focus on a TV, and its title is the name of the window for TalkBack. The Text spacing
+       row says "Drawn as Wide at this text size, so that nothing is cut off." under its value for as
+       long as the limit is reached, so a user who raised the font later can see why. The text is in
+       English only, as the other strings.
+   * **Known limitations:**
+     * At Wider, from 1.15 to 1.99, 0 to 9 runs of the 231 at a scale run past their box by 0.5 to
+       2.6 px, as above. The fit tests find none cut or ending in an ellipsis. It has not been seen on a
+       device.
+     * At a combined font scale above 2.0 (a system font of 2.0 with Largest text is 2.6) Normal
+       text already fails the fit tests in 8 of the 84 runs of the Library (Apps with a long host
+       name, on a TV and on a phone) and in 1 of the 70 runs of the components (the rows of the
+       settings on a TV). Wider is drawn as Wide there. The roadmap has the item.
+     * The line ends of a wrapped text can draw past their box at Wide and Wider. See
+       [accessibility, text spacing: known limitations](../ux/accessibility.md#text-spacing-known-limitations).
 
 5. **Accent colour.**
    * **The set:** violet (today's colour, the default), teal `#4BECD0` and white `#EFF3FF`. The role
@@ -221,6 +265,8 @@ Decision details:
 * Bad, because the bundled fonts add 1,549,487 bytes to the debug APK, of which the compressed fonts are 1,517,543 bytes (from 3,040,504 bytes raw; see More Information).
 * Bad, because the layouts that do not fit at Wide or Wider need work, and each layout change needs a fit
   test.
+* Bad, because Wider is not drawn in full at a font scale of 2.0: it is drawn as Wide, and the user is told
+  in a dialog and in the row.
 * Bad, because the halo and the new fonts have been measured by the model of the tool, not on a device.
   The halo has not been seen with these fonts.
 * Bad, because the dependency policy has a new licence in the allowlist (CC-BY-4.0), for fonts only.

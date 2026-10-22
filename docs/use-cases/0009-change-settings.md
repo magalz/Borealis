@@ -218,7 +218,8 @@ stream ([ADR 0056](../adr/0056-add-an-animated-background-and-the-appearance-gro
 5. Card density has three choices: Comfortable (the default), Compact and Dense. The
    system stores them under `borealis_card_density` as `comfortable`, `compact` and
    `dense`. Compact and Dense add one column on every device, except with Text spacing
-   at Wider, where they keep the columns of Comfortable. The hosts and apps in a
+   at Wider, where they keep the columns of Comfortable (the Wider that is drawn: at a font
+   scale of 2.0 Wider is drawn as Wide, and the column is added). The hosts and apps in a
    row are 4 and 6 on a TV (3 and 5 in Comfortable), 3 and 5 on a handheld (2 and 4),
    2 and 4 on a phone (1 and 3), and 3 and 5 on a wide phone (2 and 4). Dense also cuts
    the card padding from 18 to 12 dp on a TV and a handheld, and from 14 to 10 dp on a

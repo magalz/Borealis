@@ -136,6 +136,14 @@ Decision details:
      dot breaks 3:1 over bright glass. The owner chose the shadow on 2026-10-22. Over the brightest
      host-card glass it raises the contrast of the dot from 3.79:1 to 5.68:1 in today's palette (see
      [the offline colour and the status shapes](../ux/accessibility.md#the-offline-colour-and-the-status-shapes)).
+   * **Colour-blind palettes:** the accent adapts to the palette. A palette changes the status colours
+     and not the accent, so violet was the blue of the success colour to a protanope and a deuteranope
+     (9.3 and 5.0 of CIEDE2000 from it). Under Red-green and Blue-yellow an accent that is not 20 or
+     more from the four status colours as the viewer sees them has a variant: violet under both (a
+     pale rose under Red-green, a lighter and pinker violet under Blue-yellow) and the soft accent of
+     white under Blue-yellow. Teal keeps its colour. The owner decided it on 2026-10-22, after the
+     user test. See
+     [the accents under the colour-blind palettes](../ux/accessibility.md#the-accents-under-the-colour-blind-palettes).
    * **Evidence:** the measurements are in
      [Accent candidates](../ux/accessibility.md#accent-candidates-sprint-11), from the `accents` command
      of the contrast tool.

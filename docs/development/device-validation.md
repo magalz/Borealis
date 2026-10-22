@@ -2845,3 +2845,231 @@ Findings:
      recommended against a `/unpair` cancel route. Option D, sending phase 4 with
      an invalid secret after a wrong PIN, is not chosen.
    - **Not filed upstream yet.** The host-side table of the roadmap has the row.
+
+## 16. Results: Sprint 11
+
+This section holds the results of the Sprint 11 device round, which ran on
+2026-10-22 from 05:16 to 07:20. The steps are those of
+[section 3.24](#324-sprint-11-checks), numbered as in the table below. The round
+ran over ADB on build `d5af7bfc`, on the Google TV Streamer only. The S22 was not on
+ADB, so every S22 item is left for the owner. The paired host showed as Offline on
+the TV, so the stream, the Online dot and the cover count did not run (P1). Every
+visual verdict is `owner check`. The final checks of the phase ran at `fc6a64ae`,
+after the round; see [Final checks](#final-checks).
+
+### Setup
+
+- Build: `app-debug.apk` from `d5af7bfc`, the phase head at the time. The About pane
+  on the TV shows `0.0.0-dev (commit d5af7bfc89a5)`. The package is
+  `io.github.magalz.borealis.debug`, and `adb install -r` on the TV at 05:17:51
+  returned `Success`.
+- Host: LuminalShine 26.10.0-beta.1, as the round brief says. The host process ran
+  on the PC. The app does not show that string.
+- Devices:
+  - the Google TV Streamer, Android 14 (API 34), 1920 x 1080 at 320 dpi, on ADB for
+    the whole round;
+  - the Samsung Galaxy S22 (SM-S901E), API 36 per the brief, not on ADB. Its connects
+    were refused at 05:17 and at 07:17. It was not installed, its settings were not
+    changed and it was not locked by the round.
+- Hosts on the TV: the paired host card reads Offline, so the app shows no version for
+  it. The same PC shows as a second card, "Found on this network / Not paired". Its
+  Host details read `Host software: Sunshine-compatible, version 7.1.431.-1`,
+  `Status: Online`, `Paired: No` and `Ports: HTTP 47989, HTTPS 47984`.
+- Start values on the TV, restored at the end and read back from the panes:
+  - Appearance: font IBM Plex Sans; accent Violet; background Aurora curtains at
+    100 %; card density Comfortable; glass tint 40 %; glass blur 8 dp.
+  - Accessibility: Reduce motion Follow system; Transparency Standard; thicker focus
+    outline off; text size 100 %; text spacing Normal; High contrast off;
+    colour-blind palette off.
+- Warm-up: every group and pane of Settings was walked twice before anything was
+  measured.
+- How the screen was read:
+  - `uiautomator dump`, parsed to text, bounds and state. Compose gives the full text,
+    not the text as drawn, so the "ends in ..." check only catches literal ellipses.
+    The round therefore also took screenshots of the panes and of the host cards for
+    each font and spacing. They are kept outside the repository.
+  - Frame times from `dumpsys gfxinfo <package> framestats`, with 120 frames per
+    window, the most that `framestats` keeps. On a 60 Hz output the intervals alternate
+    between 33.3 and 50 ms, so the table gives the mean interval where the median would
+    flip.
+
+### Numbering
+
+The round numbered its own rows 1 to 12. Those numbers do not match section 3.24, so
+the table below uses the numbers of section 3.24:
+
+- round 2 (text size) is step 1; round 3 (fonts) is step 2; round 5 (background
+  intensity) is step 5; round 6 (text spacing) is step 8; round 7 (card density) is
+  step 9; round 8 (About on a TV) is step 6; round 12 (Online dot) is step 4;
+- round 4 (accent colour) is step 3, except for the segmented control and the
+  snackbar, which are in round 9 (stream chrome) and which need a stream;
+- round 1 (install and start), round 10 (frame time) and round 11 (the icon) have no
+  step in section 3.24, so the table shows them as `-`;
+- section 3.24 step 7 (the Sprint 10 follow-ups) was not run in the round, and step 10
+  (sleep) is the end state of the round.
+
+### Results
+
+One row per item, with the step of [section 3.24](#324-sprint-11-checks) that it
+belongs to.
+
+| Step | Item | Device | Result | Evidence and notes |
+| --- | --- | --- | --- | --- |
+| - | Install and start | TV | pass | Cold start 5226 ms (`am start -W`). `logcat -b crash` is empty after the start and at the end of the round (0 lines). |
+| - | Install and start | S22 | not run | Not on ADB. The connects were refused at 05:17 and 07:17. |
+| 1 | Body text size | TV | pass (bounds); look owner check | All 10 groups and their panes were walked: 0 text nodes outside their parent and 0 overlaps. Body text nodes are 42 px tall at 320 dpi, the 16 sp line box (15 sp would give 39 px). Secondary values are 38 px (14.5 sp). The 13 sp smallest text was not measured. Input, Gamepad, Appearance and Accessibility scroll with the focus. The 10 groups fit with no scrolling. The Stream focus outline is not clipped at the top (screenshot). |
+| 1 | Handheld text sizes | S22 | not run | Not on ADB. Owner check, in landscape with a pad. |
+| 2 | Font choice | TV | pass (bounds); look owner check | The picker lists 7 fonts, each with a purpose line: IBM Plex Sans, Atkinson Hyperlegible Next, Luciole, Lexend, Andika, B612 and System font. For each font: Hosts 5 of 5 focus targets reached, Settings 10 of 10 groups, Appearance 7 rows, About 4 rows; 0 text nodes outside their parent, 0 overlaps. Nothing is cut in the screenshots. The only text that ends in "..." is the "Checking..." status label, which is not a truncation. See O1 for Luciole. |
+| 2 | Licences of the fonts | TV | pass (licence texts); NOTICE TODO(verify) | The round recorded the OFL texts for IBM Plex, Atkinson Hyperlegible Next and Mono, Lexend, Andika, and B612 and B612 Mono, and the CC BY 4.0 credit of Luciole. The NOTICE file was not recorded in the round. TODO(verify): check that NOTICE credits every font. |
+| 2 | Monospaced codes font | TV | not run | Not in the round's recorded checks. The look is an owner check: PIN, addresses, chips, the performance overlay and the adb command. |
+| 2 | Font choice | S22 | not run | Not on ADB. |
+| 3 | Accent colour, rail and font picker | TV | pass; the white bar is an owner check | Violet, Teal and White each give a clear selection. The rail's Settings item and the selected group carry the accent tint. In the font picker the selected row has an accent fill, its name in the accent colour and a check mark, and stays distinct from the focused row. With White, a white bar marks the selected rail item and the selected group (screenshot). The background aurora stays violet with Teal and White. |
+| 3 | Segmented control and snackbar | TV | not run | The only segmented control is in the in-game menu, which needs a stream. A stream needs a paired online host, which is P1. The snackbar was not raised: no trigger was available without a side effect. |
+| 3 | Accent colour | S22 | not run | Not on ADB. |
+| 4 | Online dot shadow | TV | not run | No paired host is online on the TV (P1). |
+| 4 | Online dot shadow | S22 | not run | Not on ADB. |
+| 5 | Background intensity, brightness | TV | pass | Mean luma of the background beside the panes, with the 99th percentile in brackets, at 100, 75, 50 and 25 %. Aurora curtains: 17.6 (36), 17.0 (31), 16.8 (26), 16.3 (21). Northern lights clip: 20.9 (76), 19.8 (64), 18.0 (47), 16.9 (30). The clip kept playing: 120 frames in each 5 s window at every step. With High contrast on, over the clip: 16.7 (25) at all four steps, so the steps change nothing. |
+| 5 | Readability at 25 % | TV | owner check | The round kept screenshots of the glass panels at 100 % over the clip and at 25 %. The readability verdict is the owner's. |
+| 5 | Background intensity | S22 | not run | Not on ADB. |
+| 6 | About: Source code and Privacy policy | TV | pass | Each opens a dialog with the title, a QR code, "Scan with your phone to open this link.", the URL and Close, with the focus on Close (screenshot). Back and Close both return the focus to the link. `topResumedActivity` stays Borealis's LibraryActivity, so no other app came to the front. Open-source licences opens an in-app screen, and Back returns to its link. |
+| 6 | QR code size and quiet zone | TV | owner check | Visual. The round did not judge the code at a distance. |
+| 6 | QR code scanned with the S22 camera | S22 | not run | Not on ADB, and the scan needs the owner's phone. |
+| 7 | Sprint 10 follow-ups (rail footer) | TV | not run | Not in the round's steps. Section 3.23, step 6, covers the footer. |
+| 8 | Text spacing, Wide and Wider | TV | pass (bounds); look owner check | B612 at Wide and at Wider, then Andika at Wider: Hosts 5 of 5, Settings 10 of 10, Appearance 7, About 4, with 0 problems. The gaps between words are clearly wider than the gaps between letters (crops of Source code and Open-source licences). At Wider, "Privacy and diagnostics" wraps to two lines. With Andika and Wider the group list no longer fits: it scrolls with the focus, and every group stays reachable. See P2 for Wider with Compact or Dense. |
+| 8 | Value rows, slider values and text fields at Wider | TV | not run | Not in the round's recorded checks. |
+| 8 | Stream keyboard, performance overlay and narrow phone at Wider | S22 | not run | Not on ADB. |
+| 8 | Text spacing | S22 | not run | Not on ADB. |
+| 9 | Card density, host cards | TV | pass (widths and padding); look owner check | Host card width: Comfortable 432 px and Compact 318 px, with a 24 px gap, so 3 and then 4 columns. Dense also gives 4. Dense card padding is 24 px (12 dp), against 36 px (18 dp) at Compact. The grid starts at the same place in both (left 508, top 296). The focus outline is not clipped on either card at Dense (screenshot). |
+| 9 | Covers per row | TV | not run | No paired host is online (P1), so the TV shows no app list. Expected from section 3.24: 3 hosts and 5 apps at Comfortable, 4 hosts and 6 apps at Compact and Dense. |
+| 9 | Dense cover size, row heights and focus kept on a density change | TV | not run | Not in the round's recorded checks. |
+| 9 | Card density | S22 | not run | Not on ADB. The Running badge at the largest text in Dense is an owner check. |
+| 10 | TV asleep at the end | TV | pass | The TV is on Home and asleep at 07:17 (`mWakefulness=Asleep`). |
+| - | Frame time, default look | TV | pass | Two 8 s windows of 120 frames each. Hosts p50 29.5 / 29.5 ms, p90 30.1 / 29.9 ms; Settings p50 34.5 / 34.5 ms, p90 34.8 / 34.9 ms. With Andika, Wider and Dense: Hosts p50 29.3 / 29.4 ms, p90 29.7 / 29.8 ms; Settings p50 34.3 / 34.4 ms, p90 34.6 / 34.7 ms. Mean interval 41.3 to 41.7 ms (24 fps). The Sprint 10 references are 34.8 ms (Hosts) and 37.0 ms (Settings) at p50; both are lower now. |
+| - | The round icon | TV | owner check | "Borealis Debug" shows as a round icon in "Your apps": a deep violet sky with stars, two aurora bands and a dark mountain line. The upper band is teal (sampled #4e908e, hue about 178 degrees, so not green) and the lower band is violet (screenshot). The home screen shows no banner, only the round icon. |
+
+The stream steps (the in-game menu of step 3 and the stream checks in the owner
+items), the Online dot on the TV (step 4), the covers (step 9) and every S22 item
+were not run in the round. Each of them is an owner item below, or waits for the
+host to be fixed (P1).
+
+### Problems found
+
+#### P1. TV: the paired host shows Offline while the host runs
+
+This blocks the Online dot (step 4), the covers (step 9) and the stream menu (step 3).
+It is a finding of the round, not a check of section 3.24.
+
+- What: the paired host card on the TV stays Offline, and its polls fail every time.
+  The same PC shows as a separate card, "Found on this network / Not paired", which
+  the app reports as Online.
+- Details:
+  - The Host details of the paired card list its stored addresses, one of them an IPv6
+    address on port 65050.
+  - The host process listens on TCP 47984, 47989, 47990 and 48010. Its
+    `sunshine.conf` sets no port and no name.
+  - The discovered card reads "Paired: No" and "Ports: HTTP 47989, HTTPS 47984".
+  - So the pairing record on the TV no longer matches the host as it runs now. A
+    port or identity change on the host since pairing, or the 26.10.0-beta.1 update,
+    would explain it. The round did not check further, because that would mean
+    changing pairing or host settings.
+- Steps to reproduce: wake the TV, open Borealis and look at Hosts. Open the menu on
+  each card (Menu key), then Details.
+- Logcat (masked; `Borealis.UPSTREAM`, `logger=com.limelight.LimeLog`):
+
+  ```text
+  I Borealis.UPSTREAM: Starting parallel poll for <host> (<ip>, null, null, [<ipv6>]:65050)
+  I Borealis.UPSTREAM: Parallel poll for <host> returned address: null
+  W Borealis.UPSTREAM: <host> is offline (try 2)
+  I Borealis.UPSTREAM: Starting parallel poll for <host> (<ip>, null, null, [<ipv6>]:47989)
+  I Borealis.UPSTREAM: Parallel poll for <host> returned address: <ip>
+  ```
+
+  The first three lines are the paired card; the last two are the discovered card.
+- Owner: check the host and its paired clients in the LuminalShine web UI, and pair
+  the TV again from the "Not paired" card if needed. The expected result is one card,
+  Online.
+
+#### P2. TV: with Wider at Compact or Dense, words on the host cards break in the middle
+
+- What: at Compact and at Dense with Wider text spacing, the second card's host name
+  breaks inside a word. That name is 14 characters with one hyphen.
+  - With Andika and Wider at Compact, the IPv4 address also wraps before its last
+    digit, and the "HEVC 10-bit" chip wraps to two lines inside its pill.
+  - Nothing is cut, and every line stays visible, but a split address reads wrong.
+  - Not seen with IBM Plex at Normal and Compact, nor with B612 at Wider and
+    Comfortable. Seen with IBM Plex at Wider and Compact (name only), and with Andika
+    at Wider and Dense (name only).
+- Steps to reproduce: Settings, Accessibility, Text spacing, Wider. Then Appearance,
+  Card density, Compact (or Dense). Open Hosts. Optionally set Appearance, Font, Andika.
+- Logcat: none. It is a layout effect, and nothing is logged.
+- Verdict: the owner's. It may be the accepted cost of Wider in a 4-column card.
+- Status at `fc6a64ae`: not re-run (see Final checks).
+
+### Observations
+
+These are not counted as problems.
+
+- O1. Luciole draws tight lines. In Luciole the text lines are 28 to 31 px tall, against
+  42 px in IBM Plex at the same size. Two-line descriptions in the panes sit close
+  together. Nothing overlaps or is cut. The owner judges this at 3 m (section 3.24,
+  step 2).
+
+### Notes on the round
+
+These are not app problems.
+
+- At about 06:00 the TV went to sleep through HDMI (CEC, `mLastSleepReason=hdmi`). The
+  round woke it with `KEYCODE_WAKEUP`, and the app process stayed alive.
+- Between 06:42 and 06:51 Back presses on the Hosts screen closed Borealis, and the
+  home screen then started the ambient screensaver. The round relaunched Borealis and
+  left Hosts through the rail from then on. The two density settings applied in that
+  time were set again and measured again.
+
+### Owner items
+
+The owner ran a 22-step script of the round, which is not in the repository. These
+items are the ones the round did not run, with the step of section 3.24 they match.
+
+- Host (P1): check the host and pair the TV again if needed, so that one card shows
+  Online. The stream and Online dot items below depend on it.
+- TV, fonts at 3 m with Wider (steps 2 and 8): all 7 fonts, and the Luciole line
+  spacing (O1).
+- TV, TalkBack on the font picker (not in section 3.24): the owner turns TalkBack on
+  and off, and each font reads its name and purpose line once.
+- TV, stream with an online host (not in section 3.24): the "Starting" screen in B612
+  with Wider; then the in-game menu and Quit, which must end the host app and leave
+  nothing running on the PC. Keep the stream under one minute.
+- TV, the in-game menu with each accent (step 3): the segmented control with Violet,
+  Teal and White, and a snackbar if one is easy to raise.
+- TV, the Online dot shadow with High contrast on and off (step 4).
+- TV, the covers per row at each density (step 9): 5 apps at Comfortable, 6 at Compact
+  and Dense.
+- TV, the verdict on P2 (steps 8 and 9).
+- TV, the round icon: the upper band is teal, not green (no step in section 3.24).
+- S22, steps 1 to 9 of section 3.24 in portrait, over USB or wireless ADB as the owner
+  chooses. The owner script gives these portrait counts: 1 host card and 3 covers per
+  row at Comfortable, then 2 and 4 at Compact and Dense. TODO(verify): the portrait
+  counts are not in section 3.24, so take the expected values from the owner's notes.
+- S22, the Online dot and the Running badge at 4 columns (steps 4 and 9).
+- S22, TalkBack on the font picker (not in section 3.24).
+- S22 and TV, the QR codes of the About dialog, scanned with the S22 camera (step 6).
+- S22, the system font at its largest size with Wider in Borealis, on Hosts, Settings
+  and About (not in section 3.24; the owner checks it).
+- Both devices, at the end: set Borealis back to the start values listed in Setup,
+  press Home, put the TV to sleep (step 10), and lock the S22.
+
+### Final checks
+
+- The final checks of the phase ran at `fc6a64ae`. The build changed after the round
+  at `d5af7bfc` only by the review fixes:
+  - `09325b4d5` keeps the ink of a host card off its border at Wide and Wider, by
+    keeping room at the end of the card's text (`HostCard.kt`, Wide and Wider only),
+    with `6dee8f401` as its test;
+  - `d1c51da30` and `d4764781d` correct KDocs and documentation.
+- The host card change was not measured on a device. The TV host-card checks at Wide
+  and Wider (steps 8 and 9) were taken at `d5af7bfc`. TODO(verify): repeat them on
+  `fc6a64ae`, or record the owner's check.
+- The change keeps the ink off the border. It does not change how a word breaks, so
+  P2 is not known to be fixed. TODO(verify): repeat P2 on `fc6a64ae`.
+- The results of the final checks are not in the round's results file.
+  TODO(verify): add their results to this section from the phase checks.

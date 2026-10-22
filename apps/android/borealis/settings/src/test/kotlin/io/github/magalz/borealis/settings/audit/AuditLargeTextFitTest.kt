@@ -4,10 +4,11 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.FitCase
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
+import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
-import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
 import io.github.magalz.borealis.logging.AuditOutcome
@@ -21,13 +22,15 @@ import org.robolectric.annotation.Config
 /**
  * The Audit trail at a system font scale of 2.0, the largest that Android offers (WCAG 1.4.4: text
  * resizes to 200 percent without loss of content). Every text must fit where it is, or the list
- * scrolls: none runs past its width, is cut off at the bottom or ends in an ellipsis.
+ * scrolls: none runs past its width, is cut off at the bottom or ends in an ellipsis. The Text
+ * spacing of the runs is Normal, Wide or Wider, and the look draws the level that the font scale
+ * lets it (ADR 0058, decision 4), so none fails.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-class AuditLargeTextFitTest(font: FontChoice) {
+class AuditLargeTextFitTest(case: FitCase) {
     @get:Rule val composeRule = createComposeRule()
 
-    private val look = BorealisLook(font = font)
+    private val look = BorealisLook(font = case.font, textSpacing = case.spacing)
 
     private val entries =
         AuditUiState(
@@ -94,7 +97,7 @@ class AuditLargeTextFitTest(font: FontChoice) {
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun fonts(): List<FontChoice> = FontChoice.entries
+        fun cases(): List<FitCase> = fitCases()
 
         private const val SCALE = 2f
         private const val NARROW_WINDOW = "w240dp-h568dp-xhdpi"

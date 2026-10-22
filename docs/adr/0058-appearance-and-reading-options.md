@@ -146,6 +146,14 @@ Decision details:
      read as a faint ring there. On a TV the shadow is black and reaches 10.75 dp from the centre of
      the dot instead of 10, so that it reads at least as clearly as the phone's. The owner decided this
      on the UAT of 2026-10-22.
+   * **Colour-blind palettes:** the accent adapts to the palette. A palette changes the status colours
+     and not the accent, so violet was the blue of the success colour to a protanope and a deuteranope
+     (9.3 and 5.0 of CIEDE2000 from it). Under Red-green and Blue-yellow an accent that is not 20 or
+     more from the four status colours as the viewer sees them has a variant: violet under both (a
+     pale rose under Red-green, a lighter and pinker violet under Blue-yellow) and the soft accent of
+     white under Blue-yellow. Teal keeps its colour. The owner decided it on 2026-10-22, after the
+     user test. See
+     [the accents under the colour-blind palettes](../ux/accessibility.md#the-accents-under-the-colour-blind-palettes).
    * **Evidence:** the measurements are in
      [Accent candidates](../ux/accessibility.md#accent-candidates-sprint-11), from the `accents` command
      of the contrast tool.

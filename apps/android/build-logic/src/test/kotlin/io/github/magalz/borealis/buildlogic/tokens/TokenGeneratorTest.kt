@@ -377,6 +377,37 @@ class TokenGeneratorTest {
     }
 
     @Test
+    fun `the accent sets of the colour-blind palettes of the real file are generated with their high contrast`() {
+        val kotlin = TokenGenerator.generate(realTokens()).kotlin
+
+        val violetRedGreen =
+            kotlin
+                .substringAfter("object AccentVioletRedGreen {")
+                .substringBefore("object AccentVioletBlueYellow")
+        val violetBlueYellow =
+            kotlin
+                .substringAfter("object AccentVioletBlueYellow {")
+                .substringBefore("object AccentWhiteBlueYellow")
+        val whiteBlueYellow =
+            kotlin
+                .substringAfter("object AccentWhiteBlueYellow {")
+                .substringBefore("object ColourVision")
+        assertThat(violetRedGreen).contains("val Accent = Color(0xFFF4BCBC)")
+        assertThat(violetRedGreen).contains("val AccentSoft = Color(0xFFFCC3C8)")
+        assertThat(violetRedGreen).contains("val AccentTint = Color(0x21F4BCBC)")
+        assertThat(violetRedGreen).contains("object HighContrast {")
+        assertThat(violetRedGreen).contains("val AccentInverse = Color(0xFF774849)")
+        assertThat(violetBlueYellow).contains("val Accent = Color(0xFFC688FE)")
+        assertThat(violetBlueYellow).contains("val AccentSoft = Color(0xFFC8BBFE)")
+        assertThat(violetBlueYellow).contains("val AccentLine = Color(0x66C688FE)")
+        assertThat(violetBlueYellow).contains("val Accent = Color(0xFFC7B9FC)")
+        assertThat(violetBlueYellow).contains("val AccentSoft = Color(0xFFCAC4FE)")
+        assertThat(whiteBlueYellow).contains("val Accent = Color(0xFFEFF3FF)")
+        assertThat(whiteBlueYellow).contains("val AccentSoft = Color(0xFFF3FCFF)")
+        assertThat(whiteBlueYellow).contains("object HighContrast {")
+    }
+
+    @Test
     fun `the high contrast group of the real file has the snackbar action of violet`() {
         val kotlin = TokenGenerator.generate(realTokens()).kotlin
 
@@ -392,6 +423,8 @@ class TokenGeneratorTest {
         assertThat(xml).contains("""<color name="borealis_accent_inverse">#FF7C3AED</color>""")
         assertThat(xml).doesNotContain("teal")
         assertThat(xml).doesNotContain("white")
+        assertThat(xml).doesNotContain("violet")
+        assertThat(xml).doesNotContain("red_green")
     }
 
     @Test

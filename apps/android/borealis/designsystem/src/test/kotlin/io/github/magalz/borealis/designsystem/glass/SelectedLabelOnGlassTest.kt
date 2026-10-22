@@ -6,6 +6,7 @@ import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.theme.AccentChoice
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
+import io.github.magalz.borealis.designsystem.theme.ColourVision
 import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.designsystem.theme.borealisColors
 import org.junit.Test
@@ -20,22 +21,43 @@ import org.junit.Test
  * same backdrop, and keeps 3:1 as a non-text indicator.
  */
 class SelectedLabelOnGlassTest {
-    private fun spec(accent: AccentChoice, style: BackgroundStyle, transparency: Transparency) =
-        glassSpec(BorealisLook(accent = accent, transparency = transparency), style, SDK)
+    private fun spec(
+        accent: AccentChoice,
+        vision: ColourVision,
+        style: BackgroundStyle,
+        transparency: Transparency,
+    ) =
+        glassSpec(
+            BorealisLook(accent = accent, colourVision = vision, transparency = transparency),
+            style,
+            SDK,
+        )
+
+    /** The backdrops measured for each accent as it is, and for each variant under a palette. */
+    private val measured =
+        LAID.mapKeys { (accent, _) -> accent to ColourVision.Off } + LAID_UNDER_PALETTE
 
     private fun forEachGlass(
-        check: (accent: AccentChoice, style: BackgroundStyle, laid: Double, plain: Double) -> Unit
+        check:
+            (
+                accent: AccentChoice,
+                vision: ColourVision,
+                style: BackgroundStyle,
+                laid: Double,
+                plain: Double,
+            ) -> Unit
     ) {
-        for ((accent, styles) in LAID) {
+        for ((look, styles) in measured) {
+            val (accent, vision) = look
             for ((style, laid) in styles) {
-                for ((level, measured) in
+                for ((level, backdrop) in
                     listOf(
                         Transparency.Standard to laid.standard,
                         Transparency.Reduced to laid.reduced,
                     )) {
-                    val glass = spec(accent, style, level)
+                    val glass = spec(accent, vision, style, level)
                     val plain = backdropLuminance(style, glass.blurDp, glass.tintPercent)
-                    check(accent, style, measured, plain)
+                    check(accent, vision, style, backdrop, plain)
                 }
             }
         }
@@ -43,11 +65,24 @@ class SelectedLabelOnGlassTest {
 
     @Test
     fun `accent-soft keeps 4_5 to 1 over its tint on the glass of every style for every accent`() {
-        forEachGlass { accent, style, laid, _ ->
-            val soft = borealisColors(BorealisLook(accent = accent)).accentSoft
+        forEachGlass { accent, vision, style, laid, _ ->
+            val soft =
+                borealisColors(BorealisLook(accent = accent, colourVision = vision)).accentSoft
 
-            assertWithMessage("$accent over $style").that(contrast(soft, laid)).isAtLeast(AA_RATIO)
+            assertWithMessage("$accent $vision over $style")
+                .that(contrast(soft, laid))
+                .isAtLeast(AA_RATIO)
         }
+    }
+
+    @Test
+    fun `every accent that has a variant under a palette is measured there`() {
+        assertThat(LAID_UNDER_PALETTE.keys)
+            .containsExactly(
+                AccentChoice.Violet to ColourVision.RedGreen,
+                AccentChoice.Violet to ColourVision.BlueYellow,
+                AccentChoice.White to ColourVision.BlueYellow,
+            )
     }
 
     @Test
@@ -74,8 +109,8 @@ class SelectedLabelOnGlassTest {
     @Test
     fun `the measured backdrops are the glass of the app with a tint laid on it, so they are brighter`() {
         // A table that fell behind the backgrounds would be darker than the glass table of the app.
-        forEachGlass { accent, style, laid, plain ->
-            assertWithMessage("$accent over $style").that(laid).isAtLeast(plain)
+        forEachGlass { accent, vision, style, laid, plain ->
+            assertWithMessage("$accent $vision over $style").that(laid).isAtLeast(plain)
         }
     }
 

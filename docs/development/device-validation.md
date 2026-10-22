@@ -2920,7 +2920,7 @@ belongs to.
 | 1 | Body text size | TV | pass (bounds); look owner check | All 10 groups and their panes were walked: 0 text nodes outside their parent and 0 overlaps. Body text nodes are 42 px tall at 320 dpi, the 16 sp line box (15 sp would give 39 px). Secondary values are 38 px (14.5 sp). The 13 sp smallest text was not measured. Input, Gamepad, Appearance and Accessibility scroll with the focus. The 10 groups fit with no scrolling. The Stream focus outline is not clipped at the top (screenshot). |
 | 1 | Handheld text sizes | S22 | not run | Not on ADB. Owner check, in landscape with a pad. |
 | 2 | Font choice | TV | pass (bounds); look owner check | The picker lists 7 fonts, each with a purpose line: IBM Plex Sans, Atkinson Hyperlegible Next, Luciole, Lexend, Andika, B612 and System font. For each font: Hosts 5 of 5 focus targets reached, Settings 10 of 10 groups, Appearance 7 rows, About 4 rows; 0 text nodes outside their parent, 0 overlaps. Nothing is cut in the screenshots. The only text that ends in "..." is the "Checking..." status label, which is not a truncation. See O1 for Luciole. |
-| 2 | Licences of the fonts | TV | pass (licence texts); NOTICE TODO(verify) | The round recorded the OFL texts for IBM Plex, Atkinson Hyperlegible Next and Mono, Lexend, Andika, and B612 and B612 Mono, and the CC BY 4.0 credit of Luciole. The NOTICE file was not recorded in the round. TODO(verify): check that NOTICE credits every font. |
+| 2 | Licences of the fonts | TV | pass | The round recorded the OFL texts for IBM Plex, Atkinson Hyperlegible Next and Mono, Lexend, Andika, and B612 and B612 Mono, and the CC BY 4.0 credit of Luciole. The NOTICE file is not a device check: the phase review at `d5af7bfc` confirmed that it credits every bundled font. |
 | 2 | Monospaced codes font | TV | not run | Not in the round's recorded checks. The look is an owner check: PIN, addresses, chips, the performance overlay and the adb command. |
 | 2 | Font choice | S22 | not run | Not on ADB. |
 | 3 | Accent colour, rail and font picker | TV | pass; the white bar is an owner check | Violet, Teal and White each give a clear selection. The rail's Settings item and the selected group carry the accent tint. In the font picker the selected row has an accent fill, its name in the accent colour and a check mark, and stays distinct from the focused row. With White, a white bar marks the selected rail item and the selected group (screenshot). The background aurora stays violet with Teal and White. |
@@ -3048,8 +3048,8 @@ items are the ones the round did not run, with the step of section 3.24 they mat
 - TV, the round icon: the upper band is teal, not green (no step in section 3.24).
 - S22, steps 1 to 9 of section 3.24 in portrait, over USB or wireless ADB as the owner
   chooses. The owner script gives these portrait counts: 1 host card and 3 covers per
-  row at Comfortable, then 2 and 4 at Compact and Dense. TODO(verify): the portrait
-  counts are not in section 3.24, so take the expected values from the owner's notes.
+  row at Comfortable, then 2 and 4 at Compact and Dense. These are the values of
+  `hostGridColumns` and `appGridColumns` for a phone narrower than 600 dp.
 - S22, the Online dot and the Running badge at 4 columns (steps 4 and 9).
 - S22, TalkBack on the font picker (not in section 3.24).
 - S22 and TV, the QR codes of the About dialog, scanned with the S22 camera (step 6).
@@ -3067,9 +3067,13 @@ items are the ones the round did not run, with the step of section 3.24 they mat
     with `6dee8f401` as its test;
   - `d1c51da30` and `d4764781d` correct KDocs and documentation.
 - The host card change was not measured on a device. The TV host-card checks at Wide
-  and Wider (steps 8 and 9) were taken at `d5af7bfc`. TODO(verify): repeat them on
-  `fc6a64ae`, or record the owner's check.
+  and Wider (steps 8 and 9) were taken at `d5af7bfc`. They are repeated with the
+  owner's check on the final build.
 - The change keeps the ink off the border. It does not change how a word breaks, so
-  P2 is not known to be fixed. TODO(verify): repeat P2 on `fc6a64ae`.
-- The results of the final checks are not in the round's results file.
-  TODO(verify): add their results to this section from the phase checks.
+  P2 is not fixed. It waits for the owner's decision.
+- The results of the final checks at `fc6a64ae`, on Windows:
+  - the Android gate (`spotlessCheck detekt lint testDebugUnitTest :build-logic:test
+    assembleDebug licensee koverXmlReportBorealis`): BUILD SUCCESSFUL;
+  - the four-module Roborazzi verify: BUILD SUCCESSFUL;
+  - `python -I -m unittest discover -s design/accessibility`: 327 tests OK;
+  - markdownlint with the CI globs: 0 issues in 124 files.

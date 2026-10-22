@@ -147,7 +147,8 @@ fun SettingsValueRow(
     tone: SettingsRowTone = SettingsRowTone.Normal,
     onClickLabel: String? = null,
 ) {
-    Row(
+    RowTextWithTrailing(
+        CONTENT_GAP,
         modifier
             .settingsRowSurface()
             .then(
@@ -168,8 +169,22 @@ fun SettingsValueRow(
                 }
             )
             .settingsRowSize(),
-        horizontalArrangement = Arrangement.spacedBy(CONTENT_GAP),
-        verticalAlignment = Alignment.CenterVertically,
+        trailing =
+            listOfNotNull<@Composable () -> Unit>(
+                value?.let { { ValueText(it, enabled) } },
+                if (tone == SettingsRowTone.Normal) {
+                    {
+                        Icon(
+                            BorealisIcons.ChevronRight,
+                            contentDescription = null,
+                            modifier = Modifier.size(ROW_ICON_SIZE),
+                            tint = LocalBorealisColors.current.ink3,
+                        )
+                    }
+                } else {
+                    null
+                },
+            ),
     ) {
         SettingsRowText(
             title,
@@ -177,17 +192,7 @@ fun SettingsValueRow(
             note = disabledNote,
             enabled = enabled,
             tone = tone,
-            modifier = Modifier.weight(1f),
         )
-        if (value != null) ValueText(value, enabled)
-        if (tone == SettingsRowTone.Normal) {
-            Icon(
-                BorealisIcons.ChevronRight,
-                contentDescription = null,
-                modifier = Modifier.size(ROW_ICON_SIZE),
-                tint = LocalBorealisColors.current.ink3,
-            )
-        }
     }
 }
 
@@ -199,14 +204,14 @@ fun SettingsValueRow(
  */
 @Composable
 fun SettingsInfoRow(title: String, value: String, modifier: Modifier = Modifier) {
-    Row(
+    RowTextWithTrailing(
+        CONTENT_GAP,
         modifier
             .settingsRowSurface()
             .focusable()
             .semantics(mergeDescendants = true) {}
             .settingsRowSize(),
-        horizontalArrangement = Arrangement.spacedBy(CONTENT_GAP),
-        verticalAlignment = Alignment.CenterVertically,
+        trailing = listOf { ValueText(value, enabled = true) },
     ) {
         SettingsRowText(
             title,
@@ -214,9 +219,7 @@ fun SettingsInfoRow(title: String, value: String, modifier: Modifier = Modifier)
             note = null,
             enabled = true,
             tone = SettingsRowTone.Normal,
-            modifier = Modifier.weight(1f),
         )
-        ValueText(value, enabled = true)
     }
 }
 

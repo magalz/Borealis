@@ -27,6 +27,7 @@ internal constructor(
     private val codesFamily: FontFamily,
     private val codesRatio: Float,
     private val floor: TextUnit,
+    private val spacing: TextSpacing,
 ) {
     /**
      * [style], a style of the type scale, drawn in the font of the codes. Its size is that of
@@ -39,6 +40,13 @@ internal constructor(
         val size = style.fontSize * codesRatio
         return style.copy(fontFamily = codesFamily, fontSize = if (size < floor) floor else size)
     }
+
+    /**
+     * [style] with at least the letter spacing and the line height of the Text spacing of the look:
+     * for a style that a component builds itself, from the size and the family of another, so that
+     * it does not drop what the type scale gave. At Normal it is [style] itself.
+     */
+    fun spaced(style: TextStyle): TextStyle = style.spaced(spacing)
 }
 
 private val KICKER_SPACING = 0.07.em
@@ -225,6 +233,7 @@ fun borealisType(
         codesFamily = fonts.codes,
         codesRatio = fonts.codesScale / fonts.textScale,
         floor = floor,
+        spacing = spacing,
     )
 }
 

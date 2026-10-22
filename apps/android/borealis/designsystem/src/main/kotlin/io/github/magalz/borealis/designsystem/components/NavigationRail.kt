@@ -186,10 +186,14 @@ fun RailFooter(
             if (version != null) {
                 Text(
                     version,
+                    // A version is not a kicker, so it has no letter spacing of its own; the level
+                    // of the Text spacing is given on top of it.
                     style =
-                        label.copy(
-                            fontWeight = BorealisTokens.FontWeight.Regular,
-                            letterSpacing = 0.sp,
+                        LocalBorealisType.current.spaced(
+                            label.copy(
+                                fontWeight = BorealisTokens.FontWeight.Regular,
+                                letterSpacing = 0.sp,
+                            )
                         ),
                     color = colors.ink3,
                     maxLines = 2,

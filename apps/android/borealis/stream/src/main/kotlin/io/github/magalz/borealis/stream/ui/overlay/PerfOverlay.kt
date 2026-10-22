@@ -59,7 +59,10 @@ internal fun PerfOverlay(
             Text(
                 line,
                 color = colors.ink,
-                style = TextStyle(fontFamily = codes.fontFamily, fontSize = codes.fontSize),
+                style =
+                    type.spaced(
+                        TextStyle(fontFamily = codes.fontFamily, fontSize = codes.fontSize)
+                    ),
             )
         }
     }

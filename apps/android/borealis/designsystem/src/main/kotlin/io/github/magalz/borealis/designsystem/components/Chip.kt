@@ -86,9 +86,11 @@ internal fun smallCodesStyle(): TextStyle {
     val type = LocalBorealisType.current
     val codes = type.codes(type.kicker)
     val least = BorealisTokens.Size.Handheld.Minimum
-    return TextStyle(
-        fontFamily = codes.fontFamily,
-        fontSize = if (codes.fontSize < least) least else codes.fontSize,
+    return type.spaced(
+        TextStyle(
+            fontFamily = codes.fontFamily,
+            fontSize = if (codes.fontSize < least) least else codes.fontSize,
+        )
     )
 }
 

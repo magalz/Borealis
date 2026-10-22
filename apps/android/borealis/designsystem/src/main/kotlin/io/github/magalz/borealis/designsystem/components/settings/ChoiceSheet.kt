@@ -35,6 +35,7 @@ import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.designsystem.theme.borealisTypography
 
@@ -148,9 +149,10 @@ private fun <T> OptionRow(
     val colors = LocalBorealisColors.current
     val shape = MaterialTheme.shapes.medium
     val formFactor = LocalFormFactor.current
+    val spacing = LocalBorealisLook.current.textSpacing
     val labelStyle =
-        remember(option.labelFont, formFactor) {
-            option.labelFont?.let { borealisTypography(formFactor, it).titleMedium }
+        remember(option.labelFont, formFactor, spacing) {
+            option.labelFont?.let { borealisTypography(formFactor, it, spacing).titleMedium }
         } ?: MaterialTheme.typography.titleMedium
     Row(
         modifier

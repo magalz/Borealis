@@ -1,47 +1,40 @@
-package com.limelight.utils;
+package com.limelight.utils
 
-public class Vector2d {
-    private float x;
-    private float y;
-    private double magnitude;
-    
-    public static final Vector2d ZERO = new Vector2d();
-    
-    public Vector2d() {
-        initialize(0, 0);
+class Vector2d {
+    private var xValue = 0f
+    private var yValue = 0f
+
+    var magnitude = 0.0
+        private set
+
+    // A setter initializes the vector again, so that the magnitude follows.
+    var x: Float
+        get() = xValue
+        set(value) = initialize(value, yValue)
+
+    var y: Float
+        get() = yValue
+        set(value) = initialize(xValue, value)
+
+    init {
+        initialize(0f, 0f)
     }
-    
-    public void initialize(float x, float y) {
-        this.x = x;
-        this.y = y;
-        this.magnitude = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+
+    fun initialize(x: Float, y: Float) {
+        xValue = x
+        yValue = y
+        magnitude = Math.sqrt(Math.pow(x.toDouble(), 2.0) + Math.pow(y.toDouble(), 2.0))
     }
-    
-    public double getMagnitude() {
-        return magnitude;
+
+    fun getNormalized(vector: Vector2d) {
+        vector.initialize((xValue / magnitude).toFloat(), (yValue / magnitude).toFloat())
     }
-    
-    public void getNormalized(Vector2d vector) {
-        vector.initialize((float)(x / magnitude), (float)(y / magnitude));
+
+    fun scalarMultiply(factor: Double) {
+        initialize((xValue * factor).toFloat(), (yValue * factor).toFloat())
     }
-    
-    public void scalarMultiply(double factor) {
-        initialize((float)(x * factor), (float)(y * factor));
-    }
-    
-    public void setX(float x) {
-        initialize(x, this.y);
-    }
-    
-    public void setY(float y) {
-        initialize(this.x, y);
-    }
-    
-    public float getX() {
-        return x;
-    }
-    
-    public float getY() {
-        return y;
+
+    companion object {
+        @JvmField val ZERO = Vector2d()
     }
 }

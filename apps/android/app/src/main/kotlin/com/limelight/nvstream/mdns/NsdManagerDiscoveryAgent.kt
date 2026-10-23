@@ -1,234 +1,204 @@
-package com.limelight.nvstream.mdns;
+package com.limelight.nvstream.mdns
 
-import android.annotation.TargetApi;
-import android.content.Context;
-import android.net.nsd.NsdManager;
-import android.net.nsd.NsdServiceInfo;
-import android.os.Build;
-
-import com.limelight.LimeLog;
-
-import java.net.Inet4Address;
-import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.util.HashMap;
-import java.util.List;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import android.annotation.TargetApi
+import android.content.Context
+import android.net.nsd.NsdManager
+import android.net.nsd.NsdServiceInfo
+import android.os.Build
+import com.limelight.LimeLog
+import java.net.Inet4Address
+import java.net.Inet6Address
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 @TargetApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-public class NsdManagerDiscoveryAgent extends MdnsDiscoveryAgent {
-    private static final String SERVICE_TYPE = "_nvstream._tcp";
-    private final NsdManager nsdManager;
-    private final Object listenerLock = new Object();
-    private NsdManager.DiscoveryListener pendingListener;
-    private NsdManager.DiscoveryListener activeListener;
-    private final HashMap<String, NsdManager.ServiceInfoCallback> serviceCallbacks = new HashMap<>();
-    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
+class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener) :
+    MdnsDiscoveryAgent(listener) {
+    private val nsdManager = context.getSystemService(NsdManager::class.java)
+    private val listenerLock = Any()
+    private var pendingListener: NsdManager.DiscoveryListener? = null
+    private var activeListener: NsdManager.DiscoveryListener? = null
+    private val serviceCallbacks = HashMap<String?, NsdManager.ServiceInfoCallback>()
+    private val executor =
+        ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, LinkedBlockingQueue<Runnable>())
 
-    private NsdManager.DiscoveryListener createDiscoveryListener() {
-        return new NsdManager.DiscoveryListener() {
-            @Override
-            public void onStartDiscoveryFailed(String serviceType, int errorCode) {
-                LimeLog.severe("NSD: Service discovery start failed: " + errorCode);
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    @Suppress("LongMethod")
+    private fun createDiscoveryListener(): NsdManager.DiscoveryListener =
+        object : NsdManager.DiscoveryListener {
+            override fun onStartDiscoveryFailed(serviceType: String?, errorCode: Int) {
+                LimeLog.severe("NSD: Service discovery start failed: $errorCode")
 
                 // This listener is no longer pending after this failure
-                synchronized (listenerLock) {
-                    if (pendingListener != this) {
-                        return;
+                synchronized(listenerLock) {
+                    if (pendingListener !== this) {
+                        return
                     }
 
-                    pendingListener = null;
+                    pendingListener = null
                 }
 
-                listener.notifyDiscoveryFailure(new RuntimeException("onStartDiscoveryFailed(): " + errorCode));
+                listener.notifyDiscoveryFailure(
+                    RuntimeException("onStartDiscoveryFailed(): $errorCode")
+                )
             }
 
-            @Override
-            public void onStopDiscoveryFailed(String serviceType, int errorCode) {
-                LimeLog.severe("NSD: Service discovery stop failed: " + errorCode);
+            override fun onStopDiscoveryFailed(serviceType: String?, errorCode: Int) {
+                LimeLog.severe("NSD: Service discovery stop failed: $errorCode")
 
                 // This listener is no longer active after this failure
-                synchronized (listenerLock) {
-                    if (activeListener != this) {
-                        return;
+                synchronized(listenerLock) {
+                    if (activeListener !== this) {
+                        return
                     }
 
-                    activeListener = null;
+                    activeListener = null
                 }
             }
 
-            @Override
-            public void onDiscoveryStarted(String serviceType) {
-                LimeLog.info("NSD: Service discovery started");
+            override fun onDiscoveryStarted(serviceType: String?) {
+                LimeLog.info("NSD: Service discovery started")
 
-                synchronized (listenerLock) {
-                    if (pendingListener != this) {
-                        // If we registered another discovery listener in the meantime, stop this one
-                        nsdManager.stopServiceDiscovery(this);
-                        return;
+                synchronized(listenerLock) {
+                    if (pendingListener !== this) {
+                        // If we registered another discovery listener in the meantime, stop this
+                        // one
+                        nsdManager.stopServiceDiscovery(this)
+                        return
                     }
 
-                    pendingListener = null;
-                    activeListener = this;
+                    pendingListener = null
+                    activeListener = this
                 }
             }
 
-            @Override
-            public void onDiscoveryStopped(String serviceType) {
-                LimeLog.info("NSD: Service discovery stopped");
+            override fun onDiscoveryStopped(serviceType: String?) {
+                LimeLog.info("NSD: Service discovery stopped")
 
-                synchronized (listenerLock) {
-                    if (activeListener != this) {
-                        return;
+                synchronized(listenerLock) {
+                    if (activeListener !== this) {
+                        return
                     }
 
-                    activeListener = null;
+                    activeListener = null
                 }
             }
 
-            @Override
-            public void onServiceFound(NsdServiceInfo nsdServiceInfo) {
+            override fun onServiceFound(nsdServiceInfo: NsdServiceInfo) {
                 // Protect against racing stopDiscovery() call
-                synchronized (listenerLock) {
+                synchronized(listenerLock) {
                     // Ignore callbacks if we're not the active listener
-                    if (activeListener != this) {
-                        return;
+                    if (activeListener !== this) {
+                        return
                     }
 
-                    LimeLog.info("NSD: Machine appeared: " + nsdServiceInfo.getServiceName());
+                    LimeLog.info("NSD: Machine appeared: " + nsdServiceInfo.serviceName)
 
-                    NsdManager.ServiceInfoCallback serviceInfoCallback = new NsdManager.ServiceInfoCallback() {
-                        @Override
-                        public void onServiceInfoCallbackRegistrationFailed(int errorCode) {
-                            LimeLog.severe("NSD: Service info callback registration failed: " + errorCode);
-                            listener.notifyDiscoveryFailure(new RuntimeException("onServiceInfoCallbackRegistrationFailed(): " + errorCode));
+                    val serviceInfoCallback =
+                        object : NsdManager.ServiceInfoCallback {
+                            override fun onServiceInfoCallbackRegistrationFailed(errorCode: Int) {
+                                LimeLog.severe(
+                                    "NSD: Service info callback registration failed: $errorCode"
+                                )
+                                listener.notifyDiscoveryFailure(
+                                    RuntimeException(
+                                        "onServiceInfoCallbackRegistrationFailed(): $errorCode"
+                                    )
+                                )
+                            }
+
+                            override fun onServiceUpdated(serviceInfo: NsdServiceInfo) {
+                                LimeLog.info("NSD: Machine resolved: " + serviceInfo.serviceName)
+                                reportNewComputer(
+                                    serviceInfo.serviceName,
+                                    serviceInfo.port,
+                                    serviceInfo.hostAddresses
+                                        .filterIsInstance<Inet4Address>()
+                                        .toTypedArray(),
+                                    serviceInfo.hostAddresses
+                                        .filterIsInstance<Inet6Address>()
+                                        .toTypedArray(),
+                                )
+                            }
+
+                            override fun onServiceLost() = Unit
+
+                            override fun onServiceInfoCallbackUnregistered() = Unit
                         }
 
-                        @Override
-                        public void onServiceUpdated(NsdServiceInfo nsdServiceInfo) {
-                            LimeLog.info("NSD: Machine resolved: " + nsdServiceInfo.getServiceName());
-                            reportNewComputer(nsdServiceInfo.getServiceName(), nsdServiceInfo.getPort(),
-                                    getV4Addrs(nsdServiceInfo.getHostAddresses()),
-                                    getV6Addrs(nsdServiceInfo.getHostAddresses()));
-                        }
-
-                        @Override
-                        public void onServiceLost() {
-                        }
-
-                        @Override
-                        public void onServiceInfoCallbackUnregistered() {
-                        }
-                    };
-
-                    nsdManager.registerServiceInfoCallback(nsdServiceInfo, executor, serviceInfoCallback);
-                    serviceCallbacks.put(nsdServiceInfo.getServiceName(), serviceInfoCallback);
+                    nsdManager.registerServiceInfoCallback(
+                        nsdServiceInfo,
+                        executor,
+                        serviceInfoCallback,
+                    )
+                    serviceCallbacks[nsdServiceInfo.serviceName] = serviceInfoCallback
                 }
             }
 
-            @Override
-            public void onServiceLost(NsdServiceInfo nsdServiceInfo) {
+            override fun onServiceLost(nsdServiceInfo: NsdServiceInfo) {
                 // Protect against racing stopDiscovery() call
-                synchronized (listenerLock) {
+                synchronized(listenerLock) {
                     // Ignore callbacks if we're not the active listener
-                    if (activeListener != this) {
-                        return;
+                    if (activeListener !== this) {
+                        return
                     }
 
-                    LimeLog.info("NSD: Machine lost: " + nsdServiceInfo.getServiceName());
+                    LimeLog.info("NSD: Machine lost: " + nsdServiceInfo.serviceName)
 
-                    NsdManager.ServiceInfoCallback serviceInfoCallback = serviceCallbacks.remove(nsdServiceInfo.getServiceName());
+                    val serviceInfoCallback = serviceCallbacks.remove(nsdServiceInfo.serviceName)
                     if (serviceInfoCallback != null) {
-                        nsdManager.unregisterServiceInfoCallback(serviceInfoCallback);
+                        nsdManager.unregisterServiceInfoCallback(serviceInfoCallback)
                     }
                 }
             }
-        };
-    }
+        }
 
-    public NsdManagerDiscoveryAgent(Context context, MdnsDiscoveryListener listener) {
-        super(listener);
-        this.nsdManager = context.getSystemService(NsdManager.class);
-    }
-
-    @Override
-    public void startDiscovery(int discoveryIntervalMs) {
-        synchronized (listenerLock) {
-            // Register a new service discovery listener if there's not already one starting or running
+    override fun startDiscovery(discoveryIntervalMs: Int) {
+        synchronized(listenerLock) {
+            // Register a new service discovery listener if there's not already one starting or
+            // running
             if (pendingListener == null && activeListener == null) {
-                pendingListener = createDiscoveryListener();
-                nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, pendingListener);
+                val discoveryListener = createDiscoveryListener()
+                pendingListener = discoveryListener
+                nsdManager.discoverServices(
+                    SERVICE_TYPE,
+                    NsdManager.PROTOCOL_DNS_SD,
+                    discoveryListener,
+                )
             }
         }
     }
 
-    @Override
-    public void stopDiscovery() {
+    override fun stopDiscovery() {
         // Protect against racing ServiceInfoCallback and DiscoveryListener callbacks
-        synchronized (listenerLock) {
+        synchronized(listenerLock) {
             // Clear any pending listener to ensure the discoverStarted() callback
             // will realize it's gone and stop itself.
-            pendingListener = null;
+            pendingListener = null
 
             // Unregister the service discovery listener
-            if (activeListener != null) {
-                nsdManager.stopServiceDiscovery(activeListener);
+            val running = activeListener
+            if (running != null) {
+                nsdManager.stopServiceDiscovery(running)
 
                 // Even though listener stoppage is asynchronous, the listener is gone as far as
                 // we're concerned. We null this right now to ensure pending callbacks know it's
                 // stopped and startDiscovery() can immediately create a new listener. If we left
                 // it until onDiscoveryStopped() was called, startDiscovery() would get confused
                 // and assume a listener was already running, even though it's stopping.
-                activeListener = null;
+                activeListener = null
             }
 
             // Unregister all service info callbacks
-            for (NsdManager.ServiceInfoCallback callback : serviceCallbacks.values()) {
-                nsdManager.unregisterServiceInfoCallback(callback);
+            for (callback in serviceCallbacks.values) {
+                nsdManager.unregisterServiceInfoCallback(callback)
             }
-            serviceCallbacks.clear();
+            serviceCallbacks.clear()
         }
     }
 
-    private static Inet4Address[] getV4Addrs(List<InetAddress> addrs) {
-        int matchCount = 0;
-        for (InetAddress addr : addrs) {
-            if (addr instanceof Inet4Address) {
-                matchCount++;
-            }
-        }
-
-        Inet4Address[] matching = new Inet4Address[matchCount];
-
-        int i = 0;
-        for (InetAddress addr : addrs) {
-            if (addr instanceof Inet4Address) {
-                matching[i++] = (Inet4Address) addr;
-            }
-        }
-
-        return matching;
-    }
-
-    private static Inet6Address[] getV6Addrs(List<InetAddress> addrs) {
-        int matchCount = 0;
-        for (InetAddress addr : addrs) {
-            if (addr instanceof Inet6Address) {
-                matchCount++;
-            }
-        }
-
-        Inet6Address[] matching = new Inet6Address[matchCount];
-
-        int i = 0;
-        for (InetAddress addr : addrs) {
-            if (addr instanceof Inet6Address) {
-                matching[i++] = (Inet6Address) addr;
-            }
-        }
-
-        return matching;
+    private companion object {
+        private const val SERVICE_TYPE = "_nvstream._tcp"
     }
 }

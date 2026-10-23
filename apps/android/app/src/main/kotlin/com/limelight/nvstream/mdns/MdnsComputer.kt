@@ -1,71 +1,30 @@
-package com.limelight.nvstream.mdns;
+package com.limelight.nvstream.mdns
 
-import java.net.Inet6Address;
-import java.net.InetAddress;
+import java.net.Inet6Address
+import java.net.InetAddress
+import java.util.Objects
 
-public class MdnsComputer {
-    private InetAddress localAddr;
-    private Inet6Address v6Addr;
-    private int port;
-    private String name;
+class MdnsComputer(
+    val name: String?,
+    val localAddress: InetAddress?,
+    val ipv6Address: Inet6Address?,
+    val port: Int,
+) {
+    // A computer with no name throws a NullPointerException here, as the Java did.
+    override fun hashCode(): Int = Objects.requireNonNull(name).hashCode()
 
-    public MdnsComputer(String name, InetAddress localAddress, Inet6Address v6Addr, int port) {
-        this.name = name;
-        this.localAddr = localAddress;
-        this.v6Addr = v6Addr;
-        this.port = port;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public InetAddress getLocalAddress() {
-        return localAddr;
-    }
-
-    public Inet6Address getIpv6Address() {
-        return v6Addr;
-    }
-
-    public int getPort() {
-        return port;
-    }
-
-    @Override
-    public int hashCode() {
-        return name.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof MdnsComputer) {
-            MdnsComputer other = (MdnsComputer)o;
-
-            if (!other.name.equals(name) || other.port != port) {
-                return false;
-            }
-
-            if ((other.localAddr != null && localAddr == null) ||
-                    (other.localAddr == null && localAddr != null) ||
-                    (other.localAddr != null && !other.localAddr.equals(localAddr))) {
-                return false;
-            }
-
-            if ((other.v6Addr != null && v6Addr == null) ||
-                    (other.v6Addr == null && v6Addr != null) ||
-                    (other.v6Addr != null && !other.v6Addr.equals(v6Addr))) {
-                return false;
-            }
-
-            return true;
+    override fun equals(other: Any?): Boolean {
+        if (other !is MdnsComputer) {
+            return false
         }
 
-        return false;
+        // The name of the other computer is dereferenced, so a missing one throws, as in the Java.
+        if (Objects.requireNonNull(other.name) != name || other.port != port) {
+            return false
+        }
+
+        return other.localAddress == localAddress && other.ipv6Address == ipv6Address
     }
 
-    @Override
-    public String toString() {
-        return "["+name+" - "+localAddr+" - "+v6Addr+"]";
-    }
+    override fun toString(): String = "[$name - $localAddress - $ipv6Address]"
 }

@@ -1,149 +1,188 @@
-package com.limelight.nvstream.wol;
+package com.limelight.nvstream.wol
 
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.util.Scanner;
+import com.limelight.LimeLog
+import com.limelight.nvstream.http.ComputerDetails
+import java.io.IOException
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+import java.util.Scanner
 
-import com.limelight.LimeLog;
-import com.limelight.nvstream.http.ComputerDetails;
-
-public class WakeOnLanSender {
+object WakeOnLanSender {
     // These ports will always be tried as-is.
-    private static final int[] STATIC_PORTS_TO_TRY = new int[] {
-        9, // Standard WOL port (privileged port)
-        47009, // Port opened by Moonlight Internet Hosting Tool for WoL (non-privileged port)
-    };
+
+    // Standard WOL port (privileged port)
+    private const val STANDARD_WOL_PORT = 9
+
+    // Port opened by Moonlight Internet Hosting Tool for WoL (non-privileged port)
+    private const val HOSTING_TOOL_WOL_PORT = 47009
+    private val STATIC_PORTS_TO_TRY = intArrayOf(STANDARD_WOL_PORT, HOSTING_TOOL_WOL_PORT)
 
     // These ports will be offset by the base port number (47989) to support alternate ports.
-    private static final int[] DYNAMIC_PORTS_TO_TRY = new int[] {
-        47998, 47999, 48000, 48002, 48010, // Ports opened by GFE
-    };
+    private const val BASE_PORT = 47989
 
-    private static void sendPacketsForAddress(InetAddress address, int httpPort, DatagramSocket sock, byte[] payload) throws IOException {
-        IOException lastException = null;
-        boolean sentWolPacket = false;
+    // Ports opened by GFE
+    private const val GFE_PORT_47998 = 47998
+    private const val GFE_PORT_47999 = 47999
+    private const val GFE_PORT_48000 = 48000
+    private const val GFE_PORT_48002 = 48002
+    private const val GFE_PORT_48010 = 48010
+    private val DYNAMIC_PORTS_TO_TRY =
+        intArrayOf(GFE_PORT_47998, GFE_PORT_47999, GFE_PORT_48000, GFE_PORT_48002, GFE_PORT_48010)
+
+    private const val MAC_ADDRESS_BYTES = 6
+    private const val MAC_ADDRESS_REPETITIONS = 16
+    private const val PAYLOAD_BYTES = 102
+    private const val HEX_RADIX = 16
+
+    // The stack traces go to the standard error stream, as in the inherited Java. Logging them
+    // instead is a behaviour change (Sprint 12 backlog).
+    @Suppress("PrintStackTrace")
+    private fun sendPacketsForAddress(
+        address: InetAddress,
+        httpPort: Int,
+        sock: DatagramSocket,
+        payload: ByteArray,
+    ) {
+        var lastException: IOException? = null
+        var sentWolPacket = false
 
         // Try the static ports
-        for (int port : STATIC_PORTS_TO_TRY) {
+        for (port in STATIC_PORTS_TO_TRY) {
             try {
-                DatagramPacket dp = new DatagramPacket(payload, payload.length);
-                dp.setAddress(address);
-                dp.setPort(port);
-                sock.send(dp);
-                sentWolPacket = true;
-            } catch (IOException e) {
-                e.printStackTrace();
-                lastException = e;
+                val dp = DatagramPacket(payload, payload.size)
+                dp.address = address
+                dp.port = port
+                sock.send(dp)
+                sentWolPacket = true
+            } catch (e: IOException) {
+                e.printStackTrace()
+                lastException = e
             }
         }
 
         // Try the dynamic ports
-        for (int port : DYNAMIC_PORTS_TO_TRY) {
+        for (port in DYNAMIC_PORTS_TO_TRY) {
             try {
-                DatagramPacket dp = new DatagramPacket(payload, payload.length);
-                dp.setAddress(address);
-                dp.setPort((port - 47989) + httpPort);
-                sock.send(dp);
-                sentWolPacket = true;
-            } catch (IOException e) {
-                e.printStackTrace();
-                lastException = e;
+                val dp = DatagramPacket(payload, payload.size)
+                dp.address = address
+                dp.port = (port - BASE_PORT) + httpPort
+                sock.send(dp)
+                sentWolPacket = true
+            } catch (e: IOException) {
+                e.printStackTrace()
+                lastException = e
             }
         }
 
         if (!sentWolPacket) {
-            throw lastException;
+            throw checkNotNull(lastException)
         }
     }
-    
-    public static void sendWolPacket(ComputerDetails computer) throws IOException {
-        byte[] payload = createWolPayload(computer);
-        IOException lastException = null;
-        boolean sentWolPacket = false;
 
-        try (final DatagramSocket sock = new DatagramSocket(0)) {
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    // The stack traces go to the standard error stream, as in the inherited Java. Logging them
+    // instead is a behaviour change (Sprint 12 backlog).
+    @JvmStatic
+    @Throws(IOException::class)
+    @Suppress("NestedBlockDepth", "PrintStackTrace")
+    fun sendWolPacket(computer: ComputerDetails) {
+        val payload = createWolPayload(computer)
+        var lastException: IOException? = null
+        var sentWolPacket = false
+
+        DatagramSocket(0).use { sock ->
             // Try all resolved remote and local addresses and broadcast addresses.
             // The broadcast address is required to avoid stale ARP cache entries
             // making the sleeping machine unreachable.
-            for (ComputerDetails.AddressTuple address : new ComputerDetails.AddressTuple[] {
-                    computer.localAddress, computer.remoteAddress,
-                    computer.manualAddress, computer.ipv6Address,
-            }) {
+            val addresses =
+                arrayOf(
+                    computer.localAddress,
+                    computer.remoteAddress,
+                    computer.manualAddress,
+                    computer.ipv6Address,
+                )
+            for (address in addresses) {
                 if (address == null) {
-                    continue;
+                    continue
                 }
 
                 try {
-                    sendPacketsForAddress(InetAddress.getByName("255.255.255.255"), address.port, sock, payload);
-                    sentWolPacket = true;
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    lastException = e;
+                    sendPacketsForAddress(
+                        InetAddress.getByName("255.255.255.255"),
+                        address.port,
+                        sock,
+                        payload,
+                    )
+                    sentWolPacket = true
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                    lastException = e
                 }
 
                 try {
-                    for (InetAddress resolvedAddress : InetAddress.getAllByName(address.address)) {
+                    for (resolvedAddress in InetAddress.getAllByName(address.address)) {
                         try {
-                            sendPacketsForAddress(resolvedAddress, address.port, sock, payload);
-                            sentWolPacket = true;
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            lastException = e;
+                            sendPacketsForAddress(resolvedAddress, address.port, sock, payload)
+                            sentWolPacket = true
+                        } catch (e: IOException) {
+                            e.printStackTrace()
+                            lastException = e
                         }
                     }
-                } catch (IOException e) {
+                } catch (e: IOException) {
                     // We may have addresses that don't resolve on this subnet,
                     // but don't throw and exit the whole function if that happens.
                     // We'll throw it at the end if we didn't send a single packet.
-                    e.printStackTrace();
-                    lastException = e;
+                    e.printStackTrace()
+                    lastException = e
                 }
             }
         }
 
         // Propagate the DNS resolution exception if we didn't
         // manage to get a single packet out to the host.
-        if (!sentWolPacket && lastException != null) {
-            throw lastException;
+        val failure = lastException
+        if (!sentWolPacket && failure != null) {
+            throw failure
         }
     }
-    
-    private static byte[] macStringToBytes(String macAddress) {
-        byte[] macBytes = new byte[6];
 
-        try (@SuppressWarnings("resource")
-             final Scanner scan = new Scanner(macAddress).useDelimiter(":")
-        ) {
-            for (int i = 0; i < macBytes.length && scan.hasNext(); i++) {
+    private fun macStringToBytes(macAddress: String?): ByteArray {
+        val macBytes = ByteArray(MAC_ADDRESS_BYTES)
+
+        Scanner(macAddress).useDelimiter(":").use { scan ->
+            var i = 0
+            while (i < macBytes.size && scan.hasNext()) {
                 try {
-                    macBytes[i] = (byte) Integer.parseInt(scan.next(), 16);
-                } catch (NumberFormatException e) {
-                    LimeLog.warning("Malformed MAC address: " + macAddress + " (index: " + i + ")");
-                    break;
+                    macBytes[i] = scan.next().toInt(HEX_RADIX).toByte()
+                } catch (e: NumberFormatException) {
+                    LimeLog.warning("Malformed MAC address: $macAddress (index: $i)")
+                    break
                 }
+                i++
             }
-            return macBytes;
+            return macBytes
         }
     }
-    
-    private static byte[] createWolPayload(ComputerDetails computer) {
-        byte[] payload = new byte[102];
-        byte[] macAddress = macStringToBytes(computer.macAddress);
-        int i;
-        
+
+    private fun createWolPayload(computer: ComputerDetails): ByteArray {
+        val payload = ByteArray(PAYLOAD_BYTES)
+        val macAddress = macStringToBytes(computer.macAddress)
+        var i = 0
+
         // 6 bytes of FF
-        for (i = 0; i < 6; i++) {
-            payload[i] = (byte)0xFF;
+        while (i < MAC_ADDRESS_BYTES) {
+            payload[i] = 0xFF.toByte()
+            i++
         }
-        
+
         // 16 repetitions of the MAC address
-        for (int j = 0; j < 16; j++) {
-            System.arraycopy(macAddress, 0, payload, i, macAddress.length);
-            i += macAddress.length;
+        repeat(MAC_ADDRESS_REPETITIONS) {
+            System.arraycopy(macAddress, 0, payload, i, macAddress.size)
+            i += macAddress.size
         }
-        
-        return payload;
+
+        return payload
     }
 }

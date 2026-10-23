@@ -56,6 +56,12 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import org.xmlpull.v1.XmlPullParserException
 
+// The markers that sat on the import groups of the Java, which ktfmt sorts together:
+// BOREALIS: standard UTF-8 for typed text (stream.keyframe): StartFailureLog and Utf8Text
+// BOREALIS: typed failure causes (host.failure): CauseKind, FailureCauses, StartSteps and
+// CertificateMismatchException
+// BOREALIS: LuminalShine launch retries (host.launch): the host.launch imports
+
 // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
 // The stack traces that the Java prints to stderr and the RuntimeException that wraps the cause of
 // a missing AES provider stay as they were: PrintStackTrace and TooGenericExceptionThrown are
@@ -618,8 +624,8 @@ open class NvConnection(
 
     fun start(
         audioRenderer: AudioRenderer?,
-        videoDecoderRenderer: VideoDecoderRenderer,
-        connectionListener: NvConnectionListener,
+        videoDecoderRenderer: VideoDecoderRenderer?,
+        connectionListener: NvConnectionListener?,
     ) {
         Thread { runStart(audioRenderer, videoDecoderRenderer, connectionListener) }.start()
     }
@@ -629,11 +635,12 @@ open class NvConnection(
     @Suppress("LongMethod", "ReturnCount")
     private fun runStart(
         audioRenderer: AudioRenderer?,
-        videoDecoderRenderer: VideoDecoderRenderer,
-        connectionListener: NvConnectionListener,
+        videoDecoderRenderer: VideoDecoderRenderer?,
+        connectionListener: NvConnectionListener?,
     ) {
         context.connListener = connectionListener
-        context.videoCapabilities = videoDecoderRenderer.getCapabilities()
+        // A null renderer or listener fails here, in the thread, at its first use, as in the Java.
+        context.videoCapabilities = checkNotNull(videoDecoderRenderer).getCapabilities()
 
         val appName = checkNotNull(checkNotNull(context.streamConfig).app).appName
 
@@ -642,7 +649,8 @@ open class NvConnection(
         launchRetried = false // BOREALIS
         startStep = StartSteps.SERVER_INFO // BOREALIS
 
-        context.listener.stageStarting(appName)
+        val listener = context.listener
+        listener.stageStarting(appName)
 
         try {
             if (!startApp()) {
@@ -702,7 +710,7 @@ open class NvConnection(
             MoonBridge.setupBridge(
                 videoDecoderRenderer,
                 audioRenderer,
-                HeldStageFailures(connectionListener, collisions),
+                HeldStageFailures(listener, collisions),
             )
             val streamConfig = checkNotNull(context.streamConfig)
             val ret =

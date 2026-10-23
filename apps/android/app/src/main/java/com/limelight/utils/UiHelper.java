@@ -8,8 +8,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Build;
-import android.view.View;
-import android.view.WindowInsets;
 
 import com.limelight.Game;
 import com.limelight.R;
@@ -55,23 +53,6 @@ public class UiHelper {
 
     public static void notifyStreamEnded(Context context) {
         setGameModeStatus(context, false, false);
-    }
-
-    public static void applyStatusBarPadding(View view) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // This applies the padding that we omitted in notifyNewRootView() on Q
-            view.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
-                @Override
-                public WindowInsets onApplyWindowInsets(View view, WindowInsets windowInsets) {
-                    view.setPadding(view.getPaddingLeft(),
-                            view.getPaddingTop(),
-                            view.getPaddingRight(),
-                            windowInsets.getTappableElementInsets().bottom);
-                    return windowInsets;
-                }
-            });
-            view.requestApplyInsets();
-        }
     }
 
     public static void showDecoderCrashDialog(Activity activity) {

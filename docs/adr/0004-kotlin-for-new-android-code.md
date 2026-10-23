@@ -6,6 +6,10 @@ decision-makers: João Pedro Magalhães
 
 # 0004 Use Kotlin for new Android code
 
+> **Note (2026-10-23):** The rule about inherited Java in this ADR, "upstream Java untouched", is changed by
+> [ADR 0054](0054-declare-independence-from-moonlight.md) and [ADR 0059](0059-convert-the-inherited-java-to-kotlin.md).
+> The inherited code is Borealis code, and it is converted to Kotlin under ADR 0059. The rule for new code stays.
+
 ## Context and Problem Statement
 
 Upstream Moonlight Android is written in Java. Which language should new Android code use, and what happens to the upstream Java?

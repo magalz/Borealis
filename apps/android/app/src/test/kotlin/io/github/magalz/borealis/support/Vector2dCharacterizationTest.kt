@@ -111,6 +111,17 @@ class Vector2dCharacterizationTest {
     }
 
     @Test
+    fun `a component that float division would round differently is rounded from the double quotient`() {
+        val into = Vector2d()
+
+        vector(2.6377461f, -2.4493098f).getNormalized(into)
+
+        // 2.6377461 / 3.5995587... is 0.7327970862 in double; a float division gives 0.73279703.
+        assertThat(into.x).isEqualTo(0.73279709f)
+        assertThat(into.y).isEqualTo(-0.68044722f)
+    }
+
+    @Test
     fun `a negative component stays negative when normalized`() {
         val into = Vector2d()
 
@@ -186,6 +197,17 @@ class Vector2dCharacterizationTest {
     }
 
     @Test
+    fun `the factor is not narrowed to float before the product`() {
+        val vector = vector(3f, 7f)
+
+        vector.scalarMultiply(0.3)
+
+        // In float, 3 * 0.3f is 0.90000004 and 7 * 0.3f is 2.1000001.
+        assertThat(vector.x).isEqualTo(0.9f)
+        assertThat(vector.y).isEqualTo(2.1f)
+    }
+
+    @Test
     fun `a product that does not fit a float becomes infinite`() {
         val vector = vector(1f, -1f)
 
@@ -251,6 +273,9 @@ class Vector2dCharacterizationTest {
     @Test
     fun `the zero vector can be changed, and then it is changed for everybody`() {
         val zero = Vector2d.ZERO
+        // Whatever test ran before restored it: it is the origin when this one starts.
+        assertThat(zero.x).isEqualTo(0f)
+        assertThat(zero.y).isEqualTo(0f)
         try {
             zero.initialize(1f, 2f)
 

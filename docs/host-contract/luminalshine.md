@@ -8,7 +8,8 @@ the compatibility table. PyroWave is covered separately in
 [pyrowave.md](pyrowave.md).
 
 The items marked **Changed in 26.10.0-beta.1** come from the 26.10.0-beta.1
-release notes (2026-10-20) and were verified in the host source at
+release notes (2026-10-20), except the Web UI `POST /api/apps/import` note, which comes from the
+commit history, and were verified in the host source at
 `NortheBridge/luminalshine@46f6936d` (2026-10-22, `git describe`:
 `26.09.1-38-g46f6936d`), a later commit than the revision above. The `src/`
 references inside those items are lines at `46f6936d`, not at `5afdbdc6`, and
@@ -261,7 +262,7 @@ that failure deletes the session (`fail_pair`, `src/nvhttp.cpp:1929-1945`), so t
 attempt after it succeeds. The automatic restart turns this into one extra PIN
 dialog instead of a raw error.
 
-**Changed in 26.10.0-beta.1.** Seen live on 2026-10-21 and verified in source at
+**Changed since 26.09.1 (in the 26.10.0-beta.1 release).** Seen live on 2026-10-21 and verified in source at
 `46f6936d`. The behaviour is the pairing rework `e31d66e9` (PR #188, 2026-10-01).
 The `26.09.1` tag does not contain it (the tag has no 409 `Pairing exchange already
 in progress`); `5afdbdc6` and every later commit do. `pair`, `fail_pair`,
@@ -591,6 +592,7 @@ host guarantee. `ping_timeout` is 10 s by default (`src/config.cpp:844`).
 | 503 | `Failed to prepare the client virtual display.` | launch `src/nvhttp.cpp:3006`; resume `3382` | Building the display request failed for a virtual-display session | Limited retries (1 to 2), then show the message |
 | 503 | `Windows did not activate the virtual display.`, `Windows did not apply the requested virtual-display mode.`, `The virtual display activated, but its capture ring did not begin publishing frames.`, `The Windows display helper was unavailable.`, or `Display configuration failed.` | launch `src/nvhttp.cpp:3019-3021`; resume `3393-3395`; strings `src/platform/windows/display_helper_integration.cpp:1802-1816` | Mandatory virtual-display apply or readiness check failed | Limited retries (1 to 2); on repeat, show the message; a retry with a different mode is a reasonable manual action |
 | 503 | `Failed to initialize video capture/encoding. Is a display connected and turned on?` | launch `src/nvhttp.cpp:3084-3085`; resume `3453-3454` | The pre-stream encoder probe failed | Limited retries (1 to 2), then show the message |
+| 503 | `The host is shutting down.` | launch and resume, `src/nvhttp.cpp:3681-3690` at `46f6936d` (26.10.0-beta.1) | The request reached the launch worker after the host began to shut down | No retry; show the message. Borealis today treats an unknown 503 as a capture or display failure and retries once after 3 s (`core/src/launch.cpp:22-44`); that one retry is harmless |
 | 503 | `No running app to resume` | resume `src/nvhttp.cpp:3244-3245` | `/resume` with no app running | Do not retry; re-read `/serverinfo` and call `/launch` |
 | 403 | `Encryption is mandatory for this host but unsupported by the client` | launch `src/nvhttp.cpp:3096-3097`; resume `3464-3465` | The host's LAN or WAN encryption policy is mandatory and the client did not send `corever` of 1 or more | No retry; this is a client defect or an outdated protocol library |
 | 404 | `Failed to start the specified application` | launch `src/nvhttp.cpp:3111-3113` (code is the return value of `proc::execute`) | Unknown `appid` returns 404 (`src/process.cpp:1104-1109`) | No retry; refresh `/applist` |

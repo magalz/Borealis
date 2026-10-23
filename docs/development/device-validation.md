@@ -98,11 +98,12 @@ capture that is committed.
    `/serverinfo` does not carry the release version (contract section 1 and
    proposal P1), so the version in the Host details dialog is the protocol
    version `7.1.431.-1`, not `26.09.1`. On 26.10.0-beta.1 the HTTPS
-   `/serverinfo` carries `LuminalShineVersion` (#199; reported in its release
-   notes, not yet verified in the source). The client does not show it yet
+   `/serverinfo` carries `LuminalShineVersion` (#199; verified in the source at
+   `46f6936d`, see the [host contract](../host-contract/luminalshine.md)). The client does not show it yet
    (Sprint 17), so Host details still shows `7.1.431.-1` there too, and must
    show no error because of the new field. The Sprint 10 checks (section 3.23)
-   run against 26.10.0-beta.1, which has no fixtures folder yet.
+   run against 26.10.0-beta.1; its plain-HTTP captures are in
+   `core/tests/fixtures/luminalshine/26.10.0-beta.1/`.
 3. Open `https://<host>:47990` (the Web UI) in a browser on the PC and check
    that it loads. Accept a self-signed certificate warning if the browser shows
    one. `TODO(verify)`: whether the browser warning appears.

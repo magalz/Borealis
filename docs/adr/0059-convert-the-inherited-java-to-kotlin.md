@@ -47,8 +47,12 @@ without edits. The rules are numbered so that each conversion brief can point to
    3. The package and every class name stay the same. `com.limelight` is not renamed, and
       `com.limelight.nvstream.jni.MoonBridge` stays Java.
    4. `// BOREALIS:` markers and upstream licence headers are kept as they are.
+   5. Several files may move in one rename commit when the next commit converts exactly those files.
+      The conversion commit also makes the Kotlin callers compile.
+   6. ktfmt formats the new Kotlin file. The rule against reformatting inherited files applies to the
+      Java that stays.
 2. **The Java-facing API.** Until the last Java caller is converted, the Kotlin code keeps the API that
-   Java uses:
+   Java uses, so that no Java file needs an edit unless the task brief says so:
    1. public fields use `@JvmField`, with the same name;
    2. constants use `const val`, so that Java can use them as `case` labels;
    3. static members use a `companion object` with `@JvmStatic` or `@JvmField`, or an `object`;
@@ -104,8 +108,16 @@ without edits. The rules are numbered so that each conversion brief can point to
 7. **Coverage.** Converted code counts in Kover coverage from the first conversion. The exclusion for
    `com.limelight.*` is narrowed to the Java that stays: `com.limelight.Game*`,
    `com.limelight.binding.input.*`, `com.limelight.binding.video.*`, `com.limelight.binding.audio.*` and
-   `com.limelight.nvstream.jni.*`. There is no coverage floor.
-8. **Dead code.** Code that is verified as dead is removed before the conversion. Each removal has its own
+   `com.limelight.nvstream.jni.*`. In Codecov, the converted path
+   (`apps/android/app/src/main/kotlin/com/limelight/`) gets its own patch and project statuses,
+   separate from the 90% gate of [ADR 0049](0049-coverage-gate.md), which keeps applying to the rest.
+   Their target is set at the end of Sprint 12 from the measured coverage of the converted code, and
+   it rises each sprint until it reaches 90% at the end of the migration. Each migration sprint is
+   merged on its own, as before.
+8. **Dead code.** Code that is verified as dead, and that the task brief lists, is removed before the
+   conversion. In Sprint 12 these are the three `LegacyDatabaseReader` classes, which read
+   `computers.db`, `computers2.db` and `computers3.db`, databases of old Moonlight versions that never
+   exist under Borealis's application id `io.github.magalz.borealis`, and unused helpers. Each removal has its own
    `refactor: remove <what>` commit, and the commit message gives the evidence: the callers searched in
    Java, Kotlin, XML, the manifest, reflection and tests. The build passes after each removal.
 9. **Commit order and tests.** Each conversion starts with characterization tests (`test: characterize
@@ -113,13 +125,15 @@ without edits. The rules are numbered so that each conversion brief can point to
    fail when the Java is broken on purpose. The owner's rule of a failing test before the implementation
    applies to behaviour changes, and a conversion has none.
 10. **Behaviour changes are out of scope.** A bug found during a conversion is reported and goes to the
-    backlog. A conversion does not fix it, rename members unless Kotlin forces it, or add new abstractions.
+    backlog. A conversion does not fix it, rename members unless Kotlin forces it, or add new abstractions,
+    coroutines, Flow or Hilt injection.
 
 ### Consequences
 
 * Good, because the converted code is covered by the same static analysis and coverage as the Kotlin
   code written in Borealis.
-* Good, because the file history is kept, and blame still shows the Java author of each line.
+* Good, because the file history is kept: `git log --follow` and blame can follow each file back to
+  its Java history.
 * Good, because the Java that stays needs no edits, and the JNI signatures stay the same.
 * Good, because each conversion is checked against the Java code by characterization tests and by the
   `javap` comparison.
@@ -162,7 +176,7 @@ without edits. The rules are numbered so that each conversion brief can point to
 
 * Good, because nothing in the inherited code changes.
 * Bad, because the Java code keeps the static analysis and the null safety of Kotlin out of reach, and
-  the migration of ADR 0004 does not reach the code that ships.
+  the migration that ADR 0054 allows does not reach the code that ships.
 
 ## More Information
 
@@ -171,5 +185,6 @@ without edits. The rules are numbered so that each conversion brief can point to
   Java is Borealis code and is converted under the rules above. The Java that is still in use stays Java
   until Sprints 13 and 14.
 * Related: [0054](0054-declare-independence-from-moonlight.md) (inherited code is Borealis code).
+* Related: [0049](0049-coverage-gate.md) (the coverage gate that rule 7 amends for converted code).
 * Related: [roadmap, Kotlin migration (Sprints 12 to 14)](../roadmap.md#kotlin-migration-sprints-12-to-14).
 * Related: [characterization tests for inherited code](../development/tdd.md#characterization-tests-for-inherited-code).

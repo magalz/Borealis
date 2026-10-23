@@ -149,14 +149,14 @@ class ComputerDatabaseManagerCharacterizationTest {
     fun `a host that the Java build saved is found by its uuid`() {
         val manager = openFixture()
 
-        FIXTURE_HOSTS.forEach { host -> assertStored(manager.getComputerByUUID(host.uuid), host) }
+        FIXTURE_HOSTS.forEach { host -> assertStored(manager.getComputerByUUID(host.uuid)!!, host) }
     }
 
     @Test
     fun `a host that the Java build saved is found by its name`() {
         val manager = openFixture()
 
-        FIXTURE_HOSTS.forEach { host -> assertStored(manager.getComputerByName(host.name), host) }
+        FIXTURE_HOSTS.forEach { host -> assertStored(manager.getComputerByName(host.name)!!, host) }
     }
 
     @Test
@@ -392,8 +392,8 @@ class ComputerDatabaseManagerCharacterizationTest {
             details(uuid = "local", local = AddressTuple("192.0.2.1", 41235), manual = AddressTuple("h.test", 41236))
         )
 
-        assertThat(manager.getComputerByUUID("remote").externalPort).isEqualTo(41234)
-        assertThat(manager.getComputerByUUID("local").externalPort).isEqualTo(NvHTTP.DEFAULT_HTTP_PORT)
+        assertThat(manager.getComputerByUUID("remote")!!.externalPort).isEqualTo(41234)
+        assertThat(manager.getComputerByUUID("local")!!.externalPort).isEqualTo(NvHTTP.DEFAULT_HTTP_PORT)
         assertThat(NvHTTP.DEFAULT_HTTP_PORT).isEqualTo(47989)
     }
 
@@ -429,13 +429,13 @@ class ComputerDatabaseManagerCharacterizationTest {
 
         assertThat(saved).isTrue()
         assertThat(raw { it.rows("SELECT typeof(ServerCert) FROM Computers") }).containsExactly(listOf("null"))
-        assertThat(manager.getComputerByUUID("u-1").serverCert).isNull()
+        assertThat(manager.getComputerByUUID("u-1")!!.serverCert).isNull()
     }
 
     @Test
     fun `deleting a host removes the row of its uuid and no other`() {
         val manager = openFixture()
-        val doomed = manager.getComputerByUUID(FIXTURE_HOSTS[1].uuid)
+        val doomed = manager.getComputerByUUID(FIXTURE_HOSTS[1].uuid)!!
 
         manager.deleteComputer(doomed)
 
@@ -484,7 +484,7 @@ class ComputerDatabaseManagerCharacterizationTest {
         manager.updateComputer(details(uuid = "u-1", name = "Same"))
         manager.updateComputer(details(uuid = "u-2", name = "Same"))
 
-        assertThat(manager.getComputerByName("Same").uuid).isEqualTo("u-1")
+        assertThat(manager.getComputerByName("Same")!!.uuid).isEqualTo("u-1")
     }
 
     @Test
@@ -550,7 +550,7 @@ class ComputerDatabaseManagerCharacterizationTest {
         insertRaw("u-3", "Good too", "{}")
 
         assertThrows(RuntimeException::class.java) { manager.getAllComputers() }
-        assertThat(manager.getComputerByUUID("u-1").name).isEqualTo("Good")
+        assertThat(manager.getComputerByUUID("u-1")!!.name).isEqualTo("Good")
     }
 
     @Test
@@ -585,7 +585,7 @@ class ComputerDatabaseManagerCharacterizationTest {
         val manager = open()
         insertRaw("u-1", "Text port", """{"local":{"address":"192.0.2.1","port":"47990"}}""")
 
-        assertThat(manager.getComputerByUUID("u-1").localAddress).isEqualTo(AddressTuple("192.0.2.1", 47990))
+        assertThat(manager.getComputerByUUID("u-1")!!.localAddress).isEqualTo(AddressTuple("192.0.2.1", 47990))
     }
 
     @Test
@@ -593,7 +593,7 @@ class ComputerDatabaseManagerCharacterizationTest {
         val manager = open()
         insertRaw("u-1", "Bracketed", """{"ipv6":{"address":"[2001:db8::2]","port":47989}}""")
 
-        assertThat(manager.getComputerByUUID("u-1").ipv6Address).isEqualTo(AddressTuple("2001:db8::2", 47989))
+        assertThat(manager.getComputerByUUID("u-1")!!.ipv6Address).isEqualTo(AddressTuple("2001:db8::2", 47989))
     }
 
     @Test
@@ -606,7 +606,7 @@ class ComputerDatabaseManagerCharacterizationTest {
                 """"local":{"address":"192.0.2.2","port":2}}""",
         )
 
-        val read = manager.getComputerByUUID("u-1")
+        val read = manager.getComputerByUUID("u-1")!!
 
         assertThat(read.localAddress).isEqualTo(AddressTuple("192.0.2.2", 2))
         assertThat(read.remoteAddress).isNull()
@@ -616,7 +616,7 @@ class ComputerDatabaseManagerCharacterizationTest {
 
     @Test
     fun `a tuple becomes a JSON object with its address and its port`() {
-        val json = ComputerDatabaseManager.tupleToJson(AddressTuple("192.0.2.1", 47989))
+        val json = ComputerDatabaseManager.tupleToJson(AddressTuple("192.0.2.1", 47989))!!
 
         assertThat(json.toString()).isEqualTo("""{"address":"192.0.2.1","port":47989}""")
         assertThat(json.get("port")).isInstanceOf(Int::class.javaObjectType)

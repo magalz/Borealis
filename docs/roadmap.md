@@ -798,7 +798,8 @@ The owner creates the tag. See the [release procedure](development/release.md).
 - **Combined font scales above 2.0 at Normal.** A system font of 2.0 with the Text size Largest is
   2.6. There Normal text fails the fit tests in 8 of the 84 runs of the Library (Apps with a long
   host name, on a TV and on a phone) and in 1 of the 70 runs of the components (the rows of the
-  settings on a TV). Wider is drawn as Wide from 2.0, and Wide and Normal are never limited. See
+  settings on a TV). Wider is drawn as Wide from 2.0, and Wide and Normal are never limited. Wide
+  above a combined 2.0 has not been measured, only Normal was. See
   [accessibility, text spacing](ux/accessibility.md#text-spacing-known-limitations).
 
 From the Sprint 9 quality review. None of these changes behaviour. Sprint 10

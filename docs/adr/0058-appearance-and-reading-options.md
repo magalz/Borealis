@@ -148,8 +148,8 @@ Decision details:
        is more than rounding: 0 to 9 runs at a scale, 5 at 2.0, each 0.5 to 2.6 px past its box in a
        text whose spaces have the spans of the word spacing, and none cut or ending in an ellipsis.
        The fit check holds a line to 1 px, so the 200 % tests, which run with that check, draw
-       Wider as Wide at 2.0. The
-       table is in [accessibility, text spacing: the limit at a very large font](../ux/accessibility.md#text-spacing-the-limit-at-a-very-large-font).
+       Wider as Wide at 2.0. The table, with all 18 scales, is in
+       [accessibility, text spacing: the limit at a very large font](../ux/accessibility.md#text-spacing-the-limit-at-a-very-large-font).
      * **The warning:** when the user chooses Wider while the limit is reached, a dialog says so: the
        title is "Wider spacing is limited", and the text says that, at this text size, Borealis uses
        Wide spacing instead of Wider so that nothing is cut off, that the choice stays, and that Wider
@@ -165,7 +165,8 @@ Decision details:
      * At a combined font scale above 2.0 (a system font of 2.0 with Largest text is 2.6) Normal
        text already fails the fit tests in 8 of the 84 runs of the Library (Apps with a long host
        name, on a TV and on a phone) and in 1 of the 70 runs of the components (the rows of the
-       settings on a TV). Wider is drawn as Wide there. The roadmap has the item.
+       settings on a TV). Wider is drawn as Wide there, and Wide is not limited: Wide above a
+       combined 2.0 has not been measured, only Normal was, at 2.6. The roadmap has the item.
      * The line ends of a wrapped text can draw past their box at Wide and Wider. See
        [accessibility, text spacing: known limitations](../ux/accessibility.md#text-spacing-known-limitations).
 

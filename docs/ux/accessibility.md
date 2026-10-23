@@ -1669,23 +1669,34 @@ at (`effectiveTextSpacing`, `theme/TextSpacingLimit.kt`). The look keeps what th
 Wider comes back when the scale falls, and the type, the design-system `Text`, the stream chrome and
 the layouts that follow the level (the card columns) use the level that is drawn.
 
-The 200 % fit tests were run in every font at Wide and at Wider, at font scales from 1.15 to 2.0,
-with the Text size at its default. Each scale is 462 runs, 231 at each level. The table has the
-runs that fail the fit check, which holds a line to 1 px past its box. The measures are of
-2026-10-22. The columns "before" are from before the three fixes of the layout changes above and
-before the UAT layout; the columns "after" are from the head that merged both.
+The 200 % fit tests were run in every font at Wide and at Wider, at 18 font scales from 1.15 to
+2.0, with the Text size at its default. Each scale is 462 runs, 231 at each level. The table has
+every scale and the runs that fail the fit check, which holds a line to 1 px past its box. The
+measures are of 2026-10-22. The columns "before" are from before the three fixes of the layout
+changes above and before the UAT layout, at the eight scales of the table that were run then (1.0
+was run too and had no failure). The columns "after" are from the head with the fixes: all 18
+scales, and the ten of 1.15, 1.3, 1.4, 1.5, 1.6, 1.69, 1.7, 1.8, 1.9 and 2.0 again on the head that
+merged the UAT layout, with the same counts.
 
 | Font scale | Wider before | Wide before | Wider after | Wide after |
 | --- | --- | --- | --- | --- |
 | 1.15 | 1 | 0 | 1 | 0 |
+| 1.2 | not run | not run | 0 | 0 |
 | 1.3 | 4 | 0 | 0 | 0 |
+| 1.35 | not run | not run | 0 | 0 |
 | 1.4 | 8 | 0 | 1 | 0 |
+| 1.45 | not run | not run | 1 | 0 |
 | 1.5 | 9 | 0 | 3 | 0 |
+| 1.55 | not run | not run | 1 | 0 |
 | 1.6 | 11 | 0 | 4 | 0 |
+| 1.65 | not run | not run | 1 | 0 |
 | 1.69 | not run | not run | 3 | 0 |
 | 1.7 | 8 | 1 | 1 | 0 |
+| 1.75 | not run | not run | 4 | 0 |
 | 1.8 | 19 | 1 | 9 | 0 |
+| 1.85 | not run | not run | 4 | 0 |
 | 1.9 | not run | not run | 3 | 0 |
+| 1.95 | not run | not run | 3 | 0 |
 | 2.0 | 16 | 8 | 5 | 0 |
 
 What the table says:
@@ -1694,8 +1705,8 @@ What the table says:
   Pairing screen of a TV in all seven fonts, from 1.3.
 - **After the fixes** Wide fails in none of the runs. Wider fails in none that is more than
   rounding: every failure that is left runs 0.5 to 2.6 px past its box, in a text whose spaces have
-  the spans of the word spacing, and none is cut or ends in an ellipsis. Over the 18 scales that
-  were measured, from 1.15 to 2.0, there are 44 such runs, and the most is 2.6 px.
+  the spans of the word spacing, and none is cut or ends in an ellipsis. The "after" column of
+  Wider adds up to 44 runs, and the most is 2.6 px.
 - **The limit is at 2.0** because the 200 % tests run with the check of 1 px, and 5 runs of Wider
   fail it at 2.0. So the tests at 2.0 draw Wider as Wide. Below 2.0 Wider is drawn in full.
 
@@ -1710,7 +1721,8 @@ The dialog and the row of Settings, and what they say, are in
 - At a combined font scale above 2.0 (a system font of 2.0 with Largest text is 2.6), Normal text
   already fails the fit tests in 8 of the 84 runs of the Library (Apps with a long host name, on a
   TV and on a phone) and in 1 of the 70 runs of the components (the rows of the settings on a TV);
-  Settings and the Audit trail pass. Wider is drawn as Wide there. It is a backlog item in the
+  Settings and the Audit trail pass. Wider is drawn as Wide there, and Wide is not limited: Wide
+  above a combined 2.0 has not been measured, only Normal was, at 2.6. It is a backlog item in the
   roadmap.
 - At Wide and Wider, the line ends of a wrapped text can draw up to one word spacing past their
   box: about 12 px in IBM Plex Sans at Wider, and up to 23 px at the largest TV text in the system

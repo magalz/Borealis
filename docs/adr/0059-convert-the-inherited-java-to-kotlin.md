@@ -91,7 +91,7 @@ without edits. The rules are numbered so that each conversion brief can point to
       SharedPreferences while it reads.
    9. Every `LimeLog` call keeps its log text and its level.
 5. **Persistent formats stay byte-compatible.** These are `computers4.db` (table `Computers`, with the
-   `Addresses` JSON), the `uniqueid` file, `client.crt` and `client.key` (PEM), the default
+   `Addresses` JSON), the `uniqueid` file, `client.crt` (PEM) and `client.key` (binary PKCS#8), the default
    SharedPreferences and `GlPreferences`, the `poster.<applicationId>` provider URIs, the shortcut and
    `Game` intent extras, and the JUL logger name `com.limelight.LimeLog`. A fixture written by the Java
    code is committed in the characterization commit and read by the Kotlin code.
@@ -106,7 +106,7 @@ without edits. The rules are numbered so that each conversion brief can point to
    3. A rule that points at a real bug is never suppressed. The bug is reported instead.
    4. There is no detekt baseline.
 7. **Coverage.** Converted code counts in Kover coverage from the first conversion. The exclusion for
-   `com.limelight.*` is narrowed to the Java that stays: `com.limelight.Game*`,
+   `com.limelight.*` is narrowed to the Java that stays: `com.limelight.Game` and its nested classes (`com.limelight.Game$*`),
    `com.limelight.binding.input.*`, `com.limelight.binding.video.*`, `com.limelight.binding.audio.*` and
    `com.limelight.nvstream.jni.*`. In Codecov, the converted path
    (`apps/android/app/src/main/kotlin/com/limelight/`) gets its own patch and project statuses,

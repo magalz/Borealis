@@ -7,9 +7,18 @@ style client and what it requires from one. It was verified against
 the compatibility table. PyroWave is covered separately in
 [pyrowave.md](pyrowave.md).
 
+The items marked **Changed in 26.10.0-beta.1** come from the 26.10.0-beta.1
+release notes (2026-10-20) and were verified in the host source at
+`NortheBridge/luminalshine@46f6936d` (2026-10-22, `git describe`:
+`26.09.1-38-g46f6936d`), a later commit than the revision above. The `src/`
+references inside those items are lines at `46f6936d`, not at `5afdbdc6`, and
+`src/` is the same at `46f6936d` and at `e2662a44` (the merge of PR #206,
+2026-10-20). The plain-HTTP responses of a running 26.10.0-beta.1 host are recorded
+in [the 26.10.0-beta.1 fixtures](../../core/tests/fixtures/luminalshine/26.10.0-beta.1/PROVENANCE.md).
+
 Everything here comes from static reading of the host source, except the items
 marked **Observed** (runtime observations from the Sprint 2 and 3 device rounds)
-and the recorded `/unpair` response in section 18, item 4. Statements about
+and the recorded `/unpair` responses in section 18, item 4. Statements about
 runtime behaviour that the source alone cannot establish are marked
 **Unverified**.
 
@@ -27,10 +36,24 @@ runtime behaviour that the source alone cannot establish are marked
   (`src/nvhttp.h:42`). These are protocol-emulation constants, not the
   LuminalShine release version; in `26.09.1` there is no field in `/serverinfo`
   that carries the LuminalShine version (see proposal P1 in section 20).
-  **Changed in 26.10.0-beta.1** (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source): the HTTPS `/serverinfo`
-  appends `LuminalShineVersion` (#199), and keeps `appversion` (`7.1.431.-1`) and
-  `GfeVersion`; the HTTP response is unchanged. The Borealis client does not read
-  the field yet (Sprint 17), so Host details still shows `7.1.431.-1`.
+  **Changed in 26.10.0-beta.1** (#199; verified in source at `46f6936d`): the
+  HTTPS `/serverinfo` appends one element, `LuminalShineVersion`, as the last
+  child of `<root>`, after `state`, and keeps `appversion` (`7.1.431.-1`) and
+  `GfeVersion` (`src/nvhttp.cpp:2532-2533`, `2612-2617`; the element is written by
+  `put_luminalshine_version`, `src/nvhttp.cpp:2507-2509`, `src/nvhttp.h:69-78`).
+  The call sits inside `if constexpr (std::is_same_v<SunshineHTTPS, T>)`, so the
+  plain-HTTP response is unchanged and carries no version: a client can read the
+  release only over HTTPS, that is, once it is paired. The header comment gives
+  the reason: the HTTP port answers unauthenticated peers
+  (`src/nvhttp.h:73-75`). The value is `PROJECT_VERSION`, fixed when the host is
+  built: the CI `BUILD_VERSION`, the release tag or the nearest git tag, with a
+  leading `v` removed (`cmake/prep/build_version.cmake:44-51`, `107-115`,
+  `137-141`), so a client must treat the string as free text, not as a strict
+  version. The plain-HTTP capture of a 26.10.0-beta.1 host (2026-10-23) has no
+  `LuminalShineVersion` and is byte for byte the 26.09.1 response. The HTTPS
+  value of that host was not read (no HTTPS call was allowed). The Borealis
+  client does not read the field yet (Sprint 17), so Host details still shows
+  `7.1.431.-1`.
 - `/serverinfo` reports `state` as `SUNSHINE_SERVER_BUSY` while an app is
   running and `SUNSHINE_SERVER_FREE` otherwise, and `currentgame` as the running
   app id (`src/nvhttp.cpp:2578-2581`). Moonlight therefore classifies the host
@@ -82,9 +105,23 @@ The host serves exactly the endpoints in the table. Any other path on either
 server returns an XML body with `status_code` 404 (`src/nvhttp.cpp:2127-2143`,
 `src/nvhttp.cpp:3723-3748`). All endpoints use GET.
 
-**Changed in 26.10.0-beta.1** (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source): an unknown path returns one
-correctly framed response, HTTP 200 with the XML `status_code="404"`, and then the
-connection closes (#200, which fixes #194). The 26.09.1 behaviour below, with the
+**Changed in 26.10.0-beta.1** (#200, which fixes #194; verified in source at
+`46f6936d`): an unknown path, on both servers, returns one correctly framed
+response, `HTTP/1.1 200 OK` with `Content-Length: 64` and the XML
+`status_code="404"`, and then the connection closes. `not_found` now writes the XML
+once and sets `close_connection_after_response`; the second write that streamed a
+header-less `HTTP/1.1 404 NOT FOUND` block into the response is gone
+(`src/nvhttp.cpp:2146-2158`, instantiated for `SimpleWeb::HTTP` at `2160`, declared
+in `src/nvhttp.h:93-102`). Both servers register it as their default resource
+(`src/nvhttp.cpp:3822` and `3850`). The host's own regression test pins the exact
+bytes, `HTTP/1.1 200 OK\r\nContent-Length: 64\r\n\r\n` plus the 64-byte body and
+then end of stream, with nothing after it
+(`tests/unit/test_nvhttp_not_found.cpp:37-39`, `161-166`). A running 26.10.0-beta.1
+host answered an unknown path with those 103 bytes on 2026-10-23
+([`unknown-path-http.response`](../../core/tests/fixtures/luminalshine/26.10.0-beta.1/unknown-path-http.response)).
+The framing is not visible in the host source of this checkout, because
+Simple-Web-Server is a git submodule that is not checked out: the header bytes
+come from that test and from the capture. The 26.09.1 behaviour below, with the
 trailing bytes, stays the rule for older hosts.
 
 | Path | HTTP | HTTPS | Purpose |
@@ -97,7 +134,8 @@ trailing bytes, stays the rule for older hosts.
 | `/resume` | no | yes | Resume the running app (section 7) |
 | `/cancel` | no | yes | Terminate sessions and the running app (section 7.6) |
 
-Not present, by absence from the route table (`src/nvhttp.cpp:3723-3748`):
+Not present, by absence from the route table (`src/nvhttp.cpp:3723-3748`;
+`src/nvhttp.cpp:3822-3854` at `46f6936d`, which adds no route):
 `/unpair`, `/actions/clipboard`, and any other Apollo/Artemis extension.
 Unpairing is available only through the REST API (section 17).
 
@@ -223,21 +261,40 @@ that failure deletes the session (`fail_pair`, `src/nvhttp.cpp:1929-1945`), so t
 attempt after it succeeds. The automatic restart turns this into one extra PIN
 dialog instead of a raw error.
 
-**Changed in 26.10.0-beta.1.** Seen live on 2026-10-21 and checked in source at
-`e2662a44`, the commit of the beta tag. `src/nvhttp.cpp` is the same as upstream
-`main` at `236aff9a`.
+**Changed in 26.10.0-beta.1.** Seen live on 2026-10-21 and verified in source at
+`46f6936d`. The behaviour is the pairing rework `e31d66e9` (PR #188, 2026-10-01).
+The `26.09.1` tag does not contain it (the tag has no 409 `Pairing exchange already
+in progress`); `5afdbdc6` and every later commit do. `pair`, `fail_pair`,
+`serverchallengeresp` and `submit_pin` are the same at `5afdbdc6` and at `46f6936d`,
+and `src/` is the same at `e2662a44`, at `236aff9a` and at `46f6936d` (the later
+commits change `.github/`, `scripts/` and `tests/` only).
 
 - The client runs phases 1 to 3, detects the wrong PIN after phase 3
-  (`serverchallengeresp`), and stops, as every Moonlight client does. It then
-  sends `/unpair`, which LuminalShine does not route, so it gets a 404.
-- The host keeps the session at `last_phase == SERVERCHALLENGERESP`. Its log ends
-  at "Pairing PIN delivered; awaiting client proof" (`src/nvhttp.cpp:2499`).
-  Phase 4 never arrives, so `fail_pair` (`src/nvhttp.cpp:1953-1959`), which
-  removes a session on a failure, does not run.
+  (`serverchallengeresp`), and stops, as every Moonlight client does. The host
+  never sees the mistake: phase 3 only decrypts the client's response with the key
+  derived from the salt and the PIN the host holds, and answers `paired` 1 with
+  the signed server secret (`src/nvhttp.cpp:2030-2058`). The host compares the
+  client hash only in phase 4 (`src/nvhttp.cpp:2095-2097`). The client then sends
+  `/unpair`, which LuminalShine does not route (the route tables,
+  `src/nvhttp.cpp:3822-3854`, have no `/unpair`), so it reaches `not_found` and
+  gets the single 404 response of section 3. Nothing on the host removes the
+  session.
+- The host keeps the session at `last_phase == SERVERCHALLENGERESP`
+  (`src/nvhttp.cpp:2035`). Its log ends at "Pairing PIN delivered; awaiting client
+  proof" (`src/nvhttp.cpp:2499`). Phase 4 never arrives, so `fail_pair`
+  (`src/nvhttp.cpp:1953-1959`), which removes a session on a failure, does not
+  run.
 - Every new phase 1 from the same client gets 409 `Pairing exchange already in
-  progress` at once (`src/nvhttp.cpp:2227-2250`). The session expires 5 minutes
-  after its last update (`kPairingSessionTtl`, `src/nvhttp.cpp:918`). Restarting
-  Borealis does not clear it; restarting LuminalShine does.
+  progress` at once (`src/nvhttp.cpp:2227-2251`): the session exists and its phase
+  is not `NONE`, and only a phase-1 retry inside the `getservercert` phase is
+  answered again. The session is keyed by the client's `uniqueid` query value in an
+  in-memory map (`src/nvhttp.cpp:909`, `2189`, `2225`). It expires 5 minutes after
+  its last update (`kPairingSessionTtl`, `src/nvhttp.cpp:918`; `session_expired`,
+  `1732-1737`) and is dropped by the next `/pair` call, or the next listing or PIN
+  submission in the Web UI (`prune_expired_pairings_locked`, `1894-1912`; callers
+  at `2218`, `2370`, `2412`). Restarting Borealis does not clear it as long as
+  Borealis keeps its `uniqueid`; restarting LuminalShine does, because the map is
+  not persisted.
 - The automatic restart of Borealis never runs on that host, because 409 maps to
   "No restart" (the table above). The user waits up to 5 minutes, or restarts
   LuminalShine, before pairing again.
@@ -398,16 +455,38 @@ for resume the equivalent is `resume` 1 (`src/nvhttp.cpp:3471-3486`).
   retried: `/launch`, `/resume`, `/cancel`, `/quit` and pairing are not
   idempotent. A client that polls `/serverinfo` in the background can see the
   host as briefly offline during that window.
-  **Changed in 26.10.0-beta.1** (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source): PR #203 was merged on
-  2026-10-20 and ships in this release, so launch, resume and cancel run in order
-  on one dedicated worker, off the HTTPS I/O thread, and a long `/launch` no
-  longer holds the other requests (#202). Borealis keeps the 3-attempt
-  `/serverinfo` retry and the 3 s wait before `/resume` for older hosts and for
-  #205, which is still open, and keeps the handling of the not-found cases for
-  26.09.1. In the device round of 2026-10-21 neither was triggered on
-  26.10.0-beta.1 (no retry, no wait and no 503, with a second device opening the
-  host during a launch); whether the race of #205 is still reachable is not
-  tested.
+  **Changed in 26.10.0-beta.1** (#203, which fixes #202; verified in source at
+  `46f6936d`): PR #203 was merged on 2026-10-20 and ships in this release. The
+  `/launch`, `/resume` and `/cancel` routes no longer run their handler on the
+  HTTPS I/O thread. Each one posts it, through `run_on_launch_worker`
+  (`src/nvhttp.cpp:3649-3692`), to `launch_worker`, one `util::serial_executor_t`
+  created in `nvhttp::start` (`src/nvhttp.cpp:3728-3730`, routes at `3829-3844`;
+  `src/serial_executor.h:25-109`). That executor has one thread, named
+  `nvhttp::launch`, which runs the posted handlers one at a time in posting order
+  (`src/serial_executor.h:52-62`, `85-101`). The three handlers stay serialised
+  with each other, as they were on the I/O thread: a `/cancel` waits behind a
+  `/launch` in progress (`src/nvhttp.cpp:3839-3841`). `/serverinfo`, `/pair`,
+  `/applist`, `/appasset` and the TLS handshakes stay on the I/O thread, which a
+  long `/launch` no longer holds (#202). `/serverinfo` also no longer waits for the
+  lock a launch holds while it starts the app: it reads the running app with
+  `proc::proc.running_nowait()` (`src/nvhttp.cpp:2607-2609`,
+  `src/process.cpp:1793-1803`), which returns the id the launch published early,
+  so a host that is still starting its app already answers
+  `SUNSHINE_SERVER_BUSY`. While the host shuts down the worker drops queued
+  requests without an answer (their connections are closed,
+  `src/nvhttp.cpp:3898-3904`); a request that arrives in the gap gets 503 with the
+  message `The host is shutting down.` (`src/nvhttp.cpp:3681-3690`). The host
+  source of this checkout does not show the single I/O thread itself, because it
+  is a Simple-Web-Server default and that submodule is not checked out; the
+  comment at `src/nvhttp.cpp:3650-3652` states it. The worker serialises the three
+  handlers with each other only: the RTSP setup that follows a handler's response
+  is not part of its task, so the source does not show whether the race of #205
+  is closed. Borealis keeps the 3-attempt `/serverinfo` retry and the 3 s wait
+  before `/resume` for older hosts and for #205, which is still open, and keeps
+  the handling of the not-found cases for 26.09.1. In the device round of
+  2026-10-21 neither was triggered on 26.10.0-beta.1 (no retry, no wait and no
+  503, with a second device opening the host during a launch); whether the race
+  of #205 is still reachable is not tested.
 - **Observed, not verified in the source (Sprint 3):** when a second client's
   `/resume` is accepted while the first client's `/launch` is still setting up,
   the host logs `Failed to verify RTSP message tag` and the second client's RTSP
@@ -928,6 +1007,12 @@ credential (`src/http_auth.cpp:1403-1476`):
 
 The POST endpoints in this table require `Content-Type: application/json`.
 
+**Changed in 26.10.0-beta.1** (verified in source at `46f6936d`): the Web UI gains
+`POST /api/apps/import`, which replaces the whole application list from an
+`apps.json` document of at most 5 MiB (`src/confighttp.cpp:1616-1647`, route at
+`src/confighttp.cpp:4585`, validation in `src/apps_import.h`). It is an
+administration endpoint, not a streaming one, and a client does not need it.
+
 ## 18. Client obligations for Borealis
 
 These are actionable requirements derived from the sections above. Where the
@@ -962,9 +1047,17 @@ Moonlight Android 12.2 client already does the right thing the item says so.
    does not mask PIN_WRONG or FAILED. The risk is the trailing bytes: an HTTP
    client that pools the connection can read them as the start of its next
    response on that connection. Send `/unpair` without connection reuse and
-   read its XML `status_code`. **Changed in 26.10.0-beta.1** (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source):
-   #200 makes the host send a single response for an unknown path, so the
-   trailing bytes are gone. Keep the 26.09.1 behaviour and the
+   read its XML `status_code`. **Changed in 26.10.0-beta.1** (#200; verified in
+   source at `46f6936d`, and recorded on a running 26.10.0-beta.1 host on
+   2026-10-23, fixture
+   [`unpair-http.response`](../../core/tests/fixtures/luminalshine/26.10.0-beta.1/unpair-http.response)):
+   `/unpair` is still not routed (`src/nvhttp.cpp:3822-3854`), so it reaches
+   `not_found`, which now writes one response (`src/nvhttp.cpp:2146-2158`, section
+   3). Over plain HTTP the host answers `HTTP/1.1 200 OK` with
+   `Content-Length: 64` and the XML body with `status_code="404"`, 103 bytes in
+   all, and closes the socket; the 88 trailing bytes are gone (the capture read
+   to the end of the stream and found nothing after the body). The response is
+   byte for byte the one of an unknown path. Keep the 26.09.1 behaviour and the
    `BestEffortUnpair` `Connection: close` for older hosts.
 5. **Keep the client certificate stable and use HTTPS for everything except
    pairing phases 1 to 4 and the initial `/serverinfo`.** Identity, per-client
@@ -1053,9 +1146,13 @@ nothing in this document until the host adopts them.
   changes) and a `Capabilities` list (for example `pyrowave`, `virtual-display`,
   `launch-retry-codes`). Today a client can only infer the host from the absence
   of Apollo fields and from `appversion` `7.1.431.-1`, which is a fixed
-  emulation constant (`src/nvhttp.h:37`). **Partly adopted in 26.10.0-beta.1** (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source):
-  `LuminalShineVersion` is in the HTTPS `/serverinfo` (#199). The release notes
-  name no `LuminalShineApiLevel` and no `Capabilities` list.
+  emulation constant (`src/nvhttp.h:37`). **Partly adopted in 26.10.0-beta.1**
+  (#199; verified in source at `46f6936d`): `LuminalShineVersion` is in the HTTPS
+  `/serverinfo` only (`src/nvhttp.cpp:2507-2509`, `2614-2617`; section 1), so a
+  client can read the release only after it is paired, by design
+  (`src/nvhttp.h:73-75`). Nothing in `src/` writes a `LuminalShineApiLevel` or a
+  `Capabilities` element (a search of `src/` finds neither name), so the
+  capability list and the API level of this proposal are still open.
 - **P2. A client-requested PyroWave bitrate cap.** The host ignores the client's
   bitrate and always uses `pyrowave_bitrate_mbps`, default 700
   (`src/rtsp.cpp:1694`). Honour the client's `x-nv-vqos[0].bw.maximumBitrateKbps`

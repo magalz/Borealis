@@ -56,11 +56,10 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import org.xmlpull.v1.XmlPullParserException
 
-// The markers that sat on the import groups of the Java, which ktfmt sorts together:
-// BOREALIS: standard UTF-8 for typed text (stream.keyframe): StartFailureLog and Utf8Text
-// BOREALIS: typed failure causes (host.failure): CauseKind, FailureCauses, StartSteps and
-// CertificateMismatchException
-// BOREALIS: LuminalShine launch retries (host.launch): the host.launch imports
+// The markers of the import groups of the Java, which ktfmt sorts together:
+// BOREALIS: standard UTF-8 for typed text (stream.keyframe)
+// BOREALIS: typed failure causes (host.failure)
+// BOREALIS: LuminalShine launch retries (host.launch)
 
 // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
 // The stack traces that the Java prints to stderr and the RuntimeException that wraps the cause of
@@ -649,8 +648,7 @@ open class NvConnection(
         launchRetried = false // BOREALIS
         startStep = StartSteps.SERVER_INFO // BOREALIS
 
-        val listener = context.listener
-        listener.stageStarting(appName)
+        context.listener.stageStarting(appName)
 
         try {
             if (!startApp()) {
@@ -710,7 +708,7 @@ open class NvConnection(
             MoonBridge.setupBridge(
                 videoDecoderRenderer,
                 audioRenderer,
-                HeldStageFailures(listener, collisions),
+                HeldStageFailures(checkNotNull(connectionListener), collisions),
             )
             val streamConfig = checkNotNull(context.streamConfig)
             val ret =

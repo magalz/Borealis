@@ -21,6 +21,7 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             with(BorealisCoverage) { configureCoverage() }
             with(BorealisLicenses) { configureLicensee() }
             with(BorealisDetekt) { configureDetekt() }
+            configureFixtures()
 
             val components = extensions.getByType<ApplicationAndroidComponentsExtension>()
             val version = BorealisVersion.fromGitDescribe(gitDescribe())

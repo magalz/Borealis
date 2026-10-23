@@ -1,36 +1,54 @@
-package com.limelight.nvstream;
+package com.limelight.nvstream
 
-public interface NvConnectionListener {
-    void stageStarting(String stage);
-    void stageComplete(String stage);
-    void stageFailed(String stage, int portFlags, int errorCode);
-    
-    void connectionStarted();
-    void connectionTerminated(int errorCode);
-    void connectionStatusUpdate(int connectionStatus);
-    
-    void displayMessage(String message);
-    void displayTransientMessage(String message);
+import io.github.magalz.borealis.host.launch.ConflictAnswer
+import io.github.magalz.borealis.host.launch.ConflictChoice
 
-    void rumble(short controllerNumber, short lowFreqMotor, short highFreqMotor);
-    void rumbleTriggers(short controllerNumber, short leftTrigger, short rightTrigger);
+// Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+@Suppress("TooManyFunctions")
+interface NvConnectionListener {
+    fun stageStarting(stage: String?)
 
-    void setHdrMode(boolean enabled, byte[] hdrMetadata);
+    fun stageComplete(stage: String?)
 
-    void setMotionEventState(short controllerNumber, byte motionType, short reportRateHz);
+    fun stageFailed(stage: String, portFlags: Int, errorCode: Int)
 
-    void setControllerLED(short controllerNumber, byte r, byte g, byte b);
+    fun connectionStarted()
 
-    // BOREALIS: the host asked to try /launch or /resume again (host.launch); category is a LaunchCategory ordinal
-    default void launchRetrying(int category, int attempt, int maxAttempts, int delayMs) {
-    }
+    fun connectionTerminated(errorCode: Int)
 
-    // BOREALIS: /launch (or /resume when resume is true) is about to be requested (host.failure); Game shows the "starting app" stage
-    default void launchStarting(boolean resume) {
-    }
+    fun connectionStatusUpdate(connectionStatus: Int)
 
-    // BOREALIS: another app is running on the host: the listener asks the user and sets the answer; without a UI the launch is cancelled (host.launch)
-    default void launchConflict(int runningAppId, String runningAppName, int requestedAppId, String requestedAppName, io.github.magalz.borealis.host.launch.ConflictAnswer answer) {
-        answer.choose(io.github.magalz.borealis.host.launch.ConflictChoice.CANCEL);
+    fun displayMessage(message: String)
+
+    fun displayTransientMessage(message: String)
+
+    fun rumble(controllerNumber: Short, lowFreqMotor: Short, highFreqMotor: Short)
+
+    fun rumbleTriggers(controllerNumber: Short, leftTrigger: Short, rightTrigger: Short)
+
+    fun setHdrMode(enabled: Boolean, hdrMetadata: ByteArray?)
+
+    fun setMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short)
+
+    fun setControllerLED(controllerNumber: Short, r: Byte, g: Byte, b: Byte)
+
+    // BOREALIS: the host asked to try /launch or /resume again (host.launch); category is a
+    // LaunchCategory ordinal
+    fun launchRetrying(category: Int, attempt: Int, maxAttempts: Int, delayMs: Int) {}
+
+    // BOREALIS: /launch (or /resume when resume is true) is about to be requested (host.failure);
+    // Game shows the "starting app" stage
+    fun launchStarting(resume: Boolean) {}
+
+    // BOREALIS: another app is running on the host: the listener asks the user and sets the
+    // answer; without a UI the launch is cancelled (host.launch)
+    fun launchConflict(
+        runningAppId: Int,
+        runningAppName: String?,
+        requestedAppId: Int,
+        requestedAppName: String?,
+        answer: ConflictAnswer,
+    ) {
+        answer.choose(ConflictChoice.CANCEL)
     }
 }

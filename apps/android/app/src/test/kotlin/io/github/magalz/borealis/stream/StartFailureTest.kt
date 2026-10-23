@@ -33,11 +33,11 @@ private class RecordingListener : NvConnectionListener {
     val failedStages = CopyOnWriteArrayList<String>()
     val failed = CountDownLatch(1)
 
-    override fun stageStarting(stage: String) {
+    override fun stageStarting(stage: String?) {
         calls += "stageStarting"
     }
 
-    override fun stageComplete(stage: String) {
+    override fun stageComplete(stage: String?) {
         calls += "stageComplete"
     }
 

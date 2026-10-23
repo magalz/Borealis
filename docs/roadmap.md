@@ -623,9 +623,10 @@ Removed, not converted:
   versions under the `com.limelight` application id. Borealis's application id is
   `io.github.magalz.borealis`, so these files never exist in its data (ADR 0059, rule 8).
 - **`ByteBufferDescriptor` and four unused helpers.** Verified unused and removed before
-  conversion, each removal with its own commit (ADR 0059, rule 8).
-  TODO(verify): the four helper names are not in the sprint notes; take them from the
-  #57 to #68 merge commits.
+  conversion, each removal with its own commit (ADR 0059, rule 8): `LimeLog.setFileHandler`
+  and the `UiHelper` methods `notifyNewRootView`, `applyStatusBarPadding` and
+  `displayDeletePcConfirmationDialog`. The strings `yes`, `no` and `delete_pc_msg`, used only
+  by the last one, went with it.
 
 `Vector2d` was first reported unused, but `ControllerHandler` uses it. It was converted
 instead of removed.
@@ -993,8 +994,8 @@ when. Paths are under `apps/android/app/src/main/kotlin/`, unless a path starts 
     the whole list. `ComputerManagerService.onCreate` calls it without a guard.
   - `computers/ComputerDatabaseManager.kt`: a row with a null uuid is stored and can never be
     deleted.
-  - `computers/ComputerDatabaseManager.kt` and `computers/IdentityManager.kt`: "UID written to
-    disk" is logged before the flush. The client id file has no hex check.
+  - `computers/IdentityManager.kt`: "UID written to disk" is logged before the flush. The
+    client id file has no hex check.
   - `nvstream/mdns/NsdManagerDiscoveryAgent.kt`: leaks a `ServiceInfoCallback` when a service
     is found twice. Its executor is never shut down, and `DiscoveryService.kt` has no
     `onDestroy`.

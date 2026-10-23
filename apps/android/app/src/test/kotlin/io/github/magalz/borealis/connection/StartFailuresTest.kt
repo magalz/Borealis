@@ -2,6 +2,9 @@ package io.github.magalz.borealis.connection
 
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.NvConnection
+import com.limelight.nvstream.NvConnectionListener
+import com.limelight.nvstream.av.audio.AudioRenderer
+import com.limelight.nvstream.av.video.VideoDecoderRenderer
 import io.github.magalz.borealis.crypto.TestIdentities
 import io.github.magalz.borealis.host.failure.CauseKind
 import io.github.magalz.borealis.library.RecordingLog
@@ -238,6 +241,45 @@ class StartFailuresTest {
         assertThat(died.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue()
         assertThat(uncaught.single()).isInstanceOf(RuntimeException::class.java)
         assertThat(listener.events).isEmpty()
+        assertThat(rig.paths()).isEmpty()
+    }
+
+    /**
+     * Starts through reflection: a Java caller may pass null for the renderer and the listener, and
+     * the test must compile whatever the Kotlin parameter types are.
+     */
+    private fun startWithNull(
+        connection: NvConnection,
+        decoder: VideoDecoderRenderer?,
+        connectionListener: NvConnectionListener?,
+    ) {
+        NvConnection::class
+            .java
+            .getMethod(
+                "start",
+                AudioRenderer::class.java,
+                VideoDecoderRenderer::class.java,
+                NvConnectionListener::class.java,
+            )
+            .invoke(connection, StubAudio(), decoder, connectionListener)
+    }
+
+    @Test
+    fun `a start without a decoder renderer fails in its own thread before it says anything`() {
+        startWithNull(rig.connection(), null, listener)
+
+        assertThat(died.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue()
+        assertThat(uncaught.single()).isInstanceOf(RuntimeException::class.java)
+        assertThat(listener.events).isEmpty()
+        assertThat(rig.paths()).isEmpty()
+    }
+
+    @Test
+    fun `a start without a listener fails in its own thread before it asks the host anything`() {
+        startWithNull(rig.connection(), StubDecoder(), null)
+
+        assertThat(died.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue()
+        assertThat(uncaught.single()).isInstanceOf(RuntimeException::class.java)
         assertThat(rig.paths()).isEmpty()
     }
 

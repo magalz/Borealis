@@ -1,97 +1,68 @@
-package com.limelight.utils;
+package com.limelight.utils
 
-import android.content.Context;
-import android.content.pm.ShortcutInfo;
-import android.content.pm.ShortcutManager;
-import android.graphics.Bitmap;
-import android.graphics.drawable.Icon;
+import android.content.Context
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
+import android.graphics.Bitmap
+import android.graphics.drawable.Icon
+import com.limelight.R
+import com.limelight.nvstream.http.ComputerDetails
+import com.limelight.nvstream.http.NvApp
 
-import com.limelight.R;
-import com.limelight.nvstream.http.ComputerDetails;
-import com.limelight.nvstream.http.NvApp;
+// Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+@Suppress("TooManyFunctions")
+class ShortcutHelper(private val context: Context) {
+    private val sm: ShortcutManager = context.getSystemService(ShortcutManager::class.java)
+    private val tvChannelHelper = TvChannelHelper(context)
 
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-
-public class ShortcutHelper {
-
-    private final ShortcutManager sm;
-    private final Context context;
-    private final TvChannelHelper tvChannelHelper;
-
-    public ShortcutHelper(Context context) {
-        this.context = context;
-        sm = context.getSystemService(ShortcutManager.class);
-        this.tvChannelHelper = new TvChannelHelper(context);
-    }
-
-    private void reapShortcutsForDynamicAdd() {
-        List<ShortcutInfo> dynamicShortcuts = sm.getDynamicShortcuts();
-        while (!dynamicShortcuts.isEmpty() && dynamicShortcuts.size() >= sm.getMaxShortcutCountPerActivity()) {
-            ShortcutInfo maxRankShortcut = dynamicShortcuts.get(0);
-            for (ShortcutInfo scut : dynamicShortcuts) {
-                if (maxRankShortcut.getRank() < scut.getRank()) {
-                    maxRankShortcut = scut;
+    private fun reapShortcutsForDynamicAdd() {
+        val dynamicShortcuts = sm.dynamicShortcuts
+        while (
+            dynamicShortcuts.isNotEmpty() && dynamicShortcuts.size >= sm.maxShortcutCountPerActivity
+        ) {
+            var maxRankShortcut = dynamicShortcuts[0]
+            for (scut in dynamicShortcuts) {
+                if (maxRankShortcut.rank < scut.rank) {
+                    maxRankShortcut = scut
                 }
             }
-            sm.removeDynamicShortcuts(Collections.singletonList(maxRankShortcut.getId()));
+            sm.removeDynamicShortcuts(listOf(maxRankShortcut.id))
         }
     }
 
-    private List<ShortcutInfo> getAllShortcuts() {
-        LinkedList<ShortcutInfo> list = new LinkedList<>();
-        list.addAll(sm.getDynamicShortcuts());
-        list.addAll(sm.getPinnedShortcuts());
-        return list;
-    }
+    private fun getAllShortcuts(): List<ShortcutInfo> = sm.dynamicShortcuts + sm.pinnedShortcuts
 
-    private ShortcutInfo getInfoForId(String id) {
-        List<ShortcutInfo> shortcuts = getAllShortcuts();
+    private fun getInfoForId(id: String?): ShortcutInfo? =
+        getAllShortcuts().firstOrNull { it.id == id }
 
-        for (ShortcutInfo info : shortcuts) {
-            if (info.getId().equals(id)) {
-                return info;
-            }
-        }
+    private fun isExistingDynamicShortcut(id: String?): Boolean =
+        sm.dynamicShortcuts.any { it.id == id }
 
-        return null;
-    }
-
-    private boolean isExistingDynamicShortcut(String id) {
-        for (ShortcutInfo si : sm.getDynamicShortcuts()) {
-            if (si.getId().equals(id)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public void reportComputerShortcutUsed(ComputerDetails computer) {
+    fun reportComputerShortcutUsed(computer: ComputerDetails) {
         if (getInfoForId(computer.uuid) != null) {
-            sm.reportShortcutUsed(computer.uuid);
+            sm.reportShortcutUsed(computer.uuid)
         }
     }
 
-    public void reportGameLaunched(ComputerDetails computer, NvApp app) {
-        tvChannelHelper.createTvChannel(computer);
-        tvChannelHelper.addGameToChannel(computer, app);
+    fun reportGameLaunched(computer: ComputerDetails, app: NvApp) {
+        tvChannelHelper.createTvChannel(computer)
+        tvChannelHelper.addGameToChannel(computer, app)
     }
 
-    public void createHostShortcut(ComputerDetails computer, boolean forceAdd, boolean newlyPaired) {
-        ShortcutInfo sinfo = new ShortcutInfo.Builder(context, computer.uuid)
+    fun createHostShortcut(computer: ComputerDetails, forceAdd: Boolean, newlyPaired: Boolean) {
+        val sinfo =
+            ShortcutInfo.Builder(context, computer.uuid)
                 .setIntent(ServerHelper.createPcShortcutIntent(context, computer))
-                .setShortLabel(computer.name)
-                .setLongLabel(computer.name)
+                .setShortLabel(checkNotNull(computer.name))
+                .setLongLabel(checkNotNull(computer.name))
                 .setIcon(Icon.createWithResource(context, R.mipmap.ic_pc_scut))
-                .build();
+                .build()
 
-        ShortcutInfo existingSinfo = getInfoForId(computer.uuid);
+        val existingSinfo = getInfoForId(computer.uuid)
         if (existingSinfo != null) {
             // Update in place
-            sm.updateShortcuts(Collections.singletonList(sinfo));
-            sm.enableShortcuts(Collections.singletonList(computer.uuid));
+            sm.updateShortcuts(listOf(sinfo))
+            sm.enableShortcuts(listOf(computer.uuid))
         }
 
         // Reap shortcuts to make space for this if it's new
@@ -104,80 +75,82 @@ public class ShortcutHelper {
 
             if (forceAdd) {
                 // This should free an entry for us to add one below
-                reapShortcutsForDynamicAdd();
+                reapShortcutsForDynamicAdd()
             }
 
             // We still need to check the maximum shortcut count even after reaping,
             // because there's a possibility that it could be zero.
-            if (sm.getDynamicShortcuts().size() < sm.getMaxShortcutCountPerActivity()) {
+            if (sm.dynamicShortcuts.size < sm.maxShortcutCountPerActivity) {
                 // Add a shortcut if there is room
-                sm.addDynamicShortcuts(Collections.singletonList(sinfo));
+                sm.addDynamicShortcuts(listOf(sinfo))
             }
         }
 
         if (newlyPaired) {
             // Avoid hammering the channel API for each computer poll because it will throttle us
-            tvChannelHelper.createTvChannel(computer);
-            tvChannelHelper.requestChannelOnHomeScreen(computer);
+            tvChannelHelper.createTvChannel(computer)
+            tvChannelHelper.requestChannelOnHomeScreen(computer)
         }
     }
 
-    private String getShortcutIdForGame(ComputerDetails computer, NvApp app) {
-        return computer.uuid + app.getAppId();
-    }
+    private fun getShortcutIdForGame(computer: ComputerDetails, app: NvApp): String =
+        "${computer.uuid}${app.appId}"
 
-    public boolean createPinnedGameShortcut(ComputerDetails computer, NvApp app, Bitmap iconBits) {
-        if (sm.isRequestPinShortcutSupported()) {
-            Icon appIcon;
+    fun createPinnedGameShortcut(
+        computer: ComputerDetails,
+        app: NvApp,
+        iconBits: Bitmap?,
+    ): Boolean =
+        if (sm.isRequestPinShortcutSupported) {
+            val appIcon =
+                if (iconBits != null) {
+                    Icon.createWithAdaptiveBitmap(iconBits)
+                } else {
+                    Icon.createWithResource(context, R.mipmap.ic_pc_scut)
+                }
 
-            if (iconBits != null) {
-                appIcon = Icon.createWithAdaptiveBitmap(iconBits);
-            } else {
-                appIcon = Icon.createWithResource(context, R.mipmap.ic_pc_scut);
-            }
+            val sInfo =
+                ShortcutInfo.Builder(context, getShortcutIdForGame(computer, app))
+                    .setIntent(ServerHelper.createAppShortcutIntent(context, computer, app))
+                    .setShortLabel("${app.appName} (${computer.name})")
+                    .setIcon(appIcon)
+                    .build()
 
-            ShortcutInfo sInfo = new ShortcutInfo.Builder(context, getShortcutIdForGame(computer, app))
-                .setIntent(ServerHelper.createAppShortcutIntent(context, computer, app))
-                .setShortLabel(app.getAppName() + " (" + computer.name + ")")
-                .setIcon(appIcon)
-                .build();
-
-            return sm.requestPinShortcut(sInfo, null);
+            sm.requestPinShortcut(sInfo, null)
         } else {
-            return false;
+            false
         }
-    }
 
-    public void disableComputerShortcut(ComputerDetails computer, CharSequence reason) {
-        tvChannelHelper.deleteChannel(computer);
+    fun disableComputerShortcut(computer: ComputerDetails, reason: CharSequence?) {
+        tvChannelHelper.deleteChannel(computer)
         // Delete the computer shortcut itself
         if (getInfoForId(computer.uuid) != null) {
-            sm.disableShortcuts(Collections.singletonList(computer.uuid), reason);
+            sm.disableShortcuts(listOf(computer.uuid), reason)
         }
 
         // Delete all associated app shortcuts too
-        List<ShortcutInfo> shortcuts = getAllShortcuts();
-        LinkedList<String> appShortcutIds = new LinkedList<>();
-        for (ShortcutInfo info : shortcuts) {
-            if (info.getId().startsWith(computer.uuid)) {
-                appShortcutIds.add(info.getId());
+        val shortcuts = getAllShortcuts()
+        val appShortcutIds = mutableListOf<String>()
+        for (info in shortcuts) {
+            if (info.id.startsWith(checkNotNull(computer.uuid))) {
+                appShortcutIds.add(info.id)
             }
         }
-        sm.disableShortcuts(appShortcutIds, reason);
+        sm.disableShortcuts(appShortcutIds, reason)
     }
 
-    public void disableAppShortcut(ComputerDetails computer, NvApp app, CharSequence reason) {
-        tvChannelHelper.deleteProgram(computer, app);
-        String id = getShortcutIdForGame(computer, app);
+    fun disableAppShortcut(computer: ComputerDetails, app: NvApp, reason: CharSequence?) {
+        tvChannelHelper.deleteProgram(computer, app)
+        val id = getShortcutIdForGame(computer, app)
         if (getInfoForId(id) != null) {
-            sm.disableShortcuts(Collections.singletonList(id), reason);
+            sm.disableShortcuts(listOf(id), reason)
         }
     }
 
-    public void enableAppShortcut(ComputerDetails computer, NvApp app) {
-        String id = getShortcutIdForGame(computer, app);
+    fun enableAppShortcut(computer: ComputerDetails, app: NvApp) {
+        val id = getShortcutIdForGame(computer, app)
         if (getInfoForId(id) != null) {
-            sm.enableShortcuts(Collections.singletonList(id));
+            sm.enableShortcuts(listOf(id))
         }
     }
 }

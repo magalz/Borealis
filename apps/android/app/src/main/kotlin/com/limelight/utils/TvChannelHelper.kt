@@ -1,61 +1,63 @@
-package com.limelight.utils;
+package com.limelight.utils
 
-import android.app.Activity;
-import android.content.Context;
-import android.content.ActivityNotFoundException;
-import android.content.ContentUris;
-import android.content.ContentValues;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteException;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.drawable.Drawable;
-import android.media.tv.TvContract;
-import android.net.Uri;
+import android.app.Activity
+import android.content.ContentUris
+import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.database.sqlite.SQLiteException
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.Drawable
+import android.media.tv.TvContract
+import android.net.Uri
+import androidx.core.graphics.createBitmap
+import com.limelight.LimeLog
+import com.limelight.PosterContentProvider
+import com.limelight.R
+import com.limelight.nvstream.http.ComputerDetails
+import com.limelight.nvstream.http.NvApp
+import java.io.IOException
 
-import com.limelight.LimeLog;
-import com.limelight.PosterContentProvider;
-import com.limelight.R;
-import com.limelight.nvstream.http.ComputerDetails;
-import com.limelight.nvstream.http.NvApp;
+private const val ASPECT_RATIO_MOVIE_POSTER = 5
+private const val TYPE_GAME = 12
+private const val INTERNAL_PROVIDER_ID_INDEX = 1
+private const val PROGRAM_BROWSABLE_INDEX = 2
+private const val ID_INDEX = 0
+private const val LOGO_QUALITY = 100
 
-import java.io.IOException;
-import java.io.OutputStream;
+// The weight of a program counts the seconds since this instant (2017-07-14).
+private const val WEIGHT_EPOCH_MS = 1_500_000_000_000L
+private const val MS_PER_SECOND = 1000L
 
-public class TvChannelHelper {
+private fun toValueString(value: Any?): String? = value?.toString()
 
-    private static final int ASPECT_RATIO_MOVIE_POSTER = 5;
-    private static final int TYPE_GAME = 12;
-    private static final int INTERNAL_PROVIDER_ID_INDEX = 1;
-    private static final int PROGRAM_BROWSABLE_INDEX = 2;
-    private static final int ID_INDEX = 0;
-    private Context context;
+private fun toUriString(intent: Intent?): String? = intent?.toUri(Intent.URI_INTENT_SCHEME)
 
-    public TvChannelHelper(Context context) {
-        this.context = context;
-    }
-
-    void requestChannelOnHomeScreen(ComputerDetails computer) {
-        // BOREALIS: the channel request needs an Activity; an application context only deletes channels.
-        if (!(context instanceof Activity)) {
-            return;
+class TvChannelHelper(private val context: Context) {
+    // BOREALIS: the channel request needs an Activity; an application context only deletes
+    // channels.
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    @Suppress("ReturnCount", "TooGenericExceptionCaught")
+    internal fun requestChannelOnHomeScreen(computer: ComputerDetails) {
+        if (context !is Activity) {
+            return
         }
         if (!isAndroidTV()) {
-            return;
+            return
         }
 
-        Long channelId = getChannelId(computer.uuid);
+        val channelId = getChannelId(computer.uuid)
         if (channelId == null) {
-            return;
+            return
         }
 
-        Intent intent = new Intent(TvContract.ACTION_REQUEST_CHANNEL_BROWSABLE);
-        intent.putExtra(TvContract.EXTRA_CHANNEL_ID, getChannelId(computer.uuid));
+        val intent = Intent(TvContract.ACTION_REQUEST_CHANNEL_BROWSABLE)
+        intent.putExtra(TvContract.EXTRA_CHANNEL_ID, getChannelId(computer.uuid))
         try {
-            ((Activity) context).startActivityForResult(intent, 0);
-        } catch (Exception ignored) {
+            context.startActivityForResult(intent, 0)
+        } catch (ignored: Exception) {
             // ActivityNotFoundException is the only officially documented
             // exception that can result from this call. However some buggy
             // devices throw others.
@@ -63,291 +65,335 @@ public class TvChannelHelper {
         }
     }
 
-    void createTvChannel(ComputerDetails computer) {
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    // The Java printed the stack trace of a provider that does not know the channels, as it did
+    // for the programs.
+    @Suppress("ReturnCount", "PrintStackTrace")
+    internal fun createTvChannel(computer: ComputerDetails) {
         if (!isAndroidTV()) {
-            return;
+            return
         }
 
-        ChannelBuilder builder = new ChannelBuilder()
+        val builder =
+            ChannelBuilder()
                 .setType(TvContract.Channels.TYPE_PREVIEW)
                 .setDisplayName(computer.name)
                 .setInternalProviderId(computer.uuid)
-                .setAppLinkIntent(ServerHelper.createPcShortcutIntent(context, computer));
+                .setAppLinkIntent(ServerHelper.createPcShortcutIntent(context, computer))
 
-        Long channelId = getChannelId(computer.uuid);
+        val channelId = getChannelId(computer.uuid)
         if (channelId != null) {
-            context.getContentResolver().update(TvContract.buildChannelUri(channelId),
-                    builder.toContentValues(), null, null);
-            return;
+            context.contentResolver.update(
+                TvContract.buildChannelUri(channelId),
+                builder.toContentValues(),
+                null,
+                null,
+            )
+            return
         }
 
-        Uri channelUri;
+        val channelUri: Uri?
 
         try {
-            channelUri = context.getContentResolver().insert(
-                    TvContract.Channels.CONTENT_URI, builder.toContentValues());
-        } catch (IllegalArgumentException e) {
+            channelUri =
+                context.contentResolver.insert(
+                    TvContract.Channels.CONTENT_URI,
+                    builder.toContentValues(),
+                )
+        } catch (e: IllegalArgumentException) {
             // This can happen on HarmonyOS devices which report to
             // support Leanback APIs, yet don't implement this URI
-            e.printStackTrace();
-            return;
+            e.printStackTrace()
+            return
         }
 
         if (channelUri != null) {
-            long id = ContentUris.parseId(channelUri);
-            updateChannelIcon(id);
+            val id = ContentUris.parseId(channelUri)
+            updateChannelIcon(id)
         }
     }
 
-    private void updateChannelIcon(long channelId) {
-        Bitmap logo = drawableToBitmap(context.getResources().getDrawable(R.drawable.ic_channel));
+    @Suppress("DEPRECATION")
+    private fun updateChannelIcon(channelId: Long) {
+        val logo = drawableToBitmap(context.resources.getDrawable(R.drawable.ic_channel))
         try {
-            Uri localUri = TvContract.buildChannelLogoUri(channelId);
-            try (OutputStream outputStream = context.getContentResolver().openOutputStream(localUri)) {
-                logo.compress(Bitmap.CompressFormat.PNG, 100, outputStream);
-                outputStream.flush();
-            } catch (SQLiteException | IOException e) {
-                LimeLog.warning("Failed to store the logo to the system content provider.");
-                e.printStackTrace();
+            val localUri = TvContract.buildChannelLogoUri(channelId)
+            try {
+                context.contentResolver.openOutputStream(localUri).use { outputStream ->
+                    val stream = checkNotNull(outputStream)
+                    logo.compress(Bitmap.CompressFormat.PNG, LOGO_QUALITY, stream)
+                    stream.flush()
+                }
+            } catch (e: SQLiteException) {
+                logoNotStored(e)
+            } catch (e: IOException) {
+                logoNotStored(e)
             }
         } finally {
-            logo.recycle();
+            logo.recycle()
         }
     }
 
-    private Bitmap drawableToBitmap(Drawable drawable) {
-        int width = context.getResources().getDimensionPixelSize(R.dimen.tv_channel_logo_width);
-        int height = context.getResources().getDimensionPixelSize(R.dimen.tv_channel_logo_width);
-
-        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(bitmap);
-        drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
-        drawable.draw(canvas);
-        return bitmap;
+    private fun logoNotStored(e: Exception) {
+        LimeLog.warning("Failed to store the logo to the system content provider.")
+        e.printStackTrace()
     }
 
-    void addGameToChannel(ComputerDetails computer, NvApp app) {
+    private fun drawableToBitmap(drawable: Drawable): Bitmap {
+        val width = context.resources.getDimensionPixelSize(R.dimen.tv_channel_logo_width)
+        // The height reads the width dimension too, as the Java did (reported in Sprint 12).
+        val height = context.resources.getDimensionPixelSize(R.dimen.tv_channel_logo_width)
+
+        val bitmap = createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
+    }
+
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    @Suppress("ReturnCount", "PrintStackTrace")
+    internal fun addGameToChannel(computer: ComputerDetails, app: NvApp) {
         if (!isAndroidTV()) {
-            return;
+            return
         }
 
-
-        Long channelId = getChannelId(computer.uuid);
+        val channelId = getChannelId(computer.uuid)
         if (channelId == null) {
-            return;
+            return
         }
 
-        PreviewProgramBuilder builder = new PreviewProgramBuilder()
+        val builder =
+            PreviewProgramBuilder()
                 .setChannelId(channelId)
                 .setType(TYPE_GAME)
-                .setTitle(app.getAppName())
+                .setTitle(app.appName)
                 .setPosterArtAspectRatio(ASPECT_RATIO_MOVIE_POSTER)
-                .setPosterArtUri(PosterContentProvider.createBoxArtUri(computer.uuid, ""+app.getAppId()))
+                .setPosterArtUri(
+                    PosterContentProvider.createBoxArtUri(
+                        checkNotNull(computer.uuid),
+                        "" + app.appId,
+                    )
+                )
                 .setIntent(ServerHelper.createAppShortcutIntent(context, computer, app))
-                .setInternalProviderId(""+app.getAppId())
+                .setInternalProviderId("" + app.appId)
                 // Weight should increase each time we run the game
-                .setWeight((int)((System.currentTimeMillis() - 1500000000000L) / 1000));
+                .setWeight(((System.currentTimeMillis() - WEIGHT_EPOCH_MS) / MS_PER_SECOND).toInt())
 
-        Long programId = getProgramId(channelId, ""+app.getAppId());
+        val programId = getProgramId(channelId, "" + app.appId)
         if (programId != null) {
-            context.getContentResolver().update(TvContract.buildPreviewProgramUri(programId),
-                    builder.toContentValues(), null, null);
-            return;
+            context.contentResolver.update(
+                TvContract.buildPreviewProgramUri(programId),
+                builder.toContentValues(),
+                null,
+                null,
+            )
+            return
         }
 
         try {
-            context.getContentResolver().insert(TvContract.PreviewPrograms.CONTENT_URI,
-                    builder.toContentValues());
-        } catch (IllegalArgumentException e) {
+            context.contentResolver.insert(
+                TvContract.PreviewPrograms.CONTENT_URI,
+                builder.toContentValues(),
+            )
+        } catch (e: IllegalArgumentException) {
             // This can happen on HarmonyOS devices which report to
             // support Leanback APIs, yet don't implement this URI
-            e.printStackTrace();
-            return;
+            e.printStackTrace()
+            return
         }
 
-        TvContract.requestChannelBrowsable(context, channelId);
+        TvContract.requestChannelBrowsable(context, channelId)
     }
 
-    void deleteChannel(ComputerDetails computer) {
+    internal fun deleteChannel(computer: ComputerDetails) {
         if (!isAndroidTV()) {
-            return;
+            return
         }
 
-        Long channelId = getChannelId(computer.uuid);
+        val channelId = getChannelId(computer.uuid)
         if (channelId == null) {
-            return;
+            return
         }
 
-        context.getContentResolver().delete(TvContract.buildChannelUri(channelId), null, null);
+        context.contentResolver.delete(TvContract.buildChannelUri(channelId), null, null)
     }
 
-    void deleteProgram(ComputerDetails computer, NvApp app) {
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    @Suppress("ReturnCount")
+    internal fun deleteProgram(computer: ComputerDetails, app: NvApp) {
         if (!isAndroidTV()) {
-            return;
+            return
         }
 
-        Long channelId = getChannelId(computer.uuid);
+        val channelId = getChannelId(computer.uuid)
         if (channelId == null) {
-            return;
+            return
         }
 
-
-        Long programId = getProgramId(channelId, ""+app.getAppId());
+        val programId = getProgramId(channelId, "" + app.appId)
         if (programId == null) {
-            return;
+            return
         }
 
-        context.getContentResolver().delete(TvContract.buildPreviewProgramUri(programId), null, null);
+        context.contentResolver.delete(TvContract.buildPreviewProgramUri(programId), null, null)
     }
 
-    private Long getChannelId(String computerUuid) {
-        try (Cursor cursor = context.getContentResolver().query(
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    @Suppress("ReturnCount")
+    private fun getChannelId(computerUuid: String?): Long? {
+        context.contentResolver
+            .query(
                 TvContract.Channels.CONTENT_URI,
-                new String[] {TvContract.Channels._ID, TvContract.Channels.COLUMN_INTERNAL_PROVIDER_ID},
+                arrayOf(TvContract.Channels._ID, TvContract.Channels.COLUMN_INTERNAL_PROVIDER_ID),
                 null,
                 null,
-                null)) {
-            if (cursor == null || cursor.getCount() == 0) {
-                return null;
-            }
-            while (cursor.moveToNext()) {
-                String internalProviderId = cursor.getString(INTERNAL_PROVIDER_ID_INDEX);
-                if (computerUuid.equals(internalProviderId)) {
-                    return cursor.getLong(ID_INDEX);
+                null,
+            )
+            .use { cursor ->
+                if (cursor == null) {
+                    return null
                 }
-            }
+                if (cursor.count == 0) {
+                    return null
+                }
+                while (cursor.moveToNext()) {
+                    val internalProviderId = cursor.getString(INTERNAL_PROVIDER_ID_INDEX)
+                    if (checkNotNull(computerUuid) == internalProviderId) {
+                        return cursor.getLong(ID_INDEX)
+                    }
+                }
 
-            return null;
-        }
+                return null
+            }
     }
 
-    private Long getProgramId(long channelId, String appId) {
-        try (Cursor cursor = context.getContentResolver().query(
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    @Suppress("ReturnCount", "NestedBlockDepth")
+    private fun getProgramId(channelId: Long, appId: String): Long? {
+        context.contentResolver
+            .query(
                 TvContract.buildPreviewProgramsUriForChannel(channelId),
-                new String[] {TvContract.PreviewPrograms._ID, TvContract.PreviewPrograms.COLUMN_INTERNAL_PROVIDER_ID, TvContract.PreviewPrograms.COLUMN_BROWSABLE},
+                arrayOf(
+                    TvContract.PreviewPrograms._ID,
+                    TvContract.PreviewPrograms.COLUMN_INTERNAL_PROVIDER_ID,
+                    TvContract.PreviewPrograms.COLUMN_BROWSABLE,
+                ),
                 null,
                 null,
-                null)) {
-            if (cursor == null || cursor.getCount() == 0) {
-                return null;
-            }
-            while (cursor.moveToNext()) {
-                String internalProviderId = cursor.getString(INTERNAL_PROVIDER_ID_INDEX);
-                if (appId.equals(internalProviderId)) {
-                    long id = cursor.getLong(ID_INDEX);
-                    int browsable = cursor.getInt(PROGRAM_BROWSABLE_INDEX);
-                    if (browsable != 0) {
-                        return id;
-                    } else {
-                        int countDeleted = context.getContentResolver().delete(TvContract.buildPreviewProgramUri(id), null, null);
-                        if (countDeleted > 0) {
-                            LimeLog.info("Preview program has been deleted");
+                null,
+            )
+            .use { cursor ->
+                if (cursor == null) {
+                    return null
+                }
+                if (cursor.count == 0) {
+                    return null
+                }
+                while (cursor.moveToNext()) {
+                    val internalProviderId = cursor.getString(INTERNAL_PROVIDER_ID_INDEX)
+                    if (appId == internalProviderId) {
+                        val id = cursor.getLong(ID_INDEX)
+                        val browsable = cursor.getInt(PROGRAM_BROWSABLE_INDEX)
+                        if (browsable != 0) {
+                            return id
                         } else {
-                            LimeLog.warning("Preview program has not been deleted");
+                            val countDeleted =
+                                context.contentResolver.delete(
+                                    TvContract.buildPreviewProgramUri(id),
+                                    null,
+                                    null,
+                                )
+                            if (countDeleted > 0) {
+                                LimeLog.info("Preview program has been deleted")
+                            } else {
+                                LimeLog.warning("Preview program has not been deleted")
+                            }
                         }
                     }
                 }
+
+                return null
             }
-
-            return null;
-        }
     }
 
-    private static <T> String toValueString(T value) {
-        return value == null ? null : value.toString();
+    private fun isAndroidTV(): Boolean =
+        context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+
+    private class PreviewProgramBuilder {
+        private val values = ContentValues()
+
+        fun setChannelId(channelId: Long): PreviewProgramBuilder {
+            values.put(TvContract.PreviewPrograms.COLUMN_CHANNEL_ID, channelId)
+            return this
+        }
+
+        fun setType(type: Int): PreviewProgramBuilder {
+            values.put(TvContract.PreviewPrograms.COLUMN_TYPE, type)
+            return this
+        }
+
+        fun setTitle(title: String?): PreviewProgramBuilder {
+            values.put(TvContract.PreviewPrograms.COLUMN_TITLE, title)
+            return this
+        }
+
+        fun setPosterArtAspectRatio(aspectRatio: Int): PreviewProgramBuilder {
+            values.put(TvContract.PreviewPrograms.COLUMN_POSTER_ART_ASPECT_RATIO, aspectRatio)
+            return this
+        }
+
+        fun setIntent(intent: Intent?): PreviewProgramBuilder {
+            values.put(TvContract.PreviewPrograms.COLUMN_INTENT_URI, toUriString(intent))
+            return this
+        }
+
+        fun setIntentUri(uri: Uri?): PreviewProgramBuilder {
+            values.put(TvContract.PreviewPrograms.COLUMN_INTENT_URI, toValueString(uri))
+            return this
+        }
+
+        fun setInternalProviderId(id: String?): PreviewProgramBuilder {
+            values.put(TvContract.PreviewPrograms.COLUMN_INTERNAL_PROVIDER_ID, id)
+            return this
+        }
+
+        fun setPosterArtUri(uri: Uri?): PreviewProgramBuilder {
+            values.put(TvContract.PreviewPrograms.COLUMN_POSTER_ART_URI, toValueString(uri))
+            return this
+        }
+
+        fun setWeight(weight: Int): PreviewProgramBuilder {
+            values.put(TvContract.PreviewPrograms.COLUMN_WEIGHT, weight)
+            return this
+        }
+
+        fun toContentValues(): ContentValues = ContentValues(values)
     }
 
-    private static String toUriString(Intent intent) {
-        return intent == null ? null : intent.toUri(Intent.URI_INTENT_SCHEME);
-    }
+    private class ChannelBuilder {
+        private val values = ContentValues()
 
-    private boolean isAndroidTV() {
-        return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_LEANBACK);
-    }
-
-    private static class PreviewProgramBuilder {
-
-        private ContentValues mValues = new ContentValues();
-
-
-        public PreviewProgramBuilder setChannelId(Long channelId) {
-            mValues.put(TvContract.PreviewPrograms.COLUMN_CHANNEL_ID, channelId);
-            return this;
+        fun setType(type: String?): ChannelBuilder {
+            values.put(TvContract.Channels.COLUMN_TYPE, type)
+            return this
         }
 
-        public PreviewProgramBuilder setType(int type) {
-            mValues.put(TvContract.PreviewPrograms.COLUMN_TYPE, type);
-            return this;
+        fun setDisplayName(displayName: String?): ChannelBuilder {
+            values.put(TvContract.Channels.COLUMN_DISPLAY_NAME, displayName)
+            return this
         }
 
-        public PreviewProgramBuilder setTitle(String title) {
-            mValues.put(TvContract.PreviewPrograms.COLUMN_TITLE, title);
-            return this;
+        fun setInternalProviderId(internalProviderId: String?): ChannelBuilder {
+            values.put(TvContract.Channels.COLUMN_INTERNAL_PROVIDER_ID, internalProviderId)
+            return this
         }
 
-        public PreviewProgramBuilder setPosterArtAspectRatio(int aspectRatio) {
-            mValues.put(TvContract.PreviewPrograms.COLUMN_POSTER_ART_ASPECT_RATIO, aspectRatio);
-            return this;
+        fun setAppLinkIntent(intent: Intent?): ChannelBuilder {
+            values.put(TvContract.Channels.COLUMN_APP_LINK_INTENT_URI, toUriString(intent))
+            return this
         }
 
-        public PreviewProgramBuilder setIntent(Intent intent) {
-            mValues.put(TvContract.PreviewPrograms.COLUMN_INTENT_URI, toUriString(intent));
-            return this;
-        }
-
-        public PreviewProgramBuilder setIntentUri(Uri uri) {
-            mValues.put(TvContract.PreviewPrograms.COLUMN_INTENT_URI, toValueString(uri));
-            return this;
-        }
-
-        public PreviewProgramBuilder setInternalProviderId(String id) {
-            mValues.put(TvContract.PreviewPrograms.COLUMN_INTERNAL_PROVIDER_ID, id);
-            return this;
-        }
-
-        public PreviewProgramBuilder setPosterArtUri(Uri uri) {
-            mValues.put(TvContract.PreviewPrograms.COLUMN_POSTER_ART_URI, toValueString(uri));
-            return this;
-        }
-
-        public PreviewProgramBuilder setWeight(int weight) {
-            mValues.put(TvContract.PreviewPrograms.COLUMN_WEIGHT, weight);
-            return this;
-        }
-
-        public ContentValues toContentValues() {
-            return new ContentValues(mValues);
-        }
-
-    }
-
-    private static class ChannelBuilder {
-
-        private ContentValues mValues = new ContentValues();
-
-        public ChannelBuilder setType(String type) {
-            mValues.put(TvContract.Channels.COLUMN_TYPE, type);
-            return this;
-        }
-
-        public ChannelBuilder setDisplayName(String displayName) {
-            mValues.put(TvContract.Channels.COLUMN_DISPLAY_NAME, displayName);
-            return this;
-        }
-
-        public ChannelBuilder setInternalProviderId(String internalProviderId) {
-            mValues.put(TvContract.Channels.COLUMN_INTERNAL_PROVIDER_ID, internalProviderId);
-            return this;
-        }
-
-        public ChannelBuilder setAppLinkIntent(Intent intent) {
-            mValues.put(TvContract.Channels.COLUMN_APP_LINK_INTENT_URI, toUriString(intent));
-            return this;
-        }
-
-        public ContentValues toContentValues() {
-            return new ContentValues(mValues);
-        }
-
+        fun toContentValues(): ContentValues = ContentValues(values)
     }
 }

@@ -565,18 +565,38 @@ inherited Java to Kotlin before SecOps, one area at a time, in three sprints.
 
 ### Sprint 12: Kotlin migration, network, host and support
 
-About 7,300 lines:
+In progress. Owner decisions of 2026-10-23, recorded in [ADR 0059](adr/0059-convert-the-inherited-java-to-kotlin.md):
 
-- network and host, 5,402 lines: `nvstream/http` (`NvHTTP` and pairing, 1,467),
+- **H1, placement and history:** converted files move to `src/main/kotlin/com/limelight/...`
+  in a rename-only commit, and the conversion follows in its own commit (ADR 0059, rule 1).
+- **A1, static analysis:** the conversion is faithful. Mechanical detekt findings are fixed,
+  structural rules are suppressed on the declaration with a backlog item, and there is no
+  detekt baseline (ADR 0059, rule 6).
+- **C1, coverage:** converted code counts in Kover coverage at once. The exclusion narrows to
+  the Java that stays, and there is no coverage floor (ADR 0059, rule 7).
+- **D1, dead code:** verified dead code is removed before conversion, each removal in its own
+  commit with its evidence (ADR 0059, rule 8).
+- **Behaviour:** a conversion keeps behaviour. Bugs found are reported and go to the backlog
+  (ADR 0059, rule 10).
+
+Reference source: the LuminalShine reference is now the owner's fork at `D:\Repos\luminalshine`.
+
+Size: 47 files and 7,325 lines, under `apps/android/app/src/main/java`:
+
+- network and host, 31 files and 5,402 lines: `nvstream/http` (`NvHTTP` and pairing, 1,467),
   `computers` (1,577), `nvstream/mdns` (728), `nvstream/wol`, `binding/crypto`,
   `discovery`, and `nvstream` (`NvConnection` and the stream configuration, 991),
   `nvstream/av` and `nvstream/input`;
-- support, 1,923 lines: `preferences` (`PreferenceConfiguration`, 599), `utils`
+- support, 16 files and 1,923 lines: `preferences` (`PreferenceConfiguration`, 599), `utils`
   (1,004), `ui`, `grid/assets`, `PosterContentProvider`, `LimeLog` and `binding`.
 
 Items:
 
 - HTTP and computers come first, because Phase 3 uses them.
+- **Legacy database readers removed, not converted.** The three `LegacyDatabaseReader`
+  classes (308 lines) read `computers.db`, `computers2.db` and `computers3.db`, the databases of
+  older Moonlight versions under the `com.limelight` application id. Borealis's application id
+  is `io.github.magalz.borealis`, so these files never exist in its data (ADR 0059, rule 8).
 - **Re-verify the 26.10.0-beta.1 host changes.** Moved from the backlog: check
   them in the source, and capture a fixture folder for them. The characterization
   tests of the HTTP layer use these fixtures. See the

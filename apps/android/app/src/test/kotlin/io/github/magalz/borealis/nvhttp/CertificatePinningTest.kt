@@ -11,12 +11,16 @@ import io.github.magalz.borealis.library.RecordingAudit
 import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
 import java.io.Closeable
+import java.math.BigInteger
+import java.security.KeyPairGenerator
+import java.security.KeyStore
 import java.security.NoSuchAlgorithmException
 import java.security.Security
 import java.lang.reflect.Proxy
 import java.security.cert.Certificate
 import java.security.cert.CertificateException
 import java.security.cert.X509Certificate
+import java.util.Date
 import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLHandshakeException
 import javax.net.ssl.SSLPeerUnverifiedException
@@ -24,10 +28,18 @@ import javax.net.ssl.SSLSession
 import javax.net.ssl.X509KeyManager
 import javax.net.ssl.X509TrustManager
 import okhttp3.OkHttpClient
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x509.Extension
+import org.bouncycastle.asn1.x509.GeneralName
+import org.bouncycastle.asn1.x509.GeneralNames
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
+import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import org.junit.After
 import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
@@ -40,6 +52,8 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class CertificatePinningTest {
     @get:Rule val audit = RecordingAudit()
+
+    @get:Rule val folder = TemporaryFolder()
 
     private val closeables = mutableListOf<Closeable>()
 
@@ -202,6 +216,67 @@ class CertificatePinningTest {
         assertThat(event.type).isEqualTo(AuditType.TLS_FAILURE)
         assertThat(event.host).isEqualTo("127.0.0.1")
         assertThat(event.detail).isEqualTo("error=SSLHandshakeException")
+    }
+
+    @Test
+    fun `a certificate that the platform trusts is accepted, with or without a pin`() {
+        val trusted = trustedIdentity()
+        val store = folder.newFile("trust.p12")
+        KeyStore.getInstance("PKCS12").apply {
+            load(null, null)
+            setCertificateEntry("host", trusted.certificate)
+            store.outputStream().use { store(it, TRUST_PASSWORD.toCharArray()) }
+        }
+        val properties =
+            mapOf(
+                "javax.net.ssl.trustStore" to store.path,
+                "javax.net.ssl.trustStoreType" to "PKCS12",
+                "javax.net.ssl.trustStorePassword" to TRUST_PASSWORD,
+            )
+        val before = properties.keys.associateWith { System.getProperty(it) }
+        properties.forEach { (key, value) -> System.setProperty(key, value) }
+        try {
+            val host = host(identity = trusted)
+            answerApps(host)
+            // The default trust manager is built with the system trust store, when the client is.
+            val unpinned = clientOf(host)
+            val pinnedToAnother = clientOf(host, serverCert = other.certificate)
+
+            assertThat(unpinned.getAppList()).hasSize(1)
+            assertThat(pinnedToAnother.getAppList()).hasSize(1)
+
+            assertThat(unpinned.sawCertificateMismatch()).isFalse()
+            assertThat(pinnedToAnother.sawCertificateMismatch()).isFalse()
+            assertThat(audit.events).isEmpty()
+        } finally {
+            before.forEach { (key, value) ->
+                if (value == null) System.clearProperty(key) else System.setProperty(key, value)
+            }
+        }
+    }
+
+    /** A self-signed certificate for 127.0.0.1 and its name, which a trust store can hold. */
+    private fun trustedIdentity(): TestIdentity {
+        val keyPair = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
+        val name = X500Name("CN=Trusted Test Host")
+        val now = System.currentTimeMillis()
+        val day = 24L * 60 * 60 * 1000
+        val holder =
+            JcaX509v3CertificateBuilder(
+                    name,
+                    BigInteger.valueOf(now),
+                    Date(now - day),
+                    Date(now + day),
+                    name,
+                    keyPair.public,
+                )
+                .addExtension(
+                    Extension.subjectAlternativeName,
+                    false,
+                    GeneralNames(GeneralName(GeneralName.iPAddress, "127.0.0.1")),
+                )
+                .build(JcaContentSignerBuilder("SHA256withRSA").build(keyPair.private))
+        return TestIdentity(keyPair, JcaX509CertificateConverter().getCertificate(holder))
     }
 
     @Test
@@ -382,5 +457,9 @@ class CertificatePinningTest {
         assertThat(chain.asList()).containsExactly(null as X509Certificate?)
         assertThat(key).isNull()
         assertThat(calls).containsExactly("getClientCertificate", "getClientPrivateKey").inOrder()
+    }
+
+    private companion object {
+        const val TRUST_PASSWORD = "changeit"
     }
 }

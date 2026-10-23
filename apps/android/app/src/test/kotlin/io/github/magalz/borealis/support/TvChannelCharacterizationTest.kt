@@ -131,6 +131,8 @@ class TvChannelCharacterizationTest {
 
         helper.createHostShortcut(computer, false, true)
 
+        // The signature of a PNG file.
+        assertThat(logo.toByteArray().take(PNG_SIGNATURE.size)).isEqualTo(PNG_SIGNATURE)
         val bitmap = BitmapFactory.decodeByteArray(logo.toByteArray(), 0, logo.size())
         val width = app.resources.getDimensionPixelSize(R.dimen.tv_channel_logo_width)
         assertThat(width).isGreaterThan(0)
@@ -530,6 +532,9 @@ class TvChannelCharacterizationTest {
     }
 
     private companion object {
+        val PNG_SIGNATURE =
+            listOf(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A).map { it.toByte() }
+
         /** The instant that the weight of a program counts from: 2017-07-14 (UTC). */
         const val EPOCH_MS = 1_500_000_000_000L
     }

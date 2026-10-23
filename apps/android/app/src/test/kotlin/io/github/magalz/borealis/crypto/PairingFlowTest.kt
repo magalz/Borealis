@@ -261,6 +261,31 @@ class PairingFlowTest {
     }
 
     @Test
+    fun `a PIN hash that differs only in its last byte is a wrong PIN`() {
+        // The right PIN and the right AES key: only the last byte of the hash in the answer is off,
+        // so only a comparison of the whole hash sees it.
+        for ((sha256, serverInfo) in listOf(true to SERVER_INFO_GEN7, false to SERVER_INFO_GEN6)) {
+            val host = host(sha256 = sha256)
+            host.flipLastHashByte = true
+            val rig = PairingRig(host)
+
+            assertWithMessage("sha256 is $sha256")
+                .that(rig.pair(serverInfo))
+                .isEqualTo(PairState.PIN_WRONG)
+
+            assertThat(rig.seen)
+                .containsExactly(
+                    "http getservercert",
+                    "http clientchallenge",
+                    "http serverchallengeresp",
+                    "http unpair",
+                )
+                .inOrder()
+            assertThat(host.clientHashMatched).isNull()
+        }
+    }
+
+    @Test
     fun `a host that does not accept the first phase fails the pairing without an unpair`() {
         val host = host()
         refusing(host, "getservercert")

@@ -124,6 +124,9 @@ internal class FakePairingHost(
     /** How many bytes of the server challenge the host sends after its hash. */
     var serverChallengeBytesSent: Int = SECRET_LENGTH
 
+    /** Flips the last byte of the hash in the client challenge answer; everything else is right. */
+    var flipLastHashByte: Boolean = false
+
     /** The verdicts of the host about the client, after the last phase. */
     var clientHashMatched: Boolean? = null
         private set
@@ -290,9 +293,11 @@ internal class FakePairingHost(
         val sentChallenge = ByteArray(SECRET_LENGTH).also { random.nextBytes(it) }
         // What the client reads back is the part that was sent, padded with zeros.
         serverChallenge = sentChallenge.copyOf(serverChallengeBytesSent).copyOf(SECRET_LENGTH)
-        val response =
-            hash(challenge + hostIdentity.certificate.signature + serverSecret) +
-                sentChallenge.copyOf(serverChallengeBytesSent)
+        val answerHash = hash(challenge + hostIdentity.certificate.signature + serverSecret)
+        if (flipLastHashByte) {
+            answerHash[answerHash.lastIndex] = (answerHash.last().toInt() xor 1).toByte()
+        }
+        val response = answerHash + sentChallenge.copyOf(serverChallengeBytesSent)
         return PairingReply.root(
             "<paired>1</paired><challengeresponse>${hex(aes(true, response))}</challengeresponse>"
         )

@@ -1,259 +1,289 @@
-package com.limelight.binding.crypto;
+package com.limelight.binding.crypto
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.StringWriter;
-import java.math.BigInteger;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.Provider;
-import java.security.SecureRandom;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Locale;
+import android.annotation.SuppressLint
+import android.content.Context
+import android.util.Base64
+import com.limelight.LimeLog
+import com.limelight.nvstream.http.LimelightCryptoProvider
+import java.io.ByteArrayInputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.OutputStreamWriter
+import java.io.StringWriter
+import java.math.BigInteger
+import java.security.KeyFactory
+import java.security.KeyPair
+import java.security.KeyPairGenerator
+import java.security.NoSuchAlgorithmException
+import java.security.PrivateKey
+import java.security.Provider
+import java.security.SecureRandom
+import java.security.cert.CertificateException
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
+import java.security.spec.InvalidKeySpecException
+import java.security.spec.PKCS8EncodedKeySpec
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.X500NameBuilder
+import org.bouncycastle.asn1.x500.style.BCStyle
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
+import org.bouncycastle.cert.X509v3CertificateBuilder
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.openssl.jcajce.JcaPEMWriter
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 
-import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x500.X500NameBuilder;
-import org.bouncycastle.asn1.x500.style.BCStyle;
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
-import org.bouncycastle.cert.X509v3CertificateBuilder;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
-import org.bouncycastle.operator.ContentSigner;
-import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+class AndroidCryptoProvider(c: Context) : LimelightCryptoProvider {
+    private val certFile: File
+    private val keyFile: File
 
-import android.annotation.SuppressLint;
-import android.content.Context;
-import android.util.Base64;
+    private var cert: X509Certificate? = null
+    private var key: PrivateKey? = null
+    private var pemCertBytes: ByteArray? = null
 
-import com.limelight.LimeLog;
-import com.limelight.nvstream.http.LimelightCryptoProvider;
+    init {
+        val dataPath = c.filesDir.absolutePath
 
-public class AndroidCryptoProvider implements LimelightCryptoProvider {
-
-    private final File certFile;
-    private final File keyFile;
-
-    private X509Certificate cert;
-    private PrivateKey key;
-    private byte[] pemCertBytes;
-
-    private static final Object globalCryptoLock = new Object();
-
-    private static final Provider bcProvider = new BouncyCastleProvider();
-
-    public AndroidCryptoProvider(Context c) {
-        String dataPath = c.getFilesDir().getAbsolutePath();
-
-        certFile = new File(dataPath + File.separator + "client.crt");
-        keyFile = new File(dataPath + File.separator + "client.key");
+        certFile = File(dataPath + File.separator + "client.crt")
+        keyFile = File(dataPath + File.separator + "client.key")
     }
 
-    private byte[] loadFileToBytes(File f) {
+    private fun loadFileToBytes(f: File): ByteArray? {
         if (!f.exists()) {
-            return null;
+            return null
         }
 
-        try (final FileInputStream fin = new FileInputStream(f)) {
-            byte[] fileData = new byte[(int) f.length()];
-            if (fin.read(fileData) != f.length()) {
-                // Failed to read
-                fileData = null;
+        return try {
+            FileInputStream(f).use { fin ->
+                val fileData = ByteArray(f.length().toInt())
+                // A short read is a failure to read
+                if (fin.read(fileData).toLong() != f.length()) null else fileData
             }
-            return fileData;
-        } catch (IOException e) {
-            return null;
+        } catch (ignored: IOException) {
+            null
         }
     }
 
-    private boolean loadCertKeyPair() {
-        byte[] certBytes = loadFileToBytes(certFile);
-        byte[] keyBytes = loadFileToBytes(keyFile);
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    @Suppress("ReturnCount", "TooGenericExceptionThrown")
+    private fun loadCertKeyPair(): Boolean {
+        val certBytes = loadFileToBytes(certFile)
+        val keyBytes = loadFileToBytes(keyFile)
 
         // If either file was missing, we definitely can't succeed
         if (certBytes == null || keyBytes == null) {
-            LimeLog.info("Missing cert or key; need to generate a new one");
-            return false;
+            LimeLog.info("Missing cert or key; need to generate a new one")
+            return false
         }
 
         try {
-            CertificateFactory certFactory = CertificateFactory.getInstance("X.509", bcProvider);
-            cert = (X509Certificate) certFactory.generateCertificate(new ByteArrayInputStream(certBytes));
-            pemCertBytes = certBytes;
-            KeyFactory keyFactory = KeyFactory.getInstance("RSA", bcProvider);
-            key = keyFactory.generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
-        } catch (CertificateException e) {
+            val certFactory = CertificateFactory.getInstance("X.509", bcProvider)
+            cert =
+                certFactory.generateCertificate(ByteArrayInputStream(certBytes)) as X509Certificate?
+            pemCertBytes = certBytes
+            val keyFactory = KeyFactory.getInstance("RSA", bcProvider)
+            key = keyFactory.generatePrivate(PKCS8EncodedKeySpec(keyBytes))
+        } catch (expected: CertificateException) {
             // May happen if the cert is corrupt
-            LimeLog.warning("Corrupted certificate");
-            return false;
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        } catch (InvalidKeySpecException e) {
+            LimeLog.warning("Corrupted certificate")
+            return false
+        } catch (e: NoSuchAlgorithmException) {
+            throw RuntimeException(e)
+        } catch (expected: InvalidKeySpecException) {
             // May happen if the key is corrupt
-            LimeLog.warning("Corrupted key");
-            return false;
+            LimeLog.warning("Corrupted key")
+            return false
         }
 
-        return true;
+        return true
     }
 
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     @SuppressLint("TrulyRandom")
-    private boolean generateCertKeyPair() {
-        byte[] snBytes = new byte[8];
-        new SecureRandom().nextBytes(snBytes);
+    @Suppress("TooGenericExceptionCaught", "TooGenericExceptionThrown")
+    private fun generateCertKeyPair(): Boolean {
+        val snBytes = ByteArray(SERIAL_BYTES)
+        SecureRandom().nextBytes(snBytes)
 
-        KeyPair keyPair;
+        val keyPair: KeyPair
         try {
-            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA", bcProvider);
-            keyPairGenerator.initialize(2048);
-            keyPair = keyPairGenerator.generateKeyPair();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
+            val keyPairGenerator = KeyPairGenerator.getInstance("RSA", bcProvider)
+            keyPairGenerator.initialize(KEY_SIZE_BITS)
+            keyPair = keyPairGenerator.generateKeyPair()
+        } catch (e: NoSuchAlgorithmException) {
+            throw RuntimeException(e)
         }
 
-        Date now = new Date();
+        val now = Date()
 
         // Expires in 20 years
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(now);
-        calendar.add(Calendar.YEAR, 20);
-        Date expirationDate = calendar.getTime();
+        val calendar = Calendar.getInstance()
+        calendar.time = now
+        calendar.add(Calendar.YEAR, VALIDITY_YEARS)
+        val expirationDate = calendar.time
 
-        BigInteger serial = new BigInteger(snBytes).abs();
+        val serial = BigInteger(snBytes).abs()
 
-        X500NameBuilder nameBuilder = new X500NameBuilder(BCStyle.INSTANCE);
-        nameBuilder.addRDN(BCStyle.CN, "NVIDIA GameStream Client");
-        X500Name name = nameBuilder.build();
+        val nameBuilder = X500NameBuilder(BCStyle.INSTANCE)
+        nameBuilder.addRDN(BCStyle.CN, "NVIDIA GameStream Client")
+        val name: X500Name = nameBuilder.build()
 
-        X509v3CertificateBuilder certBuilder = new X509v3CertificateBuilder(name, serial, now, expirationDate, Locale.ENGLISH, name,
-            SubjectPublicKeyInfo.getInstance(keyPair.getPublic().getEncoded()));
+        val certBuilder =
+            X509v3CertificateBuilder(
+                name,
+                serial,
+                now,
+                expirationDate,
+                Locale.ENGLISH,
+                name,
+                SubjectPublicKeyInfo.getInstance(keyPair.public.encoded),
+            )
 
         try {
-            ContentSigner sigGen = new JcaContentSignerBuilder("SHA256withRSA").setProvider(bcProvider).build(keyPair.getPrivate());
-            cert = new JcaX509CertificateConverter().setProvider(bcProvider).getCertificate(certBuilder.build(sigGen));
-            key = keyPair.getPrivate();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            val sigGen =
+                JcaContentSignerBuilder("SHA256withRSA")
+                    .setProvider(bcProvider)
+                    .build(keyPair.private)
+            cert =
+                JcaX509CertificateConverter()
+                    .setProvider(bcProvider)
+                    .getCertificate(certBuilder.build(sigGen))
+            key = keyPair.private
+        } catch (e: Exception) {
+            throw RuntimeException(e)
         }
 
-        LimeLog.info("Generated a new key pair");
+        LimeLog.info("Generated a new key pair")
 
         // Save the resulting pair
-        saveCertKeyPair();
+        saveCertKeyPair()
 
-        return true;
+        return true
     }
 
-    private void saveCertKeyPair() {
-        try (final FileOutputStream certOut = new FileOutputStream(certFile);
-             final FileOutputStream keyOut = new FileOutputStream(keyFile)
-        ) {
-            // Write the certificate in OpenSSL PEM format (important for the server)
-            StringWriter strWriter = new StringWriter();
-            try (final JcaPEMWriter pemWriter = new JcaPEMWriter(strWriter)) {
-                pemWriter.writeObject(cert);
-            }
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    @Suppress("NestedBlockDepth", "PrintStackTrace")
+    private fun saveCertKeyPair() {
+        try {
+            FileOutputStream(certFile).use { certOut ->
+                FileOutputStream(keyFile).use { keyOut ->
+                    // Write the certificate in OpenSSL PEM format (important for the server)
+                    val strWriter = StringWriter()
+                    JcaPEMWriter(strWriter).use { pemWriter -> pemWriter.writeObject(cert) }
 
-            // Line endings MUST be UNIX for the PC to accept the cert properly
-            try (final OutputStreamWriter certWriter = new OutputStreamWriter(certOut)) {
-                String pemStr = strWriter.getBuffer().toString();
-                for (int i = 0; i < pemStr.length(); i++) {
-                    char c = pemStr.charAt(i);
-                    if (c != '\r')
-                        certWriter.append(c);
+                    // Line endings MUST be UNIX for the PC to accept the cert properly
+                    OutputStreamWriter(certOut).use { certWriter ->
+                        val pemStr = strWriter.buffer.toString()
+                        for (i in pemStr.indices) {
+                            val c = pemStr[i]
+                            if (c != '\r') {
+                                certWriter.append(c)
+                            }
+                        }
+                    }
+
+                    // Write the private out in PKCS8 format
+                    keyOut.write(checkNotNull(key).encoded)
+
+                    LimeLog.info("Saved generated key pair to disk")
                 }
             }
-
-            // Write the private out in PKCS8 format
-            keyOut.write(key.getEncoded());
-
-            LimeLog.info("Saved generated key pair to disk");
-        } catch (IOException e) {
+        } catch (e: IOException) {
             // This isn't good because it means we'll have
             // to re-pair next time
-            e.printStackTrace();
+            e.printStackTrace()
         }
     }
 
-    public X509Certificate getClientCertificate() {
+    override val clientCertificate: X509Certificate?
+        get() = loadOrGenerateCertificate()
+
+    override val clientPrivateKey: PrivateKey?
+        get() = loadOrGeneratePrivateKey()
+
+    override val pemEncodedClientCertificate: ByteArray?
+        get() =
+            synchronized(globalCryptoLock) {
+                // Call our helper function to do the cert loading/generation for us
+                loadOrGenerateCertificate()
+
+                // Return a cached value if we have it
+                pemCertBytes
+            }
+
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    @Suppress("ReturnCount")
+    private fun loadOrGenerateCertificate(): X509Certificate? {
         // Use a lock here to ensure only one guy will be generating or loading
         // the certificate and key at a time
-        synchronized (globalCryptoLock) {
+        synchronized(globalCryptoLock) {
             // Return a loaded cert if we have one
             if (cert != null) {
-                return cert;
+                return cert
             }
 
             // No loaded cert yet, let's see if we have one on disk
             if (loadCertKeyPair()) {
                 // Got one
-                return cert;
+                return cert
             }
 
             // Try to generate a new key pair
             if (!generateCertKeyPair()) {
                 // Failed
-                return null;
+                return null
             }
 
             // Load the generated pair
-            loadCertKeyPair();
-            return cert;
+            loadCertKeyPair()
+            return cert
         }
     }
 
-    public PrivateKey getClientPrivateKey() {
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    @Suppress("ReturnCount")
+    private fun loadOrGeneratePrivateKey(): PrivateKey? {
         // Use a lock here to ensure only one guy will be generating or loading
         // the certificate and key at a time
-        synchronized (globalCryptoLock) {
+        synchronized(globalCryptoLock) {
             // Return a loaded key if we have one
             if (key != null) {
-                return key;
+                return key
             }
 
             // No loaded key yet, let's see if we have one on disk
             if (loadCertKeyPair()) {
                 // Got one
-                return key;
+                return key
             }
 
             // Try to generate a new key pair
             if (!generateCertKeyPair()) {
                 // Failed
-                return null;
+                return null
             }
 
             // Load the generated pair
-            loadCertKeyPair();
-            return key;
+            loadCertKeyPair()
+            return key
         }
     }
 
-    public byte[] getPemEncodedClientCertificate() {
-        synchronized (globalCryptoLock) {
-            // Call our helper function to do the cert loading/generation for us
-            getClientCertificate();
+    override fun encodeBase64String(data: ByteArray): String =
+        Base64.encodeToString(data, Base64.NO_WRAP)
 
-            // Return a cached value if we have it
-            return pemCertBytes;
-        }
-    }
+    private companion object {
+        private const val SERIAL_BYTES = 8
+        private const val KEY_SIZE_BITS = 2048
+        private const val VALIDITY_YEARS = 20
 
-    @Override
-    public String encodeBase64String(byte[] data) {
-        return Base64.encodeToString(data, Base64.NO_WRAP);
+        private val globalCryptoLock = Any()
+
+        private val bcProvider: Provider = BouncyCastleProvider()
     }
 }

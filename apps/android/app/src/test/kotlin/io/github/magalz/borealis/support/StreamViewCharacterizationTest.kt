@@ -16,6 +16,7 @@ import org.robolectric.RobolectricTestRunner
 /**
  * The surface of the stream: it keeps the aspect ratio of the video, and the IME cannot take keys.
  */
+@Suppress("DEPRECATION")
 @RunWith(RobolectricTestRunner::class)
 class StreamViewCharacterizationTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()

@@ -36,6 +36,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowToast
 
 /** The intents that start a stream and that the launcher shortcuts carry, and the offline check. */
+@Suppress("DEPRECATION")
 @RunWith(RobolectricTestRunner::class)
 class ServerHelperCharacterizationTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()

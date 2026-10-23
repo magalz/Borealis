@@ -43,6 +43,7 @@ import org.robolectric.shadow.api.Shadow
  * `ShortcutHelper`, which `Game` and the Library use; the TV provider of the system is a fake that
  * keeps its rows and records what the helper did to them.
  */
+@Suppress("DEPRECATION")
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(shadows = [TvChannelCharacterizationTest.RecordingTvInputManager::class])

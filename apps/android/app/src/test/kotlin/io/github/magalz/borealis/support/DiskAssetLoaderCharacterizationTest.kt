@@ -50,7 +50,7 @@ class DiskAssetLoaderCharacterizationTest {
         val tuple = tuple("host-1", 7)
         assertThat(loader.checkCacheExists(tuple)).isFalse()
 
-        loader.getFile("host-1", 7).also { it.parentFile.mkdirs() }.writeText("png")
+        loader.getFile("host-1", 7).also { it.parentFile?.mkdirs() }.writeText("png")
 
         assertThat(loader.checkCacheExists(tuple)).isTrue()
         assertThat(loader.checkCacheExists(tuple("host-1", 8))).isFalse()
@@ -59,9 +59,9 @@ class DiskAssetLoaderCharacterizationTest {
 
     @Test
     fun `deleting the assets of a host removes its files and keeps its directory and other hosts`() {
-        loader.getFile("host-1", 7).also { it.parentFile.mkdirs() }.writeText("a")
+        loader.getFile("host-1", 7).also { it.parentFile?.mkdirs() }.writeText("a")
         loader.getFile("host-1", 8).writeText("b")
-        loader.getFile("host-2", 7).also { it.parentFile.mkdirs() }.writeText("c")
+        loader.getFile("host-2", 7).also { it.parentFile?.mkdirs() }.writeText("c")
 
         loader.deleteAssetsForComputer("host-1")
 

@@ -37,7 +37,7 @@ class CacheHelperCharacterizationTest {
     fun `creating a path makes its parent directories and not the file`() {
         val file = CacheHelper.openPath(true, root, "boxart", "host", "7.png")
 
-        assertThat(file.parentFile.isDirectory).isTrue()
+        assertThat(file.parentFile?.isDirectory).isTrue()
         assertThat(file.exists()).isFalse()
     }
 

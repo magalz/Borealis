@@ -18,6 +18,7 @@ import org.robolectric.shadows.ShadowNetworkInfo
 /**
  * Whether the network that the device uses is a VPN: the computer manager checks it before polling.
  */
+@Suppress("DEPRECATION")
 @RunWith(RobolectricTestRunner::class)
 class NetHelperCharacterizationTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()

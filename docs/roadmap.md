@@ -465,7 +465,7 @@ Why this order:
 
 ### Sprint 11: Appearance
 
-Merged as pull requests #55 and #56 (2026-10-22). Owner decisions of 2026-10-21. Every font in the font
+Merged as pull requests #55 (2026-10-22) and #56 (2026-10-23). Owner decisions of 2026-10-21. Every font in the font
 choice is there for an accessibility reason, from a survey of primary sources
 that [ADR 0058](adr/0058-appearance-and-reading-options.md) records.
 

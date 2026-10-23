@@ -1,5 +1,5 @@
-package com.limelight.ui;
+package com.limelight.ui
 
-public interface GameGestures {
-    void toggleKeyboard();
+fun interface GameGestures {
+    fun toggleKeyboard()
 }

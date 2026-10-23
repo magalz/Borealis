@@ -1,22 +1,16 @@
-package com.limelight.utils;
+package com.limelight.utils
 
-import android.content.Context;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 
-public class NetHelper {
-    public static boolean isActiveNetworkVpn(Context context) {
-        ConnectivityManager connMgr = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        Network activeNetwork = connMgr.getActiveNetwork();
-        if (activeNetwork != null) {
-            NetworkCapabilities netCaps = connMgr.getNetworkCapabilities(activeNetwork);
-            if (netCaps != null) {
-                return netCaps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ||
-                        !netCaps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN);
-            }
-        }
-
-        return false;
+object NetHelper {
+    @JvmStatic
+    fun isActiveNetworkVpn(context: Context): Boolean {
+        val connMgr = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val netCaps = connMgr.activeNetwork?.let { connMgr.getNetworkCapabilities(it) }
+        return netCaps != null &&
+            (netCaps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ||
+                !netCaps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN))
     }
 }

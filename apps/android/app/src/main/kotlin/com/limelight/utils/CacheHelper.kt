@@ -1,53 +1,67 @@
-package com.limelight.utils;
+package com.limelight.utils
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.BufferedOutputStream
+import java.io.File
+import java.io.FileNotFoundException
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
+import java.util.Objects
 
-public class CacheHelper {
-    public static File openPath(boolean createPath, File root, String... path) {
-        File f = root;
-        for (int i = 0; i < path.length; i++) {
-            String component = path[i];
+object CacheHelper {
+    private const val BUFFER_SIZE = 4096
 
-            if (i == path.length - 1) {
+    // A null component is refused with a NullPointerException, as File did for the Java callers.
+    @JvmStatic
+    fun openPath(createPath: Boolean, root: File, vararg path: String?): File {
+        var f = root
+        for (i in path.indices) {
+            val component = path[i]
+
+            if (i == path.size - 1) {
                 // This is the file component so now we create parent directories
                 if (createPath) {
-                    f.mkdirs();
+                    f.mkdirs()
                 }
             }
 
-            f = new File(f, component);
+            f = File(f, Objects.requireNonNull(component))
         }
-        return f;
+        return f
     }
 
-    public static boolean cacheFileExists(File root, String... path) {
-        return openPath(false, root, path).exists();
-    }
+    @JvmStatic
+    fun cacheFileExists(root: File, vararg path: String?): Boolean =
+        openPath(false, root, *path).exists()
 
-    public static OutputStream openCacheFileForOutput(File root, String... path) throws FileNotFoundException {
-        return new BufferedOutputStream(new FileOutputStream(openPath(true, root, path)));
-    }
+    @JvmStatic
+    @Throws(FileNotFoundException::class)
+    fun openCacheFileForOutput(root: File, vararg path: String?): OutputStream =
+        BufferedOutputStream(FileOutputStream(openPath(true, root, *path)))
 
-    public static void writeInputStreamToOutputStream(InputStream in, OutputStream out, long maxLength) throws IOException {
-        byte[] buf = new byte[4096];
-        int bytesRead;
+    @JvmStatic
+    @Throws(IOException::class)
+    fun writeInputStreamToOutputStream(input: InputStream, out: OutputStream, maxLength: Long) {
+        val buf = ByteArray(BUFFER_SIZE)
+        var remaining = maxLength
 
-        while ((bytesRead = in.read(buf)) != -1) {
-            maxLength -= bytesRead;
-            if (maxLength <= 0) {
-                throw new IOException("Stream exceeded max size");
+        while (true) {
+            val bytesRead = input.read(buf)
+            if (bytesRead == -1) {
+                break
             }
-            out.write(buf, 0, bytesRead);
+            remaining -= bytesRead
+            if (remaining <= 0) {
+                throw IOException("Stream exceeded max size")
+            }
+            out.write(buf, 0, bytesRead)
         }
     }
 
-    public static void writeStringToOutputStream(OutputStream out, String str) throws IOException {
-        out.write(str.getBytes("UTF-8"));
+    @JvmStatic
+    @Throws(IOException::class)
+    fun writeStringToOutputStream(out: OutputStream, str: String) {
+        out.write(str.toByteArray(Charsets.UTF_8))
     }
 }

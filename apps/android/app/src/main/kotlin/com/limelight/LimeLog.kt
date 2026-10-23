@@ -1,19 +1,13 @@
-package com.limelight;
+package com.limelight
 
-import java.util.logging.Logger;
+import java.util.logging.Logger
 
-public class LimeLog {
-    private static final Logger LOGGER = Logger.getLogger(LimeLog.class.getName());
+object LimeLog {
+    private val logger = Logger.getLogger(LimeLog::class.java.name)
 
-    public static void info(String msg) {
-        LOGGER.info(msg);
-    }
-    
-    public static void warning(String msg) {
-        LOGGER.warning(msg);
-    }
-    
-    public static void severe(String msg) {
-        LOGGER.severe(msg);
-    }
+    @JvmStatic fun info(msg: String?) = logger.info(msg)
+
+    @JvmStatic fun warning(msg: String?) = logger.warning(msg)
+
+    @JvmStatic fun severe(msg: String?) = logger.severe(msg)
 }

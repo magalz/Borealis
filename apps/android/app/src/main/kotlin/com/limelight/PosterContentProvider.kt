@@ -1,107 +1,101 @@
-package com.limelight;
+package com.limelight
 
-import android.content.ContentProvider;
-import android.content.ContentResolver;
-import android.content.ContentValues;
-import android.content.UriMatcher;
-import android.database.Cursor;
-import android.net.Uri;
-import android.os.ParcelFileDescriptor;
+import android.content.ContentProvider
+import android.content.ContentResolver
+import android.content.ContentValues
+import android.content.UriMatcher
+import android.database.Cursor
+import android.net.Uri
+import android.os.ParcelFileDescriptor
+import com.limelight.grid.assets.DiskAssetLoader
+import io.github.magalz.borealis.library.PosterRequest
+import java.io.FileNotFoundException
 
-import com.limelight.grid.assets.DiskAssetLoader;
+class PosterContentProvider : ContentProvider() {
+    private var diskAssetLoader: DiskAssetLoader? = null
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.List;
-
-public class PosterContentProvider extends ContentProvider {
-
-
-    public static final String AUTHORITY = "poster." + BuildConfig.APPLICATION_ID;
-    public static final String PNG_MIME_TYPE = "image/png";
-    public static final int APP_ID_PATH_INDEX = 2;
-    public static final int COMPUTER_UUID_PATH_INDEX = 1;
-    private DiskAssetLoader mDiskAssetLoader;
-
-    private static final UriMatcher sUriMatcher;
-    private static final String BOXART_PATH = "boxart";
-    private static final int BOXART_URI_ID = 1;
-
-    static {
-        sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
-        sUriMatcher.addURI(AUTHORITY, BOXART_PATH, BOXART_URI_ID);
-    }
-
-    @Override
-    public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
-        int match = sUriMatcher.match(uri);
+    @Throws(FileNotFoundException::class)
+    override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
+        val match = uriMatcher.match(uri)
         if (match == BOXART_URI_ID) {
-            return openBoxArtFile(uri, mode);
+            return openBoxArtFile(uri, mode)
         }
-        return openBoxArtFile(uri, mode);
-
+        return openBoxArtFile(uri, mode)
     }
 
-    public ParcelFileDescriptor openBoxArtFile(Uri uri, String mode) throws FileNotFoundException {
-        if (!"r".equals(mode)) {
-            throw new UnsupportedOperationException("This provider is only for read mode");
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    @Suppress("ThrowsCount")
+    @Throws(FileNotFoundException::class)
+    fun openBoxArtFile(uri: Uri, mode: String?): ParcelFileDescriptor {
+        if (mode != "r") {
+            throw UnsupportedOperationException("This provider is only for read mode")
         }
 
-        List<String> segments = uri.getPathSegments();
-        if (segments.size() != 3) {
-            throw new FileNotFoundException();
+        val segments = uri.pathSegments
+        if (segments.size != BOXART_URI_SEGMENTS) {
+            throw FileNotFoundException()
         }
-        String appId = segments.get(APP_ID_PATH_INDEX);
-        String uuid = segments.get(COMPUTER_UUID_PATH_INDEX);
-        File file = mDiskAssetLoader.getFile(uuid, io.github.magalz.borealis.library.PosterRequest.checkedAppId(uuid, appId));
+        val appId = segments[APP_ID_PATH_INDEX]
+        val uuid = segments[COMPUTER_UUID_PATH_INDEX]
+        val checkedAppId = PosterRequest.checkedAppId(uuid, appId)
+        val file = checkNotNull(diskAssetLoader).getFile(uuid, checkedAppId)
         if (file.exists()) {
-            return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
+            return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
         }
-        throw new FileNotFoundException();
+        throw FileNotFoundException()
     }
 
-    @Override
-    public int delete(Uri uri, String selection, String[] selectionArgs) {
-        throw new UnsupportedOperationException("This provider is only for read mode");
+    override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?): Int =
+        throw UnsupportedOperationException("This provider is only for read mode")
+
+    override fun getType(uri: Uri): String = PNG_MIME_TYPE
+
+    override fun insert(uri: Uri, values: ContentValues?): Uri? =
+        throw UnsupportedOperationException("This provider is only for read mode")
+
+    override fun onCreate(): Boolean {
+        diskAssetLoader = DiskAssetLoader(checkNotNull(context))
+        return true
     }
 
-    @Override
-    public String getType(Uri uri) {
-        return PNG_MIME_TYPE;
-    }
+    override fun query(
+        uri: Uri,
+        projection: Array<out String>?,
+        selection: String?,
+        selectionArgs: Array<out String>?,
+        sortOrder: String?,
+    ): Cursor? = throw UnsupportedOperationException("This provider doesn't support query")
 
-    @Override
-    public Uri insert(Uri uri, ContentValues values) {
-        throw new UnsupportedOperationException("This provider is only for read mode");
-    }
+    override fun update(
+        uri: Uri,
+        values: ContentValues?,
+        selection: String?,
+        selectionArgs: Array<out String>?,
+    ): Int = throw UnsupportedOperationException("This provider is support read only")
 
-    @Override
-    public boolean onCreate() {
-        mDiskAssetLoader = new DiskAssetLoader(getContext());
-        return true;
-    }
+    companion object {
+        const val AUTHORITY = "poster." + BuildConfig.APPLICATION_ID
+        const val PNG_MIME_TYPE = "image/png"
+        const val APP_ID_PATH_INDEX = 2
+        const val COMPUTER_UUID_PATH_INDEX = 1
 
-    @Override
-    public Cursor query(Uri uri, String[] projection, String selection,
-                        String[] selectionArgs, String sortOrder) {
-        throw new UnsupportedOperationException("This provider doesn't support query");
-    }
+        private const val BOXART_PATH = "boxart"
+        private const val BOXART_URI_ID = 1
+        private const val BOXART_URI_SEGMENTS = 3
 
-    @Override
-    public int update(Uri uri, ContentValues values, String selection,
-                      String[] selectionArgs) {
-        throw new UnsupportedOperationException("This provider is support read only");
-    }
+        private val uriMatcher =
+            UriMatcher(UriMatcher.NO_MATCH).also {
+                it.addURI(AUTHORITY, BOXART_PATH, BOXART_URI_ID)
+            }
 
-
-    public static Uri createBoxArtUri(String uuid, String appId) {
-        return new Uri.Builder()
+        @JvmStatic
+        fun createBoxArtUri(uuid: String, appId: String): Uri =
+            Uri.Builder()
                 .scheme(ContentResolver.SCHEME_CONTENT)
                 .authority(AUTHORITY)
                 .appendPath(BOXART_PATH)
                 .appendPath(uuid)
                 .appendPath(appId)
-                .build();
+                .build()
     }
-
 }

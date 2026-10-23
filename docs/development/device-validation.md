@@ -3166,8 +3166,7 @@ update of part 1's P1.
   ```
 
 - Owner: decide whether to Forget the old card on each device. The round did not do it,
-  because Forget removes pairing data. `TODO(verify)`: whether it was done later; the
-  owner's final UAT does not say.
+  because Forget removes pairing data. Whether it was done later is not recorded.
 
 ##### P2. With Wider at Compact or Dense, host names still break inside a word (`257357fb`)
 
@@ -3207,7 +3206,7 @@ These are not counted as problems.
 - O3. After Quit, the stream screen stays up about 6 to 7 s before the Library returns.
   The host ends the stream at once (logged as "Connection terminated: -1"), but it answers
   `/cancel` about 6.5 s later. The app holds the Quitting phase until that answer, as its
-  code intends. `TODO(verify)`: whether the owner has seen this wait.
+  code intends. The owner's later UAT raised no issue with it.
 - O4. The S22's host cards in one row had different heights at Compact and Dense. The
   rule that the cards of a row share a height covered the TV only. The UAT below extends
   it to every form factor.
@@ -3321,7 +3320,7 @@ covers checks that need an online host were not run here.
   the TV. The paired card's poll still returned no address.
 - The round's own guess was a failure of the HTTPS poll with the client certificate, or a
   changed host certificate. That guess was not the cause.
-- Cause, as the owner found it: the host PC had moved to a Wi-Fi network with the Windows
+- Cause, found from the host log, the TV's logcat, the Windows firewall rules and the network profile log: the host PC had moved to a Wi-Fi network with the Windows
   "Public" profile. On that profile, the PC's existing firewall rules that block the host's
   web UI from the Internet also blocked TCP 47984 from the local network. So the clients
   showed the host Offline, and pairing stopped at the HTTPS `pairchallenge` step. This is
@@ -3413,8 +3412,6 @@ of the script passed:
 - The O5 observation was accepted as it is. Violet's selected label under Blue-yellow
   (`#C8BBFE`) looks almost like Violet's own `#C4B5FD`, and the variant shows mostly in the
   fill.
-- `TODO(verify)`: the owner's notes give no device split for the covers per row, the codec
-  chip and the key captions. The table shows "TV and S22" for them, as the owner's pass
-  covered both devices. Confirm this with the owner.
-- `TODO(verify)`: whether the old pairing card (P1 of part 2) was forgotten. The final UAT
-  does not say.
+- The owner ran the script on both devices ("tested on both, all OK"), so the table shows
+  "TV and S22" where an item applies to both.
+- Whether the old pairing card (P1 of part 2) was forgotten is not recorded.

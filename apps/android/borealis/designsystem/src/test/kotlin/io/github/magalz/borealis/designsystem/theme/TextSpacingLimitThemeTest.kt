@@ -162,8 +162,8 @@ class TextSpacingLimitThemeTest {
     @Test
     fun `the fit cases of the largest text are drawn as chosen, Wider among them`() {
         // The fit tests of the largest text run every font at Wider, at the Text size Largest over
-        // a
-        // system font scale of 1.3. They test nothing of Wider if the theme draws it as Wide there.
+        // a system font scale of 1.3. They test nothing of Wider if the theme draws it as Wide
+        // there.
         for (case in fitCases() + cardFitCases()) {
             chosen = case.spacing
             systemScale = 1.3f
@@ -211,8 +211,7 @@ class TextSpacingLimitThemeTest {
             }
         }
         // Wider is chosen all along: its spaces have 0.68 em below a font scale of 2.0, and the
-        // 0.28
-        // em of Wide from it.
+        // 0.28 em of Wide from it.
         val wider = TextSpacing.Wider.letterEm + TextSpacing.Wider.wordEm
         val wide = TextSpacing.Wide.letterEm + TextSpacing.Wide.wordEm
         chosen = TextSpacing.Wider

@@ -65,7 +65,12 @@ class AuditEntryRoomTest(private val font: FontChoice) {
 
         private const val NARROW_WINDOW = "w240dp-h640dp-xhdpi"
 
-        /** What a line of several spaces with spans can run past its box and still be blank. */
+        /**
+         * What the check of the title allows beyond the fit check: 0.5 to 2.6 px of overshoot were
+         * measured in texts with the spans of the word spacing. The test is not sharp for the
+         * System font: on the row as it was, its title ran 3.4 px past its box, so 3 px tells it
+         * from the fixed row by 0.4 px. The other three fonts that fail ran 6.2 to 9.1 px past.
+         */
         private const val ROUNDING_PX = 3f
     }
 }

@@ -73,17 +73,17 @@ private val ROW_PADDING_VERTICAL = 10.dp
 private val COLUMN_GAP = 12.dp
 private val PHONE_TIME_WIDTH = 72.dp
 private val TV_TIME_WIDTH = 100.dp
+private val HEADER_PADDING = 16.dp
+private val CODE_GAP = 8.dp
+private val FIELD_GAP = 16.dp
+private val SUMMARY_GAP = 2.dp
+private const val SUMMARY_MAX_LINES = 3
 
 /**
  * The time takes this share of the row at most, so that the title keeps its room. It wraps at its
  * space ("Mon 17:00") when the text is large; at the default size it is far below it.
  */
 private const val TIME_MAX_SHARE = 0.35f
-private val HEADER_PADDING = 16.dp
-private val CODE_GAP = 8.dp
-private val FIELD_GAP = 16.dp
-private val SUMMARY_GAP = 2.dp
-private const val SUMMARY_MAX_LINES = 3
 
 /**
  * The audit trail (UC-007): [AuditUiState.entries] as a list on a glass panel, newest first, and in

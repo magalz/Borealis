@@ -153,7 +153,7 @@ fit. The table below is derived from those formulas for the default
 | --- | --- | --- |
 | 256 | 392064 | 224 |
 | 1024 | 2749056 | 32 |
-| 1392 (Moonlight Android's LAN value, `borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/Game.java:497`) | 3878448 | 23 |
+| 1392 (Moonlight Android's LAN value, `borealis:apps/android/app/src/main/java/com/limelight/Game.java:495`) | 3878448 | 23 |
 | 1500 | 4209900 | 21 |
 | 2048 | 5891712 | 15 |
 
@@ -507,7 +507,7 @@ selects fp16 or fp32 wavelet precision
 - **No stock PyroWave support in the client stack.** The stock Moonlight client
   negotiates a regular codec (`docs/pyrowave.md:28-29`). Moonlight Android decodes
   with `MediaCodec` through a renderer typed `MediaCodecDecoderRenderer`
-  (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/Game.java:169`) and its
+  (`borealis:apps/android/app/src/main/java/com/limelight/Game.java:169`) and its
   native library registers decoder callbacks in
   `borealis:apps/android/app/src/main/jni/moonlight-core/callbacks.c:404-410`.
   PyroWave needs a new Vulkan decode and present path and the format-3 and

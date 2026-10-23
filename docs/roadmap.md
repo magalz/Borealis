@@ -595,8 +595,6 @@ Size: 47 files and 7,325 lines, under `apps/android/app/src/main/java`:
 - support, 16 files and 1,923 lines: `preferences` (`PreferenceConfiguration`, 599), `utils`
   (1,004), `ui`, `grid/assets`, `PosterContentProvider`, `LimeLog` and `binding`.
 
-Items:
-
 Outcome, by issue (each one a merged task of the phase):
 
 - **Done, #57 tooling.** Kover counts the converted `com.limelight` code in coverage.
@@ -781,7 +779,7 @@ release. Sprint 16 is hardening and security testing.
   - The client id is logged at INFO with "UID is now" (`com/limelight/computers/IdentityManager.kt`).
   - `printStackTrace` writes to stderr, and can carry host names or addresses; the
     Wake-on-LAN sender is one case (`com/limelight/nvstream/wol/WakeOnLanSender.kt`).
-  - The `FileNotFoundException` message is the full URL, in debug builds
+  - The `FileNotFoundException` message carries the full URL; a debug log can show it
     (`com/limelight/nvstream/http/NvHTTP.kt`).
   - `defaultNetworkLock` has no `try`/`finally`, so an exception under a VPN wedges
     discovery (`com/limelight/computers/ComputerManagerService.kt`).
@@ -925,11 +923,14 @@ Kotlin from Sprint 12 on.
   or post-MVP.
 
 From the Sprint 12 conversion (2026-10-23). Nothing here is scheduled; the owner decides
-when. Paths are under `apps/android/app/src/main/kotlin/`, unless a path starts with
-`io/`, which is under the same root.
+when. Paths are under `apps/android/app/src/main/kotlin/com/limelight/`, except
+`HeldStageFailures.kt`, `library/UpstreamHostShortcuts.kt` and
+`library/ComputerManagerConnection.kt`, which are under
+`apps/android/app/src/main/kotlin/io/github/magalz/borealis/`.
 
 - **(a) Refactor the converted code.** The 48 places marked `(Sprint 12 backlog)` each
-  hold one `@Suppress` for a detekt rule, so the converted code keeps the shape of the
+  hold one suppression annotation (detekt rules, and in two places a lint check or a
+  compiler warning), so the converted code keeps the shape of the
   inherited Java (ADR 0059, rule 6). Most are structural rules (`ReturnCount`,
   `CyclomaticComplexMethod`, `NestedBlockDepth`, `LongMethod` and similar). Some suppress
   `PrintStackTrace`, where the Java wrote to stderr, and a few suppress `ThrowsCount`,
@@ -978,7 +979,7 @@ when. Paths are under `apps/android/app/src/main/kotlin/`, unless a path starts 
   - `preferences/PreferenceConfiguration.kt`: `checkbox_51_surround=true` overwrites a
     user-chosen `list_audio_config`. When it is false, the legacy key stays forever.
   - `preferences/PreferenceConfiguration.kt`: the legacy `seekbar_bitrate` is read but never
-    migrated or removed.
+    migrated; only the streaming-settings reset removes it.
   - `preferences/PreferenceConfiguration.kt`: `isSquarishScreen(0, y)` gives NaN or
     Infinity, and so returns false.
   - `utils/TvChannelHelper.kt`: uses the logo width as its height. The logo is always square.

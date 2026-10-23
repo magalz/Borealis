@@ -43,7 +43,9 @@ Artemis at commit `c5cf27f4` (2026-09-09).
   `src/` reference is relative to the same repository at `46f6936d` (the commit
   named in the "Verified against" table), not at `5afdbdc6`.
 - A reference prefixed with `borealis:` is relative to the root of this
-  repository (for example `borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:815`).
+  repository (for example `borealis:apps/android/app/src/main/java/com/limelight/Game.java:489`).
+  A reference prefixed with `borealis@<commit>:` is relative to the root of this repository
+  at that commit (for example `borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:815`).
   Every `borealis:` reference was checked at commit `a050fbac` (2026-10-18).
   References to files that Sprint 12 converted to Kotlin are pinned to
   `borealis@2f321dc77`, the last commit before the Kotlin conversion, so their line numbers stay true.

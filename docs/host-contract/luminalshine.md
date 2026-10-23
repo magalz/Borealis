@@ -542,16 +542,16 @@ width, height and frame rate in `/launch` `mode=` and in the ANNOUNCE attributes
 Moonlight Android 12.2 can produce exactly this mismatch. It builds the
 `/launch` mode from the user's selected frame rate
 (`setLaunchRefreshRate(prefConfig.fps)`,
-`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/Game.java:491`, and the
+`borealis:apps/android/app/src/main/java/com/limelight/Game.java:489`, and the
 `fps` of the `mode=` parameter in `launchApp`,
 `borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:816`)
 but streams at `chosenFrameRate` (`setRefreshRate(chosenFrameRate)`,
-`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/Game.java:492`).
+`borealis:apps/android/app/src/main/java/com/limelight/Game.java:490`).
 With frame pacing "cap FPS", a selected rate that is equal to or at most 3 Hz
 above the display refresh rate, and a refresh rate above 49 Hz,
 `chosenFrameRate` becomes the rounded refresh rate minus 1, for example 59 for
 a 60 Hz selection
-(`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/Game.java:469-484`).
+(`borealis:apps/android/app/src/main/java/com/limelight/Game.java:469-484`).
 A host with the default per-client virtual display then rebuilds the monitor
 on every such launch. This is confirmed: the Android client passes
 `getRefreshRate()` (the `chosenFrameRate`) to the native library
@@ -1080,7 +1080,7 @@ Moonlight Android 12.2 client already does the right thing the item says so.
    must equal `clientViewportWd`, `clientViewportHt` and `maxFPS`, otherwise
    the host rebuilds the virtual display (section 7.4). Moonlight Android sets
    `clientRefreshRateX100` from the display refresh rate
-   (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/Game.java:501`); the
+   (`borealis:apps/android/app/src/main/java/com/limelight/Game.java:499`); the
    host ignores it when it disagrees with `maxFPS`, so that attribute is
    harmless. The launch rate and the stream rate are the ones that must match;
    Moonlight Android can make them differ (end of section 7.4), so Borealis must

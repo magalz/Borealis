@@ -129,7 +129,7 @@ class PairingManager(private val http: NvHTTP, cryptoProvider: LimelightCryptoPr
 
         // Decode the server's response and subsequent challenge
         val encServerChallengeResponse =
-            hexToBytes(NvHTTP.getXmlString(challengeResp, "challengeresponse", true))
+            hexToBytes(checkNotNull(NvHTTP.getXmlString(challengeResp, "challengeresponse", true)))
         val decServerChallengeResponse = decryptAes(encServerChallengeResponse, aesKey)
 
         // These ranges can run past the end of a short answer: Arrays pads that with zeros.
@@ -163,7 +163,8 @@ class PairingManager(private val http: NvHTTP, cryptoProvider: LimelightCryptoPr
         }
 
         // Get the server's signed secret
-        val serverSecretResp = hexToBytes(NvHTTP.getXmlString(secretResp, "pairingsecret", true))
+        val serverSecretResp =
+            hexToBytes(checkNotNull(NvHTTP.getXmlString(secretResp, "pairingsecret", true)))
         val serverSecret = Arrays.copyOfRange(serverSecretResp, 0, SECRET_LENGTH)
         val serverSignature =
             Arrays.copyOfRange(serverSecretResp, SECRET_LENGTH, serverSecretResp.size)

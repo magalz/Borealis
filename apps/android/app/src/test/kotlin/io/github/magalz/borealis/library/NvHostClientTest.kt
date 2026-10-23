@@ -64,11 +64,11 @@ class NvHostClientTest {
 
     private val crypto =
         object : LimelightCryptoProvider {
-            override fun getClientCertificate(): X509Certificate? = null
+            override val clientCertificate: X509Certificate? = null
 
-            override fun getClientPrivateKey(): PrivateKey? = null
+            override val clientPrivateKey: PrivateKey? = null
 
-            override fun getPemEncodedClientCertificate(): ByteArray = byteArrayOf(1, 2, 3)
+            override val pemEncodedClientCertificate: ByteArray = byteArrayOf(1, 2, 3)
 
             override fun encodeBase64String(data: ByteArray): String = ""
         }

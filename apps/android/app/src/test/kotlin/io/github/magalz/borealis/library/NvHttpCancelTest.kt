@@ -30,11 +30,11 @@ class NvHttpCancelTest {
 
     private val crypto =
         object : LimelightCryptoProvider {
-            override fun getClientCertificate(): X509Certificate? = null
+            override val clientCertificate: X509Certificate? = null
 
-            override fun getClientPrivateKey(): PrivateKey? = null
+            override val clientPrivateKey: PrivateKey? = null
 
-            override fun getPemEncodedClientCertificate(): ByteArray? = null
+            override val pemEncodedClientCertificate: ByteArray? = null
 
             override fun encodeBase64String(data: ByteArray): String = ""
         }

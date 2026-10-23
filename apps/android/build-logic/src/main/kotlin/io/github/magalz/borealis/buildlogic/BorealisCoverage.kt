@@ -22,7 +22,7 @@ internal object BorealisCoverage {
      * Classes the report leaves out, as Kover wildcards (`*` crosses dots, so `pkg.*` covers the
      * subpackages).
      *
-     * The inherited Java that stays Java until Sprints 13 and 14 and has no unit tests: `Game` and
+     * The inherited Java that stays Java until Sprints 13 and 14, which convert it: `Game` and
      * its nested classes, the input, video and audio bindings and the JNI bridge. Everything else
      * in `com.limelight` counts, so converted code shows up at once. The list shrinks as those
      * sprints convert what is left (ADR 0059). `Game*` would also catch a sibling such as

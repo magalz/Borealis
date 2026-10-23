@@ -256,8 +256,11 @@ python -m unittest discover -s design/accessibility
 
 - **Coverage** (Kover, [ADR 0046](../adr/0046-test-coverage-with-kover-llvm-cov-and-codecov.md)):
   the root project merges the debug unit-test coverage of `:borealis:*` and of
-  `:app`. Code in `com.limelight` counts in the Kover report as soon as it is
-  Kotlin. Its Codecov statuses are set at the end of Sprint 12
+  `:app`. Code in `com.limelight` counts in the Kover report, except the Java
+  that stays Java (below). In Codecov the converted path
+  (`apps/android/app/src/main/kotlin/com/limelight/`) gets its own patch and
+  project statuses, separate from the 90% gate, set at the end of Sprint 12 with a
+  target that rises each sprint to 90%
   ([ADR 0059](../adr/0059-convert-the-inherited-java-to-kotlin.md),
   [ADR 0049](../adr/0049-coverage-gate.md)). Not counted:
   - the Java that stays Java until Sprints 13 and 14:

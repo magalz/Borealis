@@ -1630,8 +1630,15 @@ s11-text-spacing measurement; they were not run again for this document.
 ### Text spacing: fit coverage
 
 - Every font at Normal and at Wider, and IBM Plex Sans at Wide, at 130 % text size times the
-  system font scale of 1.3: 540 runs, no failure.
-- The 200 % system font size is tested at Normal only. See the known limitations below.
+  system font scale of 1.3 (1.69): 540 runs, no failure. Wider is drawn as Wider there, which a
+  test of the theme keeps (`TextSpacingLimitThemeTest`).
+- The 200 % system font size (2.0) is tested in every font at Normal and at Wider, and IBM Plex Sans
+  at Wide: the Library, the components, Settings with Privacy and the Audit trail
+  (`LargeTextFitTest`, `SettingsLargeTextFitTest`, `AuditLargeTextFitTest`). No failure. Wider is
+  drawn as Wide at 2.0, so the runs of Wider are drawn at Wide, and the limit section below says
+  why.
+- Compact and Dense at 2.0, in IBM Plex Sans and Andika, at Normal, Wide and Wider, in the Library
+  screens: 144 runs, no failure (a probe, not kept as a test).
 
 ### Text spacing: layout changes
 
@@ -1645,12 +1652,78 @@ A layout that does not fit at Wide or Wider is changed rather than cut:
   of 2.0 (`KeyCaptionSizeTest`, `KeyCaptionScaleTest`, `KeyboardKeyCaptionSpacingTest`). Luciole at
   Normal is cut off at 2.0 whatever the floor, as it was before;
 - Compact and Dense keep the columns of Comfortable at Wider (`CardDensityLayoutTest`).
+- the Pairing screen of a TV wraps the line under the PIN at 280 dp, the width of the note about a
+  restart, so that the steps keep about 290 dp for their words at a font scale of 2.0, where they
+  had 149 dp (`PairingTvRoomTest`);
+- the name in the rail footer wraps, inside the word if it must, instead of ending in an ellipsis
+  (`RailFooterNarrowTest`);
+- the time of an Audit entry takes 35 % of the row at most and wraps at its space, so that the title
+  keeps its room on a narrow phone (`AuditEntryRoomTest`).
+
+### Text spacing: the limit at a very large font
+
+Wider is drawn as Wide from a font scale of 2.0, the largest that Android offers, and Wide and
+Normal are never limited ([ADR 0058](../adr/0058-appearance-and-reading-options.md), decision 4).
+The scale is the system font scale times the Text size, which is the scale that the text is drawn
+at (`effectiveTextSpacing`, `theme/TextSpacingLimit.kt`). The look keeps what the user chose, so
+Wider comes back when the scale falls, and the type, the design-system `Text`, the stream chrome and
+the layouts that follow the level (the card columns) use the level that is drawn.
+
+The 200 % fit tests were run in every font at Wide and at Wider, at 18 font scales from 1.15 to
+2.0, with the Text size at its default. Each scale is 462 runs, 231 at each level. The table has
+every scale and the runs that fail the fit check, which holds a line to 1 px past its box. The
+measures are of 2026-10-22. The columns "before" are from before the three fixes of the layout
+changes above and before the UAT layout, at the eight scales of the table that were run then (1.0
+was run too and had no failure). The columns "after" are from the head with the fixes: all 18
+scales, and the ten of 1.15, 1.3, 1.4, 1.5, 1.6, 1.69, 1.7, 1.8, 1.9 and 2.0 again on the head that
+merged the UAT layout, with the same counts.
+
+| Font scale | Wider before | Wide before | Wider after | Wide after |
+| --- | --- | --- | --- | --- |
+| 1.15 | 1 | 0 | 1 | 0 |
+| 1.2 | not run | not run | 0 | 0 |
+| 1.3 | 4 | 0 | 0 | 0 |
+| 1.35 | not run | not run | 0 | 0 |
+| 1.4 | 8 | 0 | 1 | 0 |
+| 1.45 | not run | not run | 1 | 0 |
+| 1.5 | 9 | 0 | 3 | 0 |
+| 1.55 | not run | not run | 1 | 0 |
+| 1.6 | 11 | 0 | 4 | 0 |
+| 1.65 | not run | not run | 1 | 0 |
+| 1.69 | not run | not run | 3 | 0 |
+| 1.7 | 8 | 1 | 1 | 0 |
+| 1.75 | not run | not run | 4 | 0 |
+| 1.8 | 19 | 1 | 9 | 0 |
+| 1.85 | not run | not run | 4 | 0 |
+| 1.9 | not run | not run | 3 | 0 |
+| 1.95 | not run | not run | 3 | 0 |
+| 2.0 | 16 | 8 | 5 | 0 |
+
+What the table says:
+
+- **Before the fixes** the failures of Wider began at 1.15 and those of Wide at 1.7. Most were the
+  Pairing screen of a TV in all seven fonts, from 1.3.
+- **After the fixes** Wide fails in none of the runs. Wider fails in none that is more than
+  rounding: every failure that is left runs 0.5 to 2.6 px past its box, in a text whose spaces have
+  the spans of the word spacing, and none is cut or ends in an ellipsis. The "after" column of
+  Wider adds up to 44 runs, and the most is 2.6 px.
+- **The limit is at 2.0** because the 200 % tests run with the check of 1 px, and 5 runs of Wider
+  fail it at 2.0. So the tests at 2.0 draw Wider as Wide. Below 2.0 Wider is drawn in full.
+
+The dialog and the row of Settings, and what they say, are in
+[UC-010](../use-cases/0010-adjust-accessibility.md), A8.
 
 ### Text spacing: known limitations
 
-- The 200 % system font size is tested at Normal only. A probe at Wider found 18 fit failures: one
-  in IBM Plex Sans (Pairing on a TV), and the rest in the other fonts, on Hosts, Apps and
-  Appearance among others. It is a backlog item in the roadmap.
+- Below 2.0, Wider is drawn in full, and 0 to 9 runs of the 231 at a scale run 0.5 to 2.6 px past
+  their box (see the limit above). The fit tests find none cut or ending in an ellipsis. It has not
+  been seen on a device.
+- At a combined font scale above 2.0 (a system font of 2.0 with Largest text is 2.6), Normal text
+  already fails the fit tests in 8 of the 84 runs of the Library (Apps with a long host name, on a
+  TV and on a phone) and in 1 of the 70 runs of the components (the rows of the settings on a TV);
+  Settings and the Audit trail pass. Wider is drawn as Wide there, and Wide is not limited: Wide
+  above a combined 2.0 has not been measured, only Normal was, at 2.6. It is a backlog item in the
+  roadmap.
 - At Wide and Wider, the line ends of a wrapped text can draw up to one word spacing past their
   box: about 12 px in IBM Plex Sans at Wider, and up to 23 px at the largest TV text in the system
   font. The review found no text cut. The ink lands in the padding or in the gaps.
@@ -1663,7 +1736,9 @@ adds one column to the hosts and apps in Compact and in Dense, and cuts the card
 The invariants hold in every density: the touch targets, the gaps between the cards, the gutter of
 the screen and the TV focus scale do not change. With Text spacing at Wider the column is not added:
 Compact and Dense keep the columns of Comfortable, because the words of a card need the room (host
-names broke inside a word on a TV in the device round). Dense still takes its card padding. The host
+names broke inside a word on a TV in the device round). Dense still takes its card padding. The
+rule follows the level that is drawn, so at a font scale of 2.0, where Wider is drawn as Wide, the
+column is added again. The host
 cards of a row are as high as the tallest of them on every device, where a row has more than one
 card.
 
@@ -1686,7 +1761,7 @@ and AAA (1.4.6) for the text of High contrast.
 | 1.4.3 Contrast (Minimum) | AA | Text on the opaque surfaces (Table B), on glass through the tint floors and the adapted secondary ink (Table C and the floors), on the background through the halo (Tables D to F), and in the Add host field (Tables L and M). |
 | 1.4.4 Resize Text | AA | Text size 100, 115 or 130 % times the system scale, and tests at a font scale of 2.0 (`LargeTextFitTest`). |
 | 1.4.6 Contrast (Enhanced) | AAA | High contrast: 7:1 or more for the text roles on every fill, and for the loose text over every background (Tables G and H). |
-| 1.4.12 Text Spacing | AA | The Text spacing row: Wide sets 0.12 em of letter spacing, 0.16 em of word spacing and a line height of 1.5, the minimums of the criterion, and Wider sets 0.5 em of word spacing. The spaces are drawn apart in every font (`WordGapTest`, `TextWordSpacingTest`), and the layouts that do not fit at Wide or Wider are changed (`TextFitTest`). The 200 % system font size is tested at Normal only (see text spacing: known limitations). |
+| 1.4.12 Text Spacing | AA | The Text spacing row: Wide sets 0.12 em of letter spacing, 0.16 em of word spacing and a line height of 1.5, the minimums of the criterion, and Wider sets 0.5 em of word spacing. The spaces are drawn apart in every font (`WordGapTest`, `TextWordSpacingTest`), and the layouts that do not fit at Wide or Wider are changed (`TextFitTest`). The 200 % system font size is tested at Normal, Wide and Wider, and at 2.0 Wider is drawn as Wide, with a dialog and a line in the row that say so (see text spacing: the limit at a very large font). |
 | 1.4.11 Non-text Contrast | AA | The offline ring at 3.25:1 or more, the icons on the background through the halo (Tables I to K), the outlines of the text field (Tables L and M), the opaque borders of High contrast, and the Online dot with its shadow: 5.68:1 over the brightest host-card glass (3.79:1 without it, today's palette). The Apps title dot on the animated background is not measured (a known limitation, see the status dot). |
 | 2.1.1 Keyboard | A | The D-pad and a gamepad reach every control; OK on a Settings group enters its pane, and the licence text and the Audit detail scroll with the D-pad. |
 | 2.2.2 Pause, Stop, Hide | A | The animated background is the only decorative moving content; it stops with Reduce motion On, the system's Remove animations or the battery saver, and the background Off is the plain page. Progress indicators are not covered yet (roadmap backlog). |

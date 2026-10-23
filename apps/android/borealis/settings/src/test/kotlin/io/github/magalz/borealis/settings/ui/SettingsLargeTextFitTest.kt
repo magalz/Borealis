@@ -6,9 +6,10 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.FitCase
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
+import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
-import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.settings.privacy.PrivacyActions
 import io.github.magalz.borealis.settings.privacy.PrivacyDialogActions
@@ -25,11 +26,12 @@ import org.robolectric.annotation.Config
  * Settings and Privacy and diagnostics at a system font scale of 2.0, the largest that Android
  * offers (WCAG 1.4.4: text resizes to 200 percent without loss of content). Every text must fit
  * where it is, or the pane scrolls: none runs past its width, is cut off at the bottom or ends in
- * an ellipsis.
+ * an ellipsis. The Text spacing of the runs is Normal, Wide or Wider, and the look draws the level
+ * that the font scale lets it (ADR 0058, decision 4), so none fails.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-class SettingsLargeTextFitTest(font: FontChoice) : SettingsScreenTestBase() {
-    private val look = BorealisLook(font = font)
+class SettingsLargeTextFitTest(case: FitCase) : SettingsScreenTestBase() {
+    private val look = BorealisLook(font = case.font, textSpacing = case.spacing)
 
     private fun showSettings(formFactor: FormFactor, group: SettingsGroupId) {
         if (formFactor == FormFactor.Tv) asTelevision()
@@ -136,7 +138,7 @@ class SettingsLargeTextFitTest(font: FontChoice) : SettingsScreenTestBase() {
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun fonts(): List<FontChoice> = FontChoice.entries
+        fun cases(): List<FitCase> = fitCases()
 
         private const val SCALE = 2f
     }

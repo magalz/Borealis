@@ -143,6 +143,19 @@ targets of 48 dp on a phone and a handheld.
    the host detail line wraps, the key captions are drawn with the spacing of Wide at
    Wider, and Compact and Dense keep the columns of Comfortable at Wider. The
    known limits are in [accessibility](../ux/accessibility.md#text-spacing-known-limitations).
+3. At a font scale of 2.0, the largest that Android offers, Wider is drawn as Wide, and
+   Wide and Normal are drawn as chosen. The scale is the font scale of the system times
+   the Text size, so Largest text over a system font of 1.3 (1.69) draws Wider. The
+   choice stays stored, and Wider comes back when the scale falls. The stream chrome
+   follows the same rule. When the user chooses Wider while the font scale has reached
+   2.0, a dialog opens with the title "Wider spacing is limited". It says that, at this
+   text size, Borealis uses Wide spacing instead of Wider so that nothing is cut off,
+   that the choice stays, and that Wider comes back when the system font size or the Text
+   size is smaller. It has one OK button, which has the focus on a TV, and TalkBack reads
+   the title as the name of the window. For as long as the limit is reached, the Text
+   spacing row says "Drawn as Wide at this text size, so that nothing is cut off." under
+   its value, so that a user who raised the font later can see why. The measurements are
+   in [accessibility](../ux/accessibility.md#text-spacing-the-limit-at-a-very-large-font).
 
 ## Postconditions
 
@@ -155,7 +168,7 @@ targets of 48 dp on a phone and a handheld.
 
 UC-010-T1 to T14 are Sprint 10 tests (Compose tests run on Robolectric).
 UC-010-T15 is the Sprint 10 device round.
-UC-010-T16 and T17 are Sprint 11 rows.
+UC-010-T16 to T18 are Sprint 11 rows.
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
@@ -172,10 +185,11 @@ UC-010-T16 and T17 are Sprint 11 rows.
 | UC-010-T11 | Given a wrong or expired PIN, or an error under the address of Add host, when it appears, then a screen reader announces it. | UI | exists (Sprint 10, UI): `LibraryScreensTalkBackTest` |
 | UC-010-T12 | Given the main screens on a phone, a handheld and a TV, when the Accessibility Test Framework runs over them, then it finds nothing but the accepted findings, each with its reason. | UI | exists (Sprint 10, UI): `LibraryAccessibilityChecksTest`, `SettingsAccessibilityChecksTest`, `StreamAccessibilityChecksTest`, `PrivacyAccessibilityChecksTest`, `AuditAccessibilityChecksTest`, `SendToPhoneAccessibilityChecksTest` |
 | UC-010-T13 | Given a phone or a handheld, when the segments, the groups, the chips and the sheet handle are measured, then they are 48 dp; given a TV, then they keep their sizes. | UI | exists (Sprint 10, UI): `TouchTargetTest` |
-| UC-010-T14 | Given a font scale of 2.0, when the Library, Settings, Privacy, the Audit trail and the components are shown, then no text is cut or ends in an ellipsis. | UI | exists (Sprint 10, UI): `LargeTextFitTest`, `SettingsLargeTextFitTest`, `AuditLargeTextFitTest` |
+| UC-010-T14 | Given a font scale of 2.0, when the Library, Settings, Privacy, the Audit trail and the components are shown, then no text is cut or ends in an ellipsis, at Normal and at Wider (drawn as Wide at 2.0), and at Wide in IBM Plex Sans. | UI | exists (Sprint 10, UI; Wide and Wider since Sprint 11): `LargeTextFitTest`, `SettingsLargeTextFitTest`, `AuditLargeTextFitTest` |
 | UC-010-T15 | Given the Streamer and the S22, when the user changes each Accessibility setting and uses TalkBack, then each holds. | device | checked in part in the Sprint 10 round of 2026-10-21 (section 3.23, results in section 15); the visual items and TalkBack are the owner's |
 | UC-010-T16 | Given the Accessibility group, when the user chooses Text spacing (Normal, Wide or Wider), then the choice is stored under `borealis_text_spacing` as `normal`, `wide` or `wider`, the text draws the letter and word spacing of A8 (Wide 0.12 em and 0.16 em, Wider 0.18 em and 0.5 em), the line height is at least 1.5 at Wide and Wider, TalkBack reads the original text, and a layout that does not fit at Wide or Wider is changed rather than cut, as in A8. | UI, unit | exists (Sprint 11, UI and unit): `TextSpacingTypographyTest`, `TextSpacingThemeTest`, `TextWordSpacingTest`, `WordGapTest`, `SettingsTextSpacingTest` |
 | UC-010-T17 | Given an Online host, when its dot is drawn, then a soft dark shadow in the page colour lies round the dot, outside its box, it is static, and it is not drawn under High contrast. | UI | exists (Sprint 11, UI): `StatusDotTest` |
+| UC-010-T18 | Given Wider chosen, when the font scale (the system scale times the Text size) is below 2.0, then Wider is drawn as Wider, and from 2.0 it is drawn as Wide, in the Library, Settings and the stream chrome, and the choice stays stored; when the user chooses Wider at 2.0 or more, then a dialog says that Wide is used instead, with one OK button that has the focus on a TV and a title that names the window, the row says the same under its value, and no dialog opens below 2.0 or for Wide or Normal. Given the Pairing screen of a TV, the rail footer and an Audit entry at large text, then the steps keep their room, the name wraps and the title keeps its room. | UI, unit | exists (Sprint 11, UI and unit): `TextSpacingLimitThemeTest`, `StreamChromeTextSpacingTest`, `SettingsTextSpacingLimitTest`, `SettingsTextSpacingLimitPhoneTest`, `SpacingLimitScreenshotTest`, `PairingTvRoomTest`, `RailFooterNarrowTest`, `AuditEntryRoomTest` |
 
 Not covered by a test: the traversal links that TalkBack follows (Robolectric
 cannot see them), a visible snackbar (no check covers it), and the halo and the

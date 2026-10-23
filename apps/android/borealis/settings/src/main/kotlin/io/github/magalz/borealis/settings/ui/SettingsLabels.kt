@@ -2,6 +2,7 @@ package io.github.magalz.borealis.settings.ui
 
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import io.github.magalz.borealis.designsystem.components.settings.ChoiceOption
 import io.github.magalz.borealis.settings.R
@@ -128,10 +129,11 @@ private fun transparencyNote(@StringRes level: Int): String =
 
 /**
  * The summary under the row of [this] item, or `null` when it has none. The Transparency summary
- * names the levels and the glass rows that it overrides by their own labels.
+ * names the levels and the glass rows that it overrides by their own labels. The Text spacing row
+ * has one only while the level of its [value] is drawn as a smaller one at the font scale.
  */
 @Composable
-internal fun SettingsItem.summaryText(): String? =
+internal fun SettingsItem.summaryText(value: RowValue): String? =
     when (this) {
         SettingsItem.TRANSPARENCY ->
             stringResource(
@@ -141,6 +143,8 @@ internal fun SettingsItem.summaryText(): String? =
                 stringResource(R.string.settings_glass_tint_title),
                 stringResource(R.string.settings_glass_blur_title),
             )
+        SettingsItem.TEXT_SPACING ->
+            spacingLimit(value.choiceKey, LocalDensity.current.fontScale)?.summary()
         else -> summaryRes?.let { stringResource(it) }
     }
 

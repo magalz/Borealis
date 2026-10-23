@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.DpRect
 import com.google.common.truth.Expect
+import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.CardDensity
@@ -38,6 +39,11 @@ import org.robolectric.annotation.Config
  * would take (device round P2: host names broke inside a word, an address wrapped before its last
  * digit and a chip took two lines). Normal and Wide add the column. The screens are drawn alone,
  * with no rail, so that the padding is the distance of a card from the edge of the window.
+ *
+ * At a font scale of 2.0 the theme draws Wider as Wide (ADR 0058, decision 4), and the grids follow
+ * the level that is drawn: Compact and Dense add their column there with Wider chosen too, and the
+ * texts of the cards fit. These cases are a guard: a probe of the Library screens found them clean
+ * before they were written.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 class CardDensityLayoutTest(private val case: Case) {
@@ -131,6 +137,73 @@ class CardDensityLayoutTest(private val case: Case) {
 
         expect.that(appsPerRow()).isEqualTo(columns(4))
         assertAppPadding(PHONE_GUTTER)
+    }
+
+    /**
+     * The columns of [comfortable] at a font scale of 2.0, one more for each denser layout, Wider
+     * chosen or not: Wider is drawn as Wide there, and Wide adds the column.
+     */
+    private fun columnsAtLargestFont(comfortable: Int) =
+        if (case.density == CardDensity.Comfortable) comfortable else comfortable + 1
+
+    @Test
+    @Config(qualifiers = TV, fontScale = 2f)
+    fun `Hosts on a TV at a font scale of 2 point 0 have the columns of the level that is drawn and fit`() {
+        showHosts(FormFactor.Tv)
+
+        expect.that(hostsPerRow()).isEqualTo(columnsAtLargestFont(3))
+        assertHostPadding(TV_GUTTER)
+        composeRule.assertNoClippedText()
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD, fontScale = 2f)
+    fun `Hosts on a handheld at a font scale of 2 point 0 have the columns of the level that is drawn and fit`() {
+        showHosts(FormFactor.Handheld)
+
+        expect.that(hostsPerRow()).isEqualTo(columnsAtLargestFont(2))
+        assertHostPadding(TV_GUTTER)
+        composeRule.assertNoClippedText()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE, fontScale = 2f)
+    fun `Hosts on a phone at a font scale of 2 point 0 have the columns of the level that is drawn and fit`() {
+        showHosts(FormFactor.Phone)
+
+        expect.that(hostsPerRow()).isEqualTo(columnsAtLargestFont(1))
+        assertHostPadding(PHONE_GUTTER)
+        composeRule.assertNoClippedText()
+    }
+
+    @Test
+    @Config(qualifiers = TV, fontScale = 2f)
+    fun `Apps on a TV at a font scale of 2 point 0 have the columns of the level that is drawn and fit`() {
+        showApps(FormFactor.Tv)
+
+        expect.that(appsPerRow()).isEqualTo(columnsAtLargestFont(5))
+        assertAppPadding(TV_GUTTER)
+        composeRule.assertNoClippedText()
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD, fontScale = 2f)
+    fun `Apps on a handheld at a font scale of 2 point 0 have the columns of the level that is drawn and fit`() {
+        showApps(FormFactor.Handheld)
+
+        expect.that(appsPerRow()).isEqualTo(columnsAtLargestFont(4))
+        assertAppPadding(TV_GUTTER)
+        composeRule.assertNoClippedText()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE, fontScale = 2f)
+    fun `Apps on a phone at a font scale of 2 point 0 have the columns of the level that is drawn and fit`() {
+        showApps(FormFactor.Phone)
+
+        expect.that(appsPerRow()).isEqualTo(columnsAtLargestFont(3))
+        assertAppPadding(PHONE_GUTTER)
+        composeRule.assertNoClippedText()
     }
 
     private fun showHosts(formFactor: FormFactor) {

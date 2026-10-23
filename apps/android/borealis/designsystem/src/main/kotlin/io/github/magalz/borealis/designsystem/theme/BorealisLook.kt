@@ -95,7 +95,8 @@ enum class CardDensity {
  * @property backgroundIntensity how strongly the animated background shows. With [highContrast] on,
  *   the stronger of its veil and the dim of high contrast wins.
  * @property cardDensity how close the cards sit.
- * @property textSpacing the space between letters, words and lines.
+ * @property textSpacing the space between letters, words and lines. The theme draws the level that
+ *   the font scale allows, which is a smaller one at a very large font ([effectiveTextSpacing]).
  * @property glassTintPercent the tint of a [Transparency.Standard] glass panel, before the floor of
  *   the background raises it.
  * @property glassBlurDp the blur radius of a [Transparency.Standard] glass panel.
@@ -118,5 +119,8 @@ data class BorealisLook(
     val textSpacing: TextSpacing = TextSpacing.Normal,
 )
 
-/** The [BorealisLook] in effect. A screen that nobody gives a look to gets the defaults. */
+/**
+ * The [BorealisLook] in effect: what [BorealisTheme] was given, with the text spacing that its font
+ * scale allows. A screen that nobody gives a look to gets the defaults.
+ */
 val LocalBorealisLook = staticCompositionLocalOf { BorealisLook() }

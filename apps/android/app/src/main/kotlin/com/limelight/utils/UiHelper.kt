@@ -1,91 +1,92 @@
-package com.limelight.utils;
+package com.limelight.utils
 
-import android.app.Activity;
-import android.app.GameManager;
-import android.app.GameState;
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.os.Build;
+import android.app.Activity
+import android.app.GameManager
+import android.app.GameState
+import android.content.Context
+import android.os.Build
+import androidx.core.content.edit
+import com.limelight.R
+import com.limelight.preferences.PreferenceConfiguration
 
-import com.limelight.Game;
-import com.limelight.R;
-import com.limelight.preferences.PreferenceConfiguration;
+object UiHelper {
+    private const val DECODER_TOMBSTONE_PREFS = "DecoderTombstone"
+    private const val CRASH_COUNT = "CrashCount"
+    private const val LAST_NOTIFIED_CRASH_COUNT = "LastNotifiedCrashCount"
 
-public class UiHelper {
+    // The settings are reset at every third crash in a row.
+    private const val CRASHES_BEFORE_RESET = 3
 
-    private static void setGameModeStatus(Context context, boolean streaming, boolean interruptible) {
+    // Swallow any failure. Some OEM builds ship partial/incompatible GameManager impls.
+    @Suppress("TooGenericExceptionCaught")
+    private fun setGameModeStatus(context: Context, streaming: Boolean, interruptible: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             try {
-                GameManager gameManager = context.getSystemService(GameManager.class);
-                if (gameManager == null) {
-                    return; // Not supported on this device (e.g., Meta Quest)
-                }
+                // Not supported on this device (e.g., Meta Quest)
+                val gameManager = context.getSystemService(GameManager::class.java) ?: return
 
                 if (streaming) {
-                    gameManager.setGameState(new GameState(false, interruptible ? GameState.MODE_GAMEPLAY_INTERRUPTIBLE : GameState.MODE_GAMEPLAY_UNINTERRUPTIBLE));
+                    gameManager.setGameState(
+                        GameState(
+                            false,
+                            if (interruptible) {
+                                GameState.MODE_GAMEPLAY_INTERRUPTIBLE
+                            } else {
+                                GameState.MODE_GAMEPLAY_UNINTERRUPTIBLE
+                            },
+                        )
+                    )
                 } else {
-                    gameManager.setGameState(new GameState(false, GameState.MODE_NONE));
+                    gameManager.setGameState(GameState(false, GameState.MODE_NONE))
                 }
-            } catch (Throwable t) {
-                // Swallow any failure. Some OEM builds ship partial/incompatible GameManager impls.
+            } catch (ignored: Throwable) {
+                // Swallowed: see above.
             }
         }
     }
 
-    public static void notifyStreamConnecting(Context context) {
-        setGameModeStatus(context, true, true);
-    }
+    @JvmStatic fun notifyStreamConnecting(context: Context) = setGameModeStatus(context, true, true)
 
-    public static void notifyStreamConnected(Context context) {
-        setGameModeStatus(context, true, false);
-    }
+    @JvmStatic fun notifyStreamConnected(context: Context) = setGameModeStatus(context, true, false)
 
-    public static void notifyStreamEnteringPiP(Context context) {
-        setGameModeStatus(context, true, true);
-    }
+    @JvmStatic
+    fun notifyStreamEnteringPiP(context: Context) = setGameModeStatus(context, true, true)
 
-    public static void notifyStreamExitingPiP(Context context) {
-        setGameModeStatus(context, true, false);
-    }
+    @JvmStatic
+    fun notifyStreamExitingPiP(context: Context) = setGameModeStatus(context, true, false)
 
-    public static void notifyStreamEnded(Context context) {
-        setGameModeStatus(context, false, false);
-    }
+    @JvmStatic fun notifyStreamEnded(context: Context) = setGameModeStatus(context, false, false)
 
-    public static void showDecoderCrashDialog(Activity activity) {
-        final SharedPreferences prefs = activity.getSharedPreferences("DecoderTombstone", 0);
-        final int crashCount = prefs.getInt("CrashCount", 0);
-        int lastNotifiedCrashCount = prefs.getInt("LastNotifiedCrashCount", 0);
+    @JvmStatic
+    fun showDecoderCrashDialog(activity: Activity) {
+        val prefs = activity.getSharedPreferences(DECODER_TOMBSTONE_PREFS, 0)
+        val crashCount = prefs.getInt(CRASH_COUNT, 0)
+        val lastNotifiedCrashCount = prefs.getInt(LAST_NOTIFIED_CRASH_COUNT, 0)
 
         // Remember the last crash count we notified at, so we don't
         // display the crash dialog every time the app is started until
         // they stream again
         if (crashCount != 0 && crashCount != lastNotifiedCrashCount) {
-            if (crashCount % 3 == 0) {
-                // At 3 consecutive crashes, we'll forcefully reset their settings
-                PreferenceConfiguration.resetStreamingSettings(activity);
-                Dialog.displayDialog(activity,
-                        activity.getResources().getString(R.string.title_decoding_reset),
-                        activity.getResources().getString(R.string.message_decoding_reset),
-                        new Runnable() {
-                            @Override
-                            public void run() {
-                                // Mark notification as acknowledged on dismissal
-                                prefs.edit().putInt("LastNotifiedCrashCount", crashCount).apply();
-                            }
-                        });
+            // Mark notification as acknowledged on dismissal
+            val acknowledge = Runnable {
+                prefs.edit { putInt(LAST_NOTIFIED_CRASH_COUNT, crashCount) }
             }
-            else {
-                Dialog.displayDialog(activity,
-                        activity.getResources().getString(R.string.title_decoding_error),
-                        activity.getResources().getString(R.string.message_decoding_error),
-                        new Runnable() {
-                            @Override
-                            public void run() {
-                                // Mark notification as acknowledged on dismissal
-                                prefs.edit().putInt("LastNotifiedCrashCount", crashCount).apply();
-                            }
-                        });
+            if (crashCount % CRASHES_BEFORE_RESET == 0) {
+                // At 3 consecutive crashes, we'll forcefully reset their settings
+                PreferenceConfiguration.resetStreamingSettings(activity)
+                Dialog.displayDialog(
+                    activity,
+                    activity.resources.getString(R.string.title_decoding_reset),
+                    activity.resources.getString(R.string.message_decoding_reset),
+                    acknowledge,
+                )
+            } else {
+                Dialog.displayDialog(
+                    activity,
+                    activity.resources.getString(R.string.title_decoding_error),
+                    activity.resources.getString(R.string.message_decoding_error),
+                    acknowledge,
+                )
             }
         }
     }

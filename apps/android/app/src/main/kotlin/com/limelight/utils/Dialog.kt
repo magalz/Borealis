@@ -1,64 +1,58 @@
-package com.limelight.utils;
+package com.limelight.utils
 
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
-import android.widget.Button;
+import android.app.Activity
+import android.app.AlertDialog
 
-public class Dialog implements Runnable {
-    private final String title;
-    private final String message;
-    private final Activity activity;
-    private final Runnable runOnDismiss;
+class Dialog
+private constructor(
+    private val activity: Activity,
+    private val title: String?,
+    private val message: String?,
+    private val runOnDismiss: Runnable,
+) : Runnable {
+    private lateinit var alert: AlertDialog
 
-    private AlertDialog alert;
-
-    private Dialog(Activity activity, String title, String message, Runnable runOnDismiss)
-    {
-        this.activity = activity;
-        this.title = title;
-        this.message = message;
-        this.runOnDismiss = runOnDismiss;
-    }
-
-    public static void displayDialog(Activity activity, String title, String message, Runnable runOnDismiss)
-    {
-        activity.runOnUiThread(new Dialog(activity, title, message, runOnDismiss));
-    }
-
-    @Override
-    public void run() {
+    override fun run() {
         // If we're dying, don't bother creating a dialog
-        if (activity.isFinishing())
-            return;
+        if (activity.isFinishing) {
+            return
+        }
 
-        alert = new AlertDialog.Builder(activity).create();
+        alert = AlertDialog.Builder(activity).create()
 
-        alert.setTitle(title);
-        alert.setMessage(message);
-        alert.setCancelable(false);
-        alert.setCanceledOnTouchOutside(false);
- 
-        alert.setButton(AlertDialog.BUTTON_POSITIVE, activity.getResources().getText(android.R.string.ok), new DialogInterface.OnClickListener() {
-              public void onClick(DialogInterface dialog, int which) {
-                  alert.dismiss();
+        alert.setTitle(title)
+        alert.setMessage(message)
+        alert.setCancelable(false)
+        alert.setCanceledOnTouchOutside(false)
 
-                  runOnDismiss.run();
-              }
-        });
-        alert.setOnShowListener(new DialogInterface.OnShowListener(){
+        alert.setButton(
+            AlertDialog.BUTTON_POSITIVE,
+            activity.resources.getText(android.R.string.ok),
+        ) { _, _ ->
+            alert.dismiss()
 
-            @Override
-            public void onShow(DialogInterface dialog) {
-                // Set focus to the OK button by default
-                Button button = alert.getButton(AlertDialog.BUTTON_POSITIVE);
-                button.setFocusable(true);
-                button.setFocusableInTouchMode(true);
-                button.requestFocus();
-            }
-        });
+            runOnDismiss.run()
+        }
+        alert.setOnShowListener {
+            // Set focus to the OK button by default
+            val button = alert.getButton(AlertDialog.BUTTON_POSITIVE)
+            button.isFocusable = true
+            button.isFocusableInTouchMode = true
+            button.requestFocus()
+        }
 
-        alert.show();
+        alert.show()
     }
 
+    companion object {
+        @JvmStatic
+        fun displayDialog(
+            activity: Activity,
+            title: String?,
+            message: String?,
+            runOnDismiss: Runnable,
+        ) {
+            activity.runOnUiThread(Dialog(activity, title, message, runOnDismiss))
+        }
+    }
 }

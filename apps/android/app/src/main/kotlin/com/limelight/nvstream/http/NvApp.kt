@@ -1,70 +1,40 @@
-package com.limelight.nvstream.http;
+package com.limelight.nvstream.http
 
-import com.limelight.LimeLog;
+import com.limelight.LimeLog
 
-public class NvApp {
-    private String appName = "";
-    private int appId;
-    private boolean initialized;
-    private boolean hdrSupported;
-    
-    public NvApp() {}
-    
-    public NvApp(String appName) {
-        this.appName = appName;
+class NvApp() {
+    var appName: String? = ""
+    var appId: Int = 0
+        set(value) {
+            field = value
+            isInitialized = true
+        }
+
+    var isHdrSupported: Boolean = false
+    var isInitialized: Boolean = false
+        private set
+
+    constructor(appName: String?) : this() {
+        this.appName = appName
     }
-    
-    public NvApp(String appName, int appId, boolean hdrSupported) {
-        this.appName = appName;
-        this.appId = appId;
-        this.hdrSupported = hdrSupported;
-        this.initialized = true;
+
+    constructor(appName: String?, appId: Int, hdrSupported: Boolean) : this() {
+        this.appName = appName
+        this.appId = appId
+        this.isHdrSupported = hdrSupported
     }
-    
-    public void setAppName(String appName) {
-        this.appName = appName;
-    }
-    
-    public void setAppId(String appId) {
+
+    fun setAppId(appId: String?) {
         try {
-            this.appId = Integer.parseInt(appId);
-            this.initialized = true;
-        } catch (NumberFormatException e) {
-            LimeLog.warning("Malformed app ID: "+appId);
+            this.appId =
+                Integer.parseInt(appId ?: throw NumberFormatException("Cannot parse null string"))
+        } catch (e: NumberFormatException) {
+            LimeLog.warning("Malformed app ID: $appId")
         }
     }
-    
-    public void setAppId(int appId) {
-        this.appId = appId;
-        this.initialized = true;
-    }
 
-    public void setHdrSupported(boolean hdrSupported) {
-        this.hdrSupported = hdrSupported;
-    }
-    
-    public String getAppName() {
-        return this.appName;
-    }
-    
-    public int getAppId() {
-        return this.appId;
-    }
-
-    public boolean isHdrSupported() {
-        return this.hdrSupported;
-    }
-    
-    public boolean isInitialized() {
-        return this.initialized;
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder str = new StringBuilder();
-        str.append("Name: ").append(appName).append("\n");
-        str.append("HDR Supported: ").append(hdrSupported ? "Yes" : "Unknown").append("\n");
-        str.append("ID: ").append(appId).append("\n");
-        return str.toString();
-    }
+    override fun toString(): String =
+        "Name: $appName\n" +
+            "HDR Supported: ${if (isHdrSupported) "Yes" else "Unknown"}\n" +
+            "ID: $appId\n"
 }

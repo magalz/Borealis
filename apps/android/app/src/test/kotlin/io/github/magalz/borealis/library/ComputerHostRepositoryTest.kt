@@ -60,7 +60,7 @@ class ComputerHostRepositoryTest {
             boxArt = { deletedBoxArt += it },
             shortcuts = {
                 shortcutFailure?.let { failure -> throw failure }
-                forgottenShortcuts += it.uuid
+                forgottenShortcuts += it.uuid!!
             },
             io = io,
         )

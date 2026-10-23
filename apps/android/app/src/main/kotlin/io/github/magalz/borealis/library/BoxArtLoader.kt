@@ -107,7 +107,7 @@ internal constructor(
     }
 
     private suspend fun download(tuple: LoaderTuple) {
-        val details = connection.lookup(tuple.computer.uuid) ?: return
+        val details = connection.lookup(checkNotNull(tuple.computer.uuid)) ?: return
         // The art is only asked of a paired host, whose certificate NvHTTP then pins.
         if (details.pairState != PairState.PAIRED || details.serverCert == null) return
         val client = clients.create(details, connection.binder().uniqueId)

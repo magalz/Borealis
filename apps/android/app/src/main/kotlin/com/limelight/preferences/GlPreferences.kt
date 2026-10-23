@@ -1,37 +1,38 @@
-package com.limelight.preferences;
+package com.limelight.preferences
 
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.SharedPreferences
 
-import android.content.Context;
-import android.content.SharedPreferences;
+class GlPreferences private constructor(private val prefs: SharedPreferences) {
+    @JvmField var glRenderer: String = ""
 
-public class GlPreferences {
-    private static final String PREF_NAME = "GlPreferences";
+    @JvmField var savedFingerprint: String = ""
 
-    private static final String FINGERPRINT_PREF_STRING = "Fingerprint";
-    private static final String GL_RENDERER_PREF_STRING = "Renderer";
+    // The KTX edit(commit = true) drops the result of commit(), and this returns it.
+    @SuppressLint("UseKtx")
+    fun writePreferences(): Boolean =
+        prefs
+            .edit()
+            .putString(GL_RENDERER_PREF_STRING, glRenderer)
+            .putString(FINGERPRINT_PREF_STRING, savedFingerprint)
+            .commit()
 
-    private SharedPreferences prefs;
-    public String glRenderer;
-    public String savedFingerprint;
+    companion object {
+        private const val PREF_NAME = "GlPreferences"
 
-    private GlPreferences(SharedPreferences prefs) {
-        this.prefs = prefs;
-    }
+        private const val FINGERPRINT_PREF_STRING = "Fingerprint"
+        private const val GL_RENDERER_PREF_STRING = "Renderer"
 
-    public static GlPreferences readPreferences(Context context) {
-        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, 0);
-        GlPreferences glPrefs = new GlPreferences(prefs);
+        @JvmStatic
+        fun readPreferences(context: Context): GlPreferences {
+            val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            val glPrefs = GlPreferences(prefs)
 
-        glPrefs.glRenderer = prefs.getString(GL_RENDERER_PREF_STRING, "");
-        glPrefs.savedFingerprint = prefs.getString(FINGERPRINT_PREF_STRING, "");
+            glPrefs.glRenderer = checkNotNull(prefs.getString(GL_RENDERER_PREF_STRING, ""))
+            glPrefs.savedFingerprint = checkNotNull(prefs.getString(FINGERPRINT_PREF_STRING, ""))
 
-        return glPrefs;
-    }
-
-    public boolean writePreferences() {
-        return prefs.edit()
-                .putString(GL_RENDERER_PREF_STRING, glRenderer)
-                .putString(FINGERPRINT_PREF_STRING, savedFingerprint)
-                .commit();
+            return glPrefs
+        }
     }
 }

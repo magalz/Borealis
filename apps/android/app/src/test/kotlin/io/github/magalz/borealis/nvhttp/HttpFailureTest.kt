@@ -2,6 +2,7 @@ package io.github.magalz.borealis.nvhttp
 
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import com.limelight.BuildConfig
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import com.limelight.nvstream.http.HostHttpResponseException
 import com.limelight.nvstream.http.NvApp
@@ -142,6 +143,11 @@ class HttpFailureTest {
             .isInstanceOf(ConnectException::class.java)
         assertThat(assertThrows(IOException::class.java) { http.getServerInfo(false) })
             .isInstanceOf(ConnectException::class.java)
+    }
+
+    @Test
+    fun `the logging switch of a build is the debug flag of the build`() {
+        assertThat(verboseField().getBoolean(null)).isEqualTo(BuildConfig.DEBUG)
     }
 
     @Test

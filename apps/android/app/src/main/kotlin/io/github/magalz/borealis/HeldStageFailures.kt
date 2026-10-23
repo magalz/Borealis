@@ -2,6 +2,7 @@ package io.github.magalz.borealis
 
 import com.limelight.nvstream.NvConnectionListener
 import com.limelight.nvstream.jni.MoonBridge
+import io.github.magalz.borealis.host.launch.ConflictAnswer
 import io.github.magalz.borealis.host.launch.ResumeCollisions
 import io.github.magalz.borealis.host.launch.StageFailure
 
@@ -27,4 +28,20 @@ constructor(
             StageFailure.REPORT -> inner.stageFailed(stage, portFlags, errorCode)
         }
     }
+
+    // The launch callbacks keep the defaults of the interface, as they did while it was Java (a
+    // delegation does not forward Java default methods). Only MoonBridge calls this listener, and
+    // it never calls these three.
+    override fun launchRetrying(category: Int, attempt: Int, maxAttempts: Int, delayMs: Int) =
+        super.launchRetrying(category, attempt, maxAttempts, delayMs)
+
+    override fun launchStarting(resume: Boolean) = super.launchStarting(resume)
+
+    override fun launchConflict(
+        runningAppId: Int,
+        runningAppName: String?,
+        requestedAppId: Int,
+        requestedAppName: String?,
+        answer: ConflictAnswer,
+    ) = super.launchConflict(runningAppId, runningAppName, requestedAppId, requestedAppName, answer)
 }

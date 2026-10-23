@@ -551,8 +551,9 @@ class ComputerManagerService : Service() {
         }
     }
 
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     // The stack trace goes to the standard error stream, as in the inherited Java. Logging it
-    // instead is a behaviour change (Sprint 12 backlog).
+    // instead is a behaviour change.
     @Suppress("PrintStackTrace", "ReturnCount")
     private fun tryPollIp(
         details: ComputerDetails,

@@ -64,6 +64,14 @@ class JmDNSDiscoveryAgentCharacterizationTest {
         assertThat(threads.map { it.state }).doesNotContain(Thread.State.NEW)
     }
 
+    /** Waits until [line] is logged at info level by the discovery thread. */
+    private fun awaitInfo(line: String) {
+        val deadline = System.nanoTime() + WAIT_NANOS
+        while (!log.messages(Level.INFO).contains(line) && System.nanoTime() < deadline) {
+            Thread.sleep(POLL_MS)
+        }
+    }
+
     private fun startAnother(): JmDNSDiscoveryAgent {
         val other = JmDNSDiscoveryAgent(app, RecordingDiscoveryListener())
         started += other
@@ -142,6 +150,35 @@ class JmDNSDiscoveryAgentCharacterizationTest {
         assertThat(dns.requests).hasSize(1)
         assertThat(log.messages(Level.INFO)).contains("mDNS: Machine appeared: Den PC")
         assertThat(log.messages(Level.INFO)).doesNotContain("mDNS: Resolved (blocking)")
+    }
+
+    @Test
+    fun `a service that did not resolve yet is retried by the discovery thread`() {
+        agent.serviceAdded(FakeServiceEvent(FakeJmDns(), serviceInfo("Den PC", 47989)))
+
+        agent.startDiscovery(INTERVAL_MS)
+        awaitInfo("mDNS: Retrying service resolution for machine: Den PC")
+
+        assertThat(log.messages(Level.INFO))
+            .contains("mDNS: Retrying service resolution for machine: Den PC")
+        assertThat(listener.added).isEmpty()
+    }
+
+    @Test
+    fun `a service that resolved at once is not retried`() {
+        val resolved = serviceInfo("Den PC", 47989, listOf(ip4("10.0.0.2")))
+        agent.serviceAdded(FakeServiceEvent(FakeJmDns(mapOf("Den PC" to resolved)), resolved))
+        // A second service that does not resolve marks the end of the first pass of the thread.
+        agent.serviceAdded(FakeServiceEvent(FakeJmDns(), serviceInfo("Laptop", 47989)))
+
+        agent.startDiscovery(INTERVAL_MS)
+        awaitInfo("mDNS: Retrying service resolution for machine: Laptop")
+        awaitSleeping(awaitThreads(1))
+        Thread.sleep(SETTLE_MS)
+
+        assertThat(log.messages(Level.INFO))
+            .doesNotContain("mDNS: Retrying service resolution for machine: Den PC")
+        assertThat(listener.added).hasSize(1)
     }
 
     @Test
@@ -257,5 +294,6 @@ class JmDNSDiscoveryAgentCharacterizationTest {
         const val INTERVAL_MS = 60_000
         const val POLL_MS = 10L
         const val WAIT_NANOS = 5_000_000_000L
+        const val SETTLE_MS = 200L
     }
 }

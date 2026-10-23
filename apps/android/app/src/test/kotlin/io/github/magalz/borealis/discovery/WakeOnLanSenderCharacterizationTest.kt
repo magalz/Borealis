@@ -35,6 +35,14 @@ class WakeOnLanSenderCharacterizationTest {
     private val loopback = InetAddress.getByName("127.0.0.1")
     private val open = mutableListOf<DatagramSocket>()
 
+    // A made-up MAC address of this test, locally administered (02:), and different for every test
+    // and every run. Ports 9 and 47009 are fixed, so another test run on the same machine may send
+    // to them while this one listens; the receiving loop skips whatever is not this packet.
+    private val ownMac =
+        intArrayOf(0x02) + IntArray(OWN_MAC_RANDOM_BYTES) { Random.nextInt(BYTE_VALUES) }
+    private val ownMacText = ownMac.joinToString(":") { it.toString(HEX_RADIX).padStart(2, '0') }
+    private val ownPacket = magicPacket(*ownMac)
+
     @After
     fun closeSockets() {
         open.forEach { it.close() }
@@ -64,15 +72,30 @@ class WakeOnLanSenderCharacterizationTest {
         error("no free ports to listen on")
     }
 
-    private fun DatagramSocket.take(timeoutMs: Int = RECEIVE_MS): ByteArray? =
-        try {
-            soTimeout = timeoutMs
-            val packet = DatagramPacket(ByteArray(BUFFER_BYTES), BUFFER_BYTES)
-            receive(packet)
-            packet.data.copyOf(packet.length)
-        } catch (ignored: SocketTimeoutException) {
-            null
+    /**
+     * The next packet that holds [expected], or null when none comes within [timeoutMs]. A packet
+     * with another payload is not the one of this test and is skipped.
+     */
+    private fun DatagramSocket.take(expected: ByteArray, timeoutMs: Int = RECEIVE_MS): ByteArray? {
+        val deadline = System.nanoTime() + timeoutMs * NANOS_PER_MS
+        while (true) {
+            val leftMs = (deadline - System.nanoTime()) / NANOS_PER_MS
+            if (leftMs <= 0) {
+                return null
+            }
+            try {
+                soTimeout = leftMs.toInt()
+                val packet = DatagramPacket(ByteArray(BUFFER_BYTES), BUFFER_BYTES)
+                receive(packet)
+                val payload = packet.data.copyOf(packet.length)
+                if (payload.contentEquals(expected)) {
+                    return payload
+                }
+            } catch (ignored: SocketTimeoutException) {
+                return null
+            }
         }
+    }
 
     private fun host(
         mac: String?,
@@ -93,23 +116,22 @@ class WakeOnLanSenderCharacterizationTest {
     fun `the magic packet is six 0xFF bytes and sixteen copies of the MAC address`() {
         val ports = bindDynamicPorts()
 
-        WakeOnLanSender.sendWolPacket(host("02:11:22:33:44:55", ports.httpPort))
+        WakeOnLanSender.sendWolPacket(host(ownMacText, ports.httpPort))
 
-        val received = ports.sockets.first().take()
+        val received = ports.sockets.first().take(ownPacket)
         assertThat(received).hasLength(102)
-        assertThat(received).isEqualTo(magicPacket(0x02, 0x11, 0x22, 0x33, 0x44, 0x55))
+        assertThat(received).isEqualTo(ownPacket)
     }
 
     @Test
     fun `each of the five dynamic ports of the host gets the packet once`() {
         val ports = bindDynamicPorts()
 
-        WakeOnLanSender.sendWolPacket(host("02:11:22:33:44:55", ports.httpPort))
+        WakeOnLanSender.sendWolPacket(host(ownMacText, ports.httpPort))
 
-        val expected = magicPacket(0x02, 0x11, 0x22, 0x33, 0x44, 0x55)
         ports.sockets.forEach {
-            assertThat(it.take()).isEqualTo(expected)
-            assertThat(it.take(NONE_MS)).isNull()
+            assertThat(it.take(ownPacket)).isEqualTo(ownPacket)
+            assertThat(it.take(ownPacket, NONE_MS)).isNull()
         }
     }
 
@@ -119,9 +141,9 @@ class WakeOnLanSenderCharacterizationTest {
         assumeNotNull(port)
         val ports = bindDynamicPorts()
 
-        WakeOnLanSender.sendWolPacket(host("02:11:22:33:44:55", ports.httpPort))
+        WakeOnLanSender.sendWolPacket(host(ownMacText, ports.httpPort))
 
-        assertThat(port!!.take()).isEqualTo(magicPacket(0x02, 0x11, 0x22, 0x33, 0x44, 0x55))
+        assertThat(port!!.take(ownPacket)).isEqualTo(ownPacket)
     }
 
     @Test
@@ -131,9 +153,9 @@ class WakeOnLanSenderCharacterizationTest {
         assumeNotNull(port)
         val ports = bindDynamicPorts()
 
-        WakeOnLanSender.sendWolPacket(host("02:11:22:33:44:55", ports.httpPort))
+        WakeOnLanSender.sendWolPacket(host(ownMacText, ports.httpPort))
 
-        assertThat(port!!.take()).isEqualTo(magicPacket(0x02, 0x11, 0x22, 0x33, 0x44, 0x55))
+        assertThat(port!!.take(ownPacket)).isEqualTo(ownPacket)
     }
 
     @Test
@@ -142,8 +164,8 @@ class WakeOnLanSenderCharacterizationTest {
 
         WakeOnLanSender.sendWolPacket(host("AA:bb:Cc:dD:EE:ff", ports.httpPort))
 
-        assertThat(ports.sockets.first().take())
-            .isEqualTo(magicPacket(0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF))
+        val expected = magicPacket(0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF)
+        assertThat(ports.sockets.first().take(expected)).isEqualTo(expected)
     }
 
     @Test
@@ -152,7 +174,8 @@ class WakeOnLanSenderCharacterizationTest {
 
         WakeOnLanSender.sendWolPacket(host("100:1ff:7f:80:0:1", ports.httpPort))
 
-        assertThat(ports.sockets.first().take()).isEqualTo(magicPacket(0x00, 0xFF, 0x7F, 0x80, 0x00, 0x01))
+        val expected = magicPacket(0x00, 0xFF, 0x7F, 0x80, 0x00, 0x01)
+        assertThat(ports.sockets.first().take(expected)).isEqualTo(expected)
         assertThat(log.messages(Level.WARNING)).isEmpty()
     }
 
@@ -162,7 +185,8 @@ class WakeOnLanSenderCharacterizationTest {
 
         WakeOnLanSender.sendWolPacket(host("-1:+f:02:03:04:05", ports.httpPort))
 
-        assertThat(ports.sockets.first().take()).isEqualTo(magicPacket(0xFF, 0x0F, 0x02, 0x03, 0x04, 0x05))
+        val expected = magicPacket(0xFF, 0x0F, 0x02, 0x03, 0x04, 0x05)
+        assertThat(ports.sockets.first().take(expected)).isEqualTo(expected)
     }
 
     @Test
@@ -171,7 +195,8 @@ class WakeOnLanSenderCharacterizationTest {
 
         WakeOnLanSender.sendWolPacket(host("02:11:zz:33:44:55", ports.httpPort))
 
-        assertThat(ports.sockets.first().take()).isEqualTo(magicPacket(0x02, 0x11, 0, 0, 0, 0))
+        val expected = magicPacket(0x02, 0x11, 0, 0, 0, 0)
+        assertThat(ports.sockets.first().take(expected)).isEqualTo(expected)
         assertThat(log.messages(Level.WARNING))
             .containsExactly("Malformed MAC address: 02:11:zz:33:44:55 (index: 2)")
     }
@@ -182,7 +207,8 @@ class WakeOnLanSenderCharacterizationTest {
 
         WakeOnLanSender.sendWolPacket(host("02: 11:22:33:44:55", ports.httpPort))
 
-        assertThat(ports.sockets.first().take()).isEqualTo(magicPacket(0x02, 0, 0, 0, 0, 0))
+        val expected = magicPacket(0x02, 0, 0, 0, 0, 0)
+        assertThat(ports.sockets.first().take(expected)).isEqualTo(expected)
         assertThat(log.messages(Level.WARNING))
             .containsExactly("Malformed MAC address: 02: 11:22:33:44:55 (index: 1)")
     }
@@ -193,7 +219,8 @@ class WakeOnLanSenderCharacterizationTest {
 
         WakeOnLanSender.sendWolPacket(host("02:11", ports.httpPort))
 
-        assertThat(ports.sockets.first().take()).isEqualTo(magicPacket(0x02, 0x11, 0, 0, 0, 0))
+        val expected = magicPacket(0x02, 0x11, 0, 0, 0, 0)
+        assertThat(ports.sockets.first().take(expected)).isEqualTo(expected)
         assertThat(log.messages(Level.WARNING)).isEmpty()
     }
 
@@ -203,7 +230,8 @@ class WakeOnLanSenderCharacterizationTest {
 
         WakeOnLanSender.sendWolPacket(host("01:02:03:04:05:06:07:08", ports.httpPort))
 
-        assertThat(ports.sockets.first().take()).isEqualTo(magicPacket(1, 2, 3, 4, 5, 6))
+        val expected = magicPacket(1, 2, 3, 4, 5, 6)
+        assertThat(ports.sockets.first().take(expected)).isEqualTo(expected)
     }
 
     @Test
@@ -212,7 +240,8 @@ class WakeOnLanSenderCharacterizationTest {
 
         WakeOnLanSender.sendWolPacket(host("", ports.httpPort))
 
-        assertThat(ports.sockets.first().take()).isEqualTo(magicPacket(0, 0, 0, 0, 0, 0))
+        val expected = magicPacket(0, 0, 0, 0, 0, 0)
+        assertThat(ports.sockets.first().take(expected)).isEqualTo(expected)
         assertThat(log.messages(Level.WARNING)).isEmpty()
     }
 
@@ -224,17 +253,17 @@ class WakeOnLanSenderCharacterizationTest {
             WakeOnLanSender.sendWolPacket(host(null, ports.httpPort))
         }
 
-        ports.sockets.forEach { assertThat(it.take(NONE_MS)).isNull() }
+        ports.sockets.forEach { assertThat(it.take(ownPacket, NONE_MS)).isNull() }
     }
 
     @Test
     fun `a host with no address sends nothing and is not an error`() {
         val ports = bindDynamicPorts()
-        val nowhere = ComputerDetails().apply { macAddress = "02:11:22:33:44:55" }
+        val nowhere = ComputerDetails().apply { macAddress = ownMacText }
 
         WakeOnLanSender.sendWolPacket(nowhere)
 
-        ports.sockets.forEach { assertThat(it.take(NONE_MS)).isNull() }
+        ports.sockets.forEach { assertThat(it.take(ownPacket, NONE_MS)).isNull() }
     }
 
     @Test
@@ -242,7 +271,7 @@ class WakeOnLanSenderCharacterizationTest {
         val ports = bindDynamicPorts()
         val details =
             ComputerDetails().apply {
-                macAddress = "02:11:22:33:44:55"
+                macAddress = ownMacText
                 localAddress = AddressTuple("127.0.0.1", ports.httpPort)
                 remoteAddress = AddressTuple("127.0.0.1", ports.httpPort)
                 manualAddress = AddressTuple("127.0.0.1", ports.httpPort)
@@ -250,9 +279,8 @@ class WakeOnLanSenderCharacterizationTest {
 
         WakeOnLanSender.sendWolPacket(details)
 
-        val expected = magicPacket(0x02, 0x11, 0x22, 0x33, 0x44, 0x55)
-        repeat(3) { assertThat(ports.sockets.first().take()).isEqualTo(expected) }
-        assertThat(ports.sockets.first().take(NONE_MS)).isNull()
+        repeat(3) { assertThat(ports.sockets.first().take(ownPacket)).isEqualTo(ownPacket) }
+        assertThat(ports.sockets.first().take(ownPacket, NONE_MS)).isNull()
     }
 
     @Test
@@ -268,13 +296,13 @@ class WakeOnLanSenderCharacterizationTest {
         assumeNotNull(socket)
         val details =
             ComputerDetails().apply {
-                macAddress = "02:11:22:33:44:55"
+                macAddress = ownMacText
                 ipv6Address = AddressTuple("::1", first - DYNAMIC_FIRST_OFFSET)
             }
 
         WakeOnLanSender.sendWolPacket(details)
 
-        assertThat(socket!!.take()).isEqualTo(magicPacket(0x02, 0x11, 0x22, 0x33, 0x44, 0x55))
+        assertThat(socket!!.take(ownPacket)).isEqualTo(ownPacket)
     }
 
     @Test
@@ -282,10 +310,9 @@ class WakeOnLanSenderCharacterizationTest {
         assumeTrue(InetAddress.getAllByName("localhost").contains(loopback))
         val ports = bindDynamicPorts()
 
-        WakeOnLanSender.sendWolPacket(host("02:11:22:33:44:55", ports.httpPort, "localhost"))
+        WakeOnLanSender.sendWolPacket(host(ownMacText, ports.httpPort, "localhost"))
 
-        assertThat(ports.sockets.first().take())
-            .isEqualTo(magicPacket(0x02, 0x11, 0x22, 0x33, 0x44, 0x55))
+        assertThat(ports.sockets.first().take(ownPacket)).isEqualTo(ownPacket)
     }
 
     @Test
@@ -293,15 +320,14 @@ class WakeOnLanSenderCharacterizationTest {
         val ports = bindDynamicPorts()
         val details =
             ComputerDetails().apply {
-                macAddress = "02:11:22:33:44:55"
+                macAddress = ownMacText
                 localAddress = AddressTuple(UNRESOLVABLE, ports.httpPort)
                 remoteAddress = AddressTuple("127.0.0.1", ports.httpPort)
             }
 
         WakeOnLanSender.sendWolPacket(details)
 
-        val expected = magicPacket(0x02, 0x11, 0x22, 0x33, 0x44, 0x55)
-        ports.sockets.forEach { assertThat(it.take()).isEqualTo(expected) }
+        ports.sockets.forEach { assertThat(it.take(ownPacket)).isEqualTo(ownPacket) }
     }
 
     @Test
@@ -309,7 +335,7 @@ class WakeOnLanSenderCharacterizationTest {
         // Inherited quirk: the dynamic ports are the HTTP port plus 9 to 21, and a port above 65535
         // is an IllegalArgumentException, not an IOException, so nothing catches it.
         assertThrows(IllegalArgumentException::class.java) {
-            WakeOnLanSender.sendWolPacket(host("02:11:22:33:44:55", MAX_PORT))
+            WakeOnLanSender.sendWolPacket(host(ownMacText, MAX_PORT))
         }
     }
 
@@ -323,6 +349,10 @@ class WakeOnLanSenderCharacterizationTest {
         const val STANDARD_WOL_PORT = 9
         const val MAX_PORT = 65_535
         const val BUFFER_BYTES = 1_024
+        const val OWN_MAC_RANDOM_BYTES = 5
+        const val BYTE_VALUES = 256
+        const val HEX_RADIX = 16
+        const val NANOS_PER_MS = 1_000_000L
         const val RECEIVE_MS = 3_000
         const val NONE_MS = 150
 

@@ -115,6 +115,15 @@ class MdnsDiscoveryAgentCharacterizationTest {
     }
 
     @Test
+    fun `a host with no IPv4 address that is reported again is not announced again`() {
+        report(v6 = listOf(ip6("fe80::1"), ip6("2001:db8::1")))
+        report(v6 = listOf(ip6("fe80::1"), ip6("2001:db8::1")))
+
+        assertThat(listener.added).hasSize(1)
+        assertThat(agent.getComputerSet()).hasSize(1)
+    }
+
+    @Test
     fun `a host with only a global IPv6 address has no local address`() {
         report(v6 = listOf(ip6("2001:db8::1")))
 
@@ -194,6 +203,24 @@ class MdnsDiscoveryAgentCharacterizationTest {
 
         assertThat(listener.added.single().ipv6Address)
             .isEqualTo(ip6("2001:db8:2::211:22ff:fe33:4455"))
+    }
+
+    @Test
+    fun `a global IPv6 address that shares only half of the interface identifier is not the match`() {
+        report(
+            v6 =
+                listOf(
+                    ip6("fe80::1111:2222:3333:4444"),
+                    // The low 32 bits are the same as the link-local ones, the high 32 are not.
+                    ip6("2001:db8:1::aaaa:bbbb:3333:4444"),
+                    // The high 32 bits are the same, the low 32 are not.
+                    ip6("2001:db8:2::1111:2222:cccc:dddd"),
+                    ip6("2001:db8:3::1111:2222:3333:4444"),
+                )
+        )
+
+        assertThat(listener.added.single().ipv6Address)
+            .isEqualTo(ip6("2001:db8:3::1111:2222:3333:4444"))
     }
 
     @Test

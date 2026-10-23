@@ -55,3 +55,5 @@ Chosen option: "Kotlin for new code, upstream Java untouched", because Kotlin is
 ## More Information
 
 See [0003](0003-native-apps-per-platform-with-shared-core.md) and [0005](0005-ui-toolkit-and-visual-style.md).
+
+Amended by [0054](0054-declare-independence-from-moonlight.md) and [0059](0059-convert-the-inherited-java-to-kotlin.md): the inherited Java is Borealis code and is converted to Kotlin under ADR 0059. The rule for new code stays.

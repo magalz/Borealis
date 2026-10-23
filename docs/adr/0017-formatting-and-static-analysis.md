@@ -71,3 +71,5 @@ Definition of Done:
 ## More Information
 
 See [0037](0037-kotlin-formatter-ktfmt.md), [0038](0038-git-hooks-with-githooks.md) and [0016](0016-testing-strategy-and-tdd.md).
+
+Amended by [0059](0059-convert-the-inherited-java-to-kotlin.md): the inherited Java is converted to Kotlin, and the converted code follows the Kotlin rules above. No new Java code is written.

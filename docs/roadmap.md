@@ -465,7 +465,7 @@ Why this order:
 
 ### Sprint 11: Appearance
 
-In progress, not merged. Owner decisions of 2026-10-21. Every font in the font
+Merged as pull requests #55 (2026-10-22) and #56 (2026-10-23). Owner decisions of 2026-10-21. Every font in the font
 choice is there for an accessibility reason, from a survey of primary sources
 that [ADR 0058](adr/0058-appearance-and-reading-options.md) records.
 
@@ -550,8 +550,8 @@ inherited Java to Kotlin before SecOps, one area at a time, in three sprints.
   class and every native method signature stay, because the JNI symbols depend on
   them. Kotlin code that Java still calls keeps a Java-friendly API (`@JvmStatic`,
   `@JvmField`, `@JvmOverloads`) until its last Java caller is converted.
-- **ADR:** an ADR on the conversion rules is written when Sprint 12 is planned. It
-  updates [ADR 0004](adr/0004-kotlin-for-new-android-code.md).
+- **ADR:** [ADR 0059](adr/0059-convert-the-inherited-java-to-kotlin.md) records the conversion
+  rules. It amends [ADR 0004](adr/0004-kotlin-for-new-android-code.md).
 - **Dead code:** the full sweep of the Java methods for dead code happens area by
   area. Sprint 8, item 1 hands it over.
 - **Size:** 80 Java files and 21,539 lines under
@@ -565,18 +565,41 @@ inherited Java to Kotlin before SecOps, one area at a time, in three sprints.
 
 ### Sprint 12: Kotlin migration, network, host and support
 
-About 7,300 lines:
+In progress. Owner decisions of 2026-10-23, recorded in [ADR 0059](adr/0059-convert-the-inherited-java-to-kotlin.md):
 
-- network and host, 5,402 lines: `nvstream/http` (`NvHTTP` and pairing, 1,467),
+- **H1, placement and history:** converted files move to `src/main/kotlin/com/limelight/...`
+  in a rename-only commit, and the conversion follows in its own commit (ADR 0059, rule 1).
+- **A1, static analysis:** the conversion is faithful. Mechanical detekt findings are fixed,
+  structural rules are suppressed on the declaration with a backlog item, and there is no
+  detekt baseline (ADR 0059, rule 6).
+- **C1, coverage:** converted code counts in Kover coverage at once. The exclusion narrows to
+  the Java that stays. In Codecov the converted path gets its own patch and project statuses,
+  separate from the 90% gate; their target comes from the coverage measured at the end of
+  Sprint 12 and rises each sprint to 90%. Each migration sprint is merged on its own
+  (ADR 0059, rule 7).
+- **D1, dead code:** verified dead code is removed before conversion, each removal in its own
+  commit with its evidence (ADR 0059, rule 8).
+- **Behaviour:** a conversion keeps behaviour. Bugs found are reported and go to the backlog
+  (ADR 0059, rule 10).
+
+Reference source: the LuminalShine reference is now the owner's fork at `D:\Repos\luminalshine`.
+
+Size: 47 files and 7,325 lines, under `apps/android/app/src/main/java`:
+
+- network and host, 31 files and 5,402 lines: `nvstream/http` (`NvHTTP` and pairing, 1,467),
   `computers` (1,577), `nvstream/mdns` (728), `nvstream/wol`, `binding/crypto`,
   `discovery`, and `nvstream` (`NvConnection` and the stream configuration, 991),
   `nvstream/av` and `nvstream/input`;
-- support, 1,923 lines: `preferences` (`PreferenceConfiguration`, 599), `utils`
+- support, 16 files and 1,923 lines: `preferences` (`PreferenceConfiguration`, 599), `utils`
   (1,004), `ui`, `grid/assets`, `PosterContentProvider`, `LimeLog` and `binding`.
 
 Items:
 
 - HTTP and computers come first, because Phase 3 uses them.
+- **Legacy database readers removed, not converted.** The three `LegacyDatabaseReader`
+  classes (308 lines) read `computers.db`, `computers2.db` and `computers3.db`, the databases of
+  older Moonlight versions under the `com.limelight` application id. Borealis's application id
+  is `io.github.magalz.borealis`, so these files never exist in its data (ADR 0059, rule 8).
 - **Re-verify the 26.10.0-beta.1 host changes.** Moved from the backlog: check
   them in the source, and capture a fixture folder for them. The characterization
   tests of the HTTP layer use these fixtures. See the

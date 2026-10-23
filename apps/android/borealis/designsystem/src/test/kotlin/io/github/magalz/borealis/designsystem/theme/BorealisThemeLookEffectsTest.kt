@@ -82,7 +82,15 @@ class BorealisThemeLookEffectsTest {
     fun `a colour-blind palette gives the content the status colours of the palette`() {
         show(BorealisLook(colourVision = ColourVision.RedGreen))
 
-        assertThat(colors).isEqualTo(BorealisColors().withColourVision(ColourVision.RedGreen))
+        assertThat(colors)
+            .isEqualTo(
+                BorealisColors()
+                    .withColourVision(
+                        ColourVision.RedGreen,
+                        AccentChoice.Violet,
+                        highContrast = false,
+                    )
+            )
         assertThat(scheme?.error).isEqualTo(colors?.dangerInk)
     }
 

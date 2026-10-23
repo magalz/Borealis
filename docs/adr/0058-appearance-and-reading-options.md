@@ -115,9 +115,60 @@ Decision details:
    * **Layout work:** the layouts that do not fit at Wide or Wider are fixed as part of this work. The
      spike found 22 fit failures at Wide and 39 at Wider with 0.5 em. A test keeps the word gap clearly
      larger than the letter gap in every font.
-   * **Known limitations:** the 200 % system font size is tested at Normal only, and the line ends of a
-     wrapped text can draw past their box at Wide and Wider. See
-     [accessibility, text spacing: known limitations](../ux/accessibility.md#text-spacing-known-limitations).
+   * **Key captions:** a key is only so wide, so at Wider its caption is drawn with the spacing of
+     Wide. The caption floor is 8 sp at Normal, and 8 sp over 1.12 (one plus the 0.12 em of letter
+     spacing) at Wide and at Wider, which is drawn as Wide. The plain 8 sp fits at the largest text
+     size, but at a system font scale of 2.0 the captions are cut off at Wide in all seven fonts, so
+     the floor is lowered by the spacing. The owner decided the captions on the UAT of 2026-10-22.
+     At a system font scale of 2.0, Luciole at Normal is cut off whatever the floor, as before.
+   * **The limit at a very large font:** Wider is drawn as Wide from a font scale of 2.0, the largest
+     that Android offers, and Wide and Normal are never limited. The owner decided on 2026-10-22 to
+     limit Wider and to warn, and then to raise the limit as far as the fit tests allow. The scale is
+     the one that the text is drawn at, the system font scale times the Text size
+     (`effectiveTextSpacing`, `theme/TextSpacingLimit.kt`), because what overflows is the text at the
+     size that is drawn: Largest text over a system font of 1.3 is 1.69 and still draws Wider.
+     * **What is stored:** the look keeps what the user chose, and Wider comes back when the font
+       scale falls. The theme gives the type, the design-system `Text` and everything under it, the
+       stream chrome among them, the level that is drawn, so the layouts that follow the level (the
+       card columns) follow it too: at 2.0 a Compact or Dense grid with Wider chosen has the columns
+       that Wide has.
+     * **Why 2.0:** the 200 % fit tests (the Library, the components, Settings and the Audit trail)
+       were run in every font at Wide and at Wider, at the font scales from 1.15 to 2.0, 462 runs at
+       each. Before the fixes below Wider failed from 1.15 (16 runs at 2.0) and Wide from 1.7 (8 runs
+       at 2.0). Three layouts caused it, and they are fixed:
+       * the Pairing screen of a TV: the PIN column is as wide as its longest line, and the line under
+         the PIN was one line of 421 dp at 2.0, which left the steps 149 dp. It wraps at the width of
+         the note about a restart now, and the steps have about 290 dp;
+       * the footer of the rail: the name was one line with an ellipsis, so "Borealis" was cut off
+         in a narrow rail. It wraps now, inside the word if it must;
+       * the time of an Audit entry on a phone: "Mon 17:00" took so much of a narrow row that a word
+         of the title ran past its box. The time takes 35 % of the row at most and wraps at its space.
+
+       After the fixes Wide fails in none of the runs at any of the scales, and Wider in none that
+       is more than rounding: 0 to 9 runs at a scale, 5 at 2.0, each 0.5 to 2.6 px past its box in a
+       text whose spaces have the spans of the word spacing, and none cut or ending in an ellipsis.
+       The fit check holds a line to 1 px, so the 200 % tests, which run with that check, draw
+       Wider as Wide at 2.0. The table, with all 18 scales, is in
+       [accessibility, text spacing: the limit at a very large font](../ux/accessibility.md#text-spacing-the-limit-at-a-very-large-font).
+     * **The warning:** when the user chooses Wider while the limit is reached, a dialog says so: the
+       title is "Wider spacing is limited", and the text says that, at this text size, Borealis uses
+       Wide spacing instead of Wider so that nothing is cut off, that the choice stays, and that Wider
+       comes back when the system font size or the Text size is smaller. It has one OK button, which
+       has the focus on a TV, and its title is the name of the window for TalkBack. The Text spacing
+       row says "Drawn as Wide at this text size, so that nothing is cut off." under its value for as
+       long as the limit is reached, so a user who raised the font later can see why. The text is in
+       English only, as the other strings.
+   * **Known limitations:**
+     * At Wider, from 1.15 to 1.99, 0 to 9 runs of the 231 at a scale run past their box by 0.5 to
+       2.6 px, as above. The fit tests find none cut or ending in an ellipsis. It has not been seen on a
+       device.
+     * At a combined font scale above 2.0 (a system font of 2.0 with Largest text is 2.6) Normal
+       text already fails the fit tests in 8 of the 84 runs of the Library (Apps with a long host
+       name, on a TV and on a phone) and in 1 of the 70 runs of the components (the rows of the
+       settings on a TV). Wider is drawn as Wide there, and Wide is not limited: Wide above a
+       combined 2.0 has not been measured, only Normal was, at 2.6. The roadmap has the item.
+     * The line ends of a wrapped text can draw past their box at Wide and Wider. See
+       [accessibility, text spacing: known limitations](../ux/accessibility.md#text-spacing-known-limitations).
 
 5. **Accent colour.**
    * **The set:** violet (today's colour, the default), teal `#4BECD0` and white `#EFF3FF`. The role
@@ -136,6 +187,18 @@ Decision details:
      dot breaks 3:1 over bright glass. The owner chose the shadow on 2026-10-22. Over the brightest
      host-card glass it raises the contrast of the dot from 3.79:1 to 5.68:1 in today's palette (see
      [the offline colour and the status shapes](../ux/accessibility.md#the-offline-colour-and-the-status-shapes)).
+     On a TV the glass is darker (luma 22, against 30 on a phone), and the shadow in the page colour
+     read as a faint ring there. On a TV the shadow is black and reaches 10.75 dp from the centre of
+     the dot instead of 10, so that it reads at least as clearly as the phone's. The owner decided this
+     on the UAT of 2026-10-22.
+   * **Colour-blind palettes:** the accent adapts to the palette. A palette changes the status colours
+     and not the accent, so violet was the blue of the success colour to a protanope and a deuteranope
+     (9.3 and 5.0 of CIEDE2000 from it). Under Red-green and Blue-yellow an accent that is not 20 or
+     more from the four status colours as the viewer sees them has a variant: violet under both (a
+     pale rose under Red-green, a lighter and pinker violet under Blue-yellow) and the soft accent of
+     white under Blue-yellow. Teal keeps its colour. The owner decided it on 2026-10-22, after the
+     user test. See
+     [the accents under the colour-blind palettes](../ux/accessibility.md#the-accents-under-the-colour-blind-palettes).
    * **Evidence:** the measurements are in
      [Accent candidates](../ux/accessibility.md#accent-candidates-sprint-11), from the `accents` command
      of the contrast tool.
@@ -158,6 +221,13 @@ Decision details:
    * **Dense:** the same columns as Compact, with less card padding: 12 dp on the TV and the handheld
      (from 18 dp), and 10 dp on the phone (from 14 dp). The Continue cover is 44 dp (from 56 dp), and
      the least height of a TV host card is 164 dp (from 176 dp).
+   * **At Wider:** Compact and Dense keep the columns of Comfortable, on every device. On a TV with
+     Wider and Compact or Dense, host names broke inside a word, the address wrapped before its last
+     digit and the "HEVC 10-bit" chip took two lines. Dense still takes its card padding, the Continue
+     cover and the TV card height. The layout follows the spacing that is drawn. Normal and Wide add
+     the column. The owner decided this on the UAT of 2026-10-22.
+   * **Row height:** the host cards of a row are as high as the tallest of them, on every device
+     wherever a row has more than one card. It was a TV only. A phone in one column changes nothing.
 
    * **The fixes:** the spike cut two things in the denser variants, and the density work fixes both.
      * The host detail line was cut at the largest text size. It now wraps.
@@ -196,6 +266,8 @@ Decision details:
 * Bad, because the bundled fonts add 1,549,487 bytes to the debug APK, of which the compressed fonts are 1,517,543 bytes (from 3,040,504 bytes raw; see More Information).
 * Bad, because the layouts that do not fit at Wide or Wider need work, and each layout change needs a fit
   test.
+* Bad, because Wider is not drawn in full at a font scale of 2.0: it is drawn as Wide, and the user is told
+  in a dialog and in the row.
 * Bad, because the halo and the new fonts have been measured by the model of the tool, not on a device.
   The halo has not been seen with these fonts.
 * Bad, because the dependency policy has a new licence in the allowlist (CC-BY-4.0), for fonts only.

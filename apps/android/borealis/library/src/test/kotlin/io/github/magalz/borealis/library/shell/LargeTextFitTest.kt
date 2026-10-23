@@ -10,9 +10,10 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.FitCase
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
+import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
-import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.addhost.AddHostError
 import io.github.magalz.borealis.library.addhost.AddHostScreen
@@ -36,13 +37,15 @@ import org.robolectric.annotation.Config
 /**
  * The Library screens at a system font scale of 2.0, the largest that Android offers (WCAG 1.4.4:
  * text resizes to 200 percent without loss of content). Every text must fit where it is, or the
- * screen scrolls: none runs past its width, is cut off at the bottom or ends in an ellipsis.
+ * screen scrolls: none runs past its width, is cut off at the bottom or ends in an ellipsis. The
+ * Text spacing of the runs is Normal, Wide or Wider, and the look draws the level that the font
+ * scale lets it (ADR 0058, decision 4), so none fails.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-class LargeTextFitTest(font: FontChoice) {
+class LargeTextFitTest(case: FitCase) {
     @get:Rule val composeRule = createComposeRule()
 
-    private val look = BorealisLook(font = font)
+    private val look = BorealisLook(font = case.font, textSpacing = case.spacing)
 
     @Test
     @Config(qualifiers = PHONE, fontScale = SCALE)
@@ -206,7 +209,7 @@ class LargeTextFitTest(font: FontChoice) {
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun fonts(): List<FontChoice> = FontChoice.entries
+        fun cases(): List<FitCase> = fitCases()
 
         private const val SCALE = 2f
         private const val LONG_HOST_NAME =

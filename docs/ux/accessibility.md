@@ -863,7 +863,15 @@ reads it in one sentence with the name.
 The Online dot has a soft dark shadow in the page colour, drawn outside its 10 dp box (`StatusDot`).
 It is strongest at the edge of the dot, at 85 % of the page colour, and is gone 5 dp outside the box.
 It is static, and it is not drawn under High contrast. The shadow is dark, not a glow, because a glow
-that touches the dot breaks 3:1 over bright glass. The owner chose it on 2026-10-22. Contrast of the
+that touches the dot breaks 3:1 over bright glass. The owner chose it on 2026-10-22.
+
+On a TV the glass is darker, only a little above the page colour (luma 22 in the device round,
+against 30 on a phone), and the shadow in the page colour read as a faint ring there. On a TV the
+shadow is black, at the same 85 % peak, and is gone 5.75 dp outside the box, still short of the 6 dp
+to the status text. In CIE lightness it takes 5.8 off the glass next to the dot on a TV (1.8 with the
+page colour), where the phone's takes 4.7 off its own, and it still shows 9.25 dp from the centre
+(7.75 before) where the phone's shows 8.25 (`StatusDotTest`). A handheld has the phone's shadow. The
+owner decided this on the UAT of 2026-10-22. Contrast of the
 dot against what is next to it, over the brightest host-card glass (luminance 0.0495), without and
 then with the shadow:
 
@@ -881,7 +889,9 @@ not measured, and nothing in Sprint 11 makes it worse. The shadow is drawn round
 ### The colour-blind palettes
 
 The palettes take their colours from the Okabe and Ito set, which is safe for colour vision
-deficiency. Each replaces the status roles only (`BorealisColors.withColourVision`):
+deficiency. Each replaces the status roles (`BorealisColors.withColourVision`), and the accent roles
+of an accent that the palette would not tell from a status colour (see [the accents under the
+colour-blind palettes](#the-accents-under-the-colour-blind-palettes)):
 
 | Role | Red-green | Blue-yellow |
 | --- | --- | --- |
@@ -1239,7 +1249,9 @@ Table U. The least CIEDE2000 distance of `accent` from the status colours as eac
 - **Violet and the dichromats.** The three rows that violet fails (`distance:red-green:protanopia`,
   `distance:red-green:deuteranopia` and `distance:blue-yellow:tritanopia`) are the violet of
   today, which a protanope and a deuteranope see as blue and a tritanope as grey. They are the
-  `known_fails` of violet, and green and teal pass them.
+  `known_fails` of violet, and green and teal pass them. The app does not draw that violet under a
+  colour-blind palette: it draws the variant of [the accents under the colour-blind
+  palettes](#the-accents-under-the-colour-blind-palettes).
 - **The checks that need a frame** are not in `known_fails`: a test keeps the other checks of each
   set equal to the file, and the glass ones of violet are in the tables above.
 
@@ -1276,6 +1288,172 @@ Table W. The selected label of the app: `accent-soft` over its tint on the glass
 | Flowing light | Reduced | 7.17 | 10.41 | 10.08 | 11.19 |
 | Starfield | Standard | 7.03 | 10.23 | 9.92 | 10.96 |
 | Starfield | Reduced | 7.93 | 11.59 | 11.21 | 12.47 |
+
+### The accents under the colour-blind palettes
+
+A palette replaces the status colours, and the accent stayed as it was. So an accent could be a
+colour that the viewer of the palette does not tell from a status colour: to a protanope and a
+deuteranope violet is a blue, as the sky blue of the success colour of the Red-green palette is. The
+owner saw it in the user test of 2026-10-22, where the palette did nothing to the colour of the
+selection, and decided that the accent adapts to the palette (issue #50; [ADR
+0058](../adr/0058-appearance-and-reading-options.md), decision 5).
+
+- Date: 2026-10-22. Revision measured: `22ef9310`, the tool and the colours of `accents.json`; the
+  fix of `b327cd39` changes no figure. The frames are the 288 of the baseline, as above. The values
+  are those of the tokens `accent-violet-red-green`, `accent-violet-blue-yellow` and
+  `accent-white-blue-yellow`, and `AccentPaletteVariantsTest` keeps the app equal to them.
+- `python -I design/accessibility/contrast.py accents <frames> --palette red-green` (or
+  `blue-yellow`) measures the accents as that palette draws them, and prints Tables N to X for them.
+  Table X does not need the frames.
+- **The rule.** For each colour-blind palette, `accent`, `accent-soft` and the colours of High
+  contrast (`accent`, `accent-soft` and `accent-line`) are 20 or more of CIEDE2000 from each of the
+  four status colours (success, warning, danger, offline), as normal vision and the vision that the
+  palette is for see them: protanopia and deuteranopia for Red-green, tritanopia for Blue-yellow
+  (the matrices of `ColourMeasures.kt`). It is the bar that `ColourVisionPaletteTest` holds for the
+  four status colours among themselves. A variant is chosen to be 21 or more where it can be, as the
+  sets that pass have 20.5 or more to spare and the model of colour vision is an approximation.
+- **Measured and not held.**
+  - `accent-strong` carries no text and no part of the app draws it.
+  - `accent-line` is the accent at 40 %, measured over `surface`, a dark tone. For an accent that is
+    light enough to carry its text (4.5:1) it is 20 from the four status colours for no colour of
+    the sRGB gamut in the Red-green palette, and for a magenta alone in the Blue-yellow palette:
+    the offline grey is the colour of the middle of that range of tones. Teal's is 10.5 from it as a
+    protanope sees it, and white's 7.8.
+  - The text colours of the status roles (`success-ink`, `warning-ink`, `danger-ink`) are given
+    where one is nearer than 20 (`ink 15.3, success-ink`). They are never held: they are lightened
+    to be read as text, so every accent that can be read as text is near one of them in the
+    Red-green palette. Teal is 15.3 from the success text colour of today's palette, and 23.5 from
+    the success colour.
+- **Which pairs fall short (Table X).**
+  - Violet under Red-green: `accent` is 9.3 (protanopia) and 5.0 (deuteranopia) from the success
+    colour, `accent-soft` 3.5 and 7.3, and the High contrast colours are no better (3.8 and 8.0, 8.6
+    and 13.3).
+  - Violet under Blue-yellow: `accent` is 14.8 from the grey of the offline colour as a tritanope
+    sees it, and the High contrast `accent` and `accent-soft` are 19.7 and 18.6 from the warning
+    yellow, which a tritanope sees as a pale pink. Its `accent-soft` keeps 20.9.
+  - White under Blue-yellow: `accent-soft`, the pure white, is 16.8 from the warning yellow as a
+    tritanope sees it, and so is the High contrast `accent-soft`.
+  - Keep the 20: teal under both palettes (21.6 at the least under Red-green, as a deuteranope
+    sees it, and 21.1 under Blue-yellow, as a tritanope sees it, both from the success colour), and
+    white under Red-green (20.6 as a protanope sees it).
+- **The variants.** A variant is the whole set of roles of an accent under a palette, as a
+  candidate is, and `accents.json` has a note on how each value was derived.
+  The owner chose them on 2026-10-22, from a sheet of the colours as the vision is simulated:
+  violet under Red-green and Blue-yellow, and the soft accent of white under Blue-yellow. Teal is
+  not changed under either palette.
+
+Table N, for the variants. The role sets of the variants.
+
+| Role | Violet, Red-green | Violet, Blue-yellow | White, Blue-yellow |
+| --- | --- | --- | --- |
+| `accent` | `#F4BCBC` | `#C688FE` | `#EFF3FF` |
+| `accent-soft` | `#FCC3C8` | `#C8BBFE` | `#F3FCFF` |
+| `accent-strong` | `#B88484` | `#934BBA` | `#B4B8C4` |
+| `on-accent` | `#200E0D` | `#1D092E` | `#0E1013` |
+| `accent-tint` | `#F4BCBC21` | `#C688FE21` | `#EFF3FF21` |
+| `accent-line` | `#F4BCBC66` | `#C688FE66` | `#EFF3FF66` |
+| `accent-inverse` | `#8A5A5A` | `#834BBA` | `#636671` |
+| high contrast `accent` | `#F4BCBC` | `#C7B9FC` | `#EFF3FF` |
+| high contrast `accent-soft` | `#FCC3C8` | `#CAC4FE` | `#F3FCFF` |
+| high contrast `accent-line` | `#F4BCBC` | `#C7B9FC` | `#EFF3FF` |
+| high contrast `accent-inverse` | `#774849` | `#6F38A6` | `#51555F` |
+
+- **Violet under Blue-yellow** is `#C688FE`, a lighter and pinker violet: 0.049 from violet in
+  OKLab, 6.2 in CIEDE2000, and the hue of OKLCH moves from 293.5 to 306.9 degrees. `accent` is 21.1
+  from the status colours as a tritanope sees them (offline) and 29.4 as normal vision sees them,
+  and 28.1 and 21.5 from ink and ink-2. It keeps every contrast rule of violet, and over the glass
+  it is no worse: `accent` as text 4.20:1 at the least over Flowing light (outline only, as violet's
+  3.88:1), `accent-soft` 6.03:1 (violet 5.71) and the selected label 4.95:1 (violet 4.74), with the
+  floors of the glass unchanged. High contrast keeps 7.55:1 for `accent`, 8.23:1 for `accent-soft`
+  and 7.52:1 for the snackbar action.
+- **Violet under Red-green has no violet.** The colours within 45 degrees of the hue of violet that
+  are 20 from the four status colours and from ink are all darker than L 0.57 in OKLCH (Y 0.17):
+  the nearest, `#755AD8`, keeps 3.35:1 on `surface-raised` and 2.96:1 on the tint of a selected row,
+  and none is light enough to carry text over the glass as `accent-soft` does (Y 0.49 or more).
+  The nearest colour of any hue that keeps the 20 and every contrast rule is a pale rose,
+  `#F4BCBC`: 0.215 from violet in OKLab and 30.5 in CIEDE2000. It is 28.6, 21.0 and 22.3 from the
+  status colours as normal vision, a protanope and a deuteranope see them, and it fails no check
+  (`accent` as text 6.41:1 or more over the glass, the selected label 5.28:1 or more, High contrast
+  7.64:1 and 8.25:1). The owner chose it from four ways: the rose, violet as it is under the
+  palette, the teal set drawn under it, and the dark violet that keeps the hue and gives up the
+  contrast of its text.
+- **White under Blue-yellow** changes its `accent-soft` alone, to `#F3FCFF`, a white with a trace of
+  cyan: 22.9 from the warning yellow as a tritanope sees it, and 4.1 CIEDE2000 from pure white. It
+  keeps 10.14:1 over the glass as text and 7.07:1 as the selected label, where the pure white keeps
+  10.55 and 7.35. The accent `#EFF3FF` (20.5) and every other value stay, and so do its known
+  failures, the distance from ink and from ink-2.
+- **What the app draws.** `BorealisColors.withColourVision(vision, accent, highContrast)` gives the
+  status roles of the palette and, for these three pairs, the variant in place of the accent family
+  of `withAccent` and, under High contrast, of `withHighContrast`. `borealisColors` keeps the order:
+  accent, then High contrast, then the palette. With the palette off, and for teal, and for white
+  under Red-green, nothing changes. The drawn backgrounds keep their fixed violet, so the glass
+  table stays valid. The floors of the glass are those of the effective colours, and they are the
+  floors of the accents that the variants replace.
+
+Table X. The least CIEDE2000 distance of each role that marks a selection or an accent from the four status colours of each palette, as each vision sees them, for the accents and for their variants under a colour-blind palette (a variant has cells under its own palette alone). 20 or more apart is distinct. The accent and the soft accent and the colours of high contrast are held to 20 under the colour-blind palettes (`short` when they are not); the strong accent and the line (over `surface`) are measured and `not held`, and the colours of today's palette are given for information. `ink` is the least distance from the text colours of the status roles, given when it is under 20 and never held.
+
+| Check | Violet (today) | Green | Teal | White | Violet, Red-green palette | Violet, Blue-yellow palette | White, Blue-yellow palette |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `accent` from the default status colours, normal vision | 23.9, offline | 21.3, success; ink 11.6, success-ink | 23.5, success; ink 15.3, success-ink | 36.1, warning | - | - | - |
+| `accent-soft` from the default status colours, normal vision | 30.9, offline | 26.5, success; ink 16.1, success-ink | 27.3, success; ink 17.5, success-ink | 32.2, warning | - | - | - |
+| `accent-strong` from the default status colours, normal vision | 20.1, offline | 13.3, success (information); ink 13.1, success-ink | 17.4, success (information); ink 17.4, success-ink | 25.2, offline | - | - | - |
+| `accent-line` from the default status colours, normal vision | 19.9, offline (information) | 18.3, offline (information) | 19.4, offline (information) | 1.7, offline (information) | - | - | - |
+| high contrast `accent` from the default status colours, normal vision | 31.5, offline | 21.3, success; ink 11.6, success-ink | 23.5, success; ink 15.3, success-ink | 36.1, warning | - | - | - |
+| high contrast `accent-soft` from the default status colours, normal vision | 34.7, offline | 26.5, success; ink 16.1, success-ink | 27.3, success; ink 17.5, success-ink | 32.2, warning | - | - | - |
+| high contrast `accent-line` from the default status colours, normal vision | 31.5, offline | 21.3, success; ink 11.6, success-ink | 23.5, success; ink 15.3, success-ink | 36.1, warning | - | - | - |
+| `accent` from the red-green status colours, normal vision | 24.7, success | 30.8, warning | 29.5, success | 26.2, success | 28.6, offline; ink 16.5, danger-ink | - | - |
+| `accent-soft` from the red-green status colours, normal vision | 24.4, success | 29.3, warning | 29.0, success | 28.6, success | 30.1, offline; ink 18.8, danger-ink | - | - |
+| `accent-strong` from the red-green status colours, normal vision | 32.6, offline | 26.7, offline | 26.1, offline | 18.6, offline (not held); ink 16.6, success-ink | 19.1, offline (not held) | - | - |
+| `accent-line` from the red-green status colours, normal vision | 27.5, offline | 21.0, offline | 22.7, offline | 7.8, offline (not held) | 16.9, offline (not held) | - | - |
+| high contrast `accent` from the red-green status colours, normal vision | 25.4, success | 30.8, warning | 29.5, success | 26.2, success | 28.6, offline; ink 16.5, danger-ink | - | - |
+| high contrast `accent-soft` from the red-green status colours, normal vision | 26.6, success | 29.3, warning | 29.0, success | 28.6, success | 30.1, offline; ink 18.8, danger-ink | - | - |
+| high contrast `accent-line` from the red-green status colours, normal vision | 25.4, success | 30.8, warning | 29.5, success | 26.2, success | 28.6, offline; ink 16.5, danger-ink | - | - |
+| `accent` from the red-green status colours, protanopia vision | 9.3, success (short); ink 15.5, success-ink | 21.2, warning; ink 11.2, danger-ink | 24.6, warning; ink 13.8, danger-ink | 20.6, success; ink 14.5, success-ink | 21.0, offline; ink 13.6, danger-ink | - | - |
+| `accent-soft` from the red-green status colours, protanopia vision | 3.5, success (short); ink 5.4, success-ink | 24.4, warning; ink 16.6, danger-ink | 26.3, warning; ink 17.8, danger-ink | 25.5, success; ink 19.6, success-ink | 21.5, success; ink 16.1, danger-ink | - | - |
+| `accent-strong` from the red-green status colours, protanopia vision | 24.1, success | 17.3, offline (not held); ink 8.1, danger-ink | 13.3, offline (not held); ink 13.0, danger-ink | 13.5, success (not held); ink 10.5, success-ink | 5.6, offline (not held); ink 19.8, danger-ink | - | - |
+| `accent-line` from the red-green status colours, protanopia vision | 25.8, offline | 10.8, offline (not held) | 10.5, offline (not held) | 7.8, offline (not held) | 14.1, offline (not held) | - | - |
+| high contrast `accent` from the red-green status colours, protanopia vision | 3.8, success (short); ink 4.9, success-ink | 21.2, warning; ink 11.2, danger-ink | 24.6, warning; ink 13.8, danger-ink | 20.6, success; ink 14.5, success-ink | 21.0, offline; ink 13.6, danger-ink | - | - |
+| high contrast `accent-soft` from the red-green status colours, protanopia vision | 8.6, success (short); ink 2.9, success-ink | 24.4, warning; ink 16.6, danger-ink | 26.3, warning; ink 17.8, danger-ink | 25.5, success; ink 19.6, success-ink | 21.5, success; ink 16.1, danger-ink | - | - |
+| high contrast `accent-line` from the red-green status colours, protanopia vision | 3.8, success (short); ink 4.9, success-ink | 21.2, warning; ink 11.2, danger-ink | 24.6, warning; ink 13.8, danger-ink | 20.6, success; ink 14.5, success-ink | 21.0, offline; ink 13.6, danger-ink | - | - |
+| `accent` from the red-green status colours, deuteranopia vision | 5.0, success (short); ink 12.1, success-ink | 24.7, warning; ink 14.4, danger-ink | 21.6, success; ink 15.8, success-ink | 24.7, success; ink 17.6, success-ink | 22.3, warning; ink 10.9, danger-ink | - | - |
+| `accent-soft` from the red-green status colours, deuteranopia vision | 7.3, success (short); ink 2.5, success-ink | 25.5, warning; ink 17.7, danger-ink | 25.1, success; ink 18.6, success-ink | 28.2, warning | 23.5, warning; ink 13.0, danger-ink | - | - |
+| `accent-strong` from the red-green status colours, deuteranopia vision | 21.9, success | 10.8, offline (not held); ink 18.1, danger-ink | 7.9, offline (not held); ink 19.2, success-ink | 16.5, success (not held); ink 11.9, success-ink | 11.2, offline (not held); ink 17.5, danger-ink | - | - |
+| `accent-line` from the red-green status colours, deuteranopia vision | 25.7, offline | 11.9, offline (not held) | 13.3, offline (not held) | 7.8, offline (not held) | 13.0, offline (not held) | - | - |
+| high contrast `accent` from the red-green status colours, deuteranopia vision | 8.0, success (short); ink 2.1, success-ink | 24.7, warning; ink 14.4, danger-ink | 21.6, success; ink 15.8, success-ink | 24.7, success; ink 17.6, success-ink | 22.3, warning; ink 10.9, danger-ink | - | - |
+| high contrast `accent-soft` from the red-green status colours, deuteranopia vision | 13.3, success (short); ink 6.0, success-ink | 25.5, warning; ink 17.7, danger-ink | 25.1, success; ink 18.6, success-ink | 28.2, warning | 23.5, warning; ink 13.0, danger-ink | - | - |
+| high contrast `accent-line` from the red-green status colours, deuteranopia vision | 8.0, success (short); ink 2.1, success-ink | 24.7, warning; ink 14.4, danger-ink | 21.6, success; ink 15.8, success-ink | 24.7, success; ink 17.6, success-ink | 22.3, warning; ink 10.9, danger-ink | - | - |
+| `accent` from the blue-yellow status colours, normal vision | 27.9, offline | 22.1, success; ink 8.8, success-ink | 21.7, success; ink 8.8, success-ink | 31.5, offline | - | 29.4, offline | 31.5, offline |
+| `accent-soft` from the blue-yellow status colours, normal vision | 29.1, offline | 27.8, success; ink 11.3, success-ink | 26.9, success; ink 10.1, success-ink | 28.9, warning | - | 29.4, offline | 31.5, warning |
+| `accent-strong` from the blue-yellow status colours, normal vision | 32.6, offline | 7.4, success (not held); ink 10.9, success-ink | 8.3, success (not held); ink 12.0, success-ink | 18.6, offline (not held) | - | 28.2, offline | 18.6, offline (not held) |
+| `accent-line` from the blue-yellow status colours, normal vision | 27.5, offline | 19.1, success (not held) | 20.0, success | 7.8, offline (not held) | - | 27.9, offline | 7.8, offline (not held) |
+| high contrast `accent` from the blue-yellow status colours, normal vision | 29.2, offline | 22.1, success; ink 8.8, success-ink | 21.7, success; ink 8.8, success-ink | 31.5, offline | - | 29.1, offline | 31.5, offline |
+| high contrast `accent-soft` from the blue-yellow status colours, normal vision | 30.0, offline | 27.8, success; ink 11.3, success-ink | 26.9, success; ink 10.1, success-ink | 28.9, warning | - | 29.3, offline | 31.5, warning |
+| high contrast `accent-line` from the blue-yellow status colours, normal vision | 29.2, offline | 22.1, success; ink 8.8, success-ink | 21.7, success; ink 8.8, success-ink | 31.5, offline | - | 29.1, offline | 31.5, offline |
+| `accent` from the blue-yellow status colours, tritanopia vision | 14.8, offline (short) | 21.3, success; ink 7.7, success-ink | 21.1, success; ink 8.4, success-ink | 20.5, warning | - | 21.1, offline; ink 16.4, danger-ink | 20.5, warning |
+| `accent-soft` from the blue-yellow status colours, tritanopia vision | 20.9, offline | 26.2, success; ink 11.0, success-ink | 25.1, success; ink 10.2, success-ink | 16.8, warning (short); ink 16.8, warning-ink | - | 21.4, warning | 22.9, warning |
+| `accent-strong` from the blue-yellow status colours, tritanopia vision | 17.4, offline (not held) | 6.9, success (not held); ink 9.3, success-ink | 6.1, success (not held); ink 9.8, success-ink | 18.2, offline (not held); ink 19.4, success-ink | - | 21.1, offline | 18.2, offline (not held); ink 19.4, success-ink |
+| `accent-line` from the blue-yellow status colours, tritanopia vision | 20.2, offline | 17.5, success (not held) | 17.6, success (not held) | 7.5, offline (not held) | - | 20.5, offline | 7.5, offline (not held) |
+| high contrast `accent` from the blue-yellow status colours, tritanopia vision | 19.7, warning (short); ink 19.7, warning-ink | 21.3, success; ink 7.7, success-ink | 21.1, success; ink 8.4, success-ink | 20.5, warning | - | 21.1, warning | 20.5, warning |
+| high contrast `accent-soft` from the blue-yellow status colours, tritanopia vision | 18.6, warning (short); ink 18.6, warning-ink | 26.2, success; ink 11.0, success-ink | 25.1, success; ink 10.2, success-ink | 16.8, warning (short); ink 16.8, warning-ink | - | 23.4, offline; ink 20.0, success-ink | 22.9, warning |
+| high contrast `accent-line` from the blue-yellow status colours, tritanopia vision | 19.7, warning (short); ink 19.7, warning-ink | 21.3, success; ink 7.7, success-ink | 21.1, success; ink 8.4, success-ink | 20.5, warning | - | 21.1, warning | 20.5, warning |
+
+Table W, for the variants. The selected label of the app, `accent-soft` over its tint on the glass,
+as text. Text needs 4.5:1.
+
+| Style | Glass | Violet, Red-green | Violet, Blue-yellow | White, Blue-yellow |
+| --- | --- | --- | --- | --- |
+| Aurora curtains | Standard | 7.08 | 6.62 | 9.51 |
+| Aurora curtains | Reduced | 8.60 | 8.04 | 11.60 |
+| Soft glow | Standard | 7.41 | 6.93 | 9.98 |
+| Soft glow | Reduced | 8.58 | 8.02 | 11.58 |
+| Northern lights | Standard | 5.93 | 5.59 | 7.90 |
+| Northern lights | Reduced | 8.02 | 7.51 | 10.80 |
+| Light mist | Standard | 6.39 | 5.95 | 8.59 |
+| Light mist | Reduced | 8.64 | 8.07 | 11.66 |
+| Flowing light | Standard | 5.28 | 4.95 | 7.07 |
+| Flowing light | Reduced | 7.99 | 7.49 | 10.75 |
+| Starfield | Standard | 7.83 | 7.34 | 10.53 |
+| Starfield | Reduced | 8.87 | 8.28 | 11.98 |
 
 ## Halo per font (Sprint 11)
 
@@ -1452,8 +1630,15 @@ s11-text-spacing measurement; they were not run again for this document.
 ### Text spacing: fit coverage
 
 - Every font at Normal and at Wider, and IBM Plex Sans at Wide, at 130 % text size times the
-  system font scale of 1.3: 540 runs, no failure.
-- The 200 % system font size is tested at Normal only. See the known limitations below.
+  system font scale of 1.3 (1.69): 540 runs, no failure. Wider is drawn as Wider there, which a
+  test of the theme keeps (`TextSpacingLimitThemeTest`).
+- The 200 % system font size (2.0) is tested in every font at Normal and at Wider, and IBM Plex Sans
+  at Wide: the Library, the components, Settings with Privacy and the Audit trail
+  (`LargeTextFitTest`, `SettingsLargeTextFitTest`, `AuditLargeTextFitTest`). No failure. Wider is
+  drawn as Wide at 2.0, so the runs of Wider are drawn at Wide, and the limit section below says
+  why.
+- Compact and Dense at 2.0, in IBM Plex Sans and Andika, at Normal, Wide and Wider, in the Library
+  screens: 144 runs, no failure (a probe, not kept as a test).
 
 ### Text spacing: layout changes
 
@@ -1462,18 +1647,86 @@ A layout that does not fit at Wide or Wider is changed rather than cut:
 - a value row stacks its value under the text when the longest word does not fit;
 - a slider's value takes at most 40 % of its row;
 - the host detail line wraps;
-- the key captions keep a lower floor at Wider.
+- the key captions are drawn with the spacing of Wide at Wider; their floor is 8 sp at Normal and
+  8 sp over 1.12 at Wide and Wider, because the plain 8 sp is cut off at Wide at a system font scale
+  of 2.0 (`KeyCaptionSizeTest`, `KeyCaptionScaleTest`, `KeyboardKeyCaptionSpacingTest`). Luciole at
+  Normal is cut off at 2.0 whatever the floor, as it was before;
+- Compact and Dense keep the columns of Comfortable at Wider (`CardDensityLayoutTest`).
+- the Pairing screen of a TV wraps the line under the PIN at 280 dp, the width of the note about a
+  restart, so that the steps keep about 290 dp for their words at a font scale of 2.0, where they
+  had 149 dp (`PairingTvRoomTest`);
+- the name in the rail footer wraps, inside the word if it must, instead of ending in an ellipsis
+  (`RailFooterNarrowTest`);
+- the time of an Audit entry takes 35 % of the row at most and wraps at its space, so that the title
+  keeps its room on a narrow phone (`AuditEntryRoomTest`).
+
+### Text spacing: the limit at a very large font
+
+Wider is drawn as Wide from a font scale of 2.0, the largest that Android offers, and Wide and
+Normal are never limited ([ADR 0058](../adr/0058-appearance-and-reading-options.md), decision 4).
+The scale is the system font scale times the Text size, which is the scale that the text is drawn
+at (`effectiveTextSpacing`, `theme/TextSpacingLimit.kt`). The look keeps what the user chose, so
+Wider comes back when the scale falls, and the type, the design-system `Text`, the stream chrome and
+the layouts that follow the level (the card columns) use the level that is drawn.
+
+The 200 % fit tests were run in every font at Wide and at Wider, at 18 font scales from 1.15 to
+2.0, with the Text size at its default. Each scale is 462 runs, 231 at each level. The table has
+every scale and the runs that fail the fit check, which holds a line to 1 px past its box. The
+measures are of 2026-10-22. The columns "before" are from before the three fixes of the layout
+changes above and before the UAT layout, at the eight scales of the table that were run then (1.0
+was run too and had no failure). The columns "after" are from the head with the fixes: all 18
+scales, and the ten of 1.15, 1.3, 1.4, 1.5, 1.6, 1.69, 1.7, 1.8, 1.9 and 2.0 again on the head that
+merged the UAT layout, with the same counts.
+
+| Font scale | Wider before | Wide before | Wider after | Wide after |
+| --- | --- | --- | --- | --- |
+| 1.15 | 1 | 0 | 1 | 0 |
+| 1.2 | not run | not run | 0 | 0 |
+| 1.3 | 4 | 0 | 0 | 0 |
+| 1.35 | not run | not run | 0 | 0 |
+| 1.4 | 8 | 0 | 1 | 0 |
+| 1.45 | not run | not run | 1 | 0 |
+| 1.5 | 9 | 0 | 3 | 0 |
+| 1.55 | not run | not run | 1 | 0 |
+| 1.6 | 11 | 0 | 4 | 0 |
+| 1.65 | not run | not run | 1 | 0 |
+| 1.69 | not run | not run | 3 | 0 |
+| 1.7 | 8 | 1 | 1 | 0 |
+| 1.75 | not run | not run | 4 | 0 |
+| 1.8 | 19 | 1 | 9 | 0 |
+| 1.85 | not run | not run | 4 | 0 |
+| 1.9 | not run | not run | 3 | 0 |
+| 1.95 | not run | not run | 3 | 0 |
+| 2.0 | 16 | 8 | 5 | 0 |
+
+What the table says:
+
+- **Before the fixes** the failures of Wider began at 1.15 and those of Wide at 1.7. Most were the
+  Pairing screen of a TV in all seven fonts, from 1.3.
+- **After the fixes** Wide fails in none of the runs. Wider fails in none that is more than
+  rounding: every failure that is left runs 0.5 to 2.6 px past its box, in a text whose spaces have
+  the spans of the word spacing, and none is cut or ends in an ellipsis. The "after" column of
+  Wider adds up to 44 runs, and the most is 2.6 px.
+- **The limit is at 2.0** because the 200 % tests run with the check of 1 px, and 5 runs of Wider
+  fail it at 2.0. So the tests at 2.0 draw Wider as Wide. Below 2.0 Wider is drawn in full.
+
+The dialog and the row of Settings, and what they say, are in
+[UC-010](../use-cases/0010-adjust-accessibility.md), A8.
 
 ### Text spacing: known limitations
 
-- The 200 % system font size is tested at Normal only. A probe at Wider found 18 fit failures: one
-  in IBM Plex Sans (Pairing on a TV), and the rest in the other fonts, on Hosts, Apps and
-  Appearance among others. It is a backlog item in the roadmap.
+- Below 2.0, Wider is drawn in full, and 0 to 9 runs of the 231 at a scale run 0.5 to 2.6 px past
+  their box (see the limit above). The fit tests find none cut or ending in an ellipsis. It has not
+  been seen on a device.
+- At a combined font scale above 2.0 (a system font of 2.0 with Largest text is 2.6), Normal text
+  already fails the fit tests in 8 of the 84 runs of the Library (Apps with a long host name, on a
+  TV and on a phone) and in 1 of the 70 runs of the components (the rows of the settings on a TV);
+  Settings and the Audit trail pass. Wider is drawn as Wide there, and Wide is not limited: Wide
+  above a combined 2.0 has not been measured, only Normal was, at 2.6. It is a backlog item in the
+  roadmap.
 - At Wide and Wider, the line ends of a wrapped text can draw up to one word spacing past their
   box: about 12 px in IBM Plex Sans at Wider, and up to 23 px at the largest TV text in the system
   font. The review found no text cut. The ink lands in the padding or in the gaps.
-- The key caption floor can reach about 6.8 sp at Wider on a 320 dp phone, so that "Enter" and
-  "Shift" fit. The owner has not yet decided whether to keep it.
 - A non-breaking space gets no word spacing, and no app string uses one.
 
 ### Card density
@@ -1481,7 +1734,13 @@ A layout that does not fit at Wide or Wider is changed rather than cut:
 Card density (issue #51, [ADR 0058](../adr/0058-appearance-and-reading-options.md), decision 7)
 adds one column to the hosts and apps in Compact and in Dense, and cuts the card padding in Dense.
 The invariants hold in every density: the touch targets, the gaps between the cards, the gutter of
-the screen and the TV focus scale do not change.
+the screen and the TV focus scale do not change. With Text spacing at Wider the column is not added:
+Compact and Dense keep the columns of Comfortable, because the words of a card need the room (host
+names broke inside a word on a TV in the device round). Dense still takes its card padding. The
+rule follows the level that is drawn, so at a font scale of 2.0, where Wider is drawn as Wide, the
+column is added again. The host
+cards of a row are as high as the tallest of them on every device, where a row has more than one
+card.
 
 Known limitations of the density:
 
@@ -1498,11 +1757,11 @@ and AAA (1.4.6) for the text of High contrast.
 | Criterion | Level | How it is met |
 | --- | --- | --- |
 | 1.3.1 Info and Relationships | A | Headings, pane titles, one sentence for a host card and a pairing step, a role and an Expanded or Collapsed state for the sections of the phone Settings (`*TalkBackTest`). |
-| 1.4.1 Use of Color | A | A shape for each status of the dot, and a text beside it. The palettes keep the colours apart for dichromats (`StatusDotTest`, `ColourVisionPaletteTest`). The Online shadow of Sprint 11 is a contrast aid, not a status cue. The Running badge of a cover is the dot and its label when the label fits on one line. On a phone with 4 columns the label never fits, so the badge is the dot alone: its shape and presence, the tile's TalkBack state "Running" and the Apps header "`<app>` running" carry the status. |
+| 1.4.1 Use of Color | A | A shape for each status of the dot, and a text beside it. The palettes keep the colours apart for dichromats (`StatusDotTest`, `ColourVisionPaletteTest`), and the accent from the status colours (`AccentPaletteVariantsTest`). The Online shadow of Sprint 11 is a contrast aid, not a status cue. The Running badge of a cover is the dot and its label when the label fits on one line. On a phone with 4 columns the label never fits, so the badge is the dot alone: its shape and presence, the tile's TalkBack state "Running" and the Apps header "`<app>` running" carry the status. |
 | 1.4.3 Contrast (Minimum) | AA | Text on the opaque surfaces (Table B), on glass through the tint floors and the adapted secondary ink (Table C and the floors), on the background through the halo (Tables D to F), and in the Add host field (Tables L and M). |
 | 1.4.4 Resize Text | AA | Text size 100, 115 or 130 % times the system scale, and tests at a font scale of 2.0 (`LargeTextFitTest`). |
 | 1.4.6 Contrast (Enhanced) | AAA | High contrast: 7:1 or more for the text roles on every fill, and for the loose text over every background (Tables G and H). |
-| 1.4.12 Text Spacing | AA | The Text spacing row: Wide sets 0.12 em of letter spacing, 0.16 em of word spacing and a line height of 1.5, the minimums of the criterion, and Wider sets 0.5 em of word spacing. The spaces are drawn apart in every font (`WordGapTest`, `TextWordSpacingTest`), and the layouts that do not fit at Wide or Wider are changed (`TextFitTest`). The 200 % system font size is tested at Normal only (see text spacing: known limitations). |
+| 1.4.12 Text Spacing | AA | The Text spacing row: Wide sets 0.12 em of letter spacing, 0.16 em of word spacing and a line height of 1.5, the minimums of the criterion, and Wider sets 0.5 em of word spacing. The spaces are drawn apart in every font (`WordGapTest`, `TextWordSpacingTest`), and the layouts that do not fit at Wide or Wider are changed (`TextFitTest`). The 200 % system font size is tested at Normal, Wide and Wider, and at 2.0 Wider is drawn as Wide, with a dialog and a line in the row that say so (see text spacing: the limit at a very large font). |
 | 1.4.11 Non-text Contrast | AA | The offline ring at 3.25:1 or more, the icons on the background through the halo (Tables I to K), the outlines of the text field (Tables L and M), the opaque borders of High contrast, and the Online dot with its shadow: 5.68:1 over the brightest host-card glass (3.79:1 without it, today's palette). The Apps title dot on the animated background is not measured (a known limitation, see the status dot). |
 | 2.1.1 Keyboard | A | The D-pad and a gamepad reach every control; OK on a Settings group enters its pane, and the licence text and the Audit detail scroll with the D-pad. |
 | 2.2.2 Pause, Stop, Hide | A | The animated background is the only decorative moving content; it stops with Reduce motion On, the system's Remove animations or the battery saver, and the background Off is the plain page. Progress indicators are not covered yet (roadmap backlog). |

@@ -94,13 +94,19 @@ targets of 48 dp on a phone and a handheld.
 
 1. The user chooses Red-green or Blue-yellow. The status colours (success,
    warning, danger and offline) change to the colours of that palette, which keep
-   apart for the colour vision it is for.
+   apart for the colour vision it is for. The accent adapts too (Sprint 11): where
+   Violet, or the soft accent of White, would come within 20 of a status colour
+   under the vision of the palette, it is drawn as a variant (a pale rose for
+   Violet under Red-green, a lighter and pinker violet for Violet under
+   Blue-yellow, and a soft accent with a trace of cyan for White under
+   Blue-yellow). Teal keeps its colour.
 2. Whatever the palette, a status is not told by colour alone: the dot of a host
    is a filled circle for online, a filled triangle for attention, and a hollow
    ring for offline and unknown. The card says it in words too.
-3. The Online dot has a soft dark shadow in the page colour (Sprint 11). It is static,
-   and it is not drawn under High contrast. It keeps the dot apart from the glass
-   under it ([accessibility](../ux/accessibility.md#the-offline-colour-and-the-status-shapes)).
+3. The Online dot has a soft dark shadow in the page colour (Sprint 11), and a black
+   one, a little wider, on a TV, where the glass is darker. It is static, and it is
+   not drawn under High contrast. It keeps the dot apart from the glass under it
+   ([accessibility](../ux/accessibility.md#the-offline-colour-and-the-status-shapes)).
 
 ### A7: The user uses TalkBack (Sprint 10; any step)
 
@@ -134,8 +140,22 @@ targets of 48 dp on a phone and a handheld.
    spacing, and the labels of text fields do. Where a layout does not fit at Wide or
    Wider, it is changed rather than cut: a value row stacks its value under the text
    when the longest word does not fit, a slider's value is limited to 40 % of its row,
-   the host detail line wraps, and the key captions keep a lower floor at Wider. The
+   the host detail line wraps, the key captions are drawn with the spacing of Wide at
+   Wider, and Compact and Dense keep the columns of Comfortable at Wider. The
    known limits are in [accessibility](../ux/accessibility.md#text-spacing-known-limitations).
+3. At a font scale of 2.0, the largest that Android offers, Wider is drawn as Wide, and
+   Wide and Normal are drawn as chosen. The scale is the font scale of the system times
+   the Text size, so Largest text over a system font of 1.3 (1.69) draws Wider. The
+   choice stays stored, and Wider comes back when the scale falls. The stream chrome
+   follows the same rule. When the user chooses Wider while the font scale has reached
+   2.0, a dialog opens with the title "Wider spacing is limited". It says that, at this
+   text size, Borealis uses Wide spacing instead of Wider so that nothing is cut off,
+   that the choice stays, and that Wider comes back when the system font size or the Text
+   size is smaller. It has one OK button, which has the focus on a TV, and TalkBack reads
+   the title as the name of the window. For as long as the limit is reached, the Text
+   spacing row says "Drawn as Wide at this text size, so that nothing is cut off." under
+   its value, so that a user who raised the font later can see why. The measurements are
+   in [accessibility](../ux/accessibility.md#text-spacing-the-limit-at-a-very-large-font).
 
 ## Postconditions
 
@@ -148,7 +168,7 @@ targets of 48 dp on a phone and a handheld.
 
 UC-010-T1 to T14 are Sprint 10 tests (Compose tests run on Robolectric).
 UC-010-T15 is the Sprint 10 device round.
-UC-010-T16 and T17 are Sprint 11 rows.
+UC-010-T16 to T18 are Sprint 11 rows.
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
@@ -156,7 +176,7 @@ UC-010-T16 and T17 are Sprint 11 rows.
 | UC-010-T2 | Given each Accessibility setting, when it is stored, then `BorealisLook` holds the value of its stable id, and an id that no choice has stands for the default. | unit | exists (Sprint 10, unit): `BorealisLooksTest` |
 | UC-010-T3 | Given Reduce motion Follow system, On or Off, when the system animation scale or the setting changes, then the animations are removed or kept as the rule says, while the content is shown. | UI | exists (Sprint 10, UI): `ReducedMotionTest` |
 | UC-010-T4 | Given High contrast, when the colours are read, then every text role is 7:1 or more on the page, the surfaces and the selected rows, the borders are opaque and 3:1 or more, and a palette composes with it. | unit | exists (Sprint 10, unit): `HighContrastColorsTest` |
-| UC-010-T5 | Given a colour-blind palette, when the status colours are read, then every pair is 20 or more apart in CIEDE2000 for the dichromacies it is for, each colour is 3:1 or more, and the status inks are 7:1 or more (the bar of the test; 9.2:1 measured). | unit | exists (Sprint 10, unit): `ColourVisionPaletteTest` |
+| UC-010-T5 | Given a colour-blind palette, when the status colours are read, then every pair is 20 or more apart in CIEDE2000 for the dichromacies it is for, each colour is 3:1 or more, and the status inks are 7:1 or more (the bar of the test; 9.2:1 measured); and the accent and the soft accent, and their High contrast colours, are 20 or more apart from the four status colours under the vision of the palette, as the variants of Violet and White make them (Sprint 11). | unit | exists (Sprint 10 and 11, unit): `ColourVisionPaletteTest`, `AccentPaletteVariantsTest` |
 | UC-010-T6 | Given a status, when the dot is drawn, then it is a filled circle, a filled triangle or a hollow ring, whatever the colour. | UI | exists (Sprint 10, UI): `StatusDotTest`; the Online shadow (Sprint 11) is in the same test class |
 | UC-010-T7 | Given Thicker focus outline or High contrast, when an item has the focus, then the outline is 5 dp, starts 2 dp outside the item, is in ink, and keeps 3:1 over the page, the surface and the brightest backdrop of every glass. | UI | exists (Sprint 10, UI): `ThickFocusOutlineTest` |
 | UC-010-T8 | Given a look, a background and an API level, when the glass is made, then Standard, Reduced, Off, High contrast and the plain page give the glass of ADR 0057, and a TV runs the drawn background at 24 frames a second only while the blur is drawn. | unit | exists (Sprint 10, unit): `GlassRulesTest` |
@@ -165,10 +185,11 @@ UC-010-T16 and T17 are Sprint 11 rows.
 | UC-010-T11 | Given a wrong or expired PIN, or an error under the address of Add host, when it appears, then a screen reader announces it. | UI | exists (Sprint 10, UI): `LibraryScreensTalkBackTest` |
 | UC-010-T12 | Given the main screens on a phone, a handheld and a TV, when the Accessibility Test Framework runs over them, then it finds nothing but the accepted findings, each with its reason. | UI | exists (Sprint 10, UI): `LibraryAccessibilityChecksTest`, `SettingsAccessibilityChecksTest`, `StreamAccessibilityChecksTest`, `PrivacyAccessibilityChecksTest`, `AuditAccessibilityChecksTest`, `SendToPhoneAccessibilityChecksTest` |
 | UC-010-T13 | Given a phone or a handheld, when the segments, the groups, the chips and the sheet handle are measured, then they are 48 dp; given a TV, then they keep their sizes. | UI | exists (Sprint 10, UI): `TouchTargetTest` |
-| UC-010-T14 | Given a font scale of 2.0, when the Library, Settings, Privacy, the Audit trail and the components are shown, then no text is cut or ends in an ellipsis. | UI | exists (Sprint 10, UI): `LargeTextFitTest`, `SettingsLargeTextFitTest`, `AuditLargeTextFitTest` |
+| UC-010-T14 | Given a font scale of 2.0, when the Library, Settings, Privacy, the Audit trail and the components are shown, then no text is cut or ends in an ellipsis, at Normal and at Wider (drawn as Wide at 2.0), and at Wide in IBM Plex Sans. | UI | exists (Sprint 10, UI; Wide and Wider since Sprint 11): `LargeTextFitTest`, `SettingsLargeTextFitTest`, `AuditLargeTextFitTest` |
 | UC-010-T15 | Given the Streamer and the S22, when the user changes each Accessibility setting and uses TalkBack, then each holds. | device | checked in part in the Sprint 10 round of 2026-10-21 (section 3.23, results in section 15); the visual items and TalkBack are the owner's |
 | UC-010-T16 | Given the Accessibility group, when the user chooses Text spacing (Normal, Wide or Wider), then the choice is stored under `borealis_text_spacing` as `normal`, `wide` or `wider`, the text draws the letter and word spacing of A8 (Wide 0.12 em and 0.16 em, Wider 0.18 em and 0.5 em), the line height is at least 1.5 at Wide and Wider, TalkBack reads the original text, and a layout that does not fit at Wide or Wider is changed rather than cut, as in A8. | UI, unit | exists (Sprint 11, UI and unit): `TextSpacingTypographyTest`, `TextSpacingThemeTest`, `TextWordSpacingTest`, `WordGapTest`, `SettingsTextSpacingTest` |
 | UC-010-T17 | Given an Online host, when its dot is drawn, then a soft dark shadow in the page colour lies round the dot, outside its box, it is static, and it is not drawn under High contrast. | UI | exists (Sprint 11, UI): `StatusDotTest` |
+| UC-010-T18 | Given Wider chosen, when the font scale (the system scale times the Text size) is below 2.0, then Wider is drawn as Wider, and from 2.0 it is drawn as Wide, in the Library, Settings and the stream chrome, and the choice stays stored; when the user chooses Wider at 2.0 or more, then a dialog says that Wide is used instead, with one OK button that has the focus on a TV and a title that names the window, the row says the same under its value, and no dialog opens below 2.0 or for Wide or Normal. Given the Pairing screen of a TV, the rail footer and an Audit entry at large text, then the steps keep their room, the name wraps and the title keeps its room. | UI, unit | exists (Sprint 11, UI and unit): `TextSpacingLimitThemeTest`, `StreamChromeTextSpacingTest`, `SettingsTextSpacingLimitTest`, `SettingsTextSpacingLimitPhoneTest`, `SpacingLimitScreenshotTest`, `PairingTvRoomTest`, `RailFooterNarrowTest`, `AuditEntryRoomTest` |
 
 Not covered by a test: the traversal links that TalkBack follows (Robolectric
 cannot see them), a visible snackbar (no check covers it), and the halo and the

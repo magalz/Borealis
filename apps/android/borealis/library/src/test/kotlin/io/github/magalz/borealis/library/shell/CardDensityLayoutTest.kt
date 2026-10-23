@@ -7,10 +7,12 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.DpRect
 import com.google.common.truth.Expect
+import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import io.github.magalz.borealis.library.testing.AppsOf
 import io.github.magalz.borealis.library.testing.HANDHELD
 import io.github.magalz.borealis.library.testing.HostsOf
@@ -32,21 +34,38 @@ import org.robolectric.annotation.Config
  * before the setting. Compact and Dense add one column everywhere, the wide phone of 600dp
  * included, and every density keeps the gutter of the screen (34dp on a TV and a handheld, 16dp on
  * a phone) as the padding of the grids, so that the cards line up with the title. Dense takes less
- * padding inside the cards: `CardDensityPaddingTest`. The screens are drawn alone, with no rail, so
- * that the padding is the distance of a card from the edge of the window.
+ * padding inside the cards: `CardDensityPaddingTest`. With Text spacing at Wider the cards keep the
+ * columns of Comfortable in every density: the words of a card need the room that the extra column
+ * would take (device round P2: host names broke inside a word, an address wrapped before its last
+ * digit and a chip took two lines). Normal and Wide add the column. The screens are drawn alone,
+ * with no rail, so that the padding is the distance of a card from the edge of the window.
+ *
+ * At a font scale of 2.0 the theme draws Wider as Wide (ADR 0058, decision 4), and the grids follow
+ * the level that is drawn: Compact and Dense add their column there with Wider chosen too, and the
+ * texts of the cards fit. These cases are a guard: a probe of the Library screens found them clean
+ * before they were written.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-class CardDensityLayoutTest(private val density: CardDensity) {
+class CardDensityLayoutTest(private val case: Case) {
     @get:Rule val composeRule = createComposeRule()
 
     /** The columns and the padding are both told, when both are wrong. */
     @get:Rule val expect: Expect = Expect.create()
 
-    private val look = BorealisLook(cardDensity = density)
+    /** What a run changes: the density of the cards and the Text spacing. */
+    class Case(val density: CardDensity, val spacing: TextSpacing) {
+        override fun toString() = "$density-$spacing"
+    }
 
-    /** The columns of [comfortable], one more for each denser layout. */
+    private val look = BorealisLook(cardDensity = case.density, textSpacing = case.spacing)
+
+    /** The columns of [comfortable], one more for each denser layout, but at Wider. */
     private fun columns(comfortable: Int) =
-        if (density == CardDensity.Comfortable) comfortable else comfortable + 1
+        if (case.density == CardDensity.Comfortable || case.spacing == TextSpacing.Wider) {
+            comfortable
+        } else {
+            comfortable + 1
+        }
 
     @Test
     @Config(qualifiers = TV)
@@ -120,6 +139,73 @@ class CardDensityLayoutTest(private val density: CardDensity) {
         assertAppPadding(PHONE_GUTTER)
     }
 
+    /**
+     * The columns of [comfortable] at a font scale of 2.0, one more for each denser layout, Wider
+     * chosen or not: Wider is drawn as Wide there, and Wide adds the column.
+     */
+    private fun columnsAtLargestFont(comfortable: Int) =
+        if (case.density == CardDensity.Comfortable) comfortable else comfortable + 1
+
+    @Test
+    @Config(qualifiers = TV, fontScale = 2f)
+    fun `Hosts on a TV at a font scale of 2 point 0 have the columns of the level that is drawn and fit`() {
+        showHosts(FormFactor.Tv)
+
+        expect.that(hostsPerRow()).isEqualTo(columnsAtLargestFont(3))
+        assertHostPadding(TV_GUTTER)
+        composeRule.assertNoClippedText()
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD, fontScale = 2f)
+    fun `Hosts on a handheld at a font scale of 2 point 0 have the columns of the level that is drawn and fit`() {
+        showHosts(FormFactor.Handheld)
+
+        expect.that(hostsPerRow()).isEqualTo(columnsAtLargestFont(2))
+        assertHostPadding(TV_GUTTER)
+        composeRule.assertNoClippedText()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE, fontScale = 2f)
+    fun `Hosts on a phone at a font scale of 2 point 0 have the columns of the level that is drawn and fit`() {
+        showHosts(FormFactor.Phone)
+
+        expect.that(hostsPerRow()).isEqualTo(columnsAtLargestFont(1))
+        assertHostPadding(PHONE_GUTTER)
+        composeRule.assertNoClippedText()
+    }
+
+    @Test
+    @Config(qualifiers = TV, fontScale = 2f)
+    fun `Apps on a TV at a font scale of 2 point 0 have the columns of the level that is drawn and fit`() {
+        showApps(FormFactor.Tv)
+
+        expect.that(appsPerRow()).isEqualTo(columnsAtLargestFont(5))
+        assertAppPadding(TV_GUTTER)
+        composeRule.assertNoClippedText()
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD, fontScale = 2f)
+    fun `Apps on a handheld at a font scale of 2 point 0 have the columns of the level that is drawn and fit`() {
+        showApps(FormFactor.Handheld)
+
+        expect.that(appsPerRow()).isEqualTo(columnsAtLargestFont(4))
+        assertAppPadding(TV_GUTTER)
+        composeRule.assertNoClippedText()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE, fontScale = 2f)
+    fun `Apps on a phone at a font scale of 2 point 0 have the columns of the level that is drawn and fit`() {
+        showApps(FormFactor.Phone)
+
+        expect.that(appsPerRow()).isEqualTo(columnsAtLargestFont(3))
+        assertAppPadding(PHONE_GUTTER)
+        composeRule.assertNoClippedText()
+    }
+
     private fun showHosts(formFactor: FormFactor) {
         composeRule.setContent { Themed(formFactor) { HostsOf(manyHosts(CARDS), formFactor) } }
         composeRule.waitForIdle()
@@ -170,6 +256,9 @@ class CardDensityLayoutTest(private val density: CardDensity) {
 
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun densities(): List<CardDensity> = CardDensity.entries
+        fun cases(): List<Case> =
+            CardDensity.entries.flatMap { density ->
+                TextSpacing.entries.map { spacing -> Case(density, spacing) }
+            }
     }
 }

@@ -1371,9 +1371,13 @@ Steps:
      check.
    - Set the accent back to Violet.
 4. The Online dot shadow (Streamer, S22).
-   - Hosts with an online host: the dot has a soft dark shadow in the page colour,
-     round the dot and on the card glass. Expected: the shadow shows on the glass and
-     not on the Apps title, where the dot sits on the page. The shadow does not move.
+   - Hosts with an online host: the dot has a soft dark shadow round the dot and on
+     the card glass. On the S22 it is in the page colour and shows on the glass, and
+     not on the Apps title, where the dot sits on the page. On the Streamer it is
+     black and a little wider (10.75 dp from the centre of the dot), because the TV
+     glass is darker, and it shows faintly on the Apps title over the page. Expected
+     on the Streamer: a dark ring about as clear as the S22's, that ends before the
+     "Online" text. The shadow does not move. The owner confirms the look by eye.
    - Set High contrast on. Expected: the shadow is not drawn. Set it off again. Owner
      check.
    - Known limitation to note, not a fail: the Apps title dot on the animated background
@@ -3077,3 +3081,337 @@ items are the ones the round did not run, with the step of section 3.24 they mat
   - the four-module Roborazzi verify: BUILD SUCCESSFUL;
   - `python -I -m unittest discover -s design/accessibility`: 327 tests OK;
   - markdownlint with the CI globs: 0 issues in 124 files.
+
+### Part 2, morning of 2026-10-22, build `257357fb`
+
+This part ran after part 1 on the same day, on the TV and the S22, on build
+`257357fb`. The owner's UAT of that build followed it, and its decisions are in the
+next subsection. Part 3 (build `29b40741`) and the owner's final UAT come after that.
+The labels P1, P2 and O1 to O4 keep the numbering of part 1, so P1 here is the
+update of part 1's P1.
+
+#### Setup
+
+- Build: `257357fb`, `app-debug.apk` (SHA-256 starts `723b4e75cdbf31a8`), package
+  `io.github.magalz.borealis.debug`, versionName `0.0.0-dev`, versionCode 1. About on the
+  S22 reads `0.0.0-dev (commit 257357fb0a4b)`.
+- Install with `adb install -r`, both `Success`: TV 07:59:41 to 07:59:49, S22 07:59:49
+  to 07:59:53.
+- Devices:
+  - the Google TV Streamer, API 34, 1920 x 1080 at 320 dpi, over wireless debugging;
+  - the Samsung Galaxy S22 (SM-S901E), API 36, 1080 x 2340 at 480 dpi, over USB as
+    `<serial-s22>`, in portrait (`ROTATION_0`) for every action.
+- S22 lock: the phone dozed after the install and showed its lock screen. The keyguard
+  is secure, but the trust agent kept the device unlocked. The round ran
+  `wm dismiss-keyguard`, which opened it with no PIN, pattern or biometric. Nothing was
+  typed.
+- Host state, as the app shows it, the same on both devices:
+  - the paired host is Online in one card, with "Paired: Yes" and
+    `Host software: Sunshine-compatible, version 7.1.431.-1` (the app does not show the
+    26.10.0-beta.1 string);
+  - a second card is the old pairing record, Offline or "Checking…" (P1).
+- Start values, the same on both devices, restored at the end and read back from the
+  panes:
+  - Appearance: font IBM Plex Sans; accent Violet; background Aurora curtains at 100 %;
+    card density Comfortable; glass tint 40 %; glass blur 8 dp;
+  - Accessibility: Reduce motion Follow system; Transparency Standard; thicker focus
+    outline off; text size 100 %; text spacing Normal; High contrast off; colour-blind
+    palette off.
+- Warm-up: the TV walked every Settings group and pane twice by keys. The S22 read the
+  Appearance, Accessibility and About sections in every pass. No frame time was measured.
+- Method notes:
+  - Compose gives uiautomator the full text, so the screenshots were checked for "…" and
+    for cut text. Every screenshot was deleted after it was viewed.
+  - Logcat from both streams is kept masked, and a check found no host name, IPv4, IPv6
+    or MAC address in it.
+- The step numbers in the table are the round's own. They are not the numbers of
+  [section 3.24](#324-sprint-11-checks).
+
+#### Results
+
+| Step | Item | Device | Result | Evidence and notes |
+| --- | --- | --- | --- | --- |
+| 1 | Install and start | TV | pass | Cold start 5503 ms (`am start -W`). `logcat -b crash` is empty at the start and at the end. No `FATAL EXCEPTION` or ANR for the package since 07:59. |
+| 2 | Host state (P1) | TV and S22 | pass, with a leftover | The paired host is Online in one card. The old pairing record is a second card, Offline. Nothing was re-paired or forgotten. |
+| 3 | Stream chrome, B612 and Wider | TV | pass for the text; look owner check; stream too long (D1) | One dump of the Starting screen at 08:30:06, before the first frame at 08:30:14.9: "Starting Desktop", the four steps, the 15 s note and Cancel. At Wider with B612, "Preparing the display" is 436 px wide and "Waiting for the first frame" 576 px, and both fit. At Normal the same texts are about 300 and 370 px. In-game menu, then Quit and its confirmation: `/cancel` answered `cancel=1`, the Library came back at 08:31:18.9 and Apps read "Nothing running". Font and spacing were set back afterwards. |
+| 4 | Segmented control, each accent | TV | pass for the menu and Quit; look owner check | Teal (stream A) and White (stream B): the menu opened, Quit and its confirmation worked, and `/cancel` answered `cancel=1` both times. Both devices then read "Nothing running". No capture was taken. |
+| 5 | Online dot | TV | owner check (described) | The dot is 20 px (10 dp). The shadow takes the glass from about 22 luma to 17 at the dot's edge, and the glass level returns about 8 px (4 dp) out: a thin, faint dark ring. With High contrast on, the ring is flat, as designed. High contrast was set back to Off. |
+| 6 | P2 on this build | TV | still present; verdict owner | IBM Plex at Wider: the name breaks inside a word after 10 characters at Compact and after 11 at Dense. Andika at Wider and Compact: the name breaks after 9 characters, the IPv4 address wraps before its last digit, and the "HEVC 10-bit" chip takes two lines. No ink comes near the card border; the text ends 28 to 41 px from the card's edge. The fix of `09325b4d5` holds. |
+| 7 | Covers per row | TV | pass | Comfortable: covers 250 px with a 24 px gap, 5 per row. Compact and Dense: 204 px, 6 per row. The host has two apps, so the right edge of a row was not tested. The focus outline is not clipped at any density. "Steam Big Picture" shows as "Steam Big P…" at Compact and Dense (known limitation). |
+| 8 | Install and start | S22 | pass | Cold start 1144 ms (LAUNCHER intent). `logcat -b crash` is empty at the start and at the end. |
+| 9 | Fonts | S22 | pass | All 7 fonts. For each: Appearance 7 rows, Accessibility 7 rows and the Privacy link, About 4 rows, Hosts 2 cards with Add host and Settings. 0 text outside its parent and 0 overlaps. Nothing is cut; only "Checking…" ends in "…". "Atkinson Hyperlegible Next" wraps to two lines as a value. Luciole draws tight lines (O1). See O2. |
+| 10 | Accent, font picker | S22 | pass for the picker row; White bar not run | The selected row of the font picker shows its accent fill, name and check mark for Teal, Violet and White. The White bar is drawn only on the rail, the two-pane Settings groups and the segmented controls. In portrait none of them shows outside a stream, so the bar was not checked. |
+| 11 | Text spacing | S22 | pass | Normal, Wide and Wider on Hosts, Settings and About: 0 problems, and every row was reached. Word gaps are clearly wider than letter gaps at Wide and Wider. Nothing is cut. At Wider, the Text size description ends close to its "100 %" value. |
+| 12 | Card density, portrait | S22 | pass | Host cards: 1 per row at Comfortable (984 px); 2 per row at Compact and Dense (474 px, gap 36). Covers: 3 per row at Comfortable (304 px); 4 per row at Compact and Dense (219 px, 73 dp). Text inset of a card: 42 px at Comfortable and Compact, 30 px at Dense. The two cards of a row differ in height (229 and 351 px at Compact), see O4. |
+| 13 | Running badge at 4 columns | S22 | pass for the badge; the "running" state is not in the dump | On the host's Apps at Compact, the S22 header reads "Desktop running" while the TV streams. A capture of the Desktop cover shows the dot in its ring in the bottom-start corner, uncut. The state description "Running" is not exported by uiautomator, so TalkBack has to confirm it. TV stream B: started 09:16:40, first frame 09:16:52, Quit sent 09:17:12, Library back 09:17:20. |
+| 14 | Online dot | S22 | owner check (described) | The dot is 30 px (10 dp). The shadow takes the glass from about 30 luma to 18 or 19 at the dot's edge, and the glass level returns about 15 px (5 dp) out. It is clearly more visible than on the TV. |
+| End | Settings and state | Both | pass | Settings restored and read back. Home on both. TV `mWakefulness=Asleep` at 09:22. S22 locked (`KEYCODE_SLEEP`, `Dozing`, `isKeyguardShowing=true`). |
+
+#### Problems found
+
+##### P1 (update). The host is Online, but the old pairing record stays as a second card
+
+- What: both devices list two cards for the PC. The current pairing is Online. The record
+  from before the host changed has another, shorter name and the same IPv4 address. It
+  polls a stored IPv6 address on port 65050 and stays Offline or "Checking…".
+- Effect: a dead card stays on Hosts. Its menu has Forget.
+- Steps to reproduce: open Hosts, then each card's menu (Menu key on the TV), then
+  Details.
+- Logcat (masked; `Borealis.UPSTREAM`):
+
+  ```text
+  I Borealis.UPSTREAM: Starting parallel poll for <host> (<ip>, null, null, [<ip6>]:65050)
+  I Borealis.UPSTREAM: Parallel poll for <host> returned address: null
+  W Borealis.UPSTREAM: <host> is offline (try 1)
+  ```
+
+- Owner: decide whether to Forget the old card on each device. The round did not do it,
+  because Forget removes pairing data. Whether it was done later is not recorded.
+
+##### P2. With Wider at Compact or Dense, host names still break inside a word (`257357fb`)
+
+- What:
+  - IBM Plex at Wider: at Compact the name breaks after 10 of its 14 characters, and at
+    Dense after 11. It never breaks at its hyphen.
+  - Andika at Wider and Compact: the name breaks after 9 characters, the IPv4 address
+    wraps before its last digit, and the "HEVC 10-bit" chip takes two lines.
+  - No ink comes near the card border.
+- Steps to reproduce: Settings, Accessibility, Text spacing, Wider. Then Appearance, Card
+  density, Compact (or Dense). Open Hosts. Optionally, Appearance, Font, Andika.
+- Logcat: none. It is a layout effect.
+- Verdict: the owner's. The decision is in the UAT below. Part 3 fixed it on the offline
+  cards at `29b40741` (its P2).
+
+##### D1. Round deviation: stream A ran about 76 s, over the one-minute limit
+
+- The driver waited for the first-frame line with a `logcat -T` time filter that was
+  quoted wrongly. Every poll failed, so it waited through 40 polls before it opened the
+  menu.
+- Timeline: the stream started at 08:30:03, the first frame came at 08:30:14.9, Quit was
+  sent at 08:31:12 and the Library was back at 08:31:18.9. That is about 57 s of video.
+- The driver was fixed before stream B, which took 40 s.
+- Both streams ended with the in-game menu's Quit. The host answered `cancel=1` both
+  times, and nothing was left running.
+
+#### Observations
+
+These are not counted as problems.
+
+- O1 (part 1, also on the S22). Luciole draws tight lines. Its two-line descriptions in
+  Settings nearly touch the row title above them. Nothing overlaps in the bounds, and
+  nothing is cut.
+- O2. On the S22, choosing a font collapses the other open Settings sections
+  (Accessibility and About), and only Appearance stays open. The UAT below records that
+  it was not reproduced, and a guard test was added.
+- O3. After Quit, the stream screen stays up about 6 to 7 s before the Library returns.
+  The host ends the stream at once (logged as "Connection terminated: -1"), but it answers
+  `/cancel` about 6.5 s later. The app holds the Quitting phase until that answer, as its
+  code intends. The owner's later UAT raised no issue with it.
+- O4. The S22's host cards in one row had different heights at Compact and Dense. The
+  rule that the cards of a row share a height covered the TV only. The UAT below extends
+  it to every form factor.
+
+#### Notes on the round
+
+- The screenshots taken for P2 and for the look passes show host names and addresses.
+  They were deleted after they were viewed, and none is kept in the repository.
+- My first TV dump printed the old card's name raw, because its status "Checking…" was not
+  yet recognised by the masker. The masker was fixed at once. No output of it is in a file.
+- Old dump files from earlier rounds remain on the devices and were left untouched. They
+  may hold host names. This round's own dumps were removed after each read.
+- End state: both devices on Home. The TV is asleep, and the S22 is locked. The Borealis
+  settings are back at the start values on both.
+
+### Owner UAT of build `257357fb`, 2026-10-22
+
+The owner ran the user acceptance test (UAT) of build `257357fb` on the TV and the S22
+after part 2. The decisions below came from it. Each was built and merged before part 3.
+They are recorded in [ADR 0058](../adr/0058-appearance-and-reading-options.md).
+
+1. The accent adapts to the colour-blind palettes. Violet becomes a pale rose under
+   Red-green and a lighter violet under Blue-yellow. White's soft accent gets a trace of
+   cyan under Blue-yellow. Teal does not change.
+2. With Wider, Compact and Dense keep the Comfortable columns (P2).
+3. The host cards of a row share the tallest height on every form factor (O4).
+4. The TV's Online shadow is black and a little wider.
+5. Key captions at Wider draw at Wide.
+6. Wider is drawn as Wide from a combined font scale of 2.0, with a dialog. Layout fixes on
+   Pairing (TV), the rail footer and the Audit row came first.
+7. The keyboard chip threshold stays at a quarter.
+8. O2 was not reproduced, in Robolectric or on the S22. A guard test was added.
+
+### Part 3, evening of 2026-10-22, build `29b40741`
+
+This part ran after the UAT above, on the phase head `29b40741`. The host showed Offline on
+both devices for the whole part, while the host PC was on a Wi-Fi network with the Windows
+"Public" profile (P3). No stream was started, as the round's brief asked, so the stream and
+covers checks that need an online host were not run here.
+
+#### Setup
+
+- Build: `29b40741`, the phase head, `app-debug.apk` (SHA-256 starts `075b7a28a324f4fe`),
+  package `io.github.magalz.borealis.debug`, versionName `0.0.0-dev`, versionCode 1.
+  Nothing was built for the round.
+- Install with `adb install -r`, both `Success`: TV 21:51:55 to 21:52:05; S22 22:38:18 to
+  22:38:24. The S22 was not touched before 22:37.
+- Devices:
+  - the Google TV Streamer, API 34, 1920 x 1080 at 320 dpi, over wireless debugging, system
+    `font_scale` 1.0;
+  - the Samsung Galaxy S22 (SM-S901E), API 36, 1080 x 2340 at 480 dpi, over USB as
+    `<serial-s22>`, system `font_scale` 0.8, in portrait (`ROTATION_0`). The scripts
+    checked the rotation and the focused window before every tap, key press and capture,
+    and refused to act when Borealis was not focused.
+- S22 lock: at 22:37 the phone was awake on its launcher with no keyguard showing. Nothing
+  was dismissed and nothing was typed.
+- Start values on the TV, read from the panes at 21:53:
+  - Appearance: font IBM Plex Sans; accent Teal; background Aurora curtains at 100 %;
+    card density Dense; glass tint 40 %; glass blur 8 dp;
+  - Accessibility: Reduce motion Follow system; Transparency Standard; thicker focus outline
+    off (its own value, which the row shows as on while High contrast is on); text size
+    100 %; text spacing Normal; High contrast on; colour-blind palette off.
+- Start values on the S22, read at 22:39:
+  - Appearance: font System font; accent Violet; background Aurora curtains at 100 %; card
+    density Comfortable; glass tint 40 %; glass blur 8 dp;
+  - Accessibility: Reduce motion Follow system; Transparency Standard; thicker focus outline
+    on; text size 100 %; text spacing Normal; High contrast off; colour-blind palette off.
+- Warm-up: on the TV, every Settings group and pane was walked twice by keys (22:01 to
+  22:06), and the values were read back unchanged. On the S22, Appearance and Accessibility
+  were read in full before the checks. No frame time was measured.
+- Method notes:
+  - Columns come from the bounds: (right edge minus the left of the first card, plus the
+    gap) divided by (card width plus gap). On the TV the right edge is that of the "2 hosts"
+    label, at 1852 px.
+  - Colours are sampled from `screencap` images: the colour of the strongest ink in the
+    label's box, and the near-white column of the White bar. Every full screenshot was
+    deleted after it was viewed. The six kept images show no host name and no address.
+  - High contrast was set Off on the TV for check 5, because it was On at the start.
+
+#### Results
+
+| Step | Item | Device | Result | Evidence and notes |
+| --- | --- | --- | --- | --- |
+| 1 | Install and start | TV | pass | Cold start 5115 ms (`am start -W`, LEANBACK_LAUNCHER). `logcat -b crash` is empty at the start and at 22:37:14. No `FATAL EXCEPTION` or ANR for the package. |
+| 2 | Columns follow Wider, Hosts | TV | pass | Host cards: Normal and Dense 318 px, gap 24, so 4 per row. Normal and Compact 318 px, 4 per row. Wider and Compact 432 px, 3 per row. Wider and Dense 432 px, 3 per row. Andika, Wider and Compact 432 px, 3 per row. The grid starts at 508 px in every case, and the cards of a row have the same height. |
+| 2 | Columns follow Wider, Apps | TV | not run (P3) | The covers need the Apps of an online host. The host was still Offline at 23:43. |
+| 3 | P2 again | TV | pass for names and addresses; codec chip not run (P3) | IBM Plex at Wider, Compact and Dense, and Andika at Wider and Compact: each name and each address is on one line, and the longer name ends 52 to 87 px from the card's right edge. No word breaks in the screenshots. An offline card draws no codec chips, so the chip was not checked. |
+| 4 | Online dot on a TV | TV | not run (P3) | No card was Online and no Apps title could be opened, from 21:52 to 22:37 and again at 23:43. |
+| 5 | Accents under the palettes | TV | pass against the tokens; look owner check (O5) | Rail item, group and font picker row. Violet under Red-green and Blue-yellow, White under Blue-yellow, and Teal under all three palettes. In each case the three labels have the same ink. The values are in O5 and match `AccentPaletteVariantsTest`. Crops are kept outside the repository. |
+| 6 | No limit dialog at the TV's sizes | TV | pass | `font_scale` 1.0. Text spacing Wider, then Text size 130 %: no dialog. Then Wide and Wider again at 130 %: no dialog. The focused window stayed `LibraryActivity`, no text with "limit" or "drawn as" appeared, and the Text spacing row reads "Wider" with no note. Text size was set back to 100 %. |
+| 7 | Equal heights | S22 | pass; weak evidence | Compact: 2 cards per row (474 px, gap 36), heights 217 and 217 px. Dense: 2 per row, heights 193 and 193 px. Both cards were offline with the same one-line texts, so the rule was not tested with uneven content here. At Compact with Wider and 130 %, the S22 shows 1 card per row (984 px), heights 252 and 252 px, so the Wider fallback to the Comfortable columns applies on the phone too. |
+| 8 | Accents under the palettes | S22 | pass against the tokens (O5) | Font picker, selected row ("System font"): Violet under Red-green, Violet under Blue-yellow, White under Blue-yellow, Teal under Blue-yellow, Red-green and Off, and Violet with no palette. The values are the same as on the TV. |
+| 9 | No limit dialog at the S22's sizes | S22 | pass | `font_scale` 0.8. Text spacing Wider, then Text size 130 %: no dialog. Then Wide and Wider again at 130 %: no dialog. The focused window stayed `LibraryActivity`, with no "limit" or "drawn as" text, and the Text spacing row reads "Wider" with no note. |
+| End | Settings and state | S22 | pass | Settings read back at 22:54, all at the start values. `logcat -b crash` is empty, with no `FATAL EXCEPTION` or ANR for the package. Home, then `KEYCODE_SLEEP`: `mWakefulness=Dozing` and `isKeyguardShowing=true` (22:55). |
+| End | Settings and state | TV | pass | Settings set back and read back from the panes at 23:49, all at the start values. `logcat -b crash` is empty, and no `FATAL EXCEPTION` or ANR for the package. Home, then `KEYCODE_SLEEP`: `mWakefulness=Asleep` at 23:49:30. |
+
+#### Problems found
+
+##### P3. Both host cards are Offline on both devices, caused by the PC's firewall profile
+
+- What: from 21:52 to 22:55 on the S22 and the TV, and again on the TV at 23:43, both cards
+  on Hosts showed "Checking…" and then "Offline".
+  - The first card is the old pairing record of part 2 (P1). It still polls a stored IPv6
+    address on port 65050.
+  - The second card is the current pairing. It was Online on both devices in part 2. Its
+    Details now read "Status: Offline" and still list its other addresses and a MAC address
+    for wake.
+- What the round checked, read only: the host process ran on the PC and listened on TCP
+  47984, 47989, 47990 and 48010. From the TV, a TCP connection to port 47989 opened, and a
+  plain `GET /serverinfo` answered `HTTP/1.1 200 OK`. The host also answered a ping from
+  the TV. The paired card's poll still returned no address.
+- The round's own guess was a failure of the HTTPS poll with the client certificate, or a
+  changed host certificate. That guess was not the cause.
+- Cause, found from the host log, the TV's logcat, the Windows firewall rules and the network profile log: the host PC had moved to a Wi-Fi network with the Windows
+  "Public" profile. On that profile, the PC's existing firewall rules that block the host's
+  web UI from the Internet also blocked TCP 47984 from the local network. So the clients
+  showed the host Offline, and pairing stopped at the HTTPS `pairchallenge` step. This is
+  the case that [section 1.3](#13-host), step 4 describes.
+- Fix, by the owner: the PC was moved back to a Private network. TCP 47984 and 47989 were
+  then reachable from the TV, and the hosts came back Online without re-pairing (see the
+  final UAT).
+- Logcat (masked; `Borealis.UPSTREAM`, `logger=com.limelight.LimeLog`, TV, 21:53):
+
+  ```text
+  I Borealis.UPSTREAM: Starting parallel poll for <host> (<ip>, null, null, [<ip6>]:47989)
+  I Borealis.UPSTREAM: Parallel poll for <host> returned address: null
+  W Borealis.UPSTREAM: <host> is offline (try 0)
+  I Borealis.UPSTREAM: Starting parallel poll for <host> (<ip>, null, null, [<ip6>]:65050)
+  I Borealis.UPSTREAM: Parallel poll for <host> returned address: null
+  W Borealis.UPSTREAM: <host> is offline (try 0)
+  W Borealis.UPSTREAM: Auto-discovered PC failed to respond: Name: <host> State: OFFLINE ...
+  ```
+
+##### P2. Fixed on offline cards (`29b40741`)
+
+- With Wider at Compact and at Dense, the TV now uses the Comfortable width (432 px, 3 per
+  row). No name breaks inside a word, and no address wraps, with IBM Plex and with Andika
+  (step 3 above).
+- The codec chip could not be checked here, because an offline card draws no chips. The
+  final UAT covered it.
+
+#### Observations
+
+- O5. The selection draws in the soft tone of each variant, not in the `accent` hex that
+  the brief names.
+  - The selected labels and the check mark use `accentSoft`: Violet under Red-green is
+    `#FCC3C8`, and Violet under Blue-yellow is `#C8BBFE`. The variant's `accent` shows
+    only in the tint of the selected fill.
+  - White under Blue-yellow matches the brief: the soft tone is `#F3FCFF`, and the bar is
+    `#EFF3FF`. Teal does not change, and its soft tone is `#A2FCE8`.
+  - Violet under Blue-yellow (`#C8BBFE`) is close to Violet with no palette (`#C4B5FD`).
+    On screen the labels look almost the same, and the pinker tone shows mainly in the
+    faint fill.
+  - All values match `AccentPaletteVariantsTest`. The owner's final UAT accepted this as
+    it is.
+- O6 (round note). The first pass of Violet under Blue-yellow on the TV, at about 22:27,
+  sampled the Teal colours everywhere, so the accent had not been applied when it was
+  sampled. Either the driver's timing or a remote-control input caused it. The second pass,
+  at 22:34 to 22:36, measured `#C8BBFE`, and the kept crop comes from it.
+
+#### Notes on the round
+
+- The TV pause and release:
+  - At 22:36:29 Borealis left the foreground, and the owner used the TV. Borealis was
+    stopped, not finished. The round's driver never sends Home.
+  - The accent script's next case then pressed Back when Borealis was not in front, up to
+    four times between about 22:36:30 and 22:36:45, before it stopped with an error. Some
+    of those presses may have reached the owner's home screen or app.
+  - Four app settings were left changed: Accent Violet (start Teal), Colour-blind palette
+    Blue-yellow (start Off), High contrast Off (start On) and Card density Compact (start
+    Dense).
+  - At 23:42 the owner's other app was in front. The round brought Borealis back with the
+    launcher intent, and at 23:44, before any change, read the same four values. Nothing
+    else had moved, so the Back presses changed no app setting.
+  - All the values were set back at 23:49 and read back from the panes. Every Appearance
+    and Accessibility value equals its start value.
+- Logcat buffers: `logcat -c` ran on the TV at 21:52 and on the S22 at 22:38, before the
+  launches. On the S22 it also cleared an older crash record of another app, which was not
+  Borealis.
+- Host names appear in the round's session transcript only, not in any file. The
+  screenshots viewed for step 3 showed names and an address, and every one was deleted. A
+  leak check of this file and of the owner's script found no host name, IPv4, IPv6 or MAC
+  address. The name hashes that the masker used were deleted afterwards.
+- Dump files: the driver removed `/sdcard/x.xml` after every read. It is gone on both
+  devices.
+
+### Owner's final UAT on build `29b40741`, 2026-10-22
+
+The owner ran the final UAT script on build `29b40741`, on the TV and the S22. Every item
+of the script passed:
+
+| Item | Device | Result |
+| --- | --- | --- |
+| The hosts are Online again, without re-pairing (P3) | TV and S22 | pass |
+| Pairing at Text size 130 % with Wider | TV | pass |
+| Covers per row at Wider, with Compact and Dense | TV and S22 | pass |
+| The codec chip on one line (part 3, P2) | TV and S22 | pass |
+| The black Online shadow on the card and on the Apps title | TV and S22 | pass |
+| Equal heights with an online and an offline card | S22 | pass |
+| The limit dialog at the S22's largest system font | S22 | pass |
+| Key captions at Wider in a stream | TV and S22 | pass |
+
+- The O5 observation was accepted as it is. Violet's selected label under Blue-yellow
+  (`#C8BBFE`) looks almost like Violet's own `#C4B5FD`, and the variant shows mostly in the
+  fill.
+- The owner ran the script on both devices ("tested on both, all OK"), so the table shows
+  "TV and S22" where an item applies to both.
+- Whether the old pairing card (P1 of part 2) was forgotten is not recorded.

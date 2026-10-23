@@ -59,6 +59,16 @@ fun TextLayoutResult.fitProblems(): List<String> {
 private const val HALF_PIXEL = 0.5f
 
 /**
+ * How far the lines of this layout run past the width that the text was given, in px, with the room
+ * that [fitProblems] allows them taken off: 0 or less when none does. [fitProblems] holds a line to
+ * a pixel of rounding; the text of a line with several spaces that have spans can be a pixel or two
+ * wider than that and still be what the screen draws (up to 2.3 px were measured at Wider), so a
+ * test that is about a text running past its box by a word's worth reads this and not the problem.
+ */
+fun TextLayoutResult.widthOvershootPx(): Float =
+    (0 until lineCount).maxOf { visibleRight(it) - maxWidth(this@widthOvershootPx) }
+
+/**
  * The right edge of [line], less what Android lets a line end past the width when its text has the
  * word spacing of the Text spacing setting.
  *

@@ -149,8 +149,8 @@ private fun FooterSlot(footer: @Composable () -> Unit, modifier: Modifier = Modi
 /**
  * The footer of the [NavigationRail]: the Borealis mark, the [name] and the [version] of the app,
  * or the name alone when the version is `null`. A screen reader reads the sentence [description]
- * (for example "Borealis, version 0.1.0") and nothing else of it. A long version wraps and then
- * ends in an ellipsis.
+ * (for example "Borealis, version 0.1.0") and nothing else of it. The name wraps when it must, even
+ * inside the word; a long version wraps and then ends in an ellipsis.
  */
 @Composable
 fun RailFooter(
@@ -176,13 +176,9 @@ fun RailFooter(
             tint = colors.ink3,
         )
         Column {
-            Text(
-                name,
-                style = label,
-                color = colors.ink2,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            // The name is one word. In a rail too narrow for it at the text that is drawn it wraps
+            // inside the word, where an ellipsis would cut it.
+            Text(name, style = label, color = colors.ink2)
             if (version != null) {
                 Text(
                     version,

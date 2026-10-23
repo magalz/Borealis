@@ -9,9 +9,12 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
@@ -20,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import io.github.magalz.borealis.designsystem.R
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
@@ -28,6 +32,7 @@ import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
+import io.github.magalz.borealis.designsystem.theme.TextSpacing
 
 /** How wide a key of the keyboard is: a character, a modifier or an action, or the space bar. */
 enum class KeyStyle(internal val maxWidth: Dp) {
@@ -50,8 +55,11 @@ private val TV_HEIGHT = 40.dp
 /**
  * The least that a caption shrinks to with the default look. At a larger text size the floor is the
  * same size on the screen, not the same number of sp, so a caption is never smaller than the same
- * key shows it with the default look. A Text spacing that widens the letters lowers the floor by
- * the same factor, so that the caption still fits its key: a caption of one word is never broken.
+ * key shows it with the default look. A spacing that widens the letters lowers the floor by the
+ * same factor, so that the caption still fits its key: a caption of one word is never broken. The
+ * caption is drawn with the spacing of Wide at most (Wider is drawn as Wide), so the floor is 8sp
+ * over 1.12 at the lowest. With the plain 8sp the captions are cut off at Wide at a system font
+ * scale of 2.0 (`KeyCaptionScaleTest`).
  */
 private val MIN_CAPTION_SIZE = 8.sp
 
@@ -78,7 +86,6 @@ fun KeyboardKey(
     onLongClick: (() -> Unit)? = null,
 ) {
     val colors = LocalBorealisColors.current
-    val look = LocalBorealisLook.current
     val shape = MaterialTheme.shapes.small
     val height = if (LocalFormFactor.current == FormFactor.Phone) PHONE_HEIGHT else TV_HEIGHT
     val locked = stringResource(R.string.borealis_key_locked)
@@ -96,16 +103,7 @@ fun KeyboardKey(
             .heightIn(min = height),
         contentAlignment = Alignment.Center,
     ) {
-        val textStyle =
-            if (style == KeyStyle.Normal) {
-                MaterialTheme.typography.bodyMedium
-            } else {
-                MaterialTheme.typography.bodySmall
-            }
-        // A caption with a space ("Fn 123") wraps to a second line before it shrinks, and the key
-        // grows to hold it; a word is never broken, so it stays on one line and shrinks.
-        val wraps = ' ' in label
-        Text(
+        KeyCaption(
             label,
             color =
                 when {
@@ -113,6 +111,47 @@ fun KeyboardKey(
                     style == KeyStyle.Normal -> colors.ink
                     else -> colors.ink2
                 },
+            style,
+        )
+    }
+}
+
+/**
+ * The spacing that the caption of a key is drawn with: the one of the level, but at Wider that of
+ * Wide. A key is only so wide, and the 0.18 em between the letters and the half em between the
+ * words of Wider would break a caption or shrink it to nothing.
+ */
+private fun TextSpacing.forCaption(): TextSpacing =
+    if (this == TextSpacing.Wider) TextSpacing.Wide else this
+
+/** The caption of a key, at the spacing that [forCaption] gives it. */
+@Composable
+private fun KeyCaption(label: String, color: Color, style: KeyStyle) {
+    val look = LocalBorealisLook.current
+    val spacing = look.textSpacing.forCaption()
+    val base =
+        if (style == KeyStyle.Normal) {
+            MaterialTheme.typography.bodyMedium
+        } else {
+            MaterialTheme.typography.bodySmall
+        }
+    // The styles of a caption have no letter spacing or line height of their own, so the ones of
+    // the spacing replace those of the level, as the theme has them at that level.
+    val textStyle =
+        if (spacing == look.textSpacing) {
+            base
+        } else {
+            base.copy(letterSpacing = spacing.letterEm.em, lineHeight = spacing.lineHeightEm.em)
+        }
+    // The words of a caption are spaced by the design-system Text, which reads the look.
+    val captionLook = remember(look, spacing) { look.copy(textSpacing = spacing) }
+    // A caption with a space ("Fn 123") wraps to a second line before it shrinks, and the key
+    // grows to hold it; a word is never broken, so it stays on one line and shrinks.
+    val wraps = ' ' in label
+    CompositionLocalProvider(LocalBorealisLook provides captionLook) {
+        Text(
+            label,
+            color = color,
             textAlign = TextAlign.Center,
             softWrap = wraps,
             maxLines = if (wraps) 2 else 1,
@@ -122,8 +161,7 @@ fun KeyboardKey(
             // caption that does not fit its key wraps where it can, then shrinks with the key.
             autoSize =
                 TextAutoSize.StepBased(
-                    minFontSize =
-                        MIN_CAPTION_SIZE / look.textSize.scale / (1 + look.textSpacing.letterEm),
+                    minFontSize = MIN_CAPTION_SIZE / look.textSize.scale / (1 + spacing.letterEm),
                     maxFontSize = textStyle.fontSize,
                 ),
         )

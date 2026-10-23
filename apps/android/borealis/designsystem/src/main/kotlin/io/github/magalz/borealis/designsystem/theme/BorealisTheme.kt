@@ -29,10 +29,12 @@ private val LocalAppliedTextSize = compositionLocalOf { 1f }
  * multiplies the font scale of the system, so every `sp` follows it, and `dp` stay as they are. The
  * font and the text spacing give the type its families, its sizes, its letter spacing and its line
  * height ([borealisTypography], [borealisType]); the word spacing is added by the design-system
- * `Text`, which reads the look. The rest of the look (the transparency, Reduce motion and the
- * thicker focus) is read from [LocalBorealisLook] by the pieces that use it; for Reduce motion the
- * theme also watches the system animation scale once, for all of them
- * ([rememberAnimationsRemoved]).
+ * `Text`, which reads the look. The text spacing is the one that the font scale allows
+ * ([effectiveTextSpacing]), and the look that the theme provides has that level, so everything
+ * under it draws with it; the look that was given is never changed. The rest of the look (the
+ * transparency, Reduce motion and the thicker focus) is read from [LocalBorealisLook] by the pieces
+ * that use it; for Reduce motion the theme also watches the system animation scale once, for all of
+ * them ([rememberAnimationsRemoved]).
  */
 @Composable
 fun BorealisTheme(
@@ -44,10 +46,6 @@ fun BorealisTheme(
         remember(look.highContrast, look.colourVision, look.accent) { borealisColors(look) }
     val colorScheme = remember(colors) { borealisColorScheme(colors) }
     val shapes = remember { borealisShapes() }
-    val typography =
-        remember(formFactor, look.font, look.textSpacing) {
-            borealisTypography(formFactor, look.font, look.textSpacing)
-        }
     // One observer of the animator scale for all that is under the theme, and none in a theme that
     // is inside another one.
     val systemAnimationsRemoved = rememberSystemAnimationsRemoved()
@@ -58,9 +56,19 @@ fun BorealisTheme(
             val factor = look.textSize.scale / applied
             if (factor == 1f) system else Density(system.density, system.fontScale * factor)
         }
+    // The look that is drawn: the look given, with the Text spacing that its font scale allows.
+    val textSpacing = effectiveTextSpacing(look.textSpacing, density.fontScale)
+    val drawn =
+        remember(look, textSpacing) {
+            if (textSpacing == look.textSpacing) look else look.copy(textSpacing = textSpacing)
+        }
+    val typography =
+        remember(formFactor, look.font, textSpacing) {
+            borealisTypography(formFactor, look.font, textSpacing)
+        }
     CompositionLocalProvider(
         LocalFormFactor provides formFactor,
-        LocalBorealisLook provides look,
+        LocalBorealisLook provides drawn,
         LocalBorealisColors provides colors,
         LocalDensity provides density,
         LocalAppliedTextSize provides look.textSize.scale,
@@ -68,8 +76,8 @@ fun BorealisTheme(
         // Material leaves the content colour black; text and icons outside a Surface need ink.
         LocalContentColor provides colors.ink,
         LocalBorealisType provides
-            remember(formFactor, look.font, look.textSpacing) {
-                borealisType(formFactor, look.font, look.textSpacing)
+            remember(formFactor, look.font, textSpacing) {
+                borealisType(formFactor, look.font, textSpacing)
             },
         LocalBorealisShapes provides remember { borealisExtraShapes() },
         LocalBorealisSpacing provides

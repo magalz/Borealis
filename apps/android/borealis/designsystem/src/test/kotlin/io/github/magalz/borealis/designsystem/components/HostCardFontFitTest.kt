@@ -39,15 +39,15 @@ import org.robolectric.annotation.Config
  * last line keeps the card padding under it, and no text runs past its width or ends in an
  * ellipsis. [HostCardSizeTest] keeps the card at the height of the token in IBM Plex. The cards at
  * the largest text size are in the fit tests of Hosts. The cards of the denser layouts (ADR 0058,
- * decision 7) are narrower, and are tried at the largest text: 130 percent over a system font scale
- * of 1.3.
+ * decision 7) are narrower, except at Wider where they keep the width of Comfortable, and are tried
+ * at the largest text: 130 percent over a system font scale of 1.3.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class HostCardFontFitTest(case: FitCase) {
     @get:Rule val composeRule = createComposeRule()
 
-    /** The denser layouts have narrower cards, which are tried at the largest text. */
+    /** The denser layouts are tried at the largest text; their cards are narrower but at Wider. */
     private val density = case.density
     private val denser = density != CardDensity.Comfortable
     private val look =
@@ -57,7 +57,7 @@ class HostCardFontFitTest(case: FitCase) {
             textSize = if (denser) TextSize.Largest else TextSize.Default,
             cardDensity = case.density,
         )
-    private val width = if (denser) tvHostCardWidth(case.density) else 260.dp
+    private val width = if (denser) tvHostCardWidth(case.density, case.spacing) else 260.dp
     private val systemFontScale = if (denser) SYSTEM_SCALE else 1f
 
     @Test

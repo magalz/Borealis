@@ -124,7 +124,10 @@ class AccentColorsTest {
             val colors = colorsOf(AccentChoice.Teal, colourVision = vision)
 
             assertThat(colors.accent).isEqualTo(teal.accent)
-            assertThat(colors.success).isEqualTo(base.withColourVision(vision).success)
+            assertThat(colors.success)
+                .isEqualTo(
+                    base.withColourVision(vision, AccentChoice.Teal, highContrast = false).success
+                )
         }
     }
 

@@ -296,7 +296,7 @@ User-facing strings of the module stay in the module, one file per area. The app
 
 ### Fixtures in unit tests
 
-`borealis.android.library` gives every unit-test task of a `:borealis:*` module the system property `borealis.fixtures.dir`, the absolute path of `core/tests/fixtures` (layout, provenance and scrubbing rules in its `README.md`). The directory is a test input, so changing a fixture re-runs the tests. In `:borealis:host` the test helper `Fixtures` resolves a fixture by relative path (`Fixtures.text("luminalshine/26.09.1/serverinfo-http.xml")`) and fails with a clear message when the property or the file is missing. `FixturePolicyTest` enforces the public-repository rules on every file under `luminalshine/`: scrubbed host name, `uniqueid`, MAC and addresses, and a `device` or `source` provenance row for each file.
+`borealis.android.library` gives every unit-test task of a `:borealis:*` module, and `borealis.android.application` gives the same to the application module, the system property `borealis.fixtures.dir`, the absolute path of `core/tests/fixtures` (layout, provenance and scrubbing rules in its `README.md`). The directory is a test input, so changing a fixture re-runs the tests. In `:borealis:host` the test helper `Fixtures` resolves a fixture by relative path (`Fixtures.text("luminalshine/26.09.1/serverinfo-http.xml")`) and fails with a clear message when the property or the file is missing. `FixturePolicyTest` enforces the public-repository rules on every file under `luminalshine/`: scrubbed host name, `uniqueid`, MAC and addresses, and a `device` or `source` provenance row for each file.
 
 ## `:borealis:library`
 

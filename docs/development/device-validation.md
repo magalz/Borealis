@@ -1430,6 +1430,50 @@ Steps:
    - Set Card density back to Comfortable.
 10. End with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the Streamer.
 
+### 3.25 Sprint 12 checks
+
+Run these on the Google TV Streamer, with the owner's OK, and on the S22. Sprint 12
+converted the inherited Java to Kotlin for the network, host, support and stream
+connection code. A conversion keeps behaviour (ADR 0059), so the steps check that
+the behaviour kept. Record each item as `pass`, `fail`, `owner check` or `not applicable`, with a
+short note for each `fail`.
+
+Not runnable: nothing in this section needs a device that is not listed. Add host
+manual entry and the pairing and Wake-on-LAN steps need the owner, because they need
+the host and its PIN. Do not record a host name, an address, a MAC address or a PIN.
+
+Steps:
+
+1. Upgrade in place (Streamer, S22). Do this first, and it matters most.
+   - Install the `main` build, with data. Pair one host and pin one shortcut, and
+     note the settings. Install the phase build over it without clearing the data.
+   - Expected: the saved hosts are still there and still paired, with no PIN asked.
+   - Expected: the client id is the same, as seen in Diagnostics or in the pairing
+     state on the host.
+   - Expected: the settings (resolution, bitrate, frame pacing and the others) are
+     unchanged.
+   - Expected: the pinned shortcuts and the TV channel entries still start the right
+     game.
+2. Discovery (Streamer, S22).
+   - Expected: mDNS finds the host on the local network.
+   - Add host manual entry: owner check.
+3. App list and box art (Streamer, S22).
+   - Expected: the app list of a paired host loads, and the box art shows for each app.
+4. Short stream (Streamer, S22).
+   - Launch an app, then Resume it, then Quit. Expected: each step works, with no error
+     dialog.
+   - Expected: the performance overlay shows the chosen resolution, fps and bitrate.
+   - Expected: input works in the stream from a keyboard, from a pad and from touch.
+5. Logs (Streamer, S22).
+   - Expected: the output of `LimeLog` still reaches `BorealisLog`, as seen in the
+     logcat capture of section 1.4.
+   - Expected: the log has no PIN, token, key, certificate, address or host name.
+6. Owner UAT (owner).
+   - Pairing, including a wrong PIN on `26.10.0-beta.1`.
+   - Forget, then pair again.
+   - Wake-on-LAN.
+7. End with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the Streamer.
+
 ## 4. Results templates
 
 Copy one table per device. Use `pass`, `fail` or `not applicable`, and add a

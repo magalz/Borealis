@@ -14,6 +14,38 @@ protocol library under `core/third_party/moonlight-common-c/`).
 An area that the Java to Kotlin migration has converted no longer takes
 upstream cherry-picks directly. Its upstream fixes are ported by hand into the
 Kotlin code. See the [roadmap](../roadmap.md#kotlin-migration-sprints-12-to-14).
+The conversion rules are in [ADR 0059](../adr/0059-convert-the-inherited-java-to-kotlin.md).
+
+Sprint 12 converted or removed these Java paths under `apps/android/app/src/main/java/`.
+A cherry-pick of an upstream commit that touches one of them does not apply to the
+Borealis code, so port the fix by hand into the Kotlin file. The converted code is in
+`apps/android/app/src/main/kotlin/`, at the same package path:
+
+- `com/limelight/LimeLog.java`, `PosterContentProvider.java`, `binding/PlatformBinding.java`
+- `binding/crypto/AndroidCryptoProvider.java`
+- `computers/ComputerDatabaseManager.java`, `ComputerManagerListener.java`,
+  `ComputerManagerService.java`, `IdentityManager.java`
+- `computers/LegacyDatabaseReader.java`, `LegacyDatabaseReader2.java`,
+  `LegacyDatabaseReader3.java` (removed, not converted)
+- `discovery/DiscoveryService.java`
+- `grid/assets/DiskAssetLoader.java`
+- `nvstream/ConnectionContext.java`, `NvConnection.java`, `NvConnectionListener.java`,
+  `StreamConfiguration.java`
+- `nvstream/av/ByteBufferDescriptor.java` (removed, not converted),
+  `nvstream/av/audio/AudioRenderer.java`, `nvstream/av/video/VideoDecoderRenderer.java`
+- `nvstream/http/ComputerDetails.java`, `HostHttpResponseException.java`,
+  `LimelightCryptoProvider.java`, `NvApp.java`, `NvHTTP.java`, `PairingManager.java`
+- `nvstream/input/ControllerPacket.java`, `KeyboardPacket.java`, `MouseButtonPacket.java`
+- `nvstream/mdns/JmDNSDiscoveryAgent.java`, `MdnsComputer.java`, `MdnsDiscoveryAgent.java`,
+  `MdnsDiscoveryListener.java`, `NsdManagerDiscoveryAgent.java`
+- `nvstream/wol/WakeOnLanSender.java`
+- `preferences/GlPreferences.java`, `PreferenceConfiguration.java`
+- `ui/GameGestures.java`, `StreamView.java`
+- `utils/CacheHelper.java`, `Dialog.java`, `NetHelper.java`, `ServerHelper.java`,
+  `ShortcutHelper.java`, `TvChannelHelper.java`, `UiHelper.java`, `Vector2d.java`
+
+The Java that remains is in the Sprint 13 and 14 areas of the roadmap. Upstream fixes
+for those files still come by cherry-pick until their area is converted.
 
 ## 1. Prepare
 

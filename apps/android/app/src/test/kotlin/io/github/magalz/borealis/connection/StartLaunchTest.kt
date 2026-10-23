@@ -381,6 +381,50 @@ class StartLaunchTest {
     }
 
     @Test
+    fun `above 4K is streamed as asked when a GFE host says that it supports it`() {
+        rig.script.state = HostScript.GFE_FREE
+        rig.script.gfeVersion = "3.20.0"
+        rig.script.codecSupport = "512"
+        val config =
+            rig.config(
+                width = 5120,
+                height = 2880,
+                formats = MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265,
+            )
+
+        startAndConnect(rig.connection(config))
+
+        assertThat(listener.events("message")).isEmpty()
+        assertThat(startConnectionArgs().subList(5, 7)).containsExactly(5120, 2880).inOrder()
+    }
+
+    @Test
+    fun `above 4K is refused when a GFE host supports another codec mode only`() {
+        rig.script.state = HostScript.GFE_FREE
+        rig.script.gfeVersion = "3.20.0"
+        rig.script.codecSupport = "256"
+        val config =
+            rig.config(
+                width = 5120,
+                height = 2880,
+                formats = MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265,
+            )
+
+        rig.start(rig.connection(config))
+        listener.await("stageFailed")
+        listener.awaitEnded()
+
+        assertThat(listener.events)
+            .containsExactly(
+                "stageStarting $DESKTOP_NAME",
+                "message Your host PC does not support streaming at resolutions above 4K.",
+                "stageFailed serverinfo ports=0 error=0",
+            )
+            .inOrder()
+        assertThat(ShadowRecordingBridge.calls).isEmpty()
+    }
+
+    @Test
     fun `above 4K is streamed as asked when HEVC is there and the host is GFE 3`() {
         rig.script.gfeVersion = "3.20.0"
         rig.script.codecSupport = "512"

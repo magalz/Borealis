@@ -220,8 +220,33 @@ class StopAndCancelTest {
         assertThat(rig.permits()).isEqualTo(1)
     }
 
+    @Test
+    fun `a start that is cancelled when it is complete ends at once, without waiting for the stream that runs`() {
+        val first = rig.connection()
+        startAndConnect(first)
+        listener.awaitEnded()
+        val secondListener = rig.newListener()
+        val second = rig.connection()
+        secondListener.onEvent = { if (it.startsWith("stageComplete")) second.cancelLaunch() }
+
+        try {
+            rig.start(second, listener = secondListener)
+            secondListener.await("stageComplete")
+            val thread = secondListener.threads.single()
+            thread.join(END_MS)
+
+            assertThat(thread.isAlive).isFalse()
+            assertThat(ShadowRecordingBridge.named("startConnection")).hasSize(1)
+            assertThat(rig.permits()).isEqualTo(0)
+        } finally {
+            // Frees the place for a thread that did not end, so that it cannot hold a later test.
+            first.stop()
+        }
+    }
+
     private companion object {
         const val WAIT_MS = 30_000L
+        const val END_MS = 10_000L
         const val POLL_MS = 10L
     }
 }

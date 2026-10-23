@@ -131,11 +131,11 @@ class ServerInfoParsingTest {
         val serverInfo =
             serverInfoWith("MaxLumaPixelsHEVC", "8589934592").replace(
                 "<currentgame>",
-                "<MaxLumaPixelsH264>2073600</MaxLumaPixelsH264><currentgame>",
+                "<MaxLumaPixelsH264>4294967296</MaxLumaPixelsH264><currentgame>",
             )
 
         assertThat(http.getMaxLumaPixelsHEVC(serverInfo)).isEqualTo(8589934592L)
-        assertThat(http.getMaxLumaPixelsH264(serverInfo)).isEqualTo(2073600L)
+        assertThat(http.getMaxLumaPixelsH264(serverInfo)).isEqualTo(4294967296L)
         assertThat(http.getMaxLumaPixelsHEVC(serverInfoWithout("MaxLumaPixelsHEVC"))).isEqualTo(0L)
         assertThat(http.getMaxLumaPixelsH264(serverInfoWithout("MaxLumaPixelsH264"))).isEqualTo(0L)
         assertThrows(NumberFormatException::class.java) {

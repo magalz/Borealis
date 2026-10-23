@@ -166,7 +166,13 @@ class LaunchRequestTest {
         val host = host()
         answerLaunch(host)
 
-        client(host).launchApp(context(width = 1280, height = 720, launchRefreshRate = 90, refreshRate = 90), "launch", 1, false)
+        client(host)
+            .launchApp(
+                context(width = 1280, height = 720, launchRefreshRate = 90, refreshRate = 90),
+                "launch",
+                1,
+                false,
+            )
 
         assertThat(host.requests.single().value("mode")).isEqualTo("1280x720x90")
     }

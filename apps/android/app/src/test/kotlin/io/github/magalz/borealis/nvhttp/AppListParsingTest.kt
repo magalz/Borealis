@@ -25,9 +25,9 @@ class AppListParsingTest {
 
     private fun app(title: String? = "Game", id: String? = "1", hdr: String? = "0"): String =
         "<App>" +
-            (hdr?.let { "<IsHdrSupported>$it</IsHdrSupported>" } ?: "") +
-            (title?.let { "<AppTitle>$it</AppTitle>" } ?: "") +
-            (id?.let { "<ID>$it</ID>" } ?: "") +
+            hdr?.let { "<IsHdrSupported>$it</IsHdrSupported>" }.orEmpty() +
+            title?.let { "<AppTitle>$it</AppTitle>" }.orEmpty() +
+            id?.let { "<ID>$it</ID>" }.orEmpty() +
             "</App>"
 
     private fun list(vararg apps: String): String =

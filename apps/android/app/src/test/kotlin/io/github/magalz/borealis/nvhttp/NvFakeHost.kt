@@ -79,7 +79,7 @@ internal class HostReply private constructor(val bytes: ByteArray?, val closeAft
         fun failure(code: String, message: String? = null): HostReply =
             xml(
                 """<root status_code="$code"""" +
-                    (message?.let { """ status_message="$it"""" } ?: "") +
+                    message?.let { """ status_message="$it"""" }.orEmpty() +
                     "/>"
             )
 

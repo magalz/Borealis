@@ -154,6 +154,12 @@ class NvHttpJavaApiTest {
         val publicNames = NvHTTP::class.java.methods.map { it.name }.toSet()
 
         // Package-private in the Java: the pairing manager of the same package is the only caller.
-        assertThat(publicNames).containsNoneOf("getXmlString", "setServerCert", "executePairingCommand", "executePairingChallenge")
+        assertThat(publicNames)
+            .containsNoneOf(
+                "getXmlString",
+                "setServerCert",
+                "executePairingCommand",
+                "executePairingChallenge",
+            )
     }
 }

@@ -1038,6 +1038,13 @@ when. Paths are under `apps/android/app/src/main/kotlin/com/limelight/`, except
   - `computers/ComputerManagerService.kt`: `ReachabilityTuple` is dead code. It is kept.
 - **(c) For SecOps (Sprint 16).** The security observations of the conversion are listed
   under Sprint 16, one line each, with their files.
+- **(d) From the Sprint 12 device round (2026-10-23).**
+  - The bridged upstream log lines (`Borealis.UPSTREAM`, from `LimeLog`) carry host names
+    and IP addresses in clear, as the inherited code always did. This is not a regression,
+    and the owner decides whether to mask them or accept them. See
+    [device-validation section 17](development/device-validation.md#17-results-sprint-12), P2.
+  - Optional feature: send `continuousAudio=1` in `/launch`, so the client gets a steady
+    audio stream on a silent PC. LuminalShine supports it.
 
 ## Host-side items (LuminalShine)
 

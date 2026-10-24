@@ -725,6 +725,14 @@ Planned, not started.
   last. Robolectric cannot see TalkBack's traversal links: check it with TalkBack
   on a device in this sprint.
 - **A UAT note:** "Fn 123" wraps on narrow phones at the default look.
+- **A pinned app shortcut fails when the app is not running.** Found in the Sprint 12
+  round (2026-10-24); the owner put it here. The launch request of the shortcut fires
+  once the app list loads from the cache, before the first poll gives the host an
+  address, so `ServerHelper.doStart` shows "Computer is offline" and starts nothing.
+  The fix waits for the host's first answer before it starts the stream, with a test
+  first. See
+  [device-validation section 17](development/device-validation.md#17-results-sprint-12),
+  the follow-up on the S22.
 
 ### Sprint 16: SecOps
 

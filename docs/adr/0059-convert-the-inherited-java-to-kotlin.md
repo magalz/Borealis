@@ -108,12 +108,12 @@ without edits. The rules are numbered so that each conversion brief can point to
 7. **Coverage.** Converted code counts in Kover coverage from the first conversion. The exclusion for
    `com.limelight.*` is narrowed to the Java that stays: `com.limelight.Game` and its nested classes (`com.limelight.Game$*`),
    `com.limelight.binding.input.*`, `com.limelight.binding.video.*`, `com.limelight.binding.audio.*` and
-   `com.limelight.nvstream.jni.*`. In Codecov, the converted path
-   (`apps/android/app/src/main/kotlin/com/limelight/`) gets its own patch and project statuses,
-   separate from the 90% gate of [ADR 0049](0049-coverage-gate.md), which keeps applying to the rest.
-   Their target is set at the end of Sprint 12 from the measured coverage of the converted code, and
-   it rises each sprint until it reaches 90% at the end of the migration. Each migration sprint is
-   merged on its own, as before.
+   `com.limelight.nvstream.jni.*`. In Codecov, converted code is held to the same gate as the rest
+   ([ADR 0049](0049-coverage-gate.md): 90% of the patch, and at most 1% project drop). The owner first
+   planned separate statuses for the converted path, with a target that would rise each sprint; at the
+   end of Sprint 12 the converted code measured 97.0% line coverage, so the single gate was kept
+   (owner decision, 2026-10-23). If a later migration sprint cannot reach the gate, the owner decides
+   again then. Each migration sprint is merged on its own.
 8. **Dead code.** Code that is verified as dead, and that the task brief lists, is removed before the
    conversion. In Sprint 12 these are the three `LegacyDatabaseReader` classes, which read
    `computers.db`, `computers2.db` and `computers3.db`, databases of old Moonlight versions that never

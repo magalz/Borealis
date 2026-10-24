@@ -3737,10 +3737,8 @@ about 2.4 s ahead of the PC's; the times below are the phone's.
 
 Owner items left after the follow-up:
 
-- S22 in-game menu by touch: open it with Back, then Quit and Quit. With a pad too, if
-  one is at hand (D4).
-- Open the pinned Desktop shortcut from the S22 home screen.
-- The performance overlay on the S22 and the TV.
+- The S22 in-game menu with a pad, if one is at hand (D4).
+- The performance overlay on the TV.
 - The TV channel.
 - A physical keyboard and a pad in a stream.
 - Hearing the sound on each device: the logs show the audio packets.
@@ -3748,3 +3746,32 @@ Owner items left after the follow-up:
 
 End of the follow-up: the S22 was left on its home screen, unlocked, with the owner at
 hand; the test window on the PC had closed itself. Crash buffer 0.
+
+Owner results on the S22, 2026-10-24 (11:06 to 11:07, phone clock, read from logcat
+afterwards):
+
+- The performance overlay: pass (owner).
+- The in-game menu by touch: Back, then Quit and Quit, ended the stream; the host
+  answered `/cancel`. Pass (owner).
+- The pinned Desktop shortcut:
+  - Opened with Borealis not running, it showed the toast "Computer is offline" and
+    started nothing. The shortcut's launch request fires once the app list loads from
+    the cache, about 0.6 s after the app started (0.9 s after the tap), before the
+    first poll gives the host an address: `ServerHelper.doStart` then sees no active
+    address. The first poll answered 0.7 s later. A second try inside the app started
+    the stream.
+  - Opened with Borealis running, it started the stream screen at once. Pass.
+  - The first case is a bug of the Library's launch request path, not of the Sprint 12
+    conversion. The request came in `636fb7a6b` (2026-10-15), and `7b0ab7380`
+    (2026-10-16) seeds the app list from the cache, so the list is ready before the
+    first poll. The Java at `2f321dc77` read the hosts from the database with the same
+    unknown state and no address (read in the code, not run on that build). The owner
+    put the fix in Sprint 15 (roadmap, Sprint 15).
+- Leaving a stream while it starts: about 2 s after the second shortcut start, the
+  stream activity closed and the phone went to Recents and another app. About 7 s
+  later the system destroyed the app's sockets, so the `/launch` still waiting for
+  the host failed with "Software caused connection abort". The host rolled the
+  launch back after its timeout. On this phone Samsung's freezer froze the app from
+  then on, and `dumpsys netpolicy` read afterwards showed its network blocked as
+  `APP_BACKGROUND`. This is the system's background rule; no client defect was found
+  in this round.

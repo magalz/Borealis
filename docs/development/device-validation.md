@@ -3754,19 +3754,24 @@ afterwards):
 - The in-game menu by touch: Back, then Quit and Quit, ended the stream; the host
   answered `/cancel`. Pass (owner).
 - The pinned Desktop shortcut:
-  - Opened with the app not running, it showed the toast "Computer is offline" and
+  - Opened with Borealis not running, it showed the toast "Computer is offline" and
     started nothing. The shortcut's launch request fires once the app list loads from
-    the cache, about 0.5 s after the start, before the first poll gives the host an
-    address: `ServerHelper.doStart` then sees no active address. The first poll
-    answered 0.7 s later. A second try inside the app started the stream.
-  - Opened with the app running, it started the stream at once. Pass.
-  - The first case is a bug of the launch request path (the Library code of
-    2026-10-16), not of the Sprint 12 conversion: the Java read the hosts from the
-    database with the same unknown state and no address. The owner put the fix in
-    Sprint 15 (roadmap, Sprint 15).
+    the cache, about 0.6 s after the app started (0.9 s after the tap), before the
+    first poll gives the host an address: `ServerHelper.doStart` then sees no active
+    address. The first poll answered 0.7 s later. A second try inside the app started
+    the stream.
+  - Opened with Borealis running, it started the stream screen at once. Pass.
+  - The first case is a bug of the Library's launch request path, not of the Sprint 12
+    conversion. The request came in `636fb7a6b` (2026-10-15), and `7b0ab7380`
+    (2026-10-16) seeds the app list from the cache, so the list is ready before the
+    first poll. The Java at `2f321dc77` read the hosts from the database with the same
+    unknown state and no address (read in the code, not run on that build). The owner
+    put the fix in Sprint 15 (roadmap, Sprint 15).
 - Leaving a stream while it starts: about 2 s after the second shortcut start, the
-  stream activity closed and the phone went to other apps. About 7 s later Android
-  blocked the app's network in the background (`APP_BACKGROUND`) and destroyed its
-  sockets, so the `/launch` still waiting for the host failed with "Software caused
-  connection abort". The host rolled the launch back after its timeout. This is the
-  system's background rule, not a client fault.
+  stream activity closed and the phone went to Recents and another app. About 7 s
+  later the system destroyed the app's sockets, so the `/launch` still waiting for
+  the host failed with "Software caused connection abort". The host rolled the
+  launch back after its timeout. On this phone Samsung's freezer froze the app from
+  then on, and `dumpsys netpolicy` read afterwards showed its network blocked as
+  `APP_BACKGROUND`. This is the system's background rule; no client defect was found
+  in this round.

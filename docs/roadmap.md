@@ -788,6 +788,23 @@ release. Sprint 16 is hardening and security testing.
   - Not listed: the debug URL logging of the HTTP client. The `JulBridge` and the
     `Redactor` mask `rikey`, the salt and the client certificate.
 
+- **Addresses in the logs (owner, 2026-10-24).** Local addresses may stay in the logs;
+  public addresses, and those of internet overlays such as Tailscale, may not. In every
+  line and export, mask the addresses outside 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16,
+  loopback and link-local: public IPv4, the CGNAT range 100.64.0.0/10, global IPv6 and the
+  Tailscale ULA `fd7a:115c:a1e0::/48`. The central place is the `Redactor` of the
+  logging module. The native print of the WAN address found by STUN
+  (`app/src/main/jni/moonlight-core/simplejni.c`) goes straight to logcat and must be
+  covered too. Host names stay visible, and the "Mask addresses" switch still masks
+  every address. See
+  [device-validation section 17](development/device-validation.md#17-results-sprint-12), P2.
+- **CodeQL `java/path-injection` on `PosterContentProvider`.** CodeQL flags the box-art
+  file path of the exported provider, on the Java file on `main` and on the converted
+  Kotlin file (pull request #70). The host id is checked by `PosterRequest.checkedAppId`,
+  which CodeQL does not see as a sanitizer. Owner decision of 2026-10-24: the alerts stay
+  open until this sprint, which makes the check visible to CodeQL or dismisses them with
+  the reason.
+
 ### Sprint 17: release preparation
 
 - The root and Android READMEs.
@@ -861,6 +878,9 @@ The owner creates the tag. See the [release procedure](development/release.md).
     the app already caches it for pinned shortcut icons and the TV channel. The
     Apps screen shows the initials of each app. App covers are one of the
     [Phase 3 extension points](ux/phase-2-proposal.md#phase-3-extension-points).
+    The owner confirmed this on 2026-10-24, after the Sprint 12 round. The host serves
+    each app's image at `/appasset`, and a default `box.png` for an app with none; what
+    such an app shows in the grid is decided when the covers come.
 - **Phase 4: PyroWave.** See the [host contract](host-contract/pyrowave.md).
   The official LuminalShine build ships experimental PyroWave, opt-in and
   needing Vulkan 1.3, in 26.10.0-beta.1 (release notes).
@@ -1040,8 +1060,9 @@ when. Paths are under `apps/android/app/src/main/kotlin/com/limelight/`, except
   under Sprint 16, one line each, with their files.
 - **(d) From the Sprint 12 device round (2026-10-23).**
   - The bridged upstream log lines (`Borealis.UPSTREAM`, from `LimeLog`) carry host names
-    and IP addresses in clear, as the inherited code always did. This is not a regression,
-    and the owner decides whether to mask them or accept them. See
+    and IP addresses in clear, as the inherited code always did. This is not a regression.
+    The owner decided on 2026-10-24: host names stay, and public and overlay addresses are
+    masked in Sprint 16 (see Sprint 16). See
     [device-validation section 17](development/device-validation.md#17-results-sprint-12), P2.
   - Optional feature: send `continuousAudio=1` in `/launch`, so the client gets a steady
     audio stream on a silent PC. LuminalShine supports it.

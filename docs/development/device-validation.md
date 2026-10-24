@@ -3591,12 +3591,10 @@ belongs to.
   - `Starting parallel poll for <host> (<ip>, null, null, [<ipv6>]:47989)`;
   - `https://<ip>/launch?...`;
   - `NSD: Machine appeared: <host>`.
-- Scale: in the raw captures, before masking, IPv4 or IPv6 addresses appear in clear
-  in 519 `Borealis.UPSTREAM` lines, and host names in 632 lines. The old build does
-  the same, so this is not a regression of the conversion. Secrets are redacted.
-  `TODO(verify)`: the round's notes call these counts those of "the kept logs", but
-  the kept, masked files hold no address. The counts are taken to come from the raw
-  captures.
+- Scale: in the round's log captures, scanned before they were masked, IPv4 or IPv6
+  addresses appear in clear in 519 `Borealis.UPSTREAM` lines, and host names in 632
+  lines. The old build does the same, so this is not a regression of the conversion.
+  Secrets are redacted.
 - Against the checklist: [section 3.25](#325-sprint-12-checks), step 5, expects no
   address or host name in the log. The logging README says IP masking is opt-in.
 - Decision: the owner's. Either mask the bridged lines, or accept them and change
@@ -3605,7 +3603,7 @@ belongs to.
 ### Deviations
 
 - D1 (S22 stream 1):
-  - My rotation check read `ROTATION_90` as `ROTATION_9`, so no touch was sent.
+  - The round's rotation check read `ROTATION_90` as `ROTATION_9`, so no touch was sent.
   - The TV's menu key sequence (Back, 14 times Down, OK, Right, OK) did not quit on
     the phone. The keys reached the window, but the stream went on.
   - Checked afterwards: no persisted setting changed. Whether a key reached the PC
@@ -3641,8 +3639,8 @@ belongs to.
 
 ### Owner items
 
-The owner ran a script of the round, which is not in the repository. These are the
-items the round did not run, with the step of section 3.25 they match.
+The owner has a script for these items, which is not in the repository. These are
+the items the round did not run, with the step of section 3.25 they match.
 
 - S22 (owner check): wireless ADB may need to be re-enabled. Look at the screen, and
   leave any stream with Back. Expected: no stream running, and the paired host

@@ -575,10 +575,10 @@ conversion is merged; the device round is pending. Owner decisions of 2026-10-23
   structural rules are suppressed on the declaration with a backlog item, and there is no
   detekt baseline (ADR 0059, rule 6).
 - **C1, coverage:** converted code counts in Kover coverage at once. The exclusion narrows to
-  the Java that stays. In Codecov the converted path gets its own patch and project statuses,
-  separate from the 90% gate; their target comes from the coverage measured at the end of
-  Sprint 12 and rises each sprint to 90%. Each migration sprint is merged on its own
-  (ADR 0059, rule 7).
+  the Java that stays. Converted code is held to the same Codecov gate as the rest (90% of
+  the patch): the separate statuses first planned were dropped once the converted code
+  measured 97.0% line coverage at the end of the sprint. Each migration sprint is merged on
+  its own (ADR 0059, rule 7).
 - **D1, dead code:** verified dead code is removed before conversion, each removal in its own
   commit with its evidence (ADR 0059, rule 8).
 - **Behaviour:** a conversion keeps behaviour. Bugs found are reported and go to the backlog

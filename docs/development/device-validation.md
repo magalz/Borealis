@@ -1464,7 +1464,8 @@ Steps:
      dialog.
    - Expected: the performance overlay shows the chosen resolution, fps and bitrate.
    - Expected: input works in the stream from a keyboard, from a pad and from touch.
-   - To check audio, play a sound on the PC during the stream: the host sends no audio while the PC is silent.
+   - To check audio, play a sound on the PC during the stream: the host sends no audio
+     while the PC is silent.
 5. Logs (Streamer, S22).
    - Expected: the output of `LimeLog` still reaches `BorealisLog`, as seen in the
      logcat capture of section 1.4.
@@ -3508,7 +3509,8 @@ later items are left for the owner (`owner check`).
   - `files/uniqueid`, `files/client.crt`, `files/client.key`: the same on both
     devices, before and after the install.
   - The default preferences file, `GlPreferences.xml`, `BorealisStream.xml`,
-    `HiddenApps.xml`, the datastore and the cache folders: the same. On the TV the
+    `HiddenApps.xml` and the datastore: the same. The cache folders, read on the TV
+    only: the same. On the TV the
     default preferences file was still byte-identical to the baseline at the end
     of the round, after the settings were changed and set back.
   - `databases/computers4.db`: 2 rows in `Computers` on both devices. On the S22 the
@@ -3526,26 +3528,33 @@ belongs to.
 | --- | --- | --- | --- |
 | 1 Upgrade in place | TV | pass | `adb install -r`: Success, 21:26:01 to 21:26:11. Identity and settings unchanged. Still 2 hosts; the paired host is Online, and its app list opened with no PIN asked. |
 | 1 Upgrade in place | S22 | pass | `adb install -r`: Success, 21:06:25 to 21:06:48. Identity and settings unchanged. Still 2 hosts; the paired host is Online, and its app list opened with no PIN asked. |
+| - First start | TV | pass | Cold start after the install. Crash buffer 0. The startup log reads `commit=9fe2e6b059fe`. |
+| - First start | S22 | pass | Cold start 947 ms. Crash buffer 0. |
 | 1 Pinned shortcut and TV channel | TV, S22 | owner check | No shortcut was pinned on either device, so the pinned-shortcut item was not tested. The TV channel row was not read (no permission to query it). |
 | 2 Discovery (mDNS) | TV | pass | On each cold start: `NSD: Service discovery started`, the machine appeared and resolved, and the mDNS address lines, all on `Borealis.UPSTREAM` (`logger=com.limelight.LimeLog`), as on the old build. |
-| 2 Discovery (mDNS) | S22 | owner check | The S22 showed the same 2 hosts at start. Its discovery lines were not read. |
+| 2 Discovery (mDNS) | S22 | not run | The S22 showed the same 2 hosts at start. Its discovery lines were not read (reduced S22 scope). |
 | 2 Add host manual entry | TV, S22 | owner check | Not run: it needs the host's address. |
 | 3 App list | TV | pass | `/applist` answered 200 with two apps. No parse error. |
 | 3 App list | S22 | pass | The app list of the paired host opened with no PIN asked. |
-| 3 Box art | TV | owner check | The Apps grid draws monogram tiles on both builds; the grid does not use box art. The first stream cached a 600 x 800 PNG (8231 B) in `cache/boxart`. The owner decides whether the monogram look is the expected one. |
-| 3 Box art | S22 | owner check | Not read. |
-| 4 Short stream: launch, Resume, Quit | TV | pass | Launch 21:29:12, first frame 21:29:34.5, Quit ended with `cancel=1` at 21:30:11.4 and no error dialog. Resume at 21:33:27 with `<resume>1</resume>`, first frame 21:33:52.6, Quit at 21:34:02. No crash in the crash buffer. |
-| 4 Short stream: launch, Resume, Quit | S22 | owner check | Stream 1 (21:09:54) reached its first frame at 21:10:09.98, and ended with Home at 21:12:32, not with Quit (D1). Stream 2 (21:15:58) had no first frame before the S22 left ADB (D2). Resume and Quit were not run on the S22. |
-| 4 Input: keyboard, pad, touch | TV | owner check | Keys sent by `adb` (`DPAD_RIGHT`, `SHIFT_LEFT`) reached the stream with no crash. A physical keyboard, a pad and touch were not tested. |
+| 3 Box art | TV | owner check | The round recorded a pass, because the build behaves as the old one: the Apps grid draws monogram tiles on both builds, and the grid does not use box art. The first stream cached a 600 x 800 PNG (8231 B) in `cache/boxart`. Step 3 expects box art for each app, so the owner decides whether the monogram tiles are the expected look. |
+| 3 Box art | S22 | not run | Not read (reduced S22 scope). |
+| 4 Short stream: launch, Resume, Quit | TV | pass | Launch 21:29:12, first frame 21:29:34.5, Quit ended with `cancel=1` at 21:30:11.4, and the Library came back. Resume: OK on Desktop at 21:33:34.7, `<resume>1</resume>` at 21:33:50.6, first frame 21:33:52.6, with no 409 and no conflict screen; Quit at 21:34:02. No crash in the crash buffer. |
+| 4 Short stream: launch, Resume, Quit | S22 | owner check | Stream 1 (21:09:54) reached its first frame at 21:10:09.98, and ended with Home at 21:12:32, not with Quit (D1). Stream 2 (21:15:58) had no first frame before the S22 left ADB (D2). Resume and Quit were not run on the S22; the menu, Resume and Quit are owner items. |
+| 4 Input: keyboard, pad, touch | TV | owner check | Keys sent by `adb` (`DPAD_RIGHT`, `SHIFT_LEFT`) caused no crash, and the stream went on. A physical keyboard and a pad were not tested. |
 | 4 Input: keyboard, pad, touch | S22 | owner check | No touch was sent (D1, D2). |
 | 4 Performance overlay | TV | owner check | Logcat matches the set 1280x720 at 59 fps (cap FPS on a 60 Hz display). The bitrate is not in logcat, and the overlay was not read on screen. |
 | 4 Performance overlay | S22 | owner check | Not read (D1, D2). |
-| 4 Audio in the stream (added note) | TV | fail, P1 explained | No audio in any stream of the round. Not a regression: see P1, which explains the cause and the A/B test. |
-| 4 Audio in the stream (added note) | S22 | fail, P1 explained | No `Received first audio packet` line in its stream of about 2.5 min. See P1. |
+| - 1080p, 30 fps, 25 Mbps | TV | pass | mode=1920x1080x30, decoder 1920x1080 at 30 fps, about 31 frames a second received. The bitrate is not in logcat. Set back to 720p and 60 fps, which returned the bitrate to Automatic. |
+| - Frame pacing "Lowest latency", codec H.264 | TV | pass | mode=1280x720x60 with no "Adjusting FPS" line; `video/avc` on the low-latency decoder. Set back to "Balanced with fps limit" and Automatic. |
+| - Refresh and reload | TV | pass | On Apps, `/applist` was fetched again every 30 s. Hosts were polled, and NSD discovery restarted after a stream. |
+| - Cold start after a force-stop | TV | pass | COLD, 5374 ms. Both hosts back, the paired one Online, discovery lines present, crash buffer 0. |
+| 4 Audio in the stream (added note) | TV | pass in the follow-up | The round's streams had a silent PC and received no audio. In the follow-up, with a sound playing on the PC, the first audio packet arrived after 6300 ms from the stream start. Not a regression: see P1. The audible output is an owner check. |
+| 4 Audio in the stream (added note) | S22 | owner check | The round's stream had a silent PC and logged no `Received first audio packet` line. Audio with a sound playing was not tested on the S22. See P1. |
 | 5 Logs: LimeLog reaches BorealisLog | TV | pass | `Borealis.UPSTREAM` lines with `logger=com.limelight.LimeLog`, and `Borealis.APP`, `Borealis.CORE` and `Borealis.HOST` at process start. |
+| 5 Logs: LimeLog reaches BorealisLog | S22 | not run | The S22 lines were scanned for secrets (next row), but the bridge was not checked on its own. |
 | 5 Logs: no PIN, token, key or certificate | TV, S22 | pass | A scan of 1457 `Borealis.*` lines found no unredacted `rikey`, `rikeyid`, `salt`, `clientcert`, pairing challenge, `uniqueid`, PIN or PEM block. They show `[REDACTED]`. |
 | 5 Logs: no address or host name | TV, S22 | fail, P2 | Addresses and host names appear in clear in `Borealis.UPSTREAM` lines. The old build does the same. See P2. |
-| 6 Owner UAT: pairing, Forget, Wake-on-LAN | TV, S22 | owner check | Not run in the round. |
+| 6 Owner UAT: pairing, Forget, Wake-on-LAN | one device | owner check | Not run in the round. |
 | 7 End: TV asleep | TV | pass | Home, then `KEYCODE_SLEEP`: `mWakefulness=Asleep` at 21:55:37. Crash buffer 0. |
 | 7 End: S22 | S22 | owner check | Unreachable over ADB since 21:17, so not locked or sent Home by the round (D3). |
 
@@ -3556,14 +3565,16 @@ belongs to.
 - What: no stream of the round received audio. On the TV, all five streams logged
   `Borealis.COMMONC: No audio traffic was ever received from the host!`. On the S22,
   its stream of about 2.5 minutes logged no `Received first audio packet` line.
-  The video worked in every stream.
+  The video worked in every stream that reached a first frame: all five TV streams
+  and S22 stream 1.
 - Launch parameters: the same as in the Sprint 11 capture (`localAudioPlayMode=0`,
   `surroundAudioInfo=196610`, audio port 48000, audio channel config `0xC`).
 - Cause: the host sends audio only while something plays on the PC, and the PC was
   silent during the round's streams.
   - In LuminalShine, a capture timeout writes silence only when the client asks for
     `continuousAudio` (`src/platform/windows/audio.cpp:569`). `/launch` reads that
-    argument with a default of 0 (`src/nvhttp.cpp:1617`), and silent frames are
+    argument with a default of 0 (see the [host contract](../host-contract/luminalshine.md#14-audio),
+    section 14), and silent frames are
     skipped (`src/audio.cpp:276`). Neither the Sprint 11 build nor the Sprint 12
     build sends `continuousAudio`.
 - A/B test on the TV, 2026-10-23 22:10 to 22:16:
@@ -3578,7 +3589,8 @@ belongs to.
     `client.crt`, `client.key`, the preferences, the datastore, the host database
     rows (2) and the shortcuts (1 dynamic, 0 pinned).
 - Verdict: not a regression. The Sprint 12 build behaves as the Sprint 11 build
-  does. No code change is needed. To check audio, play a sound on the PC during the
+  does. Asking for `continuousAudio` is an optional feature in the backlog. To check
+  audio, play a sound on the PC during the
   stream (see the note in [section 3.25](#325-sprint-12-checks), step 4).
 - Steps to reproduce: start Desktop on the TV, play a sound on the PC, then quit.
   Check logcat for `Received first audio packet`.
@@ -3596,7 +3608,10 @@ belongs to.
   lines. The old build does the same, so this is not a regression of the conversion.
   Secrets are redacted.
 - Against the checklist: [section 3.25](#325-sprint-12-checks), step 5, expects no
-  address or host name in the log. The logging README says IP masking is opt-in.
+  address or host name in the log. The logging README
+  (`apps/android/borealis/README.md`) says address masking is off by default, and
+  that host names in free text, the upstream `LimeLog` lines included, are not
+  masked even with "Mask addresses" on.
 - Decision: the owner's. Either mask the bridged lines, or accept them and change
   the checklist. The roadmap records both options under Sprint 12 backlog (d).
 
@@ -3605,7 +3620,8 @@ belongs to.
 - D1 (S22 stream 1):
   - The round's rotation check read `ROTATION_90` as `ROTATION_9`, so no touch was sent.
   - The TV's menu key sequence (Back, 14 times Down, OK, Right, OK) did not quit on
-    the phone. The keys reached the window, but the stream went on.
+    the phone. The keys reached the window, but the stream went on; its OK, Right,
+    OK went to an unknown menu item.
   - Checked afterwards: no persisted setting changed. Whether a key reached the PC
     (for example through "Send keys") is not known.
   - The stream ended with Home at 21:12:32, not with Quit. It ran 2 min 40 s, over
@@ -3620,6 +3636,10 @@ belongs to.
   was Borealis with the keyguard dismissed. The owner should check it and lock it.
 - Audio follow-up: the A/B test of P1 played a Windows sound on the PC during its
   streams, on 2026-10-23 from 22:10 to 22:16. The round itself had the PC silent.
+  For the A/B, the Sprint 11 build was installed over the Sprint 12 build on the TV,
+  then the Sprint 12 build was installed again (22:13), with the data kept and the
+  identity snapshots compared at each step. The TV ended on the Sprint 12 build and
+  asleep.
 
 ### Observations
 
@@ -3662,10 +3682,15 @@ the items the round did not run, with the step of section 3.25 they match.
 - Pinned shortcut (step 1): pin a game shortcut on the S22 (press and hold the
   Borealis icon in the launcher), open it, and check that it starts the right
   stream. No shortcut is pinned on either device today.
-- TV, pairing (section 3.25, step 6): a wrong PIN first, then the right one, on
+- Box art (step 3): decide whether the monogram tiles of the Apps grid are the
+  expected look on both devices.
+- Keyboard (step 4): a short stream with a physical keyboard, if one is at hand.
+- S22 Resume (step 4): start a stream, press Home, reopen the app and resume the
+  running app. Expected: the stream comes back with no conflict screen.
+- Pairing on one device (section 3.25, step 6): a wrong PIN first, then the right one, on
   `26.10.0-beta.1`. Forget, then pair again. Add host by address. Wake-on-LAN with
   the PC asleep.
 - P2: decide whether to mask the upstream lines or to change the checklist.
 - Clean-up: put back any setting that was changed. The TV's values at the end of the
-  round match the baseline. Press Home on both devices and put the TV to sleep (done
-  on the TV).
+  round match the baseline. Press Home on both devices and put the TV to sleep (the
+  TV was left asleep after the audio follow-up).

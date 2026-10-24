@@ -35,9 +35,6 @@
     <string name="conn_hardware_latency">Average hardware decoding latency:</string>
 
     <!-- General strings -->
-    <string name="yes">Yes</string>
-    <string name="no">No</string>
-    <string name="delete_pc_msg">Are you sure you want to delete this PC?</string>
     <string name="slow_connection_msg">Slow connection to PC\nReduce your bitrate</string>
     <string name="poor_connection_msg">Poor connection to PC</string>
 

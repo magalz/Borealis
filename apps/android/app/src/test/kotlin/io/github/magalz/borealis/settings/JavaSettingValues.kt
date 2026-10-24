@@ -58,7 +58,7 @@ private fun framePacing(c: PreferenceConfiguration): String =
     }
 
 private fun audioConfig(c: PreferenceConfiguration): String =
-    when (c.audioConfiguration.channelCount) {
+    when (checkNotNull(c.audioConfiguration).channelCount) {
         STEREO_CHANNELS -> "2"
         SURROUND_51_CHANNELS -> "51"
         else -> "71"

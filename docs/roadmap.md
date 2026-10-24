@@ -465,7 +465,7 @@ Why this order:
 
 ### Sprint 11: Appearance
 
-In progress, not merged. Owner decisions of 2026-10-21. Every font in the font
+Merged as pull requests #55 (2026-10-22) and #56 (2026-10-23). Owner decisions of 2026-10-21. Every font in the font
 choice is there for an accessibility reason, from a survey of primary sources
 that [ADR 0058](adr/0058-appearance-and-reading-options.md) records.
 
@@ -550,13 +550,13 @@ inherited Java to Kotlin before SecOps, one area at a time, in three sprints.
   class and every native method signature stay, because the JNI symbols depend on
   them. Kotlin code that Java still calls keeps a Java-friendly API (`@JvmStatic`,
   `@JvmField`, `@JvmOverloads`) until its last Java caller is converted.
-- **ADR:** an ADR on the conversion rules is written when Sprint 12 is planned. It
-  updates [ADR 0004](adr/0004-kotlin-for-new-android-code.md).
+- **ADR:** [ADR 0059](adr/0059-convert-the-inherited-java-to-kotlin.md) records the conversion
+  rules. It amends [ADR 0004](adr/0004-kotlin-for-new-android-code.md).
 - **Dead code:** the full sweep of the Java methods for dead code happens area by
   area. Sprint 8, item 1 hands it over.
-- **Size:** 80 Java files and 21,539 lines under
-  `apps/android/app/src/main/java` on 2026-10-21, almost all of it the stream
-  core.
+- **Size:** 33 Java files and 14,214 lines under `apps/android/app/src/main/java`
+  after Sprint 12, almost all of it the input, video and `Game` code of Sprints 13
+  and 14. Before Sprint 12 it was 80 Java files and 21,539 lines (2026-10-21).
 - **Upstream cherry-picks:** an area that is converted no longer takes upstream
   cherry-picks directly. Its fixes are ported by hand. See
   [upstream cherry-picks](development/upstream-sync.md).
@@ -565,25 +565,79 @@ inherited Java to Kotlin before SecOps, one area at a time, in three sprints.
 
 ### Sprint 12: Kotlin migration, network, host and support
 
-About 7,300 lines:
+Converted in the phase branch `phase/s12-kotlin-network`, one merged task per area. Every
+conversion is merged; the device round is pending. Owner decisions of 2026-10-23, recorded in
+[ADR 0059](adr/0059-convert-the-inherited-java-to-kotlin.md):
 
-- network and host, 5,402 lines: `nvstream/http` (`NvHTTP` and pairing, 1,467),
+- **H1, placement and history:** converted files move to `src/main/kotlin/com/limelight/...`
+  in a rename-only commit, and the conversion follows in its own commit (ADR 0059, rule 1).
+- **A1, static analysis:** the conversion is faithful. Mechanical detekt findings are fixed,
+  structural rules are suppressed on the declaration with a backlog item, and there is no
+  detekt baseline (ADR 0059, rule 6).
+- **C1, coverage:** converted code counts in Kover coverage at once. The exclusion narrows to
+  the Java that stays. Converted code is held to the same Codecov gate as the rest (90% of
+  the patch): the separate statuses first planned were dropped once the converted code
+  measured 97.0% line coverage at the end of the sprint. Each migration sprint is merged on
+  its own (ADR 0059, rule 7).
+- **D1, dead code:** verified dead code is removed before conversion, each removal in its own
+  commit with its evidence (ADR 0059, rule 8).
+- **Behaviour:** a conversion keeps behaviour. Bugs found are reported and go to the backlog
+  (ADR 0059, rule 10).
+
+Reference source: the LuminalShine reference is now the owner's fork at `D:\Repos\luminalshine`.
+
+Size: 47 files and 7,325 lines, under `apps/android/app/src/main/java`:
+
+- network and host, 31 files and 5,402 lines: `nvstream/http` (`NvHTTP` and pairing, 1,467),
   `computers` (1,577), `nvstream/mdns` (728), `nvstream/wol`, `binding/crypto`,
   `discovery`, and `nvstream` (`NvConnection` and the stream configuration, 991),
   `nvstream/av` and `nvstream/input`;
-- support, 1,923 lines: `preferences` (`PreferenceConfiguration`, 599), `utils`
+- support, 16 files and 1,923 lines: `preferences` (`PreferenceConfiguration`, 599), `utils`
   (1,004), `ui`, `grid/assets`, `PosterContentProvider`, `LimeLog` and `binding`.
+
+Outcome, by issue (each one a merged task of the phase):
+
+- **Done, #57 tooling.** Kover counts the converted `com.limelight` code in coverage.
+- **Done, #58 host contract.** The 26.10.0-beta.1 changes checked in the source, with
+  their fixtures. See the [host contract](host-contract/README.md).
+- **Done, #59 host model.** `ComputerDetails`, `NvApp`, `HostHttpResponseException` and
+  `ComputerManagerListener`.
+- **Done, #60 stream types.** The stream configuration, the renderer and the packet types.
+- **Done, #61 discovery.** Host discovery and Wake-on-LAN.
+- **Done, #62 preferences.** `PreferenceConfiguration` and `GlPreferences`.
+- **Done, #63 crypto and pairing.** The client identity and pairing.
+- **Done, #64 nvhttp.** The GameStream HTTP client.
+- **Done, #65 computer store.** The host list and the client id. The three legacy
+  database readers were removed.
+- **Done, #66 support.** `LimeLog`, `utils`, `ui`, `DiskAssetLoader`, `PosterContentProvider`
+  and `Vector2d`.
+- **Done, #67 nvconnection.** The stream connection.
+- **Done, #68 computer manager.** `ComputerManagerService`.
+
+Removed, not converted:
+
+- **Legacy database readers.** The three `LegacyDatabaseReader` classes (308 lines) read
+  `computers.db`, `computers2.db` and `computers3.db`, the databases of older Moonlight
+  versions under the `com.limelight` application id. Borealis's application id is
+  `io.github.magalz.borealis`, so these files never exist in its data (ADR 0059, rule 8).
+- **`ByteBufferDescriptor` and four unused helpers.** Verified unused and removed before
+  conversion, each removal with its own commit (ADR 0059, rule 8): `LimeLog.setFileHandler`
+  and the `UiHelper` methods `notifyNewRootView`, `applyStatusBarPadding` and
+  `displayDeletePcConfirmationDialog`. The strings `yes`, `no` and `delete_pc_msg`, used only
+  by the last one, went with it.
+
+`Vector2d` was first reported unused, but `ControllerHandler` uses it. It was converted
+instead of removed.
 
 Items:
 
-- HTTP and computers come first, because Phase 3 uses them.
-- **Re-verify the 26.10.0-beta.1 host changes.** Moved from the backlog: check
-  them in the source, and capture a fixture folder for them. The characterization
-  tests of the HTTP layer use these fixtures. See the
-  [host contract](host-contract/README.md).
-- The device round: discovery, Add host, pairing (including a wrong PIN on
+- **Done.** HTTP and computers came first, because Phase 3 uses them.
+- **Done (#58).** Re-verify the 26.10.0-beta.1 host changes, moved from the backlog: the
+  changes are checked in the source, and a fixture folder captures them. The
+  characterization tests of the HTTP layer use these fixtures.
+- **Pending.** The device round: discovery, Add host, pairing (including a wrong PIN on
   26.10.0-beta.1), Wake-on-LAN, Forget, the app list, pinned shortcuts and the TV
-  channel, launch, resume and Quit.
+  channel, launch, resume and Quit. The result is recorded after the round.
 
 ### Sprint 13: Kotlin migration, input
 
@@ -671,6 +725,14 @@ Planned, not started.
   last. Robolectric cannot see TalkBack's traversal links: check it with TalkBack
   on a device in this sprint.
 - **A UAT note:** "Fn 123" wraps on narrow phones at the default look.
+- **A pinned app shortcut fails when Borealis is not running.** Found in the Sprint 12
+  round (2026-10-24); the owner put it here. The launch request of the shortcut fires
+  once the app list loads from the cache, before the first poll gives the host an
+  address, so `ServerHelper.doStart` shows "Computer is offline" and starts nothing.
+  Proposed fix, with a test first: wait for the host's first poll answer before the
+  stream starts; a host that never answers still ends in the offline message. See
+  [device-validation section 17](development/device-validation.md#17-results-sprint-12),
+  the follow-up on the S22.
 
 ### Sprint 16: SecOps
 
@@ -707,6 +769,50 @@ release. Sprint 16 is hardening and security testing.
   - An independent review recommended against a `/unpair` cancel route.
   - See [host contract, section 4.3](host-contract/luminalshine.md#43-pairing-status-codes)
     and the [host-side table](#host-side-items-luminalshine).
+- **Security observations from the Sprint 12 conversion.** Paths are under
+  `apps/android/app/src/main/kotlin/`. Each one is a finding to audit, not a fix.
+  - Pinning accepts any certificate the platform trusts; the pin only limits the
+    untrusted ones (`com/limelight/nvstream/http/NvHTTP.kt`).
+  - A failed identity save is only printed, and a corrupt or missing identity is
+    regenerated silently, so every host pairs again with no signal
+    (`com/limelight/binding/crypto/AndroidCryptoProvider.kt`).
+  - The PIN hash is compared with `Arrays.equals`, which is not constant time
+    (`com/limelight/nvstream/http/PairingManager.kt`).
+  - `hexToBytes` is lenient (non-hex characters and Unicode digits), and a short host
+    answer is zero-padded (`com/limelight/nvstream/http/PairingManager.kt`).
+  - Every client sends the constant `uniqueid` `0123456789ABCDEF`
+    (`com/limelight/nvstream/http/NvHTTP.kt`).
+  - A failed HTTPS serverinfo for a pinned host falls back to plain HTTP
+    (`com/limelight/nvstream/http/NvHTTP.kt`).
+  - The client id is logged at INFO with "UID is now" (`com/limelight/computers/IdentityManager.kt`).
+  - `printStackTrace` writes to stderr, and can carry host names or addresses; the
+    Wake-on-LAN sender is one case (`com/limelight/nvstream/wol/WakeOnLanSender.kt`).
+  - The `FileNotFoundException` message carries the full URL; a debug log can show it
+    (`com/limelight/nvstream/http/NvHTTP.kt`).
+  - `defaultNetworkLock` has no `try`/`finally`, so an exception under a VPN wedges
+    discovery (`com/limelight/computers/ComputerManagerService.kt`).
+  - `waitForPollingStopped` spins and prints stack traces while it is interrupted during
+    a poll (`com/limelight/computers/ComputerManagerService.kt`). Not reachable today.
+  - Not listed: the debug URL logging of the HTTP client. The `JulBridge` and the
+    `Redactor` mask `rikey`, the salt and the client certificate.
+- **Addresses in the logs (owner, 2026-10-24).** Local addresses may stay in the logs;
+  public addresses, and those of internet overlays such as Tailscale, may not. In every
+  line and export, mask the addresses outside 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16,
+  loopback and link-local: public IPv4, the CGNAT range 100.64.0.0/10, global IPv6 and the
+  Tailscale ULA `fd7a:115c:a1e0::/48`. The central place is the `Redactor` of the
+  logging module. moonlight-common-c lines go straight to logcat, unredacted, when the
+  forward to `BorealisLog` fails (before it is set up, or on a JNI error): the fallback
+  in `BridgeClLogMessage` (`app/src/main/jni/moonlight-core/callbacks.c`) must be
+  covered too. The STUN print in `simplejni.c` is dead code since ADR 0050. Host names
+  stay visible, and the "Mask addresses" switch still masks every address and the host
+  names it recognises. See
+  [device-validation section 17](development/device-validation.md#17-results-sprint-12), P2.
+- **CodeQL `java/path-injection` on `PosterContentProvider`.** CodeQL flags the box-art
+  file path of the exported provider, on the Java file on `main` and on the converted
+  Kotlin file (pull request #70). The host id is checked by `PosterRequest.checkedAppId`,
+  which CodeQL does not see as a sanitizer. Owner decision of 2026-10-24: the alerts stay
+  open until this sprint, which makes the check visible to CodeQL or dismisses them with
+  the reason.
 
 ### Sprint 17: release preparation
 
@@ -781,6 +887,9 @@ The owner creates the tag. See the [release procedure](development/release.md).
     the app already caches it for pinned shortcut icons and the TV channel. The
     Apps screen shows the initials of each app. App covers are one of the
     [Phase 3 extension points](ux/phase-2-proposal.md#phase-3-extension-points).
+    The owner confirmed this on 2026-10-24, after the Sprint 12 round. The host serves
+    each app's image at `/appasset`, and a default `box.png` for an app with none. The
+    owner chooses what such an app shows after seeing the covers in the grid.
 - **Phase 4: PyroWave.** See the [host contract](host-contract/pyrowave.md).
   The official LuminalShine build ships experimental PyroWave, opt-in and
   needing Vulkan 1.3, in 26.10.0-beta.1 (release notes).
@@ -841,6 +950,131 @@ Kotlin from Sprint 12 on.
 - **Why the Hosts list does not update after Forget.** The owner wants this
   looked into, so the list updates by itself. Schedule: after SecOps (Sprint 16),
   or post-MVP.
+
+From the Sprint 12 conversion (2026-10-23). Nothing here is scheduled; the owner decides
+when. Paths are under `apps/android/app/src/main/kotlin/com/limelight/`, except
+`HeldStageFailures.kt`, `library/UpstreamHostShortcuts.kt` and
+`library/ComputerManagerConnection.kt`, which are under
+`apps/android/app/src/main/kotlin/io/github/magalz/borealis/`.
+
+- **(a) Refactor the converted code.** The 48 places marked `(Sprint 12 backlog)` each
+  hold one suppression annotation (detekt rules, and in two places a lint check or a
+  compiler warning), so the converted code keeps the shape of the
+  inherited Java (ADR 0059, rule 6). Most are structural rules (`ReturnCount`,
+  `CyclomaticComplexMethod`, `NestedBlockDepth`, `LongMethod` and similar). Some suppress
+  `PrintStackTrace`, where the Java wrote to stderr, and a few suppress `ThrowsCount`,
+  `TooGenericExceptionThrown` or `TrulyRandom`. Some comments say that a fix would be a
+  behaviour change. By file, with the count:
+  - `PosterContentProvider.kt`: 1
+  - `binding/crypto/AndroidCryptoProvider.kt`: 5
+  - `computers/ComputerDatabaseManager.kt`: 2
+  - `computers/ComputerManagerService.kt`: 9
+  - `computers/IdentityManager.kt`: 1
+  - `nvstream/NvConnection.kt`: 5
+  - `nvstream/NvConnectionListener.kt`: 1
+  - `nvstream/StreamConfiguration.kt`: 1
+  - `nvstream/av/video/VideoDecoderRenderer.kt`: 1
+  - `nvstream/http/NvHTTP.kt`: 4
+  - `nvstream/http/PairingManager.kt`: 2
+  - `nvstream/mdns/JmDNSDiscoveryAgent.kt`: 1
+  - `nvstream/mdns/MdnsDiscoveryAgent.kt`: 1
+  - `nvstream/mdns/NsdManagerDiscoveryAgent.kt`: 1
+  - `nvstream/wol/WakeOnLanSender.kt`: 3
+  - `preferences/PreferenceConfiguration.kt`: 3
+  - `utils/ShortcutHelper.kt`: 1
+  - `utils/TvChannelHelper.kt`: 6
+
+  That is 48 suppressions in 18 files.
+- **(b) Bugs found during the Sprint 12 conversion.** None is fixed. The conversion keeps
+  behaviour (ADR 0059, rule 10).
+  - **Priority:** `utils/ShortcutHelper.kt`, `reapShortcutsForDynamicAdd`, loops forever
+    when the dynamic shortcut list is full and `forceAdd` is true, because it never re-reads
+    the list. `library/UpstreamHostShortcuts.kt`, `reportHostOpened`, runs it inside
+    `synchronized(publishing)`, so publishing blocks. The upstream code has the same loop.
+    The fix is to re-read the list inside the loop. Propose it to the owner as a priority
+    fix after Sprint 12.
+  - `nvstream/http/ComputerDetails.kt`: `update()` overwrites `state`, `name`, `uuid`,
+    `rawAppList` and other fields without a condition. `library/ComputerManagerConnection.kt`
+    works around it with `withListFrom`.
+  - `nvstream/http/ComputerDetails.kt`: `AddressTuple` is mutable, and its `hashCode`
+    depends on the mutable fields. A latent hazard, not a live bug.
+  - `HeldStageFailures.kt` (`io/github/magalz/borealis/`): does not forward
+    `launchRetrying`, `launchStarting` or `launchConflict`. Unreachable today.
+  - `preferences/PreferenceConfiguration.kt`: `readPreferences` throws
+    `NumberFormatException` on a bad stored `list_fps`, width or height, and no caller
+    catches it.
+  - `preferences/PreferenceConfiguration.kt`: a stored resolution with no "x" that is not a
+    legacy name (for example `"Native"`) is silently rewritten as 1280x720.
+  - `preferences/PreferenceConfiguration.kt`: `checkbox_51_surround=true` overwrites a
+    user-chosen `list_audio_config`. When it is false, the legacy key stays forever.
+  - `preferences/PreferenceConfiguration.kt`: the legacy `seekbar_bitrate` is read but never
+    migrated; only the streaming-settings reset removes it.
+  - `preferences/PreferenceConfiguration.kt`: `isSquarishScreen(0, y)` gives NaN or
+    Infinity, and so returns false.
+  - `utils/TvChannelHelper.kt`: uses the logo width as its height. The logo is always square.
+  - `grid/assets/DiskAssetLoader.kt`: `LoaderTuple` has `equals` without `hashCode`.
+  - `utils/ShortcutHelper.kt`: `disableComputerShortcut` matches by prefix, so a host `ab`
+    catches the shortcuts of host `abc`.
+  - `PosterContentProvider.kt`: `openFile` serves any three-segment path as box art.
+  - `utils/TvChannelHelper.kt`: `setIntentUri` is unused. `requestChannelOnHomeScreen`
+    queries the provider twice.
+  - `computers/ComputerDatabaseManager.kt`: `updateComputer` throws
+    `SQLiteConstraintException` for a null name.
+  - `computers/ComputerDatabaseManager.kt`: `getAllComputers` throws on one bad row and hides
+    the whole list. `ComputerManagerService.onCreate` calls it without a guard.
+  - `computers/ComputerDatabaseManager.kt`: a row with a null uuid is stored and can never be
+    deleted.
+  - `computers/IdentityManager.kt`: "UID written to disk" is logged before the flush. The
+    client id file has no hex check.
+  - `nvstream/mdns/NsdManagerDiscoveryAgent.kt`: leaks a `ServiceInfoCallback` when a service
+    is found twice. Its executor is never shut down, and `DiscoveryService.kt` has no
+    `onDestroy`.
+  - `nvstream/wol/WakeOnLanSender.kt`: the port maths overflows above an HTTP port of about
+    65514. The `IllegalArgumentException` that follows aborts the whole send.
+  - `nvstream/mdns/MdnsDiscoveryAgent.kt`: the IPv6-only add and notify run outside
+    `synchronized(computers)`.
+  - `nvstream/mdns/JmDNSDiscoveryAgent.kt`: a dead `catch (UnsupportedEncodingException)`.
+  - `nvstream/http/NvHTTP.kt`, kept as they are: an app id above `Int.MAX_VALUE` is dropped;
+    `status_code` is truncated to 32 bits; text before the first `<App>` throws an unchecked
+    `NoSuchElementException`; the release path uses the platform default charset.
+  - `nvstream/NvConnection.kt`: `stop()` releases a semaphore permit even when the connection
+    never took one, and a failed `startConnection` releases one too. Permits can exceed 1, so
+    two connections could start together.
+  - `nvstream/NvConnection.kt`: a start whose app has no id finds the app by name but launches
+    with `appid=0`. `Game` always passes an id.
+  - `nvstream/NvConnection.kt`: the `HostHttpResponseException` catch of the start thread does
+    not check `launchCancelled`. The 470 and 525 messages also apply to errors while
+    resolving a conflict (Join).
+  - `computers/ComputerManagerService.kt`: `waitForPollingStopped` spins and prints stack
+    traces while it is interrupted during a poll. Not reachable today.
+  - `computers/ComputerManagerService.kt`: `getLocalDatabaseReference` is a non-atomic
+    check-then-increment. `runPoll` leaks a database reference if the listener or the
+    database throws.
+  - `computers/ComputerManagerService.kt`: `populateExternalAddress` leaks `defaultNetworkLock`
+    when STUN throws, and has a redundant condition.
+  - `computers/ComputerManagerService.kt`: an offline host is re-notified every fourth failed
+    poll, and the OFFLINE write counts as a success for the TTL.
+  - `computers/ComputerManagerService.kt`: `addComputerBlocking` adds a preset-ONLINE computer
+    without a uuid, so the next `addTuple` hits an NPE.
+  - `computers/ComputerManagerService.kt`: `startPolling` without discovery throws after it has
+    already changed its state. `invalidateStateForComputer` blocks for the length of an
+    in-flight poll.
+  - `computers/ComputerManagerService.kt`: the mDNS `notifyComputerAdded` polls on the agent's
+    single executor.
+  - `computers/ComputerManagerService.kt` (low): calling `ApplistPoller.start()` twice orphans
+    the first thread. `lastSuccessfulPollMs` is read under a different lock than the one it is
+    written under.
+  - `computers/ComputerManagerService.kt`: `ReachabilityTuple` is dead code. It is kept.
+- **(c) For SecOps (Sprint 16).** The security observations of the conversion are listed
+  under Sprint 16, one line each, with their files.
+- **(d) From the Sprint 12 device round (2026-10-23).**
+  - The bridged upstream log lines (`Borealis.UPSTREAM`, from `LimeLog`) carry host names
+    and IP addresses in clear, as the inherited code always did. This is not a regression.
+    The owner decided on 2026-10-24: host names stay, and public and overlay addresses are
+    masked in Sprint 16 (see Sprint 16). See
+    [device-validation section 17](development/device-validation.md#17-results-sprint-12), P2.
+  - Optional feature: send `continuousAudio=1` in `/launch`, so the client gets a steady
+    audio stream on a silent PC. LuminalShine supports it.
 
 ## Host-side items (LuminalShine)
 

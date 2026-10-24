@@ -100,3 +100,5 @@ This ADR refines the gating part of [0046](0046-test-coverage-with-kover-llvm-co
 * Related: [0046](0046-test-coverage-with-kover-llvm-cov-and-codecov.md), which this ADR refines.
 * Related: [0016](0016-testing-strategy-and-tdd.md) for the testing strategy and TDD.
 * Related: [0047](0047-harvest-upstream-then-emancipate.md) for the upstream Java hooks that are excluded from coverage.
+
+Amended by [0059](0059-convert-the-inherited-java-to-kotlin.md): code converted from the inherited Java counts in coverage. Only the Java that stays is excluded, and converted code is held to the same 90% patch gate and 1% project tolerance as the rest.

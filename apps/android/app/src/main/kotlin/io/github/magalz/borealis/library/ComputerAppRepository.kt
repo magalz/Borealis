@@ -57,7 +57,12 @@ constructor(
                             host = details.toHost(parsed),
                             apps =
                                 parsed.map {
-                                    App(it.appId, it.appName, it.isHdrSupported, it.appId in hidden)
+                                    App(
+                                        it.appId,
+                                        checkNotNull(it.appName),
+                                        it.isHdrSupported,
+                                        it.appId in hidden,
+                                    )
                                 },
                             loading = raw == null,
                         )

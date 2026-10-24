@@ -61,7 +61,8 @@ constructor(
     private suspend fun add(details: ComputerDetails, host: String): AddHostResult =
         try {
             when {
-                connection.addComputer(details) -> AddHostResult.Added(details.uuid, details.name)
+                connection.addComputer(details) ->
+                    AddHostResult.Added(checkNotNull(details.uuid), checkNotNull(details.name))
                 withContext(io) { subnet.isWrongSiteLocalAddress(host) } ->
                     AddHostResult.WrongSubnet
                 else -> AddHostResult.Unreachable

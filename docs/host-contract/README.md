@@ -21,10 +21,12 @@ instead of re-reading the host source.
 | Commit | `5afdbdc6d04e0ad24cdcab5cfa9743bfc4f2dca8` (`NortheBridge/luminalshine@5afdbdc6`) |
 | Commit date | 2026-10-05 |
 | Nearest release tag | `26.09.1` (`git describe`: `26.09.1-15-g5afdbdc6`) |
-| Contract revision date | 2026-10-18 |
+| Contract revision date | 2026-10-23 |
 | Protocol version string the host reports | `7.1.431.-1` (`src/nvhttp.h:37`) |
 | Lineage | Sunshine, then Vibeshine, then LuminalShine; not derived from Apollo (`gh-pages-template/compare.html:66-82`) |
-| Later release | `26.10.0-beta.1`, a prerelease of 2026-10-20, is not covered by this revision. What it changes is recorded as "Changed in 26.10.0-beta.1", and every such item is reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source. Re-verify it in a later sprint. |
+| Later release | `26.10.0-beta.1`, a prerelease of 2026-10-20. The items the release notes (2026-10-20) list are recorded in `luminalshine.md` as "Changed in 26.10.0-beta.1" and were verified in source at the commit in the next row. The rest of the contract is verified at `5afdbdc6` only: re-verify it in a later sprint |
+| Commit for the 26.10.0-beta.1 items | `46f6936d249ea88f1e8042ff63e056aa29d5db21` (`NortheBridge/luminalshine@46f6936d`), commit date 2026-10-22, `git describe`: `26.09.1-38-g46f6936d`. The local clone has no `26.10.0-beta.1` tag, so the tag itself was not checked. `src/` is the same at `46f6936d` and at `e2662a44` (the merge of PR #206, 2026-10-20), which contains the merges of PRs #199, #200 and #203: the commits in between change only `.github/`, `scripts/` and `tests/` |
+| 26.10.0-beta.1 fixtures | Plain-HTTP responses captured from a running 26.10.0-beta.1 host on 2026-10-23: [`core/tests/fixtures/luminalshine/26.10.0-beta.1/`](../../core/tests/fixtures/luminalshine/26.10.0-beta.1/PROVENANCE.md) |
 
 The host source tree is the only authority for the host side. The Moonlight
 client facts were checked against the Moonlight Android 12.2 code in this
@@ -37,9 +39,16 @@ Artemis at commit `c5cf27f4` (2026-09-09).
 - A reference of the form `src/nvhttp.cpp:2831` is a path relative to the
   luminalshine repository root at `5afdbdc6`, followed by a line (or
   `first-last` line range).
+- Inside an item marked **Changed in 26.10.0-beta.1** in `luminalshine.md`, a
+  `src/` reference is relative to the same repository at `46f6936d` (the commit
+  named in the "Verified against" table), not at `5afdbdc6`.
 - A reference prefixed with `borealis:` is relative to the root of this
-  repository (for example `borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:815`).
+  repository (for example `borealis:apps/android/app/src/main/java/com/limelight/Game.java:489`).
+  A reference prefixed with `borealis@<commit>:` is relative to the root of this repository
+  at that commit (for example `borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:815`).
   Every `borealis:` reference was checked at commit `a050fbac` (2026-10-18).
+  References to files that Sprint 12 converted to Kotlin are pinned to
+  `borealis@2f321dc77`, the last commit before the Kotlin conversion, so their line numbers stay true.
   The files are Borealis code since
   [ADR 0054](../adr/0054-declare-independence-from-moonlight.md), so a line can
   move whenever Borealis edits its file; where the Moonlight 12.2 behaviour a sentence
@@ -56,8 +65,9 @@ Artemis at commit `c5cf27f4` (2026-09-09).
   behaviour.
 - No claim about a live host session is made anywhere in this folder, except
   the items marked **Observed** (device rounds of Sprints 2 and 3) and the
-  recorded `/unpair` response in [luminalshine.md](luminalshine.md) section 18,
-  item 4 (Phase 1 capture). The rest of the analysis was static source reading.
+  recorded `/unpair` responses in [luminalshine.md](luminalshine.md) section 18,
+  item 4 (the Phase 1 capture of 26.09.1 and the capture of 26.10.0-beta.1 on
+  2026-10-23). The rest of the analysis was static source reading.
 
 ## How to update the contract when the host changes
 
@@ -77,11 +87,13 @@ Artemis at commit `c5cf27f4` (2026-09-09).
 6. Update the contract fixtures (recorded host responses and captured
    handshakes used by the Borealis core tests). They live in
    `core/tests/fixtures/luminalshine/<version>/`, one directory per verified
-   LuminalShine version. The directory exists: `26.09.1/` holds
-   `serverinfo-http.xml`, `unpair-http.response` and `PROVENANCE.md`, and the
-   golden vectors are in `core/tests/fixtures/vectors/`. The fixtures are 26.09.1
-   only: 26.10.0-beta.1 has no folder yet, and capturing one is a follow-up. Add a
-   new directory for a new version instead of overwriting the old one.
+   LuminalShine version. The directories exist: `26.09.1/` holds
+   `serverinfo-http.xml`, `unpair-http.response` and `PROVENANCE.md`;
+   `26.10.0-beta.1/` holds `serverinfo-http.xml`, `unknown-path-http.response`,
+   `unpair-http.response` and `PROVENANCE.md`; the golden vectors are in
+   `core/tests/fixtures/vectors/`. Both fixture folders hold plain-HTTP responses
+   only, so neither has the HTTPS-only `LuminalShineVersion`. Add a new directory
+   for a new version instead of overwriting the old one.
 7. Run the contract tests against the new fixtures and record the result in the
    compatibility table.
 8. Commit with a Conventional Commit message such as
@@ -91,7 +103,8 @@ Artemis at commit `c5cf27f4` (2026-09-09).
 
 | Area | Host files |
 | --- | --- |
-| Launch/resume status codes and messages | `src/nvhttp.cpp` (`launch`, `resume`, `cancel`) |
+| Launch/resume status codes and messages | `src/nvhttp.cpp` (`launch`, `resume`, `cancel`, `run_on_launch_worker`), `src/serial_executor.h` |
+| Unknown paths and the host version marker | `src/nvhttp.cpp` (`not_found`, `serverinfo`, `put_luminalshine_version`), `src/nvhttp.h` |
 | Pairing flow and limits | `src/nvhttp.cpp` (`pair`, `submit_pin`) |
 | Codec advertisement | `src/nvhttp.cpp` (`serverinfo`), `src/rtsp.cpp` (`cmd_describe`) |
 | ANNOUNCE parsing and validation | `src/rtsp.cpp` (`cmd_announce`) |
@@ -109,8 +122,8 @@ above.
 
 | Borealis version | LuminalShine version | Host commit | Status | Notes |
 | --- | --- | --- | --- | --- |
-| (unreleased) | `26.09.1` + 15 commits | `5afdbdc6` | Known issues | Device-tested on 26.09.1 in Phase 1 and in the later sprint rounds (Galaxy S22 and Google TV Streamer; see [device-validation.md](../development/device-validation.md)). The Sprint 8 round of 2026-10-18 ran against LuminalShine 26.09.1 ([section 13](../development/device-validation.md#13-results-sprint-8)). Known issues: the 400 "Out of order call" after a wrong PIN, handled by one automatic restart; NortheBridge/luminalshine#194 (stray bytes after a 404; fixed by PR #200, which shipped in 26.10.0-beta.1, according to its release notes); #198 (teardown hang after a disconnect); #201 (a second client leaving a shared app ends the first client's session); #202 (a long `/launch` blocks every other HTTPS request; fixed by PR #203, which shipped in 26.10.0-beta.1, according to its release notes); #204 (host crash after the virtual display cleanup of an ended session); #205 (a second client's `/resume` fails the RTSP tag check while the first client's launch is still setting up). The [roadmap](../roadmap.md#host-side-items-luminalshine) lists the host items with the state when last checked |
-| (unreleased) | `26.10.0-beta.1` (a prerelease of 2026-10-20) | not recorded | Known issues | Documented from its release notes (2026-10-20), not yet verified in source. The status is Known issues because the issues below stay open. Live-checked in part in the Sprint 10 round of 2026-10-21 ([section 15](../development/device-validation.md#15-results-sprint-10)): launch, stream, quit, a second device during a launch (#203) and Host details; pairing, teardown and `/unpair` were not run. Known issues: #198, #201, #204 and #205 stay open; #194 and #202 are fixed on the host. "Quitting `<app>`…" stayed on screen until `/cancel` answered: about 17 s once in the night round of 2026-10-21, and 5.5 to 6.7 s in the morning smoke of the same day (5 to 7 s on 26.09.1). The cause is not known, and it is on the [roadmap](../roadmap.md#backlog-not-scheduled). The release ships #199 (`LuminalShineVersion` in the HTTPS `/serverinfo`), #200 and #203, experimental PyroWave, and changes to pairing and teardown ([luminalshine.md](luminalshine.md), "Changed in 26.10.0-beta.1") |
+| (unreleased) | `26.09.1` + 15 commits | `5afdbdc6` | Known issues | Device-tested on 26.09.1 in Phase 1 and in the later sprint rounds (Galaxy S22 and Google TV Streamer; see [device-validation.md](../development/device-validation.md)). The Sprint 8 round of 2026-10-18 ran against LuminalShine 26.09.1 ([section 13](../development/device-validation.md#13-results-sprint-8)). Known issues: the 400 "Out of order call" after a wrong PIN, handled by one automatic restart; NortheBridge/luminalshine#194 (stray bytes after a 404; fixed by PR #200, which shipped in 26.10.0-beta.1: verified in source at `46f6936d` and on a running host); #198 (teardown hang after a disconnect); #201 (a second client leaving a shared app ends the first client's session); #202 (a long `/launch` blocks every other HTTPS request; fixed by PR #203, which shipped in 26.10.0-beta.1: verified in source at `46f6936d`); #204 (host crash after the virtual display cleanup of an ended session); #205 (a second client's `/resume` fails the RTSP tag check while the first client's launch is still setting up). The [roadmap](../roadmap.md#host-side-items-luminalshine) lists the host items with the state when last checked |
+| (unreleased) | `26.10.0-beta.1` (a prerelease of 2026-10-20) | `46f6936d` (the commit its items were verified at; the beta tag was not checked) | Known issues | The release items #199, #200 and #203 are verified in source at `46f6936d` ([luminalshine.md](luminalshine.md), "Changed in 26.10.0-beta.1"), and the plain-HTTP responses of a running host are recorded in the [26.10.0-beta.1 fixtures](../../core/tests/fixtures/luminalshine/26.10.0-beta.1/PROVENANCE.md); no contract test reads them yet. The status is Known issues because the issues below stay open. Live-checked in part in the Sprint 10 round of 2026-10-21 ([section 15](../development/device-validation.md#15-results-sprint-10)): launch, stream, quit, a second device during a launch (#203) and Host details; pairing, teardown and `/unpair` were not run. Known issues: #198, #201, #204 and #205 stay open; #194 and #202 are fixed on the host. "Quitting `<app>`…" stayed on screen until `/cancel` answered: about 17 s once in the night round of 2026-10-21, and 5.5 to 6.7 s in the morning smoke of the same day (5 to 7 s on 26.09.1). The cause is not known, and it is on the [roadmap](../roadmap.md#backlog-not-scheduled). The release ships #199 (`LuminalShineVersion` in the HTTPS `/serverinfo` only), #200 and #203. The pairing, teardown and PyroWave work its notes mention (for example `e31d66e9`, `d9fc0190` and `57b56e9b`) is already in `5afdbdc6`, which the rest of the contract covers; the wrong-PIN 409 after a failed pairing comes from `e31d66e9`, not from the 26.10.0-beta.1 merges. Its other source changes need no client change: a lock on the paired-client list; `/serverinfo` reading the running app without waiting for a launch, so a host still starting its app now answers `SUNSHINE_SERVER_BUSY` at once; a 503 `The host is shutting down.` during host shutdown ([luminalshine.md](luminalshine.md), section 7.5); and `POST /api/apps/import` in the Web UI REST API |
 
 Allowed status values:
 

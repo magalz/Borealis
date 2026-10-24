@@ -14,7 +14,7 @@ import javax.inject.Singleton
 
 /** [HostClient] over the upstream [NvHTTP], which has no seam of its own. */
 internal class NvHostClient(private val http: NvHTTP) : HostClient {
-    override fun pairState(): PairState = http.pairState
+    override fun pairState(): PairState = http.getPairState()
 
     override fun pair(pin: String): PairResult {
         val manager = http.pairingManager

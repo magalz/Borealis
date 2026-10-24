@@ -33,11 +33,11 @@ private class RecordingListener : NvConnectionListener {
     val failedStages = CopyOnWriteArrayList<String>()
     val failed = CountDownLatch(1)
 
-    override fun stageStarting(stage: String) {
+    override fun stageStarting(stage: String?) {
         calls += "stageStarting"
     }
 
-    override fun stageComplete(stage: String) {
+    override fun stageComplete(stage: String?) {
         calls += "stageComplete"
     }
 
@@ -146,11 +146,11 @@ class StartFailureTest {
 
     private val crypto =
         object : LimelightCryptoProvider {
-            override fun getClientCertificate(): X509Certificate? = null
+            override val clientCertificate: X509Certificate? = null
 
-            override fun getClientPrivateKey(): PrivateKey? = null
+            override val clientPrivateKey: PrivateKey? = null
 
-            override fun getPemEncodedClientCertificate(): ByteArray? = null
+            override val pemEncodedClientCertificate: ByteArray? = null
 
             override fun encodeBase64String(data: ByteArray): String = ""
         }

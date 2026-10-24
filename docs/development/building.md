@@ -256,13 +256,27 @@ python -m unittest discover -s design/accessibility
 
 - **Coverage** (Kover, [ADR 0046](../adr/0046-test-coverage-with-kover-llvm-cov-and-codecov.md)):
   the root project merges the debug unit-test coverage of `:borealis:*` and of
-  the Borealis Kotlin in `:app`. Upstream `com.limelight.*`
-  classes and generated Hilt/Dagger, `BuildConfig`, `R` and Compose singleton
-  classes are excluded. Output: `apps/android/build/reports/kover/coverage.xml`
+  `:app`. Code in `com.limelight` counts in the Kover report, except the Java
+  that stays Java (below), and converted code is held to the same Codecov gate
+  as the rest
+  ([ADR 0059](../adr/0059-convert-the-inherited-java-to-kotlin.md),
+  [ADR 0049](../adr/0049-coverage-gate.md)). Not counted:
+  - the Java that stays Java until Sprints 13 and 14:
+    `com.limelight.Game` with its nested classes, and the packages
+    `com.limelight.binding.input` (with its subpackages),
+    `com.limelight.binding.video`, `com.limelight.binding.audio` and
+    `com.limelight.nvstream.jni`. `BorealisCoverage.EXCLUDED_CLASSES` lists them
+    and shrinks as each one is converted;
+  - generated Hilt/Dagger, Room and serialization classes, `BuildConfig`, `R`
+    and Compose singleton classes.
+
+  Output: `apps/android/build/reports/kover/coverage.xml`
   (JaCoCo format, uploaded to Codecov) and
   `apps/android/build/reports/kover/htmlBorealis/index.html`. The XML names
-  sources package-relative (`io/github/magalz/borealis/...`); Codecov matches
-  them to repository files by path suffix.
+  sources package-relative (`io/github/magalz/borealis/...`,
+  `com/limelight/...`); Codecov matches them to repository files by path
+  suffix. Java under `app/src/main/java` never reaches Codecov (`codecov.yml`
+  ignores it); the Java that stays is also excluded from the Kover report.
 - **Licences** (licensee, [ADR 0041](../adr/0041-license-checking-with-licensee.md)):
   `licensee` runs for `:app` (the debug and release runtime classpaths) and for
   every `:borealis:*` module, and is part of `check`. Allowed: Apache-2.0, MIT,

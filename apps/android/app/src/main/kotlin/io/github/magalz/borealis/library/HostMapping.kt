@@ -96,7 +96,7 @@ internal fun ComputerDetails.toHost(
         }
     val online = reachability != Reachability.OFFLINE
     return Host(
-        id = uuid,
+        id = checkNotNull(uuid),
         name = name.orEmpty(),
         reachability = reachability,
         paired = pairState == PairState.PAIRED,

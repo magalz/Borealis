@@ -7,9 +7,19 @@ style client and what it requires from one. It was verified against
 the compatibility table. PyroWave is covered separately in
 [pyrowave.md](pyrowave.md).
 
+The items marked **Changed in 26.10.0-beta.1** come from the 26.10.0-beta.1
+release notes (2026-10-20), except the Web UI `POST /api/apps/import` note, which comes from the
+commit history, and were verified in the host source at
+`NortheBridge/luminalshine@46f6936d` (2026-10-22, `git describe`:
+`26.09.1-38-g46f6936d`), a later commit than the revision above. The `src/`
+references inside those items are lines at `46f6936d`, not at `5afdbdc6`, and
+`src/` is the same at `46f6936d` and at `e2662a44` (the merge of PR #206,
+2026-10-20). The plain-HTTP responses of a running 26.10.0-beta.1 host are recorded
+in [the 26.10.0-beta.1 fixtures](../../core/tests/fixtures/luminalshine/26.10.0-beta.1/PROVENANCE.md).
+
 Everything here comes from static reading of the host source, except the items
 marked **Observed** (runtime observations from the Sprint 2 and 3 device rounds)
-and the recorded `/unpair` response in section 18, item 4. Statements about
+and the recorded `/unpair` responses in section 18, item 4. Statements about
 runtime behaviour that the source alone cannot establish are marked
 **Unverified**.
 
@@ -27,14 +37,28 @@ runtime behaviour that the source alone cannot establish are marked
   (`src/nvhttp.h:42`). These are protocol-emulation constants, not the
   LuminalShine release version; in `26.09.1` there is no field in `/serverinfo`
   that carries the LuminalShine version (see proposal P1 in section 20).
-  **Changed in 26.10.0-beta.1** (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source): the HTTPS `/serverinfo`
-  appends `LuminalShineVersion` (#199), and keeps `appversion` (`7.1.431.-1`) and
-  `GfeVersion`; the HTTP response is unchanged. The Borealis client does not read
-  the field yet (Sprint 17), so Host details still shows `7.1.431.-1`.
+  **Changed in 26.10.0-beta.1** (#199; verified in source at `46f6936d`): the
+  HTTPS `/serverinfo` appends one element, `LuminalShineVersion`, as the last
+  child of `<root>`, after `state`, and keeps `appversion` (`7.1.431.-1`) and
+  `GfeVersion` (`src/nvhttp.cpp:2532-2533`, `2612-2617`; the element is written by
+  `put_luminalshine_version`, `src/nvhttp.cpp:2507-2509`, `src/nvhttp.h:69-78`).
+  The call sits inside `if constexpr (std::is_same_v<SunshineHTTPS, T>)`, so the
+  plain-HTTP response is unchanged and carries no version: a client can read the
+  release only over HTTPS, that is, once it is paired. The header comment gives
+  the reason: the HTTP port answers unauthenticated peers
+  (`src/nvhttp.h:73-75`). The value is `PROJECT_VERSION`, fixed when the host is
+  built: the CI `BUILD_VERSION`, the release tag or the nearest git tag, with a
+  leading `v` removed (`cmake/prep/build_version.cmake:44-51`, `107-115`,
+  `137-141`), so a client must treat the string as free text, not as a strict
+  version. The plain-HTTP capture of a 26.10.0-beta.1 host (2026-10-23) has no
+  `LuminalShineVersion` and is byte for byte the 26.09.1 response. The HTTPS
+  value of that host was not read (no HTTPS call was allowed). The Borealis
+  client does not read the field yet (Sprint 17), so Host details still shows
+  `7.1.431.-1`.
 - `/serverinfo` reports `state` as `SUNSHINE_SERVER_BUSY` while an app is
   running and `SUNSHINE_SERVER_FREE` otherwise, and `currentgame` as the running
   app id (`src/nvhttp.cpp:2578-2581`). Moonlight therefore classifies the host
-  as non-NVIDIA (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:399-400`).
+  as non-NVIDIA (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:399-400`).
 - The host project lists Twilight (LG webOS) as its first-party client, and its
   documentation states that any Moonlight client works
   (`docs/system_requirements.md:70-76`, `gh-pages-template/clients.html:86-96`).
@@ -74,7 +98,7 @@ arrives over a real IPv6 address, so a client must not overwrite its stored LAN
 IPv4 address with it (`src/nvhttp.cpp:2525-2538`, the branch at `2534-2535` is not
 conditional on the scheme;
 Moonlight already skips `127.` addresses in
-`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/ComputerDetails.java:119-120`).
+`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/ComputerDetails.java:119-120`).
 
 ## 3. GameStream HTTP(S) endpoints
 
@@ -82,9 +106,23 @@ The host serves exactly the endpoints in the table. Any other path on either
 server returns an XML body with `status_code` 404 (`src/nvhttp.cpp:2127-2143`,
 `src/nvhttp.cpp:3723-3748`). All endpoints use GET.
 
-**Changed in 26.10.0-beta.1** (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source): an unknown path returns one
-correctly framed response, HTTP 200 with the XML `status_code="404"`, and then the
-connection closes (#200, which fixes #194). The 26.09.1 behaviour below, with the
+**Changed in 26.10.0-beta.1** (#200, which fixes #194; verified in source at
+`46f6936d`): an unknown path, on both servers, returns one correctly framed
+response, `HTTP/1.1 200 OK` with `Content-Length: 64` and the XML
+`status_code="404"`, and then the connection closes. `not_found` now writes the XML
+once and sets `close_connection_after_response`; the second write that streamed a
+header-less `HTTP/1.1 404 NOT FOUND` block into the response is gone
+(`src/nvhttp.cpp:2146-2158`, instantiated for `SimpleWeb::HTTP` at `2160`, declared
+in `src/nvhttp.h:93-102`). Both servers register it as their default resource
+(`src/nvhttp.cpp:3822` and `3850`). The host's own regression test pins the exact
+bytes, `HTTP/1.1 200 OK\r\nContent-Length: 64\r\n\r\n` plus the 64-byte body and
+then end of stream, with nothing after it
+(`tests/unit/test_nvhttp_not_found.cpp:37-39`, `161-166`). A running 26.10.0-beta.1
+host answered an unknown path with those 103 bytes on 2026-10-23
+([`unknown-path-http.response`](../../core/tests/fixtures/luminalshine/26.10.0-beta.1/unknown-path-http.response)).
+The framing is not visible in the host source of this checkout, because
+Simple-Web-Server is a git submodule that is not checked out: the header bytes
+come from that test and from the capture. The 26.09.1 behaviour below, with the
 trailing bytes, stays the rule for older hosts.
 
 | Path | HTTP | HTTPS | Purpose |
@@ -97,7 +135,8 @@ trailing bytes, stays the rule for older hosts.
 | `/resume` | no | yes | Resume the running app (section 7) |
 | `/cancel` | no | yes | Terminate sessions and the running app (section 7.6) |
 
-Not present, by absence from the route table (`src/nvhttp.cpp:3723-3748`):
+Not present, by absence from the route table (`src/nvhttp.cpp:3723-3748`;
+`src/nvhttp.cpp:3822-3854` at `46f6936d`, which adds no route):
 `/unpair`, `/actions/clipboard`, and any other Apollo/Artemis extension.
 Unpairing is available only through the REST API (section 17).
 
@@ -141,7 +180,7 @@ then `pairchallenge` over HTTPS): `src/nvhttp.cpp:1941-2106`, dispatched at
 - The HTTP request for phase 1 (`phrase=getservercert`) is held open until the
   user submits the PIN. Moonlight Android already uses a client with no read
   timeout for exactly this request
-  (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/PairingManager.java:205-209`).
+  (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/PairingManager.java:205-209`).
   Any other client must do the same.
 - A host that has the PIN-on-stdin flag set reads the PIN from standard input
   instead (`src/nvhttp.cpp:2280-2282`). This is a host operator mode; it is not
@@ -223,21 +262,40 @@ that failure deletes the session (`fail_pair`, `src/nvhttp.cpp:1929-1945`), so t
 attempt after it succeeds. The automatic restart turns this into one extra PIN
 dialog instead of a raw error.
 
-**Changed in 26.10.0-beta.1.** Seen live on 2026-10-21 and checked in source at
-`e2662a44`, the commit of the beta tag. `src/nvhttp.cpp` is the same as upstream
-`main` at `236aff9a`.
+**Changed since 26.09.1 (in the 26.10.0-beta.1 release).** Seen live on 2026-10-21 and verified in source at
+`46f6936d`. The behaviour is the pairing rework `e31d66e9` (PR #188, 2026-10-01).
+The `26.09.1` tag does not contain it (the tag has no 409 `Pairing exchange already
+in progress`); `5afdbdc6` and every later commit do. `pair`, `fail_pair`,
+`serverchallengeresp` and `submit_pin` are the same at `5afdbdc6` and at `46f6936d`,
+and `src/` is the same at `e2662a44`, at `236aff9a` and at `46f6936d` (the later
+commits change `.github/`, `scripts/` and `tests/` only).
 
 - The client runs phases 1 to 3, detects the wrong PIN after phase 3
-  (`serverchallengeresp`), and stops, as every Moonlight client does. It then
-  sends `/unpair`, which LuminalShine does not route, so it gets a 404.
-- The host keeps the session at `last_phase == SERVERCHALLENGERESP`. Its log ends
-  at "Pairing PIN delivered; awaiting client proof" (`src/nvhttp.cpp:2499`).
-  Phase 4 never arrives, so `fail_pair` (`src/nvhttp.cpp:1953-1959`), which
-  removes a session on a failure, does not run.
+  (`serverchallengeresp`), and stops, as every Moonlight client does. The host
+  never sees the mistake: phase 3 only decrypts the client's response with the key
+  derived from the salt and the PIN the host holds, and answers `paired` 1 with
+  the signed server secret (`src/nvhttp.cpp:2030-2058`). The host compares the
+  client hash only in phase 4 (`src/nvhttp.cpp:2095-2097`). The client then sends
+  `/unpair`, which LuminalShine does not route (the route tables,
+  `src/nvhttp.cpp:3822-3854`, have no `/unpair`), so it reaches `not_found` and
+  gets the single 404 response of section 3. Nothing on the host removes the
+  session.
+- The host keeps the session at `last_phase == SERVERCHALLENGERESP`
+  (`src/nvhttp.cpp:2035`). Its log ends at "Pairing PIN delivered; awaiting client
+  proof" (`src/nvhttp.cpp:2499`). Phase 4 never arrives, so `fail_pair`
+  (`src/nvhttp.cpp:1953-1959`), which removes a session on a failure, does not
+  run.
 - Every new phase 1 from the same client gets 409 `Pairing exchange already in
-  progress` at once (`src/nvhttp.cpp:2227-2250`). The session expires 5 minutes
-  after its last update (`kPairingSessionTtl`, `src/nvhttp.cpp:918`). Restarting
-  Borealis does not clear it; restarting LuminalShine does.
+  progress` at once (`src/nvhttp.cpp:2227-2251`): the session exists and its phase
+  is not `NONE`, and only a phase-1 retry inside the `getservercert` phase is
+  answered again. The session is keyed by the client's `uniqueid` query value in an
+  in-memory map (`src/nvhttp.cpp:909`, `2189`, `2225`). It expires 5 minutes after
+  its last update (`kPairingSessionTtl`, `src/nvhttp.cpp:918`; `session_expired`,
+  `1732-1737`) and is dropped by the next `/pair` call, or the next listing or PIN
+  submission in the Web UI (`prune_expired_pairings_locked`, `1894-1912`; callers
+  at `2218`, `2370`, `2412`). Restarting Borealis does not clear it as long as
+  Borealis keeps its `uniqueid`; restarting LuminalShine does, because the map is
+  not persisted.
 - The automatic restart of Borealis never runs on that host, because 409 maps to
   "No restart" (the table above). The user waits up to 5 minutes, or restarts
   LuminalShine, before pairing again.
@@ -317,7 +375,7 @@ resettable fields back.
 Absent, in contrast with Apollo-derived hosts: `Permission`, `ServerCommand` and
 `VirtualDisplayCapable` (searched `src/nvhttp.cpp`: no occurrences).
 `ExternalIP` is not sent either; Moonlight Android treats it as optional
-(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:394`).
+(`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:394`).
 `VirtualDisplayDriverReady` appears only in the `/launch` and `/resume`
 responses (`src/nvhttp.cpp:3144-3148`, `src/nvhttp.cpp:3482-3486`).
 
@@ -398,16 +456,38 @@ for resume the equivalent is `resume` 1 (`src/nvhttp.cpp:3471-3486`).
   retried: `/launch`, `/resume`, `/cancel`, `/quit` and pairing are not
   idempotent. A client that polls `/serverinfo` in the background can see the
   host as briefly offline during that window.
-  **Changed in 26.10.0-beta.1** (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source): PR #203 was merged on
-  2026-10-20 and ships in this release, so launch, resume and cancel run in order
-  on one dedicated worker, off the HTTPS I/O thread, and a long `/launch` no
-  longer holds the other requests (#202). Borealis keeps the 3-attempt
-  `/serverinfo` retry and the 3 s wait before `/resume` for older hosts and for
-  #205, which is still open, and keeps the handling of the not-found cases for
-  26.09.1. In the device round of 2026-10-21 neither was triggered on
-  26.10.0-beta.1 (no retry, no wait and no 503, with a second device opening the
-  host during a launch); whether the race of #205 is still reachable is not
-  tested.
+  **Changed in 26.10.0-beta.1** (#203, which fixes #202; verified in source at
+  `46f6936d`): PR #203 was merged on 2026-10-20 and ships in this release. The
+  `/launch`, `/resume` and `/cancel` routes no longer run their handler on the
+  HTTPS I/O thread. Each one posts it, through `run_on_launch_worker`
+  (`src/nvhttp.cpp:3649-3692`), to `launch_worker`, one `util::serial_executor_t`
+  created in `nvhttp::start` (`src/nvhttp.cpp:3728-3730`, routes at `3829-3844`;
+  `src/serial_executor.h:25-109`). That executor has one thread, named
+  `nvhttp::launch`, which runs the posted handlers one at a time in posting order
+  (`src/serial_executor.h:52-62`, `85-101`). The three handlers stay serialised
+  with each other, as they were on the I/O thread: a `/cancel` waits behind a
+  `/launch` in progress (`src/nvhttp.cpp:3839-3841`). `/serverinfo`, `/pair`,
+  `/applist`, `/appasset` and the TLS handshakes stay on the I/O thread, which a
+  long `/launch` no longer holds (#202). `/serverinfo` also no longer waits for the
+  lock a launch holds while it starts the app: it reads the running app with
+  `proc::proc.running_nowait()` (`src/nvhttp.cpp:2607-2609`,
+  `src/process.cpp:1793-1803`), which returns the id the launch published early,
+  so a host that is still starting its app already answers
+  `SUNSHINE_SERVER_BUSY`. While the host shuts down the worker drops queued
+  requests without an answer (their connections are closed,
+  `src/nvhttp.cpp:3898-3904`); a request that arrives in the gap gets 503 with the
+  message `The host is shutting down.` (`src/nvhttp.cpp:3681-3690`). The host
+  source of this checkout does not show the single I/O thread itself, because it
+  is a Simple-Web-Server default and that submodule is not checked out; the
+  comment at `src/nvhttp.cpp:3650-3652` states it. The worker serialises the three
+  handlers with each other only: the RTSP setup that follows a handler's response
+  is not part of its task, so the source does not show whether the race of #205
+  is closed. Borealis keeps the 3-attempt `/serverinfo` retry and the 3 s wait
+  before `/resume` for older hosts and for #205, which is still open, and keeps
+  the handling of the not-found cases for 26.09.1. In the device round of
+  2026-10-21 neither was triggered on 26.10.0-beta.1 (no retry, no wait and no
+  503, with a second device opening the host during a launch); whether the race
+  of #205 is still reachable is not tested.
 - **Observed, not verified in the source (Sprint 3):** when a second client's
   `/resume` is accepted while the first client's `/launch` is still setting up,
   the host logs `Failed to verify RTSP message tag` and the second client's RTSP
@@ -462,11 +542,11 @@ width, height and frame rate in `/launch` `mode=` and in the ANNOUNCE attributes
 Moonlight Android 12.2 can produce exactly this mismatch. It builds the
 `/launch` mode from the user's selected frame rate
 (`setLaunchRefreshRate(prefConfig.fps)`,
-`borealis:apps/android/app/src/main/java/com/limelight/Game.java:491`, and the
+`borealis:apps/android/app/src/main/java/com/limelight/Game.java:489`, and the
 `fps` of the `mode=` parameter in `launchApp`,
-`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:816`)
+`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:816`)
 but streams at `chosenFrameRate` (`setRefreshRate(chosenFrameRate)`,
-`borealis:apps/android/app/src/main/java/com/limelight/Game.java:492`).
+`borealis:apps/android/app/src/main/java/com/limelight/Game.java:490`).
 With frame pacing "cap FPS", a selected rate that is equal to or at most 3 Hz
 above the display refresh rate, and a refresh rate above 49 Hz,
 `chosenFrameRate` becomes the rounded refresh rate minus 1, for example 59 for
@@ -475,7 +555,7 @@ a 60 Hz selection
 A host with the default per-client virtual display then rebuilds the monitor
 on every such launch. This is confirmed: the Android client passes
 `getRefreshRate()` (the `chosenFrameRate`) to the native library
-(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:536`),
+(`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:536`),
 and upstream moonlight-common-c writes `StreamConfig.fps` into
 `x-nv-video[0].maxFPS` (`borealis:core/third_party/moonlight-common-c/src/SdpGenerator.c:320-321`, upstream 874ac95; this is
 not the Aurora fork).
@@ -483,7 +563,7 @@ not the Aurora fork).
 Borealis no longer produces this mismatch against a host that is not GFE:
 `launchApp` takes the `mode=` frame rate from `LaunchFrameRate.forLaunch`, which
 returns the stream frame rate for such a host
-(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:795-797`).
+(`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:795-797`).
 **Observed** in the Sprint 2 round (Streamer), with frame pacing "cap FPS": the
 `/launch` mode was `1280x720x59` and the host logged `HTTP and RTSP agree` (row 3.7 of
 [device-validation.md section 7](../development/device-validation.md#7-results-sprint-2-2026-10-14)).
@@ -497,7 +577,7 @@ like when the announced RTSP mode then differs from the overridden monitor mode
 
 Status is carried in the XML `status_code` attribute of the response (HTTP
 status is 200 in all of these); Moonlight raises it as `HostHttpResponseException`
-(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:294-308`).
+(`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:294-308`).
 The "recommended client behaviour" column is a Borealis recommendation, not a
 host guarantee. `ping_timeout` is 10 s by default (`src/config.cpp:844`).
 
@@ -505,13 +585,14 @@ host guarantee. `ping_timeout` is 10 s by default (`src/config.cpp:844`).
 | --- | --- | --- | --- | --- |
 | 400 | `Missing a required launch parameter` | launch `src/nvhttp.cpp:2805` | A required query parameter is missing | No retry; client bug |
 | 400 | `Missing a required resume parameter` | resume `src/nvhttp.cpp:3256` | As above | No retry; client bug |
-| 400 | `An app is already running on this host` | launch `src/nvhttp.cpp:2816` | `/launch` was called while an app runs | No retry of `/launch`. Moonlight's `startApp` already resumes or quits first when `/serverinfo` shows a running app (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:395-430`; Borealis turned the quit into a user choice, section 7.6); the 400 arrives when another device's launch started after that read. Borealis then re-reads `/serverinfo` for up to 3 s: `currentgame` 0 launches again once, otherwise the user chooses Join (`/resume`), Quit and relaunch (`/cancel`, then `/launch`) or Cancel. `/cancel` is never called without that choice (section 7.6) |
+| 400 | `An app is already running on this host` | launch `src/nvhttp.cpp:2816` | `/launch` was called while an app runs | No retry of `/launch`. Moonlight's `startApp` already resumes or quits first when `/serverinfo` shows a running app (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:395-430`; Borealis turned the quit into a user choice, section 7.6); the 400 arrives when another device's launch started after that read. Borealis then re-reads `/serverinfo` for up to 3 s: `currentgame` 0 launches again once, otherwise the user chooses Join (`/resume`), Quit and relaunch (`/cancel`, then `/launch`) or Cancel. `/cancel` is never called without that choice (section 7.6) |
 | 409 | `Another client launch is already pending; retry the connection.` | launch `src/nvhttp.cpp:2831-2832`, `2853-2854`, `3157-3158`; resume `3265-3266`, `3281-3282`, `3495-3496` | A previous `/launch` or `/resume` has not been claimed by an RTSP connection yet; the pending launch expires after `ping_timeout` (`src/rtsp.cpp:606`) | Retry with backoff for up to about 12 s in total (for example 1, 2, 3, 5 s), then show the host message. Do not call `/cancel`: it would also cancel another client's pending launch (`src/rtsp.cpp:1132-1136`) |
 | 503 | `The previous stream is still restoring the display; retry the connection.` | launch `src/nvhttp.cpp:2845-2846`; resume `3274-3275` | The host waited 8 s (`acquire_launch(8s)`, `src/nvhttp.cpp:2841`, `3270`) for the previous session's cleanup and gave up | Retry, 2 to 3 attempts with 2 to 5 s delays (each attempt can itself take 8 s), then show the message |
 | 503 | `GPU/display stack is not ready; retry after recovery or reboot the host.` | launch `src/nvhttp.cpp:2968-2969`; resume `3331-3332` | The D3D11 health probe failed | Limited retries (for example 2 with 5 s delay), then tell the user to restart the host or its GPU driver |
 | 503 | `Failed to prepare the client virtual display.` | launch `src/nvhttp.cpp:3006`; resume `3382` | Building the display request failed for a virtual-display session | Limited retries (1 to 2), then show the message |
 | 503 | `Windows did not activate the virtual display.`, `Windows did not apply the requested virtual-display mode.`, `The virtual display activated, but its capture ring did not begin publishing frames.`, `The Windows display helper was unavailable.`, or `Display configuration failed.` | launch `src/nvhttp.cpp:3019-3021`; resume `3393-3395`; strings `src/platform/windows/display_helper_integration.cpp:1802-1816` | Mandatory virtual-display apply or readiness check failed | Limited retries (1 to 2); on repeat, show the message; a retry with a different mode is a reasonable manual action |
 | 503 | `Failed to initialize video capture/encoding. Is a display connected and turned on?` | launch `src/nvhttp.cpp:3084-3085`; resume `3453-3454` | The pre-stream encoder probe failed | Limited retries (1 to 2), then show the message |
+| 503 | `The host is shutting down.` | launch and resume, `src/nvhttp.cpp:3681-3690` at `46f6936d` (26.10.0-beta.1) | The request reached the launch worker after the host began to shut down | No retry; show the message. Borealis today treats an unknown 503 as a capture or display failure and retries once after 3 s (`core/src/launch.cpp:22-44`); that one retry is harmless |
 | 503 | `No running app to resume` | resume `src/nvhttp.cpp:3244-3245` | `/resume` with no app running | Do not retry; re-read `/serverinfo` and call `/launch` |
 | 403 | `Encryption is mandatory for this host but unsupported by the client` | launch `src/nvhttp.cpp:3096-3097`; resume `3464-3465` | The host's LAN or WAN encryption policy is mandatory and the client did not send `corever` of 1 or more | No retry; this is a client defect or an outdated protocol library |
 | 404 | `Failed to start the specified application` | launch `src/nvhttp.cpp:3111-3113` (code is the return value of `proc::execute`) | Unknown `appid` returns 404 (`src/process.cpp:1104-1109`) | No retry; refresh `/applist` |
@@ -536,10 +617,10 @@ Notes on the table:
 - The Moonlight Android 12.2 client does not retry. It shows the message and
   fails. Borealis added `launchWithRetry`, which runs the retry policy and which
   `startApp` calls for `/resume` and, through `launchNotRunningApp`, for `/launch`
-  (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:171-179`).
+  (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:171-179`).
   It also changed the catch blocks of the start thread, so a failure goes to the
   error screen, which never shows the exception text
-  (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:492-510`).
+  (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:492-510`).
 
 ### 7.6 Cancel
 
@@ -550,7 +631,7 @@ the virtual display unless a deferred launch must be preserved
 `/launch` wins the lifecycle race the cancel cleanup is skipped
 (`src/nvhttp.cpp:3540-3550`). Moonlight 12.2 answered a `currentgame` for a
 different app by cancelling then launching
-(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:395-399`,
+(`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:395-399`,
 `:437-458`; the `else` branch at `:406-407` called `quitAndLaunch` directly in
 12.2). Borealis does not: it asks the user first, and never quits another
 device's app without the user's explicit choice, even when the Library has not
@@ -656,7 +737,7 @@ Aurora fork), which the Moonlight Android client uses: `SCM_H264` `0x1`,
 `SCM_HEVC` `0x100`, `SCM_HEVC_MAIN10` `0x200`, `SCM_AV1_MAIN8` `0x10000` and
 `SCM_AV1_MAIN10` `0x20000` (`borealis:core/third_party/moonlight-common-c/src/Limelight.h:506-510`). The Android client tests
 `0x20200` (`0x200` or `0x20000`) for HDR
-(`borealis:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:333`)
+(`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:333`)
 and `0x200` for resolutions above 4K (`:343-344`), a check that applies only to
 a GFE host (`context.isNvidiaServerSoftware`) and never to LuminalShine. The
 4:4:4 bits (`SCM_H264_HIGH8_444` and following) are defined
@@ -928,6 +1009,12 @@ credential (`src/http_auth.cpp:1403-1476`):
 
 The POST endpoints in this table require `Content-Type: application/json`.
 
+**Changed in 26.10.0-beta.1** (verified in source at `46f6936d`): the Web UI gains
+`POST /api/apps/import`, which replaces the whole application list from an
+`apps.json` document of at most 5 MiB (`src/confighttp.cpp:1616-1647`, route at
+`src/confighttp.cpp:4585`, validation in `src/apps_import.h`). It is an
+administration endpoint, not a streaming one, and a client does not need it.
+
 ## 18. Client obligations for Borealis
 
 These are actionable requirements derived from the sections above. Where the
@@ -945,7 +1032,7 @@ Moonlight Android 12.2 client already does the right thing the item says so.
    messages, and do not retry 400, 403, 404 or 410.
 4. **Do not rely on `GET /unpair`.** It is not routed and returns 404. Moonlight
    Android calls it on every pairing failure path and for the in-app unpair
-   (`borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/PairingManager.java:219-289`;
+   (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/PairingManager.java:219-289`;
    the 12.2 `PcView` that made the in-app call is gone, and the Library's
    `ComputerHostRepository.forget` makes it now,
    `borealis:apps/android/app/src/main/kotlin/io/github/magalz/borealis/library/ComputerHostRepository.kt:93-99,117-126`).
@@ -962,9 +1049,17 @@ Moonlight Android 12.2 client already does the right thing the item says so.
    does not mask PIN_WRONG or FAILED. The risk is the trailing bytes: an HTTP
    client that pools the connection can read them as the start of its next
    response on that connection. Send `/unpair` without connection reuse and
-   read its XML `status_code`. **Changed in 26.10.0-beta.1** (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source):
-   #200 makes the host send a single response for an unknown path, so the
-   trailing bytes are gone. Keep the 26.09.1 behaviour and the
+   read its XML `status_code`. **Changed in 26.10.0-beta.1** (#200; verified in
+   source at `46f6936d`, and recorded on a running 26.10.0-beta.1 host on
+   2026-10-23, fixture
+   [`unpair-http.response`](../../core/tests/fixtures/luminalshine/26.10.0-beta.1/unpair-http.response)):
+   `/unpair` is still not routed (`src/nvhttp.cpp:3822-3854`), so it reaches
+   `not_found`, which now writes one response (`src/nvhttp.cpp:2146-2158`, section
+   3). Over plain HTTP the host answers `HTTP/1.1 200 OK` with
+   `Content-Length: 64` and the XML body with `status_code="404"`, 103 bytes in
+   all, and closes the socket; the 88 trailing bytes are gone (the capture read
+   to the end of the stream and found nothing after the body). The response is
+   byte for byte the one of an unknown path. Keep the 26.09.1 behaviour and the
    `BestEffortUnpair` `Connection: close` for older hosts.
 5. **Keep the client certificate stable and use HTTPS for everything except
    pairing phases 1 to 4 and the initial `/serverinfo`.** Identity, per-client
@@ -985,7 +1080,7 @@ Moonlight Android 12.2 client already does the right thing the item says so.
    must equal `clientViewportWd`, `clientViewportHt` and `maxFPS`, otherwise
    the host rebuilds the virtual display (section 7.4). Moonlight Android sets
    `clientRefreshRateX100` from the display refresh rate
-   (`borealis:apps/android/app/src/main/java/com/limelight/Game.java:501`); the
+   (`borealis:apps/android/app/src/main/java/com/limelight/Game.java:499`); the
    host ignores it when it disagrees with `maxFPS`, so that attribute is
    harmless. The launch rate and the stream rate are the ones that must match;
    Moonlight Android can make them differ (end of section 7.4), so Borealis must
@@ -1033,7 +1128,7 @@ does not provide:
 | `virtualDisplay=`, `scaleFactor=`, `appuuid=`, `gcpersist=` launch parameters | Ignored | `artemis:app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:878-892` |
 | `Permission` in `/serverinfo` | Not sent | `artemis:app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:412-419` |
 | `ServerCommand` list in `/serverinfo` | Not sent | `artemis:app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:437`, `:568-570` |
-| `GET /unpair` | 404 | `borealis:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:745-749` |
+| `GET /unpair` | 404 | `borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:745-749` |
 
 The virtual-display gap is the one most likely to mislead: Artemis concludes the
 host has no virtual display and refuses to offer it
@@ -1053,9 +1148,13 @@ nothing in this document until the host adopts them.
   changes) and a `Capabilities` list (for example `pyrowave`, `virtual-display`,
   `launch-retry-codes`). Today a client can only infer the host from the absence
   of Apollo fields and from `appversion` `7.1.431.-1`, which is a fixed
-  emulation constant (`src/nvhttp.h:37`). **Partly adopted in 26.10.0-beta.1** (reported in the 26.10.0-beta.1 release notes (2026-10-20); not yet verified in source):
-  `LuminalShineVersion` is in the HTTPS `/serverinfo` (#199). The release notes
-  name no `LuminalShineApiLevel` and no `Capabilities` list.
+  emulation constant (`src/nvhttp.h:37`). **Partly adopted in 26.10.0-beta.1**
+  (#199; verified in source at `46f6936d`): `LuminalShineVersion` is in the HTTPS
+  `/serverinfo` only (`src/nvhttp.cpp:2507-2509`, `2614-2617`; section 1), so a
+  client can read the release only after it is paired, by design
+  (`src/nvhttp.h:73-75`). Nothing in `src/` writes a `LuminalShineApiLevel` or a
+  `Capabilities` element (a search of `src/` finds neither name), so the
+  capability list and the API level of this proposal are still open.
 - **P2. A client-requested PyroWave bitrate cap.** The host ignores the client's
   bitrate and always uses `pyrowave_bitrate_mbps`, default 700
   (`src/rtsp.cpp:1694`). Honour the client's `x-nv-vqos[0].bw.maximumBitrateKbps`

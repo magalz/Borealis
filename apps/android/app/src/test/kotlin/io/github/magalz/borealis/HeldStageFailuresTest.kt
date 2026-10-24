@@ -21,9 +21,9 @@ class HeldStageFailuresTest {
             messages += message
         }
 
-        override fun stageStarting(stage: String) = Unit
+        override fun stageStarting(stage: String?) = Unit
 
-        override fun stageComplete(stage: String) = Unit
+        override fun stageComplete(stage: String?) = Unit
 
         override fun connectionStarted() = Unit
 

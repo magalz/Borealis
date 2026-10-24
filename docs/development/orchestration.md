@@ -44,7 +44,7 @@ The impact tools (`get_impact`, `preflight_check`, `detect_changes`) are the mai
     - deletes the task branches, local and remote;
     - runs the Memtrace `cleanup_worktrees` tool for `repo_id: Borealis`, which drops the overlays of the removed worktrees;
     - checks out `main` in the orchestrator's checkout and pulls the merge;
-    - resets the store with `memtrace reset Borealis`, which drops the repository's records, its old branch labels and its history replays (we do not use the replays);
+    - wipes the whole Borealis store, running each command in `D:\Repos\Borealis`: `memtrace stop`, then `memtrace reset` with no repository, which empties `D:\Repos\Borealis\.memdb` and moves its history to `.memdb.history`, then `memtrace history purge --store D:\Repos\Borealis\.memdb --delete-forever`, then starts the daemon again (`memtrace start --headless --no-workspace` in `D:\Repos\Borealis`, with `MEMTRACE_NO_STARTUP_WATCH=1` and `MEMTRACE_NO_WATCH_RESTORE=1`). This drops every record, branch label and history replay. The per-repository `memtrace reset Borealis` is not used: on a store of 28 GB its delete gave no answer within two hours (2026-10-23);
     - indexes the checkout again from scratch: `index_directory` with `path: "D:\\Repos\\Borealis"`, `repo_id: "Borealis"`, `branch: "main"` and `defer_replay: true`, then checks with `list_indexed_repositories` that `graph_head_sha` is the merge commit.
 
 ## Parallel waves

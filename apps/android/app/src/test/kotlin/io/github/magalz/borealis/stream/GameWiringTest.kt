@@ -128,17 +128,17 @@ class GameWiringTest {
     @Test
     fun `the connection never hands an exception text to the listener`() {
         val connection =
-            File("src/main/java/com/limelight/nvstream/NvConnection.java").readText()
+            File("src/main/kotlin/com/limelight/nvstream/NvConnection.kt").readText()
 
-        assertThat(connection).doesNotContain("displayMessage(e.getMessage())")
+        assertThat(connection).doesNotContain("displayMessage(e.message")
         assertThat(connection).doesNotContain("stageFailed(appName")
     }
 
     @Test
     fun `sending the launch or the resume is the step that fails after the serverinfo`() {
         val connection =
-            File("src/main/java/com/limelight/nvstream/NvConnection.java").readText()
-        val start = connection.indexOf("private LaunchOutcome launchWithRetry(")
+            File("src/main/kotlin/com/limelight/nvstream/NvConnection.kt").readText()
+        val start = connection.indexOf("private fun launchWithRetry(")
         val launch = connection.substring(start, connection.indexOf("\n    }\n", start))
 
         // The launch needs the native library, so a unit test cannot run it: read the wiring.
@@ -150,8 +150,8 @@ class GameWiringTest {
     @Test
     fun `a failed quit is the quit step, set before the quit request is sent`() {
         val connection =
-            File("src/main/java/com/limelight/nvstream/NvConnection.java").readText()
-        val start = connection.indexOf("protected boolean quitAndLaunch(")
+            File("src/main/kotlin/com/limelight/nvstream/NvConnection.kt").readText()
+        val start = connection.indexOf("protected open fun quitAndLaunch(")
         val quit = connection.substring(start, connection.indexOf("\n    }\n", start))
 
         assertThat(quit).contains("startStep = StartSteps.QUIT")

@@ -132,7 +132,7 @@ constructor(
     private suspend fun outcomeOf(result: PairResult, details: ComputerDetails): PairingOutcome =
         when (result.state) {
             PairState.PAIRED -> {
-                connection.pinCertificate(details.uuid, result.serverCert)
+                connection.pinCertificate(checkNotNull(details.uuid), result.serverCert)
                 PairingOutcome.Paired
             }
             PairState.PIN_WRONG -> PairingOutcome.PinWrong

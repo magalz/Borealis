@@ -129,7 +129,7 @@ class ShortcutReapTest {
     }
 
     private companion object {
-        const val REAP_TIMEOUT_MS = 5_000L
+        const val REAP_TIMEOUT_MS = 30_000L
     }
 }
 

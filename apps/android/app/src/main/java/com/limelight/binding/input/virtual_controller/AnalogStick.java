@@ -19,18 +19,6 @@ import java.util.List;
 public class AnalogStick extends VirtualControllerElement {
 
     /**
-     * outer radius size in percent of the ui element
-     */
-    public static final int SIZE_RADIUS_COMPLETE = 90;
-    /**
-     * analog stick size in percent of the ui element
-     */
-    public static final int SIZE_RADIUS_ANALOG_STICK = 90;
-    /**
-     * dead zone size in percent of the ui element
-     */
-    public static final int SIZE_RADIUS_DEADZONE = 90;
-    /**
      * time frame for a double click
      */
     public final static long timeoutDoubleClick = 350;

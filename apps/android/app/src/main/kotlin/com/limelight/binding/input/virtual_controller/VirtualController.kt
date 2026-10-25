@@ -1,200 +1,187 @@
-/**
- * Created by Karim Mreisi.
- */
+/** Created by Karim Mreisi. */
 
-package com.limelight.binding.input.virtual_controller;
+// The package name is the inherited one: ADR 0059 keeps it, and it has an underscore.
+@file:Suppress("PackageNaming")
 
-import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
-import android.util.DisplayMetrics;
-import android.view.View;
-import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.Toast;
+package com.limelight.binding.input.virtual_controller
 
-import com.limelight.R;
-import com.limelight.binding.input.ControllerHandler;
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
+import android.view.View
+import android.widget.Button
+import android.widget.FrameLayout
+import android.widget.Toast
+import com.limelight.R
+import com.limelight.binding.input.ControllerHandler
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class VirtualController {
-    public static class ControllerInputContext {
-        public short inputMap = 0x0000;
-        public byte leftTrigger = 0x00;
-        public byte rightTrigger = 0x00;
-        public short rightStickX = 0x0000;
-        public short rightStickY = 0x0000;
-        public short leftStickX = 0x0000;
-        public short leftStickY = 0x0000;
+class VirtualController(
+    private val controllerHandler: ControllerHandler?,
+    private val frameLayout: FrameLayout?,
+    private val context: Context,
+) {
+    class ControllerInputContext {
+        @JvmField var inputMap: Short = 0x0000
+        @JvmField var leftTrigger: Byte = 0x00
+        @JvmField var rightTrigger: Byte = 0x00
+        @JvmField var rightStickX: Short = 0x0000
+        @JvmField var rightStickY: Short = 0x0000
+        @JvmField var leftStickX: Short = 0x0000
+        @JvmField var leftStickY: Short = 0x0000
     }
 
-    public enum ControllerMode {
+    enum class ControllerMode {
         Active,
         MoveButtons,
-        ResizeButtons
+        ResizeButtons,
     }
 
-    private final ControllerHandler controllerHandler;
-    private final Context context;
-    private final Handler handler;
+    // The elements of the layout call it from their own listeners (Java, in this package).
+    val handler: Handler = Handler(Looper.getMainLooper())
 
-    private final Runnable delayedRetransmitRunnable = new Runnable() {
-        @Override
-        public void run() {
-            sendControllerInputContextInternal();
-        }
-    };
+    private val delayedRetransmitRunnable = Runnable { sendControllerInputContextInternal() }
 
-    private FrameLayout frame_layout = null;
+    private var currentMode = ControllerMode.Active
 
-    ControllerMode currentMode = ControllerMode.Active;
-    ControllerInputContext inputContext = new ControllerInputContext();
+    private val buttonConfigure = Button(context)
 
-    private Button buttonConfigure = null;
+    private val elementList = ArrayList<VirtualControllerElement>()
 
-    private List<VirtualControllerElement> elements = new ArrayList<>();
+    val controllerInputContext = ControllerInputContext()
 
-    public VirtualController(final ControllerHandler controllerHandler, FrameLayout layout, final Context context) {
-        this.controllerHandler = controllerHandler;
-        this.frame_layout = layout;
-        this.context = context;
-        this.handler = new Handler(Looper.getMainLooper());
+    val controllerMode: ControllerMode
+        get() = currentMode
 
-        buttonConfigure = new Button(context);
-        buttonConfigure.setAlpha(0.25f);
-        buttonConfigure.setFocusable(false);
-        buttonConfigure.setBackgroundResource(R.drawable.ic_settings);
-        buttonConfigure.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String message;
+    val elements: List<VirtualControllerElement>
+        get() = elementList
 
-                if (currentMode == ControllerMode.Active){
-                    currentMode = ControllerMode.MoveButtons;
-                    message = "Entering configuration mode (Move buttons)";
-                } else if (currentMode == ControllerMode.MoveButtons) {
-                    currentMode = ControllerMode.ResizeButtons;
-                    message = "Entering configuration mode (Resize buttons)";
-                } else {
-                    currentMode = ControllerMode.Active;
-                    VirtualControllerConfigurationLoader.saveProfile(VirtualController.this, context);
-                    message = "Exiting configuration mode";
+    init {
+        buttonConfigure.alpha = CONFIGURE_BUTTON_ALPHA
+        buttonConfigure.isFocusable = false
+        buttonConfigure.setBackgroundResource(R.drawable.ic_settings)
+        buttonConfigure.setOnClickListener {
+            val message: String
+
+            when (currentMode) {
+                ControllerMode.Active -> {
+                    currentMode = ControllerMode.MoveButtons
+                    message = "Entering configuration mode (Move buttons)"
                 }
-
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
-
-                buttonConfigure.invalidate();
-
-                for (VirtualControllerElement element : elements) {
-                    element.invalidate();
+                ControllerMode.MoveButtons -> {
+                    currentMode = ControllerMode.ResizeButtons
+                    message = "Entering configuration mode (Resize buttons)"
+                }
+                ControllerMode.ResizeButtons -> {
+                    currentMode = ControllerMode.Active
+                    VirtualControllerConfigurationLoader.saveProfile(this, context)
+                    message = "Exiting configuration mode"
                 }
             }
-        });
 
-    }
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 
-    Handler getHandler() {
-        return handler;
-    }
+            buttonConfigure.invalidate()
 
-    public void hide() {
-        for (VirtualControllerElement element : elements) {
-            element.setVisibility(View.INVISIBLE);
-        }
-
-        buttonConfigure.setVisibility(View.INVISIBLE);
-    }
-
-    public void show() {
-        for (VirtualControllerElement element : elements) {
-            element.setVisibility(View.VISIBLE);
-        }
-
-        buttonConfigure.setVisibility(View.VISIBLE);
-    }
-
-    public void removeElements() {
-        for (VirtualControllerElement element : elements) {
-            frame_layout.removeView(element);
-        }
-        elements.clear();
-
-        frame_layout.removeView(buttonConfigure);
-    }
-
-    public void setOpacity(int opacity) {
-        for (VirtualControllerElement element : elements) {
-            element.setOpacity(opacity);
+            for (element in elementList) {
+                element.invalidate()
+            }
         }
     }
 
+    fun hide() {
+        for (element in elementList) {
+            element.visibility = View.INVISIBLE
+        }
 
-    public void addElement(VirtualControllerElement element, int x, int y, int width, int height) {
-        elements.add(element);
-        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(width, height);
-        layoutParams.setMargins(x, y, 0, 0);
-
-        frame_layout.addView(element, layoutParams);
+        buttonConfigure.visibility = View.INVISIBLE
     }
 
-    public List<VirtualControllerElement> getElements() {
-        return elements;
+    fun show() {
+        for (element in elementList) {
+            element.visibility = View.VISIBLE
+        }
+
+        buttonConfigure.visibility = View.VISIBLE
     }
 
-    public void refreshLayout() {
-        removeElements();
+    fun removeElements() {
+        for (element in elementList) {
+            requireFrame().removeView(element)
+        }
+        elementList.clear()
 
-        DisplayMetrics screen = context.getResources().getDisplayMetrics();
+        requireFrame().removeView(buttonConfigure)
+    }
 
-        int buttonSize = (int)(screen.heightPixels*0.06f);
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(buttonSize, buttonSize);
-        params.leftMargin = 15;
-        params.topMargin = 15;
-        frame_layout.addView(buttonConfigure, params);
+    fun setOpacity(opacity: Int) {
+        for (element in elementList) {
+            element.setOpacity(opacity)
+        }
+    }
+
+    fun addElement(element: VirtualControllerElement, x: Int, y: Int, width: Int, height: Int) {
+        elementList.add(element)
+        val layoutParams = FrameLayout.LayoutParams(width, height)
+        layoutParams.setMargins(x, y, 0, 0)
+
+        requireFrame().addView(element, layoutParams)
+    }
+
+    fun refreshLayout() {
+        removeElements()
+
+        val screen = context.resources.displayMetrics
+
+        val buttonSize = (screen.heightPixels * CONFIGURE_BUTTON_SIZE_RATIO).toInt()
+        val params = FrameLayout.LayoutParams(buttonSize, buttonSize)
+        params.leftMargin = CONFIGURE_BUTTON_MARGIN
+        params.topMargin = CONFIGURE_BUTTON_MARGIN
+        requireFrame().addView(buttonConfigure, params)
 
         // Start with the default layout
-        VirtualControllerConfigurationLoader.createDefaultLayout(this, context);
+        VirtualControllerConfigurationLoader.createDefaultLayout(this, context)
 
         // Apply user preferences onto the default layout
-        VirtualControllerConfigurationLoader.loadFromPreferences(this, context);
+        VirtualControllerConfigurationLoader.loadFromPreferences(this, context)
     }
 
-    public ControllerMode getControllerMode() {
-        return currentMode;
+    private fun sendControllerInputContextInternal() {
+        controllerHandler?.reportOscState(
+            controllerInputContext.inputMap.toInt(),
+            controllerInputContext.leftStickX,
+            controllerInputContext.leftStickY,
+            controllerInputContext.rightStickX,
+            controllerInputContext.rightStickY,
+            controllerInputContext.leftTrigger,
+            controllerInputContext.rightTrigger,
+        )
     }
 
-    public ControllerInputContext getControllerInputContext() {
-        return inputContext;
-    }
-
-    private void sendControllerInputContextInternal() {
-        if (controllerHandler != null) {
-            controllerHandler.reportOscState(
-                    inputContext.inputMap,
-                    inputContext.leftStickX,
-                    inputContext.leftStickY,
-                    inputContext.rightStickX,
-                    inputContext.rightStickY,
-                    inputContext.leftTrigger,
-                    inputContext.rightTrigger
-            );
-        }
-    }
-
-    void sendControllerInputContext() {
+    // The elements of the layout call it from their own listeners (Java, in this package).
+    fun sendControllerInputContext() {
         // Cancel retransmissions of prior gamepad inputs
-        handler.removeCallbacks(delayedRetransmitRunnable);
+        handler.removeCallbacks(delayedRetransmitRunnable)
 
-        sendControllerInputContextInternal();
+        sendControllerInputContextInternal()
 
         // HACK: GFE sometimes discards gamepad packets when they are received
         // very shortly after another. This can be critical if an axis zeroing packet
         // is lost and causes an analog stick to get stuck. To avoid this, we retransmit
         // the gamepad state a few times unless another input event happens before then.
-        handler.postDelayed(delayedRetransmitRunnable, 25);
-        handler.postDelayed(delayedRetransmitRunnable, 50);
-        handler.postDelayed(delayedRetransmitRunnable, 75);
+        handler.postDelayed(delayedRetransmitRunnable, FIRST_RETRANSMIT_DELAY_MS)
+        handler.postDelayed(delayedRetransmitRunnable, SECOND_RETRANSMIT_DELAY_MS)
+        handler.postDelayed(delayedRetransmitRunnable, THIRD_RETRANSMIT_DELAY_MS)
+    }
+
+    // A null layout fails on its first use, as in the Java, not in the constructor.
+    private fun requireFrame(): FrameLayout = checkNotNull(frameLayout)
+
+    private companion object {
+        private const val CONFIGURE_BUTTON_ALPHA = 0.25f
+        private const val CONFIGURE_BUTTON_SIZE_RATIO = 0.06f
+        private const val CONFIGURE_BUTTON_MARGIN = 15
+        private const val FIRST_RETRANSMIT_DELAY_MS = 25L
+        private const val SECOND_RETRANSMIT_DELAY_MS = 50L
+        private const val THIRD_RETRANSMIT_DELAY_MS = 75L
     }
 }

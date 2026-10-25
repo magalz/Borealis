@@ -3815,3 +3815,32 @@ Results of the evening of 2026-10-24 (owner and orchestrator, same build):
 
 Owner items left: Forget and pair again, Wake-on-LAN with the PC asleep, and whether a
 pad on the S22 reaches Quit in the in-game menu (D4).
+
+Results of the night of 2026-10-24 (owner, with the S22 logs read afterwards):
+
+- A pad on the S22 reaches Quit through the in-game menu (owner). D4 is closed for a
+  pad; the keys sent by `adb` stay as recorded.
+- Forget, then pair again, on the TV: pass (owner).
+- Pairing on the S22 after the wrong PIN. The owner saw the pairing fail and later
+  found the host paired. The app's own log (`no_backup/logs/borealis.log`, read
+  through `run-as`, masked) and the system's activity history show, in local time:
+  - 23:22:04: an attempt with a wrong PIN ends as `PIN_WRONG`; the `/unpair` that
+    follows answers 404, as the host contract says (no `/unpair` route).
+  - 23:22:19 to 23:23:37: about ten attempts, each answered 409 `IN_PROGRESS`; three
+    of them within 2 s.
+  - 23:24:07 to 23:24:22: the screen goes off and on, and the app comes back.
+  - 23:24:23: an attempt waits for the PIN on the host, and at 23:24:37 all four
+    steps answer 200: `pairing ended state=PAIRED`.
+  - 23:24:40: a stream starts, and it ends at 23:25:12.
+
+  So the S22 did pair at 23:24:37; the host's paired state is not a client fault.
+  What the screen showed between the attempts was not recorded.
+- New findings (owner):
+  - Back from the Apps screen to the Hosts screen plays a "shrinking" animation
+    (TV and phone), while other screens just fade.
+  - After Forget, the host does not come back as "Found on this network" until the
+    app is closed and opened again.
+
+  Both are in Sprint 15 (roadmap).
+
+Owner items left: Wake-on-LAN with the PC asleep.

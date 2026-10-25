@@ -122,6 +122,37 @@ class StickControlsCharacterizationTest {
     }
 
     @Test
+    fun `the right stick puts the height of the finger in its own height number, up as positive`() {
+        stick(right, MotionEvent.ACTION_DOWN, 60f, -80f, FIRST)
+        assertThat(rightSticks()).isEqualTo(17_553 to 23_404) // 80 / 112 of 0x7FFE is 23404.3
+
+        stick(right, MotionEvent.ACTION_MOVE, -60f, 80f, FIRST + 10)
+        assertThat(rightSticks()).isEqualTo(-17_553 to -23_404)
+        assertThat(leftSticks()).isEqualTo(0 to 0)
+    }
+
+    @Test
+    fun `the right stick sends 0x7FFE at the end of its way to the right and to the left`() {
+        stick(right, MotionEvent.ACTION_DOWN, 130f, 0f, FIRST)
+        assertThat(context.rightStickX).isEqualTo(0x7FFE.toShort())
+
+        stick(right, MotionEvent.ACTION_MOVE, -130f, 0f, FIRST + 10)
+        assertThat(context.rightStickX).isEqualTo((-0x7FFE).toShort())
+    }
+
+    @Test
+    fun `a finger on the column of the middle moves the right stick the other way round, as the left one`() {
+        // The angle of a finger exactly above or below the middle is the one of the opposite side
+        // (see the test of the stick itself): 100 pixels down sends up, and 100 pixels up sends down.
+        stick(right, MotionEvent.ACTION_DOWN, 0f, 100f, FIRST)
+        assertThat(rightSticks()).isEqualTo(0 to 29_255)
+
+        stick(right, MotionEvent.ACTION_MOVE, 0f, -100f, FIRST + 10)
+        assertThat(rightSticks()).isEqualTo(0 to -29_255)
+        assertThat(kit.rig.packets.last().rightStickY).isEqualTo(-29_255)
+    }
+
+    @Test
     fun `lifting the finger puts the sticks back to zero, and what it sends is the middle`() {
         stick(right, MotionEvent.ACTION_DOWN, 100f, 0f, FIRST)
         val sent = kit.rig.packets.size

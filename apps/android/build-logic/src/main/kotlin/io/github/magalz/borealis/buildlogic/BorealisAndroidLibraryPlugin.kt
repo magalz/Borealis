@@ -15,6 +15,7 @@ class BorealisAndroidLibraryPlugin : Plugin<Project> {
             with(BorealisLicenses) { configureLicensee() }
             with(BorealisDetekt) { configureDetekt() }
             configureFixtures()
+            configureTestTempDir()
 
             extensions.configure<LibraryExtension> {
                 compileSdk = BorealisBuild.COMPILE_SDK

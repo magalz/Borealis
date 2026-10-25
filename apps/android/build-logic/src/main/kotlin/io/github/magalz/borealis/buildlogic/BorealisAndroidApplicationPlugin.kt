@@ -22,6 +22,7 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             with(BorealisLicenses) { configureLicensee() }
             with(BorealisDetekt) { configureDetekt() }
             configureFixtures()
+            configureTestTempDir()
             configureUnitTestHeap()
 
             val components = extensions.getByType<ApplicationAndroidComponentsExtension>()

@@ -8,7 +8,9 @@ import android.hardware.usb.UsbInterface
 import java.time.Duration
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.rules.ExternalResource
 import org.robolectric.annotation.Implementation
@@ -64,7 +66,8 @@ class ShadowScriptedUsbConnection {
     val writes = CopyOnWriteArrayList<Write>()
 
     /** The threads that read from an IN endpoint, in the order of their first read. */
-    val readers = CopyOnWriteArrayList<Thread>()
+    private val readers = CopyOnWriteArrayList<Thread>()
+    private val firstRead = CountDownLatch(1)
 
     /** The timeout of each read of an IN endpoint, in milliseconds. */
     val readTimeouts = CopyOnWriteArrayList<Int>()
@@ -75,6 +78,17 @@ class ShadowScriptedUsbConnection {
     /** How many times the code closed this connection. */
     val closes: Int
         get() = closeCount.get()
+
+    /**
+     * The thread that reads from an IN endpoint, once it has made its first read. A controller
+     * reports its arrival before that read, so a test that has seen the arrival has to wait for it.
+     */
+    fun awaitReader(): Thread {
+        check(firstRead.await(READER_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+            "no read of the IN endpoint in $READER_TIMEOUT_SECONDS seconds"
+        }
+        return readers.single()
+    }
 
     /** Queues a [Read.Report] of [bytes] (each an unsigned byte value). */
     fun report(vararg bytes: Int) {
@@ -142,6 +156,7 @@ class ShadowScriptedUsbConnection {
     private fun read(buffer: ByteArray, length: Int, timeout: Int): Int {
         if (Thread.currentThread() !in readers) readers.add(Thread.currentThread())
         readTimeouts.add(timeout)
+        firstRead.countDown()
         val next =
             try {
                 reads.take()
@@ -168,6 +183,8 @@ class ShadowScriptedUsbConnection {
     }
 
     companion object {
+        private const val READER_TIMEOUT_SECONDS = 10L
+
         /** The connections opened since the last test, oldest first. */
         val created = CopyOnWriteArrayList<ShadowScriptedUsbConnection>()
 

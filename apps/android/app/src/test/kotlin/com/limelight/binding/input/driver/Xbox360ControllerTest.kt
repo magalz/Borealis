@@ -416,7 +416,7 @@ class Xbox360ControllerTest {
         pad.start()
         pad.listener.states(1)
 
-        val thread = pad.usb.readers.single()
+        val thread = pad.usb.awaitReader()
         assertThat(thread.name).startsWith("Thread-")
         assertThat(thread.isDaemon).isFalse()
         assertThat(thread.priority).isEqualTo(Thread.NORM_PRIORITY)
@@ -431,9 +431,9 @@ class Xbox360ControllerTest {
         assertThat(pad.listener.next()).isInstanceOf(PadEvent.Added::class.java)
 
         // Only the pad's own stop interrupts the thread, so a plain interrupt is a thread that is
-        // told
-        // to end: the read that it waits on ends at its timeout and the thread leaves without more.
-        val reader = pad.usb.readers.single()
+        // told to end: the read that it waits on ends at its timeout and the thread leaves with no
+        // more.
+        val reader = pad.usb.awaitReader()
         reader.interrupt()
         reader.join(5_000)
 
@@ -522,6 +522,8 @@ class Xbox360ControllerTest {
         val pad = pad()
         pad.start()
         assertThat(pad.listener.next()).isInstanceOf(PadEvent.Added::class.java)
+        // The thread makes its first read, and so waits for a report, a little after the arrival.
+        val reader = pad.usb.awaitReader()
 
         pad.controller.stop()
 
@@ -529,7 +531,6 @@ class Xbox360ControllerTest {
         assertThat(pad.usb.closes).isEqualTo(1)
         assertThat(pad.listener.quietFor(200)).isTrue()
         // The stop interrupts the thread that waits for a report, and the thread ends.
-        val reader = pad.usb.readers.single()
         reader.join(5_000)
         assertThat(reader.isAlive).isFalse()
     }

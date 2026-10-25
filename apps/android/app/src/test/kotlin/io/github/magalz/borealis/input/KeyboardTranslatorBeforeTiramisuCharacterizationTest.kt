@@ -2,6 +2,7 @@ package io.github.magalz.borealis.input
 
 import android.content.Context
 import android.hardware.input.InputManager
+import android.os.Build
 import android.view.InputDevice
 import android.view.KeyEvent
 import androidx.test.core.app.ApplicationProvider
@@ -21,13 +22,14 @@ import org.robolectric.util.ReflectionHelpers
  * sent as the key code it came with.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28])
+// Android 12, an API level that other tests already run on, so no new Robolectric sandbox is needed.
+@Config(sdk = [Build.VERSION_CODES.S])
 class KeyboardTranslatorBeforeTiramisuCharacterizationTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
     /**
      * An alphabetic keyboard that Android has. The fixture of the design system builds devices with
-     * `InputDevice.Builder`, which Android 9 does not have, so the device is made and filled in
+     * `InputDevice.Builder`, which only Android 13 has, so the device is made and filled in
      * the way Robolectric's own tests do.
      */
     @Suppress("DEPRECATION") // Robolectric's only way to make a device before Android 13.

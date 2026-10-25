@@ -215,6 +215,14 @@ class GameControllerDeviceTest : DevicesTestBase() {
     }
 
     @Test
+    @Config(sdk = [ANDROID_10])
+    fun `before Android 11 the virtual device is no controller even with a gamepad connected`() {
+        connectPad(pad(3))
+
+        assertThat(isController(virtualKeyboard())).isFalse()
+    }
+
+    @Test
     @Config(sdk = [ANDROID_12])
     fun `after Android 11 the virtual device is no controller even with a gamepad connected`() {
         connectPad(pad(3))
@@ -227,6 +235,7 @@ class GameControllerDeviceTest : DevicesTestBase() {
             .device
 
     private companion object {
+        const val ANDROID_10 = 29
         const val ANDROID_11 = 30
         const val ANDROID_12 = 31
         const val KEYBOARD = InputDevice.SOURCE_KEYBOARD

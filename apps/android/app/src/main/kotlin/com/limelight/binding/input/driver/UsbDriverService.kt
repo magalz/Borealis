@@ -78,7 +78,8 @@ class UsbDriverService : Service(), UsbDriverListener {
     }
 
     inner class UsbEventReceiver : BroadcastReceiver() {
-        // The deprecated getParcelableExtra stays: the typed one needs API 33.
+        // The deprecated getParcelableExtra stays (the typed one needs API 33), and so does the
+        // no-looper Handler().
         // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
         @Suppress("DEPRECATION")
         override fun onReceive(context: Context, intent: Intent) {

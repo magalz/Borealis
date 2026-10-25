@@ -30,7 +30,6 @@ import org.robolectric.util.ReflectionHelpers
 import org.robolectric.util.ReflectionHelpers.ClassParameter
 import org.robolectric.shadows.ShadowContextImpl
 import org.robolectric.shadows.ShadowInputEvent
-import org.robolectric.shadows.ShadowLooper
 
 /** One controller packet, with the signed bytes and shorts the handler handed the connection. */
 data class InputPacket(
@@ -69,7 +68,6 @@ class FeedbackConnection(activity: Activity) :
     val packets = CopyOnWriteArrayList<InputPacket>()
     val arrivals = CopyOnWriteArrayList<Arrival>()
     val motions = CopyOnWriteArrayList<Motion>()
-    val touches = CopyOnWriteArrayList<String>()
 
     override fun sendControllerInput(
         controllerNumber: Short,
@@ -122,18 +120,6 @@ class FeedbackConnection(activity: Activity) :
         z: Float,
     ): Int {
         motions += Motion(controllerNumber.toInt(), motionType.toInt(), x, y, z)
-        return 0
-    }
-
-    override fun sendControllerTouchEvent(
-        controllerNumber: Byte,
-        eventType: Byte,
-        pointerId: Int,
-        x: Float,
-        y: Float,
-        pressure: Float,
-    ): Int {
-        touches += "touch $controllerNumber $eventType"
         return 0
     }
 }
@@ -208,14 +194,9 @@ class FeedbackRig(
     fun led(red: Int, green: Int, blue: Int, controller: Int = 0) =
         handler.handleSetControllerLED(controller.toShort(), red.toByte(), green.toByte(), blue.toByte())
 
-    /** Robolectric's looper clock, which [advanceBy] moves. */
+    /** Robolectric's looper clock, which [advanceBackgroundBy] moves. */
     val now: Long
         get() = SystemClock.uptimeMillis()
-
-    /** Moves the main looper's clock and runs what it had scheduled in that time. */
-    fun advanceBy(millis: Long) {
-        ShadowLooper.idleMainLooper(millis, TimeUnit.MILLISECONDS)
-    }
 
     /** The looper of the handler's own `HandlerThread`, which batteries, sensors and LEDs run on. */
     val backgroundLooper: Looper

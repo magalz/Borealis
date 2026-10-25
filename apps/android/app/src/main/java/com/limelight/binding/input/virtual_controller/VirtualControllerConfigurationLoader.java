@@ -18,12 +18,6 @@ import org.json.JSONObject;
 public class VirtualControllerConfigurationLoader {
     public static final String OSC_PREFERENCE = "OSC";
 
-    private static int getPercent(
-            int percent,
-            int total) {
-        return (int) (((float) total / (float) 100) * (float) percent);
-    }
-
     // The default controls are specified using a grid of 128*72 cells at 16:9
     private static int screenScale(int units, int height) {
         return (int) (((float) height / (float) 72) * (float) units);
@@ -199,7 +193,7 @@ public class VirtualControllerConfigurationLoader {
 
         int height = screen.heightPixels;
 
-        // NOTE: Some of these getPercent() expressions seem like they can be combined
+        // NOTE: Some of these screenScale() expressions seem like they can be combined
         // into a single call. Due to floating point rounding, this isn't actually possible.
 
         if (!config.onlyL3R3)

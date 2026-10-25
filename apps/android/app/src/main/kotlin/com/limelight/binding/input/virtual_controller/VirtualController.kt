@@ -32,7 +32,7 @@ class VirtualController(
         ResizeButtons,
     }
 
-    // The elements of the layout call it from their own listeners (Java, in this package).
+    // The elements of the layout call it from their own listeners (Kotlin, in this package).
     val handler: Handler = Handler(Looper.getMainLooper())
 
     private val delayedRetransmitRunnable = Runnable { sendControllerInputContextInternal() }
@@ -153,7 +153,7 @@ class VirtualController(
         )
     }
 
-    // The elements of the layout call it from their own listeners (Java, in this package).
+    // The elements of the layout call it from their own listeners (Kotlin, in this package).
     fun sendControllerInputContext() {
         // Cancel retransmissions of prior gamepad inputs
         handler.removeCallbacks(delayedRetransmitRunnable)

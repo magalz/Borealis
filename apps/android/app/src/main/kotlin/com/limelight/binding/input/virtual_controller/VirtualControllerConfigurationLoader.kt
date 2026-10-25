@@ -432,7 +432,7 @@ object VirtualControllerConfigurationLoader {
             for (element in controller.elements) {
                 val prefKey = element.elementId.toString()
                 try {
-                    putString(prefKey, element.configuration.toString())
+                    putString(prefKey, element.getConfiguration().toString())
                 } catch (e: JSONException) {
                     e.printStackTrace()
                 }

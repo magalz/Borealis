@@ -21,11 +21,32 @@ data class Screen(val width: Int, val height: Int)
 data class Placed(val id: Int, val left: Int, val top: Int, val width: Int, val height: Int)
 
 /**
- * The id of an element, which the layout saves it under. `elementId` is protected in the element,
- * and a view's own `id` would hide an extension of that name.
+ * The id of an element, which the layout saves it under. A view's own `id` would hide an extension
+ * of the name `elementId`.
  */
 val VirtualControllerElement.eid: Int
     get() = elementId
+
+/**
+ * The colour an element draws with when nothing presses it. The element keeps it protected, for
+ * its subclasses, so a test reads it by reflection.
+ */
+val VirtualControllerElement.defaultColor: Int
+    get() =
+        VirtualControllerElement::class
+            .java
+            .getDeclaredMethod("getDefaultColor")
+            .apply { isAccessible = true }
+            .invoke(this) as Int
+
+/** The colour an element draws with while it is pressed; protected in the element too. */
+val VirtualControllerElement.pressedColor: Int
+    get() =
+        VirtualControllerElement::class
+            .java
+            .getDeclaredField("pressedColor")
+            .apply { isAccessible = true }
+            .getInt(this)
 
 /** Where the element sits in its frame, from the layout parameters the controller gave it. */
 fun VirtualControllerElement.placed(): Placed {

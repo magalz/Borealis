@@ -108,6 +108,22 @@ class DefaultLayoutCharacterizationTest {
         checkPlacement(OscRig.TABLET_16_10, onlyL3R3 = true, showGuideButton = false)
 
     @Test
+    fun `a 1920 by 1200 panel, where the float order of the grid shows, gets the full layout with Guide`() =
+        checkPlacement(OscRig.WUXGA, onlyL3R3 = false, showGuideButton = true)
+
+    @Test
+    fun `a 1920 by 1200 panel gets the full layout without Guide`() =
+        checkPlacement(OscRig.WUXGA, onlyL3R3 = false, showGuideButton = false)
+
+    @Test
+    fun `a 1920 by 1200 panel gets L3 and R3 with Guide`() =
+        checkPlacement(OscRig.WUXGA, onlyL3R3 = true, showGuideButton = true)
+
+    @Test
+    fun `a 1920 by 1200 panel gets L3 and R3 without Guide`() =
+        checkPlacement(OscRig.WUXGA, onlyL3R3 = true, showGuideButton = false)
+
+    @Test
     fun `the layout is the elements in the frame, in order, with no margin on the right or the bottom`() {
         val rig = defaultLayout(OscRig.PHONE)
 

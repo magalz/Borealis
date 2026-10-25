@@ -175,6 +175,13 @@ class OscRig(screen: Screen = PHONE, withHandler: Boolean = true) {
         /** A 16:10 tablet, with a height that does not divide by the 72 rows of the grid. */
         val TABLET_16_10 = Screen(2560, 1600)
 
+        /**
+         * A 1920 by 1200 panel, 16:10. At this height the order of the float operations of the grid
+         * shows: dividing by 72 first and multiplying after places the pad at 499, where
+         * multiplying first would place it at 500.
+         */
+        val WUXGA = Screen(1920, 1200)
+
         const val A = ControllerPacket.A_FLAG
         const val B = ControllerPacket.B_FLAG
         const val X = ControllerPacket.X_FLAG

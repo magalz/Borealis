@@ -13,7 +13,9 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.input.ControllerPacket.A_FLAG
 import com.limelight.nvstream.input.ControllerPacket.B_FLAG
+import com.limelight.nvstream.input.ControllerPacket.BACK_FLAG
 import com.limelight.nvstream.input.ControllerPacket.LB_FLAG
+import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
 import com.limelight.nvstream.input.ControllerPacket.X_FLAG
 import com.limelight.nvstream.input.ControllerPacket.Y_FLAG
 import com.limelight.preferences.PreferenceConfiguration.AnalogStickForScrolling
@@ -23,6 +25,7 @@ import org.junit.runner.RunWith
 import java.time.Duration
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.shadows.ShadowSystemClock
 
 /**
  * `transmitControllerInputLocked`: what the handler sends when several contexts share a controller
@@ -204,6 +207,22 @@ class CombiningCharacterizationTest {
         rig.handler.setCaptured(true)
 
         assertThat(rig.packets.drop(before)).containsExactly(Sent(0, 1, 0), Sent(2, 1, 0)).inOrder()
+    }
+
+    @Test
+    fun `a chord that a USB driver thread completes is reported on the main thread`() {
+        val usb = FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) }
+        usb.report(PLAY_FLAG or BACK_FLAG)
+        // The clock moves, but the looper does not run the check that was scheduled for the chord.
+        ShadowSystemClock.advanceBy(Duration.ofMillis(1_000))
+
+        val driver = Thread { usb.report(PLAY_FLAG or BACK_FLAG or A_FLAG) }
+        driver.start()
+        driver.join()
+
+        assertThat(rig.chords).isEqualTo(0)
+        rig.advanceBy(0)
+        assertThat(rig.chords).isEqualTo(1)
     }
 
     // ----- The strongest stick and trigger -----

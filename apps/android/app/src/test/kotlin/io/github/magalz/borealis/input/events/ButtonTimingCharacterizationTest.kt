@@ -502,6 +502,22 @@ class ButtonTimingCharacterizationTest {
     }
 
     @Test
+    fun `an event after the deadline completes the chord itself, before the scheduled check runs`() {
+        val chordPad = rig.addPad(8, fields = mapOf("hasSelect" to true))
+        val now = rig.now
+        chordPad.press(KEYCODE_BUTTON_SELECT, at = now)
+        chordPad.press(KEYCODE_BUTTON_START, at = now)
+
+        // The looper's clock stays where it is, so the check scheduled for 1000 ms has not run.
+        chordPad.press(KEYCODE_BUTTON_A, at = now + 1_000)
+
+        assertThat(rig.chords).isEqualTo(1)
+        assertThat(rig.buttons().last()).isEqualTo(A_FLAG)
+        rig.advanceBy(2_000)
+        assertThat(rig.chords).isEqualTo(1)
+    }
+
+    @Test
     fun `on a pad with a Mode button the early chord is a short press of Start and Select`() {
         val chordPad = rig.addPad(8, fields = mapOf("hasSelect" to true, "hasMode" to true))
         startSelectChord(chordPad)

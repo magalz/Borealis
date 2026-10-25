@@ -417,6 +417,20 @@ class ElementBaseCharacterizationTest {
         }
     }
 
+    @Test
+    fun `lifting or cancelling in a configuration mode redraws the element, which drops its frame`() {
+        kit.mode(ControllerMode.MoveButtons)
+
+        listOf(MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL).forEach { action ->
+            down(10f, 10f)
+            shadowOf(element).clearWasInvalidated()
+
+            up(action)
+
+            assertThat(shadowOf(element).wasInvalidated()).isTrue()
+        }
+    }
+
     // The mark of a selected element
 
     private fun marks(): List<Drawn> = draw(element).calls

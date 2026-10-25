@@ -96,6 +96,32 @@ class StickControlsCharacterizationTest {
     }
 
     @Test
+    fun `the numbers are cut toward zero, also where the part cut off is more than a half`() {
+        stick(left, MotionEvent.ACTION_DOWN, 70f, 0f, FIRST)
+        assertThat(leftSticks()).isEqualTo(20_478 to 0) // 0.625 of 0x7FFE is 20478.75, not 20479
+
+        stick(left, MotionEvent.ACTION_MOVE, -70f, 0f, FIRST + 10)
+        assertThat(leftSticks()).isEqualTo(-20_478 to 0)
+    }
+
+    @Test
+    fun `the angle is the arc tangent of a quotient of floats, in each quarter`() {
+        // The four fingers have the same quotient, 82 over 103. With the quotient in double
+        // precision, the other number of each pair would be one less (or one more, below zero).
+        stick(left, MotionEvent.ACTION_DOWN, 103f, -82f, FIRST)
+        assertThat(leftSticks()).isEqualTo(25_634 to 20_408)
+
+        stick(left, MotionEvent.ACTION_MOVE, 82f, 103f, FIRST + 10)
+        assertThat(leftSticks()).isEqualTo(20_408 to -25_634)
+
+        stick(left, MotionEvent.ACTION_MOVE, -103f, 82f, FIRST + 20)
+        assertThat(leftSticks()).isEqualTo(-25_634 to -20_408)
+
+        stick(left, MotionEvent.ACTION_MOVE, -82f, -103f, FIRST + 30)
+        assertThat(leftSticks()).isEqualTo(-20_408 to 25_634)
+    }
+
+    @Test
     fun `lifting the finger puts the sticks back to zero, and what it sends is the middle`() {
         stick(right, MotionEvent.ACTION_DOWN, 100f, 0f, FIRST)
         val sent = kit.rig.packets.size

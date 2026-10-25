@@ -89,6 +89,22 @@ class DigitalPadCharacterizationTest {
     }
 
     @Test
+    fun `a touch on the edge of a third is not in it, where the edge is a whole number of pixels`() {
+        // 400 by 300: the thirds are at 132 and 264 across and at 99 and 198 down, exactly
+        val round = kit.add(DigitalPad(kit.controller, kit.rig.activity), 500, 500, 400, 300)
+        val roundLog = PadLog().also { round.addDigitalPadListener(it) }
+
+        listOf(132f to 150f, 264f to 150f, 200f to 99f, 200f to 198f).forEach { (x, y) ->
+            round.touch(MotionEvent.ACTION_DOWN, x, y)
+        }
+        listOf(131.5f to 150f, 264.5f to 150f, 200f to 98.5f, 200f to 198.5f).forEach { (x, y) ->
+            round.touch(MotionEvent.ACTION_DOWN, x, y)
+        }
+
+        assertThat(roundLog.directions).containsExactly(NONE, NONE, NONE, NONE, LEFT, RIGHT, UP, DOWN).inOrder()
+    }
+
+    @Test
     fun `a touch in the middle presses no direction, and tells it`() {
         assertThat(direction(165f, 120f)).isEqualTo(NONE)
         assertThat(log.directions).containsExactly(0)

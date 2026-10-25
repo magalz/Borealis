@@ -4,9 +4,7 @@
 
 package com.limelight.binding.input.virtual_controller;
 
-import android.app.AlertDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.util.DisplayMetrics;
@@ -169,57 +167,6 @@ public abstract class VirtualControllerElement extends View {
     protected int getDefaultStrokeWidth() {
         DisplayMetrics screen = getResources().getDisplayMetrics();
         return (int)(screen.heightPixels*0.004f);
-    }
-
-    protected void showConfigurationDialog() {
-        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(getContext());
-
-        alertBuilder.setTitle("Configuration");
-
-        CharSequence functions[] = new CharSequence[]{
-                "Move",
-                "Resize",
-            /*election
-            "Set n
-            Disable color sormal color",
-            "Set pressed color",
-            */
-                "Cancel"
-        };
-
-        alertBuilder.setItems(functions, new DialogInterface.OnClickListener() {
-
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                switch (which) {
-                    case 0: { // move
-                        actionEnableMove();
-                        break;
-                    }
-                    case 1: { // resize
-                        actionEnableResize();
-                        break;
-                    }
-                /*
-                case 2: { // set default color
-                    actionShowNormalColorChooser();
-                    break;
-                }
-                case 3: { // set pressed color
-                    actionShowPressedColorChooser();
-                    break;
-                }
-                */
-                    default: { // cancel
-                        actionCancel();
-                        break;
-                    }
-                }
-            }
-        });
-        AlertDialog alert = alertBuilder.create();
-        // show menu
-        alert.show();
     }
 
     @Override

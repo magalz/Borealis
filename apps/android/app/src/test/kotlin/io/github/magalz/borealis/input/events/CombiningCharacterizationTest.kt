@@ -424,7 +424,7 @@ class CombiningCharacterizationTest {
     }
 
     @Test
-    fun `the D-pad scrolls one click when it goes down, up and left being the positive directions`() {
+    fun `the D-pad scrolls one click when it goes down, up and right being the positive directions`() {
         val pad = mouseModePad()
 
         val clicks =

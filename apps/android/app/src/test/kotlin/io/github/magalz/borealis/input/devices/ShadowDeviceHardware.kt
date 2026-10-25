@@ -1,0 +1,199 @@
+package io.github.magalz.borealis.input.devices
+
+import android.hardware.SensorManager
+import android.hardware.lights.Light
+import android.os.Build
+import android.os.Vibrator
+import android.view.InputDevice
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Implementation
+import org.robolectric.annotation.Implements
+import org.robolectric.annotation.RealObject
+import org.robolectric.shadow.api.Shadow
+import org.robolectric.util.ReflectionHelpers
+import org.robolectric.util.ReflectionHelpers.ClassParameter
+
+/**
+ * What the framework tells the handler about the vibrators and the lights of an input device.
+ * Robolectric answers every one of those questions with null, which the handler does not expect
+ * from a real device, so [ShadowDeviceHardware] answers them from here. The sensors of a device
+ * are the ones Robolectric's sensor manager has (they are shared by every sensor manager).
+ */
+data class Hardware(
+    /** How many vibrators the device's vibrator manager has. */
+    val vibrators: Int = 0,
+    /** Whether each of them has amplitude control. */
+    val amplitudeControl: Boolean = true,
+    /** How many of its lights can show a color. */
+    val rgbLights: Int = 0,
+    /** How many of its lights cannot. */
+    val plainLights: Int = 0,
+)
+
+/** The hardware of each device id, and what the handler did to it. */
+object DeviceHardware {
+    private val byDevice = mutableMapOf<Int, Hardware>()
+    private val sensorManagers = mutableMapOf<Int, SensorManager>()
+
+    /** The device ids whose vibrator manager the handler cancelled, in order. */
+    val vibratorManagerCancels = mutableListOf<Int>()
+
+    /** How many vibrators the vibrator manager of the phone itself has. */
+    var systemVibrators = 0
+
+    fun set(deviceId: Int, hardware: Hardware) {
+        byDevice[deviceId] = hardware
+    }
+
+    fun of(deviceId: Int): Hardware = byDevice[deviceId] ?: Hardware()
+
+    /** The sensor manager that [InputDevice.getSensorManager] answers for the device. */
+    fun sensorManagerOf(deviceId: Int): SensorManager =
+        sensorManagers.getOrPut(deviceId) { newInstance("android.hardware.SystemSensorManager") }
+
+    fun reset() {
+        byDevice.clear()
+        sensorManagers.clear()
+        vibratorManagerCancels.clear()
+        systemVibrators = 0
+    }
+}
+
+@Suppress("UNCHECKED_CAST")
+private fun <T> newInstance(className: String): T =
+    ReflectionHelpers.callConstructor(Class.forName(className)) as T
+
+private fun light(id: Int, rgb: Boolean): Light =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        val capabilities =
+            if (rgb) Light.LIGHT_CAPABILITY_COLOR_RGB else Light.LIGHT_CAPABILITY_BRIGHTNESS
+        ReflectionHelpers.callConstructor(
+            Light::class.java,
+            ClassParameter.from(Int::class.javaPrimitiveType, id),
+            ClassParameter.from(String::class.java, "light-$id"),
+            ClassParameter.from(Int::class.javaPrimitiveType, id),
+            ClassParameter.from(Int::class.javaPrimitiveType, Light.LIGHT_TYPE_INPUT),
+            ClassParameter.from(Int::class.javaPrimitiveType, capabilities),
+        )
+    } else {
+        // Before Android 14 the capabilities are not an argument: hasRgbControl() is always true.
+        ReflectionHelpers.callConstructor(
+            Light::class.java,
+            ClassParameter.from(Int::class.javaPrimitiveType, id),
+            ClassParameter.from(Int::class.javaPrimitiveType, id),
+            ClassParameter.from(Int::class.javaPrimitiveType, Light.LIGHT_TYPE_INPUT),
+        )
+    }
+
+/**
+ * Gives an input device the vibrators, lights and sensor manager of [DeviceHardware]. The vibrator
+ * and lights managers are typed `Any` because their classes only exist from Android 12, and this
+ * shadow is also loaded on the levels before it.
+ */
+@Implements(InputDevice::class)
+class ShadowDeviceHardware {
+    // Robolectric sets the field when it makes the shadow, so it cannot be a val.
+    @Suppress("VarCouldBeVal") @RealObject private lateinit var device: InputDevice
+
+    @Suppress("unused")
+    @Implementation
+    fun getVibratorManager(): Any {
+        val manager = newInstance<Any>("android.hardware.input.InputDeviceVibratorManager")
+        Shadow.extract<ShadowDeviceVibratorManager>(manager).deviceId = device.id
+        return manager
+    }
+
+    @Suppress("unused")
+    @Implementation
+    fun getLightsManager(): Any {
+        val manager = newInstance<Any>("android.hardware.input.InputDeviceLightsManager")
+        Shadow.extract<ShadowDeviceLightsManager>(manager).deviceId = device.id
+        return manager
+    }
+
+    @Suppress("unused")
+    @Implementation
+    fun getSensorManager(): SensorManager = DeviceHardware.sensorManagerOf(device.id)
+}
+
+@Implements(
+    className = "android.hardware.input.InputDeviceVibratorManager",
+    isInAndroidSdk = false,
+    minSdk = Build.VERSION_CODES.S,
+)
+class ShadowDeviceVibratorManager {
+    var deviceId = 0
+
+    @Suppress("unused")
+    @Implementation
+    fun getVibratorIds(): IntArray = IntArray(DeviceHardware.of(deviceId).vibrators) { it + 1 }
+
+    @Suppress("unused")
+    @Implementation
+    fun getVibrator(vibratorId: Int): Vibrator {
+        val vibrator = newInstance<Vibrator>("android.hardware.input.InputDeviceVibrator")
+        Shadow.extract<ShadowDeviceVibrator>(vibrator).deviceId = deviceId
+        return vibrator
+    }
+
+    @Suppress("unused")
+    @Implementation
+    fun cancel() {
+        DeviceHardware.vibratorManagerCancels += deviceId
+    }
+}
+
+@Implements(
+    className = "android.hardware.input.InputDeviceVibrator",
+    isInAndroidSdk = false,
+    minSdk = Build.VERSION_CODES.S,
+)
+class ShadowDeviceVibrator {
+    var deviceId = 0
+
+    @Suppress("unused")
+    @Implementation
+    fun hasAmplitudeControl(): Boolean = DeviceHardware.of(deviceId).amplitudeControl
+
+    @Suppress("unused", "FunctionOnlyReturningConstant")
+    @Implementation
+    fun hasVibrator(): Boolean = true
+}
+
+@Implements(
+    className = "android.hardware.input.InputDeviceLightsManager",
+    isInAndroidSdk = false,
+    minSdk = Build.VERSION_CODES.S,
+)
+class ShadowDeviceLightsManager {
+    var deviceId = 0
+
+    @Suppress("unused")
+    @Implementation
+    fun getLights(): List<Light> {
+        val hardware = DeviceHardware.of(deviceId)
+        return List(hardware.rgbLights) { light(it, rgb = true) } +
+            List(hardware.plainLights) { light(hardware.rgbLights + it, rgb = false) }
+    }
+}
+
+/**
+ * The vibrator manager of the phone itself. Robolectric's has no vibrators; this one has
+ * [DeviceHardware.systemVibrators], each of which has amplitude control when Robolectric's vibrator
+ * does (`ShadowVibrator.setHasAmplitudeControl`).
+ */
+@Implements(
+    className = "android.os.SystemVibratorManager",
+    isInAndroidSdk = false,
+    minSdk = Build.VERSION_CODES.S,
+)
+class ShadowSystemVibratorManager {
+    @Suppress("unused")
+    @Implementation
+    fun getVibratorIds(): IntArray = IntArray(DeviceHardware.systemVibrators) { it + 1 }
+
+    @Suppress("unused")
+    @Implementation
+    fun getVibrator(vibratorId: Int): Vibrator =
+        RuntimeEnvironment.getApplication().getSystemService(Vibrator::class.java)
+}

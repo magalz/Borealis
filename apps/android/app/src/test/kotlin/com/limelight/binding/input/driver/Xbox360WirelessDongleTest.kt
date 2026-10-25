@@ -16,7 +16,14 @@ import org.robolectric.annotation.Config
  * kernel driver takes the dongle back.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowMoonBridge::class, ShadowScriptedUsbConnection::class])
+@Config(
+    shadows =
+        [
+            ShadowMoonBridge::class,
+            ShadowScriptedUsbConnection::class,
+            ShadowRequestingUsbManager::class,
+        ]
+)
 class Xbox360WirelessDongleTest {
     @get:Rule val scriptedUsb = ScriptedUsbReset()
 

@@ -19,7 +19,14 @@ import org.robolectric.annotation.Config
  * before it reports the pad, so every test that reads reports takes about that long.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowMoonBridge::class, ShadowScriptedUsbConnection::class])
+@Config(
+    shadows =
+        [
+            ShadowMoonBridge::class,
+            ShadowScriptedUsbConnection::class,
+            ShadowRequestingUsbManager::class,
+        ]
+)
 class Xbox360ControllerTest {
     @get:Rule val scriptedUsb = ScriptedUsbReset()
 

@@ -12,7 +12,10 @@ import org.robolectric.shadows.ShadowUsbManager
 /**
  * The stock USB manager shadow, which also keeps the permission requests the code makes, and fails
  * them on demand the way a Samsung Knox policy does: with a [SecurityException] the API does not
- * document. Use it with `@Config(shadows = [ShadowRequestingUsbManager::class])`.
+ * document. It behaves as the stock shadow until a test sets [failure] or [openFails], so all the
+ * driver tests use it together with [ShadowScriptedUsbConnection], in one Robolectric sandbox:
+ * `@Config(shadows = [ShadowMoonBridge::class, ShadowScriptedUsbConnection::class,
+ * ShadowRequestingUsbManager::class])`.
  */
 @Implements(UsbManager::class)
 class ShadowRequestingUsbManager : ShadowUsbManager() {

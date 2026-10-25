@@ -22,7 +22,7 @@ import org.robolectric.shadows.ShadowSystemClock
  * an OUT endpoint is recorded. Robolectric's own [UsbDeviceConnection] shadow writes every transfer
  * into a pipe, whatever the direction, so it cannot play a pad that sends reports.
  *
- * Use it with `@Config(shadows = [ShadowScriptedUsbConnection::class])`. It replaces the stock
+ * Use it with the set of shadows named in [ShadowRequestingUsbManager]. It replaces the stock
  * shadow for [UsbDeviceConnection], so `UsbManager.openDevice` hands it out too: [created] lists
  * the connections the code under test opened.
  */

@@ -29,7 +29,14 @@ import org.robolectric.annotation.Config
  * Controllers report from their input thread, which waits a second before the first event.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowMoonBridge::class, ShadowScriptedUsbConnection::class])
+@Config(
+    shadows =
+        [
+            ShadowMoonBridge::class,
+            ShadowScriptedUsbConnection::class,
+            ShadowRequestingUsbManager::class,
+        ]
+)
 class UsbDriverServiceTest {
     @get:Rule val scriptedUsb = ScriptedUsbReset()
 

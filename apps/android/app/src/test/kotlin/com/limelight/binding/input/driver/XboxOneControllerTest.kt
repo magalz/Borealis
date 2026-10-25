@@ -15,7 +15,14 @@ import org.robolectric.annotation.Config
  * endpoint, and what reaches the listener from the reports a pad plays on the IN endpoint.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowMoonBridge::class, ShadowScriptedUsbConnection::class])
+@Config(
+    shadows =
+        [
+            ShadowMoonBridge::class,
+            ShadowScriptedUsbConnection::class,
+            ShadowRequestingUsbManager::class,
+        ]
+)
 class XboxOneControllerTest {
     @get:Rule val scriptedUsb = ScriptedUsbReset()
 

@@ -18,7 +18,14 @@ import org.robolectric.annotation.Config
  * checks read `os.version`, so the tests set it and put it back.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowMoonBridge::class, ShadowScriptedUsbConnection::class])
+@Config(
+    shadows =
+        [
+            ShadowMoonBridge::class,
+            ShadowScriptedUsbConnection::class,
+            ShadowRequestingUsbManager::class,
+        ]
+)
 class UsbClaimRulesTest {
     @get:Rule val scriptedUsb = ScriptedUsbReset()
 

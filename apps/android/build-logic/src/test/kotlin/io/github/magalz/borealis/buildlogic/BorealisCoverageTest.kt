@@ -24,21 +24,34 @@ class BorealisCoverageTest {
     private fun isExcluded(className: String) = patterns.any { it.matcher(className).matches() }
 
     @Test
-    fun `the Java that stays Java until sprints 13 and 14 is not counted`() {
+    fun `the Java that stays Java until sprint 14 is not counted`() {
         val stillJava =
             listOf(
                 "com.limelight.Game",
                 "com.limelight.Game\$1",
                 "com.limelight.Game\$ServiceConnectionState",
-                "com.limelight.binding.input.ControllerHandler",
-                "com.limelight.binding.input.driver.UsbDriverService",
-                "com.limelight.binding.input.evdev.EvdevListener",
                 "com.limelight.binding.video.MediaCodecDecoderRenderer",
                 "com.limelight.binding.audio.AndroidAudioRenderer",
                 "com.limelight.nvstream.jni.MoonBridge",
             )
 
         assertThat(stillJava.filterNot(::isExcluded)).isEmpty()
+    }
+
+    @Test
+    fun `the input code that sprint 13 converts is counted`() {
+        val input =
+            listOf(
+                "com.limelight.binding.input.ControllerHandler",
+                "com.limelight.binding.input.ControllerHandler\$InputDeviceContext",
+                "com.limelight.binding.input.KeyboardTranslator",
+                "com.limelight.binding.input.capture.InputCaptureManager",
+                "com.limelight.binding.input.driver.UsbDriverService",
+                "com.limelight.binding.input.touch.RelativeTouchContext",
+                "com.limelight.binding.input.virtual_controller.VirtualController",
+            )
+
+        assertThat(input.filter(::isExcluded)).isEmpty()
     }
 
     @Test

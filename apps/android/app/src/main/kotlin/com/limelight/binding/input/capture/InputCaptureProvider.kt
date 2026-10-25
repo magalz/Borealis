@@ -1,45 +1,49 @@
-package com.limelight.binding.input.capture;
+package com.limelight.binding.input.capture
 
-import android.view.MotionEvent;
+import android.view.MotionEvent
 
-public abstract class InputCaptureProvider {
-    protected boolean isCapturing;
-    protected boolean isCursorVisible;
+// Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+@Suppress("AbstractClassCanBeConcreteClass")
+abstract class InputCaptureProvider {
+    @JvmField protected var isCapturing = false
 
-    public void enableCapture() {
-        isCapturing = true;
-        hideCursor();
-    }
-    public void disableCapture() {
-        isCapturing = false;
-        showCursor();
-    }
+    @JvmField protected var isCursorVisible = false
 
-    public void destroy() {}
-
-    public boolean isCapturingActive() {
-        return isCapturing;
+    open fun enableCapture() {
+        isCapturing = true
+        hideCursor()
     }
 
-    public void showCursor() {
-        isCursorVisible = true;
+    open fun disableCapture() {
+        isCapturing = false
+        showCursor()
     }
 
-    public void hideCursor() {
-        isCursorVisible = false;
+    open fun destroy() {}
+
+    open fun isCapturingActive(): Boolean {
+        return isCapturing
     }
 
-    public boolean eventHasRelativeMouseAxes(MotionEvent event) {
-        return false;
+    open fun showCursor() {
+        isCursorVisible = true
     }
 
-    public float getRelativeAxisX(MotionEvent event) {
-        return 0;
+    open fun hideCursor() {
+        isCursorVisible = false
     }
 
-    public float getRelativeAxisY(MotionEvent event) {
-        return 0;
+    open fun eventHasRelativeMouseAxes(event: MotionEvent): Boolean {
+        return false
     }
 
-    public void onWindowFocusChanged(boolean focusActive) {}
+    open fun getRelativeAxisX(event: MotionEvent): Float {
+        return 0f
+    }
+
+    open fun getRelativeAxisY(event: MotionEvent): Float {
+        return 0f
+    }
+
+    open fun onWindowFocusChanged(focusActive: Boolean) {}
 }

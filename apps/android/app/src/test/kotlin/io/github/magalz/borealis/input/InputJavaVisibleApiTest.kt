@@ -105,7 +105,7 @@ class InputJavaVisibleApiTest {
     }
 
     @Test
-    fun `the providers are public and not final, and extend one another`() {
+    fun `the providers are public, extend one another, and the two that are extended are open`() {
         val base = InputCaptureProvider::class.java
         val icon = AndroidPointerIconCaptureProvider::class.java
         val nativeProvider = AndroidNativePointerCaptureProvider::class.java
@@ -113,6 +113,9 @@ class InputJavaVisibleApiTest {
         assertThat(Modifier.isAbstract(base.modifiers)).isTrue()
         for (type in listOf(base, icon, nativeProvider)) {
             assertThat(Modifier.isPublic(type.modifiers)).isTrue()
+        }
+        // Nothing extends the native provider, so it does not have to stay open.
+        for (type in listOf(base, icon)) {
             assertThat(Modifier.isFinal(type.modifiers)).isFalse()
         }
         assertThat(icon.superclass).isEqualTo(base)

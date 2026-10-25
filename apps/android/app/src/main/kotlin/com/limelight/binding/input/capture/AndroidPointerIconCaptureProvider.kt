@@ -1,28 +1,21 @@
-package com.limelight.binding.input.capture;
+package com.limelight.binding.input.capture
 
-import android.app.Activity;
-import android.content.Context;
-import android.view.PointerIcon;
-import android.view.View;
+import android.app.Activity
+import android.content.Context
+import android.view.PointerIcon
+import android.view.View
 
-public class AndroidPointerIconCaptureProvider extends InputCaptureProvider {
-    private final View targetView;
-    private final Context context;
+open class AndroidPointerIconCaptureProvider(activity: Activity, private val targetView: View) :
+    InputCaptureProvider() {
+    private val context: Context = activity
 
-    public AndroidPointerIconCaptureProvider(Activity activity, View targetView) {
-        this.context = activity;
-        this.targetView = targetView;
+    override fun hideCursor() {
+        super.hideCursor()
+        targetView.pointerIcon = PointerIcon.getSystemIcon(context, PointerIcon.TYPE_NULL)
     }
 
-    @Override
-    public void hideCursor() {
-        super.hideCursor();
-        targetView.setPointerIcon(PointerIcon.getSystemIcon(context, PointerIcon.TYPE_NULL));
-    }
-
-    @Override
-    public void showCursor() {
-        super.showCursor();
-        targetView.setPointerIcon(null);
+    override fun showCursor() {
+        super.showCursor()
+        targetView.pointerIcon = null
     }
 }

@@ -520,6 +520,44 @@ class ControllerNumberTest : DevicesTestBase() {
         assertThat(rig.arrivalControllers().last()).isEqualTo(1)
     }
 
+    @Test
+    fun `the seventeenth USB pad shares controller 0 because only sixteen numbers exist`() {
+        val rig = rig(multiController = true)
+        val pads = (1..17).map { FakeUsbController(it, rig.handler) }
+        pads.forEach(rig.handler::deviceAdded)
+
+        pads.forEach { it.report(a) }
+
+        val contexts = pads.map { ContextView(checkNotNull(rig.usbContexts().get(it.controllerId))) }
+        assertThat(contexts.take(16).map { it.short("controllerNumber") })
+            .containsExactlyElementsIn((0..15).toList())
+            .inOrder()
+        assertThat(contexts.last().short("controllerNumber")).isEqualTo(0)
+        assertThat(contexts.last().bool("reservedControllerNumber")).isFalse()
+        assertThat(contexts.last().bool("assignedControllerNumber")).isTrue()
+        assertThat(rig.connection.arrivals).hasSize(17)
+        // All sixteen bits set read as a negative short
+        assertThat(rig.arrivalMasks()[14]).isEqualTo(0x7FFF)
+        assertThat(rig.arrivalMasks()[15]).isEqualTo(-1)
+        assertThat(rig.arrivalMasks().last()).isEqualTo(-1)
+    }
+
+    @Test
+    fun `a USB pad that takes number 0 leaves the start set of a pad attached at the start`() {
+        val system = pad(1)
+        val rig = rig(multiController = true, devices = listOf(system))
+        val usb = FakeUsbController(9, rig.handler).also { rig.handler.deviceAdded(it) }
+        usb.report(a)
+        assertThat(rig.arrivalMasks()).containsExactly(0b1)
+
+        rig.handler.deviceRemoved(usb)
+
+        // The system pad was counted at the start as bit 0; the USB pad took that bit over, so
+        // freeing it leaves no bit behind
+        assertThat(rig.connection.packets.last())
+            .isEqualTo(Sent(controller = 0, activeMask = 0, buttons = 0))
+    }
+
     private companion object {
         const val GAMEPAD = InputDevice.SOURCE_GAMEPAD
         const val MOUSE = InputDevice.SOURCE_MOUSE

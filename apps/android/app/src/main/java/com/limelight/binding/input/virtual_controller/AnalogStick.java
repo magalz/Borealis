@@ -76,11 +76,6 @@ public class AnalogStick extends VirtualControllerElement {
     }
 
     /**
-     * configuration if the analog stick should be displayed as circle or square
-     */
-    private boolean circle_stick = true; // TODO: implement square sick for simulations
-
-    /**
      * outer radius, this size will be automatically updated on resize
      */
     private float radius_complete = 0;

@@ -261,12 +261,12 @@ python -m unittest discover -s design/accessibility
   as the rest
   ([ADR 0059](../adr/0059-convert-the-inherited-java-to-kotlin.md),
   [ADR 0049](../adr/0049-coverage-gate.md)). Not counted:
-  - the Java that stays Java until Sprints 13 and 14:
+  - the Java that stays Java until Sprint 14:
     `com.limelight.Game` with its nested classes, and the packages
-    `com.limelight.binding.input` (with its subpackages),
     `com.limelight.binding.video`, `com.limelight.binding.audio` and
     `com.limelight.nvstream.jni`. `BorealisCoverage.EXCLUDED_CLASSES` lists them
-    and shrinks as each one is converted;
+    and shrinks as each one is converted. The input package
+    `com.limelight.binding.input` counts from Sprint 13, which converts it;
   - generated Hilt/Dagger, Room and serialization classes, `BuildConfig`, `R`
     and Compose singleton classes.
 

@@ -190,6 +190,21 @@ class NativePointerCaptureCharacterizationTest {
     }
 
     @Test
+    fun `a request that waited is not cancelled when the capture is disabled meanwhile`() {
+        // Pinned as the Java does it, not as a promise: the request looks for a device when its
+        // delay ends, and does not look at whether the capture is still on.
+        rig.connect(MOUSE, Sources.MOUSE)
+        rig.provider.enableCapture()
+        rig.provider.onWindowFocusChanged(true)
+        rig.provider.disableCapture()
+        val asked = rig.view.requests
+
+        rig.advanceBy(500)
+
+        assertThat(rig.view.requests).isEqualTo(asked + 1)
+    }
+
+    @Test
     fun `losing focus asks for nothing`() {
         rig.connect(MOUSE, Sources.MOUSE)
         rig.provider.enableCapture()

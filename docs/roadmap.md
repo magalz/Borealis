@@ -637,7 +637,9 @@ Items:
   characterization tests of the HTTP layer use these fixtures.
 - **Pending.** The device round: discovery, Add host, pairing (including a wrong PIN on
   26.10.0-beta.1), Wake-on-LAN, Forget, the app list, pinned shortcuts and the TV
-  channel, launch, resume and Quit. The result is recorded after the round.
+  channel, launch, resume and Quit. The results are in
+  [device-validation section 17](development/device-validation.md#17-results-sprint-12);
+  Forget and Wake-on-LAN are still the owner's.
 
 ### Sprint 13: Kotlin migration, input
 
@@ -733,6 +735,24 @@ Planned, not started.
   stream starts; a host that never answers still ends in the offline message. See
   [device-validation section 17](development/device-validation.md#17-results-sprint-12),
   the follow-up on the S22.
+- **The in-game menu loses its focus on Left or Right.** Found by the owner in the
+  Sprint 12 round (2026-10-24); the owner put it here. Left or Right, on the D-pad or
+  the analog stick, makes the focus outline disappear, and it does not come back until
+  the menu is closed and opened again. It happens often with the analog stick. Check
+  where the focus goes, and whether D4 of the round (keys from the phone not
+  reaching Quit) is the same cause.
+- **Add host says "Pair it" for a host that is already paired.** Found in the Sprint
+  12 round (2026-10-24); the owner put it here. `shell_host_added` shows for any
+  added host. Word it by the host's pairing state.
+- **Back from Apps to Hosts plays a shrinking animation.** Found by the owner in the
+  Sprint 12 round (2026-10-24), on the TV and the phone. The other screens of the
+  Library fade (`FadingNavHost` in `LibraryNavHost.kt`). Find where the shrink comes
+  from, and make this back like the others.
+- **A forgotten host is not found again until the app restarts.** Found by the owner in
+  the Sprint 12 round (2026-10-24). After Forget, the host does not come back as
+  "Found on this network" until the app is closed and opened again. Check whether
+  discovery skips a host it already reported, in `ComputerManagerService` and the
+  mDNS agents, with a test first.
 
 ### Sprint 16: SecOps
 
@@ -757,7 +777,12 @@ release. Sprint 16 is hardening and security testing.
 - **LuminalShine wrong-PIN fix, as a contribution to the host.** Added at the
   Sprint 10 UAT (2026-10-21). Proposed; the owner confirms at planning. On
   LuminalShine 26.10.0-beta.1, a wrong PIN keeps the pairing session for 5
-  minutes, and a retry gets 409 until it expires. The fix:
+  minutes, and a retry gets 409 until it expires. The owner saw the same symptom
+  again in the Sprint 12 round (2026-10-24): a retry shows a new PIN for a moment,
+  then the "try again" screen. The app log shows twelve attempts one after another,
+  each answered 409 within 0.1 s, about 0.7 to 21 s apart; who started each is not
+  recorded. Whether the client should wait on 409 `IN_PROGRESS` is for planning. The
+  fix:
   - Fix A: a fresh phase 1 from the same peer address and the same client
     certificate, after the PIN was applied, ends the old exchange as FAILED and
     starts a new one that needs a new PIN.

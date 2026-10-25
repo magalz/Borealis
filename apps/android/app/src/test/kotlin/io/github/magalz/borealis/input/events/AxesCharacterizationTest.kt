@@ -142,6 +142,15 @@ class AxesCharacterizationTest {
     }
 
     @Test
+    fun `a stick exactly on the circle is inside it`() {
+        // 15 percent is 0.15f, and the magnitude of a stick held on one axis is that value exactly.
+        assertThat(send(AXIS_X to 0.15f)).isEqualTo(Sent(0, 1, 0))
+        assertThat(send(AXIS_Y to -0.15f)).isEqualTo(Sent(0, 1, 0))
+        assertThat(send(AXIS_Z to 0.15f)).isEqualTo(Sent(0, 1, 0))
+        assertThat(send(AXIS_RZ to -0.15f)).isEqualTo(Sent(0, 1, 0))
+    }
+
+    @Test
     fun `the deadzone is a circle, not a square`() {
         // 0.12 on each axis is 0.17 from the center, outside 0.15, though each axis is inside.
         assertThat(send(AXIS_X to 0.12f, AXIS_Y to 0.12f))

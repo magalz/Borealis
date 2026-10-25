@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.input.events
 
+import android.view.KeyEvent.ACTION_DOWN
 import android.view.KeyEvent.KEYCODE_BUTTON_A
 import android.view.KeyEvent.KEYCODE_BUTTON_L1
 import android.view.KeyEvent.KEYCODE_BUTTON_R1
@@ -185,6 +186,18 @@ class ButtonTimingCharacterizationTest {
         pad.release(KEYCODE_BUTTON_START)
 
         assertThat(pad.getBoolean("mouseEmulationActive")).isTrue()
+    }
+
+    @Test
+    fun `the Start hold counts from the event time of the key down, not from its down time`() {
+        val start = rig.now
+        // A key down that claims to have gone down a second before the event was made
+        rig.handler.handleButtonDown(pad.keyEvent(start - 1_000, start, ACTION_DOWN, KEYCODE_BUTTON_START))
+        rig.advanceBy(700)
+
+        pad.release(KEYCODE_BUTTON_START, downTime = start - 1_000)
+
+        assertThat(pad.getBoolean("mouseEmulationActive")).isFalse()
     }
 
     @Test

@@ -193,6 +193,19 @@ class CombiningCharacterizationTest {
         assertThat(rig.packets.last()).isEqualTo(Sent(0, 1, A_FLAG))
     }
 
+    @Test
+    fun `every controller number that sent input gets a neutral packet when the capture starts`() {
+        val first = rig.addPad(7, controllerNumber = 0)
+        val second = rig.addPad(8, controllerNumber = 2)
+        first.press(KEYCODE_BUTTON_A)
+        second.press(KEYCODE_BUTTON_B)
+        val before = rig.packets.size
+
+        rig.handler.setCaptured(true)
+
+        assertThat(rig.packets.drop(before)).containsExactly(Sent(0, 1, 0), Sent(2, 1, 0)).inOrder()
+    }
+
     // ----- The strongest stick and trigger -----
 
     private fun twoPads(
@@ -414,15 +427,24 @@ class CombiningCharacterizationTest {
     fun `the D-pad scrolls one click when it goes down, up and left being the positive directions`() {
         val pad = mouseModePad()
 
-        for (keyCode in listOf(KEYCODE_DPAD_UP, KEYCODE_DPAD_DOWN, KEYCODE_DPAD_RIGHT, KEYCODE_DPAD_LEFT)) {
+        val clicks =
+            listOf(
+                KEYCODE_DPAD_UP to "scroll 1",
+                KEYCODE_DPAD_DOWN to "scroll -1",
+                KEYCODE_DPAD_RIGHT to "hscroll 1",
+                KEYCODE_DPAD_LEFT to "hscroll -1",
+            )
+        val expected = mutableListOf<String>()
+        for ((keyCode, click) in clicks) {
             pad.press(keyCode)
+            expected += click
+            // The click goes out with the key down ...
+            assertThat(rig.connection.mouse).containsExactlyElementsIn(expected).inOrder()
             rig.advanceBy(100)
             pad.release(keyCode)
+            // ... and the key up sends none.
+            assertThat(rig.connection.mouse).containsExactlyElementsIn(expected).inOrder()
         }
-
-        assertThat(rig.connection.mouse)
-            .containsExactly("scroll 1", "scroll -1", "hscroll 1", "hscroll -1")
-            .inOrder()
     }
 
     @Test

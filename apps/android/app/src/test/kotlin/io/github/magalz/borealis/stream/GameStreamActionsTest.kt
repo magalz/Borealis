@@ -44,7 +44,7 @@ import org.robolectric.shadows.ShadowToast
 private class RecordingTouch : TouchContext {
     var cancelled = 0
 
-    override fun getActionIndex(): Int = 0
+    override val actionIndex: Int = 0
 
     override fun setPointerCount(pointerCount: Int) = Unit
 
@@ -63,7 +63,7 @@ private class RecordingTouch : TouchContext {
         cancelled++
     }
 
-    override fun isCancelled(): Boolean = false
+    override val isCancelled: Boolean = false
 }
 
 private class RecordingGamepad : GamepadChrome {

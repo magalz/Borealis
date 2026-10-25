@@ -1453,7 +1453,9 @@ Steps:
    - Expected: the settings (resolution, bitrate, frame pacing and the others) are
      unchanged.
    - Expected: the pinned shortcuts and the TV channel entries still start the right
-     game.
+     game. The Google TV Streamer shows no app channels (section 11), so on it the
+     channel entries do not apply, and only the posters are checked, through the
+     provider (3.21, step 7).
 2. Discovery (Streamer, S22).
    - Expected: mDNS finds the host on the local network.
    - Add host manual entry: owner check.
@@ -3735,7 +3737,7 @@ about 2.4 s ahead of the PC's; the times below are the phone's.
   in D1. Whether a pad or a keyboard on the
   phone reaches Quit is an owner check.
 
-Owner items left after the follow-up:
+Owner items left after the follow-up (the evening results below close most of them):
 
 - The S22 in-game menu with a pad, if one is at hand (D4).
 - The performance overlay on the TV.
@@ -3775,3 +3777,92 @@ afterwards):
   then on, and `dumpsys netpolicy` read afterwards showed its network blocked as
   `APP_BACKGROUND`. This is the system's background rule; no client defect was found
   in this round.
+
+Results of the evening of 2026-10-24 (owner and orchestrator, same build):
+
+- Performance overlay on the TV: pass (owner).
+- Sound: heard on both devices (owner). On the S22 during the follow-up's sound. On the
+  TV in a stream at 23:18 with a Windows sound playing on the PC: the first audio
+  packet after 5700 ms, the stream left with Quit, crash buffer 0. As in the A/B of
+  P1, the log has many `Too much pending audio data` lines when the sound starts.
+- A physical keyboard and a pad in a stream: pass, with one finding below (owner).
+  The owner answered the item "the S22 in-game menu with a pad"; the device and
+  whether the pad reached Quit in the menu were not recorded.
+- TV channel: not applicable on this device. The Google TV Streamer shows no
+  third-party preview-channel rows (section 11, the TV channel spike of Sprint 6).
+  The posters were checked through the provider instead, as in the Sprint 8 checks
+  (3.21, step 7), all pass, and the crash buffer stayed at 0:
+  - the poster read through `PosterContentProvider` has the same md5 as the cache file
+    read with `run-as`;
+  - an app ID that is not a number gives `FileNotFoundException: not an app id`;
+  - a host ID with `../` in it gives `FileNotFoundException: not a host id`;
+  - an app with no cached poster gives `FileNotFoundException`.
+- Add host by hand on the S22: pass (orchestrator). The address of the paired host was entered
+  without showing it. The app recognised the known host: no duplicate card, and the
+  paired host stayed Online. The message "`<host>` added. Pair it to see its apps."
+  shows for any added host, a paired one too. The owner put the wording in Sprint 15.
+- Wrong PIN on 26.10.0-beta.1 (owner): the same as before Sprint 12. After a wrong
+  PIN, a retry shows a new PIN for a moment, then the "try again" screen. This is
+  the same symptom as before Sprint 12, and it matches the host keeping the failed
+  pairing session (409 on a retry; roadmap, Sprint 16, the LuminalShine wrong-PIN
+  fix). The logcat of this try was not read.
+- New finding (owner): in the in-game menu, Left or Right, on the D-pad or the
+  analog stick, makes the focus outline disappear, and it does not come back until
+  the menu is closed (B or Back) and opened again. It happens often with the analog
+  stick. The owner put it in Sprint 15, with the in-game menu work. D4 may have the
+  same cause (its key sequence had Right in it); where the focus goes is not yet
+  known.
+
+Owner items left: Forget and pair again, Wake-on-LAN with the PC asleep, and whether a
+pad on the S22 reaches Quit in the in-game menu (D4).
+
+Results of the night of 2026-10-24 (owner, with the S22 logs read afterwards):
+
+- A pad on the S22 reaches Quit through the in-game menu (owner). D4 is closed for a
+  pad; the keys sent by `adb` stay as recorded.
+- Unpair (the owner's word), then pair again, on the TV: pass (owner).
+- Pairing on the S22 after the wrong PIN. The owner stopped trying while the S22 was
+  not paired, and found the host paired a few minutes later. Three records were read
+  afterwards: the app's own log (`no_backup/logs/borealis.log`, through `run-as`,
+  masked), the system's activity history, and the host log. Times are local, on the
+  phone's clock unless marked "host"; that night the host's clock ran about 1.4 s
+  behind the phone's.
+  - 23:22:04 to 23:22:16: an attempt waits for the PIN; a PIN is entered in the host's
+    Web UI; the attempt ends as `PIN_WRONG` (the test). The `/unpair` in its teardown
+    answers 404, as the host contract says (no `/unpair` route).
+  - 23:22:19 to 23:23:37: twelve attempts, each answered 409 `IN_PROGRESS` within
+    0.1 s, about 0.7 to 21 s apart, the last four within about 2.3 s. Who started each is not
+    recorded.
+  - Host 23:23:24: an unpair request is posted to the Web UI's API. Host 23:23:48 to
+    23:23:58: LuminalShine quits from the system tray and starts again. Who did it is
+    not recorded. This ended the failed pairing session (inferred: the next attempt was
+    not answered 409).
+  - 23:24:07 to 23:24:23: the phone's screen goes off and on, and the app comes back
+    (its polling restarts at 23:24:23.07).
+  - 23:24:23: an attempt starts; the host logs "Pairing request awaiting PIN" from the
+    S22's address. 13 s later the Web UI posts a PIN ("Pairing PIN delivered"), and at
+    23:24:37 all five pairing requests answer 200: `pairing ended state=PAIRED`. The
+    app makes a new random PIN for each attempt, so the PIN delivered was the one the
+    S22 made for this attempt.
+  - 23:24:41 to 23:25:12: the stream screen is open; `/launch` answers at 23:24:50, the
+    connection ends at 23:25:06, and `/cancel` answers 200 at 23:25:12. Who started
+    it is not recorded.
+
+  So the S22 paired because a PIN was entered in the host's Web UI for its pending
+  request (host 23:24:35). By the code, an attempt starts only when the pairing screen
+  opens, on "Get new PIN", or once more by itself after `RestartNeeded` (not taken
+  here). The log shows one app process through the window, so no state was restored.
+  What started the 23:24:23 attempt, 0.8 s after the app came back, is not recorded.
+  The owner does not recall entering that PIN. A try the same night, with logcat
+  recorded from 23:52 to 00:17, did not reproduce it: after a screen off and on at
+  23:59, no attempt started until the next one at 00:04:39. It stays open for a later
+  try.
+- New findings (owner):
+  - Back from the Apps screen to the Hosts screen plays a "shrinking" animation
+    (TV and phone), while other screens just fade.
+  - After Forget, the host does not come back as "Found on this network" until the
+    app is closed and opened again.
+
+  Both are in Sprint 15 (roadmap).
+
+Owner items left: Wake-on-LAN with the PC asleep.

@@ -137,6 +137,18 @@ class KeyboardTranslatorLayoutCharacterizationTest {
     }
 
     @Test
+    fun `the last place of the platform is read too`() {
+        // The place of the highest key code sends B.
+        val highest = KeyEvent.getMaxKeyCode()
+        keyboard(KEYBOARD, layout = mapOf(highest to KeyEvent.KEYCODE_B))
+        val translator = KeyboardTranslator()
+
+        assertThat(translator.hasNormalizedMapping(KeyEvent.KEYCODE_B, KEYBOARD)).isTrue()
+        assertThat(translator.translate(KeyEvent.KEYCODE_B, KEYBOARD))
+            .isEqualTo(translator.translate(highest, -1))
+    }
+
+    @Test
     fun `a negative key code from a keyboard with a layout is an array index error`() {
         // A key event never has a negative key code. This pins what the translator does with one.
         keyboard(KEYBOARD)

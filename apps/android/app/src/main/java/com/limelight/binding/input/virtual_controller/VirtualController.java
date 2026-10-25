@@ -13,7 +13,6 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
-import com.limelight.LimeLog;
 import com.limelight.R;
 import com.limelight.binding.input.ControllerHandler;
 
@@ -36,8 +35,6 @@ public class VirtualController {
         MoveButtons,
         ResizeButtons
     }
-
-    private static final boolean _PRINT_DEBUG_INFORMATION = false;
 
     private final ControllerHandler controllerHandler;
     private final Context context;
@@ -146,12 +143,6 @@ public class VirtualController {
         return elements;
     }
 
-    private static final void _DBG(String text) {
-        if (_PRINT_DEBUG_INFORMATION) {
-            LimeLog.info("VirtualController: " + text);
-        }
-    }
-
     public void refreshLayout() {
         removeElements();
 
@@ -179,12 +170,6 @@ public class VirtualController {
     }
 
     private void sendControllerInputContextInternal() {
-        _DBG("INPUT_MAP + " + inputContext.inputMap);
-        _DBG("LEFT_TRIGGER " + inputContext.leftTrigger);
-        _DBG("RIGHT_TRIGGER " + inputContext.rightTrigger);
-        _DBG("LEFT STICK X: " + inputContext.leftStickX + " Y: " + inputContext.leftStickY);
-        _DBG("RIGHT STICK X: " + inputContext.rightStickX + " Y: " + inputContext.rightStickY);
-
         if (controllerHandler != null) {
             controllerHandler.reportOscState(
                     inputContext.inputMap,

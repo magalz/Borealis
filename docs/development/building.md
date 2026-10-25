@@ -257,16 +257,16 @@ python -m unittest discover -s design/accessibility
 - **Coverage** (Kover, [ADR 0046](../adr/0046-test-coverage-with-kover-llvm-cov-and-codecov.md)):
   the root project merges the debug unit-test coverage of `:borealis:*` and of
   `:app`. Code in `com.limelight` counts in the Kover report, except the Java
-  that stays Java (below), and converted code is held to the same Codecov gate
-  as the rest
+  that stays Java (below). The input package `com.limelight.binding.input`
+  counts from Sprint 13, which converts it, so until then the report shows its
+  Java uncovered. Converted code is held to the same Codecov gate as the rest
   ([ADR 0059](../adr/0059-convert-the-inherited-java-to-kotlin.md),
   [ADR 0049](../adr/0049-coverage-gate.md)). Not counted:
   - the Java that stays Java until Sprint 14:
     `com.limelight.Game` with its nested classes, and the packages
     `com.limelight.binding.video`, `com.limelight.binding.audio` and
     `com.limelight.nvstream.jni`. `BorealisCoverage.EXCLUDED_CLASSES` lists them
-    and shrinks as each one is converted. The input package
-    `com.limelight.binding.input` counts from Sprint 13, which converts it;
+    and shrinks as each one is converted;
   - generated Hilt/Dagger, Room and serialization classes, `BuildConfig`, `R`
     and Compose singleton classes.
 

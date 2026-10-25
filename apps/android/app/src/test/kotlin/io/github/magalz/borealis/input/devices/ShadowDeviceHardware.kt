@@ -46,6 +46,9 @@ object DeviceHardware {
     /** How many vibrators the vibrator manager of the phone itself has. */
     var systemVibrators = 0
 
+    /** Whether `InputDevice.isExternal()` throws, as a framework that cannot answer would. */
+    var externalFails = false
+
     fun set(deviceId: Int, hardware: Hardware) {
         byDevice[deviceId] = hardware
     }
@@ -61,6 +64,7 @@ object DeviceHardware {
         sensorManagers.clear()
         vibratorManagerCancels.clear()
         systemVibrators = 0
+        externalFails = false
     }
 }
 
@@ -119,6 +123,14 @@ class ShadowDeviceHardware {
     @Suppress("unused")
     @Implementation
     fun getSensorManager(): SensorManager = DeviceHardware.sensorManagerOf(device.id)
+
+    /** The device's own answer, unless [DeviceHardware.externalFails] makes it throw. */
+    @Suppress("unused")
+    @Implementation
+    fun isExternal(): Boolean {
+        check(!DeviceHardware.externalFails) { "the framework cannot say" }
+        return Shadow.directlyOn<Boolean, InputDevice>(device, InputDevice::class.java, "isExternal")
+    }
 }
 
 @Implements(

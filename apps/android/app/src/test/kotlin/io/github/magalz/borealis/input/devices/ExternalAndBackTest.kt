@@ -93,6 +93,16 @@ class ExternalAndBackTest : DevicesTestBase() {
 
     @Test
     @Config(sdk = [ANDROID_9])
+    fun `on Android 9 a device the framework cannot answer for counts as external`() {
+        // The reflected call throws, the Java prints the stack trace and answers true
+        DeviceHardware.externalFails = true
+
+        assertThat(external(pad(1, external = false))).isTrue()
+        assertThat(external(pad(2, external = true))).isTrue()
+    }
+
+    @Test
+    @Config(sdk = [ANDROID_9])
     fun `on Android 9 the known names still win`() {
         assertThat(external(pad(1, name = "gpio-keys", external = true))).isFalse()
     }

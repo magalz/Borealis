@@ -733,6 +733,15 @@ Planned, not started.
   stream starts; a host that never answers still ends in the offline message. See
   [device-validation section 17](development/device-validation.md#17-results-sprint-12),
   the follow-up on the S22.
+- **The in-game menu loses its focus on Left or Right.** Found by the owner in the
+  Sprint 12 round (2026-10-24); the owner put it here. Left or Right, on the D-pad or
+  the analog stick, makes the focus outline disappear, and it does not come back until
+  the menu is closed and opened again. It happens often with the analog stick. Check
+  where the focus goes, and whether D4 of the round (keys from the phone not
+  reaching Quit) is the same cause.
+- **Add host says "Pair it" for a host that is already paired.** Found in the Sprint
+  12 round (2026-10-24); the owner put it here. `shell_host_added` shows for any
+  added host. Word it by the host's pairing state.
 
 ### Sprint 16: SecOps
 
@@ -757,7 +766,9 @@ release. Sprint 16 is hardening and security testing.
 - **LuminalShine wrong-PIN fix, as a contribution to the host.** Added at the
   Sprint 10 UAT (2026-10-21). Proposed; the owner confirms at planning. On
   LuminalShine 26.10.0-beta.1, a wrong PIN keeps the pairing session for 5
-  minutes, and a retry gets 409 until it expires. The fix:
+  minutes, and a retry gets 409 until it expires. The owner saw it again in the
+  Sprint 12 round (2026-10-24): a retry shows a new PIN for a moment, then the
+  "try again" screen. The fix:
   - Fix A: a fresh phase 1 from the same peer address and the same client
     certificate, after the PIN was applied, ends the old exchange as FAILED and
     starts a new one that needs a new PIN.

@@ -168,6 +168,31 @@ class CombiningCharacterizationTest {
         assertThat(rig.packets.last()).isEqualTo(Sent(0, 1, A_FLAG or B_FLAG or X_FLAG, leftStickX = 32766))
     }
 
+    @Test
+    fun `a USB pad on another controller number is left out of the packet of a system pad`() {
+        val system = rig.addPad(7, controllerNumber = 3)
+        val usb = FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) }
+        usb.report(B_FLAG, leftStickX = 1f)
+        assertThat(rig.packets.last()).isEqualTo(Sent(0, 1, B_FLAG, leftStickX = 32766))
+
+        system.press(KEYCODE_BUTTON_A)
+
+        assertThat(rig.packets.last()).isEqualTo(Sent(3, 1, A_FLAG))
+    }
+
+    @Test
+    fun `a USB pad in mouse mode is left out of the packet of a system pad that is not`() {
+        rig.handler.setMouseEmulation(true)
+        val usb = FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) }
+        val system = rig.addPad(7, controllerNumber = 0)
+        usb.report(B_FLAG, leftStickX = 1f)
+        assertThat(rig.connection.mouse).containsExactly("down 3")
+
+        system.press(KEYCODE_BUTTON_A)
+
+        assertThat(rig.packets.last()).isEqualTo(Sent(0, 1, A_FLAG))
+    }
+
     // ----- The strongest stick and trigger -----
 
     private fun twoPads(

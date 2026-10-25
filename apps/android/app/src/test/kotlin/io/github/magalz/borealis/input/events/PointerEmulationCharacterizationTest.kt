@@ -41,7 +41,7 @@ class PointerEmulationCharacterizationTest {
     // The pixels of ten ticks: 20.48 each, carried over
     private val pixels = listOf(20, 20, 21, 20, 21, 20, 21, 20, 21, 20)
 
-    // The same at the scroll rate, 14.34 a tick
+    // A stick pushed into a corner is held to the unit circle, so each axis of it is 20.48 / sqrt(2) = 14.48 a tick
     private val scrolls = listOf(14, 14, 15, 14, 15, 14, 15, 14, 15, 14)
 
     @Test
@@ -133,6 +133,32 @@ class PointerEmulationCharacterizationTest {
         assertThat(pad.getBoolean("mouseEmulationActive")).isTrue()
         rig.handler.setCaptured(false)
         assertThat(rig.mouseAfter(16)).containsExactly("move 20 0")
+    }
+
+    @Test
+    fun `the stick for scrolling sends nothing while captured either, and scrolls again when the capture ends`() {
+        val right = rigWith(AnalogStickForScrolling.RIGHT)
+        val rightPad = right.mousePad()
+        right.handler.setCaptured(true)
+        rightPad.set("leftStickX", full)
+        rightPad.set("rightStickY", full)
+
+        assertThat(right.mouseAfter(160)).isEmpty()
+        right.handler.setCaptured(false)
+        assertThat(right.mouseAfter(16)).containsExactly("move 20 0", "hires scroll 20").inOrder()
+    }
+
+    @Test
+    fun `the left stick for scrolling is silent while captured too`() {
+        val left = rigWith(AnalogStickForScrolling.LEFT)
+        val leftPad = left.mousePad()
+        left.handler.setCaptured(true)
+        leftPad.set("rightStickX", full)
+        leftPad.set("leftStickY", full)
+
+        assertThat(left.mouseAfter(160)).isEmpty()
+        left.handler.setCaptured(false)
+        assertThat(left.mouseAfter(16)).containsExactly("move 20 0", "hires scroll 20").inOrder()
     }
 
     // ----- Switching it on and off -----

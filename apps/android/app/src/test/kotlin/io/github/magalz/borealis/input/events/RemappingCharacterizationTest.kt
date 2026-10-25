@@ -267,6 +267,16 @@ class RemappingCharacterizationTest {
     }
 
     @Test
+    @Config(sdk = [28])
+    fun `another product of the HORI vendor, and the HORIPAD product of another vendor, are not mapped by scan code`() {
+        val otherProduct = pad(deviceId = 7, fields = mapOf("vendorId" to 0x0f0d, "productId" to 0x00c0))
+        val otherVendor = pad(deviceId = 8, fields = mapOf("vendorId" to 0x045e, "productId" to 0x00c1))
+
+        assertThat(otherProduct.observe(KEYCODE_BUTTON_B, scanCode = 0x130)).isEqualTo(KeyResult(true, sent(B_FLAG)))
+        assertThat(otherVendor.observe(KEYCODE_BUTTON_B, scanCode = 0x130)).isEqualTo(KeyResult(true, sent(B_FLAG)))
+    }
+
+    @Test
     fun `a scan code the Switch layout does not have keeps the key code of the event`() {
         val pad = pad(fields = mapOf("vendorId" to 0x0f0d, "productId" to 0x00c1))
 
@@ -617,6 +627,13 @@ class RemappingCharacterizationTest {
 
         val without = pad(deviceId = 8)
         assertThat(without.observe(KEYCODE_SEARCH)).isEqualTo(KeyResult(false, noPacket))
+    }
+
+    @Test
+    fun `a pad that sends Search for the big button keeps every other key as it is`() {
+        val pad = pad(fields = mapOf("searchIsMode" to true))
+
+        assertThat(pad.observe(KEYCODE_BUTTON_A)).isEqualTo(KeyResult(true, sent(A_FLAG)))
     }
 
     @Test

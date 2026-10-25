@@ -145,8 +145,11 @@ class ShadowScriptedUsbConnection {
         return transfer(endpoint, buffer, length, timeout)
     }
 
+    // Once the connection is closed a transfer fails, as in the native code, and nothing is sent.
     private fun transfer(endpoint: UsbEndpoint, buffer: ByteArray, length: Int, timeout: Int): Int =
-        if (endpoint.direction == UsbConstants.USB_DIR_IN) {
+        if (closes > 0) {
+            -1
+        } else if (endpoint.direction == UsbConstants.USB_DIR_IN) {
             read(buffer, length, timeout)
         } else {
             writes.add(Write(endpoint, buffer.copyOf(length), timeout))

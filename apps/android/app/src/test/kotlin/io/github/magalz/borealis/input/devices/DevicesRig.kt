@@ -453,9 +453,6 @@ class DevicesRig(
     /** The handler's default context: events with no device and the on-screen controller. */
     fun defaultContext(): ContextView = ContextView(checkNotNull(field(handler, "defaultContext")))
 
-    /** The packet counts of one controller number. */
-    fun packetsOf(controller: Int): List<Sent> = connection.packets.filter { it.controller == controller }
-
     /** Ends the handler's background thread, as the stream does when it ends. */
     fun close() {
         handler.destroy()

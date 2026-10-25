@@ -153,6 +153,23 @@ class StickControlsCharacterizationTest {
     }
 
     @Test
+    fun `the radius of a touch is the root of a sum of floats, which fractional points tell from a sum of doubles`() {
+        // x * x + y * y is added as floats before the root: with the sum in double precision, each of
+        // these points gives a number that is one other in the height or the width.
+        left.touch(MotionEvent.ACTION_DOWN, 51.6f, 201.3f, FIRST)
+        assertThat(leftSticks()).isEqualTo(-28_787 to -15_008)
+
+        left.touch(MotionEvent.ACTION_MOVE, 53.199997f, 94.0f, FIRST + 10)
+        assertThat(leftSticks()).isEqualTo(-28_319 to 16_382)
+
+        left.touch(MotionEvent.ACTION_MOVE, 52.9f, 98.7f, FIRST + 20)
+        assertThat(leftSticks()).isEqualTo(-28_406 to 15_008)
+
+        right.touch(MotionEvent.ACTION_DOWN, 51.6f, 201.3f, FIRST)
+        assertThat(rightSticks()).isEqualTo(-28_787 to -15_008)
+    }
+
+    @Test
     fun `lifting the finger puts the sticks back to zero, and what it sends is the middle`() {
         stick(right, MotionEvent.ACTION_DOWN, 100f, 0f, FIRST)
         val sent = kit.rig.packets.size

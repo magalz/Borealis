@@ -275,6 +275,15 @@ class ElementDrawCharacterizationTest {
         assertColour(canvas.bitmap.getPixel(292, 150), grey)
     }
 
+    @Test
+    fun `the outer circle of a stick of 433 pixels is 216 over 100 times 100 in float, less two strokes`() {
+        // 216 / 100 * 100 is 216.00002 in float, where 216 * 100 / 100 is 216
+        val high = ElementRig(Screen(1920, 1200))
+        val stick = high.add(AnalogStick(high.controller, high.rig.activity, 12), 10, 10, 433, 433)
+
+        assertThat(draw(stick).of("circle")[0].numbers).containsExactly(216f, 216f, 208.00002f).inOrder()
+    }
+
     // The button
 
     private val tall by lazy { ElementRig(Screen(2400, 1300)) }
@@ -301,6 +310,15 @@ class ElementDrawCharacterizationTest {
             .comparingElementsUsing(sameDrawing)
             .containsExactly(transparent(), oval(grey), text("A", grey))
             .inOrder()
+    }
+
+    @Test
+    fun `the text of a button is placed at value over 100 times percent in float, which 105 shows`() {
+        // 105 / 100 * 63 is 66.149994 in float, where 105 * 63 / 100 is 66.15
+        val start = tall.add(DigitalButton(tall.controller, 7, 1, tall.rig.activity), 400, 100, 180, 105)
+        start.setText("START")
+
+        assertThat(draw(start).of("text").single().numbers).containsExactly(90f, 66.149994f).inOrder()
     }
 
     @Test
@@ -437,6 +455,15 @@ class ElementDrawCharacterizationTest {
             .comparingElementsUsing(sameDrawing)
             .containsExactlyElementsIn(padCalls(centred = true, pressed = emptySet()))
             .inOrder()
+    }
+
+    @Test
+    fun `the sides of the pad are value over 100 times percent in float, which 240 shows`() {
+        // 240 / 100 * 33 is 79.200005 and 240 / 100 * 66 is 158.40001 in float, where the products
+        // divided by 100 are 79.2 and 158.4
+        val left = draw(pad).of("rect")[1]
+
+        assertThat(left.numbers).containsExactly(9f, 79.200005f, 108.9f, 158.40001f).inOrder()
     }
 
     @Test

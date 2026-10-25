@@ -58,14 +58,12 @@ public class KeyboardTranslator implements InputManager.InputDeviceListener {
     public static final int VK_PAUSE = 19;
 
     private static class KeyboardMapping {
-        private final InputDevice device;
         private final int[] deviceKeyCodeToQwertyKeyCode;
 
         @TargetApi(33)
         public KeyboardMapping(InputDevice device) {
             int maxKeyCode = KeyEvent.getMaxKeyCode();
 
-            this.device = device;
             this.deviceKeyCodeToQwertyKeyCode = new int[maxKeyCode + 1];
 
             // Any unmatched keycodes are treated as unknown
@@ -77,11 +75,6 @@ public class KeyboardTranslator implements InputManager.InputDeviceListener {
                     deviceKeyCodeToQwertyKeyCode[deviceKeyCode] = i;
                 }
             }
-        }
-
-        @TargetApi(33)
-        public int getDeviceKeyCodeForQwertyKeyCode(int qwertyKeyCode) {
-            return device.getKeyCodeForKeyLocation(qwertyKeyCode);
         }
 
         public int getQwertyKeyCodeForDeviceKeyCode(int deviceKeyCode) {

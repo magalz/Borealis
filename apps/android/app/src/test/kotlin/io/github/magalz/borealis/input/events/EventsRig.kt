@@ -335,7 +335,11 @@ class Pad(
     }
 
     /** A joystick event with the given axis values, from a pad that reports them as a joystick. */
-    fun motion(axes: Map<Int, Float>, source: Int = InputDevice.SOURCE_JOYSTICK): Boolean {
+    fun motion(
+        axes: Map<Int, Float>,
+        source: Int = InputDevice.SOURCE_JOYSTICK,
+        history: List<Map<Int, Float>> = emptyList(),
+    ): Boolean {
         val event =
             motionEvent(
                 deviceId,
@@ -343,6 +347,7 @@ class Pad(
                 MotionEvent.ACTION_MOVE,
                 listOf(PointerState(0, axes)),
                 device,
+                history = history,
             )
         return rig.handler.handleMotionEvent(event)
     }
@@ -391,6 +396,7 @@ fun motionEvent(
     pointers: List<PointerState>,
     device: InputDevice?,
     flags: Int = 0,
+    history: List<Map<Int, Float>> = emptyList(),
 ): MotionEvent {
     val properties =
         pointers
@@ -409,6 +415,9 @@ fun motionEvent(
                 }
             }
             .toTypedArray()
+    // The oldest sample is what the event is made with; the later ones are batched on it, so the
+    // last sample is the current value and the earlier ones are the history.
+    val samples = history + listOf(pointers.first().axes)
     val event =
         MotionEvent.obtain(
             0L,
@@ -416,7 +425,7 @@ fun motionEvent(
             action,
             pointers.size,
             properties,
-            coords,
+            if (history.isEmpty()) coords else arrayOf(coordsOf(samples.first())),
             0,
             0,
             1f,
@@ -426,9 +435,17 @@ fun motionEvent(
             source,
             flags,
         )
+    if (history.isNotEmpty()) {
+        samples.drop(1).forEachIndexed { index, sample ->
+            event.addBatch(index + 1L, arrayOf(coordsOf(sample)), 0)
+        }
+    }
     device?.let { Shadow.extract<ShadowInputEvent>(event).setDevice(it) }
     return event
 }
+
+private fun coordsOf(axes: Map<Int, Float>) =
+    MotionEvent.PointerCoords().apply { axes.forEach { (axis, value) -> setAxisValue(axis, value) } }
 
 /** A motion range as the framework builds one from the kernel's axis description. */
 fun motionRange(axis: Int, min: Float, max: Float, source: Int = InputDevice.SOURCE_TOUCHPAD) =

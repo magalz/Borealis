@@ -253,6 +253,22 @@ class ButtonTimingCharacterizationTest {
     }
 
     @Test
+    fun `any key up while Select is emulated ends it, though Start and the bumper are still held`() {
+        pad.press(KEYCODE_BUTTON_L1)
+        pad.press(KEYCODE_BUTTON_START)
+        pad.press(KEYCODE_BUTTON_A)
+        rig.advanceBy(100)
+        assertThat(rig.buttons().last()).isEqualTo(BACK_FLAG or A_FLAG)
+
+        // Start and the left bumper were taken out of the buttons when they became Select, so
+        // neither is there for the check that a release makes, and Select goes up with A.
+        pad.release(KEYCODE_BUTTON_A)
+
+        assertThat(rig.buttons().last()).isEqualTo(0)
+        assertThat(pad.getInt("emulatingButtonFlags")).isEqualTo(0)
+    }
+
+    @Test
     fun `Start within 100 ms of the left bumper going up is Select`() {
         pad.press(KEYCODE_BUTTON_L1)
         rig.advanceBy(100)

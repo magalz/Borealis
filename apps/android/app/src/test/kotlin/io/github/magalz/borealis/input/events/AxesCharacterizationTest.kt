@@ -106,6 +106,14 @@ class AxesCharacterizationTest {
     }
 
     @Test
+    fun `a batched event is read at its latest value, whatever its history holds`() {
+        assertThat(pad.motion(mapOf(AXIS_X to 0.5f), history = listOf(mapOf(AXIS_X to 1f), mapOf(AXIS_X to -1f))))
+            .isTrue()
+
+        assertThat(rig.packets.last()).isEqualTo(Sent(0, 1, 0, leftStickX = 16383))
+    }
+
+    @Test
     fun `an event with no value for a stick brings it back to the center`() {
         send(AXIS_X to 1f, AXIS_Z to 1f)
 

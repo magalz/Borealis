@@ -138,10 +138,6 @@ public class UsbDriverService extends Service implements UsbDriverListener {
             UsbDriverService.this.start();
         }
 
-        public void stop() {
-            UsbDriverService.this.stop();
-        }
-
         // BOREALIS: the stream shows its first frame, so the held permission dialogs may appear
         public void onStreamReady() {
             // The first frame is reported from the render thread; the requests live on the main one

@@ -16,7 +16,7 @@ class ShortcutHelper(private val context: Context) {
     private val tvChannelHelper = TvChannelHelper(context)
 
     private fun reapShortcutsForDynamicAdd() {
-        val dynamicShortcuts = sm.dynamicShortcuts
+        var dynamicShortcuts = sm.dynamicShortcuts
         while (
             dynamicShortcuts.isNotEmpty() && dynamicShortcuts.size >= sm.maxShortcutCountPerActivity
         ) {
@@ -27,6 +27,12 @@ class ShortcutHelper(private val context: Context) {
                 }
             }
             sm.removeDynamicShortcuts(listOf(maxRankShortcut.id))
+
+            // Read the list again, so the next pass sees what the removal left. A launcher that
+            // refuses the removal leaves it as it was: stop, or this would never end.
+            val remaining = sm.dynamicShortcuts
+            if (remaining.size >= dynamicShortcuts.size) return
+            dynamicShortcuts = remaining
         }
     }
 

@@ -176,7 +176,6 @@ public class AnalogStick extends VirtualControllerElement {
     }
 
     private void notifyOnMovement(float x, float y) {
-        _DBG("movement x: " + x + " movement y: " + y);
         // notify listeners
         for (AnalogStickListener listener : listeners) {
             listener.onMovement(x, y);
@@ -184,7 +183,6 @@ public class AnalogStick extends VirtualControllerElement {
     }
 
     private void notifyOnClick() {
-        _DBG("click");
         // notify listeners
         for (AnalogStickListener listener : listeners) {
             listener.onClick();
@@ -192,7 +190,6 @@ public class AnalogStick extends VirtualControllerElement {
     }
 
     private void notifyOnDoubleClick() {
-        _DBG("double click");
         // notify listeners
         for (AnalogStickListener listener : listeners) {
             listener.onDoubleClick();
@@ -200,7 +197,6 @@ public class AnalogStick extends VirtualControllerElement {
     }
 
     private void notifyOnRevoke() {
-        _DBG("revoke");
         // notify listeners
         for (AnalogStickListener listener : listeners) {
             listener.onRevoke();

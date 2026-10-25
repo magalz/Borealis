@@ -16,8 +16,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public abstract class VirtualControllerElement extends View {
-    protected static boolean _PRINT_DEBUG_INFORMATION = false;
-
     public static final int EID_DPAD = 1;
     public static final int EID_LT = 2;
     public static final int EID_RT = 3;
@@ -204,12 +202,6 @@ public abstract class VirtualControllerElement extends View {
     abstract protected void onElementDraw(Canvas canvas);
 
     abstract public boolean onElementTouchEvent(MotionEvent event);
-
-    protected static final void _DBG(String text) {
-        if (_PRINT_DEBUG_INFORMATION) {
-            System.out.println(text);
-        }
-    }
 
     public void setOpacity(int opacity) {
         int hexOpacity = opacity * 255 / 100;

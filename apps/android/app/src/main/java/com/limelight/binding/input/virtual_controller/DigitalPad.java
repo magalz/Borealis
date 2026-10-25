@@ -149,7 +149,6 @@ public class DigitalPad extends VirtualControllerElement {
     }
 
     private void newDirectionCallback(int direction) {
-        _DBG("direction: " + direction);
 
         // notify listeners
         for (DigitalPadListener listener : listeners) {

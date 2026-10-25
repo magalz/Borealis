@@ -14,9 +14,9 @@ internal const val DELETE_TEST_TEMP_DIR_AFTER = "Delete the temporary folder of 
  * folder before a run, which also removes what a killed run left, and deletes it after the run,
  * when no test JVM holds it any more. A failed run keeps its folder until the next run.
  */
-internal fun Project.configureTestTempDir() {
+internal fun Project.configureTestTempDir(windows: Boolean = false) {
     tasks.withType(Test::class.java).configureEach {
-        val dir = layout.buildDirectory.get().asFile.resolve("tmp/$name/jvm-tmp")
+        val dir = testTempDir(name, windows)
         systemProperty("java.io.tmpdir", dir.absolutePath)
         doFirst(CLEAR_TEST_TEMP_DIR_BEFORE) {
             dir.deleteRecursively()
@@ -25,3 +25,8 @@ internal fun Project.configureTestTempDir() {
         doLast(DELETE_TEST_TEMP_DIR_AFTER) { dir.deleteRecursively() }
     }
 }
+
+/** Stub: the folder of [taskName]. */
+@Suppress("UnusedParameter") // Not used yet.
+internal fun Project.testTempDir(taskName: String, windows: Boolean): java.io.File =
+    layout.buildDirectory.get().asFile.resolve("tmp/$taskName/jvm-tmp")

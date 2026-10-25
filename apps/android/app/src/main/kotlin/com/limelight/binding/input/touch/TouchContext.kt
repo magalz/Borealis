@@ -1,11 +1,17 @@
-package com.limelight.binding.input.touch;
+package com.limelight.binding.input.touch
 
-public interface TouchContext {
-    int getActionIndex();
-    void setPointerCount(int pointerCount);
-    boolean touchDownEvent(int eventX, int eventY, long eventTime, boolean isNewFinger);
-    boolean touchMoveEvent(int eventX, int eventY, long eventTime);
-    void touchUpEvent(int eventX, int eventY, long eventTime);
-    void cancelTouch();
-    boolean isCancelled();
+interface TouchContext {
+    val actionIndex: Int
+
+    fun setPointerCount(pointerCount: Int)
+
+    fun touchDownEvent(eventX: Int, eventY: Int, eventTime: Long, isNewFinger: Boolean): Boolean
+
+    fun touchMoveEvent(eventX: Int, eventY: Int, eventTime: Long): Boolean
+
+    fun touchUpEvent(eventX: Int, eventY: Int, eventTime: Long)
+
+    fun cancelTouch()
+
+    val isCancelled: Boolean
 }

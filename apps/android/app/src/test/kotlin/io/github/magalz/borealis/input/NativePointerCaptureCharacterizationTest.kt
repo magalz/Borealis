@@ -29,6 +29,19 @@ class NativePointerCaptureCharacterizationTest {
     }
 
     @Test
+    fun `the listener is registered before the capture is requested`() {
+        // A device that changes when the capture starts has to reach the provider.
+        rig.connect(MOUSE, Sources.MOUSE)
+        var listeningAtRequest: Boolean? = null
+        rig.view.onRequest = { listeningAtRequest = rig.listening() }
+
+        rig.provider.hideCursor()
+
+        assertThat(listeningAtRequest).isTrue()
+        assertThat(rig.view.requests).isEqualTo(1)
+    }
+
+    @Test
     fun `hiding the cursor with no mouse still hides it and listens, but asks for nothing`() {
         rig.connect(KEYBOARD, Sources.KEYBOARD)
 

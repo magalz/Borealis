@@ -34,7 +34,11 @@ internal class PointerCaptureView(context: Context) : View(context) {
     /** Runs when the capture is released, before the release is counted. */
     var onRelease: () -> Unit = {}
 
+    /** Runs when the capture is requested, before the request is counted. */
+    var onRequest: () -> Unit = {}
+
     override fun requestPointerCapture() {
+        onRequest()
         requests++
     }
 

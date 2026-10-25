@@ -637,7 +637,9 @@ Items:
   characterization tests of the HTTP layer use these fixtures.
 - **Pending.** The device round: discovery, Add host, pairing (including a wrong PIN on
   26.10.0-beta.1), Wake-on-LAN, Forget, the app list, pinned shortcuts and the TV
-  channel, launch, resume and Quit. The result is recorded after the round.
+  channel, launch, resume and Quit. The results are in
+  [device-validation section 17](development/device-validation.md#17-results-sprint-12);
+  Forget and Wake-on-LAN are still the owner's.
 
 ### Sprint 13: Kotlin migration, input
 
@@ -766,9 +768,9 @@ release. Sprint 16 is hardening and security testing.
 - **LuminalShine wrong-PIN fix, as a contribution to the host.** Added at the
   Sprint 10 UAT (2026-10-21). Proposed; the owner confirms at planning. On
   LuminalShine 26.10.0-beta.1, a wrong PIN keeps the pairing session for 5
-  minutes, and a retry gets 409 until it expires. The owner saw it again in the
-  Sprint 12 round (2026-10-24): a retry shows a new PIN for a moment, then the
-  "try again" screen. The fix:
+  minutes, and a retry gets 409 until it expires. The owner saw the same symptom
+  again in the Sprint 12 round (2026-10-24): a retry shows a new PIN for a moment,
+  then the "try again" screen. The fix:
   - Fix A: a fresh phase 1 from the same peer address and the same client
     certificate, after the PIN was applied, ends the old exchange as FAILED and
     starts a new one that needs a new PIN.

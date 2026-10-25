@@ -1454,7 +1454,8 @@ Steps:
      unchanged.
    - Expected: the pinned shortcuts and the TV channel entries still start the right
      game. The Google TV Streamer shows no app channels (section 11), so on it the
-     posters are checked through the provider (3.21, step 7).
+     channel entries do not apply, and only the posters are checked, through the
+     provider (3.21, step 7).
 2. Discovery (Streamer, S22).
    - Expected: mDNS finds the host on the local network.
    - Add host manual entry: owner check.
@@ -3784,29 +3785,33 @@ Results of the evening of 2026-10-24 (owner and orchestrator, same build):
   TV in a stream at 23:18 with a Windows sound playing on the PC: the first audio
   packet after 5700 ms, the stream left with Quit, crash buffer 0. As in the A/B of
   P1, the log has many `Too much pending audio data` lines when the sound starts.
-- A physical keyboard and a pad in a stream: pass (owner), the in-game menu with the
-  pad included.
+- A physical keyboard and a pad in a stream: pass, with one finding below (owner).
+  The owner answered the item "the S22 in-game menu with a pad"; the device and
+  whether the pad reached Quit in the menu were not recorded.
 - TV channel: not applicable on this device. The Google TV Streamer shows no
   third-party preview-channel rows (section 11, the TV channel spike of Sprint 6).
   The posters were checked through the provider instead, as in the Sprint 8 checks
-  (3.21, step 7), all pass:
+  (3.21, step 7), all pass, and the crash buffer stayed at 0:
   - the poster read through `PosterContentProvider` has the same md5 as the cache file
     read with `run-as`;
   - an app ID that is not a number gives `FileNotFoundException: not an app id`;
   - a host ID with `../` in it gives `FileNotFoundException: not a host id`;
-  - an app with no cached poster gives `FileNotFoundException`; crash buffer 0.
-- Add host by hand on the S22: pass. The address of the paired host was entered
+  - an app with no cached poster gives `FileNotFoundException`.
+- Add host by hand on the S22: pass (orchestrator). The address of the paired host was entered
   without showing it. The app recognised the known host: no duplicate card, and the
   paired host stayed Online. The message "`<host>` added. Pair it to see its apps."
   shows for any added host, a paired one too. The owner put the wording in Sprint 15.
 - Wrong PIN on 26.10.0-beta.1 (owner): the same as before Sprint 12. After a wrong
   PIN, a retry shows a new PIN for a moment, then the "try again" screen. This is
-  the host keeping the failed pairing session (roadmap, Sprint 16, the LuminalShine
-  wrong-PIN fix); not a Sprint 12 regression.
+  the same symptom as before Sprint 12, and it matches the host keeping the failed
+  pairing session (409 on a retry; roadmap, Sprint 16, the LuminalShine wrong-PIN
+  fix). The logcat of this try was not read.
 - New finding (owner): in the in-game menu, Left or Right, on the D-pad or the
   analog stick, makes the focus outline disappear, and it does not come back until
   the menu is closed (B or Back) and opened again. It happens often with the analog
-  stick. The owner put it in Sprint 15, with the in-game menu work. D4 may be the
-  same family: keys that move the focus out of the menu panel.
+  stick. The owner put it in Sprint 15, with the in-game menu work. D4 may have the
+  same cause (its key sequence had Right in it); where the focus goes is not yet
+  known.
 
-Owner items left: Forget and pair again, and Wake-on-LAN with the PC asleep.
+Owner items left: Forget and pair again, Wake-on-LAN with the PC asleep, and whether a
+pad on the S22 reaches Quit in the in-game menu (D4).

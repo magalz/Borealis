@@ -1,11 +1,20 @@
-package com.limelight.binding.input.driver;
+package com.limelight.binding.input.driver
 
-public interface UsbDriverListener {
-    void reportControllerState(int controllerId, int buttonFlags,
-                               float leftStickX, float leftStickY,
-                               float rightStickX, float rightStickY,
-                               float leftTrigger, float rightTrigger);
+// Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+@Suppress("LongParameterList")
+interface UsbDriverListener {
+    fun reportControllerState(
+        controllerId: Int,
+        buttonFlags: Int,
+        leftStickX: Float,
+        leftStickY: Float,
+        rightStickX: Float,
+        rightStickY: Float,
+        leftTrigger: Float,
+        rightTrigger: Float,
+    )
 
-    void deviceRemoved(AbstractController controller);
-    void deviceAdded(AbstractController controller);
+    fun deviceRemoved(controller: AbstractController)
+
+    fun deviceAdded(controller: AbstractController)
 }

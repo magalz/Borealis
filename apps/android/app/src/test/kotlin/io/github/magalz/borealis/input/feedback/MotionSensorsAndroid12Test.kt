@@ -2,6 +2,7 @@ package io.github.magalz.borealis.input.feedback
 
 import android.hardware.Sensor
 import com.google.common.truth.Truth.assertThat
+import com.limelight.nvstream.jni.MoonBridge
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -58,7 +59,8 @@ class MotionSensorsAndroid12Test : FeedbackTestBase() {
     fun `a pad that is not asked is not reported with sensors`() {
         val rig = requestFrom(FeedbackRig.XBOX_VENDOR)
 
-        assertThat(rig.connection.arrivals.single().capabilities and 0x30).isEqualTo(0)
+        val sensors = MoonBridge.LI_CCAP_ACCEL.toInt() or MoonBridge.LI_CCAP_GYRO.toInt()
+        assertThat(rig.connection.arrivals.single().capabilities and sensors).isEqualTo(0)
     }
 
     private companion object {

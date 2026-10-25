@@ -377,6 +377,26 @@ class AxesCharacterizationTest {
     }
 
     @Test
+    fun `each direction of the hat marks only its own axis as used`() {
+        val directions =
+            listOf(
+                Triple(AXIS_HAT_X to -1f, true, false),
+                Triple(AXIS_HAT_X to 1f, true, false),
+                Triple(AXIS_HAT_Y to -1f, false, true),
+                Triple(AXIS_HAT_Y to 1f, false, true),
+            )
+
+        directions.forEachIndexed { index, (axis, x, y) ->
+            val hat = rig.addPad(20 + index, fields = mapOf("hatXAxis" to AXIS_HAT_X, "hatYAxis" to AXIS_HAT_Y))
+
+            hat.motion(mapOf(axis))
+
+            assertWithMessage("$axis X").that(hat.getBoolean("hatXAxisUsed")).isEqualTo(x)
+            assertWithMessage("$axis Y").that(hat.getBoolean("hatYAxisUsed")).isEqualTo(y)
+        }
+    }
+
+    @Test
     fun `a hat that is only at rest leaves its axes unused`() {
         send(AXIS_HAT_X to 0.5f, AXIS_HAT_Y to -0.5f)
 

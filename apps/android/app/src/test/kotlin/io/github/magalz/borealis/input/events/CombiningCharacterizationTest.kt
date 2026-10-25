@@ -271,12 +271,12 @@ class CombiningCharacterizationTest {
             fields =
                 mapOf(
                     "inputMap" to A_FLAG,
-                    "leftTrigger" to 5.toByte(),
-                    "rightTrigger" to 3.toByte(),
-                    "leftStickX" to 400.toShort(),
-                    "leftStickY" to (-300).toShort(),
-                    "rightStickX" to 250.toShort(),
-                    "rightStickY" to 900.toShort(),
+                    "leftTrigger" to 23.toByte(),
+                    "rightTrigger" to 6.toByte(),
+                    "leftStickX" to 430.toShort(),
+                    "leftStickY" to (-1356).toShort(),
+                    "rightStickX" to (-243).toShort(),
+                    "rightStickY" to (-697).toShort(),
                 ),
         )
         rig.addPad(
@@ -285,19 +285,20 @@ class CombiningCharacterizationTest {
             fields =
                 mapOf(
                     "inputMap" to B_FLAG,
-                    "leftTrigger" to 20.toByte(),
-                    "rightTrigger" to 9.toByte(),
-                    "leftStickX" to 800.toShort(),
-                    "leftStickY" to (-700).toShort(),
-                    "rightStickX" to 500.toShort(),
-                    "rightStickY" to (-1200).toShort(),
+                    "leftTrigger" to 33.toByte(),
+                    "rightTrigger" to 32.toByte(),
+                    "leftStickX" to 2356.toShort(),
+                    "leftStickY" to 2687.toShort(),
+                    "rightStickX" to 3298.toShort(),
+                    "rightStickY" to 3712.toShort(),
                 ),
         )
         rig.handler.deviceAdded(FakeUsbController(1, rig.handler))
-        // The USB values are floats: 0.15 is 38 and 0.2 is 51 as triggers, 0.05 is 1638 as a stick.
-        rig.handler.reportControllerState(1, X_FLAG, 0.05f, -0.06f, 0.07f, 0.08f, 0.15f, 0.2f)
+        // The USB values are floats. As sticks 0.09 is 2948, -0.04 is 1310 (Y is upside down),
+        // 0.03 is 982 and -0.1 is 3276; as triggers 0.22 is 56 and 0.2 is 51.
+        rig.handler.reportControllerState(1, X_FLAG, 0.09f, -0.04f, 0.03f, -0.1f, 0.22f, 0.2f)
 
-        rig.handler.reportOscState(Y_FLAG, 3000, -2500, -4000, 5000, 100, 70)
+        rig.handler.reportOscState(Y_FLAG, 3016, 1841, -1986, -183, 68, 66)
 
         assertThat(rig.packets.last())
             .isEqualTo(
@@ -305,12 +306,12 @@ class CombiningCharacterizationTest {
                     controller = 0,
                     activeMask = 1,
                     buttons = A_FLAG or B_FLAG or X_FLAG or Y_FLAG,
-                    leftTrigger = 119,
-                    rightTrigger = 127,
-                    leftStickX = 4094,
-                    leftStickY = -3,
-                    rightStickX = -1537,
-                    rightStickY = -33,
+                    leftTrigger = 127,
+                    rightTrigger = 119,
+                    leftStickX = 3070,
+                    leftStickY = -1,
+                    rightStickX = -1,
+                    rightStickY = -49,
                 )
             )
     }

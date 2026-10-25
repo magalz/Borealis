@@ -460,6 +460,35 @@ class ButtonTimingCharacterizationTest {
     }
 
     @Test
+    fun `a key down is counted at the time of the event, not at the time the handler got it`() {
+        val chordPad = rig.addPad(8, fields = mapOf("hasSelect" to true))
+        val now = rig.now
+
+        // Select went down 1500 ms ago and Start 1400 ms ago: the chord is 400 ms overdue.
+        chordPad.press(KEYCODE_BUTTON_SELECT, at = now - 1_500)
+        chordPad.press(KEYCODE_BUTTON_START, at = now - 1_400)
+        rig.advanceBy(0)
+
+        assertThat(rig.chords).isEqualTo(1)
+    }
+
+    @Test
+    fun `a key up is counted at the time of the event, not at the time the handler got it`() {
+        val chordPad = rig.addPad(8, fields = mapOf("hasSelect" to true))
+        val now = rig.now
+        chordPad.press(KEYCODE_BUTTON_SELECT, at = now - 1_500)
+        chordPad.press(KEYCODE_BUTTON_START, at = now - 1_400)
+
+        // Select went up 900 ms into the chord, though the handler hears of it 400 ms late.
+        chordPad.release(KEYCODE_BUTTON_SELECT, at = now - 500)
+        val tapped = rig.buttons().last()
+        rig.advanceBy(0)
+
+        assertThat(rig.chords).isEqualTo(0)
+        assertThat(tapped).isEqualTo(SPECIAL_BUTTON_FLAG)
+    }
+
+    @Test
     fun `on a pad with a Mode button the early chord is a short press of Start and Select`() {
         val chordPad = rig.addPad(8, fields = mapOf("hasSelect" to true, "hasMode" to true))
         startSelectChord(chordPad)

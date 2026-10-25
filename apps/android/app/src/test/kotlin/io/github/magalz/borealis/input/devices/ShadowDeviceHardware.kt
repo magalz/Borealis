@@ -163,6 +163,15 @@ class ShadowDeviceVibrator {
     @Suppress("unused", "FunctionOnlyReturningConstant")
     @Implementation
     fun hasVibrator(): Boolean = true
+
+    /** How many times the handler cancelled this vibrator. */
+    var cancels = 0
+
+    @Suppress("unused")
+    @Implementation
+    fun cancel() {
+        cancels++
+    }
 }
 
 @Implements(

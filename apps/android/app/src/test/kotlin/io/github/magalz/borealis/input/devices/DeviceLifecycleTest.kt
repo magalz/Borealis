@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.input.devices
 
+import android.os.Vibrator
 import android.view.KeyEvent
 import android.view.KeyEvent.KEYCODE_A
 import android.view.KeyEvent.KEYCODE_BUTTON_A
@@ -9,7 +10,10 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
 import io.github.magalz.borealis.input.FakeUsbController
 import org.junit.Test
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadow.api.Shadow
 
 /**
  * The handler makes the context of a device when its first event arrives, keeps it while the device
@@ -227,6 +231,43 @@ class DeviceLifecycleTest : DevicesTestBase() {
         rig.disconnect(device)
 
         assertThat(DeviceHardware.vibratorManagerCancels).containsExactly(device.id)
+    }
+
+    @Test
+    fun `removing a device cancels its own vibrator`() {
+        val device = pad(1, hasVibrator = true)
+        val rig = rig(devices = listOf(device))
+        val vibrator = checkNotNull(rig.touch(device)["vibrator"])
+
+        rig.disconnect(device)
+
+        assertThat(Shadow.extract<ShadowDeviceVibrator>(vibrator).cancels).isEqualTo(1)
+        assertThat(DeviceHardware.vibratorManagerCancels).isEmpty()
+    }
+
+    @Test
+    fun `removing an internal pad cancels the vibrator of the phone`() {
+        val device = pad(1, external = false)
+        val rig = rig(devices = listOf(device))
+        rig.touch(device)
+        val phone = RuntimeEnvironment.getApplication().getSystemService(Vibrator::class.java)
+        assertThat(shadowOf(phone).isCancelled).isFalse()
+
+        rig.disconnect(device)
+
+        assertThat(shadowOf(phone).isCancelled).isTrue()
+    }
+
+    @Test
+    fun `removing a pad without a vibrator leaves the phone's alone`() {
+        val device = pad(1)
+        val rig = rig(devices = listOf(device))
+        rig.touch(device)
+
+        rig.disconnect(device)
+
+        val phone = RuntimeEnvironment.getApplication().getSystemService(Vibrator::class.java)
+        assertThat(shadowOf(phone).isCancelled).isFalse()
     }
 
     @Test

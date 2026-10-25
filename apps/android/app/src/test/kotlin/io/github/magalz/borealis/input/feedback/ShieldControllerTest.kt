@@ -110,6 +110,18 @@ abstract class ShieldContract : FeedbackTestBase() {
     }
 
     @Test
+    fun `a percentage of zero is an empty battery and not an unknown one`() {
+        val results =
+            listOf(
+                    Reading(0, SceConnectionType.WIRELESS, SceChargingState.CHARGING),
+                    Reading(0, SceConnectionType.WIRED, SceChargingState.NOT_CHARGING),
+                )
+                .map(::reported)
+
+        assertThat(results).containsExactly(event(3, 0), event(4, 0)).inOrder()
+    }
+
+    @Test
     fun `a percentage goes through a float, which loses one at 53 and at 59`() {
         val results =
             listOf(1, 29, 53, 57, 59, 99).map {

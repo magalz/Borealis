@@ -259,6 +259,17 @@ class StickControlsCharacterizationTest {
     }
 
     @Test
+    fun `a right trigger held for three seconds changes nothing either`() {
+        kit.rig.press(rightTrigger)
+        val sent = kit.rig.packets.size
+
+        kit.rig.advanceBy(10_000)
+
+        assertThat(kit.rig.packets.size - sent).isEqualTo(3)
+        assertThat(kit.rig.packets.map { it.rightTrigger }.distinct()).containsExactly(-1)
+    }
+
+    @Test
     fun `a finger slid onto a trigger of its layer presses it, and one of another layer does not`() {
         val id = VirtualControllerElement.EID_A
         val button = kit.add(DigitalButton(controller, id, 1, kit.rig.activity), 100, 700, 100, 60)

@@ -6,8 +6,11 @@ package com.limelight.binding.input.virtual_controller
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
+import android.graphics.Canvas
+import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
 import java.io.File
+import org.json.JSONException
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -140,6 +143,26 @@ class SavedLayoutCharacterizationTest {
     }
 
     @Test
+    fun `an element that cannot write its place is skipped and the others are saved`() {
+        refresh()
+        val unwritable =
+            object : VirtualControllerElement(rig.controller, rig.activity, UNWRITABLE_ID) {
+                override fun onElementDraw(canvas: Canvas) = Unit
+
+                override fun onElementTouchEvent(event: MotionEvent) = true
+
+                override fun getConfiguration(): JSONObject = throw JSONException("no place")
+            }
+        rig.controller.addElement(unwritable, 1, 2, 3, 4)
+
+        VirtualControllerConfigurationLoader.saveProfile(rig.controller, rig.activity)
+
+        assertThat(rig.saved.contains(UNWRITABLE_ID.toString())).isFalse()
+        assertThat(rig.savedLayout().values)
+            .containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, false, true))
+    }
+
+    @Test
     fun `saving a layout adds to the file and does not clear the ids that this layout does not hold`() {
         refresh()
         VirtualControllerConfigurationLoader.saveProfile(rig.controller, rig.activity)
@@ -236,5 +259,9 @@ class SavedLayoutCharacterizationTest {
 
         assertThat(rig.layout().first { it.id == 6 }).isEqualTo(Placed(6, 7, 8, 10, 11))
         assertThat(rig.saved.contains("6")).isTrue()
+    }
+
+    private companion object {
+        const val UNWRITABLE_ID = 99
     }
 }

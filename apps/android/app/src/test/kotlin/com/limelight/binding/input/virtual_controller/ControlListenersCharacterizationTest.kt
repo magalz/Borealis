@@ -134,6 +134,69 @@ class ControlListenersCharacterizationTest {
             .containsExactly(0, 0, 0, 0)
     }
 
+    // Sliding from one button to another
+
+    /** Where the middle of [element] is on the screen. */
+    private fun middleOf(element: VirtualControllerElement) =
+        (element.x + element.width / 2) to (element.y + element.height / 2)
+
+    /** Moves the finger that is on [from] to the middle of [to]. */
+    private fun slide(from: VirtualControllerElement, to: VirtualControllerElement) {
+        val (x, y) = middleOf(to)
+        rig.touch(from, MotionEvent.ACTION_MOVE, x - from.x, y - from.y)
+    }
+
+    @Test
+    fun `a finger slid from one button onto another of the same layer presses it too`() {
+        val b = rig.element(VirtualControllerElement.EID_B)
+        rig.press(a)
+
+        slide(a, b)
+
+        assertThat(inputMap()).isEqualTo(ControllerPacket.A_FLAG or ControllerPacket.B_FLAG)
+    }
+
+    @Test
+    fun `a finger slid from a face button onto Back or Start presses nothing there`() {
+        rig.press(a)
+
+        slide(a, rig.element(VirtualControllerElement.EID_BACK))
+        slide(a, rig.element(VirtualControllerElement.EID_START))
+
+        assertThat(inputMap()).isEqualTo(ControllerPacket.A_FLAG)
+    }
+
+    @Test
+    fun `a finger slid from Back onto Start presses nothing, because they have layers of their own`() {
+        val back = rig.element(VirtualControllerElement.EID_BACK)
+        rig.press(back)
+
+        slide(back, rig.element(VirtualControllerElement.EID_START))
+
+        assertThat(inputMap()).isEqualTo(ControllerPacket.BACK_FLAG)
+    }
+
+    @Test
+    fun `a finger slid from Start onto a face button presses nothing there`() {
+        val start = rig.element(VirtualControllerElement.EID_START)
+        rig.press(start)
+
+        slide(start, rig.element(VirtualControllerElement.EID_B))
+
+        assertThat(inputMap()).isEqualTo(ControllerPacket.PLAY_FLAG)
+    }
+
+    @Test
+    fun `a finger slid off a button lets go of the button it pressed by sliding`() {
+        val b = rig.element(VirtualControllerElement.EID_B)
+        rig.press(a)
+        slide(a, b)
+
+        rig.touch(a, MotionEvent.ACTION_MOVE, -1_000f, -1_000f)
+
+        assertThat(inputMap()).isEqualTo(ControllerPacket.A_FLAG)
+    }
+
     // The pad
 
     private fun padAt(x: Float, y: Float, action: Int = MotionEvent.ACTION_DOWN) = rig.touch(pad, action, x, y)

@@ -494,6 +494,22 @@ class VirtualControllerCharacterizationTest {
     }
 
     @Test
+    fun `the retransmits run on the main looper whichever thread built the controller`() {
+        lateinit var built: VirtualController
+        Thread { built = VirtualController(rig.handlerRig.handler, rig.frame, rig.activity) }
+            .apply {
+                start()
+                join()
+            }
+        built.controllerInputContext.inputMap = ControllerPacket.A_FLAG.toShort()
+
+        built.sendControllerInputContext()
+        rig.advanceBy(75)
+
+        assertThat(rig.packets).hasSize(4)
+    }
+
+    @Test
     fun `a controller without a handler sends nothing and does not fail`() {
         val bare = OscRig(withHandler = false)
         bare.controller.controllerInputContext.inputMap = ControllerPacket.A_FLAG.toShort()

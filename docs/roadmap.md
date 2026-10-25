@@ -780,7 +780,7 @@ release. Sprint 16 is hardening and security testing.
   minutes, and a retry gets 409 until it expires. The owner saw the same symptom
   again in the Sprint 12 round (2026-10-24): a retry shows a new PIN for a moment,
   then the "try again" screen. The app log shows twelve attempts one after another,
-  each answered 409 within 0.1 s, 0.6 to 21 s apart; who started each is not
+  each answered 409 within 0.1 s, about 0.7 to 21 s apart; who started each is not
   recorded. Whether the client should wait on 409 `IN_PROGRESS` is for planning. The
   fix:
   - Fix A: a fresh phase 1 from the same peer address and the same client

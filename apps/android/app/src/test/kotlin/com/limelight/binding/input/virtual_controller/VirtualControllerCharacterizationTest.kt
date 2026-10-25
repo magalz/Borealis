@@ -10,6 +10,7 @@ import android.widget.Toast
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
 import io.github.magalz.borealis.input.Packet
+import io.github.magalz.borealis.settings.ShadowMoonBridge
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,7 +25,7 @@ import org.robolectric.shadows.ShadowToast
  * the controls press to the controller handler, again shortly after, in case the PC lost it.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowOscMoonBridge::class])
+@Config(shadows = [ShadowMoonBridge::class])
 class VirtualControllerCharacterizationTest {
     private val rig = OscRig()
     private val controller = rig.controller

@@ -9,6 +9,7 @@ import android.content.SharedPreferences
 import android.graphics.Canvas
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.settings.ShadowMoonBridge
 import java.io.File
 import org.json.JSONException
 import org.json.JSONObject
@@ -28,7 +29,7 @@ import org.robolectric.annotation.Config
  * format.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowOscMoonBridge::class])
+@Config(shadows = [ShadowMoonBridge::class])
 class SavedLayoutCharacterizationTest {
     private val rig = OscRig()
 

@@ -6,6 +6,7 @@ package com.limelight.binding.input.virtual_controller
 import android.widget.FrameLayout
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
+import io.github.magalz.borealis.settings.ShadowMoonBridge
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -20,7 +21,7 @@ import org.robolectric.annotation.Config
  * and the work after it keep the layout users have on their screens.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowOscMoonBridge::class])
+@Config(shadows = [ShadowMoonBridge::class])
 class DefaultLayoutCharacterizationTest {
     private fun defaultLayout(
         screen: Screen,

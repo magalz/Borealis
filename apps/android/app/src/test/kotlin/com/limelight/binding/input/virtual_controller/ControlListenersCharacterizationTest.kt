@@ -6,6 +6,7 @@ package com.limelight.binding.input.virtual_controller
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
+import io.github.magalz.borealis.settings.ShadowMoonBridge
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -17,7 +18,7 @@ import org.robolectric.annotation.Config
  * directions, and each change goes to the handler with the retransmits after it.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowOscMoonBridge::class])
+@Config(shadows = [ShadowMoonBridge::class])
 class ControlListenersCharacterizationTest {
     private val rig = OscRig().also { it.settings() }
     private val controller = rig.controller

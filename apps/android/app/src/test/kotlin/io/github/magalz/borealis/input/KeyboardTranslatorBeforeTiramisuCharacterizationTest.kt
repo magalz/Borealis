@@ -22,7 +22,7 @@ import org.robolectric.util.ReflectionHelpers
  * sent as the key code it came with.
  */
 @RunWith(RobolectricTestRunner::class)
-// Android 12, an API level that other tests already run on, so no new Robolectric sandbox is needed.
+// Android 12, an API level that other tests already run on, so no further android-all jar is loaded.
 @Config(sdk = [Build.VERSION_CODES.S])
 class KeyboardTranslatorBeforeTiramisuCharacterizationTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()

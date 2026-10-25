@@ -985,14 +985,14 @@ when. Paths are under `apps/android/app/src/main/kotlin/com/limelight/`, except
   - `utils/TvChannelHelper.kt`: 6
 
   That is 48 suppressions in 18 files.
-- **(b) Bugs found during the Sprint 12 conversion.** None is fixed. The conversion keeps
+- **(b) Bugs found during the Sprint 12 conversion.** Only the first is fixed. The conversion keeps
   behaviour (ADR 0059, rule 10).
-  - **Priority:** `utils/ShortcutHelper.kt`, `reapShortcutsForDynamicAdd`, loops forever
-    when the dynamic shortcut list is full and `forceAdd` is true, because it never re-reads
-    the list. `library/UpstreamHostShortcuts.kt`, `reportHostOpened`, runs it inside
-    `synchronized(publishing)`, so publishing blocks. The upstream code has the same loop.
-    The fix is to re-read the list inside the loop. Propose it to the owner as a priority
-    fix after Sprint 12.
+  - **Priority, fixed by issue #69:** `utils/ShortcutHelper.kt`, `reapShortcutsForDynamicAdd`,
+    looped forever when the dynamic shortcut list was full and `forceAdd` was true, because
+    it never re-read the list. `library/UpstreamHostShortcuts.kt`, `reportHostOpened`, runs
+    it inside `synchronized(publishing)`, so publishing blocked. The upstream code has the same
+    loop. The loop now re-reads the list after each removal and stops if a removal does not
+    shrink it.
   - `nvstream/http/ComputerDetails.kt`: `update()` overwrites `state`, `name`, `uuid`,
     `rawAppList` and other fields without a condition. `library/ComputerManagerConnection.kt`
     works around it with `withListFrom`.

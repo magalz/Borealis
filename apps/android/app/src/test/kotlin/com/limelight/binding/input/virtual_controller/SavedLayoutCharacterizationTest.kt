@@ -1,6 +1,3 @@
-// The package name is the inherited one: ADR 0059 keeps it, and it has an underscore.
-@file:Suppress("PackageNaming")
-
 package com.limelight.binding.input.virtual_controller
 
 import android.content.Context

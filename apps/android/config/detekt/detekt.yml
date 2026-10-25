@@ -15,6 +15,10 @@ naming:
   FunctionNaming:
     ignoreAnnotated:
       - Composable
+  # The inherited package com.limelight.binding.input.virtual_controller keeps its name (ADR 0059,
+  # rule 1.3), and the default pattern rejects the underscore in it. Main and test sources.
+  PackageNaming:
+    excludes: ['**/virtual_controller/**']
   # A Compose file is named after its composable and keeps beside it the one small type that the
   # composable takes (an enum, a state or an action class). The rule sees only that class and asks
   # for a rename or a file of its own. No option fits: mustBeFirst skips a file only when a function

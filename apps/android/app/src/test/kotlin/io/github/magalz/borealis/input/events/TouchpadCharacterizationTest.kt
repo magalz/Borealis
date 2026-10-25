@@ -62,7 +62,14 @@ class TouchpadCharacterizationTest {
     private val touches
         get() = rig.connection.touches
 
-    private fun touch(controller: Int = 2, type: Int, id: Int = 0, x: Float = 0.25f, y: Float = 0.25f, pressure: Float = 0.5f) =
+    private fun touch(
+        controller: Int = 2,
+        type: Int,
+        id: Int = 0,
+        x: Float = 0.25f,
+        y: Float = 0.25f,
+        pressure: Float = 0.5f,
+    ) =
         Touch(controller, type, id, x, y, pressure)
 
     // Touch types, as the host library numbers them
@@ -179,7 +186,12 @@ class TouchpadCharacterizationTest {
 
     @Test
     fun `a move sends every finger, in the order of the event`() {
-        val fingers = listOf(finger(id = 4, x = 100f), finger(id = 9, x = 500f, y = 250f), finger(id = 2, x = 1000f, y = 500f))
+        val fingers =
+            listOf(
+                finger(id = 4, x = 100f),
+                finger(id = 9, x = 500f, y = 250f),
+                finger(id = 2, x = 1000f, y = 500f),
+            )
 
         assertThat(pad.touch(ACTION_MOVE, fingers)).isTrue()
 
@@ -327,9 +339,23 @@ class TouchpadCharacterizationTest {
     @Test
     fun `when the touchpad controls the mouse no touch is sent, and the system gets the event`() {
         val mouse = EventsRig { gamepadTouchpadAsMouse = true }
-        val mousePad = mouse.addPad(7, controllerNumber = 2, fields = mapOf("touchpadXRange" to xRange, "touchpadYRange" to yRange))
+        val mousePad =
+            mouse.addPad(
+                7,
+                controllerNumber = 2,
+                fields = mapOf("touchpadXRange" to xRange, "touchpadYRange" to yRange),
+            )
 
-        for (action in listOf(ACTION_DOWN, ACTION_UP, ACTION_MOVE, ACTION_POINTER_DOWN, ACTION_POINTER_UP, ACTION_CANCEL)) {
+        val actions =
+            listOf(
+                ACTION_DOWN,
+                ACTION_UP,
+                ACTION_MOVE,
+                ACTION_POINTER_DOWN,
+                ACTION_POINTER_UP,
+                ACTION_CANCEL,
+            )
+        for (action in actions) {
             assertWithMessage("action $action").that(mousePad.touch(action, listOf(finger()))).isFalse()
         }
 
@@ -435,7 +461,15 @@ class TouchpadCharacterizationTest {
 
     @Test
     fun `any other action of a mouse source sends nothing and is still answered`() {
-        for (action in listOf(ACTION_MOVE, ACTION_HOVER_MOVE, ACTION_POINTER_DOWN, ACTION_BUTTON_PRESS, ACTION_BUTTON_RELEASE)) {
+        val others =
+            listOf(
+                ACTION_MOVE,
+                ACTION_HOVER_MOVE,
+                ACTION_POINTER_DOWN,
+                ACTION_BUTTON_PRESS,
+                ACTION_BUTTON_RELEASE,
+            )
+        for (action in others) {
             assertWithMessage("action $action").that(mouseSource(action, BUTTON_PRIMARY)).isTrue()
         }
 

@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.input.events
 
+import android.os.Looper
 import android.view.KeyEvent.KEYCODE_BUTTON_A
 import android.view.KeyEvent.KEYCODE_BUTTON_B
 import android.view.KeyEvent.KEYCODE_BUTTON_L1
@@ -19,7 +20,9 @@ import com.limelight.preferences.PreferenceConfiguration.AnalogStickForScrolling
 import io.github.magalz.borealis.input.FakeUsbController
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Duration
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 
 /**
  * `transmitControllerInputLocked`: what the handler sends when several contexts share a controller
@@ -198,8 +201,18 @@ class CombiningCharacterizationTest {
         // 1000 then -3000: the second is stronger, and the packet holds 1000 OR -3000, not -3000.
         val (first, _) =
             twoPads(
-                mapOf("leftStickX" to 1000.toShort(), "leftStickY" to (-3000).toShort(), "rightStickX" to 1000.toShort(), "rightStickY" to (-1000).toShort()),
-                mapOf("leftStickX" to (-3000).toShort(), "leftStickY" to 1000.toShort(), "rightStickX" to (-1000).toShort(), "rightStickY" to 1000.toShort()),
+                mapOf(
+                    "leftStickX" to 1000.toShort(),
+                    "leftStickY" to (-3000).toShort(),
+                    "rightStickX" to 1000.toShort(),
+                    "rightStickY" to (-1000).toShort(),
+                ),
+                mapOf(
+                    "leftStickX" to (-3000).toShort(),
+                    "leftStickY" to 1000.toShort(),
+                    "rightStickX" to (-1000).toShort(),
+                    "rightStickY" to 1000.toShort(),
+                ),
             )
 
         val sent = first.send()
@@ -307,7 +320,7 @@ class CombiningCharacterizationTest {
     @Test
     fun `without multiple controllers the mask is always player 1`() {
         val pad = rig.addPad(7, controllerNumber = 3)
-        rig.handler.javaClass.getDeclaredField("currentControllers").apply { isAccessible = true }.setShort(rig.handler, 6)
+        rig.setHandlerField("currentControllers", 6.toShort())
 
         assertThat(pad.send().activeMask).isEqualTo(1)
     }
@@ -316,8 +329,7 @@ class CombiningCharacterizationTest {
     fun `with multiple controllers the mask is the controllers in use, the ones at the start and the on-screen one`() {
         val multi = EventsRig(multiController = true)
         val pad = multi.addPad(7, controllerNumber = 3)
-        fun setMask(name: String, value: Int) =
-            multi.handler.javaClass.getDeclaredField(name).apply { isAccessible = true }.setShort(multi.handler, value.toShort())
+        fun setMask(name: String, value: Int) = multi.setHandlerField(name, value.toShort())
         fun mask(): Int {
             pad.motion(mapOf())
             return multi.packets.last().activeMask
@@ -458,6 +470,23 @@ class CombiningCharacterizationTest {
         assertThat(second).isEqualTo(2)
         assertThat(tenth).isEqualTo(10)
         assertThat(pad.getBoolean("mouseEmulationActive")).isTrue()
+    }
+
+    @Test
+    fun `the first tick is scheduled 16 ms after the mouse came on and the next one 16 ms after that`() {
+        rig.addPad(7, controllerNumber = 0)
+        val looper = shadowOf(Looper.getMainLooper())
+
+        val enabledAt = rig.now
+        rig.handler.setMouseEmulation(true)
+        val first = looper.nextScheduledTaskTime
+        rig.advanceBy(16)
+        val tickedAt = rig.now
+        val second = looper.nextScheduledTaskTime
+
+        // The scheduled time is on the clock of the looper, which is the clock of the events.
+        assertThat(first).isEqualTo(Duration.ofMillis(enabledAt + 16))
+        assertThat(second).isEqualTo(Duration.ofMillis(tickedAt + 16))
     }
 
     @Test

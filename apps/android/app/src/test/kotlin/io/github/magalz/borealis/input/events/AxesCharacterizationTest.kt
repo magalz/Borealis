@@ -208,7 +208,16 @@ class AxesCharacterizationTest {
 
     @Test
     fun `a trigger at or below the deadzone of its context is zero`() {
-        val deadzone = rig.addPad(7, fields = mapOf("triggerDeadzone" to 0.13f, "leftTriggerAxis" to AXIS_BRAKE, "rightTriggerAxis" to AXIS_GAS))
+        val deadzone =
+            rig.addPad(
+                7,
+                fields =
+                    mapOf(
+                        "triggerDeadzone" to 0.13f,
+                        "leftTriggerAxis" to AXIS_BRAKE,
+                        "rightTriggerAxis" to AXIS_GAS,
+                    ),
+            )
         fun send(vararg axes: Pair<Int, Float>): Sent {
             deadzone.motion(axes.toMap())
             return rig.packets.last()
@@ -512,6 +521,22 @@ class AxesCharacterizationTest {
 
         assertThat(rig.packets.last().buttons).isEqualTo(LEFT_FLAG)
         assertThat(noHat.getBoolean("hatXAxisUsed")).isFalse()
+    }
+
+    @Test
+    fun `a context with only one hat axis has no hat, so its D-pad keys stay through a motion event`() {
+        val onlyX = rig.addPad(7, fields = mapOf("hatXAxis" to AXIS_HAT_X))
+        val onlyY = rig.addPad(8, fields = mapOf("hatYAxis" to AXIS_HAT_Y))
+
+        onlyX.press(KEYCODE_DPAD_LEFT)
+        onlyX.motion(mapOf(AXIS_HAT_X to 1f))
+        onlyY.press(KEYCODE_DPAD_UP)
+        onlyY.motion(mapOf(AXIS_HAT_Y to 1f))
+
+        assertThat(onlyX.inputMap).isEqualTo(LEFT_FLAG)
+        assertThat(onlyY.inputMap).isEqualTo(UP_FLAG)
+        assertThat(onlyX.getBoolean("hatXAxisUsed")).isFalse()
+        assertThat(onlyY.getBoolean("hatYAxisUsed")).isFalse()
     }
 
     @Test

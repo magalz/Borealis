@@ -119,14 +119,14 @@ class ButtonTimingCharacterizationTest {
     }
 
     @Test
-    fun `the held time is cut to an int, so one that is a multiple of 2 to the 32 plus 10 ms looks like 10 ms`() {
+    fun `the held time is cut to an int, so 2 to the 32 plus 10 ms looks like 10 ms`() {
         assertThat(waited((1L shl 32) + 10)).isTrue()
         assertThat(waited((1L shl 32) + 30)).isFalse()
         assertThat(waited((1L shl 31) - 1)).isFalse()
     }
 
     @Test
-    fun `a held time past what an int holds wraps to a negative one and the wait length overflows to a negative sleep`() {
+    fun `a held time past what an int holds wraps, and the wait then overflows to a negative sleep`() {
         for (heldMs in listOf(1L shl 31, (1L shl 31) + 5)) {
             val error =
                 assertThrows(IllegalArgumentException::class.java) {
@@ -270,6 +270,23 @@ class ButtonTimingCharacterizationTest {
     }
 
     @Test
+    fun `a repeat of Start while Select is emulated adds Start, and the next key up still ends that Select`() {
+        pad.press(KEYCODE_BUTTON_L1)
+        pad.press(KEYCODE_BUTTON_START)
+        pad.press(KEYCODE_BUTTON_START, repeat = 1)
+        rig.advanceBy(100)
+        assertThat(rig.buttons().last()).isEqualTo(BACK_FLAG or PLAY_FLAG)
+
+        pad.press(KEYCODE_BUTTON_A)
+        rig.advanceBy(100)
+        pad.release(KEYCODE_BUTTON_A)
+
+        // Left bumper is not in the buttons any more, so the check finds one of the two up.
+        assertThat(rig.buttons().last()).isEqualTo(PLAY_FLAG)
+        assertThat(pad.getInt("emulatingButtonFlags")).isEqualTo(0)
+    }
+
+    @Test
     fun `Start within 100 ms of the left bumper going up is Select`() {
         pad.press(KEYCODE_BUTTON_L1)
         rig.advanceBy(100)
@@ -388,6 +405,23 @@ class ButtonTimingCharacterizationTest {
     }
 
     @Test
+    fun `a repeat of Select while the touchpad button is emulated adds Select, and the next key up ends that button`() {
+        val clickpad = rig.addPad(8, fields = mapOf("hasSelect" to true, "needsClickpadEmulation" to true))
+        clickpad.press(KEYCODE_BUTTON_L1)
+        clickpad.press(KEYCODE_BUTTON_SELECT)
+        clickpad.press(KEYCODE_BUTTON_SELECT, repeat = 1)
+        rig.advanceBy(100)
+        assertThat(rig.buttons().last()).isEqualTo(TOUCHPAD_FLAG or BACK_FLAG)
+
+        clickpad.press(KEYCODE_BUTTON_A)
+        rig.advanceBy(100)
+        clickpad.release(KEYCODE_BUTTON_A)
+
+        assertThat(rig.buttons().last()).isEqualTo(BACK_FLAG)
+        assertThat(clickpad.getInt("emulatingButtonFlags")).isEqualTo(0)
+    }
+
+    @Test
     fun `a pad with a Select button that is not standing in for a PS4 pad sends Select and the bumper as they are`() {
         val plain = rig.addPad(8, fields = mapOf("hasSelect" to true))
         plain.press(KEYCODE_BUTTON_L1)
@@ -473,7 +507,15 @@ class ButtonTimingCharacterizationTest {
         pressAllFour(pad)
 
         assertThat(pad.getBoolean("pendingExit")).isFalse()
-        for (keyCode in listOf(KEYCODE_BUTTON_START, KEYCODE_BUTTON_L1, KEYCODE_BUTTON_SELECT, KEYCODE_BUTTON_R1, KEYCODE_BUTTON_A)) {
+        val keys =
+            listOf(
+                KEYCODE_BUTTON_START,
+                KEYCODE_BUTTON_L1,
+                KEYCODE_BUTTON_SELECT,
+                KEYCODE_BUTTON_R1,
+                KEYCODE_BUTTON_A,
+            )
+        for (keyCode in keys) {
             pad.release(keyCode)
         }
 

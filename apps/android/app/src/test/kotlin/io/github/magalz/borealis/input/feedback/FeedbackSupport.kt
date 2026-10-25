@@ -14,7 +14,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import org.junit.After
 
 /** The base of the feedback tests: makes the rigs and stops each one's thread after the test. */
-abstract class FeedbackTestBase {
+open class FeedbackTestBase {
     private val rigs = mutableListOf<FeedbackRig>()
 
     @After

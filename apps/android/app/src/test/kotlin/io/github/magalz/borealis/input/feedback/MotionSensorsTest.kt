@@ -297,6 +297,19 @@ class MotionSensorsTest : FeedbackTestBase() {
     }
 
     @Test
+    fun `a change of accuracy is ignored`() {
+        val rig = sensorRig()
+        wake(rig)
+        rig.motionState(GYRO, 100)
+        val listener = sensors.listenerOf(Sensor.TYPE_GYROSCOPE)
+
+        listener.onAccuracyChanged(sensors.sensors.getValue(Sensor.TYPE_GYROSCOPE), 3)
+
+        assertThat(rig.connection.motions).isEmpty()
+        assertThat(sensors.log).containsExactly("register 4 10000")
+    }
+
+    @Test
     fun `a reading that repeats the last one is not sent again`() {
         val rig = sensorRig()
         wake(rig)

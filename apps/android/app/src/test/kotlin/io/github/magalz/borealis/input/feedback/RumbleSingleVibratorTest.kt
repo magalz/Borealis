@@ -192,7 +192,8 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
             calls += Hardware.calls(phone).toList()
         }
 
-        assertThat(calls).containsExactly(emptyList<VibratorCall>(), emptyList<VibratorCall>(), emptyList<VibratorCall>())
+        assertThat(calls.flatten()).isEmpty()
+        assertThat(calls).hasSize(3)
     }
 
     @Test

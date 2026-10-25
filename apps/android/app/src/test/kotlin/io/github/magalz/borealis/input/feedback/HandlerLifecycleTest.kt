@@ -165,6 +165,19 @@ class HandlerLifecycleTest : FeedbackTestBase() {
     }
 
     @Test
+    fun `a device that Android adds is not touched until it sends input`() {
+        val own = Hardware.vibrator()
+        val rig = rig()
+        val pad = rig.connectPad(features = DeviceFeatures(vibrator = own))
+
+        rig.handler.onInputDeviceAdded(pad.id)
+        rig.rumble(0x6400, 0x6400)
+
+        assertThat(rig.connection.arrivals).isEmpty()
+        assertThat(Hardware.calls(own)).isEmpty()
+    }
+
+    @Test
     fun `destroying ends the thread`() {
         val rig = rig()
         val thread = rig.backgroundThread

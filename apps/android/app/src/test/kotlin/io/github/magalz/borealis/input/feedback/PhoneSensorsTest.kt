@@ -15,6 +15,8 @@ import org.robolectric.annotation.Config
  * pad is player one. The phone is held in whatever way the display is turned, so every reading is
  * remapped to the axes of the controller, and each rotation does it differently.
  */
+// Abstract so that it does not run alone: the subclasses carry the Robolectric runner and the SDK level.
+@Suppress("AbstractClassCanBeConcreteClass")
 abstract class PhoneSensorsContract : FeedbackTestBase() {
     private fun phoneRig(configure: com.limelight.preferences.PreferenceConfiguration.() -> Unit = {}) =
         rig {

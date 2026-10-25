@@ -2,9 +2,14 @@ package io.github.magalz.borealis.input.devices
 
 import android.hardware.SensorManager
 import android.hardware.lights.Light
+import android.hardware.lights.LightsManager
+import android.hardware.lights.LightsRequest
 import android.os.Build
 import android.os.Vibrator
 import android.view.InputDevice
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import org.cgutman.shieldcontrollerextensions.SceManager
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
@@ -178,6 +183,45 @@ class ShadowDeviceLightsManager {
 }
 
 /**
+ * A session with the lights of an input device, as `InputDeviceLightsManager.openSession()` gives
+ * one, that records what the handler asks of it: every request, and every close (which fails with
+ * [closeFailure] when the test sets one). The requests come from the handler's background thread;
+ * [firstRequest] opens when the first one arrives.
+ */
+@Implements(
+    className = "android.hardware.input.InputDeviceLightsManager\$InputDeviceLightsSession",
+    isInAndroidSdk = false,
+    minSdk = Build.VERSION_CODES.S,
+)
+class ShadowDeviceLightsSession {
+    val requests = CopyOnWriteArrayList<LightsRequest>()
+    val firstRequest = CountDownLatch(1)
+    val closes = CopyOnWriteArrayList<Unit>()
+    var closeFailure: RuntimeException? = null
+
+    @Suppress("unused")
+    @Implementation
+    fun requestLights(request: LightsRequest) {
+        requests += request
+        firstRequest.countDown()
+    }
+
+    @Suppress("unused")
+    @Implementation
+    fun close() {
+        closes += Unit
+        closeFailure?.let { throw it }
+    }
+}
+
+/** A new [ShadowDeviceLightsSession], for a test to hand to a context as its lights session. */
+fun recordingLightsSession(): LightsManager.LightsSession =
+    newInstance("android.hardware.input.InputDeviceLightsManager\$InputDeviceLightsSession")
+
+val LightsManager.LightsSession.recorded: ShadowDeviceLightsSession
+    get() = Shadow.extract(this)
+
+/**
  * The vibrator manager of the phone itself. Robolectric's has no vibrators; this one has
  * [DeviceHardware.systemVibrators], each of which has amplitude control when Robolectric's vibrator
  * does (`ShadowVibrator.setHasAmplitudeControl`).
@@ -196,4 +240,25 @@ class ShadowSystemVibratorManager {
     @Implementation
     fun getVibrator(vibratorId: Int): Vibrator =
         RuntimeEnvironment.getApplication().getSystemService(Vibrator::class.java)
+}
+
+/** The ids of the input devices that the SHIELD controller service says it knows. */
+object SceDevices {
+    val recognized = mutableSetOf<Int>()
+
+    fun reset() {
+        recognized.clear()
+    }
+}
+
+/**
+ * The SHIELD controller service, which a unit test cannot bind. The handler asks it whether a
+ * device is a SHIELD controller; it answers from [SceDevices.recognized]. Everything else it does
+ * (battery, rumble) answers as an unbound service does, so nothing is reported.
+ */
+@Implements(SceManager::class)
+class ShadowDeviceSceManager {
+    @Suppress("unused")
+    @Implementation
+    fun isRecognizedDevice(device: InputDevice): Boolean = device.id in SceDevices.recognized
 }

@@ -22,7 +22,9 @@ import org.robolectric.annotation.Config
             ShadowDeviceVibratorManager::class,
             ShadowDeviceVibrator::class,
             ShadowDeviceLightsManager::class,
+            ShadowDeviceLightsSession::class,
             ShadowSystemVibratorManager::class,
+            ShadowDeviceSceManager::class,
         ]
 )
 // Abstract so that Gradle does not run the base as a test of its own.
@@ -34,6 +36,7 @@ abstract class DevicesTestBase {
     fun resetShadows() {
         ShadowDevicesMoonBridge.reset()
         DeviceHardware.reset()
+        SceDevices.reset()
     }
 
     @After

@@ -245,6 +245,31 @@ class ArrivalReportTest : DevicesTestBase() {
     }
 
     @Test
+    fun `a SHIELD controller rumbles and reports its battery through the SHIELD service`() {
+        shadowOf(RuntimeEnvironment.getApplication().getSystemService(android.os.Vibrator::class.java))
+            .setHasVibrator(false)
+        val device = pad(1, external = false)
+        SceDevices.recognized += device.id
+
+        val arrival = arrivalOf(device)
+
+        // Without the service this device would report nothing: it is internal and has no vibrator
+        assertThat(arrival.capabilities)
+            .isEqualTo(caps(MoonBridge.LI_CCAP_RUMBLE, MoonBridge.LI_CCAP_BATTERY_STATE))
+    }
+
+    @Test
+    fun `the SHIELD service only knows the devices it names`() {
+        val shield = pad(1)
+        val other = pad(2)
+        SceDevices.recognized += shield.id
+
+        val capabilities = arrivalOf(other).capabilities
+
+        assertThat(capabilities and MoonBridge.LI_CCAP_RUMBLE.toInt()).isEqualTo(0)
+    }
+
+    @Test
     fun `a pad with its own vibrator rumbles`() {
         val arrival = arrivalOf(pad(1, hasVibrator = true))
 

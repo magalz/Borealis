@@ -336,7 +336,7 @@ object Hardware {
     /** A battery, as `InputDevice.getBatteryState()` reports it. Android 12 and later. */
     fun battery(present: Boolean = true, status: Int = 0, capacity: Float = Float.NaN): Any {
         val className =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 "android.hardware.input.InputManagerGlobal\$LocalBatteryState"
             } else {
                 "android.hardware.input.InputDeviceBatteryState"

@@ -2,6 +2,9 @@ package io.github.magalz.borealis.input.devices
 
 import android.view.InputDevice
 import android.view.KeyEvent.KEYCODE_BUTTON_A
+import android.view.KeyEvent.KEYCODE_BUTTON_B
+import android.view.KeyEvent.KEYCODE_BUTTON_X
+import android.view.KeyEvent.KEYCODE_BUTTON_Y
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
 import io.github.magalz.borealis.input.FakeUsbController
@@ -15,6 +18,7 @@ import org.junit.Test
  */
 class ControllerNumberTest : DevicesTestBase() {
     private val a = ControllerPacket.A_FLAG
+    private val b = ControllerPacket.B_FLAG
 
     private fun DevicesRig.arrivalControllers() = connection.arrivals.map { it.controller }
 
@@ -260,6 +264,80 @@ class ControllerNumberTest : DevicesTestBase() {
         rig.handler.setCaptured(true)
 
         assertThat(rig.connection.packets.map { it.controller }).containsExactly(0)
+    }
+
+    @Test
+    fun `pads that share a controller number send one fused packet`() {
+        val rig = rig(multiController = false)
+        val first = pad(1)
+        val second = pad(2)
+        listOf(first, second).forEach(rig::connect)
+
+        rig.press(first, KEYCODE_BUTTON_A)
+        rig.press(second, KEYCODE_BUTTON_B)
+        rig.release(first, KEYCODE_BUTTON_A)
+
+        assertThat(rig.connection.packets.map { it.buttons })
+            .containsExactly(a, a or b, b)
+            .inOrder()
+        assertThat(rig.connection.packets.map { it.controller }).containsExactly(0, 0, 0)
+    }
+
+    @Test
+    fun `pads with a number each send their own packets`() {
+        val rig = rig(multiController = true)
+        val first = pad(1)
+        val second = pad(2)
+        listOf(first, second).forEach(rig::connect)
+
+        rig.press(first, KEYCODE_BUTTON_A)
+        rig.press(second, KEYCODE_BUTTON_B)
+
+        assertThat(rig.connection.packets.map { it.controller to it.buttons })
+            .containsExactly(0 to a, 1 to b)
+            .inOrder()
+    }
+
+    @Test
+    fun `removing a pad that shares controller 0 zeroes it for the pad that is left`() {
+        val rig = rig(multiController = false)
+        val first = pad(1)
+        val second = pad(2)
+        listOf(first, second).forEach(rig::connect)
+        rig.press(first, KEYCODE_BUTTON_A)
+        rig.press(second, KEYCODE_BUTTON_B)
+
+        rig.disconnect(second)
+
+        // The first pad still holds A, but the zero packet is for controller 0 as a whole
+        assertThat(rig.connection.packets.last())
+            .isEqualTo(Sent(controller = 0, activeMask = 1, buttons = 0))
+        // Its next event brings its state back
+        rig.press(first, KEYCODE_BUTTON_X)
+        assertThat(rig.connection.packets.last().buttons).isEqualTo(a or ControllerPacket.X_FLAG)
+    }
+
+    @Test
+    fun `a touchpad and its joystick are one controller`() {
+        val rig = rig(multiController = true)
+        val other = pad(1)
+        val joystick = pad(5, descriptor = "same")
+        val touchpad = pad(4, name = "pad Touchpad", sources = MOUSE, axes = emptyList(), descriptor = "same")
+        listOf(other, joystick, touchpad).forEach(rig::connect)
+        rig.press(other, KEYCODE_BUTTON_A)
+
+        rig.press(touchpad, KEYCODE_BUTTON_A)
+        rig.press(joystick, KEYCODE_BUTTON_B)
+        rig.press(other, KEYCODE_BUTTON_Y)
+
+        assertThat(rig.connection.packets.map { it.controller to it.buttons })
+            .containsExactly(
+                0 to a,
+                1 to a,
+                1 to (a or b),
+                0 to (a or ControllerPacket.Y_FLAG),
+            )
+            .inOrder()
     }
 
     @Test

@@ -133,6 +133,22 @@ class GameControllerDeviceTest : DevicesTestBase() {
     }
 
     @Test
+    fun `a virtual device with joystick axes is a controller`() {
+        val virtual = pad(-1, sources = JOYSTICK, keyboardType = KEYBOARD_TYPE_NON_ALPHABETIC, axes = LEFT_STICK)
+
+        assertThat(isController(virtual.device)).isTrue()
+        assertThat(layoutSays(virtual.device)).isFalse()
+    }
+
+    @Test
+    fun `joystick axes without the joystick source are no controller of their own`() {
+        // Only a non-alphabetic keyboard type keeps this one in
+        val mouse = pad(1, sources = MOUSE, keyboardType = KEYBOARD_TYPE_ALPHABETIC, axes = LEFT_STICK)
+
+        assertThat(isController(mouse.device)).isFalse()
+    }
+
+    @Test
     fun `the layout rule rejects what the handler accepts`() {
         val virtualGamepad = pad(-1, sources = GAMEPAD, axes = emptyList()).device
         val mouse = pad(1, sources = MOUSE, keyboardType = KEYBOARD_TYPE_NONE, axes = emptyList()).device

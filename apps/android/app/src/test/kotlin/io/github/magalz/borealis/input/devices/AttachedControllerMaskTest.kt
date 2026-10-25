@@ -62,6 +62,13 @@ class AttachedControllerMaskTest : DevicesTestBase() {
     }
 
     @Test
+    fun `axes without the joystick source are not counted`() {
+        connectAll(pad(1, sources = InputDevice.SOURCE_GAMEPAD, axes = LEFT_STICK), pad(2))
+
+        assertThat(mask()).isEqualTo(0b1)
+    }
+
+    @Test
     fun `an alphabetic keyboard with joystick axes is not counted`() {
         connectAll(
             pad(

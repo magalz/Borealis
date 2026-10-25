@@ -95,8 +95,9 @@ class MotionSensorsTest : FeedbackTestBase() {
         wake(rig)
 
         rig.motionState(GYRO, -5)
+        rig.motionState(ACCEL, -8)
 
-        assertThat(sensors.log).containsExactly("register 4 -200000")
+        assertThat(sensors.log).containsExactly("register 4 -200000", "register 1 -125000").inOrder()
     }
 
     @Test
@@ -509,12 +510,32 @@ class MotionSensorsTest : FeedbackTestBase() {
         val rig = sensorRig()
         wake(rig)
         rig.motionState(GYRO, 100)
+        rig.motionState(ACCEL, 50)
 
         rig.handler.enableSensors()
         rig.advanceBackgroundBy(1000)
         rig.awaitBackground()
 
-        assertThat(sensors.log).containsExactly("register 4 10000")
+        assertThat(sensors.log).containsExactly("register 4 10000", "register 1 20000").inOrder()
+    }
+
+    @Test
+    fun `enabling registers only the sensor that is off`() {
+        val rig = sensorRig()
+        wake(rig)
+        rig.motionState(GYRO, 100)
+        rig.motionState(ACCEL, 50)
+        rig.motionState(ACCEL, 0)
+        rig.motionState(ACCEL, 25)
+        rig.handler.disableSensors()
+        rig.motionState(GYRO, 100)
+        sensors.log.clear()
+
+        rig.handler.enableSensors()
+        rig.advanceBackgroundBy(1000)
+        rig.awaitBackground()
+
+        assertThat(sensors.log).containsExactly("register 1 40000")
     }
 
     @Test

@@ -1,37 +1,23 @@
-/**
- * Created by Karim Mreisi.
- */
+/** Created by Karim Mreisi. */
+package com.limelight.binding.input.virtual_controller
 
-package com.limelight.binding.input.virtual_controller;
+import android.annotation.SuppressLint
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.view.MotionEvent
+import kotlin.math.atan
 
-import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.view.MotionEvent;
+/** This is a analog stick on screen element. It is used to get 2-Axis user input. */
+// Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+// The elements have no (Context) constructor on purpose: they need their controller and their id.
+@SuppressLint("ViewConstructor")
+open class AnalogStick(controller: VirtualController, context: Context, elementId: Int) :
+    VirtualControllerElement(controller, context, elementId) {
 
-import java.util.ArrayList;
-import java.util.List;
-
-/**
- * This is a analog stick on screen element. It is used to get 2-Axis user input.
- */
-public class AnalogStick extends VirtualControllerElement {
-
-    /**
-     * time frame for a double click
-     */
-    public final static long timeoutDoubleClick = 350;
-
-    /**
-     * touch down time until the deadzone is lifted to allow precise movements with the analog sticks
-     */
-    public final static long timeoutDeadzone = 150;
-
-    /**
-     * Listener interface to update registered observers.
-     */
-    public interface AnalogStickListener {
+    /** Listener interface to update registered observers. */
+    interface AnalogStickListener {
 
         /**
          * onMovement event will be fired on real analog stick movement (outside of the deadzone).
@@ -39,290 +25,302 @@ public class AnalogStick extends VirtualControllerElement {
          * @param x horizontal position, value from -1.0 ... 0 .. 1.0
          * @param y vertical position, value from -1.0 ... 0 .. 1.0
          */
-        void onMovement(float x, float y);
+        fun onMovement(x: Float, y: Float)
 
-        /**
-         * onClick event will be fired on click on the analog stick
-         */
-        void onClick();
+        /** onClick event will be fired on click on the analog stick */
+        fun onClick()
 
         /**
          * onDoubleClick event will be fired on a double click in a short time frame on the analog
          * stick.
          */
-        void onDoubleClick();
+        fun onDoubleClick()
 
-        /**
-         * onRevoke event will be fired on unpress of the analog stick.
-         */
-        void onRevoke();
+        /** onRevoke event will be fired on unpress of the analog stick. */
+        fun onRevoke()
     }
 
-    /**
-     * Movement states of the analog sick.
-     */
-    private enum STICK_STATE {
+    /** Movement states of the analog sick. */
+    private enum class StickState {
         NO_MOVEMENT,
         MOVED_IN_DEAD_ZONE,
-        MOVED_ACTIVE
+        MOVED_ACTIVE,
     }
 
-    /**
-     * Click type states.
-     */
-    private enum CLICK_STATE {
+    /** Click type states. */
+    private enum class ClickState {
         SINGLE,
-        DOUBLE
+        DOUBLE,
     }
 
-    /**
-     * outer radius, this size will be automatically updated on resize
-     */
-    private float radius_complete = 0;
-    /**
-     * analog stick radius, this size will be automatically updated on resize
-     */
-    private float radius_analog_stick = 0;
-    /**
-     * dead zone radius, this size will be automatically updated on resize
-     */
-    private float radius_dead_zone = 0;
+    /** outer radius, this size will be automatically updated on resize */
+    private var radiusComplete = 0f
 
-    /**
-     * horizontal position in relation to the center of the element
-     */
-    private float relative_x = 0;
-    /**
-     * vertical position in relation to the center of the element
-     */
-    private float relative_y = 0;
+    /** analog stick radius, this size will be automatically updated on resize */
+    private var radiusAnalogStick = 0f
 
+    /** dead zone radius, this size will be automatically updated on resize */
+    private var radiusDeadZone = 0f
 
-    private double movement_radius = 0;
-    private double movement_angle = 0;
+    /** horizontal position in relation to the center of the element */
+    private var relativeX = 0f
 
-    private float position_stick_x = 0;
-    private float position_stick_y = 0;
+    /** vertical position in relation to the center of the element */
+    private var relativeY = 0f
 
-    private final Paint paint = new Paint();
+    private var movementRadius = 0.0
+    private var movementAngle = 0.0
 
-    private STICK_STATE stick_state = STICK_STATE.NO_MOVEMENT;
-    private CLICK_STATE click_state = CLICK_STATE.SINGLE;
+    private var positionStickX = 0f
+    private var positionStickY = 0f
 
-    private List<AnalogStickListener> listeners = new ArrayList<>();
-    private long timeLastClick = 0;
+    private val paint = Paint()
 
-    private static double getMovementRadius(float x, float y) {
-        return Math.sqrt(x * x + y * y);
-    }
+    private var stickState = StickState.NO_MOVEMENT
+    private var clickState = ClickState.SINGLE
 
-    private static double getAngle(float way_x, float way_y) {
-        // prevent divisions by zero for corner cases
-        if (way_x == 0) {
-            return way_y < 0 ? Math.PI : 0;
-        } else if (way_y == 0) {
-            if (way_x > 0) {
-                return Math.PI * 3 / 2;
-            } else if (way_x < 0) {
-                return Math.PI * 1 / 2;
-            }
-        }
-        // return correct calculated angle for each quadrant
-        if (way_x > 0) {
-            if (way_y < 0) {
-                // first quadrant
-                return 3 * Math.PI / 2 + Math.atan((double) (-way_y / way_x));
-            } else {
-                // second quadrant
-                return Math.PI + Math.atan((double) (way_x / way_y));
-            }
-        } else {
-            if (way_y > 0) {
-                // third quadrant
-                return Math.PI / 2 + Math.atan((double) (way_y / -way_x));
-            } else {
-                // fourth quadrant
-                return 0 + Math.atan((double) (-way_x / -way_y));
-            }
-        }
-    }
+    private val listeners = ArrayList<AnalogStickListener>()
+    private var timeLastClick = 0L
 
-    public AnalogStick(VirtualController controller, Context context, int elementId) {
-        super(controller, context, elementId);
+    init {
         // reset stick position
-        position_stick_x = getWidth() / 2;
-        position_stick_y = getHeight() / 2;
+        positionStickX = (width / 2).toFloat()
+        positionStickY = (height / 2).toFloat()
     }
 
-    public void addAnalogStickListener(AnalogStickListener listener) {
-        listeners.add(listener);
+    fun addAnalogStickListener(listener: AnalogStickListener) {
+        listeners.add(listener)
     }
 
-    private void notifyOnMovement(float x, float y) {
+    private fun notifyOnMovement(x: Float, y: Float) {
         // notify listeners
-        for (AnalogStickListener listener : listeners) {
-            listener.onMovement(x, y);
+        for (listener in listeners) {
+            listener.onMovement(x, y)
         }
     }
 
-    private void notifyOnClick() {
+    private fun notifyOnClick() {
         // notify listeners
-        for (AnalogStickListener listener : listeners) {
-            listener.onClick();
+        for (listener in listeners) {
+            listener.onClick()
         }
     }
 
-    private void notifyOnDoubleClick() {
+    private fun notifyOnDoubleClick() {
         // notify listeners
-        for (AnalogStickListener listener : listeners) {
-            listener.onDoubleClick();
+        for (listener in listeners) {
+            listener.onDoubleClick()
         }
     }
 
-    private void notifyOnRevoke() {
+    private fun notifyOnRevoke() {
         // notify listeners
-        for (AnalogStickListener listener : listeners) {
-            listener.onRevoke();
+        for (listener in listeners) {
+            listener.onRevoke()
         }
     }
 
-    @Override
-    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         // calculate new radius sizes depending
-        radius_complete = getPercent(getCorrectWidth() / 2, 100) - 2 * getDefaultStrokeWidth();
-        radius_dead_zone = getPercent(getCorrectWidth() / 2, 30);
-        radius_analog_stick = getPercent(getCorrectWidth() / 2, 20);
+        radiusComplete =
+            getPercent((correctWidth / 2).toFloat(), RADIUS_COMPLETE_PERCENT) -
+                2 * defaultStrokeWidth
+        radiusDeadZone = getPercent((correctWidth / 2).toFloat(), RADIUS_DEAD_ZONE_PERCENT)
+        radiusAnalogStick = getPercent((correctWidth / 2).toFloat(), RADIUS_ANALOG_STICK_PERCENT)
 
-        super.onSizeChanged(w, h, oldw, oldh);
+        super.onSizeChanged(w, h, oldw, oldh)
     }
 
-    @Override
-    protected void onElementDraw(Canvas canvas) {
+    override fun onElementDraw(canvas: Canvas) {
         // set transparent background
-        canvas.drawColor(Color.TRANSPARENT);
+        canvas.drawColor(Color.TRANSPARENT)
 
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(getDefaultStrokeWidth());
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = defaultStrokeWidth.toFloat()
 
         // draw outer circle
-        if (!isPressed() || click_state == CLICK_STATE.SINGLE) {
-            paint.setColor(getDefaultColor());
+        if (!isPressed || clickState == ClickState.SINGLE) {
+            paint.color = defaultColor
         } else {
-            paint.setColor(pressedColor);
+            paint.color = pressedColor
         }
-        canvas.drawCircle(getWidth() / 2, getHeight() / 2, radius_complete, paint);
+        canvas.drawCircle((width / 2).toFloat(), (height / 2).toFloat(), radiusComplete, paint)
 
-        paint.setColor(getDefaultColor());
+        paint.color = defaultColor
         // draw dead zone
-        canvas.drawCircle(getWidth() / 2, getHeight() / 2, radius_dead_zone, paint);
+        canvas.drawCircle((width / 2).toFloat(), (height / 2).toFloat(), radiusDeadZone, paint)
 
         // draw stick depending on state
-        switch (stick_state) {
-            case NO_MOVEMENT: {
-                paint.setColor(getDefaultColor());
-                canvas.drawCircle(getWidth() / 2, getHeight() / 2, radius_analog_stick, paint);
-                break;
+        when (stickState) {
+            StickState.NO_MOVEMENT -> {
+                paint.color = defaultColor
+                canvas.drawCircle(
+                    (width / 2).toFloat(),
+                    (height / 2).toFloat(),
+                    radiusAnalogStick,
+                    paint,
+                )
             }
-            case MOVED_IN_DEAD_ZONE:
-            case MOVED_ACTIVE: {
-                paint.setColor(pressedColor);
-                canvas.drawCircle(position_stick_x, position_stick_y, radius_analog_stick, paint);
-                break;
+            StickState.MOVED_IN_DEAD_ZONE,
+            StickState.MOVED_ACTIVE -> {
+                paint.color = pressedColor
+                canvas.drawCircle(positionStickX, positionStickY, radiusAnalogStick, paint)
             }
         }
     }
 
-    private void updatePosition(long eventTime) {
+    private fun updatePosition(eventTime: Long) {
         // get 100% way
-        float complete = radius_complete - radius_analog_stick;
+        val complete = radiusComplete - radiusAnalogStick
 
         // calculate relative way
-        float correlated_y = (float) (Math.sin(Math.PI / 2 - movement_angle) * (movement_radius));
-        float correlated_x = (float) (Math.cos(Math.PI / 2 - movement_angle) * (movement_radius));
+        val correlatedY = (Math.sin(Math.PI / 2 - movementAngle) * movementRadius).toFloat()
+        val correlatedX = (Math.cos(Math.PI / 2 - movementAngle) * movementRadius).toFloat()
 
         // update positions
-        position_stick_x = getWidth() / 2 - correlated_x;
-        position_stick_y = getHeight() / 2 - correlated_y;
+        positionStickX = width / 2 - correlatedX
+        positionStickY = height / 2 - correlatedY
 
         // Stay active even if we're back in the deadzone because we know the user is actively
         // giving analog stick input and we don't want to snap back into the deadzone.
         // We also release the deadzone if the user keeps the stick pressed for a bit to allow
         // them to make precise movements.
-        stick_state = (stick_state == STICK_STATE.MOVED_ACTIVE ||
-                eventTime - timeLastClick > timeoutDeadzone ||
-                movement_radius > radius_dead_zone) ?
-                STICK_STATE.MOVED_ACTIVE : STICK_STATE.MOVED_IN_DEAD_ZONE;
+        stickState =
+            if (
+                stickState == StickState.MOVED_ACTIVE ||
+                    eventTime - timeLastClick > TIMEOUT_DEADZONE ||
+                    movementRadius > radiusDeadZone
+            ) {
+                StickState.MOVED_ACTIVE
+            } else {
+                StickState.MOVED_IN_DEAD_ZONE
+            }
 
         //  trigger move event if state active
-        if (stick_state == STICK_STATE.MOVED_ACTIVE) {
-            notifyOnMovement(-correlated_x / complete, correlated_y / complete);
+        if (stickState == StickState.MOVED_ACTIVE) {
+            notifyOnMovement(-correlatedX / complete, correlatedY / complete)
         }
     }
 
-    @Override
-    public boolean onElementTouchEvent(MotionEvent event) {
+    override fun onElementTouchEvent(event: MotionEvent): Boolean {
         // save last click state
-        CLICK_STATE lastClickState = click_state;
+        val lastClickState = clickState
 
         // get absolute way for each axis
-        relative_x = -(getWidth() / 2 - event.getX());
-        relative_y = -(getHeight() / 2 - event.getY());
+        relativeX = -(width / 2 - event.x)
+        relativeY = -(height / 2 - event.y)
 
         // get radius and angel of movement from center
-        movement_radius = getMovementRadius(relative_x, relative_y);
-        movement_angle = getAngle(relative_x, relative_y);
+        movementRadius = getMovementRadius(relativeX, relativeY)
+        movementAngle = getAngle(relativeX, relativeY)
 
         // pass touch event to parent if out of outer circle
-        if (movement_radius > radius_complete && !isPressed())
-            return false;
+        if (movementRadius > radiusComplete && !isPressed) {
+            return false
+        }
 
         // chop radius if out of outer circle or near the edge
-        if (movement_radius > (radius_complete - radius_analog_stick)) {
-            movement_radius = radius_complete - radius_analog_stick;
+        if (movementRadius > (radiusComplete - radiusAnalogStick)) {
+            movementRadius = (radiusComplete - radiusAnalogStick).toDouble()
         }
 
         // handle event depending on action
-        switch (event.getActionMasked()) {
+        when (event.actionMasked) {
             // down event (touch event)
-            case MotionEvent.ACTION_DOWN: {
+            MotionEvent.ACTION_DOWN -> {
                 // set to dead zoned, will be corrected in update position if necessary
-                stick_state = STICK_STATE.MOVED_IN_DEAD_ZONE;
+                stickState = StickState.MOVED_IN_DEAD_ZONE
                 // check for double click
-                if (lastClickState == CLICK_STATE.SINGLE &&
-                        event.getEventTime() - timeLastClick <= timeoutDoubleClick) {
-                    click_state = CLICK_STATE.DOUBLE;
-                    notifyOnDoubleClick();
+                if (
+                    lastClickState == ClickState.SINGLE &&
+                        event.eventTime - timeLastClick <= TIMEOUT_DOUBLE_CLICK
+                ) {
+                    clickState = ClickState.DOUBLE
+                    notifyOnDoubleClick()
                 } else {
-                    click_state = CLICK_STATE.SINGLE;
-                    notifyOnClick();
+                    clickState = ClickState.SINGLE
+                    notifyOnClick()
                 }
                 // reset last click timestamp
-                timeLastClick = event.getEventTime();
+                timeLastClick = event.eventTime
                 // set item pressed and update
-                setPressed(true);
-                break;
+                isPressed = true
             }
             // up event (revoke touch)
-            case MotionEvent.ACTION_CANCEL:
-            case MotionEvent.ACTION_UP: {
-                setPressed(false);
-                break;
+            MotionEvent.ACTION_CANCEL,
+            MotionEvent.ACTION_UP -> {
+                isPressed = false
             }
         }
 
-        if (isPressed()) {
+        if (isPressed) {
             // when is pressed calculate new positions (will trigger movement if necessary)
-            updatePosition(event.getEventTime());
+            updatePosition(event.eventTime)
         } else {
-            stick_state = STICK_STATE.NO_MOVEMENT;
-            notifyOnRevoke();
+            stickState = StickState.NO_MOVEMENT
+            notifyOnRevoke()
 
             // not longer pressed reset analog stick
-            notifyOnMovement(0, 0);
+            notifyOnMovement(0f, 0f)
         }
         // refresh view
-        invalidate();
+        invalidate()
         // accept the touch event
-        return true;
+        return true
+    }
+
+    private companion object {
+        /** time frame for a double click */
+        private const val TIMEOUT_DOUBLE_CLICK = 350L
+
+        /**
+         * touch down time until the deadzone is lifted to allow precise movements with the analog
+         * sticks
+         */
+        private const val TIMEOUT_DEADZONE = 150L
+
+        // The circles, in percent of half of the shorter side of the element
+        private const val RADIUS_COMPLETE_PERCENT = 100f
+        private const val RADIUS_DEAD_ZONE_PERCENT = 30f
+        private const val RADIUS_ANALOG_STICK_PERCENT = 20f
+
+        // 3 * PI / 2 is three quarter turns
+        private const val QUARTER_TURNS_RIGHT = 3
+
+        private fun getMovementRadius(x: Float, y: Float): Double =
+            Math.sqrt((x * x + y * y).toDouble())
+
+        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+        @Suppress("ReturnCount")
+        private fun getAngle(wayX: Float, wayY: Float): Double {
+            // prevent divisions by zero for corner cases
+            if (wayX == 0f) {
+                return if (wayY < 0) Math.PI else 0.0
+            } else if (wayY == 0f) {
+                if (wayX > 0) {
+                    return Math.PI * QUARTER_TURNS_RIGHT / 2
+                } else if (wayX < 0) {
+                    return Math.PI * 1 / 2
+                }
+            }
+            // return correct calculated angle for each quadrant
+            return if (wayX > 0) {
+                if (wayY < 0) {
+                    // first quadrant
+                    QUARTER_TURNS_RIGHT * Math.PI / 2 + atan((-wayY / wayX).toDouble())
+                } else {
+                    // second quadrant
+                    Math.PI + atan((wayX / wayY).toDouble())
+                }
+            } else {
+                if (wayY > 0) {
+                    // third quadrant
+                    Math.PI / 2 + atan((wayY / -wayX).toDouble())
+                } else {
+                    // fourth quadrant
+                    0 + atan((-wayX / -wayY).toDouble())
+                }
+            }
+        }
     }
 }

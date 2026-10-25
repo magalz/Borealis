@@ -1,202 +1,236 @@
-/**
- * Created by Karim Mreisi.
- */
+/** Created by Karim Mreisi. */
+package com.limelight.binding.input.virtual_controller
 
-package com.limelight.binding.input.virtual_controller;
+import android.annotation.SuppressLint
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.view.MotionEvent
 
-import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.view.MotionEvent;
+// Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+// The elements have no (Context) constructor on purpose: they need their controller and their id.
+@SuppressLint("ViewConstructor")
+class DigitalPad(controller: VirtualController, context: Context) :
+    VirtualControllerElement(controller, context, EID_DPAD) {
+    private var direction = DIGITAL_PAD_DIRECTION_NO_DIRECTION
+    private val listeners = ArrayList<DigitalPadListener>()
 
-import java.util.ArrayList;
-import java.util.List;
+    private val paint = Paint()
 
-public class DigitalPad extends VirtualControllerElement {
-    public final static int DIGITAL_PAD_DIRECTION_NO_DIRECTION = 0;
-    int direction = DIGITAL_PAD_DIRECTION_NO_DIRECTION;
-    public final static int DIGITAL_PAD_DIRECTION_LEFT = 1;
-    public final static int DIGITAL_PAD_DIRECTION_UP = 2;
-    public final static int DIGITAL_PAD_DIRECTION_RIGHT = 4;
-    public final static int DIGITAL_PAD_DIRECTION_DOWN = 8;
-    List<DigitalPadListener> listeners = new ArrayList<>();
-
-    private static final int DPAD_MARGIN = 5;
-
-    private final Paint paint = new Paint();
-
-    public DigitalPad(VirtualController controller, Context context) {
-        super(controller, context, EID_DPAD);
+    fun addDigitalPadListener(listener: DigitalPadListener) {
+        listeners.add(listener)
     }
 
-    public void addDigitalPadListener(DigitalPadListener listener) {
-        listeners.add(listener);
-    }
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+    @Suppress("LongMethod")
+    override fun onElementDraw(canvas: Canvas) {
+        val w = width.toFloat()
+        val h = height.toFloat()
 
-    @Override
-    protected void onElementDraw(Canvas canvas) {
         // set transparent background
-        canvas.drawColor(Color.TRANSPARENT);
+        canvas.drawColor(Color.TRANSPARENT)
 
-        paint.setTextSize(getPercent(getCorrectWidth(), 20));
-        paint.setTextAlign(Paint.Align.CENTER);
-        paint.setStrokeWidth(getDefaultStrokeWidth());
+        paint.textSize = getPercent(correctWidth.toFloat(), TEXT_SIZE_PERCENT)
+        paint.textAlign = Paint.Align.CENTER
+        paint.strokeWidth = defaultStrokeWidth.toFloat()
 
         if (direction == DIGITAL_PAD_DIRECTION_NO_DIRECTION) {
             // draw no direction rect
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setColor(getDefaultColor());
+            paint.style = Paint.Style.STROKE
+            paint.color = defaultColor
             canvas.drawRect(
-                    getPercent(getWidth(), 36), getPercent(getHeight(), 36),
-                    getPercent(getWidth(), 63), getPercent(getHeight(), 63),
-                    paint
-            );
+                getPercent(w, MIDDLE_NEAR_PERCENT),
+                getPercent(h, MIDDLE_NEAR_PERCENT),
+                getPercent(w, MIDDLE_FAR_PERCENT),
+                getPercent(h, MIDDLE_FAR_PERCENT),
+                paint,
+            )
         }
 
         // draw left rect
-        paint.setColor(
-                (direction & DIGITAL_PAD_DIRECTION_LEFT) > 0 ? pressedColor : getDefaultColor());
-        paint.setStyle(Paint.Style.STROKE);
+        paint.color =
+            if ((direction and DIGITAL_PAD_DIRECTION_LEFT) > 0) pressedColor else defaultColor
+        paint.style = Paint.Style.STROKE
         canvas.drawRect(
-                paint.getStrokeWidth()+DPAD_MARGIN, getPercent(getHeight(), 33),
-                getPercent(getWidth(), 33), getPercent(getHeight(), 66),
-                paint
-        );
-
+            paint.strokeWidth + DPAD_MARGIN,
+            getPercent(h, THIRD_PERCENT),
+            getPercent(w, THIRD_PERCENT),
+            getPercent(h, TWO_THIRDS_PERCENT),
+            paint,
+        )
 
         // draw up rect
-        paint.setColor(
-                (direction & DIGITAL_PAD_DIRECTION_UP) > 0 ? pressedColor : getDefaultColor());
-        paint.setStyle(Paint.Style.STROKE);
+        paint.color =
+            if ((direction and DIGITAL_PAD_DIRECTION_UP) > 0) pressedColor else defaultColor
+        paint.style = Paint.Style.STROKE
         canvas.drawRect(
-                getPercent(getWidth(), 33), paint.getStrokeWidth()+DPAD_MARGIN,
-                getPercent(getWidth(), 66), getPercent(getHeight(), 33),
-                paint
-        );
+            getPercent(w, THIRD_PERCENT),
+            paint.strokeWidth + DPAD_MARGIN,
+            getPercent(w, TWO_THIRDS_PERCENT),
+            getPercent(h, THIRD_PERCENT),
+            paint,
+        )
 
         // draw right rect
-        paint.setColor(
-                (direction & DIGITAL_PAD_DIRECTION_RIGHT) > 0 ? pressedColor : getDefaultColor());
-        paint.setStyle(Paint.Style.STROKE);
+        paint.color =
+            if ((direction and DIGITAL_PAD_DIRECTION_RIGHT) > 0) pressedColor else defaultColor
+        paint.style = Paint.Style.STROKE
         canvas.drawRect(
-                getPercent(getWidth(), 66), getPercent(getHeight(), 33),
-                getWidth() - (paint.getStrokeWidth()+DPAD_MARGIN), getPercent(getHeight(), 66),
-                paint
-        );
+            getPercent(w, TWO_THIRDS_PERCENT),
+            getPercent(h, THIRD_PERCENT),
+            w - (paint.strokeWidth + DPAD_MARGIN),
+            getPercent(h, TWO_THIRDS_PERCENT),
+            paint,
+        )
 
         // draw down rect
-        paint.setColor(
-                (direction & DIGITAL_PAD_DIRECTION_DOWN) > 0 ? pressedColor : getDefaultColor());
-        paint.setStyle(Paint.Style.STROKE);
+        paint.color =
+            if ((direction and DIGITAL_PAD_DIRECTION_DOWN) > 0) pressedColor else defaultColor
+        paint.style = Paint.Style.STROKE
         canvas.drawRect(
-                getPercent(getWidth(), 33), getPercent(getHeight(), 66),
-                getPercent(getWidth(), 66), getHeight() - (paint.getStrokeWidth()+DPAD_MARGIN),
-                paint
-        );
+            getPercent(w, THIRD_PERCENT),
+            getPercent(h, TWO_THIRDS_PERCENT),
+            getPercent(w, TWO_THIRDS_PERCENT),
+            h - (paint.strokeWidth + DPAD_MARGIN),
+            paint,
+        )
 
         // draw left up line
-        paint.setColor((
-                        (direction & DIGITAL_PAD_DIRECTION_LEFT) > 0 &&
-                                (direction & DIGITAL_PAD_DIRECTION_UP) > 0
-                ) ? pressedColor : getDefaultColor()
-        );
-        paint.setStyle(Paint.Style.STROKE);
+        paint.color =
+            if (
+                (direction and DIGITAL_PAD_DIRECTION_LEFT) > 0 &&
+                    (direction and DIGITAL_PAD_DIRECTION_UP) > 0
+            ) {
+                pressedColor
+            } else {
+                defaultColor
+            }
+        paint.style = Paint.Style.STROKE
         canvas.drawLine(
-                paint.getStrokeWidth()+DPAD_MARGIN, getPercent(getHeight(), 33),
-                getPercent(getWidth(), 33), paint.getStrokeWidth()+DPAD_MARGIN,
-                paint
-        );
+            paint.strokeWidth + DPAD_MARGIN,
+            getPercent(h, THIRD_PERCENT),
+            getPercent(w, THIRD_PERCENT),
+            paint.strokeWidth + DPAD_MARGIN,
+            paint,
+        )
 
         // draw up right line
-        paint.setColor((
-                        (direction & DIGITAL_PAD_DIRECTION_UP) > 0 &&
-                                (direction & DIGITAL_PAD_DIRECTION_RIGHT) > 0
-                ) ? pressedColor : getDefaultColor()
-        );
-        paint.setStyle(Paint.Style.STROKE);
+        paint.color =
+            if (
+                (direction and DIGITAL_PAD_DIRECTION_UP) > 0 &&
+                    (direction and DIGITAL_PAD_DIRECTION_RIGHT) > 0
+            ) {
+                pressedColor
+            } else {
+                defaultColor
+            }
+        paint.style = Paint.Style.STROKE
         canvas.drawLine(
-                getPercent(getWidth(), 66), paint.getStrokeWidth()+DPAD_MARGIN,
-                getWidth() - (paint.getStrokeWidth()+DPAD_MARGIN), getPercent(getHeight(), 33),
-                paint
-        );
+            getPercent(w, TWO_THIRDS_PERCENT),
+            paint.strokeWidth + DPAD_MARGIN,
+            w - (paint.strokeWidth + DPAD_MARGIN),
+            getPercent(h, THIRD_PERCENT),
+            paint,
+        )
 
         // draw right down line
-        paint.setColor((
-                        (direction & DIGITAL_PAD_DIRECTION_RIGHT) > 0 &&
-                                (direction & DIGITAL_PAD_DIRECTION_DOWN) > 0
-                ) ? pressedColor : getDefaultColor()
-        );
-        paint.setStyle(Paint.Style.STROKE);
+        paint.color =
+            if (
+                (direction and DIGITAL_PAD_DIRECTION_RIGHT) > 0 &&
+                    (direction and DIGITAL_PAD_DIRECTION_DOWN) > 0
+            ) {
+                pressedColor
+            } else {
+                defaultColor
+            }
+        paint.style = Paint.Style.STROKE
         canvas.drawLine(
-                getWidth()-paint.getStrokeWidth(), getPercent(getHeight(), 66),
-                getPercent(getWidth(), 66), getHeight()-(paint.getStrokeWidth()+DPAD_MARGIN),
-                paint
-        );
+            w - paint.strokeWidth,
+            getPercent(h, TWO_THIRDS_PERCENT),
+            getPercent(w, TWO_THIRDS_PERCENT),
+            h - (paint.strokeWidth + DPAD_MARGIN),
+            paint,
+        )
 
         // draw down left line
-        paint.setColor((
-                        (direction & DIGITAL_PAD_DIRECTION_DOWN) > 0 &&
-                                (direction & DIGITAL_PAD_DIRECTION_LEFT) > 0
-                ) ? pressedColor : getDefaultColor()
-        );
-        paint.setStyle(Paint.Style.STROKE);
+        paint.color =
+            if (
+                (direction and DIGITAL_PAD_DIRECTION_DOWN) > 0 &&
+                    (direction and DIGITAL_PAD_DIRECTION_LEFT) > 0
+            ) {
+                pressedColor
+            } else {
+                defaultColor
+            }
+        paint.style = Paint.Style.STROKE
         canvas.drawLine(
-                getPercent(getWidth(), 33), getHeight()-(paint.getStrokeWidth()+DPAD_MARGIN),
-                paint.getStrokeWidth()+DPAD_MARGIN, getPercent(getHeight(), 66),
-                paint
-        );
+            getPercent(w, THIRD_PERCENT),
+            h - (paint.strokeWidth + DPAD_MARGIN),
+            paint.strokeWidth + DPAD_MARGIN,
+            getPercent(h, TWO_THIRDS_PERCENT),
+            paint,
+        )
     }
 
-    private void newDirectionCallback(int direction) {
-
+    private fun newDirectionCallback(direction: Int) {
         // notify listeners
-        for (DigitalPadListener listener : listeners) {
-            listener.onDirectionChange(direction);
+        for (listener in listeners) {
+            listener.onDirectionChange(direction)
         }
     }
 
-    @Override
-    public boolean onElementTouchEvent(MotionEvent event) {
+    override fun onElementTouchEvent(event: MotionEvent): Boolean {
         // get masked (not specific to a pointer) action
-        switch (event.getActionMasked()) {
-            case MotionEvent.ACTION_DOWN:
-            case MotionEvent.ACTION_MOVE: {
-                direction = 0;
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN,
+            MotionEvent.ACTION_MOVE -> {
+                direction = 0
 
-                if (event.getX() < getPercent(getWidth(), 33)) {
-                    direction |= DIGITAL_PAD_DIRECTION_LEFT;
+                if (event.x < getPercent(width.toFloat(), THIRD_PERCENT)) {
+                    direction = direction or DIGITAL_PAD_DIRECTION_LEFT
                 }
-                if (event.getX() > getPercent(getWidth(), 66)) {
-                    direction |= DIGITAL_PAD_DIRECTION_RIGHT;
+                if (event.x > getPercent(width.toFloat(), TWO_THIRDS_PERCENT)) {
+                    direction = direction or DIGITAL_PAD_DIRECTION_RIGHT
                 }
-                if (event.getY() > getPercent(getHeight(), 66)) {
-                    direction |= DIGITAL_PAD_DIRECTION_DOWN;
+                if (event.y > getPercent(height.toFloat(), TWO_THIRDS_PERCENT)) {
+                    direction = direction or DIGITAL_PAD_DIRECTION_DOWN
                 }
-                if (event.getY() < getPercent(getHeight(), 33)) {
-                    direction |= DIGITAL_PAD_DIRECTION_UP;
+                if (event.y < getPercent(height.toFloat(), THIRD_PERCENT)) {
+                    direction = direction or DIGITAL_PAD_DIRECTION_UP
                 }
-                newDirectionCallback(direction);
-                invalidate();
-
-                return true;
+                newDirectionCallback(direction)
+                invalidate()
             }
-            case MotionEvent.ACTION_CANCEL:
-            case MotionEvent.ACTION_UP: {
-                direction = 0;
-                newDirectionCallback(direction);
-                invalidate();
-
-                return true;
-            }
-            default: {
+            MotionEvent.ACTION_CANCEL,
+            MotionEvent.ACTION_UP -> {
+                direction = 0
+                newDirectionCallback(direction)
+                invalidate()
             }
         }
 
-        return true;
+        return true
     }
 
-    public interface DigitalPadListener {
-        void onDirectionChange(int direction);
+    fun interface DigitalPadListener {
+        fun onDirectionChange(direction: Int)
+    }
+
+    companion object {
+        const val DIGITAL_PAD_DIRECTION_NO_DIRECTION = 0
+        const val DIGITAL_PAD_DIRECTION_LEFT = 1
+        const val DIGITAL_PAD_DIRECTION_UP = 2
+        const val DIGITAL_PAD_DIRECTION_RIGHT = 4
+        const val DIGITAL_PAD_DIRECTION_DOWN = 8
+
+        private const val DPAD_MARGIN = 5
+
+        // The pad is drawn and read in percent of its width and of its height
+        private const val TEXT_SIZE_PERCENT = 20f
+        private const val MIDDLE_NEAR_PERCENT = 36f
+        private const val MIDDLE_FAR_PERCENT = 63f
+        private const val THIRD_PERCENT = 33f
+        private const val TWO_THIRDS_PERCENT = 66f
     }
 }

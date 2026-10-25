@@ -1,246 +1,251 @@
-/**
- * Created by Karim Mreisi.
- */
+/** Created by Karim Mreisi. */
+package com.limelight.binding.input.virtual_controller
 
-package com.limelight.binding.input.virtual_controller;
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.view.MotionEvent
+import android.view.View
+import android.widget.FrameLayout
+import org.json.JSONException
+import org.json.JSONObject
 
-import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.util.DisplayMetrics;
-import android.view.MotionEvent;
-import android.view.View;
-import android.widget.FrameLayout;
+// Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+@Suppress("TooManyFunctions")
+abstract class VirtualControllerElement
+protected constructor(
+    protected val virtualController: VirtualController,
+    context: Context,
+    // The layout loader saves and loads the elements by this id, from this package.
+    internal val elementId: Int,
+) : View(context) {
+    private val paint = Paint()
 
-import org.json.JSONException;
-import org.json.JSONObject;
+    private var normalColor = NORMAL_COLOR
+    protected var pressedColor = PRESSED_COLOR
 
-public abstract class VirtualControllerElement extends View {
-    public static final int EID_DPAD = 1;
-    public static final int EID_LT = 2;
-    public static final int EID_RT = 3;
-    public static final int EID_LB = 4;
-    public static final int EID_RB = 5;
-    public static final int EID_A = 6;
-    public static final int EID_B = 7;
-    public static final int EID_X = 8;
-    public static final int EID_Y = 9;
-    public static final int EID_BACK = 10;
-    public static final int EID_START = 11;
-    public static final int EID_LS = 12;
-    public static final int EID_RS = 13;
-    public static final int EID_LSB = 14;
-    public static final int EID_RSB = 15;
-    public static final int EID_GDB = 16;
+    private var startSizeX = 0
+    private var startSizeY = 0
 
-    protected VirtualController virtualController;
-    protected final int elementId;
+    private var positionPressedX = 0f
+    private var positionPressedY = 0f
 
-    private final Paint paint = new Paint();
-
-    private int normalColor = 0xF0888888;
-    protected int pressedColor = 0xF00000FF;
-    private int configMoveColor = 0xF0FF0000;
-    private int configResizeColor = 0xF0FF00FF;
-    private int configSelectedColor = 0xF000FF00;
-
-    protected int startSize_x;
-    protected int startSize_y;
-
-    float position_pressed_x = 0;
-    float position_pressed_y = 0;
-
-    private enum Mode {
+    private enum class Mode {
         Normal,
         Resize,
-        Move
+        Move,
     }
 
-    private Mode currentMode = Mode.Normal;
+    private var currentMode = Mode.Normal
 
-    protected VirtualControllerElement(VirtualController controller, Context context, int elementId) {
-        super(context);
+    private fun moveElement(pressedX: Int, pressedY: Int, fingerX: Int, fingerY: Int) {
+        val newPosX = this.x.toInt() + fingerX - pressedX
+        val newPosY = this.y.toInt() + fingerY - pressedY
 
-        this.virtualController = controller;
-        this.elementId = elementId;
+        val layoutParams = this.layoutParams as FrameLayout.LayoutParams
+
+        layoutParams.leftMargin = if (newPosX > 0) newPosX else 0
+        layoutParams.topMargin = if (newPosY > 0) newPosY else 0
+        layoutParams.rightMargin = 0
+        layoutParams.bottomMargin = 0
+
+        requestLayout()
     }
 
-    protected void moveElement(int pressed_x, int pressed_y, int x, int y) {
-        int newPos_x = (int) getX() + x - pressed_x;
-        int newPos_y = (int) getY() + y - pressed_y;
+    private fun resizeElement(pressedX: Int, pressedY: Int, fingerX: Int, fingerY: Int) {
+        val layoutParams = this.layoutParams as FrameLayout.LayoutParams
 
-        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
+        val newHeight = fingerY + (startSizeY - pressedY)
+        val newWidth = fingerX + (startSizeX - pressedX)
 
-        layoutParams.leftMargin = newPos_x > 0 ? newPos_x : 0;
-        layoutParams.topMargin = newPos_y > 0 ? newPos_y : 0;
-        layoutParams.rightMargin = 0;
-        layoutParams.bottomMargin = 0;
+        layoutParams.height = if (newHeight > MIN_SIZE) newHeight else MIN_SIZE
+        layoutParams.width = if (newWidth > MIN_SIZE) newWidth else MIN_SIZE
 
-        requestLayout();
+        requestLayout()
     }
 
-    protected void resizeElement(int pressed_x, int pressed_y, int width, int height) {
-        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
-
-        int newHeight = height + (startSize_y - pressed_y);
-        int newWidth = width + (startSize_x - pressed_x);
-
-        layoutParams.height = newHeight > 20 ? newHeight : 20;
-        layoutParams.width = newWidth > 20 ? newWidth : 20;
-
-        requestLayout();
-    }
-
-    @Override
-    protected void onDraw(Canvas canvas) {
-        onElementDraw(canvas);
+    override fun onDraw(canvas: Canvas) {
+        onElementDraw(canvas)
 
         if (currentMode != Mode.Normal) {
-            paint.setColor(configSelectedColor);
-            paint.setStrokeWidth(getDefaultStrokeWidth());
-            paint.setStyle(Paint.Style.STROKE);
+            paint.color = CONFIG_SELECTED_COLOR
+            paint.strokeWidth = defaultStrokeWidth.toFloat()
+            paint.style = Paint.Style.STROKE
 
-            canvas.drawRect(paint.getStrokeWidth(), paint.getStrokeWidth(),
-                    getWidth()-paint.getStrokeWidth(), getHeight()-paint.getStrokeWidth(),
-                    paint);
+            canvas.drawRect(
+                paint.strokeWidth,
+                paint.strokeWidth,
+                width - paint.strokeWidth,
+                height - paint.strokeWidth,
+                paint,
+            )
         }
 
-        super.onDraw(canvas);
+        super.onDraw(canvas)
     }
 
-    protected void actionEnableMove() {
-        currentMode = Mode.Move;
+    private fun actionEnableMove() {
+        currentMode = Mode.Move
     }
 
-    protected void actionEnableResize() {
-        currentMode = Mode.Resize;
+    private fun actionEnableResize() {
+        currentMode = Mode.Resize
     }
 
-    protected void actionCancel() {
-        currentMode = Mode.Normal;
-        invalidate();
+    private fun actionCancel() {
+        currentMode = Mode.Normal
+        invalidate()
     }
 
-    protected int getDefaultColor() {
-        if (virtualController.getControllerMode() == VirtualController.ControllerMode.MoveButtons)
-            return configMoveColor;
-        else if (virtualController.getControllerMode() == VirtualController.ControllerMode.ResizeButtons)
-            return configResizeColor;
-        else
-            return normalColor;
-    }
+    protected val defaultColor: Int
+        get() =
+            when (virtualController.controllerMode) {
+                VirtualController.ControllerMode.MoveButtons -> CONFIG_MOVE_COLOR
+                VirtualController.ControllerMode.ResizeButtons -> CONFIG_RESIZE_COLOR
+                else -> normalColor
+            }
 
-    protected int getDefaultStrokeWidth() {
-        DisplayMetrics screen = getResources().getDisplayMetrics();
-        return (int)(screen.heightPixels*0.004f);
-    }
+    protected val defaultStrokeWidth: Int
+        get() {
+            val screen = resources.displayMetrics
+            return (screen.heightPixels * STROKE_RATIO).toInt()
+        }
 
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
+    override fun onTouchEvent(event: MotionEvent): Boolean {
         // Ignore secondary touches on controls
         //
         // NB: We can get an additional pointer down if the user touches a non-StreamView area
         // while also touching an OSC control, even if that pointer down doesn't correspond to
         // an area of the OSC control.
-        if (event.getActionIndex() != 0) {
-            return true;
+        if (event.actionIndex != 0) {
+            return true
         }
 
-        if (virtualController.getControllerMode() == VirtualController.ControllerMode.Active) {
-            return onElementTouchEvent(event);
+        if (virtualController.controllerMode == VirtualController.ControllerMode.Active) {
+            return onElementTouchEvent(event)
         }
 
-        switch (event.getActionMasked()) {
-            case MotionEvent.ACTION_DOWN: {
-                position_pressed_x = event.getX();
-                position_pressed_y = event.getY();
-                startSize_x = getWidth();
-                startSize_y = getHeight();
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                positionPressedX = event.x
+                positionPressedY = event.y
+                startSizeX = width
+                startSizeY = height
 
-                if (virtualController.getControllerMode() == VirtualController.ControllerMode.MoveButtons)
-                    actionEnableMove();
-                else if (virtualController.getControllerMode() == VirtualController.ControllerMode.ResizeButtons)
-                    actionEnableResize();
-
-                return true;
-            }
-            case MotionEvent.ACTION_MOVE: {
-                switch (currentMode) {
-                    case Move: {
-                        moveElement(
-                                (int) position_pressed_x,
-                                (int) position_pressed_y,
-                                (int) event.getX(),
-                                (int) event.getY());
-                        break;
-                    }
-                    case Resize: {
-                        resizeElement(
-                                (int) position_pressed_x,
-                                (int) position_pressed_y,
-                                (int) event.getX(),
-                                (int) event.getY());
-                        break;
-                    }
-                    case Normal: {
-                        break;
-                    }
+                if (
+                    virtualController.controllerMode == VirtualController.ControllerMode.MoveButtons
+                ) {
+                    actionEnableMove()
+                } else if (
+                    virtualController.controllerMode ==
+                        VirtualController.ControllerMode.ResizeButtons
+                ) {
+                    actionEnableResize()
                 }
-                return true;
             }
-            case MotionEvent.ACTION_CANCEL:
-            case MotionEvent.ACTION_UP: {
-                actionCancel();
-                return true;
+            MotionEvent.ACTION_MOVE -> {
+                when (currentMode) {
+                    Mode.Move ->
+                        moveElement(
+                            positionPressedX.toInt(),
+                            positionPressedY.toInt(),
+                            event.x.toInt(),
+                            event.y.toInt(),
+                        )
+                    Mode.Resize ->
+                        resizeElement(
+                            positionPressedX.toInt(),
+                            positionPressedY.toInt(),
+                            event.x.toInt(),
+                            event.y.toInt(),
+                        )
+                    Mode.Normal -> Unit
+                }
             }
-            default: {
-            }
+            MotionEvent.ACTION_CANCEL,
+            MotionEvent.ACTION_UP -> actionCancel()
+            else -> Unit
         }
-        return true;
+        return true
     }
 
-    abstract protected void onElementDraw(Canvas canvas);
+    protected abstract fun onElementDraw(canvas: Canvas)
 
-    abstract public boolean onElementTouchEvent(MotionEvent event);
+    abstract fun onElementTouchEvent(event: MotionEvent): Boolean
 
-    public void setOpacity(int opacity) {
-        int hexOpacity = opacity * 255 / 100;
-        this.normalColor = (hexOpacity << 24) | (normalColor & 0x00FFFFFF);
-        this.pressedColor = (hexOpacity << 24) | (pressedColor & 0x00FFFFFF);
+    fun setOpacity(opacity: Int) {
+        val hexOpacity = opacity * MAX_ALPHA / PERCENT_SCALE
+        normalColor = (hexOpacity shl ALPHA_SHIFT) or (normalColor and RGB_MASK)
+        pressedColor = (hexOpacity shl ALPHA_SHIFT) or (pressedColor and RGB_MASK)
 
-        invalidate();
+        invalidate()
     }
 
-    protected final float getPercent(float value, float percent) {
-        return value / 100 * percent;
+    protected fun getPercent(value: Float, percent: Float): Float = value / PERCENT * percent
+
+    protected val correctWidth: Int
+        get() = if (width > height) height else width
+
+    @Throws(JSONException::class)
+    open fun getConfiguration(): JSONObject {
+        val configuration = JSONObject()
+
+        val layoutParams = this.layoutParams as FrameLayout.LayoutParams
+
+        configuration.put("LEFT", layoutParams.leftMargin)
+        configuration.put("TOP", layoutParams.topMargin)
+        configuration.put("WIDTH", layoutParams.width)
+        configuration.put("HEIGHT", layoutParams.height)
+
+        return configuration
     }
 
-    protected final int getCorrectWidth() {
-        return getWidth() > getHeight() ? getHeight() : getWidth();
+    @Throws(JSONException::class)
+    fun loadConfiguration(configuration: JSONObject) {
+        val layoutParams = this.layoutParams as FrameLayout.LayoutParams
+
+        layoutParams.leftMargin = configuration.getInt("LEFT")
+        layoutParams.topMargin = configuration.getInt("TOP")
+        layoutParams.width = configuration.getInt("WIDTH")
+        layoutParams.height = configuration.getInt("HEIGHT")
+
+        requestLayout()
     }
 
+    companion object {
+        const val EID_DPAD = 1
+        const val EID_LT = 2
+        const val EID_RT = 3
+        const val EID_LB = 4
+        const val EID_RB = 5
+        const val EID_A = 6
+        const val EID_B = 7
+        const val EID_X = 8
+        const val EID_Y = 9
+        const val EID_BACK = 10
+        const val EID_START = 11
+        const val EID_LS = 12
+        const val EID_RS = 13
+        const val EID_LSB = 14
+        const val EID_RSB = 15
+        const val EID_GDB = 16
 
-    public JSONObject getConfiguration() throws JSONException {
-        JSONObject configuration = new JSONObject();
+        private const val NORMAL_COLOR = 0xF0888888.toInt()
+        private const val PRESSED_COLOR = 0xF00000FF.toInt()
+        private const val CONFIG_MOVE_COLOR = 0xF0FF0000.toInt()
+        private const val CONFIG_RESIZE_COLOR = 0xF0FF00FF.toInt()
+        private const val CONFIG_SELECTED_COLOR = 0xF000FF00.toInt()
 
-        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
+        // The smallest width and height that resizing leaves an element, in pixels
+        private const val MIN_SIZE = 20
 
-        configuration.put("LEFT", layoutParams.leftMargin);
-        configuration.put("TOP", layoutParams.topMargin);
-        configuration.put("WIDTH", layoutParams.width);
-        configuration.put("HEIGHT", layoutParams.height);
+        // The stroke is this share of the screen height, cut to whole pixels
+        private const val STROKE_RATIO = 0.004f
 
-        return configuration;
-    }
-
-    public void loadConfiguration(JSONObject configuration) throws JSONException {
-        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
-
-        layoutParams.leftMargin = configuration.getInt("LEFT");
-        layoutParams.topMargin = configuration.getInt("TOP");
-        layoutParams.width = configuration.getInt("WIDTH");
-        layoutParams.height = configuration.getInt("HEIGHT");
-
-        requestLayout();
+        private const val MAX_ALPHA = 255
+        private const val PERCENT_SCALE = 100
+        private const val ALPHA_SHIFT = 24
+        private const val RGB_MASK = 0x00FFFFFF
+        private const val PERCENT = 100f
     }
 }

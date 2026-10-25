@@ -4,6 +4,9 @@ import android.os.Build
 import android.view.InputDevice
 import com.limelight.nvstream.jni.MoonBridge
 import java.util.concurrent.CopyOnWriteArrayList
+import org.cgutman.shieldcontrollerextensions.SceChargingState
+import org.cgutman.shieldcontrollerextensions.SceConnectionType
+import org.cgutman.shieldcontrollerextensions.SceManager
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
 import org.robolectric.annotation.RealObject
@@ -41,12 +44,13 @@ object ShadowFeedbackBridge {
     @JvmStatic
     fun guessControllerType(vendorId: Int, productId: Int): Byte = MoonBridge.LI_CTYPE_UNKNOWN
 
-    @Suppress("unused")
+    // The library looks the pad up in a table; no pad of a test is in it
+    @Suppress("unused", "FunctionOnlyReturningConstant")
     @Implementation
     @JvmStatic
     fun guessControllerHasPaddles(vendorId: Int, productId: Int): Boolean = false
 
-    @Suppress("unused")
+    @Suppress("unused", "FunctionOnlyReturningConstant")
     @Implementation
     @JvmStatic
     fun guessControllerHasShareButton(vendorId: Int, productId: Int): Boolean = false
@@ -131,5 +135,69 @@ class ShadowFeedbackInputDevice {
         val features = mutableMapOf<Int, DeviceFeatures>()
 
         fun reset() = features.clear()
+    }
+}
+
+/**
+ * The SHIELD controller extensions: a service of the NVIDIA SHIELD that a unit test does not have.
+ * The handler asks it whether a pad is a SHIELD pad, for its battery and for a rumble. A test sets
+ * what it answers here, and reads what the handler asked of it. State lives in this class, which
+ * every test of one Robolectric sandbox shares: call [reset] before each test.
+ */
+@Implements(SceManager::class)
+class ShadowSceManager {
+    @Suppress("unused") @Implementation fun start(): Boolean = true.also { started++ }
+
+    @Suppress("unused")
+    @Implementation
+    fun stop() {
+        stopped++
+    }
+
+    @Suppress("unused")
+    @Implementation
+    fun isRecognizedDevice(device: InputDevice): Boolean = recognized
+
+    @Suppress("unused")
+    @Implementation
+    fun rumble(device: InputDevice, lowFreqMotor: Int, highFreqMotor: Int): Boolean {
+        rumbles += lowFreqMotor to highFreqMotor
+        return rumbleAccepted
+    }
+
+    @Suppress("unused")
+    @Implementation
+    fun getBatteryPercentage(device: InputDevice): Int = batteryPercentage
+
+    @Suppress("unused")
+    @Implementation
+    fun getConnectionType(device: InputDevice): SceConnectionType = connectionType
+
+    @Suppress("unused")
+    @Implementation
+    fun getChargingState(device: InputDevice): SceChargingState = chargingState
+
+    companion object {
+        @Volatile var recognized = false
+        @Volatile var rumbleAccepted = false
+        @Volatile var batteryPercentage = 0
+        @Volatile var connectionType = SceConnectionType.UNKNOWN
+        @Volatile var chargingState = SceChargingState.UNKNOWN
+        @Volatile var started = 0
+        @Volatile var stopped = 0
+
+        /** The `(low, high)` pairs the handler asked to rumble, as the ints it passed. */
+        val rumbles = CopyOnWriteArrayList<Pair<Int, Int>>()
+
+        fun reset() {
+            recognized = false
+            rumbleAccepted = false
+            batteryPercentage = 0
+            connectionType = SceConnectionType.UNKNOWN
+            chargingState = SceChargingState.UNKNOWN
+            started = 0
+            stopped = 0
+            rumbles.clear()
+        }
     }
 }

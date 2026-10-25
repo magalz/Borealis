@@ -70,7 +70,7 @@ class BatteryReportTest : FeedbackTestBase() {
 
     @Test
     fun `the percentage is the capacity times a hundred, truncated`() {
-        val capacities = listOf(0f, 1f, 0.555f, 0.995f, 0.5f, 0.07f, 0.9999f)
+        val capacities = listOf(0f, 1f, 0.555f, 0.995f, 0.5f, 0.07f, 0.9999f, 0.53f, 0.59f)
 
         val percentages =
             capacities.map { capacity ->
@@ -79,7 +79,8 @@ class BatteryReportTest : FeedbackTestBase() {
                 events().single().percentage
             }
 
-        assertThat(percentages).containsExactly(0, 100, 55, 99, 50, 7, 99).inOrder()
+        // 0.53f and 0.59f times 100 come out a hair under 53 and 59, and the cast truncates them
+        assertThat(percentages).containsExactly(0, 100, 55, 99, 50, 7, 99, 52, 58).inOrder()
     }
 
     @Test
@@ -288,7 +289,7 @@ class BatteryReportTest : FeedbackTestBase() {
     }
 }
 
-/** Before Android 12 `InputDevice` has no battery state, and nothing is reported (the SHIELD API is not on this phone). */
+/** Before Android 12 `InputDevice` has no battery state, so nothing is reported (the SHIELD API is not here). */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [30])
 class BatteryReportAndroid11Test : FeedbackTestBase() {

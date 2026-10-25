@@ -166,6 +166,7 @@ class FeedbackRig(
 
     init {
         ShadowFeedbackBridge.reset()
+        ShadowSceManager.reset()
         ShadowFeedbackInputDevice.reset()
         // The SHIELD extension service does not exist here; without this the bind answers with no
         // binder.
@@ -299,7 +300,7 @@ class FeedbackRig(
 
     /** An input device with the joystick axes X and Y. */
     private fun newPadDevice(id: Int, vendorId: Int, productId: Int, external: Boolean): InputDevice =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             builtPadDevice(id, vendorId, productId, external)
         } else {
             fieldPadDevice(id, vendorId, productId, external)
@@ -321,7 +322,7 @@ class FeedbackRig(
         return builder.build()
     }
 
-    /** Made field by field before Android 13, which `InputDeviceBuilder` needs (`InputDevice.Builder`). */
+    /** Made field by field before Android 14, which `InputDeviceBuilder` needs (`InputDevice.Builder`). */
     private fun fieldPadDevice(id: Int, vendorId: Int, productId: Int, external: Boolean): InputDevice {
         val device = Shadow.newInstanceOf(InputDevice::class.java)
         ReflectionHelpers.setField(device, "mId", id)

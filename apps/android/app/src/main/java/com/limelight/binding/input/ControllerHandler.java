@@ -142,7 +142,6 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     private final Handler mainThreadHandler;
     private final HandlerThread backgroundHandlerThread;
     private final Handler backgroundThreadHandler;
-    private boolean hasGameController;
     private boolean stopped = false;
     private volatile MenuChordListener menuChordListener;
     private volatile ChromeKeySink chromeKeySink;
@@ -189,24 +188,6 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         this.sceManager.start();
 
         int deadzonePercentage = prefConfig.deadzonePercentage;
-
-        int[] ids = InputDevice.getDeviceIds();
-        for (int id : ids) {
-            InputDevice dev = InputDevice.getDevice(id);
-            if (dev == null) {
-                // This device was removed during enumeration
-                continue;
-            }
-            if ((dev.getSources() & InputDevice.SOURCE_JOYSTICK) != 0 ||
-                    (dev.getSources() & InputDevice.SOURCE_GAMEPAD) != 0) {
-                // This looks like a gamepad, but we'll check X and Y to be sure
-                if (getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_X) != null &&
-                    getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_Y) != null) {
-                    // This is a gamepad
-                    hasGameController = true;
-                }
-            }
-        }
 
         // 1% is the lowest possible deadzone we support
         if (deadzonePercentage <= 0) {
@@ -837,7 +818,6 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         if (getMotionRangeForJoystickAxis(dev, context.leftStickXAxis) != null &&
                 getMotionRangeForJoystickAxis(dev, context.leftStickYAxis) != null) {
             // This is a gamepad
-            hasGameController = true;
             context.hasJoystickAxes = true;
         }
 

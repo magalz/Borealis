@@ -56,9 +56,8 @@ object VirtualControllerConfigurationLoader {
     // A finger slid from one button presses only the buttons of its own layer
     private const val START_LAYER = 3
 
-    // The Java did `inputMap |= flag` and `inputMap &= ~flag` on a short: the result narrows back
-    // to a
-    // short.
+    // The Java did `inputMap |= flag` and `inputMap &= ~flag` on a short, which narrows the
+    // result back to a short.
     private fun VirtualController.ControllerInputContext.setFlag(
         flag: Int,
         pressed: Boolean,

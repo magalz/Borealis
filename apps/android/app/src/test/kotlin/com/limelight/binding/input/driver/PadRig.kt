@@ -106,8 +106,8 @@ internal fun AbstractController.viaGetter(name: String): Any? =
     AbstractController::class.java.getMethod(name).invoke(this)
 
 /**
- * Milliseconds of the JVM's own clock. Robolectric makes System.nanoTime and currentTimeMillis follow
- * the fake looper clock, which does not run while a test waits for a real thread.
+ * Milliseconds of the JVM's own clock. Robolectric makes System.nanoTime and currentTimeMillis
+ * follow the fake looper clock, which does not run while a test waits for a real thread.
  */
 internal fun realMillis(): Long = ManagementFactory.getRuntimeMXBean().uptime
 

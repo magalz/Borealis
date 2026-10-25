@@ -641,4 +641,15 @@ class AxesCharacterizationTest {
 
         assertThat(rig.packets).containsExactly(Sent(3, 1, 0))
     }
+
+    @Test
+    @Config(sdk = [29])
+    fun `on Android 10 the device -1 has its own context`() {
+        val virtual = rig.addPad(-1, controllerNumber = 3)
+
+        virtual.motion(mapOf(AXIS_X to 1f))
+
+        // Only Android 11 sends the virtual device's events to the default context.
+        assertThat(rig.packets).containsExactly(Sent(3, 1, 0))
+    }
 }

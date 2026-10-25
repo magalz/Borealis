@@ -188,6 +188,34 @@ class PointerEmulationCharacterizationTest {
     }
 
     @Test
+    fun `turning the mouse off and on again before a tick leaves one chain of ticks`() {
+        val rig = rigWith(null)
+        rig.mousePad("leftStickX" to full)
+        rig.advanceBy(5)
+
+        rig.handler.setMouseEmulation(false)
+        rig.handler.setMouseEmulation(true)
+
+        // The old chain would tick 11 ms from now; the new one ticks at 16 ms, once.
+        assertThat(rig.mouseAfter(11)).isEmpty()
+        assertThat(rig.mouseAfter(5)).hasSize(1)
+    }
+
+    @Test
+    fun `turning the mouse off and on drops what the right stick had carried over`() {
+        val rig = rigWith(AnalogStickForScrolling.RIGHT)
+        rig.mousePad("rightStickY" to full)
+        rig.advanceBy(32)
+        rig.connection.mouse.clear()
+
+        rig.handler.setMouseEmulation(false)
+        rig.handler.setMouseEmulation(true)
+
+        // 20.48 a tick: the first tick sends 20, and a carried 0.96 would make it 21.
+        assertThat(rig.mouseAfter(16)).containsExactly("hires scroll 20")
+    }
+
+    @Test
     fun `a pad that already has the mouse on is left alone and the notice goes to the first pad that changes`() {
         val rig = rigWith(null)
         rig.addPad(7, fields = mapOf("mouseEmulationActive" to true))

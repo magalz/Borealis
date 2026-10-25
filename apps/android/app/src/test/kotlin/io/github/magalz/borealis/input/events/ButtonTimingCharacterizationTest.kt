@@ -418,6 +418,19 @@ class ButtonTimingCharacterizationTest {
     }
 
     @Test
+    fun `a button other than Select within 100 ms of the left bumper going up is not the touchpad button`() {
+        val clickpad = rig.addPad(8, fields = mapOf("hasSelect" to true, "needsClickpadEmulation" to true))
+        clickpad.press(KEYCODE_BUTTON_L1)
+        rig.advanceBy(100)
+        clickpad.release(KEYCODE_BUTTON_L1)
+        rig.advanceBy(50)
+
+        clickpad.press(KEYCODE_BUTTON_A)
+
+        assertThat(rig.buttons().last()).isEqualTo(A_FLAG)
+    }
+
+    @Test
     fun `a repeat of Select while the touchpad button is emulated adds Select, and the next key up ends that button`() {
         val clickpad = rig.addPad(8, fields = mapOf("hasSelect" to true, "needsClickpadEmulation" to true))
         clickpad.press(KEYCODE_BUTTON_L1)
@@ -470,6 +483,24 @@ class ButtonTimingCharacterizationTest {
         assertThat(stillTapping).containsExactly(SPECIAL_BUTTON_FLAG)
         assertThat(ended).containsExactly(SPECIAL_BUTTON_FLAG, 0).inOrder()
         assertThat(rig.chords).isEqualTo(0)
+    }
+
+    @Test
+    fun `a Guide tap still going when the capture starts sends nothing after the neutral packets`() {
+        val chordPad = rig.addPad(8, fields = mapOf("hasSelect" to true))
+        chordPad.press(KEYCODE_BUTTON_SELECT)
+        rig.advanceBy(30)
+        chordPad.press(KEYCODE_BUTTON_START)
+        rig.advanceBy(100)
+        chordPad.release(KEYCODE_BUTTON_SELECT)
+        rig.advanceBy(10)
+
+        // The tap has 40 ms left, and its end is a packet that the capture must not let through.
+        rig.handler.setCaptured(true)
+        val sent = rig.packets.size
+        rig.advanceBy(100)
+
+        assertThat(rig.packets).hasSize(sent)
     }
 
     @Test

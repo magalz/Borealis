@@ -185,11 +185,14 @@ class Xbox360ControllerTest {
         val pad = pad(id = 3)
         pad.play(report(faceByte = 0x10))
 
+        val before = realMillis()
         pad.start()
-        // The input thread lets the old Android input device go away before it announces the pad.
-        assertThat(pad.listener.quietFor(500)).isTrue()
         val first = pad.listener.next()
+        val waited = realMillis() - before
 
+        // The input thread lets the old Android input device go away before it announces the pad.
+        // There is no upper bound: only the second is promised, not how much later.
+        assertThat(waited).isAtLeast(950L)
         assertThat(first).isInstanceOf(PadEvent.Added::class.java)
         assertThat((first as PadEvent.Added).controller).isSameInstanceAs(pad.controller)
         val second = pad.listener.next()

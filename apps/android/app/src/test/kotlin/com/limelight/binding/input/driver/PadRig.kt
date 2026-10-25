@@ -2,6 +2,7 @@ package com.limelight.binding.input.driver
 
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
+import java.lang.management.ManagementFactory
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -103,6 +104,12 @@ internal class RecordingListener : UsbDriverListener {
  */
 internal fun AbstractController.viaGetter(name: String): Any? =
     AbstractController::class.java.getMethod(name).invoke(this)
+
+/**
+ * Milliseconds of the JVM's own clock. Robolectric makes System.nanoTime and currentTimeMillis follow
+ * the fake looper clock, which does not run while a test waits for a real thread.
+ */
+internal fun realMillis(): Long = ManagementFactory.getRuntimeMXBean().uptime
 
 /** A controller on a connection a test controls, with the listener that hears it. */
 internal class Pad<C : AbstractController>(

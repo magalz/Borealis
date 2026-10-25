@@ -243,14 +243,6 @@ public abstract class VirtualControllerElement extends View {
         }
     }
 
-    public void setColors(int normalColor, int pressedColor) {
-        this.normalColor = normalColor;
-        this.pressedColor = pressedColor;
-
-        invalidate();
-    }
-
-
     public void setOpacity(int opacity) {
         int hexOpacity = opacity * 255 / 100;
         this.normalColor = (hexOpacity << 24) | (normalColor & 0x00FFFFFF);

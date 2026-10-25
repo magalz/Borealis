@@ -69,15 +69,16 @@ class ButtonTimingCharacterizationTest {
         return (System.nanoTime() - start) / 1_000_000.0
     }
 
-    private fun median(heldMs: Long): Double = List(5) { releaseTime(heldMs) }.sorted()[2]
+    /** The fastest of five, which a busy machine does not inflate; a wait never takes less. */
+    private fun fastest(heldMs: Long): Double = List(5) { releaseTime(heldMs) }.min()
 
     @Test
     fun `a key let go at once makes the handler wait 25 ms before the release goes out`() {
         releaseTime(100) // warm up the code the measure runs
 
-        val instant = median(0)
-        val nearly = median(24)
-        val long = median(100)
+        val instant = fastest(0)
+        val nearly = fastest(24)
+        val long = fastest(100)
 
         assertThat(instant).isAtLeast(22.0)
         // Held for 24 ms, only the missing millisecond is waited, and a long hold waits for nothing.

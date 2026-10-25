@@ -236,6 +236,72 @@ class CombiningCharacterizationTest {
         assertThat(first.send().leftStickX).isEqualTo(-1)
     }
 
+    @Test
+    fun `two triggers of equal strength take the later pad's, ORed with the earlier one`() {
+        val (first, _) =
+            twoPads(
+                mapOf("leftTrigger" to 5.toByte(), "rightTrigger" to (-100).toByte()),
+                mapOf("leftTrigger" to (-5).toByte(), "rightTrigger" to 100.toByte()),
+            )
+
+        val sent = first.send()
+
+        assertThat(sent.leftTrigger).isEqualTo(-1)
+        assertThat(sent.rightTrigger).isEqualTo(-100 or 100)
+    }
+
+    @Test
+    fun `two system pads, a USB pad and the on-screen controller on one number are ORed in that order`() {
+        rig.addPad(
+            7,
+            controllerNumber = 0,
+            fields =
+                mapOf(
+                    "inputMap" to A_FLAG,
+                    "leftTrigger" to 5.toByte(),
+                    "rightTrigger" to 3.toByte(),
+                    "leftStickX" to 400.toShort(),
+                    "leftStickY" to (-300).toShort(),
+                    "rightStickX" to 250.toShort(),
+                    "rightStickY" to 900.toShort(),
+                ),
+        )
+        rig.addPad(
+            8,
+            controllerNumber = 0,
+            fields =
+                mapOf(
+                    "inputMap" to B_FLAG,
+                    "leftTrigger" to 20.toByte(),
+                    "rightTrigger" to 9.toByte(),
+                    "leftStickX" to 800.toShort(),
+                    "leftStickY" to (-700).toShort(),
+                    "rightStickX" to 500.toShort(),
+                    "rightStickY" to (-1200).toShort(),
+                ),
+        )
+        rig.handler.deviceAdded(FakeUsbController(1, rig.handler))
+        // The USB values are floats: 0.15 is 38 and 0.2 is 51 as triggers, 0.05 is 1638 as a stick.
+        rig.handler.reportControllerState(1, X_FLAG, 0.05f, -0.06f, 0.07f, 0.08f, 0.15f, 0.2f)
+
+        rig.handler.reportOscState(Y_FLAG, 3000, -2500, -4000, 5000, 100, 70)
+
+        assertThat(rig.packets.last())
+            .isEqualTo(
+                Sent(
+                    controller = 0,
+                    activeMask = 1,
+                    buttons = A_FLAG or B_FLAG or X_FLAG or Y_FLAG,
+                    leftTrigger = 119,
+                    rightTrigger = 127,
+                    leftStickX = 4094,
+                    leftStickY = -3,
+                    rightStickX = -1537,
+                    rightStickY = -33,
+                )
+            )
+    }
+
     // ----- The gamepad mask of the packet -----
 
     @Test

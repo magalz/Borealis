@@ -1,10 +1,15 @@
 package io.github.magalz.borealis.input.events
 
 import com.google.common.truth.Truth.assertThat
+import android.view.KeyEvent.KEYCODE_BUTTON_A
+import android.view.KeyEvent.KEYCODE_BUTTON_START
+import com.limelight.nvstream.input.ControllerPacket.A_FLAG
 import com.limelight.preferences.PreferenceConfiguration.AnalogStickForScrolling
+import io.github.magalz.borealis.input.FakeUsbController
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.shadows.ShadowToast
 
 /**
  * What the 16 ms ticks of a pad in mouse mode send for its sticks: the pointer moves, or scrolls in
@@ -128,5 +133,85 @@ class PointerEmulationCharacterizationTest {
         assertThat(pad.getBoolean("mouseEmulationActive")).isTrue()
         rig.handler.setCaptured(false)
         assertThat(rig.mouseAfter(16)).containsExactly("move 20 0")
+    }
+
+    // ----- Switching it on and off -----
+
+    @Test
+    fun `turning the mouse on reaches every system pad but not the default context, and shows one notice`() {
+        val rig = rigWith(null)
+        val one = rig.addPad(7)
+        val two = rig.addPad(8)
+
+        rig.handler.setMouseEmulation(true)
+
+        assertThat(one.getBoolean("mouseEmulationActive")).isTrue()
+        assertThat(two.getBoolean("mouseEmulationActive")).isTrue()
+        assertThat(rig.default.getBoolean("mouseEmulationActive")).isFalse()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isTrue()
+        assertThat(ShadowToast.shownToastCount()).isEqualTo(1)
+        assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("Mouse emulation is: ON")
+
+        rig.handler.setMouseEmulation(false)
+
+        assertThat(one.getBoolean("mouseEmulationActive")).isFalse()
+        assertThat(two.getBoolean("mouseEmulationActive")).isFalse()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
+        assertThat(ShadowToast.shownToastCount()).isEqualTo(2)
+        assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("Mouse emulation is: OFF")
+    }
+
+    @Test
+    fun `a pad that already has the mouse on is left alone and the notice goes to the first pad that changes`() {
+        val rig = rigWith(null)
+        rig.addPad(7, fields = mapOf("mouseEmulationActive" to true))
+        val off = rig.addPad(8)
+
+        rig.handler.setMouseEmulation(true)
+
+        assertThat(off.getBoolean("mouseEmulationActive")).isTrue()
+        assertThat(ShadowToast.shownToastCount()).isEqualTo(1)
+    }
+
+    @Test
+    fun `the mouse that a Start hold turned on is what a pad that connects later gets`() {
+        val rig = rigWith(null)
+        val pad = rig.addPad(7)
+        pad.press(KEYCODE_BUTTON_START)
+        rig.advanceBy(800)
+        pad.release(KEYCODE_BUTTON_START)
+        assertThat(pad.getBoolean("mouseEmulationActive")).isTrue()
+
+        val usb = FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) }
+        usb.report(A_FLAG)
+
+        assertThat(rig.connection.mouse).contains("down 1")
+    }
+
+    @Test
+    fun `without the mouse a pad that connects later is a gamepad`() {
+        val rig = rigWith(null)
+        rig.addPad(7)
+
+        val usb = FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) }
+        usb.report(A_FLAG)
+
+        assertThat(rig.connection.mouse).isEmpty()
+        assertThat(rig.packets.last().buttons).isEqualTo(A_FLAG)
+    }
+
+    @Test
+    fun `a button of a pad in mouse mode is a click and of a pad that is not is a button`() {
+        val rig = rigWith(null)
+        val mouse = rig.addPad(7, fields = mapOf("mouseEmulationActive" to true))
+        val gamepad = rig.addPad(8, controllerNumber = 1)
+
+        mouse.press(KEYCODE_BUTTON_A)
+        gamepad.press(KEYCODE_BUTTON_A)
+
+        assertThat(rig.connection.mouse).containsExactly("down 1")
+        assertThat(rig.packets.map { it.controller to it.buttons })
+            .containsExactly(0 to 0, 1 to A_FLAG)
+            .inOrder()
     }
 }

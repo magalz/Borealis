@@ -59,7 +59,7 @@ object VirtualControllerConfigurationLoader {
     // The Java did `inputMap |= flag` and `inputMap &= ~flag` on a short: the result narrows back
     // to a
     // short.
-    private inline fun VirtualController.ControllerInputContext.setFlag(
+    private fun VirtualController.ControllerInputContext.setFlag(
         flag: Int,
         pressed: Boolean,
     ) {

@@ -750,8 +750,8 @@ Planned, not started.
   from, and make this back like the others.
 - **A forgotten host is not found again until the app restarts.** Found by the owner in
   the Sprint 12 round (2026-10-24). After Forget, the host does not come back as
-  "Found on this network" until the app is closed and opened again. Look at how
-  discovery treats a host it already reported, in `ComputerManagerService` and the
+  "Found on this network" until the app is closed and opened again. Check whether
+  discovery skips a host it already reported, in `ComputerManagerService` and the
   mDNS agents, with a test first.
 
 ### Sprint 16: SecOps
@@ -779,9 +779,10 @@ release. Sprint 16 is hardening and security testing.
   LuminalShine 26.10.0-beta.1, a wrong PIN keeps the pairing session for 5
   minutes, and a retry gets 409 until it expires. The owner saw the same symptom
   again in the Sprint 12 round (2026-10-24): a retry shows a new PIN for a moment,
-  then the "try again" screen. The client sent the retries 0.6 to 21 s apart, three of
-  them within 2 s, each answered 409; the client side of the fix should keep to one
-  attempt at a time. The fix:
+  then the "try again" screen. The app log shows twelve attempts one after another,
+  each answered 409 within 0.1 s, 0.6 to 21 s apart; who started each is not
+  recorded. Whether the client should wait on 409 `IN_PROGRESS` is for planning. The
+  fix:
   - Fix A: a fresh phase 1 from the same peer address and the same client
     certificate, after the PIN was applied, ends the old exchange as FAILED and
     starts a new one that needs a new PIN.

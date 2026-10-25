@@ -3820,21 +3820,36 @@ Results of the night of 2026-10-24 (owner, with the S22 logs read afterwards):
 
 - A pad on the S22 reaches Quit through the in-game menu (owner). D4 is closed for a
   pad; the keys sent by `adb` stay as recorded.
-- Forget, then pair again, on the TV: pass (owner).
-- Pairing on the S22 after the wrong PIN. The owner saw the pairing fail and later
-  found the host paired. The app's own log (`no_backup/logs/borealis.log`, read
-  through `run-as`, masked) and the system's activity history show, in local time:
-  - 23:22:04: an attempt with a wrong PIN ends as `PIN_WRONG`; the `/unpair` that
-    follows answers 404, as the host contract says (no `/unpair` route).
-  - 23:22:19 to 23:23:37: about ten attempts, each answered 409 `IN_PROGRESS`; three
-    of them within 2 s.
-  - 23:24:07 to 23:24:22: the screen goes off and on, and the app comes back.
-  - 23:24:23: an attempt waits for the PIN on the host, and at 23:24:37 all four
-    steps answer 200: `pairing ended state=PAIRED`.
-  - 23:24:40: a stream starts, and it ends at 23:25:12.
+- Unpair, then pair again, on the TV: pass (owner).
+- Pairing on the S22 after the wrong PIN. The owner stopped trying while the S22 was
+  not paired, and found the host paired a few minutes later. Three records were read
+  afterwards: the app's own log (`no_backup/logs/borealis.log`, through `run-as`,
+  masked), the system's activity history, and the host log. Times are local, on the
+  phone's clock unless marked "host"; the host's clock ran 1 to 2.5 s behind the
+  phone's.
+  - 23:22:04 to 23:22:16: an attempt waits for the PIN; a PIN is entered in the host's
+    Web UI; the attempt ends as `PIN_WRONG` (the test). The `/unpair` in its teardown
+    answers 404, as the host contract says (no `/unpair` route).
+  - 23:22:19 to 23:23:37: twelve attempts, each answered 409 `IN_PROGRESS` within
+    0.1 s, 0.6 to 21 s apart, the last four within 2.3 s. Who started each is not
+    recorded.
+  - Host 23:23:24: a client is unpaired through the Web UI. Host 23:23:48 to 23:23:58:
+    LuminalShine shuts down and starts again, which ends the failed pairing session.
+  - 23:24:07 to 23:24:22: the phone's screen goes off and on, and the app comes back.
+  - 23:24:23: an attempt starts; the host logs "Pairing request awaiting PIN" from the
+    S22's address. 13 s later the Web UI posts a PIN ("Pairing PIN delivered"), and at
+    23:24:37 all five pairing requests answer 200: `pairing ended state=PAIRED`. The
+    app makes a new random PIN for each attempt, so the PIN delivered was the one the
+    S22 showed for this attempt.
+  - 23:24:40 to 23:25:12: the stream screen is open; `/launch` at 23:24:50, the
+    connection ends at 23:25:06, and `/cancel` answers 200 at 23:25:12. Who started
+    it is not recorded.
 
-  So the S22 did pair at 23:24:37; the host's paired state is not a client fault.
-  What the screen showed between the attempts was not recorded.
+  So the S22 paired because a PIN was entered in the host's Web UI for its pending
+  request (host 23:24:35). The app does not start pairing on its own when it comes back:
+  an attempt starts when the pairing screen opens or on "Get new PIN". The owner does
+  not recall entering that PIN. A try to reproduce it on 2026-10-25, with logcat
+  recorded, did not reproduce it; it stays open for a later try.
 - New findings (owner):
   - Back from the Apps screen to the Hosts screen plays a "shrinking" animation
     (TV and phone), while other screens just fade.

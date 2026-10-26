@@ -79,7 +79,9 @@ fun InputDevice.hasControllerJoystickAxes(): Boolean =
  *   `KEYBOARD | DPAD` with a non-alphabetic keyboard, and a mouse or a touchscreen, which have no
  *   keyboard at all.
  *
- * An alphabetic keyboard counts only for gamepad buttons, never for joystick axes.
+ * An alphabetic keyboard counts only for gamepad buttons, never for joystick axes, apart from the
+ * Android 11 case above: there the virtual device -1 counts whatever its keyboard type, while a
+ * device has gamepad buttons or joystick axes.
  */
 fun isStreamControllerDevice(device: InputDevice?): Boolean =
     device == null ||

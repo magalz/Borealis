@@ -7,9 +7,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
@@ -22,7 +19,6 @@ import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.isFocused
-import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -30,23 +26,15 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.dp
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.testing.FakeInputModeManager
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
-import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.annotation.Config
 
-@RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
-class SettingsTwoPaneTest {
-    @get:Rule val composeRule = createComposeRule()
-    private var selected by mutableStateOf("stream")
+class SettingsTwoPaneTest : SettingsTwoPaneTestBase("stream") {
     private val selections = mutableListOf<String>()
 
     private val allGroups =
@@ -477,56 +465,38 @@ class SettingsTwoPaneTest {
         assertThat(group.right - group.left).isEqualTo(184.dp)
     }
 
-    private fun press(key: Key) {
-        composeRule.onRoot().performKeyInput { pressKey(key) }
-        composeRule.waitForIdle()
-    }
-
-    /**
-     * The gamepad A button as a device delivers it. A click listens for OK, Enter and the numpad
-     * Enter, not for A: when the app leaves A alone, Android hands the focused item the key OK in
-     * its place (the fallback of the key map). Keys injected into a test skip that step, so the
-     * test does it.
-     */
-    private fun pressGamepadA() {
-        press(Key.ButtonA)
-        press(Key.DirectionCenter)
-    }
-
     @Composable
     private fun Specimen(
         groups: List<SettingsGroup<String>> = allGroups,
         formFactor: FormFactor = FormFactor.Tv,
         focusOnOpen: Boolean = false,
     ) {
-        BorealisTheme(formFactor) {
-            SettingsTwoPane(
-                groups = groups,
-                selected = { selected },
-                onSelect = {
-                    selections += it
-                    selected = it
-                },
-                focusOnOpen = focusOnOpen,
-            ) { group ->
-                when (group) {
-                    "stream" -> {
-                        SettingsValueRow("Resolution", "1280 x 720", {})
-                        SettingsValueRow("Frame rate", "60 fps", {})
-                    }
-                    "video" -> {
-                        SettingsValueRow("Codec", "Automatic", {})
-                        SettingsSwitchRow("HDR", false, {})
-                    }
-                    "audio" -> {
-                        SettingsValueRow("Channels", "Stereo", {})
-                        SettingsSliderRow("Vibration", 0f, 0f..200f, 10f, "0 %", {})
-                        // Unlike the clickable rows it takes focus in touch mode too, as a text
-                        // field does: a pane that something entered in that mode shows it.
-                        Text("Notes", Modifier.focusable())
-                    }
-                    else -> SettingsValueRow("Licences", null, {})
+        TwoPane(
+            groups,
+            formFactor = formFactor,
+            focusOnOpen = focusOnOpen,
+            onSelect = {
+                selections += it
+                selected = it
+            },
+        ) { group ->
+            when (group) {
+                "stream" -> {
+                    SettingsValueRow("Resolution", "1280 x 720", {})
+                    SettingsValueRow("Frame rate", "60 fps", {})
                 }
+                "video" -> {
+                    SettingsValueRow("Codec", "Automatic", {})
+                    SettingsSwitchRow("HDR", false, {})
+                }
+                "audio" -> {
+                    SettingsValueRow("Channels", "Stereo", {})
+                    SettingsSliderRow("Vibration", 0f, 0f..200f, 10f, "0 %", {})
+                    // Unlike the clickable rows it takes focus in touch mode too, as a text
+                    // field does: a pane that something entered in that mode shows it.
+                    Text("Notes", Modifier.focusable())
+                }
+                else -> SettingsValueRow("Licences", null, {})
             }
         }
     }

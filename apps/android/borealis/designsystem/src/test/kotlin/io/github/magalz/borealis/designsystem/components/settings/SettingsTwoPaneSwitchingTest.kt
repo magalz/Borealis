@@ -1,35 +1,20 @@
 package io.github.magalz.borealis.designsystem.components.settings
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
-import io.github.magalz.borealis.designsystem.theme.BorealisTheme
-import io.github.magalz.borealis.designsystem.theme.FormFactor
-import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.annotation.Config
 
 /**
  * What the pane of a [SettingsTwoPane] shows when the group changes: the new group looks fresh,
  * with no switch sliding and no scroll left over from the last time it was shown.
  */
-@RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
-class SettingsTwoPaneSwitchingTest {
-    @get:Rule val composeRule = createComposeRule()
-    private var selected by mutableStateOf("on")
-
+class SettingsTwoPaneSwitchingTest : SettingsTwoPaneTestBase("on") {
     private val groups =
         listOf(
             SettingsGroup("on", "Switch on"),
@@ -88,19 +73,13 @@ class SettingsTwoPaneSwitchingTest {
 
     @Composable
     private fun Specimen() {
-        BorealisTheme(FormFactor.Tv) {
-            SettingsTwoPane(
-                groups = groups,
-                selected = { selected },
-                onSelect = { selected = it },
-            ) { group ->
-                when (group) {
-                    // One call site for both groups, as the rows of a screen are drawn from a list.
-                    "on",
-                    "off" -> SettingsSwitchRow("The switch", group == "on", onCheckedChange = {})
-                    "long" -> repeat(LONG_ROWS) { SettingsValueRow("Long row ${it + 1}", null, {}) }
-                    else -> repeat(MID_ROWS) { SettingsValueRow("Mid row ${it + 1}", null, {}) }
-                }
+        TwoPane(groups) { group ->
+            when (group) {
+                // One call site for both groups, as the rows of a screen are drawn from a list.
+                "on",
+                "off" -> SettingsSwitchRow("The switch", group == "on", onCheckedChange = {})
+                "long" -> repeat(LONG_ROWS) { SettingsValueRow("Long row ${it + 1}", null, {}) }
+                else -> repeat(MID_ROWS) { SettingsValueRow("Mid row ${it + 1}", null, {}) }
             }
         }
     }

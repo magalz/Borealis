@@ -79,8 +79,9 @@ class BuildFacts : ExternalResource() {
 private class FreshClassLoader(private val original: Class<*>, sandbox: ClassLoader) :
     ClassLoader(sandbox) {
     private val bytes =
-        checkNotNull(sandbox.getResourceAsStream(original.name.replace('.', '/') + ".class"))
-            .use { it.readBytes() }
+        checkNotNull(sandbox.getResourceAsStream(original.name.replace('.', '/') + ".class")).use {
+            it.readBytes()
+        }
 
     override fun loadClass(name: String, resolve: Boolean): Class<*> {
         if (name != original.name) return super.loadClass(name, resolve)

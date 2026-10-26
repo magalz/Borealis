@@ -110,6 +110,18 @@ class GamepadCaptureTest {
     }
 
     @Test
+    fun `a held right click is released when the capture starts`() {
+        rig.handler.setMouseEmulation(true)
+        padOne.report(b)
+        assertThat(rig.connection.mouse).contains("down 3")
+
+        rig.handler.setCaptured(true)
+        padOne.report(0)
+
+        assertThat(rig.connection.mouse.last()).isEqualTo("up 3")
+    }
+
+    @Test
     fun `the menu chord is not reported while captured`() {
         rig.handler.setCaptured(true)
 
@@ -118,6 +130,26 @@ class GamepadCaptureTest {
         rig.advanceBy(3_000)
 
         assertThat(rig.chords).isEqualTo(0)
+    }
+
+    @Test
+    fun `a chord let go after a second while captured is not reported either`() {
+        rig.handler.setCaptured(true)
+        val packets = rig.connection.packets.size
+        val time = rig.now
+
+        rig.handler.handleButtonDown(
+            rig.keyEvent(time, time, KeyEvent.ACTION_DOWN, KEYCODE_BUTTON_START)
+        )
+        rig.handler.handleButtonDown(
+            rig.keyEvent(time, time, KeyEvent.ACTION_DOWN, KEYCODE_BUTTON_SELECT)
+        )
+        rig.handler.handleButtonUp(
+            rig.keyEvent(time, time + 1_500, KeyEvent.ACTION_UP, KEYCODE_BUTTON_SELECT)
+        )
+
+        assertThat(rig.chords).isEqualTo(0)
+        assertThat(rig.connection.packets).hasSize(packets)
     }
 
     @Test

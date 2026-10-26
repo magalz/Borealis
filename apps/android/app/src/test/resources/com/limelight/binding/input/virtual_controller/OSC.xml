@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+    <string name="11">{&quot;LEFT&quot;:177,&quot;TOP&quot;:233,&quot;WIDTH&quot;:161,&quot;HEIGHT&quot;:112}</string>
+    <string name="12">{&quot;LEFT&quot;:184,&quot;TOP&quot;:236,&quot;WIDTH&quot;:162,&quot;HEIGHT&quot;:114}</string>
+    <string name="13">{&quot;LEFT&quot;:191,&quot;TOP&quot;:239,&quot;WIDTH&quot;:163,&quot;HEIGHT&quot;:116}</string>
+    <string name="14">{&quot;LEFT&quot;:198,&quot;TOP&quot;:242,&quot;WIDTH&quot;:164,&quot;HEIGHT&quot;:118}</string>
+    <string name="15">{&quot;LEFT&quot;:205,&quot;TOP&quot;:245,&quot;WIDTH&quot;:165,&quot;HEIGHT&quot;:120}</string>
+    <string name="16">{&quot;LEFT&quot;:212,&quot;TOP&quot;:248,&quot;WIDTH&quot;:166,&quot;HEIGHT&quot;:122}</string>
+    <string name="1">{&quot;LEFT&quot;:107,&quot;TOP&quot;:203,&quot;WIDTH&quot;:151,&quot;HEIGHT&quot;:92}</string>
+    <string name="2">{&quot;LEFT&quot;:114,&quot;TOP&quot;:206,&quot;WIDTH&quot;:152,&quot;HEIGHT&quot;:94}</string>
+    <string name="3">{&quot;LEFT&quot;:121,&quot;TOP&quot;:209,&quot;WIDTH&quot;:153,&quot;HEIGHT&quot;:96}</string>
+    <string name="4">{&quot;LEFT&quot;:128,&quot;TOP&quot;:212,&quot;WIDTH&quot;:154,&quot;HEIGHT&quot;:98}</string>
+    <string name="5">{&quot;LEFT&quot;:135,&quot;TOP&quot;:215,&quot;WIDTH&quot;:155,&quot;HEIGHT&quot;:100}</string>
+    <string name="6">{&quot;LEFT&quot;:142,&quot;TOP&quot;:218,&quot;WIDTH&quot;:156,&quot;HEIGHT&quot;:102}</string>
+    <string name="7">{&quot;LEFT&quot;:149,&quot;TOP&quot;:221,&quot;WIDTH&quot;:157,&quot;HEIGHT&quot;:104}</string>
+    <string name="8">{&quot;LEFT&quot;:156,&quot;TOP&quot;:224,&quot;WIDTH&quot;:158,&quot;HEIGHT&quot;:106}</string>
+    <string name="9">{&quot;LEFT&quot;:163,&quot;TOP&quot;:227,&quot;WIDTH&quot;:159,&quot;HEIGHT&quot;:108}</string>
+    <string name="10">{&quot;LEFT&quot;:170,&quot;TOP&quot;:230,&quot;WIDTH&quot;:160,&quot;HEIGHT&quot;:110}</string>
+</map>

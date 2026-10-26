@@ -102,13 +102,15 @@ without edits. The rules are numbered so that each conversion brief can point to
       `LargeClass`, `TooManyFunctions`, `NestedBlockDepth`, `ReturnCount`, `ComplexCondition` and
       `LongParameterList`) are suppressed on the declaration with `@Suppress("<Rule>")`, next to the comment
       `// Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).`
+      The comment names the sprint that converted the code: `(Sprint 12 backlog)` for Sprint 12 and
+      `(Sprint 13 backlog)` for Sprint 13.
       The suppressions are listed in the conversion report, and a backlog item lists them.
    3. A rule that points at a real bug is never suppressed. The bug is reported instead.
    4. There is no detekt baseline.
 7. **Coverage.** Converted code counts in Kover coverage from the first conversion. The exclusion for
    `com.limelight.*` is narrowed to the Java that stays: `com.limelight.Game` and its nested classes (`com.limelight.Game$*`),
-   `com.limelight.binding.input.*`, `com.limelight.binding.video.*`, `com.limelight.binding.audio.*` and
-   `com.limelight.nvstream.jni.*`. In Codecov, converted code is held to the same gate as the rest
+   `com.limelight.binding.video.*`, `com.limelight.binding.audio.*` and `com.limelight.nvstream.jni.*`.
+   Sprint 13 took `com.limelight.binding.input.*` off the list. In Codecov, converted code is held to the same gate as the rest
    ([ADR 0049](0049-coverage-gate.md): 90% of the patch, and at most 1% project drop). The owner first
    planned separate statuses for the converted path, with a target that would rise each sprint; at the
    end of Sprint 12 the converted code measured 97.0% line coverage, so the single gate was kept
@@ -182,8 +184,8 @@ without edits. The rules are numbered so that each conversion brief can point to
 
 * This ADR updates [ADR 0004](0004-kotlin-for-new-android-code.md). ADR 0004 said that upstream Java stays
   untouched. This ADR, with [ADR 0054](0054-declare-independence-from-moonlight.md), says that the inherited
-  Java is Borealis code and is converted under the rules above. The Java that is still in use stays Java
-  until Sprints 13 and 14.
+  Java is Borealis code and is converted under the rules above. The Java that is still in use stayed Java
+  until Sprint 13 converted the input code (`binding/input`); the rest stays Java until Sprint 14.
 * Related: [0054](0054-declare-independence-from-moonlight.md) (inherited code is Borealis code).
 * Related: [0049](0049-coverage-gate.md) (the coverage gate that rule 7 amends for converted code).
 * Related: [roadmap, Kotlin migration (Sprints 12 to 14)](../roadmap.md#kotlin-migration-sprints-12-to-14).

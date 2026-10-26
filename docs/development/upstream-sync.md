@@ -44,7 +44,26 @@ Borealis code, so port the fix by hand into the Kotlin file. The converted code 
 - `utils/CacheHelper.java`, `Dialog.java`, `NetHelper.java`, `ServerHelper.java`,
   `ShortcutHelper.java`, `TvChannelHelper.java`, `UiHelper.java`, `Vector2d.java`
 
-The Java that remains is in the Sprint 13 and 14 areas of the roadmap. Upstream fixes
+Sprint 13 converted these Java paths under `apps/android/app/src/main/java/`. No whole
+file was removed. The removals of the sprint are methods, fields and constants (see the
+roadmap). The converted code is in `apps/android/app/src/main/kotlin/`, at the same
+package path:
+
+- `com/limelight/binding/input/ControllerHandler.java`, `KeyboardTranslator.java`
+- `binding/input/capture/AndroidNativePointerCaptureProvider.java`,
+  `AndroidPointerIconCaptureProvider.java`, `InputCaptureManager.java`,
+  `InputCaptureProvider.java`
+- `binding/input/driver/AbstractController.java`, `AbstractXboxController.java`,
+  `UsbDriverListener.java`, `UsbDriverService.java`, `Xbox360Controller.java`,
+  `Xbox360WirelessDongle.java`, `XboxOneController.java`
+- `binding/input/touch/AbsoluteTouchContext.java`, `RelativeTouchContext.java`,
+  `TouchContext.java`
+- `binding/input/virtual_controller/AnalogStick.java`, `DigitalButton.java`,
+  `DigitalPad.java`, `LeftAnalogStick.java`, `LeftTrigger.java`, `RightAnalogStick.java`,
+  `RightTrigger.java`, `VirtualController.java`, `VirtualControllerConfigurationLoader.java`,
+  `VirtualControllerElement.java`
+
+The Java that remains is in the Sprint 14 area of the roadmap. Upstream fixes
 for those files still come by cherry-pick until their area is converted.
 
 ## 1. Prepare

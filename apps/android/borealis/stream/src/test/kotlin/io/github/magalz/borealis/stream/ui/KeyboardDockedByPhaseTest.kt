@@ -27,7 +27,7 @@ class KeyboardDockedByPhaseTest {
         LayerFixture(
                 composeRule,
                 formFactor,
-                aStreaming(Panel.KEYBOARD, dockedKeyboard = dockedKeyboard),
+                aStreaming(Panel.KEYBOARD).copy(dockedKeyboard = dockedKeyboard),
                 keyboardMode = true,
             )
             .show()

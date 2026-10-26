@@ -27,26 +27,26 @@ import io.github.magalz.borealis.stream.testing.aSessionInfo
 import io.github.magalz.borealis.stream.testing.setChrome
 import io.github.magalz.borealis.stream.testing.setChromeInKeyboardMode
 
-/** A streaming phase with the defaults of a phone that has not shown the hint. */
+/**
+ * A streaming phase with the defaults of a phone that has not shown the hint. A test that needs the
+ * hint, a pointer speed or a docked keyboard uses `copy`.
+ */
 internal fun aStreaming(
     panel: Panel = Panel.NONE,
     overlay: OverlayMode = OverlayMode.OFF,
     touchMode: TouchMode? = TouchMode.TRACKPAD,
     gamepadMouse: Boolean? = null,
     info: SessionInfo = aSessionInfo,
-    showMenuHint: Boolean = false,
-    pointerSpeed: PointerSpeed = PointerSpeed.NORMAL,
-    dockedKeyboard: Boolean = false,
 ) =
     StreamPhase.Streaming(
-        panel,
-        overlay,
-        touchMode,
-        gamepadMouse,
-        info,
-        showMenuHint,
-        pointerSpeed,
-        dockedKeyboard,
+        panel = panel,
+        overlay = overlay,
+        touchMode = touchMode,
+        gamepadMouse = gamepadMouse,
+        info = info,
+        showMenuHint = false,
+        pointerSpeed = PointerSpeed.NORMAL,
+        dockedKeyboard = false,
     )
 
 /**
@@ -58,10 +58,10 @@ internal class LayerFixture(
     private val formFactor: FormFactor,
     phase: StreamPhase.Streaming,
     perf: PerfSnapshot? = null,
-    val intents: RecordingIntents = RecordingIntents(),
     private val keyboardMode: Boolean = false,
     private val appName: String = "Desktop",
 ) {
+    val intents = RecordingIntents()
     var phase by mutableStateOf(phase)
     var perf by mutableStateOf(perf)
     val handleBounds = mutableListOf<Rect?>()

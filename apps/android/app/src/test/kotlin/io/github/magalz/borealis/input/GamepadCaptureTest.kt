@@ -110,6 +110,18 @@ class GamepadCaptureTest {
     }
 
     @Test
+    fun `a held right click is released when the capture starts`() {
+        rig.handler.setMouseEmulation(true)
+        padOne.report(b)
+        assertThat(rig.connection.mouse).contains("down 3")
+
+        rig.handler.setCaptured(true)
+        padOne.report(0)
+
+        assertThat(rig.connection.mouse.last()).isEqualTo("up 3")
+    }
+
+    @Test
     fun `the menu chord is not reported while captured`() {
         rig.handler.setCaptured(true)
 

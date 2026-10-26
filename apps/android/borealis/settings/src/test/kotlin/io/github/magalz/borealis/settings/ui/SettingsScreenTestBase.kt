@@ -20,7 +20,8 @@ import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot
 import io.github.magalz.borealis.settings.testing.FakeDeviceFactsSource
 import io.github.magalz.borealis.settings.testing.FakeSettingsRepository
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Rule
 import org.robolectric.Shadows.shadowOf
 
@@ -62,8 +63,9 @@ open class SettingsScreenTestBase {
             loadLicenses = { licenses },
         )
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     protected open fun viewModel(): SettingsViewModel =
-        SettingsViewModel(repository, options, facts, { resets++ }, Dispatchers.Unconfined)
+        SettingsViewModel(repository, options, facts, { resets++ }, UnconfinedTestDispatcher())
 
     /**
      * Shows the screen on [backdrop], which is the page colour the window has in the app: the

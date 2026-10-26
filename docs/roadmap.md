@@ -1320,9 +1320,9 @@ otherwise.
   - About 300 idle `HandlerThread("ControllerHandler")` threads stay alive in the test JVM,
     because tests rarely call `destroy()`.
   - One wall-clock test: `ButtonTimingCharacterizationTest` compares real sleep times with a
-    25 ms threshold. It failed under load in two runs of the phase review. The phase fixes
-    loosened it (they merge before these docs), and the `waited` test pins the same threshold
-    without the clock.
+    25 ms threshold. It failed in two runs of the phase review, because on Windows a 1 ms sleep
+    can take a whole 15.6 ms timer tick. The phase fixes loosened it, and the `waited` test pins
+    the same threshold without the clock.
   - Robolectric caches its sandboxes up to a limit (3 times the supported SDK levels, 42 in
     Robolectric 4.17) and evicts the least recently used one. Each distinct
     `@Config(shadows = ...)` set and SDK level needs a sandbox. The phase review counted 32

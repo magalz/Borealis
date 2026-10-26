@@ -76,11 +76,10 @@ class BuildFacts : ExternalResource() {
  * loaded, so the `Build` fields set before the load decide the class-load branches, and no test
  * leaves state behind for another.
  */
-private class FreshClassLoader(private val original: Class<*>) : ClassLoader(original.classLoader) {
+private class FreshClassLoader(private val original: Class<*>, sandbox: ClassLoader) :
+    ClassLoader(sandbox) {
     private val bytes =
-        checkNotNull(
-                original.classLoader.getResourceAsStream(original.name.replace('.', '/') + ".class")
-            )
+        checkNotNull(sandbox.getResourceAsStream(original.name.replace('.', '/') + ".class"))
             .use { it.readBytes() }
 
     override fun loadClass(name: String, resolve: Boolean): Class<*> {
@@ -228,7 +227,10 @@ class HelperHandle(private val type: Class<*>) {
         /** Loads a copy of the helper, running its static initializer now. */
         fun load(): HelperHandle {
             val original = Class.forName(HELPER_CLASS)
-            return HelperHandle(Class.forName(HELPER_CLASS, true, FreshClassLoader(original)))
+            val sandbox = checkNotNull(original.classLoader)
+            return HelperHandle(
+                Class.forName(HELPER_CLASS, true, FreshClassLoader(original, sandbox))
+            )
         }
 
         private const val HELPER_CLASS = "com.limelight.binding.video.MediaCodecHelper"

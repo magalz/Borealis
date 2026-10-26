@@ -514,6 +514,19 @@ class MoonBridgeCallbacksTest {
         assertThat(received).isEmpty()
     }
 
+    // The shadow
+
+    @Test
+    fun `a reset of the shadow leaves the bridge without renderers and listener`() {
+        // connect() stored the three
+        ShadowRecordingBridge.reset()
+
+        assertThat(MoonBridge.bridgeDrSetup(0, 0, 0, 0)).isEqualTo(-1)
+        assertThat(MoonBridge.bridgeArInit(0, 0, 0)).isEqualTo(-1)
+        MoonBridge.bridgeClConnectionStarted()
+        assertThat(received).isEmpty()
+    }
+
     // The one helper that is not a callback
 
     @Test

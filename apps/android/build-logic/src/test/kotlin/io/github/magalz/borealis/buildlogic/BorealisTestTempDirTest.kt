@@ -7,6 +7,7 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.tasks.testing.Test
 import org.gradle.testfixtures.ProjectBuilder
+import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 
@@ -68,12 +69,57 @@ class BorealisTestTempDirTest {
     }
 
     @org.junit.Test
+    fun `on windows two modules of one checkout get folders of their own`() {
+        val root = project("checkout")
+        val app = ProjectBuilder.builder().withParent(root).withName("app").build()
+        val borealis = ProjectBuilder.builder().withParent(root).withName("borealis").build()
+        val stream = ProjectBuilder.builder().withParent(borealis).withName("stream").build()
+
+        // One checkout, so the same root directory and the same task: only the module differs.
+        assertThat(app.rootDir).isEqualTo(stream.rootDir)
+        assertThat(app.path).isEqualTo(":app")
+        assertThat(stream.path).isEqualTo(":borealis:stream")
+        assertThat(app.testTempDir("testDebugUnitTest", windows = true))
+            .isNotEqualTo(stream.testTempDir("testDebugUnitTest", windows = true))
+    }
+
+    @org.junit.Test
     fun `on windows the test jvm uses the short folder`() {
         val (project, test) = module(windows = true)
         val dir = project.testTempDir("testDebugUnitTest", windows = true)
 
         assertThat(dir.parentFile.name).isEqualTo(".bt")
         assertThat(test.allJvmArgs).contains("-Djava.io.tmpdir=${dir.absolutePath}")
+    }
+
+    /** Runs [block] in a JVM that reports [osName] as its operating system. */
+    private fun <T> onOperatingSystem(osName: String, block: () -> T): T {
+        val original = System.getProperty("os.name")
+        System.setProperty("os.name", osName)
+        try {
+            return block()
+        } finally {
+            System.setProperty("os.name", original)
+        }
+    }
+
+    @org.junit.Test
+    fun `the plugins' default follows the operating system the build runs on`() {
+        val onWindows = project("windows")
+        val onLinux = project("linux")
+        val windowsTest = onWindows.tasks.register("testDebugUnitTest", Test::class.java)
+        val linuxTest = onLinux.tasks.register("testDebugUnitTest", Test::class.java)
+
+        // The plugins call configureTestTempDir() without the flag, so the default decides.
+        onOperatingSystem("Windows 11") { onWindows.configureTestTempDir() }
+        onOperatingSystem("Linux") { onLinux.configureTestTempDir() }
+
+        val shortDir = onWindows.testTempDir("testDebugUnitTest", windows = true)
+        assertThat(shortDir.parentFile.name).isEqualTo(".bt")
+        assertThat(windowsTest.get().allJvmArgs)
+            .contains("-Djava.io.tmpdir=${shortDir.absolutePath}")
+        assertThat(linuxTest.get().allJvmArgs)
+            .contains("-Djava.io.tmpdir=${onLinux.buildTempDir().absolutePath}")
     }
 
     @org.junit.Test
@@ -90,6 +136,23 @@ class BorealisTestTempDirTest {
 
         assertThat(stale.exists()).isFalse()
         assertThat(project.buildTempDir().isDirectory).isTrue()
+    }
+
+    @org.junit.Test
+    fun `a run that cannot make its temporary folder stops there and names the folder`() {
+        val project = project()
+        // A regular file in the way: no folder can be made below it.
+        val blocker = folder.newFile("not-a-folder")
+        project.layout.buildDirectory.set(blocker.resolve("build"))
+        val test = project.tasks.register("testDebugUnitTest", Test::class.java)
+        project.configureTestTempDir(windows = false)
+        val dir = project.buildTempDir()
+        val clear = checkNotNull(test.get().action(CLEAR_TEST_TEMP_DIR_BEFORE))
+
+        val error = assertThrows(IllegalStateException::class.java) { clear.execute(test.get()) }
+
+        assertThat(error).hasMessageThat().contains(dir.absolutePath)
+        assertThat(dir.exists()).isFalse()
     }
 
     @org.junit.Test

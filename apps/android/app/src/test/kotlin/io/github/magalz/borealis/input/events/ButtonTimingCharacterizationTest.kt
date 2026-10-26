@@ -82,9 +82,13 @@ class ButtonTimingCharacterizationTest {
         val long = fastest(100)
 
         assertThat(instant).isAtLeast(22.0)
-        // Held for 24 ms, only the missing millisecond is waited, and a long hold waits for nothing.
-        assertThat(instant - nearly).isAtLeast(12.0)
+        // A long hold waits for nothing.
         assertThat(instant - long).isAtLeast(12.0)
+        // Held for 24 ms, only the missing millisecond is waited. On Windows a 1 ms sleep can take a
+        // whole timer tick (15.6 ms), so the gap is usually about 15 ms and its floor about 9.4 ms
+        // (it came out at 9.6 and 9.9 in the phase review); only a clear gap is asked for.
+        // The 25 ms threshold itself is pinned without a clock by the test after this one.
+        assertThat(instant - nearly).isAtLeast(5.0)
     }
 
     @Test

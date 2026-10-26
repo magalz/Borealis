@@ -45,7 +45,6 @@ object MoonBridge {
     const val BUFFER_TYPE_PPS = 2
     const val BUFFER_TYPE_VPS = 3
 
-    const val FRAME_TYPE_PFRAME = 0
     const val FRAME_TYPE_IDR = 1
 
     const val COLORSPACE_REC_601 = 0

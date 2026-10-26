@@ -650,7 +650,7 @@ Items:
 ### Sprint 13: Kotlin migration, input
 
 Converted in the phase branch `phase/s13-kotlin-input`, one merged task per area. Every
-conversion is merged; the device round is pending. Owner decisions of 2026-10-25:
+conversion is merged; the device round is done. Owner decisions of 2026-10-25:
 
 - **Characterize, then convert.** `ControllerHandler` (3,659 lines) was pinned first by
   three characterization tasks, for events, devices and feedback, which worked in parallel
@@ -722,9 +722,12 @@ carry `@SuppressLint("ViewConstructor")` in source.
 
 Items:
 
-- **Pending.** The device round: both 8BitDo pads (the Pro 3 in Switch mode, the Ultimate 2 in
-  D-input), a USB pad, the on-screen controller and touch on the S22, the keyboard and mouse,
-  the gamepad mouse, the menu chord and the quit combo.
+- **Done.** The device round of 2026-10-26: both 8BitDo pads (the Pro 3 in Switch mode, the
+  Ultimate 2 in D-input), the on-screen controller and touch on the S22, the keyboard and
+  mouse, the gamepad mouse, the menu chord and the quit combo. The results are in
+  [device-validation section 18](development/device-validation.md#18-results-sprint-13). The
+  round found no Sprint 13 regression, and four items went to the backlog (item (d) under
+  Backlog, not scheduled).
 - Phase 4 (PyroWave) uses input and video.
 
 ### Sprint 14: Kotlin migration, video, audio and the stream activity
@@ -1328,6 +1331,19 @@ otherwise.
     `@Config(shadows = ...)` set and SDK level needs a sandbox. The phase review counted 32
     distinct sandboxes at `895d0419a`, and the `:app` test heap peaked at 1.17 GB of its 2 GB
     (the heap is 2 GB since Sprint 13).
+- **(d) Found in the Sprint 13 device round (2026-10-26), on the S22.** Nothing here is
+  scheduled, and none is a Sprint 13 regression. The results are in
+  [device-validation section 18](development/device-validation.md#18-results-sprint-13).
+  - **Trackpad drag.** In trackpad mode, the default, a drag is a press and hold without
+    moving for about 650 ms, then a move (`RelativeTouchContext.kt`, `DRAG_TIME_THRESHOLD`).
+    The owner expected the usual double tap and hold, which does not start a drag.
+  - **Direct touch.** A long press and a move select text on the PC instead of dragging, as
+    they do on a phone. The owner found it hard to reproduce on a desktop.
+  - **Alt+Tab.** With Alt held, the first Tab is lost, and Windows opens its Alt menu. The
+    main build (`ded969bdb`, Sprint 12 code) does the same, so it is not from Sprint 13.
+  - **Ultimate 2, Home held.** The PC acts as if Win+Tab was pressed. The app sends the
+    Guide button while the pad's Home button is held, and nothing in the input code maps it
+    to Win+Tab. Probably Windows' own long press of the Xbox button; to verify on the host.
 
 ## Host-side items (LuminalShine)
 

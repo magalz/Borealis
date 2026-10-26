@@ -1481,6 +1481,73 @@ Steps:
    - Wake-on-LAN.
 7. End with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the Streamer.
 
+### 3.26 Sprint 13 checks
+
+Run these on the Samsung Galaxy S22 and on the Google TV Streamer, with the owner's OK for
+the TV. Sprint 13 converted the inherited input code to Kotlin: the keyboard and mouse
+capture, the touch contexts, the USB drivers, the on-screen controller and
+`ControllerHandler` (ADR 0059). A conversion keeps behaviour, so the steps check that the
+behaviour kept. Record each item as `pass`, `fail`, `owner check` or `not applicable`, with
+a short note for each `fail`.
+
+The physical actions need the owner: the pads, the keyboard and the touch. Do not record a
+host name, an address, a MAC address or a PIN.
+
+Two corrections from the round are applied below:
+
+- The touch mode defaults to the trackpad, because the setting is on by default.
+- The trackpad drag is a press and hold of about 650 ms without moving, then a move
+  (`DRAG_TIME_THRESHOLD` in `RelativeTouchContext.kt`). It is not a double tap and hold.
+
+Steps:
+
+1. Update in place (S22, TV).
+   - Install the phase build over the Sprint 12 build, with the data kept.
+   - Expected: the Library opens, and the startup log reads `commit=` with the revision
+     of the build.
+2. Touch, absolute (direct) mode (S22).
+   - Set Touch to direct in Settings, not in the stream menu. A choice in the stream menu
+     lasts for that session only. Leave the setting, then start a new stream.
+   - Expected: tap is a left click, long press is a right click, two-finger scroll works,
+     and a drag moves the pointer.
+3. Touch, trackpad mode (S22).
+   - This is the default. Expected: tap, two-finger scroll and drag work. A drag is a
+     press and hold without moving for about 650 ms, then a move. Check the pointer speed.
+4. On-screen controller (S22).
+   - Expected: shown in the stream. A, B, X, Y (the sign-extension case: the host sees Y),
+     the D-pad in 8 directions, both sticks (move, centre, click), LT and RT, LB and RB,
+     Start, Select and Guide all work. A long hold (3 s) on a button works.
+5. On-screen controller edit (S22).
+   - Move and resize one element, leave, and reopen the stream. Expected: the layout is
+     kept. The opacity setting changes the look.
+6. Keyboard and mouse (S22, if available).
+   - Expected: typing in a host text field works, and so do Esc, the arrows and the
+     modifiers. Mouse capture, the buttons, the wheel and the release with the menu work.
+7. 8BitDo Pro 3 (Switch mode, `057E:2009`), on the S22 and the TV.
+   - Expected: every button, both sticks, the triggers and the D-pad work. Rumble works
+     (a host test, for example Steam's controller test). Motion works if the host shows
+     it. The arrival, with its controller type, is in the host log if it is visible.
+8. 8BitDo Ultimate 2 (`2DC8:6012` in D-input over BLE on the S22; `2DC8:310B` through the
+   receiver on the TV, through the USB driver, with the permission held until the first
+   frame).
+   - Expected: buttons, sticks, triggers, Guide and rumble work.
+9. Gamepad mouse (S22).
+   - Expected: toggle it from the menu row. Check the pointer speed, the RB precision and
+     right-stick scroll. A pad that joins while it is on joins silently.
+10. Menu chord (Select and Start held for 1 s), on the S22.
+    - Expected: the menu opens, the capture is released and restored, and the quit combo
+      works.
+11. Two pads at once (S22, TV).
+    - Expected: the two controllers are numbers 0 and 1 on the host. Unplug one during the
+      stream. Expected: the other keeps working.
+12. Connect a pad during the stream, then disconnect and reconnect it (S22, TV).
+13. Logs (S22, TV).
+    - Watch the app's logcat for exceptions from `com.limelight.binding.input`. Keep the
+      captures masked, as in [section 17](#17-results-sprint-12).
+14. End (TV, S22).
+    - Quit the app on the S22. Then end with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP`
+      on the Streamer.
+
 ## 4. Results templates
 
 Copy one table per device. Use `pass`, `fail` or `not applicable`, and add a
@@ -2328,7 +2395,8 @@ taken during the stream, because it would show the PC screen.
 - Backlog, from this round: the native pad modes, the smoother D-pad moves in
   Settings on a TV, the quit warning for Desktop, and the host details text. See
   the [roadmap, Sprint 9](../roadmap.md#sprint-9-ux-polish-and-the-handheld). The
-  native pad modes are in Sprint 13.
+  native pad modes are documented in Sprint 17, not in Sprint 13
+  ([roadmap, Sprint 17](../roadmap.md#sprint-17-release-preparation)).
 - The Sprint 6 quit combo follow-up for USB-driver pads is done in `5416a79c`.
   See the [roadmap](../roadmap.md#sprint-7-follow-ups-and-backlog), item 2.
 - Backlog, from the Bluetooth pad round: the handheld host card height. On the
@@ -2728,7 +2796,8 @@ These are not counted as problems.
   display. There was no retry.
 - **Host version.** Host details shows the protocol version `7.1.431.-1` as
   "Sunshine-compatible", not "LuminalShine 26.10.0-beta.1". The client shows the
-  host version in Sprint 13.
+  host version in Sprint 17
+  ([roadmap, Sprint 17](../roadmap.md#sprint-17-release-preparation)).
 - **The offline host.** Its card alternates between "Offline" and "Checking…".
 - **A navigation slip.** One OK landed on the card of the offline host, after Left
   from the online card moved to the other card and not to the rail. The options of
@@ -3866,3 +3935,148 @@ Results of the night of 2026-10-24 (owner, with the S22 logs read afterwards):
   Both are in Sprint 15 (roadmap).
 
 Owner items left: Wake-on-LAN with the PC asleep.
+
+## 18. Results: Sprint 13
+
+This section holds the results of the Sprint 13 device round, which ran on 2026-10-26: on
+the Samsung Galaxy S22 from about 10:33 to 12:27, and on the Google TV Streamer from 12:08
+to 12:14. The steps are those of [section 3.26](#326-sprint-13-checks). The round tested
+build `9af270c73` (the startup log reads `commit=9af270c7390a`). It found no regression of
+Sprint 13. Four items went to the backlog, see
+[roadmap, Backlog, not scheduled](../roadmap.md#backlog-not-scheduled), item (d).
+
+### Setup
+
+- Build: `app-debug.apk` built 2026-10-26 09:04 from `9af270c73` (SHA-256 starts
+  `a4b7c5f6a8459d9c`). The package is `io.github.magalz.borealis.debug`, `versionName`
+  `0.0.0-dev`, `versionCode` 1. The round did not build anything.
+- Old build on the devices: the Sprint 12 build of 2026-10-23 (section 17), replaced in
+  place.
+- Comparison build: at 12:25 the main build (`ded969bdb`, Sprint 12 code with Dependabot
+  #79) was installed on the S22 for the Alt+Tab check (finding 4). The Sprint 13 build was
+  installed again afterwards.
+- Devices:
+  - Samsung Galaxy S22 (SM-S901E), API 36, connected over USB.
+  - Google TV Streamer, API 34, connected over wireless ADB.
+- Host: the LuminalShine release was not recorded in this round. The app showed the protocol
+  version `7.1.431.-1`: the S22 log at 11:09:42 reads `host capabilities family=SUNSHINE
+  version=7.1.431.-1`.
+- Method:
+  - The owner operated the pads, the keyboard and the touch. The app's logcat was read
+    after each item.
+  - The raw logs were deleted after the round, because they held host addresses. The
+    results below are the owner's results and what the logs showed, with times.
+- Corrections to [section 3.26](#326-sprint-13-checks), found in the round:
+  - The touch mode defaults to the trackpad, because the setting is on by default. The
+    owner's first touch check ran in trackpad mode.
+  - The trackpad drag is a press and hold of about 650 ms without moving, then a move. It
+    is not a double tap and hold.
+
+### Results
+
+One row per item, with the step of [section 3.26](#326-sprint-13-checks) that it belongs
+to. The round's notes numbered the pad items differently. On the S22, items 3 to 7 are steps
+7 to 11. On the TV, item 8 is step 8 (the Ultimate 2), item 9 is step 7 (the Pro 3), and item
+10 covers steps 9 to 11 (the menu chord, the quit combo, the gamepad mouse and both pads).
+
+| Step | Device | Result | Evidence and notes |
+| --- | --- | --- | --- |
+| 1 Update in place | S22 | pass | Installed in place at 10:33. The Library opened. The startup log reads `commit=9af270c7390a`. |
+| 1 Update in place | TV | pass | Installed in place at 10:33 (round notes). Launched at 12:08:40 with the `LEANBACK_LAUNCHER` intent. The startup log reads `commit=9af270c7390a`, SDK 34. |
+| 2 Touch, absolute (direct) | S22 | pass, backlog 2 | Direct touch set in Settings was used by a new stream (clean run, 12:20, finding 1). Long press and move select text on the PC instead of dragging. Tap, long press and two-finger scroll are not recorded separately. |
+| 3 Touch, trackpad (default) | S22 | pass, backlog 1 | Tap, move and two-finger scroll work. The drag is a press and hold of about 0.65 s, then a move. Pointer speed is not recorded. |
+| 4 On-screen controller | S22 | pass | Owner: all buttons, the D-pad, the sticks, the triggers, the bumpers, Start, Select, Guide and the 3 s hold work. No app exception in the log. |
+| 5 On-screen controller edit | S22 | pass | Owner: the layout edit was kept, and the opacity changed the look. |
+| 6 Keyboard and mouse | S22 | pass, backlog 3 | Owner: keyboard and mouse work. The first Tab of Alt+Tab is lost (finding 4). |
+| 7 8BitDo Pro 3 (Switch mode) | S22 | pass | Owner: "finalizado", and "funcionou em todos os modos" for the shared items. Buttons, sticks, triggers and D-pad by the owner. Rumble and motion were not reported separately for the Pro 3: the rumble lines in the S22 log are for controller 0, the Ultimate 2 at that time. Log: "Nintendo Switch Pro Controller" counted, "Enumerated 1 gamepads", stream launched at 11:09:46, no input error or exception. |
+| 7 8BitDo Pro 3 (Switch mode) | TV | pass | Owner: passed (round item 9, the Pro 3 through the receiver in Switch mode). Log: the Pro 3 was assigned controller 1 at 12:13:04. |
+| 8 8BitDo Ultimate 2 | S22 | pass | Owner: "flawless" in the four modes. Four connects, each assigned controller 0 and released on removal. Rumble reached the pad. No exception. |
+| 8 8BitDo Ultimate 2 | TV | pass | Owner: passed (round item 8, the Ultimate 2 through the receiver in XInput, through the USB driver). The USB driver counted the receiver and assigned controller 0 at 12:12:20. |
+| 9 Gamepad mouse | S22 | pass | Owner: "funcionou os dois", covering the pointer speed, the RB precision and the right-stick scroll, and both pads in mouse mode at once. A pad that joins while it is on joins silently. |
+| 9 Gamepad mouse | TV | pass | Owner: passed (round item 10). |
+| 10 Menu chord and quit combo | S22 | pass | Owner: work in every mode. |
+| 10 Menu chord and quit combo | TV | pass | Owner: passed (round item 10: menu chord, quit combo, gamepad mouse and both pads together on the TV). |
+| 11 Two pads at once | S22 | pass | Ultimate 2 took controller 0 and Pro 3 took controller 1. Each number was released on its disconnect, and the other pad kept working (owner: "perfeitamente"). Rumble reached controller 0. |
+| 11 Two pads at once | TV | pass, unplug not run | Both pads together on the TV: pass (owner, round item 10). The unplug of one pad as a separate step was not run. The log shows the USB pad removed at 12:13:51, after the stream ended at 12:13:45: a device I/O error, a rumble transfer failure, and controller 0 released. This is the receiver going away (observation 1). |
+| 12 Connect and disconnect | S22 | pass | The Ultimate 2 connected four times during the stream (input devices 27 to 30). Controller 0 was assigned and released each time, with "Controller number 0 is now available" after each disconnect. In round item 7 the owner turned a pad off and on again during the stream: pass (owner). |
+| 12 Connect and disconnect | TV | owner check | The receiver left at 12:13:51, after the stream had ended at 12:13:45 (observation 1). The reconnect is not recorded. |
+| 13 Logs: exceptions | S22 | pass | No exception from `com.limelight.binding.input`, and no `FATAL` line. The app process restarted between items (deviation 2). |
+| 13 Logs: exceptions | TV | pass | No exception. |
+| 14 End: TV asleep | TV | pass | The TV returned home and was put to sleep. |
+| 14 End: S22 | S22 | not run | The Sprint 13 build was installed again at 12:27, after the Alt+Tab comparison. The app was left on the Library screen. The step's Quit was not run. |
+
+### Findings
+
+#### 1. Touch setting: a mistake in the test, not a defect
+
+- The first report was that the touch setting did not reach the stream. The stored value
+  read at 11:08 was `true` (trackpad), which matched the owner's last choice in Settings.
+- The owner's report came from a mistake in the test: another option had been changed.
+- The clean run at 12:20 set Touch to Direct in Settings and left it there. The stored
+  `checkbox_touchscreen_trackpad` was `false`, and the new stream started in direct touch.
+  This is not a defect.
+
+#### 2. Backlog 1: the trackpad drag is a press and hold (S22)
+
+- Device: S22, touch in trackpad mode (the default).
+- What happens: a drag starts when the finger stays still for about 650 ms
+  (`DRAG_TIME_THRESHOLD` in `RelativeTouchContext.kt`), and then moves. Tap, move and
+  two-finger scroll work.
+- The owner expected the usual trackpad gesture, a double tap and hold. This is filed as
+  a backlog item, not as a bug.
+
+#### 3. Backlog 2: direct touch does not drag like a phone (S22)
+
+- Device: S22, touch in direct mode, set in Settings.
+- What happens: a long press and a move select text on the PC instead of dragging, as they
+  do on a phone.
+- The owner found this hard to reproduce on a desktop. It is filed as "full mobile
+  behaviour".
+- A choice made in the stream menu lasts for that session only. A new stream returns to the
+  trackpad mode, unless Settings was changed (see finding 1).
+
+#### 4. Backlog 3: the first Tab of Alt+Tab is lost (S22)
+
+- Device: S22, keyboard, in a stream.
+- What happens: with Alt held, the first Tab is lost, and Windows opens its Alt menu. Tabs
+  pressed later, with Alt still held, work. The WindowManager log shows no system window
+  taking focus during the streams.
+- Comparison, 12:25: the main build (`ded969bdb`) showed the same problem on the S22. The
+  problem is therefore not from Sprint 13. The Sprint 13 build was installed again after
+  the check.
+
+#### 5. Backlog 4: Home held on the Ultimate 2 acts as Win+Tab (S22)
+
+- Device: S22, 8BitDo Ultimate 2, with or without the gamepad mouse.
+- What happens: holding Home makes the PC act as if Win+Tab was pressed. The app sends the
+  Guide button for as long as the pad's Mode or Home button is held (`GuideChord`). Nothing
+  in the input code maps it to Win+Tab.
+- Probably Windows' own long press of the Xbox button. To verify on the host.
+
+### Deviations
+
+1. The S22 stream ended at 12:07:05. The log reads "Control stream received unexpected
+   disconnect event", then "Connection terminated: -1". It came right after two Back presses
+   and taps in the menu. It is not recorded whether it was a Quit. The host closed the
+   session.
+2. The S22 app process restarted between 11:10 and 11:55 (process 16603, then 849). The logs
+   show no `FATAL` or crash line. The cause was not recorded.
+
+### Observations
+
+1. TV, at 12:13:51, six seconds after the stream ended: "Detected device I/O error" and
+   "Rumble transfer failed: -1", then "Removed controller: 0" and "Controller number 0 is now
+   available". The USB receiver went away or changed identity. The pad stopped and released
+   its number. No exception.
+2. With both pads off, the Touch row came back in the stream menu. The row is shown only
+   without a pad, which is expected.
+3. The S22 log still reads "Using Android O+ native mouse capture". This text is already in
+   the Sprint 13 backlog, item (b).
+4. S22 rumble on the Ultimate 2: "Rumble on gamepad 0: 0000 7f00", then "0000 0000".
+
+### Owner items and open points
+
+- Not run: the unplug of one pad on the TV as a separate step (step 11), and a reconnect of
+  the receiver on the TV (step 12).
+- Not recorded: the trackpad pointer speed (step 3). The Quit of the S22 at its end (step 14)
+  was not run.

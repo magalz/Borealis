@@ -3958,7 +3958,9 @@ Sprint 13. Four items went to the backlog, see
 - Devices:
   - Samsung Galaxy S22 (SM-S901E), API 36, connected over USB.
   - Google TV Streamer, API 34, connected over wireless ADB.
-- Host: the host version is not recorded in the round's notes. TODO(verify).
+- Host: the LuminalShine release was not recorded in this round. The app showed the protocol
+  version `7.1.431.-1`: the S22 log at 11:09:42 reads `host capabilities family=SUNSHINE
+  version=7.1.431.-1`.
 - Method:
   - The owner operated the pads, the keyboard and the touch. The app's logcat was read
     after each item.
@@ -3973,8 +3975,9 @@ Sprint 13. Four items went to the backlog, see
 ### Results
 
 One row per item, with the step of [section 3.26](#326-sprint-13-checks) that it belongs
-to. The round's notes numbered the pad items differently (3 to 7 on the S22, 8 to 10 on the
-TV). The rows here use the steps of section 3.26, matched by content.
+to. The round's notes numbered the pad items differently. On the S22, items 3 to 7 are steps
+7 to 11. On the TV, item 8 is step 8 (the Ultimate 2), item 9 is step 7 (the Pro 3), and item
+10 covers steps 9 to 11 (the menu chord, the quit combo, the gamepad mouse and both pads).
 
 | Step | Device | Result | Evidence and notes |
 | --- | --- | --- | --- |
@@ -3985,22 +3988,22 @@ TV). The rows here use the steps of section 3.26, matched by content.
 | 4 On-screen controller | S22 | pass | Owner: all buttons, the D-pad, the sticks, the triggers, the bumpers, Start, Select, Guide and the 3 s hold work. No app exception in the log. |
 | 5 On-screen controller edit | S22 | pass | Owner: the layout edit was kept, and the opacity changed the look. |
 | 6 Keyboard and mouse | S22 | pass, backlog 3 | Owner: keyboard and mouse work. The first Tab of Alt+Tab is lost (finding 4). |
-| 7 8BitDo Pro 3 (Switch mode) | S22 | pass | Owner: finished. Log: "Nintendo Switch Pro Controller" counted, "Enumerated 1 gamepads", stream launched at 11:09:46, no input error or exception. Details of buttons, rumble and motion: TODO(verify). |
-| 7 8BitDo Pro 3 (Switch mode) | TV | pass | Owner: passed (round items 8 to 10, see Open points). Log: the Pro 3 was assigned controller 1 at 12:13:04. |
+| 7 8BitDo Pro 3 (Switch mode) | S22 | pass | Owner: "finalizado", and "funcionou em todos os modos" for the shared items. Buttons, sticks, triggers and D-pad by the owner. Rumble and motion were not reported separately for the Pro 3: the rumble lines in the S22 log are for controller 0, the Ultimate 2 at that time. Log: "Nintendo Switch Pro Controller" counted, "Enumerated 1 gamepads", stream launched at 11:09:46, no input error or exception. |
+| 7 8BitDo Pro 3 (Switch mode) | TV | pass | Owner: passed (round item 9, the Pro 3 through the receiver in Switch mode). Log: the Pro 3 was assigned controller 1 at 12:13:04. |
 | 8 8BitDo Ultimate 2 | S22 | pass | Owner: "flawless" in the four modes. Four connects, each assigned controller 0 and released on removal. Rumble reached the pad. No exception. |
-| 8 8BitDo Ultimate 2 | TV | pass | Owner: passed (round items 8 to 10). The USB driver counted the receiver and assigned controller 0 at 12:12:20. |
-| 9 Gamepad mouse | S22 | pass | Works on both pads, and with both pads in mouse mode at once. A pad that joins while it is on joins (owner). Pointer speed and right-stick scroll: TODO(verify). |
-| 9 Gamepad mouse | TV | owner check | Not recorded per step. The owner said round items 8 to 10 all passed (see Open points). |
+| 8 8BitDo Ultimate 2 | TV | pass | Owner: passed (round item 8, the Ultimate 2 through the receiver in XInput, through the USB driver). The USB driver counted the receiver and assigned controller 0 at 12:12:20. |
+| 9 Gamepad mouse | S22 | pass | Owner: "funcionou os dois", covering the pointer speed, the RB precision and the right-stick scroll, and both pads in mouse mode at once. A pad that joins while it is on joins silently. |
+| 9 Gamepad mouse | TV | pass | Owner: passed (round item 10). |
 | 10 Menu chord and quit combo | S22 | pass | Owner: work in every mode. |
-| 10 Menu chord and quit combo | TV | owner check | Not recorded per step (see step 9, TV). |
+| 10 Menu chord and quit combo | TV | pass | Owner: passed (round item 10: menu chord, quit combo, gamepad mouse and both pads together on the TV). |
 | 11 Two pads at once | S22 | pass | Ultimate 2 took controller 0 and Pro 3 took controller 1. Each number was released on its disconnect, and the other pad kept working (owner: "perfeitamente"). Rumble reached controller 0. |
-| 11 Two pads at once | TV | owner check | Controller 0 (receiver) and controller 1 (Pro 3) were both connected at 12:13:04. The unplug of one pad during the stream is not recorded. |
-| 12 Connect and disconnect | S22 | pass | Four Ultimate 2 connects. Each disconnect logged "Controller number 0 is now available". A connect during a stream: TODO(verify). |
+| 11 Two pads at once | TV | pass, unplug not run | Both pads together on the TV: pass (owner, round item 10). The unplug of one pad as a separate step was not run. The log shows the USB pad removed at 12:13:51, after the stream ended at 12:13:45: a device I/O error, a rumble transfer failure, and controller 0 released. This is the receiver going away (observation 1). |
+| 12 Connect and disconnect | S22 | pass | The Ultimate 2 connected four times during the stream (input devices 27 to 30). Controller 0 was assigned and released each time, with "Controller number 0 is now available" after each disconnect. In round item 7 the owner turned a pad off and on again during the stream: pass (owner). |
 | 12 Connect and disconnect | TV | owner check | The receiver left at 12:13:51, after the stream had ended at 12:13:45 (observation 1). The reconnect is not recorded. |
 | 13 Logs: exceptions | S22 | pass | No exception from `com.limelight.binding.input`, and no `FATAL` line. The app process restarted between items (deviation 2). |
 | 13 Logs: exceptions | TV | pass | No exception. |
 | 14 End: TV asleep | TV | pass | The TV returned home and was put to sleep. |
-| 14 End: S22 | S22 | owner check | The end state of the S22 is not recorded. TODO(verify). |
+| 14 End: S22 | S22 | not run | The Sprint 13 build was installed again at 12:27, after the Alt+Tab comparison. The app was left on the Library screen. The step's Quit was not run. |
 
 ### Findings
 
@@ -4054,9 +4057,10 @@ TV). The rows here use the steps of section 3.26, matched by content.
 
 1. The S22 stream ended at 12:07:05. The log reads "Control stream received unexpected
    disconnect event", then "Connection terminated: -1". It came right after two Back presses
-   and taps in the menu. Whether that was Quit is not recorded. TODO(verify).
-2. The S22 app process restarted between items (process 16603, then 849). The logs show no
-   `FATAL` line. The cause is not recorded. TODO(verify).
+   and taps in the menu. It is not recorded whether it was a Quit. The host closed the
+   session.
+2. The S22 app process restarted between 11:10 and 11:55 (process 16603, then 849). The logs
+   show no `FATAL` or crash line. The cause was not recorded.
 
 ### Observations
 
@@ -4072,12 +4076,7 @@ TV). The rows here use the steps of section 3.26, matched by content.
 
 ### Owner items and open points
 
-- The owner's details of the Pro 3's buttons, rumble and motion were asked for, but are not
-  in the notes. TODO(verify).
-- The round's notes numbered the TV items 8 to 10 and the owner said they all passed. The
-  steps 7 to 10 on the TV are matched by content. Per-step results for the gamepad mouse and
-  the menu chord on the TV are not recorded. TODO(verify).
-- Not recorded: pointer speed and right-stick scroll (step 3 and step 9), the unplug of one
-  pad on the TV (step 11), a connect during a stream on the S22 (step 12), and the end state
-  of the S22 (step 14). TODO(verify).
-- The host version is not recorded. TODO(verify).
+- Not run: the unplug of one pad on the TV as a separate step (step 11), and a reconnect of
+  the receiver on the TV (step 12).
+- Not recorded: the trackpad pointer speed (step 3). The Quit of the S22 at its end (step 14)
+  was not run.

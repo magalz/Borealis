@@ -1,413 +1,528 @@
-package com.limelight.nvstream.jni;
+package com.limelight.nvstream.jni
 
-import com.limelight.nvstream.NvConnectionListener;
-import com.limelight.nvstream.av.audio.AudioRenderer;
-import com.limelight.nvstream.av.video.VideoDecoderRenderer;
+import com.limelight.nvstream.NvConnectionListener
+import com.limelight.nvstream.av.audio.AudioRenderer
+import com.limelight.nvstream.av.video.VideoDecoderRenderer
+import io.github.magalz.borealis.logging.NativeLogForwarder
 
-public class MoonBridge {
+/**
+ * The bridge to the native `moonlight-core` library. The C code finds every native by the JNI name
+ * `Java_com_limelight_nvstream_jni_MoonBridge_<name>` and every callback by a `GetStaticMethodID`
+ * lookup with a name and a descriptor, so the name, the package and the JVM signature of every
+ * member stay as they were in Java; `MoonBridgeJniContractTest` reads the C sources and checks
+ * them.
+ *
+ * Every member is `@JvmStatic`, `@JvmField` or `const`: a Robolectric shadow replaces the static
+ * initializer of this class, and an instance member (or a companion) would dereference the
+ * `INSTANCE` that the initializer never set.
+ */
+// Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+@Suppress("TooManyFunctions")
+object MoonBridge {
     /* See documentation in Limelight.h for information about these functions and constants */
 
-    public static final AudioConfiguration AUDIO_CONFIGURATION_STEREO = new AudioConfiguration(2, 0x3);
-    public static final AudioConfiguration AUDIO_CONFIGURATION_51_SURROUND = new AudioConfiguration(6, 0x3F);
-    public static final AudioConfiguration AUDIO_CONFIGURATION_71_SURROUND = new AudioConfiguration(8, 0x63F);
+    @JvmField
+    val AUDIO_CONFIGURATION_STEREO = AudioConfiguration(channelCount = 2, channelMask = 0x3)
 
-    public static final int VIDEO_FORMAT_H264 = 0x0001;
-    public static final int VIDEO_FORMAT_H265 = 0x0100;
-    public static final int VIDEO_FORMAT_H265_MAIN10 = 0x0200;
-    public static final int VIDEO_FORMAT_AV1_MAIN8 = 0x1000;
-    public static final int VIDEO_FORMAT_AV1_MAIN10 = 0x2000;
+    @JvmField
+    val AUDIO_CONFIGURATION_51_SURROUND = AudioConfiguration(channelCount = 6, channelMask = 0x3F)
 
-    public static final int VIDEO_FORMAT_MASK_H264 = 0x000F;
-    public static final int VIDEO_FORMAT_MASK_H265 = 0x0F00;
-    public static final int VIDEO_FORMAT_MASK_AV1 = 0xF000;
-    public static final int VIDEO_FORMAT_MASK_10BIT = 0x2200;
+    @JvmField
+    val AUDIO_CONFIGURATION_71_SURROUND = AudioConfiguration(channelCount = 8, channelMask = 0x63F)
 
-    public static final int BUFFER_TYPE_PICDATA = 0;
-    public static final int BUFFER_TYPE_SPS = 1;
-    public static final int BUFFER_TYPE_PPS = 2;
-    public static final int BUFFER_TYPE_VPS = 3;
+    const val VIDEO_FORMAT_H264 = 0x0001
+    const val VIDEO_FORMAT_H265 = 0x0100
+    const val VIDEO_FORMAT_H265_MAIN10 = 0x0200
+    const val VIDEO_FORMAT_AV1_MAIN8 = 0x1000
+    const val VIDEO_FORMAT_AV1_MAIN10 = 0x2000
 
-    public static final int FRAME_TYPE_PFRAME = 0;
-    public static final int FRAME_TYPE_IDR = 1;
+    const val VIDEO_FORMAT_MASK_H264 = 0x000F
+    const val VIDEO_FORMAT_MASK_H265 = 0x0F00
+    const val VIDEO_FORMAT_MASK_AV1 = 0xF000
+    const val VIDEO_FORMAT_MASK_10BIT = 0x2200
 
-    public static final int COLORSPACE_REC_601 = 0;
-    public static final int COLORSPACE_REC_709 = 1;
-    public static final int COLORSPACE_REC_2020 = 2;
+    const val BUFFER_TYPE_PICDATA = 0
+    const val BUFFER_TYPE_SPS = 1
+    const val BUFFER_TYPE_PPS = 2
+    const val BUFFER_TYPE_VPS = 3
 
-    public static final int COLOR_RANGE_LIMITED = 0;
-    public static final int COLOR_RANGE_FULL = 1;
+    const val FRAME_TYPE_PFRAME = 0
+    const val FRAME_TYPE_IDR = 1
 
-    public static final int CAPABILITY_DIRECT_SUBMIT = 1;
-    public static final int CAPABILITY_REFERENCE_FRAME_INVALIDATION_AVC = 2;
-    public static final int CAPABILITY_REFERENCE_FRAME_INVALIDATION_HEVC = 4;
-    public static final int CAPABILITY_REFERENCE_FRAME_INVALIDATION_AV1 = 0x40;
+    const val COLORSPACE_REC_601 = 0
+    const val COLORSPACE_REC_709 = 1
+    const val COLORSPACE_REC_2020 = 2
 
-    public static final int DR_OK = 0;
-    public static final int DR_NEED_IDR = -1;
+    const val COLOR_RANGE_LIMITED = 0
+    const val COLOR_RANGE_FULL = 1
 
-    public static final int CONN_STATUS_OKAY = 0;
-    public static final int CONN_STATUS_POOR = 1;
+    const val CAPABILITY_DIRECT_SUBMIT = 1
+    const val CAPABILITY_REFERENCE_FRAME_INVALIDATION_AVC = 2
+    const val CAPABILITY_REFERENCE_FRAME_INVALIDATION_HEVC = 4
+    const val CAPABILITY_REFERENCE_FRAME_INVALIDATION_AV1 = 0x40
 
-    public static final int ML_ERROR_GRACEFUL_TERMINATION = 0;
-    public static final int ML_ERROR_NO_VIDEO_TRAFFIC = -100;
-    public static final int ML_ERROR_NO_VIDEO_FRAME = -101;
-    public static final int ML_ERROR_UNEXPECTED_EARLY_TERMINATION = -102;
-    public static final int ML_ERROR_PROTECTED_CONTENT = -103;
-    public static final int ML_ERROR_FRAME_CONVERSION = -104;
+    const val DR_OK = 0
+    const val DR_NEED_IDR = -1
 
-    public static final int ML_PORT_FLAG_TCP_47984 = 0x0001;
-    public static final int ML_PORT_FLAG_TCP_47989 = 0x0002;
+    const val CONN_STATUS_OKAY = 0
+    const val CONN_STATUS_POOR = 1
 
-    public static final int ML_TEST_RESULT_INCONCLUSIVE = 0xFFFFFFFF;
+    const val ML_ERROR_GRACEFUL_TERMINATION = 0
+    const val ML_ERROR_NO_VIDEO_TRAFFIC = -100
+    const val ML_ERROR_NO_VIDEO_FRAME = -101
+    const val ML_ERROR_UNEXPECTED_EARLY_TERMINATION = -102
+    const val ML_ERROR_PROTECTED_CONTENT = -103
+    const val ML_ERROR_FRAME_CONVERSION = -104
 
-    public static final byte SS_KBE_FLAG_NON_NORMALIZED = 0x01;
+    const val ML_PORT_FLAG_TCP_47984 = 0x0001
+    const val ML_PORT_FLAG_TCP_47989 = 0x0002
 
-    public static final int LI_ERR_UNSUPPORTED = -5501;
+    const val ML_TEST_RESULT_INCONCLUSIVE = 0xFFFFFFFF.toInt()
 
-    public static final byte LI_TOUCH_EVENT_HOVER       = 0x00;
-    public static final byte LI_TOUCH_EVENT_DOWN        = 0x01;
-    public static final byte LI_TOUCH_EVENT_UP          = 0x02;
-    public static final byte LI_TOUCH_EVENT_MOVE        = 0x03;
-    public static final byte LI_TOUCH_EVENT_CANCEL      = 0x04;
-    public static final byte LI_TOUCH_EVENT_BUTTON_ONLY = 0x05;
-    public static final byte LI_TOUCH_EVENT_HOVER_LEAVE = 0x06;
-    public static final byte LI_TOUCH_EVENT_CANCEL_ALL  = 0x07;
+    const val SS_KBE_FLAG_NON_NORMALIZED: Byte = 0x01
 
-    public static final byte LI_TOOL_TYPE_UNKNOWN = 0x00;
-    public static final byte LI_TOOL_TYPE_PEN = 0x01;
-    public static final byte LI_TOOL_TYPE_ERASER = 0x02;
+    const val LI_ERR_UNSUPPORTED = -5501
 
-    public static final byte LI_PEN_BUTTON_PRIMARY = 0x01;
-    public static final byte LI_PEN_BUTTON_SECONDARY = 0x02;
+    const val LI_TOUCH_EVENT_HOVER: Byte = 0x00
+    const val LI_TOUCH_EVENT_DOWN: Byte = 0x01
+    const val LI_TOUCH_EVENT_UP: Byte = 0x02
+    const val LI_TOUCH_EVENT_MOVE: Byte = 0x03
+    const val LI_TOUCH_EVENT_CANCEL: Byte = 0x04
+    const val LI_TOUCH_EVENT_BUTTON_ONLY: Byte = 0x05
+    const val LI_TOUCH_EVENT_HOVER_LEAVE: Byte = 0x06
+    const val LI_TOUCH_EVENT_CANCEL_ALL: Byte = 0x07
 
-    public static final byte LI_TILT_UNKNOWN = (byte)0xFF;
-    public static final short LI_ROT_UNKNOWN = (short)0xFFFF;
+    const val LI_TOOL_TYPE_UNKNOWN: Byte = 0x00
+    const val LI_TOOL_TYPE_PEN: Byte = 0x01
+    const val LI_TOOL_TYPE_ERASER: Byte = 0x02
 
-    public static final byte LI_CTYPE_UNKNOWN  = 0x00;
-    public static final byte LI_CTYPE_XBOX     = 0x01;
-    public static final byte LI_CTYPE_PS       = 0x02;
-    public static final byte LI_CTYPE_NINTENDO = 0x03;
-    public static final byte LI_CTYPE_STEAM    = 0x04;
+    const val LI_PEN_BUTTON_PRIMARY: Byte = 0x01
+    const val LI_PEN_BUTTON_SECONDARY: Byte = 0x02
 
-    public static final short LI_CCAP_ANALOG_TRIGGERS = 0x01;
-    public static final short LI_CCAP_RUMBLE          = 0x02;
-    public static final short LI_CCAP_TRIGGER_RUMBLE  = 0x04;
-    public static final short LI_CCAP_TOUCHPAD        = 0x08;
-    public static final short LI_CCAP_ACCEL           = 0x10;
-    public static final short LI_CCAP_GYRO            = 0x20;
-    public static final short LI_CCAP_BATTERY_STATE   = 0x40;
-    public static final short LI_CCAP_RGB_LED         = 0x80;
+    const val LI_TILT_UNKNOWN: Byte = 0xFF.toByte()
+    const val LI_ROT_UNKNOWN: Short = 0xFFFF.toShort()
 
-    public static final byte LI_MOTION_TYPE_ACCEL = 0x01;
-    public static final byte LI_MOTION_TYPE_GYRO  = 0x02;
+    const val LI_CTYPE_UNKNOWN: Byte = 0x00
+    const val LI_CTYPE_XBOX: Byte = 0x01
+    const val LI_CTYPE_PS: Byte = 0x02
+    const val LI_CTYPE_NINTENDO: Byte = 0x03
+    const val LI_CTYPE_STEAM: Byte = 0x04
 
-    public static final byte LI_BATTERY_STATE_UNKNOWN      = 0x00;
-    public static final byte LI_BATTERY_STATE_NOT_PRESENT  = 0x01;
-    public static final byte LI_BATTERY_STATE_DISCHARGING  = 0x02;
-    public static final byte LI_BATTERY_STATE_CHARGING     = 0x03;
-    public static final byte LI_BATTERY_STATE_NOT_CHARGING = 0x04; // Connected to power but not charging
-    public static final byte LI_BATTERY_STATE_FULL         = 0x05;
+    const val LI_CCAP_ANALOG_TRIGGERS: Short = 0x01
+    const val LI_CCAP_RUMBLE: Short = 0x02
+    const val LI_CCAP_TRIGGER_RUMBLE: Short = 0x04
+    const val LI_CCAP_TOUCHPAD: Short = 0x08
+    const val LI_CCAP_ACCEL: Short = 0x10
+    const val LI_CCAP_GYRO: Short = 0x20
+    const val LI_CCAP_BATTERY_STATE: Short = 0x40
+    const val LI_CCAP_RGB_LED: Short = 0x80
 
-    public static final byte LI_BATTERY_PERCENTAGE_UNKNOWN = (byte)0xFF;
+    const val LI_MOTION_TYPE_ACCEL: Byte = 0x01
+    const val LI_MOTION_TYPE_GYRO: Byte = 0x02
 
-    private static AudioRenderer audioRenderer;
-    private static VideoDecoderRenderer videoRenderer;
-    private static NvConnectionListener connectionListener;
+    const val LI_BATTERY_STATE_UNKNOWN: Byte = 0x00
+    const val LI_BATTERY_STATE_NOT_PRESENT: Byte = 0x01
+    const val LI_BATTERY_STATE_DISCHARGING: Byte = 0x02
+    const val LI_BATTERY_STATE_CHARGING: Byte = 0x03
+    const val LI_BATTERY_STATE_NOT_CHARGING: Byte = 0x04 // Connected to power but not charging
+    const val LI_BATTERY_STATE_FULL: Byte = 0x05
 
-    static {
-        System.loadLibrary("moonlight-core");
-        init();
+    const val LI_BATTERY_PERCENTAGE_UNKNOWN: Byte = 0xFF.toByte()
+
+    // The bit layout of the packed audio configuration and of the slice count (Limelight.h)
+    private const val MAGIC_BYTE = 0xCA
+    private const val BYTE_MASK = 0xFF
+    private const val SHORT_MASK = 0xFFFF
+    private const val BYTE_BITS = 8
+    private const val SHORT_BITS = 16
+    private const val SLICES_SHIFT = 24
+
+    private var audioRenderer: AudioRenderer? = null
+    private var videoRenderer: VideoDecoderRenderer? = null
+    private var connectionListener: NvConnectionListener? = null
+
+    init {
+        System.loadLibrary("moonlight-core")
+        init()
     }
 
-    public static int CAPABILITY_SLICES_PER_FRAME(byte slices) {
-        return slices << 24;
-    }
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    @Suppress("FunctionNaming")
+    @JvmStatic
+    fun CAPABILITY_SLICES_PER_FRAME(slices: Byte): Int = slices.toInt() shl SLICES_SHIFT
 
-    public static class AudioConfiguration {
-        public final int channelCount;
-        public final int channelMask;
+    class AudioConfiguration {
+        @JvmField val channelCount: Int
 
-        public AudioConfiguration(int channelCount, int channelMask) {
-            this.channelCount = channelCount;
-            this.channelMask = channelMask;
+        @JvmField val channelMask: Int
+
+        constructor(channelCount: Int, channelMask: Int) {
+            this.channelCount = channelCount
+            this.channelMask = channelMask
         }
 
         // Creates an AudioConfiguration from the integer value returned by moonlight-common-c
         // See CHANNEL_COUNT_FROM_AUDIO_CONFIGURATION() and CHANNEL_MASK_FROM_AUDIO_CONFIGURATION()
-        // in Limelight.h
-        private AudioConfiguration(int audioConfiguration) {
+        // in Limelight.h. It is internal, not private (the object calls it), so it is public in the
+        // class file.
+        internal constructor(audioConfiguration: Int) {
             // Check the magic byte before decoding to make sure we got something that's actually
             // a MAKE_AUDIO_CONFIGURATION()-based value and not something else like an older version
             // hardcoded AUDIO_CONFIGURATION value from an earlier version of moonlight-common-c.
-            if ((audioConfiguration & 0xFF) != 0xCA) {
-                throw new IllegalArgumentException("Audio configuration has invalid magic byte!");
+            require((audioConfiguration and BYTE_MASK) == MAGIC_BYTE) {
+                "Audio configuration has invalid magic byte!"
             }
 
-            this.channelCount = (audioConfiguration >> 8) & 0xFF;
-            this.channelMask = (audioConfiguration >> 16) & 0xFFFF;
+            channelCount = (audioConfiguration shr BYTE_BITS) and BYTE_MASK
+            channelMask = (audioConfiguration shr SHORT_BITS) and SHORT_MASK
         }
 
         // See SURROUNDAUDIOINFO_FROM_AUDIO_CONFIGURATION() in Limelight.h
-        public int getSurroundAudioInfo() {
-            return channelMask << 16 | channelCount;
-        }
+        val surroundAudioInfo: Int
+            get() = (channelMask shl SHORT_BITS) or channelCount
 
-        @Override
-        public boolean equals(Object obj) {
-            if (obj instanceof AudioConfiguration) {
-                AudioConfiguration that = (AudioConfiguration)obj;
-                return this.toInt() == that.toInt();
+        override fun equals(other: Any?): Boolean {
+            if (other is AudioConfiguration) {
+                return this.toInt() == other.toInt()
             }
 
-            return false;
+            return false
         }
 
-        @Override
-        public int hashCode() {
-            return toInt();
-        }
+        override fun hashCode(): Int = toInt()
 
         // Returns the integer value expected by moonlight-common-c
         // See MAKE_AUDIO_CONFIGURATION() in Limelight.h
-        public int toInt() {
-            return ((channelMask) << 16) | (channelCount << 8) | 0xCA;
-        }
+        fun toInt(): Int =
+            (channelMask shl SHORT_BITS) or (channelCount shl BYTE_BITS) or MAGIC_BYTE
     }
 
-    public static int bridgeDrSetup(int videoFormat, int width, int height, int redrawRate) {
-        if (videoRenderer != null) {
-            return videoRenderer.setup(videoFormat, width, height, redrawRate);
-        }
-        else {
-            return -1;
-        }
+    @JvmStatic
+    fun bridgeDrSetup(videoFormat: Int, width: Int, height: Int, redrawRate: Int): Int =
+        videoRenderer?.setup(videoFormat, width, height, redrawRate) ?: -1
+
+    @JvmStatic
+    fun bridgeDrStart() {
+        videoRenderer?.start()
     }
 
-    public static void bridgeDrStart() {
-        if (videoRenderer != null) {
-            videoRenderer.start();
-        }
+    @JvmStatic
+    fun bridgeDrStop() {
+        videoRenderer?.stop()
     }
 
-    public static void bridgeDrStop() {
-        if (videoRenderer != null) {
-            videoRenderer.stop();
-        }
+    @JvmStatic
+    fun bridgeDrCleanup() {
+        videoRenderer?.cleanup()
     }
 
-    public static void bridgeDrCleanup() {
-        if (videoRenderer != null) {
-            videoRenderer.cleanup();
-        }
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    @Suppress("LongParameterList")
+    @JvmStatic
+    fun bridgeDrSubmitDecodeUnit(
+        decodeUnitData: ByteArray?,
+        decodeUnitLength: Int,
+        decodeUnitType: Int,
+        frameNumber: Int,
+        frameType: Int,
+        frameHostProcessingLatency: Char,
+        receiveTimeUs: Long,
+        enqueueTimeUs: Long,
+    ): Int =
+        videoRenderer?.submitDecodeUnit(
+            decodeUnitData,
+            decodeUnitLength,
+            decodeUnitType,
+            frameNumber,
+            frameType,
+            frameHostProcessingLatency,
+            receiveTimeUs,
+            enqueueTimeUs,
+        ) ?: DR_OK
+
+    @JvmStatic
+    fun bridgeArInit(audioConfiguration: Int, sampleRate: Int, samplesPerFrame: Int): Int =
+        audioRenderer?.setup(AudioConfiguration(audioConfiguration), sampleRate, samplesPerFrame)
+            ?: -1
+
+    @JvmStatic
+    fun bridgeArStart() {
+        audioRenderer?.start()
     }
 
-    public static int bridgeDrSubmitDecodeUnit(byte[] decodeUnitData, int decodeUnitLength, int decodeUnitType,
-                                               int frameNumber, int frameType, char frameHostProcessingLatency,
-                                               long receiveTimeUs, long enqueueTimeUs) {
-        if (videoRenderer != null) {
-            return videoRenderer.submitDecodeUnit(decodeUnitData, decodeUnitLength,
-                    decodeUnitType, frameNumber, frameType, frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs);
-        }
-        else {
-            return DR_OK;
-        }
+    @JvmStatic
+    fun bridgeArStop() {
+        audioRenderer?.stop()
     }
 
-    public static int bridgeArInit(int audioConfiguration, int sampleRate, int samplesPerFrame) {
-        if (audioRenderer != null) {
-            return audioRenderer.setup(new AudioConfiguration(audioConfiguration), sampleRate, samplesPerFrame);
-        }
-        else {
-            return -1;
-        }
+    @JvmStatic
+    fun bridgeArCleanup() {
+        audioRenderer?.cleanup()
     }
 
-    public static void bridgeArStart() {
-        if (audioRenderer != null) {
-            audioRenderer.start();
-        }
+    @JvmStatic
+    fun bridgeArPlaySample(pcmData: ShortArray?) {
+        audioRenderer?.playDecodedAudio(pcmData)
     }
 
-    public static void bridgeArStop() {
-        if (audioRenderer != null) {
-            audioRenderer.stop();
-        }
+    @JvmStatic
+    fun bridgeClStageStarting(stage: Int) {
+        connectionListener?.stageStarting(getStageName(stage))
     }
 
-    public static void bridgeArCleanup() {
-        if (audioRenderer != null) {
-            audioRenderer.cleanup();
-        }
+    @JvmStatic
+    fun bridgeClStageComplete(stage: Int) {
+        connectionListener?.stageComplete(getStageName(stage))
     }
 
-    public static void bridgeArPlaySample(short[] pcmData) {
-        if (audioRenderer != null) {
-            audioRenderer.playDecodedAudio(pcmData);
-        }
+    // The listener takes a non-null stage name, and the native lookup always answers one.
+    @JvmStatic
+    fun bridgeClStageFailed(stage: Int, errorCode: Int) {
+        connectionListener?.stageFailed(
+            checkNotNull(getStageName(stage)),
+            getPortFlagsFromStage(stage),
+            errorCode,
+        )
     }
 
-    public static void bridgeClStageStarting(int stage) {
-        if (connectionListener != null) {
-            connectionListener.stageStarting(getStageName(stage));
-        }
+    @JvmStatic
+    fun bridgeClConnectionStarted() {
+        connectionListener?.connectionStarted()
     }
 
-    public static void bridgeClStageComplete(int stage) {
-        if (connectionListener != null) {
-            connectionListener.stageComplete(getStageName(stage));
-        }
+    @JvmStatic
+    fun bridgeClConnectionTerminated(errorCode: Int) {
+        connectionListener?.connectionTerminated(errorCode)
     }
 
-    public static void bridgeClStageFailed(int stage, int errorCode) {
-        if (connectionListener != null) {
-            connectionListener.stageFailed(getStageName(stage), getPortFlagsFromStage(stage), errorCode);
-        }
+    @JvmStatic
+    fun bridgeClRumble(controllerNumber: Short, lowFreqMotor: Short, highFreqMotor: Short) {
+        connectionListener?.rumble(controllerNumber, lowFreqMotor, highFreqMotor)
     }
 
-    public static void bridgeClConnectionStarted() {
-        if (connectionListener != null) {
-            connectionListener.connectionStarted();
-        }
+    @JvmStatic
+    fun bridgeClConnectionStatusUpdate(connectionStatus: Int) {
+        connectionListener?.connectionStatusUpdate(connectionStatus)
     }
 
-    public static void bridgeClConnectionTerminated(int errorCode) {
-        if (connectionListener != null) {
-            connectionListener.connectionTerminated(errorCode);
-        }
+    @JvmStatic
+    fun bridgeClSetHdrMode(enabled: Boolean, hdrMetadata: ByteArray?) {
+        connectionListener?.setHdrMode(enabled, hdrMetadata)
     }
 
-    public static void bridgeClRumble(short controllerNumber, short lowFreqMotor, short highFreqMotor) {
-        if (connectionListener != null) {
-            connectionListener.rumble(controllerNumber, lowFreqMotor, highFreqMotor);
-        }
+    @JvmStatic
+    fun bridgeClRumbleTriggers(controllerNumber: Short, leftTrigger: Short, rightTrigger: Short) {
+        connectionListener?.rumbleTriggers(controllerNumber, leftTrigger, rightTrigger)
     }
 
-    public static void bridgeClConnectionStatusUpdate(int connectionStatus) {
-        if (connectionListener != null) {
-            connectionListener.connectionStatusUpdate(connectionStatus);
-        }
+    @JvmStatic
+    fun bridgeClSetMotionEventState(controllerNumber: Short, eventType: Byte, sampleRateHz: Short) {
+        connectionListener?.setMotionEventState(controllerNumber, eventType, sampleRateHz)
     }
 
-    public static void bridgeClSetHdrMode(boolean enabled, byte[] hdrMetadata) {
-        if (connectionListener != null) {
-            connectionListener.setHdrMode(enabled, hdrMetadata);
-        }
+    @JvmStatic
+    fun bridgeClSetControllerLED(controllerNumber: Short, r: Byte, g: Byte, b: Byte) {
+        connectionListener?.setControllerLED(controllerNumber, r, g, b)
     }
 
-    public static void bridgeClRumbleTriggers(short controllerNumber, short leftTrigger, short rightTrigger) {
-        if (connectionListener != null) {
-            connectionListener.rumbleTriggers(controllerNumber, leftTrigger, rightTrigger);
-        }
+    // BOREALIS: called from borealis_log.c for each moonlight-common-c log line; false makes the
+    // native side use logcat. The native side never passes null; a null throws, and the native side
+    // clears the exception and falls back to logcat too.
+    @JvmStatic
+    fun bridgeClLogMessage(message: ByteArray?): Boolean =
+        NativeLogForwarder.forward(checkNotNull(message))
+
+    @JvmStatic
+    fun setupBridge(
+        videoRenderer: VideoDecoderRenderer?,
+        audioRenderer: AudioRenderer?,
+        connectionListener: NvConnectionListener?,
+    ) {
+        MoonBridge.videoRenderer = videoRenderer
+        MoonBridge.audioRenderer = audioRenderer
+        MoonBridge.connectionListener = connectionListener
     }
 
-    public static void bridgeClSetMotionEventState(short controllerNumber, byte eventType, short sampleRateHz) {
-        if (connectionListener != null) {
-            connectionListener.setMotionEventState(controllerNumber, eventType, sampleRateHz);
-        }
+    @JvmStatic
+    fun cleanupBridge() {
+        MoonBridge.videoRenderer = null
+        MoonBridge.audioRenderer = null
+        MoonBridge.connectionListener = null
     }
 
-    public static void bridgeClSetControllerLED(short controllerNumber, byte r, byte g, byte b) {
-        if (connectionListener != null) {
-            connectionListener.setControllerLED(controllerNumber, r, g, b);
-        }
-    }
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    @Suppress("LongParameterList")
+    @JvmStatic
+    external fun startConnection(
+        address: String?,
+        appVersion: String?,
+        gfeVersion: String?,
+        rtspSessionUrl: String?,
+        serverCodecModeSupport: Int,
+        width: Int,
+        height: Int,
+        fps: Int,
+        bitrate: Int,
+        packetSize: Int,
+        streamingRemotely: Int,
+        audioConfiguration: Int,
+        supportedVideoFormats: Int,
+        clientRefreshRateX100: Int,
+        riAesKey: ByteArray?,
+        riAesIv: ByteArray?,
+        videoCapabilities: Int,
+        colorSpace: Int,
+        colorRange: Int,
+    ): Int
 
-    // BOREALIS: called from borealis_log.c for each moonlight-common-c log line; false makes the native side use logcat
-    public static boolean bridgeClLogMessage(byte[] message) {
-        return io.github.magalz.borealis.logging.NativeLogForwarder.forward(message);
-    }
+    @JvmStatic external fun stopConnection()
 
-    public static void setupBridge(VideoDecoderRenderer videoRenderer, AudioRenderer audioRenderer, NvConnectionListener connectionListener) {
-        MoonBridge.videoRenderer = videoRenderer;
-        MoonBridge.audioRenderer = audioRenderer;
-        MoonBridge.connectionListener = connectionListener;
-    }
+    @JvmStatic external fun interruptConnection()
 
-    public static void cleanupBridge() {
-        MoonBridge.videoRenderer = null;
-        MoonBridge.audioRenderer = null;
-        MoonBridge.connectionListener = null;
-    }
+    @JvmStatic external fun sendMouseMove(deltaX: Short, deltaY: Short)
 
-    public static native int startConnection(String address, String appVersion, String gfeVersion,
-                                              String rtspSessionUrl, int serverCodecModeSupport,
-                                              int width, int height, int fps,
-                                              int bitrate, int packetSize, int streamingRemotely,
-                                              int audioConfiguration, int supportedVideoFormats,
-                                              int clientRefreshRateX100,
-                                              byte[] riAesKey, byte[] riAesIv,
-                                              int videoCapabilities,
-                                              int colorSpace, int colorRange);
+    @JvmStatic
+    external fun sendMousePosition(
+        x: Short,
+        y: Short,
+        referenceWidth: Short,
+        referenceHeight: Short,
+    )
 
-    public static native void stopConnection();
+    @JvmStatic
+    external fun sendMouseMoveAsMousePosition(
+        deltaX: Short,
+        deltaY: Short,
+        referenceWidth: Short,
+        referenceHeight: Short,
+    )
 
-    public static native void interruptConnection();
+    @JvmStatic external fun sendMouseButton(buttonEvent: Byte, mouseButton: Byte)
 
-    public static native void sendMouseMove(short deltaX, short deltaY);
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    @Suppress("LongParameterList")
+    @JvmStatic
+    external fun sendMultiControllerInput(
+        controllerNumber: Short,
+        activeGamepadMask: Short,
+        buttonFlags: Int,
+        leftTrigger: Byte,
+        rightTrigger: Byte,
+        leftStickX: Short,
+        leftStickY: Short,
+        rightStickX: Short,
+        rightStickY: Short,
+    )
 
-    public static native void sendMousePosition(short x, short y, short referenceWidth, short referenceHeight);
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    @Suppress("LongParameterList")
+    @JvmStatic
+    external fun sendTouchEvent(
+        eventType: Byte,
+        pointerId: Int,
+        x: Float,
+        y: Float,
+        pressure: Float,
+        contactAreaMajor: Float,
+        contactAreaMinor: Float,
+        rotation: Short,
+    ): Int
 
-    public static native void sendMouseMoveAsMousePosition(short deltaX, short deltaY, short referenceWidth, short referenceHeight);
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    @Suppress("LongParameterList")
+    @JvmStatic
+    external fun sendPenEvent(
+        eventType: Byte,
+        toolType: Byte,
+        penButtons: Byte,
+        x: Float,
+        y: Float,
+        pressure: Float,
+        contactAreaMajor: Float,
+        contactAreaMinor: Float,
+        rotation: Short,
+        tilt: Byte,
+    ): Int
 
-    public static native void sendMouseButton(byte buttonEvent, byte mouseButton);
+    @JvmStatic
+    external fun sendControllerArrivalEvent(
+        controllerNumber: Byte,
+        activeGamepadMask: Short,
+        type: Byte,
+        supportedButtonFlags: Int,
+        capabilities: Short,
+    ): Int
 
-    public static native void sendMultiControllerInput(short controllerNumber,
-                                    short activeGamepadMask, int buttonFlags,
-                                    byte leftTrigger, byte rightTrigger,
-                                    short leftStickX, short leftStickY,
-                                    short rightStickX, short rightStickY);
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    @Suppress("LongParameterList")
+    @JvmStatic
+    external fun sendControllerTouchEvent(
+        controllerNumber: Byte,
+        eventType: Byte,
+        pointerId: Int,
+        x: Float,
+        y: Float,
+        pressure: Float,
+    ): Int
 
-    public static native int sendTouchEvent(byte eventType, int pointerId, float x, float y, float pressure,
-                                            float contactAreaMajor, float contactAreaMinor, short rotation);
+    @JvmStatic
+    external fun sendControllerMotionEvent(
+        controllerNumber: Byte,
+        motionType: Byte,
+        x: Float,
+        y: Float,
+        z: Float,
+    ): Int
 
-    public static native int sendPenEvent(byte eventType, byte toolType, byte penButtons, float x, float y,
-                                          float pressure, float contactAreaMajor, float contactAreaMinor,
-                                          short rotation, byte tilt);
+    @JvmStatic
+    external fun sendControllerBatteryEvent(
+        controllerNumber: Byte,
+        batteryState: Byte,
+        batteryPercentage: Byte,
+    ): Int
 
-    public static native int sendControllerArrivalEvent(byte controllerNumber, short activeGamepadMask, byte type, int supportedButtonFlags, short capabilities);
+    @JvmStatic
+    external fun sendKeyboardInput(keyMap: Short, keyDirection: Byte, modifier: Byte, flags: Byte)
 
-    public static native int sendControllerTouchEvent(byte controllerNumber, byte eventType, int pointerId, float x, float y, float pressure);
+    @JvmStatic external fun sendMouseHighResScroll(scrollAmount: Short)
 
-    public static native int sendControllerMotionEvent(byte controllerNumber, byte motionType, float x, float y, float z);
-
-    public static native int sendControllerBatteryEvent(byte controllerNumber, byte batteryState, byte batteryPercentage);
-
-    public static native void sendKeyboardInput(short keyMap, byte keyDirection, byte modifier, byte flags);
-
-    public static native void sendMouseHighResScroll(short scrollAmount);
-
-    public static native void sendMouseHighResHScroll(short scrollAmount);
+    @JvmStatic external fun sendMouseHighResHScroll(scrollAmount: Short)
 
     // BOREALIS: standard UTF-8 bytes, not a String: GetStringUTFChars gives modified UTF-8
-    public static native void sendUtf8Text(byte[] text);
+    @JvmStatic external fun sendUtf8Text(text: ByteArray?)
 
     // BOREALIS: asks the host for a new keyframe
-    public static native void requestIdrFrame();
+    @JvmStatic external fun requestIdrFrame()
 
-    public static native String getStageName(int stage);
+    @JvmStatic external fun getStageName(stage: Int): String?
 
-    public static native String findExternalAddressIP4(String stunHostName, int stunPort);
+    @JvmStatic external fun findExternalAddressIP4(stunHostName: String?, stunPort: Int): String?
 
-    public static native int getPendingAudioDuration();
+    @JvmStatic external fun getPendingAudioDuration(): Int
 
-    public static native int testClientConnectivity(String testServerHostName, int referencePort, int testFlags);
+    @JvmStatic
+    external fun testClientConnectivity(
+        testServerHostName: String?,
+        referencePort: Int,
+        testFlags: Int,
+    ): Int
 
-    public static native int getPortFlagsFromStage(int stage);
+    @JvmStatic external fun getPortFlagsFromStage(stage: Int): Int
 
-    public static native int getPortFlagsFromTerminationErrorCode(int errorCode);
+    @JvmStatic external fun getPortFlagsFromTerminationErrorCode(errorCode: Int): Int
 
-    public static native String stringifyPortFlags(int portFlags, String separator);
+    @JvmStatic external fun stringifyPortFlags(portFlags: Int, separator: String?): String?
 
     // The RTT is in the top 32 bits, and the RTT variance is in the bottom 32 bits
-    public static native long getEstimatedRttInfo();
+    @JvmStatic external fun getEstimatedRttInfo(): Long
 
-    public static native String getLaunchUrlQueryParameters();
+    @JvmStatic external fun getLaunchUrlQueryParameters(): String?
 
-    public static native byte guessControllerType(int vendorId, int productId);
+    @JvmStatic external fun guessControllerType(vendorId: Int, productId: Int): Byte
 
-    public static native boolean guessControllerHasPaddles(int vendorId, int productId);
+    @JvmStatic external fun guessControllerHasPaddles(vendorId: Int, productId: Int): Boolean
 
-    public static native boolean guessControllerHasShareButton(int vendorId, int productId);
+    @JvmStatic external fun guessControllerHasShareButton(vendorId: Int, productId: Int): Boolean
 
-    public static native void init();
+    @JvmStatic external fun init()
 }

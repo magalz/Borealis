@@ -60,7 +60,7 @@ internal object MoonBridgeClassFile {
     val natives: List<Method>
         get() = methods.filter { it.isNative }
 
-    /** The `Int`, `Short` and `Byte` constants, by name. */
+    /** The public `Int`, `Short` and `Byte` constants, by name. */
     val constants: Map<String, Constant> by lazy {
         buildMap {
             ClassReader(bytes())
@@ -73,7 +73,9 @@ internal object MoonBridgeClassFile {
                             signature: String?,
                             value: Any?,
                         ): FieldVisitor? {
-                            if (value is Int) put(name, Constant(name, descriptor, value))
+                            if (value is Int && access and Opcodes.ACC_PUBLIC != 0) {
+                                put(name, Constant(name, descriptor, value))
+                            }
                             return null
                         }
                     },

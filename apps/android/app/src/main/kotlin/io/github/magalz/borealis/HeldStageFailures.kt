@@ -16,7 +16,7 @@ class HeldStageFailures
 constructor(
     private val inner: NvConnectionListener,
     private val collisions: ResumeCollisions,
-    private val rtspStageName: () -> String = {
+    private val rtspStageName: () -> String? = {
         MoonBridge.getStageName(ResumeCollisions.STAGE_RTSP_HANDSHAKE)
     },
 ) : NvConnectionListener by inner {

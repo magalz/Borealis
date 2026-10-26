@@ -18,7 +18,7 @@ Java code that remains, or losing the history of each file?
 ## Decision Drivers
 
 * Behaviour stays the same. A conversion is not a place for fixes or features.
-* The Java that stays (`Game`, `binding/input`, `binding/video`, `binding/audio` and `MoonBridge`) must
+* The Java that stays (`Game`, `binding/video`, `binding/audio` and `MoonBridge`) must
   keep compiling and keep its JNI signatures, without edits.
 * `git log --follow` and `git blame` must keep the Java history of each file.
 * The persistent formats of the app must keep reading the data that users already have.
@@ -184,8 +184,8 @@ without edits. The rules are numbered so that each conversion brief can point to
 
 * This ADR updates [ADR 0004](0004-kotlin-for-new-android-code.md). ADR 0004 said that upstream Java stays
   untouched. This ADR, with [ADR 0054](0054-declare-independence-from-moonlight.md), says that the inherited
-  Java is Borealis code and is converted under the rules above. The Java that is still in use stays Java
-  until Sprints 13 and 14.
+  Java is Borealis code and is converted under the rules above. The Java that is still in use stayed Java
+  until Sprint 13 converted the input code (`binding/input`); the rest stays Java until Sprint 14.
 * Related: [0054](0054-declare-independence-from-moonlight.md) (inherited code is Borealis code).
 * Related: [0049](0049-coverage-gate.md) (the coverage gate that rule 7 amends for converted code).
 * Related: [roadmap, Kotlin migration (Sprints 12 to 14)](../roadmap.md#kotlin-migration-sprints-12-to-14).

@@ -51,13 +51,13 @@ class HevcSpsTest {
     @Test
     fun `a NAL of another type is rejected`() {
         for (type in listOf(0, 1, 19, 32, 34, 39, 63)) {
-            assertThat(HevcSps.parse(HevcSpsBuilder.sps(nalType = type))).isNull()
+            assertThat(HevcSps.parse(HevcSpsBuilder.sps(SpsFields(nalType = type)))).isNull()
         }
     }
 
     @Test
     fun `an SPS of another layer is rejected`() {
-        assertThat(HevcSps.parse(HevcSpsBuilder.sps(layerId = 1))).isNull()
+        assertThat(HevcSps.parse(HevcSpsBuilder.sps(SpsFields(layerId = 1)))).isNull()
     }
 
     @Test
@@ -76,13 +76,15 @@ class HevcSpsTest {
     fun `every truncation of a valid SPS is null or the full result`() {
         val built =
             listOf(
-                HevcSpsBuilder.sps(conformanceWindow = true, extraFields = 40),
+                HevcSpsBuilder.sps(SpsFields(conformanceWindow = true, extraFields = 40)),
                 HevcSpsBuilder.sps(
-                    extraFields = 40,
-                    profileIdc = 4,
-                    chromaFormatIdc = 3,
-                    bitDepthLuma = 10,
-                    bitDepthChroma = 10,
+                    SpsFields(
+                        extraFields = 40,
+                        profileIdc = 4,
+                        chromaFormatIdc = 3,
+                        bitDepthLuma = 10,
+                        bitDepthChroma = 10,
+                    )
                 ),
             )
         for (nal in fixtures.keys.map(::fixture) + built) {
@@ -138,14 +140,16 @@ class HevcSpsTest {
             for (mask in 0 until (1 shl 12) step 7) {
                 val nal =
                     HevcSpsBuilder.sps(
-                        maxSubLayersMinus1 = subLayersMinus1,
-                        subLayerProfilePresent = List(6) { (mask shr it) and 1 == 1 },
-                        subLayerLevelPresent = List(6) { (mask shr (it + 6)) and 1 == 1 },
-                        profileIdc = 4,
-                        chromaFormatIdc = 3,
-                        conformanceWindow = true,
-                        bitDepthLuma = 12,
-                        bitDepthChroma = 10,
+                        SpsFields(
+                            maxSubLayersMinus1 = subLayersMinus1,
+                            subLayerProfilePresent = List(6) { (mask shr it) and 1 == 1 },
+                            subLayerLevelPresent = List(6) { (mask shr (it + 6)) and 1 == 1 },
+                            profileIdc = 4,
+                            chromaFormatIdc = 3,
+                            conformanceWindow = true,
+                            bitDepthLuma = 12,
+                            bitDepthChroma = 10,
+                        )
                     )
 
                 val info = HevcSps.parse(nal)
@@ -160,20 +164,24 @@ class HevcSpsTest {
 
     @Test
     fun `a reserved sps_max_sub_layers_minus1 of 7 is rejected`() {
-        assertThat(HevcSps.parse(HevcSpsBuilder.sps(maxSubLayersMinus1 = 7))).isNull()
+        assertThat(HevcSps.parse(HevcSpsBuilder.sps(SpsFields(maxSubLayersMinus1 = 7)))).isNull()
     }
 
     @Test
     fun `emulation prevention bytes are removed before parsing`() {
         // Zero compatibility flags give the RBSP 00 00 runs that must be escaped on the wire.
         val escaped =
-            HevcSpsBuilder.sps(profileIdc = 4, compatibilityFlags = 0, chromaFormatIdc = 3)
+            HevcSpsBuilder.sps(
+                SpsFields(profileIdc = 4, compatibilityFlags = 0, chromaFormatIdc = 3)
+            )
         val unescaped =
             HevcSpsBuilder.sps(
-                profileIdc = 4,
-                compatibilityFlags = 0,
-                chromaFormatIdc = 3,
-                escaped = false,
+                SpsFields(
+                    profileIdc = 4,
+                    compatibilityFlags = 0,
+                    chromaFormatIdc = 3,
+                    escaped = false,
+                )
             )
         assertThat(escaped.size).isGreaterThan(unescaped.size)
 
@@ -183,25 +191,30 @@ class HevcSpsTest {
     @Test
     fun `separate colour planes are reported for 4 4 4`() {
         val nal =
-            HevcSpsBuilder.sps(profileIdc = 4, chromaFormatIdc = 3, separateColourPlane = true)
+            HevcSpsBuilder.sps(
+                SpsFields(profileIdc = 4, chromaFormatIdc = 3, separateColourPlane = true)
+            )
 
         assertThat(HevcSps.parse(nal)?.separateColourPlane).isTrue()
-        assertThat(HevcSps.parse(HevcSpsBuilder.sps(chromaFormatIdc = 3))?.separateColourPlane)
+        assertThat(
+                HevcSps.parse(HevcSpsBuilder.sps(SpsFields(chromaFormatIdc = 3)))
+                    ?.separateColourPlane
+            )
             .isFalse()
     }
 
     @Test
     fun `values outside the specification are rejected`() {
-        assertThat(HevcSps.parse(HevcSpsBuilder.sps(chromaFormatIdc = 4))).isNull()
-        assertThat(HevcSps.parse(HevcSpsBuilder.sps(bitDepthLuma = 17))).isNull()
-        assertThat(HevcSps.parse(HevcSpsBuilder.sps(bitDepthChroma = 20))).isNull()
+        assertThat(HevcSps.parse(HevcSpsBuilder.sps(SpsFields(chromaFormatIdc = 4)))).isNull()
+        assertThat(HevcSps.parse(HevcSpsBuilder.sps(SpsFields(bitDepthLuma = 17)))).isNull()
+        assertThat(HevcSps.parse(HevcSpsBuilder.sps(SpsFields(bitDepthChroma = 20)))).isNull()
     }
 
     @Test
     fun `a runaway Exp-Golomb code is bounded`() {
         // Start code (4), NAL header (2), VPS id and sub-layer byte (1) and profile_tier_level
         // (12), then 40 zero bits where an Exp-Golomb code starts.
-        val valid = HevcSpsBuilder.sps(escaped = false)
+        val valid = HevcSpsBuilder.sps(SpsFields(escaped = false))
         val headerAndPtl = valid.copyOfRange(0, 4 + 2 + 1 + 12)
 
         assertThat(HevcSps.parse(headerAndPtl + ByteArray(40))).isNull()
@@ -211,14 +224,18 @@ class HevcSpsTest {
     fun `a conformance window is skipped`() {
         val with =
             HevcSps.parse(
-                HevcSpsBuilder.sps(conformanceWindow = true, bitDepthLuma = 10, bitDepthChroma = 10)
+                HevcSpsBuilder.sps(
+                    SpsFields(conformanceWindow = true, bitDepthLuma = 10, bitDepthChroma = 10)
+                )
             )
         val without =
             HevcSps.parse(
                 HevcSpsBuilder.sps(
-                    conformanceWindow = false,
-                    bitDepthLuma = 10,
-                    bitDepthChroma = 10,
+                    SpsFields(
+                        conformanceWindow = false,
+                        bitDepthLuma = 10,
+                        bitDepthChroma = 10,
+                    )
                 )
             )
 

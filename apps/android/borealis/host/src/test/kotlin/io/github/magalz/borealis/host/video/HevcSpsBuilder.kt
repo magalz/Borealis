@@ -2,6 +2,28 @@ package io.github.magalz.borealis.host.video
 
 import java.io.ByteArrayOutputStream
 
+/**
+ * The fields of an SPS that a test sets; the rest is fixed. The defaults are a Main profile SPS of
+ * 1920 x 1080 with 8-bit 4:2:0 samples, as an encoder writes it, with the escape bytes in.
+ */
+data class SpsFields(
+    val profileIdc: Int = 1,
+    val compatibilityFlags: Int = 1 shl 1,
+    val maxSubLayersMinus1: Int = 0,
+    val subLayerProfilePresent: List<Boolean> = emptyList(),
+    val subLayerLevelPresent: List<Boolean> = emptyList(),
+    val chromaFormatIdc: Int = 1,
+    val separateColourPlane: Boolean = false,
+    val conformanceWindow: Boolean = false,
+    val bitDepthLuma: Int = 8,
+    val bitDepthChroma: Int = 8,
+    val nalType: Int = 33,
+    val layerId: Int = 0,
+    val threeByteStartCode: Boolean = false,
+    val extraFields: Int = 1,
+    val escaped: Boolean = true,
+)
+
 /** Writes an HEVC SPS the way an encoder does, so tests can reach syntax the fixtures lack. */
 object HevcSpsBuilder {
     val START_CODE_4 = byteArrayOf(0, 0, 0, 1)
@@ -67,59 +89,44 @@ object HevcSpsBuilder {
         bit(false)
     }
 
-    @Suppress("LongParameterList")
-    fun sps(
-        profileIdc: Int = 1,
-        compatibilityFlags: Int = 1 shl 1,
-        maxSubLayersMinus1: Int = 0,
-        subLayerProfilePresent: List<Boolean> = emptyList(),
-        subLayerLevelPresent: List<Boolean> = emptyList(),
-        chromaFormatIdc: Int = 1,
-        separateColourPlane: Boolean = false,
-        conformanceWindow: Boolean = false,
-        bitDepthLuma: Int = 8,
-        bitDepthChroma: Int = 8,
-        nalType: Int = 33,
-        layerId: Int = 0,
-        startCode: ByteArray = START_CODE_4,
-        extraFields: Int = 1,
-        escaped: Boolean = true,
-    ): ByteArray {
-        val w = BitWriter()
-        w.bits(0, 4) // sps_video_parameter_set_id
-        w.bits(maxSubLayersMinus1, 3)
-        w.bit(true) // sps_temporal_id_nesting_flag
-        // profile_tier_level(1, maxSubLayersMinus1)
-        w.profileFields(profileIdc, compatibilityFlags)
-        w.bits(93, 8) // general_level_idc
-        for (i in 0 until maxSubLayersMinus1) {
-            w.bit(subLayerProfilePresent.getOrElse(i) { false })
-            w.bit(subLayerLevelPresent.getOrElse(i) { false })
+    fun sps(fields: SpsFields = SpsFields()): ByteArray =
+        with(fields) {
+            val w = BitWriter()
+            w.bits(0, 4) // sps_video_parameter_set_id
+            w.bits(maxSubLayersMinus1, 3)
+            w.bit(true) // sps_temporal_id_nesting_flag
+            // profile_tier_level(1, maxSubLayersMinus1)
+            w.profileFields(profileIdc, compatibilityFlags)
+            w.bits(93, 8) // general_level_idc
+            for (i in 0 until maxSubLayersMinus1) {
+                w.bit(subLayerProfilePresent.getOrElse(i) { false })
+                w.bit(subLayerLevelPresent.getOrElse(i) { false })
+            }
+            if (maxSubLayersMinus1 > 0) {
+                repeat(8 - maxSubLayersMinus1) { w.bits(0, 2) } // reserved_zero_2bits
+            }
+            for (i in 0 until maxSubLayersMinus1) {
+                if (subLayerProfilePresent.getOrElse(i) { false }) w.profileFields(profileIdc, -1)
+                if (subLayerLevelPresent.getOrElse(i) { false }) w.bits(90, 8)
+            }
+            w.ue(0) // sps_seq_parameter_set_id
+            w.ue(chromaFormatIdc)
+            if (chromaFormatIdc == 3) w.bit(separateColourPlane)
+            w.ue(1920)
+            w.ue(1080)
+            w.bit(conformanceWindow)
+            if (conformanceWindow) repeat(4) { w.ue(it + 1) }
+            w.ue(bitDepthLuma - 8)
+            w.ue(bitDepthChroma - 8)
+            // Later syntax (log2_max_pic_order_cnt_lsb_minus4 and so on) the parser must not need.
+            repeat(extraFields) { w.ue(4) }
+            val rbsp = w.rbspTrailingBits()
+            val header =
+                byteArrayOf(
+                    ((nalType shl 1) or (layerId shr 5)).toByte(),
+                    (((layerId and 31) shl 3) or 1).toByte(),
+                )
+            val startCode = if (threeByteStartCode) START_CODE_3 else START_CODE_4
+            startCode + header + if (escaped) escape(rbsp) else rbsp
         }
-        if (maxSubLayersMinus1 > 0) {
-            repeat(8 - maxSubLayersMinus1) { w.bits(0, 2) } // reserved_zero_2bits
-        }
-        for (i in 0 until maxSubLayersMinus1) {
-            if (subLayerProfilePresent.getOrElse(i) { false }) w.profileFields(profileIdc, -1)
-            if (subLayerLevelPresent.getOrElse(i) { false }) w.bits(90, 8)
-        }
-        w.ue(0) // sps_seq_parameter_set_id
-        w.ue(chromaFormatIdc)
-        if (chromaFormatIdc == 3) w.bit(separateColourPlane)
-        w.ue(1920)
-        w.ue(1080)
-        w.bit(conformanceWindow)
-        if (conformanceWindow) repeat(4) { w.ue(it + 1) }
-        w.ue(bitDepthLuma - 8)
-        w.ue(bitDepthChroma - 8)
-        // Later syntax (log2_max_pic_order_cnt_lsb_minus4 and so on) the parser must not need.
-        repeat(extraFields) { w.ue(4) }
-        val rbsp = w.rbspTrailingBits()
-        val header =
-            byteArrayOf(
-                ((nalType shl 1) or (layerId shr 5)).toByte(),
-                (((layerId and 31) shl 3) or 1).toByte(),
-            )
-        return startCode + header + if (escaped) escape(rbsp) else rbsp
-    }
 }

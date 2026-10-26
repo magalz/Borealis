@@ -473,6 +473,18 @@ class MediaCodecHelperSelectionTest : MediaCodecHelperTestBase() {
             )
             probable(helper)
         }
+        rows.check(
+            "a blacklisted decoder that throws is skipped before its capabilities are read",
+            "c2.vendor.low",
+        ) {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.plain"),
+                codec("OMX.google.h264.decoder") { brokenCapabilities = true },
+                codec("c2.vendor.low") { lowLatency = true },
+            )
+            probable(helper)
+        }
         rows.check("the fallback skips blacklisted decoders", "c2.vendor.avc") {
             val helper = helper()
             installCodecs(

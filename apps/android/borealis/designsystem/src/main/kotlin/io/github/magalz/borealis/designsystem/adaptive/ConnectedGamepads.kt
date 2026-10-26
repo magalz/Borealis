@@ -58,6 +58,9 @@ fun InputDevice.hasJoystickXy(): Boolean =
 fun InputDevice.hasControllerJoystickAxes(): Boolean =
     isJoystickController(sources, hasJoystickXy(), keyboardType)
 
+/** Stub: the stream's rule moves here in the next commit. */
+fun isStreamControllerDevice(device: InputDevice?): Boolean = device == null && false
+
 private fun InputDevice.isGameController(): Boolean =
     isGameController(sources, isVirtual, hasJoystickXy(), keyboardType)
 

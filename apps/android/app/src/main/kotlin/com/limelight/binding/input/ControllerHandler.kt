@@ -47,6 +47,7 @@ import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.GameGestures
 import com.limelight.utils.Vector2d
 import io.github.magalz.borealis.designsystem.adaptive.hasControllerJoystickAxes
+import io.github.magalz.borealis.designsystem.adaptive.isStreamControllerDevice
 import io.github.magalz.borealis.stream.input.ButtonState
 import io.github.magalz.borealis.stream.input.CaptureEnd
 import io.github.magalz.borealis.stream.input.ChromeKeySink
@@ -3935,44 +3936,9 @@ class ControllerHandler(
             return (device.sources and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
         }
 
+        // The stream's rule lives with the layout's, in :borealis:designsystem.
         @JvmStatic
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-        @Suppress("ReturnCount")
-        fun isGameControllerDevice(device: InputDevice?): Boolean {
-            if (device == null) {
-                return true
-            }
-
-            if (hasJoystickAxes(device) || hasGamepadButtons(device)) {
-                // Has real joystick axes or gamepad buttons
-                return true
-            }
-
-            // HACK for https://issuetracker.google.com/issues/163120692
-            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.R) {
-                if (device.id == -1) {
-                    // This "virtual" device could be input from any of the attached devices.
-                    // Look to see if any gamepads are connected.
-                    val ids = InputDevice.getDeviceIds()
-                    for (id in ids) {
-                        val dev = InputDevice.getDevice(id)
-                        if (dev == null) {
-                            // This device was removed during enumeration
-                            continue
-                        }
-
-                        // If there are any gamepad devices connected, we'll
-                        // report that this virtual device is a gamepad.
-                        if (hasJoystickAxes(dev) || hasGamepadButtons(dev)) {
-                            return true
-                        }
-                    }
-                }
-            }
-
-            // Otherwise, we'll try anything that claims to be a non-alphabetic keyboard
-            return device.keyboardType != InputDevice.KEYBOARD_TYPE_ALPHABETIC
-        }
+        fun isGameControllerDevice(device: InputDevice?): Boolean = isStreamControllerDevice(device)
 
         @JvmStatic
         fun getAttachedControllerMask(context: Context): Short {

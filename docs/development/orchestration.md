@@ -59,6 +59,14 @@ Tasks without shared files and with satisfied dependencies run in parallel in on
 - **Gradle file locks can leave a worktree folder behind.** On Windows a Gradle daemon or an IDE can hold a file open, so `git worktree remove --force` may fail or leave the folder. An agent does not delete such a folder: it reports it, and the orchestrator deletes it once the lock is gone.
 - **Several builds at once.** Tasks build on the same machine in parallel. If a daemon dies for lack of memory, wait and run the command again; never kill processes. On the KSP error "different roots", run the task again with `--rerun`.
 
+## Lessons from Sprint 13
+
+- **Mutation runs and disk space.** On 2026-10-25 mutation loops (one test JVM per mutant) left 11,469 Robolectric folders and 4,982 Conscrypt libraries in `%TEMP%` and filled the C: drive. Rules since: at most 60 mutants per task, one at a time, in the foreground (never in the background, so a loop ends with its agent); no `--fail-fast` in a mutation run; never mutate a time, a delay, a loop bound or a sleep to a large value (one mutant made a test sleep for 24 days, and its processes had to be stopped by hand); count the `robolectric-*` folders before and after a run; after stopping an agent, the orchestrator checks for and stops the processes it started.
+- **Deleting folders.** When asking the owner to delete leftover folders, name each folder exactly and say whether any agent is still running. A cleanup by prefix deleted an active review worktree.
+- **Windows path length.** A test temporary folder deep under the checkout made Robolectric's SQLite paths pass 260 characters. The build now puts the folder at the drive root on Windows. After changing test temp paths, run the tests that open SQLite too.
+- **Characterize before converting a large class.** `ControllerHandler` (3,659 lines) was pinned by three characterization tasks working in parallel on separate test packages, then converted in one task with every test unchanged, and reviewed in two halves.
+- **Worktree removal on Windows.** A worktree whose `build/` holds paths over 260 characters cannot be removed by `git worktree remove` ("Invalid argument"): git unregisters it and the folder stays. The orchestrator removes such a folder with a `\\?\` path, as it did in this sprint. The phase review confirmed the cause: 2,171 paths in that worktree's `build/` passed 260 characters.
+
 ## Reporting to the owner
 
 The orchestrator reports, per phase and honestly: behaviour changed, commits and their test-first order, checks run and the exact revision tested, remaining limitations and open decisions, and any blocked publication. It asks before any push to `main`, any repository setting change and any message to other people.

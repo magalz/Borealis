@@ -103,10 +103,13 @@ What stays, and why:
 
 | Lint ids | Why they stay |
 | --- | --- |
-| `UnusedAttribute`, `RtlHardcoded`, `ViewConstructor`, `UseRequiresApi` | Cosmetic. The attributes apply from API 30 or 33 and older versions ignore them. The gravity in `activity_game.xml` is the stream notification overlay. The seven virtual-controller views are built in code only. The `@TargetApi` annotations are for API 30 and later; the ones for API 28 and below went with the dead checks. |
+| `UnusedAttribute`, `RtlHardcoded`, `UseRequiresApi` | Cosmetic. The attributes apply from API 30 or 33 and older versions ignore them. The gravity in `activity_game.xml` is the stream notification overlay. The two `UseRequiresApi` entries suggest `@RequiresApi` in place of `@TargetApi` in `Game.java` (converted in Sprint 14) and in `NsdManagerDiscoveryAgent.kt`. The `@TargetApi` annotations are for API 30 and later; the ones for API 28 and below went with the dead checks. |
 | `OldTargetApi` | A `targetSdk` of 37 is a platform update, decided on its own and not in a lint sweep. |
 | `NotShrinkingResources` | Release builds minify without `shrinkResources`. Turning it on changes the release package, so it is a release decision. |
-| `DefaultLocale`, `ApplySharedPref`, `SourceLockedOrientationActivity`, `VectorRaster` | Inherited code that does what it should. `toLowerCase()` runs on device and GPU names. `commit()` is deliberate: the crash listener must persist the crash count before the process dies. The stream locks the orientation on purpose. `ic_settings.xml` is a large vector. |
+| `DefaultLocale`, `ApplySharedPref`, `SourceLockedOrientationActivity`, `VectorRaster` | Inherited code that does what it should. `toLowerCase()` runs on device and GPU names, in `MediaCodecHelper.java` (converted in Sprint 14). `commit()` is deliberate: the crash listener must persist the crash count before the process dies. The stream locks the orientation on purpose. `ic_settings.xml` is a large vector. |
+
+`ViewConstructor` has no baseline entry since Sprint 13: the seven virtual-controller views
+carry `@SuppressLint("ViewConstructor")` in source, because they are built in code only.
 
 `apps/android/app/lint.xml` holds four more ignores, by path, beside the
 baseline:
@@ -258,8 +261,7 @@ python -m unittest discover -s design/accessibility
   the root project merges the debug unit-test coverage of `:borealis:*` and of
   `:app`. Code in `com.limelight` counts in the Kover report, except the Java
   that stays Java (below). The input package `com.limelight.binding.input`
-  counts from Sprint 13, which converts it, so until then the report shows its
-  Java uncovered. Converted code is held to the same Codecov gate as the rest
+  counts since Sprint 13 converted it. Converted code is held to the same Codecov gate as the rest
   ([ADR 0059](../adr/0059-convert-the-inherited-java-to-kotlin.md),
   [ADR 0049](../adr/0049-coverage-gate.md)). Not counted:
   - the Java that stays Java until Sprint 14:
@@ -327,6 +329,16 @@ keystore created outside the repository, or start the dry run on GitHub
 Other test levels: Robolectric and Compose UI tests run with the unit tests,
 and screenshot tests use Roborazzi (see above). Emulator tests with Gradle
 Managed Devices are planned and not set up.
+
+Each unit-test task gets a temporary folder of its own as `java.io.tmpdir`
+(`BorealisTestTempDir.kt`). On Windows it is `<drive>\.bt\<8 hex>` at the root
+of the checkout's drive, unique per checkout, module and task, so that
+Robolectric's SQLite paths stay under the 260 characters Windows allows.
+Elsewhere it is `build/tmp/<task>/jvm-tmp`. The task empties the folder before a
+run and deletes it after the run. A failed or killed run leaves the folder until
+the next run of that task. The `:app` unit-test JVM has a 2 GB heap
+(`BorealisUnitTestHeap.kt`), because Robolectric keeps a sandbox for each SDK
+level and set of shadows.
 
 ## borealis-core (C++)
 

@@ -21,7 +21,7 @@ jcodec = "0.2.5"
 jmdns = "3.6.4"
 junit = "4.13.2"
 kotlinx-coroutines = "1.11.0"
-kotlinx-serialization = "1.11.0"
+kotlinx-serialization = "1.12.0"
 # Kotlin Gradle plugin used by AGP built-in Kotlin. It may lead the version bundled with
 # AGP when CI passes (ADR 0047); Dependabot groups it with KSP.
 kotlin = "2.4.21"

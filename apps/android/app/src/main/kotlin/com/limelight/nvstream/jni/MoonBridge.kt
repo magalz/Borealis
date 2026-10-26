@@ -41,7 +41,6 @@ object MoonBridge {
     const val VIDEO_FORMAT_MASK_AV1 = 0xF000
     const val VIDEO_FORMAT_MASK_10BIT = 0x2200
 
-    const val BUFFER_TYPE_PICDATA = 0
     const val BUFFER_TYPE_SPS = 1
     const val BUFFER_TYPE_PPS = 2
     const val BUFFER_TYPE_VPS = 3

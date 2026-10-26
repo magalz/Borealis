@@ -197,7 +197,7 @@ class HelperHandle(private val type: Class<*>) {
         call("findProbableSafeDecoder", mime, requiredProfile) as MediaCodecInfo?
 
     val bypassesSoftwareBlock: Boolean
-        get() = type.getField("SHOULD_BYPASS_SOFTWARE_BLOCK").get(null) as Boolean
+        get() = flag("SHOULD_BYPASS_SOFTWARE_BLOCK")
 
     companion object {
         /** Every private prefix list of the helper, by field name. */

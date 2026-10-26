@@ -20,6 +20,9 @@ class ExportFlowTest {
     private lateinit var zip: File
     private val saved = mutableListOf<File>()
 
+    /** The intents that the flow asked whether an app can receive. */
+    private val asked = mutableListOf<Intent>()
+
     private val recordingStore = BundleStore { file ->
         saved += file
         SavedBundle("Download/${file.name}", "adb pull /sdcard/Download/${file.name}")
@@ -39,7 +42,6 @@ class ExportFlowTest {
         build: () -> File = { zip },
         uriFor: (File) -> Uri = { Uri.parse("content://test.fileprovider/diagnostics/${it.name}") },
         store: BundleStore = recordingStore,
-        asked: MutableList<Intent> = mutableListOf(),
     ) =
         ExportFlow(
             chooserTitle = "Share diagnostics",
@@ -61,9 +63,7 @@ class ExportFlowTest {
 
     @Test
     fun `a phone shares the bundle through a chooser when an app can receive it`() {
-        val asked = mutableListOf<Intent>()
-
-        val result = flow(canShare = true, asked = asked).run()
+        val result = flow(canShare = true).run()
 
         val chooser = (result as ExportResult.Share).chooser
         assertThat(chooser.action).isEqualTo(Intent.ACTION_CHOOSER)

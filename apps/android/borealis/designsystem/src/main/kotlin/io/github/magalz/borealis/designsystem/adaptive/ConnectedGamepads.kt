@@ -15,7 +15,7 @@ import androidx.compose.ui.platform.LocalContext
  * gamepad, or a joystick with the X and Y axes ([hasJoystickXy]) that is no alphabetic keyboard
  * ([keyboardType] is not [InputDevice.KEYBOARD_TYPE_ALPHABETIC]). It answers "is a pad connected?",
  * for the form factor and for the USB driver (`NativeGamepadSupport`). The stream asks something
- * broader, whether to send a device's events to the host as controller input: that is
+ * broader, which devices' key events `Game` offers to the controller handler first: that is
  * [isStreamControllerDevice]. The source masks are compared whole, because the class bits overlap
  * with the keyboard's: an 8BitDo pad reports `KEYBOARD | GAMEPAD | JOYSTICK` with a non-alphabetic
  * keyboard, and a remote reports `KEYBOARD | DPAD`.
@@ -59,19 +59,25 @@ fun InputDevice.hasControllerJoystickAxes(): Boolean =
     isJoystickController(sources, hasJoystickXy(), keyboardType)
 
 /**
- * Whether the stream sends this device's events to the host as controller input. It is the rule of
- * `ControllerHandler.isGameControllerDevice`, which the stream's key and motion events ask. It is
- * broader than [isGameController], which answers "is a pad connected?" for the form factor and the
- * USB driver, and every difference is on purpose, so that a TV remote still acts in a stream:
- * - no device at all counts: an event that names no device is passed on;
- * - a virtual device counts when it has gamepad buttons or joystick axes: the stream never asks
- *   whether the device is virtual, and the system's virtual device can carry the input of a pad;
+ * Whether `Game` offers this device's key events to the controller handler before the keyboard
+ * handler. It is the rule of `ControllerHandler.isGameControllerDevice`, which `Game.onKeyDown` and
+ * `onKeyUp` ask for each key event. The verdict only decides the order of the two handlers: the
+ * controller handler can still decline the event (after a remapping, for example), and then the
+ * keyboard handler gets it. Motion events do not ask it: `Game` gives those to the controller
+ * handler by the source class of the event.
+ *
+ * It is broader than [isGameController], which judges whether one device is a real pad for the form
+ * factor and the USB driver, and every difference is on purpose, so that a TV remote's keys still
+ * reach the controller handler first:
+ * - no device at all counts: an event with no device goes to the controller handler first;
+ * - a virtual device counts when it has gamepad buttons or joystick axes: the rule does not look at
+ *   whether a device is virtual;
  * - on Android 11 only, the virtual device -1 counts while any device has gamepad buttons or
  *   joystick axes, the workaround for https://issuetracker.google.com/issues/163120692, where the
  *   system reports the events of every attached device as coming from it;
- * - anything that is no alphabetic keyboard is tried as a controller, whatever its sources: a
- *   remote that reports `KEYBOARD | DPAD` with a non-alphabetic keyboard, and a mouse or a
- *   touchscreen, which have no keyboard at all.
+ * - anything that is no alphabetic keyboard counts, whatever its sources: a remote that reports
+ *   `KEYBOARD | DPAD` with a non-alphabetic keyboard, and a mouse or a touchscreen, which have no
+ *   keyboard at all.
  *
  * An alphabetic keyboard counts only for gamepad buttons, never for joystick axes.
  */

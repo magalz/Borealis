@@ -558,6 +558,10 @@ inherited Java to Kotlin before SecOps, one area at a time, in three sprints.
 - **Size:** 33 Java files and 14,214 lines under `apps/android/app/src/main/java`
   after Sprint 12, almost all of it the input, video and `Game` code of Sprints 13
   and 14. Before Sprint 12 it was 80 Java files and 21,539 lines (2026-10-21).
+  Sprint 13 converted the input code: 26 Java files and 7,982 lines. After Sprint 13 it is
+  7 Java files and 6,232 lines (`git ls-tree` and `wc -l` at `895d0419a`): `Game.java`
+  (2,600), `binding/video` (2,985 in four files, with `MediaCodecDecoderRenderer` at 1,876),
+  `binding/audio` (216), `nvstream/jni/MoonBridge.java` (431). All of it is Sprint 14.
 - **Upstream cherry-picks:** an area that is converted no longer takes upstream
   cherry-picks directly. Its fixes are ported by hand. See
   [upstream cherry-picks](development/upstream-sync.md).
@@ -651,7 +655,11 @@ conversion is merged; the device round is pending. Owner decisions of 2026-10-25
   three characterization tasks, for events, devices and feedback, which worked in parallel
   on separate test packages. One task then converted it with every test unchanged. Two
   reviewers read the conversion, one for each half of the Java file (lines 1 to 1,850, and
-  1,850 to the end).
+  1,850 to the end). The three characterization tasks ran 250 (events), 277 (devices) and
+  333 (feedback) test runs, 860 in all. The input test packages (`io.github.magalz.borealis.input.*`,
+  69 classes) ran 1,123 tests after the `ControllerHandler` follow-ups. The whole `:app` suite
+  had 3,179 tests at `895d0419a`, in the phase review (gate 1). These are test runs: a contract
+  test that runs once per SDK subclass counts once for each run.
 - **Controller rule.** Two named rules sit side by side in `ConnectedGamepads.kt`
   (`:borealis:designsystem`), with no behaviour change. `isGameController` says whether a
   device is a real pad. `isStreamControllerDevice` says whether `Game` offers a device's key
@@ -685,7 +693,8 @@ Removed, not converted: each removal has its own `refactor: remove` commit with 
 
 - **`ControllerHandler`:** the `hasGameController` field, written twice and read nowhere.
 - **`KeyboardTranslator`:** ten unused `VK_*` constants, and `getDeviceKeyCodeForQwertyKeyCode`,
-  a method of the private `KeyboardMapping` that nothing calls.
+  a method of the private `KeyboardMapping` that nothing calls. The `device` field of
+  `KeyboardMapping` went with it, because only this method read it.
 - **`InputCaptureProvider`:** `isCapturingEnabled`, which returns the flag that
   `isCapturingActive()` already returns.
 - **`UsbDriverBinder`:** `stop`, which has no caller; the service stops itself.

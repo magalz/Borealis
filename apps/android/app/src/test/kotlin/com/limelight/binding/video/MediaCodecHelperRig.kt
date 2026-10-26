@@ -206,7 +206,6 @@ class HelperHandle(private val type: Class<*>) {
         /** Every private prefix list of the helper, by field name. */
         val LIST_FIELDS =
             listOf(
-                "preferredDecoders",
                 "blacklistedDecoderPrefixes",
                 "spsFixupBitstreamFixupDecoderPrefixes",
                 "blacklistedAdaptivePlaybackPrefixes",

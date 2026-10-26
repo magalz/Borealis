@@ -27,8 +27,6 @@ import com.limelight.preferences.PreferenceConfiguration;
 
 public class MediaCodecHelper {
     
-    private static final List<String> preferredDecoders;
-
     private static final List<String> blacklistedDecoderPrefixes;
     private static final List<String> spsFixupBitstreamFixupDecoderPrefixes;
     private static final List<String> blacklistedAdaptivePlaybackPrefixes;
@@ -80,10 +78,6 @@ public class MediaCodecHelper {
         // Qualcomm and NVIDIA may be added at runtime
     }
 
-    static {
-        preferredDecoders = new LinkedList<>();
-    }
-    
     static {
         blacklistedDecoderPrefixes = new LinkedList<>();
 
@@ -765,33 +759,6 @@ public class MediaCodecHelper {
         return infoList;
     }
     
-    private static MediaCodecInfo findPreferredDecoder() {
-        // This is a different algorithm than the other findXXXDecoder functions,
-        // because we want to evaluate the decoders in our list's order
-        // rather than MediaCodecList's order
-
-        if (!initialized) {
-            throw new IllegalStateException("MediaCodecHelper must be initialized before use");
-        }
-        
-        for (String preferredDecoder : preferredDecoders) {
-            for (MediaCodecInfo codecInfo : getMediaCodecList()) {
-                // Skip encoders
-                if (codecInfo.isEncoder()) {
-                    continue;
-                }
-                
-                // Check for preferred decoders
-                if (preferredDecoder.equalsIgnoreCase(codecInfo.getName())) {
-                    LimeLog.info("Preferred decoder choice is "+codecInfo.getName());
-                    return codecInfo;
-                }
-            }
-        }
-        
-        return null;
-    }
-
     private static boolean isCodecBlacklisted(MediaCodecInfo codecInfo) {
         // Use the new isSoftwareOnly() function on Android Q
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -842,12 +809,10 @@ public class MediaCodecHelper {
     }
     
     public static MediaCodecInfo findProbableSafeDecoder(String mimeType, int requiredProfile) {
-        // First look for a preferred decoder by name
-        MediaCodecInfo info = findPreferredDecoder();
-        if (info != null) {
-            return info;
+        if (!initialized) {
+            throw new IllegalStateException("MediaCodecHelper must be initialized before use");
         }
-        
+
         // Now look for decoders we know are safe
         try {
             // If this function completes, it will determine if the decoder is safe

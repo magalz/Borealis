@@ -255,12 +255,12 @@ class ConnectedGamepadsTest {
     }
 
     @Test
-    fun `the stream takes the events of no device at all as controller input`() {
+    fun `no device at all is a stream controller device`() {
         assertThat(isStreamControllerDevice(null)).isTrue()
     }
 
     @Test
-    fun `a gamepad source is stream controller input whatever its axes and keyboard type`() {
+    fun `a gamepad source is a stream controller device whatever its axes and keyboard type`() {
         val gamepad = inputDevice(id = 1, sources = GAMEPAD)
         val keyboardPad =
             inputDevice(
@@ -276,7 +276,7 @@ class ConnectedGamepadsTest {
     }
 
     @Test
-    fun `a joystick source with X and Y is stream controller input`() {
+    fun `a joystick source with X and Y is a stream controller device`() {
         val stick = inputDevice(id = 1, sources = JOYSTICK, joystickXy = true)
 
         assertThat(isStreamControllerDevice(stick)).isTrue()
@@ -284,7 +284,7 @@ class ConnectedGamepadsTest {
     }
 
     @Test
-    fun `an alphabetic keyboard is no stream controller input, with or without joystick axes`() {
+    fun `an alphabetic keyboard is no stream controller device, with or without joystick axes`() {
         val keyboard = inputDevice(id = 1, sources = KEYBOARD, keyboardType = ALPHABETIC)
         val keyboardWithAxes =
             inputDevice(
@@ -301,7 +301,7 @@ class ConnectedGamepadsTest {
     }
 
     @Test
-    fun `a dpad source alone does not make an alphabetic keyboard stream controller input`() {
+    fun `a dpad source alone does not make an alphabetic keyboard a stream controller device`() {
         // The class bits of the sources overlap: DPAD shares its button class with GAMEPAD.
         val dpad = inputDevice(id = 1, sources = DPAD, keyboardType = ALPHABETIC)
 
@@ -319,7 +319,7 @@ class ConnectedGamepadsTest {
     }
 
     @Test
-    fun `a remote with a non-alphabetic keyboard is stream controller input, but no pad`() {
+    fun `a remote with a non-alphabetic keyboard is a stream controller device, but no pad`() {
         val remote = inputDevice(id = 1, sources = KEYBOARD or DPAD, keyboardType = NON_ALPHABETIC)
 
         assertThat(isStreamControllerDevice(remote)).isTrue()
@@ -327,7 +327,7 @@ class ConnectedGamepadsTest {
     }
 
     @Test
-    fun `a device with no keyboard is stream controller input, though it is a mouse or a touchscreen`() {
+    fun `a device with no keyboard is a stream controller device, though it is a mouse or a touchscreen`() {
         val mouse = inputDevice(id = 1, sources = MOUSE)
         val touchscreen = inputDevice(id = 2, sources = TOUCHSCREEN)
 
@@ -338,7 +338,7 @@ class ConnectedGamepadsTest {
     }
 
     @Test
-    fun `a virtual device with gamepad buttons or joystick axes is stream controller input, but no pad`() {
+    fun `a virtual device with gamepad buttons or joystick axes is a stream controller device, but no pad`() {
         val virtualGamepad = inputDevice(id = -1, sources = GAMEPAD)
         val virtualStick =
             inputDevice(
@@ -356,7 +356,7 @@ class ConnectedGamepadsTest {
 
     @Test
     @Config(sdk = [ANDROID_11])
-    fun `on Android 11 the virtual device is stream controller input while a pad is connected`() {
+    fun `on Android 11 the virtual device is a stream controller device while a pad is connected`() {
         connectPad()
         val virtual = virtualKeyboard()
 
@@ -379,7 +379,7 @@ class ConnectedGamepadsTest {
 
     @Test
     @Config(sdk = [ANDROID_11])
-    fun `on Android 11 the virtual device is no stream controller input without a connected pad`() {
+    fun `on Android 11 the virtual device is no stream controller device without a connected pad`() {
         connect(context, deviceOf(id = 3, sources = KEYBOARD, keyboardType = ALPHABETIC))
         connect(
             context,
@@ -407,7 +407,7 @@ class ConnectedGamepadsTest {
 
     @Test
     @Config(sdk = [ANDROID_10])
-    fun `before Android 11 the virtual device is no stream controller input with a pad connected`() {
+    fun `before Android 11 the virtual device is no stream controller device with a pad connected`() {
         connectPad()
 
         assertThat(isStreamControllerDevice(virtualKeyboard())).isFalse()
@@ -415,7 +415,7 @@ class ConnectedGamepadsTest {
 
     @Test
     @Config(sdk = [ANDROID_12])
-    fun `after Android 11 the virtual device is no stream controller input with a pad connected`() {
+    fun `after Android 11 the virtual device is no stream controller device with a pad connected`() {
         connectPad()
 
         assertThat(isStreamControllerDevice(virtualKeyboard())).isFalse()

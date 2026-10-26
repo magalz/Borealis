@@ -224,10 +224,9 @@ object MediaCodecHelper {
         return glRenderer.lowercase(Locale.getDefault()).contains("powervr")
     }
 
-    // The Java trim() removes every character up to the space, not only whitespace, so the lambda
-    // stays: it keeps the behaviour of the inherited Java.
-    @Suppress("TrimLambda")
     private fun getAdrenoVersionString(glRenderer: String): String? {
+        // The Java trim() removes every character up to the space, not only whitespace, so the
+        // lambda stays: it keeps the behaviour of the inherited Java.
         val renderer = glRenderer.lowercase(Locale.getDefault()).trim { it <= ' ' }
 
         if (!renderer.contains("adreno")) {

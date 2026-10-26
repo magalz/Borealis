@@ -68,12 +68,57 @@ class BorealisTestTempDirTest {
     }
 
     @org.junit.Test
+    fun `on windows two modules of one checkout get folders of their own`() {
+        val root = project("checkout")
+        val app = ProjectBuilder.builder().withParent(root).withName("app").build()
+        val borealis = ProjectBuilder.builder().withParent(root).withName("borealis").build()
+        val stream = ProjectBuilder.builder().withParent(borealis).withName("stream").build()
+
+        // One checkout, so the same root directory and the same task: only the module differs.
+        assertThat(app.rootDir).isEqualTo(stream.rootDir)
+        assertThat(app.path).isEqualTo(":app")
+        assertThat(stream.path).isEqualTo(":borealis:stream")
+        assertThat(app.testTempDir("testDebugUnitTest", windows = true))
+            .isNotEqualTo(stream.testTempDir("testDebugUnitTest", windows = true))
+    }
+
+    @org.junit.Test
     fun `on windows the test jvm uses the short folder`() {
         val (project, test) = module(windows = true)
         val dir = project.testTempDir("testDebugUnitTest", windows = true)
 
         assertThat(dir.parentFile.name).isEqualTo(".bt")
         assertThat(test.allJvmArgs).contains("-Djava.io.tmpdir=${dir.absolutePath}")
+    }
+
+    /** Runs [block] in a JVM that reports [osName] as its operating system. */
+    private fun <T> onOperatingSystem(osName: String, block: () -> T): T {
+        val original = System.getProperty("os.name")
+        System.setProperty("os.name", osName)
+        try {
+            return block()
+        } finally {
+            System.setProperty("os.name", original)
+        }
+    }
+
+    @org.junit.Test
+    fun `the plugins' default follows the operating system the build runs on`() {
+        val onWindows = project("windows")
+        val onLinux = project("linux")
+        val windowsTest = onWindows.tasks.register("testDebugUnitTest", Test::class.java)
+        val linuxTest = onLinux.tasks.register("testDebugUnitTest", Test::class.java)
+
+        // The plugins call configureTestTempDir() without the flag, so the default decides.
+        onOperatingSystem("Windows 11") { onWindows.configureTestTempDir() }
+        onOperatingSystem("Linux") { onLinux.configureTestTempDir() }
+
+        val shortDir = onWindows.testTempDir("testDebugUnitTest", windows = true)
+        assertThat(shortDir.parentFile.name).isEqualTo(".bt")
+        assertThat(windowsTest.get().allJvmArgs)
+            .contains("-Djava.io.tmpdir=${shortDir.absolutePath}")
+        assertThat(linuxTest.get().allJvmArgs)
+            .contains("-Djava.io.tmpdir=${onLinux.buildTempDir().absolutePath}")
     }
 
     @org.junit.Test

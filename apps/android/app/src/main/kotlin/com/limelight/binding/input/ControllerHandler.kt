@@ -3293,10 +3293,9 @@ class ControllerHandler(
         @JvmField val menuChord = MenuChordDetector()
         @JvmField var tapButtons = 0
 
-        // What the pad does to the chrome while it has the input; the logic is in UsbChromeInput.
-        // It
-        // has its own main-thread handler because the default context exists before
-        // mainThreadHandler
+        // What the pad does to the chrome while it has the input; the logic is in
+        // UsbChromeInput. It has its own main-thread handler because the default context
+        // exists before mainThreadHandler
         @JvmField
         val chromeInput =
             UsbChromeInput(Handler(Looper.getMainLooper())) {

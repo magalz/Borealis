@@ -192,6 +192,18 @@ abstract class ShieldContract : FeedbackTestBase() {
     }
 
     @Test
+    fun `the low motor goes to the service as a signed int too`() {
+        val rig = rig()
+        ShadowSceManager.recognized = true
+        ShadowSceManager.rumbleAccepted = true
+        rig.wake(rig.connectPad())
+
+        rig.rumble(0xC000, 0x4000)
+
+        assertThat(ShadowSceManager.rumbles).containsExactly(-0x4000 to 0x4000)
+    }
+
+    @Test
     fun `a rumble the service does not take goes on to the vibrator of the pad`() {
         val own = Hardware.vibrator()
         val rig = rig()

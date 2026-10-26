@@ -275,6 +275,21 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     }
 
     @Test
+    fun `the fallback strength scales the unsigned high motor value before the cut`() {
+        val phone = Hardware.vibrator()
+        val rig = rig(phoneVibrator = phone) {
+            vibrateFallbackToDevice = true
+            vibrateFallbackToDeviceStrength = 100
+        }
+        rig.wake(rig.connectPad())
+
+        rig.rumble(0, 0xFFFF)
+
+        // 65535 is cut at 65534, which is -2: the high byte is 255, and 255 * 0.33 is 84
+        assertThat(Hardware.calls(phone)).containsExactly(oneShot(84))
+    }
+
+    @Test
     fun `a fallback strength of zero cancels the phone`() {
         val phone = Hardware.vibrator()
         val rig = rig(phoneVibrator = phone) {

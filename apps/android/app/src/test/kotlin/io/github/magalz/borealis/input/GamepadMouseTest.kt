@@ -117,4 +117,15 @@ class GamepadMouseTest {
 
         assertThat(rig.connection.mouse).contains("down 1")
     }
+
+    @Test
+    fun `a pad that connects while it is on joins without a notice`() {
+        val bare = ControllerHandlerRig()
+        bare.handler.setMouseEmulation(true)
+        val notices = ShadowToast.shownToastCount()
+
+        bare.handler.deviceAdded(FakeUsbController(5, bare.handler))
+
+        assertThat(ShadowToast.shownToastCount()).isEqualTo(notices)
+    }
 }

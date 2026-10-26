@@ -125,8 +125,9 @@ crash notice, which cannot be triggered. The results are in
    removed by the owner's decision, because they linked to Moonlight's wiki.
 5. **Duplicated game controller rule.** Done (merge `e81583be`). The test of
    what counts as a game controller is one rule. Unifying it with
-   `ControllerHandler.isGameControllerDevice` is done in Sprint 13: it delegates to
-   `isStreamControllerDevice`, next to `isGameController` in `ConnectedGamepads.kt`.
+   `ControllerHandler.isGameControllerDevice` was settled in Sprint 13 as two named rules
+   side by side in `ConnectedGamepads.kt`, with `ControllerHandler.isGameControllerDevice`
+   delegating to `isStreamControllerDevice`.
 6. **Host parameter objects.** Done (merge `d9865d61`).
 7. **Phone title bars.** Done (merge `8a6acbad`). The four phone title bars
    (Apps, Audit, Settings and Privacy) share one phone bar and one back button.
@@ -656,10 +657,11 @@ conversion is merged; the device round is pending. Owner decisions of 2026-10-25
   on separate test packages. One task then converted it with every test unchanged. Two
   reviewers read the conversion, one for each half of the Java file (lines 1 to 1,850, and
   1,850 to the end). The three characterization tasks ran 250 (events), 277 (devices) and
-  333 (feedback) test runs, 860 in all. The input test packages (`io.github.magalz.borealis.input.*`,
-  69 classes) ran 1,123 tests after the `ControllerHandler` follow-ups. The whole `:app` suite
-  had 3,179 tests at `895d0419a`, in the phase review (gate 1). These are test runs: a contract
-  test that runs once per SDK subclass counts once for each run.
+  333 (feedback) test runs, 860 in all. The input tests are in two namespaces: 1,123 in
+  `io.github.magalz.borealis.input.*` (69 classes) and 511 in `com.limelight.binding.input.*`,
+  1,634 in all (the phase review's run of both). The whole `:app` suite had 3,179 tests at
+  `895d0419a`, in the phase review. These are test runs: a contract test that runs once per
+  SDK subclass counts once for each run.
 - **Controller rule.** Two named rules sit side by side in `ConnectedGamepads.kt`
   (`:borealis:designsystem`), with no behaviour change. `isGameController` says whether a
   device is a real pad. `isStreamControllerDevice` says whether `Game` offers a device's key
@@ -669,12 +671,14 @@ conversion is merged; the device round is pending. Owner decisions of 2026-10-25
   the task empties it before each run. The leftover folders of the mutation runs had filled
   the C: drive on 2026-10-25 (see [building](development/building.md)).
 
-Size: 26 Java files and 7,982 lines under `apps/android/app/src/main/java/com/limelight/binding/input`,
-moved by seven `chore: move` commits, one per area, as rename-only commits. After the conversion they are 26 Kotlin files and 8,399 lines
-under `apps/android/app/src/main/kotlin/`. By area, in Java lines: `binding/input` (4,060,
-with `ControllerHandler` at 3,659 and `KeyboardTranslator` at 401), `virtual_controller`
-(1,905, 10 files), `driver` (the USB drivers, 1,173, 7 files), `touch` (591, 3 files) and
-`capture` (253, 4 files). No Java is left under `binding/input`.
+Size: 26 Java files and 7,982 lines under
+`apps/android/app/src/main/java/com/limelight/binding/input`, moved by seven `chore: move`
+commits, one per task, as rename-only commits. After the conversion they are 26 Kotlin files
+and 8,399 lines under `apps/android/app/src/main/kotlin/com/limelight/binding/input`. By area,
+in Java lines: `binding/input` (4,060, with `ControllerHandler` at 3,659 and
+`KeyboardTranslator` at 401), `virtual_controller` (1,905, 10 files), `driver` (the USB
+drivers, 1,173, 7 files), `touch` (591, 3 files) and `capture` (253, 4 files). No Java is
+left under `binding/input`.
 
 Outcome, by issue (each one a merged task of the phase):
 
@@ -706,8 +710,15 @@ Removed, not converted: each removal has its own `refactor: remove` commit with 
   element classes (the eight debug calls of the stick, button and pad classes went with it).
 - **`AnalogStick`:** the private `circle_stick` flag, which was never read, and three unused
   `SIZE_RADIUS` constants.
-- **Test code:** `ShadowOscMoonBridge`, a test shadow of the on-screen controller tests, replaced
-  by the shared MoonBridge shadow.
+Test code, not a `refactor: remove` commit: `ShadowOscMoonBridge`, a test shadow of the
+on-screen controller tests, was deleted in `a65a0bca0` (a `test:` commit), and those tests use
+the shared MoonBridge shadow.
+
+Lint: the lint baseline lost the 15 entries of the converted input Java (`b11ec77a6`, merged
+in `f8c20d882`). The 27 entries left filter 11 `UnusedAttribute`, 3 `RtlHardcoded`, 2
+`UseRequiresApi` (`Game.java` and `NsdManagerDiscoveryAgent.kt`), 2 `DefaultLocale` (both in
+`MediaCodecHelper.java`) and one each of nine other ids. None is in `binding/input`. The seven `ViewConstructor` entries are no longer in the baseline: the views
+carry `@SuppressLint("ViewConstructor")` in source.
 
 Items:
 
@@ -1164,14 +1175,19 @@ when. None of the bugs is fixed: the conversion keeps behaviour (ADR 0059, rule 
 under `apps/android/app/src/main/kotlin/com/limelight/binding/input/`, unless an item says
 otherwise.
 
-- **(a) Refactor the converted code.** The 62 places marked `(Sprint 13 backlog)` sit in 22
-  files, each next to a suppression annotation. Most suppress structural rules (`ReturnCount`,
-  `LongMethod`, `ComplexCondition`, `CyclomaticComplexMethod`, `TooManyFunctions`,
-  `LoopWithTooManyJumpStatements`, `LongParameterList`, `NestedBlockDepth` and `LargeClass`).
-  Some suppress `PrintStackTrace`, where the Java wrote to stderr, and five suppress
-  `DEPRECATION`. A few suppress `TooGenericExceptionCaught`, `UnusedPrivateProperty`,
-  `ObjectLiteralToLambda` or `AbstractClassCanBeConcreteClass`. By file, with the count:
-  - `ControllerHandler.kt`: 25
+- **(a) Refactor the converted code.** The 65 places marked `(Sprint 13 backlog)` sit in 22
+  files. 64 of them are next to a suppression annotation. The one in `driver/AbstractController.kt`
+  marks the never-assigned `supportedButtonFlags`, which is a bug (see (b)). Most suppress
+  structural rules (`ReturnCount`, `LongMethod`, `ComplexCondition`, `CyclomaticComplexMethod`,
+  `TooManyFunctions`, `LoopWithTooManyJumpStatements`, `LongParameterList`, `NestedBlockDepth`
+  and `LargeClass`). Some suppress `PrintStackTrace`, where the Java wrote to stderr, and seven
+  suppress `DEPRECATION`. A few suppress `TooGenericExceptionCaught`, `UnusedPrivateProperty`,
+  `ObjectLiteralToLambda` or `AbstractClassCanBeConcreteClass`. Eleven places carry an Android
+  lint suppression instead: `@SuppressLint("ViewConstructor")` on the seven on-screen controller
+  views, `@SuppressLint("InlinedApi")` on three declarations (two in `ControllerHandler.kt`, one
+  in `KeyboardTranslator.kt`) and `@SuppressLint("UnspecifiedRegisterReceiverFlag")` on the
+  receiver of `UsbDriverService.kt`. By file, with the count:
+  - `ControllerHandler.kt`: 28 (three of its markers wrap over two lines)
   - `KeyboardTranslator.kt`: 1
   - `capture/AndroidNativePointerCaptureProvider.kt`: 2
   - `capture/InputCaptureProvider.kt`: 1
@@ -1194,7 +1210,7 @@ otherwise.
   - `virtual_controller/VirtualControllerConfigurationLoader.kt`: 4
   - `virtual_controller/VirtualControllerElement.kt`: 1
 
-  That is 62 places in 22 files.
+  That is 65 places in 22 files.
 - **(b) Bugs and oddities found during the conversion, by area.** Each one is kept as it was.
   - **Keyboard and capture** (`KeyboardTranslator.kt`, `capture/`):
     - A negative key code for a device with a layout throws `ArrayIndexOutOfBoundsException` in
@@ -1253,8 +1269,9 @@ otherwise.
   - **ControllerHandler** (events, devices and feedback):
     - Combining: `x |= maxByMagnitude(x, v)` can send bits of two pads on one controller number.
       Ties take the later pad.
-    - `handleSetMotionEventState` stops after the first pad with a matching controller number, so
-      a touchpad and its joystick on one number get the state only on the first.
+    - `handleSetMotionEventState` stops after the first pad with a matching controller number
+      that has a sensor manager (a matching pad without one is skipped with `continue`). So when
+      two pads on one number both have a sensor manager, only the first gets the state.
     - `handleRumbleTriggers` passes a possibly null `vibratorManager` to `rumbleQuadVibrators`.
     - The controller-input fusing block is written out three times (about lines 1479 to 1514 of
       the Java).
@@ -1291,8 +1308,8 @@ otherwise.
       `sceManager.rumble` gets sign-extended shorts (0xC000 arrives as -16384), which is probably
       a bug. A USB pad that sent no input answers to controller 0.
 - **(c) Test and tooling items.**
-  - Spotless (ktfmt) covers `apps/android/app/src/main/kotlin` only, so the test sources are not
-    formatted. Detekt covers them.
+  - Spotless (ktfmt) covers `borealis/**` and `build-logic/**`, tests included. Of `:app`, only
+    `app/src/main/kotlin` is formatted, so `app/src/test` is not. Detekt covers the tests.
   - `.gitattributes` marks `apps/android/**` as `-text`, so the Borealis Kotlin under `app/src`
     mixes CRLF and LF line endings. Normalize the Borealis-owned Kotlin under
     `app/src/main/kotlin` and `app/src/test/kotlin`.
@@ -1300,9 +1317,15 @@ otherwise.
     `ANDROID_xx` constants). Fold them into the test standardization of Sprint 14.
   - About 300 idle `HandlerThread("ControllerHandler")` threads stay alive in the test JVM,
     because tests rarely call `destroy()`.
-  - One wall-clock test: `ButtonTimingCharacterizationTest` (low flake risk).
-  - Each distinct `@Config(shadows = ...)` set and each SDK level is a Robolectric sandbox, held
-    for the life of the JVM. The `:app` test heap is 2 GB since Sprint 13.
+  - One wall-clock test: `ButtonTimingCharacterizationTest` compares real sleep times with a
+    25 ms threshold. It failed under load in two runs of the phase review. The phase fixes
+    loosened it (they merge before these docs), and the `waited` test pins the same threshold
+    without the clock.
+  - Robolectric caches its sandboxes up to a limit (3 times the supported SDK levels, 42 in
+    Robolectric 4.17) and evicts the least recently used one. Each distinct
+    `@Config(shadows = ...)` set and SDK level needs a sandbox. The phase review counted 32
+    distinct sandboxes at `895d0419a`, and the `:app` test heap peaked at 1.17 GB of its 2 GB
+    (the heap is 2 GB since Sprint 13).
 
 ## Host-side items (LuminalShine)
 

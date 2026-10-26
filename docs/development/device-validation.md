@@ -3983,7 +3983,7 @@ to. The round's notes numbered the pad items differently. On the S22, items 3 to
 | --- | --- | --- | --- |
 | 1 Update in place | S22 | pass | Installed in place at 10:33. The Library opened. The startup log reads `commit=9af270c7390a`. |
 | 1 Update in place | TV | pass | Installed in place at 10:33 (round notes). Launched at 12:08:40 with the `LEANBACK_LAUNCHER` intent. The startup log reads `commit=9af270c7390a`, SDK 34. |
-| 2 Touch, absolute (direct) | S22 | fail, backlog 2 | Direct touch set in Settings was used by a new stream (clean run, 12:20, finding 1). Long press and move select text on the PC instead of dragging. Tap, long press and two-finger scroll are not recorded separately. |
+| 2 Touch, absolute (direct) | S22 | pass, backlog 2 | Direct touch set in Settings was used by a new stream (clean run, 12:20, finding 1). Long press and move select text on the PC instead of dragging. Tap, long press and two-finger scroll are not recorded separately. |
 | 3 Touch, trackpad (default) | S22 | pass, backlog 1 | Tap, move and two-finger scroll work. The drag is a press and hold of about 0.65 s, then a move. Pointer speed is not recorded. |
 | 4 On-screen controller | S22 | pass | Owner: all buttons, the D-pad, the sticks, the triggers, the bumpers, Start, Select, Guide and the 3 s hold work. No app exception in the log. |
 | 5 On-screen controller edit | S22 | pass | Owner: the layout edit was kept, and the opacity changed the look. |

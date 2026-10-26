@@ -65,7 +65,7 @@ Tasks without shared files and with satisfied dependencies run in parallel in on
 - **Deleting folders.** When asking the owner to delete leftover folders, name each folder exactly and say whether any agent is still running. A cleanup by prefix deleted an active review worktree.
 - **Windows path length.** A test temporary folder deep under the checkout made Robolectric's SQLite paths pass 260 characters. The build now puts the folder at the drive root on Windows. After changing test temp paths, run the tests that open SQLite too.
 - **Characterize before converting a large class.** `ControllerHandler` (3,659 lines) was pinned by three characterization tasks working in parallel on separate test packages, then converted in one task with every test unchanged, and reviewed in two halves.
-- **Worktree removal on Windows.** A worktree whose `build/` holds paths over 260 characters cannot be removed by `git worktree remove` ("Invalid argument"): git unregisters it and the folder stays. The orchestrator reports it to the owner, who deletes it with a `\\?\` path.
+- **Worktree removal on Windows.** A worktree whose `build/` holds paths over 260 characters cannot be removed by `git worktree remove` ("Invalid argument"): git unregisters it and the folder stays. The orchestrator removes such a folder with a `\\?\` path, as it did in this sprint. The phase review confirmed the cause: 2,171 paths in that worktree's `build/` passed 260 characters.
 
 ## Reporting to the owner
 

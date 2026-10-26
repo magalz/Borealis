@@ -55,14 +55,6 @@ public class MoonBridge {
     public static final int ML_ERROR_PROTECTED_CONTENT = -103;
     public static final int ML_ERROR_FRAME_CONVERSION = -104;
 
-    public static final int ML_PORT_INDEX_TCP_47984 = 0;
-    public static final int ML_PORT_INDEX_TCP_47989 = 1;
-    public static final int ML_PORT_INDEX_TCP_48010 = 2;
-    public static final int ML_PORT_INDEX_UDP_47998 = 8;
-    public static final int ML_PORT_INDEX_UDP_47999 = 9;
-    public static final int ML_PORT_INDEX_UDP_48000 = 10;
-    public static final int ML_PORT_INDEX_UDP_48010 = 11;
-
     public static final int ML_PORT_FLAG_ALL = 0xFFFFFFFF;
     public static final int ML_PORT_FLAG_TCP_47984 = 0x0001;
     public static final int ML_PORT_FLAG_TCP_47989 = 0x0002;

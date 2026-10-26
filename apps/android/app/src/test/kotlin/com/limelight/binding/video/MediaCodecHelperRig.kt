@@ -165,9 +165,6 @@ class HelperHandle(private val type: Class<*>) {
 
     fun needsBaselineSpsHack(name: String) = call("decoderNeedsBaselineSpsHack", name) as Boolean
 
-    fun needsSpsBitstreamRestrictions(name: String) =
-        call("decoderNeedsSpsBitstreamRestrictions", name) as Boolean
-
     fun slicesPerFrame(name: String) = call("getDecoderOptimalSlicesPerFrame", name) as Byte
 
     fun refFrameInvalidationAvc(name: String, height: Int) =
@@ -207,7 +204,6 @@ class HelperHandle(private val type: Class<*>) {
         val LIST_FIELDS =
             listOf(
                 "blacklistedDecoderPrefixes",
-                "spsFixupBitstreamFixupDecoderPrefixes",
                 "blacklistedAdaptivePlaybackPrefixes",
                 "baselineProfileHackPrefixes",
                 "directSubmitPrefixes",

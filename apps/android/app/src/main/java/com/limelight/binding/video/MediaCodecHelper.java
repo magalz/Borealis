@@ -28,7 +28,6 @@ import com.limelight.preferences.PreferenceConfiguration;
 public class MediaCodecHelper {
     
     private static final List<String> blacklistedDecoderPrefixes;
-    private static final List<String> spsFixupBitstreamFixupDecoderPrefixes;
     private static final List<String> blacklistedAdaptivePlaybackPrefixes;
     private static final List<String> baselineProfileHackPrefixes;
     private static final List<String> directSubmitPrefixes;
@@ -103,13 +102,6 @@ public class MediaCodecHelper {
     }
     
     static {
-        // If a decoder qualifies for reference frame invalidation,
-        // these entries will be ignored for those decoders.
-        spsFixupBitstreamFixupDecoderPrefixes = new LinkedList<>();
-        spsFixupBitstreamFixupDecoderPrefixes.add("omx.nvidia");
-        spsFixupBitstreamFixupDecoderPrefixes.add("omx.qcom");
-        spsFixupBitstreamFixupDecoderPrefixes.add("omx.brcm");
-
         baselineProfileHackPrefixes = new LinkedList<>();
         baselineProfileHackPrefixes.add("omx.intel");
 
@@ -621,10 +613,6 @@ public class MediaCodecHelper {
         return isDecoderInList(directSubmitPrefixes, decoderName) && !isExynos4Device();
     }
     
-    public static boolean decoderNeedsSpsBitstreamRestrictions(String decoderName) {
-        return isDecoderInList(spsFixupBitstreamFixupDecoderPrefixes, decoderName);
-    }
-
     public static boolean decoderNeedsBaselineSpsHack(String decoderName) {
         return isDecoderInList(baselineProfileHackPrefixes, decoderName);
     }

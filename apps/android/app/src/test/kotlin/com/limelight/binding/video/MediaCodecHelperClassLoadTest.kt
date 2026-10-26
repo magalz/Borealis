@@ -130,8 +130,6 @@ class MediaCodecHelperClassLoadTest : MediaCodecHelperTestBase() {
         val rows = Rows()
         val expected =
             mapOf(
-                "spsFixupBitstreamFixupDecoderPrefixes" to
-                    listOf("omx.nvidia", "omx.qcom", "omx.brcm"),
                 "blacklistedAdaptivePlaybackPrefixes" to listOf("omx.intel", "omx.mtk"),
                 "baselineProfileHackPrefixes" to listOf("omx.intel"),
                 "directSubmitPrefixes" to

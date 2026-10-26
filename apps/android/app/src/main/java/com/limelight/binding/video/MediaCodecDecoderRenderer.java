@@ -70,7 +70,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     private Activity activity;
     private MediaCodec videoDecoder;
     private Thread rendererThread;
-    private boolean needsSpsBitstreamFixup, isExynos4;
     private boolean adaptivePlayback, directSubmit, fusedIdrFrame;
     private boolean constrainedHighProfile;
     private boolean refFrameInvalidationAvc, refFrameInvalidationHevc, refFrameInvalidationAv1;
@@ -617,21 +616,13 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             }
 
             // These fixups only apply to H264 decoders
-            needsSpsBitstreamFixup = MediaCodecHelper.decoderNeedsSpsBitstreamRestrictions(selectedDecoderInfo.getName());
             needsBaselineSpsHack = MediaCodecHelper.decoderNeedsBaselineSpsHack(selectedDecoderInfo.getName());
             constrainedHighProfile = MediaCodecHelper.decoderNeedsConstrainedHighProfile(selectedDecoderInfo.getName());
-            isExynos4 = MediaCodecHelper.isExynos4Device();
-            if (needsSpsBitstreamFixup) {
-                LimeLog.info("Decoder "+selectedDecoderInfo.getName()+" needs SPS bitstream restrictions fixup");
-            }
             if (needsBaselineSpsHack) {
                 LimeLog.info("Decoder "+selectedDecoderInfo.getName()+" needs baseline SPS hack");
             }
             if (constrainedHighProfile) {
                 LimeLog.info("Decoder "+selectedDecoderInfo.getName()+" needs constrained high profile");
-            }
-            if (isExynos4) {
-                LimeLog.info("Decoder "+selectedDecoderInfo.getName()+" is on Exynos 4");
             }
 
             refFrameInvalidationActive = refFrameInvalidationAvc;

@@ -28,9 +28,6 @@ class MediaCodecHelperUninitializedTest : MediaCodecHelperTestBase() {
             helper.needsConstrainedHighProfile("omx.intel")
         }
         rows.throwsNotInitialized("baseline SPS hack") { helper.needsBaselineSpsHack("omx.intel") }
-        rows.throwsNotInitialized("SPS bitstream restrictions") {
-            helper.needsSpsBitstreamRestrictions("omx.qcom.video")
-        }
         rows.throwsNotInitialized("slices per frame") { helper.slicesPerFrame("omx.qcom.video") }
         rows.throwsNotInitialized("AVC reference frame invalidation") {
             helper.refFrameInvalidationAvc("omx.qcom.video", 1080)

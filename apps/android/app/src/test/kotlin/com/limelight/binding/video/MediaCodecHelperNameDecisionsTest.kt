@@ -81,25 +81,6 @@ class MediaCodecHelperNameDecisionsTest : MediaCodecHelperTestBase() {
     }
 
     @Test
-    fun `NVIDIA, Qualcomm and Broadcom decoders need the SPS bitstream restrictions fixup`() {
-        val helper = helper()
-        val rows = Rows()
-
-        listOf("omx.nvidia.h264.decode", "OMX.qcom.video.decoder.avc", "OMX.BRCM.video.h264")
-            .forEach { name ->
-                rows.check("$name needs the fixup", true) {
-                    helper.needsSpsBitstreamRestrictions(name)
-                }
-            }
-        listOf("OMX.Exynos.AVC.Decoder", "c2.qti.avc.decoder", "OMX.Intel.hw_vd.h264", "OMX.qco")
-            .forEach { name ->
-                rows.check("$name does not", false) { helper.needsSpsBitstreamRestrictions(name) }
-            }
-
-        rows.verify()
-    }
-
-    @Test
     fun `software decoders use four slices per frame and so do old Qualcomm decoders`() {
         val rows = Rows()
         val modern = helper(gl = GlFacts(GlFacts.GL_3_2, "Adreno (TM) 640"))

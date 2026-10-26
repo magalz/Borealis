@@ -13,9 +13,10 @@ import androidx.compose.ui.platform.LocalContext
 /**
  * Whether an input device with these facts is a real game controller: not virtual, and either a
  * gamepad, or a joystick with the X and Y axes ([hasJoystickXy]) that is no alphabetic keyboard
- * ([keyboardType] is not [InputDevice.KEYBOARD_TYPE_ALPHABETIC]). It answers "is a pad connected?",
- * for the form factor and for the USB driver (`NativeGamepadSupport`). The stream asks something
- * broader, which devices' key events `Game` offers to the controller handler first: that is
+ * ([keyboardType] is not [InputDevice.KEYBOARD_TYPE_ALPHABETIC]). It answers "is this device a real
+ * pad?", for the form factor (which asks it of every device Android has, in [isGamepadConnected])
+ * and for the USB driver (`NativeGamepadSupport`). The stream asks something broader, which
+ * devices' key events `Game` offers to the controller handler first: that is
  * [isStreamControllerDevice]. The source masks are compared whole, because the class bits overlap
  * with the keyboard's: an 8BitDo pad reports `KEYBOARD | GAMEPAD | JOYSTICK` with a non-alphabetic
  * keyboard, and a remote reports `KEYBOARD | DPAD`.

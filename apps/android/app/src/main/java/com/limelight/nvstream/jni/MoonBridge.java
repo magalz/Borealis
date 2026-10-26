@@ -79,7 +79,6 @@ public class MoonBridge {
 
     public static final byte LI_PEN_BUTTON_PRIMARY = 0x01;
     public static final byte LI_PEN_BUTTON_SECONDARY = 0x02;
-    public static final byte LI_PEN_BUTTON_TERTIARY = 0x04;
 
     public static final byte LI_TILT_UNKNOWN = (byte)0xFF;
     public static final short LI_ROT_UNKNOWN = (short)0xFFFF;

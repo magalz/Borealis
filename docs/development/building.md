@@ -103,10 +103,13 @@ What stays, and why:
 
 | Lint ids | Why they stay |
 | --- | --- |
-| `UnusedAttribute`, `RtlHardcoded`, `ViewConstructor`, `UseRequiresApi` | Cosmetic. The attributes apply from API 30 or 33 and older versions ignore them. The gravity in `activity_game.xml` is the stream notification overlay. The seven virtual-controller views are built in code only. The `@TargetApi` annotations are for API 30 and later; the ones for API 28 and below went with the dead checks. |
+| `UnusedAttribute`, `RtlHardcoded`, `UseRequiresApi` | Cosmetic. The attributes apply from API 30 or 33 and older versions ignore them. The gravity in `activity_game.xml` is the stream notification overlay. The two `UseRequiresApi` entries suggest `@RequiresApi` in place of `@TargetApi` in `Game.java` (converted in Sprint 14) and in `NsdManagerDiscoveryAgent.kt`. The `@TargetApi` annotations are for API 30 and later; the ones for API 28 and below went with the dead checks. |
 | `OldTargetApi` | A `targetSdk` of 37 is a platform update, decided on its own and not in a lint sweep. |
 | `NotShrinkingResources` | Release builds minify without `shrinkResources`. Turning it on changes the release package, so it is a release decision. |
-| `DefaultLocale`, `ApplySharedPref`, `SourceLockedOrientationActivity`, `VectorRaster` | Inherited code that does what it should. `toLowerCase()` runs on device and GPU names. `commit()` is deliberate: the crash listener must persist the crash count before the process dies. The stream locks the orientation on purpose. `ic_settings.xml` is a large vector. |
+| `DefaultLocale`, `ApplySharedPref`, `SourceLockedOrientationActivity`, `VectorRaster` | Inherited code that does what it should. `toLowerCase()` runs on device and GPU names, in `MediaCodecHelper.java` (converted in Sprint 14). `commit()` is deliberate: the crash listener must persist the crash count before the process dies. The stream locks the orientation on purpose. `ic_settings.xml` is a large vector. |
+
+`ViewConstructor` has no baseline entry since Sprint 13: the seven virtual-controller views
+carry `@SuppressLint("ViewConstructor")` in source, because they are built in code only.
 
 `apps/android/app/lint.xml` holds four more ignores, by path, beside the
 baseline:

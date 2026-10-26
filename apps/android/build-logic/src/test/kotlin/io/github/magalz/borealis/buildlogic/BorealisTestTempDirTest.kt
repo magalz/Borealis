@@ -7,6 +7,7 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.tasks.testing.Test
 import org.gradle.testfixtures.ProjectBuilder
+import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 
@@ -135,6 +136,23 @@ class BorealisTestTempDirTest {
 
         assertThat(stale.exists()).isFalse()
         assertThat(project.buildTempDir().isDirectory).isTrue()
+    }
+
+    @org.junit.Test
+    fun `a run that cannot make its temporary folder stops there and names the folder`() {
+        val project = project()
+        // A regular file in the way: no folder can be made below it.
+        val blocker = folder.newFile("not-a-folder")
+        project.layout.buildDirectory.set(blocker.resolve("build"))
+        val test = project.tasks.register("testDebugUnitTest", Test::class.java)
+        project.configureTestTempDir(windows = false)
+        val dir = project.buildTempDir()
+        val clear = checkNotNull(test.get().action(CLEAR_TEST_TEMP_DIR_BEFORE))
+
+        val error = assertThrows(IllegalStateException::class.java) { clear.execute(test.get()) }
+
+        assertThat(error).hasMessageThat().contains(dir.absolutePath)
+        assertThat(dir.exists()).isFalse()
     }
 
     @org.junit.Test

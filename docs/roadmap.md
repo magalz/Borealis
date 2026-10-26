@@ -1182,11 +1182,13 @@ otherwise.
   `TooManyFunctions`, `LoopWithTooManyJumpStatements`, `LongParameterList`, `NestedBlockDepth`
   and `LargeClass`). Some suppress `PrintStackTrace`, where the Java wrote to stderr, and seven
   suppress `DEPRECATION`. A few suppress `TooGenericExceptionCaught`, `UnusedPrivateProperty`,
-  `ObjectLiteralToLambda` or `AbstractClassCanBeConcreteClass`. Eleven places carry an Android
-  lint suppression instead: `@SuppressLint("ViewConstructor")` on the seven on-screen controller
-  views, `@SuppressLint("InlinedApi")` on three declarations (two in `ControllerHandler.kt`, one
-  in `KeyboardTranslator.kt`) and `@SuppressLint("UnspecifiedRegisterReceiverFlag")` on the
-  receiver of `UsbDriverService.kt`. By file, with the count:
+  `ObjectLiteralToLambda` or `AbstractClassCanBeConcreteClass`. Ten of the marked places carry
+  an Android lint suppression instead: `@SuppressLint("ViewConstructor")` on the seven
+  on-screen controller views, `@SuppressLint("InlinedApi")` on two declarations (one in
+  `ControllerHandler.kt`, one in `KeyboardTranslator.kt`) and
+  `@SuppressLint("UnspecifiedRegisterReceiverFlag")` on the receiver of `UsbDriverService.kt`.
+  A third `InlinedApi`, on the button map of `ControllerHandler.kt` (`ANDROID_TO_LI_BUTTON_MAP`,
+  line 3866), has no marker. By file, with the count:
   - `ControllerHandler.kt`: 28 (three of its markers wrap over two lines)
   - `KeyboardTranslator.kt`: 1
   - `capture/AndroidNativePointerCaptureProvider.kt`: 2

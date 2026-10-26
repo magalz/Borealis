@@ -27,13 +27,15 @@ naming:
     active: false
 complexity:
   LongParameterList:
+    # A Robolectric shadow method (@Implementation) mirrors the signature it replaces.
     ignoreAnnotated:
       - Composable
-    # Test builders and fixtures take many values on purpose. Off in test sources until the Java to
-    # Kotlin migration standardizes them (owner decision, 2026-10-18).
-    excludes: ['**/test/**', '**/androidTest/**', '**/testFixtures/**']
+      - Implementation
+    # Test sources follow the rule outside :app. Drop these excludes when the :app tests are fixed
+    # (Sprint 14).
+    excludes: ['**/app/src/test/**', '**/app/src/androidTest/**']
 coroutines:
-  # Tests use Dispatchers.Unconfined and IO directly. Off in test sources until the Java to Kotlin
-  # migration injects dispatchers there too (owner decision, 2026-10-18).
+  # Tests inject their dispatchers, outside :app as in main code. Drop these excludes when the
+  # :app tests are fixed (Sprint 14).
   InjectDispatcher:
-    excludes: ['**/test/**', '**/androidTest/**', '**/testFixtures/**']
+    excludes: ['**/app/src/test/**', '**/app/src/androidTest/**']

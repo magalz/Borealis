@@ -21,7 +21,7 @@ import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.magalz.borealis.designsystem.components.Text
-import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens

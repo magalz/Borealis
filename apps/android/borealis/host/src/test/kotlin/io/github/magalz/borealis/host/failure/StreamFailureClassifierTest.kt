@@ -16,42 +16,28 @@ class StreamFailureClassifierTest {
 
     private fun classify(facts: FailureFacts) = StreamFailureClassifier.classify(facts, text, ports)
 
-    private fun start(
-        cause: CauseKind = CauseKind.NONE,
-        portFlags: Int = 0,
-        httpCode: Int? = null,
-        errorCode: Int = 0,
-        resumeCollision: Boolean = false,
-        retriesExhausted: Boolean = false,
-    ) =
-        FailureFacts(
-            stage = "Desktop",
-            errorCode = errorCode,
-            portFlags = portFlags,
-            terminated = false,
-            cause = cause,
-            httpCode = httpCode,
-            resumeCollision = resumeCollision,
-            retriesExhausted = retriesExhausted,
-        )
+    /** A failure of the Desktop launch that says nothing about its cause. */
+    private val started =
+        FailureFacts(stage = "Desktop", errorCode = 0, portFlags = 0, terminated = false)
 
     @Test
     fun `a pinned certificate mismatch is a changed certificate`() {
-        val failure = classify(start(cause = CauseKind.CERT_MISMATCH))
+        val failure = classify(started.copy(cause = CauseKind.CERT_MISMATCH))
 
         assertThat(failure.kind).isEqualTo(FailureKind.CERTIFICATE_CHANGED)
     }
 
     @Test
     fun `a certificate mismatch wins over a busy host`() {
-        val failure = classify(start(cause = CauseKind.CERT_MISMATCH, resumeCollision = true))
+        val failure =
+            classify(started.copy(cause = CauseKind.CERT_MISMATCH, resumeCollision = true))
 
         assertThat(failure.kind).isEqualTo(FailureKind.CERTIFICATE_CHANGED)
     }
 
     @Test
     fun `a resume collision is a busy host`() {
-        val failure = classify(start(resumeCollision = true))
+        val failure = classify(started.copy(resumeCollision = true))
 
         assertThat(failure.kind).isEqualTo(FailureKind.HOST_BUSY)
     }
@@ -59,28 +45,28 @@ class StreamFailureClassifierTest {
     @Test
     fun `exhausted launch retries are a busy host`() {
         val failure =
-            classify(start(cause = CauseKind.HTTP, httpCode = 503, retriesExhausted = true))
+            classify(started.copy(cause = CauseKind.HTTP, httpCode = 503, retriesExhausted = true))
 
         assertThat(failure.kind).isEqualTo(FailureKind.HOST_BUSY)
     }
 
     @Test
     fun `a timeout before the first frame is a busy host`() {
-        val failure = classify(start(cause = CauseKind.TIMEOUT, portFlags = 0x3))
+        val failure = classify(started.copy(cause = CauseKind.TIMEOUT, portFlags = 0x3))
 
         assertThat(failure.kind).isEqualTo(FailureKind.HOST_BUSY)
     }
 
     @Test
     fun `an unreachable host is offline`() {
-        val failure = classify(start(cause = CauseKind.UNREACHABLE))
+        val failure = classify(started.copy(cause = CauseKind.UNREACHABLE))
 
         assertThat(failure.kind).isEqualTo(FailureKind.HOST_OFFLINE)
     }
 
     @Test
     fun `an unreachable host on the HTTP ports is offline and names the ports`() {
-        val failure = classify(start(cause = CauseKind.UNREACHABLE, portFlags = 0x3))
+        val failure = classify(started.copy(cause = CauseKind.UNREACHABLE, portFlags = 0x3))
 
         assertThat(failure.kind).isEqualTo(FailureKind.HOST_OFFLINE)
         assertThat(failure.portHint).isEqualTo("$portHint:ports=3")
@@ -88,8 +74,8 @@ class StreamFailureClassifierTest {
 
     @Test
     fun `a failure without a known cause is generic`() {
-        assertThat(classify(start()).kind).isEqualTo(FailureKind.GENERIC)
-        assertThat(classify(start(cause = CauseKind.HTTP, httpCode = 500)).kind)
+        assertThat(classify(started).kind).isEqualTo(FailureKind.GENERIC)
+        assertThat(classify(started.copy(cause = CauseKind.HTTP, httpCode = 500)).kind)
             .isEqualTo(FailureKind.GENERIC)
     }
 
@@ -133,7 +119,7 @@ class StreamFailureClassifierTest {
 
     @Test
     fun `a failed start never stopped, even when the facts say a frame was shown`() {
-        assertThat(classify(start().copy(streamed = true)).kind).isEqualTo(FailureKind.GENERIC)
+        assertThat(classify(started.copy(streamed = true)).kind).isEqualTo(FailureKind.GENERIC)
     }
 
     @Test
@@ -181,7 +167,8 @@ class StreamFailureClassifierTest {
 
     @Test
     fun `an HTTP error adds its status to the support text`() {
-        val failure = classify(start(cause = CauseKind.HTTP, httpCode = 503, errorCode = 503))
+        val failure =
+            classify(started.copy(cause = CauseKind.HTTP, httpCode = 503, errorCode = 503))
 
         assertThat(failure.rawCode).isEqualTo("$rawHttp:$rawStage:503|Desktop|503")
     }
@@ -196,8 +183,8 @@ class StreamFailureClassifierTest {
 
     @Test
     fun `the port hint is there for generic and offline failures that have port flags`() {
-        val generic = classify(start(portFlags = 0x3))
-        val offline = classify(start(cause = CauseKind.UNREACHABLE, portFlags = 0x100))
+        val generic = classify(started.copy(portFlags = 0x3))
+        val offline = classify(started.copy(cause = CauseKind.UNREACHABLE, portFlags = 0x100))
 
         assertThat(generic.portHint).isEqualTo("$portHint:ports=3")
         assertThat(offline.portHint).isEqualTo("$portHint:ports=256")
@@ -205,22 +192,26 @@ class StreamFailureClassifierTest {
 
     @Test
     fun `the port hint is absent without port flags`() {
-        assertThat(classify(start()).portHint).isNull()
-        assertThat(classify(start(cause = CauseKind.UNREACHABLE)).portHint).isNull()
+        assertThat(classify(started).portHint).isNull()
+        assertThat(classify(started.copy(cause = CauseKind.UNREACHABLE)).portHint).isNull()
     }
 
     @Test
     fun `the port hint is absent for busy and changed-certificate failures`() {
-        assertThat(classify(start(cause = CauseKind.TIMEOUT, portFlags = 0x3)).portHint).isNull()
-        assertThat(classify(start(resumeCollision = true, portFlags = 0x3)).portHint).isNull()
-        assertThat(classify(start(cause = CauseKind.CERT_MISMATCH, portFlags = 0x3)).portHint)
+        assertThat(classify(started.copy(cause = CauseKind.TIMEOUT, portFlags = 0x3)).portHint)
+            .isNull()
+        assertThat(classify(started.copy(resumeCollision = true, portFlags = 0x3)).portHint)
+            .isNull()
+        assertThat(
+                classify(started.copy(cause = CauseKind.CERT_MISMATCH, portFlags = 0x3)).portHint
+            )
             .isNull()
     }
 
     @Test
     fun `an unreadable RTSP reply shows no port hint, even with port flags`() {
         val failure =
-            classify(start(portFlags = 0x3, errorCode = -1).copy(rtspReplyUnreadable = true))
+            classify(started.copy(portFlags = 0x3, errorCode = -1, rtspReplyUnreadable = true))
 
         assertThat(failure.kind).isEqualTo(FailureKind.GENERIC)
         assertThat(failure.portHint).isNull()
@@ -229,14 +220,14 @@ class StreamFailureClassifierTest {
 
     @Test
     fun `the same stage with another code still shows the port hint`() {
-        val failure = classify(start(portFlags = 0x3, errorCode = -2))
+        val failure = classify(started.copy(portFlags = 0x3, errorCode = -2))
 
         assertThat(failure.portHint).isEqualTo("$portHint:ports=3")
     }
 
     @Test
     fun `an error -1 without the unreadable reply fact still shows the port hint`() {
-        val failure = classify(start(portFlags = 0x3, errorCode = -1))
+        val failure = classify(started.copy(portFlags = 0x3, errorCode = -1))
 
         assertThat(failure.portHint).isEqualTo("$portHint:ports=3")
     }

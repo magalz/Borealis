@@ -9,11 +9,11 @@ import io.github.magalz.borealis.settings.catalog.SettingStore
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot
 import io.github.magalz.borealis.settings.testing.FakeBacking
+import io.github.magalz.borealis.settings.testing.WorkerDispatcherRule
 import io.github.magalz.borealis.settings.testing.eventually
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -21,13 +21,16 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 /** The ordering, rollback and snapshot rules of the repository, over backings in memory. */
 class StoreSettingsRepositoryTest {
+    @get:Rule val workers = WorkerDispatcherRule()
+
     private val prefs = FakeBacking(SettingStore.PREFS)
     private val dataStore = FakeBacking(SettingStore.DATASTORE)
-    private val scope = CoroutineScope(Dispatchers.IO)
+    private val scope = CoroutineScope(workers.dispatcher)
     private val logged = CopyOnWriteArrayList<LogRecord>()
     private val repository = repositoryOf(SettingsSnapshot.DEFAULTS)
 

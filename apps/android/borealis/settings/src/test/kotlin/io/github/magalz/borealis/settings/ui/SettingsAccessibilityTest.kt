@@ -23,7 +23,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.options.DefaultSettingsOptions
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -111,13 +112,14 @@ private const val NOTE_CONTRAST = "High contrast is on in Accessibility"
  * of Appearance (ADR 0057, decision 11). The rules of which row is blocked are the real ones.
  */
 abstract class SettingsLookTestBase : SettingsScreenTestBase() {
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun viewModel(): SettingsViewModel =
         SettingsViewModel(
             repository,
             DefaultSettingsOptions(),
             facts,
             { resets++ },
-            Dispatchers.Unconfined,
+            UnconfinedTestDispatcher(),
         )
 
     /**

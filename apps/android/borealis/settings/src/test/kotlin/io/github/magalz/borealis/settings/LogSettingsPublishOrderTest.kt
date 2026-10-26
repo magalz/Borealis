@@ -14,15 +14,16 @@ import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot
 import io.github.magalz.borealis.settings.store.StoreSettingsRepository
 import io.github.magalz.borealis.settings.testing.FakeBacking
+import io.github.magalz.borealis.settings.testing.WorkerDispatcherRule
 import io.github.magalz.borealis.settings.testing.eventually
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -31,7 +32,9 @@ import org.junit.Test
  * new value, not after.
  */
 class LogSettingsPublishOrderTest {
-    private val scope = CoroutineScope(Dispatchers.IO)
+    @get:Rule val workers = WorkerDispatcherRule()
+
+    private val scope = CoroutineScope(workers.dispatcher)
     private val repository =
         StoreSettingsRepository(
             FakeBacking(SettingStore.PREFS),

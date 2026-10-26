@@ -28,7 +28,7 @@ import io.github.magalz.borealis.designsystem.glass.backdropLuminance
 import io.github.magalz.borealis.designsystem.glass.contrast
 import io.github.magalz.borealis.designsystem.glass.glassSpec
 import io.github.magalz.borealis.designsystem.glass.luminance
-import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme

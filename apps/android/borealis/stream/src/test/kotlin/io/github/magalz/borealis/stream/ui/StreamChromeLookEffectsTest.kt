@@ -20,6 +20,7 @@ import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.testing.Edge
 import io.github.magalz.borealis.designsystem.testing.colourOutside
 import io.github.magalz.borealis.designsystem.testing.isNear
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.ColourVision
@@ -32,7 +33,6 @@ import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
 import io.github.magalz.borealis.stream.testing.TV
-import io.github.magalz.borealis.stream.testing.setContentInKeyboardMode
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

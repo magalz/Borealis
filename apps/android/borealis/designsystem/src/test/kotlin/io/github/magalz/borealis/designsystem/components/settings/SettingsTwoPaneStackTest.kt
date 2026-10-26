@@ -7,10 +7,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.onFocusChanged
@@ -20,14 +17,12 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.click
-import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -38,28 +33,17 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.test.withKeyDown
 import androidx.compose.ui.unit.dp
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
-import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.testing.FakeInputModeManager
-import io.github.magalz.borealis.designsystem.theme.BorealisTheme
-import io.github.magalz.borealis.designsystem.theme.FormFactor
-import org.junit.Rule
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.annotation.Config
 
 /**
  * The panes of a [SettingsTwoPane] are stacked: every built pane is laid out and drawn in the same
  * bounds, and only the selected one can be seen, reached or touched. Showing another is a change of
  * which one counts, and recomposes, measures and records nothing.
  */
-@RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
-class SettingsTwoPaneStackTest {
-    @get:Rule val composeRule = createComposeRule()
-    private var selected by mutableStateOf("g1")
-
+class SettingsTwoPaneStackTest : SettingsTwoPaneTestBase("g1") {
     /**
      * Whether the screen applies the selection that [SettingsTwoPane] asks for. A test that moves
      * focus over the groups without wanting the selection to follow turns it off.
@@ -82,9 +66,6 @@ class SettingsTwoPaneStackTest {
 
     /** The keys that the field of a pane got. */
     private val fieldKeys = mutableListOf<Key>()
-
-    private val groups =
-        listOf("g1", "g2", "g3", "g4", "own").map { SettingsGroup(it, "Group $it") }
 
     @Test
     fun `a switch to a built pane composes, measures and draws nothing of its rows`() {
@@ -167,15 +148,12 @@ class SettingsTwoPaneStackTest {
         composeRule.waitForIdle()
 
         repeat(TABS) {
-            composeRule.onRoot().performKeyInput { pressKey(Key.Tab) }
-            composeRule.waitForIdle()
+            press(Key.Tab)
         }
         composeRule.onNodeWithText("Group g1").requestFocus()
-        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
-        composeRule.waitForIdle()
+        press(Key.DirectionRight)
         repeat(TABS) {
-            composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
-            composeRule.waitForIdle()
+            press(Key.DirectionDown)
         }
 
         assertThat(focused).isNotEmpty()
@@ -222,8 +200,7 @@ class SettingsTwoPaneStackTest {
         composeRule.onNodeWithText("Group own").requestFocus()
         composeRule.waitForIdle()
 
-        composeRule.onRoot().performKeyInput { pressKey(Key.Tab) }
-        composeRule.waitForIdle()
+        press(Key.Tab)
 
         composeRule.onNodeWithText("Row 1 of g3").assertIsFocused()
     }
@@ -232,14 +209,12 @@ class SettingsTwoPaneStackTest {
     fun `a pane that holds focus when another group is selected gets no more keys`() {
         composeRule.setContentInKeyboardMode { Specimen() }
         composeRule.onNodeWithText("Group g1").requestFocus()
-        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
-        composeRule.waitForIdle()
+        press(Key.DirectionRight)
         composeRule.onNodeWithText("Row 1 of g1").requestFocus()
 
         composeRule.runOnUiThread { selected = "g2" }
         composeRule.waitForIdle()
-        composeRule.onRoot().performKeyInput { pressKey(Key.Enter) }
-        composeRule.waitForIdle()
+        press(Key.Enter)
 
         assertThat(clicks).isEmpty()
     }
@@ -251,20 +226,17 @@ class SettingsTwoPaneStackTest {
             CompositionLocalProvider(LocalInputModeManager provides window) { Specimen() }
         }
         composeRule.onNodeWithText("Group g1").requestFocus()
-        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
-        composeRule.waitForIdle()
+        press(Key.DirectionRight)
         // The field takes focus in touch mode as well, where a tap leaves the window.
         composeRule.onNodeWithTag("field of g1").requestFocus()
-        composeRule.onRoot().performKeyInput { pressKey(Key.Enter) }
-        composeRule.waitForIdle()
+        press(Key.Enter)
         assertThat(fieldKeys).isNotEmpty()
         fieldKeys.clear()
 
         window.inputMode = InputMode.Touch
         composeRule.onNodeWithText("Group g3").performClick()
         composeRule.waitForIdle()
-        composeRule.onRoot().performKeyInput { pressKey(Key.Enter) }
-        composeRule.waitForIdle()
+        press(Key.Enter)
 
         assertThat(fieldKeys).isEmpty()
         assertThat(clicks).isEmpty()
@@ -332,51 +304,27 @@ class SettingsTwoPaneStackTest {
     @Composable
     private fun Specimen() {
         SideEffect { screenRuns++ }
-        BorealisTheme(FormFactor.Tv) {
-            SettingsTwoPane(
-                groups = groups,
-                modifier = CountingModifier(twoPaneRecompositions),
-                selected = { selected },
-                onSelect = { if (applySelection) selected = it },
-                selfScrolling = { it == "own" },
-            ) { group ->
-                contentRuns.merge(group, 1, Int::plus)
-                // Rows at the same places in every pane, and more of them in "g2" than in "g1".
-                when (group) {
-                    "own" -> Box(Modifier.fillMaxSize().testTag("own"))
-                    "g1" -> {
-                        ProbeRow(group, 1)
-                        FieldRow(group)
-                    }
-                    "g2" -> repeat(MANY_ROWS) { ProbeRow(group, it + 1) }
-                    else -> ProbeRow(group, 1)
+        TwoPane(
+            NUMBERED_GROUPS,
+            modifier = CountingModifier(twoPaneRecompositions),
+            selfScrolling = { it == "own" },
+            onSelect = { if (applySelection) selected = it },
+        ) { group ->
+            contentRuns.merge(group, 1, Int::plus)
+            // Rows at the same places in every pane, and more of them in "g2" than in "g1".
+            when (group) {
+                "own" -> Box(Modifier.fillMaxSize().testTag("own"))
+                "g1" -> {
+                    ProbeRow(group, 1)
+                    FieldRow(group)
                 }
+                "g2" -> repeat(MANY_ROWS) { ProbeRow(group, it + 1) }
+                else -> ProbeRow(group, 1)
             }
         }
     }
 
-    /**
-     * A modifier that is never equal to itself, so that each recomposition that applies it shows.
-     */
-    private class CountingModifier(private val applied: IntArray) :
-        ModifierNodeElement<CountingNode>() {
-        override fun create() = CountingNode()
-
-        override fun update(node: CountingNode) {
-            applied[0]++
-        }
-
-        // On purpose: see the class.
-        @Suppress("EqualsAlwaysReturnsTrueOrFalse") override fun equals(other: Any?) = false
-
-        override fun hashCode() = System.identityHashCode(this)
-    }
-
-    private class CountingNode : Modifier.Node()
-
     private companion object {
-        /** Enough frames for one pane in each of them. */
-        const val FRAMES_TO_BUILD_ALL = 12
         const val TABS = 8
         const val MANY_ROWS = 3
         val FIELD_SIZE = 40.dp

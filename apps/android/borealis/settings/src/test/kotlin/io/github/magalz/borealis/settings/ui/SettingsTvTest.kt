@@ -30,6 +30,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.testing.FakeInputModeManager
 import io.github.magalz.borealis.designsystem.testing.OnPage
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.options.DisabledReason
 import io.github.magalz.borealis.settings.options.RowState

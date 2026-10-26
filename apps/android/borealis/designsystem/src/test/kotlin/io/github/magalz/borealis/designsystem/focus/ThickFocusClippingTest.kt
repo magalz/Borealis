@@ -14,10 +14,10 @@ import io.github.magalz.borealis.designsystem.components.RailItem
 import io.github.magalz.borealis.designsystem.components.settings.SettingsGroup
 import io.github.magalz.borealis.designsystem.components.settings.SettingsTwoPane
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
-import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.testing.Edge
 import io.github.magalz.borealis.designsystem.testing.colourOutside
 import io.github.magalz.borealis.designsystem.testing.isNear
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme

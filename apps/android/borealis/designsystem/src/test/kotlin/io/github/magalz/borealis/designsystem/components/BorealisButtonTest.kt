@@ -31,7 +31,7 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.assertPixel
 import io.github.magalz.borealis.designsystem.pixelAt
-import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.AccentChoice
 import io.github.magalz.borealis.designsystem.theme.BorealisColors

@@ -35,12 +35,8 @@ class HostsRouteTest {
     private var settings = 0
 
     private val offline =
-        aHost(
-            id = "living",
-            name = "Living Room PC",
-            reachability = Reachability.OFFLINE,
-            canWake = true,
-        )
+        aHost(id = "living", name = "Living Room PC", reachability = Reachability.OFFLINE)
+            .copy(canWake = true)
 
     @Test
     fun `the hosts of the repository show and the search message goes away`() {

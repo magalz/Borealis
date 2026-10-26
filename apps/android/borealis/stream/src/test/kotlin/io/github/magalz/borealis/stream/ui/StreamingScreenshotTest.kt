@@ -82,12 +82,8 @@ class StreamingScreenshotTest {
         composeRule.setChromeInKeyboardMode(FormFactor.Tv) {
             Stream {
                 Layer(
-                    aStreaming(
-                        Panel.MENU,
-                        touchMode = null,
-                        gamepadMouse = true,
-                        pointerSpeed = PointerSpeed.FAST,
-                    )
+                    aStreaming(Panel.MENU, touchMode = null, gamepadMouse = true)
+                        .copy(pointerSpeed = PointerSpeed.FAST)
                 )
             }
         }
@@ -168,7 +164,7 @@ class StreamingScreenshotTest {
     @Config(qualifiers = PHONE_LANDSCAPE)
     fun streamPhoneHandleHint() {
         composeRule.setContent {
-            Stream(FormFactor.Phone) { Layer(aStreaming(showMenuHint = true)) }
+            Stream(FormFactor.Phone) { Layer(aStreaming().copy(showMenuHint = true)) }
         }
 
         shoot("stream_phone_handle-hint")

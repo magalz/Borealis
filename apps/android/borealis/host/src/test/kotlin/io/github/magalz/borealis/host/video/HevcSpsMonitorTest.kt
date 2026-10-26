@@ -16,9 +16,10 @@ class HevcSpsMonitorTest {
     private var declaresMain10 = true
     private var declaresMain10Asked = 0
 
-    private val main = HevcSpsBuilder.sps(profileIdc = 1)
-    private val main10 = HevcSpsBuilder.sps(profileIdc = 2, bitDepthLuma = 10, bitDepthChroma = 10)
-    private val rext444 = HevcSpsBuilder.sps(profileIdc = 4, chromaFormatIdc = 3)
+    private val main = HevcSpsBuilder.sps(SpsFields(profileIdc = 1))
+    private val main10 =
+        HevcSpsBuilder.sps(SpsFields(profileIdc = 2, bitDepthLuma = 10, bitDepthChroma = 10))
+    private val rext444 = HevcSpsBuilder.sps(SpsFields(profileIdc = 4, chromaFormatIdc = 3))
 
     @Before
     fun recordLogs() {
@@ -63,7 +64,7 @@ class HevcSpsMonitorTest {
         val monitor = monitor()
         monitor.onSps(main)
         monitor.onSps(main)
-        monitor.onSps(HevcSpsBuilder.sps(profileIdc = 1, startCode = HevcSpsBuilder.START_CODE_3))
+        monitor.onSps(HevcSpsBuilder.sps(SpsFields(profileIdc = 1, threeByteStartCode = true)))
 
         assertThat(records).hasSize(1)
         assertThat(records[0].message).contains("profile=Main chroma=4:2:0 depth=8/8")

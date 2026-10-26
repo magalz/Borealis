@@ -13,8 +13,9 @@ import io.github.magalz.borealis.logging.BorealisAudit
 import io.github.magalz.borealis.logging.Redactor
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.testing.FakeSettingsRepository
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -40,8 +41,10 @@ class AuditRouteTest {
 
     @After fun uninstallRedactor() = BorealisAudit.uninstall()
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun show() {
-        val viewModel = AuditViewModel(trail, settings, fixedFormatter(), Dispatchers.Unconfined)
+        val viewModel =
+            AuditViewModel(trail, settings, fixedFormatter(), UnconfinedTestDispatcher())
         composeRule.setContent { AuditRoute(onBack = { backs++ }, viewModel = viewModel) }
         composeRule.waitForIdle()
     }

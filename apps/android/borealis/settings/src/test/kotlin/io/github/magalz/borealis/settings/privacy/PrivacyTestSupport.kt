@@ -3,10 +3,6 @@ package io.github.magalz.borealis.settings.privacy
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.input.InputMode
-import androidx.compose.ui.input.InputModeManager
-import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -17,36 +13,12 @@ import io.github.magalz.borealis.diagnostics.bundle.ExportResult
 import io.github.magalz.borealis.settings.testing.InGlassHost
 import java.io.File
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestDispatcher
-import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runCurrent
-import kotlinx.coroutines.test.setMain
-import org.junit.rules.TestWatcher
-import org.junit.runner.Description
 
 const val PHONE = "w360dp-h640dp-xhdpi"
 const val TV = "w960dp-h540dp-land-television-xhdpi"
 const val HANDHELD = "w800dp-h480dp-land-hdpi"
-
-/** Runs `Dispatchers.Main` (and so `viewModelScope`) on a test dispatcher, so time is virtual. */
-class MainDispatcherRule(private val dispatcher: TestDispatcher = StandardTestDispatcher()) :
-    TestWatcher() {
-    override fun starting(description: Description) {
-        Dispatchers.setMain(dispatcher)
-    }
-
-    override fun finished(description: Description) {
-        Dispatchers.resetMain()
-    }
-}
 
 /** Privacy actions that do nothing, for a screen that is only looked at. */
 internal fun noopPrivacyActions() =
@@ -71,27 +43,6 @@ fun ComposeContentTestRule.showPrivacy(
             )
         }
     }
-    waitForIdle()
-}
-
-/** Collects [flow] until the test ends, as a screen does, and runs the work that this starts. */
-fun TestScope.subscribe(flow: Flow<*>): Job =
-    backgroundScope
-        .launch(UnconfinedTestDispatcher(testScheduler)) { flow.collect {} }
-        .also { runCurrent() }
-
-/**
- * Sets [content] and switches the window to the keyboard input mode, the way a D-pad or a gamepad
- * key does on a device. Clickables are focusable in this mode only, and the focus outline shows
- * only in it.
- */
-fun ComposeContentTestRule.setContentInKeyboardMode(content: @Composable () -> Unit) {
-    var manager: InputModeManager? = null
-    setContent {
-        manager = LocalInputModeManager.current
-        content()
-    }
-    runOnIdle { checkNotNull(manager).requestInputMode(InputMode.Keyboard) }
     waitForIdle()
 }
 

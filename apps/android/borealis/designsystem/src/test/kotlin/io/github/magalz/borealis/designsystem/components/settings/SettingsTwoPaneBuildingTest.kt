@@ -12,28 +12,17 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
-import io.github.magalz.borealis.designsystem.theme.BorealisTheme
-import io.github.magalz.borealis.designsystem.theme.FormFactor
-import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.annotation.Config
 
 /**
  * When a [SettingsTwoPane] composes the pane of each group: the selected one at once, the others in
  * the frames after the first, the nearest first, and a group that brings its own content only while
  * it is shown. A pane that is built stays built, and switching to it composes nothing.
  */
-@RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
-class SettingsTwoPaneBuildingTest {
-    @get:Rule val composeRule = createComposeRule()
-    private var selected by mutableStateOf("g1")
+class SettingsTwoPaneBuildingTest : SettingsTwoPaneTestBase("g1") {
     private var value by mutableStateOf("first value")
     private val otherValue = "other value"
 
@@ -45,9 +34,6 @@ class SettingsTwoPaneBuildingTest {
 
     /** How many times the row of each group was composed, the first time included. */
     private val composedTimes = mutableMapOf<String, Int>()
-
-    private val groups =
-        listOf("g1", "g2", "g3", "g4", "own").map { SettingsGroup(it, "Group $it") }
 
     @Test
     fun `the selected group is composed at once and the others in the frames after the first`() {
@@ -170,20 +156,8 @@ class SettingsTwoPaneBuildingTest {
         // Read here, not in the rows, as the screen reads its state and hands it down.
         val handedDown = value
         val handedDownToOthers = otherValue
-        BorealisTheme(FormFactor.Tv) {
-            SettingsTwoPane(
-                groups = groups,
-                selected = { selected },
-                onSelect = { selected = it },
-                selfScrolling = { it == "own" },
-            ) { group ->
-                BuiltRow(group, if (group == "g1") handedDown else handedDownToOthers)
-            }
+        TwoPane(NUMBERED_GROUPS, selfScrolling = { it == "own" }) { group ->
+            BuiltRow(group, if (group == "g1") handedDown else handedDownToOthers)
         }
-    }
-
-    private companion object {
-        /** Enough frames for one group in each of them. */
-        const val FRAMES_TO_BUILD_ALL = 12
     }
 }

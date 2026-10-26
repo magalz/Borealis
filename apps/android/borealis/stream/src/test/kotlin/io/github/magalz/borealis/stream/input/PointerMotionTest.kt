@@ -7,20 +7,15 @@ import org.junit.Test
 class PointerMotionTest {
     private val motion = PointerMotion()
 
+    /** The speed of a stick at the setting's default, with no session factor and no precision. */
+    private val nominal = PointerSpeed(percent = 100, sessionFactor = 1f, precision = false)
+
     private fun step(
         x: Int,
         y: Int = 0,
         elapsedMs: Long = 100,
-        speedPercent: Int = 100,
-        sessionFactor: Float = 1f,
-        precision: Boolean = false,
-    ) =
-        motion.step(
-            x.toShort(),
-            y.toShort(),
-            elapsedMs,
-            PointerSpeed(speedPercent, sessionFactor, precision),
-        )
+        speed: PointerSpeed = nominal,
+    ) = motion.step(x.toShort(), y.toShort(), elapsedMs, speed)
 
     /** The pixels moved in one second of ticks of [tickMs] with the stick held. */
     private fun movedInOneSecond(x: Int, y: Int = 0, tickMs: Long = 100): Pair<Int, Int> {
@@ -84,25 +79,31 @@ class PointerMotionTest {
 
     @Test
     fun `the speed setting scales the move`() {
-        assertThat(step(32766, speedPercent = 50).x).isEqualTo(64)
-        assertThat(step(32766, speedPercent = 200).x).isEqualTo(256)
-        assertThat(step(32766, speedPercent = 10).x).isEqualTo(12)
+        assertThat(step(32766, speed = nominal.copy(percent = 50)).x).isEqualTo(64)
+        assertThat(step(32766, speed = nominal.copy(percent = 200)).x).isEqualTo(256)
+        assertThat(step(32766, speed = nominal.copy(percent = 10)).x).isEqualTo(12)
     }
 
     @Test
     fun `the session factor scales the move`() {
-        assertThat(step(32766, sessionFactor = 2f).x).isEqualTo(256)
-        assertThat(step(32766, sessionFactor = 0.5f).x).isEqualTo(64)
+        assertThat(step(32766, speed = nominal.copy(sessionFactor = 2f)).x).isEqualTo(256)
+        assertThat(step(32766, speed = nominal.copy(sessionFactor = 0.5f)).x).isEqualTo(64)
     }
 
     @Test
     fun `holding precision moves at a quarter`() {
-        assertThat(step(32766, precision = true).x).isEqualTo(32)
+        assertThat(step(32766, speed = nominal.copy(precision = true)).x).isEqualTo(32)
     }
 
     @Test
     fun `the factors multiply`() {
-        assertThat(step(32766, speedPercent = 50, sessionFactor = 0.5f, precision = true).x)
+        assertThat(
+                step(
+                        32766,
+                        speed = PointerSpeed(percent = 50, sessionFactor = 0.5f, precision = true),
+                    )
+                    .x
+            )
             .isEqualTo(8)
     }
 

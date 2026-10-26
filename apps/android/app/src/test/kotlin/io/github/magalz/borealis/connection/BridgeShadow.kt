@@ -461,14 +461,6 @@ internal object ShadowRecordingBridge {
     @Suppress("unused")
     @Implementation
     @JvmStatic
-    fun getPendingVideoFrames(): Int {
-        record("getPendingVideoFrames")
-        return intAnswer("getPendingVideoFrames")
-    }
-
-    @Suppress("unused")
-    @Implementation
-    @JvmStatic
     fun testClientConnectivity(testServerHostName: String?, referencePort: Int, testFlags: Int): Int {
         record("testClientConnectivity", testServerHostName, referencePort, testFlags)
         return intAnswer("testClientConnectivity")

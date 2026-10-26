@@ -396,6 +396,37 @@ class ConnectedGamepadsTest {
 
     @Test
     @Config(sdk = [ANDROID_11])
+    fun `on Android 11 a pad is found after a device that is no pad`() {
+        connect(context, deviceOf(id = 2, sources = KEYBOARD, keyboardType = ALPHABETIC))
+        connectPad(id = 3)
+        assertThat(InputDevice.getDeviceIds().toList()).containsExactly(2, 3).inOrder()
+
+        assertThat(isStreamControllerDevice(virtualKeyboard())).isTrue()
+    }
+
+    @Test
+    @Config(sdk = [ANDROID_11])
+    fun `on Android 11 a pad is found before a device that is no pad`() {
+        connectPad(id = 2)
+        connect(context, deviceOf(id = 3, sources = KEYBOARD, keyboardType = ALPHABETIC))
+        assertThat(InputDevice.getDeviceIds().toList()).containsExactly(2, 3).inOrder()
+
+        assertThat(isStreamControllerDevice(virtualKeyboard())).isTrue()
+    }
+
+    @Test
+    @Config(sdk = [ANDROID_11])
+    fun `on Android 11 a virtual pad counts as a connected pad, though it is no pad for the layout`() {
+        // The loop of the workaround never asks whether a device is virtual, as in the Java.
+        val virtualPad = deviceOf(id = -2, sources = GAMEPAD)
+        connect(context, virtualPad)
+
+        assertThat(layoutSays(virtualPad)).isFalse()
+        assertThat(isStreamControllerDevice(virtualKeyboard())).isTrue()
+    }
+
+    @Test
+    @Config(sdk = [ANDROID_11])
     fun `on Android 11 only the device with id minus one gets the workaround`() {
         connectPad()
         val otherVirtual = deviceOf(id = -2, sources = KEYBOARD, keyboardType = ALPHABETIC)

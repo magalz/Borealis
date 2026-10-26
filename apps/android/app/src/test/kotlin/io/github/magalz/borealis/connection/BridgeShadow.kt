@@ -33,7 +33,8 @@ internal data class BridgeCall(
  * one in [answers].
  *
  * `setupBridge` and `cleanupBridge` are recorded and then run the real code, so the `bridge*`
- * callbacks reach the renderers and the listener that a test gives to `setupBridge`.
+ * callbacks reach the renderers and the listener that a test gives to `setupBridge`; [reset] runs
+ * the real `cleanupBridge` too.
  * `getStageName` and `getLaunchUrlQueryParameters` answer without being recorded.
  *
  * State lives in this object, which every test of one Robolectric sandbox shares: call [reset]
@@ -74,6 +75,10 @@ internal object ShadowRecordingBridge {
      */
     val answers = ConcurrentHashMap<String, Any>()
 
+    /**
+     * Forgets the calls and the answers, and runs the real `cleanupBridge`, so that the next test of
+     * the sandbox finds `MoonBridge` without renderers and listener.
+     */
     fun reset() {
         calls.clear()
         listener = null
@@ -82,6 +87,11 @@ internal object ShadowRecordingBridge {
         onInterrupt = {}
         externalAddress = null
         answers.clear()
+        realCleanupBridge()
+    }
+
+    private fun realCleanupBridge() {
+        Shadow.directlyOn<Any?, MoonBridge>(MoonBridge::class.java, "cleanupBridge")
     }
 
     /** The calls named [name], in order. */
@@ -158,7 +168,7 @@ internal object ShadowRecordingBridge {
     fun cleanupBridge() {
         listener = null
         record("cleanupBridge")
-        Shadow.directlyOn<Any?, MoonBridge>(MoonBridge::class.java, "cleanupBridge")
+        realCleanupBridge()
     }
 
     @Suppress("unused", "LongParameterList")

@@ -25,9 +25,14 @@ internal fun Project.configureTestTempDir(windows: Boolean = isWindows()) {
         val dir = testTempDir(name, windows)
         systemProperty("java.io.tmpdir", dir.absolutePath)
         doFirst(CLEAR_TEST_TEMP_DIR_BEFORE) {
+            // A folder that cannot be emptied is not worth failing the build over, but one that
+            // cannot be made is: the test JVM would fail later with an obscure Robolectric error.
             dir.deleteRecursively()
-            dir.mkdirs()
+            check(dir.isDirectory || dir.mkdirs()) {
+                "Cannot create the test temporary folder ${dir.absolutePath}"
+            }
         }
+        // A failed delete only leaves the folder for the next run to empty.
         doLast(DELETE_TEST_TEMP_DIR_AFTER) { dir.deleteRecursively() }
     }
 }

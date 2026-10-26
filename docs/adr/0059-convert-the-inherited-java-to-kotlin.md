@@ -18,7 +18,7 @@ Java code that remains, or losing the history of each file?
 ## Decision Drivers
 
 * Behaviour stays the same. A conversion is not a place for fixes or features.
-* The Java that stays (`Game`, `binding/video`, `binding/audio` and `MoonBridge`) must
+* The Java that stays (`Game`, `binding/input`, `binding/video`, `binding/audio` and `MoonBridge`) must
   keep compiling and keep its JNI signatures, without edits.
 * `git log --follow` and `git blame` must keep the Java history of each file.
 * The persistent formats of the app must keep reading the data that users already have.

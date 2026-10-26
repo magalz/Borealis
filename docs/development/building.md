@@ -258,8 +258,7 @@ python -m unittest discover -s design/accessibility
   the root project merges the debug unit-test coverage of `:borealis:*` and of
   `:app`. Code in `com.limelight` counts in the Kover report, except the Java
   that stays Java (below). The input package `com.limelight.binding.input`
-  counts from Sprint 13, which converts it, so until then the report shows its
-  Java uncovered. Converted code is held to the same Codecov gate as the rest
+  counts since Sprint 13 converted it. Converted code is held to the same Codecov gate as the rest
   ([ADR 0059](../adr/0059-convert-the-inherited-java-to-kotlin.md),
   [ADR 0049](../adr/0049-coverage-gate.md)). Not counted:
   - the Java that stays Java until Sprint 14:
@@ -327,6 +326,16 @@ keystore created outside the repository, or start the dry run on GitHub
 Other test levels: Robolectric and Compose UI tests run with the unit tests,
 and screenshot tests use Roborazzi (see above). Emulator tests with Gradle
 Managed Devices are planned and not set up.
+
+Each unit-test task gets a temporary folder of its own as `java.io.tmpdir`
+(`BorealisTestTempDir.kt`). On Windows it is `<drive>\.bt\<8 hex>` at the root
+of the checkout's drive, unique per checkout, module and task, so that
+Robolectric's SQLite paths stay under the 260 characters Windows allows.
+Elsewhere it is `build/tmp/<task>/jvm-tmp`. The task empties the folder before a
+run and deletes it after the run. A failed or killed run leaves the folder until
+the next run of that task. The `:app` unit-test JVM has a 2 GB heap
+(`BorealisUnitTestHeap.kt`), because Robolectric keeps a sandbox for each SDK
+level and set of shadows.
 
 ## borealis-core (C++)
 

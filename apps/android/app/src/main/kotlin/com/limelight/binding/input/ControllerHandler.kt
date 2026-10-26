@@ -123,6 +123,8 @@ class ControllerHandler(
             deviceVibrator = vibratorManager.defaultVibrator
         } else {
             deviceVibratorManager = null
+            // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13
+            // backlog).
             @Suppress("DEPRECATION")
             deviceVibrator = activityContext.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         }

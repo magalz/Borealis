@@ -24,18 +24,27 @@ class BorealisCoverageTest {
     private fun isExcluded(className: String) = patterns.any { it.matcher(className).matches() }
 
     @Test
-    fun `the Java that stays Java until sprint 14 is not counted`() {
-        val stillJava =
+    fun `the Java that sprint 14 converts is counted`() {
+        val remainingJava =
             listOf(
                 "com.limelight.Game",
                 "com.limelight.Game\$1",
-                "com.limelight.Game\$ServiceConnectionState",
                 "com.limelight.binding.video.MediaCodecDecoderRenderer",
+                "com.limelight.binding.video.MediaCodecHelper",
                 "com.limelight.binding.audio.AndroidAudioRenderer",
                 "com.limelight.nvstream.jni.MoonBridge",
+                "com.limelight.nvstream.jni.MoonBridge\$AudioConfiguration",
             )
 
-        assertThat(stillJava.filterNot(::isExcluded)).isEmpty()
+        assertThat(remainingJava.filter(::isExcluded)).isEmpty()
+    }
+
+    @Test
+    fun `no exclusion names a com limelight class`() {
+        val limelightEntries =
+            BorealisCoverage.EXCLUDED_CLASSES.filter { it.startsWith("com.limelight") }
+
+        assertThat(limelightEntries).isEmpty()
     }
 
     @Test
@@ -65,8 +74,6 @@ class BorealisCoverageTest {
                 "com.limelight.LimeLog",
                 "com.limelight.binding.PlatformBinding",
                 "com.limelight.binding.crypto.AndroidCryptoProvider",
-                // `Game` and its nested classes are excluded, not everything that starts with Game.
-                "com.limelight.GameMenu",
             )
 
         assertThat(converted.filter(::isExcluded)).isEmpty()

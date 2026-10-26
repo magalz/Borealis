@@ -289,8 +289,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                                      CrashListener crashListener, int consecutiveCrashCount,
                                      boolean meteredData, boolean requestedHdr,
                                      String glRenderer) {
-        //dumpDecoders();
-
         this.activity = activity;
         this.prefs = prefs;
         this.crashListener = crashListener;

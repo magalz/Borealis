@@ -765,28 +765,6 @@ public class MediaCodecHelper {
         return infoList;
     }
     
-    @SuppressWarnings("RedundantThrows")
-    public static String dumpDecoders() throws Exception {
-        String str = "";
-        for (MediaCodecInfo codecInfo : getMediaCodecList()) {
-            // Skip encoders
-            if (codecInfo.isEncoder()) {
-                continue;
-            }
-            
-            str += "Decoder: "+codecInfo.getName()+"\n";
-            for (String type : codecInfo.getSupportedTypes()) {
-                str += "\t"+type+"\n";
-                CodecCapabilities caps = codecInfo.getCapabilitiesForType(type);
-                
-                for (CodecProfileLevel profile : caps.profileLevels) {
-                    str += "\t\t"+profile.profile+" "+profile.level+"\n";
-                }
-            }
-        }
-        return str;
-    }
-    
     private static MediaCodecInfo findPreferredDecoder() {
         // This is a different algorithm than the other findXXXDecoder functions,
         // because we want to evaluate the decoders in our list's order

@@ -12,9 +12,10 @@ import io.github.magalz.borealis.logging.NativeLogForwarder
  * member stay as they were in Java; `MoonBridgeJniContractTest` reads the C sources and checks
  * them.
  *
- * Every member is `@JvmStatic`, `@JvmField` or `const`: a Robolectric shadow replaces the static
- * initializer of this class, and an instance member (or a companion) would dereference the
- * `INSTANCE` that the initializer never set.
+ * Every non-private member is `@JvmStatic`, `@JvmField` or `const`: a Robolectric shadow replaces the
+ * static initializer of this class, and an instance member (or a companion) would dereference the
+ * `INSTANCE` that the initializer never set. The private state needs no annotation: it is a static
+ * field that only this class reads.
  */
 // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
 @Suppress("TooManyFunctions")
@@ -323,9 +324,9 @@ object MoonBridge {
         connectionListener?.setControllerLED(controllerNumber, r, g, b)
     }
 
-    // BOREALIS: called from borealis_log.c for each moonlight-common-c log line; false makes the
-    // native side use logcat. The native side never passes null; a null throws, and the native side
-    // clears the exception and falls back to logcat too.
+    // BOREALIS: called from borealis_log.c for each moonlight-common-c log line; false makes the native side use logcat
+    // The native side never passes null; a null throws, and the native side clears the exception and
+    // falls back to logcat too.
     @JvmStatic
     fun bridgeClLogMessage(message: ByteArray?): Boolean =
         NativeLogForwarder.forward(checkNotNull(message))

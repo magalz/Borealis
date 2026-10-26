@@ -190,3 +190,5 @@ without edits. The rules are numbered so that each conversion brief can point to
 * Related: [0049](0049-coverage-gate.md) (the coverage gate that rule 7 amends for converted code).
 * Related: [roadmap, Kotlin migration (Sprints 12 to 14)](../roadmap.md#kotlin-migration-sprints-12-to-14).
 * Related: [characterization tests for inherited code](../development/tdd.md#characterization-tests-for-inherited-code).
+
+Amended by [0060](0060-convert-moonbridge-to-a-kotlin-object.md): rule 1.3 no longer keeps `MoonBridge` in Java; Sprint 14 converts it to a Kotlin `object` with the same name, package and JNI signatures.

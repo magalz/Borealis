@@ -201,7 +201,7 @@ class HeldKeyOpensSurfaceTest {
         this.surfaceText = surfaceText
         composeRule.onNodeWithTag(TILE).requestFocus()
         val downTime = SystemClock.uptimeMillis()
-        send(tile(), key, AndroidKeyAction.Down, repeat = 0, downTime = downTime)
+        send(tile(), HeldKey(key, AndroidKeyAction.Down, repeat = 0, downTime = downTime))
         // The long click of a held OK fires after the long-press timeout of the Compose clock.
         advanceClock(LONG_PRESS_MILLIS)
         composeRule.mainClock.advanceTimeBy(LONG_PRESS_MILLIS)
@@ -247,28 +247,30 @@ class HeldKeyOpensSurfaceTest {
         repeat: Int,
         downTime: Long,
         flags: Int = 0,
-    ): Boolean = send(surfaceNode(), key, action, repeat, downTime, flags)
+    ): Boolean = send(surfaceNode(), HeldKey(key, action, repeat, downTime, flags))
+
+    /** One key event of a press that is held: the key, its action, its repeat and its flags. */
+    private data class HeldKey(
+        val key: Key,
+        val action: AndroidKeyAction,
+        val repeat: Int,
+        val downTime: Long,
+        val flags: Int = 0,
+    )
 
     @OptIn(InternalTestApi::class, ExperimentalTestApi::class)
-    private fun send(
-        node: SemanticsNodeInteraction,
-        key: Key,
-        action: AndroidKeyAction,
-        repeat: Int,
-        downTime: Long,
-        flags: Int = 0,
-    ): Boolean {
+    private fun send(node: SemanticsNodeInteraction, held: HeldKey): Boolean {
         val event =
             android.view.KeyEvent(
-                downTime,
+                held.downTime,
                 SystemClock.uptimeMillis(),
-                action.code,
-                key.nativeKeyCode,
-                repeat,
+                held.action.code,
+                held.key.nativeKeyCode,
+                held.repeat,
                 0,
                 0,
                 0,
-                flags,
+                held.flags,
             )
         val root = checkNotNull(node.fetchSemanticsNode().root)
         return root.sendKeyEvent(androidx.compose.ui.input.key.KeyEvent(event))

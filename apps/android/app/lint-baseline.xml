@@ -26,17 +26,6 @@
     <issue
         id="DefaultLocale"
         message="Implicitly using the default locale is a common source of bugs: Use `toLowerCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
-        errorLine1="        if (!hasJoystickAxes(dev) &amp;&amp; devName.toLowerCase().contains(&quot;remote&quot;)) {"
-        errorLine2="                                             ~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/binding/input/ControllerHandler.java"
-            line="691"
-            column="46"/>
-    </issue>
-
-    <issue
-        id="DefaultLocale"
-        message="Implicitly using the default locale is a common source of bugs: Use `toLowerCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
         errorLine1="        return glRenderer.toLowerCase().contains(&quot;powervr&quot;);"
         errorLine2="                          ~~~~~~~~~~~">
         <location
@@ -212,61 +201,6 @@
 
     <issue
         id="UseRequiresApi"
-        message="Use `@RequiresApi(31)` instead of `@TargetApi` to propagate the requirement to callers of `hasDualAmplitudeControlledRumbleVibrators`"
-        errorLine1="    @TargetApi(31)"
-        errorLine2="    ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/binding/input/ControllerHandler.java"
-            line="2132"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="UseRequiresApi"
-        message="Use `@RequiresApi(31)` instead of `@TargetApi` to propagate the requirement to callers of `rumbleDualVibrators`"
-        errorLine1="    @TargetApi(31)"
-        errorLine2="    ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/binding/input/ControllerHandler.java"
-            line="2152"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="UseRequiresApi"
-        message="Use `@RequiresApi(31)` instead of `@TargetApi` to propagate the requirement to callers of `hasQuadAmplitudeControlledRumbleVibrators`"
-        errorLine1="    @TargetApi(31)"
-        errorLine2="    ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/binding/input/ControllerHandler.java"
-            line="2189"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="UseRequiresApi"
-        message="Use `@RequiresApi(31)` instead of `@TargetApi` to propagate the requirement to callers of `rumbleQuadVibrators`"
-        errorLine1="    @TargetApi(31)"
-        errorLine2="    ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/binding/input/ControllerHandler.java"
-            line="2209"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="UseRequiresApi"
-        message="Use `@RequiresApi(Build.VERSION_CODES.S)` instead of `@TargetApi` to propagate the requirement to callers of `run`"
-        errorLine1="            @TargetApi(Build.VERSION_CODES.S)"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/binding/input/ControllerHandler.java"
-            line="3382"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UseRequiresApi"
         message="Use `@RequiresApi(Build.VERSION_CODES.R)` instead of `@TargetApi` to propagate the requirement to callers of `onPictureInPictureRequested`"
         errorLine1="    @TargetApi(Build.VERSION_CODES.R)"
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
@@ -274,28 +208,6 @@
             file="src/main/java/com/limelight/Game.java"
             line="753"
             column="5"/>
-    </issue>
-
-    <issue
-        id="UseRequiresApi"
-        message="Use `@RequiresApi(33)` instead of `@TargetApi` to propagate the requirement to callers of `KeyboardMapping`"
-        errorLine1="        @TargetApi(33)"
-        errorLine2="        ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/binding/input/KeyboardTranslator.java"
-            line="64"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseRequiresApi"
-        message="Use `@RequiresApi(33)` instead of `@TargetApi` to propagate the requirement to callers of `getDeviceKeyCodeForQwertyKeyCode`"
-        errorLine1="        @TargetApi(33)"
-        errorLine2="        ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/binding/input/KeyboardTranslator.java"
-            line="82"
-            column="9"/>
     </issue>
 
     <issue
@@ -351,83 +263,6 @@
             file="build.gradle"
             line="49"
             column="13"/>
-    </issue>
-
-    <issue
-        id="ViewConstructor"
-        message="Custom view `AnalogStick` is missing constructor used by tools: `(Context)` or `(Context,AttributeSet)` or `(Context,AttributeSet,int)`"
-        errorLine1="public class AnalogStick extends VirtualControllerElement {"
-        errorLine2="             ~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/binding/input/virtual_controller/AnalogStick.java"
-            line="19"
-            column="14"/>
-    </issue>
-
-    <issue
-        id="ViewConstructor"
-        message="Custom view `DigitalButton` is missing constructor used by tools: `(Context)` or `(Context,AttributeSet)` or `(Context,AttributeSet,int)`"
-        errorLine1="public class DigitalButton extends VirtualControllerElement {"
-        errorLine2="             ~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/binding/input/virtual_controller/DigitalButton.java"
-            line="21"
-            column="14"/>
-    </issue>
-
-    <issue
-        id="ViewConstructor"
-        message="Custom view `DigitalPad` is missing constructor used by tools: `(Context)` or `(Context,AttributeSet)` or `(Context,AttributeSet,int)`"
-        errorLine1="public class DigitalPad extends VirtualControllerElement {"
-        errorLine2="             ~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/binding/input/virtual_controller/DigitalPad.java"
-            line="16"
-            column="14"/>
-    </issue>
-
-    <issue
-        id="ViewConstructor"
-        message="Custom view `LeftAnalogStick` is missing constructor used by tools: `(Context)` or `(Context,AttributeSet)` or `(Context,AttributeSet,int)`"
-        errorLine1="public class LeftAnalogStick extends AnalogStick {"
-        errorLine2="             ~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/binding/input/virtual_controller/LeftAnalogStick.java"
-            line="11"
-            column="14"/>
-    </issue>
-
-    <issue
-        id="ViewConstructor"
-        message="Custom view `LeftTrigger` is missing constructor used by tools: `(Context)` or `(Context,AttributeSet)` or `(Context,AttributeSet,int)`"
-        errorLine1="public class LeftTrigger extends DigitalButton {"
-        errorLine2="             ~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/binding/input/virtual_controller/LeftTrigger.java"
-            line="9"
-            column="14"/>
-    </issue>
-
-    <issue
-        id="ViewConstructor"
-        message="Custom view `RightAnalogStick` is missing constructor used by tools: `(Context)` or `(Context,AttributeSet)` or `(Context,AttributeSet,int)`"
-        errorLine1="public class RightAnalogStick extends AnalogStick {"
-        errorLine2="             ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/binding/input/virtual_controller/RightAnalogStick.java"
-            line="11"
-            column="14"/>
-    </issue>
-
-    <issue
-        id="ViewConstructor"
-        message="Custom view `RightTrigger` is missing constructor used by tools: `(Context)` or `(Context,AttributeSet)` or `(Context,AttributeSet,int)`"
-        errorLine1="public class RightTrigger extends DigitalButton {"
-        errorLine2="             ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/binding/input/virtual_controller/RightTrigger.java"
-            line="9"
-            column="14"/>
     </issue>
 
     <issue

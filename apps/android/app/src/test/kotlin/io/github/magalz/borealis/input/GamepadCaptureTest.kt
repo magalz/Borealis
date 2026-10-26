@@ -121,6 +121,26 @@ class GamepadCaptureTest {
     }
 
     @Test
+    fun `a chord let go after a second while captured is not reported either`() {
+        rig.handler.setCaptured(true)
+        val packets = rig.connection.packets.size
+        val time = rig.now
+
+        rig.handler.handleButtonDown(
+            rig.keyEvent(time, time, KeyEvent.ACTION_DOWN, KEYCODE_BUTTON_START)
+        )
+        rig.handler.handleButtonDown(
+            rig.keyEvent(time, time, KeyEvent.ACTION_DOWN, KEYCODE_BUTTON_SELECT)
+        )
+        rig.handler.handleButtonUp(
+            rig.keyEvent(time, time + 1_500, KeyEvent.ACTION_UP, KEYCODE_BUTTON_SELECT)
+        )
+
+        assertThat(rig.chords).isEqualTo(0)
+        assertThat(rig.connection.packets).hasSize(packets)
+    }
+
+    @Test
     fun `a chord held when the capture starts sends nothing when it is let go`() {
         rig.press(KEYCODE_BUTTON_START)
         rig.advanceBy(50)

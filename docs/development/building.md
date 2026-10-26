@@ -259,18 +259,13 @@ python -m unittest discover -s design/accessibility
 
 - **Coverage** (Kover, [ADR 0046](../adr/0046-test-coverage-with-kover-llvm-cov-and-codecov.md)):
   the root project merges the debug unit-test coverage of `:borealis:*` and of
-  `:app`. Code in `com.limelight` counts in the Kover report, except the Java
-  that stays Java (below). The input package `com.limelight.binding.input`
-  counts since Sprint 13 converted it. Converted code is held to the same Codecov gate as the rest
+  `:app`. Everything in `com.limelight` counts in the Kover report since
+  Sprint 14, the inherited Java that is not converted yet included. Converted
+  code is held to the same Codecov gate as the rest
   ([ADR 0059](../adr/0059-convert-the-inherited-java-to-kotlin.md),
-  [ADR 0049](../adr/0049-coverage-gate.md)). Not counted:
-  - the Java that stays Java until Sprint 14:
-    `com.limelight.Game` with its nested classes, and the packages
-    `com.limelight.binding.video`, `com.limelight.binding.audio` and
-    `com.limelight.nvstream.jni`. `BorealisCoverage.EXCLUDED_CLASSES` lists them
-    and shrinks as each one is converted;
-  - generated Hilt/Dagger, Room and serialization classes, `BuildConfig`, `R`
-    and Compose singleton classes.
+  [ADR 0049](../adr/0049-coverage-gate.md)). Not counted: the generated
+  Hilt/Dagger, Room and serialization classes, `BuildConfig`, `R` and Compose
+  singleton classes (`BorealisCoverage.EXCLUDED_CLASSES`).
 
   Output: `apps/android/build/reports/kover/coverage.xml`
   (JaCoCo format, uploaded to Codecov) and
@@ -278,7 +273,7 @@ python -m unittest discover -s design/accessibility
   sources package-relative (`io/github/magalz/borealis/...`,
   `com/limelight/...`); Codecov matches them to repository files by path
   suffix. Java under `app/src/main/java` never reaches Codecov (`codecov.yml`
-  ignores it); the Java that stays is also excluded from the Kover report.
+  ignores it), although the Kover report counts it.
 - **Licences** (licensee, [ADR 0041](../adr/0041-license-checking-with-licensee.md)):
   `licensee` runs for `:app` (the debug and release runtime classpaths) and for
   every `:borealis:*` module, and is part of `check`. Allowed: Apache-2.0, MIT,

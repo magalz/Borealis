@@ -18,13 +18,13 @@ import androidx.compose.ui.test.requestFocus
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.shell.LibraryScaffold
 import io.github.magalz.borealis.library.shell.RailActions
 import io.github.magalz.borealis.library.shell.RailSelection
 import io.github.magalz.borealis.library.testing.TV
-import io.github.magalz.borealis.library.testing.setContentInKeyboardMode
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

@@ -17,13 +17,13 @@ import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.noAnimations
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.testing.settleWindows
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.hosts.HostsScreen
 import io.github.magalz.borealis.library.hosts.withHosts
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.TV
-import io.github.magalz.borealis.library.testing.setContentInKeyboardMode
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test

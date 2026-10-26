@@ -34,8 +34,8 @@ import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.test.withKeyDown
 import androidx.compose.ui.unit.dp
 import com.google.common.truth.Truth.assertThat
-import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.testing.FakeInputModeManager
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import org.junit.Test
 
 /**

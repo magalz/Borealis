@@ -25,7 +25,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.assertPixel
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
-import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.testing.systemAnimationScale
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import org.junit.Rule

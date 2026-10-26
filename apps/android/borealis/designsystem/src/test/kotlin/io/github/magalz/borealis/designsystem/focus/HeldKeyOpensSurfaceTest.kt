@@ -31,7 +31,7 @@ import io.github.magalz.borealis.designsystem.components.DialogAction
 import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.components.settings.ChoiceOption
 import io.github.magalz.borealis.designsystem.components.settings.ChoiceSheet
-import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import java.time.Duration

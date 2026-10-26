@@ -1,4 +1,4 @@
-package io.github.magalz.borealis.designsystem
+package io.github.magalz.borealis.designsystem.testing
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.input.InputMode

@@ -13,7 +13,9 @@ import io.github.magalz.borealis.settings.repository.SettingsSnapshot
 import io.github.magalz.borealis.settings.testing.FakeDeviceFactsSource
 import io.github.magalz.borealis.settings.testing.FakeSettingsRepository
 import io.github.magalz.borealis.settings.testing.FakeSettingsRepository.Write
+import io.github.magalz.borealis.settings.testing.MainDispatcherRule
 import io.github.magalz.borealis.settings.testing.deviceFacts
+import io.github.magalz.borealis.settings.testing.subscribe
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.ExperimentalCoroutinesApi

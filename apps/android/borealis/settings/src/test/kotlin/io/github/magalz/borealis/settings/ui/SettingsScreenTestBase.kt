@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.core.app.ApplicationProvider
 import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.testing.OnPage
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot
 import io.github.magalz.borealis.settings.testing.FakeDeviceFactsSource

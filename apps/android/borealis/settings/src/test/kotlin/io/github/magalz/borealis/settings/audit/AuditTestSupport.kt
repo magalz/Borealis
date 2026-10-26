@@ -1,11 +1,6 @@
 package io.github.magalz.borealis.settings.audit
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.input.InputMode
-import androidx.compose.ui.input.InputModeManager
-import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
-import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -18,15 +13,8 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.Locale
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
-import org.junit.rules.TestWatcher
-import org.junit.runner.Description
 
 const val PHONE = "w360dp-h640dp-xhdpi"
 const val TV = "w960dp-h540dp-land-television-xhdpi"
@@ -60,28 +48,6 @@ class FakeAuditTrail(initial: List<AuditEntry> = emptyList()) : AuditTrail {
         entries.value = emptyList()
         return true
     }
-}
-
-/** Runs `Dispatchers.Main`, and so `viewModelScope`, on a test dispatcher. */
-@OptIn(ExperimentalCoroutinesApi::class)
-class MainDispatcherRule : TestWatcher() {
-    override fun starting(description: Description) = Dispatchers.setMain(StandardTestDispatcher())
-
-    override fun finished(description: Description) = Dispatchers.resetMain()
-}
-
-/**
- * Sets [content] and switches the window to the keyboard input mode, the way a D-pad key does on a
- * device. Clickables are focusable in this mode only, and the focus outline shows only in it.
- */
-fun ComposeContentTestRule.setContentInKeyboardMode(content: @Composable () -> Unit) {
-    var manager: InputModeManager? = null
-    setContent {
-        manager = LocalInputModeManager.current
-        content()
-    }
-    runOnIdle { assertThat(checkNotNull(manager).requestInputMode(InputMode.Keyboard)).isTrue() }
-    waitForIdle()
 }
 
 /**

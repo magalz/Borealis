@@ -14,6 +14,7 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.testing.paneTitles
 import io.github.magalz.borealis.designsystem.testing.readingOrder
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.OverlayMode
@@ -25,7 +26,6 @@ import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
 import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.aPerf
-import io.github.magalz.borealis.stream.testing.setContentInKeyboardMode
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

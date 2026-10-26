@@ -18,6 +18,7 @@ import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.AcceptedFinding
 import io.github.magalz.borealis.designsystem.testing.NoTouchOnTv
 import io.github.magalz.borealis.designsystem.testing.assertAccessible
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -32,7 +33,6 @@ import io.github.magalz.borealis.library.testing.appTiles
 import io.github.magalz.borealis.library.testing.hostCards
 import io.github.magalz.borealis.library.testing.manyApps
 import io.github.magalz.borealis.library.testing.manyHosts
-import io.github.magalz.borealis.library.testing.setContentInKeyboardMode
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

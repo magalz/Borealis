@@ -1,15 +1,13 @@
 package io.github.magalz.borealis.stream.testing
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.input.InputMode
-import androidx.compose.ui.input.InputModeManager
-import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.width
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.host.launch.ConflictChoice
@@ -32,21 +30,6 @@ internal fun ComposeContentTestRule.setChrome(
     formFactor: FormFactor,
     content: @Composable () -> Unit,
 ) = setContent { BorealisTheme(formFactor) { content() } }
-
-/**
- * Sets [content] and switches the window to the keyboard input mode, the way a D-pad or a gamepad
- * key does on a device. Clickables are focusable in this mode only, and the focus outline shows
- * only in it.
- */
-internal fun ComposeContentTestRule.setContentInKeyboardMode(content: @Composable () -> Unit) {
-    var manager: InputModeManager? = null
-    setContent {
-        manager = LocalInputModeManager.current
-        content()
-    }
-    runOnIdle { assertThat(checkNotNull(manager).requestInputMode(InputMode.Keyboard)).isTrue() }
-    waitForIdle()
-}
 
 /** Like [setChrome], in the keyboard input mode (see [setContentInKeyboardMode]). */
 internal fun ComposeContentTestRule.setChromeInKeyboardMode(

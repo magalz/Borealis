@@ -2,8 +2,10 @@ package io.github.magalz.borealis.input.feedback
 
 import android.hardware.Sensor
 import android.hardware.SensorManager
+import android.util.SparseArray
 import android.view.Surface
 import com.google.common.truth.Truth.assertThat
+import com.limelight.binding.input.ControllerHandler
 import com.limelight.nvstream.jni.MoonBridge
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,6 +38,19 @@ class MotionSensorsTest : FeedbackTestBase() {
     }
 
     private fun gyro(value: Float) = value * DEGREES_PER_RADIAN
+
+    /** The report rate the handler keeps for [pad], in the field [name] of its context. */
+    private fun storedRate(rig: FeedbackRig, pad: Pad, name: String): Int {
+        @Suppress("UNCHECKED_CAST") // The field holds the handler's contexts by construction.
+        val contexts =
+            ControllerHandler::class
+                .java
+                .getDeclaredField("inputDeviceContexts")
+                .apply { isAccessible = true }
+                .get(rig.handler) as SparseArray<Any>
+        val context = contexts.get(pad.id)
+        return context.javaClass.getDeclaredField(name).apply { isAccessible = true }.getShort(context).toInt()
+    }
 
     @Test
     fun `a gyroscope request registers the gyroscope at the period of the rate`() {
@@ -87,6 +102,26 @@ class MotionSensorsTest : FeedbackTestBase() {
 
         assertThat(sensors.log.filter { it.startsWith("register") })
             .containsExactly("register 4 5000", "register 4 5000", "register 4 5000")
+    }
+
+    @Test
+    fun `the rate kept for the gyroscope is the one that was cut at 200`() {
+        val rig = sensorRig()
+        val pad = wake(rig)
+
+        rig.motionState(GYRO, 400)
+
+        assertThat(storedRate(rig, pad, "gyroReportRateHz")).isEqualTo(200)
+    }
+
+    @Test
+    fun `the rate kept for the accelerometer is the one that was cut at 200`() {
+        val rig = sensorRig()
+        val pad = wake(rig)
+
+        rig.motionState(ACCEL, 400)
+
+        assertThat(storedRate(rig, pad, "accelReportRateHz")).isEqualTo(200)
     }
 
     @Test

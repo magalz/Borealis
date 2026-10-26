@@ -13,6 +13,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 
 /** The motion sensors of a pad, as the host asks for them and as they report, on Android 13 and later. */
+// One suite for one feature: detekt's size limit is passed, and the helpers are shared by every test.
+@Suppress("LargeClass")
 @RunWith(RobolectricTestRunner::class)
 class MotionSensorsTest : FeedbackTestBase() {
     private val padSensors = Hardware.sensorManager(Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE)

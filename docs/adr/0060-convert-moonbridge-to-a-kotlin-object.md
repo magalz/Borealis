@@ -43,7 +43,8 @@ Every static method that the C code calls back keeps its name and descriptor too
 `FindClass` and the callbacks with `GetStaticMethodID`, and the native methods are exported as
 `Java_com_limelight_nvstream_jni_MoonBridge_*` functions. Members that are verified as unused are removed first, under
 [ADR 0059](0059-convert-the-inherited-java-to-kotlin.md) rule 8: the native `getPendingVideoFrames` with its C wrapper,
-and the constants that only the C code reads. Every other native method and every callback stays.
+and some constants that no Java or Kotlin code reads, such as the `ML_PORT_INDEX_*` constants. Every other native
+method and every callback stays.
 
 The shape is a Kotlin `object MoonBridge`. Every member is `@JvmStatic`, `@JvmField` or `const val`, and every native
 method is a `@JvmStatic external fun`. This keeps each native and each callback a static method of the class itself,
@@ -71,7 +72,7 @@ counts in Kover coverage.
 The checks are:
 
 * a JNI contract test that reads the C sources and checks by reflection that every exported native is a static native
-  method, and that every looked-up callback is a static method with the right descriptor. It is the only check for
+  method, and that every looked-up callback is a static method with the right descriptor. It is the only automated check for
   `bridgeClLogMessage`, which `borealis_log.c` looks up leniently: if the method is missing, log forwarding turns off
   silently;
 * `javap -p -s` before and after the conversion, because the `javap -public` of ADR 0059 rule 2.10 does not show

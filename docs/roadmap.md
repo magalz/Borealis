@@ -125,7 +125,8 @@ crash notice, which cannot be triggered. The results are in
    removed by the owner's decision, because they linked to Moonlight's wiki.
 5. **Duplicated game controller rule.** Done (merge `e81583be`). The test of
    what counts as a game controller is one rule. Unifying it with
-   `ControllerHandler.isGameControllerDevice` is open; see Sprint 13.
+   `ControllerHandler.isGameControllerDevice` is done in Sprint 13: it delegates to
+   `isStreamControllerDevice`, next to `isGameController` in `ConnectedGamepads.kt`.
 6. **Host parameter objects.** Done (merge `d9865d61`).
 7. **Phone title bars.** Done (merge `8a6acbad`). The four phone title bars
    (Apps, Audit, Settings and Privacy) share one phone bar and one back button.
@@ -643,19 +644,67 @@ Items:
 
 ### Sprint 13: Kotlin migration, input
 
-About 8,000 lines: `binding/input` (4,060, with `ControllerHandler` at 3,659 and
-`KeyboardTranslator`), `binding/input/virtual_controller` (1,905),
-`binding/input/driver` (the USB drivers, 1,173), `binding/input/touch` (591) and
-`binding/input/capture` (253).
+Converted in the phase branch `phase/s13-kotlin-input`, one merged task per area. Every
+conversion is merged; the device round is pending. Owner decisions of 2026-10-25:
 
-- **Game controller rule.** Unify the game controller rule with
-  `ControllerHandler.isGameControllerDevice`, possibly in a neutral input module.
-  Today `:app` depends on `:borealis:designsystem` for it. `ControllerHandlerRig`
-  can then use the shared `InputDevices` fixture. The unification is its own task,
-  after the conversion. Any difference between the two rules goes to the owner.
-- The device round: both 8BitDo pads (the Pro 3 in Switch mode, the Ultimate 2 in
-  D-input), a USB pad, the on-screen controller and touch on the S22, the keyboard
-  and mouse, the gamepad mouse, the menu chord and the quit combo.
+- **Characterize, then convert.** `ControllerHandler` (3,659 lines) was pinned first by
+  three characterization tasks, for events, devices and feedback, which worked in parallel
+  on separate test packages. One task then converted it with every test unchanged. Two
+  reviewers read the conversion, one for each half of the Java file (lines 1 to 1,850, and
+  1,850 to the end).
+- **Controller rule.** Two named rules sit side by side in `ConnectedGamepads.kt`
+  (`:borealis:designsystem`), with no behaviour change. `isGameController` says whether a
+  device is a real pad. `isStreamControllerDevice` says whether `Game` offers a device's key
+  events to the controller handler before the keyboard handler; it is broader on purpose.
+  `ControllerHandler.isGameControllerDevice` delegates to `isStreamControllerDevice`.
+- **Test temporary folders.** Each unit-test task gets a temporary folder of its own, and
+  the task empties it before each run. The leftover folders of the mutation runs had filled
+  the C: drive on 2026-10-25 (see [building](development/building.md)).
+
+Size: 26 Java files and 7,982 lines under `apps/android/app/src/main/java/com/limelight/binding/input`,
+moved by seven `chore: move` commits, one per area, as rename-only commits. After the conversion they are 26 Kotlin files and 8,399 lines
+under `apps/android/app/src/main/kotlin/`. By area, in Java lines: `binding/input` (4,060,
+with `ControllerHandler` at 3,659 and `KeyboardTranslator` at 401), `virtual_controller`
+(1,905, 10 files), `driver` (the USB drivers, 1,173, 7 files), `touch` (591, 3 files) and
+`capture` (253, 4 files). No Java is left under `binding/input`.
+
+Outcome, by issue (each one a merged task of the phase):
+
+- **Done, #73 keyboard and capture.** `KeyboardTranslator` and the mouse capture providers.
+- **Done, #74 touch.** The absolute and relative touch contexts.
+- **Done, #75 USB drivers.** The USB controller drivers and `UsbDriverService`.
+- **Done, #76 on-screen controller.** The core (`VirtualController` and its configuration
+  loader) and the elements (the sticks, the buttons, the pad and the triggers).
+- **Done, #77 ControllerHandler.** Pinned by the three characterization tasks, then
+  converted in one task.
+- **Done, #78 controller rule.** The stream's rule, `isStreamControllerDevice`, next to
+  `isGameController` (see above).
+
+Removed, not converted: each removal has its own `refactor: remove` commit with its evidence
+(ADR 0059, rule 8). Grouped by class:
+
+- **`ControllerHandler`:** the `hasGameController` field, written twice and read nowhere.
+- **`KeyboardTranslator`:** ten unused `VK_*` constants, and `getDeviceKeyCodeForQwertyKeyCode`,
+  a method of the private `KeyboardMapping` that nothing calls.
+- **`InputCaptureProvider`:** `isCapturingEnabled`, which returns the flag that
+  `isCapturingActive()` already returns.
+- **`UsbDriverBinder`:** `stop`, which has no caller; the service stops itself.
+- **`VirtualControllerConfigurationLoader`:** the unused private `getPercent`.
+- **`VirtualController`:** the debug switch and its `_DBG` helper, with five calls that built
+  a message that was then discarded.
+- **`VirtualControllerElement`:** `showConfigurationDialog`, `setColors`, two commented-out
+  colour choosers, and the debug flag `_PRINT_DEBUG_INFORMATION` with its output `_DBG` in the
+  element classes (the eight debug calls of the stick, button and pad classes went with it).
+- **`AnalogStick`:** the private `circle_stick` flag, which was never read, and three unused
+  `SIZE_RADIUS` constants.
+- **Test code:** `ShadowOscMoonBridge`, a test shadow of the on-screen controller tests, replaced
+  by the shared MoonBridge shadow.
+
+Items:
+
+- **Pending.** The device round: both 8BitDo pads (the Pro 3 in Switch mode, the Ultimate 2 in
+  D-input), a USB pad, the on-screen controller and touch on the S22, the keyboard and mouse,
+  the gamepad mouse, the menu chord and the quit combo.
 - Phase 4 (PyroWave) uses input and video.
 
 ### Sprint 14: Kotlin migration, video, audio and the stream activity
@@ -1100,6 +1149,151 @@ when. Paths are under `apps/android/app/src/main/kotlin/com/limelight/`, except
     [device-validation section 17](development/device-validation.md#17-results-sprint-12), P2.
   - Optional feature: send `continuousAudio=1` in `/launch`, so the client gets a steady
     audio stream on a silent PC. LuminalShine supports it.
+
+From the Sprint 13 conversion (2026-10-25). Nothing here is scheduled; the owner decides
+when. None of the bugs is fixed: the conversion keeps behaviour (ADR 0059, rule 10). Paths are
+under `apps/android/app/src/main/kotlin/com/limelight/binding/input/`, unless an item says
+otherwise.
+
+- **(a) Refactor the converted code.** The 62 places marked `(Sprint 13 backlog)` sit in 22
+  files, each next to a suppression annotation. Most suppress structural rules (`ReturnCount`,
+  `LongMethod`, `ComplexCondition`, `CyclomaticComplexMethod`, `TooManyFunctions`,
+  `LoopWithTooManyJumpStatements`, `LongParameterList`, `NestedBlockDepth` and `LargeClass`).
+  Some suppress `PrintStackTrace`, where the Java wrote to stderr, and five suppress
+  `DEPRECATION`. A few suppress `TooGenericExceptionCaught`, `UnusedPrivateProperty`,
+  `ObjectLiteralToLambda` or `AbstractClassCanBeConcreteClass`. By file, with the count:
+  - `ControllerHandler.kt`: 25
+  - `KeyboardTranslator.kt`: 1
+  - `capture/AndroidNativePointerCaptureProvider.kt`: 2
+  - `capture/InputCaptureProvider.kt`: 1
+  - `driver/AbstractController.kt`: 1
+  - `driver/AbstractXboxController.kt`: 2
+  - `driver/UsbDriverListener.kt`: 1
+  - `driver/UsbDriverService.kt`: 6
+  - `driver/Xbox360Controller.kt`: 1
+  - `driver/Xbox360WirelessDongle.kt`: 2
+  - `driver/XboxOneController.kt`: 3
+  - `touch/AbsoluteTouchContext.kt`: 1
+  - `touch/RelativeTouchContext.kt`: 1
+  - `virtual_controller/AnalogStick.kt`: 2
+  - `virtual_controller/DigitalButton.kt`: 2
+  - `virtual_controller/DigitalPad.kt`: 2
+  - `virtual_controller/LeftAnalogStick.kt`: 1
+  - `virtual_controller/LeftTrigger.kt`: 1
+  - `virtual_controller/RightAnalogStick.kt`: 1
+  - `virtual_controller/RightTrigger.kt`: 1
+  - `virtual_controller/VirtualControllerConfigurationLoader.kt`: 4
+  - `virtual_controller/VirtualControllerElement.kt`: 1
+
+  That is 62 places in 22 files.
+- **(b) Bugs and oddities found during the conversion, by area.** Each one is kept as it was.
+  - **Keyboard and capture** (`KeyboardTranslator.kt`, `capture/`):
+    - A negative key code for a device with a layout throws `ArrayIndexOutOfBoundsException` in
+      `translate` and `hasNormalizedMapping`: only the upper bound is checked.
+    - A key code above `KeyEvent.getMaxKeyCode()` from a device crashes the `KeyboardMapping`
+      constructor.
+    - The delayed pointer-capture request (500 ms) checks for a capture device when it fires,
+      not whether capture is still on. `disableCapture()` within those 500 ms still ends with
+      `requestPointerCapture()`.
+    - `hideCursor()` and `showCursor()` register and unregister the device listener
+      unconditionally. `showCursor()` releases a capture that was never requested (harmless).
+    - `InputCaptureManager` logs "Android O+ native mouse capture", though there is one provider.
+    - The Windows `VK_*` codes are duplicated in `borealis/stream/.../KeyboardLayout.kt`.
+  - **Touch** (`touch/`):
+    - `RelativeTouchContext`: the release runnables of the middle, X1 and X2 buttons are
+      unreachable, because `getMouseButtonIndex` gives only left or right.
+    - A view of width or height 0 gives an infinite scale factor, so a delta becomes -1.
+    - In a two-finger scroll, an x-only move sends `sendMouseHighResScroll(0)`.
+    - `AbsoluteTouchContext.lastTouchLocationX` is written and never read.
+    - A first tap within 250 ms of time 0 near (0,0) skips the reposition (unreachable with uptime).
+  - **USB drivers** (`driver/`):
+    - `AbstractController.supportedButtonFlags` is never assigned, so a USB pad's arrival reports
+      0 supported buttons to the host.
+    - An Xbox One pad shows Guide pressed in its first reports, until a 0x07 report.
+    - `stop()` sends `rumble(0, 0)`, which keeps the Xbox One trigger motors running.
+    - Races: `stopped` is not volatile, and `controllers` is not synchronized while `stop()` on
+      the input thread re-enters `deviceRemoved`. A `ConcurrentModificationException` or a
+      skipped entry is possible.
+    - An attach broadcast with no device throws a `NullPointerException` after 1 s on the main
+      looper; a permission broadcast with no device throws at once.
+    - `Xbox360WirelessDongle.start()` always returns false, so its `stop`, `rumble` and
+      `rumbleTriggers` never run, and the `else` of the claim chain is unreachable.
+    - Y axes: `~raw / 32767f` gives about -1.00003 at the extreme. The Xbox One triggers are not
+      clamped: values above 1023 or negative pass through.
+    - A blocked `bulkTransfer` ignores `interrupt()`, so after `stop()` the input thread lingers
+      up to the 3 s timeout.
+    - `onCreate`, `onDestroy` and `onReceive` of the service do not call `super`.
+    - The Kotlin reads `listener` once where the Java read it twice. The review accepted this:
+      a race that threw on the input thread no longer throws.
+  - **On-screen controller** (`virtual_controller/`):
+    - The Y button's flag `0x8000` is sign-extended from a `short` into `reportOscState(int)`,
+      so the packet carries `0xFFFF8000`. This is latent: `moonlight-common-c` masks negative
+      button flags with `0xFFFF` (`core/third_party/moonlight-common-c/src/InputStream.c`, lines
+      1012 to 1021).
+    - A finger exactly above or below the stick's centre gets the opposite angle. One pixel off
+      is right.
+    - The first stick touch within 350 ms of time 0 is a double click.
+    - A stick whose way is 0 pixels gives NaN (0/0), sent as `(short)NaN = 0`.
+    - MOVE or UP with no DOWN inside the stick's circle sends revoke and a movement of (0,0).
+    - The right-down line of the pad starts 5 px further out than the other lines.
+    - A second finger is answered true even when the element refuses it.
+    - The icon branch of `DigitalButton` is unreachable: `setIcon` is always -1.
+    - A corrupt saved-layout entry applies its earlier numbers before the `JSONException`.
+    - `keyLong` is always 0 in `createDigitalButton`, so a long click only resends the same state.
+    - `createDefaultLayout` reads and writes the default preferences on every call.
+  - **ControllerHandler** (events, devices and feedback):
+    - Combining: `x |= maxByMagnitude(x, v)` can send bits of two pads on one controller number.
+      Ties take the later pad.
+    - `handleSetMotionEventState` stops after the first pad with a matching controller number, so
+      a touchpad and its joystick on one number get the state only on the first.
+    - `handleRumbleTriggers` passes a possibly null `vibratorManager` to `rumbleQuadVibrators`.
+    - The controller-input fusing block is written out three times (about lines 1479 to 1514 of
+      the Java).
+    - The `gestures` constructor property is stored and never read.
+    - `(byte)(lt * 0xFF)` turns negative above 0.5; `(short)(x * 0x7FFE)` wraps past plus or
+      minus 1.
+    - The held-time `(int)` cast: a hold of 2^32 + 10 ms looks like 10 ms. A hold of 2^31 ms or
+      more makes the sleep negative, and `handleButtonUp` throws `IllegalArgumentException`.
+    - An unknown paddle scan code makes the whole handler return false: no packet, and no
+      emulation checks.
+    - The raw D-pad codes 704 to 707 are tried first, so 0x2c3 is Down on a pad with paddles.
+    - A zero-width touchpad range divides by zero and sends NaN coordinates.
+    - A key up for a button that is not down still sends a packet, and key repeats resend.
+    - `onInputDeviceChanged` forgets the held buttons and turns the gamepad mouse off for that
+      device.
+    - Removing a pad that shares controller 0 zeroes it for the pad that is left.
+    - The 17th pad shares controller 0 without reserving it. The mask is `1 << count` and wraps
+      at 16.
+    - `isExternal` matches `gpio`, `joy_key` and `keypad` case-sensitively; the other names are not.
+    - A Shield comment says small stick deadzones, but the code only sets `searchIsMode` and
+      `hasMode`.
+    - ADT-1 and ASUS set the trigger deadzone with no trigger axes. ADT-1 forces `hasSelect` and
+      `hasMode`; Thrustmaster Score A forces `hasMode = false`; the Xbox One S firmware check
+      tests only gas.
+    - Any non-PlayStation pad with a sensor manager is reported as UNKNOWN, shows a toast and
+      gets clickpad emulation.
+    - Sensors: a first all-zero reading is dropped as a repeat; a negative rate gives a negative
+      period; a second pad on the same number gets no sensor registration; `destroy()` leaves the
+      listeners set, so a later `disableSensors()` sends a stationary gyro event.
+    - Battery: the percentage goes through a float and a truncating byte (53 becomes 52, 59
+      becomes 58; out of range wraps). `LI_BATTERY_STATE_NOT_PRESENT` is never used, and an
+      unknown status is retried at every poll.
+    - Rumble: small motors truncate to an amplitude of 0 and cancel the vibration.
+      `sceManager.rumble` gets sign-extended shorts (0xC000 arrives as -16384), which is probably
+      a bug. A USB pad that sent no input answers to controller 0.
+- **(c) Test and tooling items.**
+  - Spotless (ktfmt) covers `apps/android/app/src/main/kotlin` only, so the test sources are not
+    formatted. Detekt covers them.
+  - `.gitattributes` marks `apps/android/**` as `-text`, so the Borealis Kotlin under `app/src`
+    mixes CRLF and LF line endings. Normalize the Borealis-owned Kotlin under
+    `app/src/main/kotlin` and `app/src/test/kotlin`.
+  - Test helpers repeat across the Sprint 13 test packages (rigs, `MoonBridge` shadows and the
+    `ANDROID_xx` constants). Fold them into the test standardization of Sprint 14.
+  - About 300 idle `HandlerThread("ControllerHandler")` threads stay alive in the test JVM,
+    because tests rarely call `destroy()`.
+  - One wall-clock test: `ButtonTimingCharacterizationTest` (low flake risk).
+  - Each distinct `@Config(shadows = ...)` set and each SDK level is a Robolectric sandbox, held
+    for the life of the JVM. The `:app` test heap is 2 GB since Sprint 13.
 
 ## Host-side items (LuminalShine)
 

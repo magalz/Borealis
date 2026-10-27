@@ -188,20 +188,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         return !decoderCanMeetPerformancePoint(avcCaps, prefs) && decoderCanMeetPerformancePoint(hevcCaps, prefs);
     }
 
-    private boolean decoderCanMeetPerformancePointWithAv1AndNotHevc(MediaCodecInfo av1DecoderInfo, MediaCodecInfo hevcDecoderInfo, PreferenceConfiguration prefs) {
-        MediaCodecInfo.VideoCapabilities av1Caps = av1DecoderInfo.getCapabilitiesForType("video/av01").getVideoCapabilities();
-        MediaCodecInfo.VideoCapabilities hevcCaps = hevcDecoderInfo.getCapabilitiesForType("video/hevc").getVideoCapabilities();
-
-        return !decoderCanMeetPerformancePoint(hevcCaps, prefs) && decoderCanMeetPerformancePoint(av1Caps, prefs);
-    }
-
-    private boolean decoderCanMeetPerformancePointWithAv1AndNotAvc(MediaCodecInfo av1DecoderInfo, MediaCodecInfo avcDecoderInfo, PreferenceConfiguration prefs) {
-        MediaCodecInfo.VideoCapabilities avcCaps = avcDecoderInfo.getCapabilitiesForType("video/avc").getVideoCapabilities();
-        MediaCodecInfo.VideoCapabilities av1Caps = av1DecoderInfo.getCapabilitiesForType("video/av01").getVideoCapabilities();
-
-        return !decoderCanMeetPerformancePoint(avcCaps, prefs) && decoderCanMeetPerformancePoint(av1Caps, prefs);
-    }
-
     private MediaCodecInfo findHevcDecoder(PreferenceConfiguration prefs, boolean requestedHdr) {
         // Don't return anything if H.264 is forced
         if (prefs.videoFormat == PreferenceConfiguration.FormatOption.FORCE_H264) {
@@ -257,14 +243,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                 // Force HEVC enabled if the user asked for it
                 if (prefs.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1) {
                     LimeLog.info("Forcing AV1 enabled despite non-whitelisted decoder");
-                }
-                // Use AV1 if the HEVC decoder is unable to meet the performance point
-                else if (hevcDecoder != null && decoderCanMeetPerformancePointWithAv1AndNotHevc(decoderInfo, hevcDecoder, prefs)) {
-                    LimeLog.info("Using non-whitelisted AV1 decoder to meet performance point");
-                }
-                // Use AV1 if the H.264 decoder is unable to meet the performance point and we have no HEVC decoder
-                else if (hevcDecoder == null && decoderCanMeetPerformancePointWithAv1AndNotAvc(decoderInfo, avcDecoder, prefs)) {
-                    LimeLog.info("Using non-whitelisted AV1 decoder to meet performance point");
                 }
                 else {
                     return null;

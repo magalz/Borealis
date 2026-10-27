@@ -2,6 +2,7 @@ package io.github.magalz.borealis.stream
 
 import com.google.common.truth.Truth.assertThat
 import java.io.File
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 /**
@@ -10,8 +11,17 @@ import org.junit.Test
  */
 class GameWiringTest {
     private val source: String = File("src/main/java/com/limelight/Game.java").readText()
-    private val renderer: String =
-        File("src/main/java/com/limelight/binding/video/MediaCodecDecoderRenderer.java").readText()
+
+    // The names of the renderer's own fields and methods, read without initializing the class.
+    private fun rendererMembers(): List<String> {
+        val renderer =
+            Class.forName(
+                "com.limelight.binding.video.MediaCodecDecoderRenderer",
+                false,
+                javaClass.classLoader,
+            )
+        return renderer.declaredFields.map { it.name } + renderer.declaredMethods.map { it.name }
+    }
 
     private fun body(signature: String): String {
         val start = source.indexOf(signature)
@@ -188,12 +198,18 @@ class GameWiringTest {
         assertThat(source).doesNotContain("performanceOverlay")
         assertThat(source).doesNotContain("onPerfUpdate")
         assertThat(source).doesNotContain("PerfOverlayListener")
-        assertThat(renderer).doesNotContain("perfListener")
-        assertThat(renderer).doesNotContain("perf_overlay_")
+        assertThat(rendererMembers().filter { it.contains("perfListener", ignoreCase = true) })
+            .isEmpty()
+        // No code can name a perf_overlay_ string: no strings.xml holds one (the next test).
         assertThat(File("src/main/res/layout/activity_game.xml").readText())
             .doesNotContain("performanceOverlay")
-        assertThat(File("src/main/java/com/limelight/binding/video/PerfOverlayListener.java").exists())
-            .isFalse()
+        assertThrows(ClassNotFoundException::class.java) {
+            Class.forName(
+                "com.limelight.binding.video.PerfOverlayListener",
+                false,
+                javaClass.classLoader,
+            )
+        }
     }
 
     @Test

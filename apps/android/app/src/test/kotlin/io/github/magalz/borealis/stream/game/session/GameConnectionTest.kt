@@ -21,6 +21,7 @@ import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.game.AVC_DECODER
 import io.github.magalz.borealis.stream.game.GameIntent
 import io.github.magalz.borealis.stream.game.GameTestBase
+import io.github.magalz.borealis.stream.game.RecordingSurfaceHolder
 import io.github.magalz.borealis.stream.game.phase
 import java.util.concurrent.TimeUnit
 import org.junit.Test
@@ -426,6 +427,21 @@ internal class GameConnectionTest : GameTestBase() {
         rig.game.connectionStarted()
         rig.stop()
 
+        idleWatchdog(FirstFrameWatchdog.DEFAULT_TIMEOUT_MILLIS * 2)
+
+        assertThat(watchdogFired()).isFalse()
+    }
+
+    @Test
+    fun `a surface that goes away under a running stream ends the watchdog`() {
+        val holder = RecordingSurfaceHolder()
+        rig.create()
+        rig.game.surfaceCreated(holder)
+        rig.game.connectionStarted()
+        rig.markConnectionAttempted()
+
+        rig.game.surfaceDestroyed(holder)
+        rig.awaitStop()
         idleWatchdog(FirstFrameWatchdog.DEFAULT_TIMEOUT_MILLIS * 2)
 
         assertThat(watchdogFired()).isFalse()

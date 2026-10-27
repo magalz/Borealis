@@ -2,7 +2,6 @@ package io.github.magalz.borealis.input.events
 
 import android.app.Activity
 import android.content.ComponentName
-import android.hardware.input.InputManager
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -10,12 +9,13 @@ import android.view.MotionEvent
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.nvstream.NvConnection
 import com.limelight.preferences.PreferenceConfiguration
+import io.github.magalz.borealis.testing.addInputDeviceContext
+import io.github.magalz.borealis.testing.addSystemInputDevice
 import java.util.concurrent.TimeUnit
 import org.robolectric.Robolectric
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadow.api.Shadow
-import org.robolectric.shadows.ShadowInputDevice
 import org.robolectric.shadows.ShadowInputEvent
 import org.robolectric.shadows.ShadowLooper
 
@@ -221,33 +221,17 @@ class EventsRig(
         controllerNumber: Int = 0,
         fields: Map<String, Any?> = emptyMap(),
     ): Pad {
-        val device = ShadowInputDevice.makeInputDeviceNamed("pad $deviceId")
-        InputDevice::class
-            .java
-            .getDeclaredField("mId")
-            .apply { isAccessible = true }
-            .setInt(device, deviceId)
-        val inputManager =
-            RuntimeEnvironment.getApplication().getSystemService(InputManager::class.java)
-        shadowOf(inputManager).addInputDevice(device)
-
-        val contextClass =
-            Class.forName("com.limelight.binding.input.ControllerHandler\$InputDeviceContext")
+        val device = addSystemInputDevice("pad $deviceId", deviceId)
         val context =
-            contextClass
-                .getDeclaredConstructor(ControllerHandler::class.java)
-                .apply { isAccessible = true }
-                .newInstance(handler)
+            handler.addInputDeviceContext(
+                deviceId,
+                mapOf(
+                    "name" to "pad $deviceId",
+                    "assignedControllerNumber" to true,
+                    "controllerNumber" to controllerNumber.toShort(),
+                ) + fields,
+            )
         val pad = Pad(this, deviceId, device, context)
-        pad.set("name", "pad $deviceId")
-        pad.set("assignedControllerNumber", true)
-        pad.set("controllerNumber", controllerNumber.toShort())
-        fields.forEach { (name, value) -> pad.set(name, value) }
-        @Suppress("UNCHECKED_CAST") // The field holds the handler's contexts by construction.
-        (handlerField("inputDeviceContexts") as android.util.SparseArray<Any?>).put(
-            deviceId,
-            context,
-        )
         return pad
     }
 }

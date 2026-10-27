@@ -120,4 +120,68 @@ internal class GameDisplayTest : GameTestBase() {
         assertThat(rig.game.requestedOrientation)
             .isEqualTo(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE)
     }
+
+    @Test
+    fun `a native resolution that the display has as a mode lets the window lay out under a notch`() {
+        rig.preference("list_resolution", "2400x1080")
+        rig.displayModes(DisplayMode(0, 2400, 1080, 60f))
+
+        rig.create()
+
+        assertThat(rig.game.window.attributes.layoutInDisplayCutoutMode)
+            .isEqualTo(WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS)
+    }
+
+    @Test
+    fun `a native resolution turned the other way round counts as the display's too`() {
+        rig.preference("list_resolution", "1080x2400")
+        rig.displayModes(DisplayMode(0, 2400, 1080, 60f))
+
+        rig.create()
+
+        assertThat(rig.game.window.attributes.layoutInDisplayCutoutMode)
+            .isEqualTo(WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS)
+    }
+
+    @Test
+    fun `a native resolution that is no mode of the display leaves the notch alone`() {
+        rig.preference("list_resolution", "2500x1100")
+        rig.displayModes(DisplayMode(0, 2400, 1080, 60f))
+
+        rig.create()
+
+        assertThat(rig.game.window.attributes.layoutInDisplayCutoutMode)
+            .isEqualTo(WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT)
+    }
+
+    @Test
+    fun `a standard resolution leaves the notch alone even when the display has it`() {
+        rig.preference("list_resolution", "1920x1080")
+        rig.displayModes(DisplayMode(0, 1920, 1080, 60f))
+
+        rig.create()
+
+        assertThat(rig.game.window.attributes.layoutInDisplayCutoutMode)
+            .isEqualTo(WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT)
+    }
+
+    @Test
+    fun `a native resolution on a square-ish display locks the orientation of the stream`() {
+        rig.displayModes(DisplayMode(0, 1080, 1000, 60f))
+        rig.preference("list_resolution", "1000x1080")
+        rig.create()
+        assertThat(rig.game.requestedOrientation)
+            .isEqualTo(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT)
+    }
+
+    @Test
+    fun `a wide native resolution on a square-ish display locks it to landscape`() {
+        rig.displayModes(DisplayMode(0, 1080, 1000, 60f))
+        rig.preference("list_resolution", "1080x1000")
+
+        rig.create()
+
+        assertThat(rig.game.requestedOrientation)
+            .isEqualTo(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE)
+    }
 }

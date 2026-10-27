@@ -164,6 +164,15 @@ internal class GameDisplayChoiceTest : GameTestBase() {
         assertThat(picked).isEqualTo(Picked(0, 60f, 5994))
     }
 
+    @Test
+    fun `a refresh rate just past the equal margin is no equal match, a multiple takes its place`() {
+        // 63.5 hertz is not within three hertz of 60, so the equal match that smoothness keeps is
+        // not there, and the 120 hertz that 60 frames divide evenly is a better match than it.
+        val picked = pick(Wanted(pacing = "smoothness"), hd(0, 63.5f), hd(2, 120f))
+
+        assertThat(picked).isEqualTo(Picked(0, 120f, 6350))
+    }
+
     // The resolution
 
     @Test

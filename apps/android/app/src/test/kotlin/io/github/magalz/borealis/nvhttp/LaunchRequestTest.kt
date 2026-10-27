@@ -7,6 +7,7 @@ import com.limelight.nvstream.StreamConfiguration
 import com.limelight.nvstream.http.HostHttpResponseException
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.jni.MoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.crypto.TestIdentities
 import io.github.magalz.borealis.testing.LimeLogCapture
 import java.io.Closeable
@@ -25,7 +26,7 @@ import org.xmlpull.v1.XmlPullParserException
  * ends a stream, and how the answer of the host is read. They go over HTTPS to the pinned host.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowNvMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class LaunchRequestTest {
     private val closeables = mutableListOf<Closeable>()
 

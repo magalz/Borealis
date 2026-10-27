@@ -5,6 +5,7 @@ import android.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.preferences.PreferenceConfiguration
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot
 import io.github.magalz.borealis.testing.ANDROID_12
@@ -29,7 +30,7 @@ import org.robolectric.annotation.Config
  * dropped from the catalog.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class SettingsDefaultsParityTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
 
@@ -102,14 +103,14 @@ class SettingsDefaultsParityTest {
     }
 
     @Test
-    @Config(sdk = [ANDROID_12], shadows = [ShadowMoonBridge::class])
+    @Config(sdk = [ANDROID_12], shadows = [ShadowRecordingBridge::class])
     fun `on Android 12 Java turns motion sensors off while the catalog default is on`() {
         assertThat(Settings.GAMEPAD_MOTION_SENSORS.default).isTrue()
         assertThat(read().gamepadMotionSensors).isFalse()
     }
 
     @Test
-    @Config(sdk = [ANDROID_13], shadows = [ShadowMoonBridge::class])
+    @Config(sdk = [ANDROID_13], shadows = [ShadowRecordingBridge::class])
     fun `on Android 13 and later the motion sensors default is on in Java as in the catalog`() {
         assertThat(read().gamepadMotionSensors).isEqualTo(Settings.GAMEPAD_MOTION_SENSORS.default)
     }

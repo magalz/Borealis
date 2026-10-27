@@ -308,6 +308,9 @@ class ConnectionRig(private val resetPlace: Boolean = true) : ExternalResource()
         host.close()
         ShadowMonkeyActivityManager.monkey = false
         resetSemaphore()
+        // The shadow lives as long as the sandbox: what this test told it must not reach the
+        // tests of the other classes that share it.
+        ShadowRecordingBridge.reset()
     }
 
     /**

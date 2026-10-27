@@ -6,6 +6,7 @@ import android.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.preferences.PreferenceConfiguration
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.store.SettingsSnapshots
 import io.github.magalz.borealis.testing.ANDROID_12
@@ -23,7 +24,7 @@ import org.robolectric.annotation.Config
  */
 @Suppress("DEPRECATION")
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class SettingsStoreJavaTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val preferences: SharedPreferences =
@@ -105,7 +106,7 @@ class SettingsStoreJavaTest {
         }
 
     @Test
-    @Config(sdk = [ANDROID_12], shadows = [ShadowMoonBridge::class])
+    @Config(sdk = [ANDROID_12], shadows = [ShadowRecordingBridge::class])
     fun `the motion sensors that Java turns off on Android 12 reach the snapshot`() {
         val before = SettingsSnapshots.current(context)
         assertThat(before[Settings.GAMEPAD_MOTION_SENSORS]).isTrue()

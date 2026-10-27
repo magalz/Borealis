@@ -2,7 +2,7 @@ package com.limelight.binding.input.virtual_controller
 
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
-import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -33,7 +33,7 @@ class PadLog(private val name: String = "", private val shared: MutableList<Stri
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class DigitalPadCharacterizationTest {
     private val kit = ElementRig()
     private val pad = kit.add(DigitalPad(kit.controller, kit.rig.activity), 100, 100, 330, 240)

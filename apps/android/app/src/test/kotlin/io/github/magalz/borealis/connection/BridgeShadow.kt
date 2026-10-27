@@ -32,6 +32,10 @@ internal data class BridgeCall(
  * native that has no answer returns the default of its type (0, false, null), unless a test puts
  * one in [answers].
  *
+ * It is the one shadow of `MoonBridge` for the tests that need no more than its static initialiser
+ * too (the settings, the preferences, the controllers, the stream configuration): they load it and
+ * read none of what it records.
+ *
  * `setupBridge` and `cleanupBridge` are recorded and then run the real code, so the `bridge*`
  * callbacks reach the renderers and the listener that a test gives to `setupBridge`; [reset] runs
  * the real `cleanupBridge` too. `getStageName` and `getLaunchUrlQueryParameters` answer without
@@ -71,7 +75,11 @@ internal object ShadowRecordingBridge {
 
     /**
      * What a native answers, by its name, instead of the default of its type: an `Int` (it wins
-     * over [intResult]), a `Long`, a `Byte`, a `Boolean` or a `String`.
+     * over [intResult]), a `Long`, a `Byte`, a `Boolean` or a `String`. A native that answers with
+     * an `Int` may take a `List<Int>`: the first call gets the first answer, the last answer serves
+     * every call after the list ends, and an empty list answers 0. The natives that look a pad up
+     * by its ids (`guessControllerType`, `guessControllerHasPaddles` and
+     * `guessControllerHasShareButton`) look first for the key `"<name> <vendorId> <productId>"`.
      */
     val answers = ConcurrentHashMap<String, Any>()
 
@@ -112,7 +120,18 @@ internal object ShadowRecordingBridge {
         return named(name)[count - 1]
     }
 
-    private fun intAnswer(name: String): Int = answers[name] as Int? ?: intResult
+    private fun intAnswer(name: String): Int =
+        when (val answer = answers[name]) {
+            is List<*> -> {
+                // The call was recorded before it is answered: it is the last one of its name.
+                val index = named(name).size - 1
+                (answer.getOrElse(index) { answer.lastOrNull() } ?: 0) as Int
+            }
+            else -> answer as Int? ?: intResult
+        }
+
+    private fun padAnswer(name: String, vendorId: Int, productId: Int): Any? =
+        answers["$name $vendorId $productId"] ?: answers[name]
 
     private fun record(name: String, vararg args: Any?): BridgeCall =
         BridgeCall(name, args.toList(), Thread.holdsLock(MoonBridge::class.java)).also {
@@ -517,7 +536,7 @@ internal object ShadowRecordingBridge {
     @JvmStatic
     fun guessControllerType(vendorId: Int, productId: Int): Byte {
         record("guessControllerType", vendorId, productId)
-        return answers["guessControllerType"] as Byte? ?: 0
+        return padAnswer("guessControllerType", vendorId, productId) as Byte? ?: 0
     }
 
     @Suppress("unused")
@@ -525,7 +544,7 @@ internal object ShadowRecordingBridge {
     @JvmStatic
     fun guessControllerHasPaddles(vendorId: Int, productId: Int): Boolean {
         record("guessControllerHasPaddles", vendorId, productId)
-        return answers["guessControllerHasPaddles"] as Boolean? ?: false
+        return padAnswer("guessControllerHasPaddles", vendorId, productId) as Boolean? ?: false
     }
 
     @Suppress("unused")
@@ -533,7 +552,7 @@ internal object ShadowRecordingBridge {
     @JvmStatic
     fun guessControllerHasShareButton(vendorId: Int, productId: Int): Boolean {
         record("guessControllerHasShareButton", vendorId, productId)
-        return answers["guessControllerHasShareButton"] as Boolean? ?: false
+        return padAnswer("guessControllerHasShareButton", vendorId, productId) as Boolean? ?: false
     }
 
     @Suppress("unused")

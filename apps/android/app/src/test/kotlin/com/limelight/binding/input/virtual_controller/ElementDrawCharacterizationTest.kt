@@ -7,7 +7,7 @@ import com.google.common.truth.Correspondence
 import com.google.common.truth.Truth.assertThat
 import com.limelight.R
 import com.limelight.binding.input.virtual_controller.VirtualController.ControllerMode
-import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import kotlin.math.abs
 import org.json.JSONObject
 import org.junit.Test
@@ -27,7 +27,7 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class ElementDrawCharacterizationTest {
     private fun paint(
         color: Int,

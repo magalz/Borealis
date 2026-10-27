@@ -3,14 +3,10 @@ package io.github.magalz.borealis.nvhttp
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import com.limelight.nvstream.http.LimelightCryptoProvider
 import com.limelight.nvstream.http.NvHTTP
-import com.limelight.nvstream.jni.MoonBridge
 import io.github.magalz.borealis.crypto.TestIdentities
 import io.github.magalz.borealis.crypto.providerOf
 import java.io.File
 import java.security.cert.X509Certificate
-import org.robolectric.annotation.Implementation
-import org.robolectric.annotation.Implements
-import org.robolectric.util.ReflectionHelpers
 
 /** The id that every request carries, whatever id the caller passes to the constructor. */
 internal const val UNIQUE_ID = "0123456789ABCDEF"
@@ -84,34 +80,3 @@ internal fun serverInfoBody(
         "<uniqueid>00000000-0000-0000-0000-000000000001</uniqueid><HttpsPort>$httpsPort</HttpsPort>" +
         "<PairStatus>${if (paired) 1 else 0}</PairStatus><currentgame>$currentGame</currentgame>" +
         "<state>$state</state></root>"
-
-/**
- * Lets `launchApp` run on the JVM. `MoonBridge` loads the native `moonlight-core` library when it
- * is initialised, and `launchApp` asks it for the launch query parameters. This shadow skips the
- * library, sets the three audio configurations that the stream configuration reads and answers
- * with the value of moonlight-common-c (`LiGetLaunchUrlQueryParameters`).
- *
- * Use it with `@Config(shadows = [ShadowNvMoonBridge::class])`.
- */
-@Implements(MoonBridge::class)
-object ShadowNvMoonBridge {
-    const val LAUNCH_URL_QUERY_PARAMETERS = "&corever=1"
-
-    @Suppress("unused")
-    @Implementation
-    @JvmStatic
-    fun __staticInitializer__() {
-        set("AUDIO_CONFIGURATION_STEREO", MoonBridge.AudioConfiguration(2, 0x3))
-        set("AUDIO_CONFIGURATION_51_SURROUND", MoonBridge.AudioConfiguration(6, 0x3F))
-        set("AUDIO_CONFIGURATION_71_SURROUND", MoonBridge.AudioConfiguration(8, 0x63F))
-    }
-
-    @Suppress("unused")
-    @Implementation
-    @JvmStatic
-    fun getLaunchUrlQueryParameters(): String = LAUNCH_URL_QUERY_PARAMETERS
-
-    private fun set(name: String, value: MoonBridge.AudioConfiguration) {
-        ReflectionHelpers.setStaticField(MoonBridge::class.java, name, value)
-    }
-}

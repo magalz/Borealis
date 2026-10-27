@@ -5,6 +5,7 @@ import com.limelight.nvstream.ConnectionContext
 import com.limelight.nvstream.StreamConfiguration
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.crypto.TestIdentities
 import java.io.Closeable
 import java.io.IOException
@@ -30,7 +31,7 @@ import org.robolectric.annotation.Config
  * `httpClientLongConnectNoReadTimeout`).
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowNvMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class ClientConfigurationTest {
     private val closeables = mutableListOf<Closeable>()
 
@@ -67,10 +68,11 @@ class ClientConfigurationTest {
 
     private fun clientsOf(http: NvHTTP) =
         listOf(
-            "httpClientLongConnectTimeout",
-            "httpClientShortConnectTimeout",
-            "httpClientLongConnectNoReadTimeout",
-        ).map { http.client(it) }
+                "httpClientLongConnectTimeout",
+                "httpClientShortConnectTimeout",
+                "httpClientLongConnectNoReadTimeout",
+            )
+            .map { http.client(it) }
 
     @Test
     fun `the long client waits 5 s to connect and 7 s to read`() {

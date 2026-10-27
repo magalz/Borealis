@@ -47,8 +47,8 @@ class VendorQuirksTest : DevicesTestBase() {
 
     @Test
     fun `the paddles and the share button come from the native list`() {
-        ShadowDevicesMoonBridge.paddles += 0x045e to 0x0b00
-        ShadowDevicesMoonBridge.shares += 0x045e to 0x0b00
+        NativePads.paddles(0x045e, 0x0b00)
+        NativePads.shares(0x045e, 0x0b00)
 
         val quirks =
             quirksOf(
@@ -70,7 +70,7 @@ class VendorQuirksTest : DevicesTestBase() {
             }
         )
 
-        assertThat(ShadowDevicesMoonBridge.queries)
+        assertThat(NativePads.queries)
             .containsExactly(
                 "guessControllerHasPaddles ${0x1234} ${0x5678}",
                 "guessControllerHasShareButton ${0x1234} ${0x5678}",

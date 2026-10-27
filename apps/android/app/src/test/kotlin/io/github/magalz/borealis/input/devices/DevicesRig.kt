@@ -12,16 +12,14 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.nvstream.NvConnection
-import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.designsystem.testing.inputDeviceListeners
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import org.robolectric.Robolectric
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
-import org.robolectric.annotation.Implementation
-import org.robolectric.annotation.Implements
 import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.InputDeviceBuilder
 import org.robolectric.shadows.ShadowInputEvent
@@ -30,75 +28,37 @@ import org.robolectric.util.ReflectionHelpers
 import org.robolectric.util.ReflectionHelpers.ClassParameter
 
 /**
- * Stands in for the native `moonlight-core` library, which a unit test does not have. Creating a
- * controller context from a real [InputDevice] asks it for the controller type and for the paddles
- * and the share button of a vendor and product, and this shadow answers from [types], [paddles] and
- * [shares] (anything not listed is unknown, no paddles and no share button) and records every
- * question in [queries]. The static initializer, which loads the native library, only sets the
- * audio configurations that `PreferenceConfiguration.readPreferences` reads.
+ * What the native `moonlight-core` library knows of pads, through [ShadowRecordingBridge], which
+ * answers for it. Creating a controller context from a real [InputDevice] asks the library for the
+ * controller type and for the paddles and the share button of a vendor and product. Anything a test
+ * does not tell it is unknown, with no paddles and no share button. [queries] holds every question
+ * the handler asked.
  *
- * State lives in this object, which every test of one Robolectric sandbox shares: call [reset]
- * before each test.
- *
- * Use it with `@Config(shadows = [ShadowDevicesMoonBridge::class])`.
+ * State lives in [ShadowRecordingBridge], which every test of one Robolectric sandbox shares: its
+ * `reset` before each test forgets what a test told.
  */
-@Implements(MoonBridge::class)
-object ShadowDevicesMoonBridge {
-    /** The controller type that `guessControllerType` answers for a vendor and product. */
-    val types = mutableMapOf<Pair<Int, Int>, Byte>()
+object NativePads {
+    /** Tells the library that the pad of [vendorId] and [productId] is of [type]. */
+    fun type(vendorId: Int, productId: Int, type: Byte) {
+        ShadowRecordingBridge.answers["guessControllerType $vendorId $productId"] = type
+    }
 
-    /** The vendor and product ids that `guessControllerHasPaddles` answers true for. */
-    val paddles = mutableSetOf<Pair<Int, Int>>()
+    /** Tells the library that the pad of [vendorId] and [productId] has paddles. */
+    fun paddles(vendorId: Int, productId: Int) {
+        ShadowRecordingBridge.answers["guessControllerHasPaddles $vendorId $productId"] = true
+    }
 
-    /** The vendor and product ids that `guessControllerHasShareButton` answers true for. */
-    val shares = mutableSetOf<Pair<Int, Int>>()
+    /** Tells the library that the pad of [vendorId] and [productId] has a share button. */
+    fun shares(vendorId: Int, productId: Int) {
+        ShadowRecordingBridge.answers["guessControllerHasShareButton $vendorId $productId"] = true
+    }
 
     /** Every question the handler asked, as `"<method> <vendor> <product>"`, in order. */
-    val queries = CopyOnWriteArrayList<String>()
-
-    fun reset() {
-        types.clear()
-        paddles.clear()
-        shares.clear()
-        queries.clear()
-    }
-
-    @Suppress("unused")
-    @Implementation
-    @JvmStatic
-    fun __staticInitializer__() {
-        set("AUDIO_CONFIGURATION_STEREO", MoonBridge.AudioConfiguration(2, 0x3))
-        set("AUDIO_CONFIGURATION_51_SURROUND", MoonBridge.AudioConfiguration(6, 0x3F))
-        set("AUDIO_CONFIGURATION_71_SURROUND", MoonBridge.AudioConfiguration(8, 0x63F))
-    }
-
-    private fun set(name: String, value: MoonBridge.AudioConfiguration) {
-        ReflectionHelpers.setStaticField(MoonBridge::class.java, name, value)
-    }
-
-    @Suppress("unused")
-    @Implementation
-    @JvmStatic
-    fun guessControllerType(vendorId: Int, productId: Int): Byte {
-        queries += "guessControllerType $vendorId $productId"
-        return types[vendorId to productId] ?: MoonBridge.LI_CTYPE_UNKNOWN
-    }
-
-    @Suppress("unused")
-    @Implementation
-    @JvmStatic
-    fun guessControllerHasPaddles(vendorId: Int, productId: Int): Boolean {
-        queries += "guessControllerHasPaddles $vendorId $productId"
-        return (vendorId to productId) in paddles
-    }
-
-    @Suppress("unused")
-    @Implementation
-    @JvmStatic
-    fun guessControllerHasShareButton(vendorId: Int, productId: Int): Boolean {
-        queries += "guessControllerHasShareButton $vendorId $productId"
-        return (vendorId to productId) in shares
-    }
+    val queries: List<String>
+        get() =
+            ShadowRecordingBridge.calls
+                .filter { it.name.startsWith("guessController") }
+                .map { call -> (listOf(call.name) + call.args).joinToString(" ") }
 }
 
 /** One controller packet as the handler handed it to the connection. */

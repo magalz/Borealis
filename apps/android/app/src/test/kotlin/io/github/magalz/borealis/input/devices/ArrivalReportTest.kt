@@ -72,7 +72,7 @@ class ArrivalReportTest : DevicesTestBase() {
             )
 
         assertThat(arrival.type).isEqualTo(MoonBridge.LI_CTYPE_XBOX.toInt())
-        assertThat(ShadowDevicesMoonBridge.queries)
+        assertThat(NativePads.queries)
             .containsExactly(
                 "guessControllerHasPaddles $xbox ${0x028e}",
                 "guessControllerHasShareButton $xbox ${0x028e}",
@@ -91,8 +91,7 @@ class ArrivalReportTest : DevicesTestBase() {
             )
 
         assertThat(arrival.type).isEqualTo(MoonBridge.LI_CTYPE_PS.toInt())
-        assertThat(ShadowDevicesMoonBridge.queries.none { it.startsWith("guessControllerType") })
-            .isTrue()
+        assertThat(NativePads.queries.none { it.startsWith("guessControllerType") }).isTrue()
     }
 
     @Test
@@ -110,7 +109,7 @@ class ArrivalReportTest : DevicesTestBase() {
 
     @Test
     fun `another vendor is looked up in the native list`() {
-        ShadowDevicesMoonBridge.types[0x28de to 0x1205] = MoonBridge.LI_CTYPE_STEAM
+        NativePads.type(0x28de, 0x1205, MoonBridge.LI_CTYPE_STEAM)
 
         val arrival =
             arrivalOf(
@@ -121,8 +120,7 @@ class ArrivalReportTest : DevicesTestBase() {
             )
 
         assertThat(arrival.type).isEqualTo(MoonBridge.LI_CTYPE_STEAM.toInt())
-        assertThat(ShadowDevicesMoonBridge.queries.last())
-            .isEqualTo("guessControllerType ${0x28de} ${0x1205}")
+        assertThat(NativePads.queries.last()).isEqualTo("guessControllerType ${0x28de} ${0x1205}")
     }
 
     @Test
@@ -214,7 +212,7 @@ class ArrivalReportTest : DevicesTestBase() {
 
     @Test
     fun `a pad with paddles has the four paddle buttons`() {
-        ShadowDevicesMoonBridge.paddles += 0x045e to 0x0b00
+        NativePads.paddles(0x045e, 0x0b00)
 
         val arrival =
             arrivalOf(
@@ -235,7 +233,7 @@ class ArrivalReportTest : DevicesTestBase() {
 
     @Test
     fun `a pad with a share button has the misc button`() {
-        ShadowDevicesMoonBridge.shares += 0x045e to 0x0b12
+        NativePads.shares(0x045e, 0x0b12)
 
         val arrival =
             arrivalOf(

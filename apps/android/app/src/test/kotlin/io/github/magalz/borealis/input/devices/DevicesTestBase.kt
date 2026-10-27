@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.input.devices
 
 import com.limelight.preferences.PreferenceConfiguration
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import org.junit.After
 import org.junit.Before
 import org.junit.runner.RunWith
@@ -8,16 +9,16 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The base of the tests that make controller contexts from Android input devices. A context
- * reads the native `moonlight-core` library and the vibrators, lights and sensors of the device,
- * which Robolectric does not have, so the shadows of this package stand in for them. The rigs
- * a test makes are closed after it, which ends the handler's background thread.
+ * The base of the tests that make controller contexts from Android input devices. A context reads
+ * the native `moonlight-core` library and the vibrators, lights and sensors of the device, which
+ * Robolectric does not have, so the shadows of this package stand in for them. The rigs a test
+ * makes are closed after it, which ends the handler's background thread.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(
     shadows =
         [
-            ShadowDevicesMoonBridge::class,
+            ShadowRecordingBridge::class,
             ShadowDeviceHardware::class,
             ShadowDeviceVibratorManager::class,
             ShadowDeviceVibrator::class,
@@ -34,7 +35,7 @@ abstract class DevicesTestBase {
 
     @Before
     fun resetShadows() {
-        ShadowDevicesMoonBridge.reset()
+        ShadowRecordingBridge.reset()
         DeviceHardware.reset()
         SceDevices.reset()
     }

@@ -271,7 +271,7 @@ class ControllerLedTest : FeedbackTestBase() {
 
         assertThat(log.entries)
             .contains(Level.WARNING to "Error closing LightsSession: closed twice")
-        assertThat(ShadowFeedbackBridge.batteryEvents).hasSize(1)
+        assertThat(batteryEvents).hasSize(1)
     }
 
     @Test

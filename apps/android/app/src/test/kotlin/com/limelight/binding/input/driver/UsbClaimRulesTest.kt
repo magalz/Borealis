@@ -4,7 +4,7 @@ import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.view.InputDevice
 import com.google.common.truth.Truth.assertThat
-import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.testing.LimeLogCapture
 import org.junit.After
 import org.junit.Rule
@@ -22,7 +22,7 @@ import org.robolectric.annotation.Config
 @Config(
     shadows =
         [
-            ShadowMoonBridge::class,
+            ShadowRecordingBridge::class,
             ShadowScriptedUsbConnection::class,
             ShadowRequestingUsbManager::class,
         ]

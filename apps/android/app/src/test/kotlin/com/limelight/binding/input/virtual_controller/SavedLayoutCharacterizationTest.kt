@@ -6,7 +6,7 @@ import android.content.SharedPreferences
 import android.graphics.Canvas
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
-import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import java.io.File
 import org.json.JSONException
 import org.json.JSONObject
@@ -26,7 +26,7 @@ import org.robolectric.annotation.Config
  * format.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class SavedLayoutCharacterizationTest {
     private val rig = OscRig()
 
@@ -35,7 +35,8 @@ class SavedLayoutCharacterizationTest {
 
     private fun installFixture() {
         val folder = File(rig.activity.dataDir, "shared_prefs").apply { mkdirs() }
-        val fixture = checkNotNull(OscRig::class.java.getResourceAsStream("OSC.xml")) { "OSC.xml is missing" }
+        val fixture =
+            checkNotNull(OscRig::class.java.getResourceAsStream("OSC.xml")) { "OSC.xml is missing" }
         fixture.use { input -> File(folder, "OSC.xml").outputStream().use { input.copyTo(it) } }
     }
 
@@ -51,7 +52,9 @@ class SavedLayoutCharacterizationTest {
         refresh()
 
         assertThat(rig.layout())
-            .containsExactlyElementsIn((GoldenLayouts.FULL_ORDER + GoldenLayouts.GUIDE).map(::userLayout))
+            .containsExactlyElementsIn(
+                (GoldenLayouts.FULL_ORDER + GoldenLayouts.GUIDE).map(::userLayout)
+            )
             .inOrder()
     }
 
@@ -62,7 +65,9 @@ class SavedLayoutCharacterizationTest {
         refresh(onlyL3R3 = true)
 
         assertThat(rig.layout())
-            .containsExactlyElementsIn((GoldenLayouts.L3_R3_ORDER + GoldenLayouts.GUIDE).map(::userLayout))
+            .containsExactlyElementsIn(
+                (GoldenLayouts.L3_R3_ORDER + GoldenLayouts.GUIDE).map(::userLayout)
+            )
             .inOrder()
     }
 
@@ -78,7 +83,9 @@ class SavedLayoutCharacterizationTest {
             .containsExactlyElementsIn(GoldenLayouts.FULL_ORDER + GoldenLayouts.GUIDE)
             .inOrder()
         assertThat(rig.layout())
-            .containsExactlyElementsIn((GoldenLayouts.FULL_ORDER + GoldenLayouts.GUIDE).map(::userLayout))
+            .containsExactlyElementsIn(
+                (GoldenLayouts.FULL_ORDER + GoldenLayouts.GUIDE).map(::userLayout)
+            )
             .inOrder()
         assertThat(rig.savedLayout().keys).containsExactlyElementsIn((1..16).map { it.toString() })
     }
@@ -100,7 +107,9 @@ class SavedLayoutCharacterizationTest {
     fun `an empty saved layout leaves the default one`() {
         refresh()
 
-        assertThat(rig.layout()).containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, false, true)).inOrder()
+        assertThat(rig.layout())
+            .containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, false, true))
+            .inOrder()
     }
 
     @Test
@@ -110,7 +119,8 @@ class SavedLayoutCharacterizationTest {
 
         VirtualControllerConfigurationLoader.saveProfile(rig.controller, rig.activity)
 
-        assertThat(rig.savedLayout()).containsExactlyEntriesIn((1..16).associate { it.toString() to userLayout(it) })
+        assertThat(rig.savedLayout())
+            .containsExactlyEntriesIn((1..16).associate { it.toString() to userLayout(it) })
     }
 
     @Test
@@ -121,7 +131,8 @@ class SavedLayoutCharacterizationTest {
         VirtualControllerConfigurationLoader.saveProfile(rig.controller, rig.activity)
 
         val expected = GoldenLayouts.of(OscRig.PHONE, onlyL3R3 = false, guide = true)
-        assertThat(rig.savedLayout()).containsExactlyEntriesIn(expected.associateBy { it.id.toString() })
+        assertThat(rig.savedLayout())
+            .containsExactlyEntriesIn(expected.associateBy { it.id.toString() })
         rig.saved.all.values.forEach { json ->
             val keys = JSONObject(json as String).keys().asSequence().toSet()
             assertThat(keys).containsExactly("LEFT", "TOP", "WIDTH", "HEIGHT")
@@ -131,7 +142,8 @@ class SavedLayoutCharacterizationTest {
     @Test
     fun `saving a moved element keeps the new place, and the layout of the next refresh starts from it`() {
         refresh()
-        rig.element(6).loadConfiguration(JSONObject("""{"LEFT":5,"TOP":6,"WIDTH":70,"HEIGHT":80}"""))
+        rig.element(6)
+            .loadConfiguration(JSONObject("""{"LEFT":5,"TOP":6,"WIDTH":70,"HEIGHT":80}"""))
 
         VirtualControllerConfigurationLoader.saveProfile(rig.controller, rig.activity)
         rig.controller.refreshLayout()
@@ -187,7 +199,8 @@ class SavedLayoutCharacterizationTest {
         VirtualControllerConfigurationLoader.saveProfile(rig.controller, spying)
         VirtualControllerConfigurationLoader.loadFromPreferences(rig.controller, spying)
 
-        assertThat(opened).containsExactly("OSC" to Context.MODE_PRIVATE, "OSC" to Context.MODE_PRIVATE)
+        assertThat(opened)
+            .containsExactly("OSC" to Context.MODE_PRIVATE, "OSC" to Context.MODE_PRIVATE)
         assertThat(VirtualControllerConfigurationLoader.OSC_PREFERENCE).isEqualTo("OSC")
     }
 
@@ -202,7 +215,8 @@ class SavedLayoutCharacterizationTest {
         val expected = defaults.map { if (it.id == 6) it else userLayout(it.id) }
         assertThat(rig.layout()).containsExactlyElementsIn(expected).inOrder()
         assertThat(rig.saved.contains("6")).isFalse()
-        assertThat(rig.saved.all.keys).containsExactlyElementsIn((1..16).filter { it != 6 }.map { it.toString() })
+        assertThat(rig.saved.all.keys)
+            .containsExactlyElementsIn((1..16).filter { it != 6 }.map { it.toString() })
     }
 
     @Test
@@ -211,7 +225,9 @@ class SavedLayoutCharacterizationTest {
 
         refresh()
 
-        assertThat(rig.layout()).containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, false, true)).inOrder()
+        assertThat(rig.layout())
+            .containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, false, true))
+            .inOrder()
         assertThat(rig.saved.all).isEmpty()
     }
 
@@ -235,23 +251,34 @@ class SavedLayoutCharacterizationTest {
 
         refresh()
 
-        assertThat(rig.layout()).containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, false, true)).inOrder()
+        assertThat(rig.layout())
+            .containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, false, true))
+            .inOrder()
         assertThat(rig.saved.contains("6")).isFalse()
     }
 
     @Test
     fun `an entry for an id that the layout does not hold stays in the file`() {
-        rig.saved.edit().putString("14", """{"LEFT":1,"TOP":2,"WIDTH":3,"HEIGHT":4}""").putString("99", "junk").commit()
+        rig.saved
+            .edit()
+            .putString("14", """{"LEFT":1,"TOP":2,"WIDTH":3,"HEIGHT":4}""")
+            .putString("99", "junk")
+            .commit()
 
         refresh()
 
-        assertThat(rig.layout()).containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, false, true)).inOrder()
+        assertThat(rig.layout())
+            .containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, false, true))
+            .inOrder()
         assertThat(rig.saved.all.keys).containsExactly("14", "99")
     }
 
     @Test
     fun `numbers written as text and extra keys are read the way org json reads them`() {
-        rig.saved.edit().putString("6", """{"LEFT":"7","TOP":8.9,"WIDTH":"10","HEIGHT":11,"EXTRA":12}""").commit()
+        rig.saved
+            .edit()
+            .putString("6", """{"LEFT":"7","TOP":8.9,"WIDTH":"10","HEIGHT":11,"EXTRA":12}""")
+            .commit()
 
         refresh()
 

@@ -3,6 +3,7 @@ package com.limelight.binding.audio
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.limelight.nvstream.jni.MoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.testing.LimeLogCapture
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
@@ -38,10 +39,10 @@ class ErrorStreamRecorder : ExternalResource() {
 /**
  * The Robolectric setup that every test of `AndroidAudioRenderer` shares: the audio platform and
  * the native bridge are replaced by shadows (see [ShadowRecordingAudioTrack] and
- * [ShadowAudioMoonBridge]), and the application is the context that the renderer gets.
+ * [ShadowRecordingBridge]), and the application is the context that the renderer gets.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowAudioMoonBridge::class, ShadowRecordingAudioTrack::class])
+@Config(shadows = [ShadowRecordingBridge::class, ShadowRecordingAudioTrack::class])
 // Abstract so that Gradle does not run the base as a test of its own.
 @Suppress("AbstractClassCanBeConcreteClass")
 abstract class AudioRendererTestBase {
@@ -57,7 +58,7 @@ abstract class AudioRendererTestBase {
 
     private fun resetShadows() {
         AudioPlatform.reset()
-        ShadowAudioMoonBridge.reset()
+        ShadowRecordingBridge.reset()
     }
 
     protected fun renderer(audioFx: Boolean = false) = AndroidAudioRenderer(context, audioFx)

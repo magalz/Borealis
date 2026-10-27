@@ -9,7 +9,7 @@ import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.R
-import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.testing.LimeLogCapture
 import java.time.Duration
 import org.junit.After
@@ -35,7 +35,7 @@ import org.robolectric.shadows.ShadowToast
 @Config(
     shadows =
         [
-            ShadowMoonBridge::class,
+            ShadowRecordingBridge::class,
             ShadowScriptedUsbConnection::class,
             ShadowRequestingUsbManager::class,
         ]

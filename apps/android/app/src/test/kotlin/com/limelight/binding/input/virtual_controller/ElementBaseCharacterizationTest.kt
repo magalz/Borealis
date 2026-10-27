@@ -8,7 +8,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import com.google.common.truth.Truth.assertThat
 import com.limelight.binding.input.virtual_controller.VirtualController.ControllerMode
-import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import org.json.JSONException
 import org.json.JSONObject
 import org.junit.Assert.assertThrows
@@ -53,7 +53,7 @@ class ProbeElement(
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class ElementBaseCharacterizationTest {
     private val kit = ElementRig()
     private val controller = kit.controller

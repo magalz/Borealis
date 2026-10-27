@@ -9,7 +9,7 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
-import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.testing.ANDROID_11
 import io.github.magalz.borealis.testing.ANDROID_12
 import io.github.magalz.borealis.testing.ANDROID_13
@@ -31,7 +31,7 @@ import org.robolectric.util.ReflectionHelpers
  */
 @Suppress("DEPRECATION", "LargeClass", "TooManyFunctions")
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class PreferenceConfigurationMigrationTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val preferences: SharedPreferences =
@@ -271,7 +271,7 @@ class PreferenceConfigurationMigrationTest {
     }
 
     @Test
-    @Config(sdk = [ANDROID_12], shadows = [ShadowMoonBridge::class])
+    @Config(sdk = [ANDROID_12], shadows = [ShadowRecordingBridge::class])
     fun `on Android 12 the motion sensors are written off when the user never chose`() {
         val config = read()
 
@@ -283,7 +283,7 @@ class PreferenceConfigurationMigrationTest {
     }
 
     @Test
-    @Config(sdk = [ANDROID_12], shadows = [ShadowMoonBridge::class])
+    @Config(sdk = [ANDROID_12], shadows = [ShadowRecordingBridge::class])
     fun `on Android 12 a stored motion sensors choice is kept`() {
         preferences.edit().putBoolean("checkbox_gamepad_motion_sensors", true).commit()
 
@@ -294,7 +294,7 @@ class PreferenceConfigurationMigrationTest {
     }
 
     @Test
-    @Config(sdk = [ANDROID_11], shadows = [ShadowMoonBridge::class])
+    @Config(sdk = [ANDROID_11], shadows = [ShadowRecordingBridge::class])
     fun `below Android 12 the motion sensors stay on and nothing is written`() {
         val config = read()
 
@@ -303,7 +303,7 @@ class PreferenceConfigurationMigrationTest {
     }
 
     @Test
-    @Config(sdk = [ANDROID_13], shadows = [ShadowMoonBridge::class])
+    @Config(sdk = [ANDROID_13], shadows = [ShadowRecordingBridge::class])
     fun `above Android 12 the motion sensors stay on and nothing is written`() {
         val config = read()
 
@@ -312,7 +312,7 @@ class PreferenceConfigurationMigrationTest {
     }
 
     @Test
-    @Config(sdk = [ANDROID_12], shadows = [ShadowMoonBridge::class])
+    @Config(sdk = [ANDROID_12], shadows = [ShadowRecordingBridge::class])
     fun `the edits of one read come in the order audio, resolution and frame rate, motion, frame pacing`() {
         preferences
             .edit()
@@ -346,7 +346,7 @@ class PreferenceConfigurationMigrationTest {
     }
 
     @Test
-    @Config(sdk = [ANDROID_12], shadows = [ShadowMoonBridge::class])
+    @Config(sdk = [ANDROID_12], shadows = [ShadowRecordingBridge::class])
     fun `a legacy resolution name is converted before the motion override and the frame pacing migration`() {
         preferences
             .edit()

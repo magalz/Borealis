@@ -2,7 +2,7 @@ package io.github.magalz.borealis.input.feedback
 
 import android.os.Build
 import android.view.InputDevice
-import com.limelight.nvstream.jni.MoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import java.util.concurrent.CopyOnWriteArrayList
 import org.cgutman.shieldcontrollerextensions.SceChargingState
 import org.cgutman.shieldcontrollerextensions.SceConnectionType
@@ -11,70 +11,30 @@ import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
 import org.robolectric.annotation.RealObject
 
-/** One battery packet that reached the native library, with the signed bytes as the handler sent them. */
+/**
+ * One battery packet that reached the native library, with the signed bytes as the handler sent
+ * them.
+ */
 data class BatteryEvent(val controller: Int, val state: Int, val percentage: Int)
 
 /**
- * Stands in for the native `moonlight-core` library, whose static initialiser a unit test cannot
- * run. Creating a controller context asks it for the pad's type, paddles and Share button, and the
- * battery packets of the handler end in it.
- *
- * State lives in this object, which every test of one Robolectric sandbox shares: call [reset]
- * before each test. Battery packets come from the handler's own thread, hence the concurrent list.
- *
- * Use it with `@Config(shadows = [ShadowFeedbackBridge::class, ShadowFeedbackInputDevice::class])`.
+ * The battery packets that reached the native library, with the signed bytes as the handler sent
+ * them. [ShadowRecordingBridge] records them, which the feedback tests load like the others; the
+ * packets come from the handler's own thread, and `reset` of the bridge forgets them.
  */
-@Implements(MoonBridge::class)
-object ShadowFeedbackBridge {
-    val batteryEvents = CopyOnWriteArrayList<BatteryEvent>()
-
-    fun reset() {
-        batteryEvents.clear()
-    }
-
-    @Suppress("unused")
-    @Implementation
-    @JvmStatic
-    fun __staticInitializer__() {
-        // No native library to load.
-    }
-
-    @Suppress("unused")
-    @Implementation
-    @JvmStatic
-    fun guessControllerType(vendorId: Int, productId: Int): Byte = MoonBridge.LI_CTYPE_UNKNOWN
-
-    // The library looks the pad up in a table; no pad of a test is in it
-    @Suppress("unused", "FunctionOnlyReturningConstant")
-    @Implementation
-    @JvmStatic
-    fun guessControllerHasPaddles(vendorId: Int, productId: Int): Boolean = false
-
-    @Suppress("unused", "FunctionOnlyReturningConstant")
-    @Implementation
-    @JvmStatic
-    fun guessControllerHasShareButton(vendorId: Int, productId: Int): Boolean = false
-
-    @Suppress("unused")
-    @Implementation
-    @JvmStatic
-    fun sendControllerBatteryEvent(
-        controllerNumber: Byte,
-        batteryState: Byte,
-        batteryPercentage: Byte,
-    ): Int {
-        batteryEvents +=
-            BatteryEvent(controllerNumber.toInt(), batteryState.toInt(), batteryPercentage.toInt())
-        return 0
-    }
-}
+val batteryEvents: List<BatteryEvent>
+    get() =
+        ShadowRecordingBridge.named("sendControllerBatteryEvent").map { call ->
+            val (controller, state, percentage) = call.args.map { (it as Byte).toInt() }
+            BatteryEvent(controller, state, percentage)
+        }
 
 /**
  * What a test gives one input device: the framework objects Robolectric cannot make for it, made
- * with [Hardware]. The fields are `Any?` because several of these types do not exist before
- * Android 12, and a shadow that names them in a signature cannot load there. A field left null
- * gets an absent piece of hardware when the rig connects the pad: no vibrator, no sensors, no
- * lights, no battery.
+ * with [Hardware]. The fields are `Any?` because several of these types do not exist before Android
+ * 12, and a shadow that names them in a signature cannot load there. A field left null gets an
+ * absent piece of hardware when the rig connects the pad: no vibrator, no sensors, no lights, no
+ * battery.
  */
 class DeviceFeatures(
     /** A `Vibrator`: what `InputDevice.getVibrator()` answers. */
@@ -90,7 +50,8 @@ class DeviceFeatures(
 ) {
     /** Fills what the test left out with hardware that is not there. */
     fun withAbsentHardware(): DeviceFeatures {
-        if (vibrator == null) vibrator = Hardware.vibrator(present = false, amplitudeControl = false)
+        if (vibrator == null)
+            vibrator = Hardware.vibrator(present = false, amplitudeControl = false)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (vibratorManager == null) vibratorManager = Hardware.vibratorManager()
             if (sensorManager == null) sensorManager = Hardware.sensorManager()
@@ -112,7 +73,9 @@ class DeviceFeatures(
 class ShadowFeedbackInputDevice {
     @Suppress("VarCouldBeVal") @RealObject private lateinit var device: InputDevice
 
-    @Suppress("unused") @Implementation fun getVibrator(): Any = features.getValue(device.id).vibrator!!
+    @Suppress("unused")
+    @Implementation
+    fun getVibrator(): Any = features.getValue(device.id).vibrator!!
 
     @Suppress("unused")
     @Implementation(minSdk = Build.VERSION_CODES.S)

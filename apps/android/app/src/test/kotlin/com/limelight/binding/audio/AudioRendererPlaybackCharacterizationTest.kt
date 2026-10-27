@@ -2,6 +2,7 @@ package com.limelight.binding.audio
 
 import android.content.Intent
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import java.util.logging.Level
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -11,7 +12,7 @@ import org.robolectric.Shadows.shadowOf
  * Characterizes what `AndroidAudioRenderer` does once its track exists: it writes the samples that
  * the native layer decodes unless too much audio is waiting, it opens and closes the audio effect
  * session of the track, and it drops the track. The native layer answers how much audio is waiting
- * through [ShadowAudioMoonBridge].
+ * through [ShadowRecordingBridge].
  *
  * `start`, `stop` and `cleanup` use the track without checking that `setup` made one: a call before
  * a successful `setup` fails with a [NullPointerException] at that point.
@@ -32,19 +33,19 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
     @Test
     fun `the samples are written whole to the track when nothing is pending`() {
         val renderer = ready()
-        ShadowAudioMoonBridge.pendingDurations = listOf(0)
+        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(0)
 
         renderer.playDecodedAudio(samples)
 
         assertThat(writes()).containsExactly(AudioCall.Write(1, samples.toList()))
-        assertThat(ShadowAudioMoonBridge.asked).isEqualTo(1)
+        assertThat(ShadowRecordingBridge.named("getPendingAudioDuration")).hasSize(1)
         assertThat(log.entries.map { it.second }.filter { it.startsWith("Too much") }).isEmpty()
     }
 
     @Test
     fun `39 milliseconds of pending audio still lets the samples through`() {
         val renderer = ready()
-        ShadowAudioMoonBridge.pendingDurations = listOf(39)
+        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(39)
 
         renderer.playDecodedAudio(samples)
 
@@ -54,7 +55,7 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
     @Test
     fun `a negative pending duration lets the samples through`() {
         val renderer = ready()
-        ShadowAudioMoonBridge.pendingDurations = listOf(-5)
+        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(-5)
 
         renderer.playDecodedAudio(samples)
 
@@ -65,26 +66,25 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
     fun `40 milliseconds of pending audio drops the samples and logs the duration read again`() {
         val renderer = ready()
         // The check reads 40; the log reads the duration a second time and shows what it found
-        ShadowAudioMoonBridge.pendingDurations = listOf(40, 77)
+        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(40, 77)
 
         renderer.playDecodedAudio(samples)
 
         assertThat(writes()).isEmpty()
-        assertThat(ShadowAudioMoonBridge.asked).isEqualTo(2)
-        assertThat(log.entries.last())
-            .isEqualTo(Level.INFO to "Too much pending audio data: 77 ms")
+        assertThat(ShadowRecordingBridge.named("getPendingAudioDuration")).hasSize(2)
+        assertThat(log.entries.last()).isEqualTo(Level.INFO to "Too much pending audio data: 77 ms")
     }
 
     @Test
     fun `successive packets each ask for the pending duration again`() {
         val renderer = ready()
-        ShadowAudioMoonBridge.pendingDurations = listOf(0, 100, 100, 10)
+        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(0, 100, 100, 10)
 
         repeat(3) { renderer.playDecodedAudio(samples) }
 
         // The second packet is dropped (two reads); the first and the third are written
         assertThat(writes()).hasSize(2)
-        assertThat(ShadowAudioMoonBridge.asked).isEqualTo(4)
+        assertThat(ShadowRecordingBridge.named("getPendingAudioDuration")).hasSize(4)
     }
 
     @Test
@@ -100,7 +100,7 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
     @Test
     fun `no samples with little pending audio fails when the pending audio is read`() {
         val renderer = ready()
-        ShadowAudioMoonBridge.pendingDurations = listOf(0)
+        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(0)
 
         assertThrows(NullPointerException::class.java) { renderer.playDecodedAudio(null) }
         assertThat(writes()).isEmpty()
@@ -109,29 +109,27 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
     @Test
     fun `no samples with much pending audio is only logged`() {
         val renderer = ready()
-        ShadowAudioMoonBridge.pendingDurations = listOf(60)
+        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(60)
 
         renderer.playDecodedAudio(null)
 
-        assertThat(log.entries.last())
-            .isEqualTo(Level.INFO to "Too much pending audio data: 60 ms")
+        assertThat(log.entries.last()).isEqualTo(Level.INFO to "Too much pending audio data: 60 ms")
     }
 
     @Test
     fun `samples before setup fail when little audio is pending`() {
-        ShadowAudioMoonBridge.pendingDurations = listOf(0)
+        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(0)
 
         assertThrows(NullPointerException::class.java) { renderer().playDecodedAudio(samples) }
     }
 
     @Test
     fun `samples before setup are only logged when much audio is pending`() {
-        ShadowAudioMoonBridge.pendingDurations = listOf(50)
+        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(50)
 
         renderer().playDecodedAudio(samples)
 
-        assertThat(log.entries.last())
-            .isEqualTo(Level.INFO to "Too much pending audio data: 50 ms")
+        assertThat(log.entries.last()).isEqualTo(Level.INFO to "Too much pending audio data: 50 ms")
     }
 
     // start and stop
@@ -156,7 +154,8 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
         renderer.start()
 
         val intent = broadcasts.single()
-        assertThat(intent.action).isEqualTo("android.media.action.OPEN_AUDIO_EFFECT_CONTROL_SESSION")
+        assertThat(intent.action)
+            .isEqualTo("android.media.action.OPEN_AUDIO_EFFECT_CONTROL_SESSION")
         assertThat(intent.getIntExtra("android.media.extra.AUDIO_SESSION", -1))
             .isEqualTo(AudioPlatform.sessionOf(1))
         assertThat(intent.getStringExtra("android.media.extra.PACKAGE_NAME"))
@@ -184,7 +183,10 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
         assertThat(intent.getStringExtra("android.media.extra.PACKAGE_NAME"))
             .isEqualTo(context.packageName)
         assertThat(intent.extras!!.keySet())
-            .containsExactly("android.media.extra.AUDIO_SESSION", "android.media.extra.PACKAGE_NAME")
+            .containsExactly(
+                "android.media.extra.AUDIO_SESSION",
+                "android.media.extra.PACKAGE_NAME",
+            )
     }
 
     @Test

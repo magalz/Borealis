@@ -32,10 +32,15 @@ class RendererDecodeTimeTest : RendererTestBase() {
      * Sends [frames] to the decoder, lets the renderer thread take what comes out and finish with
      * it, then closes the window of statistics with one more frame.
      */
-    private fun MediaCodecDecoderRenderer.decodeAndClose(frames: List<DecodeUnit>) {
+    private fun MediaCodecDecoderRenderer.decodeAndClose(
+        frames: List<DecodeUnit>,
+        shownBefore: Int = 0,
+    ) {
         frames.forEach { assertThat(submit(it)).isEqualTo(MoonBridge.DR_OK) }
         begin()
-        await("the frames to be shown") { events<CodecEvent.Output>().size >= frames.size }
+        await("the frames to be shown") {
+            events<CodecEvent.Output>().size >= shownBefore + frames.size
+        }
         val polls = ShadowRecordingVideoCodec.dequeueOutputCalls.get()
         await("the renderer thread to finish") {
             ShadowRecordingVideoCodec.dequeueOutputCalls.get() > polls
@@ -57,6 +62,24 @@ class RendererDecodeTimeTest : RendererTestBase() {
         assertThat(decodeMs).isAtLeast(0f)
         // One frame, so the average in whole milliseconds is the time rounded half up.
         assertThat(renderer.getAverageDecoderLatency()).isEqualTo(floor(decodeMs + 0.5f).toInt())
+    }
+
+    @Test
+    fun `a time of about two milliseconds and three quarters is rounded up to three`() {
+        // The fake takes 2.1 ms to answer and the threads take about 0.6 ms more. Whatever the time
+        // is, the average of one frame is that time rounded half up, in milliseconds. Over five
+        // frames at least one lands where rounding up differs from cutting.
+        ShadowRecordingVideoCodec.outputDelayNanos = 2_100_000
+        for (trial in 0 until TRIALS) {
+            val renderer = decoding()
+
+            renderer.decodeAndClose(frames(1), shownBefore = trial)
+
+            val decodeMs = checkNotNull(snapshots[trial].decodeMs)
+            assertThat(decodeMs).isAtLeast(2.1f)
+            assertThat(renderer.getAverageDecoderLatency()).isEqualTo(floor(decodeMs + 0.5f).toInt())
+            renderer.stop()
+        }
     }
 
     @Test
@@ -142,5 +165,9 @@ class RendererDecodeTimeTest : RendererTestBase() {
         // Two frames received and one time of 300 ms: 150 ms a frame.
         assertThat(snapshots.single().decodeMs).isEqualTo(150f)
         assertThat(renderer.getAverageDecoderLatency()).isEqualTo(150)
+    }
+
+    private companion object {
+        const val TRIALS = 5
     }
 }

@@ -1,6 +1,7 @@
 package com.limelight.binding.video
 
 import android.media.MediaCodec
+import android.view.Display
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
@@ -8,6 +9,8 @@ import io.github.magalz.borealis.stream.PerfSnapshot
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Test
+import org.robolectric.shadow.api.Shadow
+import org.robolectric.util.ReflectionHelpers
 
 /**
  * Characterizes what the renderer does with the frames the codec has decoded: which of them it
@@ -187,6 +190,18 @@ class RendererOutputTest : RendererTestBase() {
     }
 
     @Test
+    fun `a frame is shown at its frame time less the offset of the app vsync of the display`() {
+        val renderer = withFrames(PreferenceConfiguration.FRAME_PACING_BALANCED, frames = 3)
+        renderer.begin()
+        awaitReleases(1)
+        setAppVsyncOffset(APP_VSYNC_OFFSET)
+
+        renderer.doFrame(FRAME_TIME)
+
+        assertThat(outputs().last().atNs).isEqualTo(FRAME_TIME - APP_VSYNC_OFFSET)
+    }
+
+    @Test
     fun `a frame time that comes too soon after the last shown frame shows nothing`() {
         val renderer = withFrames(PreferenceConfiguration.FRAME_PACING_BALANCED, frames = 3)
         renderer.begin()
@@ -282,7 +297,20 @@ class RendererOutputTest : RendererTestBase() {
         assertThat(outputs().last().index).isEqualTo(queuedIndexes()[2])
     }
 
+    /** Makes the default display report [nanos] as the offset of the vsync that the app gets. */
+    private fun setAppVsyncOffset(nanos: Long) {
+        val global =
+            ReflectionHelpers.callStaticMethod<Any>(
+                Class.forName("android.hardware.display.DisplayManagerGlobal"),
+                "getInstance",
+            )
+        val manager = ReflectionHelpers.getField<Any>(Shadow.extract<Any>(global), "mDm")
+        val infos = ReflectionHelpers.getField<Map<Int, Any>>(manager, "displayInfos")
+        ReflectionHelpers.setField(infos.getValue(Display.DEFAULT_DISPLAY), "appVsyncOffsetNanos", nanos)
+    }
+
     private companion object {
+        const val APP_VSYNC_OFFSET = 4_000_000L
         const val FRAME_TIME = 1_000_000_000L
 
         // 80 percent of a frame at 60 FPS and at 120 FPS, in whole nanoseconds.

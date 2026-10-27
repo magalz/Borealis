@@ -181,6 +181,11 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
             consumeParameterSets(index)
             return
         }
+        val delay = outputDelayNanos
+        if (delay > 0) {
+            val until = System.nanoTime() + delay
+            while (System.nanoTime() < until) Thread.onSpinWait()
+        }
         val outputPts = outputTimestamp?.invoke(presentationTimeUs) ?: presentationTimeUs
         super.native_queueInputBuffer(index, offset, size, outputPts, flags)
     }
@@ -266,6 +271,12 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
          */
         @JvmStatic val nullInputBuffers = AtomicInteger()
 
+        /**
+         * How long the fake takes to turn a frame into an output, from the call that queues it. A
+         * test uses it to give the decoder a time that it can then read back.
+         */
+        @Volatile @JvmStatic var outputDelayNanos = 0L
+
         /** While true, no input buffer is ever free: `dequeueInputBuffer` times out. */
         @Volatile @JvmStatic var starveInput = false
 
@@ -332,6 +343,7 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
             outputAnswers.clear()
             starveInput = false
             nullInputBuffers.set(0)
+            outputDelayNanos = 0
             outputTimestamp = null
             dequeueInputCalls.set(0)
             dequeueOutputCalls.set(0)

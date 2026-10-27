@@ -269,7 +269,7 @@ internal class GameStopTest : GameTestBase() {
     fun `a connection that was terminated is not stopped again by onStop`() {
         rig.streaming()
         rig.game.connectionTerminated(MoonBridge.ML_ERROR_GRACEFUL_TERMINATION)
-        ShadowRecordingBridge.await("cleanupBridge")
+        rig.awaitStop()
 
         rig.stop()
 

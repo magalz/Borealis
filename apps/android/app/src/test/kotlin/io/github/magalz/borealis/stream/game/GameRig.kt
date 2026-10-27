@@ -44,9 +44,10 @@ import org.robolectric.util.ReflectionHelpers
 /**
  * The extras of the intent that starts the stream, under the literal key names of the persistent
  * format (pinned shortcuts carry them), not under the constants of `Game`. A null value leaves its
- * extra out.
+ * extra out. A test changes one extra with `GameIntent().copy(appName = null)`, or by naming it in
+ * the constructor.
  */
-internal class GameIntent(
+internal data class GameIntent(
     val host: String? = HOST,
     val port: Int? = PORT,
     val httpsPort: Int? = HTTPS_PORT,
@@ -116,6 +117,10 @@ internal const val AVC_DECODER = "c2.test.avc.decoder"
 /** The connection starts and, this long after, the activity grabs the input. */
 internal const val GRAB_DELAY_MS = 500L
 
+/** The class names of the threads that `Game` starts: `Game$` and a number or a name. */
+private const val STOP_THREAD = "com.limelight.Game$"
+
+private const val STOP_WAIT_MS = 30_000L
 private const val GL_3_2 = 0x30002
 private const val HDR_NITS = 500f
 private const val SHIELD_PACKAGE = "com.nvidia.blakepairing"
@@ -159,7 +164,7 @@ internal class GameRig {
         BorealisAudit.install(AuditSink { audit += it }, Redactor(), "test")
         preference("checkbox_usb_driver", false)
         decoders(codec(AVC_DECODER))
-        openGl()
+        fixOpenGl()
         network(metered = false)
         // The SHIELD extension service does not exist here; without this the bind answers with no
         // binder and the extension manager of the controller handler fails.
@@ -197,13 +202,16 @@ internal class GameRig {
     }
 
     /**
-     * The OpenGL ES version that the device reports, which `MediaCodecHelper.initialize` reads the
-     * first time it runs in a sandbox (the helper keeps its state for the sandbox).
+     * The OpenGL ES version that the device reports. It is always 3.2, and the GL renderer name of
+     * the GL preferences is empty (the one test that sets one uses a name no decoder rule reads).
+     * `MediaCodecHelper` reads both once, the first time it runs in a sandbox, and keeps what it
+     * read for every later test of the sandbox: a value that a test chose would count or not by the
+     * order of the tests. Nothing that `Game` does with the activity depends on them.
      */
-    fun openGl(version: Int = GL_3_2) {
+    private fun fixOpenGl() {
         val manager = application.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         shadowOf(manager)
-            .setDeviceConfigurationInfo(ConfigurationInfo().apply { reqGlEsVersion = version })
+            .setDeviceConfigurationInfo(ConfigurationInfo().apply { reqGlEsVersion = GL_3_2 })
     }
 
     /**
@@ -259,9 +267,9 @@ internal class GameRig {
             .setDisplayHdrCapabilities(Display.DEFAULT_DISPLAY, HDR_NITS, HDR_NITS, 0.1f, *types)
     }
 
-    /** A system feature of the device, such as television or picture in picture. */
-    fun feature(name: String, present: Boolean = true) {
-        shadowOf(application.packageManager).setSystemFeature(name, present)
+    /** Gives the device a system feature, such as television or picture in picture. */
+    fun feature(name: String) {
+        shadowOf(application.packageManager).setSystemFeature(name, true)
     }
 
     /**
@@ -305,11 +313,17 @@ internal class GameRig {
         return service.get()
     }
 
-    /** Builds the activity from [intent] and runs `onCreate`, `onStart` and `onResume`. */
+    /**
+     * Builds the activity from [intent] and runs `onCreate`, `onStart` and `onResume`. The rig
+     * holds the activity before `onCreate` runs, so that [destroy] ends it even when `onCreate`
+     * throws.
+     */
     fun create(intent: GameIntent = GameIntent()): Game {
         check(controller == null) { "the activity exists already" }
-        controller = Robolectric.buildActivity(Game::class.java, intent.build(application)).setup()
+        val activity = Robolectric.buildActivity(Game::class.java, intent.build(application))
+        controller = activity
         stage = Stage.RESUMED
+        activity.setup()
         return game
     }
 
@@ -357,15 +371,14 @@ internal class GameRig {
 
     /**
      * The activity is no longer visible: `onPause` and `onStop`. `onStop` stops a running
-     * connection on a thread of its own, and this waits for that thread to end.
+     * connection on a thread of its own, and this waits for that thread, see [awaitStop].
      */
     fun stop() {
         pause()
         if (stage == Stage.PAUSED) {
-            val running = field<Boolean>("connected") || field<Boolean>("connecting")
             checkNotNull(controller).stop()
             stage = Stage.STOPPED
-            if (running) ShadowRecordingBridge.await("cleanupBridge")
+            awaitStop()
         }
     }
 
@@ -378,19 +391,61 @@ internal class GameRig {
         }
     }
 
-    /** Ends the activity, if the test made one, and leaves nothing of the rig behind. */
+    /**
+     * Waits for the threads that the activity started to stop a connection. `Game.stopConnection`
+     * stops it on a thread of its own (`NvConnection.stop` talks to the host), which `onStop`, a
+     * surface that goes away and a terminated connection all start. A test that looks at what
+     * reached the native library after one of them calls this first, and [destroy] calls it, so
+     * that a late record never lands in the next test.
+     */
+    fun awaitStop() {
+        val threads =
+            Thread.getAllStackTraces().keys.filter { it.javaClass.name.startsWith(STOP_THREAD) }
+        for (thread in threads) {
+            thread.join(STOP_WAIT_MS)
+            check(!thread.isAlive) { "the thread that stops the connection did not end" }
+        }
+    }
+
+    /**
+     * Ends the activity, if the test made one, and leaves nothing of the rig behind. Every step
+     * runs even when an earlier one throws; the first failure is rethrown with the others added to
+     * it.
+     */
     fun destroy() {
-        if (controller != null) destroyActivity()
-        controller = null
-        usbService?.destroy()
-        usbService = null
+        runAll(
+            { if (controller != null) destroyActivity() },
+            { controller = null },
+            { usbService?.destroy() },
+            { usbService = null },
+            ::awaitStop,
+            ::restoreActivityClient,
+            ShadowRecordingBridge::reset,
+            SessionAudit::stopped,
+            BorealisAudit::uninstall,
+        )
+    }
+
+    private fun restoreActivityClient() {
         pictureInPicture?.let { (singleton, original) ->
             ReflectionHelpers.setField(singleton, "mInstance", original)
         }
         pictureInPicture = null
-        ShadowRecordingBridge.reset()
-        SessionAudit.stopped()
-        BorealisAudit.uninstall()
+    }
+
+    /** Runs every step, whatever an earlier one threw; rethrows the first failure. */
+    @Suppress("TooGenericExceptionCaught") // Any failure of a step must not skip the next steps.
+    private fun runAll(vararg steps: () -> Any?) {
+        var failure: Throwable? = null
+        for (step in steps) {
+            try {
+                step()
+            } catch (e: Throwable) {
+                val first = failure
+                if (first == null) failure = e else first.addSuppressed(e)
+            }
+        }
+        failure?.let { throw it }
     }
 
     private enum class Stage {

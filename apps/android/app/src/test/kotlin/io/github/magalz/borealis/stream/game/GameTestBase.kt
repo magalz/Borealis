@@ -9,8 +9,13 @@ import org.robolectric.annotation.Config
 
 /**
  * The Robolectric setup that every test of the stream activity shares: one SDK level (the one of
- * `robolectric.properties`) and one shadow set, the one of the connection tests, so that all of
- * them run in one sandbox. `ShadowRecordingBridge` records what reaches the native library.
+ * `robolectric.properties`) and one shadow set, `ShadowRecordingBridge` alone, which the
+ * touch-context tests and `MoonBridgeCallbacksTest` use too, so that all of them run in one
+ * sandbox. `ShadowRecordingBridge` records what reaches the native library.
+ *
+ * The shadow set of the connection tests does not fit: its `ShadowMonkeyActivityManager` replaces
+ * the activity manager of Robolectric, which then answers no OpenGL facts, and `MediaCodecHelper`
+ * needs them when the activity starts.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [ShadowRecordingBridge::class])

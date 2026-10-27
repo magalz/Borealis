@@ -134,7 +134,7 @@ internal class GameSurfaceTest : GameTestBase() {
         rig.markConnectionAttempted()
 
         rig.game.surfaceDestroyed(holder)
-        ShadowRecordingBridge.await("cleanupBridge")
+        rig.awaitStop()
 
         assertThat(stopping()).isTrue()
         assertThat(rig.field<Boolean>("connected")).isFalse()

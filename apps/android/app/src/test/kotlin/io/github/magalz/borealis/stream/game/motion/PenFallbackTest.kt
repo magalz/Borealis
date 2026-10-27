@@ -238,6 +238,22 @@ internal class PenFallbackTest : MotionTestBase() {
     }
 
     @Test
+    fun `an eraser that has just lifted does not place the pointer either`() {
+        hostWithoutPens()
+        streaming()
+        mouseCallsOf(eraser(MotionEvent.ACTION_DOWN))
+        mouseCallsOf(eraser(MotionEvent.ACTION_UP, at = TIME + 500))
+        val lifted = TIME + 500
+
+        // Inside: 150 milliseconds and 50 pixels after the lift, both limits included.
+        assertThat(mouseCallsOf(eraser(MotionEvent.ACTION_HOVER_MOVE, 150f, 100f, lifted + 150)))
+            .isEmpty()
+        // Outside: a millisecond later.
+        assertThat(mouseCallsOf(eraser(MotionEvent.ACTION_HOVER_MOVE, 150f, 100f, lifted + 151)))
+            .containsExactly(position(150, 100))
+    }
+
+    @Test
     fun `a stylus that touches down in the dead zone of its lift presses the button where the pointer is`() {
         hostWithoutPens()
         streaming()

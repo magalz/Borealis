@@ -46,9 +46,8 @@ comment:
   require_changes: false
 
 ignore:
-  # Upstream Moonlight code (git subtree) and the vendored moonlight-common-c
-  # have no Borealis tests.
-  - "apps/android/app/src/main/java/**"
+  # The vendored moonlight-core JNI sources and moonlight-common-c have no
+  # Borealis tests.
   - "apps/android/app/src/main/jni/moonlight-core/**"
   - "core/third_party/**"
   # Tests and generated code.

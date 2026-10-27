@@ -340,22 +340,17 @@ class MediaCodecDecoderRenderer(
         avcDecoderInfo: MediaCodecInfo,
         prefs: PreferenceConfiguration,
     ): Boolean {
-        val avcCaps =
-            avcDecoderInfo
-                .getCapabilitiesForType("video/avc")
-                .videoCapabilities
-                .orNpe("The AVC video capabilities")
-        val hevcCaps =
-            hevcDecoderInfo
-                .getCapabilitiesForType("video/hevc")
-                .videoCapabilities
-                .orNpe("The HEVC video capabilities")
+        val avcCaps = avcDecoderInfo.getCapabilitiesForType("video/avc").videoCapabilities
+        val hevcCaps = hevcDecoderInfo.getCapabilitiesForType("video/hevc").videoCapabilities
 
-        return !decoderCanMeetPerformancePoint(avcCaps, prefs) &&
-            decoderCanMeetPerformancePoint(hevcCaps, prefs)
+        // The Java passed the capabilities on and failed with a NullPointerException where it
+        // used them, so the HEVC ones are checked only when the AVC decoder cannot meet the point.
+        if (decoderCanMeetPerformancePoint(avcCaps.orNpe("The AVC video capabilities"), prefs)) {
+            return false
+        }
+        return decoderCanMeetPerformancePoint(hevcCaps.orNpe("The HEVC video capabilities"), prefs)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
     private fun findHevcDecoder(
         prefs: PreferenceConfiguration,
         requestedHdr: Boolean,
@@ -1210,7 +1205,7 @@ class MediaCodecDecoderRenderer(
                                 // Add delta time to the totals (excluding probable outliers)
                                 // BOREALIS: stream.perf: from the queue time when the output
                                 // matched an input, else from the timestamp as before
-                                val decodeUs =
+                                val decodeUs = // BOREALIS: stream.perf
                                     if (matchedDecodeUs != DecodeTimeTracker.NO_MATCH) {
                                         matchedDecodeUs
                                     } else {
@@ -1218,8 +1213,11 @@ class MediaCodecDecoderRenderer(
                                             (presentationTimeUs / MICROS_PER_MILLI)) *
                                             MICROS_PER_MILLI
                                     }
+                                // BOREALIS: stream.perf
                                 if (decodeUs >= 0 && decodeUs < MAX_DECODE_TIME_US) {
+                                    // BOREALIS: stream.perf
                                     val delta = (decodeUs + HALF_MILLI_US) / MICROS_PER_MILLI
+                                    // BOREALIS: stream.perf
                                     activeWindowVideoStats.decoderTimeUs += decodeUs
                                     activeWindowVideoStats.decoderTimeMs += delta
                                     activeWindowVideoStats.totalTimeMs += delta
@@ -1408,14 +1406,17 @@ class MediaCodecDecoderRenderer(
 
     // BOREALIS: the tracker is not thread-safe, and the input and the output run on different
     // threads (stream.perf)
-    private fun drainDecodeWindow(): DecodeTimeCounts =
-        synchronized(decodeTimeTracker) { decodeTimeTracker.drainWindow() }
+    private fun drainDecodeWindow(): DecodeTimeCounts { // BOREALIS: stream.perf
+        return synchronized(decodeTimeTracker) { // BOREALIS: stream.perf
+            decodeTimeTracker.drainWindow()
+        }
+    }
 
-    // BOREALIS: stream.perf
-    private fun matchOutput(presentationTimeUs: Long): Long =
-        synchronized(decodeTimeTracker) {
+    private fun matchOutput(presentationTimeUs: Long): Long { // BOREALIS: stream.perf
+        return synchronized(decodeTimeTracker) { // BOREALIS: stream.perf
             decodeTimeTracker.onOutput(presentationTimeUs, System.nanoTime())
         }
+    }
 
     private fun queueNextInputBuffer(timestampUs: Long, codecFlags: Int): Boolean {
         val codecRecovered: Boolean

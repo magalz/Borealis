@@ -21,7 +21,9 @@ class RendererHdrTest : RendererTestBase() {
             .apply { for (i in 1..12) putShort((i * 1000 + i + offset).toShort()) }
             .array()
 
-    /** What the codec must get for [metadata]: a zero metadata type, then the same twelve shorts. */
+    /**
+     * What the codec must get for [metadata]: a zero metadata type, then the same twelve shorts.
+     */
     private fun staticInfo(metadata: ByteArray) = "bytes:00" + hex(metadata)
 
     private fun ready(): MediaCodecDecoderRenderer {

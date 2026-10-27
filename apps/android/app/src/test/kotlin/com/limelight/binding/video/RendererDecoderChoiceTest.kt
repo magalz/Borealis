@@ -7,10 +7,10 @@ import com.limelight.preferences.PreferenceConfiguration.FormatOption
 import org.junit.Test
 
 /**
- * Characterizes which decoders the `MediaCodecDecoderRenderer` constructor picks for H.264, HEVC and
- * AV1, from what the device lists, the format the user prefers and the HDR request. The decisions
- * about one decoder (whitelists, blacklists, capabilities) belong to `MediaCodecHelper` and its
- * tests; these tests pin what the renderer does with them.
+ * Characterizes which decoders the `MediaCodecDecoderRenderer` constructor picks for H.264, HEVC
+ * and AV1, from what the device lists, the format the user prefers and the HDR request. The
+ * decisions about one decoder (whitelists, blacklists, capabilities) belong to `MediaCodecHelper`
+ * and its tests; these tests pin what the renderer does with them.
  */
 class RendererDecoderChoiceTest : RendererTestBase() {
     private val avc = codec("c2.test.avc.decoder") { mime = "video/avc" }
@@ -180,7 +180,13 @@ class RendererDecoderChoiceTest : RendererTestBase() {
     fun `a stream of exactly 4096 by 4096 is not over 4K`() {
         install(avc, strangeHevc)
 
-        val renderer = renderer(prefs { width = 4096; height = 4096 })
+        val renderer =
+            renderer(
+                prefs {
+                    width = 4096
+                    height = 4096
+                }
+            )
 
         assertThat(renderer.isHevcSupported()).isFalse()
     }
@@ -339,7 +345,13 @@ class RendererDecoderChoiceTest : RendererTestBase() {
             }
         install(avc, wide)
 
-        val renderer = renderer(prefs { width = 4096; height = 3000 })
+        val renderer =
+            renderer(
+                prefs {
+                    width = 4096
+                    height = 3000
+                }
+            )
 
         assertThat(renderer.isHevcSupported()).isTrue()
     }
@@ -348,7 +360,13 @@ class RendererDecoderChoiceTest : RendererTestBase() {
     fun `a size that neither decoder supports keeps HEVC out`() {
         install(avc, strangeHevc)
 
-        val renderer = renderer(prefs { width = 4096; height = 3000 })
+        val renderer =
+            renderer(
+                prefs {
+                    width = 4096
+                    height = 3000
+                }
+            )
 
         assertThat(renderer.isHevcSupported()).isFalse()
     }
@@ -380,7 +398,8 @@ class RendererDecoderChoiceTest : RendererTestBase() {
     fun `AV1 is not used unless it is forced`() {
         install(avc, av1)
 
-        for (format in listOf(FormatOption.AUTO, FormatOption.FORCE_H264, FormatOption.FORCE_HEVC)) {
+        for (format in
+            listOf(FormatOption.AUTO, FormatOption.FORCE_H264, FormatOption.FORCE_HEVC)) {
             val renderer = renderer(prefs { videoFormat = format })
 
             assertThat(renderer.isAv1Supported()).isFalse()

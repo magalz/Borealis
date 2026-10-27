@@ -183,7 +183,9 @@ class RendererOutputTest : RendererTestBase() {
         renderer.doFrame(FRAME_TIME + DUE)
 
         val shown = outputs().drop(1)
-        assertThat(shown.map { it.index }).containsExactly(queuedIndexes()[1], queuedIndexes()[2]).inOrder()
+        assertThat(shown.map { it.index })
+            .containsExactly(queuedIndexes()[1], queuedIndexes()[2])
+            .inOrder()
         assertThat(shown.map { it.atNs })
             .containsExactly(FRAME_TIME - vsyncOffset, FRAME_TIME + DUE - vsyncOffset)
             .inOrder()
@@ -227,7 +229,8 @@ class RendererOutputTest : RendererTestBase() {
 
     @Test
     fun `the due time follows the frame rate of the setup`() {
-        val renderer = withFrames(PreferenceConfiguration.FRAME_PACING_BALANCED, frames = 3, fps = 120)
+        val renderer =
+            withFrames(PreferenceConfiguration.FRAME_PACING_BALANCED, frames = 3, fps = 120)
         renderer.begin()
         awaitReleases(1)
         renderer.doFrame(FRAME_TIME)
@@ -306,7 +309,11 @@ class RendererOutputTest : RendererTestBase() {
             )
         val manager = ReflectionHelpers.getField<Any>(Shadow.extract<Any>(global), "mDm")
         val infos = ReflectionHelpers.getField<Map<Int, Any>>(manager, "displayInfos")
-        ReflectionHelpers.setField(infos.getValue(Display.DEFAULT_DISPLAY), "appVsyncOffsetNanos", nanos)
+        ReflectionHelpers.setField(
+            infos.getValue(Display.DEFAULT_DISPLAY),
+            "appVsyncOffsetNanos",
+            nanos,
+        )
     }
 
     private companion object {

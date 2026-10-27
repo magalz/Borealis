@@ -8,10 +8,10 @@ import kotlin.concurrent.thread
 import org.junit.Test
 
 /**
- * Characterizes what needs two threads to happen: the codec that does not give an input buffer for a
- * long time, the recovery that waits for the choreographer, and a thread that is interrupted while
- * it waits for the others. The input thread of the renderer, which calls `submitDecodeUnit`, is a
- * thread of its own in these tests, and the test thread plays the others, so that a test that
+ * Characterizes what needs two threads to happen: the codec that does not give an input buffer for
+ * a long time, the recovery that waits for the choreographer, and a thread that is interrupted
+ * while it waits for the others. The input thread of the renderer, which calls `submitDecodeUnit`,
+ * is a thread of its own in these tests, and the test thread plays the others, so that a test that
  * goes wrong ends by itself: its input thread is released when the renderer is told to stop.
  */
 class RendererThreadsTest : RendererTestBase() {

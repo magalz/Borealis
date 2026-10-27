@@ -241,9 +241,7 @@ class RendererStatsTest : RendererTestBase() {
         renderer.feed(pFrame(6))
 
         // The first snapshot counted 2 frames over 1 s; the second 2 + 3 frames over 2 s.
-        assertThat(snapshots.map { it.receivedFps })
-            .containsExactly(2f, 2.5f)
-            .inOrder()
+        assertThat(snapshots.map { it.receivedFps }).containsExactly(2f, 2.5f).inOrder()
     }
 
     @Test

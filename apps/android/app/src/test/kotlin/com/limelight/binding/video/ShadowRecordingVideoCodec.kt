@@ -6,8 +6,8 @@ import android.media.MediaFormat
 import android.view.Surface
 import java.io.IOException
 import java.nio.ByteBuffer
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.BlockingQueue
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
@@ -68,8 +68,8 @@ enum class CodecPoint {
  * The `ShadowMediaCodec` of Robolectric with a journal and failures a test scripts. It keeps what
  * that shadow does: ten input buffers, an output buffer for each, and a fake codec per decoder name
  * (`ShadowMediaCodec.addDecoder`) that turns a queued input into an output. This one also records
- * what the renderer does to the codecs, answers the calls that Robolectric leaves native
- * (`stop`, `reset`, `release`), and throws what a test asks for at the next call of a kind.
+ * what the renderer does to the codecs, answers the calls that Robolectric leaves native (`stop`,
+ * `reset`, `release`), and throws what a test asks for at the next call of a kind.
  *
  * Use it with `@Config(shadows = [ShadowRecordingVideoCodec::class])`. State lives in the
  * companion, which every test of one Robolectric sandbox shares: call [reset] before each test.
@@ -83,8 +83,9 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
     }
 
     /**
-     * Gives back every output that the codec holds, as a consumer that renders nothing would. A test
-     * that sends many frames without a renderer thread uses it: ten buffers are all the fake has.
+     * Gives back every output that the codec holds, as a consumer that renders nothing would. A
+     * test that sends many frames without a renderer thread uses it: ten buffers are all the fake
+     * has.
      */
     private fun giveBackOutputs() {
         val info = MediaCodec.BufferInfo()
@@ -129,8 +130,7 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
         journal += CodecEvent.Released(id)
     }
 
-    @Implementation
-    protected fun native_getSupportedVendorParameters(): List<String> = emptyList()
+    @Implementation protected fun native_getSupportedVendorParameters(): List<String> = emptyList()
 
     @Implementation
     protected override fun getBuffer(input: Boolean, index: Int): ByteBuffer? {
@@ -161,8 +161,7 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
         val buffer = super.getBuffer(true, index)
         val bytes = ByteArray(size)
         if (buffer != null) buffer.duplicate().apply { position(offset) }.get(bytes)
-        journal +=
-            CodecEvent.Queued(id, index, presentationTimeUs, flags, hex(bytes))
+        journal += CodecEvent.Queued(id, index, presentationTimeUs, flags, hex(bytes))
         if (flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
             consumeParameterSets(index)
             return
@@ -181,8 +180,10 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
      * is free again at once, as after a released frame, and no output is made.
      */
     private fun consumeParameterSets(index: Int) {
-        val waiting = ReflectionHelpers.getField<MutableList<Int>>(this, "inputBuffersPendingQueuing")
-        val free = ReflectionHelpers.getField<BlockingQueue<Int>>(this, "inputBuffersPendingDequeue")
+        val waiting =
+            ReflectionHelpers.getField<MutableList<Int>>(this, "inputBuffersPendingQueuing")
+        val free =
+            ReflectionHelpers.getField<BlockingQueue<Int>>(this, "inputBuffersPendingDequeue")
         waiting.remove(Integer.valueOf(index))
         getBuffers(true)[index].clear()
         free.add(index)
@@ -216,8 +217,8 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
     }
 
     /**
-     * The fake codec of one decoder name: it copies each input to its output, as the default
-     * codec of Robolectric does, and records the format it is configured with.
+     * The fake codec of one decoder name: it copies each input to its output, as the default codec
+     * of Robolectric does, and records the format it is configured with.
      */
     class FakeDecoder(private val name: String) : CodecConfig.Codec {
         override fun process(input: ByteBuffer, output: ByteBuffer) {
@@ -252,8 +253,8 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
         @JvmStatic val dequeueOutputCalls = AtomicInteger()
 
         /**
-         * How many of the next calls of `getInputBuffer` answer null, which the documentation allows
-         * "if the index is not a dequeued input buffer".
+         * How many of the next calls of `getInputBuffer` answer null, which the documentation
+         * allows "if the index is not a dequeued input buffer".
          */
         @JvmStatic val nullInputBuffers = AtomicInteger()
 
@@ -274,13 +275,16 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
 
         private val outputAnswers = ConcurrentLinkedQueue<Int>()
 
-        /** Makes the next `dequeueOutputBuffer` answer [code], a negative info code, and no frame. */
+        /**
+         * Makes the next `dequeueOutputBuffer` answer [code], a negative info code, and no frame.
+         */
         @JvmStatic
         fun answerNextOutputDequeue(code: Int) {
             outputAnswers.add(code)
         }
 
-        private val failures = ConcurrentHashMap<CodecPoint, ConcurrentLinkedQueue<() -> Throwable?>>()
+        private val failures =
+            ConcurrentHashMap<CodecPoint, ConcurrentLinkedQueue<() -> Throwable?>>()
 
         /** Makes the next [times] calls of kind [point] throw what [failure] makes. */
         @JvmStatic
@@ -313,13 +317,16 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
         /** Registers a fake codec for [name], with input buffers of [inputSize] bytes. */
         @JvmStatic
         fun register(name: String, inputSize: Int = BUFFER_SIZE) {
-            ShadowMediaCodec.addDecoder(name, CodecConfig(inputSize, BUFFER_SIZE, FakeDecoder(name)))
+            ShadowMediaCodec.addDecoder(
+                name,
+                CodecConfig(inputSize, BUFFER_SIZE, FakeDecoder(name)),
+            )
         }
 
         /**
-         * Forgets the journal, the failures and the fake codecs; Robolectric does not reset a shadow
-         * of @Config. The name is not `reset`: Robolectric would call a static method of that name
-         * in place of `MediaCodec.reset`.
+         * Forgets the journal, the failures and the fake codecs; Robolectric does not reset a
+         * shadow of @Config. The name is not `reset`: Robolectric would call a static method of
+         * that name in place of `MediaCodec.reset`.
          */
         @JvmStatic
         fun forgetEverything() {
@@ -335,7 +342,6 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
             dequeueOutputCalls.set(0)
             ShadowMediaCodec.clearCodecs()
         }
-
 
         private fun entriesOf(format: MediaFormat): Map<String, Any> =
             format.keys.sorted().associateWith { key ->

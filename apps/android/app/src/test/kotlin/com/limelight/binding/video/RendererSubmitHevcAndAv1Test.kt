@@ -42,7 +42,10 @@ class RendererSubmitHevcAndAv1Test : RendererTestBase() {
         }
     }
 
-    private fun MediaCodecDecoderRenderer.sendIdr(number: Int = 1, order: List<Int> = DEFAULT_ORDER) {
+    private fun MediaCodecDecoderRenderer.sendIdr(
+        number: Int = 1,
+        order: List<Int> = DEFAULT_ORDER,
+    ) {
         val data =
             mapOf(
                 MoonBridge.BUFFER_TYPE_VPS to vps,
@@ -50,7 +53,8 @@ class RendererSubmitHevcAndAv1Test : RendererTestBase() {
                 MoonBridge.BUFFER_TYPE_PPS to pps,
             )
         for (type in order) {
-            assertThat(submit(parameterSet(type, data.getValue(type), number))).isEqualTo(MoonBridge.DR_OK)
+            assertThat(submit(parameterSet(type, data.getValue(type), number)))
+                .isEqualTo(MoonBridge.DR_OK)
         }
         val idr =
             DecodeUnit(
@@ -84,7 +88,12 @@ class RendererSubmitHevcAndAv1Test : RendererTestBase() {
         val renderer = hevc()
 
         renderer.sendIdr(
-            order = listOf(MoonBridge.BUFFER_TYPE_PPS, MoonBridge.BUFFER_TYPE_SPS, MoonBridge.BUFFER_TYPE_VPS)
+            order =
+                listOf(
+                    MoonBridge.BUFFER_TYPE_PPS,
+                    MoonBridge.BUFFER_TYPE_SPS,
+                    MoonBridge.BUFFER_TYPE_VPS,
+                )
         )
 
         assertThat(queued().first().hex).isEqualTo(hex(bytes(vps + sps + pps)))
@@ -194,6 +203,10 @@ class RendererSubmitHevcAndAv1Test : RendererTestBase() {
 
     private companion object {
         val DEFAULT_ORDER =
-            listOf(MoonBridge.BUFFER_TYPE_VPS, MoonBridge.BUFFER_TYPE_SPS, MoonBridge.BUFFER_TYPE_PPS)
+            listOf(
+                MoonBridge.BUFFER_TYPE_VPS,
+                MoonBridge.BUFFER_TYPE_SPS,
+                MoonBridge.BUFFER_TYPE_PPS,
+            )
     }
 }

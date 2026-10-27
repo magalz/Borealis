@@ -74,7 +74,9 @@ class RendererCapabilitiesTest : RendererTestBase() {
                     MoonBridge.CAPABILITY_REFERENCE_FRAME_INVALIDATION_AVC
             )
         assertThat(log.lines())
-            .contains("INFO: Decoder c2.qti.avc.decoder will use reference frame invalidation for AVC")
+            .contains(
+                "INFO: Decoder c2.qti.avc.decoder will use reference frame invalidation for AVC"
+            )
     }
 
     @Test
@@ -155,7 +157,10 @@ class RendererCapabilitiesTest : RendererTestBase() {
 
         val renderer = renderer(prefs { height = 1080 })
 
-        assertThat(renderer.getCapabilities() and MoonBridge.CAPABILITY_REFERENCE_FRAME_INVALIDATION_AVC)
+        assertThat(
+                renderer.getCapabilities() and
+                    MoonBridge.CAPABILITY_REFERENCE_FRAME_INVALIDATION_AVC
+            )
             .isEqualTo(0)
     }
 
@@ -166,7 +171,10 @@ class RendererCapabilitiesTest : RendererTestBase() {
 
         val renderer = renderer(prefs { height = 720 })
 
-        assertThat(renderer.getCapabilities() and MoonBridge.CAPABILITY_REFERENCE_FRAME_INVALIDATION_AVC)
+        assertThat(
+                renderer.getCapabilities() and
+                    MoonBridge.CAPABILITY_REFERENCE_FRAME_INVALIDATION_AVC
+            )
             .isEqualTo(MoonBridge.CAPABILITY_REFERENCE_FRAME_INVALIDATION_AVC)
     }
 
@@ -202,7 +210,10 @@ class RendererCapabilitiesTest : RendererTestBase() {
 
         val renderer = renderer(prefs { videoFormat = FormatOption.FORCE_AV1 }, crashCount = 1)
 
-        assertThat(renderer.getCapabilities() and MoonBridge.CAPABILITY_REFERENCE_FRAME_INVALIDATION_AV1)
+        assertThat(
+                renderer.getCapabilities() and
+                    MoonBridge.CAPABILITY_REFERENCE_FRAME_INVALIDATION_AV1
+            )
             .isEqualTo(MoonBridge.CAPABILITY_REFERENCE_FRAME_INVALIDATION_AV1)
     }
 
@@ -245,7 +256,11 @@ class RendererCapabilitiesTest : RendererTestBase() {
             avc("vendor.test.avc.decoder"),
             av1(
                 "vendor.test.av1.decoder",
-                profiles = listOf(CodecProfileLevel.AV1ProfileMain8, CodecProfileLevel.AV1ProfileMain10HDR10),
+                profiles =
+                    listOf(
+                        CodecProfileLevel.AV1ProfileMain8,
+                        CodecProfileLevel.AV1ProfileMain10HDR10,
+                    ),
             ),
         )
 

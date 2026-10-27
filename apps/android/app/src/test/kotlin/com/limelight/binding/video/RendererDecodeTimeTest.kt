@@ -72,9 +72,10 @@ class RendererDecodeTimeTest : RendererTestBase() {
      * `System.nanoTime()` is real, so the time of a frame is its delay in the fake plus what the
      * threads add, which is not known, and the assertion cannot name the rounded value. It is an
      * identity that holds for any time (one frame, so the average is the time rounded half up), and
-     * it never fails by chance. A renderer that cuts the time instead of rounding it differs only on
-     * a frame whose time ends in 0.5 ms or more. The delays are spread over the whole millisecond,
-     * 0.25 ms apart and twice each, so that whatever the threads add, half of the frames end there.
+     * it never fails by chance. A renderer that cuts the time instead of rounding it differs only
+     * on a frame whose time ends in 0.5 ms or more. The delays are spread over the whole
+     * millisecond, 0.25 ms apart and twice each, so that whatever the threads add, half of the
+     * frames end there.
      */
     @Test
     fun `the time of a frame is rounded half up whatever fraction of a millisecond it ends in`() {
@@ -86,7 +87,8 @@ class RendererDecodeTimeTest : RendererTestBase() {
 
             val decodeMs = checkNotNull(snapshots[trial].decodeMs)
             assertThat(decodeMs).isAtLeast(delayUs / 1000f)
-            assertThat(renderer.getAverageDecoderLatency()).isEqualTo(floor(decodeMs + 0.5f).toInt())
+            assertThat(renderer.getAverageDecoderLatency())
+                .isEqualTo(floor(decodeMs + 0.5f).toInt())
             renderer.stop()
         }
     }
@@ -98,7 +100,8 @@ class RendererDecodeTimeTest : RendererTestBase() {
         renderer.decodeAndClose(frames(1))
 
         // The frame has no time between receive and enqueue, so the whole latency is the decode.
-        assertThat(renderer.getAverageEndToEndLatency()).isEqualTo(renderer.getAverageDecoderLatency())
+        assertThat(renderer.getAverageEndToEndLatency())
+            .isEqualTo(renderer.getAverageDecoderLatency())
     }
 
     @Test
@@ -180,6 +183,7 @@ class RendererDecodeTimeTest : RendererTestBase() {
         const val NANOS_PER_US = 1_000L
 
         // Two rounds of four delays, a quarter of a millisecond apart.
-        val SPREAD_DELAYS_US = listOf(2_000L, 2_250L, 2_500L, 2_750L, 2_000L, 2_250L, 2_500L, 2_750L)
+        val SPREAD_DELAYS_US =
+            listOf(2_000L, 2_250L, 2_500L, 2_750L, 2_000L, 2_250L, 2_500L, 2_750L)
     }
 }

@@ -42,7 +42,9 @@ class RendererCrashTest : RendererTestBase() {
 
     private fun Throwable.lines(): List<String> = toString().split("\n")
 
-    /** Tells the renderer of one PPS, so that the error is no longer taken for one before any SPS. */
+    /**
+     * Tells the renderer of one PPS, so that the error is no longer taken for one before any SPS.
+     */
     private fun MediaCodecDecoderRenderer.gotPps() {
         assertThat(submit(h264Pps())).isEqualTo(MoonBridge.DR_OK)
     }
@@ -58,7 +60,9 @@ class RendererCrashTest : RendererTestBase() {
         assertThat(thrown.javaClass.name)
             .isEqualTo("com.limelight.binding.video.MediaCodecDecoderRenderer\$RendererException")
         assertThat(thrown.lines().last())
-            .isEqualTo("java.lang.IllegalArgumentException: Decode unit length 100 too large for input buffer 64")
+            .isEqualTo(
+                "java.lang.IllegalArgumentException: Decode unit length 100 too large for input buffer 64"
+            )
     }
 
     @Test
@@ -127,7 +131,8 @@ class RendererCrashTest : RendererTestBase() {
         val renderer = small()
         renderer.submit(pFrame(1))
 
-        assertThat(crash(renderer, tooBig.again(2)).lines().first()).isEqualTo("PreSPSErrorFormat: 1")
+        assertThat(crash(renderer, tooBig.again(2)).lines().first())
+            .isEqualTo("PreSPSErrorFormat: 1")
     }
 
     @Test
@@ -206,8 +211,7 @@ class RendererCrashTest : RendererTestBase() {
             .isEqualTo("EarlyOutputErrorFormat: 1")
     }
 
-    private fun DecodeUnit.again(number: Int) =
-        DecodeUnit(data, type, number, frameType, times)
+    private fun DecodeUnit.again(number: Int) = DecodeUnit(data, type, number, frameType, times)
 
     // The text
 
@@ -219,7 +223,11 @@ class RendererCrashTest : RendererTestBase() {
 
         val lines = crash(renderer).lines()
 
-        assertThat(lines.filterNot { it.startsWith("Configured format") || it.startsWith("Input format") })
+        assertThat(
+                lines.filterNot {
+                    it.startsWith("Configured format") || it.startsWith("Input format")
+                }
+            )
             .containsExactly(
                 "PreSPSErrorFormat: 1",
                 "AVC Decoder: vendor.test.avc.decoder",
@@ -295,8 +303,7 @@ class RendererCrashTest : RendererTestBase() {
     @Test
     fun `an HEVC decoder and an AV1 decoder are described as the H264 one is`() {
         device(DeviceBuild(sdk = Build.VERSION_CODES.R))
-        val renderer =
-            small(MoonBridge.VIDEO_FORMAT_AV1_MAIN8, FormatOption.FORCE_AV1)
+        val renderer = small(MoonBridge.VIDEO_FORMAT_AV1_MAIN8, FormatOption.FORCE_AV1)
 
         val lines = crash(renderer).lines()
 
@@ -355,7 +362,12 @@ class RendererCrashTest : RendererTestBase() {
     @Test
     fun `the counters reflect the frames the renderer saw`() {
         val renderer = small(MoonBridge.VIDEO_FORMAT_H265)
-        for (type in listOf(MoonBridge.BUFFER_TYPE_VPS, MoonBridge.BUFFER_TYPE_SPS, MoonBridge.BUFFER_TYPE_PPS)) {
+        for (type in
+            listOf(
+                MoonBridge.BUFFER_TYPE_VPS,
+                MoonBridge.BUFFER_TYPE_SPS,
+                MoonBridge.BUFFER_TYPE_PPS,
+            )) {
             renderer.submit(parameterSet(type, "00000001 4001"))
         }
         renderer.submit(parameterSet(MoonBridge.BUFFER_TYPE_SPS, "00000001 4201", number = 1))

@@ -20,8 +20,7 @@ class RendererSetupTest : RendererTestBase() {
             change()
         }
 
-    private fun hevc(name: String = "c2.test.hevc.decoder") =
-        codec(name) { mime = "video/hevc" }
+    private fun hevc(name: String = "c2.test.hevc.decoder") = codec(name) { mime = "video/hevc" }
 
     private fun av1(name: String = "vendor.test.av1.decoder") = codec(name) { mime = "video/av01" }
 
@@ -149,8 +148,7 @@ class RendererSetupTest : RendererTestBase() {
 
         renderer.prepare(MoonBridge.VIDEO_FORMAT_H264, width = 1280, height = 720)
 
-        assertThat(configuredFormats.single())
-            .containsAtLeast("max-width", 1280, "max-height", 720)
+        assertThat(configuredFormats.single()).containsAtLeast("max-width", 1280, "max-height", 720)
     }
 
     @Test
@@ -286,9 +284,16 @@ class RendererSetupTest : RendererTestBase() {
 
         assertThat(journal.map { it::class.simpleName })
             .containsExactly(
-                "Created", "Configured", "Released",
-                "Created", "Configured", "Released",
-                "Created", "Configured", "Scaling", "Started",
+                "Created",
+                "Configured",
+                "Released",
+                "Created",
+                "Configured",
+                "Released",
+                "Created",
+                "Configured",
+                "Scaling",
+                "Started",
             )
             .inOrder()
         assertThat(events<CodecEvent.Created>().map { it.codec }.distinct()).hasSize(3)
@@ -313,7 +318,11 @@ class RendererSetupTest : RendererTestBase() {
     fun `a codec that cannot be created counts as a rejected format`() {
         install(avc())
         val renderer = renderer()
-        ShadowRecordingVideoCodec.failNext(CodecPoint.CREATE, 4, ShadowRecordingVideoCodec.ioFailure())
+        ShadowRecordingVideoCodec.failNext(
+            CodecPoint.CREATE,
+            4,
+            ShadowRecordingVideoCodec.ioFailure(),
+        )
 
         assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(-5)
 
@@ -341,9 +350,10 @@ class RendererSetupTest : RendererTestBase() {
             IllegalStateException("rejected at the end")
         }
 
-        val thrown = assertThrows(IllegalStateException::class.java) {
-            renderer.initializeDecoder(true)
-        }
+        val thrown =
+            assertThrows(IllegalStateException::class.java) {
+                renderer.initializeDecoder(true)
+            }
 
         assertThat(thrown).hasMessageThat().isEqualTo("rejected at the end")
     }
@@ -357,9 +367,10 @@ class RendererSetupTest : RendererTestBase() {
             IllegalArgumentException("bad surface")
         }
 
-        val thrown = assertThrows(IllegalArgumentException::class.java) {
-            renderer.initializeDecoder(true)
-        }
+        val thrown =
+            assertThrows(IllegalArgumentException::class.java) {
+                renderer.initializeDecoder(true)
+            }
 
         assertThat(thrown).hasMessageThat().isEqualTo("bad surface")
     }
@@ -369,7 +380,11 @@ class RendererSetupTest : RendererTestBase() {
         install(avc())
         val renderer = renderer()
         renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)
-        ShadowRecordingVideoCodec.failNext(CodecPoint.CREATE, 4, ShadowRecordingVideoCodec.ioFailure())
+        ShadowRecordingVideoCodec.failNext(
+            CodecPoint.CREATE,
+            4,
+            ShadowRecordingVideoCodec.ioFailure(),
+        )
 
         val thrown = assertThrows(RuntimeException::class.java) { renderer.initializeDecoder(true) }
 

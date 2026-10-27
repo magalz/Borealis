@@ -79,7 +79,9 @@ internal data class H264Sps(
     val numRefFrames: Int = 4,
     val vui: Vui? = Vui(),
 ) {
-    /** The NAL unit as the host sends it: the start code, the header byte `67`, the escaped data. */
+    /**
+     * The NAL unit as the host sends it: the start code, the header byte `67`, the escaped data.
+     */
     fun nal(startCode: ByteArray = START_CODE_4): ByteArray =
         startCode + byteArrayOf(NAL_HEADER) + escape(rbsp())
 

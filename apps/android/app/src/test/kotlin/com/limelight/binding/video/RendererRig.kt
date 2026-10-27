@@ -38,8 +38,7 @@ class FakeSurfaceHolder(private val surface: Surface) : SurfaceHolder {
 
     override fun isCreating() = false
 
-    @Deprecated("The type is ignored since API 11.")
-    override fun setType(type: Int) = Unit
+    @Deprecated("The type is ignored since API 11.") override fun setType(type: Int) = Unit
 
     override fun setFixedSize(width: Int, height: Int) = Unit
 
@@ -92,17 +91,19 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
     private val renderers = CopyOnWriteArrayList<MediaCodecDecoderRenderer>()
     private val started = CopyOnWriteArrayList<MediaCodecDecoderRenderer>()
     private var screen: ActivityController<Activity>? = null
-    private val watchdog =
-        Executors.newSingleThreadScheduledExecutor { task ->
-            Thread(task, "renderer test watchdog").apply { isDaemon = true }
-        }
+    private val watchdog = Executors.newSingleThreadScheduledExecutor { task ->
+        Thread(task, "renderer test watchdog").apply { isDaemon = true }
+    }
     private var alarm: ScheduledFuture<*>? = null
     private val overran = AtomicBoolean()
 
     /** An activity, which the renderer asks for the display; made on first use. */
     protected val activity: Activity
         get() =
-            (screen ?: Robolectric.buildActivity(Activity::class.java).create().also { screen = it })
+            (screen
+                    ?: Robolectric.buildActivity(Activity::class.java).create().also {
+                        screen = it
+                    })
                 .get()
 
     @Before
@@ -153,8 +154,8 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
     /**
      * The threads that have come to wait for a recovery, as the bits that the renderer prints in
      * its "Waiting to quiesce" lines: [INPUT_THREAD], [RENDERER_THREAD] and [CHOREOGRAPHER]. The
-     * lines repeat every second for a thread that waits, so the bits of all of them are joined and a
-     * thread is never counted twice. A renderer without a choreographer sets its bit itself.
+     * lines repeat every second for a thread that waits, so the bits of all of them are joined and
+     * a thread is never counted twice. A renderer without a choreographer sets its bit itself.
      */
     protected fun quiesced(): Int =
         log.lines()
@@ -221,8 +222,7 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
     protected val journal: List<CodecEvent>
         get() = ShadowRecordingVideoCodec.journal
 
-    protected inline fun <reified T : CodecEvent> events(): List<T> =
-        journal.filterIsInstance<T>()
+    protected inline fun <reified T : CodecEvent> events(): List<T> = journal.filterIsInstance<T>()
 
     /** The formats that codecs were configured with, in order. */
     protected val configuredFormats: List<Map<String, Any>>

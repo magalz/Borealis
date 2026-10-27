@@ -44,11 +44,16 @@ class RendererSubmitH264Test : RendererTestBase() {
 
     private val original = H264Sps()
 
-    /** The SPS as the renderer patches it for a decoder that is not asked to keep its references. */
+    /**
+     * The SPS as the renderer patches it for a decoder that is not asked to keep its references.
+     */
     private val patched =
         original.copy(
             numRefFrames = 1,
-            vui = original.vui?.copy(restriction = H264Sps.restrictionAdded(maxDecFrameBuffering = 1)),
+            vui =
+                original.vui?.copy(
+                    restriction = H264Sps.restrictionAdded(maxDecFrameBuffering = 1)
+                ),
         )
 
     // The patched SPS, byte for byte
@@ -72,7 +77,12 @@ class RendererSubmitH264Test : RendererTestBase() {
         val expected =
             noVui.copy(
                 numRefFrames = 1,
-                vui = Vui(timing = false, videoSignal = false, restriction = H264Sps.restrictionAdded(1)),
+                vui =
+                    Vui(
+                        timing = false,
+                        videoSignal = false,
+                        restriction = H264Sps.restrictionAdded(1),
+                    ),
             )
         assertThat(queued().first().hex).isEqualTo(hex(expected.nal() + pps))
     }
@@ -99,8 +109,7 @@ class RendererSubmitH264Test : RendererTestBase() {
 
         renderer.sendIdr(original.nal(H264Sps.START_CODE_3))
 
-        assertThat(queued().first().hex)
-            .isEqualTo(hex(patched.nal(H264Sps.START_CODE_3) + pps))
+        assertThat(queued().first().hex).isEqualTo(hex(patched.nal(H264Sps.START_CODE_3) + pps))
     }
 
     @Test
@@ -111,7 +120,10 @@ class RendererSubmitH264Test : RendererTestBase() {
 
         val expected =
             original.copy(
-                vui = original.vui?.copy(restriction = H264Sps.restrictionAdded(maxDecFrameBuffering = 4))
+                vui =
+                    original.vui?.copy(
+                        restriction = H264Sps.restrictionAdded(maxDecFrameBuffering = 4)
+                    )
             )
         assertThat(queued().first().hex).isEqualTo(hex(expected.nal() + pps))
         assertThat(log.lines()).doesNotContain("INFO: Patching num_ref_frames in SPS")
@@ -125,7 +137,11 @@ class RendererSubmitH264Test : RendererTestBase() {
         renderer.sendIdr(original.copy(vui = null).nal(), number = 2)
         renderer.sendIdr(original.copy(vui = Vui(restriction = Restriction())).nal(), number = 3)
 
-        assertThat(log.lines().filter { it.contains("SPS") || it.contains("VUI") || it.contains("restrictions") })
+        assertThat(
+                log.lines().filter {
+                    it.contains("SPS") || it.contains("VUI") || it.contains("restrictions")
+                }
+            )
             .containsExactly(
                 "INFO: Patching num_ref_frames in SPS",
                 "INFO: Adding bitstream restrictions",
@@ -235,7 +251,9 @@ class RendererSubmitH264Test : RendererTestBase() {
         renderer.sendIdr(original.nal())
 
         val replay = bytes("00000001 67") + patched.copy(constraintSets = setOf(4, 5)).nal().drop(5)
-        assertThat(queued().map { it.flags }).containsExactly(CODEC_CONFIG, CODEC_CONFIG, SYNC_FRAME).inOrder()
+        assertThat(queued().map { it.flags })
+            .containsExactly(CODEC_CONFIG, CODEC_CONFIG, SYNC_FRAME)
+            .inOrder()
         assertThat(queued()[1].hex).isEqualTo(hex(replay))
         assertThat(queued()[1].ptsUs).isEqualTo(0)
         assertThat(queued()[2].hex).isEqualTo(hex(slice))
@@ -283,8 +301,7 @@ class RendererSubmitH264Test : RendererTestBase() {
         renderer.sendIdr(main.nal())
 
         val replayed = patched.copy(profile = 100, constraintSets = setOf(4, 5))
-        assertThat(queued()[1].hex)
-            .isEqualTo(hex(bytes("00000001 67") + replayed.nal().drop(5)))
+        assertThat(queued()[1].hex).isEqualTo(hex(bytes("00000001 67") + replayed.nal().drop(5)))
     }
 
     // Frames that are not IDR frames
@@ -308,7 +325,16 @@ class RendererSubmitH264Test : RendererTestBase() {
         val padded = bytes("00000001 419a 0011 22 ffffffff")
 
         val result =
-            renderer.submitDecodeUnit(padded, 9, BUFFER_TYPE_PICDATA, 1, FRAME_TYPE_P, 0.toChar(), 0, 0)
+            renderer.submitDecodeUnit(
+                padded,
+                9,
+                BUFFER_TYPE_PICDATA,
+                1,
+                FRAME_TYPE_P,
+                0.toChar(),
+                0,
+                0,
+            )
 
         assertThat(result).isEqualTo(MoonBridge.DR_OK)
         assertThat(queued().single().hex).isEqualTo(hex(bytes("00000001 419a 0011 22")))

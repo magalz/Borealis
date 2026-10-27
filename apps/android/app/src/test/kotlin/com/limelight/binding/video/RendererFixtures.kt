@@ -43,8 +43,7 @@ internal fun MediaCodecDecoderRenderer.submit(unit: DecodeUnit): Int =
 internal fun bytes(text: String): ByteArray =
     text.filterNot { it.isWhitespace() }.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 
-internal fun hex(data: ByteArray): String =
-    data.joinToString("") { "%02x".format(Locale.ROOT, it) }
+internal fun hex(data: ByteArray): String = data.joinToString("") { "%02x".format(Locale.ROOT, it) }
 
 /** A P frame: a start code, a slice header and some payload that the renderer never reads. */
 internal fun pFrame(number: Int, times: DecodeUnit.Times = DecodeUnit.Times()) =
@@ -78,19 +77,23 @@ internal fun parameterSet(type: Int, data: String, number: Int = 1) =
 
 /**
  * A decoder of the framework like `codec(...)` makes it, with the things that
- * `decoderCanMeetPerformancePoint` reads and that `codec(...)` leaves alone: a limit on the macroblock
- * rate (`areSizeAndRateSupported`), the ranges of sizes and blocks, performance points and measured
- * frame rates. They are set through the `formatHook` of the builder.
+ * `decoderCanMeetPerformancePoint` reads and that `codec(...)` leaves alone: a limit on the
+ * macroblock rate (`areSizeAndRateSupported`), the ranges of sizes and blocks, performance points
+ * and measured frame rates. They are set through the `formatHook` of the builder.
  */
 internal class LimitedCodec(private val name: String, private val mime: String) {
     var blocksPerSecond = "1-10000000"
     var sizeRange = "64x64-4096x2304"
     var blockCount = "1-100000"
 
-    /** The performance points as the framework reads them: a size, and the frame rates it covers. */
+    /**
+     * The performance points as the framework reads them: a size, and the frame rates it covers.
+     */
     var performancePoints: Map<String, String> = emptyMap()
 
-    /** The frame rates that the codec was measured to reach, by size, as the framework reads them. */
+    /**
+     * The frame rates that the codec was measured to reach, by size, as the framework reads them.
+     */
     var measuredRates: Map<String, String> = emptyMap()
 
     /** The profiles of the decoder, or null for the one that the builder gives its mime type. */

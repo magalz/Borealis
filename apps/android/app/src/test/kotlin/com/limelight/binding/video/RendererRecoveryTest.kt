@@ -34,8 +34,7 @@ class RendererRecoveryTest : RendererTestBase() {
         awaitQuiesced(RENDERER_THREAD)
     }
 
-    private fun names() =
-        journal.filterNot { it is CodecEvent.Output }.map { it::class.simpleName }
+    private fun names() = journal.filterNot { it is CodecEvent.Output }.map { it::class.simpleName }
 
     private val stateFailure = { IllegalStateException("codec state") }
     private val recoverable = { codecException(errorCode = -1, actionCode = ACTION_RECOVERABLE) }

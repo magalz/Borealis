@@ -83,7 +83,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     private boolean reportedCrash;
     private int consecutiveCrashCount;
     private String glRenderer;
-    private boolean foreground = true;
     // BOREALIS: the in-game overlay asks for structured numbers at runtime, whatever the preference says (stream.perf)
     private volatile boolean perfEnabled;
     private volatile PerfSnapshotSink perfSink;
@@ -425,14 +424,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         else {
             return MoonBridge.COLOR_RANGE_LIMITED;
         }
-    }
-
-    public void notifyVideoForeground() {
-        foreground = true;
-    }
-
-    public void notifyVideoBackground() {
-        foreground = false;
     }
 
     // BOREALIS: turns the per-second performance window on or off at runtime (stream.perf)

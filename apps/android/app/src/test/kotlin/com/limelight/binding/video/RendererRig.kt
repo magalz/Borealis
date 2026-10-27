@@ -160,7 +160,6 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
                 prefs,
                 CrashListener { crashes += it },
                 crashCount,
-                false,
                 hdr,
                 glRenderer,
             )

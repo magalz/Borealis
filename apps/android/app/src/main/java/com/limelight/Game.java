@@ -400,7 +400,6 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
                     }
                 },
                 tombstonePrefs.getInt("CrashCount", 0),
-                connMgr.isActiveNetworkMetered(),
                 willStreamHdr,
                 glPrefs.glRenderer);
         // BOREALIS: first rendered frame ends the watchdog

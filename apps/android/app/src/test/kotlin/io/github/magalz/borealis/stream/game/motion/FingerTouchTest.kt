@@ -176,7 +176,7 @@ internal class FingerTouchTest : MotionTestBase() {
         assertThat(sent()).containsExactly(release(left))
         forgetSent()
 
-        // The second finger goes down 4 and then 10 pixels: the scroll is three times the move.
+        // The second finger goes down 4 and then 6 pixels: the scroll is three times the move.
         val move =
             fingerEvent(MotionEvent.ACTION_MOVE, listOf(100f to 100f, 200.9f to 110.9f)) {
                 eventTime = TIME + 220

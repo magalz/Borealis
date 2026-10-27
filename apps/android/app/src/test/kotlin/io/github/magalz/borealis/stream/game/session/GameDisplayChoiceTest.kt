@@ -278,6 +278,15 @@ internal class GameDisplayChoiceTest : GameTestBase() {
         assertThat(picked).isEqualTo(Picked(2, 120f, 12000))
     }
 
+    @Test
+    fun `a television of the leanback feature reports the refresh rate that it will switch to`() {
+        rig.feature(PackageManager.FEATURE_LEANBACK)
+
+        val picked = pick(Wanted(fps = 120), DisplayMode(0, 3840, 2160, 60f), hd(2, 120f))
+
+        assertThat(picked).isEqualTo(Picked(2, 120f, 12000))
+    }
+
     // The frame rate that is capped
 
     private fun capped(fps: Int, hz: Float): Pair<Int, Int> {
@@ -294,6 +303,12 @@ internal class GameDisplayChoiceTest : GameTestBase() {
     @Test
     fun `a frame rate four above the refresh rate is no longer capped, frames are dropped`() {
         assertThat(capped(64, 60f)).isEqualTo(64 to PreferenceConfiguration.FRAME_PACING_BALANCED)
+    }
+
+    @Test
+    fun `a frame rate three above the refresh rate is still capped to one frame less`() {
+        assertThat(capped(63, 60f)).isEqualTo(59 to PreferenceConfiguration.FRAME_PACING_CAP_FPS)
+        assertThat(rig.streamConfiguration.launchRefreshRate).isEqualTo(63)
     }
 
     @Test

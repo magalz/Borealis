@@ -51,9 +51,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     private final HevcSpsMonitor hevcSpsMonitor; // BOREALIS: logs the stream profile, never affects decoding
     private final HdrRestartReuse hdrRestartReuse = new HdrRestartReuse(); // BOREALIS: set by setHdrMode, used once by the IDR CSD fetch
 
-    private static final boolean USE_FRAME_RENDER_TIME = false;
-    private static final boolean FRAME_RENDER_TIME_ONLY = USE_FRAME_RENDER_TIME && false;
-
     private MediaCodecInfo avcDecoder;
     private MediaCodecInfo hevcDecoder;
     private MediaCodecInfo av1Decoder;
@@ -83,7 +80,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     private boolean reportedCrash;
     private int consecutiveCrashCount;
     private String glRenderer;
-    private boolean foreground = true;
     // BOREALIS: the in-game overlay asks for structured numbers at runtime, whatever the preference says (stream.perf)
     private volatile boolean perfEnabled;
     private volatile PerfSnapshotSink perfSink;
@@ -207,7 +203,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         return !decoderCanMeetPerformancePoint(avcCaps, prefs) && decoderCanMeetPerformancePoint(av1Caps, prefs);
     }
 
-    private MediaCodecInfo findHevcDecoder(PreferenceConfiguration prefs, boolean meteredNetwork, boolean requestedHdr) {
+    private MediaCodecInfo findHevcDecoder(PreferenceConfiguration prefs, boolean requestedHdr) {
         // Don't return anything if H.264 is forced
         if (prefs.videoFormat == PreferenceConfiguration.FormatOption.FORCE_H264) {
             return null;
@@ -286,7 +282,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
     public MediaCodecDecoderRenderer(Activity activity, PreferenceConfiguration prefs,
                                      CrashListener crashListener, int consecutiveCrashCount,
-                                     boolean meteredData, boolean requestedHdr,
+                                     boolean requestedHdr,
                                      String glRenderer) {
         this.activity = activity;
         this.prefs = prefs;
@@ -306,7 +302,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             LimeLog.warning("No AVC decoder found");
         }
 
-        hevcDecoder = findHevcDecoder(prefs, meteredData, requestedHdr);
+        hevcDecoder = findHevcDecoder(prefs, requestedHdr);
         if (hevcDecoder != null) {
             LimeLog.info("Selected HEVC decoder: "+hevcDecoder.getName());
         }
@@ -425,14 +421,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         else {
             return MoonBridge.COLOR_RANGE_LIMITED;
         }
-    }
-
-    public void notifyVideoForeground() {
-        foreground = true;
-    }
-
-    public void notifyVideoBackground() {
-        foreground = false;
     }
 
     // BOREALIS: turns the per-second performance window on or off at runtime (stream.perf)
@@ -676,20 +664,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                 // We couldn't even configure a decoder without any low latency options
                 return -5;
             }
-        }
-
-        if (USE_FRAME_RENDER_TIME) {
-            videoDecoder.setOnFrameRenderedListener(new MediaCodec.OnFrameRenderedListener() {
-                @Override
-                public void onFrameRendered(MediaCodec mediaCodec, long presentationTimeUs, long renderTimeNanos) {
-                    long delta = (renderTimeNanos / 1000000L) - (presentationTimeUs / 1000);
-                    if (delta >= 0 && delta < 1000) {
-                        if (USE_FRAME_RENDER_TIME) {
-                            activeWindowVideoStats.totalTimeMs += delta;
-                        }
-                    }
-                }
-            }, null);
         }
 
         return 0;
@@ -1109,9 +1083,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                                 long delta = (decodeUs + 500) / 1000; // BOREALIS: stream.perf
                                 activeWindowVideoStats.decoderTimeUs += decodeUs; // BOREALIS: stream.perf
                                 activeWindowVideoStats.decoderTimeMs += delta;
-                                if (!USE_FRAME_RENDER_TIME) {
-                                    activeWindowVideoStats.totalTimeMs += delta;
-                                }
+                                activeWindowVideoStats.totalTimeMs += delta;
                             }
                         } else {
                             switch (outIndex) {
@@ -1589,12 +1561,10 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         activeWindowVideoStats.totalFramesReceived++;
         activeWindowVideoStats.totalFrames++;
 
-        if (!FRAME_RENDER_TIME_ONLY) {
-            // Count time from first packet received to enqueue time as receive time
-            // We will count DU queue time as part of decoding, because it is directly
-            // caused by a slow decoder.
-            activeWindowVideoStats.totalTimeMs += (enqueueTimeUs - receiveTimeUs) / 1000;
-        }
+        // Count time from first packet received to enqueue time as receive time
+        // We will count DU queue time as part of decoding, because it is directly
+        // caused by a slow decoder.
+        activeWindowVideoStats.totalTimeMs += (enqueueTimeUs - receiveTimeUs) / 1000;
 
         if (!fetchNextInputBuffer()) {
             return MoonBridge.DR_NEED_IDR;

@@ -44,6 +44,10 @@ internal class MouseMovementTest : MotionTestBase() {
                 // A move of a whole turn of a short is no move at all.
                 Triple(65536f, 0f, emptyList()),
                 Triple(0f, -65536f, emptyList()),
+                // A float past an int stops at the end of the int, and its low 16 bits are all
+                // ones.
+                Triple(1e10f, -1e10f, listOf(moveBy(-1, 0))),
+                Triple(Float.NaN, 3f, listOf(moveBy(0, 3))),
             )
 
         for ((x, y, expected) in table) {
@@ -53,6 +57,25 @@ internal class MouseMovementTest : MotionTestBase() {
             assertWithMessage("($x, $y)").that(sent()).containsExactlyElementsIn(expected).inOrder()
             forgetSent()
         }
+    }
+
+    @Test
+    fun `a captured touchpad moves the pointer by its relative axes`() {
+        streaming()
+        val event =
+            motionEventOf(InputDevice.SOURCE_TOUCHPAD, MotionEvent.ACTION_MOVE) {
+                pointer(
+                    100f,
+                    100f,
+                    MotionEvent.TOOL_TYPE_FINGER,
+                    mapOf(Axes.RELATIVE_X to 5.6f, Axes.RELATIVE_Y to -3.7f),
+                )
+            }
+
+        assertThat(dispatchCapturedPointer(event)).isTrue()
+
+        // The coordinates of the touchpad are no position: only the relative axes count.
+        assertThat(sent()).containsExactly(moveBy(5, -3))
     }
 
     @Test
@@ -349,6 +372,9 @@ internal class MouseMovementTest : MotionTestBase() {
                 // A part of a notch: 1.2, cut to 1; and just under 1, which is nothing.
                 Triple(0.01f, -0.01f, 1 to -1),
                 Triple(0.0083f, -0.0083f, 0 to 0),
+                // The product is a float: 0.7f * 120 is exactly 84, where a double would give
+                // 83.99.
+                Triple(0.7f, -0.7f, 84 to -84),
                 // 273.5 notches are 32820, past the sign bit of a short.
                 Triple(273.5f, -273.5f, -32716 to 32716),
                 Triple(0f, 0f, 0 to 0),

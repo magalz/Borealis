@@ -146,9 +146,10 @@ internal class MouseButtonsTest : MotionTestBase() {
 
     // ----- The Samsung DeX desktop mouse -----
 
+    // The touchpad of DeX reports its pointer as a finger, which only its source makes a mouse.
     private fun dex(action: Int, buttons: Int = 0) =
         motionEventOf(SAMSUNG_DEX_SOURCE, action) {
-            pointer(10f, 20f)
+            pointer(10f, 20f, MotionEvent.TOOL_TYPE_FINGER)
             buttonState = buttons
         }
 

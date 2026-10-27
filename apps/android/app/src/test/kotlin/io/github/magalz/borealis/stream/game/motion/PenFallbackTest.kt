@@ -147,18 +147,23 @@ internal class PenFallbackTest : MotionTestBase() {
     }
 
     @Test
-    fun `a touch of a stylus among other pointers is not a button, the first pointer is not alone`() {
+    fun `a stylus among other pointers is not a button, the touch is the one of a stylus alone`() {
         hostWithoutPens()
         streaming()
-        val second =
-            motionEventOf(InputDevice.SOURCE_STYLUS, MotionEvent.ACTION_POINTER_DOWN) {
+        fun twoStyluses(action: Int, index: Int) =
+            motionEventOf(InputDevice.SOURCE_STYLUS, action) {
                 pointer(100f, 100f, MotionEvent.TOOL_TYPE_STYLUS)
                 pointer(200f, 100f, MotionEvent.TOOL_TYPE_STYLUS)
-                actionIndex = 1
+                actionIndex = index
                 eventTime = TIME
             }
 
-        assertThat(mouseCallsOf(second)).containsExactly(position(100, 100))
+        // A second pointer goes down; and the gesture of both is cancelled, which is the lift of a
+        // stylus only when it is alone.
+        assertThat(mouseCallsOf(twoStyluses(MotionEvent.ACTION_POINTER_DOWN, 1)))
+            .containsExactly(position(100, 100))
+        assertThat(mouseCallsOf(twoStyluses(MotionEvent.ACTION_CANCEL, 0)))
+            .containsExactly(position(100, 100))
     }
 
     // ----- The dead zone after a touch down -----

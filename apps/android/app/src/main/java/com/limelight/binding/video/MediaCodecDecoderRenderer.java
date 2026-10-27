@@ -51,9 +51,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     private final HevcSpsMonitor hevcSpsMonitor; // BOREALIS: logs the stream profile, never affects decoding
     private final HdrRestartReuse hdrRestartReuse = new HdrRestartReuse(); // BOREALIS: set by setHdrMode, used once by the IDR CSD fetch
 
-    private static final boolean USE_FRAME_RENDER_TIME = false;
-    private static final boolean FRAME_RENDER_TIME_ONLY = USE_FRAME_RENDER_TIME && false;
-
     private MediaCodecInfo avcDecoder;
     private MediaCodecInfo hevcDecoder;
     private MediaCodecInfo av1Decoder;
@@ -669,20 +666,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             }
         }
 
-        if (USE_FRAME_RENDER_TIME) {
-            videoDecoder.setOnFrameRenderedListener(new MediaCodec.OnFrameRenderedListener() {
-                @Override
-                public void onFrameRendered(MediaCodec mediaCodec, long presentationTimeUs, long renderTimeNanos) {
-                    long delta = (renderTimeNanos / 1000000L) - (presentationTimeUs / 1000);
-                    if (delta >= 0 && delta < 1000) {
-                        if (USE_FRAME_RENDER_TIME) {
-                            activeWindowVideoStats.totalTimeMs += delta;
-                        }
-                    }
-                }
-            }, null);
-        }
-
         return 0;
     }
 
@@ -1100,9 +1083,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                                 long delta = (decodeUs + 500) / 1000; // BOREALIS: stream.perf
                                 activeWindowVideoStats.decoderTimeUs += decodeUs; // BOREALIS: stream.perf
                                 activeWindowVideoStats.decoderTimeMs += delta;
-                                if (!USE_FRAME_RENDER_TIME) {
-                                    activeWindowVideoStats.totalTimeMs += delta;
-                                }
+                                activeWindowVideoStats.totalTimeMs += delta;
                             }
                         } else {
                             switch (outIndex) {
@@ -1580,12 +1561,10 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         activeWindowVideoStats.totalFramesReceived++;
         activeWindowVideoStats.totalFrames++;
 
-        if (!FRAME_RENDER_TIME_ONLY) {
-            // Count time from first packet received to enqueue time as receive time
-            // We will count DU queue time as part of decoding, because it is directly
-            // caused by a slow decoder.
-            activeWindowVideoStats.totalTimeMs += (enqueueTimeUs - receiveTimeUs) / 1000;
-        }
+        // Count time from first packet received to enqueue time as receive time
+        // We will count DU queue time as part of decoding, because it is directly
+        // caused by a slow decoder.
+        activeWindowVideoStats.totalTimeMs += (enqueueTimeUs - receiveTimeUs) / 1000;
 
         if (!fetchNextInputBuffer()) {
             return MoonBridge.DR_NEED_IDR;

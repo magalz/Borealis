@@ -34,8 +34,6 @@ sealed interface CodecEvent {
 
     data class Reset(val codec: Int) : CodecEvent
 
-    data class Flushed(val codec: Int) : CodecEvent
-
     data class Released(val codec: Int) : CodecEvent
 
     /** `queueInputBuffer`: the buffer index, the timestamp, the flags and the bytes queued. */
@@ -60,9 +58,6 @@ enum class CodecPoint {
     CREATE,
     CONFIGURE,
     START,
-    STOP,
-    RESET,
-    RELEASE,
     DEQUEUE_INPUT,
     QUEUE_INPUT,
     DEQUEUE_OUTPUT,
@@ -121,25 +116,16 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
 
     @Implementation
     protected fun native_stop() {
-        fire(CodecPoint.STOP)
         journal += CodecEvent.Stopped(id)
     }
 
     @Implementation
     protected fun native_reset() {
-        fire(CodecPoint.RESET)
         journal += CodecEvent.Reset(id)
     }
 
     @Implementation
-    protected override fun native_flush() {
-        super.native_flush()
-        journal += CodecEvent.Flushed(id)
-    }
-
-    @Implementation
     protected fun native_release() {
-        fire(CodecPoint.RELEASE)
         journal += CodecEvent.Released(id)
     }
 

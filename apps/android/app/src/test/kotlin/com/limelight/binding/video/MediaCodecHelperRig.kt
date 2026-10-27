@@ -285,6 +285,12 @@ class CodecBuilder(private val name: String) {
     var canonicalName: String? = null
     var brokenCapabilities = false
 
+    /**
+     * Sets more keys of the capabilities format, or replaces the ones set here (the size, block and
+     * rate ranges, the performance points), after all of them were set.
+     */
+    var formatHook: MediaFormat.() -> Unit = {}
+
     /** The single mime type of the decoder. */
     var mime: String
         get() = mimes.single()
@@ -324,6 +330,7 @@ class CodecBuilder(private val name: String) {
                         true,
                     )
                 }
+                formatHook()
             }
         return MediaCodecInfoBuilder.CodecCapabilitiesBuilder.newBuilder()
             .setMediaFormat(format)

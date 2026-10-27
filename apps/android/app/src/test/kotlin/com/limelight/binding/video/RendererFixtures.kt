@@ -2,11 +2,8 @@ package com.limelight.binding.video
 
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
-import android.media.MediaCodecInfo.CodecProfileLevel
-import android.media.MediaFormat
 import com.limelight.nvstream.jni.MoonBridge
 import java.util.Locale
-import org.robolectric.shadows.MediaCodecInfoBuilder
 import org.robolectric.util.ReflectionHelpers
 
 /** The `bufferType` of picture data: what is neither a parameter set nor a start code. */
@@ -80,9 +77,10 @@ internal fun parameterSet(type: Int, data: String, number: Int = 1) =
     )
 
 /**
- * A decoder of the framework like `codec(...)` makes it, with the two things that
- * `decoderCanMeetPerformancePoint` reads and that `codec(...)` cannot set: a limit on the macroblock
- * rate (`areSizeAndRateSupported`), a range of sizes, and performance points.
+ * A decoder of the framework like `codec(...)` makes it, with the things that
+ * `decoderCanMeetPerformancePoint` reads and that `codec(...)` leaves alone: a limit on the macroblock
+ * rate (`areSizeAndRateSupported`), the ranges of sizes and blocks, performance points and measured
+ * frame rates. They are set through the `formatHook` of the builder.
  */
 internal class LimitedCodec(private val name: String, private val mime: String) {
     var blocksPerSecond = "1-10000000"
@@ -94,22 +92,15 @@ internal class LimitedCodec(private val name: String, private val mime: String) 
 
     /** The frame rates that the codec was measured to reach, by size, as the framework reads them. */
     var measuredRates: Map<String, String> = emptyMap()
-    var profiles: List<Int> = listOf(CodecProfileLevel.AVCProfileHigh)
 
-    fun build(): MediaCodecInfo {
-        // The highest level of the codec, so that the framework does not cap the sizes.
-        val topLevel =
-            if (mime == "video/hevc") CodecProfileLevel.HEVCMainTierLevel62
-            else CodecProfileLevel.AVCLevel52
-        val levels = profiles.map { number ->
-            CodecProfileLevel().apply {
-                profile = number
-                level = topLevel
-            }
-        }
-        val format =
-            MediaFormat().apply {
-                setString(MediaFormat.KEY_MIME, mime)
+    /** The profiles of the decoder, or null for the one that the builder gives its mime type. */
+    var profiles: List<Int>? = null
+
+    fun build(): MediaCodecInfo =
+        codec(name) {
+            mime = this@LimitedCodec.mime
+            profiles = this@LimitedCodec.profiles
+            formatHook = {
                 setString("size-range", sizeRange)
                 setString("block-count-range", blockCount)
                 setString("blocks-per-second-range", blocksPerSecond)
@@ -120,21 +111,7 @@ internal class LimitedCodec(private val name: String, private val mime: String) 
                     setString("measured-frame-rate-$size-range", range)
                 }
             }
-        val capabilities =
-            MediaCodecInfoBuilder.CodecCapabilitiesBuilder.newBuilder()
-                .setMediaFormat(format)
-                .setIsEncoder(false)
-                .setProfileLevels(levels.toTypedArray())
-                .setColorFormats(intArrayOf())
-                .build()
-        return MediaCodecInfoBuilder.newBuilder()
-            .setName(name)
-            .setIsEncoder(false)
-            .setIsSoftwareOnly(false)
-            .setIsHardwareAccelerated(true)
-            .setCapabilities(capabilities)
-            .build()
-    }
+        }
 }
 
 internal fun limitedCodec(

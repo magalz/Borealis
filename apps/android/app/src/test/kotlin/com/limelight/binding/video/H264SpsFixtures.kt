@@ -47,13 +47,15 @@ private class SpsBits {
     }
 }
 
+/** The base 2 logarithms of the longest motion vector, horizontal and vertical. */
+internal data class MvLength(val horizontal: Int, val vertical: Int)
+
 /** The bitstream restriction of a VUI. */
 internal data class Restriction(
     val motionVectorsOverPicBoundaries: Boolean = true,
     val maxBytesPerPicDenom: Int = 4,
     val maxBitsPerMbDenom: Int = 0,
-    val log2MaxMvLengthHorizontal: Int = 15,
-    val log2MaxMvLengthVertical: Int = 14,
+    val log2MaxMvLength: MvLength = MvLength(horizontal = 15, vertical = 14),
     val numReorderFrames: Int = 2,
     val maxDecFrameBuffering: Int = 4,
 )
@@ -141,8 +143,8 @@ internal data class H264Sps(
             w.bit(it.motionVectorsOverPicBoundaries)
             w.ue(it.maxBytesPerPicDenom)
             w.ue(it.maxBitsPerMbDenom)
-            w.ue(it.log2MaxMvLengthHorizontal)
-            w.ue(it.log2MaxMvLengthVertical)
+            w.ue(it.log2MaxMvLength.horizontal)
+            w.ue(it.log2MaxMvLength.vertical)
             w.ue(it.numReorderFrames)
             w.ue(it.maxDecFrameBuffering)
         }
@@ -162,8 +164,7 @@ internal data class H264Sps(
                 motionVectorsOverPicBoundaries = true,
                 maxBytesPerPicDenom = 2,
                 maxBitsPerMbDenom = 1,
-                log2MaxMvLengthHorizontal = 16,
-                log2MaxMvLengthVertical = 16,
+                log2MaxMvLength = MvLength(horizontal = 16, vertical = 16),
                 numReorderFrames = 0,
                 maxDecFrameBuffering = maxDecFrameBuffering,
             )

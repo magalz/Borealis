@@ -134,7 +134,6 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
     // BOREALIS: while the Android keyboard shows, a gamepad's D-pad, Enter and Back are for it (stream)
     private final ImeKeyGate imeKeys = new ImeKeyGate(() -> ImeKeyGate.isImeVisible(getWindow().getDecorView()));
     private boolean displayedFailureDialog = false;
-    private boolean connecting = false;
     private boolean connected = false;
     // BOREALIS: the first frame was on screen, so an ending stream "stopped" and did not fail to start (stream)
     private volatile boolean firstFrameShown;
@@ -2259,8 +2258,8 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
 
     private void stopConnection() {
         startupGuard.cancel(); // BOREALIS: first-frame watchdog
-        if (connecting || connected) {
-            connecting = connected = false;
+        if (connected) {
+            connected = false;
             io.github.magalz.borealis.host.launch.SessionAudit.stopped(); // BOREALIS: audit trail
             updatePipAutoEnter();
 
@@ -2388,7 +2387,6 @@ public class Game extends ComponentActivity implements SurfaceHolder.Callback,
             @Override
             public void run() {
                 connected = true;
-                connecting = false;
                 updatePipAutoEnter();
                 streamSession.onConnectionStarted(StreamSessionFactory.sessionInfo(prefConfig, streamFrameRate, decoderRenderer.getActiveVideoFormat(), decoderRenderer.getDecoderName())); // BOREALIS: the chrome waits for the first frame
                 startupGuard.onConnectionStarted(); // BOREALIS: first-frame watchdog

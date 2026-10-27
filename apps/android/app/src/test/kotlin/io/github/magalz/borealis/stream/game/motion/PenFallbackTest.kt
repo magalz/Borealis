@@ -63,6 +63,23 @@ internal class PenFallbackTest : MotionTestBase() {
         assertThat(sentBesidesPens()).containsExactly(position(100, 100), position(100, 100))
     }
 
+    @Test
+    fun `a move of two styluses is tried once, and the host that says no is not asked again`() {
+        hostWithoutPens()
+        streaming()
+        val move =
+            motionEventOf(InputDevice.SOURCE_STYLUS, MotionEvent.ACTION_MOVE) {
+                pointer(100f, 100f, MotionEvent.TOOL_TYPE_STYLUS)
+                pointer(200f, 100f, MotionEvent.TOOL_TYPE_STYLUS)
+                eventTime = TIME
+            }
+
+        val calls = mouseCallsOf(move)
+
+        assertThat(pens()).hasSize(1)
+        assertThat(calls).containsExactly(position(100, 100))
+    }
+
     // ----- Stylus and eraser as buttons -----
 
     @Test

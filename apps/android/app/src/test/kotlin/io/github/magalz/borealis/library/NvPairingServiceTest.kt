@@ -9,6 +9,7 @@ import io.github.magalz.borealis.host.pairing.PairingFailure
 import io.github.magalz.borealis.library.domain.PairingOutcome
 import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
+import io.github.magalz.borealis.testing.WorkerDispatcherRule
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.net.UnknownHostException
@@ -16,7 +17,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
@@ -39,12 +39,14 @@ import org.xmlpull.v1.XmlPullParserException
 class NvPairingServiceTest {
     @get:Rule val audit = RecordingAudit()
     @get:Rule val log = RecordingLog()
+    @get:Rule val workers = WorkerDispatcherRule()
 
     private val binder = FakeCmsBinder()
     private val clients = FakeHostClients(binder)
     private val client = clients.client
-    private var failureFor: (HostError?, String?, Boolean) -> PairingFailure =
-        { _, fallback, _ -> PairingFailure(fallback, restart = false) }
+    private var failureFor: (HostError?, String?, Boolean) -> PairingFailure = { _, fallback, _ ->
+        PairingFailure(fallback, restart = false)
+    }
 
     private fun newService(connection: ComputerManagerConnection, io: CoroutineDispatcher) =
         NvPairingService(
@@ -295,9 +297,10 @@ class NvPairingServiceTest {
     fun `cancelling a pairing aborts the host request and stores nothing`() = runBlocking {
         val live = known()
         val started = client.blockUntilCancelled()
-        val service = newService(ComputerManagerConnection(FakeCmsConnector(binder), Dispatchers.IO), Dispatchers.IO)
+        val io = workers.dispatcher
+        val service = newService(ComputerManagerConnection(FakeCmsConnector(binder), io), io)
 
-        val pairing = async(Dispatchers.Default) { service.pair("host-1", "1234", restarted = false) }
+        val pairing = async(io) { service.pair("host-1", "1234", restarted = false) }
         awaitStarted(started)
         pairing.cancel()
         try {
@@ -318,12 +321,13 @@ class NvPairingServiceTest {
     fun `a cancelled pairing resumes polling`() = runBlocking {
         known()
         val started = client.blockUntilCancelled()
-        val connection = ComputerManagerConnection(FakeCmsConnector(binder), Dispatchers.IO)
-        val service = newService(connection, Dispatchers.IO)
-        val collector = launch(Dispatchers.IO) { connection.hostUpdates().collect {} }
+        val io = workers.dispatcher
+        val connection = ComputerManagerConnection(FakeCmsConnector(binder), io)
+        val service = newService(connection, io)
+        val collector = launch(io) { connection.hostUpdates().collect {} }
         withTimeout(WAIT_MS) { while (binder.events.isEmpty()) yield() }
 
-        val pairing = async(Dispatchers.Default) { service.pair("host-1", "1234", restarted = false) }
+        val pairing = async(io) { service.pair("host-1", "1234", restarted = false) }
         awaitStarted(started)
         pairing.cancelAndJoin()
 
@@ -332,7 +336,9 @@ class NvPairingServiceTest {
     }
 
     private suspend fun awaitStarted(started: CountDownLatch) =
-        withContext(Dispatchers.IO) { assertThat(started.await(WAIT_MS, TimeUnit.MILLISECONDS)).isTrue() }
+        withContext(workers.dispatcher) {
+            assertThat(started.await(WAIT_MS, TimeUnit.MILLISECONDS)).isTrue()
+        }
 
     @Test
     fun `the PIN never reaches the log or the audit trail`() = runTest {

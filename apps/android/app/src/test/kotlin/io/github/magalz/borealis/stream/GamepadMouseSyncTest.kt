@@ -1,15 +1,14 @@
 package io.github.magalz.borealis.stream
 
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import io.github.magalz.borealis.testing.unconfinedScope
 import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Test
 
 class GamepadMouseSyncTest {
     private val actions = RecordingStreamActions()
-    private val scope = CoroutineScope(Dispatchers.Unconfined)
+    private val scope = unconfinedScope()
     private var onThePad = false
 
     @After fun tearDown() = scope.cancel()

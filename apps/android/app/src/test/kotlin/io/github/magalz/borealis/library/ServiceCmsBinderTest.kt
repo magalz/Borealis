@@ -11,12 +11,12 @@ import com.limelight.Game
 import com.limelight.computers.ComputerManagerService
 import com.limelight.discovery.DiscoveryService
 import com.limelight.nvstream.http.NvApp
+import io.github.magalz.borealis.testing.WorkerDispatcherRule
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
@@ -31,6 +31,7 @@ import org.robolectric.Shadows.shadowOf
 @RunWith(RobolectricTestRunner::class)
 class ServiceCmsBinderTest {
     @get:Rule val log = RecordingLog()
+    @get:Rule val workers = WorkerDispatcherRule()
 
     private val app = ApplicationProvider.getApplicationContext<Application>()
     private val looper = shadowOf(Looper.getMainLooper())
@@ -59,8 +60,8 @@ class ServiceCmsBinderTest {
 
         // The connector waits on a background thread; the service callbacks need the main looper.
         val connecting =
-            CoroutineScope(Dispatchers.Default).async {
-                ServiceCmsConnector(app, Dispatchers.IO, warmUp).connect()
+            CoroutineScope(workers.dispatcher).async {
+                ServiceCmsConnector(app, workers.dispatcher, warmUp).connect()
             }
         while (!connecting.isCompleted) {
             looper.idle()
@@ -83,13 +84,12 @@ class ServiceCmsBinderTest {
         val warmUpThread = AtomicReference<Thread>()
 
         // Gives up after a few seconds, so a connector that waits for it fails instead of hanging.
-        val returned =
-            connectWith {
-                warmUpThread.set(Thread.currentThread())
-                started.countDown()
-                release.await(SLOW_WARM_UP_SECONDS, TimeUnit.SECONDS)
-                finished.set(true)
-            }
+        val returned = connectWith {
+            warmUpThread.set(Thread.currentThread())
+            started.countDown()
+            release.await(SLOW_WARM_UP_SECONDS, TimeUnit.SECONDS)
+            finished.set(true)
+        }
 
         assertThat(returned.uniqueId).matches("[0-9a-f]{16}")
         assertThat(finished.get()).isFalse()
@@ -104,7 +104,10 @@ class ServiceCmsBinderTest {
 
         assertThat(returned.uniqueId).matches("[0-9a-f]{16}")
         val deadline = System.currentTimeMillis() + WAIT_SECONDS * 1_000
-        while (log.records.none { it.message == "warm-up failed" } && System.currentTimeMillis() < deadline) {
+        while (
+            log.records.none { it.message == "warm-up failed" } &&
+                System.currentTimeMillis() < deadline
+        ) {
             Thread.sleep(POLL_MS)
         }
         val logged = log.records.single { it.message == "warm-up failed" }

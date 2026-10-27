@@ -3,8 +3,7 @@ package io.github.magalz.borealis.stream
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import io.github.magalz.borealis.testing.unconfinedScope
 import kotlinx.coroutines.cancel
 import org.junit.Test
 
@@ -60,7 +59,7 @@ class PerfGateTest {
     fun `binding follows the overlay and the menu, and tells only about changes`() {
         val session = streamingSession(OverlayMode.OFF)
         val told = mutableListOf<Boolean>()
-        val scope = CoroutineScope(Dispatchers.Unconfined)
+        val scope = unconfinedScope()
 
         PerfGate.bind(scope, session) { told += it }
         session.setOverlay(OverlayMode.DETAILED)
@@ -77,7 +76,7 @@ class PerfGateTest {
     fun `binding stops with its scope`() {
         val session = streamingSession(OverlayMode.OFF)
         val told = mutableListOf<Boolean>()
-        val scope = CoroutineScope(Dispatchers.Unconfined)
+        val scope = unconfinedScope()
         PerfGate.bind(scope, session) { told += it }
 
         scope.cancel()

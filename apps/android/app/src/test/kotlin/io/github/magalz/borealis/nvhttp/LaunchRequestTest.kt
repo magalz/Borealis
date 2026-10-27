@@ -33,8 +33,21 @@ class LaunchRequestTest {
 
     private val keyBytes =
         byteArrayOf(
-            0x00, 0x01, 0x0F, 0x10, 0x7F, 0x80.toByte(), 0x81.toByte(), 0xA5.toByte(),
-            0xAB.toByte(), 0xCD.toByte(), 0xEF.toByte(), 0xFE.toByte(), 0xFF.toByte(), 0x09, 0x90.toByte(),
+            0x00,
+            0x01,
+            0x0F,
+            0x10,
+            0x7F,
+            0x80.toByte(),
+            0x81.toByte(),
+            0xA5.toByte(),
+            0xAB.toByte(),
+            0xCD.toByte(),
+            0xEF.toByte(),
+            0xFE.toByte(),
+            0xFF.toByte(),
+            0x09,
+            0x90.toByte(),
             0x5A,
         )
 
@@ -46,18 +59,13 @@ class LaunchRequestTest {
     private fun answerLaunch(host: NvFakeHost, verb: String = "launch", body: String = SESSION) =
         host.answer("/$verb", HostReply.root(body), "https")
 
+    /** The context of a 1080p60 stream; [configure] sets more on its stream configuration. */
     private fun context(
         gfe: Boolean = false,
         width: Int = 1920,
         height: Int = 1080,
-        refreshRate: Int = 60,
-        launchRefreshRate: Int = 60,
-        sops: Boolean = true,
-        playLocalAudio: Boolean = false,
-        persistGamepads: Boolean = false,
-        gamepadMask: Int = 0,
-        audio: MoonBridge.AudioConfiguration? = MoonBridge.AUDIO_CONFIGURATION_STEREO,
         riKeyId: Int = -5,
+        configure: StreamConfiguration.Builder.() -> Unit = {},
     ): ConnectionContext =
         ConnectionContext().also {
             it.isNvidiaServerSoftware = gfe
@@ -67,13 +75,14 @@ class LaunchRequestTest {
             it.riKeyId = riKeyId
             it.streamConfig =
                 StreamConfiguration.Builder()
-                    .setRefreshRate(refreshRate)
-                    .setLaunchRefreshRate(launchRefreshRate)
-                    .setEnableSops(sops)
-                    .enableLocalAudioPlayback(playLocalAudio)
-                    .setPersistGamepadsAfterDisconnect(persistGamepads)
-                    .setAttachedGamepadMask(gamepadMask)
-                    .setAudioConfiguration(audio)
+                    .setRefreshRate(60)
+                    .setLaunchRefreshRate(60)
+                    .setEnableSops(true)
+                    .enableLocalAudioPlayback(false)
+                    .setPersistGamepadsAfterDisconnect(false)
+                    .setAttachedGamepadMask(0)
+                    .setAudioConfiguration(MoonBridge.AUDIO_CONFIGURATION_STEREO)
+                    .apply(configure)
                     .build()
         }
 
@@ -140,13 +149,12 @@ class LaunchRequestTest {
 
         client(host)
             .launchApp(
-                context(
-                    playLocalAudio = true,
-                    persistGamepads = true,
-                    gamepadMask = 15,
-                    audio = MoonBridge.AUDIO_CONFIGURATION_51_SURROUND,
-                    riKeyId = 1234567,
-                ),
+                context(riKeyId = 1234567) {
+                    enableLocalAudioPlayback(true)
+                    setPersistGamepadsAfterDisconnect(true)
+                    setAttachedGamepadMask(15)
+                    setAudioConfiguration(MoonBridge.AUDIO_CONFIGURATION_51_SURROUND)
+                },
                 "launch",
                 7,
                 false,
@@ -168,7 +176,10 @@ class LaunchRequestTest {
 
         client(host)
             .launchApp(
-                context(width = 1280, height = 720, launchRefreshRate = 90, refreshRate = 90),
+                context(width = 1280, height = 720) {
+                    setLaunchRefreshRate(90)
+                    setRefreshRate(90)
+                },
                 "launch",
                 1,
                 false,
@@ -183,9 +194,33 @@ class LaunchRequestTest {
         answerLaunch(host)
         val http = client(host)
 
-        http.launchApp(context(gfe = true, launchRefreshRate = 120, refreshRate = 120), "launch", 1, false)
-        http.launchApp(context(gfe = true, launchRefreshRate = 60, refreshRate = 60), "launch", 1, false)
-        http.launchApp(context(gfe = true, launchRefreshRate = 61, refreshRate = 61), "launch", 1, false)
+        http.launchApp(
+            context(gfe = true) {
+                setLaunchRefreshRate(120)
+                setRefreshRate(120)
+            },
+            "launch",
+            1,
+            false,
+        )
+        http.launchApp(
+            context(gfe = true) {
+                setLaunchRefreshRate(60)
+                setRefreshRate(60)
+            },
+            "launch",
+            1,
+            false,
+        )
+        http.launchApp(
+            context(gfe = true) {
+                setLaunchRefreshRate(61)
+                setRefreshRate(61)
+            },
+            "launch",
+            1,
+            false,
+        )
 
         assertThat(host.requests.map { it.value("mode") })
             .containsExactly("1920x1080x0", "1920x1080x60", "1920x1080x0")
@@ -210,7 +245,8 @@ class LaunchRequestTest {
             val host = host()
             answerLaunch(host)
 
-            client(host).launchApp(context(gfe = true, width = width, height = height), "launch", 1, false)
+            client(host)
+                .launchApp(context(gfe = true, width = width, height = height), "launch", 1, false)
 
             assertWithMessage("${width}x$height")
                 .that(host.requests.single().value("sops"))
@@ -224,7 +260,8 @@ class LaunchRequestTest {
             val host = host()
             answerLaunch(host)
 
-            client(host).launchApp(context(gfe = true, width = 2560, height = 1440), "launch", 1, false)
+            client(host)
+                .launchApp(context(gfe = true, width = 2560, height = 1440), "launch", 1, false)
 
             assertThat(log.records)
                 .contains(Level.INFO to "Disabling SOPS due to non-standard resolution: 2560x1440")
@@ -238,8 +275,8 @@ class LaunchRequestTest {
         val http = client(host)
 
         http.launchApp(context(gfe = false, width = 2560, height = 1440), "launch", 1, false)
-        http.launchApp(context(gfe = false, sops = false), "launch", 1, false)
-        http.launchApp(context(gfe = true, sops = false), "launch", 1, false)
+        http.launchApp(context(gfe = false) { setEnableSops(false) }, "launch", 1, false)
+        http.launchApp(context(gfe = true) { setEnableSops(false) }, "launch", 1, false)
 
         assertThat(host.requests.map { it.value("sops") }).containsExactly("1", "0", "0").inOrder()
     }
@@ -247,7 +284,10 @@ class LaunchRequestTest {
     @Test
     fun `a launch that the host accepts keeps the address of the RTSP session`() {
         val host = host()
-        answerLaunch(host, body = "<gamesession>1</gamesession><sessionUrl0>rtsp://192.0.2.10:48010</sessionUrl0>")
+        answerLaunch(
+            host,
+            body = "<gamesession>1</gamesession><sessionUrl0>rtsp://192.0.2.10:48010</sessionUrl0>",
+        )
         val context = context()
 
         assertThat(client(host).launchApp(context, "launch", 1, false)).isTrue()
@@ -281,14 +321,17 @@ class LaunchRequestTest {
     fun `any gamesession other than 0 is a started launch`() {
         for (value in listOf("1", "2", "00", "")) {
             val host = host()
-            answerLaunch(host, body = "<gamesession>$value</gamesession><sessionUrl0>u</sessionUrl0>")
+            answerLaunch(
+                host,
+                body = "<gamesession>$value</gamesession><sessionUrl0>u</sessionUrl0>",
+            )
 
-            val result =
-                runCatching { client(host).launchApp(context(), "launch", 1, false) }
+            val result = runCatching { client(host).launchApp(context(), "launch", 1, false) }
 
             if (value.isEmpty()) {
                 // An empty tag has no text: the field is missing.
-                assertThat(result.exceptionOrNull()).isInstanceOf(XmlPullParserException::class.java)
+                assertThat(result.exceptionOrNull())
+                    .isInstanceOf(XmlPullParserException::class.java)
             } else {
                 assertWithMessage("'$value'").that(result.getOrNull()).isTrue()
             }
@@ -378,9 +421,14 @@ class LaunchRequestTest {
     @Test
     fun `a launch reads the HTTPS port of the host first when it does not know it`() {
         val host = host()
-        host.answer("/serverinfo", HostReply.xml(serverInfoBody(httpsPort = host.httpsPort)), "http")
+        host.answer(
+            "/serverinfo",
+            HostReply.xml(serverInfoBody(httpsPort = host.httpsPort)),
+            "http",
+        )
         answerLaunch(host)
-        val http = clientOf(host, serverCert = TestIdentities.hostRsa.certificate, httpsKnown = false)
+        val http =
+            clientOf(host, serverCert = TestIdentities.hostRsa.certificate, httpsKnown = false)
 
         assertThat(http.launchApp(context(), "launch", 1, false)).isTrue()
 
@@ -465,6 +513,7 @@ class LaunchRequestTest {
     }
 
     private companion object {
-        const val SESSION = "<gamesession>1</gamesession><sessionUrl0>rtsp://192.0.2.10:48010</sessionUrl0>"
+        const val SESSION =
+            "<gamesession>1</gamesession><sessionUrl0>rtsp://192.0.2.10:48010</sessionUrl0>"
     }
 }

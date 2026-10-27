@@ -18,18 +18,25 @@ const val XBOX_ONE_INTERFACE_SUBCLASS = 71
 const val XBOX_ONE_INTERFACE_PROTOCOL = 208
 
 /**
- * A USB device as `UsbManager` lists it: one interface of [interfaceClass], [subclass] and
- * [protocol]. The default is the interface of an Xbox 360 wired pad (255, 93, 1), which the USB
- * driver claims for the vendors it knows. The reflection relies on the hidden constructors of the
- * pinned sdk=35 (Robolectric 4.17).
+ * The class, subclass and protocol of the one interface of a USB device. The default is the
+ * interface of an Xbox 360 wired pad (255, 93, 1), which the USB driver claims for the vendors it
+ * knows.
+ */
+data class UsbInterfaceType(
+    val interfaceClass: Int = UsbConstants.USB_CLASS_VENDOR_SPEC,
+    val subclass: Int = 93,
+    val protocol: Int = 1,
+)
+
+/**
+ * A USB device as `UsbManager` lists it: one interface of [type]. The reflection relies on the
+ * hidden constructors of the pinned sdk=35 (Robolectric 4.17).
  */
 fun usbDevice(
     name: String,
     vendorId: Int,
     productId: Int,
-    interfaceClass: Int = UsbConstants.USB_CLASS_VENDOR_SPEC,
-    subclass: Int = 93,
-    protocol: Int = 1,
+    type: UsbInterfaceType = UsbInterfaceType(),
 ): UsbDevice {
     val int = Int::class.javaPrimitiveType
     val boolean = Boolean::class.javaPrimitiveType
@@ -37,7 +44,7 @@ fun usbDevice(
     java.lang.reflect.Array.set(
         configurations,
         0,
-        usbConfiguration(usbInterface(interfaceClass, subclass, protocol)),
+        usbConfiguration(usbInterface(type)),
     )
     val builder =
         ReflectionHelpers.callConstructor(
@@ -75,7 +82,7 @@ fun usbDevice(
     )
 }
 
-private fun usbInterface(interfaceClass: Int, subclass: Int, protocol: Int): UsbInterface {
+private fun usbInterface(type: UsbInterfaceType): UsbInterface {
     val int = Int::class.javaPrimitiveType
     val usbInterface =
         ReflectionHelpers.callConstructor(
@@ -83,9 +90,9 @@ private fun usbInterface(interfaceClass: Int, subclass: Int, protocol: Int): Usb
             ClassParameter.from(int, 0),
             ClassParameter.from(int, 0),
             ClassParameter.from(String::class.java, "pad"),
-            ClassParameter.from(int, interfaceClass),
-            ClassParameter.from(int, subclass),
-            ClassParameter.from(int, protocol),
+            ClassParameter.from(int, type.interfaceClass),
+            ClassParameter.from(int, type.subclass),
+            ClassParameter.from(int, type.protocol),
         )
     ReflectionHelpers.callInstanceMethod<Unit>(
         usbInterface,

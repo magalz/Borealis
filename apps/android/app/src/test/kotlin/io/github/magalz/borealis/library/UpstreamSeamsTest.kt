@@ -33,7 +33,7 @@ class UpstreamSeamsTest {
     @Test
     fun `wake packets are sent to the addresses of a host`() {
         val host =
-            details(mac = "AA:BB:CC:DD:EE:FF").also {
+            details().reported(mac = "AA:BB:CC:DD:EE:FF").also {
                 it.manualAddress = AddressTuple("127.0.0.1", 47989)
             }
 

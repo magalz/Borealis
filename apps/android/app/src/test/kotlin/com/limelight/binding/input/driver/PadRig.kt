@@ -21,14 +21,28 @@ internal sealed interface PadEvent {
     class State(
         val controllerId: Int,
         val buttonFlags: Int,
-        val leftStickX: Float,
-        val leftStickY: Float,
-        val rightStickX: Float,
-        val rightStickY: Float,
+        leftStick: Stick,
+        rightStick: Stick,
         val leftTrigger: Float,
         val rightTrigger: Float,
-    ) : PadEvent
+    ) : PadEvent {
+        val leftStickX = leftStick.x
+        val leftStickY = leftStick.y
+        val rightStickX = rightStick.x
+        val rightStickY = rightStick.y
+    }
 }
+
+/** The position of one stick, as the driver reports it. */
+internal class Stick(val x: Float, val y: Float)
+
+/** The raw 16-bit positions of the four axes of a pad report. */
+internal data class RawSticks(
+    val leftX: Int = 0,
+    val leftY: Int = 0,
+    val rightX: Int = 0,
+    val rightY: Int = 0,
+)
 
 /**
  * A listener that keeps what it hears. Controllers report from their input thread, so the events
@@ -52,10 +66,8 @@ internal class RecordingListener : UsbDriverListener {
             PadEvent.State(
                 controllerId,
                 buttonFlags,
-                leftStickX,
-                leftStickY,
-                rightStickX,
-                rightStickY,
+                Stick(leftStickX, leftStickY),
+                Stick(rightStickX, rightStickY),
                 leftTrigger,
                 rightTrigger,
             )

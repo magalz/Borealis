@@ -34,11 +34,11 @@ class StickLog(private val name: String = "", private val shared: MutableList<St
 
 /**
  * What an analog stick does with a finger: where it takes a touch, how far it says the finger has
- * gone, when it counts a click or a double click, when the dead zone lets go, and what it says
- * when the finger lifts.
+ * gone, when it counts a click or a double click, when the dead zone lets go, and what it says when
+ * the finger lifts.
  *
- * The stick of these tests is 301 pixels square on a screen 1080 pixels high, which makes the
- * outer circle 142 pixels in radius, the dead zone 45, the stick 30, and the way the stick can go
+ * The stick of these tests is 301 pixels square on a screen 1080 pixels high, which makes the outer
+ * circle 142 pixels in radius, the dead zone 45, the stick 30, and the way the stick can go
  * 112. The middle is pixel 150: the stick takes half of its width in whole pixels.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -46,7 +46,8 @@ class StickLog(private val name: String = "", private val shared: MutableList<St
 @Config(shadows = [ShadowMoonBridge::class])
 class AnalogStickCharacterizationTest {
     private val kit = ElementRig()
-    private val stick = kit.add(AnalogStick(kit.controller, kit.rig.activity, 12), 100, 100, 301, 301)
+    private val stick =
+        kit.add(AnalogStick(kit.controller, kit.rig.activity, 12), 100, 100, 301, 301)
     private val log = StickLog().also { stick.addAnalogStickListener(it) }
 
     /** Touches the stick at ([dx], [dy]) from its middle, at [time]. */
@@ -372,9 +373,29 @@ class AnalogStickCharacterizationTest {
         down(dx = 60f)
         log.events.clear()
 
-        assertThat(stick.deliver(twoFingers(MotionEvent.ACTION_POINTER_DOWN, 1, 210f, 150f, 250f, 150f, FIRST + 10)))
+        assertThat(
+                stick.deliver(
+                    twoFingers(
+                        MotionEvent.ACTION_POINTER_DOWN,
+                        1,
+                        210f to 150f,
+                        250f to 150f,
+                        FIRST + 10,
+                    )
+                )
+            )
             .isTrue()
-        assertThat(stick.deliver(twoFingers(MotionEvent.ACTION_POINTER_UP, 1, 210f, 150f, 250f, 150f, FIRST + 20)))
+        assertThat(
+                stick.deliver(
+                    twoFingers(
+                        MotionEvent.ACTION_POINTER_UP,
+                        1,
+                        210f to 150f,
+                        250f to 150f,
+                        FIRST + 20,
+                    )
+                )
+            )
             .isTrue()
 
         assertThat(log.events).isEmpty()
@@ -456,7 +477,10 @@ class AnalogStickCharacterizationTest {
     fun `the time to a double click is counted from the last touch that was taken`() {
         down(time = 1_000)
         up(time = 1_050)
-        down(dx = 300f, time = 1_340) // outside the circle: not taken, and does not restart the time
+        down(
+            dx = 300f,
+            time = 1_340,
+        ) // outside the circle: not taken, and does not restart the time
 
         down(time = 1_360)
 

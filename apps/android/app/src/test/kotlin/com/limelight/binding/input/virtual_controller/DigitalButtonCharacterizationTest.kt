@@ -109,8 +109,12 @@ class DigitalButtonCharacterizationTest {
     fun `a second finger is ignored`() {
         press(a)
 
-        assertThat(a.deliver(twoFingers(MotionEvent.ACTION_POINTER_DOWN, 1, 10f, 10f, 50f, 50f))).isTrue()
-        assertThat(a.deliver(twoFingers(MotionEvent.ACTION_POINTER_UP, 1, 10f, 10f, 50f, 50f))).isTrue()
+        assertThat(
+                a.deliver(twoFingers(MotionEvent.ACTION_POINTER_DOWN, 1, 10f to 10f, 50f to 50f))
+            )
+            .isTrue()
+        assertThat(a.deliver(twoFingers(MotionEvent.ACTION_POINTER_UP, 1, 10f to 10f, 50f to 50f)))
+            .isTrue()
 
         assertThat(aLog.events).containsExactly("click")
         assertThat(a.isPressed).isTrue()

@@ -28,14 +28,14 @@ internal data class BridgeCall(
  * shadow of `MoonBridge`. It skips the static initialiser that loads the library, sets the audio
  * configurations the stream configuration reads, shadows every native of the class, records the
  * calls that `NvConnection` and the other callers make in the order they make them, and answers
- * like the library does: the launch query parameters, the name of a stage, the result of a call.
- * A native that has no answer returns the default of its type (0, false, null), unless a test puts
+ * like the library does: the launch query parameters, the name of a stage, the result of a call. A
+ * native that has no answer returns the default of its type (0, false, null), unless a test puts
  * one in [answers].
  *
  * `setupBridge` and `cleanupBridge` are recorded and then run the real code, so the `bridge*`
  * callbacks reach the renderers and the listener that a test gives to `setupBridge`; [reset] runs
- * the real `cleanupBridge` too.
- * `getStageName` and `getLaunchUrlQueryParameters` answer without being recorded.
+ * the real `cleanupBridge` too. `getStageName` and `getLaunchUrlQueryParameters` answer without
+ * being recorded.
  *
  * State lives in this object, which every test of one Robolectric sandbox shares: call [reset]
  * before each test.
@@ -76,8 +76,8 @@ internal object ShadowRecordingBridge {
     val answers = ConcurrentHashMap<String, Any>()
 
     /**
-     * Forgets the calls and the answers, and runs the real `cleanupBridge`, so that the next test of
-     * the sandbox finds `MoonBridge` without renderers and listener.
+     * Forgets the calls and the answers, and runs the real `cleanupBridge`, so that the next test
+     * of the sandbox finds `MoonBridge` without renderers and listener.
      */
     fun reset() {
         calls.clear()
@@ -171,7 +171,7 @@ internal object ShadowRecordingBridge {
         realCleanupBridge()
     }
 
-    @Suppress("unused", "LongParameterList")
+    @Suppress("unused")
     @Implementation
     @JvmStatic
     fun startConnection(
@@ -269,7 +269,7 @@ internal object ShadowRecordingBridge {
         record("sendMouseButton", buttonEvent, mouseButton)
     }
 
-    @Suppress("unused", "LongParameterList")
+    @Suppress("unused")
     @Implementation
     @JvmStatic
     fun sendMultiControllerInput(
@@ -297,7 +297,7 @@ internal object ShadowRecordingBridge {
         )
     }
 
-    @Suppress("unused", "LongParameterList")
+    @Suppress("unused")
     @Implementation
     @JvmStatic
     fun sendTouchEvent(
@@ -324,7 +324,7 @@ internal object ShadowRecordingBridge {
         return intResult
     }
 
-    @Suppress("unused", "LongParameterList")
+    @Suppress("unused")
     @Implementation
     @JvmStatic
     fun sendPenEvent(
@@ -471,7 +471,11 @@ internal object ShadowRecordingBridge {
     @Suppress("unused")
     @Implementation
     @JvmStatic
-    fun testClientConnectivity(testServerHostName: String?, referencePort: Int, testFlags: Int): Int {
+    fun testClientConnectivity(
+        testServerHostName: String?,
+        referencePort: Int,
+        testFlags: Int,
+    ): Int {
         record("testClientConnectivity", testServerHostName, referencePort, testFlags)
         return intAnswer("testClientConnectivity")
     }

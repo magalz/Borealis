@@ -12,17 +12,16 @@ import android.view.KeyEvent.KEYCODE_DPAD_UP
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.input.ControllerPacket.A_FLAG
-import com.limelight.nvstream.input.ControllerPacket.B_FLAG
 import com.limelight.nvstream.input.ControllerPacket.BACK_FLAG
-import com.limelight.nvstream.input.ControllerPacket.LB_FLAG
+import com.limelight.nvstream.input.ControllerPacket.B_FLAG
 import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
 import com.limelight.nvstream.input.ControllerPacket.X_FLAG
 import com.limelight.nvstream.input.ControllerPacket.Y_FLAG
 import com.limelight.preferences.PreferenceConfiguration.AnalogStickForScrolling
 import io.github.magalz.borealis.input.FakeUsbController
+import java.time.Duration
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.Duration
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowSystemClock
@@ -38,7 +37,10 @@ import org.robolectric.shadows.ShadowSystemClock
  */
 @RunWith(RobolectricTestRunner::class)
 class CombiningCharacterizationTest {
-    private val rig = EventsRig { gamepadMouseSpeed = 100; analogStickForScrolling = AnalogStickForScrolling.RIGHT }
+    private val rig = EventsRig {
+        gamepadMouseSpeed = 100
+        analogStickForScrolling = AnalogStickForScrolling.RIGHT
+    }
 
     /** Sends the packet of a pad without changing anything of it. */
     private fun Pad.send(): Sent {
@@ -91,7 +93,12 @@ class CombiningCharacterizationTest {
         rig.addPad(
             8,
             controllerNumber = 1,
-            fields = mapOf("assignedControllerNumber" to false, "inputMap" to B_FLAG, "leftStickX" to 500.toShort()),
+            fields =
+                mapOf(
+                    "assignedControllerNumber" to false,
+                    "inputMap" to B_FLAG,
+                    "leftStickX" to 500.toShort(),
+                ),
         )
 
         assertThat(assigned.send()).isEqualTo(Sent(1, 1, 0))
@@ -148,7 +155,12 @@ class CombiningCharacterizationTest {
             rig.addPad(
                 8,
                 controllerNumber = 0,
-                fields = mapOf("mouseEmulationActive" to true, "inputMap" to X_FLAG, "leftStickX" to 9.toShort()),
+                fields =
+                    mapOf(
+                        "mouseEmulationActive" to true,
+                        "inputMap" to X_FLAG,
+                        "leftStickX" to 9.toShort(),
+                    ),
             )
 
         gamepad.press(KEYCODE_BUTTON_A)
@@ -168,7 +180,8 @@ class CombiningCharacterizationTest {
 
         assertThat(rig.packets.last()).isEqualTo(Sent(0, 1, A_FLAG or B_FLAG, leftStickX = 32766))
         system.press(KEYCODE_BUTTON_X)
-        assertThat(rig.packets.last()).isEqualTo(Sent(0, 1, A_FLAG or B_FLAG or X_FLAG, leftStickX = 32766))
+        assertThat(rig.packets.last())
+            .isEqualTo(Sent(0, 1, A_FLAG or B_FLAG or X_FLAG, leftStickX = 32766))
     }
 
     @Test
@@ -248,7 +261,8 @@ class CombiningCharacterizationTest {
 
     @Test
     fun `two pads with the same stick value send that value`() {
-        val (first, _) = twoPads(mapOf("leftStickY" to 100.toShort()), mapOf("leftStickY" to 100.toShort()))
+        val (first, _) =
+            twoPads(mapOf("leftStickY" to 100.toShort()), mapOf("leftStickY" to 100.toShort()))
 
         assertThat(first.send().leftStickY).isEqualTo(100)
     }
@@ -434,7 +448,7 @@ class CombiningCharacterizationTest {
         val pad = mouseModePad()
 
         pad.press(KEYCODE_BUTTON_A)
-        pad.press(KEYCODE_BUTTON_A, repeat = 1)
+        pad.press(KEYCODE_BUTTON_A, KeyDetail(repeat = 1))
         pad.press(KEYCODE_BUTTON_B)
         rig.advanceBy(100)
         pad.release(KEYCODE_BUTTON_A)
@@ -497,7 +511,8 @@ class CombiningCharacterizationTest {
 
         pad.release(KEYCODE_BUTTON_A)
 
-        // The mouse side saw no press, so it sees no change in A: the A that is up is the first it knows.
+        // The mouse side saw no press, so it sees no change in A: the A that is up is the first it
+        // knows.
         assertThat(rig.connection.mouse).isEmpty()
     }
 
@@ -517,7 +532,8 @@ class CombiningCharacterizationTest {
 
     @Test
     fun `the stick moves the pointer on a tick every 16 ms, the first one 16 ms after the mouse came on`() {
-        val pad = rig.addPad(7, controllerNumber = 0, fields = mapOf("leftStickX" to 32766.toShort()))
+        val pad =
+            rig.addPad(7, controllerNumber = 0, fields = mapOf("leftStickX" to 32766.toShort()))
         rig.handler.setMouseEmulation(true)
 
         rig.advanceBy(15)
@@ -652,7 +668,8 @@ class CombiningCharacterizationTest {
 
     @Test
     fun `the default context has its controller number from the start, so a report never asks for one`() {
-        // The default context has its number from the start, which is why a report never reaches the
+        // The default context has its number from the start, which is why a report never reaches
+        // the
         // native arrival code that a new pad does.
         assertThat(rig.default.getBoolean("assignedControllerNumber")).isTrue()
         assertThat(rig.default.getShort("controllerNumber")).isEqualTo(0)

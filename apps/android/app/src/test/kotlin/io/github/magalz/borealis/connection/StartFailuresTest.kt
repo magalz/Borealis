@@ -226,7 +226,14 @@ class StartFailuresTest {
 
     @Test
     fun `a stream configuration without an app ends the thread of the start before it says anything`() {
-        rig.start(rig.connection(config = rig.config(app = null)))
+        rig.start(
+            rig.connection(
+                config =
+                    rig.config {
+                        setApp(null)
+                    }
+            )
+        )
 
         assertThat(died.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue()
         assertThat(uncaught.single()).isInstanceOf(RuntimeException::class.java)
@@ -285,7 +292,14 @@ class StartFailuresTest {
 
     @Test
     fun `a stream configuration without an audio configuration ends the thread of the start at the launch`() {
-        rig.start(rig.connection(config = rig.config(audio = null)))
+        rig.start(
+            rig.connection(
+                config =
+                    rig.config {
+                        setAudioConfiguration(null)
+                    }
+            )
+        )
 
         assertThat(died.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue()
         assertThat(uncaught.single()).isInstanceOf(RuntimeException::class.java)

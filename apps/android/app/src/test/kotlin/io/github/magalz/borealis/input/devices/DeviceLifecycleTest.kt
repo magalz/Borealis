@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.input.devices
 
 import android.os.Vibrator
-import android.view.KeyEvent
 import android.view.KeyEvent.KEYCODE_A
 import android.view.KeyEvent.KEYCODE_BUTTON_A
 import android.view.KeyEvent.KEYCODE_BUTTON_B
@@ -18,8 +17,8 @@ import org.robolectric.shadow.api.Shadow
 /**
  * The handler makes the context of a device when its first event arrives, keeps it while the device
  * is there, replaces it when Android says the device changed (keeping the controller number) and
- * drops it, with its controller number, when the device goes. USB-driver pads have contexts of their
- * own, made when the driver reports the pad.
+ * drops it, with its controller number, when the device goes. USB-driver pads have contexts of
+ * their own, made when the driver reports the pad.
  */
 class DeviceLifecycleTest : DevicesTestBase() {
     private val a = ControllerPacket.A_FLAG
@@ -87,12 +86,11 @@ class DeviceLifecycleTest : DevicesTestBase() {
     @Test
     fun `a device that is no controller still gets a context when it sends an event to the handler`() {
         val keyboard =
-            pad(
-                1,
-                sources = android.view.InputDevice.SOURCE_KEYBOARD,
-                keyboardType = android.view.InputDevice.KEYBOARD_TYPE_ALPHABETIC,
-                axes = emptyList(),
-            )
+            pad(1) {
+                sources = android.view.InputDevice.SOURCE_KEYBOARD
+                keyboardType = android.view.InputDevice.KEYBOARD_TYPE_ALPHABETIC
+                axes = emptyList()
+            }
         val rig = rig(devices = listOf(keyboard))
 
         val context = rig.touch(keyboard)
@@ -235,7 +233,7 @@ class DeviceLifecycleTest : DevicesTestBase() {
 
     @Test
     fun `removing a device cancels its own vibrator`() {
-        val device = pad(1, hasVibrator = true)
+        val device = pad(1) { hasVibrator = true }
         val rig = rig(devices = listOf(device))
         val vibrator = checkNotNull(rig.touch(device)["vibrator"])
 
@@ -247,7 +245,7 @@ class DeviceLifecycleTest : DevicesTestBase() {
 
     @Test
     fun `removing an internal pad cancels the vibrator of the phone`() {
-        val device = pad(1, external = false)
+        val device = pad(1) { external = false }
         val rig = rig(devices = listOf(device))
         rig.touch(device)
         val phone = RuntimeEnvironment.getApplication().getSystemService(Vibrator::class.java)
@@ -315,7 +313,7 @@ class DeviceLifecycleTest : DevicesTestBase() {
         assertThat(old.axes().hatX).isEqualTo(NO_AXIS)
 
         // The device gains a hat, as one that has a touchpad does when it changes mode
-        val after = pad(1, axes = STICKS_AND_Z + hat)
+        val after = pad(1) { axes = STICKS_AND_Z + hat }
         disconnectPad(before)
         connectPad(after)
         rig.change(after)
@@ -336,7 +334,7 @@ class DeviceLifecycleTest : DevicesTestBase() {
         val packets = rig.connection.packets.size
         val arrivals = rig.connection.arrivals.size
 
-        val after = pad(1, axes = STICKS_AND_Z + hat)
+        val after = pad(1) { axes = STICKS_AND_Z + hat }
         disconnectPad(before)
         connectPad(after)
         rig.change(after)
@@ -355,7 +353,7 @@ class DeviceLifecycleTest : DevicesTestBase() {
         val rig = rig(devices = listOf(before))
         rig.press(before, KEYCODE_BUTTON_A)
 
-        val after = pad(1, axes = STICKS_AND_Z + hat)
+        val after = pad(1) { axes = STICKS_AND_Z + hat }
         disconnectPad(before)
         connectPad(after)
         rig.change(after)
@@ -373,7 +371,7 @@ class DeviceLifecycleTest : DevicesTestBase() {
         rig.handler.setMouseEmulation(true)
         assertThat(rig.context(before).bool("mouseEmulationActive")).isTrue()
 
-        val after = pad(1, axes = STICKS_AND_Z + hat)
+        val after = pad(1) { axes = STICKS_AND_Z + hat }
         disconnectPad(before)
         connectPad(after)
         rig.change(after)
@@ -392,7 +390,7 @@ class DeviceLifecycleTest : DevicesTestBase() {
         setField(old.context, "accelReportRateHz", 50.toShort())
         setField(old.context, "needsClickpadEmulation", true)
 
-        val after = pad(1, axes = STICKS_AND_Z + hat)
+        val after = pad(1) { axes = STICKS_AND_Z + hat }
         disconnectPad(before)
         connectPad(after)
         rig.change(after)
@@ -412,7 +410,7 @@ class DeviceLifecycleTest : DevicesTestBase() {
         val sensors = field(rig.handler, "deviceSensorManager")
         assertThat(rig.context(before)["sensorManager"]).isSameInstanceAs(sensors)
 
-        val after = pad(1, axes = STICKS_AND_Z + hat)
+        val after = pad(1) { axes = STICKS_AND_Z + hat }
         disconnectPad(before)
         connectPad(after)
         rig.change(after)
@@ -426,7 +424,7 @@ class DeviceLifecycleTest : DevicesTestBase() {
         val rig = rig(devices = listOf(before))
         rig.press(before, KEYCODE_BUTTON_A)
 
-        val after = pad(1, axes = STICKS_AND_Z + hat)
+        val after = pad(1) { axes = STICKS_AND_Z + hat }
         disconnectPad(before)
         connectPad(after)
         rig.change(after)
@@ -441,7 +439,7 @@ class DeviceLifecycleTest : DevicesTestBase() {
         val rig = rig(devices = listOf(before))
         rig.touch(before)
 
-        val after = pad(1, axes = STICKS_AND_Z + hat)
+        val after = pad(1) { axes = STICKS_AND_Z + hat }
         disconnectPad(before)
         connectPad(after)
         rig.change(after)

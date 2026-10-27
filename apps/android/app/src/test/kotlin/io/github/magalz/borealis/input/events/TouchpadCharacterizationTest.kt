@@ -29,8 +29,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * `tryHandleTouchpadEvent` and the controller touch events it sends: which events it takes, the
- * type of touch each action is, the coordinates and pressure it normalizes, what it answers when the
- * host has no controller touch, and the touchpad button on a pad whose touchpad is a mouse.
+ * type of touch each action is, the coordinates and pressure it normalizes, what it answers when
+ * the host has no controller touch, and the touchpad button on a pad whose touchpad is a mouse.
  *
  * The pad has a touchpad 1000 by 500 with pressure from 0 to 2, and sits on controller number 2.
  */
@@ -63,14 +63,12 @@ class TouchpadCharacterizationTest {
         get() = rig.connection.touches
 
     private fun touch(
-        controller: Int = 2,
         type: Int,
         id: Int = 0,
         x: Float = 0.25f,
         y: Float = 0.25f,
         pressure: Float = 0.5f,
-    ) =
-        Touch(controller, type, id, x, y, pressure)
+    ) = Touch(2, type, id, x, y, pressure)
 
     // Touch types, as the host library numbers them
     private val down = 1
@@ -97,8 +95,18 @@ class TouchpadCharacterizationTest {
 
     @Test
     fun `the source has to be exactly a touchpad or a mouse, not a combination`() {
-        assertThat(pad.touch(ACTION_DOWN, listOf(finger()), source = SOURCE_TOUCHPAD or SOURCE_KEYBOARD)).isFalse()
-        assertThat(pad.touch(ACTION_DOWN, listOf(finger()), source = SOURCE_MOUSE or SOURCE_KEYBOARD)).isFalse()
+        assertThat(
+                pad.touch(
+                    ACTION_DOWN,
+                    listOf(finger()),
+                    source = SOURCE_TOUCHPAD or SOURCE_KEYBOARD,
+                )
+            )
+            .isFalse()
+        assertThat(
+                pad.touch(ACTION_DOWN, listOf(finger()), source = SOURCE_MOUSE or SOURCE_KEYBOARD)
+            )
+            .isFalse()
 
         assertThat(touches).isEmpty()
     }
@@ -130,7 +138,14 @@ class TouchpadCharacterizationTest {
         assertThat(pad.touch(ACTION_DOWN, listOf(finger()))).isTrue()
         assertThat(pad.touch(ACTION_MOVE, listOf(finger()))).isTrue()
         assertThat(pad.touch(ACTION_DOWN, listOf(finger()), source = SOURCE_MOUSE)).isTrue()
-        assertThat(pad.touch(ACTION_BUTTON_PRESS, listOf(finger()), actionButton = BUTTON_PRIMARY)).isTrue()
+        assertThat(
+                pad.touch(
+                    ACTION_BUTTON_PRESS,
+                    listOf(finger()),
+                    extras = TouchExtras(actionButton = BUTTON_PRIMARY),
+                )
+            )
+            .isTrue()
 
         assertThat(touches).isEmpty()
         assertThat(rig.packets).isEmpty()
@@ -154,7 +169,8 @@ class TouchpadCharacterizationTest {
 
     @Test
     fun `a finger down and up after the first are for the finger the action points at`() {
-        val fingers = listOf(finger(id = 4, x = 100f), finger(id = 9, x = 500f, y = 250f, pressure = 2f))
+        val fingers =
+            listOf(finger(id = 4, x = 100f), finger(id = 9, x = 500f, y = 250f, pressure = 2f))
 
         assertThat(pad.touch(ACTION_POINTER_DOWN, fingers, index = 1)).isTrue()
         assertThat(pad.touch(ACTION_POINTER_UP, fingers, index = 0)).isTrue()
@@ -171,15 +187,32 @@ class TouchpadCharacterizationTest {
     fun `an up with the canceled flag is a cancel of that finger, for the first finger and for the others`() {
         val fingers = listOf(finger(id = 4), finger(id = 9))
 
-        assertThat(pad.touch(ACTION_UP, listOf(finger(id = 3)), flags = FLAG_CANCELED)).isTrue()
-        assertThat(pad.touch(ACTION_POINTER_UP, fingers, index = 1, flags = FLAG_CANCELED)).isTrue()
+        assertThat(
+                pad.touch(
+                    ACTION_UP,
+                    listOf(finger(id = 3)),
+                    extras = TouchExtras(flags = FLAG_CANCELED),
+                )
+            )
+            .isTrue()
+        assertThat(
+                pad.touch(
+                    ACTION_POINTER_UP,
+                    fingers,
+                    index = 1,
+                    extras = TouchExtras(flags = FLAG_CANCELED),
+                )
+            )
+            .isTrue()
 
-        assertThat(touches).containsExactly(touch(type = cancel, id = 3), touch(type = cancel, id = 9)).inOrder()
+        assertThat(touches)
+            .containsExactly(touch(type = cancel, id = 3), touch(type = cancel, id = 9))
+            .inOrder()
     }
 
     @Test
     fun `the canceled flag changes nothing for a finger down`() {
-        pad.touch(ACTION_DOWN, listOf(finger()), flags = FLAG_CANCELED)
+        pad.touch(ACTION_DOWN, listOf(finger()), extras = TouchExtras(flags = FLAG_CANCELED))
 
         assertThat(touches).containsExactly(touch(type = down))
     }
@@ -225,7 +258,7 @@ class TouchpadCharacterizationTest {
 
         third.touch(ACTION_DOWN, listOf(finger()))
 
-        assertThat(touches).containsExactly(touch(controller = 5, type = down))
+        assertThat(touches).containsExactly(touch(type = down).copy(controller = 5))
     }
 
     // ----- Coordinates and pressure -----
@@ -285,7 +318,10 @@ class TouchpadCharacterizationTest {
     @Test
     fun `a range with no width makes the coordinate not a number`() {
         val empty =
-            touchpadPad(deviceId = 8, extra = mapOf("touchpadXRange" to motionRange(AXIS_X, 5f, 5f)))
+            touchpadPad(
+                deviceId = 8,
+                extra = mapOf("touchpadXRange" to motionRange(AXIS_X, 5f, 5f)),
+            )
 
         empty.touch(ACTION_DOWN, listOf(finger(x = 5f)))
 
@@ -301,15 +337,20 @@ class TouchpadCharacterizationTest {
 
         assertThat(pad.touch(ACTION_DOWN, listOf(finger()))).isFalse()
         assertThat(pad.touch(ACTION_UP, listOf(finger()))).isFalse()
-        assertThat(pad.touch(ACTION_POINTER_DOWN, listOf(finger(), finger(id = 1)), index = 1)).isFalse()
-        assertThat(pad.touch(ACTION_UP, listOf(finger()), flags = FLAG_CANCELED)).isFalse()
+        assertThat(pad.touch(ACTION_POINTER_DOWN, listOf(finger(), finger(id = 1)), index = 1))
+            .isFalse()
+        assertThat(
+                pad.touch(ACTION_UP, listOf(finger()), extras = TouchExtras(flags = FLAG_CANCELED))
+            )
+            .isFalse()
     }
 
     @Test
     fun `a move the host does not support stops at the first finger`() {
         rig.connection.touchResult = unsupported
 
-        assertThat(pad.touch(ACTION_MOVE, listOf(finger(id = 1), finger(id = 2), finger(id = 3)))).isFalse()
+        assertThat(pad.touch(ACTION_MOVE, listOf(finger(id = 1), finger(id = 2), finger(id = 3))))
+            .isFalse()
 
         assertThat(touches).hasSize(1)
     }
@@ -328,9 +369,15 @@ class TouchpadCharacterizationTest {
         for (answer in listOf(0, 1, -1, unsupported + 1)) {
             rig.connection.touchResult = answer
 
-            assertWithMessage("answer $answer").that(pad.touch(ACTION_DOWN, listOf(finger()))).isTrue()
-            assertWithMessage("answer $answer").that(pad.touch(ACTION_MOVE, listOf(finger()))).isTrue()
-            assertWithMessage("answer $answer").that(pad.touch(ACTION_CANCEL, listOf(finger()))).isTrue()
+            assertWithMessage("answer $answer")
+                .that(pad.touch(ACTION_DOWN, listOf(finger())))
+                .isTrue()
+            assertWithMessage("answer $answer")
+                .that(pad.touch(ACTION_MOVE, listOf(finger())))
+                .isTrue()
+            assertWithMessage("answer $answer")
+                .that(pad.touch(ACTION_CANCEL, listOf(finger())))
+                .isTrue()
         }
     }
 
@@ -356,7 +403,9 @@ class TouchpadCharacterizationTest {
                 ACTION_CANCEL,
             )
         for (action in actions) {
-            assertWithMessage("action $action").that(mousePad.touch(action, listOf(finger()))).isFalse()
+            assertWithMessage("action $action")
+                .that(mousePad.touch(action, listOf(finger())))
+                .isFalse()
         }
 
         assertThat(mouse.connection.touches).isEmpty()
@@ -389,7 +438,14 @@ class TouchpadCharacterizationTest {
 
     @Test
     fun `the primary button of the touchpad presses the touchpad button of the pad`() {
-        assertThat(pad.touch(ACTION_BUTTON_PRESS, listOf(finger()), actionButton = BUTTON_PRIMARY)).isTrue()
+        assertThat(
+                pad.touch(
+                    ACTION_BUTTON_PRESS,
+                    listOf(finger()),
+                    extras = TouchExtras(actionButton = BUTTON_PRIMARY),
+                )
+            )
+            .isTrue()
 
         assertThat(rig.packets).containsExactly(Sent(2, 1, TOUCHPAD_FLAG))
         assertThat(touches).isEmpty()
@@ -397,18 +453,50 @@ class TouchpadCharacterizationTest {
 
     @Test
     fun `and its release lets the touchpad button go`() {
-        pad.touch(ACTION_BUTTON_PRESS, listOf(finger()), actionButton = BUTTON_PRIMARY)
+        pad.touch(
+            ACTION_BUTTON_PRESS,
+            listOf(finger()),
+            extras = TouchExtras(actionButton = BUTTON_PRIMARY),
+        )
 
-        assertThat(pad.touch(ACTION_BUTTON_RELEASE, listOf(finger()), actionButton = BUTTON_PRIMARY)).isTrue()
+        assertThat(
+                pad.touch(
+                    ACTION_BUTTON_RELEASE,
+                    listOf(finger()),
+                    extras = TouchExtras(actionButton = BUTTON_PRIMARY),
+                )
+            )
+            .isTrue()
 
         assertThat(rig.buttons()).containsExactly(TOUCHPAD_FLAG, 0).inOrder()
     }
 
     @Test
     fun `another button of the touchpad is left to the system`() {
-        assertThat(pad.touch(ACTION_BUTTON_PRESS, listOf(finger()), actionButton = BUTTON_SECONDARY)).isFalse()
-        assertThat(pad.touch(ACTION_BUTTON_RELEASE, listOf(finger()), actionButton = BUTTON_SECONDARY)).isFalse()
-        assertThat(pad.touch(ACTION_BUTTON_PRESS, listOf(finger()), actionButton = 0)).isFalse()
+        assertThat(
+                pad.touch(
+                    ACTION_BUTTON_PRESS,
+                    listOf(finger()),
+                    extras = TouchExtras(actionButton = BUTTON_SECONDARY),
+                )
+            )
+            .isFalse()
+        assertThat(
+                pad.touch(
+                    ACTION_BUTTON_RELEASE,
+                    listOf(finger()),
+                    extras = TouchExtras(actionButton = BUTTON_SECONDARY),
+                )
+            )
+            .isFalse()
+        assertThat(
+                pad.touch(
+                    ACTION_BUTTON_PRESS,
+                    listOf(finger()),
+                    extras = TouchExtras(actionButton = 0),
+                )
+            )
+            .isFalse()
 
         assertThat(rig.packets).isEmpty()
     }
@@ -418,8 +506,22 @@ class TouchpadCharacterizationTest {
         val mouse = EventsRig { gamepadTouchpadAsMouse = true }
         val mousePad = mouse.addPad(7, controllerNumber = 2)
 
-        assertThat(mousePad.touch(ACTION_BUTTON_PRESS, listOf(finger()), actionButton = BUTTON_PRIMARY)).isFalse()
-        assertThat(mousePad.touch(ACTION_BUTTON_RELEASE, listOf(finger()), actionButton = BUTTON_PRIMARY)).isFalse()
+        assertThat(
+                mousePad.touch(
+                    ACTION_BUTTON_PRESS,
+                    listOf(finger()),
+                    extras = TouchExtras(actionButton = BUTTON_PRIMARY),
+                )
+            )
+            .isFalse()
+        assertThat(
+                mousePad.touch(
+                    ACTION_BUTTON_RELEASE,
+                    listOf(finger()),
+                    extras = TouchExtras(actionButton = BUTTON_PRIMARY),
+                )
+            )
+            .isFalse()
 
         assertThat(mouse.packets.map { it.buttons }).containsExactly(TOUCHPAD_FLAG, 0).inOrder()
     }
@@ -428,8 +530,16 @@ class TouchpadCharacterizationTest {
     fun `the touchpad button is added to the buttons the pad holds`() {
         val held = rig.addPad(8, controllerNumber = 2, fields = mapOf("inputMap" to 0x1000))
 
-        held.touch(ACTION_BUTTON_PRESS, listOf(finger()), actionButton = BUTTON_PRIMARY)
-        held.touch(ACTION_BUTTON_RELEASE, listOf(finger()), actionButton = BUTTON_PRIMARY)
+        held.touch(
+            ACTION_BUTTON_PRESS,
+            listOf(finger()),
+            extras = TouchExtras(actionButton = BUTTON_PRIMARY),
+        )
+        held.touch(
+            ACTION_BUTTON_RELEASE,
+            listOf(finger()),
+            extras = TouchExtras(actionButton = BUTTON_PRIMARY),
+        )
 
         assertThat(rig.buttons()).containsExactly(0x1000 or TOUCHPAD_FLAG, 0x1000).inOrder()
     }
@@ -437,7 +547,12 @@ class TouchpadCharacterizationTest {
     // ----- A touchpad that is a mouse source -----
 
     private fun mouseSource(action: Int, actionButton: Int = 0, pad: Pad = this.pad) =
-        pad.touch(action, listOf(finger()), source = SOURCE_MOUSE, actionButton = actionButton)
+        pad.touch(
+            action,
+            listOf(finger()),
+            source = SOURCE_MOUSE,
+            extras = TouchExtras(actionButton = actionButton),
+        )
 
     @Test
     fun `a mouse source presses the touchpad button when its left button goes down`() {
@@ -455,7 +570,10 @@ class TouchpadCharacterizationTest {
 
             assertWithMessage("action $action").that(mouseSource(action)).isTrue()
 
-            assertWithMessage("action $action").that(rig.buttons()).containsExactly(TOUCHPAD_FLAG, 0).inOrder()
+            assertWithMessage("action $action")
+                .that(rig.buttons())
+                .containsExactly(TOUCHPAD_FLAG, 0)
+                .inOrder()
         }
     }
 

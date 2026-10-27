@@ -93,7 +93,10 @@ class ConnectionTypeTest {
 
     /** The connection type and the packet size that reached the native connection. */
     private fun negotiated(remote: Int = StreamConfiguration.STREAM_CFG_AUTO): Pair<Int, Int> {
-        val config = rig.config(remote = remote, maxPacketSize = CONFIGURED_PACKET_SIZE)
+        val config = rig.config {
+            setRemoteConfiguration(remote)
+            setMaxPacketSize(CONFIGURED_PACKET_SIZE)
+        }
         rig.start(rig.connection(config))
         val args = ShadowRecordingBridge.await("startConnection").args
         rig.listener.awaitEnded()

@@ -69,13 +69,8 @@ class NvPairingServiceTest {
         runningGameId: Int = 0,
         address: String? = "192.168.1.5",
     ): ComputerDetails =
-        details(
-                uuid = uuid,
-                state = state,
-                pairState = pairState,
-                runningGameId = runningGameId,
-                address = address,
-            )
+        details(uuid = uuid, runningGameId = runningGameId, address = address)
+            .reported(state = state, pairState = pairState)
             .also { binder.computers[uuid] = it }
 
     private fun auditTypes() = audit.events.map { it.type }

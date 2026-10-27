@@ -32,8 +32,8 @@ import org.robolectric.util.ReflectionHelpers.ClassParameter
 /**
  * Stands in for the native `moonlight-core` library, which a unit test does not have. Creating a
  * controller context from a real [InputDevice] asks it for the controller type and for the paddles
- * and the share button of a vendor and product, and this shadow answers from [types], [paddles]
- * and [shares] (anything not listed is unknown, no paddles and no share button) and records every
+ * and the share button of a vendor and product, and this shadow answers from [types], [paddles] and
+ * [shares] (anything not listed is unknown, no paddles and no share button) and records every
  * question in [queries]. The static initializer, which loads the native library, only sets the
  * audio configurations that `PreferenceConfiguration.readPreferences` reads.
  *
@@ -205,7 +205,9 @@ class DevicesConnection(activity: Activity) :
     override fun sendMouseHScroll(scrollClicks: Byte) = Unit
 }
 
-/** One motion range of a test device: the [axis] as the [source] reports it, with its flat value. */
+/**
+ * One motion range of a test device: the [axis] as the [source] reports it, with its flat value.
+ */
 data class Axis(val axis: Int, val source: Int = InputDevice.SOURCE_JOYSTICK, val flat: Float = 0f)
 
 /**
@@ -237,71 +239,67 @@ val LEFT_STICK = listOf(MotionEvent.AXIS_X, MotionEvent.AXIS_Y).map { Axis(it) }
  * Robolectric's `InputDeviceBuilder` needs Android 14; before it the device is made with the
  * framework's own constructor, whose arguments the Android level sets.
  */
-@Suppress("LongParameterList")
-fun pad(
-    id: Int,
-    name: String = "pad-$id",
-    vendorId: Int = 0,
-    productId: Int = 0,
-    sources: Int = PAD_SOURCES,
-    keyboardType: Int = InputDevice.KEYBOARD_TYPE_NON_ALPHABETIC,
-    external: Boolean = true,
-    descriptor: String = "descriptor-$id",
-    axes: List<Axis> = STICKS_AND_Z,
-    keys: IntArray = intArrayOf(),
-    hasVibrator: Boolean = false,
-): Pad {
+fun pad(id: Int, configure: PadSpec.() -> Unit = {}): Pad {
+    val spec = PadSpec().apply(configure)
+    val name = spec.name ?: "pad-$id"
+    val descriptor = spec.descriptor ?: "descriptor-$id"
     val device =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             val builder =
                 InputDeviceBuilder.newBuilder()
                     .setId(id)
                     .setName(name)
-                    .setVendorId(vendorId)
-                    .setProductId(productId)
+                    .setVendorId(spec.vendorId)
+                    .setProductId(spec.productId)
                     .setDescriptor(descriptor)
-                    .setExternal(external)
-                    .setSources(sources)
-                    .setKeyboardType(keyboardType)
-                    .setHasVibrator(hasVibrator)
-            for (axis in axes) {
+                    .setExternal(spec.external)
+                    .setSources(spec.sources)
+                    .setKeyboardType(spec.keyboardType)
+                    .setHasVibrator(spec.hasVibrator)
+            for (axis in spec.axes) {
                 builder.addMotionRange(axis.axis, axis.source, -1f, 1f, axis.flat, 0f, 0f)
             }
             builder.build()
         } else {
-            legacyDevice(id, name, vendorId, productId, sources, keyboardType, external, descriptor, hasVibrator)
-                .also { device ->
-                    for (axis in axes) {
-                        ReflectionHelpers.callInstanceMethod<Unit>(
-                            device,
-                            "addMotionRange",
-                            ClassParameter.from(Int::class.javaPrimitiveType, axis.axis),
-                            ClassParameter.from(Int::class.javaPrimitiveType, axis.source),
-                            ClassParameter.from(Float::class.javaPrimitiveType, -1f),
-                            ClassParameter.from(Float::class.javaPrimitiveType, 1f),
-                            ClassParameter.from(Float::class.javaPrimitiveType, axis.flat),
-                            ClassParameter.from(Float::class.javaPrimitiveType, 0f),
-                            ClassParameter.from(Float::class.javaPrimitiveType, 0f),
-                        )
-                    }
+            legacyDevice(id, name, descriptor, spec).also { device ->
+                for (axis in spec.axes) {
+                    ReflectionHelpers.callInstanceMethod<Unit>(
+                        device,
+                        "addMotionRange",
+                        ClassParameter.from(Int::class.javaPrimitiveType, axis.axis),
+                        ClassParameter.from(Int::class.javaPrimitiveType, axis.source),
+                        ClassParameter.from(Float::class.javaPrimitiveType, -1f),
+                        ClassParameter.from(Float::class.javaPrimitiveType, 1f),
+                        ClassParameter.from(Float::class.javaPrimitiveType, axis.flat),
+                        ClassParameter.from(Float::class.javaPrimitiveType, 0f),
+                        ClassParameter.from(Float::class.javaPrimitiveType, 0f),
+                    )
                 }
+            }
         }
-    return Pad(device, keys)
+    return Pad(device, spec.keys)
+}
+
+/**
+ * What a test sets of a pad made by [pad]; the rest is a gamepad with two sticks and a Z axis, an
+ * external one, with no vibrator and no keys. The name and the descriptor default to `pad-<id>` and
+ * `descriptor-<id>`.
+ */
+class PadSpec {
+    var name: String? = null
+    var vendorId = 0
+    var productId = 0
+    var sources = PAD_SOURCES
+    var keyboardType = InputDevice.KEYBOARD_TYPE_NON_ALPHABETIC
+    var external = true
+    var descriptor: String? = null
+    var axes: List<Axis> = STICKS_AND_Z
+    var keys = intArrayOf()
+    var hasVibrator = false
 }
 
 // The hidden constructor of Android 9 to 13. Android 12 added the sensor and battery flags.
-@Suppress("LongParameterList")
-private fun legacyDevice(
-    id: Int,
-    name: String,
-    vendorId: Int,
-    productId: Int,
-    sources: Int,
-    keyboardType: Int,
-    external: Boolean,
-    descriptor: String,
-    hasVibrator: Boolean,
-): InputDevice {
+private fun legacyDevice(id: Int, name: String, descriptor: String, spec: PadSpec): InputDevice {
     val int = Int::class.javaPrimitiveType
     val boolean = Boolean::class.javaPrimitiveType
     val arguments =
@@ -310,14 +308,14 @@ private fun legacyDevice(
             ClassParameter.from(int, 0),
             ClassParameter.from(int, 0),
             ClassParameter.from(String::class.java, name),
-            ClassParameter.from(int, vendorId),
-            ClassParameter.from(int, productId),
+            ClassParameter.from(int, spec.vendorId),
+            ClassParameter.from(int, spec.productId),
             ClassParameter.from(String::class.java, descriptor),
-            ClassParameter.from(boolean, external),
-            ClassParameter.from(int, sources),
-            ClassParameter.from(int, keyboardType),
+            ClassParameter.from(boolean, spec.external),
+            ClassParameter.from(int, spec.sources),
+            ClassParameter.from(int, spec.keyboardType),
             ClassParameter.from(KeyCharacterMap::class.java, null),
-            ClassParameter.from(boolean, hasVibrator),
+            ClassParameter.from(boolean, spec.hasVibrator),
             ClassParameter.from(boolean, false),
             ClassParameter.from(boolean, false),
         )
@@ -330,14 +328,16 @@ private fun legacyDevice(
 
 /** Makes [pad] one of the devices Android has, with its keys. It fires no listener. */
 fun connectPad(pad: Pad) {
-    val inputManager = RuntimeEnvironment.getApplication().getSystemService(InputManager::class.java)
+    val inputManager =
+        RuntimeEnvironment.getApplication().getSystemService(InputManager::class.java)
     shadowOf(inputManager).addInputDevice(pad.device)
     shadowOf(inputManager).addInputDeviceKeys(pad.id, pad.keys)
 }
 
 /** Takes the device away from Android. It fires no listener. */
 fun disconnectPad(pad: Pad) {
-    val inputManager = RuntimeEnvironment.getApplication().getSystemService(InputManager::class.java)
+    val inputManager =
+        RuntimeEnvironment.getApplication().getSystemService(InputManager::class.java)
     shadowOf(inputManager).removeInputDevice(pad.id)
 }
 
@@ -461,7 +461,10 @@ class DevicesRig(
 
 /** A field of [target] or of one of its superclasses, read through reflection. */
 fun field(target: Any, name: String): Any? =
-    fieldOwner(target.javaClass, name).getDeclaredField(name).apply { isAccessible = true }.get(target)
+    fieldOwner(target.javaClass, name)
+        .getDeclaredField(name)
+        .apply { isAccessible = true }
+        .get(target)
 
 fun setField(target: Any, name: String, value: Any?) {
     fieldOwner(target.javaClass, name)

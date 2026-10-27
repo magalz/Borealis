@@ -43,9 +43,9 @@ internal sealed interface AudioCall {
 
 /**
  * Stands in for the audio hardware that a unit test does not have. Robolectric's own `AudioTrack`
- * shadow keeps none of what a renderer decides (the buffer size, the performance mode, the
- * samples) and answers neither the hardware rate nor the samples of a write, so this one replaces
- * it. The real `AudioTrack` and `AudioTrack.Builder` still run on top of it, with their own checks.
+ * shadow keeps none of what a renderer decides (the buffer size, the performance mode, the samples)
+ * and answers neither the hardware rate nor the samples of a write, so this one replaces it. The
+ * real `AudioTrack` and `AudioTrack.Builder` still run on top of it, with their own checks.
  *
  * State lives in [AudioPlatform], which every test of one Robolectric sandbox shares: use the
  * [AudioPlatform] rule, which resets it before each test.
@@ -53,7 +53,7 @@ internal sealed interface AudioCall {
  * Use it with `@Config(shadows = [ShadowRecordingAudioTrack::class, ...])`.
  */
 @Implements(android.media.AudioTrack::class)
-@Suppress("FunctionNaming", "unused", "LongParameterList", "UNUSED_PARAMETER")
+@Suppress("FunctionNaming", "unused", "UNUSED_PARAMETER")
 internal class ShadowRecordingAudioTrack {
     private var track = 0
 

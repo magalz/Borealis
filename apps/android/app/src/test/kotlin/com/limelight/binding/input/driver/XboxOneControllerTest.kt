@@ -192,22 +192,17 @@ class XboxOneControllerTest {
         second: Int = 0,
         leftTrigger: Int = 0,
         rightTrigger: Int = 0,
-        leftStickX: Int = 0,
-        leftStickY: Int = 0,
-        rightStickX: Int = 0,
-        rightStickY: Int = 0,
-        skipped: List<Int> = listOf(0x00, 0x01, 0x0E),
+        sticks: RawSticks = RawSticks(),
     ): IntArray =
-        intArrayOf(0x20) +
-            skipped.toIntArray() +
+        intArrayOf(0x20, 0x00, 0x01, 0x0E) +
             intArrayOf(first, second) +
             listOf(
                     leftTrigger,
                     rightTrigger,
-                    leftStickX,
-                    leftStickY,
-                    rightStickX,
-                    rightStickY,
+                    sticks.leftX,
+                    sticks.leftY,
+                    sticks.rightX,
+                    sticks.rightY,
                 )
                 .flatMap { listOf(it and 0xFF, (it shr 8) and 0xFF) }
 
@@ -345,12 +340,7 @@ class XboxOneControllerTest {
         pad.play(
             *raws
                 .map { raw ->
-                    buttonsReport(
-                        leftStickX = raw,
-                        leftStickY = raw,
-                        rightStickX = raw,
-                        rightStickY = raw,
-                    )
+                    buttonsReport(sticks = RawSticks(raw, raw, raw, raw))
                 }
                 .toTypedArray()
         )
@@ -383,10 +373,7 @@ class XboxOneControllerTest {
             buttonsReport(
                 leftTrigger = 100,
                 rightTrigger = 200,
-                leftStickX = 1000,
-                leftStickY = 2000,
-                rightStickX = -3000,
-                rightStickY = -4000,
+                sticks = RawSticks(1000, 2000, -3000, -4000),
             )
         )
 
@@ -405,7 +392,8 @@ class XboxOneControllerTest {
     @Test
     fun `the three bytes after the type of a buttons report are not read`() {
         val pad = pad()
-        pad.play(buttonsReport(first = 0x10, skipped = listOf(0xFF, 0xFF, 0xFF)))
+        // The three bytes after the type are the ones the driver skips.
+        pad.play(buttonsReport(first = 0x10).apply { fill(0xFF, 1, 4) })
 
         pad.start()
 

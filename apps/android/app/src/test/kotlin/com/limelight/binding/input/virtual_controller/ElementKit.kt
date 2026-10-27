@@ -24,21 +24,19 @@ fun motion(
 
 /**
  * A touch of two fingers, where the finger of [index] is the one that moves, goes down or lifts:
- * `getActionIndex()` of the event is [index]. The first finger is at ([x0], [y0]) and the second
- * at ([x1], [y1]).
+ * `getActionIndex()` of the event is [index]. The first finger is at [first] and the second at
+ * [second].
  */
 fun twoFingers(
     action: Int,
     index: Int,
-    x0: Float,
-    y0: Float,
-    x1: Float,
-    y1: Float,
+    first: Pair<Float, Float>,
+    second: Pair<Float, Float>,
     eventTime: Long = 0,
 ): MotionEvent {
-    val properties =
-        arrayOf(finger(0), finger(1))
-    val coordinates = arrayOf(coordinates(x0, y0), coordinates(x1, y1))
+    val properties = arrayOf(finger(0), finger(1))
+    val coordinates =
+        arrayOf(coordinates(first.first, first.second), coordinates(second.first, second.second))
     return MotionEvent.obtain(
         eventTime,
         eventTime,

@@ -99,14 +99,13 @@ class StartLaunchTest {
     fun `the native connection gets the negotiated stream and the host that the start found out`() {
         rig.script.gfeVersion = "3.28.0.417"
         rig.script.codecSupport = "259"
-        val config =
-            rig.config(
-                maxPacketSize = 1392,
-                formats = MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265,
-                clientRefreshRateX100 = 5994,
-                refreshRate = 90,
-                launchRefreshRate = 30,
-            )
+        val config = rig.config {
+            setMaxPacketSize(1392)
+            setSupportedVideoFormats(MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265)
+            setClientRefreshRateX100(5994)
+            setRefreshRate(90)
+            setLaunchRefreshRate(30)
+        }
         startAndConnect(rig.connection(config))
 
         assertThat(startConnectionArgs().subList(0, 14))
@@ -143,11 +142,10 @@ class StartLaunchTest {
 
     @Test
     fun `the native connection gets the capabilities of the decoder and the color settings`() {
-        val config =
-            rig.config(
-                colorSpace = MoonBridge.COLORSPACE_REC_2020,
-                colorRange = MoonBridge.COLOR_RANGE_FULL,
-            )
+        val config = rig.config {
+            setColorSpace(MoonBridge.COLORSPACE_REC_2020)
+            setColorRange(MoonBridge.COLOR_RANGE_FULL)
+        }
         startAndConnect(rig.connection(config), decoder = StubDecoder(capabilities = 0x42))
 
         assertThat(startConnectionArgs().subList(16, 19))
@@ -266,10 +264,11 @@ class StartLaunchTest {
     @Test
     fun `a PC that cannot stream HDR is told so, and the stream is SDR`() {
         rig.script.codecSupport = "1"
-        val config =
-            rig.config(
-                formats = MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265_MAIN10
+        val config = rig.config {
+            setSupportedVideoFormats(
+                MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265_MAIN10
             )
+        }
 
         startAndConnect(rig.connection(config))
 
@@ -292,10 +291,11 @@ class StartLaunchTest {
 
     private fun assertHdrLaunchWithSupport(support: String) {
         rig.script.codecSupport = support
-        val config =
-            rig.config(
-                formats = MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265_MAIN10
+        val config = rig.config {
+            setSupportedVideoFormats(
+                MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265_MAIN10
             )
+        }
 
         startAndConnect(rig.connection(config))
 
@@ -305,7 +305,9 @@ class StartLaunchTest {
 
     @Test
     fun `4K on a host that is not GFE 3 is 1080p, and the listener is told`() {
-        val config = rig.config(width = 3840, height = 2160)
+        val config = rig.config {
+            setResolution(3840, 2160)
+        }
 
         startAndConnect(rig.connection(config))
 
@@ -320,7 +322,9 @@ class StartLaunchTest {
     @Test
     fun `4K on GFE 2 is 1080p too`() {
         rig.script.gfeVersion = "2.8.1"
-        val config = rig.config(width = 3840, height = 2160)
+        val config = rig.config {
+            setResolution(3840, 2160)
+        }
 
         startAndConnect(rig.connection(config))
 
@@ -330,7 +334,9 @@ class StartLaunchTest {
     @Test
     fun `4K on GFE 3 is 4K`() {
         rig.script.gfeVersion = "3.20.0"
-        val config = rig.config(width = 3840, height = 2160)
+        val config = rig.config {
+            setResolution(3840, 2160)
+        }
 
         startAndConnect(rig.connection(config))
 
@@ -341,7 +347,9 @@ class StartLaunchTest {
 
     @Test
     fun `above 4K needs HEVC or AV1 on the device, and the start fails`() {
-        val config = rig.config(width = 5120, height = 2880)
+        val config = rig.config {
+            setResolution(5120, 2880)
+        }
 
         rig.start(rig.connection(config))
         listener.await("stageFailed")
@@ -360,12 +368,10 @@ class StartLaunchTest {
     @Test
     fun `above 4K needs the host to support it when the host is GFE`() {
         rig.script.state = HostScript.GFE_FREE
-        val config =
-            rig.config(
-                width = 5120,
-                height = 2880,
-                formats = MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265,
-            )
+        val config = rig.config {
+            setResolution(5120, 2880)
+            setSupportedVideoFormats(MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265)
+        }
 
         rig.start(rig.connection(config))
         listener.await("stageFailed")
@@ -385,12 +391,10 @@ class StartLaunchTest {
         rig.script.state = HostScript.GFE_FREE
         rig.script.gfeVersion = "3.20.0"
         rig.script.codecSupport = "512"
-        val config =
-            rig.config(
-                width = 5120,
-                height = 2880,
-                formats = MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265,
-            )
+        val config = rig.config {
+            setResolution(5120, 2880)
+            setSupportedVideoFormats(MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265)
+        }
 
         startAndConnect(rig.connection(config))
 
@@ -403,12 +407,10 @@ class StartLaunchTest {
         rig.script.state = HostScript.GFE_FREE
         rig.script.gfeVersion = "3.20.0"
         rig.script.codecSupport = "256"
-        val config =
-            rig.config(
-                width = 5120,
-                height = 2880,
-                formats = MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265,
-            )
+        val config = rig.config {
+            setResolution(5120, 2880)
+            setSupportedVideoFormats(MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265)
+        }
 
         rig.start(rig.connection(config))
         listener.await("stageFailed")
@@ -428,12 +430,10 @@ class StartLaunchTest {
     fun `above 4K is streamed as asked when HEVC is there and the host is GFE 3`() {
         rig.script.gfeVersion = "3.20.0"
         rig.script.codecSupport = "512"
-        val config =
-            rig.config(
-                width = 5120,
-                height = 2880,
-                formats = MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265,
-            )
+        val config = rig.config {
+            setResolution(5120, 2880)
+            setSupportedVideoFormats(MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265)
+        }
 
         startAndConnect(rig.connection(config))
 
@@ -442,7 +442,9 @@ class StartLaunchTest {
 
     @Test
     fun `an app without an id is looked up by name in the app list, without regard to case`() {
-        val config = rig.config(app = NvApp("desktop"))
+        val config = rig.config {
+            setApp(NvApp("desktop"))
+        }
 
         startAndConnect(rig.connection(config))
 
@@ -456,7 +458,9 @@ class StartLaunchTest {
      */
     @Test
     fun `an app that was looked up by name is launched with the id of the configuration`() {
-        val config = rig.config(app = NvApp("Desktop"))
+        val config = rig.config {
+            setApp(NvApp("Desktop"))
+        }
 
         startAndConnect(rig.connection(config))
 
@@ -465,7 +469,9 @@ class StartLaunchTest {
 
     @Test
     fun `an app that is not in the app list fails the start with the name of the app`() {
-        val config = rig.config(app = NvApp("Missing"))
+        val config = rig.config {
+            setApp(NvApp("Missing"))
+        }
 
         rig.start(rig.connection(config))
         listener.await("stageFailed")
@@ -484,7 +490,13 @@ class StartLaunchTest {
     @Test
     fun `the lookup by name and the launch are logged`() {
         LimeLogCapture().use { log ->
-            startAndConnect(rig.connection(rig.config(app = NvApp("Desktop"))))
+            startAndConnect(
+                rig.connection(
+                    rig.config {
+                        setApp(NvApp("Desktop"))
+                    }
+                )
+            )
 
             assertThat(log.records)
                 .containsAtLeast(

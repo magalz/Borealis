@@ -19,7 +19,9 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** An element that does nothing of its own: it notes what the base class hands on, and draws a mark. */
+/**
+ * An element that does nothing of its own: it notes what the base class hands on, and draws a mark.
+ */
 class ProbeElement(
     controller: VirtualController,
     context: Context,
@@ -93,7 +95,8 @@ class ElementBaseCharacterizationTest {
 
     @Test
     fun `an active controller answers false when the element does`() {
-        val refusing = kit.add(ProbeElement(controller, kit.rig.activity, handles = false), 400, 50, 200, 100)
+        val refusing =
+            kit.add(ProbeElement(controller, kit.rig.activity, handles = false), 400, 50, 200, 100)
 
         assertThat(refusing.touch(MotionEvent.ACTION_DOWN, 5f, 5f)).isFalse()
         assertThat(refusing.delivered).containsExactly(MotionEvent.ACTION_DOWN)
@@ -101,8 +104,8 @@ class ElementBaseCharacterizationTest {
 
     @Test
     fun `a touch by a second finger is ignored and answered as handled`() {
-        val down = twoFingers(MotionEvent.ACTION_POINTER_DOWN, 1, 5f, 5f, 9f, 9f)
-        val up = twoFingers(MotionEvent.ACTION_POINTER_UP, 1, 5f, 5f, 9f, 9f)
+        val down = twoFingers(MotionEvent.ACTION_POINTER_DOWN, 1, 5f to 5f, 9f to 9f)
+        val up = twoFingers(MotionEvent.ACTION_POINTER_UP, 1, 5f to 5f, 9f to 9f)
 
         assertThat(element.deliver(down)).isTrue()
         assertThat(element.deliver(up)).isTrue()
@@ -112,15 +115,19 @@ class ElementBaseCharacterizationTest {
 
     @Test
     fun `a second finger that is ignored does not even answer false for an element that would`() {
-        val refusing = kit.add(ProbeElement(controller, kit.rig.activity, handles = false), 400, 50, 200, 100)
+        val refusing =
+            kit.add(ProbeElement(controller, kit.rig.activity, handles = false), 400, 50, 200, 100)
 
-        assertThat(refusing.deliver(twoFingers(MotionEvent.ACTION_POINTER_DOWN, 1, 5f, 5f, 9f, 9f))).isTrue()
+        assertThat(
+                refusing.deliver(twoFingers(MotionEvent.ACTION_POINTER_DOWN, 1, 5f to 5f, 9f to 9f))
+            )
+            .isTrue()
     }
 
     @Test
     fun `the lift of the first finger while another stays goes to the element`() {
         // The action index of this event is 0: it is the first finger that goes up.
-        val liftOfFirst = twoFingers(MotionEvent.ACTION_POINTER_UP, 0, 5f, 5f, 9f, 9f)
+        val liftOfFirst = twoFingers(MotionEvent.ACTION_POINTER_UP, 0, 5f to 5f, 9f to 9f)
 
         assertThat(element.deliver(liftOfFirst)).isTrue()
 
@@ -132,8 +139,18 @@ class ElementBaseCharacterizationTest {
         kit.mode(ControllerMode.MoveButtons)
         down(10f, 10f)
 
-        assertThat(element.deliver(twoFingers(MotionEvent.ACTION_POINTER_DOWN, 1, 30f, 30f, 90f, 90f))).isTrue()
-        assertThat(element.deliver(twoFingers(MotionEvent.ACTION_POINTER_UP, 1, 30f, 30f, 90f, 90f))).isTrue()
+        assertThat(
+                element.deliver(
+                    twoFingers(MotionEvent.ACTION_POINTER_DOWN, 1, 30f to 30f, 90f to 90f)
+                )
+            )
+            .isTrue()
+        assertThat(
+                element.deliver(
+                    twoFingers(MotionEvent.ACTION_POINTER_UP, 1, 30f to 30f, 90f to 90f)
+                )
+            )
+            .isTrue()
         move(30f, 30f)
 
         // The pointer events did not end the move: the move that follows still moves.
@@ -145,7 +162,7 @@ class ElementBaseCharacterizationTest {
         kit.mode(ControllerMode.MoveButtons)
         down(10f, 10f)
 
-        element.deliver(twoFingers(MotionEvent.ACTION_MOVE, 0, 30f, 40f, 500f, 500f))
+        element.deliver(twoFingers(MotionEvent.ACTION_MOVE, 0, 30f to 40f, 500f to 500f))
 
         assertThat(place()).isEqualTo(listOf(120, 80, 200, 100))
     }
@@ -536,11 +553,10 @@ class ElementBaseCharacterizationTest {
     fun `the opacity is its share of 255 in the top byte, cut to a whole number`() {
         val alphas = listOf(0, 1, 50, 51, 90, 100)
 
-        val colours =
-            alphas.map {
-                element.setOpacity(it)
-                colours()
-            }
+        val colours = alphas.map {
+            element.setOpacity(it)
+            colours()
+        }
 
         assertThat(colours)
             .containsExactly(
@@ -592,7 +608,8 @@ class ElementBaseCharacterizationTest {
     fun `the configuration holds the four numbers of the place the layout gave`() {
         val configuration = element.getConfiguration()
 
-        assertThat(configuration.keys().asSequence().toSet()).containsExactly("LEFT", "TOP", "WIDTH", "HEIGHT")
+        assertThat(configuration.keys().asSequence().toSet())
+            .containsExactly("LEFT", "TOP", "WIDTH", "HEIGHT")
         assertThat(place()).isEqualTo(listOf(100, 50, 200, 100))
     }
 
@@ -646,12 +663,16 @@ class ElementBaseCharacterizationTest {
         val loose = unplaced()
         kit.mode(ControllerMode.MoveButtons)
         loose.touch(MotionEvent.ACTION_DOWN, 1f, 1f)
-        assertThrows(NullPointerException::class.java) { loose.touch(MotionEvent.ACTION_MOVE, 5f, 5f) }
+        assertThrows(NullPointerException::class.java) {
+            loose.touch(MotionEvent.ACTION_MOVE, 5f, 5f)
+        }
 
         kit.mode(ControllerMode.ResizeButtons)
         loose.touch(MotionEvent.ACTION_UP, 1f, 1f)
         loose.touch(MotionEvent.ACTION_DOWN, 1f, 1f)
-        assertThrows(NullPointerException::class.java) { loose.touch(MotionEvent.ACTION_MOVE, 5f, 5f) }
+        assertThrows(NullPointerException::class.java) {
+            loose.touch(MotionEvent.ACTION_MOVE, 5f, 5f)
+        }
     }
 
     @Test

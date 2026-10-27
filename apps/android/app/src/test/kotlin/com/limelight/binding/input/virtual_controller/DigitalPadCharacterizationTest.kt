@@ -10,7 +10,9 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Notes the directions that a pad tells its listeners, in order, and with the name of the listener. */
+/**
+ * Notes the directions that a pad tells its listeners, in order, and with the name of the listener.
+ */
 class PadLog(private val name: String = "", private val shared: MutableList<String>? = null) :
     DigitalPad.DigitalPadListener {
     val directions = mutableListOf<Int>()
@@ -101,7 +103,9 @@ class DigitalPadCharacterizationTest {
             round.touch(MotionEvent.ACTION_DOWN, x, y)
         }
 
-        assertThat(roundLog.directions).containsExactly(NONE, NONE, NONE, NONE, LEFT, RIGHT, UP, DOWN).inOrder()
+        assertThat(roundLog.directions)
+            .containsExactly(NONE, NONE, NONE, NONE, LEFT, RIGHT, UP, DOWN)
+            .inOrder()
     }
 
     @Test
@@ -171,8 +175,14 @@ class DigitalPadCharacterizationTest {
     fun `a second finger is ignored`() {
         press(1f, 1f)
 
-        assertThat(pad.deliver(twoFingers(MotionEvent.ACTION_POINTER_DOWN, 1, 1f, 1f, 329f, 239f))).isTrue()
-        assertThat(pad.deliver(twoFingers(MotionEvent.ACTION_POINTER_UP, 1, 1f, 1f, 329f, 239f))).isTrue()
+        assertThat(
+                pad.deliver(twoFingers(MotionEvent.ACTION_POINTER_DOWN, 1, 1f to 1f, 329f to 239f))
+            )
+            .isTrue()
+        assertThat(
+                pad.deliver(twoFingers(MotionEvent.ACTION_POINTER_UP, 1, 1f to 1f, 329f to 239f))
+            )
+            .isTrue()
 
         assertThat(log.directions).containsExactly(LEFT or UP)
     }
@@ -203,7 +213,12 @@ class DigitalPadCharacterizationTest {
 
     @Test
     fun `the four sides are the four directions`() {
-        assertThat(direction(1f, 120f) or direction(329f, 120f) or direction(165f, 1f) or direction(165f, 239f))
+        assertThat(
+                direction(1f, 120f) or
+                    direction(329f, 120f) or
+                    direction(165f, 1f) or
+                    direction(165f, 239f)
+            )
             .isEqualTo(LEFT or RIGHT or UP or DOWN)
     }
 }

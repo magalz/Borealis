@@ -19,6 +19,7 @@ import io.github.magalz.borealis.stream.game.RecordingSurface
 import io.github.magalz.borealis.stream.game.assertToasts
 import io.github.magalz.borealis.stream.game.phase
 import org.junit.Test
+import org.robolectric.shadows.ShadowDialog
 import org.robolectric.shadows.ShadowLooper
 import org.robolectric.util.ReflectionHelpers
 
@@ -240,6 +241,15 @@ internal class GameFailureTest : GameTestBase() {
         ShadowLooper.idleMainLooper()
         assertThat(rig.phase)
             .isEqualTo(failure(FailureKind.GENERIC, "Error -5 · Control connection"))
+    }
+
+    @Test
+    fun `a stage that fails opens no dialog`() {
+        rig.create()
+
+        rig.game.stageFailed("Control connection", 0, -5)
+
+        assertThat(ShadowDialog.getShownDialogs()).isEmpty()
     }
 
     // The second failure
@@ -522,6 +532,16 @@ internal class GameFailureTest : GameTestBase() {
 
         assertThat(rig.phase).isInstanceOf(StreamPhase.Streaming::class.java)
         assertThat(ShadowRecordingBridge.named("stopConnection")).hasSize(stops)
+    }
+
+    @Test
+    fun `a stream that ends in error opens no dialog`() {
+        rig.streaming()
+
+        rig.game.connectionTerminated(-5)
+        rig.awaitStop()
+
+        assertThat(ShadowDialog.getShownDialogs()).isEmpty()
     }
 
     @Test

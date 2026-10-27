@@ -14,6 +14,7 @@ import io.github.magalz.borealis.stream.game.GameTestBase
 import io.github.magalz.borealis.stream.game.assertToasts
 import io.github.magalz.borealis.stream.game.phase
 import org.junit.Test
+import org.robolectric.shadows.ShadowDialog
 import org.robolectric.shadows.ShadowLooper
 
 /**
@@ -177,6 +178,18 @@ internal class GameStageCallbacksTest : GameTestBase() {
         )
 
         assertThat(rig.phase).isEqualTo(StreamPhase.Conflict("Desktop", "Desktop", sameApp = true))
+    }
+
+    @Test
+    fun `the start and the conflict open no dialog, the chrome shows them`() {
+        rig.create()
+
+        rig.game.stageStarting("RTSP handshake")
+        rig.game.launchStarting(false)
+        rig.game.launchRetrying(0, 1, 3, 500)
+        rig.game.launchConflict(10, "Other App", 20, "Other Request", ConflictAnswer())
+
+        assertThat(ShadowDialog.getShownDialogs()).isEmpty()
     }
 
     @Test

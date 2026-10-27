@@ -22,7 +22,7 @@ class MediaCodecHelperVendorOptionTest : MediaCodecHelperTestBase() {
     private val hevc = "video/hevc"
 
     // Robolectric does not call the resetter of a shadow that a test adds with @Config.
-    @Before fun resetShadow() = ShadowVendorParametersMediaCodec.reset()
+    @Before fun resetShadow() = ShadowVendorParametersMediaCodec.forgetEverything()
 
     private val av1 = "video/av01"
 

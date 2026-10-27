@@ -35,10 +35,11 @@ open class ShadowVendorParametersMediaCodec : ShadowMediaCodec() {
 
         /**
          * Puts the parameters, the failure and the count back; Robolectric does not reset a shadow
-         * of @Config.
+         * of @Config. The name is not `reset`: Robolectric would call a static method of that name
+         * in place of `MediaCodec.reset`.
          */
         @JvmStatic
-        fun reset() {
+        fun forgetEverything() {
             parameters = emptyList()
             failure = null
             released = 0

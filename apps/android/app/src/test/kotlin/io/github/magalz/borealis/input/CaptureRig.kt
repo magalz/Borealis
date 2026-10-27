@@ -97,6 +97,8 @@ internal fun motionEvent(
     source: Int,
     samples: List<Map<Int, Float>>,
     toolType: Int = MotionEvent.TOOL_TYPE_MOUSE,
+    action: Int = MotionEvent.ACTION_MOVE,
+    buttonState: Int = 0,
 ): MotionEvent {
     val properties =
         MotionEvent.PointerProperties().apply {
@@ -105,18 +107,20 @@ internal fun motionEvent(
         }
 
     fun coords(axes: Map<Int, Float>) =
-        MotionEvent.PointerCoords().apply { axes.forEach { (axis, value) -> setAxisValue(axis, value) } }
+        MotionEvent.PointerCoords().apply {
+            axes.forEach { (axis, value) -> setAxisValue(axis, value) }
+        }
 
     val event =
         MotionEvent.obtain(
             0L,
             0L,
-            MotionEvent.ACTION_MOVE,
+            action,
             1,
             arrayOf(properties),
             arrayOf(coords(samples.first())),
             0,
-            0,
+            buttonState,
             1f,
             1f,
             0,
@@ -134,7 +138,9 @@ internal fun motionEvent(
     source: Int,
     axes: Map<Int, Float>,
     toolType: Int = MotionEvent.TOOL_TYPE_MOUSE,
-): MotionEvent = motionEvent(source, listOf(axes), toolType)
+    action: Int = MotionEvent.ACTION_MOVE,
+    buttonState: Int = 0,
+): MotionEvent = motionEvent(source, listOf(axes), toolType, action, buttonState)
 
 /** The sources that the capture providers look at, spelled as the framework spells them. */
 internal object Sources {

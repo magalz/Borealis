@@ -273,7 +273,7 @@ internal const val RENDERER_THREAD = 2
 internal const val CHOREOGRAPHER = 4
 
 /**
- * How long a test may run. The slowest test of the renderer takes five seconds, most of them the
- * start of the sandbox in the first test of a worker, and the next one under a second.
+ * How long a test may run, ten times the slowest test of the renderer: it takes six seconds, most of
+ * them the start of the sandbox in the first test of a worker, and the next one under a second.
  */
 private const val WATCHDOG_SECONDS = 60L

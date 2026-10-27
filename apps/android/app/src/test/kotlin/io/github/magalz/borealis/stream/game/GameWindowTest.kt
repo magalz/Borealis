@@ -47,6 +47,23 @@ internal class GameWindowTest : GameTestBase() {
     }
 
     @Test
+    fun `the pointer is grabbed half a second after the stream connected, whoever held it before`() {
+        rig.create()
+        // The user had let the pointer go before the chrome took the input: the chrome gives
+        // nothing back, and only the timer of the connection grabs.
+        ReflectionHelpers.setField(rig.game, "grabbedBeforeCapture", false)
+        rig.game.connectionStarted()
+        rig.firstFrame()
+        // The clock moves a few milliseconds with each frame of the chrome, so the check keeps a margin.
+        idle(GRAB_DELAY_MS - MARGIN_MS)
+        assertThat(rig.field<Boolean>("grabbedInput")).isFalse()
+
+        idle(2 * MARGIN_MS)
+
+        assertThat(rig.field<Boolean>("grabbedInput")).isTrue()
+    }
+
+    @Test
     fun `the system bars go away a second after the stream connected`() {
         rig.streaming()
         assertThat(decorView.systemUiVisibility and View.SYSTEM_UI_FLAG_FULLSCREEN).isEqualTo(0)
@@ -189,6 +206,7 @@ internal class GameWindowTest : GameTestBase() {
         const val HIDE_DELAY_MS = 1000L
         const val BARS_BACK_DELAY_MS = 2000L
         const val MULTI_WINDOW_DELAY_MS = 50L
+        const val MARGIN_MS = 50L
         const val MODIFIERS_HELD = 7
     }
 }

@@ -465,14 +465,8 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             // Set color format keys when not in HDR mode, since we know they won't change
             videoFormat.setInteger(MediaFormat.KEY_COLOR_TRANSFER, MediaFormat.COLOR_TRANSFER_SDR_VIDEO);
             switch (getPreferredColorSpace()) {
-                case MoonBridge.COLORSPACE_REC_601:
-                    videoFormat.setInteger(MediaFormat.KEY_COLOR_STANDARD, MediaFormat.COLOR_STANDARD_BT601_NTSC);
-                    break;
                 case MoonBridge.COLORSPACE_REC_709:
                     videoFormat.setInteger(MediaFormat.KEY_COLOR_STANDARD, MediaFormat.COLOR_STANDARD_BT709);
-                    break;
-                case MoonBridge.COLORSPACE_REC_2020:
-                    videoFormat.setInteger(MediaFormat.KEY_COLOR_STANDARD, MediaFormat.COLOR_STANDARD_BT2020);
                     break;
             }
         }

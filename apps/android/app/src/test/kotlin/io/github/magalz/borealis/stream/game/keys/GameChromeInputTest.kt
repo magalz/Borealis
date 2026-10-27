@@ -5,10 +5,12 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.nvstream.input.KeyboardPacket
+import io.github.magalz.borealis.stream.ChromeMode
 import io.github.magalz.borealis.stream.SessionInfo
 import io.github.magalz.borealis.stream.game.GRAB_DELAY_MS
 import io.github.magalz.borealis.stream.game.GameTestBase
 import io.github.magalz.borealis.stream.game.session
+import io.github.magalz.borealis.stream.keys.KeyChord
 import org.junit.Test
 
 /**
@@ -82,6 +84,34 @@ internal class GameChromeInputTest : GameTestBase() {
 
         rig.openChrome()
 
+        assertThat(sentKeys()).isEmpty()
+    }
+
+    @Test
+    fun `a key held on the hardware keyboard and tapped on the docked keyboard is one held key`() {
+        rig.streaming()
+        rig.session.openKeyboard()
+        idle()
+        assertThat(rig.session.chromeMode).isEqualTo(ChromeMode.DOCKED)
+        forgetCalls()
+        rig.down(KeyEvent.KEYCODE_A)
+
+        // The docked keyboard sends the A as the bare virtual key, down and up.
+        rig.session.send(KeyChord(VK_A))
+
+        assertThat(sentKeys())
+            .containsExactly(
+                SentKey(0x8041, down, 0, NON_NORMALIZED),
+                SentKey(0x8041, down, 0, 0),
+                SentKey(0x8041, up, 0, 0),
+            )
+            .inOrder()
+        forgetCalls()
+
+        rig.openChrome()
+
+        // The two keyboards name the A the same way, so the key up of the docked one let it go, and
+        // the host has no A left down to be released.
         assertThat(sentKeys()).isEmpty()
     }
 
@@ -254,6 +284,9 @@ internal class GameChromeInputTest : GameTestBase() {
     }
 
     private companion object {
+        /** The virtual key of the A, as the docked keyboard names it. */
+        const val VK_A = 0x41
+
         val SESSION =
             SessionInfo(
                 width = 1920,

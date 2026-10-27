@@ -169,6 +169,17 @@ internal class GameConnectionTest : GameTestBase() {
     }
 
     @Test
+    fun `the audit trail has the frame rate that was negotiated, not the one that was asked for`() {
+        rig.preference("frame_pacing", "cap-fps")
+        rig.create()
+
+        rig.game.connectionStarted()
+
+        assertThat(rig.audit.single().detail)
+            .isEqualTo("codec=unknown hdr=false resolution=1280x720 fps=59")
+    }
+
+    @Test
     fun `a connection that started tells the system that the game runs`() {
         rig.create()
         val modes = GameModeRecorder().also { it.install(rig.game) }

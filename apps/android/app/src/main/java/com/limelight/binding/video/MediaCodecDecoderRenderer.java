@@ -86,7 +86,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
     private static final int CR_MAX_TRIES = 10;
     private static final int CR_RECOVERY_TYPE_NONE = 0;
-    private static final int CR_RECOVERY_TYPE_FLUSH = 1;
     private static final int CR_RECOVERY_TYPE_RESTART = 2;
     private static final int CR_RECOVERY_TYPE_RESET = 3;
     private AtomicInteger codecRecoveryType = new AtomicInteger(CR_RECOVERY_TYPE_NONE);
@@ -705,22 +704,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                 outputBufferQueue.clear();
                 synchronized (decodeTimeTracker) { decodeTimeTracker.clear(); } // BOREALIS: stream.perf
 
-                // If we just need a flush, do so now with all threads quiesced.
-                if (codecRecoveryType.get() == CR_RECOVERY_TYPE_FLUSH) {
-                    LimeLog.warning("Flushing decoder");
-                    try {
-                        videoDecoder.flush();
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE);
-                    } catch (IllegalStateException e) {
-                        e.printStackTrace();
-
-                        // Something went wrong during the restart, let's use a bigger hammer
-                        // and try a reset instead.
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_RESTART);
-                    }
-                }
-
-                // We don't count flushes as codec recovery attempts
+                // Count the attempt, unless prepareForStop() cancelled the recovery meanwhile
                 if (codecRecoveryType.get() != CR_RECOVERY_TYPE_NONE) {
                     codecRecoveryAttempts++;
                     LimeLog.info("Codec recovery attempt: "+codecRecoveryAttempts);
@@ -853,10 +837,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                         LimeLog.info("Decoder requires restart for recoverable CodecException");
                         e.printStackTrace();
                     }
-                    else if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_FLUSH, CR_RECOVERY_TYPE_RESTART)) {
-                        LimeLog.info("Decoder flush promoted to restart for recoverable CodecException");
-                        e.printStackTrace();
-                    }
                     else if (codecRecoveryType.get() != CR_RECOVERY_TYPE_RESET && codecRecoveryType.get() != CR_RECOVERY_TYPE_RESTART) {
                         throw new IllegalStateException("Unexpected codec recovery type: " + codecRecoveryType.get());
                     }
@@ -864,10 +844,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                 else if (!codecExc.isRecoverable()) {
                     if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESET)) {
                         LimeLog.info("Decoder requires reset for non-recoverable CodecException");
-                        e.printStackTrace();
-                    }
-                    else if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_FLUSH, CR_RECOVERY_TYPE_RESET)) {
-                        LimeLog.info("Decoder flush promoted to reset for non-recoverable CodecException");
                         e.printStackTrace();
                     }
                     else if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_RESTART, CR_RECOVERY_TYPE_RESET)) {
@@ -891,10 +867,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             if (codecRecoveryAttempts < CR_MAX_TRIES) {
                 if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESET)) {
                     LimeLog.info("Decoder requires reset for IllegalStateException");
-                    e.printStackTrace();
-                }
-                else if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_FLUSH, CR_RECOVERY_TYPE_RESET)) {
-                    LimeLog.info("Decoder flush promoted to reset for IllegalStateException");
                     e.printStackTrace();
                 }
                 else if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_RESTART, CR_RECOVERY_TYPE_RESET)) {
@@ -1273,10 +1245,8 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
         hdrRestartReuse.requested(); // BOREALIS: before the promotion, so a recovery cannot run ahead of the mark
 
-        // Promote None/Flush to Restart and leave Reset alone
-        if (!codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESTART)) {
-            codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_FLUSH, CR_RECOVERY_TYPE_RESTART);
-        }
+        // Promote None to Restart and leave Restart and Reset alone
+        codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESTART);
     }
 
     // BOREALIS: the tracker is not thread-safe, and the input and the output run on different threads (stream.perf)

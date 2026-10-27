@@ -5,10 +5,13 @@ import com.limelight.nvstream.NvConnectionListener
 import com.limelight.nvstream.av.audio.AudioRenderer
 import com.limelight.nvstream.av.video.VideoDecoderRenderer
 import com.limelight.nvstream.jni.MoonBridge
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
+import org.robolectric.shadow.api.Shadow
 import org.robolectric.util.ReflectionHelpers
+import org.robolectric.util.ReflectionHelpers.ClassParameter
 
 /**
  * One call of `NvConnection` into `MoonBridge`: its name, its arguments as the connection passed
@@ -21,10 +24,18 @@ internal data class BridgeCall(
 )
 
 /**
- * Stands in for the native `moonlight-core` library, which a unit test does not have. It skips the
- * static initialiser that loads the library, sets the audio configurations the stream configuration
- * reads, records every call that `NvConnection` makes in the order it makes them, and answers like
- * the library does: the launch query parameters, the name of a stage, the result of a call.
+ * Stands in for the native `moonlight-core` library, which a unit test does not have: the canonical
+ * shadow of `MoonBridge`. It skips the static initialiser that loads the library, sets the audio
+ * configurations the stream configuration reads, shadows every native of the class, records the
+ * calls that `NvConnection` and the other callers make in the order they make them, and answers
+ * like the library does: the launch query parameters, the name of a stage, the result of a call.
+ * A native that has no answer returns the default of its type (0, false, null), unless a test puts
+ * one in [answers].
+ *
+ * `setupBridge` and `cleanupBridge` are recorded and then run the real code, so the `bridge*`
+ * callbacks reach the renderers and the listener that a test gives to `setupBridge`; [reset] runs
+ * the real `cleanupBridge` too.
+ * `getStageName` and `getLaunchUrlQueryParameters` answer without being recorded.
  *
  * State lives in this object, which every test of one Robolectric sandbox shares: call [reset]
  * before each test.
@@ -58,6 +69,16 @@ internal object ShadowRecordingBridge {
 
     @Volatile var externalAddress: String? = null
 
+    /**
+     * What a native answers, by its name, instead of the default of its type: an `Int` (it wins
+     * over [intResult]), a `Long`, a `Byte`, a `Boolean` or a `String`.
+     */
+    val answers = ConcurrentHashMap<String, Any>()
+
+    /**
+     * Forgets the calls and the answers, and runs the real `cleanupBridge`, so that the next test of
+     * the sandbox finds `MoonBridge` without renderers and listener.
+     */
     fun reset() {
         calls.clear()
         listener = null
@@ -65,6 +86,12 @@ internal object ShadowRecordingBridge {
         onStartConnection = { 0 }
         onInterrupt = {}
         externalAddress = null
+        answers.clear()
+        realCleanupBridge()
+    }
+
+    private fun realCleanupBridge() {
+        Shadow.directlyOn<Any?, MoonBridge>(MoonBridge::class.java, "cleanupBridge")
     }
 
     /** The calls named [name], in order. */
@@ -84,6 +111,8 @@ internal object ShadowRecordingBridge {
         }
         return named(name)[count - 1]
     }
+
+    private fun intAnswer(name: String): Int = answers[name] as Int? ?: intResult
 
     private fun record(name: String, vararg args: Any?): BridgeCall =
         BridgeCall(name, args.toList(), Thread.holdsLock(MoonBridge::class.java)).also {
@@ -124,6 +153,13 @@ internal object ShadowRecordingBridge {
     ) {
         listener = connectionListener
         record("setupBridge", videoRenderer, audioRenderer, connectionListener)
+        Shadow.directlyOn<Any?, MoonBridge>(
+            MoonBridge::class.java,
+            "setupBridge",
+            ClassParameter.from(VideoDecoderRenderer::class.java, videoRenderer),
+            ClassParameter.from(AudioRenderer::class.java, audioRenderer),
+            ClassParameter.from(NvConnectionListener::class.java, connectionListener),
+        )
     }
 
     @Suppress("unused")
@@ -132,6 +168,7 @@ internal object ShadowRecordingBridge {
     fun cleanupBridge() {
         listener = null
         record("cleanupBridge")
+        realCleanupBridge()
     }
 
     @Suppress("unused", "LongParameterList")
@@ -421,6 +458,85 @@ internal object ShadowRecordingBridge {
     fun findExternalAddressIP4(stunHostName: String?, stunPort: Int): String? {
         record("findExternalAddressIP4", stunHostName, stunPort)
         return externalAddress
+    }
+
+    @Suppress("unused")
+    @Implementation
+    @JvmStatic
+    fun getPendingAudioDuration(): Int {
+        record("getPendingAudioDuration")
+        return intAnswer("getPendingAudioDuration")
+    }
+
+    @Suppress("unused")
+    @Implementation
+    @JvmStatic
+    fun testClientConnectivity(testServerHostName: String?, referencePort: Int, testFlags: Int): Int {
+        record("testClientConnectivity", testServerHostName, referencePort, testFlags)
+        return intAnswer("testClientConnectivity")
+    }
+
+    @Suppress("unused")
+    @Implementation
+    @JvmStatic
+    fun getPortFlagsFromStage(stage: Int): Int {
+        record("getPortFlagsFromStage", stage)
+        return intAnswer("getPortFlagsFromStage")
+    }
+
+    @Suppress("unused")
+    @Implementation
+    @JvmStatic
+    fun getPortFlagsFromTerminationErrorCode(errorCode: Int): Int {
+        record("getPortFlagsFromTerminationErrorCode", errorCode)
+        return intAnswer("getPortFlagsFromTerminationErrorCode")
+    }
+
+    @Suppress("unused")
+    @Implementation
+    @JvmStatic
+    fun stringifyPortFlags(portFlags: Int, separator: String?): String? {
+        record("stringifyPortFlags", portFlags, separator)
+        return answers["stringifyPortFlags"] as String?
+    }
+
+    @Suppress("unused")
+    @Implementation
+    @JvmStatic
+    fun getEstimatedRttInfo(): Long {
+        record("getEstimatedRttInfo")
+        return answers["getEstimatedRttInfo"] as Long? ?: 0L
+    }
+
+    @Suppress("unused")
+    @Implementation
+    @JvmStatic
+    fun guessControllerType(vendorId: Int, productId: Int): Byte {
+        record("guessControllerType", vendorId, productId)
+        return answers["guessControllerType"] as Byte? ?: 0
+    }
+
+    @Suppress("unused")
+    @Implementation
+    @JvmStatic
+    fun guessControllerHasPaddles(vendorId: Int, productId: Int): Boolean {
+        record("guessControllerHasPaddles", vendorId, productId)
+        return answers["guessControllerHasPaddles"] as Boolean? ?: false
+    }
+
+    @Suppress("unused")
+    @Implementation
+    @JvmStatic
+    fun guessControllerHasShareButton(vendorId: Int, productId: Int): Boolean {
+        record("guessControllerHasShareButton", vendorId, productId)
+        return answers["guessControllerHasShareButton"] as Boolean? ?: false
+    }
+
+    @Suppress("unused")
+    @Implementation
+    @JvmStatic
+    fun init() {
+        record("init")
     }
 }
 

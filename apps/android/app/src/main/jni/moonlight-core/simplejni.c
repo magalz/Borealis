@@ -178,11 +178,6 @@ Java_com_limelight_nvstream_jni_MoonBridge_getPendingAudioDuration(JNIEnv *env, 
 }
 
 JNIEXPORT jint JNICALL
-Java_com_limelight_nvstream_jni_MoonBridge_getPendingVideoFrames(JNIEnv *env, jclass clazz) {
-    return LiGetPendingVideoFrames();
-}
-
-JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_testClientConnectivity(JNIEnv *env, jclass clazz, jstring testServerHostName, jint referencePort, jint testFlags) {
     // BOREALIS: no connection test: the app contacts only the host the user chooses (ADR 0050)
     return ML_TEST_RESULT_INCONCLUSIVE;

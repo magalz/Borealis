@@ -118,8 +118,7 @@ private class ScriptedKeyEvent(private val spec: KeySpec, time: Long) :
 }
 
 /** The event that [spec] describes, made now, with no device. */
-internal fun keyEvent(spec: KeySpec): KeyEvent =
-    ScriptedKeyEvent(spec, SystemClock.uptimeMillis())
+internal fun keyEvent(spec: KeySpec): KeyEvent = ScriptedKeyEvent(spec, SystemClock.uptimeMillis())
 
 /** The characters that a software keyboard sends in one event, with no key code of their own. */
 @Suppress("DEPRECATION") // ACTION_MULTIPLE is how the activity gets these.

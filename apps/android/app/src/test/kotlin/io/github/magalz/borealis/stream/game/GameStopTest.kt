@@ -46,6 +46,29 @@ internal class GameStopTest : GameTestBase() {
     }
 
     @Test
+    fun `onStop stops the controller handler of a running stream`() {
+        rig.streaming()
+        val handler = rig.field<ControllerHandler>("controllerHandler")
+        assertThat(ReflectionHelpers.getField<Boolean>(handler, "stopped")).isFalse()
+
+        rig.stop()
+
+        assertThat(ReflectionHelpers.getField<Boolean>(handler, "stopped")).isTrue()
+    }
+
+    @Test
+    fun `onStop leaves the controller handler of a stream that never connected to onDestroy`() {
+        rig.create()
+        val handler = rig.field<ControllerHandler>("controllerHandler")
+
+        rig.stop()
+        assertThat(ReflectionHelpers.getField<Boolean>(handler, "stopped")).isFalse()
+
+        rig.destroyActivity()
+        assertThat(ReflectionHelpers.getField<Boolean>(handler, "stopped")).isTrue()
+    }
+
+    @Test
     fun `onStop ends the session of the audit trail as a stop by the user`() {
         rig.streaming()
         rig.audit.clear()

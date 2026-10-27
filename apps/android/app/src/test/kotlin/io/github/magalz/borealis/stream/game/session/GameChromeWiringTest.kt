@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.stream.game.session
 
+import android.os.SystemClock
 import androidx.compose.ui.platform.ComposeView
 import com.google.common.truth.Truth.assertThat
 import com.limelight.binding.input.ControllerHandler
@@ -12,6 +13,9 @@ import io.github.magalz.borealis.stream.game.GameTestBase
 import io.github.magalz.borealis.stream.game.phase
 import io.github.magalz.borealis.stream.game.session
 import io.github.magalz.borealis.stream.host.StreamChromeHost
+import io.github.magalz.borealis.stream.input.ChromeKeySink
+import io.github.magalz.borealis.stream.input.GamepadButtons
+import io.github.magalz.borealis.stream.input.UsbChromeKeys
 import java.lang.reflect.Modifier
 import org.junit.Test
 import org.robolectric.util.ReflectionHelpers
@@ -110,6 +114,69 @@ internal class GameChromeWiringTest : GameTestBase() {
         handler.deviceRemoved(pad)
 
         assertThat(keyboardIsDocked()).isTrue()
+    }
+
+    // The keys of a pad on the USB driver
+
+    private val handler: ControllerHandler
+        get() = rig.field("controllerHandler")
+
+    private val chrome: StreamChromeHost
+        get() = rig.field("chromeHost")
+
+    private fun padKey(buttons: Int) =
+        UsbChromeKeys.events(0, buttons, SystemClock.uptimeMillis()).single()
+
+    /**
+     * A phone's window starts in touch mode. The window of a unit test starts out of it, so the
+     * test puts it in, where the window keeps the flag.
+     */
+    private fun startInTouchMode() {
+        val attachInfo = ReflectionHelpers.getField<Any>(chrome, "mAttachInfo")
+        ReflectionHelpers.setField(attachInfo, "mInTouchMode", true)
+        assertThat(chrome.isInTouchMode).isTrue()
+    }
+
+    private fun chromeKeySink(): ChromeKeySink =
+        checkNotNull(ReflectionHelpers.getField<ChromeKeySink?>(handler, "chromeKeySink"))
+
+    @Test
+    fun `a key of a USB pad reaches the modal chrome and takes the window out of touch mode`() {
+        rig.streaming()
+        rig.session.openMenu()
+        startInTouchMode()
+
+        val taken = chromeKeySink().onKey(padKey(GamepadButtons.DPAD_DOWN))
+
+        assertThat(chrome.isInTouchMode).isFalse()
+        // No row of the menu has the focus yet in this window, so nothing takes the key.
+        assertThat(taken).isFalse()
+    }
+
+    @Test
+    fun `a key of a USB pad does not take the window out of touch mode while the chrome is idle`() {
+        rig.streaming()
+        startInTouchMode()
+
+        val taken = chromeKeySink().onKey(padKey(GamepadButtons.DPAD_DOWN))
+
+        assertThat(taken).isFalse()
+        assertThat(chrome.isInTouchMode).isTrue()
+    }
+
+    // The gamepad mouse
+
+    @Test
+    fun `the menu shows the gamepad mouse mode of a pad that has it on`() {
+        rig.preference("checkbox_mouse_emulation", false)
+        rig.streaming()
+        handler.deviceAdded(RecordingPad(1, handler))
+        handler.setMouseEmulation(true)
+        assertThat((rig.phase as StreamPhase.Streaming).gamepadMouse).isFalse()
+
+        rig.session.openMenu()
+
+        assertThat((rig.phase as StreamPhase.Streaming).gamepadMouse).isTrue()
     }
 
     private companion object {

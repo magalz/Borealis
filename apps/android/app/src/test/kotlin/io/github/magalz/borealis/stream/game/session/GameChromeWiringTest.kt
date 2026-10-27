@@ -38,7 +38,7 @@ internal class GameChromeWiringTest : GameTestBase() {
             return
         }
         var type: Class<*>? = node.javaClass
-        while (type != null && LOOK_HOLDERS.any { type!!.name.startsWith(it) }) {
+        while (type != null && isLookHolder(type)) {
             for (field in type.declaredFields) {
                 if (Modifier.isStatic(field.modifiers) || field.type.isPrimitive) continue
                 field.isAccessible = true
@@ -46,6 +46,10 @@ internal class GameChromeWiringTest : GameTestBase() {
             }
             type = type.superclass
         }
+    }
+
+    private fun isLookHolder(type: Class<*>): Boolean = LOOK_HOLDERS.any {
+        type.name.startsWith(it)
     }
 
     private fun keyboardIsDocked(): Boolean {

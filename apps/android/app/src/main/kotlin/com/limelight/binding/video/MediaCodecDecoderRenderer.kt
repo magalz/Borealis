@@ -409,12 +409,8 @@ class MediaCodecDecoderRenderer(
             if (!MediaCodecHelper.isDecoderWhitelistedForAv1(decoderInfo)) {
                 LimeLog.info("Found AV1 decoder, but it's not whitelisted - " + decoderInfo.name)
 
-                // Force HEVC enabled if the user asked for it
-                if (prefs.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1) {
-                    LimeLog.info("Forcing AV1 enabled despite non-whitelisted decoder")
-                } else {
-                    return null
-                }
+                // The user asked for AV1 (checked above), so it is enabled anyway
+                LimeLog.info("Forcing AV1 enabled despite non-whitelisted decoder")
             }
         }
 

@@ -11,6 +11,7 @@ import com.limelight.R
 import com.limelight.binding.video.codec
 import com.limelight.nvstream.jni.MoonBridge
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.host.R as HostR
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.video.FirstFrameWatchdog
 import io.github.magalz.borealis.logging.AuditOutcome
@@ -279,7 +280,8 @@ internal class GameConnectionTest : GameTestBase() {
 
         rig.game.connectionStatusUpdate(MoonBridge.CONN_STATUS_POOR)
 
-        assertThat(notice.text.toString()).isEqualTo("Slow connection to PC\nReduce your bitrate")
+        assertThat(notice.text.toString())
+            .isEqualTo(rig.application.getString(R.string.slow_connection_msg))
         assertThat(notice.visibility).isEqualTo(View.VISIBLE)
     }
 
@@ -290,7 +292,8 @@ internal class GameConnectionTest : GameTestBase() {
 
         rig.game.connectionStatusUpdate(MoonBridge.CONN_STATUS_POOR)
 
-        assertThat(notice.text.toString()).isEqualTo("Poor connection to PC")
+        assertThat(notice.text.toString())
+            .isEqualTo(rig.application.getString(R.string.poor_connection_msg))
         assertThat(notice.visibility).isEqualTo(View.VISIBLE)
     }
 
@@ -301,7 +304,8 @@ internal class GameConnectionTest : GameTestBase() {
 
         rig.game.connectionStatusUpdate(MoonBridge.CONN_STATUS_POOR)
 
-        assertThat(notice.text.toString()).isEqualTo("Slow connection to PC\nReduce your bitrate")
+        assertThat(notice.text.toString())
+            .isEqualTo(rig.application.getString(R.string.slow_connection_msg))
     }
 
     @Test
@@ -322,7 +326,8 @@ internal class GameConnectionTest : GameTestBase() {
         rig.game.connectionStatusUpdate(UNKNOWN_STATUS)
 
         assertThat(notice.visibility).isEqualTo(View.VISIBLE)
-        assertThat(notice.text.toString()).isEqualTo("Slow connection to PC\nReduce your bitrate")
+        assertThat(notice.text.toString())
+            .isEqualTo(rig.application.getString(R.string.slow_connection_msg))
     }
 
     @Test
@@ -373,7 +378,8 @@ internal class GameConnectionTest : GameTestBase() {
             .containsExactly(MoonBridge.ML_ERROR_NO_VIDEO_FRAME)
         val failed = rig.phase as StreamPhase.Failed
         assertThat(failed.failure.kind).isEqualTo(FailureKind.GENERIC)
-        assertThat(failed.failure.rawCode).isEqualTo("Error -101")
+        assertThat(failed.failure.rawCode)
+            .isEqualTo(rig.application.getString(HostR.string.failure_raw_code, "-101"))
     }
 
     @Test

@@ -38,7 +38,17 @@ internal class GameFailureTest : GameTestBase() {
         ReflectionHelpers.getField(handler, "stopped")
 
     private fun portsHint(flags: String) =
-        "Check your firewall and port forwarding rules for: $flags"
+        rig.application.getString(HostR.string.failure_port_hint, flags)
+
+    // The raw codes that the error screen shows, from the resources of the host module.
+    private fun atCode(code: Int) =
+        rig.application.getString(HostR.string.failure_raw_code, code.toString())
+
+    private fun atStage(code: Int, stage: String) =
+        rig.application.getString(HostR.string.failure_raw_stage, code.toString(), stage)
+
+    private fun withHttp(base: String, http: Int) =
+        rig.application.getString(HostR.string.failure_raw_http, base, http.toString())
 
     // A stage that fails
 
@@ -49,7 +59,7 @@ internal class GameFailureTest : GameTestBase() {
         rig.game.stageFailed("Control connection", 0, -5)
 
         assertThat(rig.phase)
-            .isEqualTo(failure(FailureKind.GENERIC, "Error -5 · Control connection"))
+            .isEqualTo(failure(FailureKind.GENERIC, atStage(-5, "Control connection")))
     }
 
     @Test
@@ -74,7 +84,7 @@ internal class GameFailureTest : GameTestBase() {
             .isEqualTo(
                 failure(
                     FailureKind.GENERIC,
-                    "Error -5 · Control connection",
+                    atStage(-5, "Control connection"),
                     portsHint("UDP 47998"),
                 )
             )
@@ -94,7 +104,7 @@ internal class GameFailureTest : GameTestBase() {
             .isEqualTo(
                 failure(
                     FailureKind.GENERIC,
-                    "Error -5 · Control connection",
+                    atStage(-5, "Control connection"),
                     portsHint("UDP 47998") + "\n\n" + text(R.string.nettest_text_blocked),
                 )
             )
@@ -109,7 +119,7 @@ internal class GameFailureTest : GameTestBase() {
         rig.game.stageFailed("Control connection", 0, -5)
 
         assertThat(rig.phase)
-            .isEqualTo(failure(FailureKind.GENERIC, "Error -5 · Control connection"))
+            .isEqualTo(failure(FailureKind.GENERIC, atStage(-5, "Control connection")))
     }
 
     @Test
@@ -123,7 +133,7 @@ internal class GameFailureTest : GameTestBase() {
             .isEqualTo(
                 failure(
                     FailureKind.GENERIC,
-                    "Error -5 · Control connection",
+                    atStage(-5, "Control connection"),
                     text(R.string.nettest_text_blocked),
                 )
             )
@@ -142,7 +152,7 @@ internal class GameFailureTest : GameTestBase() {
             .isEqualTo(
                 failure(
                     FailureKind.GENERIC,
-                    "Error 7 · Launch",
+                    atStage(7, "Launch"),
                     portsHint("TCP 47984") +
                         "\n\n" +
                         "This device is not paired with the host." +
@@ -165,7 +175,7 @@ internal class GameFailureTest : GameTestBase() {
             .isEqualTo(
                 failure(
                     FailureKind.GENERIC,
-                    "Error -1 · RTSP handshake",
+                    atStage(-1, "RTSP handshake"),
                     text(HostR.string.failure_reply_unreadable),
                 )
             )
@@ -179,7 +189,7 @@ internal class GameFailureTest : GameTestBase() {
         rig.game.stageFailed("Launch", 0, 3)
 
         assertThat(rig.phase)
-            .isEqualTo(failure(FailureKind.CERTIFICATE_CHANGED, "Error 3 · Launch"))
+            .isEqualTo(failure(FailureKind.CERTIFICATE_CHANGED, atStage(3, "Launch")))
     }
 
     @Test
@@ -189,7 +199,7 @@ internal class GameFailureTest : GameTestBase() {
 
         rig.game.stageFailed("Launch", 0, 3)
 
-        assertThat(rig.phase).isEqualTo(failure(FailureKind.HOST_OFFLINE, "Error 3 · Launch"))
+        assertThat(rig.phase).isEqualTo(failure(FailureKind.HOST_OFFLINE, atStage(3, "Launch")))
     }
 
     @Test
@@ -199,7 +209,8 @@ internal class GameFailureTest : GameTestBase() {
 
         rig.game.stageFailed("Launch", 0, 3)
 
-        assertThat(rig.phase).isEqualTo(failure(FailureKind.GENERIC, "Error 3 · Launch · HTTP 503"))
+        assertThat(rig.phase)
+            .isEqualTo(failure(FailureKind.GENERIC, withHttp(atStage(3, "Launch"), 503)))
     }
 
     @Test
@@ -209,7 +220,7 @@ internal class GameFailureTest : GameTestBase() {
 
         rig.game.stageFailed("Launch", 0, 3)
 
-        assertThat(rig.phase).isEqualTo(failure(FailureKind.HOST_BUSY, "Error 3 · Launch"))
+        assertThat(rig.phase).isEqualTo(failure(FailureKind.HOST_BUSY, atStage(3, "Launch")))
     }
 
     @Test
@@ -223,7 +234,7 @@ internal class GameFailureTest : GameTestBase() {
             .isEqualTo(
                 failure(
                     FailureKind.HOST_BUSY,
-                    "Error 3 · Launch",
+                    atStage(3, "Launch"),
                     text(HostR.string.launch_resume_collision),
                 )
             )
@@ -240,7 +251,7 @@ internal class GameFailureTest : GameTestBase() {
 
         ShadowLooper.idleMainLooper()
         assertThat(rig.phase)
-            .isEqualTo(failure(FailureKind.GENERIC, "Error -5 · Control connection"))
+            .isEqualTo(failure(FailureKind.GENERIC, atStage(-5, "Control connection")))
     }
 
     @Test
@@ -263,7 +274,7 @@ internal class GameFailureTest : GameTestBase() {
         rig.game.connectionTerminated(-7)
 
         assertThat(rig.phase)
-            .isEqualTo(failure(FailureKind.GENERIC, "Error -5 · Control connection"))
+            .isEqualTo(failure(FailureKind.GENERIC, atStage(-5, "Control connection")))
     }
 
     @Test
@@ -292,7 +303,7 @@ internal class GameFailureTest : GameTestBase() {
         rig.game.stageFailed("video stream", 0, -5)
 
         assertToasts(text(R.string.video_decoder_init_failed))
-        assertThat(rig.phase).isEqualTo(failure(FailureKind.GENERIC, "Error -5 · video stream"))
+        assertThat(rig.phase).isEqualTo(failure(FailureKind.GENERIC, atStage(-5, "video stream")))
     }
 
     @Test
@@ -303,7 +314,7 @@ internal class GameFailureTest : GameTestBase() {
         rig.game.stageFailed("video stream", 0, -5)
 
         assertToasts()
-        assertThat(rig.phase).isEqualTo(failure(FailureKind.GENERIC, "Error -5 · video stream"))
+        assertThat(rig.phase).isEqualTo(failure(FailureKind.GENERIC, atStage(-5, "video stream")))
     }
 
     @Test
@@ -349,7 +360,7 @@ internal class GameFailureTest : GameTestBase() {
         rig.game.connectionTerminated(-5)
         rig.awaitStop()
 
-        assertThat(rig.phase).isEqualTo(failure(FailureKind.STOPPED, "Error -5"))
+        assertThat(rig.phase).isEqualTo(failure(FailureKind.STOPPED, atCode(-5)))
         assertThat(rig.game.isFinishing).isFalse()
     }
 
@@ -361,7 +372,7 @@ internal class GameFailureTest : GameTestBase() {
         rig.game.connectionTerminated(-5)
         rig.awaitStop()
 
-        assertThat(rig.phase).isEqualTo(failure(FailureKind.GENERIC, "Error -5"))
+        assertThat(rig.phase).isEqualTo(failure(FailureKind.GENERIC, atCode(-5)))
     }
 
     @Test
@@ -401,7 +412,7 @@ internal class GameFailureTest : GameTestBase() {
             .isEqualTo(
                 failure(
                     FailureKind.STOPPED,
-                    "Error -100",
+                    atCode(-100),
                     portsHint("UDP 47998, UDP 48000") +
                         "\n\n" +
                         text(R.string.no_video_received_error) +
@@ -421,7 +432,7 @@ internal class GameFailureTest : GameTestBase() {
 
         assertThat(rig.phase)
             .isEqualTo(
-                failure(FailureKind.STOPPED, "Error -100", text(R.string.nettest_text_blocked))
+                failure(FailureKind.STOPPED, atCode(-100), text(R.string.nettest_text_blocked))
             )
     }
 
@@ -431,7 +442,7 @@ internal class GameFailureTest : GameTestBase() {
         rig.game.connectionTerminated(code)
         rig.awaitStop()
 
-        assertThat(rig.phase).isEqualTo(failure(FailureKind.STOPPED, "Error $code", hint))
+        assertThat(rig.phase).isEqualTo(failure(FailureKind.STOPPED, atCode(code), hint))
     }
 
     @Test
@@ -470,7 +481,7 @@ internal class GameFailureTest : GameTestBase() {
         rig.game.connectionTerminated(-5)
         rig.awaitStop()
 
-        assertThat(rig.phase).isEqualTo(failure(FailureKind.CERTIFICATE_CHANGED, "Error -5"))
+        assertThat(rig.phase).isEqualTo(failure(FailureKind.CERTIFICATE_CHANGED, atCode(-5)))
     }
 
     @Test
@@ -578,7 +589,7 @@ internal class GameFailureTest : GameTestBase() {
         rig.awaitStop()
 
         assertThat(rig.game.isFinishing).isFalse()
-        assertThat(rig.phase).isEqualTo(failure(FailureKind.STOPPED, "Error -5"))
+        assertThat(rig.phase).isEqualTo(failure(FailureKind.STOPPED, atCode(-5)))
     }
 
     @Test
@@ -592,6 +603,6 @@ internal class GameFailureTest : GameTestBase() {
 
         ShadowLooper.idleMainLooper()
         rig.awaitStop()
-        assertThat(rig.phase).isEqualTo(failure(FailureKind.STOPPED, "Error -5"))
+        assertThat(rig.phase).isEqualTo(failure(FailureKind.STOPPED, atCode(-5)))
     }
 }

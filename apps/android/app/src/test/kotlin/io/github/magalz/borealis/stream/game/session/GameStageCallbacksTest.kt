@@ -2,6 +2,7 @@ package io.github.magalz.borealis.stream.game.session
 
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.host.R as HostR
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.host.launch.ConflictAnswer
@@ -259,7 +260,7 @@ internal class GameStageCallbacksTest : GameTestBase() {
                 StreamPhase.Failed(
                     StreamFailure(
                         FailureKind.GENERIC,
-                        "Error 7 · Launch",
+                        rig.application.getString(HostR.string.failure_raw_stage, "7", "Launch"),
                         "This device is not paired with the host.",
                     )
                 )

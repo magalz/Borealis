@@ -318,5 +318,17 @@ internal class RecordingCapture : InputCaptureProvider() {
     }
 }
 
-/** Puts a [RecordingCapture] in place of the provider of the activity, and returns it. */
-internal fun GameRig.recordCapture(): RecordingCapture = RecordingCapture().also { captureWith(it) }
+/**
+ * Puts a [RecordingCapture] in place of the provider of the activity, and returns it. With
+ * [capturing] the new provider has the pointer captured, as the real one does while the stream has
+ * the input.
+ */
+internal fun GameRig.recordCapture(capturing: Boolean = false): RecordingCapture =
+    RecordingCapture().also {
+        if (capturing) {
+            // The pointer is captured when the test starts, and what led there is not noted.
+            it.enableCapture()
+            it.calls.clear()
+        }
+        captureWith(it)
+    }

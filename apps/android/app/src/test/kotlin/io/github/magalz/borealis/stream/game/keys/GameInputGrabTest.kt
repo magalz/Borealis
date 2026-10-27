@@ -74,7 +74,7 @@ internal class GameInputGrabTest : GameTestBase() {
     @Test
     fun `letting the input go releases the pointer and shows the cursor`() {
         rig.streaming()
-        val capture = rig.recordCapture()
+        val capture = rig.recordCapture(capturing = true)
 
         rig.chord(KeyEvent.KEYCODE_Z)
         idle(250)

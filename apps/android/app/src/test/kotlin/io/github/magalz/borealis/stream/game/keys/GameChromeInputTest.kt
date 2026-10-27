@@ -129,7 +129,7 @@ internal class GameChromeInputTest : GameTestBase() {
     @Test
     fun `taking the input lets the pointer go and shows the cursor`() {
         rig.streaming()
-        val capture = rig.recordCapture()
+        val capture = rig.recordCapture(capturing = true)
 
         rig.openChrome()
 

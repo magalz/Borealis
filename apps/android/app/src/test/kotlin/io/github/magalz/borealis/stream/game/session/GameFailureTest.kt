@@ -474,15 +474,12 @@ internal class GameFailureTest : GameTestBase() {
     }
 
     @Test
-    fun `an ended stream lets the display sleep, the pad rest and the pointer go`() {
+    fun `an ended stream lets the display sleep`() {
         rig.streaming()
-        val handler = rig.field<ControllerHandler>("controllerHandler")
         assertThat(
                 rig.game.window.attributes.flags and WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
             )
             .isNotEqualTo(0)
-        assertThat(rig.field<Boolean>("grabbedInput")).isTrue()
-        assertThat(stopped(handler)).isFalse()
 
         rig.game.connectionTerminated(-5)
         rig.awaitStop()
@@ -491,7 +488,34 @@ internal class GameFailureTest : GameTestBase() {
                 rig.game.window.attributes.flags and WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
             )
             .isEqualTo(0)
+    }
+
+    @Test
+    fun `a host that ends the stream gracefully lets the pointer go and the pad rest`() {
+        rig.streaming()
+        val handler = rig.field<ControllerHandler>("controllerHandler")
+        assertThat(rig.field<Boolean>("grabbedInput")).isTrue()
+        assertThat(stopped(handler)).isFalse()
+
+        rig.game.connectionTerminated(MoonBridge.ML_ERROR_GRACEFUL_TERMINATION)
+        rig.awaitStop()
+
+        // The session stays as it was: no panel opens, so nothing else lets the pointer go.
+        assertThat(rig.phase).isInstanceOf(StreamPhase.Streaming::class.java)
         assertThat(rig.field<Boolean>("grabbedInput")).isFalse()
+        assertThat(stopped(handler)).isTrue()
+    }
+
+    @Test
+    fun `a connection that ended before it started stops the pad all the same`() {
+        rig.create()
+        val handler = rig.field<ControllerHandler>("controllerHandler")
+        assertThat(stopped(handler)).isFalse()
+
+        rig.game.connectionTerminated(-5)
+
+        // No connection started, so the activity has none to stop, but the pad is stopped.
+        assertThat(rig.field<Boolean>("connected")).isFalse()
         assertThat(stopped(handler)).isTrue()
     }
 

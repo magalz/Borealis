@@ -739,10 +739,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                     videoDecoder.release();
 
                     try {
-                        int err = initializeDecoder(true);
-                        if (err != 0) {
-                            throw new IllegalStateException("Decoder reset failed: " + err);
-                        }
+                        initializeDecoder(true);
                         codecRecoveryType.set(CR_RECOVERY_TYPE_NONE);
                     } catch (IllegalArgumentException e) {
                         e.printStackTrace();
@@ -1573,9 +1570,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     }
 
     private boolean replaySps() {
-        if (!fetchNextInputBuffer()) {
-            return false;
-        }
+        fetchNextInputBuffer();
 
         // Write the Annex B header
         nextInputBuffer.put(new byte[]{0x00, 0x00, 0x00, 0x01, 0x67});

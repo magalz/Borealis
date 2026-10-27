@@ -7,8 +7,8 @@ import com.limelight.nvstream.StreamConfiguration
 import com.limelight.nvstream.http.HostHttpResponseException
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.jni.MoonBridge
-import io.github.magalz.borealis.crypto.LimeLogCapture
 import io.github.magalz.borealis.crypto.TestIdentities
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.io.Closeable
 import java.util.logging.Level
 import javax.crypto.spec.SecretKeySpec
@@ -256,14 +256,14 @@ class LaunchRequestTest {
 
     @Test
     fun `the SOPS that GFE loses is logged with the resolution`() {
-        LimeLogCapture().use { log ->
+        LimeLogCapture().start().use { log ->
             val host = host()
             answerLaunch(host)
 
             client(host)
                 .launchApp(context(gfe = true, width = 2560, height = 1440), "launch", 1, false)
 
-            assertThat(log.records)
+            assertThat(log.entries)
                 .contains(Level.INFO to "Disabling SOPS due to non-standard resolution: 2560x1440")
         }
     }

@@ -5,9 +5,9 @@ import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.StreamConfiguration
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.jni.MoonBridge
-import io.github.magalz.borealis.crypto.LimeLogCapture
 import io.github.magalz.borealis.host.failure.CauseKind
 import io.github.magalz.borealis.nvhttp.HostReply
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.nio.ByteBuffer
 import java.util.logging.Level
 import org.junit.Rule
@@ -489,7 +489,7 @@ class StartLaunchTest {
 
     @Test
     fun `the lookup by name and the launch are logged`() {
-        LimeLogCapture().use { log ->
+        LimeLogCapture().start().use { log ->
             startAndConnect(
                 rig.connection(
                     rig.config {
@@ -498,7 +498,7 @@ class StartLaunchTest {
                 )
             )
 
-            assertThat(log.records)
+            assertThat(log.entries)
                 .containsAtLeast(
                     Level.INFO to DEPRECATED_LOOKUP,
                     Level.INFO to "Launched new game session",

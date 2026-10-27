@@ -10,7 +10,7 @@ import android.view.Surface
 import android.view.SurfaceHolder
 import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
-import io.github.magalz.borealis.discovery.LimeLogRecords
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
@@ -77,7 +77,7 @@ class FakeSurfaceHolder(private val surface: Surface) : SurfaceHolder {
 // Abstract so that Gradle does not run the base as a test of its own.
 @Suppress("AbstractClassCanBeConcreteClass")
 abstract class RendererTestBase : MediaCodecHelperTestBase() {
-    @get:Rule val log = LimeLogRecords()
+    @get:Rule val log = LimeLogCapture()
 
     /** What the crash listener of the renderers was told, in order. */
     protected val crashes = CopyOnWriteArrayList<Exception>()
@@ -273,7 +273,7 @@ internal const val RENDERER_THREAD = 2
 internal const val CHOREOGRAPHER = 4
 
 /**
- * How long a test may run, ten times the slowest test of the renderer: it takes six seconds, most of
- * them the start of the sandbox in the first test of a worker, and the next one under a second.
+ * How long a test may run, ten times the slowest test of the renderer: it takes six seconds, most
+ * of them the start of the sandbox in the first test of a worker, and the next one under a second.
  */
 private const val WATCHDOG_SECONDS = 60L

@@ -2,7 +2,7 @@ package com.limelight.binding.video
 
 import android.os.Build
 import com.google.common.truth.Truth.assertThat
-import io.github.magalz.borealis.crypto.LimeLogCapture
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.util.logging.Level
 import org.junit.Before
 import org.junit.Test
@@ -188,9 +188,9 @@ class MediaCodecHelperVendorOptionTest : MediaCodecHelperTestBase() {
             listOf("vendor.other.option", "VENDOR.Low-Latency.ENABLE")
 
         val records =
-            LimeLogCapture().use { capture ->
+            LimeLogCapture().start().use { capture ->
                 helper.refFrameInvalidationAv1(unlistedAv1())
-                capture.records.toList()
+                capture.entries.toList()
             }
 
         assertThat(records)

@@ -6,6 +6,7 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.binding.input.driver.ShadowScriptedUsbConnection.Read
 import com.limelight.nvstream.input.ControllerPacket
 import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.testing.LimeLogCapture
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test

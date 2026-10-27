@@ -7,6 +7,8 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot
+import io.github.magalz.borealis.testing.ANDROID_12
+import io.github.magalz.borealis.testing.ANDROID_13
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,9 +23,10 @@ import org.robolectric.annotation.Config
  * - the bitrate: absent means automatic, so Java reads [PreferenceConfiguration.getDefaultBitrate];
  * - the motion sensors: Java writes off on Android 12 exactly, and the catalog default stays on.
  *
- * Java does not read the overlay settings ([Settings.PERF_OVERLAY], [Settings.PERF_OVERLAY_LEGACY]),
- * the two logging switches or the background ([Settings.BACKGROUND]), so they are not compared.
- * The language list and the small icon mode are dropped from the catalog.
+ * Java does not read the overlay settings ([Settings.PERF_OVERLAY],
+ * [Settings.PERF_OVERLAY_LEGACY]), the two logging switches or the background
+ * ([Settings.BACKGROUND]), so they are not compared. The language list and the small icon mode are
+ * dropped from the catalog.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [ShadowMoonBridge::class])
@@ -121,24 +124,27 @@ class SettingsDefaultsParityTest {
         for (resolution in RESOLUTIONS) {
             for (fps in FRAME_RATES) {
                 assertThat(DefaultBitrate.kbps(resolution, fps.toString()))
-                    .isEqualTo(PreferenceConfiguration.getDefaultBitrate(resolution, fps.toString()))
+                    .isEqualTo(
+                        PreferenceConfiguration.getDefaultBitrate(resolution, fps.toString())
+                    )
             }
         }
     }
 
     @Test
     fun `the automatic bitrate of the width, height and frame rate overload equals the string overload`() {
-        assertThat(DefaultBitrate.kbps(1920, 1080, 60)).isEqualTo(DefaultBitrate.kbps("1920x1080", "60"))
+        assertThat(DefaultBitrate.kbps(1920, 1080, 60))
+            .isEqualTo(DefaultBitrate.kbps("1920x1080", "60"))
     }
 
     private companion object {
-        const val ANDROID_12 = 31
-        const val ANDROID_13 = 33
 
         /** 720p at 60 fps: the resolution factor 5 times the frame rate factor 2. */
         const val AUTOMATIC_720P60_KBPS = 10_000
 
-        /** The old screen's list (360p to 4K), a native-like odd size, and sizes beyond both ends. */
+        /**
+         * The old screen's list (360p to 4K), a native-like odd size, and sizes beyond both ends.
+         */
         val RESOLUTIONS =
             listOf(
                 "640x360",

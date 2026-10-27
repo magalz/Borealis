@@ -7,6 +7,9 @@ import android.view.InputDevice.KEYBOARD_TYPE_NON_ALPHABETIC
 import com.google.common.truth.Truth.assertThat
 import com.limelight.binding.input.ControllerHandler
 import io.github.magalz.borealis.designsystem.adaptive.isGameController
+import io.github.magalz.borealis.testing.ANDROID_10
+import io.github.magalz.borealis.testing.ANDROID_11
+import io.github.magalz.borealis.testing.ANDROID_12
 import org.junit.Test
 import org.robolectric.annotation.Config
 
@@ -305,9 +308,6 @@ class GameControllerDeviceTest : DevicesTestBase() {
             .device
 
     private companion object {
-        const val ANDROID_10 = 29
-        const val ANDROID_11 = 30
-        const val ANDROID_12 = 31
         const val KEYBOARD = InputDevice.SOURCE_KEYBOARD
         const val DPAD = InputDevice.SOURCE_DPAD
         const val GAMEPAD = InputDevice.SOURCE_GAMEPAD

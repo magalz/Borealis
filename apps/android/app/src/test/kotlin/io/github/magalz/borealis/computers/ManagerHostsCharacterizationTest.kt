@@ -5,8 +5,8 @@ import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import com.limelight.nvstream.http.PairingManager
 import io.github.magalz.borealis.crypto.TestIdentities
-import io.github.magalz.borealis.discovery.LimeLogRecords
 import io.github.magalz.borealis.nvhttp.HostReply
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
@@ -18,14 +18,14 @@ import org.robolectric.RobolectricTestRunner
 /**
  * The hosts that the inherited `ComputerManagerService` keeps: how one is added (it is polled
  * twice, and kept only when it answers), which of its addresses is used, how a known host is
- * updated, how a host is removed and what happens to its state. The hosts are fakes on the
- * loopback interface.
+ * updated, how a host is removed and what happens to its state. The hosts are fakes on the loopback
+ * interface.
  *
  * Characterization: these tests pass on the Java class and on its Kotlin conversion.
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerHostsCharacterizationTest {
-    @get:Rule(order = 0) val log = LimeLogRecords()
+    @get:Rule(order = 0) val log = LimeLogCapture()
     @get:Rule(order = 1) val rig = ManagerRule()
 
     private fun reachable(uuid: String, name: String = "DEN-PC") = rig.reachable(uuid, name)

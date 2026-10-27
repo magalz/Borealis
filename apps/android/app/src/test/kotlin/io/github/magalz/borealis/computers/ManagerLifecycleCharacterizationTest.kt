@@ -11,7 +11,7 @@ import io.github.magalz.borealis.computerstore.FIXTURE_UNIQUE_ID
 import io.github.magalz.borealis.computerstore.UNIQUE_ID_FILE
 import io.github.magalz.borealis.computerstore.computerDatabase
 import io.github.magalz.borealis.computerstore.installFixture
-import io.github.magalz.borealis.discovery.LimeLogRecords
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
@@ -24,18 +24,17 @@ import org.robolectric.shadows.ShadowNetwork
 
 /**
  * The inherited `ComputerManagerService` as Android runs it: what it does when it is created,
- * bound, unbound and destroyed, and what its network callback does. The platform is Robolectric;
- * no test starts a request to a host that is not a fake on the loopback interface.
+ * bound, unbound and destroyed, and what its network callback does. The platform is Robolectric; no
+ * test starts a request to a host that is not a fake on the loopback interface.
  *
  * Characterization: these tests pass on the Java class and on its Kotlin conversion.
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerLifecycleCharacterizationTest {
-    @get:Rule(order = 0) val log = LimeLogRecords()
+    @get:Rule(order = 0) val log = LimeLogCapture()
     @get:Rule(order = 1) val rig = ManagerRule()
 
-    private val connectivity =
-        shadowOf(rig.app.getSystemService(ConnectivityManager::class.java))
+    private val connectivity = shadowOf(rig.app.getSystemService(ConnectivityManager::class.java))
 
     @Test
     fun `every bind gets the one binder of the service, and an unbind does not ask to be rebound`() {

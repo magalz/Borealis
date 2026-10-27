@@ -8,6 +8,8 @@ import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
 import io.github.magalz.borealis.input.FakeUsbController
+import io.github.magalz.borealis.testing.ANDROID_11
+import io.github.magalz.borealis.testing.ANDROID_12
 import org.junit.Test
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -533,10 +535,5 @@ class DeviceLifecycleTest : DevicesTestBase() {
 
         assertThat(rig.contexts().size()).isEqualTo(1)
         assertThat(rig.usbContexts().size()).isEqualTo(1)
-    }
-
-    private companion object {
-        const val ANDROID_11 = 30
-        const val ANDROID_12 = 31
     }
 }

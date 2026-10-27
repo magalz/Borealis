@@ -3,6 +3,8 @@ package io.github.magalz.borealis.input.devices
 import android.view.InputDevice
 import android.view.KeyEvent
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.testing.ANDROID_10
+import io.github.magalz.borealis.testing.ANDROID_9
 import org.junit.Test
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowBuild
@@ -392,8 +394,6 @@ class ExternalAndBackTest : DevicesTestBase() {
     }
 
     private companion object {
-        const val ANDROID_9 = 28
-        const val ANDROID_10 = 29
         const val KEYBOARD = InputDevice.SOURCE_KEYBOARD
         const val GAMEPAD = InputDevice.SOURCE_GAMEPAD
         const val JOYSTICK = InputDevice.SOURCE_JOYSTICK

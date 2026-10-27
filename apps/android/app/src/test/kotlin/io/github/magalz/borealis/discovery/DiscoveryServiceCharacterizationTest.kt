@@ -10,6 +10,9 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.discovery.DiscoveryService
 import com.limelight.nvstream.mdns.MdnsComputer
+import io.github.magalz.borealis.testing.ANDROID_13
+import io.github.magalz.borealis.testing.ANDROID_14
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.net.InetAddress
 import org.junit.Rule
 import org.junit.Test
@@ -29,7 +32,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 class DiscoveryServiceCharacterizationTest {
     @get:Rule(order = 0) val network = NoMdnsNetwork()
-    @get:Rule(order = 1) val log = LimeLogRecords()
+    @get:Rule(order = 1) val log = LimeLogCapture()
 
     private val app = ApplicationProvider.getApplicationContext<Application>()
     private val platform = shadowOf(app.getSystemService(NsdManager::class.java))
@@ -202,8 +205,6 @@ class DiscoveryServiceCharacterizationTest {
         const val THREAD_NAME = "mDNS Discovery Thread"
         const val INTERVAL_MS = 60_000
         const val PORT = 47989
-        const val ANDROID_13 = 33
-        const val ANDROID_14 = 34
         const val POLL_MS = 10L
         const val WAIT_NANOS = 5_000_000_000L
     }

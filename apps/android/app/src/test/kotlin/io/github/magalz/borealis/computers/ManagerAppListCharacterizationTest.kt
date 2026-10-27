@@ -5,9 +5,9 @@ import com.limelight.computers.ComputerManagerService.ApplistPoller
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.PairingManager
 import io.github.magalz.borealis.crypto.TestIdentities
-import io.github.magalz.borealis.discovery.LimeLogRecords
 import io.github.magalz.borealis.nvhttp.HostReply
 import io.github.magalz.borealis.nvhttp.NvFakeHost
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Rule
@@ -17,16 +17,16 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * The app list poller of the inherited `ComputerManagerService`: when it asks a host for its apps,
- * what it keeps in the cache, what it tells the listener, how it survives a host that fails and
- * how it waits for the poll of the host. The host is a fake on the loopback interface, polled
- * over TLS with its pinned certificate. A test wakes the poller with `pollNow` when it is idle,
- * so that it never waits for the two seconds of the retry period.
+ * what it keeps in the cache, what it tells the listener, how it survives a host that fails and how
+ * it waits for the poll of the host. The host is a fake on the loopback interface, polled over TLS
+ * with its pinned certificate. A test wakes the poller with `pollNow` when it is idle, so that it
+ * never waits for the two seconds of the retry period.
  *
  * Characterization: these tests pass on the Java class and on its Kotlin conversion.
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerAppListCharacterizationTest {
-    @get:Rule(order = 0) val log = LimeLogRecords()
+    @get:Rule(order = 0) val log = LimeLogCapture()
     @get:Rule(order = 1) val rig = ManagerRule()
 
     private fun apps(vararg titles: String): String =
@@ -81,8 +81,7 @@ class ManagerAppListCharacterizationTest {
         val raw = host.requests.first { it.path == "/applist" }
         assertThat(raw.scheme).isEqualTo("https")
         assertThat(raw.clientCertificates).isNotEmpty()
-        assertThat(computer.rawAppList)
-            .isEqualTo("""<root status_code="200">$list</root>""")
+        assertThat(computer.rawAppList).isEqualTo("""<root status_code="200">$list</root>""")
         assertThat(cacheFile().readText()).isEqualTo(computer.rawAppList)
         val told = updates.events.single { it.thread !== Thread.currentThread() }
         assertThat(told.details).isSameInstanceAs(computer)

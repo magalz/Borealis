@@ -10,6 +10,9 @@ import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.testing.ANDROID_11
+import io.github.magalz.borealis.testing.ANDROID_12
+import io.github.magalz.borealis.testing.ANDROID_13
 import java.lang.reflect.Method
 import org.junit.After
 import org.junit.Before
@@ -69,7 +72,8 @@ class PreferenceConfigurationMigrationTest {
             .inOrder()
         assertThat(preferences.contains("checkbox_51_surround")).isFalse()
         assertThat(preferences.getString("list_audio_config", null)).isEqualTo("51")
-        assertThat(config.audioConfiguration).isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_51_SURROUND)
+        assertThat(config.audioConfiguration)
+            .isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_51_SURROUND)
     }
 
     @Test
@@ -82,7 +86,8 @@ class PreferenceConfigurationMigrationTest {
 
         val config = read()
 
-        assertThat(config.audioConfiguration).isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_51_SURROUND)
+        assertThat(config.audioConfiguration)
+            .isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_51_SURROUND)
         assertThat(preferences.getString("list_audio_config", null)).isEqualTo("51")
     }
 
@@ -94,7 +99,8 @@ class PreferenceConfigurationMigrationTest {
 
         assertThat(log).isEmpty()
         assertThat(preferences.contains("checkbox_51_surround")).isTrue()
-        assertThat(config.audioConfiguration).isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_STEREO)
+        assertThat(config.audioConfiguration)
+            .isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_STEREO)
     }
 
     @Test
@@ -159,7 +165,9 @@ class PreferenceConfigurationMigrationTest {
 
         val config = read()
 
-        assertThat(listOf(config.width, config.height, config.fps)).containsExactly(1920, 1080, 30).inOrder()
+        assertThat(listOf(config.width, config.height, config.fps))
+            .containsExactly(1920, 1080, 30)
+            .inOrder()
         assertThat(preferences.getString("list_resolution", null)).isEqualTo("1920x1080")
         assertThat(preferences.getString("list_fps", null)).isEqualTo("30")
         // The automatic bitrate uses what the migration has just written.
@@ -383,9 +391,12 @@ class PreferenceConfigurationMigrationTest {
         val config = read()
 
         assertThat(log).isEmpty()
-        assertThat(listOf(config.width, config.height, config.fps)).containsExactly(3840, 2160, 30).inOrder()
+        assertThat(listOf(config.width, config.height, config.fps))
+            .containsExactly(3840, 2160, 30)
+            .inOrder()
         assertThat(config.framePacing).isEqualTo(PreferenceConfiguration.FRAME_PACING_BALANCED)
-        assertThat(config.audioConfiguration).isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_51_SURROUND)
+        assertThat(config.audioConfiguration)
+            .isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_51_SURROUND)
     }
 
     @Test
@@ -465,7 +476,9 @@ class PreferenceConfigurationMigrationTest {
         PreferenceConfiguration.resetStreamingSettings(context)
         val config = read()
 
-        assertThat(listOf(config.width, config.height, config.fps)).containsExactly(1280, 720, 60).inOrder()
+        assertThat(listOf(config.width, config.height, config.fps))
+            .containsExactly(1280, 720, 60)
+            .inOrder()
         assertThat(config.bitrate).isEqualTo(10_000)
         assertThat(config.videoFormat).isEqualTo(PreferenceConfiguration.FormatOption.AUTO)
         assertThat(config.enableHdr).isFalse()
@@ -496,7 +509,10 @@ class PreferenceConfigurationMigrationTest {
         buildAs("Google", BROKEN_FIRMWARE_FINGERPRINT)
         assertThat(PreferenceConfiguration.isShieldAtvFirmwareWithBrokenHdr()).isFalse()
 
-        buildAs("NVIDIA", "NVIDIA/foster_e/foster:9/PPR1.180610.011/4079208_2235.1396:user/release-keys")
+        buildAs(
+            "NVIDIA",
+            "NVIDIA/foster_e/foster:9/PPR1.180610.011/4079208_2235.1396:user/release-keys",
+        )
         assertThat(PreferenceConfiguration.isShieldAtvFirmwareWithBrokenHdr()).isFalse()
 
         buildAs("NVIDIA", "robolectric")
@@ -541,10 +557,14 @@ class PreferenceConfigurationMigrationTest {
                 1440 to "2560x1440",
                 2160 to "3840x2160",
             )) {
-            assertWithMessage("height $height").that(resolutionString(height * 2, height)).isEqualTo(expected)
+            assertWithMessage("height $height")
+                .that(resolutionString(height * 2, height))
+                .isEqualTo(expected)
         }
         for (height in listOf(0, 1, 361, 719, 721, 1200, 4320, -1)) {
-            assertWithMessage("height $height").that(resolutionString(1920, height)).isEqualTo("1280x720")
+            assertWithMessage("height $height")
+                .that(resolutionString(1920, height))
+                .isEqualTo("1280x720")
         }
     }
 
@@ -565,9 +585,12 @@ class PreferenceConfigurationMigrationTest {
     /** The method and its receiver: none for a static method, the companion for a Kotlin one. */
     private fun resolutionStringMethod(): Pair<Method, Any?> {
         val outer = PreferenceConfiguration::class.java
-        declaredResolutionString(outer)?.let { return it to null }
+        declaredResolutionString(outer)?.let {
+            return it to null
+        }
         val companionType = Class.forName("${outer.name}\$Companion")
-        val companion = outer.getDeclaredField("Companion").also { it.isAccessible = true }.get(null)
+        val companion =
+            outer.getDeclaredField("Companion").also { it.isAccessible = true }.get(null)
         return checkNotNull(declaredResolutionString(companionType)) to companion
     }
 
@@ -585,9 +608,6 @@ class PreferenceConfigurationMigrationTest {
     }
 
     private companion object {
-        const val ANDROID_11 = 30
-        const val ANDROID_12 = 31
-        const val ANDROID_13 = 33
         const val RESET_KEYS = 9
         const val BROKEN_FIRMWARE_FINGERPRINT =
             "NVIDIA/foster_e/foster:9/PPR1.180610.011/4079208_2235.1395:user/release-keys"

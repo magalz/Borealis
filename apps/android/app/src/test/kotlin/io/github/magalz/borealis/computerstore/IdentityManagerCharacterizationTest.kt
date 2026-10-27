@@ -5,7 +5,7 @@ import android.content.ContextWrapper
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.computers.IdentityManager
-import io.github.magalz.borealis.discovery.LimeLogRecords
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -24,7 +24,7 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class IdentityManagerCharacterizationTest {
-    @get:Rule val log = LimeLogRecords()
+    @get:Rule val log = LimeLogCapture()
 
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val idFile = File(context.filesDir, UNIQUE_ID_FILE)
@@ -66,7 +66,8 @@ class IdentityManagerCharacterizationTest {
         val identity = IdentityManager(context)
 
         assertThat(identity.uniqueId).matches(generated.pattern)
-        assertThat(idFile.readBytes().toList()).isEqualTo(identity.uniqueId.toByteArray(Charsets.US_ASCII).toList())
+        assertThat(idFile.readBytes().toList())
+            .isEqualTo(identity.uniqueId.toByteArray(Charsets.US_ASCII).toList())
         assertThat(lines())
             .containsExactly(
                 "INFO: Reading UID from disk",
@@ -103,10 +104,11 @@ class IdentityManagerCharacterizationTest {
 
     @Test
     fun `generated ids are always 16 lower-case hex digits, padded with zeros`() {
-        val ids = List(GENERATED_IDS) {
-            idFile.delete()
-            IdentityManager(context).uniqueId
-        }
+        val ids =
+            List(GENERATED_IDS) {
+                idFile.delete()
+                IdentityManager(context).uniqueId
+            }
 
         assertThat(ids.filterNot { generated.matches(it) }).isEmpty()
         // In 500 ids a zero comes first about 31 times, a letter shows in nearly every id, a long
@@ -182,7 +184,8 @@ class IdentityManagerCharacterizationTest {
     }
 
     /** The id file as the code under test opens it, with the faults that a test asks for. */
-    private class TrackedInput(file: File, private val fault: IOException?) : FileInputStream(file) {
+    private class TrackedInput(file: File, private val fault: IOException?) :
+        FileInputStream(file) {
         var closed = false
 
         override fun read(b: ByteArray, off: Int, len: Int): Int =
@@ -194,7 +197,8 @@ class IdentityManagerCharacterizationTest {
         }
     }
 
-    private class TrackedOutput(file: File, private val fault: IOException?) : FileOutputStream(file) {
+    private class TrackedOutput(file: File, private val fault: IOException?) :
+        FileOutputStream(file) {
         var closed = false
 
         override fun write(b: ByteArray, off: Int, len: Int) {
@@ -236,7 +240,9 @@ class IdentityManagerCharacterizationTest {
         IdentityManager(files)
         IdentityManager(files)
 
-        assertThat(files.calls).containsExactly("in uniqueid", "out uniqueid 0", "in uniqueid").inOrder()
+        assertThat(files.calls)
+            .containsExactly("in uniqueid", "out uniqueid 0", "in uniqueid")
+            .inOrder()
     }
 
     @Test
@@ -299,7 +305,8 @@ class IdentityManagerCharacterizationTest {
 
         assertThat(identity.uniqueId).matches(generated.pattern)
         assertThat(files.outputs.single().closed).isTrue()
-        // The text is only buffered when the log says "written": the failure comes when it is flushed.
+        // The text is only buffered when the log says "written": the failure comes when it is
+        // flushed.
         assertThat(lines())
             .containsExactly(
                 "INFO: Reading UID from disk",

@@ -5,6 +5,9 @@ import android.hardware.SensorManager
 import android.os.Vibrator
 import com.google.common.truth.Truth.assertThat
 import com.limelight.preferences.PreferenceConfiguration
+import io.github.magalz.borealis.testing.ANDROID_11
+import io.github.magalz.borealis.testing.ANDROID_12
+import io.github.magalz.borealis.testing.ANDROID_13
 import org.junit.Test
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -357,11 +360,5 @@ class ContextHardwareTest : DevicesTestBase() {
         DeviceHardware.set(device.id, Hardware(rgbLights = 1))
 
         assertThat(contextOf(device).second.bool("hasRgbLed")).isFalse()
-    }
-
-    private companion object {
-        const val ANDROID_11 = 30
-        const val ANDROID_12 = 31
-        const val ANDROID_13 = 33
     }
 }

@@ -2,7 +2,7 @@ package io.github.magalz.borealis.input.feedback
 
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
-import io.github.magalz.borealis.crypto.LimeLogCapture
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.util.logging.Level
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -248,23 +248,28 @@ class ControllerLedTest : FeedbackTestBase() {
 
     @Test
     fun `a session that fails to close is logged and the rest of the teardown goes on`() {
-        val battery = Hardware.battery(status = android.hardware.BatteryState.STATUS_DISCHARGING, capacity = 0.5f)
+        val battery =
+            Hardware.battery(
+                status = android.hardware.BatteryState.STATUS_DISCHARGING,
+                capacity = 0.5f,
+            )
         val rig = rig()
         val pad =
-            rig.connectPad(features = DeviceFeatures(lightsManager = lights, batteryState = battery))
+            rig.connectPad(
+                features = DeviceFeatures(lightsManager = lights, batteryState = battery)
+            )
         rig.wake(pad)
         rig.awaitBackground()
         setLed(rig, 1, 2, 3)
         Hardware.session(Hardware.lights(lights).sessions.single()).failOnClose =
             IllegalStateException("closed twice")
-        val log = LimeLogCapture()
-
+        val log = LimeLogCapture().start()
         log.use { rig.handler.stop() }
         Hardware.batteryState(battery).batteryCapacity = 0.25f
         rig.advanceBackgroundBy(120_000)
         rig.awaitBackground()
 
-        assertThat(log.records)
+        assertThat(log.entries)
             .contains(Level.WARNING to "Error closing LightsSession: closed twice")
         assertThat(ShadowFeedbackBridge.batteryEvents).hasSize(1)
     }

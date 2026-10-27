@@ -19,7 +19,7 @@ import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvApp
 import com.limelight.utils.ServerHelper
 import com.limelight.utils.ShortcutHelper
-import io.github.magalz.borealis.discovery.LimeLogRecords
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.OutputStream
@@ -48,7 +48,7 @@ import org.robolectric.shadow.api.Shadow
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(shadows = [TvChannelCharacterizationTest.RecordingTvInputManager::class])
 class TvChannelCharacterizationTest {
-    @get:Rule val log = LimeLogRecords()
+    @get:Rule val log = LimeLogCapture()
 
     private val app = ApplicationProvider.getApplicationContext<Application>()
     private val tv =

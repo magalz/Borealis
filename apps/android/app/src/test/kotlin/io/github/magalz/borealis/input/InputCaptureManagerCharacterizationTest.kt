@@ -3,16 +3,16 @@ package io.github.magalz.borealis.input
 import com.google.common.truth.Truth.assertThat
 import com.limelight.binding.input.capture.AndroidNativePointerCaptureProvider
 import com.limelight.binding.input.capture.InputCaptureManager
-import io.github.magalz.borealis.crypto.LimeLogCapture
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.util.logging.Level
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * `Game` asks the manager for its capture provider once, in `onCreate`, after the layout is
- * there. There is one kind of provider since the Android O check went: the native pointer capture,
- * on the stream view of the activity, with the pointer-icon hiding it inherits.
+ * `Game` asks the manager for its capture provider once, in `onCreate`, after the layout is there.
+ * There is one kind of provider since the Android O check went: the native pointer capture, on the
+ * stream view of the activity, with the pointer-icon hiding it inherits.
  */
 @RunWith(RobolectricTestRunner::class)
 class InputCaptureManagerCharacterizationTest {
@@ -20,11 +20,12 @@ class InputCaptureManagerCharacterizationTest {
 
     @Test
     fun `the provider is the native pointer capture, and the manager says so in the log`() {
-        LimeLogCapture().use { log ->
+        LimeLogCapture().start().use { log ->
             val provider = InputCaptureManager.getInputCaptureProvider(rig.activity)
 
             assertThat(provider).isInstanceOf(AndroidNativePointerCaptureProvider::class.java)
-            assertThat(log.records).containsExactly(Level.INFO to "Using Android O+ native mouse capture")
+            assertThat(log.entries)
+                .containsExactly(Level.INFO to "Using Android O+ native mouse capture")
         }
     }
 

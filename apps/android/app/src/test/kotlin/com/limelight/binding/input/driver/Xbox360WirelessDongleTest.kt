@@ -4,6 +4,7 @@ import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbInterface
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.testing.LimeLogCapture
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

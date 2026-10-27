@@ -11,6 +11,7 @@ import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.nvstream.jni.MoonBridge
 import io.github.magalz.borealis.input.FakeUsbController
+import io.github.magalz.borealis.testing.ANDROID_11
 import org.junit.Test
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -604,9 +605,5 @@ class ArrivalReportTest : DevicesTestBase() {
                         caps(MoonBridge.LI_CCAP_ANALOG_TRIGGERS, MoonBridge.LI_CCAP_RUMBLE),
                 )
             )
-    }
-
-    private companion object {
-        const val ANDROID_11 = 30
     }
 }

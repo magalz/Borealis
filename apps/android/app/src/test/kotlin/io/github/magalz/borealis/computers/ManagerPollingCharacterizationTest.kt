@@ -4,9 +4,9 @@ import android.net.ConnectivityManager
 import com.google.common.truth.Truth.assertThat
 import com.limelight.computers.ComputerDatabaseManager
 import com.limelight.nvstream.http.ComputerDetails
-import io.github.magalz.borealis.discovery.LimeLogRecords
 import io.github.magalz.borealis.nvhttp.HostReply
 import io.github.magalz.borealis.nvhttp.NvFakeHost
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
@@ -30,7 +30,7 @@ import org.robolectric.shadows.ShadowSystemClock
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerPollingCharacterizationTest {
-    @get:Rule(order = 0) val log = LimeLogRecords()
+    @get:Rule(order = 0) val log = LimeLogCapture()
     @get:Rule(order = 1) val rig = ManagerRule()
 
     private val caller = Thread.currentThread()
@@ -313,7 +313,10 @@ class ManagerPollingCharacterizationTest {
         rig.binder.stopPolling()
 
         assertThat(failures("DEN-PC"))
-            .containsExactly("WARNING: DEN-PC is offline (try 0)", "WARNING: DEN-PC is offline (try 0)")
+            .containsExactly(
+                "WARNING: DEN-PC is offline (try 0)",
+                "WARNING: DEN-PC is offline (try 0)",
+            )
         assertThat(updates.events.map { it.state }).doesNotContain(OFFLINE)
     }
 

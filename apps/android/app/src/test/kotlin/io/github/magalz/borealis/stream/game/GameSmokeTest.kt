@@ -21,7 +21,8 @@ internal class GameSmokeTest : GameTestBase() {
     fun `a key of a hardware keyboard reaches the host as a key press`() {
         rig.streaming()
 
-        val handled = rig.game.dispatchKeyEvent(keyboardEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_A))
+        val handled =
+            rig.game.dispatchKeyEvent(keyboardEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_A))
 
         assertThat(handled).isTrue()
         val call = ShadowRecordingBridge.named("sendKeyboardInput").single()

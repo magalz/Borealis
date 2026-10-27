@@ -30,7 +30,9 @@ internal class GameWindowTest : GameTestBase() {
 
     private fun idle(millis: Long) = ShadowLooper.idleMainLooper(millis, TimeUnit.MILLISECONDS)
 
-    /** Shows the system bars the way the system does, without telling the listener of the window. */
+    /**
+     * Shows the system bars the way the system does, without telling the listener of the window.
+     */
     private fun barsShown(flags: Int) {
         ReflectionHelpers.setField(decorView, "mSystemUiVisibility", flags)
     }
@@ -54,7 +56,8 @@ internal class GameWindowTest : GameTestBase() {
         ReflectionHelpers.setField(rig.game, "grabbedBeforeCapture", false)
         rig.game.connectionStarted()
         rig.firstFrame()
-        // The clock moves a few milliseconds with each frame of the chrome, so the check keeps a margin.
+        // The clock moves a few milliseconds with each frame of the chrome, so the check keeps a
+        // margin.
         idle(GRAB_DELAY_MS - MARGIN_MS)
         assertThat(rig.field<Boolean>("grabbedInput")).isFalse()
 

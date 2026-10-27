@@ -41,7 +41,8 @@ internal class GameStopTest : GameTestBase() {
         assertThat(rig.game.isFinishing).isTrue()
         assertThat(rig.field<Boolean>("connected")).isFalse()
         assertThat(ShadowRecordingBridge.names).containsExactlyElementsIn(stopCalls).inOrder()
-        // The stop runs on a thread of its own, with the bridge locked, so the UI never waits for it.
+        // The stop runs on a thread of its own, with the bridge locked, so the UI never waits for
+        // it.
         assertThat(ShadowRecordingBridge.named("stopConnection").single().locked).isTrue()
     }
 
@@ -136,7 +137,9 @@ internal class GameStopTest : GameTestBase() {
         rig.stop()
 
         assertThat(latencyToast())
-            .isEqualTo("Average frame decoding latency: 30 ms (hardware decoder latency: 5 ms) [H.264]")
+            .isEqualTo(
+                "Average frame decoding latency: 30 ms (hardware decoder latency: 5 ms) [H.264]"
+            )
     }
 
     @Test

@@ -107,7 +107,8 @@ internal class GameDisplayTest : GameTestBase() {
 
         rig.create()
 
-        assertThat(rig.game.requestedOrientation).isEqualTo(ActivityInfo.SCREEN_ORIENTATION_FULL_USER)
+        assertThat(rig.game.requestedOrientation)
+            .isEqualTo(ActivityInfo.SCREEN_ORIENTATION_FULL_USER)
     }
 
     @Test

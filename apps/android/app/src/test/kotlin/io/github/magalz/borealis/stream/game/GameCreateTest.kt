@@ -136,7 +136,11 @@ internal class GameCreateTest : GameTestBase() {
         assertThat(rig.phase)
             .isEqualTo(
                 StreamPhase.Failed(
-                    StreamFailure(FailureKind.GENERIC, "No hardware accelerated H.264 decoder", null)
+                    StreamFailure(
+                        FailureKind.GENERIC,
+                        "No hardware accelerated H.264 decoder",
+                        null,
+                    )
                 )
             )
         val view = rig.game.findViewById<StreamView>(R.id.surfaceView)

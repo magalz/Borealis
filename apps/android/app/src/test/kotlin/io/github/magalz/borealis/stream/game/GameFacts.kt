@@ -1,9 +1,9 @@
 package io.github.magalz.borealis.stream.game
 
+import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.ConnectionContext
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.StreamConfiguration
-import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamSession
 import org.robolectric.shadows.ShadowToast
@@ -21,7 +21,9 @@ internal val GameRig.phase: StreamPhase
 internal val GameRig.connection: NvConnection
     get() = field("conn")
 
-/** What the connection knows about the start it will make: the host, the certificate, the stream. */
+/**
+ * What the connection knows about the start it will make: the host, the certificate, the stream.
+ */
 internal val GameRig.connectionContext: ConnectionContext
     get() = ReflectionHelpers.getField(connection, "context")
 

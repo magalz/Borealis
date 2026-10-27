@@ -37,8 +37,7 @@ internal class RecordingSurfaceHolder : SurfaceHolder {
 
     override fun isCreating(): Boolean = false
 
-    @Deprecated("The holder has no type to set.")
-    override fun setType(type: Int) = Unit
+    @Deprecated("The holder has no type to set.") override fun setType(type: Int) = Unit
 
     override fun setFixedSize(width: Int, height: Int) = Unit
 

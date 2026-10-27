@@ -87,8 +87,16 @@ internal class GameIntent(
     }
 }
 
-/** A display mode: `Display.Mode` has no public constructor, and this is what the display shadow takes. */
-internal data class DisplayMode(val id: Int, val width: Int, val height: Int, val refreshRate: Float) {
+/**
+ * A display mode: `Display.Mode` has no public constructor, and this is what the display shadow
+ * takes.
+ */
+internal data class DisplayMode(
+    val id: Int,
+    val width: Int,
+    val height: Int,
+    val refreshRate: Float,
+) {
     fun toMode(): Display.Mode =
         Display.Mode::class
             .java
@@ -122,10 +130,10 @@ private const val SHIELD_SERVICE = "com.nvidia.blakepairing.AccessoryService"
  * reached with [markConnectionAttempted] instead.
  *
  * Use it from a test of [GameTestBase], which sets the Robolectric configuration and destroys the
- * rig after each test. The activity reads the default shared preferences of the application: a
- * test sets them with [preference] before [create]. The USB driver preference is off, because it
- * binds a service; the network is an unmetered Wi-Fi, because a metered one shows a toast; and a
- * hardware AVC decoder exists, because without one the activity stops after its wiring.
+ * rig after each test. The activity reads the default shared preferences of the application: a test
+ * sets them with [preference] before [create]. The USB driver preference is off, because it binds a
+ * service; the network is an unmetered Wi-Fi, because a metered one shows a toast; and a hardware
+ * AVC decoder exists, because without one the activity stops after its wiring.
  *
  * The rig reads the private state of the activity by name ([field]) where the activity gives no
  * other way to see what it built. A conversion of `Game` keeps those names.
@@ -198,7 +206,9 @@ internal class GameRig {
             .setDeviceConfigurationInfo(ConfigurationInfo().apply { reqGlEsVersion = version })
     }
 
-    /** The active network: a mobile one, which Android reports as metered, or an unmetered Wi-Fi. */
+    /**
+     * The active network: a mobile one, which Android reports as metered, or an unmetered Wi-Fi.
+     */
     fun network(metered: Boolean) {
         val manager = application.getSystemService(Context.CONNECTIVITY_SERVICE)
         val type = if (metered) ConnectivityManager.TYPE_MOBILE else ConnectivityManager.TYPE_WIFI
@@ -220,7 +230,8 @@ internal class GameRig {
      */
     fun displayModes(current: DisplayMode, vararg others: DisplayMode) {
         val modes = (listOf(current.copy(id = 0)) + others).map { it.toMode() }.toTypedArray()
-        // The modes that apps see, and the modes that the system has, whose mode 0 is the current one.
+        // The modes that apps see, and the modes that the system has, whose mode 0 is the current
+        // one.
         ShadowDisplayManager.setSupportedModes(Display.DEFAULT_DISPLAY, *modes)
         val change =
             ShadowDisplayManager::class
@@ -281,8 +292,8 @@ internal class GameRig {
     }
 
     /**
-     * A running USB driver service for the activity to bind: its binder answers the bind of
-     * [Game], so that the activity connects to it as it does on a device.
+     * A running USB driver service for the activity to bind: its binder answers the bind of [Game],
+     * so that the activity connects to it as it does on a device.
      */
     fun usbDriverService(): UsbDriverService {
         val service = Robolectric.buildService(UsbDriverService::class.java).create()
@@ -303,9 +314,9 @@ internal class GameRig {
     }
 
     /**
-     * The state of a running stream: the connection started, the first frame on screen and the
-     * main looper idled until the input grab. The grab waits for the first frame: until then the
-     * chrome covers the stream and takes the input, and a grab is refused.
+     * The state of a running stream: the connection started, the first frame on screen and the main
+     * looper idled until the input grab. The grab waits for the first frame: until then the chrome
+     * covers the stream and takes the input, and a grab is refused.
      */
     fun streaming(intent: GameIntent = GameIntent()): Game {
         val game = create(intent)

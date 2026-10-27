@@ -40,7 +40,11 @@ internal fun keyboardEvent(action: Int, keyCode: Int, metaState: Int = 0): KeyEv
     return event
 }
 
-/** A press of [button] (a `MotionEvent.BUTTON_*`) by a mouse that points at ([x], [y]). */
+/**
+ * A press of [button] (a `MotionEvent.BUTTON_*`) by a mouse that points at ([x], [y]). The
+ * `motionEvent` of `input/CaptureRig.kt` builds one pointer too, but only a move, with no button
+ * state: a press needs its own action and button state, so this builds the event itself.
+ */
 internal fun mousePress(button: Int, x: Float, y: Float): MotionEvent {
     val now = SystemClock.uptimeMillis()
     val properties =

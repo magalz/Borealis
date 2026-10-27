@@ -166,11 +166,70 @@ internal class GameDisplayTest : GameTestBase() {
             .isEqualTo(WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT)
     }
 
+    /** The cutout mode of a window for a stream of [resolution] on a display of 2400x1080. */
+    private fun cutoutModeFor(resolution: String): Int {
+        rig.preference("list_resolution", resolution)
+        rig.displayModes(DisplayMode(0, 2400, 1080, 60f))
+
+        rig.create()
+
+        return rig.game.window.attributes.layoutInDisplayCutoutMode
+    }
+
+    @Test
+    fun `a native resolution with only the width of a display mode leaves the notch alone`() {
+        assertThat(cutoutModeFor("2400x1000"))
+            .isEqualTo(WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT)
+    }
+
+    @Test
+    fun `a native resolution with only the height of a display mode leaves the notch alone`() {
+        assertThat(cutoutModeFor("1000x1080"))
+            .isEqualTo(WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT)
+    }
+
+    @Test
+    fun `a native resolution that has the width of the display as its height alone leaves the notch`() {
+        assertThat(cutoutModeFor("1000x2400"))
+            .isEqualTo(WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT)
+    }
+
+    @Test
+    fun `a native resolution that has the height of the display as its width alone leaves the notch`() {
+        assertThat(cutoutModeFor("1080x1000"))
+            .isEqualTo(WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT)
+    }
+
     @Test
     fun `a native resolution on a square-ish display locks the orientation of the stream`() {
         rig.displayModes(DisplayMode(0, 1080, 1000, 60f))
         rig.preference("list_resolution", "1000x1080")
+
         rig.create()
+
+        assertThat(rig.game.requestedOrientation)
+            .isEqualTo(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT)
+    }
+
+    @Test
+    fun `a native resolution that is as wide as it is high is locked to portrait`() {
+        rig.displayModes(DisplayMode(0, 1000, 1000, 60f))
+        rig.preference("list_resolution", "1000x1000")
+
+        rig.create()
+
+        assertThat(rig.game.requestedOrientation)
+            .isEqualTo(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT)
+    }
+
+    @Test
+    fun `a portrait native resolution wins over the landscape of the on-screen controller`() {
+        rig.preference("checkbox_show_onscreen_controls", true)
+        rig.displayModes(DisplayMode(0, 1080, 1000, 60f))
+        rig.preference("list_resolution", "1000x1080")
+
+        rig.create()
+
         assertThat(rig.game.requestedOrientation)
             .isEqualTo(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT)
     }

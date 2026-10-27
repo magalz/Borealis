@@ -98,9 +98,17 @@ internal class GameConstructionTest : GameTestBase() {
 
         rig.create()
 
-        assertThat(rig.field<VirtualController?>("virtualController")).isNotNull()
+        val controller = checkNotNull(rig.field<VirtualController?>("virtualController"))
         val parent = rig.game.findViewById<View>(R.id.surfaceView).parent
         assertThat(parent).isInstanceOf(FrameLayout::class.java)
+        // Its elements and its configure button are views of that parent, and they report to the
+        // controller handler.
+        assertThat(controller.elements).isNotEmpty()
+        assertThat(controller.elements.map { it.parent }.distinct()).containsExactly(parent)
+        assertThat(ReflectionHelpers.getField<View>(controller, "buttonConfigure").parent)
+            .isSameInstanceAs(parent)
+        assertThat(ReflectionHelpers.getField<Any?>(controller, "controllerHandler"))
+            .isSameInstanceAs(controllerHandler())
     }
 
     @Test
@@ -120,16 +128,19 @@ internal class GameConstructionTest : GameTestBase() {
 
     @Test
     fun `the renderer gets the OpenGL renderer name that the GL preferences hold`() {
+        // A name that no decoder rule looks at: MediaCodecHelper reads the first one it gets in a
+        // sandbox and keeps it, so a name with a rule would make the other tests depend on this
+        // one.
         rig.application
             .getSharedPreferences("GlPreferences", Context.MODE_PRIVATE)
             .edit()
-            .putString("Renderer", "Adreno (TM) 640")
+            .putString("Renderer", "Test GPU")
             .commit()
 
         rig.create()
 
         assertThat(ReflectionHelpers.getField<String>(rig.renderer, "glRenderer"))
-            .isEqualTo("Adreno (TM) 640")
+            .isEqualTo("Test GPU")
     }
 
     @Test

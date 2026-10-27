@@ -32,7 +32,7 @@ object SessionAudit {
      * [videoFormat] is the negotiated `MoonBridge.VIDEO_FORMAT_*` value of the upstream decoder;
      * [name] and [address] label the host.
      */
-    @Suppress("LongParameterList") // The Java call site in Game.java passes the six values.
+    @Suppress("LongParameterList") // The call site in Game.kt passes the six values.
     @JvmStatic
     fun started(
         name: String?,

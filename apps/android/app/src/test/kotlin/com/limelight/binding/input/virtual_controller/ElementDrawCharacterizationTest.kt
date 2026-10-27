@@ -8,8 +8,10 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.R
 import com.limelight.binding.input.virtual_controller.VirtualController.ControllerMode
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.testing.OwnedResources
 import kotlin.math.abs
 import org.json.JSONObject
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -29,6 +31,8 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(shadows = [ShadowRecordingBridge::class])
 class ElementDrawCharacterizationTest {
+    @get:Rule val owned = OwnedResources()
+
     private fun paint(
         color: Int,
         stroke: Float = 4f,
@@ -47,7 +51,7 @@ class ElementDrawCharacterizationTest {
     private val magenta = 0xF0FF00FF.toInt()
     private val green = 0xF000FF00.toInt()
 
-    private val kit by lazy { ElementRig() }
+    private val kit by lazy { owned.own(ElementRig()) }
     private val activity by lazy { kit.rig.activity }
 
     private fun stick(width: Int = 301, height: Int = 301) =
@@ -263,7 +267,7 @@ class ElementDrawCharacterizationTest {
     @Test
     fun `the stroke is cut to whole pixels, not rounded`() {
         // 1150 * 0.004 = 4.6: a stroke of 4, an outer circle of 150 - 2 * 4
-        val high = ElementRig(Screen(2000, 1150))
+        val high = owned.own(ElementRig(Screen(2000, 1150)))
         val stick = high.add(AnalogStick(high.controller, high.rig.activity, 12), 10, 10, 301, 301)
 
         assertThat(draw(stick).calls)
@@ -299,7 +303,7 @@ class ElementDrawCharacterizationTest {
     @Test
     fun `the outer circle of a stick of 433 pixels is 216 over 100 times 100 in float, less two strokes`() {
         // 216 / 100 * 100 is 216.00002 in float, where 216 * 100 / 100 is 216
-        val high = ElementRig(Screen(1920, 1200))
+        val high = owned.own(ElementRig(Screen(1920, 1200)))
         val stick = high.add(AnalogStick(high.controller, high.rig.activity, 12), 10, 10, 433, 433)
 
         assertThat(draw(stick).of("circle")[0].numbers)
@@ -309,7 +313,7 @@ class ElementDrawCharacterizationTest {
 
     // The button
 
-    private val tall by lazy { ElementRig(Screen(2400, 1300)) }
+    private val tall by lazy { owned.own(ElementRig(Screen(2400, 1300))) }
 
     private fun button(text: String = "A") =
         tall.add(DigitalButton(tall.controller, 6, 1, tall.rig.activity), 100, 100, 200, 100).also {
@@ -465,7 +469,7 @@ class ElementDrawCharacterizationTest {
 
     // The pad
 
-    private val padKit by lazy { ElementRig() }
+    private val padKit by lazy { owned.own(ElementRig()) }
     private val pad by lazy {
         padKit.add(DigitalPad(padKit.controller, padKit.rig.activity), 100, 100, 330, 240)
     }

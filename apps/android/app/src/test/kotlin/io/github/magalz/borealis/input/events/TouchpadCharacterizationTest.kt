@@ -23,6 +23,8 @@ import android.view.MotionEvent.FLAG_CANCELED
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.input.ControllerPacket.TOUCHPAD_FLAG
+import io.github.magalz.borealis.testing.OwnedResources
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -36,7 +38,8 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class TouchpadCharacterizationTest {
-    private val rig = EventsRig()
+    @get:Rule val owned = OwnedResources()
+    @get:Rule val rig = EventsRig()
 
     private val xRange = motionRange(AXIS_X, 0f, 1000f)
     private val yRange = motionRange(AXIS_Y, 0f, 500f)
@@ -385,7 +388,7 @@ class TouchpadCharacterizationTest {
 
     @Test
     fun `when the touchpad controls the mouse no touch is sent, and the system gets the event`() {
-        val mouse = EventsRig { gamepadTouchpadAsMouse = true }
+        val mouse = owned.own(EventsRig { gamepadTouchpadAsMouse = true })
         val mousePad =
             mouse.addPad(
                 7,
@@ -503,7 +506,7 @@ class TouchpadCharacterizationTest {
 
     @Test
     fun `the touchpad button works when the touchpad controls the mouse, and the event goes on to the system`() {
-        val mouse = EventsRig { gamepadTouchpadAsMouse = true }
+        val mouse = owned.own(EventsRig { gamepadTouchpadAsMouse = true })
         val mousePad = mouse.addPad(7, controllerNumber = 2)
 
         assertThat(
@@ -597,7 +600,7 @@ class TouchpadCharacterizationTest {
 
     @Test
     fun `a mouse source is left to the system when the touchpad controls the mouse`() {
-        val mouse = EventsRig { gamepadTouchpadAsMouse = true }
+        val mouse = owned.own(EventsRig { gamepadTouchpadAsMouse = true })
         val mousePad = mouse.addPad(7, controllerNumber = 2)
 
         assertThat(mouseSource(ACTION_DOWN, pad = mousePad)).isFalse()

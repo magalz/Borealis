@@ -4,6 +4,8 @@ import android.widget.FrameLayout
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.testing.OwnedResources
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -20,6 +22,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [ShadowRecordingBridge::class])
 class DefaultLayoutCharacterizationTest {
+    @get:Rule val owned = OwnedResources()
+
     private fun defaultLayout(
         screen: Screen,
         onlyL3R3: Boolean = false,
@@ -27,7 +31,7 @@ class DefaultLayoutCharacterizationTest {
         showGuideButton: Boolean = true,
         opacity: Int? = null,
     ): OscRig {
-        val rig = OscRig(screen)
+        val rig = owned.own(OscRig(screen))
         rig.settings(onlyL3R3, flipFaceButtons, showGuideButton, opacity)
         VirtualControllerConfigurationLoader.createDefaultLayout(rig.controller, rig.activity)
         return rig

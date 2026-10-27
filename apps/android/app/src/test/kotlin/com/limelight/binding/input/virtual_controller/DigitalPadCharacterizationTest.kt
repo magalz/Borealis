@@ -3,6 +3,8 @@ package com.limelight.binding.input.virtual_controller
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.testing.OwnedResources
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -35,7 +37,8 @@ class PadLog(private val name: String = "", private val shared: MutableList<Stri
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(shadows = [ShadowRecordingBridge::class])
 class DigitalPadCharacterizationTest {
-    private val kit = ElementRig()
+    @get:Rule val owned = OwnedResources()
+    private val kit = owned.own(ElementRig())
     private val pad = kit.add(DigitalPad(kit.controller, kit.rig.activity), 100, 100, 330, 240)
     private val log = PadLog().also { pad.addDigitalPadListener(it) }
 

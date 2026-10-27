@@ -8,7 +8,9 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.input.Packet
+import io.github.magalz.borealis.testing.OwnedResources
 import org.json.JSONObject
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -24,7 +26,8 @@ import org.robolectric.shadows.ShadowToast
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [ShadowRecordingBridge::class])
 class VirtualControllerCharacterizationTest {
-    private val rig = OscRig()
+    @get:Rule val owned = OwnedResources()
+    private val rig = owned.own(OscRig())
     private val controller = rig.controller
 
     private fun context() = controller.controllerInputContext
@@ -531,7 +534,7 @@ class VirtualControllerCharacterizationTest {
 
     @Test
     fun `a controller without a handler sends nothing and does not fail`() {
-        val bare = OscRig(withHandler = false)
+        val bare = owned.own(OscRig(withHandler = false))
         bare.controller.controllerInputContext.inputMap = ControllerPacket.A_FLAG.toShort()
 
         bare.controller.sendControllerInputContext()

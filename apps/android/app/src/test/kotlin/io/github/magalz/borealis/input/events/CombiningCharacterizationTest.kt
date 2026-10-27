@@ -19,7 +19,9 @@ import com.limelight.nvstream.input.ControllerPacket.X_FLAG
 import com.limelight.nvstream.input.ControllerPacket.Y_FLAG
 import com.limelight.preferences.PreferenceConfiguration.AnalogStickForScrolling
 import io.github.magalz.borealis.input.FakeUsbController
+import io.github.magalz.borealis.testing.OwnedResources
 import java.time.Duration
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -37,7 +39,9 @@ import org.robolectric.shadows.ShadowSystemClock
  */
 @RunWith(RobolectricTestRunner::class)
 class CombiningCharacterizationTest {
-    private val rig = EventsRig {
+    @get:Rule val owned = OwnedResources()
+    @get:Rule
+    val rig = EventsRig {
         gamepadMouseSpeed = 100
         analogStickForScrolling = AnalogStickForScrolling.RIGHT
     }
@@ -399,7 +403,7 @@ class CombiningCharacterizationTest {
 
     @Test
     fun `with multiple controllers the mask is the controllers in use, the ones at the start and the on-screen one`() {
-        val multi = EventsRig(multiController = true)
+        val multi = owned.own(EventsRig(multiController = true))
         val pad = multi.addPad(7, controllerNumber = 3)
         fun setMask(name: String, value: Int) = multi.setHandlerField(name, value.toShort())
         fun mask(): Int {

@@ -12,7 +12,9 @@ import com.limelight.nvstream.NvConnection
 import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.testing.addInputDeviceContext
 import io.github.magalz.borealis.testing.addSystemInputDevice
+import java.io.Closeable
 import java.util.concurrent.TimeUnit
+import org.junit.rules.ExternalResource
 import org.robolectric.Robolectric
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -133,7 +135,7 @@ class RecordingConnection(activity: Activity) :
  * Events are stamped with the main looper's clock, which [advanceBy] moves, so the handler's
  * scheduled work runs when the test says time has passed.
  */
-class ControllerHandlerRig(multiController: Boolean = false) {
+class ControllerHandlerRig(multiController: Boolean = false) : ExternalResource(), Closeable {
     init {
         // The SHIELD extension service does not exist here; without this the bind answers with no
         // binder.
@@ -240,6 +242,23 @@ class ControllerHandlerRig(multiController: Boolean = false) {
         set("rightStickX", rightX)
         set("rightStickY", rightY)
     }
+
+    private var destroyed = false
+
+    /**
+     * Ends the thread of the handler and what it scheduled, as the stream does when it ends. The
+     * rig does it by itself after the test when it is a rule, and when `use` closes it.
+     */
+    fun destroy() {
+        if (!destroyed) {
+            destroyed = true
+            handler.destroy()
+        }
+    }
+
+    override fun after() = destroy()
+
+    override fun close() = destroy()
 
     /** The handler's contexts by device id, for the ones a test adds or reads. */
     @Suppress("UNCHECKED_CAST") // The field holds the handler's contexts by construction.

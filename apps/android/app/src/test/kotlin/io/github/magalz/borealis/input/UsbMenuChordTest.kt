@@ -7,6 +7,7 @@ import com.limelight.nvstream.input.ControllerPacket.LB_FLAG
 import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
 import com.limelight.nvstream.input.ControllerPacket.RB_FLAG
 import io.github.magalz.borealis.stream.input.StartHold
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -14,7 +15,7 @@ import org.robolectric.RobolectricTestRunner
 /** A pad on the USB driver opens the menu with the same chord. */
 @RunWith(RobolectricTestRunner::class)
 class UsbMenuChordTest {
-    private val rig = ControllerHandlerRig()
+    @get:Rule val rig = ControllerHandlerRig()
     private val pad = FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) }
     private val chord = PLAY_FLAG or BACK_FLAG
 
@@ -166,13 +167,13 @@ class UsbMenuChordTest {
     fun `the quit combo ends the stream from the driver thread, on the main thread`() {
         var failure: Throwable? = null
         Thread {
-                try {
-                    pad.report(PLAY_FLAG or BACK_FLAG or LB_FLAG or RB_FLAG)
-                    pad.report(0)
-                } catch (e: Throwable) {
-                    failure = e
-                }
+            try {
+                pad.report(PLAY_FLAG or BACK_FLAG or LB_FLAG or RB_FLAG)
+                pad.report(0)
+            } catch (e: Throwable) {
+                failure = e
             }
+        }
             .apply {
                 start()
                 join()

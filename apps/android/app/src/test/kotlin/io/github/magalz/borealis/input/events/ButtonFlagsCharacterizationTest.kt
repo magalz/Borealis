@@ -54,6 +54,8 @@ import com.limelight.nvstream.input.ControllerPacket.TOUCHPAD_FLAG
 import com.limelight.nvstream.input.ControllerPacket.UP_FLAG
 import com.limelight.nvstream.input.ControllerPacket.X_FLAG
 import com.limelight.nvstream.input.ControllerPacket.Y_FLAG
+import io.github.magalz.borealis.testing.OwnedResources
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -65,7 +67,8 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class ButtonFlagsCharacterizationTest {
-    private val rig = EventsRig()
+    @get:Rule val owned = OwnedResources()
+    @get:Rule val rig = EventsRig()
     private val pad = rig.addPad(7)
 
     /** Every key that is one button, with the flag it sets. */
@@ -309,7 +312,7 @@ class ButtonFlagsCharacterizationTest {
 
     @Test
     fun `flipping the face buttons swaps A and B and X and Y, on the way down and up`() {
-        val flipped = EventsRig { flipFaceButtons = true }
+        val flipped = owned.own(EventsRig { flipFaceButtons = true })
         val flippedPad = flipped.addPad(7)
         val faces =
             listOf(

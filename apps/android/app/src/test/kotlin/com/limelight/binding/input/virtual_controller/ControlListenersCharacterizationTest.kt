@@ -4,6 +4,8 @@ import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.testing.OwnedResources
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -17,7 +19,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [ShadowRecordingBridge::class])
 class ControlListenersCharacterizationTest {
-    private val rig = OscRig().also { it.settings() }
+    @get:Rule val owned = OwnedResources()
+    private val rig = owned.own(OscRig()).also { it.settings() }
     private val controller = rig.controller
 
     init {

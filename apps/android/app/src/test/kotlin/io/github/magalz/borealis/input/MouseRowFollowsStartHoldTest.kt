@@ -9,6 +9,7 @@ import io.github.magalz.borealis.stream.streamingSession
 import io.github.magalz.borealis.testing.unconfinedScope
 import kotlinx.coroutines.cancel
 import org.junit.After
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -19,7 +20,7 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class MouseRowFollowsStartHoldTest {
-    private val rig = ControllerHandlerRig(multiController = true)
+    @get:Rule val rig = ControllerHandlerRig(multiController = true)
     private val usbPad = FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) }
     private val secondUsbPad =
         FakeUsbController(2, rig.handler).also { rig.handler.deviceAdded(it) }

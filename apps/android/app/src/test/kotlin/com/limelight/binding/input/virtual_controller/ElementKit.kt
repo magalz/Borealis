@@ -8,6 +8,7 @@ import android.view.MotionEvent
 import android.view.MotionEvent.PointerCoords
 import android.view.MotionEvent.PointerProperties
 import com.google.common.truth.Correspondence
+import java.io.Closeable
 import kotlin.math.abs
 
 /**
@@ -156,7 +157,7 @@ fun draw(element: VirtualControllerElement): RecordingCanvas {
 }
 
 /** The settings button of the controller, which `refreshLayout` creates and the layout drops. */
-class ElementRig(screen: Screen = OscRig.PHONE) {
+class ElementRig(screen: Screen = OscRig.PHONE) : Closeable {
     val rig = OscRig(screen).also { it.settings() }
     val controller = rig.controller
     private val configureButton: android.widget.Button
@@ -168,6 +169,8 @@ class ElementRig(screen: Screen = OscRig.PHONE) {
         configureButton = rig.configureButton
         controller.removeElements()
     }
+
+    override fun close() = rig.close()
 
     /** Puts [element] in the frame at ([x], [y]) with the given size, and lays the frame out. */
     fun <T : VirtualControllerElement> add(element: T, x: Int, y: Int, width: Int, height: Int): T {

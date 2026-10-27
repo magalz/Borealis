@@ -15,9 +15,11 @@ import com.limelight.nvstream.input.ControllerPacket.LB_FLAG
 import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
 import com.limelight.nvstream.input.ControllerPacket.SPECIAL_BUTTON_FLAG
 import com.limelight.nvstream.input.ControllerPacket.TOUCHPAD_FLAG
+import io.github.magalz.borealis.testing.OwnedResources
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import org.junit.Assert.assertThrows
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -29,7 +31,8 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class ButtonTimingCharacterizationTest {
-    private val rig = EventsRig()
+    @get:Rule val owned = OwnedResources()
+    @get:Rule val rig = EventsRig()
     private val pad = rig.addPad(7)
 
     // ----- The wait before a short press goes up -----
@@ -229,7 +232,7 @@ class ButtonTimingCharacterizationTest {
 
     @Test
     fun `the Start hold does nothing when the mouse emulation setting is off`() {
-        val off = EventsRig { mouseEmulation = false }
+        val off = owned.own(EventsRig { mouseEmulation = false })
         val offPad = off.addPad(7)
 
         offPad.press(KEYCODE_BUTTON_START)

@@ -6,6 +6,7 @@ import android.view.KeyEvent.KEYCODE_BUTTON_SELECT
 import android.view.KeyEvent.KEYCODE_BUTTON_START
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket.SPECIAL_BUTTON_FLAG
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -14,7 +15,7 @@ import org.robolectric.shadows.ShadowToast
 /** The quit combo on a system pad ends the stream and does nothing else, however it is let go. */
 @RunWith(RobolectricTestRunner::class)
 class SystemPadQuitComboTest {
-    private val rig = ControllerHandlerRig().also { it.useSystemPad() }
+    @get:Rule val rig = ControllerHandlerRig().also { it.useSystemPad() }
 
     private fun pressTheQuitCombo() {
         rig.press(KEYCODE_BUTTON_START)

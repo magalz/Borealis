@@ -3,6 +3,8 @@ package io.github.magalz.borealis.input
 import android.view.KeyEvent.KEYCODE_BUTTON_A
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
+import io.github.magalz.borealis.testing.OwnedResources
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -11,7 +13,8 @@ import org.robolectric.shadows.ShadowToast
 /** The menu's "Gamepad mouse" row turns mouse emulation on or off for every pad at once. */
 @RunWith(RobolectricTestRunner::class)
 class GamepadMouseTest {
-    private val rig = ControllerHandlerRig(multiController = true)
+    @get:Rule val owned = OwnedResources()
+    @get:Rule val rig = ControllerHandlerRig(multiController = true)
     private val padOne = FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) }
     private val padTwo = FakeUsbController(2, rig.handler).also { rig.handler.deviceAdded(it) }
     private val a = ControllerPacket.A_FLAG
@@ -62,7 +65,7 @@ class GamepadMouseTest {
 
     @Test
     fun `it reads as off with no pad connected, and as on for a pad that connects after it was turned on`() {
-        val bare = ControllerHandlerRig()
+        val bare = owned.own(ControllerHandlerRig())
 
         bare.handler.setMouseEmulation(true)
         assertThat(bare.handler.isMouseEmulationOnAnyPad).isFalse()
@@ -120,7 +123,7 @@ class GamepadMouseTest {
 
     @Test
     fun `a pad that connects while it is on joins without a notice`() {
-        val bare = ControllerHandlerRig()
+        val bare = owned.own(ControllerHandlerRig())
         bare.handler.setMouseEmulation(true)
         val notices = ShadowToast.shownToastCount()
 

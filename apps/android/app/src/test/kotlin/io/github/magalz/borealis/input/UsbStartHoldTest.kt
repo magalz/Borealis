@@ -6,6 +6,7 @@ import com.limelight.nvstream.input.ControllerPacket.LB_FLAG
 import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
 import com.limelight.nvstream.input.ControllerPacket.RB_FLAG
 import io.github.magalz.borealis.stream.input.StartHold
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -14,7 +15,7 @@ import org.robolectric.shadows.ShadowToast
 /** Holding Start turns the gamepad mouse on or off, on a pad on the USB driver as on any other. */
 @RunWith(RobolectricTestRunner::class)
 class UsbStartHoldTest {
-    private val rig = ControllerHandlerRig()
+    @get:Rule val rig = ControllerHandlerRig()
     private val pad = FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) }
 
     @Test
@@ -96,12 +97,12 @@ class UsbStartHoldTest {
     private fun onDriverThread(block: () -> Unit): Throwable? {
         var failure: Throwable? = null
         Thread {
-                try {
-                    block()
-                } catch (e: Throwable) {
-                    failure = e
-                }
+            try {
+                block()
+            } catch (e: Throwable) {
+                failure = e
             }
+        }
             .apply {
                 start()
                 join()

@@ -9,9 +9,11 @@ import android.widget.FrameLayout
 import com.google.common.truth.Truth.assertThat
 import com.limelight.binding.input.virtual_controller.VirtualController.ControllerMode
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.testing.OwnedResources
 import org.json.JSONException
 import org.json.JSONObject
 import org.junit.Assert.assertThrows
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -55,7 +57,8 @@ class ProbeElement(
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(shadows = [ShadowRecordingBridge::class])
 class ElementBaseCharacterizationTest {
-    private val kit = ElementRig()
+    @get:Rule val owned = OwnedResources()
+    private val kit = owned.own(ElementRig())
     private val controller = kit.controller
     private val element = kit.add(ProbeElement(controller, kit.rig.activity), 100, 50, 200, 100)
 
@@ -507,7 +510,7 @@ class ElementBaseCharacterizationTest {
     @Test
     fun `the frame is as thick as 4 tenths of a percent of the screen height, cut to whole pixels`() {
         // 1200 * 0.004 = 4.8 would round to 5
-        val tall = ElementRig(Screen(1920, 1200))
+        val tall = owned.own(ElementRig(Screen(1920, 1200)))
         val probe = tall.add(ProbeElement(tall.controller, tall.rig.activity), 10, 10, 100, 80)
         tall.mode(ControllerMode.MoveButtons)
         probe.touch(MotionEvent.ACTION_DOWN, 1f, 1f)

@@ -33,6 +33,7 @@ import com.limelight.nvstream.input.ControllerPacket.TOUCHPAD_FLAG
 import com.limelight.nvstream.input.ControllerPacket.UP_FLAG
 import com.limelight.nvstream.input.ControllerPacket.X_FLAG
 import com.limelight.nvstream.input.ControllerPacket.Y_FLAG
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -46,7 +47,7 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 class RemappingCharacterizationTest {
-    private val rig = EventsRig()
+    @get:Rule val rig = EventsRig()
 
     private fun pad(deviceId: Int = 7, fields: Map<String, Any?> = emptyMap()) =
         rig.addPad(deviceId, fields = fields)

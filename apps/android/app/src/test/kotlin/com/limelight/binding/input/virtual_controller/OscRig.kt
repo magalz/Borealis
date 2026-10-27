@@ -11,6 +11,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import com.limelight.nvstream.input.ControllerPacket
 import io.github.magalz.borealis.input.ControllerHandlerRig
+import java.io.Closeable
 import org.json.JSONObject
 import org.robolectric.Shadows.shadowOf
 
@@ -28,8 +29,8 @@ val VirtualControllerElement.eid: Int
     get() = elementId
 
 /**
- * The colour an element draws with when nothing presses it. The element keeps it protected, for
- * its subclasses, so a test reads it by reflection.
+ * The colour an element draws with when nothing presses it. The element keeps it protected, for its
+ * subclasses, so a test reads it by reflection.
  */
 val VirtualControllerElement.defaultColor: Int
     get() =
@@ -82,11 +83,12 @@ private const val OPACITY_KEY = "seekbar_osc_opacity"
  * The controller reads the screen from the activity's display metrics and the layout choices from
  * the default preferences, which [settings] writes; the layout comes from `refreshLayout`.
  */
-class OscRig(screen: Screen = PHONE, withHandler: Boolean = true) {
+class OscRig(screen: Screen = PHONE, withHandler: Boolean = true) : Closeable {
     val handlerRig = ControllerHandlerRig()
     val activity: Activity = handlerRig.activity
     val frame = FrameLayout(activity)
-    val controller = VirtualController(if (withHandler) handlerRig.handler else null, frame, activity)
+    val controller =
+        VirtualController(if (withHandler) handlerRig.handler else null, frame, activity)
 
     /** What reached the PC from the controller: the packets of the recording connection. */
     val packets
@@ -95,6 +97,9 @@ class OscRig(screen: Screen = PHONE, withHandler: Boolean = true) {
     init {
         screen(screen)
     }
+
+    /** Ends the thread of the controller handler, as the stream does when it ends. */
+    override fun close() = handlerRig.destroy()
 
     /** Resizes the display the controller reads. */
     fun screen(screen: Screen) {

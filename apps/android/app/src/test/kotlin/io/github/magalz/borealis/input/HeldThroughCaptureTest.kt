@@ -6,20 +6,24 @@ import android.view.KeyEvent.KEYCODE_BUTTON_START
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket.BACK_FLAG
 import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * A button that went down while the chrome had the input, or before it, does nothing once the
- * input is back until it has been let go: closing a panel with the chord must not toggle the
- * gamepad mouse, and must not start the chord again while the buttons are still held.
+ * A button that went down while the chrome had the input, or before it, does nothing once the input
+ * is back until it has been let go: closing a panel with the chord must not toggle the gamepad
+ * mouse, and must not start the chord again while the buttons are still held.
  */
 @RunWith(RobolectricTestRunner::class)
 class HeldThroughCaptureTest {
-    private val rig = ControllerHandlerRig()
-    // Made on first use: a connected USB pad is what isMouseEmulationOnAnyPad reads, not the default context
-    private val pad by lazy { FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) } }
+    @get:Rule val rig = ControllerHandlerRig()
+    // Made on first use: a connected USB pad is what isMouseEmulationOnAnyPad reads, not the
+    // default context
+    private val pad by lazy {
+        FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) }
+    }
     private val chord = PLAY_FLAG or BACK_FLAG
 
     /** Takes the capture and gives it back with [held] still down; returns the time it ended. */

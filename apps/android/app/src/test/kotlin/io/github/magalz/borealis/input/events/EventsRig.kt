@@ -11,7 +11,9 @@ import com.limelight.nvstream.NvConnection
 import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.testing.addInputDeviceContext
 import io.github.magalz.borealis.testing.addSystemInputDevice
+import java.io.Closeable
 import java.util.concurrent.TimeUnit
+import org.junit.rules.ExternalResource
 import org.robolectric.Robolectric
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -146,7 +148,7 @@ class EventsConnection(activity: Activity) :
 class EventsRig(
     multiController: Boolean = false,
     configure: PreferenceConfiguration.() -> Unit = {},
-) {
+) : ExternalResource(), Closeable {
     init {
         // The SHIELD extension service does not exist here; without this the bind answers with no
         // binder.
@@ -175,6 +177,23 @@ class EventsRig(
         advanceBy(10_000)
         handler.setMenuChordListener { chords++ }
     }
+
+    private var destroyed = false
+
+    /**
+     * Ends the thread of the handler and what it scheduled, as the stream does when it ends. The
+     * rig does it by itself after the test when it is a rule, and when `use` closes it.
+     */
+    fun destroy() {
+        if (!destroyed) {
+            destroyed = true
+            handler.destroy()
+        }
+    }
+
+    override fun after() = destroy()
+
+    override fun close() = destroy()
 
     /** The events of device id 0, which the handler gives its default context. */
     val default = Pad(this, 0, null, handlerField("defaultContext"))

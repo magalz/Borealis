@@ -3,6 +3,8 @@ package com.limelight.binding.input.virtual_controller
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.testing.OwnedResources
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -45,7 +47,8 @@ class StickLog(private val name: String = "", private val shared: MutableList<St
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(shadows = [ShadowRecordingBridge::class])
 class AnalogStickCharacterizationTest {
-    private val kit = ElementRig()
+    @get:Rule val owned = OwnedResources()
+    private val kit = owned.own(ElementRig())
     private val stick =
         kit.add(AnalogStick(kit.controller, kit.rig.activity, 12), 100, 100, 301, 301)
     private val log = StickLog().also { stick.addAnalogStickListener(it) }

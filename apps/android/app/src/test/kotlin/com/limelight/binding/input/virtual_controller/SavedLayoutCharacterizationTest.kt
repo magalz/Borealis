@@ -7,9 +7,11 @@ import android.graphics.Canvas
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.testing.OwnedResources
 import java.io.File
 import org.json.JSONException
 import org.json.JSONObject
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -28,7 +30,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [ShadowRecordingBridge::class])
 class SavedLayoutCharacterizationTest {
-    private val rig = OscRig()
+    @get:Rule val owned = OwnedResources()
+    private val rig = owned.own(OscRig())
 
     /** What the fixture holds for [id]: left, top, width and height, which grow with the id. */
     private fun userLayout(id: Int) = Placed(id, 100 + 7 * id, 200 + 3 * id, 150 + id, 90 + 2 * id)

@@ -3,6 +3,8 @@ package com.limelight.binding.input.virtual_controller
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.testing.OwnedResources
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -38,7 +40,8 @@ class ButtonLog(private val name: String = "", private val shared: MutableList<S
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(shadows = [ShadowRecordingBridge::class])
 class DigitalButtonCharacterizationTest {
-    private val kit = ElementRig()
+    @get:Rule val owned = OwnedResources()
+    private val kit = owned.own(ElementRig())
     private val controller = kit.controller
     private val activity = kit.rig.activity
     private val a = kit.add(DigitalButton(controller, 6, 1, activity), 100, 100, 200, 100)

@@ -10,6 +10,7 @@ import com.limelight.nvstream.input.ControllerPacket.BACK_FLAG
 import com.limelight.nvstream.input.ControllerPacket.LB_FLAG
 import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
 import com.limelight.nvstream.input.ControllerPacket.SPECIAL_BUTTON_FLAG
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -18,7 +19,7 @@ import org.robolectric.shadows.ShadowToast
 /** Holding Select and Start opens the menu, and nothing of that hold reaches the PC. */
 @RunWith(RobolectricTestRunner::class)
 class MenuChordTest {
-    private val rig = ControllerHandlerRig().also { it.givePadASelectButton() }
+    @get:Rule val rig = ControllerHandlerRig().also { it.givePadASelectButton() }
 
     private fun holdStartAndSelect() {
         rig.press(KEYCODE_BUTTON_START)
@@ -162,7 +163,9 @@ class MenuChordTest {
         rig.release(KEYCODE_BUTTON_START)
 
         assertThat(rig.chords).isEqualTo(1)
-        assertThat(rig.buttons().none { it and (SPECIAL_BUTTON_FLAG or PLAY_FLAG or BACK_FLAG) != 0 })
+        assertThat(
+                rig.buttons().none { it and (SPECIAL_BUTTON_FLAG or PLAY_FLAG or BACK_FLAG) != 0 }
+            )
             .isTrue()
         assertThat(rig.lastButtons()).isEqualTo(0)
     }

@@ -1,6 +1,8 @@
 package io.github.magalz.borealis.stream.game.motion
 
 import android.view.MotionEvent
+import android.view.View
+import android.view.WindowInsets
 import android.view.inputmethod.InputMethodManager
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.MouseButtonPacket
@@ -11,6 +13,7 @@ import io.github.magalz.borealis.stream.game.phase
 import io.github.magalz.borealis.stream.game.session
 import org.junit.Test
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.util.ReflectionHelpers
 
 /**
  * The gesture of three fingers: it cancels the touches of the first two fingers, and a tap of three
@@ -56,6 +59,30 @@ internal class ThreeFingerTest : MotionTestBase() {
         val input = rig.application.getSystemService(InputMethodManager::class.java)
         assertThat(shadowOf(input).isSoftInputVisible).isFalse()
         assertThat(panel()).isEqualTo(Panel.KEYBOARD)
+    }
+
+    @Test
+    fun `a tap of three fingers hides the keyboard of Android when it shows, and opens nothing`() {
+        streaming()
+        val decor = rig.game.window.decorView
+        val input = rig.application.getSystemService(InputMethodManager::class.java)
+        input.showSoftInput(decor, 0)
+        reportImeVisible(decor)
+        assertThat(shadowOf(input).isSoftInputVisible).isTrue()
+
+        touch(thirdFingerDown(TIME))
+        touch(lastFingerUp(TIME + 100))
+
+        assertThat(shadowOf(input).isSoftInputVisible).isFalse()
+        assertThat(panel()).isEqualTo(Panel.NONE)
+    }
+
+    /** What the window insets say once the keyboard of Android is on screen. */
+    private fun reportImeVisible(decor: View) {
+        val insets = WindowInsets.Builder().setVisible(WindowInsets.Type.ime(), true).build()
+        val attachInfo = ReflectionHelpers.getField<Any>(decor, "mAttachInfo")
+        val root = ReflectionHelpers.getField<Any>(attachInfo, "mViewRootImpl")
+        ReflectionHelpers.setField(root, "mLastWindowInsets", insets)
     }
 
     @Test

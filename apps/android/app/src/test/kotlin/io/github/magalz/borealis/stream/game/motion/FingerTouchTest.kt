@@ -293,6 +293,38 @@ internal class FingerTouchTest : MotionTestBase() {
     }
 
     @Test
+    fun `when the second of two fingers lifts, the first goes on moving the pointer from where it was`() {
+        streaming()
+        touch(streamView, down(100f, 100f, TIME))
+        val second =
+            fingerEvent(
+                MotionEvent.ACTION_POINTER_DOWN,
+                listOf(100f to 100f, 200f to 200f),
+                index = 1,
+            ) {
+                eventTime = TIME + 10
+            }
+        touch(streamView, second)
+        val lift =
+            fingerEvent(
+                MotionEvent.ACTION_POINTER_UP,
+                listOf(100f to 100f, 200f to 200f),
+                index = 1,
+            ) {
+                eventTime = TIME + 20
+            }
+        assertThat(touch(streamView, lift)).isTrue()
+        // Two fingers that touch and lift soon are a right click.
+        assertThat(sent()).containsExactly(press(MouseButtonPacket.BUTTON_RIGHT))
+        forgetSent()
+
+        // One finger is left: its move is a move of the pointer, and not a scroll.
+        touch(streamView, finger(MotionEvent.ACTION_MOVE, 110f, 100f, TIME + 30))
+
+        assertThat(sent()).containsExactly(moveBy(40, 0))
+    }
+
+    @Test
     fun `a finger that lifts as a cancel leaves no finger to take its place`() {
         streaming()
         touch(streamView, down(100f, 100f, TIME))

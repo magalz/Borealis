@@ -47,10 +47,12 @@ internal class GameKeyboardToggleTest : GameTestBase() {
     fun `the keyboard toggle never toggles the Android keyboard`() {
         rig.streaming()
 
+        // The Android keyboard opens from the Borealis keyboard, not from the three-finger tap. A
+        // toggle would show it on the first tap and hide it on the second.
         rig.game.toggleKeyboard()
-        rig.game.toggleKeyboard()
+        assertThat(androidKeyboard.isSoftInputVisible).isFalse()
 
-        // The Android keyboard opens from the Borealis keyboard, not from the three-finger tap.
+        rig.game.toggleKeyboard()
         assertThat(androidKeyboard.isSoftInputVisible).isFalse()
     }
 

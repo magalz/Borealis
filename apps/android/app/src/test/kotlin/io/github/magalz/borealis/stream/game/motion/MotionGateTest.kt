@@ -57,8 +57,7 @@ internal class MotionGateTest : MotionTestBase() {
                 "a finger on the background view" to rig.game.onTouch(backgroundView, fingerDown()),
                 "a joystick" to rig.game.onGenericMotion(streamView, joystick(1f)),
                 "a hover of the activity" to rig.game.onGenericMotionEvent(hover()),
-                "a captured mouse" to
-                    capturedPointerListener().onCapturedPointer(streamView, relativeMove()),
+                "a captured mouse" to dispatchCapturedPointer(relativeMove()),
             )
 
         for ((what, handled) in results) {

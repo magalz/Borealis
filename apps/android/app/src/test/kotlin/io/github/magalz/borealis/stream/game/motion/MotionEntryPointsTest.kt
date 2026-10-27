@@ -64,7 +64,7 @@ internal class MotionEntryPointsTest : MotionTestBase() {
                 pointer(5.9f, -6.9f)
             }
 
-        val handled = capturedPointerListener().onCapturedPointer(streamView, event)
+        val handled = dispatchCapturedPointer(event)
 
         assertThat(handled).isTrue()
         assertThat(sent()).containsExactly(moveBy(5, -6))
@@ -88,9 +88,9 @@ internal class MotionEntryPointsTest : MotionTestBase() {
         rig.game.onTouch(streamView, fingerEvent(MotionEvent.ACTION_DOWN, listOf(100f to 50f)))
         unbufferedDispatchRequested()
 
+        // The framework grants the request for a down and a move only, so a move is the one other
+        // action that the activity could wrongly ask for.
         rig.game.onTouch(streamView, fingerEvent(MotionEvent.ACTION_MOVE, listOf(110f to 50f)))
-        assertThat(unbufferedDispatchRequested()).isFalse()
-        rig.game.onTouch(streamView, fingerEvent(MotionEvent.ACTION_UP, listOf(110f to 50f)))
 
         assertThat(unbufferedDispatchRequested()).isFalse()
     }

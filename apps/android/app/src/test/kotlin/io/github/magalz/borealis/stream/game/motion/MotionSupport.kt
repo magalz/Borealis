@@ -141,10 +141,21 @@ internal abstract class MotionTestBase : GameTestBase() {
     /** The capture provider that the activity asked for the stream view. */
     protected fun captureProvider(): InputCaptureProvider = rig.field("inputCaptureProvider")
 
-    /** What the activity registered on the stream view for a pointer that the system captured. */
-    protected fun capturedPointerListener(): View.OnCapturedPointerListener {
-        val info = ReflectionHelpers.getField<Any>(streamView, "mListenerInfo")
-        return ReflectionHelpers.getField(info, "mOnCapturedPointerListener")
+    /**
+     * A pointer event that the system captured for the stream view, as the view gets it: the view
+     * hands it to the listener that the activity registered. The framework dispatches captured
+     * events only to a window that has the pointer capture, which Robolectric never grants, so the
+     * window is told that it has it while the event is dispatched.
+     */
+    protected fun dispatchCapturedPointer(event: MotionEvent): Boolean {
+        val attachInfo = ReflectionHelpers.getField<Any>(streamView, "mAttachInfo")
+        val root = ReflectionHelpers.getField<Any>(attachInfo, "mViewRootImpl")
+        ReflectionHelpers.setField(root, "mPointerCapture", true)
+        try {
+            return streamView.dispatchCapturedPointerEvent(event)
+        } finally {
+            ReflectionHelpers.setField(root, "mPointerCapture", false)
+        }
     }
 
     protected fun idle(millis: Long) {

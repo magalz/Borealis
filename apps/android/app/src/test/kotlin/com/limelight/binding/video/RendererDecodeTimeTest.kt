@@ -15,6 +15,9 @@ import org.junit.Test
  * which a test cannot move, so those are tested through what must hold for any time. The renderer
  * falls back on the clock of `SystemClock` when a decoder returns a frame under another timestamp
  * than the input had; the fake codec can do that on request, and then the time is known exactly.
+ *
+ * The rounding of the time of a frame that was paired with its input is therefore a soft pin: see
+ * the test that spreads the delays of the fake over the fractions of a millisecond.
  */
 class RendererDecodeTimeTest : RendererTestBase() {
     private val snapshots = CopyOnWriteArrayList<PerfSnapshot>()
@@ -64,19 +67,25 @@ class RendererDecodeTimeTest : RendererTestBase() {
         assertThat(renderer.getAverageDecoderLatency()).isEqualTo(floor(decodeMs + 0.5f).toInt())
     }
 
+    /**
+     * A soft pin of the rounding half up of [MediaCodecDecoderRenderer], `(decodeUs + 500) / 1000`.
+     * `System.nanoTime()` is real, so the time of a frame is its delay in the fake plus what the
+     * threads add, which is not known, and the assertion cannot name the rounded value. It is an
+     * identity that holds for any time (one frame, so the average is the time rounded half up), and
+     * it never fails by chance. A renderer that cuts the time instead of rounding it differs only on
+     * a frame whose time ends in 0.5 ms or more. The delays are spread over the whole millisecond,
+     * 0.25 ms apart and twice each, so that whatever the threads add, half of the frames end there.
+     */
     @Test
-    fun `a time of about two milliseconds and three quarters is rounded up to three`() {
-        // The fake takes 2.1 ms to answer and the threads take about 0.6 ms more. Whatever the time
-        // is, the average of one frame is that time rounded half up, in milliseconds. Over five
-        // frames at least one lands where rounding up differs from cutting.
-        ShadowRecordingVideoCodec.outputDelayNanos = 2_100_000
-        for (trial in 0 until TRIALS) {
+    fun `the time of a frame is rounded half up whatever fraction of a millisecond it ends in`() {
+        for ((trial, delayUs) in SPREAD_DELAYS_US.withIndex()) {
+            ShadowRecordingVideoCodec.outputDelayNanos = delayUs * NANOS_PER_US
             val renderer = decoding()
 
             renderer.decodeAndClose(frames(1), shownBefore = trial)
 
             val decodeMs = checkNotNull(snapshots[trial].decodeMs)
-            assertThat(decodeMs).isAtLeast(2.1f)
+            assertThat(decodeMs).isAtLeast(delayUs / 1000f)
             assertThat(renderer.getAverageDecoderLatency()).isEqualTo(floor(decodeMs + 0.5f).toInt())
             renderer.stop()
         }
@@ -168,6 +177,9 @@ class RendererDecodeTimeTest : RendererTestBase() {
     }
 
     private companion object {
-        const val TRIALS = 5
+        const val NANOS_PER_US = 1_000L
+
+        // Two rounds of four delays, a quarter of a millisecond apart.
+        val SPREAD_DELAYS_US = listOf(2_000L, 2_250L, 2_500L, 2_750L, 2_000L, 2_250L, 2_500L, 2_750L)
     }
 }

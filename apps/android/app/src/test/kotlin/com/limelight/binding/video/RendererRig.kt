@@ -13,7 +13,12 @@ import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.discovery.LimeLogRecords
 import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.After
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Rule
 import org.junit.runner.RunWith
@@ -61,6 +66,12 @@ class FakeSurfaceHolder(private val surface: Surface) : SurfaceHolder {
  * [ShadowRecordingVideoCodec]), the decoders the device lists are what a test installs, and the
  * real `MediaCodecHelper` is put in the state that a device with [DeviceBuild] and [GlFacts] gives
  * it, whatever an earlier test of the sandbox left in it.
+ *
+ * A watchdog bounds every test. The renderer waits for its threads to stop using the codec before
+ * it recovers it, and a regression in that wait would hang the test worker for ever. After
+ * [WATCHDOG_SECONDS] seconds the watchdog tells every renderer of the test to stop, which wakes the
+ * threads that wait, and the test fails when it ends. JUnit's `Timeout` rule is not used: it runs
+ * the test off the main thread of Robolectric.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [ShadowRecordingBridge::class, ShadowRecordingVideoCodec::class])
@@ -81,6 +92,12 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
     private val renderers = CopyOnWriteArrayList<MediaCodecDecoderRenderer>()
     private val started = CopyOnWriteArrayList<MediaCodecDecoderRenderer>()
     private var screen: ActivityController<Activity>? = null
+    private val watchdog =
+        Executors.newSingleThreadScheduledExecutor { task ->
+            Thread(task, "renderer test watchdog").apply { isDaemon = true }
+        }
+    private var alarm: ScheduledFuture<*>? = null
+    private val overran = AtomicBoolean()
 
     /** An activity, which the renderer asks for the display; made on first use. */
     protected val activity: Activity
@@ -97,21 +114,56 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
         // unless they are paused: the tests call `doFrame` themselves.
         ShadowChoreographer.setPaused(true)
         device()
+        alarm = watchdog.schedule(::overrun, WATCHDOG_SECONDS, TimeUnit.SECONDS)
+    }
+
+    /** What the watchdog does: it lets go every thread that waits for the renderers. */
+    private fun overrun() {
+        overran.set(true)
+        ShadowRecordingVideoCodec.starveInput = false
+        renderers.forEach { it.prepareForStop() }
     }
 
     @After
     fun releaseDevice() {
-        started.forEach { renderer ->
-            renderer.prepareForStop()
-            renderer.stop()
+        alarm?.cancel(false)
+        try {
+            started.forEach { renderer ->
+                renderer.prepareForStop()
+                renderer.stop()
+            }
+            screen?.destroy()
+            surface.release()
+            texture.release()
+            realHelper.restore(helperBefore)
+            deviceSoc(socBefore.first, socBefore.second)
+            ShadowRecordingBridge.reset()
+            ShadowRecordingVideoCodec.forgetEverything()
+        } finally {
+            watchdog.shutdownNow()
         }
-        screen?.destroy()
-        surface.release()
-        texture.release()
-        realHelper.restore(helperBefore)
-        deviceSoc(socBefore.first, socBefore.second)
-        ShadowRecordingBridge.reset()
-        ShadowRecordingVideoCodec.forgetEverything()
+        if (overran.get()) {
+            fail(
+                "The test ran for more than $WATCHDOG_SECONDS s: a thread of the renderer was " +
+                    "probably waiting for another, and the watchdog told the renderers to stop."
+            )
+        }
+    }
+
+    /**
+     * The threads that have come to wait for a recovery, as the bits that the renderer prints in
+     * its "Waiting to quiesce" lines: [INPUT_THREAD], [RENDERER_THREAD] and [CHOREOGRAPHER]. The
+     * lines repeat every second for a thread that waits, so the bits of all of them are joined and a
+     * thread is never counted twice. A renderer without a choreographer sets its bit itself.
+     */
+    protected fun quiesced(): Int =
+        log.lines()
+            .filter { it.startsWith("INFO: Waiting to quiesce decoder threads: ") }
+            .fold(0) { threads, line -> threads or line.substringAfterLast(": ").toInt() }
+
+    /** Waits until all of [threads] wait for the others, so that the next arrival is the last. */
+    protected fun awaitQuiesced(threads: Int) {
+        await("the threads $threads to wait to quiesce") { quiesced() and threads == threads }
     }
 
     /** Makes the device [build] with [gl]; the real helper is initialized as `Game` does it. */
@@ -214,3 +266,14 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
 
 private const val AWAIT_NANOS = 30_000_000_000L
 private const val POLL_MS = 2L
+
+/** The bits of the threads that touch the codec, which the renderer prints in its log. */
+internal const val INPUT_THREAD = 1
+internal const val RENDERER_THREAD = 2
+internal const val CHOREOGRAPHER = 4
+
+/**
+ * How long a test may run. The slowest test of the renderer takes five seconds, most of them the
+ * start of the sandbox in the first test of a worker, and the next one under a second.
+ */
+private const val WATCHDOG_SECONDS = 60L

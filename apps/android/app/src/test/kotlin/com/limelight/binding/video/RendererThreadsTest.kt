@@ -154,7 +154,7 @@ class RendererThreadsTest : RendererTestBase() {
             IllegalStateException("codec state")
         }
         val call = onInputThread { renderer.submit(pFrame(1)) }
-        await("the input and renderer threads to wait") { waiting() >= 2 }
+        awaitQuiesced(INPUT_THREAD or RENDERER_THREAD)
         assertThat(events<CodecEvent.Reset>()).isEmpty()
 
         // The choreographer comes with its frame time, and is the last: it does the recovery.
@@ -181,7 +181,7 @@ class RendererThreadsTest : RendererTestBase() {
         // The input thread comes once the frame time, which runs on the test thread, waits.
         val input = onInputThread {
             try {
-                await("the frame time to wait") { waiting() >= 1 }
+                awaitQuiesced(CHOREOGRAPHER)
                 renderer.submit(pFrame(2))
             } catch (e: Throwable) {
                 // Let the frame time go, or the test thread would wait for ever.
@@ -207,7 +207,7 @@ class RendererThreadsTest : RendererTestBase() {
         }
         val call = onInputThread { renderer.submit(pFrame(1)) }
         // With balanced pacing the choreographer never comes, so both wait for it.
-        await("the input and renderer threads to wait") { waiting() >= 2 }
+        awaitQuiesced(INPUT_THREAD or RENDERER_THREAD)
 
         call.interrupt()
 
@@ -216,8 +216,6 @@ class RendererThreadsTest : RendererTestBase() {
         assertThat(outcome.interrupted).isTrue()
         assertThat(events<CodecEvent.Reset>()).isEmpty()
     }
-
-    private fun waiting() = log.lines().count { it.startsWith("INFO: Waiting to quiesce") }
 
     private companion object {
         const val JOIN_MS = 30_000L

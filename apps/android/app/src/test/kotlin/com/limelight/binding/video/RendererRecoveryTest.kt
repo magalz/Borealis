@@ -28,17 +28,10 @@ class RendererRecoveryTest : RendererTestBase() {
         return renderer
     }
 
-    private fun waiting() = log.lines().count { it.startsWith("INFO: Waiting to quiesce") }
-
-    /** Waits until [count] threads wait for the others, so that the next arrival is the last. */
-    private fun awaitWaiting(count: Int = 1) {
-        await("$count threads waiting to quiesce") { waiting() >= count }
-    }
-
     /** What the renderer thread meets first: the failure [failure], and then it waits. */
     private fun MediaCodecDecoderRenderer.metByRendererThread(failure: () -> Throwable) {
         ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_OUTPUT, 1, failure)
-        awaitWaiting()
+        awaitQuiesced(RENDERER_THREAD)
     }
 
     private fun names() =
@@ -64,7 +57,7 @@ class RendererRecoveryTest : RendererTestBase() {
         assertThat(log.lines()).contains("WARNING: ${failure.diagnosticInfo}")
         assertThat(events<CodecEvent.Stopped>()).isEmpty()
         assertThat(events<CodecEvent.Reset>()).isEmpty()
-        assertThat(waiting()).isEqualTo(0)
+        assertThat(quiesced()).isEqualTo(0)
     }
 
     @Test
@@ -106,7 +99,7 @@ class RendererRecoveryTest : RendererTestBase() {
         await("the frame to be shown") { events<CodecEvent.Output>().isNotEmpty() }
 
         assertThat(log.lines()).contains("WARNING: ${failure.diagnosticInfo}")
-        assertThat(waiting()).isEqualTo(0)
+        assertThat(quiesced()).isEqualTo(0)
     }
 
     // Failures that are recovered
@@ -222,7 +215,7 @@ class RendererRecoveryTest : RendererTestBase() {
         renderer.submit(pFrame(1))
         ShadowRecordingVideoCodec.failNext(CodecPoint.RELEASE_OUTPUT, 1, stateFailure)
         renderer.begin()
-        awaitWaiting()
+        awaitQuiesced(RENDERER_THREAD)
 
         val result = renderer.submit(pFrame(2))
 
@@ -243,7 +236,7 @@ class RendererRecoveryTest : RendererTestBase() {
         val result = renderer.submit(pFrame(1))
 
         assertThat(result).isEqualTo(MoonBridge.DR_NEED_IDR)
-        assertThat(waiting()).isEqualTo(0)
+        assertThat(quiesced()).isEqualTo(0)
         assertThat(events<CodecEvent.Reset>()).isEmpty()
         assertThat(crashes).isEmpty()
     }
@@ -391,6 +384,21 @@ class RendererRecoveryTest : RendererTestBase() {
 
         assertThat(events<CodecEvent.Reset>()).hasSize(1)
         assertThat(events<CodecEvent.Stopped>()).isEmpty()
+    }
+
+    @Test
+    fun `an illegal state leaves a pending reset as it is`() {
+        val renderer = running()
+        renderer.submit(pFrame(1))
+        renderer.metByRendererThread(stateFailure)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, stateFailure)
+
+        renderer.submit(pFrame(2))
+
+        assertThat(events<CodecEvent.Reset>()).hasSize(1)
+        assertThat(events<CodecEvent.Stopped>()).isEmpty()
+        assertThat(log.lines().filter { it.contains("promoted") }).isEmpty()
+        assertThat(crashes).isEmpty()
     }
 
     @Test

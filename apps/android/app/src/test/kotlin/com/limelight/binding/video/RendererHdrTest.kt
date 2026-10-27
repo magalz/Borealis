@@ -218,9 +218,7 @@ class RendererHdrTest : RendererTestBase() {
             IllegalStateException("boom")
         }
         renderer.begin()
-        await("the renderer thread to wait for the others") {
-            log.lines().any { it.startsWith("INFO: Waiting to quiesce decoder threads") }
-        }
+        awaitQuiesced(RENDERER_THREAD)
 
         renderer.setHdrMode(true, metadata())
         renderer.submit(pFrame(1))

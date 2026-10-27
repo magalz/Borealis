@@ -19,6 +19,8 @@ The graph leaves some files out. The tracked `.memtraceignore` keeps Gradle Kotl
 
 The impact tools (`get_impact`, `preflight_check`, `detect_changes`) are the main use of Memtrace. Its dead-code and duplicate-code results are leads, not evidence: a deletion needs a manual check for callable references (`::f`), Compose, JNI, the manifest, reflection and Hilt.
 
+Entire Brain (the `entire brain` commands of `.entire/agent-guide.md`) has a separate role, set by the owner on 2026-10-27. It answers why code is the way it is and what was decided or tried before (`entire brain recall`). For code questions it is the fallback: when Memtrace is unavailable or answers wrong and Brain can answer (`entire brain inspect …`), agents ask Brain before targeted Grep and ranged reads. Its answers are leads like Memtrace's, and its index can trail the checkout, so check `entire brain status` when an answer looks stale. Brain runs in hosted mode, so its queries leave the machine; never put secrets in them.
+
 ## Roles
 
 - **Orchestrator**: plans phases, writes one [brief](task-brief.md) per task, creates worktrees, dispatches subagents, integrates reviewed work, runs phase checks, pushes the task and phase branches, opens the phase PR under the owner's account, and reports to the owner. It owns shared files (Gradle settings and version catalog, CI workflows, `AGENTS.md`) and decides conflicts. It sends discovery to `br-scout` instead of reading broadly itself.

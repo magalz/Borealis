@@ -172,9 +172,9 @@ internal class GameWindowSessionTest : GameTestBase() {
 
         shadowOf(rig.game).setInMultiWindowMode(false)
         rig.game.onMultiWindowModeChanged(false)
-        // The request to hide the bars is the one that the window asked for; it reads the mode
-        // when it runs.
-        rig.field<Runnable>("hideSystemUi").run()
+        // The bars come back after the two seconds that a report of shown bars waits, not after
+        // the 50 milliseconds of the request that leaving the mode makes.
+        idle(BARS_BACK_DELAY_MS + FRAME_MARGIN_MS)
 
         assertThat(decorView.systemUiVisibility).isEqualTo(immersive)
         assertThat(rig.game.window.attributes.flags and WindowManager.LayoutParams.FLAG_FULLSCREEN)
@@ -240,6 +240,10 @@ internal class GameWindowSessionTest : GameTestBase() {
         assertThat(pad.awaitSensors()).isTrue()
     }
 
+    // The branch of Android 11 and earlier, where the activity enters picture in picture on its
+    // own,
+    // is not reached: on this SDK level the activity never asks for it, so this documents the
+    // Android 15 path only.
     @Test
     fun `the platform asking the activity to leave does not make it enter picture in picture`() {
         rig.preference("checkbox_enable_pip", true)
@@ -263,5 +267,6 @@ internal class GameWindowSessionTest : GameTestBase() {
         const val BARS_BACK_DELAY_MS = 2000L
         const val MULTI_WINDOW_DELAY_MS = 50L
         const val SENSORS_BACK_DELAY_MS = 1000L
+        const val FRAME_MARGIN_MS = 500L
     }
 }

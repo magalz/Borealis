@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION") // ACTION_MULTIPLE and onKeyMultiple are what the activity handles.
-
 package io.github.magalz.borealis.stream.game.keys
 
 import android.view.InputDevice
@@ -36,6 +34,7 @@ internal class GameKeyRoutingTest : GameTestBase() {
     // The chrome first
 
     @Test
+    @Suppress("DEPRECATION") // onKeyMultiple and ACTION_MULTIPLE are what the activity handles.
     fun `while the chrome is modal the keys are its own and nothing reaches the host`() {
         rig.streaming()
         rig.openChrome()

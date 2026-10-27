@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION") // ACTION_MULTIPLE and onKeyMultiple are what the activity handles.
-
 package io.github.magalz.borealis.stream.game.keys
 
 import android.view.KeyCharacterMap
@@ -233,7 +231,7 @@ internal class GameKeySendTest : GameTestBase() {
         }
 
         // The Java narrows the code point to a char: U+1F600 arrives as U+F600.
-        assertThat(sentTexts()).containsExactly("é", "€", "").inOrder()
+        assertThat(sentTexts()).containsExactly("é", "€", Char(0xF600).toString()).inOrder()
     }
 
     @Test
@@ -283,6 +281,7 @@ internal class GameKeySendTest : GameTestBase() {
     }
 
     @Test
+    @Suppress("DEPRECATION") // onKeyMultiple and ACTION_MULTIPLE are what the activity handles.
     fun `the keys of a software keyboard that make no key event arrive as text`() {
         rig.streaming()
         forgetCalls()
@@ -297,6 +296,7 @@ internal class GameKeySendTest : GameTestBase() {
     }
 
     @Test
+    @Suppress("DEPRECATION") // onKeyMultiple and ACTION_MULTIPLE are what the activity handles.
     fun `a multiple key with no characters, or with a key code of its own, is not text`() {
         rig.streaming()
         forgetCalls()

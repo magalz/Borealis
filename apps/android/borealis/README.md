@@ -54,7 +54,7 @@ All three come from the convention plugins (`BorealisCoverage`, `BorealisLicense
 ./gradlew :app:cyclonedxDirectBom                         # app/build/reports/sbom/borealis-android.cdx.json
 ```
 
-- Kover merges the debug unit-test coverage (the `debug` variant in `:borealis:*` and in `:app`) into one report at the root. Every `com.limelight.*` class counts since Sprint 14, the inherited Java that is not converted yet included, as in [building](../../../docs/development/building.md). Only the generated Hilt/Dagger/`BuildConfig`/`R`/Compose singleton classes are excluded.
+- Kover merges the debug unit-test coverage (the `debug` variant in `:borealis:*` and in `:app`) into one report at the root. Every `com.limelight.*` class counts, the inherited code (converted to Kotlin in Sprints 12 to 14, ADR 0059) included, as in [building](../../../docs/development/building.md). Only the generated Hilt/Dagger/`BuildConfig`/`R`/Compose singleton classes are excluded.
 - licensee allows Apache-2.0, MIT, BSD-2/3-Clause, ISC and Zlib plus URL-only licences of Bouncy Castle and JCodec, each with a justification in `BorealisLicenses.kt`.
 - `../sbom/native-components.cdx.json` is the hand-maintained SBOM of the native components in the APK; update it with every upstream sync (`docs/development/upstream-sync.md`).
 

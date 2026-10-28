@@ -12,8 +12,8 @@ import javax.inject.Singleton
 
 /**
  * Binds the settings repository, and the [LogSwitches] that the diagnostic bundle reads from it
- * (ADR 0055). The repository is the one of [SettingsSnapshots], so Hilt and the Java wiring share a
- * single instance and a single DataStore on the file.
+ * (ADR 0055). The repository is the one of [SettingsSnapshots], so Hilt and the code that Hilt does
+ * not reach share a single instance and a single DataStore on the file.
  */
 @Module
 @InstallIn(SingletonComponent::class)

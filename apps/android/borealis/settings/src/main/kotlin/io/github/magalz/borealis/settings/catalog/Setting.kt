@@ -2,7 +2,7 @@ package io.github.magalz.borealis.settings.catalog
 
 /** Where the value of a [Setting] is stored (ADR 0055). */
 enum class SettingStore {
-    /** The default SharedPreferences file, read synchronously by the inherited Java code. */
+    /** The default SharedPreferences file, read synchronously by the inherited code. */
     PREFS,
 
     /** The `borealis_settings` DataStore file; read once, blocking, at app start. */

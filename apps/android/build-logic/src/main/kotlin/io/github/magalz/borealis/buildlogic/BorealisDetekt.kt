@@ -35,10 +35,10 @@ internal object BorealisDetekt {
             source.setFrom()
         }
 
-        // The Kotlin compilation does not see the module's own Java: classes that Hilt generates
-        // (`Hilt_*`, for an `@AndroidEntryPoint` base class) and Moonlight's Java in `:app`.
-        // Without them the analysis reports hundreds of unresolved references and its answers
-        // are unreliable; the unit-test and instrumented-test tasks already get them.
+        // The Kotlin compilation does not see the Java that Hilt generates in the module, such as
+        // `Hilt_*`, the base class of an `@AndroidEntryPoint` Kotlin class. Without it the analysis
+        // reports hundreds of unresolved references and its answers are unreliable; the unit-test
+        // and instrumented-test tasks already get it.
         afterEvaluate {
             val javaClasses =
                 tasks.named<JavaCompile>("compileDebugJavaWithJavac").flatMap {

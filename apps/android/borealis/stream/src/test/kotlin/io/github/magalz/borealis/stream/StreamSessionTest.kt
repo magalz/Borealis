@@ -427,6 +427,53 @@ class StreamSessionTest {
     }
 
     @Test
+    fun `confirming a quit shows Quitting at once, before the stream ends`() {
+        val started = startStreaming()
+        val streaming = started.state.value.phase
+
+        started.quitApp()
+
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Quitting(streaming))
+        assertThat(started.chromeMode).isEqualTo(ChromeMode.MODAL)
+        assertThat(actions.calls).containsExactly("quitApp")
+    }
+
+    @Test
+    fun `a quit that fails while the stream still runs returns to the phase the user was in`() {
+        val started = startStreaming()
+        started.openMenu()
+        val menuOpen = started.state.value.phase
+        started.quitApp()
+
+        actions.quitFailed()
+
+        assertThat(started.state.value.phase).isEqualTo(menuOpen)
+    }
+
+    @Test
+    fun `a quit that fails can be tried again`() {
+        val started = startStreaming()
+        val streaming = started.state.value.phase
+        started.quitApp()
+        actions.quitFailed()
+
+        started.quitApp()
+
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Quitting(streaming))
+        assertThat(actions.calls).containsExactly("quitApp", "quitApp")
+    }
+
+    @Test
+    fun `a quit that is under way is not asked for again`() {
+        val started = startStreaming()
+        started.quitApp()
+
+        started.quitApp()
+
+        assertThat(actions.calls).containsExactly("quitApp")
+    }
+
+    @Test
     fun `an end of the stream while a quit is pending is quiet, not a failure`() {
         val started = startStreaming()
         val streaming = started.state.value.phase

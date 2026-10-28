@@ -12,6 +12,19 @@ class BackWhileQuittingTest {
     private val actions = RecordingActions()
 
     @Test
+    fun `back leaves the screen as soon as the quit is confirmed`() {
+        val session = aSession(actions)
+        session.onConnectionStarted(aSessionInfo)
+        session.onFirstFrame()
+        session.quitApp()
+        actions.calls.clear()
+
+        handleBack(session)
+
+        assertThat(actions.calls).containsExactly("leave")
+    }
+
+    @Test
     fun `back leaves the screen while a quit is under way`() {
         val session = aSession(actions)
         session.onConnectionStarted(aSessionInfo)

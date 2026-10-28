@@ -182,6 +182,14 @@ class StreamAccessibilityChecksTest {
 
     @Test
     @Config(qualifiers = PHONE)
+    fun `the Disconnecting screen`() {
+        show(FormFactor.Phone) { DisconnectingScreen("Desktop") }
+
+        composeRule.assertAccessible()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
     fun `the error screen on a phone`() {
         show(FormFactor.Phone) { ErrorScreen(FailureKind.CERTIFICATE_CHANGED) }
 

@@ -1272,7 +1272,8 @@ class Game :
             }
         }
 
-        finish()
+        // BOREALIS: every exit that finished the activity already asks once (leave)
+        if (!isFinishing) finish()
     }
 
     // BOREALIS: who gets the input, from the stream session; the stream gets it until the session

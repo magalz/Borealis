@@ -4682,7 +4682,8 @@ part answered. The round found no regression of Sprint 14. The owner's findings 
 Sprint 17 (general fixes) and to Sprint 19 (SecOps); the owner first put some of them in the
 backlog, and organized them the same day. See the findings below, and
 [roadmap, Sprint 17](../roadmap.md#sprint-17-general-fixes). The audio findings have a follow-up
-of the same day: [Audio follow-up, 2026-10-28](#audio-follow-up-2026-10-28).
+of the same day: [Audio follow-up, 2026-10-28](#audio-follow-up-2026-10-28). The pads have one too:
+[VHF gamepad round, 2026-10-28](#vhf-gamepad-round-2026-10-28).
 
 ### Setup
 
@@ -4881,10 +4882,13 @@ regression. Each one says where it went in the [roadmap](../roadmap.md).
 - **U7. No pad battery reaches the PC.** The host makes an Xbox 360 controller by default, which
   has no battery, and ViGEmBus emulates a wired DualShock 4. To investigate: first whether Android
   reports a battery for the pad, then the host side. Roadmap, [Sprint 17](../roadmap.md#sprint-17-general-fixes), Pads.
+  Later the same day the owner put the VHF driver on the host, which changes the host side:
+  [VHF gamepad round, 2026-10-28](#vhf-gamepad-round-2026-10-28).
 - **U8. No pad gyro.** The gyro of the Pro 3 works on Windows (Steam's test), but neither device
   exposes it: the Streamer does not, through the USB receiver, and the S22 does not, in the
   pad's 8BitDo mode. To try: Switch mode over Bluetooth on the S22, and the Motion fallback check with a pad
-  connected. Roadmap, [Sprint 17](../roadmap.md#sprint-17-general-fixes), Pads.
+  connected. Roadmap, [Sprint 17](../roadmap.md#sprint-17-general-fixes), Pads. The VHF round of the same
+  day looked at both pads again: [VHF gamepad round, 2026-10-28](#vhf-gamepad-round-2026-10-28).
 - **U9. A vibration option gives no sample.** When a vibration option is turned on in Settings,
   a short sample vibration would show what it does. Moved from item (d) to Sprint 15 on
   2026-10-28, and from there to Sprint 17 later the same day.
@@ -4972,6 +4976,107 @@ Read in the source at `a66472e29`:
 - Nothing in the client syncs audio and video. A search of `apps/android/app/src/main` and
   `apps/android/borealis` for `getTimestamp`, `getLatency` and `AudioTimestamp` finds nothing, and
   `AndroidAudioRenderer` is the only code that uses `AudioTrack`.
+
+### VHF gamepad round, 2026-10-28
+
+LuminalShine 26.10.0 replaced the ViGEm gamepad bus with a new virtual gamepad driver, VHF
+(Nonary's `libvirtualgamepad`), and 26.10.1, the version the PC runs, keeps it. See the
+[host contract, section 13](../host-contract/luminalshine.md#13-input). The owner installed the
+driver on 2026-10-28, and the orchestrator ran a pad round the same day on the Galaxy S22 and on
+the Google TV Streamer, with the owner operating the pads and the devices, against LuminalShine
+26.10.1. The builds were debug builds of the Sprint 14 code, and no code changed. The round did
+not repeat the steps of [section 3.27](#327-sprint-14-checks): it looked at what the new host does
+with the pads that the earlier rounds used. The decisions that followed are in the
+[roadmap, Sprint 17](../roadmap.md#sprint-17-general-fixes), under Pads.
+
+#### Setup
+
+- The driver is VHF driver 0.1.0.53 (protocol 2). The owner installed it with Windows PowerShell
+  5.1 (`powershell.exe`), after an attempt in PowerShell 7 failed with "Class not registered"
+  from `Get-WindowsDriver`. For a portable package the host's driver guide asks for elevated
+  64-bit Windows PowerShell (`docs/virtual-gamepad-driver.md:23-27` at `dba21a9e`); the round
+  did not record whether the owner used that package or the installer.
+- After a restart of the host, at 16:07, its log read "virtual gamepad driver is available (up
+  to 16 controllers; offers Xbox Series, Xbox One, DualSense, DualShock 4, Switch Pro)".
+  ViGEmBus stayed installed and was not used.
+- The pads: an 8BitDo Ultimate 2 (USB ID `2DC8:6012` in D-input, on its 2.4G receiver or over
+  Bluetooth) and an 8BitDo Pro 3 on its 2.4G receiver in Switch mode (`057E:2009`, "Nintendo
+  Switch Pro Controller").
+- No address, host name, serial or MAC is recorded here.
+
+#### Galaxy S22
+
+- **Ultimate 2 over Bluetooth.** Android sees a generic HID gamepad: `Has Vibrator` is false, and
+  there is no sensor and no battery. The host created "VHF gamepad 0 as an Xbox Series
+  controller on the XInput path". PC pad testers name it "Xbox 360 Controller (XInput STANDARD
+  GAMEPAD)", the XInput API's own name for the pad, not the profile the host created. The owner
+  found that the buttons, the sticks, the triggers, the D-pad, Home (short and held), the Select and
+  Start menu, the Start hold and the quit combo all pass. Rumble from a game (Steam) reaches the
+  client ("Rumble on gamepad 0: 7d70 7d70") and vibrates the phone, because the fallback is on, as
+  before. Chrome's pad tester produced no rumble at all (inconclusive).
+- **Pro 3 on its receiver, in Switch mode.** Android: `Has Vibrator` false, no sensor and no
+  battery. The host created "VHF gamepad 0 as a Switch Pro Controller". Rumble reaches the
+  client ("ae13 ae13") and vibrates the phone. Everything else passes (owner).
+- **Why the pads do not vibrate themselves.** The kernel of the S22 has `CONFIG_HID_NINTENDO=y`
+  without `NINTENDO_FF`, and the Ultimate 2 over Bluetooth is a generic HID device. The kernel does
+  have `XPAD_FF=y` and `PLAYSTATION_FF=y`, so an XInput pad or a PlayStation pad would vibrate. It
+  is not a change of Borealis or of the VHF host.
+- **Unrelated.** One stream ended at 16:22, when the S22 switched networks by itself: the client
+  logged "Resetting PC state for new available network", then an ENet unexpected disconnect, and
+  the host logged "CLIENT DISCONNECTED" and did not restart.
+- **Seen again.** Bursts of "Too much pending audio data" on the S22 at 720p. They belong to the
+  audio item of [Sprint 17](../roadmap.md#sprint-17-general-fixes).
+
+#### Google TV Streamer
+
+- **Ultimate 2 on its receiver, with the pad in D-input.** The receiver shows `2DC8:6012`
+  ("8BitDo Ultimate 2 Wireless Controller for PC"). Android: `Has Vibrator` false, no sensor and no
+  battery. The Borealis USB driver does not claim it, because it takes XInput devices only. The host
+  created "VHF gamepad 0 as an Xbox One controller on the XInput path". It is Xbox One here, and it
+  was Xbox Series on the S22 with the same pad over Bluetooth. The source returns Xbox One only
+  for the host setting `gamepad = xbox_one`, and the round did not read that setting (see the
+  [host contract, section 13](../host-contract/luminalshine.md#13-input)). Rumble reaches the client
+  many times ("7d70 7d70") and is lost: Android exposes no vibrator for the pad, and the TV has none.
+- **The TV remote.** The remote (Google TV Remote Keyboard) got a controller context and "Assigned
+  as controller 0" when it was pressed during the stream. This is the broad stream rule of
+  Sprint 13.
+- **The owner's note.** The Pro 3 receiver has no XInput mode, and XInput pads do not work in the
+  rest of Android (other apps), so the owner keeps the pads in D-input or Switch mode.
+
+#### Kernel facts
+
+The kernel configuration of each device:
+
+| Device | `HID_NINTENDO` and `NINTENDO_FF` | XInput (`xpad`) force feedback | `PLAYSTATION_FF` |
+| --- | --- | --- | --- |
+| Galaxy S22 | `HID_NINTENDO=y`, `NINTENDO_FF` not set | `XPAD_FF=y` | `y` |
+| Google TV Streamer | `HID_NINTENDO=y`, `NINTENDO_FF` not set | `JOYSTICK_XPAD=y`, `XPAD_FF` not set | `y` |
+
+So only PlayStation pads get rumble from Android on the TV. XInput rumble on the TV works only
+through the Borealis USB driver, with the receiver in XInput mode (`2DC8:310B`), as in earlier
+rounds. On the S22 an XInput pad or a PlayStation pad would vibrate, and a Nintendo pad would not.
+
+#### Not tested
+
+- The XInput receiver in this round, and two pads together.
+- Trigger rumble, and keyboard and mouse on the TV.
+- Battery and gyro: Android reported no battery and no sensor for any of the pads, so the
+  client had nothing to send. The host made an Xbox Series, an Xbox One and a Switch Pro
+  Controller, not a DualShock 4 or a DualSense.
+- The Win+Tab check against Windows' Task View on purpose, for Home held, is still to do
+  ([roadmap, Sprint 17](../roadmap.md#sprint-17-general-fixes), Input).
+
+#### Backlog item (owner, 2026-10-28)
+
+The owner sent this to the backlog sprint, Sprint 17 (Pads), the same day. Pads in D-input or Switch
+mode get no rumble on Android: the S22 and TV kernels have no `NINTENDO_FF`, the TV has no
+`XPAD_FF`, and the 8BitDo D-input identity is generic HID. Rumble reaches Borealis and then goes to
+the phone (the fallback) or nowhere (the TV). XInput mode gives rumble only through the Borealis USB
+driver, and the owner says XInput pads do not work in other Android apps. A possible fix to
+investigate: extend the Borealis userspace USB driver to the Switch Pro receiver (`057E:2009`, the
+Pro 3 dongle; rumble, and maybe gyro and battery from the `0x30` reports) and maybe to the 8BitDo
+D-input receiver (`2DC8:6012`), the way it handles XInput today. Also check why the XInput receiver
+(`2DC8:310B`) is not usable outside Borealis on the TV (the `xpad` device match on that kernel).
 
 ### Incidents
 

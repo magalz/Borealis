@@ -100,7 +100,7 @@ capture that is committed.
    version `7.1.431.-1`, not `26.09.1`. On 26.10.0-beta.1 the HTTPS
    `/serverinfo` carries `LuminalShineVersion` (#199; verified in the source at
    `46f6936d`, see the [host contract](../host-contract/luminalshine.md)). The client does not show it yet
-   (Sprint 17), so Host details still shows `7.1.431.-1` there too, and must
+   (Sprint 20), so Host details still shows `7.1.431.-1` there too, and must
    show no error because of the new field. The Sprint 10 checks (section 3.23)
    run against 26.10.0-beta.1; its plain-HTTP captures are in
    `core/tests/fixtures/luminalshine/26.10.0-beta.1/`.
@@ -1480,7 +1480,7 @@ Steps:
      logcat capture of section 1.4.
    - Expected: the log has no PIN, token, key, certificate, address or host name.
      Owner, 2026-10-24: local addresses and host names may appear; public and overlay
-     addresses may not, and are masked from Sprint 16.
+     addresses may not, and are masked from Sprint 19.
 6. Owner UAT (owner).
    - Pairing, including a wrong PIN on `26.10.0-beta.1`.
    - Forget, then pair again.
@@ -1658,8 +1658,8 @@ Steps:
      packet after silence and while the stream ends are not a `fail`. They show on both devices:
      on the S22 the pending time goes from about 90 ms down to 40 ms, and the `main` build does
      the same; the TV shows them with the continuous audio of a game (45 to 65 ms in the round of
-     2026-10-28). The item is in the backlog
-     ([roadmap](../roadmap.md#backlog-not-scheduled), Sprint 14 block, item (d)).
+     2026-10-28). The item is in
+     [Sprint 17](../roadmap.md#sprint-17-general-fixes) of the roadmap, Audio, "Audio runs".
    - 5.1 surround, if the host offers it, and 7.1 likewise. Expected: the speaker test of the PC
      plays each speaker in its place. The PC offers 5.1 and 7.1 through the virtual audio sink of
      the host, which switches to the layout that the client asks for at a launch; on a resume it
@@ -1732,8 +1732,8 @@ Steps:
     - `findExternalAddressIP4`. `populateExternalAddress` calls it only when the active network
       is a VPN (`NetHelper.isActiveNetworkVpn`), the same structure as the inherited Java and
       upstream. On the LAN it is never reached: record `not applicable` and write "not reached".
-      To reach it, turn on a VPN on the device (Tailscale is a VPN on Android; the item is in the
-      backlog, [roadmap](../roadmap.md#backlog-not-scheduled), Sprint 14 block, item (d)), then
+      To reach it, turn on a VPN on the device (Tailscale is a VPN on Android; the item is in
+      SecOps, [roadmap](../roadmap.md#sprint-19-secops)), then
       open the Library and let mDNS find the host (3.25, step 2). Expected: the host appears with
       its local address, and gets no remote address: the native returns `NULL` at once and sends
       no STUN request (3.17). The logcat has no JNI error. Source: `ComputerManagerService.kt`
@@ -1989,7 +1989,7 @@ leaves the state that the next one needs.
   - Expected: the dialog reads "Forget `<name>` on this device? The PC may keep trusting this device
     until you remove it in the LuminalShine Web UI (Clients page)." The card goes. The host may not
     come back as "Found on this network" until the app is closed and opened again: known (roadmap,
-    Sprint 15), so add it with B2. The log has `unpair not confirmed status=404` (3.3, steps 3 and
+    Sprint 17), so add it with B2. The log has `unpair not confirmed status=404` (3.3, steps 3 and
     4).
   - Owner: remove the device in the Web UI, on the Clients page (3.3, step 5), so that B4 pairs from
     scratch.
@@ -1998,7 +1998,7 @@ leaves the state that the next one needs.
     on the field opens the keyboard (section 11, D1). On the S22 the keyboard opens at once.
   - Expected: "Adding host", then Hosts with the message "`<host>` added. Pair it to see its apps."
     and the card of the PC: "Not paired", with Pair. The message reads the same for a paired host
-    (roadmap, Sprint 15): not a `fail`.
+    (roadmap, Sprint 17): not a `fail`.
   - Errors, one try each (`strings_addhost.xml`): an empty field gives "Enter an IP address or a
     host name."; a typo gives "Unable to resolve this address. Check it for typos."; a LAN address
     that no device uses gives "Unable to connect to the specified computer. Make sure the required
@@ -2012,7 +2012,7 @@ leaves the state that the next one needs.
   - Choose "Try again". On 26.10.0-beta.1 the host keeps the failed session for up to 5 minutes, so
     today the retry shows a new PIN for a moment and then "Another pairing is already in progress on
     the PC." with Try again (section 17: the same as before Sprint 12). This is the host's issue,
-    planned for Sprint 16 (roadmap, "LuminalShine wrong-PIN fix"): not a `fail`. Record the texts,
+    planned for Sprint 19 (roadmap, "LuminalShine wrong-PIN fix"): not a `fail`. Record the texts,
     and that the app does not loop (3.2, step 6).
   - Owner: restart LuminalShine on the PC, or wait 5 minutes, before B4.
   - Open point of section 17 (S22, night of 2026-10-24): after a wrong PIN the S22 once paired a few
@@ -2051,7 +2051,7 @@ leaves the state that the next one needs.
     the right game (section 17).
   - With Borealis not running (swipe it out of Recents): tap the pinned shortcut. Expected today:
     the toast "Computer is offline" and no stream, and a second try inside the app starts it. This
-    is the known fault of the launch request (roadmap, Sprint 15, "A pinned app shortcut fails
+    is the known fault of the launch request (roadmap, Sprint 17, "A pinned app shortcut fails
     when Borealis is not running"): not a `fail`.
   - TV: `not applicable` unless its launcher takes the pin. Not tested on 2026-10-28: the S22
     was used.
@@ -2979,8 +2979,8 @@ taken during the stream, because it would show the PC screen.
 - Backlog, from this round: the native pad modes, the smoother D-pad moves in
   Settings on a TV, the quit warning for Desktop, and the host details text. See
   the [roadmap, Sprint 9](../roadmap.md#sprint-9-ux-polish-and-the-handheld). The
-  native pad modes are documented in Sprint 17, not in Sprint 13
-  ([roadmap, Sprint 17](../roadmap.md#sprint-17-release-preparation)).
+  native pad modes are documented in Sprint 20, not in Sprint 13
+  ([roadmap, Sprint 20](../roadmap.md#sprint-20-release-preparation)).
 - The Sprint 6 quit combo follow-up for USB-driver pads is done in `5416a79c`.
   See the [roadmap](../roadmap.md#sprint-7-follow-ups-and-backlog), item 2.
 - Backlog, from the Bluetooth pad round: the handheld host card height. On the
@@ -3356,7 +3356,7 @@ own Quit is logged as an error, `Connection terminated: -1`, and the system repo
 a duplicate finish of the stream activity. The Library then shows "App quit."
 correctly. It was seen in both streams. It is not known whether the 17 s are host
 time (LuminalShine giving the display back) or a client wait: the client logs
-nothing in between. The [roadmap](../roadmap.md#backlog-not-scheduled) has it. The
+nothing in between. [Sprint 15](../roadmap.md#sprint-15-the-stream-screens-and-glass) of the roadmap has it. The
 final re-check of this section measured 5.5 and 6.7 s to the Library in the
 morning smoke of the same day, so the 17 s did not repeat.
 
@@ -3380,8 +3380,8 @@ These are not counted as problems.
   display. There was no retry.
 - **Host version.** Host details shows the protocol version `7.1.431.-1` as
   "Sunshine-compatible", not "LuminalShine 26.10.0-beta.1". The client shows the
-  host version in Sprint 17
-  ([roadmap, Sprint 17](../roadmap.md#sprint-17-release-preparation)).
+  host version in Sprint 20
+  ([roadmap, Sprint 20](../roadmap.md#sprint-20-release-preparation)).
 - **The offline host.** Its card alternates between "Offline" and "Checking…".
 - **A navigation slip.** One OK landed on the card of the offline host, after Left
   from the online card moved to the other card and not to the rail. The options of
@@ -3529,7 +3529,9 @@ Findings:
 2. **The Hosts list after Forget.** After Forget, the Hosts list does not update
    until the app is restarted. The owner wants a refresh button on Hosts, and a
    look at why the list does not update by itself. Schedule: after SecOps
-   (Sprint 16), or post-MVP. See the [roadmap backlog](../roadmap.md#backlog-not-scheduled).
+   (Sprint 19), or post-MVP. The look at why moved to Sprint 15 on 2026-10-28, and the refresh button and
+   the look moved to Sprint 17 later the same day. See the
+   [roadmap, Sprint 17](../roadmap.md#sprint-17-general-fixes).
 3. **A wrong PIN locks pairing for 5 minutes on LuminalShine 26.10.0-beta.1.**
    Seen live on the S22. It was checked in the host source at `e2662a44`, the
    commit of the beta tag. `src/nvhttp.cpp` there is the same as upstream `main`
@@ -3549,8 +3551,8 @@ Findings:
    - **What Borealis shows:** "the host holds another session (it expires after
      5 minutes)", with no restart.
    - **Decision:** the owner chose to leave Borealis as it is, and to fix the host
-     in Sprint 16 (proposed), as a contribution to LuminalShine. Fix A and Fix C
-     are in the [roadmap](../roadmap.md#sprint-16-secops). An independent review
+     in Sprint 19 (proposed), as a contribution to LuminalShine. Fix A and Fix C
+     are in the [roadmap](../roadmap.md#sprint-19-secops). An independent review
      recommended against a `/unpair` cancel route. Option D, sending phase 4 with
      an invalid secret after a wrong PIN, is not chosen.
    - **Not filed upstream yet.** The host-side table of the roadmap has the row.
@@ -4247,7 +4249,8 @@ belongs to.
     `client.crt`, `client.key`, the preferences, the datastore, the host database
     rows (2) and the shortcuts (1 dynamic, 0 pinned).
 - Verdict: not a regression. The Sprint 12 build behaves as the Sprint 11 build
-  does. Asking for `continuousAudio` is an optional feature in the backlog. To check
+  does. Asking for `continuousAudio` was an optional feature in the backlog; on 2026-10-28 it
+  joined the audio runs item in [Sprint 17](../roadmap.md#sprint-17-general-fixes). To check
   audio, play a sound on the PC during the
   stream (see the note in [section 3.25](#325-sprint-12-checks), step 4).
 - Steps to reproduce: start Desktop on the TV, play a sound on the PC, then quit.
@@ -4273,7 +4276,7 @@ belongs to.
   masked even with "Mask addresses" on.
 - Decision (owner, 2026-10-24): local addresses may stay in the logs; public
   addresses, and those of internet overlays such as Tailscale, may not. Host names
-  stay visible. The change is planned in Sprint 16 (roadmap, Sprint 16).
+  stay visible. The change is planned in Sprint 19 (roadmap, Sprint 19).
 
 ### Deviations
 
@@ -4421,7 +4424,7 @@ afterwards):
     (2026-10-16) seeds the app list from the cache, so the list is ready before the
     first poll. The Java at `2f321dc77` read the hosts from the database with the same
     unknown state and no address (read in the code, not run on that build). The owner
-    put the fix in Sprint 15 (roadmap, Sprint 15).
+    put the fix in Sprint 15, and moved it to Sprint 17 on 2026-10-28 (roadmap, Sprint 17).
 - Leaving a stream while it starts: about 2 s after the second shortcut start, the
   stream activity closed and the phone went to Recents and another app. About 7 s
   later the system destroyed the app's sockets, so the `/launch` still waiting for
@@ -4453,11 +4456,12 @@ Results of the evening of 2026-10-24 (owner and orchestrator, same build):
 - Add host by hand on the S22: pass (orchestrator). The address of the paired host was entered
   without showing it. The app recognised the known host: no duplicate card, and the
   paired host stayed Online. The message "`<host>` added. Pair it to see its apps."
-  shows for any added host, a paired one too. The owner put the wording in Sprint 15.
+  shows for any added host, a paired one too. The owner put the wording in Sprint 15, and moved it to
+  Sprint 17 on 2026-10-28.
 - Wrong PIN on 26.10.0-beta.1 (owner): the same as before Sprint 12. After a wrong
   PIN, a retry shows a new PIN for a moment, then the "try again" screen. This is
   the same symptom as before Sprint 12, and it matches the host keeping the failed
-  pairing session (409 on a retry; roadmap, Sprint 16, the LuminalShine wrong-PIN
+  pairing session (409 on a retry; roadmap, Sprint 19, the LuminalShine wrong-PIN
   fix). The logcat of this try was not read.
 - New finding (owner): in the in-game menu, Left or Right, on the D-pad or the
   analog stick, makes the focus outline disappear, and it does not come back until
@@ -4516,7 +4520,7 @@ Results of the night of 2026-10-24 (owner, with the S22 logs read afterwards):
   - After Forget, the host does not come back as "Found on this network" until the
     app is closed and opened again.
 
-  Both are in Sprint 15 (roadmap).
+  Both were put in Sprint 15, and moved to Sprint 17 on 2026-10-28 (roadmap).
 
 Owner items left: Wake-on-LAN with the PC asleep.
 
@@ -4527,7 +4531,8 @@ the Samsung Galaxy S22 from about 10:33 to 12:27, and on the Google TV Streamer 
 to 12:14. The steps are those of [section 3.26](#326-sprint-13-checks). The round tested
 build `9af270c73` (the startup log reads `commit=9af270c7390a`). It found no regression of
 Sprint 13. Four items went to the backlog, see
-[roadmap, Backlog, not scheduled](../roadmap.md#backlog-not-scheduled), item (d).
+[roadmap, Backlog, not scheduled](../roadmap.md#backlog-not-scheduled), item (d); on 2026-10-28
+they moved to [Sprint 17](../roadmap.md#sprint-17-general-fixes).
 
 ### Setup
 
@@ -4673,10 +4678,11 @@ part ran from about 06:24 to 07:06. The owner's part of the same steps and the o
 ([section 3.28](#328-owners-30-minute-gameplay-uat-sprint-14)) followed the same day, with the
 owner at the devices and the orchestrator reading the logs and running some steps. The steps
 are those of [section 3.27](#327-sprint-14-checks), plus three items of 3.28 that the agent
-part answered. The round found no regression of Sprint 14. The owner's findings went to the
-backlog and to Sprint 15 and Sprint 16: see the findings below, and
-[roadmap, Backlog, not scheduled](../roadmap.md#backlog-not-scheduled), item (d) of the
-Sprint 14 block.
+part answered. The round found no regression of Sprint 14. The owner's findings went to Sprint 15, to
+Sprint 17 (general fixes) and to Sprint 19 (SecOps); the owner first put some of them in the
+backlog, and organized them the same day. See the findings below, and
+[roadmap, Sprint 17](../roadmap.md#sprint-17-general-fixes). The audio findings have a follow-up
+of the same day: [Audio follow-up, 2026-10-28](#audio-follow-up-2026-10-28).
 
 ### Setup
 
@@ -4781,13 +4787,14 @@ to. The rows that start with 3.28 are items of
   of `Too much pending audio data`, from about 90 ms down to 40 ms.
 - The `main` build does the same, so it is not from Sprint 14. The TV did not show it in the
   agent part. It does in the owner's UAT, with the audio of a game (finding U2, below).
-- The owner put it in the backlog on 2026-10-28, item (d) of the Sprint 14 block.
+- The owner put it in the backlog on 2026-10-28, item (d) of the Sprint 14 block, and moved it to
+  [Sprint 17](../roadmap.md#sprint-17-general-fixes) (Audio) the same day.
 
-#### 3. Backlog: `findExternalAddressIP4` with a VPN
+#### 3. SecOps: `findExternalAddressIP4` with a VPN
 
 - The native is not reached on the LAN (the row of step 10), so this round did not run it.
-- The owner put a device test with a VPN on in the backlog on 2026-10-28, item (d) of the
-  Sprint 14 block.
+- The owner put a device test with a VPN on in the backlog on 2026-10-28, and moved it to
+  [Sprint 19](../roadmap.md#sprint-19-secops) (SecOps) the same day.
 
 ### Owner's UAT (3.28), 2026-10-28
 
@@ -4823,9 +4830,9 @@ emulation). C2, the release build on the S22 (optional), was not reported: see t
 | A12 Frame rate | S22 | 30 and 120 fps; 5 and 14 Mbps | 30 fps: host `effective_display_fps` 30, "Client configured bitrate is 5000 Kbps", 31 frames a second in the decoder window. 120 fps: the host display at 120 Hz, 14000 Kbps, 116 to 123 frames a second. | pass | Run by the agent while the owner was away, on Steam Big Picture with no game launched. |
 | A13 HDR | S22 | "HEVC 10-bit HDR", right colours | The stream of 11:04 had `hdrMode=1`: SPS Main10, depth 10/10, `Display HDR mode: enabled`, the decoder restarted for the HDR metadata, no Main10 warning. The owner saw "HEVC 10-bit HDR" in the overlay, and the picture was fine. | pass | Two earlier streams (10:56 and 10:58) had no `hdrMode`, because HDR was not on yet. |
 | Total play time | TV, S22 | at least 30 minutes (stopwatch, and the SESSION_END durations) | No stopwatch figure was recorded. A1 to A7 (TV) were played. A12 (S22) was run by the agent while the owner was away, on Steam Big Picture with no game. | not run | The notes give no total, and the SESSION_END durations were not added up. |
-| B1 Forget | TV, S22 | dialog text; the card goes | TV: the texts were right, and the log has `unpair not confirmed status=404`. S22 (11:41): Forget worked, and the log has `unpair not confirmed status=404` at 11:41:30. | pass | On the TV the host came back only after the app was killed: the known Sprint 15 item. On the S22 Add host (B2) brought the forgotten host back. |
+| B1 Forget | TV, S22 | dialog text; the card goes | TV: the texts were right, and the log has `unpair not confirmed status=404`. S22 (11:41): Forget worked, and the log has `unpair not confirmed status=404` at 11:41:30. | pass | On the TV the host came back only after the app was killed: the known Sprint 17 item. On the S22 Add host (B2) brought the forgotten host back. |
 | B2 Add host | TV, S22 | "Not paired" card; the three errors | TV: the three error texts, and "added. Pair it" with the "Not paired" card, were right. S22: Add host worked, and the forgotten host came back through it. | pass, backlog U5, U6 | The three error texts are reported for the TV only. |
-| B3 Wrong PIN | S22; TV optional | "The PIN was wrong."; known 409 retry | TV: the log has `unpair not confirmed status=404` at 09:57:31.472, then `PIN_WRONG` at 09:57:31.486, and the screen has no 404 text. Try again twice gave 409 `IN_PROGRESS`, with no loop. S22: `unpair not confirmed status=404` at 11:44:43.491, then `PIN_WRONG` at 11:44:43.493, with no 404 text on the screen. Each Try again, or a tap on the card, showed a PIN for about 1 s and then "Another pairing is already in progress on the PC." The log has one 409 `IN_PROGRESS` request for each attempt (11:44:46, 11:44:47 and 11:44:59), none automatic. | pass, backlog U12 | The known host lockout (Sprint 16). The owner saw it as a loop. After the screen went off and on, the card stayed "Not paired": this closes the open point of section 17 (a pairing with no PIN). |
+| B3 Wrong PIN | S22; TV optional | "The PIN was wrong."; known 409 retry | TV: the log has `unpair not confirmed status=404` at 09:57:31.472, then `PIN_WRONG` at 09:57:31.486, and the screen has no 404 text. Try again twice gave 409 `IN_PROGRESS`, with no loop. S22: `unpair not confirmed status=404` at 11:44:43.491, then `PIN_WRONG` at 11:44:43.493, with no 404 text on the screen. Each Try again, or a tap on the card, showed a PIN for about 1 s and then "Another pairing is already in progress on the PC." The log has one 409 `IN_PROGRESS` request for each attempt (11:44:46, 11:44:47 and 11:44:59), none automatic. | pass, backlog U12 | The known host lockout (Sprint 19). The owner saw it as a loop. After the screen went off and on, the card stayed "Not paired": this closes the open point of section 17 (a pairing with no PIN). |
 | B4 Pairing | TV, S22 | "Paired"; Apps open | TV: paired again after the wait and the restart. S22: the owner set the host emulation back to Automatic (the host restarted), then paired: PAIRED at 11:47:11. | pass | The Apps screen after the pairing was not reported. |
 | B5 Wake-on-LAN | S22 | "Wake-up sent."; the card turns Online | Not testable in this setup: the PC is on Wi-Fi, and when it sleeps it wakes again at once and drops the Wi-Fi link, so no magic-packet wake can be checked. | not applicable | The test needs the PC on Ethernet (or Wi-Fi wake support) and a sleep that holds. |
 | B6 Pinned shortcut | S22 | opens when running; known toast when not | Apps, Add to home screen: the launcher's own dialog (in Portuguese) offered "Steam Big Picture (`<host>`)", and Okay pinned it (`dumpsys shortcut`: pinned for the launcher). The owner: the shortcut works. | pass | The icon, the tap with Borealis not running (the known toast) and the host shortcut were not reported. The TV was not tested (the S22 was used). |
@@ -4857,35 +4864,114 @@ regression. Each one says where it went in the [roadmap](../roadmap.md).
   first seconds of each stream (A3). The log has the runs at the start and the end of a stream,
   and runs in mid-play: A2 (07:57:52 to 07:58:04 and 07:58:16 to 07:58:21, pending 45 to
   65 ms) and A4 (08:20:00 to 08:20:12, Balanced). The network loss stays 0. Roadmap,
-  [Backlog](../roadmap.md#backlog-not-scheduled), Sprint 14 block, item (d), "Audio runs".
+  [Sprint 17](../roadmap.md#sprint-17-general-fixes), Audio, "Audio runs". The follow-up of the same day measured them: [Audio follow-up](#audio-follow-up-2026-10-28).
 - **U3. Audio behind the picture on the TV.** In every channel layout, stereo too (A5). The owner
   put it in the backlog, with no A/B against `main` ("the aim now is to see that everything
-  works as before"). Item (d).
-- **U4. The "Audio effects" text is unclear.** Item (d).
+  works as before"). Roadmap, [Sprint 17](../roadmap.md#sprint-17-general-fixes), Audio. The follow-up found the cause, the Bluetooth
+  output: [Audio follow-up](#audio-follow-up-2026-10-28).
+- **U4. The "Audio effects" text is unclear.** Moved from item (d) to
+  [Sprint 15](../roadmap.md#sprint-15-the-stream-screens-and-glass) on 2026-10-28, and from there to
+  [Sprint 17](../roadmap.md#sprint-17-general-fixes) (Library and Settings) later the same day.
 - **U5. Add host for a host that is already added or paired.** The message does not say so.
-  Sprint 15, in the existing "Pair it" bullet.
+  Sprint 17 (Library and Settings), in the existing "Pair it" bullet. It was in Sprint 15 until later
+  the same day.
 - **U6. The Add host field opens the full keyboard.** A keyboard with `.`, `/` and `:` at hand
-  would fit an address better. Item (d).
+  would fit an address better. Moved from item (d) to Sprint 15 on 2026-10-28, and from there to
+  Sprint 17 later the same day, in the existing "Pair it" bullet.
 - **U7. No pad battery reaches the PC.** The host makes an Xbox 360 controller by default, which
   has no battery, and ViGEmBus emulates a wired DualShock 4. To investigate: first whether Android
-  reports a battery for the pad, then the host side. Item (d).
+  reports a battery for the pad, then the host side. Roadmap, [Sprint 17](../roadmap.md#sprint-17-general-fixes), Pads.
 - **U8. No pad gyro.** The gyro of the Pro 3 works on Windows (Steam's test), but neither device
   exposes it: the Streamer does not, through the USB receiver, and the S22 does not, in the
   pad's 8BitDo mode. To try: Switch mode over Bluetooth on the S22, and the Motion fallback check with a pad
-  connected. Item (d).
+  connected. Roadmap, [Sprint 17](../roadmap.md#sprint-17-general-fixes), Pads.
 - **U9. A vibration option gives no sample.** When a vibration option is turned on in Settings,
-  a short sample vibration would show what it does. Item (d).
+  a short sample vibration would show what it does. Moved from item (d) to Sprint 15 on
+  2026-10-28, and from there to Sprint 17 later the same day.
 - **U10. No keyboard and mouse combo opens the in-game menu.** Sprint 15, new bullet.
 - **U11. TV focus after the host Options sheet.** After Back closed the sheet over the Apps
   screen, no node had focus and the D-pad did nothing until another Back. The owner had left the
-  sheet open in B1 and B4. It is Library code, not Sprint 14. Item (d).
+  sheet open in B1 and B4. It is Library code, not Sprint 14. Moved from item (d) to Sprint 15 on
+  2026-10-28, and from there to Sprint 17 later the same day.
 - **U12. The wrong-PIN lockout looks like a loop.** Each Try again, or a tap on the card, showed a
   PIN for about 1 s and then "Another pairing is already in progress on the PC." The log has one
-  request for each attempt, none automatic. [Sprint 16](../roadmap.md#sprint-16-secops), the
+  request for each attempt, none automatic. [Sprint 19](../roadmap.md#sprint-19-secops), the
   wrong-PIN item.
 
-The forgotten host that came back only after the app was killed (B1, TV) is the existing Sprint
-15 item "A forgotten host is not found again until the app restarts"; it has no new entry.
+The forgotten host that came back only after the app was killed (B1, TV) is the existing
+Sprint 17 item "A forgotten host is not found again until the app restarts"; it has no new entry.
+It was a Sprint 15 item until later the same day.
+
+### Audio follow-up, 2026-10-28
+
+The owner put the audio runs (U2) and the audio behind the picture (U3) in the backlog, and asked
+for an investigation first, without code changes: an A/B with the build before Sprint 14 on the TV,
+and a reading of the code. The orchestrator ran it the same day on the Google TV Streamer, with the
+owner's OK, against LuminalShine, on Desktop. No code changed. The decisions that followed are in
+the [roadmap, Sprint 17](../roadmap.md#sprint-17-general-fixes), under Audio.
+
+#### Method
+
+- Builds: the Sprint 14 debug build from `main` (`a66472e29`), and the debug build of `main` before
+  Sprint 14 (`b205ef3fc`). They were installed over each other, with the data kept.
+- In each stream the PC played eight short beeps with 3 s of silence between them, then a 60 s tone.
+  `dumpsys media.audio_flinger` and `dumpsys audio` were read during the tone. One stream for each row
+  of the table, so each figure is from one stream.
+- The track path (the fast path, or the normal mixer), the track buffer and the track latency are
+  Android's own figures for the track of the app, read from those two dumps. They are not a measure
+  of what the ear hears.
+- Drops are the lines "Too much pending audio data". Each is a decoded packet of 5 ms that
+  `AndroidAudioRenderer` dropped by its 40 ms rule.
+- No address, host name or serial is recorded here.
+
+#### Streams
+
+| Build | Output | Video, pacing, channels | Track path | Track buffer (frames) | Track latency (Android) | Drops |
+| --- | --- | --- | --- | --- | --- | --- |
+| Sprint 14 | Bluetooth A2DP | 720p, fps limit, stereo | fast | 1,024 | 291 ms | 0 |
+| Sprint 14 | Bluetooth A2DP | 1080p, Balanced, 7.1 | normal | 16,448 | 615 ms | 103 (101 at the opening of the in-game menu at the end) |
+| Sprint 14 | HDMI | 1080p, Balanced, 7.1 | normal | 11,286 | 405 ms | 67 |
+| Sprint 14 | HDMI | 720p, fps limit, stereo | fast | 1,024 | 155 ms | 0 |
+| Sprint 14 | HDMI | 1080p, Balanced, stereo | fast | 1,024 | 152 ms | 118 |
+| Sprint 14 | HDMI | 1080p, fps limit, stereo | fast | 1,024 | 151 ms | 39, all at the first sound |
+| Before Sprint 14 | HDMI | 1080p, Balanced, stereo | fast | 1,024 | 163 ms | 378, with a 13 s run in the middle of the tone |
+
+#### What the follow-up found
+
+- **The audio behind the picture is the Bluetooth output.** With the owner's Bluetooth audio device
+  connected, the Streamer sent the audio of the stream to Bluetooth A2DP, whose output thread
+  reported 270 to 281 ms of latency, against 141 ms for HDMI. The owner turned Bluetooth off and
+  judged the sync good ("without the Bluetooth it is great"), in the 1080p, Balanced, 7.1 stream on
+  HDMI. Other apps hold their video to match the audio; a game stream does not. Whether the morning
+  UAT ran on Bluetooth is not recorded.
+- **7.1 on a 2-channel output leaves the fast path (5.1 was not measured).** The track goes to the normal mixer, with
+  a buffer 11 to 16 times larger (11,286 and 16,448 frames, against 1,024), which adds about 250 to
+  320 ms by Android's figures: 405 ms against 151 to 163 ms on HDMI, and 615 ms against 291 ms on
+  Bluetooth.
+- **The audio runs are older than Sprint 14.** The build before Sprint 14 dropped three times as
+  much in the same condition (1080p, Balanced, stereo, HDMI: 378 drops against 118). The runs follow
+  1080p, and Balanced most: there are none at 720p. They come when sound starts again after silence:
+  the host sends no audio while the PC is silent (LuminalShine's `continuousAudio` launch option, off
+  by default, would send silence). One was a 13 s run in the middle of a sound. Also seen: 101 drops
+  when the in-game menu opened, at the end of the 7.1 Bluetooth stream.
+
+#### Code facts
+
+Read in the source at `a66472e29`:
+
+- moonlight-common-c drops the first 500 ms of the audio that it receives. In `AudioReceiveThreadProc`
+  (`core/third_party/moonlight-common-c/src/AudioStream.c`), `packetsToDrop = 500 / AudioPacketDuration`.
+  A receive timeout after the first packet sets the counter to 0, because it means that the host has no
+  queued audio.
+- `AndroidAudioRenderer` tries a low-latency track with a buffer of 2 packets first, then a larger
+  low-latency buffer, then the same two buffers in standard mode. It skips the low-latency attempts
+  when the hardware sample rate is not the one of the stream, or when audio effects are on. It drops
+  a packet while 40 ms or more are pending (`PENDING_AUDIO_LIMIT_MS`).
+- Borealis does not send `continuousAudio`: the `/launch` request of `NvHTTP.kt` has
+  `localAudioPlayMode` and `surroundAudioInfo`, and not that argument.
+- Nothing in the client syncs audio and video. A search of `apps/android/app/src/main` and
+  `apps/android/borealis` for `getTimestamp`, `getLatency` and `AudioTimestamp` finds nothing, and
+  `AndroidAudioRenderer` is the only code that uses `AudioTrack`.
 
 ### Incidents
 

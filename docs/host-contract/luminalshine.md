@@ -53,7 +53,7 @@ runtime behaviour that the source alone cannot establish are marked
   version. The plain-HTTP capture of a 26.10.0-beta.1 host (2026-10-23) has no
   `LuminalShineVersion` and is byte for byte the 26.09.1 response. The HTTPS
   value of that host was not read (no HTTPS call was allowed). The Borealis
-  client does not read the field yet (Sprint 17), so Host details still shows
+  client does not read the field yet (Sprint 20), so Host details still shows
   `7.1.431.-1`.
 - `/serverinfo` reports `state` as `SUNSHINE_SERVER_BUSY` while an app is
   running and `SUNSHINE_SERVER_FREE` otherwise, and `currentgame` as the running
@@ -300,7 +300,7 @@ commits change `.github/`, `scripts/` and `tests/` only).
   "No restart" (the table above). The user waits up to 5 minutes, or restarts
   LuminalShine, before pairing again.
 
-The decision on this finding is in the roadmap, under Sprint 16 (SecOps).
+The decision on this finding is in the roadmap, under Sprint 19 (SecOps).
 
 ## 5. Client identity and per-client host settings
 

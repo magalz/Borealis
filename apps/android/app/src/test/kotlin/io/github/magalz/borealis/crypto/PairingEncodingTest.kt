@@ -20,8 +20,7 @@ import org.xmlpull.v1.XmlPullParserException
 class PairingEncodingTest {
     private val closeables = mutableListOf<Closeable>()
 
-    @After
-    fun tearDown() = closeables.forEach { it.close() }
+    @After fun tearDown() = closeables.forEach { it.close() }
 
     private fun host(sha256: Boolean = true) =
         FakePairingHost(sha256 = sha256).also { closeables += it }
@@ -36,8 +35,7 @@ class PairingEncodingTest {
     @Test
     fun `the client certificate goes out as uppercase hex with every byte kept`() {
         val host = host()
-        val bytes =
-            byteArrayOf(0x00, 0x0F, 0x10, 0x7F, 0x80.toByte(), 0xAB.toByte(), 0xFF.toByte())
+        val bytes = byteArrayOf(0x00, 0x0F, 0x10, 0x7F, 0x80.toByte(), 0xAB.toByte(), 0xFF.toByte())
         // The honest answer cannot read these bytes as a certificate: only the request counts here.
         host.intercept = { _, _ -> PairingReply.root("<paired>0</paired>") }
         val provider =
@@ -83,7 +81,11 @@ class PairingEncodingTest {
     @Test
     fun `an odd length of hex in an answer is refused with its length`() {
         val host = host()
-        answering(host, "clientchallenge", "<paired>1</paired><challengeresponse>ABC</challengeresponse>")
+        answering(
+            host,
+            "clientchallenge",
+            "<paired>1</paired><challengeresponse>ABC</challengeresponse>",
+        )
         val rig = PairingRig(host)
 
         val error = assertThrows(IllegalArgumentException::class.java) { rig.pair() }
@@ -104,7 +106,9 @@ class PairingEncodingTest {
 
             val state = rig.pair(serverInfo)
 
-            assertWithMessage("$challengeBytes bytes of challenge").that(state).isEqualTo(PairState.PAIRED)
+            assertWithMessage("$challengeBytes bytes of challenge")
+                .that(state)
+                .isEqualTo(PairState.PAIRED)
             assertThat(host.clientHashMatched).isTrue()
         }
     }
@@ -122,7 +126,11 @@ class PairingEncodingTest {
         assertThrows(IllegalArgumentException::class.java) { rig.pair() }
 
         assertThat(rig.seen)
-            .containsExactly("http getservercert", "http clientchallenge", "http serverchallengeresp")
+            .containsExactly(
+                "http getservercert",
+                "http clientchallenge",
+                "http serverchallengeresp",
+            )
             .inOrder()
     }
 

@@ -7,9 +7,9 @@ import org.junit.Test
 import org.w3c.dom.Element
 
 /**
- * Every activity that a manifest names has a class: a screen that was removed (the 12.2 host and app
- * lists) leaves no entry behind, which would only fail when something started it. Reads the source
- * manifests of the app and of the Library, so it needs no Android runtime.
+ * Every activity that a manifest names has a class: a screen that was removed (the 12.2 host and
+ * app lists) leaves no entry behind, which would only fail when something started it. Reads the
+ * source manifests of the app and of the Library, so it needs no Android runtime.
  */
 class ManifestActivitiesTest {
     private fun activityClasses(manifest: String, namespace: String): List<String> {
@@ -27,10 +27,9 @@ class ManifestActivitiesTest {
 
     private fun assertClassesExist(classes: List<String>) {
         assertThat(classes).isNotEmpty()
-        val missing =
-            classes.filter {
-                runCatching { Class.forName(it, false, javaClass.classLoader) }.isFailure
-            }
+        val missing = classes.filter {
+            runCatching { Class.forName(it, false, javaClass.classLoader) }.isFailure
+        }
         assertThat(missing).isEmpty()
     }
 

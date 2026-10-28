@@ -11,14 +11,16 @@ import java.util.concurrent.atomic.AtomicReference
 import org.junit.Test
 
 /**
- * The callbacks of [NvConnectionListener]: which ones a listener must implement, which ones have
- * a default, and what the defaults do. `Game` (Java) implements the interface, `MoonBridge` and
+ * The callbacks of [NvConnectionListener]: which ones a listener must implement, which ones have a
+ * default, and what the defaults do. `Game` (Java) implements the interface, `MoonBridge` and
  * `NvConnection` (Java) call it, and `HeldStageFailures` (Kotlin) wraps it.
  *
  * Characterization: these tests pass on the Java interface and on its Kotlin conversion.
  */
 class NvConnectionListenerCharacterizationTest {
-    /** Implements only what the interface requires: the three launch callbacks keep their defaults. */
+    /**
+     * Implements only what the interface requires: the three launch callbacks keep their defaults.
+     */
     private class RequiredOnly : NvConnectionListener {
         override fun stageStarting(stage: String?) = Unit
 
@@ -75,14 +77,18 @@ class NvConnectionListenerCharacterizationTest {
             requestedAppName: String?,
             answer: ConflictAnswer,
         ) {
-            calls += "launchConflict $runningAppId $runningAppName $requestedAppId $requestedAppName"
+            calls +=
+                "launchConflict $runningAppId $runningAppName $requestedAppId $requestedAppName"
         }
     }
 
     /** The choice that won: [ConflictAnswer.choose] only says whether the caller's choice won. */
     private fun ConflictAnswer.chosen(): Any? =
-        (ConflictAnswer::class.java.getDeclaredField("chosen").also { it.isAccessible = true }.get(this)
-                as AtomicReference<*>)
+        (ConflictAnswer::class
+                .java
+                .getDeclaredField("chosen")
+                .also { it.isAccessible = true }
+                .get(this) as AtomicReference<*>)
             .get()
 
     private fun signature(method: Method): String =

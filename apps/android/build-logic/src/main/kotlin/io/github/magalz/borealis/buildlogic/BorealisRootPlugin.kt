@@ -22,7 +22,13 @@ internal class BorealisRootPlugin : Plugin<Project> {
             configureCoverage()
 
             val kotlinTargets =
-                listOf("borealis/**/*.kt", "build-logic/**/*.kt", "app/src/main/kotlin/**/*.kt")
+                listOf(
+                    "borealis/**/*.kt",
+                    "build-logic/**/*.kt",
+                    "app/src/main/kotlin/**/*.kt",
+                    "app/src/test/**/*.kt",
+                    "app/src/androidTest/**/*.kt",
+                )
             val nativeTargets =
                 listOf("borealis/native/src/main/cpp", "app/src/main/jni/borealis").flatMap { dir ->
                     listOf("c", "cc", "cpp", "h", "hpp").map { "$dir/**/*.$it" }

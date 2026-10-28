@@ -59,7 +59,9 @@ class ServerInfoParsingTest {
         for (version in LuminalFixtures.VERSIONS) {
             val serverInfo = LuminalFixtures.serverInfo(version)
 
-            assertWithMessage(version).that(http.getServerVersion(serverInfo)).isEqualTo("7.1.431.-1")
+            assertWithMessage(version)
+                .that(http.getServerVersion(serverInfo))
+                .isEqualTo("7.1.431.-1")
             assertWithMessage(version)
                 .that(http.getServerAppVersionQuad(serverInfo))
                 .asList()
@@ -108,11 +110,15 @@ class ServerInfoParsingTest {
         assertThat(http.getServerCodecModeSupport(serverInfoWithout("ServerCodecModeSupport")))
             .isEqualTo(0L)
         for (text in listOf("abc", " 5", "0x10", "1.5", "18446744073709551616")) {
-            assertWithMessage(text).that(
-                assertThrows(NumberFormatException::class.java) {
-                    http.getServerCodecModeSupport(serverInfoWith("ServerCodecModeSupport", text))
-                }
-            ).isNotNull()
+            assertWithMessage(text)
+                .that(
+                    assertThrows(NumberFormatException::class.java) {
+                        http.getServerCodecModeSupport(
+                            serverInfoWith("ServerCodecModeSupport", text)
+                        )
+                    }
+                )
+                .isNotNull()
         }
     }
 
@@ -129,10 +135,11 @@ class ServerInfoParsingTest {
     @Test
     fun `the luma limits are longs that default to 0`() {
         val serverInfo =
-            serverInfoWith("MaxLumaPixelsHEVC", "8589934592").replace(
-                "<currentgame>",
-                "<MaxLumaPixelsH264>4294967296</MaxLumaPixelsH264><currentgame>",
-            )
+            serverInfoWith("MaxLumaPixelsHEVC", "8589934592")
+                .replace(
+                    "<currentgame>",
+                    "<MaxLumaPixelsH264>4294967296</MaxLumaPixelsH264><currentgame>",
+                )
 
         assertThat(http.getMaxLumaPixelsHEVC(serverInfo)).isEqualTo(8589934592L)
         assertThat(http.getMaxLumaPixelsH264(serverInfo)).isEqualTo(4294967296L)
@@ -144,7 +151,10 @@ class ServerInfoParsingTest {
         assertThrows(NumberFormatException::class.java) {
             http.getMaxLumaPixelsH264(
                 serverInfoWith("MaxLumaPixelsHEVC", "1")
-                    .replace("<currentgame>", "<MaxLumaPixelsH264>many</MaxLumaPixelsH264><currentgame>")
+                    .replace(
+                        "<currentgame>",
+                        "<MaxLumaPixelsH264>many</MaxLumaPixelsH264><currentgame>",
+                    )
             )
         }
     }
@@ -209,9 +219,7 @@ class ServerInfoParsingTest {
         assertThat(http.getPairState(serverInfoBody(paired = true))).isEqualTo(PairState.PAIRED)
         assertThat(http.getPairState(serverInfoBody(paired = false)))
             .isEqualTo(PairState.NOT_PAIRED)
-        assertThat(
-                http.getPairState(serverInfoWith("PairStatus", "2"))
-            )
+        assertThat(http.getPairState(serverInfoWith("PairStatus", "2")))
             .isEqualTo(PairState.NOT_PAIRED)
         assertThat(http.getPairState(serverInfoWith("PairStatus", "01")))
             .isEqualTo(PairState.NOT_PAIRED)
@@ -321,9 +329,7 @@ class ServerInfoParsingTest {
         // An empty tag has no text, so it is missing too.
         assertThat(failure { http.getServerAppVersionQuad(serverInfoWith("appversion", "")) })
             .isEqualTo("Missing mandatory field in host response: appversion")
-        assertThat(
-                http.getServerAppVersionQuad(serverInfoWith("appversion", "6.0.0.1")).asList()
-            )
+        assertThat(http.getServerAppVersionQuad(serverInfoWith("appversion", "6.0.0.1")).asList())
             .containsExactly(6, 0, 0, 1)
             .inOrder()
         for (text in listOf("7.1.431", "7.1.431.", "7.1.431.0.1", "7")) {
@@ -387,7 +393,8 @@ class ServerInfoParsingTest {
     @Test
     fun `an answer that is cut off, or empty, has the fields it did not get to missing`() {
         // The parser does not complain about the end of the input.
-        for (text in listOf("", """<root status_code="200"><hostname>x""", "<?xml version=\"1.0\"?>")) {
+        for (text in
+            listOf("", """<root status_code="200"><hostname>x""", "<?xml version=\"1.0\"?>")) {
             assertWithMessage(text).that(http.getGpuType(text)).isNull()
             assertWithMessage(text)
                 .that(failure { http.getServerVersion(text) })

@@ -19,8 +19,7 @@ class StreamSessionFactoryTest {
 
     @Test
     fun `the performance overlay starts as the three-state setting says`() {
-        fun overlay(mode: String) =
-            StreamSessionFactory.defaults(prefs(), mode, true, true).overlay
+        fun overlay(mode: String) = StreamSessionFactory.defaults(prefs(), mode, true, true).overlay
 
         assertThat(overlay(Settings.PERF_OVERLAY_OFF)).isEqualTo(OverlayMode.OFF)
         assertThat(overlay(Settings.PERF_OVERLAY_COMPACT)).isEqualTo(OverlayMode.COMPACT)
@@ -35,25 +34,36 @@ class StreamSessionFactoryTest {
 
     @Test
     fun `the touch mode follows the trackpad preference, and is absent without a touch screen`() {
-        assertThat(StreamSessionFactory.defaults(prefs(trackpad = true), "off", true, true).touchMode)
+        assertThat(
+                StreamSessionFactory.defaults(prefs(trackpad = true), "off", true, true).touchMode
+            )
             .isEqualTo(TouchMode.TRACKPAD)
-        assertThat(StreamSessionFactory.defaults(prefs(trackpad = false), "off", true, true).touchMode)
+        assertThat(
+                StreamSessionFactory.defaults(prefs(trackpad = false), "off", true, true).touchMode
+            )
             .isEqualTo(TouchMode.DIRECT)
         assertThat(StreamSessionFactory.defaults(prefs(), "off", false, true).touchMode).isNull()
     }
 
     @Test
     fun `the gamepad as a mouse follows the mouse emulation preference`() {
-        assertThat(StreamSessionFactory.defaults(prefs(mouseEmulation = true), "off", true, true).gamepadMouse)
+        assertThat(
+                StreamSessionFactory.defaults(prefs(mouseEmulation = true), "off", true, true)
+                    .gamepadMouse
+            )
             .isTrue()
-        assertThat(StreamSessionFactory.defaults(prefs(mouseEmulation = false), "off", true, true).gamepadMouse)
+        assertThat(
+                StreamSessionFactory.defaults(prefs(mouseEmulation = false), "off", true, true)
+                    .gamepadMouse
+            )
             .isFalse()
     }
 
     @Test
     fun `the menu hint is what the caller says`() {
         assertThat(StreamSessionFactory.defaults(prefs(), "off", true, true).showMenuHint).isTrue()
-        assertThat(StreamSessionFactory.defaults(prefs(), "off", true, false).showMenuHint).isFalse()
+        assertThat(StreamSessionFactory.defaults(prefs(), "off", true, false).showMenuHint)
+            .isFalse()
     }
 
     private fun sized(width: Int, height: Int, bitrate: Int) =
@@ -66,7 +76,12 @@ class StreamSessionFactoryTest {
     @Test
     fun `the session info names the negotiated codec and tells HDR`() {
         val h264 =
-            StreamSessionFactory.sessionInfo(sized(1920, 1080, 20_000), 60, MoonBridge.VIDEO_FORMAT_H264, null)
+            StreamSessionFactory.sessionInfo(
+                sized(1920, 1080, 20_000),
+                60,
+                MoonBridge.VIDEO_FORMAT_H264,
+                null,
+            )
         val hevcHdr =
             StreamSessionFactory.sessionInfo(
                 sized(3840, 2160, 80_000),
@@ -75,10 +90,16 @@ class StreamSessionFactoryTest {
                 null,
             )
         val av1 =
-            StreamSessionFactory.sessionInfo(sized(1280, 720, 5_000), 30, MoonBridge.VIDEO_FORMAT_AV1_MAIN8, null)
+            StreamSessionFactory.sessionInfo(
+                sized(1280, 720, 5_000),
+                30,
+                MoonBridge.VIDEO_FORMAT_AV1_MAIN8,
+                null,
+            )
 
         assertThat(h264).isEqualTo(SessionInfo(1920, 1080, 60, "H.264", hdr = false, null, 20_000))
-        assertThat(hevcHdr).isEqualTo(SessionInfo(3840, 2160, 120, "HEVC", hdr = true, null, 80_000))
+        assertThat(hevcHdr)
+            .isEqualTo(SessionInfo(3840, 2160, 120, "HEVC", hdr = true, null, 80_000))
         assertThat(av1.codec).isEqualTo("AV1")
         assertThat(av1.hdr).isFalse()
     }
@@ -99,7 +120,12 @@ class StreamSessionFactoryTest {
     @Test
     fun `a decoder that is not known leaves the name out`() {
         val info =
-            StreamSessionFactory.sessionInfo(sized(1920, 1080, 20_000), 60, MoonBridge.VIDEO_FORMAT_H264, null)
+            StreamSessionFactory.sessionInfo(
+                sized(1920, 1080, 20_000),
+                60,
+                MoonBridge.VIDEO_FORMAT_H264,
+                null,
+            )
 
         assertThat(info.decoder).isNull()
     }

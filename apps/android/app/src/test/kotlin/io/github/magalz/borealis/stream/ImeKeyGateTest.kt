@@ -34,8 +34,9 @@ class ImeKeyGateTest {
                 .setSources(sources)
                 .setKeyboardType(keyboardType)
                 .build()
-        val manager = ApplicationProvider.getApplicationContext<Application>()
-            .getSystemService(InputManager::class.java)
+        val manager =
+            ApplicationProvider.getApplicationContext<Application>()
+                .getSystemService(InputManager::class.java)
         shadowOf(manager).addInputDevice(device)
         assertThat(InputDevice.getDevice(id)?.keyboardType).isEqualTo(keyboardType)
         return id
@@ -52,7 +53,8 @@ class ImeKeyGateTest {
     fun `a gamepad that reports gamepad and keyboard sources is for the keyboard`() {
         val pad = device(7, GAMEPAD_AND_KEYBOARD, InputDevice.KEYBOARD_TYPE_NON_ALPHABETIC)
 
-        for (code in listOf(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_BACK)) {
+        for (code in
+            listOf(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_BACK)) {
             assertThat(gate.toIme(key(code, GAMEPAD_AND_KEYBOARD, deviceId = pad))).isTrue()
         }
     }
@@ -61,16 +63,23 @@ class ImeKeyGateTest {
     fun `a TV remote that reports keyboard and D-pad sources is for the keyboard`() {
         val remote = device(8, REMOTE, InputDevice.KEYBOARD_TYPE_NON_ALPHABETIC)
 
-        for (code in listOf(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_BACK)) {
+        for (code in
+            listOf(
+                KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_BACK,
+            )) {
             assertThat(gate.toIme(key(code, REMOTE, deviceId = remote))).isTrue()
         }
     }
 
     @Test
     fun `a keyboard with letters is a hardware keyboard even when it reports a D-pad source`() {
-        val keyboard = device(9, REMOTE or InputDevice.SOURCE_GAMEPAD, InputDevice.KEYBOARD_TYPE_ALPHABETIC)
+        val keyboard =
+            device(9, REMOTE or InputDevice.SOURCE_GAMEPAD, InputDevice.KEYBOARD_TYPE_ALPHABETIC)
 
-        for (code in listOf(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_BACK)) {
+        for (code in
+            listOf(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_BACK)) {
             assertThat(gate.toIme(key(code, REMOTE, deviceId = keyboard))).isFalse()
         }
     }

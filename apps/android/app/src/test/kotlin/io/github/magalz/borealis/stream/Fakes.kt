@@ -82,8 +82,7 @@ class FakeEntryPoint(
     val apps: FakeApps = FakeApps(),
     val hosts: FakeHosts = FakeHosts(),
     val notice: QuitNotice = QuitNotice(),
-) :
-    StreamEntryPoint {
+) : StreamEntryPoint {
     override fun appRepository(): AppRepository = apps
 
     override fun hostRepository(): HostRepository = hosts
@@ -174,7 +173,8 @@ fun streamingSession(
         StreamSession(
             appName = "Desktop",
             hostName = "Den PC",
-            defaults = StreamDefaults(overlay, TouchMode.TRACKPAD, gamepadMouse, showMenuHint = false),
+            defaults =
+                StreamDefaults(overlay, TouchMode.TRACKPAD, gamepadMouse, showMenuHint = false),
             dockKeyboard = { false },
             actions = actions,
         )

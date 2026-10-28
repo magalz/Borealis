@@ -38,7 +38,11 @@ class AudioRendererShapeCharacterizationTest {
         val methods =
             type.declaredMethods
                 .filter { Modifier.isPublic(it.modifiers) && !it.isSynthetic }
-                .map { it.name + MethodType.methodType(it.returnType, it.parameterTypes).toMethodDescriptorString() }
+                .map {
+                    it.name +
+                        MethodType.methodType(it.returnType, it.parameterTypes)
+                            .toMethodDescriptorString()
+                }
 
         assertThat(methods)
             .containsExactly(

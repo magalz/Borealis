@@ -87,7 +87,10 @@ class RumbleManagerTest : FeedbackTestBase() {
         rig.handler.handleRumble(0, 0x4000, 0)
 
         assertThat(recorded.vibrations.map { it.combined })
-            .containsExactly(VibrationExpectations.combo(10 to 64), VibrationExpectations.combo(11 to 64))
+            .containsExactly(
+                VibrationExpectations.combo(10 to 64),
+                VibrationExpectations.combo(11 to 64),
+            )
             .inOrder()
     }
 
@@ -135,7 +138,11 @@ class RumbleManagerTest : FeedbackTestBase() {
     @Test
     fun `the phone does not vibrate when the pad did`() {
         val phone = Hardware.vibrator()
-        val rig = rig(phoneVibrator = phone) { vibrateFallbackToDevice = true; vibrateFallbackToDeviceStrength = 100 }
+        val rig =
+            rig(phoneVibrator = phone) {
+                vibrateFallbackToDevice = true
+                vibrateFallbackToDeviceStrength = 100
+            }
         val pad = rig.connectPad(features = DeviceFeatures(vibratorManager = manager))
         rig.wake(pad)
 

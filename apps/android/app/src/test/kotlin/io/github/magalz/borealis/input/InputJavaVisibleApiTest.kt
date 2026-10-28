@@ -36,17 +36,21 @@ class InputJavaVisibleApiTest {
     @Test
     fun `the translator translates and asks about normalized keys with ints`() {
         val translate =
-            KeyboardTranslator::class.java.publicMethod(
-                "translate",
-                Int::class.javaPrimitiveType!!,
-                Int::class.javaPrimitiveType!!,
-            )
+            KeyboardTranslator::class
+                .java
+                .publicMethod(
+                    "translate",
+                    Int::class.javaPrimitiveType!!,
+                    Int::class.javaPrimitiveType!!,
+                )
         val normalized =
-            KeyboardTranslator::class.java.publicMethod(
-                "hasNormalizedMapping",
-                Int::class.javaPrimitiveType!!,
-                Int::class.javaPrimitiveType!!,
-            )
+            KeyboardTranslator::class
+                .java
+                .publicMethod(
+                    "hasNormalizedMapping",
+                    Int::class.javaPrimitiveType!!,
+                    Int::class.javaPrimitiveType!!,
+                )
 
         assertThat(translate.returnType).isEqualTo(Short::class.javaPrimitiveType)
         assertThat(normalized.returnType).isEqualTo(Boolean::class.javaPrimitiveType)
@@ -97,7 +101,10 @@ class InputJavaVisibleApiTest {
 
     @Test
     fun `the manager has one static method that makes the provider of an activity`() {
-        val method = InputCaptureManager::class.java.publicMethod("getInputCaptureProvider", Activity::class.java)
+        val method =
+            InputCaptureManager::class
+                .java
+                .publicMethod("getInputCaptureProvider", Activity::class.java)
 
         assertThat(Modifier.isStatic(method.modifiers)).isTrue()
         assertThat(method.returnType).isEqualTo(InputCaptureProvider::class.java)
@@ -140,7 +147,8 @@ class InputJavaVisibleApiTest {
             assertThat(field.type).isEqualTo(Boolean::class.javaPrimitiveType)
         }
 
-        for (name in listOf("enableCapture", "disableCapture", "destroy", "showCursor", "hideCursor")) {
+        for (name in
+            listOf("enableCapture", "disableCapture", "destroy", "showCursor", "hideCursor")) {
             val method = base.publicMethod(name)
             assertThat(method.returnType).isEqualTo(Void.TYPE)
         }
@@ -154,7 +162,11 @@ class InputJavaVisibleApiTest {
             assertThat(base.publicMethod(name, MotionEvent::class.java).returnType)
                 .isEqualTo(Float::class.javaPrimitiveType)
         }
-        assertThat(base.publicMethod("onWindowFocusChanged", Boolean::class.javaPrimitiveType!!).returnType)
+        assertThat(
+                base
+                    .publicMethod("onWindowFocusChanged", Boolean::class.javaPrimitiveType!!)
+                    .returnType
+            )
             .isEqualTo(Void.TYPE)
     }
 }

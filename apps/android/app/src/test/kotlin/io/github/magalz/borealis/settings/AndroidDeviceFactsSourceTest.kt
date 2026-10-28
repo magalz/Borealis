@@ -31,9 +31,7 @@ class AndroidDeviceFactsSourceTest {
 
     private val display: Display
         get() =
-            context
-                .getSystemService(DisplayManager::class.java)
-                .getDisplay(Display.DEFAULT_DISPLAY)
+            context.getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY)
 
     /** `Display.Mode` has no public constructor; the shadow takes instances of the hidden one. */
     private fun mode(id: Int, width: Int, height: Int, refreshRate: Float): Display.Mode =

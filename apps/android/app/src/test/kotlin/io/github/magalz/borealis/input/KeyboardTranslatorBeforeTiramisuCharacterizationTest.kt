@@ -22,15 +22,16 @@ import org.robolectric.util.ReflectionHelpers
  * sent as the key code it came with.
  */
 @RunWith(RobolectricTestRunner::class)
-// Android 12, an API level that other tests already run on, so no further android-all jar is loaded.
+// Android 12, an API level that other tests already run on, so no further android-all jar is
+// loaded.
 @Config(sdk = [Build.VERSION_CODES.S])
 class KeyboardTranslatorBeforeTiramisuCharacterizationTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
     /**
      * An alphabetic keyboard that Android has. The fixture of the design system builds devices with
-     * `InputDevice.Builder`, which only Android 13 has, so the device is made and filled in
-     * the way Robolectric's own tests do.
+     * `InputDevice.Builder`, which only Android 13 has, so the device is made and filled in the way
+     * Robolectric's own tests do.
      */
     @Suppress("DEPRECATION") // Robolectric's only way to make a device before Android 13.
     private fun alphabeticKeyboard() {

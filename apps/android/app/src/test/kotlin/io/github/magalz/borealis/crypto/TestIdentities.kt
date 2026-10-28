@@ -29,7 +29,6 @@ private const val SERIAL_BYTES = 8
 internal class TestIdentity(val keyPair: KeyPair, val certificate: X509Certificate) {
     /** The certificate in the PEM form of the hosts: LF line endings and 64 columns. */
     val pem: ByteArray = pemOf(certificate)
-
 }
 
 /** The SHA-256 signature algorithm that goes with a key of the three types the tests use. */
@@ -45,7 +44,8 @@ internal fun pemOf(certificate: X509Certificate): ByteArray {
     val body =
         Base64.getMimeEncoder(PEM_COLUMNS, byteArrayOf('\n'.code.toByte()))
             .encodeToString(certificate.encoded)
-    return "-----BEGIN CERTIFICATE-----\n$body\n-----END CERTIFICATE-----\n".toByteArray(Charsets.US_ASCII)
+    return "-----BEGIN CERTIFICATE-----\n$body\n-----END CERTIFICATE-----\n"
+        .toByteArray(Charsets.US_ASCII)
 }
 
 private fun generate(algorithm: String, init: KeyPairGenerator.() -> Unit): KeyPair =
@@ -64,7 +64,10 @@ private fun identityOf(keyPair: KeyPair, subject: String): TestIdentity {
                 name,
                 keyPair.public,
             )
-            .build(JcaContentSignerBuilder(signatureAlgorithmOf(keyPair.private)).build(keyPair.private))
+            .build(
+                JcaContentSignerBuilder(signatureAlgorithmOf(keyPair.private))
+                    .build(keyPair.private)
+            )
     return TestIdentity(keyPair, JcaX509CertificateConverter().getCertificate(holder))
 }
 

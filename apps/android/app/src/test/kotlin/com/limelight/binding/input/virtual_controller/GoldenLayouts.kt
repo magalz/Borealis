@@ -1,8 +1,8 @@
 package com.limelight.binding.input.virtual_controller
 
 /**
- * The default layout of the on-screen controller for each test screen, as the Java loader placed
- * it at the commit that made these tests: the elements in the order the loader adds them, with the
+ * The default layout of the on-screen controller for each test screen, as the Java loader placed it
+ * at the commit that made these tests: the elements in the order the loader adds them, with the
  * Guide button last. Every row also equals an independent computation of the grid arithmetic (a
  * float32 script): a grid of 128 by 72 cells at 16:9, `(int) ((float) height / 72f * units)`, and
  * the controls on the right moved by `width - height * 16 / 9` (integer arithmetic, negative on a
@@ -28,7 +28,9 @@ object GoldenLayouts {
         return if (guide) placed else placed.filter { it.id != GUIDE }
     }
 
-    private fun placed(vararg rows: IntArray) = rows.map { Placed(it[0], it[1], it[2], it[3], it[4]) }
+    private fun placed(vararg rows: IntArray) = rows.map {
+        Placed(it[0], it[1], it[2], it[3], it[4])
+    }
 
     private fun row(vararg values: Int) = values
 

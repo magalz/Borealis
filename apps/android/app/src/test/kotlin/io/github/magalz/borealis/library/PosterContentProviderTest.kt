@@ -34,7 +34,10 @@ class PosterContentProviderTest {
     @Before
     fun providerIsRegistered() {
         DiskAssetLoader(context).deleteAssetsForComputer(HOST)
-        Robolectric.setupContentProvider(PosterContentProvider::class.java, PosterContentProvider.AUTHORITY)
+        Robolectric.setupContentProvider(
+            PosterContentProvider::class.java,
+            PosterContentProvider.AUTHORITY,
+        )
         binder.computers[HOST] = details(uuid = HOST).also { it.serverCert = testCertificate() }
     }
 
@@ -62,7 +65,9 @@ class PosterContentProviderTest {
     }
 
     private fun open(hostId: String, appId: String) =
-        context.contentResolver.openInputStream(PosterContentProvider.createBoxArtUri(hostId, appId))
+        context.contentResolver.openInputStream(
+            PosterContentProvider.createBoxArtUri(hostId, appId)
+        )
 
     @Test
     fun `a host id that climbs out of the cache directory has no poster`() {
@@ -89,7 +94,9 @@ class PosterContentProviderTest {
     @Test
     fun `an app without cached art has no poster`() {
         assertThrows(FileNotFoundException::class.java) {
-            context.contentResolver.openInputStream(PosterContentProvider.createBoxArtUri(HOST, "7"))
+            context.contentResolver.openInputStream(
+                PosterContentProvider.createBoxArtUri(HOST, "7")
+            )
         }
     }
 

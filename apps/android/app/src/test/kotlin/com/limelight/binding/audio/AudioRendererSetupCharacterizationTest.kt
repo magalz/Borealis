@@ -7,10 +7,11 @@ import org.junit.Test
 /**
  * Characterizes `AndroidAudioRenderer.setup`: the channel masks, the buffer sizes, the order of the
  * four attempts to create a track and when each is skipped, and what the call answers. The audio
- * platform is [ShadowRecordingAudioTrack], so a test reads the calls that the renderer made into it.
+ * platform is [ShadowRecordingAudioTrack], so a test reads the calls that the renderer made into
+ * it.
  *
- * The expected calls are written out in full: the order matters. The size of a packet for stereo
- * at 240 samples per channel is 960 bytes, so the small buffer is 1920.
+ * The expected calls are written out in full: the order matters. The size of a packet for stereo at
+ * 240 samples per channel is 960 bytes, so the small buffer is 1920.
  */
 class AudioRendererSetupCharacterizationTest : AudioRendererTestBase() {
     private fun assertMask(channels: Int, mask: Int, logged: String) {
@@ -174,15 +175,18 @@ class AudioRendererSetupCharacterizationTest : AudioRendererTestBase() {
     }
 
     // 4 channels: a packet is 4 * 240 * 2 = 1920 bytes. 9000 needs five of them.
-    @Test fun `the minimum buffer of 4 channels is rounded to a packet of 1920`() =
+    @Test
+    fun `the minimum buffer of 4 channels is rounded to a packet of 1920`() =
         assertLargeBuffer(channels = 4, minimum = 9_000, expected = 9_600)
 
     // 6 channels: a packet is 2880 bytes. 40000 needs fourteen of them.
-    @Test fun `the minimum buffer of 6 channels is rounded to a packet of 2880`() =
+    @Test
+    fun `the minimum buffer of 6 channels is rounded to a packet of 2880`() =
         assertLargeBuffer(channels = 6, minimum = 40_000, expected = 40_320)
 
     // 8 channels: a packet is 3840 bytes. 50000 needs fourteen of them.
-    @Test fun `the minimum buffer of 8 channels is rounded to a packet of 3840`() =
+    @Test
+    fun `the minimum buffer of 8 channels is rounded to a packet of 3840`() =
         assertLargeBuffer(channels = 8, minimum = 50_000, expected = 53_760)
 
     @Test
@@ -284,9 +288,7 @@ class AudioRendererSetupCharacterizationTest : AudioRendererTestBase() {
 
         assertThat(result).isEqualTo(0)
         assertThat(printed.text).contains("java.lang.IllegalStateException: cannot start track 1")
-        assertThat(
-                AudioPlatform.calls.filter { it is AudioCall.Start || it is AudioCall.Release }
-            )
+        assertThat(AudioPlatform.calls.filter { it is AudioCall.Start || it is AudioCall.Release })
             .containsExactly(AudioCall.Start(1), AudioCall.Release(1), AudioCall.Start(2))
             .inOrder()
         assertThat(log.entries.last().second).startsWith("Audio track configuration:")

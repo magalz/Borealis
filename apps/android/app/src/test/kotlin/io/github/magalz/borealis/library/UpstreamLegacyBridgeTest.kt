@@ -74,7 +74,8 @@ class UpstreamLegacyBridgeTest {
 
         assertThat(probes).isEqualTo(2)
         assertThat(GlPreferences.readPreferences(activity).glRenderer).isEqualTo("Mali-G715")
-        assertThat(GlPreferences.readPreferences(activity).savedFingerprint).isEqualTo(Build.FINGERPRINT)
+        assertThat(GlPreferences.readPreferences(activity).savedFingerprint)
+            .isEqualTo(Build.FINGERPRINT)
     }
 
     @Test

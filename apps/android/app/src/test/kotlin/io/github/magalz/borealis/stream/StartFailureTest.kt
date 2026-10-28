@@ -139,7 +139,11 @@ class StartFailureTest {
                 "maxPacketSize" to 1024,
             )
         for ((name, value) in values) {
-            StreamConfiguration::class.java.getDeclaredField(name).also { it.isAccessible = true }.set(config, value)
+            StreamConfiguration::class
+                .java
+                .getDeclaredField(name)
+                .also { it.isAccessible = true }
+                .set(config, value)
         }
         return config
     }

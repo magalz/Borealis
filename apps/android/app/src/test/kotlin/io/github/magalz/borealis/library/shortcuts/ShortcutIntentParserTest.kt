@@ -7,7 +7,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/** The shortcuts pinned by 12.2 name `ShortcutTrampoline` with these extras and must keep working. */
+/**
+ * The shortcuts pinned by 12.2 name `ShortcutTrampoline` with these extras and must keep working.
+ */
 @RunWith(RobolectricTestRunner::class)
 class ShortcutIntentParserTest {
     private fun extras(vararg entries: Pair<String, Any>) =
@@ -53,7 +55,10 @@ class ShortcutIntentParserTest {
 
     @Test
     fun `an app id that the Library cannot carry falls back to the apps of the PC`() {
-        val request = ShortcutIntentParser.parse(extras("UUID" to "uuid-1", "AppId" to Int.MIN_VALUE.toString()))
+        val request =
+            ShortcutIntentParser.parse(
+                extras("UUID" to "uuid-1", "AppId" to Int.MIN_VALUE.toString())
+            )
 
         assertThat(request).isEqualTo(LibraryLaunchRequest.Apps("uuid-1"))
     }

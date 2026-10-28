@@ -11,12 +11,12 @@ import io.github.magalz.borealis.library.RecordingAudit
 import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
 import java.io.Closeable
+import java.lang.reflect.Proxy
 import java.math.BigInteger
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.NoSuchAlgorithmException
 import java.security.Security
-import java.lang.reflect.Proxy
 import java.security.cert.Certificate
 import java.security.cert.CertificateException
 import java.security.cert.X509Certificate
@@ -156,7 +156,10 @@ class CertificatePinningTest {
         val host = host()
         host.answer(
             "/serverinfo",
-            HostReply.failure("401", "The client is not authorized. Certificate verification failed."),
+            HostReply.failure(
+                "401",
+                "The client is not authorized. Certificate verification failed.",
+            ),
             "https",
         )
         host.answer("/serverinfo", HostReply.xml(serverInfoBody()), "http")
@@ -257,7 +260,8 @@ class CertificatePinningTest {
 
     /** A self-signed certificate for 127.0.0.1 and its name, which a trust store can hold. */
     private fun trustedIdentity(): TestIdentity {
-        val keyPair = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
+        val keyPair =
+            KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
         val name = X500Name("CN=Trusted Test Host")
         val now = System.currentTimeMillis()
         val day = 24L * 60 * 60 * 1000
@@ -359,7 +363,8 @@ class CertificatePinningTest {
 
         val error =
             assertThrows(CertificateException::class.java) {
-                http.trustManager()
+                http
+                    .trustManager()
                     .checkServerTrusted(arrayOf(pinned.certificate, other.certificate), "RSA")
             }
 
@@ -436,7 +441,9 @@ class CertificatePinningTest {
         val keys = clientOf(host(), provider = providerOf(client)).keyManager()
 
         assertThat(keys.chooseClientAlias(arrayOf("RSA"), null, null)).isEqualTo("Limelight-RSA")
-        assertThat(keys.getCertificateChain("anything")).asList().containsExactly(client.certificate)
+        assertThat(keys.getCertificateChain("anything"))
+            .asList()
+            .containsExactly(client.certificate)
         assertThat(keys.getPrivateKey("anything")).isEqualTo(client.keyPair.private)
         assertThat(keys.chooseServerAlias("RSA", null, null)).isNull()
         assertThat(keys.getClientAliases("RSA", null)).isNull()

@@ -140,8 +140,7 @@ class FakeJmDns(private val known: Map<String, ServiceInfo> = emptyMap()) : JmDN
 }
 
 /** A jmDNS service event with the instance that raised it and the service it names. */
-class FakeServiceEvent(private val dns: JmDNS, private val info: ServiceInfo) :
-    ServiceEvent(dns) {
+class FakeServiceEvent(private val dns: JmDNS, private val info: ServiceInfo) : ServiceEvent(dns) {
     override fun getDNS(): JmDNS = dns
 
     override fun getType(): String = info.type

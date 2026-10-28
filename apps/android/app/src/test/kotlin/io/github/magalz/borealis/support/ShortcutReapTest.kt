@@ -135,8 +135,8 @@ class ShortcutReapTest {
 
 /**
  * A launcher whose removal of dynamic shortcuts can be switched off with [refusesRemoval], and
- * whose removal stops a thread that was interrupted. Use it with
- * `@Config(shadows = [ShadowStoppableShortcutManager::class])`.
+ * whose removal stops a thread that was interrupted. Use it with `@Config(shadows =
+ * [ShadowStoppableShortcutManager::class])`.
  */
 @Implements(ShortcutManager::class)
 class ShadowStoppableShortcutManager : ShadowShortcutManager() {

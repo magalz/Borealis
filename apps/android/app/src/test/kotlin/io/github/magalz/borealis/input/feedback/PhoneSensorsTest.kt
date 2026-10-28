@@ -15,15 +15,17 @@ import org.robolectric.annotation.Config
  * pad is player one. The phone is held in whatever way the display is turned, so every reading is
  * remapped to the axes of the controller, and each rotation does it differently.
  */
-// Abstract so that it does not run alone: the subclasses carry the Robolectric runner and the SDK level.
+// Abstract so that it does not run alone: the subclasses carry the Robolectric runner and the SDK
+// level.
 @Suppress("AbstractClassCanBeConcreteClass")
 abstract class PhoneSensorsContract : FeedbackTestBase() {
-    private fun phoneRig(configure: com.limelight.preferences.PreferenceConfiguration.() -> Unit = {}) =
-        rig {
-            gamepadMotionSensors = false
-            gamepadMotionSensorsFallbackToDevice = true
-            configure()
-        }
+    private fun phoneRig(
+        configure: com.limelight.preferences.PreferenceConfiguration.() -> Unit = {}
+    ) = rig {
+        gamepadMotionSensors = false
+        gamepadMotionSensorsFallbackToDevice = true
+        configure()
+    }
 
     private fun FeedbackRig.rotate(rotation: Int) =
         shadowOf(activity.windowManager.defaultDisplay).setRotation(rotation)
@@ -59,8 +61,10 @@ abstract class PhoneSensorsContract : FeedbackTestBase() {
         rig.wake(rig.connectPad())
 
         val capabilities = rig.connection.arrivals.single().capabilities
-        assertThat(capabilities and MoonBridge.LI_CCAP_ACCEL.toInt()).isEqualTo(MoonBridge.LI_CCAP_ACCEL.toInt())
-        assertThat(capabilities and MoonBridge.LI_CCAP_GYRO.toInt()).isEqualTo(MoonBridge.LI_CCAP_GYRO.toInt())
+        assertThat(capabilities and MoonBridge.LI_CCAP_ACCEL.toInt())
+            .isEqualTo(MoonBridge.LI_CCAP_ACCEL.toInt())
+        assertThat(capabilities and MoonBridge.LI_CCAP_GYRO.toInt())
+            .isEqualTo(MoonBridge.LI_CCAP_GYRO.toInt())
     }
 
     @Test
@@ -73,7 +77,8 @@ abstract class PhoneSensorsContract : FeedbackTestBase() {
 
         val capabilities = rig.connection.arrivals.single().capabilities
         assertThat(capabilities and MoonBridge.LI_CCAP_ACCEL.toInt()).isEqualTo(0)
-        assertThat(capabilities and MoonBridge.LI_CCAP_GYRO.toInt()).isEqualTo(MoonBridge.LI_CCAP_GYRO.toInt())
+        assertThat(capabilities and MoonBridge.LI_CCAP_GYRO.toInt())
+            .isEqualTo(MoonBridge.LI_CCAP_GYRO.toInt())
     }
 
     @Test
@@ -85,7 +90,10 @@ abstract class PhoneSensorsContract : FeedbackTestBase() {
 
         assertThat(log(rig)).isEmpty()
         val capabilities = rig.connection.arrivals.single().capabilities
-        assertThat(capabilities and (MoonBridge.LI_CCAP_ACCEL.toInt() or MoonBridge.LI_CCAP_GYRO.toInt()))
+        assertThat(
+                capabilities and
+                    (MoonBridge.LI_CCAP_ACCEL.toInt() or MoonBridge.LI_CCAP_GYRO.toInt())
+            )
             .isEqualTo(0)
     }
 
@@ -116,7 +124,8 @@ abstract class PhoneSensorsContract : FeedbackTestBase() {
         val rig = phoneRig()
         rig.wake(rig.connectPad(vendorId = FeedbackRig.XBOX_VENDOR))
 
-        assertThat(rig.connection.arrivals.single().type).isEqualTo(MoonBridge.LI_CTYPE_UNKNOWN.toInt())
+        assertThat(rig.connection.arrivals.single().type)
+            .isEqualTo(MoonBridge.LI_CTYPE_UNKNOWN.toInt())
         assertThat(org.robolectric.shadows.ShadowToast.getTextOfLatestToast())
             .isEqualTo(rig.activity.getString(com.limelight.R.string.toast_controller_type_changed))
     }

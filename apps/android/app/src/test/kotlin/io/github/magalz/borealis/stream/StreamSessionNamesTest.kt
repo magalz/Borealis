@@ -8,7 +8,9 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 
-/** What the session starts with for the app of the intent, which can be missing or a placeholder. */
+/**
+ * What the session starts with for the app of the intent, which can be missing or a placeholder.
+ */
 @RunWith(RobolectricTestRunner::class)
 class StreamSessionNamesTest {
     private val activity: Activity = Robolectric.buildActivity(Activity::class.java).get()

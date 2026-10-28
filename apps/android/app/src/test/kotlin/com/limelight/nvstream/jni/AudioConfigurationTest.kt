@@ -12,7 +12,10 @@ import org.junit.Test
  * same way. Plain JUnit: the nested class does not initialize `MoonBridge`.
  */
 class AudioConfigurationTest {
-    /** `new AudioConfiguration(int)`, the constructor that decodes the packed int; `MoonBridge` calls it. */
+    /**
+     * `new AudioConfiguration(int)`, the constructor that decodes the packed int; `MoonBridge`
+     * calls it.
+     */
     private fun unpack(packed: Int): AudioConfiguration {
         val constructor =
             AudioConfiguration::class.java.getDeclaredConstructor(Int::class.javaPrimitiveType)
@@ -66,12 +69,15 @@ class AudioConfigurationTest {
     fun `an int without the magic byte is refused`() {
         val refused = assertThrows(IllegalArgumentException::class.java) { unpack(0x000302C9) }
 
-        assertThat(refused).hasMessageThat().isEqualTo("Audio configuration has invalid magic byte!")
+        assertThat(refused)
+            .hasMessageThat()
+            .isEqualTo("Audio configuration has invalid magic byte!")
     }
 
     @Test
     fun `an old hardcoded configuration value is refused`() {
-        // AUDIO_CONFIGURATION_STEREO of the moonlight-common-c versions before MAKE_AUDIO_CONFIGURATION
+        // AUDIO_CONFIGURATION_STEREO of the moonlight-common-c versions before
+        // MAKE_AUDIO_CONFIGURATION
         assertThrows(IllegalArgumentException::class.java) { unpack(0) }
         assertThrows(IllegalArgumentException::class.java) { unpack(1) }
     }

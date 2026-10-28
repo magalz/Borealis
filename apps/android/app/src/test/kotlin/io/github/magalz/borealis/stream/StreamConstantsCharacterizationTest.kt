@@ -39,10 +39,14 @@ class StreamConstantsCharacterizationTest {
     }
 
     private fun ints(vararg entries: Pair<String, Int>): Map<String, Constant> =
-        entries.associate { (name, value) -> name to Constant(int, value) }
+        entries.associate { (name, value) ->
+            name to Constant(int, value)
+        }
 
     private fun bytes(vararg entries: Pair<String, Int>): Map<String, Constant> =
-        entries.associate { (name, value) -> name to Constant(byte, value.toByte()) }
+        entries.associate { (name, value) ->
+            name to Constant(byte, value.toByte())
+        }
 
     @Test
     fun `the controller button flags keep their values`() {

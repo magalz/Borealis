@@ -7,9 +7,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,13 +18,14 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.AuroraLoader
 import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.ui.common.appLabel
 
-private val SPINNER_SIZE = 32.dp
+private val LOADER_SIZE = 48.dp
 private val CONTENT_GAP = 16.dp
 
 /**
@@ -39,7 +38,10 @@ internal fun QuittingScreen(appName: String) {
     LeavingScreen(stringResource(R.string.stream_quitting, appLabel(appName)))
 }
 
-/** What the screens of a quit and a disconnect share: [text] under a progress indicator. */
+/**
+ * What the screens of a quit and a disconnect share: [text] under the Borealis loader, which stands
+ * still when animations are removed.
+ */
 @Composable
 internal fun LeavingScreen(text: String) {
     val colors = LocalBorealisColors.current
@@ -51,11 +53,7 @@ internal fun LeavingScreen(text: String) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(CONTENT_GAP, Alignment.CenterVertically),
     ) {
-        CircularProgressIndicator(
-            Modifier.size(SPINNER_SIZE),
-            color = colors.ink3,
-            strokeWidth = 3.dp,
-        )
+        AuroraLoader(size = LOADER_SIZE)
         Text(
             text,
             Modifier.semantics { liveRegion = LiveRegionMode.Polite },

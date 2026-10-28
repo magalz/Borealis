@@ -35,7 +35,7 @@ What not to touch or decide.
 
 ## Verification
 Exact commands to run (for example `./gradlew testDebugUnitTest` from `apps/android`, or `ctest --preset dev` from `core`).
-Inherited-code rule: the implementer lists every inherited file it touched and confirms the edits to inherited Java are wiring only, new logic is in Kotlin (migrating an area to Kotlin is allowed when the brief says so) and nothing was reformatted wholesale. Vendored files under `core/third_party/` change only when the brief says so, and each change is recorded in `core/third_party/README.md` as that README describes. The reviewer re-checks this.
+Inherited-code rule: the implementer lists every inherited file it touched and confirms that no Java file was added (the app has no Java since Sprint 14), that new logic is in Kotlin and that nothing was reformatted wholesale. Vendored files under `core/third_party/` change only when the brief says so, and each change is recorded in `core/third_party/README.md` as that README describes. The reviewer re-checks this.
 
 ## Notes
 Memtrace: `repo_id: "Borealis"`, `branch: "<phase branch>"` at `<phase head sha>`; overlay `Borealis:<worktree folder>` or none. Use it first, and count your Memtrace calls against your file reads and Grep calls in the report.

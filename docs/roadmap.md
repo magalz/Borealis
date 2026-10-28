@@ -59,7 +59,7 @@ Merged as PR #19 (`f3d88540`).
    The USB permission dialog is asked only once the stream shows its first frame,
    and a pad that wakes during the stream asks at once, so it shows one dialog.
    Phones are unchanged. The remaining idea, documenting the native pad modes, is
-   planned for Sprint 17. See the
+   planned for Sprint 19. See the
    [device validation runbook, section 12](development/device-validation.md#12-results-sprint-7).
 4. **Gamepad mouse: pointer speed.** Done (issue #17, merge `1d500bdb`). A speed
    setting from 10% to 200%, default 50%. A 16 ms tick with fraction
@@ -424,11 +424,11 @@ acceptance test (UAT) of the same day ran on `20861a28`
 
 ## Next
 
-The 0.1.0 release comes after Sprint 17 and stays at the end of Phase 2
-([ADR 0054](adr/0054-declare-independence-from-moonlight.md)), so Sprints 11 to 17
+The 0.1.0 release comes after Sprint 19 and stays at the end of Phase 2
+([ADR 0054](adr/0054-declare-independence-from-moonlight.md)), so Sprints 11 to 19
 close Phase 2.
 
-### Order of the coming sprints (owner decision of 2026-10-21)
+### Order of the coming sprints (owner decisions of 2026-10-21 and 2026-10-28)
 
 The owner asked for the order that gives the least rework with the most safety,
 with any number of sprints. The phase pull requests stay small and easy to test.
@@ -440,10 +440,25 @@ with any number of sprints. The phase pull requests stay small and easy to test.
 | 13 | Kotlin migration 2: input |
 | 14 | Kotlin migration 3: video, audio and the stream activity |
 | 15 | The stream screens and glass |
-| 16 | SecOps |
-| 17 | Release preparation |
+| 16 | Fixes of the converted code |
+| 17 | Refactor of the converted code |
+| 18 | SecOps |
+| 19 | Release preparation |
 | — | `android-v0.1.0` |
-| 18 | Translation and opt-in crash reporting |
+| 20 | Translation and opt-in crash reporting |
+
+Owner decision of 2026-10-28: two sprints come before SecOps, the fixes (Sprint 16) and
+the refactor (Sprint 17) of the converted code.
+
+- On 2026-10-27 the owner decided that the conversion defects are fixed after Sprint 14,
+  and no sprint held them. The refactor of the marked places had no sprint either.
+- The fixes and the refactor come before SecOps, so that SecOps audits the final code, as
+  the order already says.
+- The fixes come first. Their triage removes dead and unreachable paths, which shrinks the
+  refactor, and the refactor then does not have to keep known defects on purpose.
+- The release moves two sprints later. Phase 2 now closes with Sprints 11 to 19.
+- The renumbering: SecOps was Sprint 16, release preparation was Sprint 17, and translation
+  and opt-in crash reporting was Sprint 18. Sprints 15 and earlier keep their numbers.
 
 Why this order:
 
@@ -460,8 +475,9 @@ Why this order:
 - The stream screens come after the migration, so their changes to `Game`, the
   decoder and the stream start are written once, in Kotlin, and the conversion is
   checked on the devices before they change.
-- SecOps comes after the last feature sprint, so it audits the final code. Release
-  preparation follows it.
+- SecOps comes after the last feature sprint, and since 2026-10-28 after the fixes and the
+  refactor of the converted code, so it audits the final code. Release preparation
+  follows it.
 - The three areas are independent. If a migration sprint's device round shows
   problems, the remaining migration sprints move after the release and the rest of
   the order stays.
@@ -775,9 +791,10 @@ Owner decisions of 2026-10-26 and 2026-10-27:
   ("Accept; device round checks"). The device round adds the Samsung keyboard (meta key)
   capture on the S22, and picture-in-picture: enter and leave, the auto-enter, and the
   suppression while the USB permission prompt is open.
-- **Defects wait.** The defects found are kept as they were, each pinned by a test, and are
-  fixed after Sprint 14 (owner, 2026-10-27). See the Sprint 14 block under Backlog, not
-  scheduled.
+- **Defects wait.** The defects found are kept as they were, each pinned by a test. The owner
+  decided on 2026-10-27 that they are fixed after Sprint 14, and on 2026-10-28 that they are
+  fixed in [Sprint 16](#sprint-16-fixes-of-the-converted-code). See the Sprint 14 block under
+  Backlog, not scheduled.
 - **Test standardization.** The detekt rules `InjectDispatcher` and `LongParameterList` are on
   for every test source (owner request, planned since 2026-10-18). See issue #91 below.
 
@@ -931,8 +948,8 @@ between Memtrace and Brain) and `5afbb49a8` (`CLAUDE.md` loads `AGENTS.md` again
 Items:
 
 - **Done.** The conversions, the rigs and the standardization above. The defects that the
-  characterization tests pin are in the Sprint 14 block of the backlog, and are fixed after
-  this sprint.
+  characterization tests pin are in the Sprint 14 block of the backlog, and are fixed in
+  [Sprint 16](#sprint-16-fixes-of-the-converted-code) (owner, 2026-10-28).
 - **Partly done.** Test size and duplication, moved here from the Sprint 9 quality review. The
   tests of every module follow the detekt rules now (see #91). The duplicates across modules
   need `testFixtures` build changes, and are item (c) of the Sprint 14 block of the backlog.
@@ -953,7 +970,7 @@ Items:
   Forget, Wake-on-LAN, the pinned shortcut, the TV channel, resume and Quit. The results are in
   [section 19](development/device-validation.md#19-results-sprint-14); no stopwatch figure of the
   play time was recorded. The findings went to
-  Sprint 15, to Sprint 16 and to the backlog (item (d) of the Sprint 14 block), and the host
+  Sprint 15, to Sprint 18 and to the backlog (item (d) of the Sprint 14 block), and the host
   crashed twice, the known #204 (see the [host-side items](#host-side-items-luminalshine)).
   Wake-on-LAN could not be tested with the PC on Wi-Fi; it needs Ethernet, or Wi-Fi wake
   support, and a sleep that holds.
@@ -994,7 +1011,10 @@ Planned, not started.
   screen until `/cancel` answered: about 17 s once in the night round of
   2026-10-21, and 5.5 to 6.7 s in the morning smoke of the same day, against 5 to
   7 s on 26.09.1. The cause is not known, because the client logs nothing in
-  between. Measure it again in this round, and report it upstream if it repeats.
+  between. Measure it again in this round, and report it upstream if it repeats. The Sprint 14
+  round did not time the Quit: [section 19](development/device-validation.md#19-results-sprint-14)
+  has no duration of the Quitting screen. Its only figure is in step 8: on the TV, a launch right
+  after a Quit gave "Launched new game session" about 12 s later.
 - **Indeterminate progress indicators ignore Reduce motion.** `QuittingScreen`,
   `AddHostScreen` and `PrivacyPane` draw Material's indicators, which do not ask
   `rememberAnimationsRemoved`. The Quitting screen is redone in this sprint; Add
@@ -1011,18 +1031,34 @@ Planned, not started.
   Proposed fix, with a test first: wait for the host's first poll answer before the
   stream starts; a host that never answers still ends in the offline message. See
   [device-validation section 17](development/device-validation.md#17-results-sprint-12),
-  the follow-up on the S22.
+  the follow-up on the S22. The Sprint 14 round did not measure it: in B6 of
+  [section 19](development/device-validation.md#19-results-sprint-14) the owner pinned the
+  shortcut and said that it works, but the tap with Borealis not running was not reported.
 - **The in-game menu loses its focus on Left or Right.** Found by the owner in the
   Sprint 12 round (2026-10-24); the owner put it here. Left or Right, on the D-pad or
   the analog stick, makes the focus outline disappear, and it does not come back until
   the menu is closed and opened again. It happens often with the analog stick. Check
   where the focus goes, and whether D4 of the round (keys from the phone not
-  reaching Quit) is the same cause.
+  reaching Quit) is the same cause. The Sprint 14 UAT did not report it
+  ([section 19](development/device-validation.md#19-results-sprint-14)).
+- **TV focus after the host Options sheet.** Moved here from item (d) of the Sprint 14 block of
+  the backlog (owner, 2026-10-28). After the sheet (Details and Forget) was closed with Back over
+  the Apps screen, no node had focus, and the D-pad did nothing until another Back, which went to
+  Hosts with the focus on the Continue row. The owner had left the sheet open in B1 and B4. It is
+  Library code, not Sprint 14. See [device-validation section 19](development/device-validation.md#19-results-sprint-14),
+  finding U11.
 - **Add host says "Pair it" for a host that is already paired, and does not say that
   the host is already added.** Found in the Sprint 12 round (2026-10-24); the owner put
   it here. `shell_host_added` shows for any added host. Word it by the host's pairing
   state. In the Sprint 14 UAT (2026-10-28) the owner added a host that was already added
-  or paired and got no word about it: say "already added" or "already paired".
+  or paired and got no word about it: say "already added" or "already paired". The same
+  screen has the keyboard of the field, moved here from item (d) of the Sprint 14 block of the
+  backlog (owner, 2026-10-28): the owner wants a numeric-style keyboard, with `.`, `/` and `:`
+  at hand, instead of the full keyboard, if Android allows it. `AddHostScreen.kt` already sets
+  `KeyboardType.Uri`, so check what that gives on the S22 and on the TV (the keyboard of Google
+  TV may ignore it), and whether another input type is possible. Host names must still be
+  typeable. See B2 and finding U6 in
+  [device-validation section 19](development/device-validation.md#19-results-sprint-14).
 - **Back from Apps to Hosts plays a shrinking animation.** Found by the owner in the
   Sprint 12 round (2026-10-24), on the TV and the phone. The other screens of the
   Library fade (`FadingNavHost` in `LibraryNavHost.kt`). Find where the shrink comes
@@ -1031,7 +1067,11 @@ Planned, not started.
   the Sprint 12 round (2026-10-24). After Forget, the host does not come back as
   "Found on this network" until the app is closed and opened again. Check whether
   discovery skips a host it already reported, in `ComputerManagerService` and the
-  mDNS agents, with a test first.
+  mDNS agents, with a test first. The owner first asked for it at the Sprint 10 UAT
+  (2026-10-21), as a backlog item that is merged here (owner, 2026-10-28). The Sprint 14 UAT saw it
+  again on the TV: in B1 of
+  [device-validation section 19](development/device-validation.md#19-results-sprint-14) the host
+  came back only after the app was killed.
 - **Second device during a launch.** Found in the Sprint 14 device round (2026-10-28); the
   owner put it here. The host runs `/launch`, `/resume` and `/cancel` one at a time on its
   launch worker (#203, [host contract](host-contract/luminalshine.md) 7.3), so a second device
@@ -1050,13 +1090,54 @@ Planned, not started.
   2026-10-28), in the keyboard and mouse block on the S22. The menu opens today with Back, a pull
   of the handle on the phone, or Select and Start held on a pad. The owner wants a combo of the
   keyboard and the mouse that opens the in-game side menu too. Choose the combo.
+- **The "Audio effects" text.** Moved here from item (d) of the Sprint 14 block of the backlog
+  (owner, 2026-10-28). The setting reads "Let system audio effects work while you stream. This can
+  add latency." (`settings_audio_fx_summary` in `strings_settings_ui.xml` of `:borealis:settings`),
+  and the owner found it unclear. Say what it does: it lets the device's equalizer and sound
+  effects act on the stream, and it uses the slower audio path, because `AndroidAudioRenderer`
+  skips the low-latency track when audio effects are on (`enableAudioFx && lowLatency`). See
+  [device-validation section 19](development/device-validation.md#19-results-sprint-14), finding U4.
+- **A sample vibration.** Moved here from item (d) of the Sprint 14 block of the backlog (owner,
+  2026-10-28). When a vibration option is turned on in Settings, give a short sample vibration,
+  so that its effect can be felt. See
+  [device-validation section 19](development/device-validation.md#19-results-sprint-14), finding U9.
 
-### Sprint 16: SecOps
+### Sprint 16: fixes of the converted code
+
+Planned, not started. Owner decision of 2026-10-28; see the
+[order of the coming sprints](#order-of-the-coming-sprints-owner-decisions-of-2026-10-21-and-2026-10-28).
+
+- **Scope:** item (b) of the blocks "From the Sprint 12 conversion", "From the Sprint 13
+  conversion" and "From the Sprint 14 conversion" of the [backlog](#backlog-not-scheduled): the
+  defects that the conversions found and kept. 34 are open from Sprint 12 (the first, #69, is
+  fixed), 53 from Sprint 13 and 41 from Sprint 14.
+- **Triage first:** the sprint starts with a triage that the owner approves. Each defect is a
+  real defect (fixed), latent, or upstream behaviour (kept, with the reason).
+- **Method:** a fix follows the [TDD rule](development/tdd.md). The test that pins the defect is
+  changed to the fixed behaviour in its own failing commit, then the fix.
+- **Order:** the fixes come before the refactor of Sprint 17. The triage removes dead and
+  unreachable paths, which shrinks the refactor, and the refactor then does not have to keep known
+  defects on purpose.
+- **Ends with a device round.**
+
+### Sprint 17: refactor of the converted code
+
+Planned, not started. Owner decision of 2026-10-28.
+
+- **Scope:** item (a) of the same three blocks of the [backlog](#backlog-not-scheduled): the 165
+  places marked `(Sprint 12 backlog)` (48), `(Sprint 13 backlog)` (65) and `(Sprint 14 backlog)`
+  (52), with the other notes of item (a) of the Sprint 14 block.
+- **Method:** behaviour does not change. The characterization tests guide the refactor. A
+  refactored place loses its suppression and its marker.
+- **Ends with a device round.**
+
+### Sprint 18: SecOps
 
 Owner decision of 2026-10-20: a whole sprint on security comes before the
-release. Sprint 16 is hardening and security testing.
+release. Sprint 18 is hardening and security testing.
 
-- It comes after the migration (owner decision of 2026-10-21), so it audits the
+- It comes after the migration (owner decision of 2026-10-21), and after the fixes and the
+  refactor of the converted code (owner decision of 2026-10-28), so it audits the
   Kotlin code that ships.
 - The sprint starts with a survey of the attack surface, which sets its scope. The
   candidate areas are the network and pairing code, the certificates and stored
@@ -1132,6 +1213,14 @@ release. Sprint 16 is hardening and security testing.
   stay visible, and the "Mask addresses" switch still masks every address and the host
   names it recognises. See
   [device-validation section 17](development/device-validation.md#17-results-sprint-12), P2.
+- **`findExternalAddressIP4` with a VPN.** Moved here from item (d) of the Sprint 14 block of
+  the backlog (owner, 2026-10-28), because this sprint already masks the Tailscale addresses.
+  The native is not reached on the LAN: `ComputerManagerService.populateExternalAddress` calls
+  it only when the active network is a VPN (the same structure as the inherited Java and
+  upstream), so the Sprint 14 round did not reach it (see
+  [device-validation section 3.27](development/device-validation.md#327-sprint-14-checks),
+  step 10). Test it with a VPN on the device (Tailscale is a VPN on Android): the Library finds
+  the host, and the log has no JNI error.
 - **CodeQL `java/path-injection` on `PosterContentProvider`.** CodeQL flags the box-art
   file path of the exported provider, on the Java file on `main` and on the converted
   Kotlin file (pull request #70). The host id is checked by `PosterRequest.checkedAppId`,
@@ -1139,7 +1228,7 @@ release. Sprint 16 is hardening and security testing.
   open until this sprint, which makes the check visible to CodeQL or dismisses them with
   the reason.
 
-### Sprint 17: release preparation
+### Sprint 19: release preparation
 
 - The root and Android READMEs.
 - An install (Obtainium) and pairing guide.
@@ -1184,7 +1273,7 @@ release. Sprint 16 is hardening and security testing.
 
 The owner creates the tag. See the [release procedure](development/release.md).
 
-### Sprint 18: translation and opt-in crash reporting
+### Sprint 20: translation and opt-in crash reporting
 
 - **Translation sprint.** The app is English only until this sprint
   ([ADR 0055](adr/0055-settings-storage-and-the-phase-2-settings-screen.md)).
@@ -1239,7 +1328,7 @@ The owner creates the tag. See the [release procedure](development/release.md).
 From the Sprint 9 quality review. None of these changes behaviour. Sprint 10
 (item 11) took the deprecated `FocusProperties.enter`, the copied spacing
 constants and the two background defaults. The test size item moved to Sprint 14,
-the quit wording to Sprint 15 and the host details to Sprint 17. The rest is not
+the quit wording to Sprint 15 and the host details to Sprint 19. The rest is not
 scheduled yet.
 
 - **`MenuChordDetector.update`** (`borealis/stream/.../input/MenuChordDetector.kt`).
@@ -1249,8 +1338,8 @@ scheduled yet.
 From the Sprint 9 device round, 2026-10-19. Sprint 10 took the Back from Apps
 focus, the About Version row and links (items 9 and 10), and the licence text
 and the `AuditScreen.kt` `Detail` order (item 12). The Gradle and AGP items moved
-to Sprint 16, the `RiskyLibrary` check to Sprint 16, and the `LibraryActivity`
-item to Sprint 17. The rest is not scheduled yet.
+to Sprint 18, the `RiskyLibrary` check to Sprint 18, and the `LibraryActivity`
+item to Sprint 19. The rest is not scheduled yet.
 
 - A touch handheld whose built-in controls report only `KEYBOARD | DPAD`, with no
   GAMEPAD source, now gets the phone layout. This is rare; watch for it.
@@ -1260,26 +1349,30 @@ item to Sprint 17. The rest is not scheduled yet.
   (owner, 2026-10-20: backlog).
 
 From the Sprint 10 reviews and its device round (2026-10-21). The other items
-moved to Sprints 11, 12, 15 and 18. None is scheduled yet.
+moved to Sprints 11, 12, 15 and 20. None is scheduled yet.
 
 - **The halo and the tint-only glass have not been seen on API 28 to 30.** No
   device is available; the tests draw them with Robolectric.
 
-From the Sprint 10 UAT (2026-10-21). None is scheduled yet; the owner put them
-after SecOps (Sprint 16), or post-MVP. The list code (`ComputerManagerService`) is
-Kotlin from Sprint 12 on.
+From the Sprint 10 UAT (2026-10-21). The refresh button is not scheduled; the owner put
+it after SecOps (Sprint 18), or post-MVP. The look at why the list does not update moved
+to Sprint 15 on 2026-10-28. The list code (`ComputerManagerService`) is Kotlin from
+Sprint 12 on.
 
 - **A refresh button on Hosts.** After Forget, the Hosts list does not update
   until the app is restarted. The owner wants a refresh button on Hosts. Schedule:
-  after SecOps (Sprint 16), or post-MVP.
-- **Why the Hosts list does not update after Forget.** The owner wants this
-  looked into, so the list updates by itself. Schedule: after SecOps (Sprint 16),
-  or post-MVP.
+  after SecOps (Sprint 18), or post-MVP. The Sprint 15 fix may make it unneeded; the
+  owner decides.
+- **Why the Hosts list does not update after Forget.** Merged into the Sprint 15 item
+  [A forgotten host is not found again until the app restarts](#sprint-15-the-stream-screens-and-glass)
+  (owner, 2026-10-28).
 
-From the Sprint 12 conversion (2026-10-23). Nothing here is scheduled; the owner decides
-when. Paths are under `apps/android/app/src/main/kotlin/com/limelight/`, except
-`HeldStageFailures.kt`, `library/UpstreamHostShortcuts.kt` and
-`library/ComputerManagerConnection.kt`, which are under
+From the Sprint 12 conversion (2026-10-23). Item (a) is scheduled for
+[Sprint 17](#sprint-17-refactor-of-the-converted-code) and item (b) for
+[Sprint 16](#sprint-16-fixes-of-the-converted-code) (owner, 2026-10-28). The rest is not
+scheduled; the owner decides when. Paths are under
+`apps/android/app/src/main/kotlin/com/limelight/`, except `HeldStageFailures.kt`,
+`library/UpstreamHostShortcuts.kt` and `library/ComputerManagerConnection.kt`, which are under
 `apps/android/app/src/main/kotlin/io/github/magalz/borealis/`.
 
 - **(a) Refactor the converted code.** The 48 places marked `(Sprint 12 backlog)` each
@@ -1390,21 +1483,23 @@ when. Paths are under `apps/android/app/src/main/kotlin/com/limelight/`, except
     the first thread. `lastSuccessfulPollMs` is read under a different lock than the one it is
     written under.
   - `computers/ComputerManagerService.kt`: `ReachabilityTuple` is dead code. It is kept.
-- **(c) For SecOps (Sprint 16).** The security observations of the conversion are listed
-  under Sprint 16, one line each, with their files.
+- **(c) For SecOps (Sprint 18).** The security observations of the conversion are listed
+  under [Sprint 18](#sprint-18-secops), one line each, with their files.
 - **(d) From the Sprint 12 device round (2026-10-23).**
   - The bridged upstream log lines (`Borealis.UPSTREAM`, from `LimeLog`) carry host names
     and IP addresses in clear, as the inherited code always did. This is not a regression.
     The owner decided on 2026-10-24: host names stay, and public and overlay addresses are
-    masked in Sprint 16 (see Sprint 16). See
+    masked in Sprint 18 (see Sprint 18). See
     [device-validation section 17](development/device-validation.md#17-results-sprint-12), P2.
-  - Optional feature: send `continuousAudio=1` in `/launch`, so the client gets a steady
-    audio stream on a silent PC. LuminalShine supports it.
+  - Optional feature: send `continuousAudio=1` in `/launch`. Merged into the "Audio runs" entry
+    of item (d) of the Sprint 14 block below (owner, 2026-10-28).
 
-From the Sprint 13 conversion (2026-10-25). Nothing here is scheduled; the owner decides
-when. None of the bugs is fixed: the conversion keeps behaviour (ADR 0059, rule 10). Paths are
-under `apps/android/app/src/main/kotlin/com/limelight/binding/input/`, unless an item says
-otherwise.
+From the Sprint 13 conversion (2026-10-25). Item (a) is scheduled for
+[Sprint 17](#sprint-17-refactor-of-the-converted-code) and item (b) for
+[Sprint 16](#sprint-16-fixes-of-the-converted-code) (owner, 2026-10-28). The rest is not
+scheduled; the owner decides when. None of the bugs is fixed yet: the conversion keeps behaviour
+(ADR 0059, rule 10). Paths are under
+`apps/android/app/src/main/kotlin/com/limelight/binding/input/`, unless an item says otherwise.
 
 - **(a) Refactor the converted code.** The 65 places marked `(Sprint 13 backlog)` sit in 22
   files. 64 of them are next to a suppression annotation. The one in `driver/AbstractController.kt`
@@ -1586,10 +1681,12 @@ otherwise.
     to Win+Tab. Probably Windows' own long press of the Xbox button; to verify on the host.
 
 From the Sprint 14 conversion (2026-10-27). The owner decided on 2026-10-27 that the defects of
-item (b) are fixed after Sprint 14. Nothing else here is scheduled; the owner decides when. None
-of the defects is fixed yet: the conversion keeps behaviour (ADR 0059, rule 10), and each one is
-kept as it was and pinned by a test that passes on the Java and on the Kotlin, so a fix changes
-that test on purpose. Paths are under `apps/android/app/src/main/kotlin/com/limelight/`, unless
+item (b) are fixed after Sprint 14. On 2026-10-28 the owner scheduled item (a) for
+[Sprint 17](#sprint-17-refactor-of-the-converted-code) and item (b) for
+[Sprint 16](#sprint-16-fixes-of-the-converted-code). The rest is not scheduled; the owner decides
+when. None of the defects is fixed yet: the conversion keeps behaviour (ADR 0059, rule 10), and
+each one is kept as it was and pinned by a test that passes on the Java and on the Kotlin, so a
+fix changes that test on purpose. Paths are under `apps/android/app/src/main/kotlin/com/limelight/`, unless
 an item says otherwise. A pinning test is named by its class and its test. The tests are under
 `apps/android/app/src/test/kotlin/`: in `io/github/magalz/borealis/stream/game/` for `Game` (the
 folders `keys/`, `motion/` and `session/`, and the files of the folder itself), in
@@ -1808,7 +1905,12 @@ pins the item.
     The limit is 42 sandboxes, so a new one needs a look at what the tests share.
 - **(d) Found in the Sprint 14 device round (2026-10-28).** The owner put these in the backlog
   on 2026-10-28: the audio runs and `findExternalAddressIP4` from the agent part, the rest from
-  the owner's part and the UAT. Nothing here is scheduled, and none is a Sprint 14 regression.
+  the owner's part and the UAT. The owner organized them the same day: four moved to
+  [Sprint 15](#sprint-15-the-stream-screens-and-glass) (the "Audio effects" text, the Add host
+  field keyboard, a sample vibration and the TV focus after the host Options sheet), and the
+  `findExternalAddressIP4` test with a VPN moved to [Sprint 18](#sprint-18-secops). Each is
+  marked "(owner, 2026-10-28)" there. The four that stay here are not scheduled, and none is a
+  Sprint 14 regression.
   The results are in [device-validation section 19](development/device-validation.md#19-results-sprint-14);
   each entry names its source there (the rows of the table, and the findings U1 to U12).
   - **Audio runs on the S22 and on the TV.** `AndroidAudioRenderer` drops a decoded packet while
@@ -1823,27 +1925,17 @@ pins the item.
     to 07:58:21 at 1080p (A2, pending 45 to 65 ms), and 08:20:00 to 08:20:12 with Balanced frame
     pacing (A4). The cause of the mid-play runs is not known. Possible ways: ask the host for
     continuous audio, or a short start buffer, and look at the mid-play runs on their own
-    (finding U2).
+    (finding U2). The "ask the host for continuous audio" way is also the optional feature that
+    item (d) of the Sprint 12 block listed (merged here, owner, 2026-10-28): send
+    `continuousAudio=1` in `/launch`, so the client gets a steady audio stream on a silent PC.
+    LuminalShine supports it. The owner asked for an investigation first, without code changes
+    (2026-10-28): an A/B with the build before Sprint 14 on the TV and a reading of the code. The
+    results will be added later.
   - **Audio behind the picture on the TV.** The owner hears the audio after the picture (lip
     sync) in every channel layout, stereo too (A5, finding U3). The owner put it in the backlog,
-    and no A/B with `main` was run: "the aim now is to see that everything works as before".
-  - **`findExternalAddressIP4` with a VPN.** It is not reached on the LAN:
-    `ComputerManagerService.populateExternalAddress` calls it only when the active network is a
-    VPN (the same structure as the inherited Java and upstream), so the round did not reach it
-    (see [device-validation section 3.27](development/device-validation.md#327-sprint-14-checks),
-    step 10). Test it with a VPN on the device (Tailscale is a VPN on Android): the Library
-    finds the host, and the log has no JNI error.
-  - **The "Audio effects" text.** The setting reads "Let system audio effects work while you
-    stream. This can add latency." (`settings_audio_fx_summary` in `strings_settings_ui.xml` of
-    `:borealis:settings`), and the owner found it unclear. Say what it does: it lets the device's
-    equalizer and sound effects act on the stream, and it uses the slower audio path, because
-    `AndroidAudioRenderer` skips the low-latency track when audio effects are on
-    (`enableAudioFx && lowLatency`). See finding U4.
-  - **The Add host field keyboard.** The owner wants a numeric-style keyboard, with `.`, `/` and
-    `:` at hand, instead of the full keyboard, if Android allows it. `AddHostScreen.kt` already
-    sets `KeyboardType.Uri`, so check what that gives on the S22 and on the TV (the keyboard of
-    Google TV may ignore it), and whether another input type is possible. Host names must still
-    be typeable. See B2 and finding U6.
+    and no A/B with `main` was run: "the aim now is to see that everything works as before". The
+    owner asked for an investigation first, without code changes (2026-10-28): an A/B with the
+    build before Sprint 14 on the TV and a reading of the code. The results will be added later.
   - **Pad battery.** No battery reaches the PC. By default the host makes the pad an Xbox 360
     controller, which has no battery, and with DualShock 4 emulation ViGEmBus makes a wired (USB)
     pad, which has none either. The client sends the battery state only when Android reports one
@@ -1857,12 +1949,6 @@ pins the item.
     pad's 8BitDo mode. Try Switch mode over Bluetooth on the S22. Run the Motion fallback check
     (the phone's sensors to a DualShock 4) with a pad connected: it did not run in the UAT,
     because no pad reached the host in the streams of 10:29 and 10:35. See A8, C5 and finding U8.
-  - **A sample vibration.** When a vibration option is turned on in Settings, give a short sample
-    vibration, so that its effect can be felt. See finding U9.
-  - **TV focus after the host Options sheet.** After the sheet (Details and Forget) was closed
-    with Back over the Apps screen, no node had focus, and the D-pad did nothing until another
-    Back, which went to Hosts with the focus on the Continue row. The owner had left the sheet
-    open in B1 and B4. It is Library code, not Sprint 14. See finding U11.
 
 ## Host-side items (LuminalShine)
 
@@ -1876,11 +1962,11 @@ ones are #198, #201, #204 and #205.
 | --- | --- | --- |
 | [NortheBridge/luminalshine#194](https://github.com/NortheBridge/luminalshine/issues/194) | Issue | Stray bytes after a 404 response. Fixed on the host by #200, in 26.10.0-beta.1 (release notes). See the [host contract](host-contract/README.md). |
 | [NortheBridge/luminalshine#198](https://github.com/NortheBridge/luminalshine/issues/198) | Issue | Teardown hang after a disconnect. See the [host contract](host-contract/README.md). |
-| [NortheBridge/luminalshine#199](https://github.com/NortheBridge/luminalshine/pull/199) | PR | Reports the LuminalShine release in `/serverinfo`, so the client can show the host version. Shipped in 26.10.0-beta.1 (release notes). The client shows it in Sprint 17. |
+| [NortheBridge/luminalshine#199](https://github.com/NortheBridge/luminalshine/pull/199) | PR | Reports the LuminalShine release in `/serverinfo`, so the client can show the host version. Shipped in 26.10.0-beta.1 (release notes). The client shows it in Sprint 19. |
 | [NortheBridge/luminalshine#200](https://github.com/NortheBridge/luminalshine/pull/200) | PR | Sends a single response for unknown GameStream paths. Fix for #194. Shipped in 26.10.0-beta.1 (release notes). |
 | [NortheBridge/luminalshine#201](https://github.com/NortheBridge/luminalshine/issues/201) | Issue | A second client leaving a shared app ends the first client's session (per-client virtual display). See [UC-003](use-cases/0003-join-or-replace-a-running-app.md). |
 | [NortheBridge/luminalshine#202](https://github.com/NortheBridge/luminalshine/issues/202) | Issue | A long `/launch` blocks every other HTTPS GameStream request until it finishes. Fixed on the host by #203, in 26.10.0-beta.1 (release notes). See the [host contract](host-contract/luminalshine.md). |
 | [NortheBridge/luminalshine#203](https://github.com/NortheBridge/luminalshine/pull/203) | PR | Fix for #202. Merged on 2026-10-20 and shipped in 26.10.0-beta.1 (release notes). |
 | [NortheBridge/luminalshine#204](https://github.com/NortheBridge/luminalshine/issues/204) | Issue | The host process crashes after the virtual display cleanup of an ended session. Seen again twice on 2026-10-28, at 06:58:56 and 09:16:06 (exception `0x20474343`, a minidump each time; the host restarted itself): see [device-validation section 19](development/device-validation.md#19-results-sprint-14). See the [host contract](host-contract/luminalshine.md). |
 | [NortheBridge/luminalshine#205](https://github.com/NortheBridge/luminalshine/issues/205) | Issue | A second client's resume fails the RTSP tag check while the first client's launch is still setting up. See the [host contract](host-contract/luminalshine.md). |
-| Wrong-PIN lockout on 26.10.0-beta.1 | Finding | After a wrong PIN, the host keeps the pairing session, and every retry gets 409 for up to 5 minutes. Restarting LuminalShine clears it. Seen live on 2026-10-21 and checked in source at `e2662a44`. Not filed upstream yet. See the [host contract](host-contract/luminalshine.md) and [Sprint 16](#sprint-16-secops). |
+| Wrong-PIN lockout on 26.10.0-beta.1 | Finding | After a wrong PIN, the host keeps the pairing session, and every retry gets 409 for up to 5 minutes. Restarting LuminalShine clears it. Seen live on 2026-10-21 and checked in source at `e2662a44`. Not filed upstream yet. See the [host contract](host-contract/luminalshine.md) and [Sprint 18](#sprint-18-secops). |

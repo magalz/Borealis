@@ -100,7 +100,7 @@ capture that is committed.
    version `7.1.431.-1`, not `26.09.1`. On 26.10.0-beta.1 the HTTPS
    `/serverinfo` carries `LuminalShineVersion` (#199; verified in the source at
    `46f6936d`, see the [host contract](../host-contract/luminalshine.md)). The client does not show it yet
-   (Sprint 17), so Host details still shows `7.1.431.-1` there too, and must
+   (Sprint 19), so Host details still shows `7.1.431.-1` there too, and must
    show no error because of the new field. The Sprint 10 checks (section 3.23)
    run against 26.10.0-beta.1; its plain-HTTP captures are in
    `core/tests/fixtures/luminalshine/26.10.0-beta.1/`.
@@ -1480,7 +1480,7 @@ Steps:
      logcat capture of section 1.4.
    - Expected: the log has no PIN, token, key, certificate, address or host name.
      Owner, 2026-10-24: local addresses and host names may appear; public and overlay
-     addresses may not, and are masked from Sprint 16.
+     addresses may not, and are masked from Sprint 18.
 6. Owner UAT (owner).
    - Pairing, including a wrong PIN on `26.10.0-beta.1`.
    - Forget, then pair again.
@@ -1732,8 +1732,8 @@ Steps:
     - `findExternalAddressIP4`. `populateExternalAddress` calls it only when the active network
       is a VPN (`NetHelper.isActiveNetworkVpn`), the same structure as the inherited Java and
       upstream. On the LAN it is never reached: record `not applicable` and write "not reached".
-      To reach it, turn on a VPN on the device (Tailscale is a VPN on Android; the item is in the
-      backlog, [roadmap](../roadmap.md#backlog-not-scheduled), Sprint 14 block, item (d)), then
+      To reach it, turn on a VPN on the device (Tailscale is a VPN on Android; the item is in
+      SecOps, [roadmap](../roadmap.md#sprint-18-secops)), then
       open the Library and let mDNS find the host (3.25, step 2). Expected: the host appears with
       its local address, and gets no remote address: the native returns `NULL` at once and sends
       no STUN request (3.17). The logcat has no JNI error. Source: `ComputerManagerService.kt`
@@ -2012,7 +2012,7 @@ leaves the state that the next one needs.
   - Choose "Try again". On 26.10.0-beta.1 the host keeps the failed session for up to 5 minutes, so
     today the retry shows a new PIN for a moment and then "Another pairing is already in progress on
     the PC." with Try again (section 17: the same as before Sprint 12). This is the host's issue,
-    planned for Sprint 16 (roadmap, "LuminalShine wrong-PIN fix"): not a `fail`. Record the texts,
+    planned for Sprint 18 (roadmap, "LuminalShine wrong-PIN fix"): not a `fail`. Record the texts,
     and that the app does not loop (3.2, step 6).
   - Owner: restart LuminalShine on the PC, or wait 5 minutes, before B4.
   - Open point of section 17 (S22, night of 2026-10-24): after a wrong PIN the S22 once paired a few
@@ -2979,8 +2979,8 @@ taken during the stream, because it would show the PC screen.
 - Backlog, from this round: the native pad modes, the smoother D-pad moves in
   Settings on a TV, the quit warning for Desktop, and the host details text. See
   the [roadmap, Sprint 9](../roadmap.md#sprint-9-ux-polish-and-the-handheld). The
-  native pad modes are documented in Sprint 17, not in Sprint 13
-  ([roadmap, Sprint 17](../roadmap.md#sprint-17-release-preparation)).
+  native pad modes are documented in Sprint 19, not in Sprint 13
+  ([roadmap, Sprint 19](../roadmap.md#sprint-19-release-preparation)).
 - The Sprint 6 quit combo follow-up for USB-driver pads is done in `5416a79c`.
   See the [roadmap](../roadmap.md#sprint-7-follow-ups-and-backlog), item 2.
 - Backlog, from the Bluetooth pad round: the handheld host card height. On the
@@ -3380,8 +3380,8 @@ These are not counted as problems.
   display. There was no retry.
 - **Host version.** Host details shows the protocol version `7.1.431.-1` as
   "Sunshine-compatible", not "LuminalShine 26.10.0-beta.1". The client shows the
-  host version in Sprint 17
-  ([roadmap, Sprint 17](../roadmap.md#sprint-17-release-preparation)).
+  host version in Sprint 19
+  ([roadmap, Sprint 19](../roadmap.md#sprint-19-release-preparation)).
 - **The offline host.** Its card alternates between "Offline" and "Checking…".
 - **A navigation slip.** One OK landed on the card of the offline host, after Left
   from the online card moved to the other card and not to the rail. The options of
@@ -3529,7 +3529,8 @@ Findings:
 2. **The Hosts list after Forget.** After Forget, the Hosts list does not update
    until the app is restarted. The owner wants a refresh button on Hosts, and a
    look at why the list does not update by itself. Schedule: after SecOps
-   (Sprint 16), or post-MVP. See the [roadmap backlog](../roadmap.md#backlog-not-scheduled).
+   (Sprint 18), or post-MVP. The look at why moved to Sprint 15 on 2026-10-28. See the
+   [roadmap backlog](../roadmap.md#backlog-not-scheduled).
 3. **A wrong PIN locks pairing for 5 minutes on LuminalShine 26.10.0-beta.1.**
    Seen live on the S22. It was checked in the host source at `e2662a44`, the
    commit of the beta tag. `src/nvhttp.cpp` there is the same as upstream `main`
@@ -3549,8 +3550,8 @@ Findings:
    - **What Borealis shows:** "the host holds another session (it expires after
      5 minutes)", with no restart.
    - **Decision:** the owner chose to leave Borealis as it is, and to fix the host
-     in Sprint 16 (proposed), as a contribution to LuminalShine. Fix A and Fix C
-     are in the [roadmap](../roadmap.md#sprint-16-secops). An independent review
+     in Sprint 18 (proposed), as a contribution to LuminalShine. Fix A and Fix C
+     are in the [roadmap](../roadmap.md#sprint-18-secops). An independent review
      recommended against a `/unpair` cancel route. Option D, sending phase 4 with
      an invalid secret after a wrong PIN, is not chosen.
    - **Not filed upstream yet.** The host-side table of the roadmap has the row.
@@ -4273,7 +4274,7 @@ belongs to.
   masked even with "Mask addresses" on.
 - Decision (owner, 2026-10-24): local addresses may stay in the logs; public
   addresses, and those of internet overlays such as Tailscale, may not. Host names
-  stay visible. The change is planned in Sprint 16 (roadmap, Sprint 16).
+  stay visible. The change is planned in Sprint 18 (roadmap, Sprint 18).
 
 ### Deviations
 
@@ -4457,7 +4458,7 @@ Results of the evening of 2026-10-24 (owner and orchestrator, same build):
 - Wrong PIN on 26.10.0-beta.1 (owner): the same as before Sprint 12. After a wrong
   PIN, a retry shows a new PIN for a moment, then the "try again" screen. This is
   the same symptom as before Sprint 12, and it matches the host keeping the failed
-  pairing session (409 on a retry; roadmap, Sprint 16, the LuminalShine wrong-PIN
+  pairing session (409 on a retry; roadmap, Sprint 18, the LuminalShine wrong-PIN
   fix). The logcat of this try was not read.
 - New finding (owner): in the in-game menu, Left or Right, on the D-pad or the
   analog stick, makes the focus outline disappear, and it does not come back until
@@ -4674,7 +4675,7 @@ part ran from about 06:24 to 07:06. The owner's part of the same steps and the o
 owner at the devices and the orchestrator reading the logs and running some steps. The steps
 are those of [section 3.27](#327-sprint-14-checks), plus three items of 3.28 that the agent
 part answered. The round found no regression of Sprint 14. The owner's findings went to the
-backlog and to Sprint 15 and Sprint 16: see the findings below, and
+backlog, to Sprint 15 and to Sprint 18: see the findings below, and
 [roadmap, Backlog, not scheduled](../roadmap.md#backlog-not-scheduled), item (d) of the
 Sprint 14 block.
 
@@ -4783,11 +4784,11 @@ to. The rows that start with 3.28 are items of
   agent part. It does in the owner's UAT, with the audio of a game (finding U2, below).
 - The owner put it in the backlog on 2026-10-28, item (d) of the Sprint 14 block.
 
-#### 3. Backlog: `findExternalAddressIP4` with a VPN
+#### 3. SecOps: `findExternalAddressIP4` with a VPN
 
 - The native is not reached on the LAN (the row of step 10), so this round did not run it.
-- The owner put a device test with a VPN on in the backlog on 2026-10-28, item (d) of the
-  Sprint 14 block.
+- The owner put a device test with a VPN on in the backlog on 2026-10-28, and moved it to
+  [Sprint 18](../roadmap.md#sprint-18-secops) (SecOps) the same day.
 
 ### Owner's UAT (3.28), 2026-10-28
 
@@ -4825,7 +4826,7 @@ emulation). C2, the release build on the S22 (optional), was not reported: see t
 | Total play time | TV, S22 | at least 30 minutes (stopwatch, and the SESSION_END durations) | No stopwatch figure was recorded. A1 to A7 (TV) were played. A12 (S22) was run by the agent while the owner was away, on Steam Big Picture with no game. | not run | The notes give no total, and the SESSION_END durations were not added up. |
 | B1 Forget | TV, S22 | dialog text; the card goes | TV: the texts were right, and the log has `unpair not confirmed status=404`. S22 (11:41): Forget worked, and the log has `unpair not confirmed status=404` at 11:41:30. | pass | On the TV the host came back only after the app was killed: the known Sprint 15 item. On the S22 Add host (B2) brought the forgotten host back. |
 | B2 Add host | TV, S22 | "Not paired" card; the three errors | TV: the three error texts, and "added. Pair it" with the "Not paired" card, were right. S22: Add host worked, and the forgotten host came back through it. | pass, backlog U5, U6 | The three error texts are reported for the TV only. |
-| B3 Wrong PIN | S22; TV optional | "The PIN was wrong."; known 409 retry | TV: the log has `unpair not confirmed status=404` at 09:57:31.472, then `PIN_WRONG` at 09:57:31.486, and the screen has no 404 text. Try again twice gave 409 `IN_PROGRESS`, with no loop. S22: `unpair not confirmed status=404` at 11:44:43.491, then `PIN_WRONG` at 11:44:43.493, with no 404 text on the screen. Each Try again, or a tap on the card, showed a PIN for about 1 s and then "Another pairing is already in progress on the PC." The log has one 409 `IN_PROGRESS` request for each attempt (11:44:46, 11:44:47 and 11:44:59), none automatic. | pass, backlog U12 | The known host lockout (Sprint 16). The owner saw it as a loop. After the screen went off and on, the card stayed "Not paired": this closes the open point of section 17 (a pairing with no PIN). |
+| B3 Wrong PIN | S22; TV optional | "The PIN was wrong."; known 409 retry | TV: the log has `unpair not confirmed status=404` at 09:57:31.472, then `PIN_WRONG` at 09:57:31.486, and the screen has no 404 text. Try again twice gave 409 `IN_PROGRESS`, with no loop. S22: `unpair not confirmed status=404` at 11:44:43.491, then `PIN_WRONG` at 11:44:43.493, with no 404 text on the screen. Each Try again, or a tap on the card, showed a PIN for about 1 s and then "Another pairing is already in progress on the PC." The log has one 409 `IN_PROGRESS` request for each attempt (11:44:46, 11:44:47 and 11:44:59), none automatic. | pass, backlog U12 | The known host lockout (Sprint 18). The owner saw it as a loop. After the screen went off and on, the card stayed "Not paired": this closes the open point of section 17 (a pairing with no PIN). |
 | B4 Pairing | TV, S22 | "Paired"; Apps open | TV: paired again after the wait and the restart. S22: the owner set the host emulation back to Automatic (the host restarted), then paired: PAIRED at 11:47:11. | pass | The Apps screen after the pairing was not reported. |
 | B5 Wake-on-LAN | S22 | "Wake-up sent."; the card turns Online | Not testable in this setup: the PC is on Wi-Fi, and when it sleeps it wakes again at once and drops the Wi-Fi link, so no magic-packet wake can be checked. | not applicable | The test needs the PC on Ethernet (or Wi-Fi wake support) and a sleep that holds. |
 | B6 Pinned shortcut | S22 | opens when running; known toast when not | Apps, Add to home screen: the launcher's own dialog (in Portuguese) offered "Steam Big Picture (`<host>`)", and Okay pinned it (`dumpsys shortcut`: pinned for the launcher). The owner: the shortcut works. | pass | The icon, the tap with Borealis not running (the known toast) and the host shortcut were not reported. The TV was not tested (the S22 was used). |
@@ -4861,11 +4862,13 @@ regression. Each one says where it went in the [roadmap](../roadmap.md).
 - **U3. Audio behind the picture on the TV.** In every channel layout, stereo too (A5). The owner
   put it in the backlog, with no A/B against `main` ("the aim now is to see that everything
   works as before"). Item (d).
-- **U4. The "Audio effects" text is unclear.** Item (d).
+- **U4. The "Audio effects" text is unclear.** Moved from item (d) to
+  [Sprint 15](../roadmap.md#sprint-15-the-stream-screens-and-glass) on 2026-10-28, new bullet.
 - **U5. Add host for a host that is already added or paired.** The message does not say so.
   Sprint 15, in the existing "Pair it" bullet.
 - **U6. The Add host field opens the full keyboard.** A keyboard with `.`, `/` and `:` at hand
-  would fit an address better. Item (d).
+  would fit an address better. Moved from item (d) to Sprint 15 on 2026-10-28, in the existing
+  "Pair it" bullet.
 - **U7. No pad battery reaches the PC.** The host makes an Xbox 360 controller by default, which
   has no battery, and ViGEmBus emulates a wired DualShock 4. To investigate: first whether Android
   reports a battery for the pad, then the host side. Item (d).
@@ -4874,14 +4877,16 @@ regression. Each one says where it went in the [roadmap](../roadmap.md).
   pad's 8BitDo mode. To try: Switch mode over Bluetooth on the S22, and the Motion fallback check with a pad
   connected. Item (d).
 - **U9. A vibration option gives no sample.** When a vibration option is turned on in Settings,
-  a short sample vibration would show what it does. Item (d).
+  a short sample vibration would show what it does. Moved from item (d) to Sprint 15 on
+  2026-10-28, new bullet.
 - **U10. No keyboard and mouse combo opens the in-game menu.** Sprint 15, new bullet.
 - **U11. TV focus after the host Options sheet.** After Back closed the sheet over the Apps
   screen, no node had focus and the D-pad did nothing until another Back. The owner had left the
-  sheet open in B1 and B4. It is Library code, not Sprint 14. Item (d).
+  sheet open in B1 and B4. It is Library code, not Sprint 14. Moved from item (d) to Sprint 15 on
+  2026-10-28, new bullet.
 - **U12. The wrong-PIN lockout looks like a loop.** Each Try again, or a tap on the card, showed a
   PIN for about 1 s and then "Another pairing is already in progress on the PC." The log has one
-  request for each attempt, none automatic. [Sprint 16](../roadmap.md#sprint-16-secops), the
+  request for each attempt, none automatic. [Sprint 18](../roadmap.md#sprint-18-secops), the
   wrong-PIN item.
 
 The forgotten host that came back only after the app was killed (B1, TV) is the existing Sprint

@@ -3,7 +3,7 @@
 > This folder is the Android client of Borealis. It started as a subtree of
 > [moonlight-android](https://github.com/moonlight-stream/moonlight-android) 12.2 and has been Borealis code since
 > [ADR 0054](../../docs/adr/0054-declare-independence-from-moonlight.md). The text below is the upstream introduction, kept
-> for the credit to Moonlight until Sprint 17 rewrites this file. The Borealis modules and the build logic are described in
+> for the credit to Moonlight until Sprint 19 rewrites this file. The Borealis modules and the build logic are described in
 > [borealis/README.md](borealis/README.md).
 
 [Moonlight for Android](https://moonlight-stream.org) is an open source client for NVIDIA GameStream and [Sunshine](https://github.com/LizardByte/Sunshine).

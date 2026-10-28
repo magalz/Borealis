@@ -16,8 +16,8 @@ internal object LegacyMigrations {
      * - A stored `checkbox_enable_perf_overlay=true` with no `borealis_perf_overlay` becomes
      *   Detailed, and the old key is removed whatever its value, so this happens once.
      * - A stored `seekbar_bitrate` (Mbps) with no `seekbar_bitrate_kbps` becomes that many kbps and
-     *   the old key is removed. Java reads the old key too, but the snapshot does not. A stored 0
-     *   stays as it is: it means automatic.
+     *   the old key is removed. The inherited code reads the old key too, but the snapshot does
+     *   not. A stored 0 stays as it is: it means automatic.
      */
     fun run(preferences: SharedPreferences) {
         val stored = preferences.all

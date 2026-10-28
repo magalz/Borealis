@@ -44,8 +44,8 @@ class LaunchHooks(
 
 /**
  * What the upstream `NvConnection` calls around `/launch` and `/resume` (host contract 7.5). The
- * Java hook only supplies the [LaunchRequest], the attempt and its [LaunchHooks]; the rules live in
- * [LaunchRetryRunner].
+ * `NvConnection` hook only supplies the [LaunchRequest], the attempt and its [LaunchHooks]; the
+ * rules live in [LaunchRetryRunner].
  */
 object LaunchRetries {
     /**

@@ -20,7 +20,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/** The SharedPreferences backing keeps the keys and the stored types that the Java code reads. */
+/**
+ * The SharedPreferences backing keeps the keys and the stored types that the inherited code reads.
+ */
 @Suppress("DEPRECATION")
 @RunWith(RobolectricTestRunner::class)
 class PrefsBackingTest {

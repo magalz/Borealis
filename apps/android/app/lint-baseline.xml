@@ -13,39 +13,6 @@
     </issue>
 
     <issue
-        id="ApplySharedPref"
-        message="Consider using `apply()` instead; `commit` writes its data to persistent storage immediately, whereas `apply` will handle it in the background"
-        errorLine1="                        tombstonePrefs.edit().putInt(&quot;CrashCount&quot;, tombstonePrefs.getInt(&quot;CrashCount&quot;, 0) + 1).commit();"
-        errorLine2="                                                                                                               ~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/Game.java"
-            line="400"
-            column="112"/>
-    </issue>
-
-    <issue
-        id="DefaultLocale"
-        message="Implicitly using the default locale is a common source of bugs: Use `toLowerCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
-        errorLine1="        return glRenderer.toLowerCase().contains(&quot;powervr&quot;);"
-        errorLine2="                          ~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/binding/video/MediaCodecHelper.java"
-            line="248"
-            column="27"/>
-    </issue>
-
-    <issue
-        id="DefaultLocale"
-        message="Implicitly using the default locale is a common source of bugs: Use `toLowerCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
-        errorLine1="        glRenderer = glRenderer.toLowerCase().trim();"
-        errorLine2="                                ~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/binding/video/MediaCodecHelper.java"
-            line="252"
-            column="33"/>
-    </issue>
-
-    <issue
         id="OldTargetApi"
         message="Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details."
         errorLine1="        targetSdk 36"
@@ -186,28 +153,6 @@
             file="src/main/res/drawable/ic_settings.xml"
             line="4"
             column="20"/>
-    </issue>
-
-    <issue
-        id="SourceLockedOrientationActivity"
-        message="You should not lock orientation of your activities, so that you can support a good user experience for any device or orientation"
-        errorLine1="                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/Game.java"
-            line="593"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="UseRequiresApi"
-        message="Use `@RequiresApi(Build.VERSION_CODES.R)` instead of `@TargetApi` to propagate the requirement to callers of `onPictureInPictureRequested`"
-        errorLine1="    @TargetApi(Build.VERSION_CODES.R)"
-        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/Game.java"
-            line="753"
-            column="5"/>
     </issue>
 
     <issue

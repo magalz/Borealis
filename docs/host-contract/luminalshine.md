@@ -542,16 +542,16 @@ width, height and frame rate in `/launch` `mode=` and in the ANNOUNCE attributes
 Moonlight Android 12.2 can produce exactly this mismatch. It builds the
 `/launch` mode from the user's selected frame rate
 (`setLaunchRefreshRate(prefConfig.fps)`,
-`borealis:apps/android/app/src/main/java/com/limelight/Game.java:489`, and the
+`borealis@5816473bc:apps/android/app/src/main/java/com/limelight/Game.java:488`, and the
 `fps` of the `mode=` parameter in `launchApp`,
 `borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:816`)
 but streams at `chosenFrameRate` (`setRefreshRate(chosenFrameRate)`,
-`borealis:apps/android/app/src/main/java/com/limelight/Game.java:490`).
+`borealis@5816473bc:apps/android/app/src/main/java/com/limelight/Game.java:489`).
 With frame pacing "cap FPS", a selected rate that is equal to or at most 3 Hz
 above the display refresh rate, and a refresh rate above 49 Hz,
 `chosenFrameRate` becomes the rounded refresh rate minus 1, for example 59 for
 a 60 Hz selection
-(`borealis:apps/android/app/src/main/java/com/limelight/Game.java:469-484`).
+(`borealis@5816473bc:apps/android/app/src/main/java/com/limelight/Game.java:467-483`).
 A host with the default per-client virtual display then rebuilds the monitor
 on every such launch. This is confirmed: the Android client passes
 `getRefreshRate()` (the `chosenFrameRate`) to the native library
@@ -1035,7 +1035,7 @@ Moonlight Android 12.2 client already does the right thing the item says so.
    (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/PairingManager.java:219-289`;
    the 12.2 `PcView` that made the in-app call is gone, and the Library's
    `ComputerHostRepository.forget` makes it now,
-   `borealis:apps/android/app/src/main/kotlin/io/github/magalz/borealis/library/ComputerHostRepository.kt:93-99,117-126`).
+   `borealis@a050fbac:apps/android/app/src/main/kotlin/io/github/magalz/borealis/library/ComputerHostRepository.kt:93-99,117-126`).
    Borealis must treat that call as best-effort, and must explain that removing a
    host on the phone does not unpair it on the host (unpair through the Web UI or
    `POST /api/clients/unpair`). **Verified against LuminalShine 26.09.1
@@ -1080,7 +1080,7 @@ Moonlight Android 12.2 client already does the right thing the item says so.
    must equal `clientViewportWd`, `clientViewportHt` and `maxFPS`, otherwise
    the host rebuilds the virtual display (section 7.4). Moonlight Android sets
    `clientRefreshRateX100` from the display refresh rate
-   (`borealis:apps/android/app/src/main/java/com/limelight/Game.java:499`); the
+   (`borealis@5816473bc:apps/android/app/src/main/java/com/limelight/Game.java:498`); the
    host ignores it when it disagrees with `maxFPS`, so that attribute is
    harmless. The launch rate and the stream rate are the ones that must match;
    Moonlight Android can make them differ (end of section 7.4), so Borealis must

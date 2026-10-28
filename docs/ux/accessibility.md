@@ -1722,8 +1722,8 @@ The dialog and the row of Settings, and what they say, are in
   already fails the fit tests in 8 of the 84 runs of the Library (Apps with a long host name, on a
   TV and on a phone) and in 1 of the 70 runs of the components (the rows of the settings on a TV);
   Settings and the Audit trail pass. Wider is drawn as Wide there, and Wide is not limited: Wide
-  above a combined 2.0 has not been measured, only Normal was, at 2.6. It is a backlog item in the
-  roadmap.
+  above a combined 2.0 has not been measured, only Normal was, at 2.6. It is in
+  [Sprint 17](../roadmap.md#sprint-17-general-fixes) of the roadmap.
 - At Wide and Wider, the line ends of a wrapped text can draw up to one word spacing past their
   box: about 12 px in IBM Plex Sans at Wider, and up to 23 px at the largest TV text in the system
   font. The review found no text cut. The ink lands in the padding or in the gaps.
@@ -1764,7 +1764,7 @@ and AAA (1.4.6) for the text of High contrast.
 | 1.4.12 Text Spacing | AA | The Text spacing row: Wide sets 0.12 em of letter spacing, 0.16 em of word spacing and a line height of 1.5, the minimums of the criterion, and Wider sets 0.5 em of word spacing. The spaces are drawn apart in every font (`WordGapTest`, `TextWordSpacingTest`), and the layouts that do not fit at Wide or Wider are changed (`TextFitTest`). The 200 % system font size is tested at Normal, Wide and Wider, and at 2.0 Wider is drawn as Wide, with a dialog and a line in the row that say so (see text spacing: the limit at a very large font). |
 | 1.4.11 Non-text Contrast | AA | The offline ring at 3.25:1 or more, the icons on the background through the halo (Tables I to K), the outlines of the text field (Tables L and M), the opaque borders of High contrast, and the Online dot with its shadow: 5.68:1 over the brightest host-card glass (3.79:1 without it, today's palette). The Apps title dot on the animated background is not measured (a known limitation, see the status dot). |
 | 2.1.1 Keyboard | A | The D-pad and a gamepad reach every control; OK on a Settings group enters its pane, and the licence text and the Audit detail scroll with the D-pad. |
-| 2.2.2 Pause, Stop, Hide | A | The animated background is the only decorative moving content; it stops with Reduce motion On, the system's Remove animations or the battery saver, and the background Off is the plain page. Progress indicators are not covered yet (roadmap backlog). |
+| 2.2.2 Pause, Stop, Hide | A | The animated background is the only decorative moving content; it stops with Reduce motion On, the system's Remove animations or the battery saver, and the background Off is the plain page. Progress indicators are not covered yet (roadmap, Sprints 15 and 17). |
 | 2.4.3 Focus Order | A | The traversal order of every screen is tested (`readingOrder`), and the focus goes back to the card that had it after Back from Apps. |
 | 2.4.6 Headings and Labels | AA | Headings on every screen title and section label. |
 | 2.4.7 Focus Visible | AA | The Borealis focus outline, 3 dp in accent-soft, and 5 dp in `ink` with Thicker focus outline and High contrast. |

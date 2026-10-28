@@ -203,7 +203,7 @@ back and gone 5 s later
 That round also saw "Quitting `<app>`…" stay on screen about 17 s once, in the
 night round, and 5.5 to 6.7 s in the morning smoke, until the host answered
 `/cancel`. The cause is not known. The Quit logged `Connection terminated: -1`
-as an error; the [roadmap](../roadmap.md#backlog-not-scheduled) has both.
+as an error; [Sprint 15](../roadmap.md#sprint-15-the-stream-screens-and-glass) of the roadmap has both.
 
 Partly covered:
 

@@ -51,7 +51,8 @@ targets of 48 dp on a phone and a handheld.
    its fade, a list scrolls without animation, the Aurora loader and the check
    mark stand still and a section opens at once. The indeterminate progress
    indicators of Material (Quitting, Add host and Privacy and diagnostics) do not
-   follow it yet; the [roadmap](../roadmap.md#backlog-not-scheduled) has the item.
+   follow it yet; Sprints [15](../roadmap.md#sprint-15-the-stream-screens-and-glass) and
+   [17](../roadmap.md#sprint-17-general-fixes) of the roadmap have the item.
 3. The battery saver also gives the background one still frame.
 
 ### A2: Transparency (branches from step 3)

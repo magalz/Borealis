@@ -1136,8 +1136,8 @@ are in
 - **The audio delay in the performance overlay.** Decision (owner, 2026-10-28): if possible, add a
   line to the performance overlay with the audio delay. Android can estimate it from the
   `AudioTrack` timestamps; the client reads none today.
-- **A 2-channel output, with 5.1 or 7.1 asked for.** On the Streamer, a track for 5.1 or 7.1 on a
-  2-channel output leaves the fast path: it goes to the normal mixer, with a buffer 11 to 16 times
+- **A 2-channel output, with 5.1 or 7.1 asked for.** On the Streamer, a track for 7.1 on a
+  2-channel output leaves the fast path (5.1 was not measured): it goes to the normal mixer, with a buffer 11 to 16 times
   larger, which adds about 250 to 320 ms (Android's figures in the follow-up: 405 ms against 151 to
   163 ms on HDMI, 615 ms against 291 ms on Bluetooth). Decision (owner, 2026-10-28): when the
   current output of the device has only 2 channels and the setting asks for 5.1 or 7.1, ask the host
@@ -1529,8 +1529,8 @@ Kotlin from Sprint 12 on. Nothing is left here.
 
 From the Sprint 12 conversion (2026-10-23). Item (a) is scheduled for
 [Sprint 18](#sprint-18-refactor-of-the-converted-code) and item (b) for
-[Sprint 16](#sprint-16-fixes-of-the-converted-code) (owner, 2026-10-28). The rest is not
-scheduled; the owner decides when. Paths are under
+[Sprint 16](#sprint-16-fixes-of-the-converted-code) (owner, 2026-10-28). Item (c) is listed under
+[Sprint 19](#sprint-19-secops), and item (d) went to Sprints 17 and 19. Paths are under
 `apps/android/app/src/main/kotlin/com/limelight/`, except `HeldStageFailures.kt`,
 `library/UpstreamHostShortcuts.kt` and `library/ComputerManagerConnection.kt`, which are under
 `apps/android/app/src/main/kotlin/io/github/magalz/borealis/`.
@@ -1832,7 +1832,7 @@ From the Sprint 14 conversion (2026-10-27). The owner decided on 2026-10-27 that
 of item (b) are fixed after Sprint 14. On 2026-10-28 the owner scheduled item (a) for
 [Sprint 18](#sprint-18-refactor-of-the-converted-code), item (b) for
 [Sprint 16](#sprint-16-fixes-of-the-converted-code), item (c) for
-[Sprint 18](#sprint-18-refactor-of-the-converted-code) and item (d) for Sprints 15, 17
+[Sprint 18](#sprint-18-refactor-of-the-converted-code) and item (d) for Sprints 17
 and 19, as item (d) says. None of the defects is fixed yet: the conversion keeps behaviour (ADR
 0059, rule 10), and each one is kept as it was and pinned by a test that passes on the Java and on
 the Kotlin, so a fix changes that test on purpose. Paths are under

@@ -1658,8 +1658,8 @@ Steps:
      packet after silence and while the stream ends are not a `fail`. They show on both devices:
      on the S22 the pending time goes from about 90 ms down to 40 ms, and the `main` build does
      the same; the TV shows them with the continuous audio of a game (45 to 65 ms in the round of
-     2026-10-28). The item is in the backlog
-     ([roadmap](../roadmap.md#backlog-not-scheduled), Sprint 14 block, item (d)).
+     2026-10-28). The item is in
+     [Sprint 17](../roadmap.md#sprint-17-general-fixes) of the roadmap, Audio, "Audio runs".
    - 5.1 surround, if the host offers it, and 7.1 likewise. Expected: the speaker test of the PC
      plays each speaker in its place. The PC offers 5.1 and 7.1 through the virtual audio sink of
      the host, which switches to the layout that the client asks for at a launch; on a resume it
@@ -3356,7 +3356,7 @@ own Quit is logged as an error, `Connection terminated: -1`, and the system repo
 a duplicate finish of the stream activity. The Library then shows "App quit."
 correctly. It was seen in both streams. It is not known whether the 17 s are host
 time (LuminalShine giving the display back) or a client wait: the client logs
-nothing in between. The [roadmap](../roadmap.md#backlog-not-scheduled) has it. The
+nothing in between. [Sprint 15](../roadmap.md#sprint-15-the-stream-screens-and-glass) of the roadmap has it. The
 final re-check of this section measured 5.5 and 6.7 s to the Library in the
 morning smoke of the same day, so the 17 s did not repeat.
 
@@ -4530,7 +4530,8 @@ the Samsung Galaxy S22 from about 10:33 to 12:27, and on the Google TV Streamer 
 to 12:14. The steps are those of [section 3.26](#326-sprint-13-checks). The round tested
 build `9af270c73` (the startup log reads `commit=9af270c7390a`). It found no regression of
 Sprint 13. Four items went to the backlog, see
-[roadmap, Backlog, not scheduled](../roadmap.md#backlog-not-scheduled), item (d).
+[roadmap, Backlog, not scheduled](../roadmap.md#backlog-not-scheduled), item (d); on 2026-10-28
+they moved to [Sprint 17](../roadmap.md#sprint-17-general-fixes).
 
 ### Setup
 
@@ -4942,7 +4943,7 @@ the [roadmap, Sprint 17](../roadmap.md#sprint-17-general-fixes), under Audio.
   judged the sync good ("without the Bluetooth it is great"), in the 1080p, Balanced, 7.1 stream on
   HDMI. Other apps hold their video to match the audio; a game stream does not. Whether the morning
   UAT ran on Bluetooth is not recorded.
-- **5.1 or 7.1 on a 2-channel output leaves the fast path.** The track goes to the normal mixer, with
+- **7.1 on a 2-channel output leaves the fast path (5.1 was not measured).** The track goes to the normal mixer, with
   a buffer 11 to 16 times larger (11,286 and 16,448 frames, against 1,024), which adds about 250 to
   320 ms by Android's figures: 405 ms against 151 to 163 ms on HDMI, and 615 ms against 291 ms on
   Bluetooth.

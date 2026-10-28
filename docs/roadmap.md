@@ -854,8 +854,9 @@ Kept on purpose:
   in the `/launch` and `/resume` request) and the two port flags `ML_PORT_FLAG_TCP_47984` and
   `ML_PORT_FLAG_TCP_47989` (`NvConnection.kt` passes them as the port flags of a start that
   failed on the network). They looked unused, and they are not.
-- **Kept although nothing uses it.** `LI_BATTERY_STATE_NOT_PRESENT`, `LI_CTYPE_STEAM`, the
-  empty `Game.stageComplete`, the `resume` parameter of `launchStarting`, and the native touch
+- **Kept although no production code uses it.** `LI_BATTERY_STATE_NOT_PRESENT`,
+  `LI_CTYPE_STEAM` (`ArrivalReportTest` reads it), the empty `Game.stageComplete`, the
+  `resume` parameter of `launchStarting`, and the native touch
   path of `Game` (`trySendTouchEvent`, `sendTouchEventForPointer` and
   `MoonBridge.sendTouchEvent`), which stays parked. Upstream turned that path off on
   2023-09-16, Artemis ships it as "Multi-touch", and LuminalShine accepts native pen and touch
@@ -891,7 +892,8 @@ ids (`UseRequiresApi` in `NsdManagerDiscoveryAgent.kt`, `OldTargetApi`, `NotShri
 Coverage of the converted files (Kover lines, from the report of the phase at `a74266ec1`, the
 run that produced these figures): `Game.kt` 95.5% (the Java was 96.4%),
 `MediaCodecDecoderRenderer.kt` 99.7% (920 of 923 lines), `VideoStats.kt` 100%,
-`MediaCodecHelper` 95.4%, `AndroidAudioRenderer` 97.6% and `MoonBridge` 98.4%. The lines of `Game.kt` that no test reaches are the branches for Android before 11 and
+`MediaCodecHelper` 95.4%, `AndroidAudioRenderer` 97.6% and `MoonBridge` 98.4%. The lines of
+`Game.kt` that no test reaches are the branches for Android before 11 and
 before 12, the branches for Android 16 (`BAKLAVA`) and SDK 37, the catches of the Samsung
 reflection, the `SecurityException` of the Wi-Fi lock, the first `surfaceChanged` and the parked
 native touch path. The rest of `MediaCodecHelper` reads `/proc` of the host. `:app` runs 4,140

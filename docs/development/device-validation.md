@@ -1654,10 +1654,12 @@ Steps:
    - Stereo (Settings, Audio, Channels, Stereo (2.0)). Expected: the line
      `Received first audio packet`, sound in both channels, no crackle, and no delay that grows
      over a minute. Expected: no run of `Too much pending audio data` lines (the check of
-     `getPendingAudioDuration`, with a limit of 40 ms). On the S22, short runs of that line (the
-     pending time goes from about 90 ms down to 40 ms) at the first packet after silence and
-     while the stream ends are not a `fail`: the `main` build does the same, and the item is in
-     the backlog ([roadmap](../roadmap.md#backlog-not-scheduled), Sprint 14 block, item (d)).
+     `getPendingAudioDuration`, with a limit of 40 ms). Short runs of that line at the first
+     packet after silence and while the stream ends are not a `fail`. They show on both devices:
+     on the S22 the pending time goes from about 90 ms down to 40 ms, and the `main` build does
+     the same; the TV shows them with the continuous audio of a game (45 to 65 ms in the round of
+     2026-10-28). The item is in the backlog
+     ([roadmap](../roadmap.md#backlog-not-scheduled), Sprint 14 block, item (d)).
    - 5.1 surround, if the host offers it, and 7.1 likewise. Expected: the speaker test of the PC
      plays each speaker in its place. The PC offers 5.1 and 7.1 through the virtual audio sink of
      the host, which switches to the layout that the client asks for. The logcat has
@@ -1862,8 +1864,9 @@ are the plan; the total is what the stopwatch shows.
     picture stays smooth, `Decode` stays a few ms and the loss stays near 0 %. A "Slow connection to
     PC" notice at 80 Mbps is a finding: record it. The TV reports one 1920x1080 mode (section 11,
     A3), so 4K is decoded and scaled: this tests the decoder and the network, not the sharpness.
-    4K at 60 fps plays on the Streamer: on 2026-10-28 the overlay read `3840×2160 · 60 fps`, with a
-    decode time of about 16 ms and 47 Mbps measured (section 19).
+    4K at 60 fps plays on the Streamer: on 2026-10-28 the overlay read `3840×2160 · 60 fps · HEVC`,
+    with host processing of 17.7, 27.1 and 35.2 ms, a network line of 6 ms ± 4 ms, loss 0.0 %,
+    47.2 Mbps and a decode time of 15.7 ms (section 19).
 - **A3. Codec (TV, 6 to 12).**
   - Quit, then Resolution back to 1080p (Bitrate: Automatic, 20 Mbps). Settings, Video, Codec:
     H.264, then AV1 ("Experimental") where the host offers it, then HEVC, 2 minutes each, with a
@@ -1968,8 +1971,9 @@ are the plan; the total is what the stopwatch shows.
     `the stream is 10-bit but the decoder does not declare HEVC Main10`. No toast "Display does not
     support HDR10" or "Decoder does not support HDR10 profile" shows, and the picture is not black
     or washed out. The overlay shows the negotiated 10-bit format, not the host's HDR state
-    (contract 9.2 and 9.3). To check that state, read the log line `Display HDR mode: enabled` (or
-    `disabled`), and the host's `Sent HDR mode: true` (or `false`). With AV1, where the host
+    (contract 9.2 and 9.3). To check that state, read the client logcat line `Display HDR mode: enabled`
+    (or `disabled`; tag `Borealis.UPSTREAM`), and the host log line `Sent HDR mode: true` (or
+    `false`). With AV1, where the host
     offers it: as 3.27, step 3. Then Quit.
 
 #### Part B: the flows around the stream
@@ -2001,8 +2005,8 @@ leaves the state that the next one needs.
   - Owner: Pair on the card and read the PIN on the device. In the Web UI, on the Clients page,
     enter another four-digit PIN (3.2, steps 1 to 3).
   - Expected: "The PIN was wrong.", with no 404 text and no "Pairing failed.". Logcat has
-    `unpair not confirmed status=404` (it still appears: on 2026-10-28 the log had it at Forget,
-    B1, on both devices; section 19). The Audit trail has PAIRING_FAILURE with `reason=wrong_pin`.
+    `unpair not confirmed status=404` (it still appears: on 2026-10-28 both app logs have it right
+    before `state=PIN_WRONG`; section 19). The Audit trail has PAIRING_FAILURE with `reason=wrong_pin`.
   - Choose "Try again". On 26.10.0-beta.1 the host keeps the failed session for up to 5 minutes, so
     today the retry shows a new PIN for a moment and then "Another pairing is already in progress on
     the PC." with Try again (section 17: the same as before Sprint 12). This is the host's issue,
@@ -4689,7 +4693,7 @@ Sprint 14 block.
   preferences, `BorealisStream.xml` and the DataStore), on both devices, after the owner's part
   as well.
 - The owner's part:
-  - The owner played one game for Part A: a 2D action RPG through Steam Big Picture. The agent
+  - The owner played one game for Part A: a turn-based RPG through Steam Big Picture. The agent
     ran A12, B8, B9 (from Apps) and C4 by ADB, with the owner's OK, and read the logs of the
     whole run.
   - Host gamepad emulation: the default (Automatic, an Xbox 360 controller) for A6. The owner
@@ -4788,7 +4792,7 @@ to. The rows that start with 3.28 are items of
 The owner ran the end-of-migration UAT of
 [section 3.28](#328-owners-30-minute-gameplay-uat-sprint-14) on the TV and on the S22. The
 orchestrator read the logs and ran some steps (marked as agent steps in the notes of a row).
-Part A played a 2D action RPG through Steam Big Picture. The UAT found no regression of
+Part A played a turn-based RPG through Steam Big Picture. The UAT found no regression of
 Sprint 14.
 
 #### Block and step results
@@ -4802,7 +4806,7 @@ emulation). C2, the release build on the S22 (optional), was not reported: see t
 | Block or step | Device | Expected | Seen | Result | Notes |
 | --- | --- | --- | --- | --- | --- |
 | A1 Baseline | TV | 720p, 60 fps, 10 Mbps; codec and decoder noted | 720p at 60 fps, HEVC, decoder `c2.mtk.hevc.decoder.lowlatency`, round trip 3 ± 3 ms, loss 0. Session info reads "of 10 Mbps". The sound was normal. | pass, backlog U2 | The overlay was read on a static Steam page, so its measured rate (0.2 Mbps) and its host time ("—") say nothing. The log has audio runs at the start and the end of the stream. |
-| A2 Resolution | TV | 1080p at 20 Mbps, 4K at 80 Mbps, smooth | 1080p, Automatic 20 Mbps: host 5.4, 5.7 and 8.2 ms (min, avg and max), round trip 4 ± 1 ms, 12.7 Mbps. 4K, Automatic 80 Mbps: host 17.7, 27.1 and 35.2 ms, round trip 6 ± 4 ms, 47.2 Mbps, decode 15.7 ms. | pass, backlog U2 | The 4K stream was a resume after a Disconnect, not a start after a Quit. The owner heard audio stutters at 1080p. The log has runs at 07:57:52 to 07:58:04 and at 07:58:16 to 07:58:21 (pending 45 to 65 ms), with no loss. |
+| A2 Resolution | TV | 1080p at 20 Mbps, 4K at 80 Mbps, smooth | 1080p, Automatic 20 Mbps: host 5.4, 5.7 and 8.2 ms (min, avg and max), round trip 4 ± 1 ms, 12.7 Mbps. 4K, Automatic 80 Mbps: the overlay read `3840×2160 · 60 fps · HEVC`, host 17.7, 27.1 and 35.2 ms, round trip 6 ± 4 ms, loss 0.0 %, 47.2 Mbps, decode 15.7 ms. | pass, backlog U2 | The 4K stream was a resume after a Disconnect, not a start after a Quit. The owner heard audio stutters at 1080p. The log has runs at 07:57:52 to 07:58:04 and at 07:58:16 to 07:58:21 (pending 45 to 65 ms), with no loss. |
 | A3 Codec | TV | H.264, AV1 where offered, HEVC; a decoder for each | H.264: `c2.mtk.avc.decoder.lowlatency`, host 4.4, 6.4 and 7.6 ms, round trip 4 ± 1 ms, 11.7 Mbps, decode 6.5 ms. HEVC: host 5.2, 5.5 and 7.6 ms, round trip 3 ± 1 ms, 14.0 Mbps, decode 6.7 ms. | pass, backlog U2 | AV1: not applicable (the host GPU has no AV1 encoder). The owner hears audio loss in the first seconds of each stream (the start run in the log). |
 | A4 Frame pacing | TV | four modes play; 59 fps with the limit | Balanced: 60 fps. Balanced with fps limit: 59 fps and the log line "Adjusting FPS target for screen to 59". Smoothest video: 60 fps. No freeze. | pass, backlog U2 | Lowest latency was the baseline of A1. The log has a mid-play audio run at 08:20:00 to 08:20:12, in Balanced. |
 | A5 Audio | TV | stereo, 5.1 (`0xFC`), sound on the PC | 5.1: `0xFC`. 7.1: `0x18FC`. Play audio on the PC: `localAudioPlayMode=1` sent. | pass, backlog U3 | On a resume the host switched its Opus encoder to 6 channels but not its virtual audio sink, so Quit before a Channels change stays the rule. 7.1 was a new launch (the host had restarted). The owner: the audio lags the picture in every mode, stereo too. Not reported: the speaker positions, and whether the PC also played the sound. |
@@ -4814,10 +4818,10 @@ emulation). C2, the release build on the S22 (optional), was not reported: see t
 | A11 On-screen controller | S22 | all controls, Opacity | Works perfectly (owner). | pass | |
 | A12 Frame rate | S22 | 30 and 120 fps; 5 and 14 Mbps | 30 fps: host `effective_display_fps` 30, "Client configured bitrate is 5000 Kbps", 31 frames a second in the decoder window. 120 fps: the host display at 120 Hz, 14000 Kbps, 116 to 123 frames a second. | pass | Run by the agent while the owner was away, on Steam Big Picture with no game launched. |
 | A13 HDR | S22 | "HEVC 10-bit HDR", right colours | The stream of 11:04 had `hdrMode=1`: SPS Main10, depth 10/10, `Display HDR mode: enabled`, the decoder restarted for the HDR metadata, no Main10 warning. The owner saw "HEVC 10-bit HDR" in the overlay, and the picture was fine. | pass | Two earlier streams (10:56 and 10:58) had no `hdrMode`, because HDR was not on yet. |
-| Total play time | TV, S22 | at least 30 minutes (stopwatch, and the SESSION_END durations) | No stopwatch figure was recorded. A1 to A7 (TV) and A8 to A13 (S22) were played as planned. | not run | The notes give no total, and the SESSION_END durations were not added up. The block that was short as play is A12: the agent ran its two streams on Steam Big Picture, with no game launched. |
+| Total play time | TV, S22 | at least 30 minutes (stopwatch, and the SESSION_END durations) | No stopwatch figure was recorded. A1 to A7 (TV) were played as planned. A12 (S22) was run by the agent while the owner was away, on Steam Big Picture with no game. | not run | The notes give no total, and the SESSION_END durations were not added up. |
 | B1 Forget | TV, S22 | dialog text; the card goes | TV: the texts were right, and the log has `unpair not confirmed status=404`. S22 (11:41): Forget worked, and the log has `unpair not confirmed status=404` at 11:41:30. | pass | On the TV the host came back only after the app was killed: the known Sprint 15 item. On the S22 Add host (B2) brought the forgotten host back. |
 | B2 Add host | TV, S22 | "Not paired" card; the three errors | TV: the three error texts, and "added. Pair it" with the "Not paired" card, were right. S22: Add host worked, and the forgotten host came back through it. | pass, backlog U5, U6 | The three error texts are reported for the TV only. |
-| B3 Wrong PIN | S22; TV optional | "The PIN was wrong."; known 409 retry | TV: `PIN_WRONG` with no 404 text. Try again twice gave 409 `IN_PROGRESS`, with no loop. S22 (11:44:43): `PIN_WRONG` with no 404 text. Each Try again, or a tap on the card, showed a PIN for about 1 s and then "Another pairing is already in progress on the PC." The log has one 409 `IN_PROGRESS` request for each attempt (11:44:46, 11:44:47 and 11:44:59), none automatic. | pass, backlog U12 | The known host lockout (Sprint 16). The owner saw it as a loop. After the screen went off and on, the card stayed "Not paired": this closes the open point of section 17 (a pairing with no PIN). |
+| B3 Wrong PIN | S22; TV optional | "The PIN was wrong."; known 409 retry | TV: the log has `unpair not confirmed status=404` at 09:57:31.472, then `PIN_WRONG` at 09:57:31.486, and the screen has no 404 text. Try again twice gave 409 `IN_PROGRESS`, with no loop. S22: `unpair not confirmed status=404` at 11:44:43.491, then `PIN_WRONG` at 11:44:43.493, with no 404 text on the screen. Each Try again, or a tap on the card, showed a PIN for about 1 s and then "Another pairing is already in progress on the PC." The log has one 409 `IN_PROGRESS` request for each attempt (11:44:46, 11:44:47 and 11:44:59), none automatic. | pass, backlog U12 | The known host lockout (Sprint 16). The owner saw it as a loop. After the screen went off and on, the card stayed "Not paired": this closes the open point of section 17 (a pairing with no PIN). |
 | B4 Pairing | TV, S22 | "Paired"; Apps open | TV: paired again after the wait and the restart. S22: the owner set the host emulation back to Automatic (the host restarted), then paired: PAIRED at 11:47:11. | pass | The Apps screen after the pairing was not reported. |
 | B5 Wake-on-LAN | S22 | "Wake-up sent."; the card turns Online | Not testable in this setup: the PC is on Wi-Fi, and when it sleeps it wakes again at once and drops the Wi-Fi link, so no magic-packet wake can be checked. | not applicable | The test needs the PC on Ethernet (or Wi-Fi wake support) and a sleep that holds. |
 | B6 Pinned shortcut | S22 | opens when running; known toast when not | Apps, Add to home screen: the launcher's own dialog (in Portuguese) offered "Steam Big Picture (`<host>`)", and Okay pinned it (`dumpsys shortcut`: pinned for the launcher). The owner: the shortcut works. | pass | The icon, the tap with Borealis not running (the known toast) and the host shortcut were not reported. The TV was not tested (the S22 was used). |
@@ -4827,7 +4831,7 @@ emulation). C2, the release build on the S22 (optional), was not reported: see t
 | C1 Release build | TV | pairs and streams for a minute, no error | The release build of `728aae024`, installed again (the owner had uninstalled it), paired at 09:54:04 and streamed from 09:54:22 to 09:55:43. | pass | No error. |
 | C3 Picture-in-picture and the USB prompt | S22 | PiP enters, expands and closes; no PiP while the USB prompt is open | PiP: enter, expand and close worked (step 7 above). On the TV the receiver's permission prompt appeared at the start of the stream (owner). On the S22 the system's USB dialog opened at 12:06:32.438, and the receiver detached at 12:06:32.667, which closed it. The stream after it was normal (HEVC Main10, HDR enabled). | pass; held-open case not run | The 8BitDo receiver switches its USB identity by itself (R5a), so "PiP while the prompt is open" cannot be held open with it. Unit tests cover the case. |
 | C4 The S22 screen when another device quits | S22 | the stream-ended screen, with no "blocked ports" text | While the S22 streamed Steam Big Picture, the TV joined and quit. S22: `Connection terminated: -1` (the `testClientConnectivity` path), and the screen "Steam Big Picture stopped", "The stream ended. The PC may have quit the app, or the connection dropped.", "Error -1", with Try again, Diagnostics and Close. | pass | No "blocked ports" text. Run by the agent on both devices, with the owner's OK. The screenshot was deleted after it was read. |
-| C5 Gyro and battery with DualShock 4 emulation | TV | the gyro moves; the host shows the battery | The host's `gamepad` setting `ds4` took effect. The gyro was not delivered: host log "DS4 gyro stale ... re-requesting motion events". The TV sees the Pro 3 through the USB receiver as a plain HID gamepad with no sensor (`dumpsys input`: no SENSOR class). ViGEmBus emulates a wired (USB) pad, so no battery reaches the host game. | fail, backlog U7, U8 | Limits of the device (the gyro) and of the host (the battery), not a change of Sprint 14. The S22 side of the gyro is in A8. |
+| C5 Gyro and battery with DualShock 4 emulation | TV | the gyro moves; the host shows the battery | The host's `gamepad` setting `ds4` took effect. The gyro was not delivered: host log "DS4 gyro stale ... re-requesting motion events". The TV sees the Pro 3 through the USB receiver as a plain HID gamepad with no sensor (`dumpsys input`: no SENSOR class). ViGEmBus emulates a wired (USB) pad, so no battery reaches the host game. | not applicable, backlog U7, U8 | The DualShock 4 emulation worked. The gyro and the battery did not reach the PC because of limits of the device (the gyro) and of the host (the battery), not a change of Sprint 14. The S22 side of the gyro is in A8. |
 
 #### The host
 

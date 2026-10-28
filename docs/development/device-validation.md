@@ -1,11 +1,11 @@
 # Device validation runbook
 
-This runbook checks Borealis Phase 1 and Sprints 2 to 10 on two devices against
+This runbook checks Borealis Phase 1 and Sprints 2 to 14 on two devices against
 LuminalShine 26.09.1 and 26.10.0-beta.1 running on the owner's Windows PC. It is
 for the owner and for the orchestrator who runs the checks. Run the steps in
 order and record the results as a new section with a table, like sections 7 to
-10. Sections 6 to 15 hold the results of Phase 1 and Sprints 2 to 10, in that
-order.
+10. Sections 6 to 18 hold the results of Phase 1 and Sprints 2 to 13, in that
+order. The results of Sprint 14 go in section 19, after its round.
 
 Sources: [host contract](../host-contract/luminalshine.md) (cited as "contract"),
 [Borealis Android README](../../apps/android/borealis/README.md),
@@ -139,7 +139,7 @@ marks what was left out, so a frame-loss burst shows as that line plus a counter
 not as every loss. The old logcat tag `moonlight-common-c` still appears for lines
 that are not forwarded: those logged before `BorealisLog` is initialised, those where
 forwarding fails, and the direct `__android_log_print` calls in `simplejni.c`; keep
-both tags in the filter. The upstream Java logger `LimeLog` is
+both tags in the filter. The upstream logger `LimeLog` (Kotlin since Sprint 12) is
 forwarded to `Borealis.UPSTREAM` (`JulBridge`).
 
 Log lines are `message key=value`, for example
@@ -413,7 +413,7 @@ removed in the Web UI.
 3. Expected: the launch ends without a stream. No further `host asked to retry`
    line appears in logcat after Back. The client sends no `/cancel`, as in 3.5
    step 6. `Game` calls `cancelLaunch()` from `onStop` and `onDestroy`
-   (`Game.java`, README `host.launch`).
+   (`Game.kt`, README `host.launch`).
 4. Launch the same app again from Apps when the host is free.
 5. Expected: the second launch proceeds and reaches the first frame (3.9). A
    launch that hangs on the Starting screen with no retry line and no stream is
@@ -1547,6 +1547,218 @@ Steps:
 14. End (TV, S22).
     - Quit the app on the S22. Then end with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP`
       on the Streamer.
+
+### 3.27 Sprint 14 checks
+
+Run these on the Samsung Galaxy S22 and on the Google TV Streamer, with the owner's OK for
+the TV. Sprint 14 converted the last inherited Java to Kotlin: `MoonBridge` (the JNI bridge),
+`MediaCodecHelper`, the video renderer, `AndroidAudioRenderer` and `Game`, the stream activity
+(ADR 0059 and [ADR 0060](../adr/0060-convert-moonbridge-to-a-kotlin-object.md)). A conversion
+keeps behaviour, so the steps check that the behaviour was kept. What only a device shows is JNI:
+the system links a native method at its first call, and the C code finds each callback by
+its name and descriptor, so a fault shows only when the call happens, and a rarely called
+native shows it last. Record each item as `pass`, `fail`, `owner check` or `not applicable`,
+with a short note for each `fail`.
+
+The physical actions need the owner: the pad, the keyboard, the second device, the touch and
+the USB prompt. Do not record a host name, an address, a MAC address or a PIN, and take no
+screenshot of the stream (section 5).
+
+One change is accepted, so it is not a `fail`: the log lines "needs SPS bitstream restrictions
+fixup" and "is on Exynos 4" of the video renderer are gone (the roadmap, Sprint 14).
+
+Steps:
+
+1. Builds (the build machine, then both devices).
+   - Debug build with CheckJNI on, where the device allows it. Install the debug APK (1.2), then
+     turn CheckJNI on before the app starts:
+     `adb -s <serial> shell setprop debug.checkjni 1`, then
+     `adb -s <serial> shell am force-stop io.github.magalz.borealis.debug` and start the app.
+     `TODO(verify)`: whether each device accepts the property. A device that refuses it is
+     `not applicable` for this item. Expected: the steps below run, and the logcat has no
+     `JNI DETECTED ERROR IN APPLICATION` (tag `art`). Source: the casts in `callbacks.c` that
+     satisfy CheckJNI (lines 323, 366 and 387).
+   - R8 release minify. From `apps/android`, run `./gradlew :app:minifyReleaseWithR8` (the release
+     build needs an `android-vX.Y.Z` tag in the history, see [building.md](building.md)). Expected:
+     the build passes.
+   - `MoonBridge` in the dex. Build the release APK (`./gradlew assembleRelease`) and run
+     `apkanalyzer dex packages --defined-only <release-apk>`, as `.github/scripts/check-apk.sh`
+     does, or start the release dry run ([release.md](release.md), section 3), which runs that
+     script. Expected: `com.limelight.nvstream.jni.MoonBridge` is listed. Source:
+     `apps/android/app/proguard-rules.pro` (`-keep class com.limelight.nvstream.jni.* {*;}`).
+   - Install the release APK of the dry run next to the debug build (3.18) and stream with it for
+     a minute. Expected: the stream plays, because R8 kept the callbacks that the C code looks up
+     by name.
+2. Upgrade in place (S22, TV). Do this before the other steps.
+   - Install the `main` debug build. Pair one host, change two settings (for example Codec and
+     Frame pacing), and note them. Start one stream and end it normally, and note the codec and
+     the decoder name in the Detailed overlay (step 4).
+   - With the app stopped, set `CrashCount` to 1 in `shared_prefs/DecoderTombstone.xml`, through
+     `adb -s <serial> shell run-as io.github.magalz.borealis.debug`. Use 1: a count of 3 would
+     reset the streaming settings (`UiHelper.showDecoderCrashDialog`). `TODO(verify)`: the
+     command; the file is a SharedPreferences XML with `<int name="CrashCount" value="1" />`.
+     The decoder crash notice cannot be triggered by hand (3.21, item 8), so this stands in for a
+     crash.
+   - Install the phase build over it with `adb install -r`, without uninstalling. Read the file
+     again before you open the app. Expected: `CrashCount` is still 1, and
+     `LastNotifiedCrashCount` is unchanged.
+   - Open the app. Expected: the first open of the Library shows the decoder crash notice
+     ("Video Decoder Crashed"), with an OK button and no Help button (3.21, item 8). Expected: the
+     host is still paired with no PIN asked, and the two settings are as noted. Dismiss the notice
+     and read the file. Expected: `LastNotifiedCrashCount` is 1.
+   - Start a stream. Expected: the log has "Disabling RFI due to previous crash"
+     (`MediaCodecDecoderRenderer.kt`: an odd count turns reference frame invalidation off for that
+     stream). End the stream normally. Expected: `CrashCount` and `LastNotifiedCrashCount` read 0
+     (`Game.kt`, `onStop`, "Clear the tombstone count if we terminated normally"), and the decoder
+     name and the codec in the overlay are the ones of the `main` build.
+3. Video, each codec (S22, TV).
+   - In Settings, Video, set Codec to H.264, then HEVC, then AV1 ("Experimental") where the host
+     offers it (the Host details dialog then lists AV1). Stream about one minute with each, with
+     the same app, as in 3.11. Expected: each plays. Expected: the `HEVC SPS` line of 3.11 for HEVC.
+     AV1 is `not applicable` when the host does not offer it, as in 3.11 step 4.
+   - Expected: the decoder name in the overlay is the one of step 2 for the same codec. Source:
+     the decoder choice in `MediaCodecDecoderRenderer.kt` and the lists in `MediaCodecHelper.kt`.
+   - HDR (S22 only; the row is hidden on the Streamer's TV, so that is `not applicable`): as 3.12,
+     with HEVC, and with AV1 where the host offers it. Expected: as 3.12, the picture is not
+     black or washed out, and the overlay codec line reads "10-bit HDR".
+4. Performance overlay (S22, TV). In a stream, open the in-game menu, set Overlay to Detailed,
+   and close the menu (3.20, step 4).
+   - Expected: the resolution and the frame rate, the codec, the decoder name, the host
+     processing time (min, avg and max), and the Network line with the round-trip time and its
+     variance, the loss and the bitrate. The decode time is a number of milliseconds with one
+     decimal. The round-trip time comes from the native `getEstimatedRttInfo`: it is a number
+     that moves a little, and it does not stay empty. Set Compact and check the line
+     `fps · host ms · net ms`. Set the overlay back to Off before Quit. Source:
+     `strings_overlay.xml` of `:borealis:stream`, `MoonBridge.getEstimatedRttInfo`.
+5. Audio (S22, TV). Play a sound on the PC during the stream: the host sends no audio while the
+   PC is silent (3.25, step 4).
+   - Stereo (Settings, Audio, Channels, Stereo (2.0)). Expected: the line
+     `Received first audio packet`, sound in both channels, no crackle, and no delay that grows
+     over a minute. Expected: no run of `Too much pending audio data` lines (the check of
+     `getPendingAudioDuration`, with a limit of 40 ms).
+   - 5.1 surround, if the host offers it, and 7.1 likewise. Expected: the speaker test of the PC
+     plays each speaker in its place. `TODO(verify)`: how the owner's PC offers 5.1. Record
+     `not applicable` where it does not. Source: `AndroidAudioRenderer.kt` (the channel masks).
+6. The Starting and Quitting screens, and a second device (S22, TV).
+   - Launch an app. Expected: the Starting screen covers the stream from the start until the
+     first video frame (3.9). Quit it from the in-game menu ("Quit `<app>`", confirm). Expected:
+     "Quitting `<app>`…" shows until the host answers, then the Library (3.6, step 2).
+   - A second device during a launch: as 3.5, steps 2 to 4. Start the app on the S22, and within
+     about 2 s on the Streamer. Expected: the second device shows "Another device is starting a
+     stream on this host. Retrying in N s", then streams, or shows a clear failure after the
+     retry budget. Source: `Game.kt` (`launchStarting`, `launchRetrying` and `stageStarting`).
+7. Picture-in-picture (S22). Turn on Settings, Advanced, Picture-in-picture (off by default).
+   - Enter and leave. In a stream, go Home. Expected: the window enters picture-in-picture at
+     once (Android 12 and later enter on their own), shows only the stream (no menu and no
+     on-screen controller), and the stream goes on. Tap the window to expand it. Expected: the
+     same session, with the on-screen controller back. Enter again and close the window.
+     Expected: the stream ends and the app keeps running on the host. With a pad that has motion
+     sensors, the motion stops while the window is small and works again after the expand.
+   - The USB prompt. Turn USB driver for Xbox controllers on (Settings, Gamepad) and plug the
+     8BitDo receiver into the S22 (3.22, item 15). In a stream, switch the pad off and on, so that
+     Android asks for the USB permission. With the dialog open, press Home. Expected: the window
+     does not enter picture-in-picture while the prompt is open. Answer the dialog, go back to the
+     stream, and press Home. Expected: the window enters picture-in-picture. `TODO(verify)`:
+     whether Home also closes the dialog on this One UI version; record what happens. Source:
+     `Game.kt` (`updatePipAutoEnter`, `onUsbPermissionPromptStarting` and
+     `onUsbPermissionPromptCompleted`).
+8. Background, return and Quit (S22, TV where it applies).
+   - With Picture-in-picture off, go Home during a stream. Expected: the stream ends on the
+     device (`Game.onStop`), the app keeps running on the host, and opening Borealis again shows
+     the Library. Start the app again. Expected: the client resumes it with no conflict screen
+     (3.10, and the owner items of [section 17](#17-results-sprint-12)).
+   - Quit from the in-game menu. Expected: as step 6. Then launch the app again at once. Expected:
+     it launches, or retries as 3.6 describes.
+9. Samsung keyboard capture (S22, with a hardware keyboard on Bluetooth or USB). Source:
+   `Game.setMetaKeyCaptureState`, which calls the Samsung `SemWindowManager.requestMetaKeyEvent`,
+   or the keyboard capture of the platform from Android 16 QPR2 (API 36.1).
+   - In a stream, with the input grabbed (the menu closed), press the Windows key. Expected: the
+     Start menu opens on the PC, and the S22 does nothing. Press Alt+Tab. Expected: the key
+     reaches the PC, not the S22. Since the `main` build the first Tab of Alt+Tab is lost and
+     Windows opens its Alt menu (section 18, finding 4): record what the PC does, and fail the
+     item only if the keys reach the S22.
+   - Release the grab: press Ctrl+Alt+Shift+Z, or open the in-game menu. Expected: the Windows
+     key and Alt+Tab act on the S22 again. Grab again, and the PC gets them again.
+10. The rare natives (S22, TV where it applies). JNI links each one at its first call, so a wrong
+    name or descriptor shows only here. Expected for all of them: no `NoSuchMethodError`, no
+    `UnsatisfiedLinkError` and no `JNI DETECTED ERROR` in the logcat.
+    - `testClientConnectivity`. Provoke a connection termination or a failed start: for example,
+      end the app on the PC from the host's Web UI during a stream, or block the stream ports on
+      the PC before a launch. Expected: the stream ends. A failure screen shows only for a
+      non-graceful error (`ML_ERROR_GRACEFUL_TERMINATION` skips it), and its text has no "blocked
+      ports" result. The native returns `ML_TEST_RESULT_INCONCLUSIVE` at once, with no delay
+      (ADR 0050, 3.17). Source: `Game.kt` (`stageFailed` and `connectionTerminated`),
+      `simplejni.c`.
+    - `findExternalAddressIP4`. Open the Library on the LAN and let mDNS find the host (3.25,
+      step 2). Expected: the host appears with its local address, and gets no remote address: the
+      native returns `NULL` at once and sends no STUN request (3.17). Source:
+      `ComputerManagerService.kt` (`populateExternalAddress`).
+    - `sendUtf8Text`. In a stream, open the in-game menu, then Keyboard, then System keyboard, and
+      type or paste a short text with an accented letter into a test file on the PC (Notepad;
+      section 5). Expected: the text arrives whole. `TODO(verify)`: whether the Android keyboard
+      sends it as an `ACTION_MULTIPLE` event, which is the case that reaches the native. A hardware
+      key with no key mapping and a character (an AltGr character, for example) takes the same
+      native. Source: `Game.kt` (`handleKeyMultiple`).
+    - `guessControllerType`, `guessControllerHasPaddles`, `guessControllerHasShareButton` and
+      `sendControllerBatteryEvent`. Connect the 8BitDo Pro 3 (Switch mode) or the Ultimate 2 and
+      stream. Expected: the arrival works, with its controller type (3.26, steps 7 and 8). With the
+      motion sensors setting on (Android 12 and later) and a host test that shows the gyro (for
+      example Steam's controller test), the motion works. The battery state goes to the host;
+      `TODO(verify)`: where the host shows it. Source: `ControllerHandler.kt`.
+    - `getPendingAudioDuration`. Reached by every audio packet: step 5.
+    - `requestIdrFrame`. In the in-game menu, choose "Refresh the picture". Expected: the menu
+      closes, the stream goes on, and no error shows. `TODO(verify)`: the line of the host log for
+      a keyframe request. Source: `NvConnection.requestKeyframe`.
+    - `bridgeClLogMessage` (the native log forwarding). Expected: lines with the tag
+      `Borealis.COMMONC` appear during the stream, such as `Received first video packet after N
+      ms` (3.9 and 3.16). If the lookup of the callback failed, forwarding would turn off
+      silently, and the lines would show only under the old tag `moonlight-common-c`. Source:
+      `borealis_log.c`.
+    - A pen. If a device with a pen is at hand, draw with it in the stream. Expected: the pen
+      moves the PC pointer and presses. `not applicable` on the S22, which has no pen. Source:
+      `Game.kt` (`trySendPenEvent`), with `sendPenEvent`.
+11. Logs (S22, TV). Keep the capture of 1.4, with `art:E AndroidRuntime:E` added to its filter.
+    - Expected: the `LimeLog` texts are the ones of the `main` build, in `Borealis.UPSTREAM` (the
+      two lines named above are the only ones gone), and no crash (`AndroidRuntime`). Search the
+      capture for `NoSuchMethodError`, `UnsatisfiedLinkError` and `JNI DETECTED ERROR`.
+      Expected: none. Keep the captures masked, as in [section 17](#17-results-sprint-12).
+12. End (TV, S22). Quit the app on the S22. End with
+    `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the Streamer.
+
+### 3.28 Owner's 30-minute gameplay UAT (Sprint 14)
+
+This is the owner's check, by hand: one real game, on the TV and on the S22, after the checks
+of 3.27. It looks for what a short check misses: a stutter, a drift, a stuck key. Take one game
+that uses a pad and a keyboard and mouse and makes sound, and a running PC with the host.
+Use the 8BitDo Pro 3 in Switch mode for the pad, and a hardware keyboard and a mouse for the
+S22. Keep the time marks. Do not record a host name, an address, a MAC address or a PIN, and
+take no screenshot of the stream (section 5): note what you saw in words.
+
+| Minutes | Where | Do | Expect |
+| --- | --- | --- | --- |
+| 0 to 5 | TV | Launch the game. Turn the overlay on (menu, Overlay, Detailed). Choose the codec you want to test in Settings, Video before the launch. | The Starting screen, then the picture. The overlay names the codec and the decoder you chose, 60 fps or the rate you set, and a steady round-trip time. |
+| 5 to 10 | TV | Play with the pad. Use every button, both sticks and the triggers. Let a rumble happen in the game, use gyro aim if the game has it, and look at the battery of the pad where the host shows it. | The inputs are right, with no stuck button. The rumble is felt, and the gyro moves what it should. The battery is shown where the host shows it. |
+| 10 to 13 | TV | Listen. Play music or a scene with sound. Set Channels to 5.1 if the PC offers it. | Clean sound in both channels, in sync with the picture, with no crackle and no delay that grows. |
+| 13 to 18 | S22 | Disconnect on the TV (menu, Disconnect: the game keeps running), then open the same game on the S22, which resumes it. With the keyboard and the mouse, type, use Esc and the arrows, move and click, and use the wheel. Press the Windows key, then release the grab (Ctrl+Alt+Shift+Z) and press the Windows key again. | The game resumes with no conflict screen. Typing and the mouse are right. The Windows key reaches the PC while the stream grabs input, and acts on the S22 when the grab has ended. |
+| 18 to 22 | S22 | Use touch. Try the trackpad mode and then the direct mode (Settings, set before the stream), and the on-screen controller. | Tap is a click, two fingers scroll, and a drag moves the pointer in the trackpad mode (a press and hold of about 650 ms, then a move). The on-screen controller buttons and sticks work. The known limits of section 18 apply. |
+| 22 to 27 | S22 | Go Home with Picture-in-picture on, then expand the window. Go Home again with it off, wait a minute, and open the app again to resume. With the USB driver on and the receiver plugged in, switch the pad off and on in the stream so that the USB prompt opens, and press Home with it open. | The window shrinks to the stream and expands again. Without PiP the stream ends and the resume brings it back with no conflict screen. The window does not enter PiP while the USB prompt is open. |
+| 27 to 30 | S22 or TV | Quit the game from the in-game menu, then launch it again. | "Quitting `<app>`…" shows, then the Library. The new launch starts, or retries and then starts. |
+
+At the end, end with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the Streamer,
+and put back any setting you changed.
+
+Record the result in this table, one row for each step you ran. Use `pass`, `fail` or
+`not applicable`, and write what you saw in the notes. A `fail` needs a note.
+
+| Step | Device | Expected | Seen | Pass or fail | Notes |
+| --- | --- | --- | --- | --- | --- |
+| 0 to 5, start and codec | TV | | | | |
+| 5 to 10, pad, rumble, gyro and battery | TV | | | | |
+| 10 to 13, audio | TV | | | | |
+| 13 to 18, keyboard and mouse | S22 | | | | |
+| 18 to 22, touch | S22 | | | | |
+| 22 to 27, background, PiP and reconnect | S22 | | | | |
+| 27 to 30, Quit and a new launch | S22 or TV | | | | |
 
 ## 4. Results templates
 

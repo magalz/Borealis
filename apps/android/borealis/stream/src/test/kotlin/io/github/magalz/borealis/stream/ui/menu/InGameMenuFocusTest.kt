@@ -28,12 +28,14 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
-// The rows of the menu that have nothing of their own to the right of the title.
-private val ROWS_WITHOUT_CONTROL =
+// The rows of the menu of a TV, with Send keys and Session info closed, from the first to the last.
+private val TV_ROWS =
     listOf(
         "Back to stream",
         "Keyboard",
         "Send keys",
+        "Gamepad mouse",
+        "Overlay",
         "Refresh the picture",
         "Session info",
         "Display for next launch",
@@ -41,10 +43,33 @@ private val ROWS_WITHOUT_CONTROL =
         "Quit Desktop",
     )
 
+// The same on a phone, where Touch takes the place of Gamepad mouse.
+private val PHONE_ROWS = TV_ROWS.map { if (it == "Gamepad mouse") "Touch" else it }
+
+// The chips of Send keys, in reading order.
+private val CHIPS =
+    listOf(
+        "Alt+Tab",
+        "Win+Tab",
+        "Win",
+        "Ctrl+Shift+Esc",
+        "Alt+F4",
+        "Win+D",
+        "Win+G",
+        "Esc",
+        "Win+Alt+B",
+    )
+
+/** [rows] with the chips of Send keys after the row that opens them. */
+private fun withChips(rows: List<String>): List<String> {
+    val after = rows.indexOf("Send keys") + 1
+    return rows.take(after) + CHIPS + rows.drop(after)
+}
+
 /**
- * Left and Right in the in-game menu (UC-004) never take the focus off the menu: Sprint 12 round
- * finding D4, where Right on Send keys or Session info left no row focused and OK did nothing until
- * the menu reopened.
+ * The in-game menu (UC-004) has no lateral movement (owner decision of 2026-10-28, issue #98): Left
+ * and Right do nothing and are not left to the host, Up and Down alone reach everything in one
+ * vertical order, and an option row changes with OK, never with its segments.
  */
 @RunWith(AndroidJUnit4::class)
 class InGameMenuFocusTest {
@@ -75,84 +100,110 @@ class InGameMenuFocusTest {
 
     private fun press(key: Key) = composeRule.onRoot().performKeyInput { pressKey(key) }
 
-    /** Presses [key] [times] times, as a user taps a direction. */
-    private fun press(key: Key, times: Int) = repeat(times) { press(key) }
+    /**
+     * What the focused row, chip or segment says first, or null unless exactly one has the focus.
+     */
+    private fun focusedTitle() =
+        composeRule
+            .onAllNodes(isFocused())
+            .fetchSemanticsNodes()
+            .singleOrNull()
+            ?.config
+            ?.getOrNull(SemanticsProperties.Text)
+            ?.firstOrNull()
+            ?.text
 
-    private fun holdsFocus(title: String) =
-        text(title).fetchSemanticsNode().config.getOrNull(SemanticsProperties.Focused) == true
+    /** Presses [key] [times] times and returns where the focus was after each press. */
+    private fun walk(key: Key, times: Int) = List(times) { press(key).let { focusedTitle() } }
 
-    private fun focusedNodes() = composeRule.onAllNodes(isFocused()).fetchSemanticsNodes().size
-
-    /** The rows of [titles] that do not hold the focus after [key], pressed with it on them. */
-    private fun rowsThatLoseFocusOn(key: Key, titles: List<String>) = titles.filter { title ->
+    /** The titles of [titles] whose focus is gone, or moved, after [key] with the focus on them. */
+    private fun movedBy(key: Key, titles: List<String>) = titles.filter { title ->
         text(title).performScrollTo().requestFocus()
         press(key)
-        !holdsFocus(title)
+        focusedTitle() != title
+    }
+
+    private fun assertLateralKeysDoNothing(fixture: LayerFixture, titles: List<String>) {
+        assertThat(movedBy(Key.DirectionRight, titles)).isEmpty()
+        assertThat(movedBy(Key.DirectionLeft, titles)).isEmpty()
+        // Nothing is left over for the host, which would give it to the game or to the PC.
+        assertThat(fixture.keysSeenOutside).containsNoneOf(Key.DirectionLeft, Key.DirectionRight)
     }
 
     @Test
     @Config(qualifiers = TV)
-    fun `Right keeps the focus on every row that has no control`() {
-        tvMenu()
+    fun `Left and Right do nothing on every row of the menu`() {
+        val fixture = tvMenu()
 
-        assertThat(rowsThatLoseFocusOn(Key.DirectionRight, ROWS_WITHOUT_CONTROL)).isEmpty()
-    }
-
-    @Test
-    @Config(qualifiers = TV)
-    fun `Left keeps the focus on every row that has no control`() {
-        tvMenu()
-
-        assertThat(rowsThatLoseFocusOn(Key.DirectionLeft, ROWS_WITHOUT_CONTROL)).isEmpty()
-    }
-
-    @Test
-    @Config(qualifiers = TV)
-    fun `Right and Left keep the focus on Send keys and Session info while they are open`() {
-        tvMenu()
-        text("Send keys").performClick()
-        text("Session info").performScrollTo().performClick()
-        text("Alt+Tab").performScrollTo().assertIsDisplayed()
-        text("Codec").performScrollTo().assertIsDisplayed()
-        val open = listOf("Send keys", "Session info")
-
-        assertThat(rowsThatLoseFocusOn(Key.DirectionRight, open)).isEmpty()
-        assertThat(rowsThatLoseFocusOn(Key.DirectionLeft, open)).isEmpty()
-    }
-
-    @Test
-    @Config(qualifiers = TV)
-    fun `Right on an option row enters its segments and Left comes back to the row`() {
-        tvMenu()
-
-        // Right lands on the selected segment, which is the second of Gamepad mouse (On, Off) and
-        // the first of Overlay (Off, Compact, Detailed): Left walks back to the first and then out.
-        for ((title, lefts) in listOf("Gamepad mouse" to 2, "Overlay" to 1)) {
-            text(title).performScrollTo().requestFocus()
-
-            press(Key.DirectionRight)
-            assertThat(focusedNodes()).isEqualTo(1)
-            assertThat(holdsFocus(title)).isFalse()
-
-            press(Key.DirectionLeft, lefts)
-            text(title).assertIsFocused()
-        }
+        assertLateralKeysDoNothing(fixture, TV_ROWS)
     }
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `a phone with keys keeps the focus on its rows too`() {
-        phoneMenu()
+    fun `Left and Right do nothing on every row of the menu of a phone with keys`() {
+        val fixture = phoneMenu()
 
-        assertThat(rowsThatLoseFocusOn(Key.DirectionRight, ROWS_WITHOUT_CONTROL)).isEmpty()
-        assertThat(rowsThatLoseFocusOn(Key.DirectionLeft, ROWS_WITHOUT_CONTROL)).isEmpty()
-        text("Touch").performScrollTo().requestFocus()
-        press(Key.DirectionRight)
-        assertThat(holdsFocus("Touch")).isFalse()
-        assertThat(focusedNodes()).isEqualTo(1)
-        // Right lands on the selected segment, Trackpad, the first of Touch: one Left is enough.
-        press(Key.DirectionLeft)
-        text("Touch").assertIsFocused()
+        assertLateralKeysDoNothing(fixture, PHONE_ROWS)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `Left and Right do nothing on the rows and the chips while Send keys and Session info are open`() {
+        val fixture = tvMenu()
+        text("Send keys").performClick()
+        text("Session info").performScrollTo().performClick()
+        text("Codec").performScrollTo().assertIsDisplayed()
+
+        assertLateralKeysDoNothing(fixture, withChips(TV_ROWS))
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `Down and Up walk the rows of the menu in their order and stop at the ends`() {
+        tvMenu()
+        assertThat(focusedTitle()).isEqualTo("Back to stream")
+
+        assertThat(walk(Key.DirectionDown, TV_ROWS.size - 1)).isEqualTo(TV_ROWS.drop(1))
+        assertThat(walk(Key.DirectionDown, 1)).containsExactly("Quit Desktop")
+        assertThat(walk(Key.DirectionUp, TV_ROWS.size - 1))
+            .isEqualTo(TV_ROWS.dropLast(1).reversed())
+        assertThat(walk(Key.DirectionUp, 1)).containsExactly("Back to stream")
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `Down walks the chips of Send keys in reading order and Up walks back`() {
+        tvMenu()
+        text("Send keys").performClick()
+        text("Back to stream").requestFocus()
+        val order = withChips(TV_ROWS)
+
+        assertThat(walk(Key.DirectionDown, order.size - 1)).isEqualTo(order.drop(1))
+        assertThat(walk(Key.DirectionUp, order.size - 1)).isEqualTo(order.dropLast(1).reversed())
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `Down walks the chips of Send keys in reading order on a narrow phone too`() {
+        phoneMenu()
+        text("Send keys").performClick()
+        text("Back to stream").requestFocus()
+        val order = withChips(PHONE_ROWS)
+
+        assertThat(walk(Key.DirectionDown, order.size - 1)).isEqualTo(order.drop(1))
+        assertThat(walk(Key.DirectionUp, order.size - 1)).isEqualTo(order.dropLast(1).reversed())
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `Session info open has nothing to focus, and Down goes on to the next row`() {
+        tvMenu()
+        text("Session info").performScrollTo().performClick()
+        text("Codec").performScrollTo().assertIsDisplayed()
+        text("Session info").requestFocus()
+
+        assertThat(walk(Key.DirectionDown, 1)).containsExactly("Display for next launch")
+        assertThat(walk(Key.DirectionUp, 2)).containsExactly("Session info", "Refresh the picture")
     }
 
     // The round finding D4: Down several times, OK, Right, OK, and Quit was never reached.
@@ -161,7 +212,8 @@ class InGameMenuFocusTest {
     fun `Down, OK, Right, OK on Send keys and then Down reaches Quit and OK asks to quit`() {
         val fixture = tvMenu()
 
-        press(Key.DirectionDown, 2)
+        press(Key.DirectionDown)
+        press(Key.DirectionDown)
         text("Send keys").assertIsFocused()
         press(Key.DirectionCenter)
         text("Alt+Tab").assertIsDisplayed()
@@ -169,8 +221,25 @@ class InGameMenuFocusTest {
         text("Send keys").assertIsFocused()
         press(Key.DirectionCenter)
         text("Alt+Tab").assertDoesNotExist()
-        // Gamepad mouse, Overlay, Refresh the picture, Session info, Display, Disconnect, Quit.
-        press(Key.DirectionDown, 7)
+        assertThat(walk(Key.DirectionDown, 7).last()).isEqualTo("Quit Desktop")
+        press(Key.DirectionCenter)
+
+        text("Quit Desktop?").assertIsDisplayed()
+        text("Cancel").assertIsFocused()
+        assertThat(fixture.intents.calls).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `Down and OK alone reach Quit through the open chips of Send keys`() {
+        val fixture = tvMenu()
+
+        press(Key.DirectionDown)
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        val order = withChips(TV_ROWS)
+        val fromSendKeys = order.drop(order.indexOf("Send keys") + 1)
+        assertThat(walk(Key.DirectionDown, fromSendKeys.size)).isEqualTo(fromSendKeys)
         text("Quit Desktop").assertIsFocused()
         press(Key.DirectionCenter)
 
@@ -185,8 +254,7 @@ class InGameMenuFocusTest {
         val fixture = tvMenu()
 
         // Keyboard, Send keys, Gamepad mouse, Overlay, Refresh the picture, Session info.
-        press(Key.DirectionDown, 6)
-        text("Session info").assertIsFocused()
+        assertThat(walk(Key.DirectionDown, 6).last()).isEqualTo("Session info")
         press(Key.DirectionCenter)
         text("Codec").assertIsDisplayed()
         press(Key.DirectionRight)
@@ -194,8 +262,7 @@ class InGameMenuFocusTest {
         press(Key.DirectionCenter)
         text("Codec").assertDoesNotExist()
         // Display for next launch, Disconnect, Quit.
-        press(Key.DirectionDown, 3)
-        text("Quit Desktop").assertIsFocused()
+        assertThat(walk(Key.DirectionDown, 3).last()).isEqualTo("Quit Desktop")
         press(Key.DirectionCenter)
 
         text("Quit Desktop?").assertIsDisplayed()

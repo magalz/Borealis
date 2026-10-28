@@ -2,6 +2,7 @@ package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
@@ -147,93 +148,93 @@ class MenuRowTest {
             .isEqualTo(44.dp)
     }
 
+    // Owner decision of 2026-10-28 (issue #98): the menu has no lateral movement, so the control at
+    // the end of a row is never a focus stop. The row is the one stop, and its button changes it.
     @Test
-    fun `the trailing content shows and the D-pad reaches it from the row`() {
+    fun `the segments at the end of a row are not focus stops and Right keeps the focus on the row`() {
+        composeRule.setContentInKeyboardMode {
+            Specimen {
+                MenuRow("Bitrate", {}, trailing = { LowHigh() })
+                MenuRow("Refresh", {})
+            }
+        }
+        composeRule.onNodeWithText("Bitrate").requestFocus()
+
+        composeRule.onNodeWithText("Bitrate").performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithText("Bitrate").assertIsFocused()
+
+        composeRule.onNodeWithText("Low").assertIsDisplayed()
+        composeRule.onNodeWithText("Bitrate").performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithText("Refresh").assertIsFocused()
+        composeRule.onNodeWithText("Refresh").performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithText("Bitrate").assertIsFocused()
+    }
+
+    @Test
+    fun `a tap on a segment selects it and does not run the click of the row`() {
+        val chosen = mutableListOf<String>()
         composeRule.setContentInKeyboardMode {
             Specimen {
                 MenuRow(
                     "Bitrate",
-                    {},
+                    { clicks++ },
                     trailing = {
-                        SegmentedControl(
-                            options = listOf("Low", "High"),
-                            selected = "Low",
-                            label = { it },
-                            onSelect = {},
-                        )
+                        SegmentedControl(listOf("Low", "High"), "Low", { it }, { chosen += it })
+                    },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("High").performClick()
+
+        assertThat(chosen).containsExactly("High")
+        assertThat(clicks).isEqualTo(0)
+    }
+
+    @Test
+    fun `OK on a row with segments runs the click of the row, not a segment`() {
+        val chosen = mutableListOf<String>()
+        composeRule.setContentInKeyboardMode {
+            Specimen {
+                MenuRow(
+                    "Bitrate",
+                    { clicks++ },
+                    trailing = {
+                        SegmentedControl(listOf("Low", "High"), "Low", { it }, { chosen += it })
                     },
                 )
             }
         }
         composeRule.onNodeWithText("Bitrate").requestFocus()
 
-        composeRule.onNodeWithText("Bitrate").performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithText("Bitrate").performKeyInput { pressKey(Key.DirectionCenter) }
 
-        composeRule.onNodeWithText("Low").assertIsFocused()
+        assertThat(clicks).isEqualTo(1)
+        assertThat(chosen).isEmpty()
     }
 
     @Test
-    fun `Left moves between the trailing segments and from the first one back to the row`() {
+    fun `OK on a row with a switch at the end runs the click of the row and the switch only shows`() {
         composeRule.setContentInKeyboardMode {
             Specimen {
                 MenuRow(
-                    "Bitrate",
-                    {},
-                    trailing = {
-                        SegmentedControl(
-                            options = listOf("Low", "High"),
-                            selected = "Low",
-                            label = { it },
-                            onSelect = {},
-                        )
-                    },
+                    "Mute microphone",
+                    { clicks++ },
+                    trailing = { Switch(checked = false, onCheckedChange = null) },
                 )
             }
         }
-        composeRule.onNodeWithText("High").requestFocus()
+        composeRule.onNodeWithText("Mute microphone").requestFocus()
 
-        composeRule.onNodeWithText("High").performKeyInput { pressKey(Key.DirectionLeft) }
-        composeRule.onNodeWithText("Low").assertIsFocused()
-
-        composeRule.onNodeWithText("Low").performKeyInput { pressKey(Key.DirectionLeft) }
-        composeRule.onNodeWithText("Bitrate").assertIsFocused()
-    }
-
-    @Test
-    fun `Left from the first segment of each stacked row returns to its own row`() {
-        composeRule.setContentInKeyboardMode {
-            Specimen {
-                MenuRow(
-                    "Codec",
-                    {},
-                    trailing = {
-                        SegmentedControl(
-                            listOf("Auto", "Always use H.264 or HEVC"),
-                            "Auto",
-                            { it },
-                            {},
-                        )
-                    },
-                )
-                MenuRow(
-                    "Bitrate",
-                    {},
-                    trailing = {
-                        SegmentedControl(listOf("Low", "High"), "Low", { it }, {})
-                    },
-                )
-            }
+        composeRule.onNodeWithText("Mute microphone").performKeyInput {
+            pressKey(Key.DirectionCenter)
+        }
+        composeRule.onNodeWithText("Mute microphone").performKeyInput {
+            pressKey(Key.DirectionRight)
         }
 
-        composeRule.onNodeWithText("Low").requestFocus()
-        composeRule.onNodeWithText("Low").performKeyInput { pressKey(Key.DirectionLeft) }
-        composeRule.onNodeWithText("Bitrate").assertIsFocused()
-
-        composeRule.onNodeWithText("Auto").requestFocus()
-        composeRule.onNodeWithText("Auto").performKeyInput {
-            pressKey(Key.DirectionLeft)
-        }
-        composeRule.onNodeWithText("Codec").assertIsFocused()
+        assertThat(clicks).isEqualTo(1)
+        composeRule.onNodeWithText("Mute microphone").assertIsFocused()
     }
 
     // Sprint 12 round finding D4: Right on a row whose end is only a mark lost the focus.
@@ -283,17 +284,30 @@ class MenuRowTest {
     }
 
     @Test
-    fun `a button as the trailing takes the focus on Right and Left gives it back to the row`() {
+    fun `a button at the end of a row is not a focus stop either`() {
         composeRule.setContentInKeyboardMode {
-            Specimen { MenuRow("Bitrate", {}, trailing = { Chip("Max", onClick = {}) }) }
+            Specimen {
+                MenuRow("Bitrate", {}, trailing = { Chip("Max", onClick = {}) })
+                MenuRow("Refresh", {})
+            }
         }
         composeRule.onNodeWithText("Bitrate").requestFocus()
 
         composeRule.onNodeWithText("Bitrate").performKeyInput { pressKey(Key.DirectionRight) }
-        composeRule.onNodeWithText("Max").assertIsFocused()
-
-        composeRule.onNodeWithText("Max").performKeyInput { pressKey(Key.DirectionLeft) }
         composeRule.onNodeWithText("Bitrate").assertIsFocused()
+        composeRule.onNodeWithText("Bitrate").performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.onNodeWithText("Refresh").assertIsFocused()
+    }
+
+    @Composable
+    private fun LowHigh() {
+        SegmentedControl(
+            options = listOf("Low", "High"),
+            selected = "Low",
+            label = { it },
+            onSelect = {},
+        )
     }
 
     @Composable

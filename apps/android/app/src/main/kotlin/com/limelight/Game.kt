@@ -642,6 +642,7 @@ class Game :
                     streamView,
                     { streamSession.closePanel() },
                     { mode -> TouchContexts.build(mode, conn, streamView, prefConfig) },
+                    { done -> stopConnectionThen(done) },
                 ),
                 heldKeys,
             )
@@ -2614,6 +2615,12 @@ class Game :
                 StreamSessionFactory.launchRetry(category, attempt, maxAttempts, delayMs)
             )
         }
+    }
+
+    // BOREALIS: stops the connection, then tells [done] (leave)
+    internal fun stopConnectionThen(done: Runnable) {
+        stopConnection()
+        done.run()
     }
 
     private fun stopConnection() {

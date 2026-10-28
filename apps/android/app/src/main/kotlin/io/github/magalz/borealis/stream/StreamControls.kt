@@ -17,4 +17,9 @@ class StreamControls(
     val closePanel: Runnable,
     /** The contexts for a touch mode; null when the mode has none (the touchscreen is off). */
     val buildTouch: (TouchMode) -> Array<TouchContext>?,
+    /**
+     * Stops the connection and runs the [Runnable] when it has stopped, on the thread that stopped
+     * it; at once when no connection runs.
+     */
+    val stopConnection: (Runnable) -> Unit,
 )

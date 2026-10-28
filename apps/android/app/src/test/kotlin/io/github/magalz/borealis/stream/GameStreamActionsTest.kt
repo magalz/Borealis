@@ -108,6 +108,7 @@ class GameStreamActionsTest {
                 builtFor += mode
                 if (mode == TouchMode.OFF) null else replacements
             },
+            stopConnection = {},
         )
 
     private fun actionsFor(target: Activity) =

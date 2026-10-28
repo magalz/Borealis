@@ -1628,8 +1628,10 @@ Steps:
      variance, the loss and the bitrate. The decode time is a number of milliseconds with one
      decimal. The round-trip time comes from the native `getEstimatedRttInfo`: it is a number
      that moves a little, and it does not stay empty. Set Compact and check the line
-     `fps · host ms · net ms`. Set the overlay back to Off before Quit. Source:
-     `strings_overlay.xml` of `:borealis:stream`, `MoonBridge.getEstimatedRttInfo`.
+     `fps · host ms · net ms`. The menu's choice lasts for that stream only
+     (`GameStreamActions.setOverlay` does nothing); only Settings, Video, Performance overlay
+     writes the setting (`borealis_perf_overlay`). Source: `strings_overlay.xml` of
+     `:borealis:stream`, `MoonBridge.getEstimatedRttInfo`.
 5. Audio (S22, TV). Play a sound on the PC during the stream: the host sends no audio while the
    PC is silent (3.25, step 4).
    - Stereo (Settings, Audio, Channels, Stereo (2.0)). Expected: the line
@@ -1727,38 +1729,347 @@ Steps:
 
 ### 3.28 Owner's 30-minute gameplay UAT (Sprint 14)
 
-This is the owner's check, by hand: one real game, on the TV and on the S22, after the checks
-of 3.27. It looks for what a short check misses: a stutter, a drift, a stuck key. Take one game
-that uses a pad and a keyboard and mouse and makes sound, and a running PC with the host.
-Use the 8BitDo Pro 3 in Switch mode for the pad, and a hardware keyboard and a mouse for the
-S22. Keep the time marks. Do not record a host name, an address, a MAC address or a PIN, and
-take no screenshot of the stream (section 5): note what you saw in words.
+This is the owner's end-of-migration run, by hand, after the checks of 3.27. The whole app is Kotlin
+now, so the run plays one real game while the stream options change (Part A, at least 30 minutes of
+play), then runs the flows around the stream (Part B): pairing, a wrong PIN, Add host, Forget,
+Wake-on-LAN, the pinned shortcut, the TV channel, resume and Quit. Run it on the Google TV Streamer,
+with the owner's OK, and on the S22, against LuminalShine on the owner's PC. It needs the owner's
+hands and ears: the pad, the keyboard, the mouse, the touch, the PIN in the Web UI and the PC
+asleep. The orchestrator reads the logcat afterwards. Do not record a host name, an address, a MAC
+address or a PIN, and take no screenshot of the stream (section 5): write the figures that you read
+on the overlay in the results table.
 
-| Minutes | Where | Do | Expect |
-| --- | --- | --- | --- |
-| 0 to 5 | TV | Launch the game. Turn the overlay on (menu, Overlay, Detailed). Choose the codec you want to test in Settings, Video before the launch. | The Starting screen, then the picture. The overlay names the codec and the decoder you chose, 60 fps or the rate you set, and a steady round-trip time. |
-| 5 to 10 | TV | Play with the pad. Use every button, both sticks and the triggers. Let a rumble happen in the game, use gyro aim if the game has it, and look at the battery of the pad where the host shows it. | The inputs are right, with no stuck button. The rumble is felt, and the gyro moves what it should. The battery is shown where the host shows it. |
-| 10 to 13 | TV | Listen. Play music or a scene with sound. Set Channels to 5.1 if the PC offers it. | Clean sound in both channels, in sync with the picture, with no crackle and no delay that grows. |
-| 13 to 18 | S22 | Disconnect on the TV (menu, Disconnect: the game keeps running), then open the same game on the S22, which resumes it. With the keyboard and the mouse, type, use Esc and the arrows, move and click, and use the wheel. Press the Windows key, then release the grab (Ctrl+Alt+Shift+Z) and press the Windows key again. | The game resumes with no conflict screen. Typing and the mouse are right. The Windows key reaches the PC while the stream grabs input, and acts on the S22 when the grab has ended. |
-| 18 to 22 | S22 | Use touch. Try the trackpad mode and then the direct mode (Settings, set before the stream), and the on-screen controller. | Tap is a click, two fingers scroll, and a drag moves the pointer in the trackpad mode (a press and hold of about 650 ms, then a move). The on-screen controller buttons and sticks work. The known limits of section 18 apply. |
-| 22 to 27 | S22 | Go Home with Picture-in-picture on, then expand the window. Go Home again with it off, wait a minute, and open the app again to resume. With the USB driver on and the receiver plugged in, switch the pad off and on in the stream so that the USB prompt opens, and press Home with it open. | The window shrinks to the stream and expands again. Without PiP the stream ends and the resume brings it back with no conflict screen. The window does not enter PiP while the USB prompt is open. |
-| 27 to 30 | S22 or TV | Quit the game from the in-game menu, then launch it again. | "Quitting `<app>`…" shows, then the Library. The new launch starts, or retries and then starts. |
+Before you start:
 
-At the end, end with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the Streamer,
-and put back any setting you changed.
+1. Install the same build on both devices (1.2). Both are paired with the host, and the host is
+   Online. Part B undoes the pairing, so run Part A first.
+2. Pick one game that makes sound, takes a pad and a keyboard and mouse, restarts in about a minute
+   and has moving scenes (a still desktop sends few frames, section 17, O2). Quit closes it and
+   loses unsaved progress, so pick a game where that costs nothing.
+3. Baseline settings on both devices (3.13, step 1). They are the defaults with one change, Video,
+   Performance overlay: Detailed. That is Stream: Resolution 720p (1280x720), Frame rate 60 fps,
+   Bitrate Automatic (10 Mbps), Frame pacing Lowest latency; Video: Codec Automatic, HDR off; Input:
+   Touch Trackpad; Audio: Channels Stereo (2.0); Advanced: Picture-in-picture off; On-screen
+   controls off.
+4. Look at the AV1 tag of the host: the tags of its card, or Host details, Video (3.4). With no AV1
+   tag, AV1 is `not applicable` (3.11, step 4).
+5. Start one logcat capture per device (1.4) with `art:E AndroidRuntime:E` added to the filter. Keep
+   it masked and outside the repository (section 17, P2).
+6. Keep a stopwatch. It runs while you play, from the first frame until you leave the stream. It
+   does not run for the Starting screen, for Quit or for Settings.
 
-Record the result in this table, one row for each step you ran. Use `pass`, `fail` or
-`not applicable`, and write what you saw in the notes. A `fail` needs a note.
+How a block runs:
 
-| Step | Device | Expected | Seen | Pass or fail | Notes |
+- A stream reads the stream settings once, when it starts (`Game.onCreate`,
+  `PreferenceConfiguration.readPreferences`). A change never reaches a stream that runs, and the
+  stream has no Settings screen. Of the stream settings, the in-game menu changes only Overlay,
+  Touch (with no pad), Gamepad mouse and Pointer speed, and only for that session.
+- So a block is: leave the stream, change one group in Settings, launch the game from Apps, play and
+  check. Leave with Quit (menu, "Quit `<game>`", confirm: the game closes and the next start is
+  fresh) or with Disconnect (menu: the game keeps running and the next start resumes it).
+- Quit before a block that changes Resolution, Frame rate, HDR or Channels. The host builds the
+  virtual display at `/launch`, and a resume keeps the old display and rebuilds it at the RTSP mode
+  (contract 7.3 and 7.4). The client sends `mode`, `hdrMode`, `surroundAudioInfo` and
+  `localAudioPlayMode` on `/resume` too (`NvHTTP.launchApp`), but whether the host applies a new
+  Channels value on a resume is not verified: `TODO(verify)`. The Quit keeps that question out of
+  the run. Disconnect before every other block.
+- If the Library reads "Nothing running" after a Disconnect, the host restarted (section 17, D1) and
+  the next launch starts the game anew. Record it: it is not a `fail`.
+- Choosing a Resolution or a Frame rate returns Bitrate to Automatic (3.19, step 1).
+- Open the in-game menu with Back on the TV, with a pull of the handle or Back on the S22, and with
+  Select and Start held when a pad is on the S22 (`strings_hint.xml`). Left and Right can make the
+  menu lose its focus outline (roadmap, Sprint 15): use Up and Down.
+- Each start takes 10 to 20 s, while the host builds the display (section 17, O1).
+
+Where to read the evidence (`PerfFormat.kt`, `strings_overlay.xml`, `SessionAudit.kt`):
+
+- The Detailed overlay: `W×H · fps · codec`, where W×H is the selected resolution (`prefs.width` and
+  `prefs.height`, `StreamSessionFactory.sessionInfo`) and the frame rate, the codec and the HDR
+  format are the negotiated ones (a 10-bit codec reads "HEVC 10-bit HDR"), `Decoder <name>`,
+  `Host processing`, `Network` (the round trip, its variance, the loss, then the measured Mbps) and
+  `Decode`.
+- The Compact overlay: `fps · host ms · net ms · codec`, where fps is the rate that arrives.
+- Menu, Session info: the same video, codec and decoder, and `Bitrate`, the measured rate of the
+  limit in Mbps.
+- Settings, Privacy and diagnostics, Audit trail (3.15): each stream has a SESSION_START (`codec`,
+  `hdr`, `resolution`, `fps`) and a SESSION_END (`reason`, `duration_s`). The durations add up to a
+  check on the stopwatch.
+
+#### Part A: the game, with the stream options changing
+
+Planned play is 44 minutes. If AV1, 5.1 and HDR do not apply, it is still 37. The minute marks below
+are the plan; the total is what the stopwatch shows.
+
+- **A1. Baseline (TV, 0 to 2).**
+  - Launch the game with the baseline settings and play with the pad, with the sound on.
+  - Expected: the Starting screen, then the picture (3.9). The overlay reads `1280×720 · 60 fps`,
+    with a codec, a decoder name and a steady round trip. The Bitrate row in Settings reads
+    "Automatic (10 Mbps)" and Session info reads "of 10 Mbps". Write down the codec, the decoder,
+    the round trip and the measured Mbps: the other blocks compare with them. Logcat has
+    `Audio channel config: 0xC` and `Received first audio packet` (stereo).
+- **A2. Resolution (TV, 2 to 6).**
+  - Quit before each change. Settings, Stream, Resolution: "1080p (1920x1080)", play 2 minutes, then
+    "4K (3840x2160)", play 2 minutes.
+  - Expected: the overlay reads `1920×1080 · 60 fps`, then `3840×2160 · 60 fps`. The Bitrate row in
+    Settings reads "Automatic (20 Mbps)", then "Automatic (80 Mbps)" (`DefaultBitrate.kt`). The
+    picture stays smooth, `Decode` stays a few ms and the loss stays near 0 %. A "Slow connection to
+    PC" notice at 80 Mbps is a finding: record it. The TV reports one 1920x1080 mode (section 11,
+    A3), so 4K is decoded and scaled: this tests the decoder and the network, not the sharpness.
+    `TODO(verify)`: 4K at 60 fps on the Streamer; no round recorded it.
+- **A3. Codec (TV, 6 to 12).**
+  - Quit, then Resolution back to 1080p (Bitrate: Automatic, 20 Mbps). Settings, Video, Codec:
+    H.264, then AV1 ("Experimental") where the host offers it, then HEVC, 2 minutes each, with a
+    Disconnect between them.
+  - Expected: the overlay names "H.264", "AV1" and "HEVC", and the decoder name changes with the
+    codec: record each. Logcat has `Using codec <decoder> for hardware decoding` with `video/avc`,
+    `video/av01` and `video/hevc` (`MediaCodecDecoderRenderer.kt`), and for HEVC the line
+    `HEVC SPS: profile=Main chroma=4:2:0 depth=8/8`, which H.264 does not have (3.11, steps 2 and
+    3).
+  - AV1: the toast "No AV1 decoder found" means the device has none: `not applicable`. The Streamer
+    has hardware AV1 decoders (`c2.mtk.av1.decoder.lowlatency`) but logged "No AV1 decoder found" in
+    Sprint 2 (section 7). `findAv1Decoder` enables a decoder that is not on the whitelist when AV1
+    is forced. `TODO(verify)`: what the Streamer does.
+- **A4. Frame pacing (TV, 12 to 16).**
+  - Disconnect between the modes, and set Codec back to Automatic first. Settings, Stream, Frame
+    pacing: Lowest latency, Balanced, Balanced with fps limit and Smoothest video, 1 minute each.
+  - Expected: each mode plays with no freeze. Smoothest video adds a delay between the pad and the
+    picture (its row says "May add a lot of latency"). With Balanced with fps limit on a 60 Hz TV
+    the overlay reads 59 fps, and logcat has `Adjusting FPS target for screen to 59` (`Game.kt`;
+    section 17, 720p at 59 fps). The host log lines of that mode are in 3.7.
+- **A5. Audio (TV, 16 to 19).**
+  - Frame pacing back to Lowest latency, then Settings, Audio, Channels: "5.1 surround" (Quit
+    first), 2 minutes. Then "Play audio on the PC" on (off by default), 1 minute, after a
+    Disconnect. `TODO(verify)`: whether a resume applies it (contract 7.1: `/resume` updates
+    `localAudioPlayMode` only when it is present and no session is active); Quit instead if the
+    sound does not also play on the PC. The game must make sound: the host sends no audio while the
+    PC is silent (3.25, step 4).
+  - Expected: with 5.1, logcat has `Audio channel config: 0xFC` (`AudioFormat.CHANNEL_OUT_5POINT1`)
+    and the speaker test of the PC plays each speaker in its place (3.27, step 5). `TODO(verify)`:
+    how the owner's PC offers 5.1; `not applicable` where it does not. In both, the sound has no
+    crackle and no delay that grows, and logcat has no run of `Too much pending audio data` after
+    the first seconds. With Play audio on the PC, the sound also plays on the PC.
+- **A6. Pad (TV, 19 to 23).**
+  - Channels and Play audio on the PC stay as A5 left them: this block does not depend on them.
+    Settings, Gamepad, Motion sensors on (the default; the row is hidden below Android 12). Connect
+    the 8BitDo Pro 3 in Switch mode (3.26, step 7). Play 4 minutes: every button, both sticks, the
+    triggers and the D-pad; a rumble in the game; gyro aim, or a host test of the gyro (Steam's
+    controller test); the battery, where the host shows it.
+  - Hold Select and Start for 1 s: the menu opens, and B closes it. Hold Start: the gamepad mouse
+    turns on or off (3.19, item (h); 3.22, step 13). Leave with the quit combo: Start, Select, LB
+    and RB together, then let all four go (3.20, step 3).
+  - Expected: the inputs are right and no button sticks. The rumble is felt, and the gyro moves what
+    it should. `TODO(verify)`: where the host shows the battery (3.27, step 10). The combo ends the
+    stream with the menu closed and Steam not opened (3.22, step 13), and the game keeps running on
+    the PC.
+- **A7. Bitrate (TV, 23 to 27).**
+  - Settings, Stream, Bitrate (a slider; one D-pad press moves 5 Mbps): 5 Mbps, then 60 Mbps, 2
+    minutes each, with a Disconnect between them. Then Quit.
+  - Expected: Session info reads "of 5 Mbps", then "of 60 Mbps". The measured Mbps of the Network
+    line stays at or under the limit. In a fast scene the picture smears or blocks at 5 Mbps and is
+    clean at 60 Mbps. The loss stays near 0 %. A "Poor connection to PC" or "Slow connection to PC"
+    notice means the link could not carry the rate (`Game.connectionStatusUpdate`): record it with
+    the loss.
+- **A8. Pad (S22, 27 to 29).**
+  - Pair the 8BitDo Pro 3 over Bluetooth: the S22 in landscape becomes a handheld (3.20, step 7).
+    Launch the game and play 2 minutes: rumble, gyro and battery.
+  - Expected: as A6. Section 18, step 7, did not report the rumble and the motion of the Pro 3 on
+    their own on the S22: record them here. Switch the pad off afterwards: the phone layout returns.
+- **A9. Keyboard and mouse (S22, 29 to 32).**
+  - Open a Notepad test file on the PC before the block (section 5). Connect a keyboard and a mouse,
+    on Bluetooth or USB. Play 3 minutes with them: move, aim, click and the wheel. Switch to the
+    test file with Alt+Tab (hold Alt and press Tab again if the first Tab is lost), type a short
+    text, use Esc and the arrows, and switch back. Then, as in 3.27, step 9: with the input grabbed,
+    press the Windows key; release the grab with Ctrl+Alt+Shift+Z and press the Windows key and
+    Alt+Tab again; grab again.
+  - Expected: the typing and the mouse are right (3.26, step 6). The Windows key and Alt+Tab reach
+    the PC while the grab is on, and act on the S22 once it is released (3.27, step 9). The first
+    Tab of Alt+Tab is lost and Windows opens its Alt menu: known (section 18, finding 4). Record
+    what the PC does; it is a `fail` only if the keys reach the S22.
+- **A10. Touch (S22, 32 to 36).**
+  - Pad off. Settings, Input, Touch: Trackpad (the default), then Direct, 2 minutes each, with a
+    Disconnect between them. Set it in Settings: a choice in the menu lasts for that session only
+    (3.26, step 2).
+  - Expected: Trackpad: a tap clicks, two fingers scroll, and a drag is a press and hold of about
+    650 ms without moving, then a move (section 18, finding 2; 3.26, step 3). Direct: a tap is a
+    left click, a long press is a right click, two fingers scroll and a drag moves the pointer. A
+    long press followed by a move selects text on the PC instead of dragging (section 18, finding 3;
+    3.26, step 2).
+- **A11. On-screen controller (S22, 36 to 38).**
+  - Settings, On-screen controls, Show on-screen controls on (off by default; the group is on the
+    phone only). Play 2 minutes with it: A, B, X, Y, the D-pad, both sticks, the triggers, the
+    bumpers, Start, Select, Guide and a hold of 3 s. Change Opacity once (90 % by default) in the
+    same visit.
+  - Expected: as 3.26, steps 4 and 5; the known limits of section 18 apply. Turn the controls off
+    afterwards.
+- **A12. Frame rate (S22, 38 to 41).**
+  - Quit before each change. Settings, Stream, Frame rate: 30 fps, play 1 minute, then 120 fps, play
+    2 minutes. 90 and 120 fps are offered when One UI's Motion smoothness is Adaptive (up to 120
+    Hz), or when Advanced, Unlock all frame rates is on (section 11, A4 and A7).
+  - Expected: the overlay reads `1280×720 · 30 fps`, then `1280×720 · 120 fps`. The Bitrate row in
+    Settings reads "Automatic (5 Mbps)", then "Automatic (14 Mbps)". The Compact overlay shows the
+    rate that arrives, near the set one in a moving scene. `TODO(verify)`: 120 fps against the
+    host's virtual display.
+- **A13. HDR (S22, 41 to 44).**
+  - Quit first. Settings: Stream, Frame rate back to 60 fps (the S22 is at 120 fps after A12);
+    Video, HDR on (the row is hidden on the Streamer's TV, which is `not applicable`) and Codec HEVC
+    (3.12). Play 3 minutes in a game with HDR on the PC (`TODO(verify)`: which game; 3.12, step 1).
+  - Expected: the overlay reads "HEVC 10-bit HDR" and 60 fps. Logcat has
+    `HEVC SPS: profile=Main10 chroma=4:2:0 depth=10/10` and no WARN
+    `the stream is 10-bit but the decoder does not declare HEVC Main10`. No toast "Display does not
+    support HDR10" or "Decoder does not support HDR10 profile" shows, and the picture is not black
+    or washed out. The overlay shows the negotiated 10-bit format, not the host's HDR state
+    (contract 9.2 and 9.3): `TODO(verify)`: how to check that state (3.12, step 5). With AV1, where
+    the host offers it: as 3.27, step 3. Then Quit.
+
+#### Part B: the flows around the stream
+
+The stream time of Part B does not count for Part A. Run B1 to B4 in this order, because each one
+leaves the state that the next one needs.
+
+- **B1. Forget (TV, S22).**
+  - Hosts, the host Options of the PC (long-press its card on the S22; on the TV hold OK, or press X
+    or Menu on a pad), Forget (3.3, steps 1 and 2).
+  - Expected: the dialog reads "Forget `<name>` on this device? The PC may keep trusting this device
+    until you remove it in the LuminalShine Web UI (Clients page)." The card goes. The host may not
+    come back as "Found on this network" until the app is closed and opened again: known (roadmap,
+    Sprint 15), so add it with B2. The log has `unpair not confirmed status=404` (3.3, steps 3 and
+    4).
+  - Owner: remove the device in the Web UI, on the Clients page (3.3, step 5), so that B4 pairs from
+    scratch.
+- **B2. Add host, manual entry (TV, S22).**
+  - Owner: Hosts, Add host, type the address of the PC (do not record it), Add host. On the TV, OK
+    on the field opens the keyboard (section 11, D1). On the S22 the keyboard opens at once.
+  - Expected: "Adding host", then Hosts with the message "`<host>` added. Pair it to see its apps."
+    and the card of the PC: "Not paired", with Pair. The message reads the same for a paired host
+    (roadmap, Sprint 15): not a `fail`.
+  - Errors, one try each (`strings_addhost.xml`): an empty field gives "Enter an IP address or a
+    host name."; a typo gives "Unable to resolve this address. Check it for typos."; a LAN address
+    that no device uses gives "Unable to connect to the specified computer. Make sure the required
+    ports are allowed through the firewall." (section 10).
+- **B3. Wrong PIN (S22; the TV is optional).**
+  - Owner: Pair on the card and read the PIN on the device. In the Web UI, on the Clients page,
+    enter another four-digit PIN (3.2, steps 1 to 3).
+  - Expected: "The PIN was wrong.", with no 404 text and no "Pairing failed.". Logcat has
+    `unpair not confirmed status=404` (`TODO(verify)`: that it still appears, 3.2, step 4). The
+    Audit trail has PAIRING_FAILURE with `reason=wrong_pin`.
+  - Choose "Try again". On 26.10.0-beta.1 the host keeps the failed session for up to 5 minutes, so
+    today the retry shows a new PIN for a moment and then "Another pairing is already in progress on
+    the PC." with Try again (section 17: the same as before Sprint 12). This is the host's issue,
+    planned for Sprint 16 (roadmap, "LuminalShine wrong-PIN fix"): not a `fail`. Record the texts,
+    and that the app does not loop (3.2, step 6).
+  - Owner: restart LuminalShine on the PC, or wait 5 minutes, before B4.
+  - Open point of section 17 (S22, night of 2026-10-24): after a wrong PIN the S22 once paired a few
+    minutes later with no PIN entered. Enter no PIN after the failure. After the restart, turn the
+    screen off and on once and read the card before B4. Expected: "Not paired". If it pairs, record
+    the time.
+- **B4. Pairing (TV, S22).**
+  - Owner: Pair on the card, read the PIN, enter it in the Web UI with a device name that has no
+    "xbox" or "webos" (3.1, steps 1 to 3). Do not copy the PIN.
+  - Expected: "Paired", then the Apps of the PC open, and the Web UI lists the device under the
+    typed name (3.1, step 4). The Audit trail has PAIRING_SUCCESS.
+- **B5. Wake-on-LAN (S22; the TV is optional).**
+  - The PC must wake on a magic packet, and the app must know its MAC address: Host details lists
+    "MAC address (for wake)" once the app has seen the PC on (3.4). Do not record it.
+    `TODO(verify)`: the wake settings of the owner's PC.
+  - Owner: put the PC to sleep. Wait until its card reads "Offline" (`TODO(verify)`: how long that
+    takes). Then press OK on the card, or tap it: the action is Wake. Or open the host Options and
+    choose Wake ("Send a Wake-on-LAN packet to the PC.").
+  - Expected: the message "Wake-up sent. The PC can take a minute to appear.", then the PC wakes and
+    the card turns Online with no restart of the app. Record the time. "Could not send the wake-up."
+    is a `fail`. Without a known MAC address the message is "Borealis does not know this PC's
+    network address yet. Pair it once while it is on." (`strings_hosts.xml`).
+- **B6. Pinned shortcut (S22).**
+  - Apps, long-press the tile of the game, "Add to home screen" ("Put a shortcut to `<game>` on your
+    home screen."), then confirm in the launcher. "Your launcher did not add the shortcut." is a
+    `fail`.
+  - Expected: the icon is the box art of the game when the PC sent it, otherwise the Borealis
+    monitor icon (3.19, items (e) and (f)).
+  - The dynamic host shortcut: long-press the Borealis icon in the launcher. Expected: a shortcut
+    for the host with the Borealis monitor icon (`ic_pc_scut`; section 11, B4). Tap it: it opens the
+    Apps of that host (the old PC shortcut, section 10).
+  - With Borealis running: tap the pinned shortcut. Expected: the stream screen opens at once, on
+    the right game (section 17).
+  - With Borealis not running (swipe it out of Recents): tap the pinned shortcut. Expected today:
+    the toast "Computer is offline" and no stream, and a second try inside the app starts it. This
+    is the known fault of the launch request (roadmap, Sprint 15, "A pinned app shortcut fails
+    when Borealis is not running"): not a `fail`.
+  - TV: `not applicable` unless its launcher takes the pin (`TODO(verify)`).
+- **B7. TV channel (Streamer).**
+  - The Streamer's launcher shows no third-party preview-channel rows (section 11, TV channel spike;
+    section 17), so there is no Borealis entry to open: `not applicable`. A device whose launcher
+    shows app channels would open the stream of the right host from the entry; none is at hand.
+  - Instead, check the box art through the provider (3.21, step 7). Expected, as in section 17: the
+    poster read through the provider has the md5 of the cache file; an app ID that is not a number
+    gives `FileNotFoundException: not an app id`; a host ID with `../` gives `not a host id`.
+- **B8. Resume from another session (TV, then S22).**
+  - Start the game on the TV, play 1 minute and Disconnect (3.10). On the S22, Hosts shows the
+    Continue row, "Running on `<host>`", with Resume; or open Apps and choose Resume on the tile of
+    the running game.
+  - Expected: no conflict screen. The stream resumes where the game is (`/resume`, "Resumed existing
+    game session"), with the first frame about 2 s after the host answers. The host takes 10 to 20 s
+    to answer (section 17, O1). If the Library reads "Nothing running", the host restarted (section
+    17, D1): record it.
+  - On the S22, go Home with Picture-in-picture off. Expected: the stream ends, the game keeps
+    running, Borealis opens on the Library, and a new resume works with no conflict screen (3.27,
+    step 8). Picture-in-picture and the USB prompt are 3.27, step 7.
+- **B9. Quit (TV, S22).**
+  - In a stream, open the menu. Expected: "Quit `<game>`" with "Closes `<game>` on the PC." and
+    "Unsaved progress in it is lost."; its confirmation is "Quit `<game>`?", with Cancel focused
+    (3.22, step 5). Choose Cancel once, then Quit.
+  - Expected: "Quitting `<game>`…" until the host answers, then the Library with "Nothing running".
+    Record the time: 5 to 17 s on 26.10.0-beta.1 (section 17, O4; roadmap, Sprint 15). Logcat shows
+    `Connection terminated: -1` at error level from `Borealis.UPSTREAM`. With the tag
+    `ActivityTaskManager` added to the 1.4 filter (optional), it also shows the system's
+    `Duplicate finish request`. Both are known (roadmap, Sprint 15), not a `fail`.
+  - From Apps: start the game, leave with Disconnect, open the actions of its tile (long-press on
+    the S22, hold OK on the TV), choose Quit `<game>` and confirm. Expected: "App quit." and
+    "Nothing running" (3.6, step 2).
+  - Launch the game again at once. Expected: it starts, or shows "The host is still restoring the
+    display after the previous stream. Retrying in N s (retry M of K)." and then starts (3.6). No
+    retry is "not reproduced", not a `fail`.
+
+At the end:
+
+- Read the Audit trail on each device (3.15, step 5). Expected: a SESSION_START and a SESSION_END
+  for each stream, with the codec, the resolution and the frame rate of its block; PAIRING_FAILURE,
+  PAIRING_SUCCESS and UNPAIR_NOT_CONFIRMED for B1 to B4; no PIN.
+- Put the settings back: Resolution and Frame rate to the baseline (this returns Bitrate to
+  Automatic), Codec Automatic, HDR off, Frame pacing Lowest latency, Channels Stereo, Play audio on
+  the PC off, Touch Trackpad, On-screen controls off, and the Performance overlay as it was. Remove
+  the pinned shortcut if it is not wanted.
+- End with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the Streamer.
+
+#### Results of 3.28
+
+Record the result in this table, one row for each block and step you ran. Use `pass`, `fail` or
+`not applicable`, and write what you saw in the notes, with the figures that you read on the
+overlay. A `fail` needs a note.
+
+| Block or step | Device | Expected | Seen | Pass or fail | Notes |
 | --- | --- | --- | --- | --- | --- |
-| 0 to 5, start and codec | TV | | | | |
-| 5 to 10, pad, rumble, gyro and battery | TV | | | | |
-| 10 to 13, audio | TV | | | | |
-| 13 to 18, keyboard and mouse | S22 | | | | |
-| 18 to 22, touch | S22 | | | | |
-| 22 to 27, background, PiP and reconnect | S22 | | | | |
-| 27 to 30, Quit and a new launch | S22 or TV | | | | |
+| A1 Baseline | TV | 720p, 60 fps, 10 Mbps; codec and decoder noted | | | |
+| A2 Resolution | TV | 1080p at 20 Mbps, 4K at 80 Mbps, smooth | | | |
+| A3 Codec | TV | H.264, AV1 where offered, HEVC; a decoder for each | | | |
+| A4 Frame pacing | TV | four modes play; 59 fps with the limit | | | |
+| A5 Audio | TV | stereo, 5.1 (`0xFC`), sound on the PC | | | |
+| A6 Pad | TV | inputs, rumble, gyro, battery; menu; quit combo | | | |
+| A7 Bitrate | TV | 5 Mbps blocky, 60 Mbps clean | | | |
+| A8 Pad | S22 | as A6, Bluetooth | | | |
+| A9 Keyboard and mouse | S22 | typing, mouse, Windows key and grab | | | |
+| A10 Touch | S22 | Trackpad and Direct gestures | | | |
+| A11 On-screen controller | S22 | all controls, Opacity | | | |
+| A12 Frame rate | S22 | 30 and 120 fps; 5 and 14 Mbps | | | |
+| A13 HDR | S22 | "HEVC 10-bit HDR", right colours | | | |
+| Total play time | TV, S22 | at least 30 minutes (stopwatch, and the SESSION_END durations) | | | |
+| B1 Forget | TV, S22 | dialog text; the card goes | | | |
+| B2 Add host | TV, S22 | "Not paired" card; the three errors | | | |
+| B3 Wrong PIN | S22 | "The PIN was wrong."; known 409 retry | | | |
+| B4 Pairing | TV, S22 | "Paired"; Apps open | | | |
+| B5 Wake-on-LAN | S22 | "Wake-up sent."; the card turns Online | | | |
+| B6 Pinned shortcut | S22 | opens when running; known toast when not | | | |
+| B7 TV channel | TV | `not applicable`; the poster provider checks | | | |
+| B8 Resume | TV, S22 | no conflict screen; Home and resume | | | |
+| B9 Quit | TV, S22 | "Quitting…", then "Nothing running"; retry text | | | |
 
 ## 4. Results templates
 

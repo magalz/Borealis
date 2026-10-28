@@ -742,9 +742,11 @@ Items:
 ### Sprint 14: Kotlin migration, video, audio and the stream activity
 
 Converted in the phase branch `phase/s14-kotlin-stream`, one merged task per area. Every
-conversion is merged. The agent part of the device round ran on 2026-10-28, and the owner's part
-and the UAT are to be run. No inherited Java is left: `git ls-files '*.java'` lists nothing, and
-`apps/android/app/src/main/java` no longer exists.
+conversion is merged. The device round and the owner's UAT ran on 2026-10-28 and found no
+Sprint 14 regression; the results are in
+[device-validation section 19](development/device-validation.md#19-results-sprint-14). No inherited
+Java is left: `git ls-files '*.java'` lists nothing, and `apps/android/app/src/main/java` no
+longer exists.
 Owner decisions of 2026-10-26 and 2026-10-27:
 
 - **MoonBridge first.** [ADR 0060](adr/0060-convert-moonbridge-to-a-kotlin-object.md)
@@ -934,22 +936,26 @@ Items:
 - **Partly done.** Test size and duplication, moved here from the Sprint 9 quality review. The
   tests of every module follow the detekt rules now (see #91). The duplicates across modules
   need `testFixtures` build changes, and are item (c) of the Sprint 14 block of the backlog.
-- **To be run: the owner's part and the UAT.** The device round, on the Google TV Streamer with
+- **Run: the device round and the owner's UAT.** The device round, on the Google TV Streamer with
   the owner's OK and on the S22: each codec the devices decode, HDR, audio, the performance
   overlay, the Starting and Quitting screens, a second device during a launch,
   picture-in-picture, the Samsung keyboard capture, the rare natives (JNI binds each one at its
   first call), CheckJNI (the debug build turns it on by itself), Quit, and an upgrade over the
   `main` build. The checks are in
   [device-validation section 3.27](development/device-validation.md#327-sprint-14-checks). The
-  agent part ran on 2026-10-28 and found no Sprint 14 regression. Its results are in
-  [section 19](development/device-validation.md#19-results-sprint-14), and two items went to the
-  backlog (item (d) of the Sprint 14 block) and one question to Sprint 15. The owner's part of
-  3.27 (the pads, the keyboard, the touch, the USB prompt, the hearing and the picture) and the
-  owner's end-of-migration UAT are pending. The UAT is
+  round ran on 2026-10-28 and found no Sprint 14 regression: the agent part first, then the
+  owner's part (the pads, the keyboard, the touch, the USB prompt, the hearing and the picture)
+  and the owner's end-of-migration UAT, with the orchestrator reading the logs and running some
+  steps. The UAT is
   [section 3.28](development/device-validation.md#328-owners-30-minute-gameplay-uat-sprint-14):
-  at least 30 minutes of play on one game while the stream options change (resolution, frame
-  rate, bitrate, codec, HDR, frame pacing, audio and input), then pairing, a wrong PIN, Add host,
-  Forget, Wake-on-LAN, the pinned shortcut, the TV channel, resume and Quit.
+  play on one game while the stream options change (resolution, frame rate, bitrate, codec, HDR,
+  frame pacing, audio and input), then pairing, a wrong PIN, Add host, Forget, Wake-on-LAN, the
+  pinned shortcut, the TV channel, resume and Quit. The results are in
+  [section 19](development/device-validation.md#19-results-sprint-14). The findings went to
+  Sprint 15, to Sprint 16 and to the backlog (item (d) of the Sprint 14 block), and the host
+  crashed twice, the known #204 (see the [host-side items](#host-side-items-luminalshine)).
+  Wake-on-LAN could not be tested with the PC on Wi-Fi; it needs Ethernet, or Wi-Fi wake
+  support, and a sleep that holds.
 
 ### Sprint 15: The stream screens and glass
 
@@ -1011,9 +1017,11 @@ Planned, not started.
   the menu is closed and opened again. It happens often with the analog stick. Check
   where the focus goes, and whether D4 of the round (keys from the phone not
   reaching Quit) is the same cause.
-- **Add host says "Pair it" for a host that is already paired.** Found in the Sprint
-  12 round (2026-10-24); the owner put it here. `shell_host_added` shows for any
-  added host. Word it by the host's pairing state.
+- **Add host says "Pair it" for a host that is already paired, and does not say that
+  the host is already added.** Found in the Sprint 12 round (2026-10-24); the owner put
+  it here. `shell_host_added` shows for any added host. Word it by the host's pairing
+  state. In the Sprint 14 UAT (2026-10-28) the owner added a host that was already added
+  or paired and got no word about it: say "already added" or "already paired".
 - **Back from Apps to Hosts plays a shrinking animation.** Found by the owner in the
   Sprint 12 round (2026-10-24), on the TV and the phone. The other screens of the
   Library fade (`FadingNavHost` in `LibraryNavHost.kt`). Find where the shrink comes
@@ -1032,6 +1040,15 @@ Planned, not started.
   stays for a different app. A yes changes
   [UC-003](use-cases/0003-join-or-replace-a-running-app.md), where every choice is explicit. See
   [device-validation section 19](development/device-validation.md#19-results-sprint-14).
+- **Disconnect gives no feedback.** Found in the Sprint 14 UAT (owner, 2026-10-28). After
+  Disconnect from the in-game menu the Library returns at once, and it looks as if nothing
+  happened. Add a "Disconnecting from `<app>`…" screen like the Quitting one (see
+  "Connecting and disconnecting screens" above). See
+  [device-validation section 19](development/device-validation.md#19-results-sprint-14), U1.
+- **A keyboard and mouse combo opens the in-game menu.** Found in the Sprint 14 UAT (owner,
+  2026-10-28), in the keyboard and mouse block on the S22. The menu opens today with Back, a pull
+  of the handle on the phone, or Select and Start held on a pad. The owner wants a combo of the
+  keyboard and the mouse that opens the in-game side menu too. Choose the combo.
 
 ### Sprint 16: SecOps
 
@@ -1060,7 +1077,10 @@ release. Sprint 16 is hardening and security testing.
   again in the Sprint 12 round (2026-10-24): a retry shows a new PIN for a moment,
   then the "try again" screen. The app log shows twelve attempts one after another,
   each answered 409 within 0.1 s, about 0.7 to 21 s apart; who started each is not
-  recorded. Whether the client should wait on 409 `IN_PROGRESS` is for planning. The
+  recorded. Whether the client should wait on 409 `IN_PROGRESS` is for planning. On
+  2026-10-28 (Sprint 14 UAT) the owner saw the lockout as a loop: each Try again, or a
+  tap on the card, shows a PIN for about 1 s and then "Another pairing is already in
+  progress on the PC."; the log has one request for each attempt, none automatic. The
   fix:
   - Fix A: a fresh phase 1 from the same peer address and the same client
     certificate, after the PIN was applied, ends the old exchange as FAILED and
@@ -1785,22 +1805,60 @@ pins the item.
       formatted".
   - Robolectric has 39 distinct configurations at the end of Sprint 14 (41 before `s14-tests-app`).
     The limit is 42 sandboxes, so a new one needs a look at what the tests share.
-- **(d) Found in the Sprint 14 device round (2026-10-28).** The owner put both in the backlog
-  on 2026-10-28. Nothing here is scheduled, and none is a Sprint 14 regression. The results
-  are in [device-validation section 19](development/device-validation.md#19-results-sprint-14).
-  - **Audio runs on the S22.** `AndroidAudioRenderer` drops a decoded packet while 40 ms or
-    more of audio are pending (`PENDING_AUDIO_LIMIT_MS`, the upstream rule, which bounds the
-    latency), and logs "Too much pending audio data". LuminalShine sends audio only while the PC
-    plays sound, so each sound after silence arrives at once. On the S22 the queue reaches about
-    90 ms and about 14 packets are dropped (the log lines of one run), which may cut the start of
-    short sounds. The TV does not show it, and the `main` build does the same. Possible ways: ask
-    the host for continuous audio, or a short start buffer.
+- **(d) Found in the Sprint 14 device round (2026-10-28).** The owner put these in the backlog
+  on 2026-10-28: the audio runs and `findExternalAddressIP4` from the agent part, the rest from
+  the owner's part and the UAT. Nothing here is scheduled, and none is a Sprint 14 regression.
+  The results are in [device-validation section 19](development/device-validation.md#19-results-sprint-14);
+  each entry names its source there (the rows of the table, and the findings U1 to U12).
+  - **Audio runs on the S22 and on the TV.** `AndroidAudioRenderer` drops a decoded packet while
+    40 ms or more of audio are pending (`PENDING_AUDIO_LIMIT_MS`, the upstream rule, which bounds
+    the latency), and logs "Too much pending audio data". LuminalShine sends audio only while the
+    PC plays sound, so each sound after silence arrives at once. On the S22 the queue reaches
+    about 90 ms and about 14 packets are dropped (the log lines of one run), which may cut the
+    start of short sounds. On the S22 the `main` build does the same. The agent part did not see
+    it on the TV, but the owner's UAT did, with the audio of a game: the owner heard a loss in the
+    first seconds of each stream (A3), and stutters at 1080p (A2). The log has the runs at the
+    start of the stream and in mid-play, with no network loss: 07:57:52 to 07:58:04 and 07:58:16
+    to 07:58:21 at 1080p (A2, pending 45 to 65 ms), and 08:20:00 to 08:20:12 with Balanced frame
+    pacing (A4). The cause of the mid-play runs is not known. Possible ways: ask the host for
+    continuous audio, or a short start buffer, and look at the mid-play runs on their own
+    (finding U2).
+  - **Audio behind the picture on the TV.** The owner hears the audio after the picture (lip
+    sync) in every channel layout, stereo too (A5, finding U3). The owner put it in the backlog,
+    and no A/B with `main` was run: "the aim now is to see that everything works as before".
   - **`findExternalAddressIP4` with a VPN.** It is not reached on the LAN:
     `ComputerManagerService.populateExternalAddress` calls it only when the active network is a
     VPN (the same structure as the inherited Java and upstream), so the round did not reach it
     (see [device-validation section 3.27](development/device-validation.md#327-sprint-14-checks),
     step 10). Test it with a VPN on the device (Tailscale is a VPN on Android): the Library
     finds the host, and the log has no JNI error.
+  - **The "Audio effects" text.** The setting reads "Let system audio effects work while you
+    stream. This can add latency." (`settings_audio_fx_summary` in `strings_settings_ui.xml` of
+    `:borealis:settings`), and the owner found it unclear. Say what it does: it lets the device's
+    equalizer and sound effects act on the stream, and it uses the slower audio path, because
+    `AndroidAudioRenderer` skips the low-latency track when audio effects are on
+    (`enableAudioFx && lowLatency`). See finding U4.
+  - **The Add host field keyboard.** The owner wants a numeric-style keyboard, with `.`, `/` and
+    `:` at hand, instead of the full keyboard, if Android allows it. `AddHostScreen.kt` already
+    sets `KeyboardType.Uri`, so check what that gives on the S22 and on the TV (the keyboard of
+    Google TV may ignore it), and whether another input type is possible. Host names must still
+    be typeable. See B2 and finding U6.
+  - **Pad battery.** No battery reaches the PC. By default the host makes the pad an Xbox 360
+    controller, which has no battery, and with DualShock 4 emulation ViGEmBus makes a wired (USB)
+    pad, which has none either. The client sends the battery state (`sendControllerBatteryEvent`,
+    3.27 step 10). Investigate on the host side. See A6, C5 and finding U7.
+  - **Pad gyro.** The gyro of the 8BitDo Pro 3 works on Windows (Steam's controller test), but
+    neither Android device exposes it to the app: the Streamer sees the pad through the USB
+    receiver as a plain HID gamepad (no sensor in `dumpsys input`), and the S22 sees it in the
+    pad's 8BitDo mode. Try Switch mode over Bluetooth on the S22. Run the Motion fallback check
+    (the phone's sensors to a DualShock 4) with a pad connected: it did not run in the UAT,
+    because no pad reached the host in the streams of 10:29 and 10:35. See A8, C5 and finding U8.
+  - **A sample vibration.** When a vibration option is turned on in Settings, give a short sample
+    vibration, so that its effect can be felt. See finding U9.
+  - **TV focus after the host Options sheet.** After the sheet (Details and Forget) was closed
+    with Back over the Apps screen, no node had focus, and the D-pad did nothing until another
+    Back, which went to Hosts with the focus on the Continue row. The owner had left the sheet
+    open in B1 and B4. It is Library code, not Sprint 14. See finding U11.
 
 ## Host-side items (LuminalShine)
 
@@ -1819,6 +1877,6 @@ ones are #198, #201, #204 and #205.
 | [NortheBridge/luminalshine#201](https://github.com/NortheBridge/luminalshine/issues/201) | Issue | A second client leaving a shared app ends the first client's session (per-client virtual display). See [UC-003](use-cases/0003-join-or-replace-a-running-app.md). |
 | [NortheBridge/luminalshine#202](https://github.com/NortheBridge/luminalshine/issues/202) | Issue | A long `/launch` blocks every other HTTPS GameStream request until it finishes. Fixed on the host by #203, in 26.10.0-beta.1 (release notes). See the [host contract](host-contract/luminalshine.md). |
 | [NortheBridge/luminalshine#203](https://github.com/NortheBridge/luminalshine/pull/203) | PR | Fix for #202. Merged on 2026-10-20 and shipped in 26.10.0-beta.1 (release notes). |
-| [NortheBridge/luminalshine#204](https://github.com/NortheBridge/luminalshine/issues/204) | Issue | The host process crashes after the virtual display cleanup of an ended session. See the [host contract](host-contract/luminalshine.md). |
+| [NortheBridge/luminalshine#204](https://github.com/NortheBridge/luminalshine/issues/204) | Issue | The host process crashes after the virtual display cleanup of an ended session. Seen again twice on 2026-10-28, at 06:58:56 and 09:16:06 (exception `0x20474343`, a minidump each time; the host restarted itself): see [device-validation section 19](development/device-validation.md#19-results-sprint-14). See the [host contract](host-contract/luminalshine.md). |
 | [NortheBridge/luminalshine#205](https://github.com/NortheBridge/luminalshine/issues/205) | Issue | A second client's resume fails the RTSP tag check while the first client's launch is still setting up. See the [host contract](host-contract/luminalshine.md). |
 | Wrong-PIN lockout on 26.10.0-beta.1 | Finding | After a wrong PIN, the host keeps the pairing session, and every retry gets 409 for up to 5 minutes. Restarting LuminalShine clears it. Seen live on 2026-10-21 and checked in source at `e2662a44`. Not filed upstream yet. See the [host contract](host-contract/luminalshine.md) and [Sprint 16](#sprint-16-secops). |

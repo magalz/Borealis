@@ -137,8 +137,9 @@ crash notice, which cannot be triggered. The results are in
 9. **Detekt type analysis.** Done (merge `65f6b3a9`, fix merges `933f368f`,
    `67cef8eb` and `b72163d3`, baselines removed in commit `50854eda`). Every
    Android module runs detekt with type analysis. The 116 findings are fixed,
-   except that `InjectDispatcher` and `LongParameterList` are no longer reported
-   in test sources (see Sprint 14). `MatchingDeclarationName` is off, because
+   except that `InjectDispatcher` and `LongParameterList` were not reported
+   in test sources until Sprint 14 turned them back on (see Sprint 14).
+   `MatchingDeclarationName` is off, because
    Compose files are named after the composable. `detekt.use.worker.api=true` is
    set.
 10. **Memtrace rule.** Done (merge `599fed98` and commit `7f7b7721`). The index
@@ -550,8 +551,13 @@ inherited Java to Kotlin before SecOps, one area at a time, in three sprints.
   code go to a later sprint.
 - **Names:** the `com.limelight` package, the `com.limelight.nvstream.jni.MoonBridge`
   class and every native method signature stay, because the JNI symbols depend on
-  them. Kotlin code that Java still calls keeps a Java-friendly API (`@JvmStatic`,
-  `@JvmField`, `@JvmOverloads`) until its last Java caller is converted.
+  them. Converted code kept a Java-friendly API (`@JvmStatic`, `@JvmField`,
+  `@JvmOverloads`) for as long as Java called it. Sprint 14 converted the last Java
+  caller, so no Java is left. The annotations are still in the code (see the Sprint 14
+  backlog, item (a)). `MoonBridge` keeps its static natives and callbacks, which the C code
+  finds by name, and its `@JvmStatic` and `@JvmField` members, because a Robolectric shadow
+  replaces its static initializer
+  ([ADR 0060](adr/0060-convert-moonbridge-to-a-kotlin-object.md)).
 - **ADR:** [ADR 0059](adr/0059-convert-the-inherited-java-to-kotlin.md) records the conversion
   rules. It amends [ADR 0004](adr/0004-kotlin-for-new-android-code.md).
 - **Dead code:** the full sweep of the Java methods for dead code happens area by
@@ -559,13 +565,15 @@ inherited Java to Kotlin before SecOps, one area at a time, in three sprints.
 - **Size:** 33 Java files and 14,214 lines under `apps/android/app/src/main/java`
   after Sprint 12, almost all of it the input, video and `Game` code of Sprints 13
   and 14. Before Sprint 12 it was 80 Java files and 21,539 lines (2026-10-21).
-  Sprint 13 converted the input code: 26 Java files and 7,982 lines. After Sprint 13 it is
+  Sprint 13 converted the input code: 26 Java files and 7,982 lines. After Sprint 13 it was
   7 Java files and 6,232 lines (`git ls-tree` and `wc -l` at `895d0419a`): `Game.java`
   (2,600), `binding/video` (2,985 in four files, with `MediaCodecDecoderRenderer` at 1,876),
-  `binding/audio` (216), `nvstream/jni/MoonBridge.java` (431). All of it is Sprint 14.
+  `binding/audio` (216), `nvstream/jni/MoonBridge.java` (431). All of it was Sprint 14, which
+  converted it: no Java file is left (`git ls-files '*.java'` lists nothing), and
+  `apps/android/app/src/main/java` no longer exists.
 - **Upstream cherry-picks:** an area that is converted no longer takes upstream
-  cherry-picks directly. Its fixes are ported by hand. See
-  [upstream cherry-picks](development/upstream-sync.md).
+  cherry-picks directly. Its fixes are ported by hand. Since Sprint 14 that is every
+  area of the app. See [upstream cherry-picks](development/upstream-sync.md).
 - **If a round shows problems:** the remaining migration sprints move after the
   release. The rest of the order stays.
 
@@ -584,7 +592,8 @@ conversion is merged; the device round is pending. Owner decisions of 2026-10-23
   the Java that stays. Converted code is held to the same Codecov gate as the rest (90% of
   the patch): the separate statuses first planned were dropped once the converted code
   measured 97.0% line coverage at the end of the sprint. Each migration sprint is merged on
-  its own (ADR 0059, rule 7).
+  its own (ADR 0059, rule 7). Sprint 14 took the exclusion away: no `com.limelight` class is
+  left out of the Kover report, and no Java is left.
 - **D1, dead code:** verified dead code is removed before conversion, each removal in its own
   commit with its evidence (ADR 0059, rule 8).
 - **Behaviour:** a conversion keeps behaviour. Bugs found are reported and go to the backlog
@@ -732,26 +741,207 @@ Items:
 
 ### Sprint 14: Kotlin migration, video, audio and the stream activity
 
-About 6,200 lines: `binding/video` (2,985, with `MediaCodecDecoderRenderer` at
-1,876 and `MediaCodecHelper` at 1,004), `binding/audio` (216), `Game.java`
-(2,600) and `nvstream/jni/MoonBridge` (431), which comes last.
+Converted in the phase branch `phase/s14-kotlin-stream`, one merged task per area. Every
+conversion is merged; the device round is to be run. No inherited Java is left:
+`git ls-files '*.java'` lists nothing, and `apps/android/app/src/main/java` no longer exists.
+Owner decisions of 2026-10-26 and 2026-10-27:
 
-- The per-SoC decoder decisions of `MediaCodecHelper` get table-driven
-  characterization tests before the conversion.
-- `MoonBridge` keeps its name, its package and every native signature; the static
-  methods the C code calls need `@JvmStatic`.
-- **Detekt tests:** turn the detekt rules `InjectDispatcher` and
-  `LongParameterList` back on in test sources, and standardize the tests. Inject
-  the dispatchers in the tests and reduce the test builders. This is an explicit
-  owner request.
-- **Test size and duplication.** Moved from the Sprint 9 quality review. The Sprint
-  9 tests run about 1,160 lines against about 590 lines of implementation, with
-  repeated group lists and helpers. They belong in shared test support (the
-  `testFixtures` of `:borealis:designsystem`). The migration ends with the tests
-  standardized.
-- The device round: each codec the devices decode, HDR, audio, the performance
-  overlay, the Starting and Quitting screens, a second device during a launch, and
-  Quit, on the TV and the S22.
+- **MoonBridge first.** [ADR 0060](adr/0060-convert-moonbridge-to-a-kotlin-object.md)
+  (2026-10-26) amends rule 1.3 of ADR 0059. `MoonBridge` is converted first, as a Kotlin
+  `object` that keeps its name, its package and every JNI signature, so `Game` and the
+  renderer are converted against its final shape. A JNI contract test reads the C sources and
+  the class file, and checks every exported native and every callback that the C code looks
+  up. ASM 9.10.1 is a `testImplementation` of `:app` for that test (owner, 2026-10-26).
+- **Characterize, remove dead code, move, convert.** Each area was pinned first by
+  characterization tests that pass on the Java. The dead code that the owner approved was then
+  removed, each removal in its own commit with its evidence (ADR 0059, rule 8). A rename-only
+  `chore: move` commit and the `refactor: convert` commit followed (rule 1). Each suite killed
+  60 to 65 mutants of the Java.
+- **Game, in four tasks and one conversion.** `Game.java` (2,600 lines) was pinned by a
+  Robolectric rig (`GameRig`, 143 tests) and by three characterization tasks, for the keys (79
+  tests), the mouse, touch and pen path (129) and the session, display and window (188), which
+  worked in parallel on separate test packages. They retired every assertion that read
+  `Game.java` as text (33 old tests), so no test reads a `.java` file any more. One task then
+  converted `Game` with every test unchanged. Two reviewers read the conversion, one for each
+  half of the file.
+- **Removals.** Each removal has its own commit with its evidence. The owner approved the
+  removals in `MoonBridge`, the renderer and `VideoStats`, and accepted the log change below.
+  On 2026-10-27 the owner decided that the dead code of the renderer and the `connecting` flag
+  of `Game` go, and that if Borealis needs them later, it writes its own.
+- **Coverage of `Game`.** The owner accepted the line coverage of `Game.kt` on 2026-10-27
+  ("Accept; device round checks"). The device round adds the Samsung keyboard (meta key)
+  capture on the S22, and picture-in-picture: enter and leave, the auto-enter, and the
+  suppression while the USB permission prompt is open.
+- **Defects wait.** The defects found are kept as they were, each pinned by a test, and are
+  fixed after Sprint 14 (owner, 2026-10-27). See the Sprint 14 block under Backlog, not
+  scheduled.
+- **Test standardization.** The detekt rules `InjectDispatcher` and `LongParameterList` are on
+  for every test source (owner request, planned since 2026-10-18). See issue #91 below.
+
+Size: 7 Java files and 6,232 lines under `apps/android/app/src/main/java` at the start
+(`git ls-tree` and `wc -l` at `b205ef3fc`): `Game.java` (2,600), `binding/video` (2,985 in four
+files, with `MediaCodecDecoderRenderer` at 1,876 and `MediaCodecHelper` at 1,004),
+`binding/audio` (216) and `nvstream/jni/MoonBridge.java` (431). After the removals the Java
+was 6,015 lines (counted at the five `chore: move` commits, which moved the seven files as
+rename-only commits). After the conversion they are 7 Kotlin files and 6,900 lines under
+`apps/android/app/src/main/kotlin/com/limelight`: `Game.kt` (2,978),
+`binding/video/MediaCodecDecoderRenderer.kt` (2,063), `binding/video/MediaCodecHelper.kt`
+(1,006), `nvstream/jni/MoonBridge.kt` (528), `binding/audio/AndroidAudioRenderer.kt` (235),
+`binding/video/VideoStats.kt` (85) and `binding/video/CrashListener.kt` (5).
+
+Outcome, by issue (each one a merged task of the phase):
+
+- **Done, #86 MoonBridge.** A Kotlin `object` whose non-private members are `@JvmStatic`,
+  `@JvmField` or `const val`, with the natives as `@JvmStatic external fun` (ADR 0060). The JNI
+  contract test, and tests of the static initializer, every callback and `AudioConfiguration`.
+  `ShadowRecordingBridge` is the canonical test shadow: it covers every native.
+- **Done, #87 MediaCodecHelper.** An `object`. 79 table-driven characterization tests pin the
+  per-device decoder decisions. Each row loads a fresh copy of the class through a child-first
+  class loader, so the class-load branches are pinned too.
+- **Done, #88 AndroidAudioRenderer.** 55 characterization tests pin the channel masks, the four
+  `AudioTrack` attempts and their skips, the return codes, the playback and the cleanup. The
+  constructor takes a non-null `Context`, which its only caller passes.
+- **Done, #89 video renderer.** `MediaCodecDecoderRenderer`, `VideoStats` and `CrashListener`.
+  261 characterization tests pin the decoder choice, the setup, the bytes queued (the H.264
+  SPS is checked against an independent bit-writer oracle), the stats, the recovery, the crash
+  text and the threads, through a recording `MediaCodec` shadow. One review, one fix round.
+- **Done, #90 Game.** The rig, the three characterization tasks and the conversion (see above).
+- **Done, #91 test standardization.** In two merges. `:borealis:*` (`caf9c492a`): the 22
+  findings of the two detekt rules in test sources are fixed (test dispatchers are injected, and
+  long parameter lists became data classes, `copy()` from a base value or shorter helpers), the
+  `SettingsTwoPane` tests share a base class, and `setContentInKeyboardMode` lives once in the
+  design-system test fixtures. `:app` (`0e709993e`): the same for the app tests, and the rest of
+  the standardization, below.
+- **Done, tooling (no issue).** Kover counted the remaining Java during the sprint, so the owner
+  could decide on the coverage of `Game` and the renderer from measured numbers. The starting
+  line coverage was `Game` 0%, `MediaCodecDecoderRenderer` 0%, `MediaCodecHelper` 33%,
+  `MoonBridge` 11% and `AndroidAudioRenderer` 0%, and the Kover total went from 98.31% to
+  88.82%. Codecov ignored the empty `app/src/main/java` until the wrap-up removed that line.
+- **Done, ADR 0060 (no issue).** See above.
+
+Removed, not converted: each removal has its own `refactor: remove` commit with its evidence
+(ADR 0059, rule 8). Grouped by class:
+
+- **`MoonBridge`:** the native `getPendingVideoFrames`, with its wrapper in `simplejni.c`; the
+  `ML_PORT_INDEX_*` constants, `ML_PORT_FLAG_ALL`, `ML_PORT_FLAG_TCP_48010` and the
+  `ML_PORT_FLAG_UDP_*` constants; `LI_CCAP_DUAL_TOUCHPAD` and `LI_PEN_BUTTON_TERTIARY`; and
+  `BUFFER_TYPE_PICDATA` and `FRAME_TYPE_PFRAME` (owner, 2026-10-26).
+- **`MediaCodecHelper`:** `dumpDecoders`, with the commented-out call in the renderer;
+  `preferredDecoders` and `findPreferredDecoder`, a list that nothing ever filled; and
+  `decoderNeedsSpsBitstreamRestrictions`, with its prefix list.
+- **`MediaCodecDecoderRenderer`:** the fields `needsSpsBitstreamFixup` and `isExynos4`, with
+  their two log blocks (see the accepted log change below); the write-only `foreground` flag,
+  with its two writers; `USE_FRAME_RENDER_TIME`, `FRAME_RENDER_TIME_ONLY` and the listener that
+  was never registered (the `totalTimeMs` sums stay); the `meteredNetwork` and `meteredData`
+  parameters; the FLUSH codec recovery; the AV1 performance-point helpers and branches; two
+  defensive checks (the "Decoder reset failed" check and the `replaySps` fetch failure); the
+  Rec. 601 and Rec. 2020 colour cases of `createBaseMediaFormat`; and the unreachable
+  `else { return null }` of `findAv1Decoder` (`677d1915d`).
+- **`VideoStats`:** `getFps` and `VideoStatsFps`.
+- **`Game`:** the `connecting` flag, which was never true.
+
+**The accepted log change.** Removing `needsSpsBitstreamFixup` and `isExynos4` is the one change
+of behaviour that the owner accepted (2026-10-26). Both fields were read only by the log
+lines that followed them, so the lines "needs SPS bitstream restrictions fixup" and "is on
+Exynos 4" are gone from the log. The decoder setup also no longer calls `isExynos4Device()`
+once per decoder, which read `/proc/cpuinfo` and `/sys/devices/system` each time. The other
+removals change nothing that a caller can see, except that a multi-window callback after an
+early return of `onCreate` no longer throws a `NullPointerException` (the `foreground` flag).
+
+Kept on purpose:
+
+- **Kept because code uses it.** `AudioConfiguration.getSurroundAudioInfo` (`NvHTTP.kt` sends it
+  in the `/launch` and `/resume` request) and the two port flags `ML_PORT_FLAG_TCP_47984` and
+  `ML_PORT_FLAG_TCP_47989` (`NvConnection.kt` passes them as the port flags of a start that
+  failed on the network). They looked unused, and they are not.
+- **Kept although no production code uses it.** `LI_BATTERY_STATE_NOT_PRESENT`,
+  `LI_CTYPE_STEAM` (`ArrivalReportTest` reads it), the empty `Game.stageComplete`, the
+  `resume` parameter of `launchStarting`, and the native touch
+  path of `Game` (`trySendTouchEvent`, `sendTouchEventForPointer` and
+  `MoonBridge.sendTouchEvent`), which stays parked. Upstream turned that path off on
+  2023-09-16, Artemis ships it as "Multi-touch", and LuminalShine accepts native pen and touch
+  by default (`native_pen_touch`). The owner keeps it. See the Sprint 13 backlog, item (d),
+  "Direct touch".
+
+Accepted deviations of the conversions, for the record (each reviewed):
+
+- **`MoonBridge`:** the callbacks read the static renderer and listener once, where the Java
+  read them twice, which removes a race `NullPointerException` inside a native callback. The
+  `checkNotNull` sites (`StreamFailures.failure`, `stringifyPortFlags`, `bridgeClLogMessage` and
+  `bridgeClStageFailed`) throw `IllegalStateException` where the callee threw
+  `NullPointerException`.
+- **`AndroidAudioRenderer`:** the constructor takes a non-null `Context`.
+- **Renderer:** narrower constructors, explicit `NullPointerException` messages, a final class,
+  the `RendererException` companion, `VideoStats` internal, and five `private final` fields.
+- **`Game`:** a final class, a final `setMetaKeyCaptureState`, a `Companion` field, synthetic
+  accessors and a final `usbDriverServiceConnection`; the fields assigned in `onCreate` are
+  `lateinit`, so a read before the assignment throws `UninitializedPropertyAccessException`
+  where the Java threw `NullPointerException` (same paths, and nothing catches either);
+  non-null framework parameters; `@RequiresApi(R)` instead of `@TargetApi(R)`; and the KTX
+  `edit(commit = true)`.
+
+Lint: the lint baseline lost the 5 entries of `Game.java` and `MediaCodecHelper.java`
+(`1afbded4a`, merged in `a74266ec1`): `ApplySharedPref`, `SourceLockedOrientationActivity` and
+`UseRequiresApi` of `Game.java`, and the two `DefaultLocale` entries of `MediaCodecHelper.java`.
+The 22 entries left filter 11 `UnusedAttribute`, 3 `RtlHardcoded` and one each of eight other
+ids (`UseRequiresApi` in `NsdManagerDiscoveryAgent.kt`, `OldTargetApi`, `NotShrinkingResources`,
+`VectorRaster`, `MissingLeanbackLauncher`, `InsecureBaseConfiguration`,
+`ExportedContentProvider` and `CustomX509TrustManager`). See
+[building](development/building.md#lint-baseline).
+
+Coverage of the converted files (Kover lines, from the report of the phase at `a74266ec1`, the
+run that produced these figures): `Game.kt` 95.5% (the Java was 96.4%),
+`MediaCodecDecoderRenderer.kt` 99.7% (920 of 923 lines), `VideoStats.kt` 100%,
+`MediaCodecHelper` 95.4%, `AndroidAudioRenderer` 97.6% and `MoonBridge` 98.4%. The lines of
+`Game.kt` that no test reaches are the branches for Android before 11 and
+before 12, the branches for Android 16 (`BAKLAVA`) and SDK 37, the catches of the Samsung
+reflection, the `SecurityException` of the Wi-Fi lock, the first `surfaceChanged` and the parked
+native touch path. The rest of `MediaCodecHelper` reads `/proc` of the host. `:app` runs 4,140
+tests (the executed set at `0e709993e`).
+
+Test standardization of `:app` (issue #91, `0e709993e`), with no change to production code, to
+the executed tests or to their assertions:
+
+- **Detekt.** `InjectDispatcher` and `LongParameterList` are on for every test source of every
+  module, `:app` included (`config/detekt/detekt.yml`). Test dispatchers are injected, and the
+  long parameter lists of builders are data classes or `copy()` from a base value.
+  `LongParameterList` ignores `@Composable` and `@Implementation`, because a Robolectric shadow
+  method mirrors the signature it replaces.
+- **Shadows.** Five `MoonBridge` shadows were folded into `ShadowRecordingBridge`, so the app
+  tests have 2 (7 before): `ShadowRecordingBridge`, and `ShadowStunMoonBridge`, which records
+  the network that the process was bound to when the STUN request was made. A reset of the
+  recording shadow clears the real bridge state.
+- **Threads.** The tests destroy the controller handlers that they start. A probe at the end of
+  the `:app` suite found 705 idle `ControllerHandler` `HandlerThread`s among 777 threads, and
+  finds none now.
+- **Shared test package.** `io.github.magalz.borealis.testing` holds `AndroidLevels` (the API
+  level constants), `LimeLogCapture`, `ControllerContexts` (the pad-context injection),
+  `Coroutines` (`unconfinedScope()` and `WorkerDispatcherRule`) and `OwnedResources` (a rule
+  that closes what a test hands it).
+- **Robolectric.** The configurations go from 41 to 39 (the limit is 42 sandboxes).
+
+Entire. Three configuration commits ride the phase pull request, made by the owner on
+2026-10-27: `fb9fcdb68` ("Enable Entire"), `4e1c39d13` (Entire Brain is enabled, and `AGENTS.md`,
+[orchestration](development/orchestration.md) and the `br-*` agents route code questions
+between Memtrace and Brain) and `5afbb49a8` (`CLAUDE.md` loads `AGENTS.md` again).
+
+Items:
+
+- **Done.** The conversions, the rigs and the standardization above. The defects that the
+  characterization tests pin are in the Sprint 14 block of the backlog, and are fixed after
+  this sprint.
+- **Partly done.** Test size and duplication, moved here from the Sprint 9 quality review. The
+  tests of every module follow the detekt rules now (see #91). The duplicates across modules
+  need `testFixtures` build changes, and are item (c) of the Sprint 14 block of the backlog.
+- **To be run.** The device round, on the Google TV Streamer with the owner's OK and on the S22:
+  each codec the devices decode, HDR, audio, the performance overlay, the Starting and Quitting
+  screens, a second device during a launch, picture-in-picture, the Samsung keyboard capture,
+  the rare natives (JNI binds each one at its first call), CheckJNI where the device allows it,
+  Quit, and an upgrade over the `main` build. The checks are in
+  [device-validation section 3.27](development/device-validation.md#327-sprint-14-checks), and the
+  owner's 30-minute gameplay test is
+  [section 3.28](development/device-validation.md#328-owners-30-minute-gameplay-uat-sprint-14).
+  The results go in section 19, which is not written yet.
 
 ### Sprint 15: The stream screens and glass
 
@@ -1313,15 +1503,22 @@ otherwise.
       `sceManager.rumble` gets sign-extended shorts (0xC000 arrives as -16384), which is probably
       a bug. A USB pad that sent no input answers to controller 0.
 - **(c) Test and tooling items.**
-  - Spotless (ktfmt) covers `borealis/**` and `build-logic/**`, tests included. Of `:app`, only
-    `app/src/main/kotlin` is formatted, so `app/src/test` is not. Detekt covers the tests.
-  - `.gitattributes` marks `apps/android/**` as `-text`, so the Borealis Kotlin under `app/src`
-    mixes CRLF and LF line endings. Normalize the Borealis-owned Kotlin under
-    `app/src/main/kotlin` and `app/src/test/kotlin`.
-  - Test helpers repeat across the Sprint 13 test packages (rigs, `MoonBridge` shadows and the
-    `ANDROID_xx` constants). Fold them into the test standardization of Sprint 14.
-  - About 300 idle `HandlerThread("ControllerHandler")` threads stay alive in the test JVM,
-    because tests rarely call `destroy()`.
+  - **Done in Sprint 14 (`s14-format`, merge `728aae024`).** Spotless (ktfmt) covered
+    `borealis/**` and `build-logic/**`, tests included. Of `:app`, only `app/src/main/kotlin`
+    was formatted, so `app/src/test` was not. Detekt covers the tests. Spotless now formats
+    `app/src/test` and `app/src/androidTest` too.
+  - **Done in Sprint 14 (`s14-format`, merge `728aae024`).** `.gitattributes` marked
+    `apps/android/**` as `-text`, so the Borealis Kotlin under `app/src` mixed CRLF and LF line
+    endings. `apps/android/app/src/**/*.kt` is now `text eol=lf`.
+  - **Done in Sprint 14 (`s14-tests-app`, merge `0e709993e`).** Test helpers repeated across the
+    Sprint 13 test packages (rigs, `MoonBridge` shadows and the `ANDROID_xx` constants). They are
+    folded: the `MoonBridge` shadows went from 7 to 2, and the shared `testing/` package holds
+    the API level constants, the `LimeLog` capture, the pad-context injection, the coroutine
+    helpers and the rule that closes what a test owns.
+  - **Done in Sprint 14 (`s14-tests-app`, merge `0e709993e`).** About 300 idle
+    `HandlerThread("ControllerHandler")` threads stayed alive in the test JVM, because tests
+    rarely called `destroy()`. The tests destroy the handlers they start: the probe found 705
+    idle threads among 777 at the end of the `:app` suite, and finds none now.
   - One wall-clock test: `ButtonTimingCharacterizationTest` compares real sleep times with a
     25 ms threshold. It failed in two runs of the phase review, because on Windows a 1 ms sleep
     can take a whole 15.6 ms timer tick. The phase fixes loosened it, and the `waited` test pins
@@ -1338,12 +1535,239 @@ otherwise.
     moving for about 650 ms, then a move (`RelativeTouchContext.kt`, `DRAG_TIME_THRESHOLD`).
     The owner expected the usual double tap and hold, which does not start a drag.
   - **Direct touch.** A long press and a move select text on the PC instead of dragging, as
-    they do on a phone. The owner found it hard to reproduce on a desktop.
+    they do on a phone. The owner found it hard to reproduce on a desktop. Sprint 14 kept the
+    native touch path of `Game` (`trySendTouchEvent`, `sendTouchEventForPointer` and
+    `MoonBridge.sendTouchEvent`), parked: upstream turned it off on 2023-09-16 ("Disable native
+    touch passthrough for now"), Artemis ships it as its MultiTouch mode, and LuminalShine
+    accepts native pen and touch by default (`native_pen_touch`). Direct mode sends mouse input
+    today; the parked path would send the touch to the host as a touch event.
   - **Alt+Tab.** With Alt held, the first Tab is lost, and Windows opens its Alt menu. The
     main build (`ded969bdb`, Sprint 12 code) does the same, so it is not from Sprint 13.
   - **Ultimate 2, Home held.** The PC acts as if Win+Tab was pressed. The app sends the
     Guide button while the pad's Home button is held, and nothing in the input code maps it
     to Win+Tab. Probably Windows' own long press of the Xbox button; to verify on the host.
+
+From the Sprint 14 conversion (2026-10-27). The owner decided on 2026-10-27 that the defects of
+item (b) are fixed after Sprint 14. Nothing else here is scheduled; the owner decides when. None
+of the defects is fixed yet: the conversion keeps behaviour (ADR 0059, rule 10), and each one is
+kept as it was and pinned by a test that passes on the Java and on the Kotlin, so a fix changes
+that test on purpose. Paths are under `apps/android/app/src/main/kotlin/com/limelight/`, unless
+an item says otherwise. A pinning test is named by its class and its test. The tests are under
+`apps/android/app/src/test/kotlin/`: in `io/github/magalz/borealis/stream/game/` for `Game` (the
+folders `keys/`, `motion/` and `session/`, and the files of the folder itself), in
+`com/limelight/binding/video/` for the renderer and `MediaCodecHelper`, in
+`com/limelight/binding/audio/` and in `com/limelight/nvstream/jni/`. Where no test is named, none
+pins the item.
+
+- **(a) Refactor the converted code.** The 52 places marked `(Sprint 14 backlog)` each sit next
+  to a suppression annotation, so the converted code keeps the shape of the inherited Java
+  (ADR 0059, rule 6). Most suppress structural rules (`CyclomaticComplexMethod`, `LongMethod`,
+  `ReturnCount`, `NestedBlockDepth`, `ComplexCondition`, `LoopWithTooManyJumpStatements`,
+  `LongParameterList`, `LargeClass` and `TooManyFunctions`). Some suppress `PrintStackTrace`,
+  where the Java wrote to stderr, and `TooGenericExceptionCaught`. Four suppress
+  `ForbiddenComment`, for the inherited TODOs. One place each suppresses `FunctionNaming`,
+  `UnusedPrivateFunction` (the parked touch path), `SwallowedException`,
+  `AbstractClassCanBeInterface`, and `ThrowsCount` with `TooGenericExceptionThrown`. A few carry a
+  compiler warning (`DEPRECATION`, `OVERRIDE_DEPRECATION` and
+  `PLATFORM_CLASS_MAPPED_TO_KOTLIN`) or an Android lint suppression
+  (`SourceLockedOrientationActivity`, `InlinedApi` and `ClickableViewAccessibility`). By file,
+  with the count:
+  - `Game.kt`: 17
+  - `binding/video/MediaCodecDecoderRenderer.kt`: 13
+  - `binding/video/MediaCodecHelper.kt`: 12
+  - `nvstream/jni/MoonBridge.kt`: 8
+  - `binding/audio/AndroidAudioRenderer.kt`: 1
+  - `nvstream/av/video/VideoDecoderRenderer.kt`: 1
+
+  That is 52 places in 6 files. Also:
+  - `Game.setMetaKeyCaptureState` has no caller outside `Game` (the tests reach it through the
+    grab), so it could be private.
+  - The `@SuppressLint("InlinedApi")` on `hideSystemUi` is probably not needed, because `minSdk`
+    is 28.
+  - Six helpers of `Game` were `private static` in the Java and are private instance methods now
+    (`normalizeValueInRange`, `getPressureOrDistance`, `getRotationDegrees`, `polarToCartesian`,
+    `cartesianToR` and `convertToolTypeToStylusToolType`). They use no state of `Game`.
+  - `VideoDecoderRenderer` could become an interface (its `AbstractClassCanBeInterface`
+    suppression). `MediaCodecDecoderRenderer` extends it and calls its constructor, so the two
+    change together.
+  - `MediaCodecHelper.getAdrenoVersionString` keeps `trim { it <= ' ' }`, which a lint hint
+    (`TrimLambda`) would replace. The Java `trim()` removes every character up to the space, not
+    only whitespace, so the lambda keeps the behaviour.
+  - `SettingsRepository.setNow` (`borealis/settings`) has no caller outside the tests. The owner
+    decides whether it goes.
+  - No Java is left, so the Java-facing annotations that converted classes kept for Java callers
+    (`@JvmStatic`, `@JvmField`, `@JvmOverloads` and `@Throws`) are not needed for them any more.
+    At `a74266ec1` the app Kotlin holds 151, 205, 2 and 61 of them, `MoonBridge.kt` 57 `@JvmStatic`
+    and 5 `@JvmField`. Dropping one is not mechanical:
+    - The C code calls only static methods of `MoonBridge`, by name and descriptor
+      (`GetStaticMethodID` in `callbacks.c` and `borealis_log.c`; it looks up no field), and the
+      natives are `@JvmStatic external fun`. Keep those.
+    - `MoonBridgeStaticInitializerTest` reads the `AUDIO_CONFIGURATION_*` fields, and
+      `channelCount` and `channelMask`, by name, so they keep `@JvmField`.
+    - Five reflection tests pin the Java-visible API: `InputJavaVisibleApiTest`,
+      `ComputerStoreJavaVisibleApiTest`, `JavaVisibleApiTest` (crypto), `NvHttpJavaApiTest` and
+      `SupportJavaVisibleApiTest`. A commit that drops an annotation changes or removes the
+      matching test in the same commit.
+    - Other tests use reflection too (`ControllerHandlerRig` and `OscRig`).
+- **(b) Bugs and oddities found during the conversion, by area.** Each one is kept as it was.
+  - **Keys** (`Game.kt`):
+    - `onWindowFocusChanged` clears `modifierFlags` but not `specialKeyCode` and
+      `waitingForAllModifiersUp`. After a focus change the next key can quit, toggle the grab or
+      toggle the cursor. A real defect, low. Fix: reset both. Pinned by `GameSpecialKeysTest`, "a
+      chord that waits is done by the next key when the focus change forgot the modifiers".
+    - A code point above U+FFFF from a hardware keyboard is narrowed to 16 bits (U+1F600 arrives
+      as U+F600). Latent, very low. Pinned by `GameKeySendTest`, "a character is sent as UTF-8
+      text, and one outside the basic plane loses its high bits".
+    - The key ups of a chord that waits for the modifiers go through to the host, which sees the
+      key up of a key whose key down it never saw. Pinned by `GameSpecialKeysTest`, "while the
+      chord waits for the modifiers, the keys down are eaten and the keys up go through".
+  - **Motion** (`Game.kt`):
+    - `ACTION_CANCEL` from a mouse or a stylus sends a pen `CANCEL_ALL` and returns before the
+      buttons and `lastButtonState`. Pinned by `PenEventsTest`, "a cancel of a mouse is a pen
+      cancel too, whatever the tool".
+    - Grouped buttons press the shared host button again at every change: releasing one while
+      the other is down sends a press. Pinned by `MouseButtonsTest`, "two buttons of a group
+      share the host button, which is pressed again at every change".
+    - On Samsung DeX, `ACTION_DOWN` adds the primary button, so a right click is left plus
+      right. Pinned by `MouseButtonsTest`, "the DeX touchpad right click comes with the left
+      button that it did not send".
+    - A mouse event that reaches the activity itself (`onGenericMotionEvent`) has no view, so
+      the position is not sent, and the buttons still are. Pinned by `MouseMovementTest`, "the
+      activity itself has no view and does not place the pointer" (the position) and "the
+      activity itself still sends the buttons".
+    - `controllerHandler.handleMotionEvent` always answers true, so the `return false` after it
+      in `handleMotionEvent` is dead. Pinned for a known pad by `MotionGateTest`, "a joystick
+      source goes to the controller handler, which sends the stick to the host".
+    - `getStreamViewRelativeNormalizedXY` divides by the width and the height of the stream view
+      without a guard. No test pins it.
+    - On the trackpad, a tap of two fingers presses the right button only when the second finger
+      lifts first, and it does so at that lift. When the first finger lifts first, nothing is
+      sent. Pinned by `FingerTouchTest`, "when the second of two fingers lifts, the first goes on
+      moving the pointer from where it was" and "when the first of two fingers lifts, the second
+      takes its place as the finger that moves".
+  - **Session** (`Game.kt`):
+    - `onUsbPermissionPromptCompleted` can arrive without a matching starting call:
+      `UsbDriverService.kt` calls its listener with `?.`, so `Game` can get a completed call for
+      a prompt whose starting call reached no listener. `suppressPipRefCount` then goes to -1,
+      and the auto-enter of picture-in-picture stays off until a dialog opens. Fix: clamp it at
+      0. Pinned by `GameUsbServiceTest`, "a dialog that closes without having opened leaves the
+      count below zero".
+    - Leaving before the connection starts skips the end of the audit session and `conn.stop`,
+      and delays the stop of the controller handler, because `stopConnection` acts only when
+      `connected` (the `connecting` flag was removed as never true). `onDestroy` still stops the
+      controller handler, so for it this is a delay, not a leak. The effect on a device is not
+      checked.
+      Pinned by `GameStopTest`, "onStop leaves the controller handler of a stream that never
+      connected to onDestroy" and "onStop leaves the native library alone when no connection
+      started".
+  - **Renderer** (`binding/video/`):
+    - `stop()` and `cleanup()` throw a `NullPointerException` before `start()` and `setup`
+      (`stop()` first tells the decoder to stop). Pinned by `RendererLifecycleTest`, "stop before
+      start fails with a null pointer after it has told the decoder to stop" and "cleanup before
+      setup fails with a null pointer".
+    - `getPreferredColorSpace` is a constant (Rec. 709). Pinned by `RendererCapabilitiesTest`,
+      "the preferred colour space is Rec 709".
+    - The wait of the codec recovery has no check for `stopping`. The comment in the code says
+      why: a thread that gives up in a half-quiesced state leaves the others asleep. The wait
+      ends when the recovery is done, when `prepareForStop` cancels it or when the thread is
+      interrupted, so the risk is a recovery whose other threads never come, with no stop
+      (a deadlock). The closest pin is `RendererThreadsTest`, "a thread that is interrupted while
+      it waits for the others gives up the recovery", which covers the interrupt path only.
+    - `VideoStats.add` takes a minimum host latency of 0 when the newer window has none. Pinned
+      by `RendererStatsTest`, "the lowest host latency reads zero when the newer window has none".
+    - `replaySps` always writes profile 100 (High), and `needsBaselineSpsHack` is cleared before
+      the replay. Pinned by `RendererSubmitH264Test`, "the replay after the baseline hack says
+      High profile whatever the stream said" and "the baseline hack is used once".
+    - `replaySps` calls `fetchNextInputBuffer()` and ignores its result. The call finds the
+      buffer that the queue call before it already fetched, so it does nothing. The owner
+      removed its failure check on 2026-10-27 and kept the call. No test pins it.
+    - `numFramesIn` counts a frame before the check for an oversize decode unit, so the crash
+      text counts the frame that crashed. Pinned by `RendererCrashTest`, "the text lists the
+      decoders, the formats, the device and the counters" (`Frames in-out: 1, 0`).
+    - `setHdrMode` before `setup` also marks a codec restart, before any codec exists. Only the
+      format is pinned: `RendererHdrTest`, "HDR metadata set before setup goes into the format as
+      a static info of 25 bytes".
+    - A frame number of 0 never flips the stats window, because the window start is set again
+      while `lastFrameNumber` is 0. No test pins it (the tests start at 1).
+    - `RendererException.getMessage` can be null. Pinned by `RendererCrashTest`, "the exception
+      has no message of its own, only its text".
+    - A redundant `else if (!e.isRecoverable)` in `handleDecoderException` follows
+      `if (e.isRecoverable)`. It changes no behaviour, so no test pins it.
+  - **MediaCodecHelper** (`binding/video/`):
+    - `initialize` sets `initialized` only at its end, so a retry after an exception adds the
+      Amazon entries again. No test pins it.
+    - The Adreno pattern takes the last three digits of the renderer text, so "6400" gives 400
+      (no test pins this), and an "Adreno" with no three-digit model counts as another GPU
+      (pinned by `MediaCodecHelperInitializeTest`, "the Adreno model decides the Qualcomm HEVC
+      decoders").
+    - `findKnownSafeDecoder` asks for `getCapabilitiesForType` twice for a decoder in the first
+      round (its own call, and `decoderSupportsAndroidRLowLatency`). No test pins it.
+    - Two checks return before the check for `initialized`, so they answer before `initialize`
+      where the others throw. Pinned by `MediaCodecHelperUninitializedTest`, "a decoder that
+      answers without a list also answers before initialize" and "the decisions on a decoder
+      throw before initialize unless they answer first".
+    - The "sw" checks are case sensitive. Pinned by `MediaCodecHelperCapabilityDecisionsTest`, "a
+      decoder with sw in its name is never whitelisted for HEVC" (its row "the match is case
+      sensitive").
+    - The search for the required profile is skipped when `findKnownSafeDecoder` throws for a
+      decoder: the search goes to the first decoder. Pinned by `MediaCodecHelperSelectionTest`,
+      "a decoder that throws for its capabilities sends the search to the first decoder".
+  - **Audio** (`binding/audio/AndroidAudioRenderer.kt`):
+    - A `release()` that throws keeps the track, and setup answers 0 with a track that never
+      played. Pinned by `AudioRendererSetupCharacterizationTest`, "a track that cannot be
+      released stays, and setup answers 0 without a track that played".
+    - A second setup leaks the first track. Pinned by `AudioRendererSetupCharacterizationTest`,
+      "a second setup creates another track and leaves the first one alone".
+    - `getMinBufferSize` is asked even when both low latency attempts are skipped. Pinned by
+      `AudioRendererSetupCharacterizationTest`, "a hardware rate that is not the rate of the
+      stream skips both low latency attempts".
+    - A packet of no samples (`samplesPerFrame` 0) throws `ArithmeticException` in the second
+      attempt. Pinned by `AudioRendererSetupCharacterizationTest`, "a packet of no samples makes
+      the second attempt divide by zero".
+    - `cleanup` does not set the track to null, so a second cleanup is refused by the platform.
+      Pinned by `AudioRendererPlaybackCharacterizationTest`, "cleanup keeps the released track,
+      so a second cleanup is refused by the platform".
+    - The pending duration is read twice when it is too long: once for the check and once for
+      the log. Pinned by `AudioRendererPlaybackCharacterizationTest`, "40 milliseconds of pending
+      audio drops the samples and logs the duration read again".
+    - `track` is not `@Volatile`, though the native threads of the audio stream use it. A
+      memory-model matter, so no test pins it.
+    - A comment on the 7.1 mask `0x18FC` still says that the constant is hardcoded for Lollipop.
+      Only the value is pinned: `AudioRendererSetupCharacterizationTest`, "8 channels ask for the
+      7 point 1 surround mask".
+  - **MoonBridge** (`nvstream/jni/MoonBridge.kt` and `app/src/main/jni/moonlight-core/`):
+    - `VIDEO_FORMAT_MASK_10BIT` is `0x2200` in Kotlin and `0xAA00` in `Limelight.h`, which also
+      counts the 4:4:4 formats. It has no effect today, because the client never asks for them.
+      Pinned by `MoonBridgeJniContractTest`, "the constants that Limelight h defines have the same
+      value in MoonBridge" (this is its only difference) and "the 10-bit video mask of MoonBridge
+      keeps the two 10-bit formats the client asks for".
+    - `AudioConfiguration.equals` compares `toInt()`, so `AudioConfiguration(0x100, 0)` equals
+      `AudioConfiguration(0, 1)`. Pinned by `AudioConfigurationTest`, "equality is decided by the
+      packed int, not by the two fields".
+    - `simplejni.c` keeps unreachable code after the early returns of `findExternalAddressIP4` and
+      `testClientConnectivity` (ADR 0050). It is C that the unit tests do not run, so no test
+      pins it.
+    - Ten bridges of `callbacks.c` do not check for a Java exception after the call: the start,
+      stop and cleanup of the video and the audio renderer, the three stage ones and
+      `BridgeClConnectionStarted`. This is upstream code, and no test runs it.
+- **(c) Test and tooling items.**
+  - `GameWiringTest` (`io/github/magalz/borealis/stream/`) keeps 6 tests that read text: 3 read
+    `NvConnection.kt` and 3 read `src/main/res`. Replace them with behaviour tests.
+  - Test code repeats across modules, and sharing it needs `testFixtures` build changes:
+    `MainDispatcherRule` is in `:borealis:library` and `:borealis:settings`,
+    `WorkerDispatcherRule` is in `:borealis:diagnostics`, `:borealis:settings` and `:app`, and
+    the `PHONE`, `TV` and `HANDHELD` device qualifiers are declared in each module that uses them.
+  - Smaller leftovers:
+    - `ANDROID_NS` is declared in 3 test files of `:app` (`BackOptOutTest`,
+      `ManifestActivitiesTest` and `ShortcutIconTest`).
+    - 24 literals of the form `@Config(sdk = [30])` remain in the `:app` tests, and could use the
+      constants of `AndroidLevels`.
+    - The `BorealisCoverageTest` test (in `build-logic`) is named "the Java that sprint 14
+      converts is counted", and no Java is left.
+    - `apps/android/borealis/README.md`, line 16, says that "Upstream Java/Groovy/C is never
+      formatted".
+  - Robolectric has 39 distinct configurations at the end of Sprint 14 (41 before `s14-tests-app`).
+    The limit is 42 sandboxes, so a new one needs a look at what the tests share.
 
 ## Host-side items (LuminalShine)
 

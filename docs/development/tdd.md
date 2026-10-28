@@ -41,12 +41,14 @@ Say in the PR which exemption applies. Everything else is not exempt, including
 
 ## Characterization tests for inherited code
 
-Inherited Moonlight code mostly has no tests. Before changing it:
+Inherited Moonlight code mostly has no tests. The Java that Sprints 12 to 14
+converted has characterization tests now. Before changing inherited code:
 
 1. Write a **characterization test** that pins the current behaviour, and
    commit it as `test: characterize <behaviour>`.
-2. Make your change (in inherited Java, wiring only; new logic goes in Kotlin)
-   with a new failing test for the new behaviour first.
+2. Make your change with a new failing test for the new behaviour first. No
+   inherited Java is left (since Sprint 14), so new logic goes in Kotlin. An edit
+   to the vendored C under `core/third_party/` needs the task brief to say so.
 3. Keep the characterization tests: they protect against regressions when an
    upstream fix is cherry-picked.
 

@@ -123,3 +123,5 @@ The checks are:
   `MoonBridge` in Java. The package, the class name and the JNI signatures stay the same.
 * Related: [0054](0054-declare-independence-from-moonlight.md) (inherited code is Borealis code).
 * Related: [roadmap, Sprint 14](../roadmap.md#sprint-14-kotlin-migration-video-audio-and-the-stream-activity).
+
+Dated note (2026-10-27, Sprint 14): `Game`, `MediaCodecDecoderRenderer` and `AndroidAudioRenderer`, the Java callers named above, are converted, and no Java file is left. The text above is the decision as it was made. `MoonBridge` keeps its `@JvmStatic`, `@JvmField` and `const val` members. The C code needs only the static methods: it finds each native and each callback by name and descriptor (`GetStaticMethodID`) and looks up no field, so those stay static methods. The other members stay static because a Robolectric shadow replaces the static initializer, and an instance member would then dereference an `INSTANCE` that was never set. `MoonBridgeStaticInitializerTest` also reads the `AUDIO_CONFIGURATION_*` fields by name.

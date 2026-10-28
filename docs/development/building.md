@@ -80,6 +80,12 @@ report it; never reformat upstream code. Spotless formats Borealis C/C++ with
 the `clang-format` on `PATH`; without it the C/C++ Spotless tasks fail with
 "clang-format 22.x not found on PATH" while the rest of the build keeps working.
 
+Spotless (ktfmt) formats all the Kotlin that Borealis owns: `borealis/**`,
+`build-logic/**`, and in the `:app` module `app/src/main/kotlin`, `app/src/test`
+and `app/src/androidTest`. `.gitattributes` keeps the Kotlin under
+`apps/android/app/src` on LF (`apps/android/app/src/**/*.kt text eol=lf`), so a
+file does not mix CRLF and LF. The rest of `apps/android/app` keeps `-text`.
+
 ### Lint baseline
 
 `apps/android/app/lint-baseline.xml` hides the Android Lint findings that
@@ -103,13 +109,23 @@ What stays, and why:
 
 | Lint ids | Why they stay |
 | --- | --- |
-| `UnusedAttribute`, `RtlHardcoded`, `UseRequiresApi` | Cosmetic. The attributes apply from API 30 or 33 and older versions ignore them. The gravity in `activity_game.xml` is the stream notification overlay. The two `UseRequiresApi` entries suggest `@RequiresApi` in place of `@TargetApi` in `Game.java` (converted in Sprint 14) and in `NsdManagerDiscoveryAgent.kt`. The `@TargetApi` annotations are for API 30 and later; the ones for API 28 and below went with the dead checks. |
+| `UnusedAttribute`, `RtlHardcoded`, `UseRequiresApi` | Cosmetic. The attributes apply from API 30 or 33 and older versions ignore them. The gravity in `activity_game.xml` is the stream notification overlay. The one `UseRequiresApi` entry suggests `@RequiresApi` in place of `@TargetApi` (for API 34) in `NsdManagerDiscoveryAgent.kt`; it is the last `@TargetApi` of the app. |
 | `OldTargetApi` | A `targetSdk` of 37 is a platform update, decided on its own and not in a lint sweep. |
 | `NotShrinkingResources` | Release builds minify without `shrinkResources`. Turning it on changes the release package, so it is a release decision. |
-| `DefaultLocale`, `ApplySharedPref`, `SourceLockedOrientationActivity`, `VectorRaster` | Inherited code that does what it should. `toLowerCase()` runs on device and GPU names, in `MediaCodecHelper.java` (converted in Sprint 14). `commit()` is deliberate: the crash listener must persist the crash count before the process dies. The stream locks the orientation on purpose. `ic_settings.xml` is a large vector. |
+| `VectorRaster` | An inherited resource that does what it should: `ic_settings.xml` is a large vector. |
 
 `ViewConstructor` has no baseline entry since Sprint 13: the seven virtual-controller views
 carry `@SuppressLint("ViewConstructor")` in source, because they are built in code only.
+
+Sprint 14 removed five entries with the Java they pointed at: `ApplySharedPref`,
+`SourceLockedOrientationActivity` and `UseRequiresApi` of `Game.java`, and the two
+`DefaultLocale` entries of `MediaCodecHelper.java`. The Kotlin does not need them.
+`MediaCodecHelper` passes `Locale.getDefault()` to `lowercase()` for device and GPU names.
+`Game` writes the crash count with `edit(commit = true)`, which lint accepts: the commit is
+deliberate, because the crash listener must persist the count before the process dies. `Game`
+keeps the orientation lock of the stream, which is on purpose, behind
+`@SuppressLint("SourceLockedOrientationActivity")`, and uses `@RequiresApi`. The baseline holds
+22 entries: the ids of the table, and the four findings reviewed below.
 
 `apps/android/app/lint.xml` holds four more ignores, by path, beside the
 baseline:
@@ -166,26 +182,32 @@ the plain task on `build-logic`. One module alone: `./gradlew :borealis:host:det
   - `MatchingDeclarationName` is off for all sources. A Compose file is named
     after its composable and keeps one small helper type beside it, which the
     rule reads as a mismatch, and detekt has no option for that.
-  - `FunctionNaming` and `LongParameterList` ignore functions annotated
-    `@Composable`: composables are named in PascalCase and take their state and
-    callbacks as parameters.
+  - `FunctionNaming` ignores functions annotated `@Composable`, which are named
+    in PascalCase. `LongParameterList` ignores `@Composable` functions, which
+    take their state and callbacks as parameters, and `@Implementation`
+    methods: a Robolectric shadow method mirrors the signature it replaces.
   - `ReturnCount` allows 3 returns, and `MagicNumber` ignores enums.
 - **`build-logic` stays plain:** the analysis does not apply the compiler
   plugins of the Kotlin DSL and would read its Gradle code as unresolved.
 - **No baseline:** every finding fails the build. Fix it, or, when a rule does
-  not fit the code (a framework constraint, a Java caller), suppress it on the
+  not fit the code (a framework constraint), suppress it on the
   narrowest element with the reason on the same line. Sprint 8 fixed the 116
-  findings the typed analysis first found, except that two rules are no longer
-  reported in test sources (below), and removed the temporary baselines.
+  findings the typed analysis first found, except that two rules were not
+  reported in test sources until Sprint 14 (below), and removed the temporary
+  baselines.
 - **The analysis runs in a worker process** (`detekt.use.worker.api=true` in
   `apps/android/gradle.properties`). In the Gradle daemon it once kept the jars
   of a module's compile classpath (`R.jar`, `classes.jar`) open on Windows,
   while several builds ran at once, and the next build that regenerated one
   failed with "Couldn't delete ... R.jar". The worker ends with the build. A
   warm local run takes about 30 s more; CI, which starts cold, is unchanged.
-- **Two rules are off in test sources:** `InjectDispatcher` and
-  `LongParameterList` (see `config/detekt/detekt.yml`). The Java to Kotlin
-  migration turns them back on in Sprint 14 and standardizes the tests.
+- **Test sources follow the same rules as main code.** `InjectDispatcher` and
+  `LongParameterList` were off in test sources until Sprint 14, which turned them
+  on for every test source: the tests of the `:borealis:*` modules, the `:app`
+  tests and the test fixtures. A test injects its dispatcher (a test dispatcher,
+  or a pool that the test closes) and a builder takes a data class or a lambda,
+  not a long list of parameters. A test that has to name a dispatcher suppresses
+  the rule with its reason (see `config/detekt/detekt.yml`).
 
 ### Screenshot tests
 
@@ -259,9 +281,9 @@ python -m unittest discover -s design/accessibility
 
 - **Coverage** (Kover, [ADR 0046](../adr/0046-test-coverage-with-kover-llvm-cov-and-codecov.md)):
   the root project merges the debug unit-test coverage of `:borealis:*` and of
-  `:app`. Everything in `com.limelight` counts in the Kover report since
-  Sprint 14, the inherited Java that is not converted yet included. Converted
-  code is held to the same Codecov gate as the rest
+  `:app`. Every `com.limelight` class counts in the Kover report: the inherited
+  code is all Kotlin since Sprint 14, and no class is left out because it is
+  inherited. Converted code is held to the same Codecov gate as the rest
   ([ADR 0059](../adr/0059-convert-the-inherited-java-to-kotlin.md),
   [ADR 0049](../adr/0049-coverage-gate.md)). Not counted: the generated
   Hilt/Dagger, Room and serialization classes, `BuildConfig`, `R` and Compose
@@ -272,8 +294,10 @@ python -m unittest discover -s design/accessibility
   `apps/android/build/reports/kover/htmlBorealis/index.html`. The XML names
   sources package-relative (`io/github/magalz/borealis/...`,
   `com/limelight/...`); Codecov matches them to repository files by path
-  suffix. Java under `app/src/main/java` never reaches Codecov (`codecov.yml`
-  ignores it), although the Kover report counts it.
+  suffix. No Java is left, so none is kept out of Codecov for being Java.
+  `codecov.yml` ignores the inherited native sources
+  (`apps/android/app/src/main/jni/moonlight-core/**`), `core/third_party/**`, the tests
+  and the generated code.
 - **Licences** (licensee, [ADR 0041](../adr/0041-license-checking-with-licensee.md)):
   `licensee` runs for `:app` (the debug and release runtime classpaths) and for
   every `:borealis:*` module, and is part of `check`. Allowed: Apache-2.0, MIT,

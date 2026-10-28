@@ -1235,27 +1235,76 @@ results are in
   (`ded969bdb`, Sprint 12 code) does the same, so it is not from Sprint 13.
 - **Ultimate 2, Home held.** The PC acts as if Win+Tab was pressed. The app sends the Guide button
   while the pad's Home button is held, and nothing in the input code maps it to Win+Tab. Probably
-  Windows' own long press of the Xbox button; to verify on the host.
+  Windows' own long press of the Xbox button; to verify on the host. In the
+  [VHF gamepad round](development/device-validation.md#vhf-gamepad-round-2026-10-28) of
+  2026-10-28, on the S22, Home short and held passed (owner). The Win+Tab check against
+  Windows' Task View on purpose is still to do.
 
 #### Pads
 
-Moved here from item (d) of the Sprint 14 block of the backlog (owner, 2026-10-28). Both are
-investigations. They were found in the Sprint 14 device round (2026-10-28), and neither is a
-Sprint 14 regression.
+Moved here from item (d) of the Sprint 14 block of the backlog (owner, 2026-10-28): the first two
+items. Both are investigations. They were found in the Sprint 14 device round (2026-10-28), and
+neither is a Sprint 14 regression. Later the same day the owner put the VHF gamepad driver on the
+host (LuminalShine 26.10.0 replaced ViGEmBus with it; 26.10.1 keeps it), and the
+[VHF gamepad round](development/device-validation.md#vhf-gamepad-round-2026-10-28) changed the
+facts of both items and added the third item and the open decision. See the
+[host contract, section 13](host-contract/luminalshine.md#13-input).
 
-- **Pad battery.** No battery reaches the PC. By default the host makes the pad an Xbox 360
-  controller, which has no battery, and with DualShock 4 emulation ViGEmBus makes a wired (USB) pad,
-  which has none either. The client sends the battery state only when Android reports one for the
-  pad (`InputDevice.batteryState.isPresent` on Android 12 and later, or the SHIELD API;
-  `ControllerHandler.sendControllerBatteryPacket` returns otherwise; 3.27 step 10). First check
-  whether Android reports a battery for the Pro 3, through the receiver and over Bluetooth
-  (`dumpsys input` or a log line). The host side comes next. See A6, C5 and finding U7.
+- **Pad battery.** No battery reaches the PC. The client sends the battery state only when Android
+  reports one for the pad (`InputDevice.batteryState.isPresent` on Android 12 and later, or the
+  SHIELD API; `ControllerHandler.sendControllerBatteryPacket` returns otherwise; 3.27 step 10). In
+  the VHF round of 2026-10-28, Android showed no battery for either pad: the Ultimate 2 (over
+  Bluetooth on the S22, and through its receiver in D-input on the TV) and the Pro 3 (on its
+  receiver in Switch mode, on the S22). The host side has changed: it no longer makes an Xbox 360
+  controller by default, nor a wired DualShock 4 through ViGEmBus. It makes an Xbox Series, an
+  Xbox One or a Switch Pro Controller from these pads (and a DualShock 4 or a DualSense for other
+  pads), and it accepts a battery state only for the DualShock 4, the DualSense and the Switch
+  Pro Controller, not for an Xbox Series or an Xbox One. The round made an Xbox Series for the
+  Ultimate 2 on the S22, an Xbox One for it on the TV, and a Switch Pro Controller for the Pro 3.
+  Still to check: whether Android reports a battery for the Pro 3 over Bluetooth (`dumpsys input` or
+  a log line); the round used its receiver only. See A6, C5 and finding U7.
 - **Pad gyro.** The gyro of the 8BitDo Pro 3 works on Windows (Steam's controller test), but neither
   Android device exposes it to the app: the Streamer sees the pad through the USB receiver as a
   plain HID gamepad (no sensor in `dumpsys input`), and the S22 sees it in the pad's 8BitDo
   mode. Try Switch mode over Bluetooth on the S22. Run the Motion fallback check (the phone's
   sensors to a DualShock 4) with a pad connected: it did not run in the UAT, because no pad reached
-  the host in the streams of 10:29 and 10:35. See A8, C5 and finding U8.
+  the host in the streams of 10:29 and 10:35. See A8, C5 and finding U8. The VHF host accepts
+  motion only for a DualShock 4, a DualSense and a Switch Pro Controller, and when it creates one it
+  asks the client for accelerometer and gyroscope events at 100 Hz; which of them it makes depends
+  on what the client reports (see the open decision below). In the VHF round neither pad had a
+  sensor on Android (the Ultimate 2 on both devices, the Pro 3 on its receiver on the S22), so no
+  motion could reach the host.
+- **Rumble for pads in D-input or Switch mode.** Found in the VHF gamepad round (2026-10-28); the
+  owner sent it to this sprint the same day. Pads in D-input or Switch mode get no rumble on
+  Android: the S22 and TV kernels have no `NINTENDO_FF`, the TV has no `XPAD_FF`, and the 8BitDo
+  D-input identity is generic HID. Rumble reaches Borealis and then goes to the phone (the fallback)
+  or nowhere (the TV). XInput mode gives rumble only through the Borealis USB driver, and the owner
+  says XInput pads do not work in other Android apps. Possible fix to investigate: extend the
+  Borealis userspace USB driver to the Switch Pro receiver (`057E:2009`, the Pro 3 dongle; rumble,
+  and maybe gyro and battery from the `0x30` reports) and maybe to the 8BitDo D-input receiver
+  (`2DC8:6012`), the way it handles XInput today. Also check why the XInput receiver (`2DC8:310B`)
+  is not usable outside Borealis on the TV (the `xpad` device match on that kernel). The kernel
+  facts are in [device-validation section 19](development/device-validation.md#vhf-gamepad-round-2026-10-28).
+- **Open owner decision: a Nintendo pad whose sensors Android exposes.** Recorded on 2026-10-28
+  from the VHF gamepad round; the owner has not decided. When Android exposes the sensors of a
+  Nintendo pad (the Pro 3 in Switch mode), should the host make it a Switch Pro Controller or a
+  DualShock 4? The host's policy
+  ([contract, section 13](host-contract/luminalshine.md#13-input)) gives one or the other by what
+  the client reports:
+  - **Switch Pro Controller**, when the client reports the Nintendo type, which Borealis does for
+    vendor `057E` (`ControllerHandler.sendControllerArrival`), unless it overrides the type (next
+    item). The Nintendo type wins over a motion capability. The host then accepts motion and a
+    battery state, and no touchpad.
+  - **DualShock 4**, when the client reports the type as unknown with an accelerometer or a gyroscope
+    and `motion_as_ds4` is on (the default). Borealis does this today for every pad that is not a
+    PlayStation pad and has a sensor manager: `sendControllerArrival` then reports the type as
+    unknown, shows a toast and turns on the clickpad emulation (see the Sprint 13 note of the
+    [backlog](#backlog-not-scheduled)). The host then accepts motion, a battery state and touch,
+    and it sends the light colour to the client.
+
+  So, with the current client, a Nintendo pad with a sensor becomes a DualShock 4. A Switch Pro
+  Controller needs the client to report the Nintendo type, or the host's `gamepad` setting (global
+  or per client) set to `switch_pro`.
 
 #### Accessibility and layout
 
@@ -1724,7 +1773,10 @@ conversion keeps behaviour (ADR 0059, rule 10). Paths are under
     - `AbstractController.supportedButtonFlags` is never assigned, so a USB pad's arrival reports
       0 supported buttons to the host.
     - An Xbox One pad shows Guide pressed in its first reports, until a 0x07 report.
-    - `stop()` sends `rumble(0, 0)`, which keeps the Xbox One trigger motors running.
+    - `stop()` sends `rumble(0, 0)`, which keeps the Xbox One trigger motors running. A host of
+      LuminalShine 26.10.0 or later can send trigger rumble (control message 0x5500, from the VHF
+      backend; [contract, section 12](host-contract/luminalshine.md#12-control-stream)), so
+      this path can run now. The VHF round of 2026-10-28 did not test trigger rumble.
     - Races: `stopped` is not volatile, and `controllers` is not synchronized while `stop()` on
       the input thread re-enters `deviceRemoved`. A `ConcurrentModificationException` or a
       skipped entry is possible.
@@ -1762,6 +1814,8 @@ conversion keeps behaviour (ADR 0059, rule 10). Paths are under
       that has a sensor manager (a matching pad without one is skipped with `continue`). So when
       two pads on one number both have a sensor manager, only the first gets the state.
     - `handleRumbleTriggers` passes a possibly null `vibratorManager` to `rumbleQuadVibrators`.
+      The same host can send it trigger rumble now (LuminalShine 26.10.0, VHF backend), so
+      this path can run. The VHF round of 2026-10-28 did not test trigger rumble.
     - The controller-input fusing block is written out three times (about lines 1479 to 1514 of
       the Java).
     - The `gestures` constructor property is stored and never read.
@@ -1791,7 +1845,11 @@ conversion keeps behaviour (ADR 0059, rule 10). Paths are under
       period; a second pad on the same number gets no sensor registration; `destroy()` leaves the
       listeners set, so a later `disableSensors()` sends a stationary gyro event.
     - Battery: the percentage goes through a float and a truncating byte (53 becomes 52, 59
-      becomes 58; out of range wraps). `LI_BATTERY_STATE_NOT_PRESENT` is never used, and an
+      becomes 58; out of range wraps). A host of LuminalShine 26.10.0 or later accepts a battery
+      state for a DualShock 4, a DualSense or a Switch Pro Controller
+      ([contract, section 13](host-contract/luminalshine.md#13-input)), so a value can reach a
+      game now. Android showed no battery for either pad in the VHF round of 2026-10-28, so
+      the path did not run. `LI_BATTERY_STATE_NOT_PRESENT` is never used, and an
       unknown status is retried at every poll.
     - Rumble: small motors truncate to an amplitude of 0 and cancel the vibration.
       `sceManager.rumble` gets sign-extended shorts (0xC000 arrives as -16384), which is probably

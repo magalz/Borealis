@@ -375,6 +375,7 @@ internal fun handleBack(session: StreamSession) {
         is StreamPhase.Quitting,
         is StreamPhase.Failed -> session.leave()
         is StreamPhase.Conflict -> session.answerConflict(ConflictChoice.CANCEL)
+        is StreamPhase.Disconnecting -> Unit
         is StreamPhase.Streaming ->
             if (phase.panel == Panel.NONE) session.openMenu() else session.closePanel()
     }

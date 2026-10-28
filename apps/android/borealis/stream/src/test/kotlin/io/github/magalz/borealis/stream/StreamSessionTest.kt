@@ -550,7 +550,7 @@ class StreamSessionTest {
                 "sendText hi",
                 "openSystemKeyboard",
                 "requestKeyframe",
-                "disconnect",
+                "disconnect Desktop",
                 "quitApp",
                 "leave",
                 "retry",

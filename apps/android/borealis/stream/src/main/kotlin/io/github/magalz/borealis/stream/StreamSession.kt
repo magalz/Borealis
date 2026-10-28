@@ -286,7 +286,7 @@ class StreamSession(
 
     override fun requestKeyframe() = actions.requestKeyframe()
 
-    override fun disconnect() = actions.disconnect()
+    override fun disconnect() = actions.disconnect(mutableState.value.appName)
 
     override fun quitApp() {
         var asked = false

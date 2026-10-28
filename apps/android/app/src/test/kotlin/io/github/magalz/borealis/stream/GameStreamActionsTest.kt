@@ -236,7 +236,7 @@ class GameStreamActionsTest {
 
     @Test
     fun `disconnect finishes the activity`() {
-        actions.disconnect()
+        actions.disconnect("Desktop")
 
         assertThat(activity.isFinishing).isTrue()
     }
@@ -436,7 +436,7 @@ class GameStreamActionsTest {
 
     @Test
     fun `disconnect writes the session end with its own reason, then finishes`() {
-        actions.disconnect()
+        actions.disconnect("Desktop")
 
         assertThat(endReasons()).containsExactly("reason=disconnect duration_s=0")
         assertThat(activity.isFinishing).isTrue()

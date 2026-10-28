@@ -50,8 +50,8 @@ class RecordingActions : StreamActions {
         calls += "menuHintShown"
     }
 
-    override fun disconnect() {
-        calls += "disconnect"
+    override fun disconnect(appName: String) {
+        calls += "disconnect $appName"
     }
 
     /** Called by a test to say the quit did not happen, as the activity does. */

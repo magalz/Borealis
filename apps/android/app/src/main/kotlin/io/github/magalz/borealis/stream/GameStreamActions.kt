@@ -159,7 +159,7 @@ internal constructor(
         preferences(activity).edit { putBoolean(KEY_MENU_HINT_SHOWN, true) }
     }
 
-    override fun disconnect() {
+    override fun disconnect(appName: String) {
         SessionAudit.disconnected()
         activity.finish()
     }

@@ -45,6 +45,12 @@ sealed interface StreamPhase {
     data class Quitting(val resumeTo: StreamPhase, val ended: StreamFailure? = null) : StreamPhase
 
     /**
+     * The user disconnected: the connection ends and the app keeps running on the PC. The screen
+     * says so until the connection has stopped, and the activity finishes after it.
+     */
+    data object Disconnecting : StreamPhase
+
+    /**
      * The first frame is on screen. [touchMode] is null when the device has no touchscreen and
      * [gamepadMouse] is null when there is no gamepad-as-mouse choice to offer. [pointerSpeed] is
      * the speed of the gamepad mouse for this session. [dockedKeyboard] says whether the keyboard

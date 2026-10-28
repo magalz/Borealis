@@ -742,8 +742,9 @@ Items:
 ### Sprint 14: Kotlin migration, video, audio and the stream activity
 
 Converted in the phase branch `phase/s14-kotlin-stream`, one merged task per area. Every
-conversion is merged; the device round is to be run. No inherited Java is left:
-`git ls-files '*.java'` lists nothing, and `apps/android/app/src/main/java` no longer exists.
+conversion is merged. The agent part of the device round ran on 2026-10-28, and the owner's part
+and the UAT are to be run. No inherited Java is left: `git ls-files '*.java'` lists nothing, and
+`apps/android/app/src/main/java` no longer exists.
 Owner decisions of 2026-10-26 and 2026-10-27:
 
 - **MoonBridge first.** [ADR 0060](adr/0060-convert-moonbridge-to-a-kotlin-object.md)
@@ -1023,9 +1024,10 @@ Planned, not started.
   discovery skips a host it already reported, in `ComputerManagerService` and the
   mDNS agents, with a test first.
 - **Second device during a launch.** Found in the Sprint 14 device round (2026-10-28); the
-  owner put it here. With 26.10.0-beta.1 the host runs `/launch`, `/resume` and `/cancel` one
-  at a time, so a second device that asks for the app while the first launch runs gets the "An
-  app is already running" dialog, not the retry of "Another device is starting a stream".
+  owner put it here. The host runs `/launch`, `/resume` and `/cancel` one at a time on its
+  launch worker (#203, [host contract](host-contract/luminalshine.md) 7.3), so a second device
+  waits until the first launch ends. On 26.10.0-beta.1 it then got the "An app is already
+  running" dialog, not the retry of "Another device is starting a stream".
   Decide whether the same app that the device asked for joins without asking, and the dialog
   stays for a different app. A yes changes
   [UC-003](use-cases/0003-join-or-replace-a-running-app.md), where every choice is explicit. See

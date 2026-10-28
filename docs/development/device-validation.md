@@ -335,12 +335,12 @@ removed in the Web UI.
 4. Expected for the second request: the host answers 409 "Another client launch
    is already pending; retry the connection." (contract 7.5). The device shows
    "Another device is starting a stream on this host. Retrying in N s (retry M of
-   K)." (`launch_retry_pending`). The retries have the category `PENDING`. With
-   LuminalShine 26.10.0-beta.1 the host runs `/launch`, `/resume` and `/cancel`
-   one at a time (#203), so the second request waits until the first launch
-   ends, and the usual outcome is the dialog of step 6, not the 409: the 409
-   needs a request inside a narrow window (see
-   [section 19](#19-results-sprint-14)).
+   K)." (`launch_retry_pending`). The retries have the category `PENDING`. The
+   host runs `/launch`, `/resume` and `/cancel` one at a time on its launch
+   worker (#203, contract 7.3), so the second request waits until the first
+   launch ends. In the round of 2026-10-28, on 26.10.0-beta.1, the second device
+   then got the dialog of step 6, not the 409, which needs a request inside a
+   narrow window (see [section 19](#19-results-sprint-14)).
 5. Expected end of the retries, one of:
    - the device streams, or
    - the device shows a clear failure after the retry budget (60 s,
@@ -353,8 +353,8 @@ removed in the Web UI.
    Cancel (`apps/android/borealis/stream/src/main/res/values/strings_conflict.xml`).
    Focus starts on Cancel. The text warns that quitting ends the session on the
    other device (since Sprint 9 the warning differs for Desktop and for a game; see
-   section 3.22, step 5). On 26.10.0-beta.1 this is the usual outcome of step 3:
-   see step 4 and [section 19](#19-results-sprint-14).
+   section 3.22, step 5). In the round of 2026-10-28, on 26.10.0-beta.1, this was
+   the outcome of step 3: see step 4 and [section 19](#19-results-sprint-14).
 7. Run the three answers, each in a new attempt. Start the same app on the
    Streamer while the S22 runs it, and answer the dialog as follows:
    - Join: the device joins the running session and streams.
@@ -1602,8 +1602,17 @@ Steps:
      the decoder name in the Detailed overlay (step 4).
    - With the app stopped, set `CrashCount` to 1 in `shared_prefs/DecoderTombstone.xml`. Use 1: a
      count of 3 would reset the streaming settings (`UiHelper.showDecoderCrashDialog`). The file
-     does not exist until a crash has happened, so write it whole: a SharedPreferences XML with
-     `<int name="CrashCount" value="1" />`. Push it to `/data/local/tmp`, then copy it in with
+     does not exist until a crash has happened, so write the whole file, not a lone element
+     (SharedPreferences cannot parse that):
+
+     ```xml
+     <?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+     <map>
+         <int name="CrashCount" value="1" />
+     </map>
+     ```
+
+     Push it to `/data/local/tmp`, then copy it in with
      `adb -s <serial> shell run-as io.github.magalz.borealis.debug cp /data/local/tmp/<file> shared_prefs/DecoderTombstone.xml`.
      That command worked on both devices. The decoder crash notice cannot be triggered by hand
      (3.21, item 8), so this stands in for a crash.
@@ -1652,7 +1661,7 @@ Steps:
    - 5.1 surround, if the host offers it, and 7.1 likewise. Expected: the speaker test of the PC
      plays each speaker in its place. The PC offers 5.1 and 7.1 through the virtual audio sink of
      the host, which switches to the layout that the client asks for. The logcat has
-     `Audio channel config: 0xFC` for 5.1 and `0x18FC` for 7.1, and the host log has
+     `Audio channel config: 0xFC` for 5.1 and `0x18FC` for 7.1. For 5.1, the host log has
      `Changed virtual audio sink format to [S16 48000 5.1]` and
      `Opus initialized: 48 kHz, 6 channels`. Record `not applicable` where the host does not
      offer it. Source: `AndroidAudioRenderer.kt` (the channel masks).
@@ -1664,10 +1673,11 @@ Steps:
      about 2 s on the Streamer. Expected: the second device shows "Another device is starting a
      stream on this host. Retrying in N s", then streams, or shows a clear failure after the
      retry budget. Source: `Game.kt` (`launchStarting`, `launchRetrying` and `stageStarting`).
-     With LuminalShine 26.10.0-beta.1 the host runs `/launch`, `/resume` and `/cancel` one at a
-     time (#203), so the request of the second device waits until the first launch ends. The usual
-     outcome is then the "An app is already running" dialog of 3.5, step 6, and the 409 retry needs
-     a request inside a narrow window. Both are a `pass` (Cancel returns to Apps with no error).
+     The host runs `/launch`, `/resume` and `/cancel` one at a time on its launch worker (#203,
+     contract 7.3), so the request of the second device waits until the first launch ends. In the
+     round of 2026-10-28, on 26.10.0-beta.1, the second device got the "An app is already
+     running" dialog of 3.5, step 6, not the 409 retry, which needs a request inside a narrow
+     window. Both are a `pass` (Cancel returns to Apps with no error).
 7. Picture-in-picture (S22). Turn on Settings, Advanced, Picture-in-picture (off by default).
    - Enter and leave. In a stream, go Home. Expected: the window enters picture-in-picture at
      once (Android 12 and later enter on their own), shows only the stream (no menu and no
@@ -1738,7 +1748,8 @@ Steps:
     - `getPendingAudioDuration`. Reached by every audio packet: step 5.
     - `requestIdrFrame`. In the in-game menu, choose "Refresh the picture". Expected: the menu
       closes, the stream goes on, and no error shows. The app log has the native line
-      `IDR frame request sent`, and a new SPS follows. The host log has `Debug: type [IDX_REQUEST_IDR_FRAME]`, followed by
+      `IDR frame request sent`, and a new SPS follows. The host log has
+      `Debug: type [IDX_REQUEST_IDR_FRAME]`, followed by
       `Video worker: issued one immediate bounded recovery IDR`. Source:
       `NvConnection.requestKeyframe`.
     - `bridgeClLogMessage` (the native log forwarding). Expected: lines with the tag
@@ -4668,7 +4679,7 @@ of the Sprint 14 block, and one question to Sprint 15.
   - The tombstone is written by a push to `/data/local/tmp`, then a `run-as ... cp`.
   - The S22 audio runs at the start and the end of a stream are not a `fail`, and the PC
     offers 5.1 and 7.1 through the virtual audio sink of the host.
-  - The second device usually gets the conflict dialog, not the retry (3.5 too).
+  - The second device can get the conflict dialog instead of the retry (3.5 too).
   - The buttons of the small PiP window hide quickly, so expand and close it by hand.
   - `testClientConnectivity` runs on every termination, `findExternalAddressIP4` needs a VPN,
     and the host log line of a keyframe request is known.
@@ -4706,7 +4717,7 @@ to. The rows that start with 3.28 are items of
 | 8 Quit, launch at once | TV | pass | `Launched new game session` about 12 s later, no retry needed. |
 | 9 Samsung keyboard capture | S22 | owner, pending | Needs a hardware keyboard. |
 | 10 testClientConnectivity | S22 | pass; screen: owner, pending | Reached through `connectionTerminated`: while the S22 streamed, the TV joined and quit. S22 `Connection terminated: -1`, no JNI error. What the S22 screen showed: owner, pending. |
-| 10 findExternalAddressIP4 | both | not reached | `ComputerManagerService.populateExternalAddress` runs the STUN call only when the active network is a VPN (the structure of the inherited Java and of upstream). On the LAN it is never called. The test needs a VPN on the device (finding 3). |
+| 10 findExternalAddressIP4 | both | not applicable (not reached) | `ComputerManagerService.populateExternalAddress` runs the STUN call only when the active network is a VPN (the structure of the inherited Java and of upstream). On the LAN it is never called. The test needs a VPN on the device (finding 3). |
 | 10 sendUtf8Text | — | owner, pending | Accented text into Notepad. |
 | 10 Controller natives | — | owner, pending | The pads. |
 | 10 getPendingAudioDuration | both | pass | Step 5. |
@@ -4723,9 +4734,10 @@ to. The rows that start with 3.28 are items of
 #### 1. A second device during a launch gets the conflict dialog
 
 - Device: S22 and TV, as in the row of step 6.
-- What happens: with 26.10.0-beta.1 the host runs `/launch`, `/resume` and `/cancel` one at a
-  time (#203), so the second request waits until the first launch ends. The TV gets "An app is
-  already running", not the 409 retry of 3.5. Both outcomes are a `pass`.
+- What happens: the host runs `/launch`, `/resume` and `/cancel` one at a time on its launch
+  worker (#203, contract 7.3), so the second request waits until the first launch ends. On
+  26.10.0-beta.1 the TV then got "An app is already running", not the 409 retry of 3.5. Both
+  outcomes are a `pass`.
 - The owner decided on 2026-10-28: fix the runbook now (3.5 and 3.27, step 6), and put the
   question whether the same app should join without asking in Sprint 15
   ([roadmap](../roadmap.md#sprint-15-the-stream-screens-and-glass)).

@@ -11,7 +11,9 @@ import org.junit.rules.ExternalResource
 /**
  * A scope whose coroutines run at once, on the thread that starts or resumes them, as the ones of
  * `Dispatchers.Unconfined` do. For the code under test that takes a scope and nothing else of the
- * dispatcher: a test hands it this one instead of naming the dispatcher itself.
+ * dispatcher: a test hands it this one instead of naming the dispatcher itself. The dispatcher runs
+ * on virtual time, so a `delay()` or a `withTimeout()` under it never fires unless the test
+ * advances the scheduler.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 fun unconfinedScope(): CoroutineScope = CoroutineScope(UnconfinedTestDispatcher())
@@ -21,9 +23,13 @@ fun unconfinedScope(): CoroutineScope = CoroutineScope(UnconfinedTestDispatcher(
  * there: these tests wait for the result in real time, so a test dispatcher with virtual time would
  * not fit. The pool is closed when the test ends.
  */
-class WorkerDispatcherRule(threads: Int = 4) : ExternalResource() {
+class WorkerDispatcherRule : ExternalResource() {
     val dispatcher: ExecutorCoroutineDispatcher =
-        Executors.newFixedThreadPool(threads).asCoroutineDispatcher()
+        Executors.newFixedThreadPool(THREADS).asCoroutineDispatcher()
 
     override fun after() = dispatcher.close()
+
+    private companion object {
+        const val THREADS = 4
+    }
 }

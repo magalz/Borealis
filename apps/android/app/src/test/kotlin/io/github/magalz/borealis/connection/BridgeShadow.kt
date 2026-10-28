@@ -41,8 +41,10 @@ internal data class BridgeCall(
  * the real `cleanupBridge` too. `getStageName` and `getLaunchUrlQueryParameters` answer without
  * being recorded.
  *
- * State lives in this object, which every test of one Robolectric sandbox shares: call [reset]
- * before each test.
+ * State lives in this object, which every test of one Robolectric sandbox shares. A class that
+ * shares a sandbox with other users of the shadow resets it before and after each test, as
+ * `ConnectionRig`, `GameTestBase` and `MoonBridgeCallbacksTest` do, so that what a test told it
+ * does not reach the tests of other classes.
  *
  * Use it with `@Config(shadows = [ShadowRecordingBridge::class, ...])`.
  */

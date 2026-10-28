@@ -204,14 +204,18 @@ class GamepadCaptureTest {
                 }
             },
         )
-        rig.connection.motion.clear()
+        try {
+            rig.connection.motion.clear()
 
-        rig.handler.setCaptured(true)
+            rig.handler.setCaptured(true)
 
-        assertThat(rig.connection.motion).containsExactly("motion 0 2 0.0 0.0 0.0")
-        // The listener is a stand-in with no sensor manager to leave: take it out, or destroying
-        // the handler after the test would look for the sensor manager.
-        rig.setDefaultContextField("gyroListener", null)
+            assertThat(rig.connection.motion).containsExactly("motion 0 2 0.0 0.0 0.0")
+        } finally {
+            // The listener is a stand-in with no sensor manager to leave: take it out, even when
+            // the assertion fails, or destroying the handler after the test would look for the
+            // sensor manager and hide the failure.
+            rig.setDefaultContextField("gyroListener", null)
+        }
     }
 
     @Test

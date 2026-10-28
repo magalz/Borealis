@@ -32,7 +32,8 @@ data class StreamDefaults(
  * `retry()` starts the stream again in a new activity and a new session. Cancelling a conflict
  * leaves the phase at [StreamPhase.Conflict]; the activity finishes itself. A quit that is asked
  * for puts the phase at [StreamPhase.Quitting] at once and keeps it there, whether or not the host
- * ends the stream, until the quit answers.
+ * ends the stream, until the quit answers. A disconnect puts it at [StreamPhase.Disconnecting] at
+ * once, and nothing that happens later changes it: the activity finishes itself.
  *
  * The keyboard is docked or covering as [dockKeyboard] says at the moment it opens, and keeps that
  * type until it closes (see [StreamPhase.Streaming.dockedKeyboard]): a pad that connects or
@@ -158,7 +159,7 @@ class StreamSession(
     fun onFailed(failure: StreamFailure) = mutableState.update {
         val phase = it.phase
         when {
-            phase is StreamPhase.Failed -> it
+            phase is StreamPhase.Failed || phase is StreamPhase.Disconnecting -> it
             phase is StreamPhase.Quitting ->
                 if (phase.ended == null) it.copy(phase = phase.copy(ended = failure)) else it
             else -> it.copy(phase = StreamPhase.Failed(failure))
@@ -286,19 +287,32 @@ class StreamSession(
 
     override fun requestKeyframe() = actions.requestKeyframe()
 
-    override fun disconnect() = actions.disconnect(mutableState.value.appName)
+    override fun disconnect() {
+        if (!startLeaving { StreamPhase.Disconnecting }) return
+        BorealisLog.i(LogTag.APP, "disconnect accepted")
+        actions.disconnect(mutableState.value.appName)
+    }
 
     override fun quitApp() {
-        var asked = false
-        mutableState.update {
-            val phase = it.phase
-            asked = phase !is StreamPhase.Failed && phase !is StreamPhase.Quitting
-            if (asked) it.copy(phase = StreamPhase.Quitting(phase)) else it
-        }
-        if (!asked) return
+        if (!startLeaving(StreamPhase::Quitting)) return
         quitAcceptedAtMs = clockMs()
         BorealisLog.i(LogTag.APP, "quit accepted")
         actions.quitApp(::onQuitFailed)
+    }
+
+    // Moves to the phase that [leaving] makes from the current one, unless the session failed or
+    // is leaving already; true when it moved. A quit and a disconnect shut each other out.
+    private inline fun startLeaving(leaving: (StreamPhase) -> StreamPhase): Boolean {
+        var started = false
+        mutableState.update {
+            val phase = it.phase
+            started =
+                phase !is StreamPhase.Failed &&
+                    phase !is StreamPhase.Quitting &&
+                    phase !is StreamPhase.Disconnecting
+            if (started) it.copy(phase = leaving(phase)) else it
+        }
+        return started
     }
 
     override fun leave() = actions.leave()

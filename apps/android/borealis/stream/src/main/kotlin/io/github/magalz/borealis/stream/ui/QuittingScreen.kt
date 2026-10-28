@@ -30,12 +30,18 @@ private val SPINNER_SIZE = 32.dp
 private val CONTENT_GAP = 16.dp
 
 /**
- * A quit under way (UC-004-T5): the host ends the stream as soon as it gets the cancel and answers
- * it seconds later, so the screen stays quiet, with a progress indicator over the black page, until
- * the activity finishes. Back leaves it.
+ * A quit under way (UC-004-T5): the screen shows from the confirmation, because the host ends the
+ * stream when it gets the cancel and answers it seconds later. It stays quiet, with a progress
+ * indicator over the black page, until the activity finishes. Back leaves it.
  */
 @Composable
 internal fun QuittingScreen(appName: String) {
+    LeavingScreen(stringResource(R.string.stream_quitting, appLabel(appName)))
+}
+
+/** What the screens of a quit and a disconnect share: [text] under a progress indicator. */
+@Composable
+internal fun LeavingScreen(text: String) {
     val colors = LocalBorealisColors.current
     Column(
         Modifier.fillMaxSize()
@@ -51,7 +57,7 @@ internal fun QuittingScreen(appName: String) {
             strokeWidth = 3.dp,
         )
         Text(
-            stringResource(R.string.stream_quitting, appLabel(appName)),
+            text,
             Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             color = colors.ink3,
             textAlign = TextAlign.Center,

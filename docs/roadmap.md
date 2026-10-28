@@ -939,8 +939,11 @@ Items:
   the rare natives (JNI binds each one at its first call), CheckJNI where the device allows it,
   Quit, and an upgrade over the `main` build. The checks are in
   [device-validation section 3.27](development/device-validation.md#327-sprint-14-checks), and the
-  owner's 30-minute gameplay test is
-  [section 3.28](development/device-validation.md#328-owners-30-minute-gameplay-uat-sprint-14).
+  owner's end-of-migration UAT is
+  [section 3.28](development/device-validation.md#328-owners-30-minute-gameplay-uat-sprint-14):
+  at least 30 minutes of play on one game while the stream options change (resolution, frame
+  rate, bitrate, codec, HDR, frame pacing, audio and input), then pairing, a wrong PIN, Add host,
+  Forget, Wake-on-LAN, the pinned shortcut, the TV channel, resume and Quit.
   The results go in section 19, which is not written yet.
 
 ### Sprint 15: The stream screens and glass

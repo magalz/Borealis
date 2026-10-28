@@ -26,12 +26,14 @@ class ComputerManagerConnectionTest {
     fun `polling starts once for two collectors and stops when the last one leaves`() = runTest {
         val connection = newConnection()
 
-        val first = launch(UnconfinedTestDispatcher(testScheduler)) {
-            connection.hostUpdates().collect {}
-        }
-        val second = launch(UnconfinedTestDispatcher(testScheduler)) {
-            connection.hostUpdates().collect {}
-        }
+        val first =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                connection.hostUpdates().collect {}
+            }
+        val second =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                connection.hostUpdates().collect {}
+            }
 
         assertThat(binder.events).containsExactly("startPolling")
         first.cancelAndJoin()
@@ -56,9 +58,10 @@ class ComputerManagerConnectionTest {
     fun `a collector sees the hosts that the service reports`() = runTest {
         val connection = newConnection()
         val seen = mutableListOf<Set<String>>()
-        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
-            connection.hostUpdates().collect { seen += it.keys }
-        }
+        val job =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                connection.hostUpdates().collect { seen += it.keys }
+            }
 
         binder.emit(details(uuid = "a"))
         binder.emit(details(uuid = "b"))
@@ -71,9 +74,10 @@ class ComputerManagerConnectionTest {
     fun `updates are copies, so changing the service's object changes nothing already emitted`() =
         runTest {
             val connection = newConnection()
-            val job = launch(UnconfinedTestDispatcher(testScheduler)) {
-                connection.hostUpdates().collect {}
-            }
+            val job =
+                launch(UnconfinedTestDispatcher(testScheduler)) {
+                    connection.hostUpdates().collect {}
+                }
             val live = details(uuid = "a", name = "Before")
 
             binder.emit(live)
@@ -93,9 +97,10 @@ class ComputerManagerConnectionTest {
         val live = details(uuid = "a")
         binder.computers["a"] = live
 
-        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
-            connection.appListUpdates("a").collect {}
-        }
+        val job =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                connection.appListUpdates("a").collect {}
+            }
 
         assertThat(binder.events).containsExactly("startPolling")
         val poller = binder.pollers.single()
@@ -113,12 +118,14 @@ class ComputerManagerConnectionTest {
     fun `two collectors of one host share a poller that stops with the last of them`() = runTest {
         val connection = newConnection()
         binder.computers["a"] = details(uuid = "a")
-        val first = launch(UnconfinedTestDispatcher(testScheduler)) {
-            connection.appListUpdates("a").collect {}
-        }
-        val second = launch(UnconfinedTestDispatcher(testScheduler)) {
-            connection.appListUpdates("a").collect {}
-        }
+        val first =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                connection.appListUpdates("a").collect {}
+            }
+        val second =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                connection.appListUpdates("a").collect {}
+            }
 
         val poller = binder.pollers.single()
         first.cancelAndJoin()
@@ -131,9 +138,10 @@ class ComputerManagerConnectionTest {
     fun `the apps of an unknown host are reported as null and no poller is started`() = runTest {
         val connection = newConnection()
 
-        val first = launch(UnconfinedTestDispatcher(testScheduler)) {
-            assertThat(connection.appListUpdates("missing").first()).isNull()
-        }
+        val first =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                assertThat(connection.appListUpdates("missing").first()).isNull()
+            }
 
         first.join()
         assertThat(binder.pollers).isEmpty()
@@ -142,9 +150,10 @@ class ComputerManagerConnectionTest {
     @Test
     fun `pausing stops polling, waits, and starts it again afterwards`() = runTest {
         val connection = newConnection()
-        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
-            connection.hostUpdates().collect {}
-        }
+        val job =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                connection.hostUpdates().collect {}
+            }
 
         val result = connection.pausePolling {
             binder.record("inside")
@@ -176,9 +185,10 @@ class ComputerManagerConnectionTest {
     @Test
     fun `polling resumes even when the paused block fails`() = runTest {
         val connection = newConnection()
-        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
-            connection.hostUpdates().collect {}
-        }
+        val job =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                connection.hostUpdates().collect {}
+            }
 
         try {
             connection.pausePolling<Unit> { error("boom") }
@@ -194,9 +204,10 @@ class ComputerManagerConnectionTest {
     @Test
     fun `a collector that leaves during a pause does not restart polling afterwards`() = runTest {
         val connection = newConnection()
-        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
-            connection.hostUpdates().collect {}
-        }
+        val job =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                connection.hostUpdates().collect {}
+            }
 
         connection.pausePolling { job.cancelAndJoin() }
 
@@ -209,9 +220,10 @@ class ComputerManagerConnectionTest {
     fun `lookup answers from the last update, then from the service`() = runTest {
         val connection = newConnection()
         binder.computers["live"] = details(uuid = "live", name = "Live")
-        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
-            connection.hostUpdates().collect {}
-        }
+        val job =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                connection.hostUpdates().collect {}
+            }
         binder.emit(details(uuid = "seen", name = "Seen"))
 
         assertThat(connection.lookup("seen")?.name).isEqualTo("Seen")
@@ -243,9 +255,10 @@ class ComputerManagerConnectionTest {
     @Test
     fun `removing a host removes it from the service and from the updates`() = runTest {
         val connection = newConnection()
-        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
-            connection.hostUpdates().collect {}
-        }
+        val job =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                connection.hostUpdates().collect {}
+            }
         val live = details(uuid = "a")
         binder.emit(live)
 
@@ -329,7 +342,11 @@ class ComputerManagerConnectionTest {
         runTest {
             val connection = newConnection()
             binder.computers["a"] =
-                details(uuid = "a", pairState = PairState.NOT_PAIRED, state = ComputerDetails.State.ONLINE)
+                details(uuid = "a")
+                    .reported(
+                        pairState = PairState.NOT_PAIRED,
+                        state = ComputerDetails.State.ONLINE,
+                    )
             val cert = testCertificate()
 
             connection.pinCertificate("a", cert)
@@ -344,9 +361,10 @@ class ComputerManagerConnectionTest {
     @Test
     fun `the app list of one host never shows up on another host`() = runTest {
         val connection = newConnection()
-        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
-            connection.hostUpdates().collect {}
-        }
+        val job =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                connection.hostUpdates().collect {}
+            }
 
         binder.emit(details(uuid = "a", rawAppList = APP_LIST))
         binder.emit(details(uuid = "b", rawAppList = null))
@@ -359,9 +377,10 @@ class ComputerManagerConnectionTest {
     @Test
     fun `a host that was removed and added again has no app list until it gets one`() = runTest {
         val connection = newConnection()
-        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
-            connection.hostUpdates().collect {}
-        }
+        val job =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                connection.hostUpdates().collect {}
+            }
         val live = details(uuid = "a", rawAppList = APP_LIST)
         binder.emit(live)
         connection.remove(live)
@@ -377,9 +396,10 @@ class ComputerManagerConnectionTest {
     @Test
     fun `a new app list replaces the one that was kept`() = runTest {
         val connection = newConnection()
-        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
-            connection.hostUpdates().collect {}
-        }
+        val job =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                connection.hostUpdates().collect {}
+            }
         val other = APP_LIST.replace("Desktop", "Games")
 
         binder.emit(details(uuid = "a", rawAppList = APP_LIST))
@@ -397,9 +417,10 @@ class ComputerManagerConnectionTest {
         val connection = newConnection()
         val live = details(uuid = "a", rawAppList = APP_LIST)
         binder.computers["a"] = live
-        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
-            connection.hostUpdates().collect {}
-        }
+        val job =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                connection.hostUpdates().collect {}
+            }
         // The service's details lost the list to a host poll, but it was received before.
         live.rawAppList = null
         binder.emit(live)

@@ -7,9 +7,9 @@ import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import com.limelight.nvstream.http.HostHttpResponseException
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
-import io.github.magalz.borealis.crypto.LimeLogCapture
 import io.github.magalz.borealis.crypto.TestIdentities
 import io.github.magalz.borealis.crypto.providerOf
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.io.Closeable
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -60,9 +60,7 @@ class HttpFailureTest {
             assertThrows(FileNotFoundException::class.java) { clientOf(host).getServerInfo(true) }
 
         assertThat(error.message)
-            .startsWith(
-                "http://127.0.0.1:${host.httpPort}/serverinfo?uniqueid=$UNIQUE_ID&uuid="
-            )
+            .startsWith("http://127.0.0.1:${host.httpPort}/serverinfo?uniqueid=$UNIQUE_ID&uuid=")
     }
 
     @Test
@@ -96,14 +94,14 @@ class HttpFailureTest {
         val host = host()
         host.answer(
             "/serverinfo",
-            HostReply.raw(
-                "HTTP/1.1 304 Not Modified\r\nContent-Length: 0\r\n\r\n".toByteArray()
-            ),
+            HostReply.raw("HTTP/1.1 304 Not Modified\r\nContent-Length: 0\r\n\r\n".toByteArray()),
             "http",
         )
 
         val error =
-            assertThrows(HostHttpResponseException::class.java) { clientOf(host).getServerInfo(true) }
+            assertThrows(HostHttpResponseException::class.java) {
+                clientOf(host).getServerInfo(true)
+            }
 
         assertThat(error.errorCode).isEqualTo(304)
     }
@@ -119,10 +117,16 @@ class HttpFailureTest {
 
             assertWithMessage("$version $name")
                 .that(body)
-                .isEqualTo("""<?xml version="1.0" encoding="utf-8"?>""" + "\n" + """<root status_code="404"/>""")
+                .isEqualTo(
+                    """<?xml version="1.0" encoding="utf-8"?>""" +
+                        "\n" +
+                        """<root status_code="404"/>"""
+                )
             // The XML says what the HTTP layer did not.
             val error =
-                assertThrows(HostHttpResponseException::class.java) { http.getComputerDetails(body) }
+                assertThrows(HostHttpResponseException::class.java) {
+                    http.getComputerDetails(body)
+                }
             assertWithMessage("$version $name").that(error.errorCode).isEqualTo(404)
         }
     }
@@ -152,7 +156,7 @@ class HttpFailureTest {
 
     @Test
     fun `a debug build logs the url and the answer of every request but serverinfo`() {
-        LimeLogCapture().use { log ->
+        LimeLogCapture().start().use { log ->
             val host = host()
             host.answer("/serverinfo", HostReply.xml(serverInfoBody()), "https")
             host.answer("/applist", HostReply.root("<App><ID>1</ID></App>"), "https")
@@ -160,12 +164,12 @@ class HttpFailureTest {
 
             withVerbose(true) {
                 http.getServerInfo(true)
-                assertThat(log.records).isEmpty()
+                assertThat(log.entries).isEmpty()
 
                 http.getAppListRaw()
             }
 
-            val record = log.records.single()
+            val record = log.entries.single()
             assertThat(record.first).isEqualTo(Level.INFO)
             assertThat(record.second)
                 .startsWith("https://127.0.0.1:${host.httpsPort}/applist?uniqueid=$UNIQUE_ID&uuid=")
@@ -176,16 +180,20 @@ class HttpFailureTest {
 
     @Test
     fun `a debug build logs the url and the error of a request that failed`() {
-        LimeLogCapture().use { log ->
+        LimeLogCapture().start().use { log ->
             val host = host()
-            host.answer("/applist", HostReply.status(500, "Internal Server Error", ByteArray(0)), "https")
+            host.answer(
+                "/applist",
+                HostReply.status(500, "Internal Server Error", ByteArray(0)),
+                "https",
+            )
             val http = clientOf(host, serverCert = pinned)
 
             withVerbose(true) {
                 assertThrows(HostHttpResponseException::class.java) { http.getAppListRaw() }
             }
 
-            val record = log.records.single()
+            val record = log.entries.single()
             assertThat(record.first).isEqualTo(Level.WARNING)
             assertThat(record.second)
                 .startsWith("https://127.0.0.1:${host.httpsPort}/applist?uniqueid=$UNIQUE_ID&uuid=")
@@ -196,7 +204,7 @@ class HttpFailureTest {
 
     @Test
     fun `a release build logs nothing about its requests`() {
-        LimeLogCapture().use { log ->
+        LimeLogCapture().start().use { log ->
             val host = host()
             host.answer("/applist", HostReply.root("<App><ID>1</ID></App>"), "https")
             host.answer("/appasset", HostReply.status(500, "Oops", ByteArray(0)), "https")
@@ -209,7 +217,7 @@ class HttpFailureTest {
                 }
             }
 
-            assertThat(log.records).isEmpty()
+            assertThat(log.entries).isEmpty()
         }
     }
 

@@ -3,13 +3,10 @@ package com.limelight.binding.audio
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.limelight.nvstream.jni.MoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.logging.Handler
-import java.util.logging.Level
-import java.util.logging.LogRecord
-import java.util.logging.Logger
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -18,32 +15,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** What `LimeLog` wrote during a test, with the level of each line. */
-class LimeLogRecorder : ExternalResource() {
-    private val logger = Logger.getLogger("com.limelight.LimeLog")
-    private val lines = CopyOnWriteArrayList<Pair<Level, String>>()
-    private val handler =
-        object : Handler() {
-            override fun publish(record: LogRecord) {
-                lines.add(record.level to record.message)
-            }
-
-            override fun flush() = Unit
-
-            override fun close() = Unit
-        }
-
-    val entries: List<Pair<Level, String>>
-        get() = lines.toList()
-
-    override fun before() = logger.addHandler(handler)
-
-    override fun after() = logger.removeHandler(handler)
-}
-
 /**
- * What the code under test printed on the error stream, which is where `printStackTrace` writes.
- * It also keeps the stack traces of the failures that a test causes on purpose out of the test log.
+ * What the code under test printed on the error stream, which is where `printStackTrace` writes. It
+ * also keeps the stack traces of the failures that a test causes on purpose out of the test log.
  */
 class ErrorStreamRecorder : ExternalResource() {
     private val buffer = ByteArrayOutputStream()
@@ -65,27 +39,26 @@ class ErrorStreamRecorder : ExternalResource() {
 /**
  * The Robolectric setup that every test of `AndroidAudioRenderer` shares: the audio platform and
  * the native bridge are replaced by shadows (see [ShadowRecordingAudioTrack] and
- * [ShadowAudioMoonBridge]), and the application is the context that the renderer gets.
+ * [ShadowRecordingBridge]), and the application is the context that the renderer gets.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowAudioMoonBridge::class, ShadowRecordingAudioTrack::class])
+@Config(shadows = [ShadowRecordingBridge::class, ShadowRecordingAudioTrack::class])
 // Abstract so that Gradle does not run the base as a test of its own.
 @Suppress("AbstractClassCanBeConcreteClass")
 abstract class AudioRendererTestBase {
-    @get:Rule val log = LimeLogRecorder()
+    @get:Rule val log = LimeLogCapture()
 
     @get:Rule val printed = ErrorStreamRecorder()
 
     protected val context: Application = ApplicationProvider.getApplicationContext()
 
-    @Before
-    fun freshPlatform() = resetShadows()
+    @Before fun freshPlatform() = resetShadows()
 
     @After fun forgetPlatform() = resetShadows()
 
     private fun resetShadows() {
         AudioPlatform.reset()
-        ShadowAudioMoonBridge.reset()
+        ShadowRecordingBridge.reset()
     }
 
     protected fun renderer(audioFx: Boolean = false) = AndroidAudioRenderer(context, audioFx)
@@ -94,7 +67,9 @@ abstract class AudioRendererTestBase {
     protected fun config(channels: Int) =
         MoonBridge.AudioConfiguration(channels, CHANNEL_MASKS[channels] ?: 0)
 
-    /** Sets [this] up as the stream does for stereo audio: 48 kHz in packets of five milliseconds. */
+    /**
+     * Sets [this] up as the stream does for stereo audio: 48 kHz in packets of five milliseconds.
+     */
     protected fun AndroidAudioRenderer.setUpStereo(): Int = setup(config(2), SAMPLE_RATE, FRAME)
 }
 

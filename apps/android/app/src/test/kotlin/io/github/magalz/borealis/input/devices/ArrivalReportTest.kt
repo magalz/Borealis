@@ -11,6 +11,7 @@ import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.nvstream.jni.MoonBridge
 import io.github.magalz.borealis.input.FakeUsbController
+import io.github.magalz.borealis.testing.ANDROID_11
 import org.junit.Test
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -21,8 +22,8 @@ import org.robolectric.shadows.ShadowToast
 /**
  * The arrival report is what the handler tells the host about a controller the first time it sends
  * input: its type, the buttons it has and what it can do (rumble, battery, motion, touchpad, LEDs).
- * It is made from the device's vendor id, its key layout, its axes and its hardware, and it goes out
- * before the first packet of the controller.
+ * It is made from the device's vendor id, its key layout, its axes and its hardware, and it goes
+ * out before the first packet of the controller.
  */
 class ArrivalReportTest : DevicesTestBase() {
     private val xbox = 0x045e
@@ -43,8 +44,11 @@ class ArrivalReportTest : DevicesTestBase() {
     private fun caps(vararg flags: Short): Int = flags.fold(0) { sum, flag -> sum or flag.toInt() }
 
     private fun addSensors(vararg types: Int) {
-        val manager = RuntimeEnvironment.getApplication().getSystemService(SensorManager::class.java)
-        types.forEach { shadowOf(manager).addSensor(SensorBuilder.newBuilder().setType(it).build()) }
+        val manager =
+            RuntimeEnvironment.getApplication().getSystemService(SensorManager::class.java)
+        types.forEach {
+            shadowOf(manager).addSensor(SensorBuilder.newBuilder().setType(it).build())
+        }
     }
 
     @Test
@@ -59,10 +63,16 @@ class ArrivalReportTest : DevicesTestBase() {
 
     @Test
     fun `Microsoft pads are Xbox pads and the native library is not asked`() {
-        val arrival = arrivalOf(pad(1, vendorId = xbox, productId = 0x028e))
+        val arrival =
+            arrivalOf(
+                pad(1) {
+                    vendorId = xbox
+                    productId = 0x028e
+                }
+            )
 
         assertThat(arrival.type).isEqualTo(MoonBridge.LI_CTYPE_XBOX.toInt())
-        assertThat(ShadowDevicesMoonBridge.queries)
+        assertThat(NativePads.queries)
             .containsExactly(
                 "guessControllerHasPaddles $xbox ${0x028e}",
                 "guessControllerHasShareButton $xbox ${0x028e}",
@@ -72,34 +82,56 @@ class ArrivalReportTest : DevicesTestBase() {
 
     @Test
     fun `Sony pads are PlayStation pads`() {
-        val arrival = arrivalOf(pad(1, vendorId = sony, productId = 0x09cc))
+        val arrival =
+            arrivalOf(
+                pad(1) {
+                    vendorId = sony
+                    productId = 0x09cc
+                }
+            )
 
         assertThat(arrival.type).isEqualTo(MoonBridge.LI_CTYPE_PS.toInt())
-        assertThat(ShadowDevicesMoonBridge.queries.none { it.startsWith("guessControllerType") })
-            .isTrue()
+        assertThat(NativePads.queries.none { it.startsWith("guessControllerType") }).isTrue()
     }
 
     @Test
     fun `Nintendo pads are Nintendo pads`() {
-        val arrival = arrivalOf(pad(1, vendorId = nintendo, productId = 0x2009))
+        val arrival =
+            arrivalOf(
+                pad(1) {
+                    vendorId = nintendo
+                    productId = 0x2009
+                }
+            )
 
         assertThat(arrival.type).isEqualTo(MoonBridge.LI_CTYPE_NINTENDO.toInt())
     }
 
     @Test
     fun `another vendor is looked up in the native list`() {
-        ShadowDevicesMoonBridge.types[0x28de to 0x1205] = MoonBridge.LI_CTYPE_STEAM
+        NativePads.type(0x28de, 0x1205, MoonBridge.LI_CTYPE_STEAM)
 
-        val arrival = arrivalOf(pad(1, vendorId = 0x28de, productId = 0x1205))
+        val arrival =
+            arrivalOf(
+                pad(1) {
+                    vendorId = 0x28de
+                    productId = 0x1205
+                }
+            )
 
         assertThat(arrival.type).isEqualTo(MoonBridge.LI_CTYPE_STEAM.toInt())
-        assertThat(ShadowDevicesMoonBridge.queries.last())
-            .isEqualTo("guessControllerType ${0x28de} ${0x1205}")
+        assertThat(NativePads.queries.last()).isEqualTo("guessControllerType ${0x28de} ${0x1205}")
     }
 
     @Test
     fun `a vendor the native list does not know is an unknown type`() {
-        val arrival = arrivalOf(pad(1, vendorId = 0x1234, productId = 0x5678))
+        val arrival =
+            arrivalOf(
+                pad(1) {
+                    vendorId = 0x1234
+                    productId = 0x5678
+                }
+            )
 
         assertThat(arrival.type).isEqualTo(MoonBridge.LI_CTYPE_UNKNOWN.toInt())
     }
@@ -116,8 +148,10 @@ class ArrivalReportTest : DevicesTestBase() {
                 KeyEvent.KEYCODE_DPAD_DOWN to ControllerPacket.DOWN_FLAG,
                 KeyEvent.KEYCODE_DPAD_LEFT to ControllerPacket.LEFT_FLAG,
                 KeyEvent.KEYCODE_DPAD_RIGHT to ControllerPacket.RIGHT_FLAG,
-                KeyEvent.KEYCODE_DPAD_UP_LEFT to (ControllerPacket.UP_FLAG or ControllerPacket.LEFT_FLAG),
-                KeyEvent.KEYCODE_DPAD_UP_RIGHT to (ControllerPacket.UP_FLAG or ControllerPacket.RIGHT_FLAG),
+                KeyEvent.KEYCODE_DPAD_UP_LEFT to
+                    (ControllerPacket.UP_FLAG or ControllerPacket.LEFT_FLAG),
+                KeyEvent.KEYCODE_DPAD_UP_RIGHT to
+                    (ControllerPacket.UP_FLAG or ControllerPacket.RIGHT_FLAG),
                 KeyEvent.KEYCODE_DPAD_DOWN_LEFT to
                     (ControllerPacket.DOWN_FLAG or ControllerPacket.LEFT_FLAG),
                 KeyEvent.KEYCODE_DPAD_DOWN_RIGHT to
@@ -136,7 +170,7 @@ class ArrivalReportTest : DevicesTestBase() {
             )
 
         for ((key, flags) in expected) {
-            val arrival = arrivalOf(pad(key, keys = intArrayOf(key)))
+            val arrival = arrivalOf(pad(key) { keys = intArrayOf(key) })
 
             assertWithMessage("key $key").that(arrival.supportedButtons).isEqualTo(flags)
         }
@@ -152,7 +186,7 @@ class ArrivalReportTest : DevicesTestBase() {
                 KeyEvent.KEYCODE_BUTTON_Z,
             )
 
-        val arrival = arrivalOf(pad(1, keys = keys))
+        val arrival = arrivalOf(pad(1) { this.keys = keys })
 
         assertThat(arrival.supportedButtons).isEqualTo(0)
     }
@@ -168,17 +202,25 @@ class ArrivalReportTest : DevicesTestBase() {
                 KeyEvent.KEYCODE_BACK,
             )
 
-        val arrival = arrivalOf(pad(1, keys = keys))
+        val arrival = arrivalOf(pad(1) { this.keys = keys })
 
         assertThat(arrival.supportedButtons)
-            .isEqualTo(ControllerPacket.A_FLAG or ControllerPacket.PLAY_FLAG or ControllerPacket.BACK_FLAG)
+            .isEqualTo(
+                ControllerPacket.A_FLAG or ControllerPacket.PLAY_FLAG or ControllerPacket.BACK_FLAG
+            )
     }
 
     @Test
     fun `a pad with paddles has the four paddle buttons`() {
-        ShadowDevicesMoonBridge.paddles += 0x045e to 0x0b00
+        NativePads.paddles(0x045e, 0x0b00)
 
-        val arrival = arrivalOf(pad(1, vendorId = xbox, productId = 0x0b00))
+        val arrival =
+            arrivalOf(
+                pad(1) {
+                    vendorId = xbox
+                    productId = 0x0b00
+                }
+            )
 
         assertThat(arrival.supportedButtons)
             .isEqualTo(
@@ -191,17 +233,23 @@ class ArrivalReportTest : DevicesTestBase() {
 
     @Test
     fun `a pad with a share button has the misc button`() {
-        ShadowDevicesMoonBridge.shares += 0x045e to 0x0b12
+        NativePads.shares(0x045e, 0x0b12)
 
-        val arrival = arrivalOf(pad(1, vendorId = xbox, productId = 0x0b12))
+        val arrival =
+            arrivalOf(
+                pad(1) {
+                    vendorId = xbox
+                    productId = 0x0b12
+                }
+            )
 
         assertThat(arrival.supportedButtons).isEqualTo(ControllerPacket.MISC_FLAG)
     }
 
     @Test
     fun `the hat axes say the dpad exists even without dpad keys`() {
-        val horizontal = arrivalOf(pad(1, axes = STICKS_AND_Z + Axis(MotionEvent.AXIS_HAT_X)))
-        val vertical = arrivalOf(pad(2, axes = STICKS_AND_Z + Axis(MotionEvent.AXIS_HAT_Y)))
+        val horizontal = arrivalOf(pad(1) { axes = STICKS_AND_Z + Axis(MotionEvent.AXIS_HAT_X) })
+        val vertical = arrivalOf(pad(2) { axes = STICKS_AND_Z + Axis(MotionEvent.AXIS_HAT_Y) })
 
         assertThat(horizontal.supportedButtons)
             .isEqualTo(ControllerPacket.LEFT_FLAG or ControllerPacket.RIGHT_FLAG)
@@ -219,7 +267,13 @@ class ArrivalReportTest : DevicesTestBase() {
     @Test
     fun `analog triggers are reported when the pad has trigger axes`() {
         val withTriggers =
-            pad(1, axes = LEFT_STICK + listOf(MotionEvent.AXIS_LTRIGGER, MotionEvent.AXIS_RTRIGGER).map { Axis(it) })
+            pad(1) {
+                axes =
+                    LEFT_STICK +
+                        listOf(MotionEvent.AXIS_LTRIGGER, MotionEvent.AXIS_RTRIGGER).map {
+                            Axis(it)
+                        }
+            }
 
         val arrival = arrivalOf(withTriggers)
 
@@ -229,26 +283,32 @@ class ArrivalReportTest : DevicesTestBase() {
 
     @Test
     fun `an internal pad uses the vibrator of the device`() {
-        val arrival = arrivalOf(pad(1, external = false))
+        val arrival = arrivalOf(pad(1) { external = false })
 
         assertThat(arrival.capabilities).isEqualTo(MoonBridge.LI_CCAP_RUMBLE.toInt())
     }
 
     @Test
     fun `an internal pad on a device without a vibrator cannot rumble or report a battery`() {
-        shadowOf(RuntimeEnvironment.getApplication().getSystemService(android.os.Vibrator::class.java))
+        shadowOf(
+                RuntimeEnvironment.getApplication()
+                    .getSystemService(android.os.Vibrator::class.java)
+            )
             .setHasVibrator(false)
 
-        val arrival = arrivalOf(pad(1, external = false))
+        val arrival = arrivalOf(pad(1) { external = false })
 
         assertThat(arrival.capabilities).isEqualTo(0)
     }
 
     @Test
     fun `a SHIELD controller rumbles and reports its battery through the SHIELD service`() {
-        shadowOf(RuntimeEnvironment.getApplication().getSystemService(android.os.Vibrator::class.java))
+        shadowOf(
+                RuntimeEnvironment.getApplication()
+                    .getSystemService(android.os.Vibrator::class.java)
+            )
             .setHasVibrator(false)
-        val device = pad(1, external = false)
+        val device = pad(1) { external = false }
         SceDevices.recognized += device.id
 
         val arrival = arrivalOf(device)
@@ -271,7 +331,7 @@ class ArrivalReportTest : DevicesTestBase() {
 
     @Test
     fun `a pad with its own vibrator rumbles`() {
-        val arrival = arrivalOf(pad(1, hasVibrator = true))
+        val arrival = arrivalOf(pad(1) { hasVibrator = true })
 
         assertThat(arrival.capabilities)
             .isEqualTo(caps(MoonBridge.LI_CCAP_RUMBLE, MoonBridge.LI_CCAP_BATTERY_STATE))
@@ -297,13 +357,21 @@ class ArrivalReportTest : DevicesTestBase() {
 
         assertThat(arrival.capabilities)
             .isEqualTo(
-                caps(MoonBridge.LI_CCAP_RUMBLE, MoonBridge.LI_CCAP_TRIGGER_RUMBLE, MoonBridge.LI_CCAP_BATTERY_STATE)
+                caps(
+                    MoonBridge.LI_CCAP_RUMBLE,
+                    MoonBridge.LI_CCAP_TRIGGER_RUMBLE,
+                    MoonBridge.LI_CCAP_BATTERY_STATE,
+                )
             )
     }
 
     @Test
     fun `a pad with a light that shows colors reports the LED`() {
-        val device = pad(1, vendorId = sony, productId = 0x09cc)
+        val device =
+            pad(1) {
+                vendorId = sony
+                productId = 0x09cc
+            }
         DeviceHardware.set(device.id, Hardware(rgbLights = 1))
 
         val arrival = arrivalOf(device)
@@ -314,7 +382,11 @@ class ArrivalReportTest : DevicesTestBase() {
 
     @Test
     fun `a pad with only plain lights does not report the LED`() {
-        val device = pad(1, vendorId = sony, productId = 0x09cc)
+        val device =
+            pad(1) {
+                vendorId = sony
+                productId = 0x09cc
+            }
         DeviceHardware.set(device.id, Hardware(plainLights = 2))
 
         val arrival = arrivalOf(device)
@@ -324,7 +396,11 @@ class ArrivalReportTest : DevicesTestBase() {
 
     @Test
     fun `a pad with a touchpad reports it`() {
-        val device = pad(1, sources = PAD_SOURCES or InputDevice.SOURCE_TOUCHPAD, vendorId = xbox)
+        val device =
+            pad(1) {
+                sources = PAD_SOURCES or InputDevice.SOURCE_TOUCHPAD
+                vendorId = xbox
+            }
 
         val arrival = arrivalOf(device)
 
@@ -336,7 +412,11 @@ class ArrivalReportTest : DevicesTestBase() {
 
     @Test
     fun `the touchpad of a PlayStation pad is a button`() {
-        val device = pad(1, sources = PAD_SOURCES or InputDevice.SOURCE_TOUCHPAD, vendorId = sony)
+        val device =
+            pad(1) {
+                sources = PAD_SOURCES or InputDevice.SOURCE_TOUCHPAD
+                vendorId = sony
+            }
 
         val arrival = arrivalOf(device)
 
@@ -345,7 +425,7 @@ class ArrivalReportTest : DevicesTestBase() {
 
     @Test
     fun `a PlayStation pad without a touchpad has no touchpad button`() {
-        val arrival = arrivalOf(pad(1, vendorId = sony))
+        val arrival = arrivalOf(pad(1) { vendorId = sony })
 
         assertThat(arrival.supportedButtons).isEqualTo(0)
         assertThat(arrival.capabilities and MoonBridge.LI_CCAP_TOUCHPAD.toInt()).isEqualTo(0)
@@ -353,7 +433,7 @@ class ArrivalReportTest : DevicesTestBase() {
 
     @Test
     fun `a touchscreen source is no touchpad`() {
-        val arrival = arrivalOf(pad(1, sources = PAD_SOURCES or InputDevice.SOURCE_TOUCHSCREEN))
+        val arrival = arrivalOf(pad(1) { sources = PAD_SOURCES or InputDevice.SOURCE_TOUCHSCREEN })
 
         assertThat(arrival.capabilities and MoonBridge.LI_CCAP_TOUCHPAD.toInt()).isEqualTo(0)
     }
@@ -362,24 +442,29 @@ class ArrivalReportTest : DevicesTestBase() {
     fun `a pad with motion sensors reports them and changes its type`() {
         addSensors(Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE)
 
-        val arrival = arrivalOf(pad(1, vendorId = xbox)) { gamepadMotionSensors = true }
+        val arrival = arrivalOf(pad(1) { vendorId = xbox }) { gamepadMotionSensors = true }
 
         assertThat(arrival.capabilities)
             .isEqualTo(
-                caps(MoonBridge.LI_CCAP_ACCEL, MoonBridge.LI_CCAP_GYRO, MoonBridge.LI_CCAP_BATTERY_STATE)
+                caps(
+                    MoonBridge.LI_CCAP_ACCEL,
+                    MoonBridge.LI_CCAP_GYRO,
+                    MoonBridge.LI_CCAP_BATTERY_STATE,
+                )
             )
         // A pad that is not a PlayStation pad is told to the host as unknown, with a notice
         assertThat(arrival.type).isEqualTo(MoonBridge.LI_CTYPE_UNKNOWN.toInt())
         assertThat(ShadowToast.getTextOfLatestToast())
             .isEqualTo("Gamepad type may be changed due to motion sensor emulation")
-        assertThat(ShadowToast.getLatestToast().duration).isEqualTo(android.widget.Toast.LENGTH_LONG)
+        assertThat(ShadowToast.getLatestToast().duration)
+            .isEqualTo(android.widget.Toast.LENGTH_LONG)
     }
 
     @Test
     fun `a pad with an accelerometer only reports no gyro`() {
         addSensors(Sensor.TYPE_ACCELEROMETER)
 
-        val arrival = arrivalOf(pad(1, vendorId = xbox)) { gamepadMotionSensors = true }
+        val arrival = arrivalOf(pad(1) { vendorId = xbox }) { gamepadMotionSensors = true }
 
         assertThat(arrival.capabilities and MoonBridge.LI_CCAP_ACCEL.toInt())
             .isEqualTo(MoonBridge.LI_CCAP_ACCEL.toInt())
@@ -390,7 +475,7 @@ class ArrivalReportTest : DevicesTestBase() {
     fun `a PlayStation pad with motion sensors keeps its type and shows no notice`() {
         addSensors(Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE)
 
-        val arrival = arrivalOf(pad(1, vendorId = sony)) { gamepadMotionSensors = true }
+        val arrival = arrivalOf(pad(1) { vendorId = sony }) { gamepadMotionSensors = true }
 
         assertThat(arrival.type).isEqualTo(MoonBridge.LI_CTYPE_PS.toInt())
         assertThat(ShadowToast.getLatestToast()).isNull()
@@ -398,7 +483,7 @@ class ArrivalReportTest : DevicesTestBase() {
 
     @Test
     fun `a pad without motion sensors keeps its type and shows no notice`() {
-        val arrival = arrivalOf(pad(1, vendorId = xbox)) { gamepadMotionSensors = true }
+        val arrival = arrivalOf(pad(1) { vendorId = xbox }) { gamepadMotionSensors = true }
 
         assertThat(arrival.type).isEqualTo(MoonBridge.LI_CTYPE_XBOX.toInt())
         assertThat(ShadowToast.getLatestToast()).isNull()
@@ -407,7 +492,7 @@ class ArrivalReportTest : DevicesTestBase() {
     @Test
     fun `the sensors of the device stand in for the pad's when the setting allows`() {
         addSensors(Sensor.TYPE_ACCELEROMETER)
-        val device = pad(1, vendorId = xbox)
+        val device = pad(1) { vendorId = xbox }
         val rig = rig(devices = listOf(device)) { gamepadMotionSensorsFallbackToDevice = true }
 
         rig.press(device, KEYCODE_BUTTON_A)
@@ -416,14 +501,15 @@ class ArrivalReportTest : DevicesTestBase() {
         assertThat(arrival.capabilities and MoonBridge.LI_CCAP_ACCEL.toInt())
             .isEqualTo(MoonBridge.LI_CCAP_ACCEL.toInt())
         assertThat(arrival.type).isEqualTo(MoonBridge.LI_CTYPE_UNKNOWN.toInt())
-        assertThat(rig.context(device)["sensorManager"]).isSameInstanceAs(field(rig.handler, "deviceSensorManager"))
+        assertThat(rig.context(device)["sensorManager"])
+            .isSameInstanceAs(field(rig.handler, "deviceSensorManager"))
         assertThat(rig.context(device).bool("needsClickpadEmulation")).isTrue()
     }
 
     @Test
     fun `a pad that is a PlayStation pad gets no clickpad emulation from the fallback`() {
         addSensors(Sensor.TYPE_ACCELEROMETER)
-        val device = pad(1, vendorId = sony)
+        val device = pad(1) { vendorId = sony }
         val rig = rig(devices = listOf(device)) { gamepadMotionSensorsFallbackToDevice = true }
 
         rig.press(device, KEYCODE_BUTTON_A)
@@ -446,11 +532,14 @@ class ArrivalReportTest : DevicesTestBase() {
     @Config(sdk = [ANDROID_11])
     fun `before Android 12 the analog triggers and the vibrator still count`() {
         val device =
-            pad(
-                1,
-                hasVibrator = true,
-                axes = LEFT_STICK + listOf(MotionEvent.AXIS_LTRIGGER, MotionEvent.AXIS_RTRIGGER).map { Axis(it) },
-            )
+            pad(1) {
+                hasVibrator = true
+                axes =
+                    LEFT_STICK +
+                        listOf(MotionEvent.AXIS_LTRIGGER, MotionEvent.AXIS_RTRIGGER).map {
+                            Axis(it)
+                        }
+            }
 
         val arrival = arrivalOf(device)
 
@@ -462,7 +551,7 @@ class ArrivalReportTest : DevicesTestBase() {
     @Config(sdk = [ANDROID_11])
     fun `before Android 12 the sensors still stand in for the pad when the setting allows`() {
         addSensors(Sensor.TYPE_GYROSCOPE)
-        val device = pad(1, vendorId = sony)
+        val device = pad(1) { vendorId = sony }
 
         val arrival = arrivalOf(device) { gamepadMotionSensorsFallbackToDevice = true }
 
@@ -477,7 +566,15 @@ class ArrivalReportTest : DevicesTestBase() {
         usb.report(ControllerPacket.A_FLAG)
 
         assertThat(rig.connection.arrivals.single())
-            .isEqualTo(Arrival(controller = 0, activeMask = 1, type = 0, supportedButtons = 0, capabilities = 0))
+            .isEqualTo(
+                Arrival(
+                    controller = 0,
+                    activeMask = 1,
+                    type = 0,
+                    supportedButtons = 0,
+                    capabilities = 0,
+                )
+            )
     }
 
     @Test
@@ -485,7 +582,11 @@ class ArrivalReportTest : DevicesTestBase() {
         val rig = rig(multiController = true)
         val usb = FakeUsbController(5, rig.handler)
         setField(usb, "type", MoonBridge.LI_CTYPE_XBOX)
-        setField(usb, "capabilities", caps(MoonBridge.LI_CCAP_ANALOG_TRIGGERS, MoonBridge.LI_CCAP_RUMBLE).toShort())
+        setField(
+            usb,
+            "capabilities",
+            caps(MoonBridge.LI_CCAP_ANALOG_TRIGGERS, MoonBridge.LI_CCAP_RUMBLE).toShort(),
+        )
         setField(usb, "supportedButtonFlags", ControllerPacket.A_FLAG)
         rig.handler.deviceAdded(usb)
 
@@ -498,12 +599,9 @@ class ArrivalReportTest : DevicesTestBase() {
                     activeMask = 1,
                     type = MoonBridge.LI_CTYPE_XBOX.toInt(),
                     supportedButtons = ControllerPacket.A_FLAG,
-                    capabilities = caps(MoonBridge.LI_CCAP_ANALOG_TRIGGERS, MoonBridge.LI_CCAP_RUMBLE),
+                    capabilities =
+                        caps(MoonBridge.LI_CCAP_ANALOG_TRIGGERS, MoonBridge.LI_CCAP_RUMBLE),
                 )
             )
-    }
-
-    private companion object {
-        const val ANDROID_11 = 30
     }
 }

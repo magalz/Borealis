@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.library
 
 import android.app.Activity
+import android.graphics.Bitmap
 import com.limelight.computers.ComputerManagerListener
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
@@ -14,7 +15,6 @@ import io.github.magalz.borealis.logging.LogLevel
 import io.github.magalz.borealis.logging.LogRecord
 import io.github.magalz.borealis.logging.LogSink
 import io.github.magalz.borealis.logging.Redactor
-import android.graphics.Bitmap
 import java.io.ByteArrayInputStream
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -55,24 +55,31 @@ fun testCertificate(): X509Certificate =
 fun details(
     uuid: String = "host-1",
     name: String = "Den PC",
-    state: ComputerDetails.State = ComputerDetails.State.ONLINE,
-    pairState: PairState = PairState.PAIRED,
     runningGameId: Int = 0,
-    mac: String? = null,
     rawAppList: String? = null,
     address: String? = "192.168.1.5",
 ): ComputerDetails =
     ComputerDetails().also {
         it.uuid = uuid
         it.name = name
-        it.state = state
-        it.pairState = pairState
+        it.state = ComputerDetails.State.ONLINE
+        it.pairState = PairState.PAIRED
         it.runningGameId = runningGameId
-        it.macAddress = mac
         it.rawAppList = rawAppList
         it.activeAddress = address?.let { host -> AddressTuple(host, 47989) }
         it.httpsPort = 47984
     }
+
+/** The details with what the host reports of itself: [state], [pairState] and [mac]. */
+fun ComputerDetails.reported(
+    state: ComputerDetails.State = ComputerDetails.State.ONLINE,
+    pairState: PairState = PairState.PAIRED,
+    mac: String? = null,
+): ComputerDetails = also {
+    it.state = state
+    it.pairState = pairState
+    it.macAddress = mac
+}
 
 /** Routes the audit facade into [events] for one test. */
 class RecordingAudit : ExternalResource(), AuditSink {

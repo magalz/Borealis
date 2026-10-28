@@ -27,15 +27,13 @@ naming:
     active: false
 complexity:
   LongParameterList:
-    # A Robolectric shadow method (@Implementation) mirrors the signature it replaces.
+    # A Robolectric shadow method (@Implementation) mirrors the signature it replaces. Test sources
+    # follow the rule like main code: a builder takes a data class or a lambda over a builder.
     ignoreAnnotated:
       - Composable
       - Implementation
-    # Test sources follow the rule outside :app. Drop these excludes when the :app tests are fixed
-    # (Sprint 14).
-    excludes: ['**/app/src/test/**', '**/app/src/androidTest/**']
 coroutines:
-  # Tests inject their dispatchers, outside :app as in main code. Drop these excludes when the
-  # :app tests are fixed (Sprint 14).
+  # Tests inject their dispatchers like main code, in every module: a test dispatcher, or a pool
+  # that the test closes. A test that has to name a dispatcher suppresses the rule with its reason.
   InjectDispatcher:
-    excludes: ['**/app/src/test/**', '**/app/src/androidTest/**']
+    active: true

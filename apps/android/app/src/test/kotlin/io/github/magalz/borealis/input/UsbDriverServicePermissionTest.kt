@@ -9,14 +9,14 @@ import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.binding.input.driver.UsbDriverService
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
-import org.robolectric.shadows.ShadowUsbManager
-import io.github.magalz.borealis.settings.ShadowMoonBridge
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowUsbManager
 import org.robolectric.util.ReflectionHelpers
 import org.robolectric.util.ReflectionHelpers.ClassParameter
 
@@ -26,7 +26,7 @@ import org.robolectric.util.ReflectionHelpers.ClassParameter
  * without any dialog.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class UsbDriverServicePermissionTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
@@ -49,11 +49,15 @@ class UsbDriverServicePermissionTest {
         binder.setStateListener(stateListener)
     }
 
-    // The reflection below relies on the hidden constructors of the pinned sdk=35 (Robolectric 4.17).
+    // The reflection below relies on the hidden constructors of the pinned sdk=35 (Robolectric
+    // 4.17).
     // An Xbox 360 wired pad: vendor-specific interface 255/93/1 of a vendor the driver knows.
     private fun pad(name: String): UsbDevice {
         val configurations =
-            java.lang.reflect.Array.newInstance(android.hardware.usb.UsbConfiguration::class.java, 1)
+            java.lang.reflect.Array.newInstance(
+                android.hardware.usb.UsbConfiguration::class.java,
+                1,
+            )
         java.lang.reflect.Array.set(configurations, 0, padConfiguration(padInterface()))
         val builder =
             ReflectionHelpers.callConstructor(
@@ -98,7 +102,10 @@ class UsbDriverServicePermissionTest {
                 ClassParameter.from(Int::class.javaPrimitiveType, 0),
                 ClassParameter.from(Int::class.javaPrimitiveType, 0),
                 ClassParameter.from(String::class.java, "pad"),
-                ClassParameter.from(Int::class.javaPrimitiveType, UsbConstants.USB_CLASS_VENDOR_SPEC),
+                ClassParameter.from(
+                    Int::class.javaPrimitiveType,
+                    UsbConstants.USB_CLASS_VENDOR_SPEC,
+                ),
                 ClassParameter.from(Int::class.javaPrimitiveType, 93),
                 ClassParameter.from(Int::class.javaPrimitiveType, 1),
             )

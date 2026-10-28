@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.mdns.MdnsComputer
 import com.limelight.nvstream.mdns.MdnsDiscoveryAgent
 import com.limelight.nvstream.mdns.MdnsDiscoveryListener
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.net.Inet4Address
 import java.net.Inet6Address
 import java.util.logging.Level
@@ -12,13 +13,13 @@ import org.junit.Test
 
 /**
  * What the base class of the mDNS agents does with the addresses of a host that a subclass
- * resolved: which computers it reports, how it de-duplicates them and how it picks the IPv6
- * address to connect to. A small concrete subclass stands in for the network.
+ * resolved: which computers it reports, how it de-duplicates them and how it picks the IPv6 address
+ * to connect to. A small concrete subclass stands in for the network.
  *
  * Characterization: these tests pass on the Java class and on its Kotlin conversion.
  */
 class MdnsDiscoveryAgentCharacterizationTest {
-    @get:Rule val log = LimeLogRecords()
+    @get:Rule val log = LimeLogCapture()
 
     private val listener = RecordingDiscoveryListener()
     private val agent = ReportingAgent(listener)
@@ -311,11 +312,10 @@ class MdnsDiscoveryAgentCharacterizationTest {
                 override fun notifyDiscoveryFailure(e: Exception) = Unit
             }
 
-        val error =
-            runCatching {
-                    ReportingAgent(failing).report("Den PC", 1, listOf(ip4("192.168.1.5")), emptyList())
-                }
-                .exceptionOrNull()
+        val error = runCatching {
+            ReportingAgent(failing).report("Den PC", 1, listOf(ip4("192.168.1.5")), emptyList())
+        }
+            .exceptionOrNull()
 
         assertThat(error).isInstanceOf(IllegalStateException::class.java)
         assertThat(error).hasMessageThat().isEqualTo("listener failed")

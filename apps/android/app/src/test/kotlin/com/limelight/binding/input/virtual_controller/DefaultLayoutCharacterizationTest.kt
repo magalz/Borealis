@@ -3,7 +3,9 @@ package com.limelight.binding.input.virtual_controller
 import android.widget.FrameLayout
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
-import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.testing.OwnedResources
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -18,8 +20,10 @@ import org.robolectric.annotation.Config
  * and the work after it keep the layout users have on their screens.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class DefaultLayoutCharacterizationTest {
+    @get:Rule val owned = OwnedResources()
+
     private fun defaultLayout(
         screen: Screen,
         onlyL3R3: Boolean = false,
@@ -27,7 +31,7 @@ class DefaultLayoutCharacterizationTest {
         showGuideButton: Boolean = true,
         opacity: Int? = null,
     ): OscRig {
-        val rig = OscRig(screen)
+        val rig = owned.own(OscRig(screen))
         rig.settings(onlyL3R3, flipFaceButtons, showGuideButton, opacity)
         VirtualControllerConfigurationLoader.createDefaultLayout(rig.controller, rig.activity)
         return rig
@@ -150,7 +154,9 @@ class DefaultLayoutCharacterizationTest {
     fun `flipping the face buttons moves nothing`() {
         val flipped = defaultLayout(OscRig.PHONE, flipFaceButtons = true)
 
-        assertThat(flipped.layout()).containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, false, true)).inOrder()
+        assertThat(flipped.layout())
+            .containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, false, true))
+            .inOrder()
     }
 
     @Test
@@ -183,14 +189,18 @@ class DefaultLayoutCharacterizationTest {
     fun `the layout with only L3 and R3 is made of buttons`() {
         val rig = defaultLayout(OscRig.PHONE, onlyL3R3 = true)
 
-        assertThat(rig.controller.elements.map { it.javaClass }.distinct()).containsExactly(DigitalButton::class.java)
+        assertThat(rig.controller.elements.map { it.javaClass }.distinct())
+            .containsExactly(DigitalButton::class.java)
     }
 
     @Test
     fun `the buttons are labelled and have no icon`() {
         val rig = defaultLayout(OscRig.PHONE)
 
-        val labels = rig.controller.elements.filterIsInstance<DigitalButton>().associate { it.eid to it.label() }
+        val labels =
+            rig.controller.elements.filterIsInstance<DigitalButton>().associate {
+                it.eid to it.label()
+            }
         assertThat(labels)
             .containsExactlyEntriesIn(
                 mapOf(
@@ -207,7 +217,12 @@ class DefaultLayoutCharacterizationTest {
                     VirtualControllerElement.EID_GDB to "GUIDE",
                 )
             )
-        assertThat(rig.controller.elements.filterIsInstance<DigitalButton>().map { it.icon() }.distinct())
+        assertThat(
+                rig.controller.elements
+                    .filterIsInstance<DigitalButton>()
+                    .map { it.icon() }
+                    .distinct()
+            )
             .containsExactly(-1)
     }
 
@@ -215,12 +230,18 @@ class DefaultLayoutCharacterizationTest {
     fun `the layout with only L3 and R3 labels them`() {
         val rig = defaultLayout(OscRig.PHONE, onlyL3R3 = true)
 
-        val labels = rig.controller.elements.filterIsInstance<DigitalButton>().associate { it.eid to it.label() }
+        val labels =
+            rig.controller.elements.filterIsInstance<DigitalButton>().associate {
+                it.eid to it.label()
+            }
         assertThat(labels)
             .containsExactly(
-                VirtualControllerElement.EID_LSB, "L3",
-                VirtualControllerElement.EID_RSB, "R3",
-                VirtualControllerElement.EID_GDB, "GUIDE",
+                VirtualControllerElement.EID_LSB,
+                "L3",
+                VirtualControllerElement.EID_RSB,
+                "R3",
+                VirtualControllerElement.EID_GDB,
+                "GUIDE",
             )
     }
 
@@ -228,13 +249,20 @@ class DefaultLayoutCharacterizationTest {
     fun `flipping the face buttons swaps the labels of A and B and of X and Y`() {
         val rig = defaultLayout(OscRig.PHONE, flipFaceButtons = true)
 
-        val labels = rig.controller.elements.filterIsInstance<DigitalButton>().associate { it.eid to it.label() }
+        val labels =
+            rig.controller.elements.filterIsInstance<DigitalButton>().associate {
+                it.eid to it.label()
+            }
         assertThat(labels)
             .containsAtLeast(
-                VirtualControllerElement.EID_A, "B",
-                VirtualControllerElement.EID_B, "A",
-                VirtualControllerElement.EID_X, "Y",
-                VirtualControllerElement.EID_Y, "X",
+                VirtualControllerElement.EID_A,
+                "B",
+                VirtualControllerElement.EID_B,
+                "A",
+                VirtualControllerElement.EID_X,
+                "Y",
+                VirtualControllerElement.EID_Y,
+                "X",
             )
         assertThat(labels).containsEntry(VirtualControllerElement.EID_LB, "LB")
         assertThat(labels).containsEntry(VirtualControllerElement.EID_START, "START")
@@ -269,10 +297,12 @@ class DefaultLayoutCharacterizationTest {
         val rig = defaultLayout(OscRig.PHONE, onlyL3R3 = true)
 
         rig.press(rig.element(VirtualControllerElement.EID_LSB))
-        assertThat(rig.controller.controllerInputContext.inputMap).isEqualTo(ControllerPacket.LS_CLK_FLAG.toShort())
+        assertThat(rig.controller.controllerInputContext.inputMap)
+            .isEqualTo(ControllerPacket.LS_CLK_FLAG.toShort())
         rig.release(rig.element(VirtualControllerElement.EID_LSB))
         rig.press(rig.element(VirtualControllerElement.EID_RSB))
-        assertThat(rig.controller.controllerInputContext.inputMap).isEqualTo(ControllerPacket.RS_CLK_FLAG.toShort())
+        assertThat(rig.controller.controllerInputContext.inputMap)
+            .isEqualTo(ControllerPacket.RS_CLK_FLAG.toShort())
     }
 
     @Test
@@ -334,7 +364,11 @@ class DefaultLayoutCharacterizationTest {
         val opaque = defaultLayout(OscRig.TV, opacity = 100)
         val transparent = defaultLayout(OscRig.TV, opacity = 0)
 
-        opaque.controller.elements.forEach { assertThat(it.defaultColor).isEqualTo(0xFF888888.toInt()) }
-        transparent.controller.elements.forEach { assertThat(it.defaultColor).isEqualTo(0x00888888) }
+        opaque.controller.elements.forEach {
+            assertThat(it.defaultColor).isEqualTo(0xFF888888.toInt())
+        }
+        transparent.controller.elements.forEach {
+            assertThat(it.defaultColor).isEqualTo(0x00888888)
+        }
     }
 }

@@ -15,7 +15,8 @@ import org.robolectric.annotation.Config
  * the handler asks before it asks Android for a vibrator. The service answers a connection type, a
  * charging state and a percentage, and the handler turns them into the battery state of Android.
  */
-// Abstract so that it does not run alone: the subclasses carry the Robolectric runner and the SDK level.
+// Abstract so that it does not run alone: the subclasses carry the Robolectric runner and the SDK
+// level.
 @Suppress("AbstractClassCanBeConcreteClass")
 abstract class ShieldContract : FeedbackTestBase() {
     private data class Reading(
@@ -31,7 +32,7 @@ abstract class ShieldContract : FeedbackTestBase() {
         ShadowSceManager.connectionType = reading.connection
         ShadowSceManager.chargingState = reading.charging
         rig.wake(rig.connectPad())
-        return ShadowFeedbackBridge.batteryEvents.single()
+        return batteryEvents.single()
     }
 
     private fun event(state: Int, percentage: Int) = BatteryEvent(0, state, percentage)
@@ -145,9 +146,7 @@ abstract class ShieldContract : FeedbackTestBase() {
         rig.advanceBackgroundBy(120_000)
         rig.awaitBackground()
 
-        assertThat(ShadowFeedbackBridge.batteryEvents)
-            .containsExactly(event(3, 80), event(2, 80))
-            .inOrder()
+        assertThat(batteryEvents).containsExactly(event(3, 80), event(2, 80)).inOrder()
     }
 
     @Test
@@ -156,7 +155,7 @@ abstract class ShieldContract : FeedbackTestBase() {
         ShadowSceManager.batteryPercentage = 80
         rig.wake(rig.connectPad())
 
-        assertThat(ShadowFeedbackBridge.batteryEvents).isEmpty()
+        assertThat(batteryEvents).isEmpty()
     }
 
     @Test
@@ -266,7 +265,7 @@ class ShieldControllerTest : ShieldContract() {
         ShadowSceManager.chargingState = SceChargingState.CHARGING
         rig.wake(rig.connectPad(features = DeviceFeatures(batteryState = battery)))
 
-        assertThat(ShadowFeedbackBridge.batteryEvents).containsExactly(BatteryEvent(0, 5, 100))
+        assertThat(batteryEvents).containsExactly(BatteryEvent(0, 5, 100))
     }
 
     @Test

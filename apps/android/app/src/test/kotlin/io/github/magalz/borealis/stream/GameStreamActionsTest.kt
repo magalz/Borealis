@@ -12,23 +12,22 @@ import com.limelight.Game
 import com.limelight.binding.input.touch.TouchContext
 import io.github.magalz.borealis.host.launch.ConflictChoice
 import io.github.magalz.borealis.host.launch.SessionAudit
+import io.github.magalz.borealis.library.LibraryLaunchRequest
+import io.github.magalz.borealis.library.domain.QuitResult
+import io.github.magalz.borealis.library.domain.WakeResult
+import io.github.magalz.borealis.library.shell.LibraryActivity
 import io.github.magalz.borealis.logging.AuditEvent
 import io.github.magalz.borealis.logging.AuditSink
 import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.logging.BorealisAudit
 import io.github.magalz.borealis.logging.Redactor
-import io.github.magalz.borealis.library.LibraryLaunchRequest
-import io.github.magalz.borealis.library.domain.QuitResult
-import io.github.magalz.borealis.library.domain.WakeResult
-import io.github.magalz.borealis.library.shell.LibraryActivity
 import io.github.magalz.borealis.stream.host.HeldKeys
 import io.github.magalz.borealis.stream.input.GamepadChrome
 import io.github.magalz.borealis.stream.keys.KeyChord
 import io.github.magalz.borealis.stream.keys.KeyModifier
 import io.github.magalz.borealis.stream.keys.Shortcuts
+import io.github.magalz.borealis.testing.unconfinedScope
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
@@ -118,7 +117,7 @@ class GameStreamActionsTest {
             controls(),
             held,
             { entryPoint },
-            CoroutineScope(Dispatchers.Unconfined),
+            unconfinedScope(),
         )
 
     @Before
@@ -141,7 +140,11 @@ class GameStreamActionsTest {
 
     @Test
     fun `Ctrl+Shift+Esc goes down in order and up in reverse`() {
-        actions.send(Shortcuts.sendKeys.single { it.chord.vk == VK_ESCAPE && it.chord.modifiers.size == 2 }.chord)
+        actions.send(
+            Shortcuts.sendKeys
+                .single { it.chord.vk == VK_ESCAPE && it.chord.modifiers.size == 2 }
+                .chord
+        )
 
         assertThat(input.events)
             .containsExactly(
@@ -403,9 +406,7 @@ class GameStreamActionsTest {
 
             actions.wakeHost()
 
-            assertWithMessage(result.name)
-                .that(ShadowToast.getTextOfLatestToast())
-                .isEqualTo(text)
+            assertWithMessage(result.name).that(ShadowToast.getTextOfLatestToast()).isEqualTo(text)
         }
     }
 

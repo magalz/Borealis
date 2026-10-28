@@ -5,7 +5,7 @@ import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.http.HostHttpResponseException
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
-import io.github.magalz.borealis.crypto.LimeLogCapture
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.io.StringReader
 import java.util.NoSuchElementException
 import java.util.logging.Level
@@ -94,9 +94,7 @@ class AppListParsingTest {
     fun `an app without a title, or with an empty one, has an empty name and stays in the list`() {
         val apps = parse(list(app(title = null, id = "7"), app(title = "", id = "8")))
 
-        assertThat(apps.map { it.summary() })
-            .containsExactly("/7/false", "/8/false")
-            .inOrder()
+        assertThat(apps.map { it.summary() }).containsExactly("/7/false", "/8/false").inOrder()
     }
 
     @Test
@@ -127,28 +125,29 @@ class AppListParsingTest {
 
     @Test
     fun `an app with an odd id is dropped and the host is warned about it`() {
-        LimeLogCapture().use { log ->
+        LimeLogCapture().start().use { log ->
             for (id in listOf("abc", "2147483648", " 7", "7 ", "1.5", "0x10", "", "4294967295")) {
                 val apps = parse(list(app(title = "Odd", id = id), app(title = "Fine", id = "3")))
 
-                assertWithMessage("id '$id'").that(apps.map { it.summary() }).containsExactly("Fine/3/false")
+                assertWithMessage("id '$id'")
+                    .that(apps.map { it.summary() })
+                    .containsExactly("Fine/3/false")
             }
-            assertThat(log.records)
-                .contains(Level.WARNING to "Malformed app ID: abc")
-            assertThat(log.records)
-                .contains(Level.WARNING to "Malformed app ID: 2147483648")
+            assertThat(log.entries).contains(Level.WARNING to "Malformed app ID: abc")
+            assertThat(log.entries).contains(Level.WARNING to "Malformed app ID: 2147483648")
             // The app never got an id, so it is the one that the list reports as incomplete.
-            assertThat(log.records).contains(Level.WARNING to "GFE returned incomplete app: 0 Odd")
+            assertThat(log.entries).contains(Level.WARNING to "GFE returned incomplete app: 0 Odd")
         }
     }
 
     @Test
     fun `an app without an id tag is dropped`() {
-        LimeLogCapture().use { log ->
-            val apps = parse(list(app(title = "Nameless id", id = null), app(title = "Ok", id = "4")))
+        LimeLogCapture().start().use { log ->
+            val apps =
+                parse(list(app(title = "Nameless id", id = null), app(title = "Ok", id = "4")))
 
             assertThat(apps.map { it.summary() }).containsExactly("Ok/4/false")
-            assertThat(log.records)
+            assertThat(log.entries)
                 .contains(Level.WARNING to "GFE returned incomplete app: 0 Nameless id")
         }
     }
@@ -202,9 +201,7 @@ class AppListParsingTest {
     fun `the status of the root is checked before any app is read`() {
         assertThat(
                 assertThrows(HostHttpResponseException::class.java) {
-                        parse(
-                            """<root status_code="500">${app("Late", "1")}</root>"""
-                        )
+                        parse("""<root status_code="500">${app("Late", "1")}</root>""")
                     }
                     .errorCode
             )
@@ -227,7 +224,9 @@ class AppListParsingTest {
     fun `text between two apps belongs to the last app and changes nothing`() {
         val apps = parse(list(app("One", "1"), "<note>between</note>", app("Two", "2")))
 
-        assertThat(apps.map { it.summary() }).containsExactly("One/1/false", "Two/2/false").inOrder()
+        assertThat(apps.map { it.summary() })
+            .containsExactly("One/1/false", "Two/2/false")
+            .inOrder()
     }
 
     @Test

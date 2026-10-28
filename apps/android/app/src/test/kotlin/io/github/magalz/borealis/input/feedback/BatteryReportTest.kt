@@ -11,8 +11,8 @@ import org.robolectric.annotation.Config
 /**
  * The battery of a pad, as the handler's own thread reports it to the host from Android 12: once
  * when the pad arrives, then every 120 seconds, and only when the status or the capacity changed
- * since the last report. The status becomes the host's battery state, and the capacity a signed byte
- * of its percentage, truncated; 255 means unknown.
+ * since the last report. The status becomes the host's battery state, and the capacity a signed
+ * byte of its percentage, truncated; 255 means unknown.
  */
 @RunWith(RobolectricTestRunner::class)
 class BatteryReportTest : FeedbackTestBase() {
@@ -29,7 +29,7 @@ class BatteryReportTest : FeedbackTestBase() {
         return pad
     }
 
-    private fun events() = ShadowFeedbackBridge.batteryEvents.toList()
+    private fun events() = batteryEvents.toList()
 
     private fun poll(rig: FeedbackRig, millis: Long = POLL_MS) {
         rig.advanceBackgroundBy(millis)
@@ -57,12 +57,11 @@ class BatteryReportTest : FeedbackTestBase() {
                 BatteryState.STATUS_FULL to MoonBridge.LI_BATTERY_STATE_FULL,
             )
 
-        val states =
-            expected.map { (status, _) ->
-                val rig = rig()
-                padWith(rig, battery(status = status))
-                events().single().state
-            }
+        val states = expected.map { (status, _) ->
+            val rig = rig()
+            padWith(rig, battery(status = status))
+            events().single().state
+        }
 
         assertThat(states).containsExactlyElementsIn(expected.map { it.second.toInt() }).inOrder()
         assertThat(states).containsExactly(0, 3, 2, 4, 5).inOrder()
@@ -72,12 +71,11 @@ class BatteryReportTest : FeedbackTestBase() {
     fun `the percentage is the capacity times a hundred, truncated`() {
         val capacities = listOf(0f, 1f, 0.555f, 0.995f, 0.5f, 0.07f, 0.9999f, 0.53f, 0.59f)
 
-        val percentages =
-            capacities.map { capacity ->
-                val rig = rig()
-                padWith(rig, battery(capacity = capacity))
-                events().single().percentage
-            }
+        val percentages = capacities.map { capacity ->
+            val rig = rig()
+            padWith(rig, battery(capacity = capacity))
+            events().single().percentage
+        }
 
         // 0.53f and 0.59f times 100 come out a hair under 53 and 59, and the cast truncates them
         assertThat(percentages).containsExactly(0, 100, 55, 99, 50, 7, 99, 52, 58).inOrder()
@@ -89,7 +87,8 @@ class BatteryReportTest : FeedbackTestBase() {
 
         padWith(rig, battery(capacity = Float.NaN))
 
-        assertThat(events().single().percentage).isEqualTo(MoonBridge.LI_BATTERY_PERCENTAGE_UNKNOWN.toInt())
+        assertThat(events().single().percentage)
+            .isEqualTo(MoonBridge.LI_BATTERY_PERCENTAGE_UNKNOWN.toInt())
         assertThat(events().single().percentage).isEqualTo(-1)
     }
 
@@ -289,7 +288,10 @@ class BatteryReportTest : FeedbackTestBase() {
     }
 }
 
-/** Before Android 12 `InputDevice` has no battery state, so nothing is reported (the SHIELD API is not here). */
+/**
+ * Before Android 12 `InputDevice` has no battery state, so nothing is reported (the SHIELD API is
+ * not here).
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [30])
 class BatteryReportAndroid11Test : FeedbackTestBase() {
@@ -302,7 +304,7 @@ class BatteryReportAndroid11Test : FeedbackTestBase() {
         rig.advanceBackgroundBy(120_000)
         rig.awaitBackground()
 
-        assertThat(ShadowFeedbackBridge.batteryEvents).isEmpty()
+        assertThat(batteryEvents).isEmpty()
         val flag = MoonBridge.LI_CCAP_BATTERY_STATE.toInt()
         assertThat(rig.connection.arrivals.single().capabilities and flag).isEqualTo(0)
     }

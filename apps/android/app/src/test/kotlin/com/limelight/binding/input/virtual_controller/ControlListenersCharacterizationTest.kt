@@ -3,7 +3,9 @@ package com.limelight.binding.input.virtual_controller
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
-import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.testing.OwnedResources
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -15,9 +17,10 @@ import org.robolectric.annotation.Config
  * directions, and each change goes to the handler with the retransmits after it.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class ControlListenersCharacterizationTest {
-    private val rig = OscRig().also { it.settings() }
+    @get:Rule val owned = OwnedResources()
+    private val rig = owned.own(OscRig()).also { it.settings() }
     private val controller = rig.controller
 
     init {
@@ -98,9 +101,16 @@ class ControlListenersCharacterizationTest {
         rig.advanceBy(10_000)
 
         // the press, one retransmit, the release and its three; the 50 and 75 of the press are gone
-        assertThat(buttons()).containsExactly(
-            ControllerPacket.A_FLAG, ControllerPacket.A_FLAG, 0, 0, 0, 0,
-        ).inOrder()
+        assertThat(buttons())
+            .containsExactly(
+                ControllerPacket.A_FLAG,
+                ControllerPacket.A_FLAG,
+                0,
+                0,
+                0,
+                0,
+            )
+            .inOrder()
     }
 
     @Test
@@ -120,7 +130,8 @@ class ControlListenersCharacterizationTest {
         rig.press(a)
 
         val context = controller.controllerInputContext
-        assertThat(listOf(context.leftTrigger.toInt(), context.rightTrigger.toInt())).containsExactly(0, 0)
+        assertThat(listOf(context.leftTrigger.toInt(), context.rightTrigger.toInt()))
+            .containsExactly(0, 0)
         assertThat(
                 listOf(
                     context.leftStickX.toInt(),
@@ -197,7 +208,8 @@ class ControlListenersCharacterizationTest {
 
     // The pad
 
-    private fun padAt(x: Float, y: Float, action: Int = MotionEvent.ACTION_DOWN) = rig.touch(pad, action, x, y)
+    private fun padAt(x: Float, y: Float, action: Int = MotionEvent.ACTION_DOWN) =
+        rig.touch(pad, action, x, y)
 
     @Test
     fun `the pad is as big as the layout made it`() {
@@ -243,7 +255,9 @@ class ControlListenersCharacterizationTest {
         padAt(225f, 10f, MotionEvent.ACTION_MOVE)
 
         assertThat(inputMap()).isEqualTo(ControllerPacket.UP_FLAG)
-        assertThat(buttons()).containsExactly(ControllerPacket.LEFT_FLAG, ControllerPacket.UP_FLAG).inOrder()
+        assertThat(buttons())
+            .containsExactly(ControllerPacket.LEFT_FLAG, ControllerPacket.UP_FLAG)
+            .inOrder()
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import com.limelight.nvstream.wol.WakeOnLanSender
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
@@ -30,7 +31,7 @@ import org.junit.Test
  * Characterization: these tests pass on the Java class and on its Kotlin conversion.
  */
 class WakeOnLanSenderCharacterizationTest {
-    @get:Rule val log = LimeLogRecords()
+    @get:Rule val log = LimeLogCapture()
 
     private val loopback = InetAddress.getByName("127.0.0.1")
     private val open = mutableListOf<DatagramSocket>()
@@ -356,7 +357,8 @@ class WakeOnLanSenderCharacterizationTest {
         const val RECEIVE_MS = 3_000
         const val NONE_MS = 150
 
-        // An IPv6 address with a scope that no interface has: the JDK refuses it at once, with no lookup.
+        // An IPv6 address with a scope that no interface has: the JDK refuses it at once, with no
+        // lookup.
         const val UNRESOLVABLE = "fe80::1%nonexistent0"
     }
 }

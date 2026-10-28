@@ -10,9 +10,9 @@ import org.robolectric.RobolectricTestRunner
 /**
  * When Android says a device changed (a touchpad that gains an axis, a pad that comes back from
  * pointer capture), the handler makes a new context for it and moves what the old one held: the
- * controller number, the sensor rates, the LED colour and its session. The host must not notice,
- * so no controller is added or removed, but the new context reads the battery again, repaints the
- * LED and, a second later, turns the sensors back on.
+ * controller number, the sensor rates, the LED colour and its session. The host must not notice, so
+ * no controller is added or removed, but the new context reads the battery again, repaints the LED
+ * and, a second later, turns the sensors back on.
  */
 @RunWith(RobolectricTestRunner::class)
 class ControllerMigrationTest : FeedbackTestBase() {
@@ -33,13 +33,12 @@ class ControllerMigrationTest : FeedbackTestBase() {
 
     private fun migrationRig(
         configure: com.limelight.preferences.PreferenceConfiguration.() -> Unit = {}
-    ) =
-        rig {
-            gamepadMotionSensors = true
-            configure()
-        }
+    ) = rig {
+        gamepadMotionSensors = true
+        configure()
+    }
 
-    private fun events() = ShadowFeedbackBridge.batteryEvents.toList()
+    private fun events() = batteryEvents.toList()
 
     private fun session() = Hardware.session(Hardware.lights(lights).sessions.single())
 
@@ -108,7 +107,9 @@ class ControllerMigrationTest : FeedbackTestBase() {
         rig.advanceBackgroundBy(1000)
         rig.awaitBackground()
 
-        assertThat(Hardware.sensors(sensors).log).containsExactly("register 4 10000", "unregister 4").inOrder()
+        assertThat(Hardware.sensors(sensors).log)
+            .containsExactly("register 4 10000", "unregister 4")
+            .inOrder()
     }
 
     @Test
@@ -125,11 +126,10 @@ class ControllerMigrationTest : FeedbackTestBase() {
 
     @Test
     fun `the borrowed sensors of the phone are borrowed again`() {
-        val rig =
-            rig {
-                gamepadMotionSensors = false
-                gamepadMotionSensorsFallbackToDevice = true
-            }
+        val rig = rig {
+            gamepadMotionSensors = false
+            gamepadMotionSensorsFallbackToDevice = true
+        }
         val pad = rig.connectPad(features = DeviceFeatures())
         rig.wake(pad)
         rig.motionState(2, 100)

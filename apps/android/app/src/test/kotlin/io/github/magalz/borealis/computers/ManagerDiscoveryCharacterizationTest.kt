@@ -7,8 +7,8 @@ import android.net.NetworkInfo
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
-import io.github.magalz.borealis.discovery.LimeLogRecords
 import io.github.magalz.borealis.nvhttp.HostReply
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import org.junit.Before
@@ -23,10 +23,10 @@ import org.robolectric.shadows.ShadowNetworkCapabilities
 import org.robolectric.shadows.ShadowNetworkInfo
 
 /**
- * What the inherited `ComputerManagerService` does with a host that mDNS finds: it adds it, and
- * on an IPv4 address it asks a STUN server for the external address of the device, with the
- * process bound to the network under a VPN. The platform is Robolectric; the STUN request is a
- * shadow of `MoonBridge` and no test reaches a host that is not a fake on the loopback interface.
+ * What the inherited `ComputerManagerService` does with a host that mDNS finds: it adds it, and on
+ * an IPv4 address it asks a STUN server for the external address of the device, with the process
+ * bound to the network under a VPN. The platform is Robolectric; the STUN request is a shadow of
+ * `MoonBridge` and no test reaches a host that is not a fake on the loopback interface.
  *
  * Characterization: these tests pass on the Java class and on its Kotlin conversion.
  */
@@ -34,7 +34,7 @@ import org.robolectric.shadows.ShadowNetworkInfo
 @Config(shadows = [ShadowStunMoonBridge::class])
 @RunWith(RobolectricTestRunner::class)
 class ManagerDiscoveryCharacterizationTest {
-    @get:Rule(order = 0) val log = LimeLogRecords()
+    @get:Rule(order = 0) val log = LimeLogCapture()
     @get:Rule(order = 1) val rig = ManagerRule()
 
     private val connectivity = shadowOf(rig.app.getSystemService(ConnectivityManager::class.java))
@@ -106,7 +106,8 @@ class ManagerDiscoveryCharacterizationTest {
         assertThat(computer.activeAddress).isEqualTo(host.address)
         assertThat(computer.state).isEqualTo(ComputerDetails.State.ONLINE)
         assertThat(rig.savedRows().single().localAddress).isEqualTo(host.address)
-        assertThat(updates.on(caller).map { it.state }).containsExactly(ComputerDetails.State.ONLINE)
+        assertThat(updates.on(caller).map { it.state })
+            .containsExactly(ComputerDetails.State.ONLINE)
         assertThat(log.lines()).contains("INFO: New PC (DEN-PC) is UUID $UUID_1")
     }
 
@@ -119,8 +120,7 @@ class ManagerDiscoveryCharacterizationTest {
         rig.findAndResolve("Gone PC", "127.0.0.1", gone.port)
 
         val template = ComputerDetails().also { it.localAddress = gone }
-        assertThat(log.lines())
-            .contains("WARNING: Auto-discovered PC failed to respond: $template")
+        assertThat(log.lines()).contains("WARNING: Auto-discovered PC failed to respond: $template")
         assertThat(rig.savedRows()).isEmpty()
     }
 
@@ -205,11 +205,7 @@ class ManagerDiscoveryCharacterizationTest {
         assertThat(request.host).isEqualTo("stun.moonlight-stream.org")
         assertThat(request.port).isEqualTo(STUN_PORT)
         assertThat(request.boundNetwork).isSameInstanceAs(under)
-        assertThat(
-                rig.app
-                    .getSystemService(ConnectivityManager::class.java)
-                    .boundNetworkForProcess
-            )
+        assertThat(rig.app.getSystemService(ConnectivityManager::class.java).boundNetworkForProcess)
             .isNull()
         // The port is a guess: the port of the address that mDNS gave.
         val computer = checkNotNull(rig.binder.getComputer(UUID_1))
@@ -229,11 +225,7 @@ class ManagerDiscoveryCharacterizationTest {
         rig.findAndResolve("Den PC", "127.0.0.1", host.httpPort)
 
         assertThat(ShadowStunMoonBridge.requests).isEmpty()
-        assertThat(
-                rig.app
-                    .getSystemService(ConnectivityManager::class.java)
-                    .boundNetworkForProcess
-            )
+        assertThat(rig.app.getSystemService(ConnectivityManager::class.java).boundNetworkForProcess)
             .isNull()
         assertThat(checkNotNull(rig.binder.getComputer(UUID_1)).remoteAddress).isNull()
     }
@@ -250,11 +242,7 @@ class ManagerDiscoveryCharacterizationTest {
 
         assertThat(ShadowStunMoonBridge.requests).hasSize(1)
         assertThat(checkNotNull(rig.binder.getComputer(UUID_1)).remoteAddress).isNull()
-        assertThat(
-                rig.app
-                    .getSystemService(ConnectivityManager::class.java)
-                    .boundNetworkForProcess
-            )
+        assertThat(rig.app.getSystemService(ConnectivityManager::class.java).boundNetworkForProcess)
             .isNull()
     }
 

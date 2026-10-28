@@ -308,36 +308,30 @@ class ConnectionRig(private val resetPlace: Boolean = true) : ExternalResource()
         host.close()
         ShadowMonkeyActivityManager.monkey = false
         resetSemaphore()
+        // The shadow lives as long as the sandbox: what this test told it must not reach the
+        // tests of the other classes that share it.
+        ShadowRecordingBridge.reset()
     }
 
-    /** The configuration of a 1080p60 stream of the Desktop app, on the local network. */
-    fun config(
-        app: NvApp? = NvApp(DESKTOP_NAME, DESKTOP_ID, false),
-        remote: Int = StreamConfiguration.STREAM_CFG_LOCAL,
-        width: Int = 1920,
-        height: Int = 1080,
-        formats: Int = MoonBridge.VIDEO_FORMAT_H264,
-        maxPacketSize: Int = 1024,
-        audio: MoonBridge.AudioConfiguration? = MoonBridge.AUDIO_CONFIGURATION_STEREO,
-        colorSpace: Int = 0,
-        colorRange: Int = 0,
-        clientRefreshRateX100: Int = 0,
-        refreshRate: Int = 60,
-        launchRefreshRate: Int = 60,
-    ): StreamConfiguration =
+    /**
+     * The configuration of a 1080p60 stream of the Desktop app, on the local network, with what
+     * [configure] sets on top of it.
+     */
+    fun config(configure: StreamConfiguration.Builder.() -> Unit = {}): StreamConfiguration =
         StreamConfiguration.Builder()
-            .setApp(app)
-            .setRemoteConfiguration(remote)
-            .setResolution(width, height)
-            .setRefreshRate(refreshRate)
-            .setLaunchRefreshRate(launchRefreshRate)
+            .setApp(NvApp(DESKTOP_NAME, DESKTOP_ID, false))
+            .setRemoteConfiguration(StreamConfiguration.STREAM_CFG_LOCAL)
+            .setResolution(1920, 1080)
+            .setRefreshRate(60)
+            .setLaunchRefreshRate(60)
             .setBitrate(20_000)
-            .setMaxPacketSize(maxPacketSize)
-            .setSupportedVideoFormats(formats)
-            .setAudioConfiguration(audio)
-            .setColorSpace(colorSpace)
-            .setColorRange(colorRange)
-            .setClientRefreshRateX100(clientRefreshRateX100)
+            .setMaxPacketSize(1024)
+            .setSupportedVideoFormats(MoonBridge.VIDEO_FORMAT_H264)
+            .setAudioConfiguration(MoonBridge.AUDIO_CONFIGURATION_STEREO)
+            .setColorSpace(0)
+            .setColorRange(0)
+            .setClientRefreshRateX100(0)
+            .apply(configure)
             .build()
 
     /** A second listener, for a second connection: the rig waits for its thread at the end too. */

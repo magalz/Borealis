@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.stream.game
 
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
@@ -8,7 +9,9 @@ import com.limelight.nvstream.input.KeyboardPacket
 import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.input.motionEvent
 import io.github.magalz.borealis.stream.StreamPhase
+import io.github.magalz.borealis.stream.game.keys.keyboardKey
 import org.junit.Test
 
 /**
@@ -22,7 +25,7 @@ internal class GameSmokeTest : GameTestBase() {
         rig.streaming()
 
         val handled =
-            rig.game.dispatchKeyEvent(keyboardEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_A))
+            rig.game.dispatchKeyEvent(keyboardKey(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_A))
 
         assertThat(handled).isTrue()
         val call = ShadowRecordingBridge.named("sendKeyboardInput").single()
@@ -36,8 +39,15 @@ internal class GameSmokeTest : GameTestBase() {
         rig.streaming()
         val view = rig.game.findViewById<android.view.View>(R.id.surfaceView)
 
-        val handled =
-            rig.game.onGenericMotion(view, mousePress(MotionEvent.BUTTON_PRIMARY, 10f, 20f))
+        val press =
+            motionEvent(
+                InputDevice.SOURCE_MOUSE,
+                mapOf(MotionEvent.AXIS_X to 10f, MotionEvent.AXIS_Y to 20f),
+                action = MotionEvent.ACTION_DOWN,
+                buttonState = MotionEvent.BUTTON_PRIMARY,
+            )
+
+        val handled = rig.game.onGenericMotion(view, press)
 
         assertThat(handled).isTrue()
         val position = ShadowRecordingBridge.named("sendMousePosition").single()

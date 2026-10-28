@@ -4,6 +4,8 @@ import android.view.KeyEvent.KEYCODE_BUTTON_R1
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket.RB_FLAG
 import com.limelight.preferences.PreferenceConfiguration.AnalogStickForScrolling
+import io.github.magalz.borealis.testing.OwnedResources
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -15,23 +17,30 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class GamepadMouseSpeedTest {
+    @get:Rule val owned = OwnedResources()
     private val rig = rigWithSpeed100()
     private val pad = FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) }
 
     private fun rigWithSpeed100() =
-        ControllerHandlerRig().apply {
-            prefs.gamepadMouseSpeed = 100
-            prefs.analogStickForScrolling = AnalogStickForScrolling.RIGHT
-        }
+        owned.own(
+            ControllerHandlerRig().apply {
+                prefs.gamepadMouseSpeed = 100
+                prefs.analogStickForScrolling = AnalogStickForScrolling.RIGHT
+            }
+        )
 
     private fun pointerMoved(from: ControllerHandlerRig = rig): Int =
         from.connection.mouse.filter { it.startsWith("move") }.sumOf { it.split(" ")[1].toInt() }
 
     private fun scrolled(): Int =
-        rig.connection.mouse.filter { it.startsWith("hires scroll") }.sumOf { it.split(" ")[2].toInt() }
+        rig.connection.mouse
+            .filter { it.startsWith("hires scroll") }
+            .sumOf { it.split(" ")[2].toInt() }
 
     private fun hScrolled(): Int =
-        rig.connection.mouse.filter { it.startsWith("hires hscroll") }.sumOf { it.split(" ")[2].toInt() }
+        rig.connection.mouse
+            .filter { it.startsWith("hires hscroll") }
+            .sumOf { it.split(" ")[2].toInt() }
 
     private fun movesSent(): Int = rig.connection.mouse.count { it.startsWith("move") }
 

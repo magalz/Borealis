@@ -26,7 +26,7 @@ class ControllerNumberTest : DevicesTestBase() {
 
     @Test
     fun `an internal pad is controller 0 and reserves no number`() {
-        val internal = pad(1, external = false)
+        val internal = pad(1) { external = false }
         val rig = rig(multiController = true, devices = listOf(internal))
 
         rig.press(internal, KEYCODE_BUTTON_A)
@@ -41,7 +41,7 @@ class ControllerNumberTest : DevicesTestBase() {
 
     @Test
     fun `an internal pad takes no number from the ones other pads reserve`() {
-        val internal = pad(1, external = false)
+        val internal = pad(1) { external = false }
         val external = pad(2)
         val rig = rig(multiController = true, devices = listOf(internal, external))
 
@@ -179,7 +179,7 @@ class ControllerNumberTest : DevicesTestBase() {
 
     @Test
     fun `an internal pad reports an empty active mask unless it was attached at the start`() {
-        val late = pad(1, external = false)
+        val late = pad(1) { external = false }
         val rig = rig(multiController = true)
         rig.connect(late)
 
@@ -321,8 +321,14 @@ class ControllerNumberTest : DevicesTestBase() {
     fun `a touchpad and its joystick are one controller`() {
         val rig = rig(multiController = true)
         val other = pad(1)
-        val joystick = pad(5, descriptor = "same")
-        val touchpad = pad(4, name = "pad Touchpad", sources = MOUSE, axes = emptyList(), descriptor = "same")
+        val joystick = pad(5) { descriptor = "same" }
+        val touchpad =
+            pad(4) {
+                name = "pad Touchpad"
+                sources = MOUSE
+                axes = emptyList()
+                descriptor = "same"
+            }
         listOf(other, joystick, touchpad).forEach(rig::connect)
         rig.press(other, KEYCODE_BUTTON_A)
 
@@ -343,8 +349,18 @@ class ControllerNumberTest : DevicesTestBase() {
     @Test
     fun `a pad without joystick axes takes the number of the joystick after it`() {
         val rig = rig(multiController = true)
-        val touchpad = pad(4, name = "pad Touchpad", sources = MOUSE, axes = emptyList(), descriptor = "same")
-        val joystick = pad(5, name = "pad", descriptor = "same")
+        val touchpad =
+            pad(4) {
+                name = "pad Touchpad"
+                sources = MOUSE
+                axes = emptyList()
+                descriptor = "same"
+            }
+        val joystick =
+            pad(5) {
+                name = "pad"
+                descriptor = "same"
+            }
         listOf(touchpad, joystick).forEach(rig::connect)
 
         rig.press(touchpad, KEYCODE_BUTTON_A)
@@ -362,8 +378,14 @@ class ControllerNumberTest : DevicesTestBase() {
     fun `the number of the joystick it propagates is the one the joystick already has`() {
         val rig = rig(multiController = true)
         val other = pad(1)
-        val joystick = pad(3, descriptor = "same")
-        val touchpad = pad(2, name = "pad Touchpad", sources = MOUSE, axes = emptyList(), descriptor = "same")
+        val joystick = pad(3) { descriptor = "same" }
+        val touchpad =
+            pad(2) {
+                name = "pad Touchpad"
+                sources = MOUSE
+                axes = emptyList()
+                descriptor = "same"
+            }
         listOf(other, joystick, touchpad).forEach(rig::connect)
         rig.press(other, KEYCODE_BUTTON_A)
         rig.press(joystick, KEYCODE_BUTTON_A)
@@ -381,8 +403,14 @@ class ControllerNumberTest : DevicesTestBase() {
     @Test
     fun `the associated joystick may come before the device`() {
         val rig = rig(multiController = true)
-        val joystick = pad(3, descriptor = "same")
-        val touchpad = pad(4, name = "pad Touchpad", sources = MOUSE, axes = emptyList(), descriptor = "same")
+        val joystick = pad(3) { descriptor = "same" }
+        val touchpad =
+            pad(4) {
+                name = "pad Touchpad"
+                sources = MOUSE
+                axes = emptyList()
+                descriptor = "same"
+            }
         listOf(joystick, touchpad).forEach(rig::connect)
 
         rig.press(touchpad, KEYCODE_BUTTON_A)
@@ -395,9 +423,19 @@ class ControllerNumberTest : DevicesTestBase() {
     fun `the joystick after the device wins over the one before it`() {
         val rig = rig(multiController = true)
         val taken = pad(1)
-        val before = pad(3, descriptor = "same")
-        val touchpad = pad(4, name = "pad Touchpad", sources = MOUSE, axes = emptyList(), descriptor = "same")
-        val after = pad(5, name = "other pad", descriptor = "same")
+        val before = pad(3) { descriptor = "same" }
+        val touchpad =
+            pad(4) {
+                name = "pad Touchpad"
+                sources = MOUSE
+                axes = emptyList()
+                descriptor = "same"
+            }
+        val after =
+            pad(5) {
+                name = "other pad"
+                descriptor = "same"
+            }
         listOf(taken, before, touchpad, after).forEach(rig::connect)
         rig.press(taken, KEYCODE_BUTTON_A)
 
@@ -411,8 +449,19 @@ class ControllerNumberTest : DevicesTestBase() {
     @Test
     fun `a device is not associated with a neighbor that has no joystick source`() {
         val rig = rig(multiController = true)
-        val neighbor = pad(5, sources = GAMEPAD, descriptor = "same", axes = emptyList())
-        val touchpad = pad(4, name = "pad Touchpad", sources = MOUSE, axes = emptyList(), descriptor = "same")
+        val neighbor =
+            pad(5) {
+                sources = GAMEPAD
+                descriptor = "same"
+                axes = emptyList()
+            }
+        val touchpad =
+            pad(4) {
+                name = "pad Touchpad"
+                sources = MOUSE
+                axes = emptyList()
+                descriptor = "same"
+            }
         listOf(touchpad, neighbor).forEach(rig::connect)
 
         rig.press(touchpad, KEYCODE_BUTTON_A)
@@ -425,8 +474,18 @@ class ControllerNumberTest : DevicesTestBase() {
     @Test
     fun `a device is not associated with a neighbor of the same name`() {
         val rig = rig(multiController = true)
-        val twin = pad(5, name = "twin", descriptor = "same")
-        val touchpad = pad(4, name = "twin", sources = MOUSE, axes = emptyList(), descriptor = "same")
+        val twin =
+            pad(5) {
+                name = "twin"
+                descriptor = "same"
+            }
+        val touchpad =
+            pad(4) {
+                name = "twin"
+                sources = MOUSE
+                axes = emptyList()
+                descriptor = "same"
+            }
         listOf(touchpad, twin).forEach(rig::connect)
 
         rig.press(touchpad, KEYCODE_BUTTON_A)
@@ -437,8 +496,18 @@ class ControllerNumberTest : DevicesTestBase() {
     @Test
     fun `a device is not associated with a neighbor of another descriptor`() {
         val rig = rig(multiController = true)
-        val stranger = pad(5, name = "stranger", descriptor = "other")
-        val touchpad = pad(4, name = "pad Touchpad", sources = MOUSE, axes = emptyList(), descriptor = "same")
+        val stranger =
+            pad(5) {
+                name = "stranger"
+                descriptor = "other"
+            }
+        val touchpad =
+            pad(4) {
+                name = "pad Touchpad"
+                sources = MOUSE
+                axes = emptyList()
+                descriptor = "same"
+            }
         listOf(touchpad, stranger).forEach(rig::connect)
 
         rig.press(touchpad, KEYCODE_BUTTON_A)
@@ -449,8 +518,14 @@ class ControllerNumberTest : DevicesTestBase() {
     @Test
     fun `an associated joystick does not reserve a number without multi-controller`() {
         val rig = rig(multiController = false)
-        val joystick = pad(5, descriptor = "same")
-        val touchpad = pad(4, name = "pad Touchpad", sources = MOUSE, axes = emptyList(), descriptor = "same")
+        val joystick = pad(5) { descriptor = "same" }
+        val touchpad =
+            pad(4) {
+                name = "pad Touchpad"
+                sources = MOUSE
+                axes = emptyList()
+                descriptor = "same"
+            }
         listOf(touchpad, joystick).forEach(rig::connect)
 
         rig.press(touchpad, KEYCODE_BUTTON_A)
@@ -463,8 +538,14 @@ class ControllerNumberTest : DevicesTestBase() {
     @Test
     fun `an associated joystick is made without the gamepad mouse the handler has on`() {
         val rig = rig(multiController = true)
-        val joystick = pad(5, descriptor = "same")
-        val touchpad = pad(4, name = "pad Touchpad", sources = MOUSE, axes = emptyList(), descriptor = "same")
+        val joystick = pad(5) { descriptor = "same" }
+        val touchpad =
+            pad(4) {
+                name = "pad Touchpad"
+                sources = MOUSE
+                axes = emptyList()
+                descriptor = "same"
+            }
         listOf(touchpad, joystick).forEach(rig::connect)
         rig.handler.setMouseEmulation(true)
 
@@ -528,7 +609,9 @@ class ControllerNumberTest : DevicesTestBase() {
 
         pads.forEach { it.report(a) }
 
-        val contexts = pads.map { ContextView(checkNotNull(rig.usbContexts().get(it.controllerId))) }
+        val contexts = pads.map {
+            ContextView(checkNotNull(rig.usbContexts().get(it.controllerId)))
+        }
         assertThat(contexts.take(16).map { it.short("controllerNumber") })
             .containsExactlyElementsIn((0..15).toList())
             .inOrder()

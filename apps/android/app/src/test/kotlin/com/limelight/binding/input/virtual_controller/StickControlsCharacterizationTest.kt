@@ -3,7 +3,9 @@ package com.limelight.binding.input.virtual_controller
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
-import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.testing.OwnedResources
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -20,15 +22,18 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class StickControlsCharacterizationTest {
-    private val kit = ElementRig()
+    @get:Rule val owned = OwnedResources()
+    private val kit = owned.own(ElementRig())
     private val controller = kit.controller
     private val context = controller.controllerInputContext
     private val left = kit.add(LeftAnalogStick(controller, kit.rig.activity), 100, 100, 301, 301)
     private val right = kit.add(RightAnalogStick(controller, kit.rig.activity), 500, 100, 301, 301)
-    private val leftTrigger = kit.add(LeftTrigger(controller, 1, kit.rig.activity), 100, 500, 100, 60)
-    private val rightTrigger = kit.add(RightTrigger(controller, 1, kit.rig.activity), 300, 500, 100, 60)
+    private val leftTrigger =
+        kit.add(LeftTrigger(controller, 1, kit.rig.activity), 100, 500, 100, 60)
+    private val rightTrigger =
+        kit.add(RightTrigger(controller, 1, kit.rig.activity), 300, 500, 100, 60)
 
     private fun stick(stick: AnalogStick, action: Int, dx: Float, dy: Float, time: Long) =
         stick.touch(action, MIDDLE + dx, MIDDLE + dy, time)
@@ -143,7 +148,8 @@ class StickControlsCharacterizationTest {
     @Test
     fun `a finger on the column of the middle moves the right stick the other way round, as the left one`() {
         // The angle of a finger exactly above or below the middle is the one of the opposite side
-        // (see the test of the stick itself): 100 pixels down sends up, and 100 pixels up sends down.
+        // (see the test of the stick itself): 100 pixels down sends up, and 100 pixels up sends
+        // down.
         stick(right, MotionEvent.ACTION_DOWN, 0f, 100f, FIRST)
         assertThat(rightSticks()).isEqualTo(0 to 29_255)
 
@@ -154,7 +160,8 @@ class StickControlsCharacterizationTest {
 
     @Test
     fun `the radius of a touch is the root of a sum of floats, which fractional points tell from a sum of doubles`() {
-        // x * x + y * y is added as floats before the root: with the sum in double precision, each of
+        // x * x + y * y is added as floats before the root: with the sum in double precision, each
+        // of
         // these points gives a number that is one other in the height or the width.
         left.touch(MotionEvent.ACTION_DOWN, 51.6f, 201.3f, FIRST)
         assertThat(leftSticks()).isEqualTo(-28_787 to -15_008)
@@ -178,7 +185,9 @@ class StickControlsCharacterizationTest {
 
         assertThat(rightSticks()).isEqualTo(0 to 0)
         // the click state goes out first, then the middle
-        assertThat(kit.rig.packets.drop(sent).map { it.rightStickX }).containsExactly(29_255, 0).inOrder()
+        assertThat(kit.rig.packets.drop(sent).map { it.rightStickX })
+            .containsExactly(29_255, 0)
+            .inOrder()
     }
 
     @Test
@@ -224,7 +233,8 @@ class StickControlsCharacterizationTest {
         stick(left, MotionEvent.ACTION_DOWN, 0f, 0f, FIRST)
         stick(left, MotionEvent.ACTION_UP, 0f, 0f, FIRST + 50)
         stick(left, MotionEvent.ACTION_DOWN, 0f, 0f, FIRST + 100)
-        assertThat(context.inputMap).isEqualTo((others.toInt() or ControllerPacket.LS_CLK_FLAG).toShort())
+        assertThat(context.inputMap)
+            .isEqualTo((others.toInt() or ControllerPacket.LS_CLK_FLAG).toShort())
         assertThat(context.inputMap.toInt()).isLessThan(0)
 
         stick(left, MotionEvent.ACTION_UP, 0f, 0f, FIRST + 150)
@@ -233,7 +243,8 @@ class StickControlsCharacterizationTest {
         stick(right, MotionEvent.ACTION_DOWN, 0f, 0f, FIRST + 500)
         stick(right, MotionEvent.ACTION_UP, 0f, 0f, FIRST + 550)
         stick(right, MotionEvent.ACTION_DOWN, 0f, 0f, FIRST + 600)
-        assertThat(context.inputMap).isEqualTo((others.toInt() or ControllerPacket.RS_CLK_FLAG).toShort())
+        assertThat(context.inputMap)
+            .isEqualTo((others.toInt() or ControllerPacket.RS_CLK_FLAG).toShort())
         stick(right, MotionEvent.ACTION_UP, 0f, 0f, FIRST + 650)
         assertThat(context.inputMap).isEqualTo(others)
     }
@@ -324,8 +335,13 @@ class StickControlsCharacterizationTest {
         val other = kit.add(LeftTrigger(controller, 2, kit.rig.activity), 300, 700, 100, 60)
         kit.rig.press(button)
 
-        // the middle of the trigger of layer 1, then of the one of layer 2, in the coordinates of the button
-        button.touch(MotionEvent.ACTION_MOVE, leftTrigger.x - button.x + 50f, leftTrigger.y - button.y + 30f)
+        // the middle of the trigger of layer 1, then of the one of layer 2, in the coordinates of
+        // the button
+        button.touch(
+            MotionEvent.ACTION_MOVE,
+            leftTrigger.x - button.x + 50f,
+            leftTrigger.y - button.y + 30f,
+        )
         assertThat(context.leftTrigger).isEqualTo(0xFF.toByte())
         button.touch(MotionEvent.ACTION_MOVE, other.x - button.x + 50f, other.y - button.y + 30f)
 

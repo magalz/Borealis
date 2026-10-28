@@ -17,8 +17,8 @@ import android.view.KeyEvent.META_ALT_ON
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.input.ControllerPacket.A_FLAG
-import com.limelight.nvstream.input.ControllerPacket.B_FLAG
 import com.limelight.nvstream.input.ControllerPacket.BACK_FLAG
+import com.limelight.nvstream.input.ControllerPacket.B_FLAG
 import com.limelight.nvstream.input.ControllerPacket.DOWN_FLAG
 import com.limelight.nvstream.input.ControllerPacket.LB_FLAG
 import com.limelight.nvstream.input.ControllerPacket.LEFT_FLAG
@@ -33,6 +33,7 @@ import com.limelight.nvstream.input.ControllerPacket.TOUCHPAD_FLAG
 import com.limelight.nvstream.input.ControllerPacket.UP_FLAG
 import com.limelight.nvstream.input.ControllerPacket.X_FLAG
 import com.limelight.nvstream.input.ControllerPacket.Y_FLAG
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -46,7 +47,7 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 class RemappingCharacterizationTest {
-    private val rig = EventsRig()
+    @get:Rule val rig = EventsRig()
 
     private fun pad(deviceId: Int = 7, fields: Map<String, Any?> = emptyMap()) =
         rig.addPad(deviceId, fields = fields)
@@ -88,7 +89,13 @@ class RemappingCharacterizationTest {
     fun `ignoring Back comes before Back standing in for Start or the Tablet Remote hack`() {
         val pad = pad(fields = mapOf("ignoreBack" to true, "backIsStart" to true))
 
-        assertThat(pad.press(KEYCODE_BACK, metaState = META_ALT_ON, flags = FLAG_SOFT_KEYBOARD)).isFalse()
+        assertThat(
+                pad.press(
+                    KEYCODE_BACK,
+                    KeyDetail(metaState = META_ALT_ON, flags = FLAG_SOFT_KEYBOARD),
+                )
+            )
+            .isFalse()
         assertThat(pad.press(KEYCODE_BACK)).isFalse()
 
         assertThat(rig.packets).isEmpty()
@@ -99,7 +106,8 @@ class RemappingCharacterizationTest {
         assertThat(rig.default.press(KEYCODE_BACK)).isFalse()
         assertThat(rig.packets).isEmpty()
 
-        assertThat(rig.default.observe(KEYCODE_BUTTON_SELECT)).isEqualTo(KeyResult(true, sent(BACK_FLAG)))
+        assertThat(rig.default.observe(KEYCODE_BUTTON_SELECT))
+            .isEqualTo(KeyResult(true, sent(BACK_FLAG)))
     }
 
     // ----- Share -----
@@ -108,23 +116,28 @@ class RemappingCharacterizationTest {
     fun `an unmapped record key with scan code 167 is the Share button on a pad that has one`() {
         val pad = pad(fields = mapOf("hasShare" to true))
 
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 167)).isEqualTo(KeyResult(true, sent(MISC_FLAG)))
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 167))
+            .isEqualTo(KeyResult(true, sent(MISC_FLAG)))
     }
 
     @Test
     fun `the same key on a pad without a Share button is left to the system`() {
         val pad = pad()
 
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 167)).isEqualTo(KeyResult(false, noPacket))
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 167))
+            .isEqualTo(KeyResult(false, noPacket))
     }
 
     @Test
     fun `scan code 167 only counts when the key code is unknown, and only 167`() {
         val pad = pad(fields = mapOf("hasShare" to true))
 
-        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 167)).isEqualTo(KeyResult(true, sent(A_FLAG)))
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 166)).isEqualTo(KeyResult(false, noPacket))
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 168)).isEqualTo(KeyResult(false, noPacket))
+        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 167))
+            .isEqualTo(KeyResult(true, sent(A_FLAG)))
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 166))
+            .isEqualTo(KeyResult(false, noPacket))
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 168))
+            .isEqualTo(KeyResult(false, noPacket))
     }
 
     // ----- Sony clickpad -----
@@ -153,7 +166,8 @@ class RemappingCharacterizationTest {
     fun `Select on a Sony pad with another scan code stays Select`() {
         val pad = pad(fields = mapOf("vendorId" to 0x054c))
 
-        assertThat(pad.observe(KEYCODE_BUTTON_SELECT, scanCode = 314)).isEqualTo(KeyResult(true, sent(BACK_FLAG)))
+        assertThat(pad.observe(KEYCODE_BUTTON_SELECT, scanCode = 314))
+            .isEqualTo(KeyResult(true, sent(BACK_FLAG)))
     }
 
     @Test
@@ -162,11 +176,15 @@ class RemappingCharacterizationTest {
         assertThat(other.observe(KEYCODE_BUTTON_SELECT, scanCode = 317))
             .isEqualTo(KeyResult(true, sent(BACK_FLAG)))
         val standalone =
-            pad(deviceId = 8, fields = mapOf("vendorId" to 0x045e, "isDualShockStandaloneTouchpad" to true))
+            pad(
+                deviceId = 8,
+                fields = mapOf("vendorId" to 0x045e, "isDualShockStandaloneTouchpad" to true),
+            )
         assertThat(standalone.observe(KEYCODE_BUTTON_SELECT, scanCode = 317))
             .isEqualTo(KeyResult(true, sent(BACK_FLAG)))
         val sony = pad(deviceId = 9, fields = mapOf("vendorId" to 0x054c))
-        assertThat(sony.observe(KEYCODE_BUTTON_A, scanCode = 317)).isEqualTo(KeyResult(true, sent(A_FLAG)))
+        assertThat(sony.observe(KEYCODE_BUTTON_A, scanCode = 317))
+            .isEqualTo(KeyResult(true, sent(A_FLAG)))
     }
 
     // ----- 8BitDo -----
@@ -175,16 +193,20 @@ class RemappingCharacterizationTest {
     fun `scan code 306 on an 8BitDo pad is the Mode button, whatever the key code`() {
         val pad = pad(fields = mapOf("vendorId" to 0x2dc8))
 
-        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 306)).isEqualTo(KeyResult(true, sent(SPECIAL_BUTTON_FLAG)))
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 306)).isEqualTo(KeyResult(true, sent(SPECIAL_BUTTON_FLAG)))
-        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 305)).isEqualTo(KeyResult(true, sent(A_FLAG)))
+        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 306))
+            .isEqualTo(KeyResult(true, sent(SPECIAL_BUTTON_FLAG)))
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 306))
+            .isEqualTo(KeyResult(true, sent(SPECIAL_BUTTON_FLAG)))
+        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 305))
+            .isEqualTo(KeyResult(true, sent(A_FLAG)))
     }
 
     @Test
     fun `scan code 306 on a pad of another vendor is left alone`() {
         val pad = pad(fields = mapOf("vendorId" to 0x045e))
 
-        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 306)).isEqualTo(KeyResult(true, sent(A_FLAG)))
+        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 306))
+            .isEqualTo(KeyResult(true, sent(A_FLAG)))
     }
 
     // ----- Nintendo pads -----
@@ -226,8 +248,10 @@ class RemappingCharacterizationTest {
     fun `a Switch Pro pad on Android 10 uses the built-in mapping`() {
         val pad = pad(fields = mapOf("vendorId" to 0x057e, "productId" to 0x2009))
 
-        assertThat(pad.observe(KEYCODE_BUTTON_C, scanCode = 0x130)).isEqualTo(KeyResult(false, noPacket))
-        assertThat(pad.observe(KEYCODE_BUTTON_B, scanCode = 0x130)).isEqualTo(KeyResult(true, sent(B_FLAG)))
+        assertThat(pad.observe(KEYCODE_BUTTON_C, scanCode = 0x130))
+            .isEqualTo(KeyResult(false, noPacket))
+        assertThat(pad.observe(KEYCODE_BUTTON_B, scanCode = 0x130))
+            .isEqualTo(KeyResult(true, sent(B_FLAG)))
     }
 
     @Test
@@ -235,7 +259,8 @@ class RemappingCharacterizationTest {
     fun `a Switch Pro pad on a newer Android uses the built-in mapping`() {
         val pad = pad(fields = mapOf("vendorId" to 0x057e, "productId" to 0x2009))
 
-        assertThat(pad.observe(KEYCODE_BUTTON_B, scanCode = 0x130)).isEqualTo(KeyResult(true, sent(B_FLAG)))
+        assertThat(pad.observe(KEYCODE_BUTTON_B, scanCode = 0x130))
+            .isEqualTo(KeyResult(true, sent(B_FLAG)))
     }
 
     @Test
@@ -243,7 +268,8 @@ class RemappingCharacterizationTest {
     fun `another Nintendo product is not mapped by scan code`() {
         val pad = pad(fields = mapOf("vendorId" to 0x057e, "productId" to 0x2006))
 
-        assertThat(pad.observe(KEYCODE_BUTTON_B, scanCode = 0x130)).isEqualTo(KeyResult(true, sent(B_FLAG)))
+        assertThat(pad.observe(KEYCODE_BUTTON_B, scanCode = 0x130))
+            .isEqualTo(KeyResult(true, sent(B_FLAG)))
     }
 
     @Test
@@ -251,7 +277,8 @@ class RemappingCharacterizationTest {
     fun `the Switch product of another vendor is not mapped by scan code`() {
         val pad = pad(fields = mapOf("vendorId" to 0x045e, "productId" to 0x2009))
 
-        assertThat(pad.observe(KEYCODE_BUTTON_B, scanCode = 0x130)).isEqualTo(KeyResult(true, sent(B_FLAG)))
+        assertThat(pad.observe(KEYCODE_BUTTON_B, scanCode = 0x130))
+            .isEqualTo(KeyResult(true, sent(B_FLAG)))
     }
 
     @Test
@@ -269,11 +296,15 @@ class RemappingCharacterizationTest {
     @Test
     @Config(sdk = [28])
     fun `another product of the HORI vendor, and the HORIPAD product of another vendor, are not mapped by scan code`() {
-        val otherProduct = pad(deviceId = 7, fields = mapOf("vendorId" to 0x0f0d, "productId" to 0x00c0))
-        val otherVendor = pad(deviceId = 8, fields = mapOf("vendorId" to 0x045e, "productId" to 0x00c1))
+        val otherProduct =
+            pad(deviceId = 7, fields = mapOf("vendorId" to 0x0f0d, "productId" to 0x00c0))
+        val otherVendor =
+            pad(deviceId = 8, fields = mapOf("vendorId" to 0x045e, "productId" to 0x00c1))
 
-        assertThat(otherProduct.observe(KEYCODE_BUTTON_B, scanCode = 0x130)).isEqualTo(KeyResult(true, sent(B_FLAG)))
-        assertThat(otherVendor.observe(KEYCODE_BUTTON_B, scanCode = 0x130)).isEqualTo(KeyResult(true, sent(B_FLAG)))
+        assertThat(otherProduct.observe(KEYCODE_BUTTON_B, scanCode = 0x130))
+            .isEqualTo(KeyResult(true, sent(B_FLAG)))
+        assertThat(otherVendor.observe(KEYCODE_BUTTON_B, scanCode = 0x130))
+            .isEqualTo(KeyResult(true, sent(B_FLAG)))
     }
 
     @Test
@@ -351,8 +382,9 @@ class RemappingCharacterizationTest {
                 .isEqualTo(KeyResult(true, noPacket))
         }
         // The key code is not even looked at: the press is taken and nothing is sent.
-        assertThat(pad.press(KEYCODE_A, scanCode = 310)).isTrue()
-        assertThat(pad.release(KEYCODE_A, scanCode = 310, downTime = rig.now - 100)).isTrue()
+        assertThat(pad.press(KEYCODE_A, KeyDetail(scanCode = 310))).isTrue()
+        assertThat(pad.release(KEYCODE_A, KeyDetail(scanCode = 310), downTime = rig.now - 100))
+            .isTrue()
         assertThat(rig.packets).isEmpty()
     }
 
@@ -368,8 +400,10 @@ class RemappingCharacterizationTest {
                     )
             )
 
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 314)).isEqualTo(KeyResult(true, sent(LS_CLK_FLAG)))
-        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 306)).isEqualTo(KeyResult(true, sent(B_FLAG)))
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 314))
+            .isEqualTo(KeyResult(true, sent(LS_CLK_FLAG)))
+        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 306))
+            .isEqualTo(KeyResult(true, sent(B_FLAG)))
     }
 
     // ----- Razer Serval -----
@@ -378,33 +412,41 @@ class RemappingCharacterizationTest {
     fun `a Serval maps its unknown keys to Select and Start`() {
         val pad = pad(fields = mapOf("isServal" to true))
 
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 314)).isEqualTo(KeyResult(true, sent(BACK_FLAG)))
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 315)).isEqualTo(KeyResult(true, sent(PLAY_FLAG)))
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 314))
+            .isEqualTo(KeyResult(true, sent(BACK_FLAG)))
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 315))
+            .isEqualTo(KeyResult(true, sent(PLAY_FLAG)))
     }
 
     @Test
     fun `any other unknown key of a Serval is left to the system`() {
         val pad = pad(fields = mapOf("isServal" to true))
 
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 313)).isEqualTo(KeyResult(false, noPacket))
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 100)).isEqualTo(KeyResult(false, noPacket))
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 313))
+            .isEqualTo(KeyResult(false, noPacket))
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 100))
+            .isEqualTo(KeyResult(false, noPacket))
     }
 
     @Test
     fun `the scan codes of a Serval only count for an unknown key code`() {
         val pad = pad(fields = mapOf("isServal" to true))
 
-        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 314)).isEqualTo(KeyResult(true, sent(A_FLAG)))
+        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 314))
+            .isEqualTo(KeyResult(true, sent(A_FLAG)))
     }
 
     @Test
     fun `an unknown key of a Serval ends the chain of quirks, so the Xbox Bluetooth table is not tried`() {
         val pad = pad(fields = mapOf("isServal" to true, "isNonStandardXboxBtController" to true))
 
-        // Scan code 306 is X on an Xbox Bluetooth pad, but the Serval branch is the one that matches.
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 306)).isEqualTo(KeyResult(false, noPacket))
+        // Scan code 306 is X on an Xbox Bluetooth pad, but the Serval branch is the one that
+        // matches.
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 306))
+            .isEqualTo(KeyResult(false, noPacket))
         // For a known key code the Serval branch does not match, so the Xbox table is the next.
-        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 306)).isEqualTo(KeyResult(true, sent(X_FLAG)))
+        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 306))
+            .isEqualTo(KeyResult(true, sent(X_FLAG)))
     }
 
     // ----- Xbox One S over Bluetooth -----
@@ -436,25 +478,31 @@ class RemappingCharacterizationTest {
     fun `the other buttons of that pad are mapped correctly by Android and keep their key code`() {
         val pad = pad(fields = mapOf("isNonStandardXboxBtController" to true))
 
-        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 304)).isEqualTo(KeyResult(true, sent(A_FLAG)))
-        assertThat(pad.observe(KEYCODE_BUTTON_B, scanCode = 305)).isEqualTo(KeyResult(true, sent(B_FLAG)))
-        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 0)).isEqualTo(KeyResult(true, sent(A_FLAG)))
+        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 304))
+            .isEqualTo(KeyResult(true, sent(A_FLAG)))
+        assertThat(pad.observe(KEYCODE_BUTTON_B, scanCode = 305))
+            .isEqualTo(KeyResult(true, sent(B_FLAG)))
+        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 0))
+            .isEqualTo(KeyResult(true, sent(A_FLAG)))
     }
 
     @Test
     fun `the Xbox button of that pad is sent as Menu and becomes Mode`() {
         val pad = pad(fields = mapOf("isNonStandardXboxBtController" to true))
 
-        assertThat(pad.observe(KEYCODE_MENU, scanCode = 172)).isEqualTo(KeyResult(true, sent(SPECIAL_BUTTON_FLAG)))
+        assertThat(pad.observe(KEYCODE_MENU, scanCode = 172))
+            .isEqualTo(KeyResult(true, sent(SPECIAL_BUTTON_FLAG)))
         // A scan code of the table wins over the Menu key code, since the table is tried first.
-        assertThat(pad.observe(KEYCODE_MENU, scanCode = 306)).isEqualTo(KeyResult(true, sent(X_FLAG)))
+        assertThat(pad.observe(KEYCODE_MENU, scanCode = 306))
+            .isEqualTo(KeyResult(true, sent(X_FLAG)))
     }
 
     @Test
     fun `Menu is Start on a pad that is not a non-standard Xbox Bluetooth pad`() {
         val pad = pad()
 
-        assertThat(pad.observe(KEYCODE_MENU, scanCode = 172)).isEqualTo(KeyResult(true, sent(PLAY_FLAG)))
+        assertThat(pad.observe(KEYCODE_MENU, scanCode = 172))
+            .isEqualTo(KeyResult(true, sent(PLAY_FLAG)))
     }
 
     // ----- ASUS ROG Kunai -----
@@ -462,7 +510,11 @@ class RemappingCharacterizationTest {
     @Test
     fun `the macro buttons of a Kunai are Start and Select`() {
         for (productId in listOf(0x7900, 0x7902)) {
-            val pad = pad(deviceId = productId, fields = mapOf("vendorId" to 0x0b05, "productId" to productId))
+            val pad =
+                pad(
+                    deviceId = productId,
+                    fields = mapOf("vendorId" to 0x0b05, "productId" to productId),
+                )
 
             for (scanCode in listOf(264, 266)) {
                 assertWithMessage("$productId scan code $scanCode")
@@ -480,14 +532,18 @@ class RemappingCharacterizationTest {
     @Test
     fun `the other scan codes and products of the ASUS vendor keep the key code`() {
         val kunai = pad(deviceId = 7, fields = mapOf("vendorId" to 0x0b05, "productId" to 0x7900))
-        assertThat(kunai.observe(KEYCODE_BUTTON_A, scanCode = 263)).isEqualTo(KeyResult(true, sent(A_FLAG)))
-        assertThat(kunai.observe(KEYCODE_BUTTON_A, scanCode = 268)).isEqualTo(KeyResult(true, sent(A_FLAG)))
+        assertThat(kunai.observe(KEYCODE_BUTTON_A, scanCode = 263))
+            .isEqualTo(KeyResult(true, sent(A_FLAG)))
+        assertThat(kunai.observe(KEYCODE_BUTTON_A, scanCode = 268))
+            .isEqualTo(KeyResult(true, sent(A_FLAG)))
 
         val other = pad(deviceId = 8, fields = mapOf("vendorId" to 0x0b05, "productId" to 0x7901))
-        assertThat(other.observe(KEYCODE_BUTTON_A, scanCode = 264)).isEqualTo(KeyResult(true, sent(A_FLAG)))
+        assertThat(other.observe(KEYCODE_BUTTON_A, scanCode = 264))
+            .isEqualTo(KeyResult(true, sent(A_FLAG)))
 
         val notAsus = pad(deviceId = 9, fields = mapOf("vendorId" to 0x045e, "productId" to 0x7900))
-        assertThat(notAsus.observe(KEYCODE_BUTTON_A, scanCode = 264)).isEqualTo(KeyResult(true, sent(A_FLAG)))
+        assertThat(notAsus.observe(KEYCODE_BUTTON_A, scanCode = 264))
+            .isEqualTo(KeyResult(true, sent(A_FLAG)))
     }
 
     @Test
@@ -503,7 +559,8 @@ class RemappingCharacterizationTest {
             )
 
         // 264 is Start for a Kunai but nothing for the Xbox Bluetooth table, which matched first.
-        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 264)).isEqualTo(KeyResult(true, sent(A_FLAG)))
+        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 264))
+            .isEqualTo(KeyResult(true, sent(A_FLAG)))
     }
 
     // ----- Raw D-pad scan codes -----
@@ -512,25 +569,32 @@ class RemappingCharacterizationTest {
     fun `without hat axes the raw D-pad scan codes of an unknown key are the D-pad`() {
         val pad = pad()
 
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 704)).isEqualTo(KeyResult(true, sent(LEFT_FLAG)))
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 705)).isEqualTo(KeyResult(true, sent(RIGHT_FLAG)))
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 706)).isEqualTo(KeyResult(true, sent(UP_FLAG)))
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 707)).isEqualTo(KeyResult(true, sent(DOWN_FLAG)))
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 704))
+            .isEqualTo(KeyResult(true, sent(LEFT_FLAG)))
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 705))
+            .isEqualTo(KeyResult(true, sent(RIGHT_FLAG)))
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 706))
+            .isEqualTo(KeyResult(true, sent(UP_FLAG)))
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 707))
+            .isEqualTo(KeyResult(true, sent(DOWN_FLAG)))
     }
 
     @Test
     fun `scan codes next to the raw D-pad ones are left to the system`() {
         val pad = pad()
 
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 703)).isEqualTo(KeyResult(false, noPacket))
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 708)).isEqualTo(KeyResult(false, noPacket))
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 703))
+            .isEqualTo(KeyResult(false, noPacket))
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 708))
+            .isEqualTo(KeyResult(false, noPacket))
     }
 
     @Test
     fun `the raw D-pad scan codes need an unknown key code`() {
         val pad = pad()
 
-        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 704)).isEqualTo(KeyResult(true, sent(A_FLAG)))
+        assertThat(pad.observe(KEYCODE_BUTTON_A, scanCode = 704))
+            .isEqualTo(KeyResult(true, sent(A_FLAG)))
     }
 
     @Test
@@ -539,14 +603,18 @@ class RemappingCharacterizationTest {
         val hatY = pad(deviceId = 8, fields = mapOf("hatYAxis" to 16))
         val hats = pad(deviceId = 9, fields = mapOf("hatXAxis" to 15, "hatYAxis" to 16))
 
-        assertThat(hatX.observe(KEYCODE_UNKNOWN, scanCode = 704)).isEqualTo(KeyResult(false, noPacket))
-        assertThat(hatY.observe(KEYCODE_UNKNOWN, scanCode = 704)).isEqualTo(KeyResult(false, noPacket))
-        assertThat(hats.observe(KEYCODE_UNKNOWN, scanCode = 704)).isEqualTo(KeyResult(false, noPacket))
+        assertThat(hatX.observe(KEYCODE_UNKNOWN, scanCode = 704))
+            .isEqualTo(KeyResult(false, noPacket))
+        assertThat(hatY.observe(KEYCODE_UNKNOWN, scanCode = 704))
+            .isEqualTo(KeyResult(false, noPacket))
+        assertThat(hats.observe(KEYCODE_UNKNOWN, scanCode = 704))
+            .isEqualTo(KeyResult(false, noPacket))
     }
 
     @Test
     fun `the on-screen controller has hat axes, so the raw D-pad scan codes do not reach its buttons`() {
-        assertThat(rig.default.observe(KEYCODE_UNKNOWN, scanCode = 704)).isEqualTo(KeyResult(false, noPacket))
+        assertThat(rig.default.observe(KEYCODE_UNKNOWN, scanCode = 704))
+            .isEqualTo(KeyResult(false, noPacket))
     }
 
     @Test
@@ -554,7 +622,8 @@ class RemappingCharacterizationTest {
         val pad = pad(fields = mapOf("hasPaddles" to true))
 
         // 0x2c3 is 707, the last raw D-pad code; the paddles start at 0x2c4.
-        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 0x2c3)).isEqualTo(KeyResult(true, sent(DOWN_FLAG)))
+        assertThat(pad.observe(KEYCODE_UNKNOWN, scanCode = 0x2c3))
+            .isEqualTo(KeyResult(true, sent(DOWN_FLAG)))
     }
 
     // ----- Tablet Remote -----
@@ -571,7 +640,8 @@ class RemappingCharacterizationTest {
     fun `Back without the soft keyboard flag, or without a modifier, stays Select`() {
         val pad = pad()
 
-        assertThat(pad.observe(KEYCODE_BACK, metaState = META_ALT_ON)).isEqualTo(KeyResult(true, sent(BACK_FLAG)))
+        assertThat(pad.observe(KEYCODE_BACK, metaState = META_ALT_ON))
+            .isEqualTo(KeyResult(true, sent(BACK_FLAG)))
         assertThat(pad.observe(KEYCODE_BACK, flags = FLAG_SOFT_KEYBOARD))
             .isEqualTo(KeyResult(true, sent(BACK_FLAG)))
     }
@@ -617,13 +687,15 @@ class RemappingCharacterizationTest {
 
         assertThat(pad.observe(KEYCODE_BUTTON_SELECT)).isEqualTo(KeyResult(true, sent(BACK_FLAG)))
         assertThat(pad.getBoolean("modeIsSelect")).isFalse()
-        assertThat(pad.observe(KEYCODE_BUTTON_MODE)).isEqualTo(KeyResult(true, sent(SPECIAL_BUTTON_FLAG)))
+        assertThat(pad.observe(KEYCODE_BUTTON_MODE))
+            .isEqualTo(KeyResult(true, sent(SPECIAL_BUTTON_FLAG)))
     }
 
     @Test
     fun `Search is Mode on a pad that sends it for the big button, and nothing otherwise`() {
         val with = pad(deviceId = 7, fields = mapOf("searchIsMode" to true))
-        assertThat(with.observe(KEYCODE_SEARCH)).isEqualTo(KeyResult(true, sent(SPECIAL_BUTTON_FLAG)))
+        assertThat(with.observe(KEYCODE_SEARCH))
+            .isEqualTo(KeyResult(true, sent(SPECIAL_BUTTON_FLAG)))
 
         val without = pad(deviceId = 8)
         assertThat(without.observe(KEYCODE_SEARCH)).isEqualTo(KeyResult(false, noPacket))
@@ -638,11 +710,16 @@ class RemappingCharacterizationTest {
 
     @Test
     fun `a pad where Back is Start and Mode is Select keeps them apart`() {
-        val pad = pad(fields = mapOf("backIsStart" to true, "modeIsSelect" to true, "searchIsMode" to true))
+        val pad =
+            pad(
+                fields =
+                    mapOf("backIsStart" to true, "modeIsSelect" to true, "searchIsMode" to true)
+            )
 
         assertThat(pad.observe(KEYCODE_BACK)).isEqualTo(KeyResult(true, sent(PLAY_FLAG)))
         assertThat(pad.observe(KEYCODE_BUTTON_MODE)).isEqualTo(KeyResult(true, sent(BACK_FLAG)))
         // Search becomes Mode, which this pad then does not turn into Select again.
-        assertThat(pad.observe(KEYCODE_SEARCH)).isEqualTo(KeyResult(true, sent(SPECIAL_BUTTON_FLAG)))
+        assertThat(pad.observe(KEYCODE_SEARCH))
+            .isEqualTo(KeyResult(true, sent(SPECIAL_BUTTON_FLAG)))
     }
 }

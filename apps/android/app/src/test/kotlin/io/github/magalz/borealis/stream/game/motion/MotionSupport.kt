@@ -1,6 +1,5 @@
 package io.github.magalz.borealis.stream.game.motion
 
-import android.util.SparseArray
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
@@ -11,6 +10,7 @@ import com.limelight.nvstream.input.MouseButtonPacket
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.stream.game.GameRig
 import io.github.magalz.borealis.stream.game.GameTestBase
+import io.github.magalz.borealis.testing.addInputDeviceContext
 import java.util.concurrent.TimeUnit
 import org.robolectric.shadows.ShadowLooper
 import org.robolectric.util.ReflectionHelpers
@@ -175,18 +175,11 @@ internal abstract class MotionTestBase : GameTestBase() {
  * with its controller number, so that no arrival is reported.
  */
 internal fun GameRig.addGamepadContext(deviceId: Int, controllerNumber: Short) {
-    val handler = field<ControllerHandler>("controllerHandler")
-    val contextClass =
-        Class.forName("com.limelight.binding.input.ControllerHandler\$InputDeviceContext")
-    val context =
-        contextClass
-            .getDeclaredConstructor(ControllerHandler::class.java)
-            .apply { isAccessible = true }
-            .newInstance(handler)
-    ReflectionHelpers.setField(context, "assignedControllerNumber", true)
-    ReflectionHelpers.setField(context, "controllerNumber", controllerNumber)
-    val contexts = ReflectionHelpers.getField<SparseArray<Any?>>(handler, "inputDeviceContexts")
-    contexts.put(deviceId, context)
+    field<ControllerHandler>("controllerHandler")
+        .addInputDeviceContext(
+            deviceId,
+            mapOf("assignedControllerNumber" to true, "controllerNumber" to controllerNumber),
+        )
 }
 
 /** A mouse event of the source mouse, with the pointer at ([x], [y]) and these buttons down. */

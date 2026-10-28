@@ -6,10 +6,10 @@ import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
 import io.github.magalz.borealis.stream.GamepadMouseSync
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.streamingSession
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import io.github.magalz.borealis.testing.unconfinedScope
 import kotlinx.coroutines.cancel
 import org.junit.After
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -20,11 +20,12 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class MouseRowFollowsStartHoldTest {
-    private val rig = ControllerHandlerRig(multiController = true)
+    @get:Rule val rig = ControllerHandlerRig(multiController = true)
     private val usbPad = FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) }
-    private val secondUsbPad = FakeUsbController(2, rig.handler).also { rig.handler.deviceAdded(it) }
+    private val secondUsbPad =
+        FakeUsbController(2, rig.handler).also { rig.handler.deviceAdded(it) }
     private val session = streamingSession(gamepadMouse = false)
-    private val scope = CoroutineScope(Dispatchers.Unconfined)
+    private val scope = unconfinedScope()
 
     init {
         GamepadMouseSync.bind(scope, session, rig.handler::isMouseEmulationOnAnyPad)

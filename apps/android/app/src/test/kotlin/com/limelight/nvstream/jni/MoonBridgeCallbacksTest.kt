@@ -153,7 +153,11 @@ private class FakeListener(private val received: MutableList<Call>) : NvConnecti
         received += Call("listener.setHdrMode", listOf(enabled, hdrMetadata))
     }
 
-    override fun setMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) {
+    override fun setMotionEventState(
+        controllerNumber: Short,
+        motionType: Byte,
+        reportRateHz: Short,
+    ) {
         received +=
             Call("listener.setMotionEventState", listOf(controllerNumber, motionType, reportRateHz))
     }
@@ -188,6 +192,9 @@ class MoonBridgeCallbacksTest {
     fun disconnect() {
         MoonBridge.cleanupBridge()
         BorealisLog.shutdown()
+        // The shadow lives as long as the sandbox: what this test told it must not reach the
+        // tests of the other classes that share it.
+        ShadowRecordingBridge.reset()
     }
 
     // The video renderer
@@ -271,7 +278,8 @@ class MoonBridgeCallbacksTest {
     fun `a decode unit without a renderer is accepted`() {
         MoonBridge.cleanupBridge()
 
-        val result = MoonBridge.bridgeDrSubmitDecodeUnit(byteArrayOf(1), 1, 0, 1, 0, '\u0001', 1L, 1L)
+        val result =
+            MoonBridge.bridgeDrSubmitDecodeUnit(byteArrayOf(1), 1, 0, 1, 0, '\u0001', 1L, 1L)
 
         assertThat(result).isEqualTo(MoonBridge.DR_OK)
         assertThat(received).isEmpty()
@@ -297,7 +305,9 @@ class MoonBridgeCallbacksTest {
                 MoonBridge.bridgeArInit(0x000302C9, 48_000, 240)
             }
 
-        assertThat(refused).hasMessageThat().isEqualTo("Audio configuration has invalid magic byte!")
+        assertThat(refused)
+            .hasMessageThat()
+            .isEqualTo("Audio configuration has invalid magic byte!")
         assertThat(received).isEmpty()
     }
 
@@ -534,7 +544,8 @@ class MoonBridgeCallbacksTest {
         assertThat(MoonBridge.CAPABILITY_SLICES_PER_FRAME(0)).isEqualTo(0)
         assertThat(MoonBridge.CAPABILITY_SLICES_PER_FRAME(1)).isEqualTo(0x01000000)
         assertThat(MoonBridge.CAPABILITY_SLICES_PER_FRAME(4)).isEqualTo(0x04000000)
-        assertThat(MoonBridge.CAPABILITY_SLICES_PER_FRAME(0xFF.toByte())).isEqualTo(0xFF000000.toInt())
+        assertThat(MoonBridge.CAPABILITY_SLICES_PER_FRAME(0xFF.toByte()))
+            .isEqualTo(0xFF000000.toInt())
     }
 
     // The log

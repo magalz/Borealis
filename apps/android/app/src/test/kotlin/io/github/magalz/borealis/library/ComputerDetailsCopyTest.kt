@@ -8,14 +8,11 @@ import org.junit.Test
 
 class ComputerDetailsCopyTest {
     private fun full(): ComputerDetails =
-        details(
-                uuid = "a",
-                name = "Den PC",
+        details(uuid = "a", name = "Den PC", runningGameId = 7, rawAppList = APP_LIST)
+            .reported(
                 state = ComputerDetails.State.ONLINE,
                 pairState = PairState.PAIRED,
-                runningGameId = 7,
                 mac = "AA:BB:CC:DD:EE:FF",
-                rawAppList = APP_LIST,
             )
             .also {
                 // A loopback local address is something the upstream copy constructor drops.

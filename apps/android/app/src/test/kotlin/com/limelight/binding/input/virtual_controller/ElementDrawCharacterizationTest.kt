@@ -7,9 +7,11 @@ import com.google.common.truth.Correspondence
 import com.google.common.truth.Truth.assertThat
 import com.limelight.R
 import com.limelight.binding.input.virtual_controller.VirtualController.ControllerMode
-import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.testing.OwnedResources
 import kotlin.math.abs
 import org.json.JSONObject
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -22,13 +24,15 @@ import org.robolectric.annotation.GraphicsMode
  * calls make on a bitmap.
  *
  * The colours are the ones an element has before it is given an opacity: grey, blue, and red and
- * magenta in the configuration modes. The stroke is 4 tenths of a percent of the screen height,
- * cut to whole pixels: 4 on the screen of 1080, and 5 on the screen of 1300 that the button uses.
+ * magenta in the configuration modes. The stroke is 4 tenths of a percent of the screen height, cut
+ * to whole pixels: 4 on the screen of 1080, and 5 on the screen of 1300 that the button uses.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class ElementDrawCharacterizationTest {
+    @get:Rule val owned = OwnedResources()
+
     private fun paint(
         color: Int,
         stroke: Float = 4f,
@@ -47,7 +51,7 @@ class ElementDrawCharacterizationTest {
     private val magenta = 0xF0FF00FF.toInt()
     private val green = 0xF000FF00.toInt()
 
-    private val kit by lazy { ElementRig() }
+    private val kit by lazy { owned.own(ElementRig()) }
     private val activity by lazy { kit.rig.activity }
 
     private fun stick(width: Int = 301, height: Int = 301) =
@@ -56,23 +60,31 @@ class ElementDrawCharacterizationTest {
     private fun circle(x: Float, y: Float, radius: Float, color: Int, stroke: Float = 4f) =
         Drawn("circle", listOf(x, y, radius), paint(color, stroke))
 
-    /** The three circles of a stick whose middle is ([x], [y]) and whose outer radius is [outer]. */
+    /** The middle of a stick and the radius of each of its three circles. */
+    private class StickShape(
+        val x: Float = 150f,
+        val y: Float = 150f,
+        val outer: Float = 142f,
+        val dead: Float = 45f,
+        val small: Float = 30f,
+    )
+
+    /**
+     * The three circles of a stick of [shape]; its stick is at [stickAt], which is the middle by
+     * default.
+     */
     private fun stickCircles(
         outerColor: Int,
         deadColor: Int,
         stickColor: Int,
-        x: Float = 150f,
-        y: Float = 150f,
-        outer: Float = 142f,
-        dead: Float = 45f,
-        small: Float = 30f,
-        stickAt: Pair<Float, Float> = x to y,
+        shape: StickShape = StickShape(),
+        stickAt: Pair<Float, Float> = shape.x to shape.y,
     ) =
         listOf(
             transparent(),
-            circle(x, y, outer, outerColor),
-            circle(x, y, dead, deadColor),
-            circle(stickAt.first, stickAt.second, small, stickColor),
+            circle(shape.x, shape.y, shape.outer, outerColor),
+            circle(shape.x, shape.y, shape.dead, deadColor),
+            circle(stickAt.first, stickAt.second, shape.small, stickColor),
         )
 
     /** The x, y and radius of the stick circle, which a stick draws last. */
@@ -130,7 +142,13 @@ class ElementDrawCharacterizationTest {
             .containsExactlyElementsIn(stickCircles(grey, grey, grey))
             .inOrder()
 
-        stickTouch(stick, MotionEvent.ACTION_DOWN, 0f, 0f, 3_000) // a single click, a long time later
+        stickTouch(
+            stick,
+            MotionEvent.ACTION_DOWN,
+            0f,
+            0f,
+            3_000,
+        ) // a single click, a long time later
 
         assertThat(draw(stick).calls[1]).isEqualTo(circle(150f, 150f, 142f, grey))
     }
@@ -221,7 +239,9 @@ class ElementDrawCharacterizationTest {
 
         assertThat(calls)
             .comparingElementsUsing(sameDrawing)
-            .containsExactlyElementsIn(stickCircles(grey, grey, grey, x = 200f, y = 150f))
+            .containsExactlyElementsIn(
+                stickCircles(grey, grey, grey, StickShape(x = 200f, y = 150f))
+            )
             .inOrder()
     }
 
@@ -234,7 +254,12 @@ class ElementDrawCharacterizationTest {
         assertThat(draw(stick).calls)
             .comparingElementsUsing(sameDrawing)
             .containsExactlyElementsIn(
-                stickCircles(grey, grey, grey, x = 100f, y = 100f, outer = 92f, dead = 30f, small = 20f)
+                stickCircles(
+                    grey,
+                    grey,
+                    grey,
+                    StickShape(x = 100f, y = 100f, outer = 92f, dead = 30f, small = 20f),
+                )
             )
             .inOrder()
     }
@@ -242,7 +267,7 @@ class ElementDrawCharacterizationTest {
     @Test
     fun `the stroke is cut to whole pixels, not rounded`() {
         // 1150 * 0.004 = 4.6: a stroke of 4, an outer circle of 150 - 2 * 4
-        val high = ElementRig(Screen(2000, 1150))
+        val high = owned.own(ElementRig(Screen(2000, 1150)))
         val stick = high.add(AnalogStick(high.controller, high.rig.activity, 12), 10, 10, 301, 301)
 
         assertThat(draw(stick).calls)
@@ -278,21 +303,29 @@ class ElementDrawCharacterizationTest {
     @Test
     fun `the outer circle of a stick of 433 pixels is 216 over 100 times 100 in float, less two strokes`() {
         // 216 / 100 * 100 is 216.00002 in float, where 216 * 100 / 100 is 216
-        val high = ElementRig(Screen(1920, 1200))
+        val high = owned.own(ElementRig(Screen(1920, 1200)))
         val stick = high.add(AnalogStick(high.controller, high.rig.activity, 12), 10, 10, 433, 433)
 
-        assertThat(draw(stick).of("circle")[0].numbers).containsExactly(216f, 216f, 208.00002f).inOrder()
+        assertThat(draw(stick).of("circle")[0].numbers)
+            .containsExactly(216f, 216f, 208.00002f)
+            .inOrder()
     }
 
     // The button
 
-    private val tall by lazy { ElementRig(Screen(2400, 1300)) }
+    private val tall by lazy { owned.own(ElementRig(Screen(2400, 1300))) }
 
     private fun button(text: String = "A") =
-        tall.add(DigitalButton(tall.controller, 6, 1, tall.rig.activity), 100, 100, 200, 100).also { it.setText(text) }
+        tall.add(DigitalButton(tall.controller, 6, 1, tall.rig.activity), 100, 100, 200, 100).also {
+            it.setText(text)
+        }
 
     private fun oval(color: Int) =
-        Drawn("oval", listOf(5f, 5f, 195f, 95f), paint(color, 5f, textSize = 50f, align = Paint.Align.CENTER))
+        Drawn(
+            "oval",
+            listOf(5f, 5f, 195f, 95f),
+            paint(color, 5f, textSize = 50f, align = Paint.Align.CENTER),
+        )
 
     private fun text(text: String, color: Int) =
         Drawn(
@@ -315,10 +348,13 @@ class ElementDrawCharacterizationTest {
     @Test
     fun `the text of a button is placed at value over 100 times percent in float, which 105 shows`() {
         // 105 / 100 * 63 is 66.149994 in float, where 105 * 63 / 100 is 66.15
-        val start = tall.add(DigitalButton(tall.controller, 7, 1, tall.rig.activity), 400, 100, 180, 105)
+        val start =
+            tall.add(DigitalButton(tall.controller, 7, 1, tall.rig.activity), 400, 100, 180, 105)
         start.setText("START")
 
-        assertThat(draw(start).of("text").single().numbers).containsExactly(90f, 66.149994f).inOrder()
+        assertThat(draw(start).of("text").single().numbers)
+            .containsExactly(90f, 66.149994f)
+            .inOrder()
     }
 
     @Test
@@ -329,7 +365,17 @@ class ElementDrawCharacterizationTest {
 
     @Test
     fun `a button that was given no text draws an empty one`() {
-        val calls = draw(tall.add(DigitalButton(tall.controller, 7, 1, tall.rig.activity), 400, 100, 200, 100)).calls
+        val calls =
+            draw(
+                    tall.add(
+                        DigitalButton(tall.controller, 7, 1, tall.rig.activity),
+                        400,
+                        100,
+                        200,
+                        100,
+                    )
+                )
+                .calls
 
         assertThat(calls.last().text).isEmpty()
     }
@@ -382,9 +428,15 @@ class ElementDrawCharacterizationTest {
 
         val calls = draw(button).calls
 
-        assertThat(calls[1].numbers).comparingElementsUsing(near).containsExactly(5f, 5f, 295f, 195f).inOrder()
+        assertThat(calls[1].numbers)
+            .comparingElementsUsing(near)
+            .containsExactly(5f, 5f, 295f, 195f)
+            .inOrder()
         assertThat(calls[1].paint?.textSize).isEqualTo(75f)
-        assertThat(calls[2].numbers).comparingElementsUsing(near).containsExactly(150f, 126f).inOrder()
+        assertThat(calls[2].numbers)
+            .comparingElementsUsing(near)
+            .containsExactly(150f, 126f)
+            .inOrder()
     }
 
     @Test
@@ -417,8 +469,10 @@ class ElementDrawCharacterizationTest {
 
     // The pad
 
-    private val padKit by lazy { ElementRig() }
-    private val pad by lazy { padKit.add(DigitalPad(padKit.controller, padKit.rig.activity), 100, 100, 330, 240) }
+    private val padKit by lazy { owned.own(ElementRig()) }
+    private val pad by lazy {
+        padKit.add(DigitalPad(padKit.controller, padKit.rig.activity), 100, 100, 330, 240)
+    }
 
     private fun padPaint(color: Int) = paint(color, 4f, textSize = 48f, align = Paint.Align.CENTER)
 
@@ -531,7 +585,9 @@ class ElementDrawCharacterizationTest {
         assertThat(draw(pad).calls)
             .comparingElementsUsing(sameDrawing)
             .containsExactlyElementsIn(
-                padCalls(centred = true, pressed = emptySet(), rest = magenta).map { recolour(it, magenta) }
+                padCalls(centred = true, pressed = emptySet(), rest = magenta).map {
+                    recolour(it, magenta)
+                }
             )
             .inOrder()
     }
@@ -543,17 +599,23 @@ class ElementDrawCharacterizationTest {
     @Test
     fun `the pixels of a pad are its rectangles, and a pressed side is blue`() {
         assertColour(draw(pad).bitmap.getPixel(165, 9), grey) // the top of the up rectangle
-        assertColour(draw(pad).bitmap.getPixel(118, 120), grey) // the left edge of the middle square
+        assertColour(
+            draw(pad).bitmap.getPixel(118, 120),
+            grey,
+        ) // the left edge of the middle square
 
         touchPad(165f, 1f)
         val canvas = draw(pad)
 
         assertColour(canvas.bitmap.getPixel(165, 9), blue)
         assertColour(canvas.bitmap.getPixel(50, 79), grey) // the top of the left rectangle
-        assertThat(Color.alpha(canvas.bitmap.getPixel(118, 120))).isEqualTo(0) // the middle square is gone
+        assertThat(Color.alpha(canvas.bitmap.getPixel(118, 120)))
+            .isEqualTo(0) // the middle square is gone
     }
 
-    /** The colour of a pixel is the colour that was drawn, give or take the rounding of the alpha. */
+    /**
+     * The colour of a pixel is the colour that was drawn, give or take the rounding of the alpha.
+     */
     private fun assertColour(actual: Int, expected: Int) {
         listOf(24, 16, 8, 0).forEach { shift ->
             val difference = abs(((actual shr shift) and 0xFF) - ((expected shr shift) and 0xFF))

@@ -6,10 +6,6 @@ import java.lang.management.ManagementFactory
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
-import java.util.logging.Handler
-import java.util.logging.Level
-import java.util.logging.LogRecord
-import java.util.logging.Logger
 import org.junit.rules.ExternalResource
 
 /** What a driver told its [UsbDriverListener], in order. */
@@ -21,14 +17,28 @@ internal sealed interface PadEvent {
     class State(
         val controllerId: Int,
         val buttonFlags: Int,
-        val leftStickX: Float,
-        val leftStickY: Float,
-        val rightStickX: Float,
-        val rightStickY: Float,
+        leftStick: Stick,
+        rightStick: Stick,
         val leftTrigger: Float,
         val rightTrigger: Float,
-    ) : PadEvent
+    ) : PadEvent {
+        val leftStickX = leftStick.x
+        val leftStickY = leftStick.y
+        val rightStickX = rightStick.x
+        val rightStickY = rightStick.y
+    }
 }
+
+/** The position of one stick, as the driver reports it. */
+internal class Stick(val x: Float, val y: Float)
+
+/** The raw 16-bit positions of the four axes of a pad report. */
+internal data class RawSticks(
+    val leftX: Int = 0,
+    val leftY: Int = 0,
+    val rightX: Int = 0,
+    val rightY: Int = 0,
+)
 
 /**
  * A listener that keeps what it hears. Controllers report from their input thread, so the events
@@ -52,10 +62,8 @@ internal class RecordingListener : UsbDriverListener {
             PadEvent.State(
                 controllerId,
                 buttonFlags,
-                leftStickX,
-                leftStickY,
-                rightStickX,
-                rightStickY,
+                Stick(leftStickX, leftStickY),
+                Stick(rightStickX, rightStickY),
                 leftTrigger,
                 rightTrigger,
             )
@@ -135,33 +143,6 @@ internal class Pad<C : AbstractController>(
     fun stopIfRunning() {
         if (running) controller.stop()
     }
-}
-
-/** What `LimeLog` wrote during a test, with the level of each line. */
-class LimeLogCapture : ExternalResource() {
-    private val logger = Logger.getLogger("com.limelight.LimeLog")
-    private val lines = CopyOnWriteArrayList<Pair<Level, String>>()
-    private val handler =
-        object : Handler() {
-            override fun publish(record: LogRecord) {
-                lines.add(record.level to record.message)
-            }
-
-            override fun flush() = Unit
-
-            override fun close() = Unit
-        }
-
-    val entries: List<Pair<Level, String>>
-        get() = lines.toList()
-
-    fun warnings(): List<String> = entries.filter { it.first == Level.WARNING }.map { it.second }
-
-    fun severes(): List<String> = entries.filter { it.first == Level.SEVERE }.map { it.second }
-
-    override fun before() = logger.addHandler(handler)
-
-    override fun after() = logger.removeHandler(handler)
 }
 
 /**

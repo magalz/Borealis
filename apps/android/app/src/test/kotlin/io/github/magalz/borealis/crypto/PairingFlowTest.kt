@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.http.HostHttpResponseException
 import com.limelight.nvstream.http.PairingManager.PairState
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.io.Closeable
 import java.io.IOException
 import java.security.Signature
@@ -27,16 +28,16 @@ private const val SECRET_AND_RSA_SIGNATURE_HEX_LENGTH = (16 + 256) * 2
 class PairingFlowTest {
     private val closeables = mutableListOf<Closeable>()
 
-    @After
-    fun tearDown() = closeables.forEach { it.close() }
+    @After fun tearDown() = closeables.forEach { it.close() }
 
     private fun host(
         sha256: Boolean = true,
         hostPin: String = "1234",
         tlsIdentity: TestIdentity = TestIdentities.hostRsa,
-    ) = FakePairingHost(sha256 = sha256, tlsIdentity = tlsIdentity, pin = hostPin).also {
-        closeables += it
-    }
+    ) =
+        FakePairingHost(sha256 = sha256, tlsIdentity = tlsIdentity, pin = hostPin).also {
+            closeables += it
+        }
 
     private fun refusing(host: FakePairingHost, phase: String) {
         host.intercept = { request, default ->
@@ -146,7 +147,8 @@ class PairingFlowTest {
 
         for (host in listOf(sha256, sha1)) {
             val sent = host.requests
-            assertThat(sent[1].query.getValue("clientchallenge")).matches("[0-9A-F]{$CHALLENGE_HEX_LENGTH}")
+            assertThat(sent[1].query.getValue("clientchallenge"))
+                .matches("[0-9A-F]{$CHALLENGE_HEX_LENGTH}")
             // 32 bytes of SHA-256, and 20 bytes of SHA-1 padded with zeros to two blocks.
             assertThat(sent[2].query.getValue("serverchallengeresp"))
                 .matches("[0-9A-F]{$TWO_BLOCKS_HEX_LENGTH}")
@@ -167,10 +169,10 @@ class PairingFlowTest {
 
     @Test
     fun `the pairing logs the generation of the host at info level`() {
-        LimeLogCapture().use { log ->
+        LimeLogCapture().start().use { log ->
             PairingRig(host()).pair()
 
-            assertThat(log.records.filter { it.second.startsWith("Pairing with") })
+            assertThat(log.entries.filter { it.second.startsWith("Pairing with") })
                 .containsExactly(Level.INFO to "Pairing with server generation: 7")
         }
     }
@@ -179,7 +181,7 @@ class PairingFlowTest {
     fun `the PIN is not logged`() {
         // A PIN with letters that no hex digit has: the logs of the requests are full of hex.
         val pin = "pin-4271-xyz"
-        LimeLogCapture().use { log ->
+        LimeLogCapture().start().use { log ->
             val host = FakePairingHost(pin = pin).also { closeables += it }
             PairingRig(host).pair()
 
@@ -227,7 +229,8 @@ class PairingFlowTest {
 
         val challenge = host.requests.last()
         assertThat(challenge.scheme).isEqualTo("https")
-        assertThat(challenge.clientCertificates).containsExactly(TestIdentities.clientRsa.certificate)
+        assertThat(challenge.clientCertificates)
+            .containsExactly(TestIdentities.clientRsa.certificate)
     }
 
     @Test
@@ -237,7 +240,8 @@ class PairingFlowTest {
 
         assertThrows(IOException::class.java) { rig.pair() }
 
-        // The four phases over HTTP ran; the TLS request never reached the host and was not unpaired.
+        // The four phases over HTTP ran; the TLS request never reached the host and was not
+        // unpaired.
         assertThat(rig.seen).containsExactlyElementsIn(FULL_EXCHANGE.dropLast(1)).inOrder()
     }
 
@@ -399,7 +403,9 @@ class PairingFlowTest {
             }
             val rig = PairingRig(host)
 
-            assertWithMessage(withoutCertificate).that(rig.pair()).isEqualTo(PairState.ALREADY_IN_PROGRESS)
+            assertWithMessage(withoutCertificate)
+                .that(rig.pair())
+                .isEqualTo(PairState.ALREADY_IN_PROGRESS)
 
             assertThat(rig.seen).containsExactly("http getservercert", "http unpair").inOrder()
             assertThat(rig.pairedCert).isNull()

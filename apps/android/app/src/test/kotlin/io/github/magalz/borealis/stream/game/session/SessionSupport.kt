@@ -8,7 +8,6 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.util.SparseArray
 import android.view.Surface
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.driver.AbstractController
@@ -17,6 +16,7 @@ import com.limelight.nvstream.NvConnection
 import com.limelight.ui.StreamView
 import io.github.magalz.borealis.host.failure.CauseKind
 import io.github.magalz.borealis.stream.game.GameRig
+import io.github.magalz.borealis.testing.addInputDeviceContext
 import java.lang.reflect.Proxy
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
@@ -26,7 +26,6 @@ import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.ShadowContextImpl
 import org.robolectric.shadows.ShadowSurfaceView
 import org.robolectric.util.ReflectionHelpers
-import org.robolectric.util.ReflectionHelpers.ClassParameter
 
 /** How long a test waits for a thread of the activity before it gives up. */
 internal const val THREAD_WAIT_MS = 10_000L
@@ -161,30 +160,20 @@ internal class KnownPad(val handler: ControllerHandler, controllerNumber: Short)
     val sensorsEnabled = CountDownLatch(1)
 
     init {
-        val contextClass =
-            Class.forName("com.limelight.binding.input.ControllerHandler\$InputDeviceContext")
         context =
-            ReflectionHelpers.callConstructor(
-                contextClass,
-                ClassParameter.from(ControllerHandler::class.java, handler),
+            handler.addInputDeviceContext(
+                CONTEXT_ID,
+                mapOf(
+                    "controllerNumber" to controllerNumber,
+                    "hasRgbLed" to true,
+                    // The change of the LED asks the input device for its lights, which a unit test
+                    // has not.
+                    "setLedStateRunnable" to Runnable { ledApplied.countDown() },
+                    // Turning the sensors on again asks the sensor manager of the pad, which a unit
+                    // test has not.
+                    "enableSensorRunnable" to Runnable { sensorsEnabled.countDown() },
+                ),
             )
-        ReflectionHelpers.setField(context, "controllerNumber", controllerNumber)
-        ReflectionHelpers.setField(context, "hasRgbLed", true)
-        // The change of the LED asks the input device for its lights, which a unit test has not.
-        ReflectionHelpers.setField(
-            context,
-            "setLedStateRunnable",
-            Runnable { ledApplied.countDown() },
-        )
-        // Turning the sensors on again asks the sensor manager of the pad, which a unit test has
-        // not.
-        ReflectionHelpers.setField(
-            context,
-            "enableSensorRunnable",
-            Runnable { sensorsEnabled.countDown() },
-        )
-        ReflectionHelpers.getField<SparseArray<Any>>(handler, "inputDeviceContexts")
-            .put(CONTEXT_ID, context)
     }
 
     val accelReportRateHz: Short

@@ -3,7 +3,7 @@ package com.limelight.binding.video
 import android.media.MediaCodecInfo.CodecProfileLevel
 import android.media.MediaFormat
 import android.os.Build
-import io.github.magalz.borealis.crypto.LimeLogCapture
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.util.logging.Level
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -20,9 +20,9 @@ class MediaCodecHelperLogTest : MediaCodecHelperTestBase() {
 
     /** What [action] logs, as the level and the text of each record. */
     private fun logged(action: () -> Unit): List<Pair<Level, String>> =
-        LimeLogCapture().use { capture ->
+        LimeLogCapture().start().use { capture ->
             action()
-            capture.records.toList()
+            capture.entries.toList()
         }
 
     private fun infos(vararg messages: String) = messages.map { info to it }

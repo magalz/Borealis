@@ -5,7 +5,8 @@ import android.hardware.usb.UsbDevice
 import com.google.common.truth.Truth.assertThat
 import com.limelight.binding.input.driver.ShadowScriptedUsbConnection.Read
 import com.limelight.nvstream.input.ControllerPacket
-import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.testing.LimeLogCapture
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -22,7 +23,7 @@ import org.robolectric.annotation.Config
 @Config(
     shadows =
         [
-            ShadowMoonBridge::class,
+            ShadowRecordingBridge::class,
             ShadowScriptedUsbConnection::class,
             ShadowRequestingUsbManager::class,
         ]
@@ -53,13 +54,10 @@ class Xbox360ControllerTest {
         faceByte: Int = 0,
         leftTrigger: Int = 0,
         rightTrigger: Int = 0,
-        leftStickX: Int = 0,
-        leftStickY: Int = 0,
-        rightStickX: Int = 0,
-        rightStickY: Int = 0,
+        sticks: RawSticks = RawSticks(),
     ): IntArray =
         intArrayOf(0x00, 0x14, dpadByte, faceByte, leftTrigger, rightTrigger) +
-            listOf(leftStickX, leftStickY, rightStickX, rightStickY).flatMap {
+            listOf(sticks.leftX, sticks.leftY, sticks.rightX, sticks.rightY).flatMap {
                 listOf(it and 0xFF, (it shr 8) and 0xFF)
             }
 
@@ -325,12 +323,7 @@ class Xbox360ControllerTest {
         pad.play(
             *raws
                 .map { raw ->
-                    report(
-                        leftStickX = raw,
-                        leftStickY = raw,
-                        rightStickX = raw,
-                        rightStickY = raw,
-                    )
+                    report(sticks = RawSticks(raw, raw, raw, raw))
                 }
                 .toTypedArray()
         )
@@ -364,10 +357,7 @@ class Xbox360ControllerTest {
             report(
                 leftTrigger = 10,
                 rightTrigger = 20,
-                leftStickX = 1000,
-                leftStickY = 2000,
-                rightStickX = -3000,
-                rightStickY = -4000,
+                sticks = RawSticks(1000, 2000, -3000, -4000),
             )
         )
 

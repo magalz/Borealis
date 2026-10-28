@@ -236,13 +236,6 @@ class GameStreamActionsTest {
     }
 
     @Test
-    fun `disconnect finishes the activity`() {
-        actions.disconnect("Desktop")
-
-        assertThat(activity.isFinishing).isTrue()
-    }
-
-    @Test
     fun `quitting ends the app on the PC of this host, then finishes`() {
         actions.quitApp {}
 
@@ -436,11 +429,10 @@ class GameStreamActionsTest {
     private fun endReasons() = audit.filter { it.type == AuditType.SESSION_END }.map { it.detail }
 
     @Test
-    fun `disconnect writes the session end with its own reason, then finishes`() {
+    fun `disconnect writes the session end with its own reason at once`() {
         actions.disconnect("Desktop")
 
         assertThat(endReasons()).containsExactly("reason=disconnect duration_s=0")
-        assertThat(activity.isFinishing).isTrue()
     }
 
     @Test

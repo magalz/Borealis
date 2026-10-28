@@ -1257,11 +1257,13 @@ facts of both items and added the third item and the open decision. See the
   Bluetooth on the S22, and through its receiver in D-input on the TV) and the Pro 3 (on its
   receiver in Switch mode, on the S22). The host side has changed: it no longer makes an Xbox 360
   controller by default, nor a wired DualShock 4 through ViGEmBus. Under `auto`, its default, it
-  makes an Xbox Series for an Xbox pad or for a pad of unknown type, a Switch Pro Controller for a
-  Nintendo pad, and a DualShock 4 for a PlayStation pad or for a pad of unknown type that reports
-  a sensor or a touchpad (with `motion_as_ds4` and `touchpad_as_ds4` on, the defaults); an Xbox
-  pad stays an Xbox Series whatever else it reports. An Xbox One or a DualSense comes only from
-  the host's `gamepad` setting (global or per client), and `auto` falls back to a DualSense only
+  makes an Xbox Series for an Xbox pad or for a pad of unknown type that reports neither a sensor
+  nor a touchpad, a Switch Pro Controller for a Nintendo pad, and a DualShock 4 for a PlayStation
+  pad or for a pad of unknown type that reports a sensor or a touchpad (with `motion_as_ds4` and
+  `touchpad_as_ds4` on, the defaults); a pad reported as an Xbox pad stays an Xbox Series whatever
+  else it reports. Borealis reports any pad with a sensor that is not a PlayStation pad as unknown
+  (see the open decision below). An Xbox One or a DualSense comes only from the host's `gamepad`
+  setting (global, per app or per client), and `auto` falls back to a DualSense only
   when the driver lacks the Xbox Series profile. The host accepts a battery state only for the
   DualShock 4, the DualSense and the Switch Pro Controller, not for an Xbox Series or an Xbox One.
   The round made an Xbox Series for the Ultimate 2 on the S22, an Xbox One for it on the TV (so

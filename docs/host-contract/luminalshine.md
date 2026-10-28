@@ -1072,7 +1072,7 @@ host raises these messages:
   PlayStation type, or for motion or touchpad capability (`motion_as_ds4`,
   `touchpad_as_ds4`), and an Xbox 360 controller for an Xbox type and by default
   (`input.cpp:1199-1220`). Without ViGEmBus the host allocated no gamepad
-  (`input.cpp:1191-1194`), and it sent no trigger rumble and no adaptive triggers (no
+  (`input.cpp:1193-1195`), and it sent no trigger rumble and no adaptive triggers (no
   emitter in `input.cpp`, searched).
 - The host settings `mouse` and `keyboard` gate all client input. With
   `mouse = disabled` the host drops every relative and absolute mouse, button,

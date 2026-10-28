@@ -742,8 +742,9 @@ Items:
 ### Sprint 14: Kotlin migration, video, audio and the stream activity
 
 Converted in the phase branch `phase/s14-kotlin-stream`, one merged task per area. Every
-conversion is merged; the device round is to be run. No inherited Java is left:
-`git ls-files '*.java'` lists nothing, and `apps/android/app/src/main/java` no longer exists.
+conversion is merged. The agent part of the device round ran on 2026-10-28, and the owner's part
+and the UAT are to be run. No inherited Java is left: `git ls-files '*.java'` lists nothing, and
+`apps/android/app/src/main/java` no longer exists.
 Owner decisions of 2026-10-26 and 2026-10-27:
 
 - **MoonBridge first.** [ADR 0060](adr/0060-convert-moonbridge-to-a-kotlin-object.md)
@@ -933,18 +934,22 @@ Items:
 - **Partly done.** Test size and duplication, moved here from the Sprint 9 quality review. The
   tests of every module follow the detekt rules now (see #91). The duplicates across modules
   need `testFixtures` build changes, and are item (c) of the Sprint 14 block of the backlog.
-- **To be run.** The device round, on the Google TV Streamer with the owner's OK and on the S22:
-  each codec the devices decode, HDR, audio, the performance overlay, the Starting and Quitting
-  screens, a second device during a launch, picture-in-picture, the Samsung keyboard capture,
-  the rare natives (JNI binds each one at its first call), CheckJNI where the device allows it,
-  Quit, and an upgrade over the `main` build. The checks are in
-  [device-validation section 3.27](development/device-validation.md#327-sprint-14-checks), and the
-  owner's end-of-migration UAT is
+- **To be run: the owner's part and the UAT.** The device round, on the Google TV Streamer with
+  the owner's OK and on the S22: each codec the devices decode, HDR, audio, the performance
+  overlay, the Starting and Quitting screens, a second device during a launch,
+  picture-in-picture, the Samsung keyboard capture, the rare natives (JNI binds each one at its
+  first call), CheckJNI (the debug build turns it on by itself), Quit, and an upgrade over the
+  `main` build. The checks are in
+  [device-validation section 3.27](development/device-validation.md#327-sprint-14-checks). The
+  agent part ran on 2026-10-28 and found no Sprint 14 regression. Its results are in
+  [section 19](development/device-validation.md#19-results-sprint-14), and two items went to the
+  backlog (item (d) of the Sprint 14 block) and one question to Sprint 15. The owner's part of
+  3.27 (the pads, the keyboard, the touch, the USB prompt, the hearing and the picture) and the
+  owner's end-of-migration UAT are pending. The UAT is
   [section 3.28](development/device-validation.md#328-owners-30-minute-gameplay-uat-sprint-14):
   at least 30 minutes of play on one game while the stream options change (resolution, frame
   rate, bitrate, codec, HDR, frame pacing, audio and input), then pairing, a wrong PIN, Add host,
   Forget, Wake-on-LAN, the pinned shortcut, the TV channel, resume and Quit.
-  The results go in section 19, which is not written yet.
 
 ### Sprint 15: The stream screens and glass
 
@@ -1018,6 +1023,15 @@ Planned, not started.
   "Found on this network" until the app is closed and opened again. Check whether
   discovery skips a host it already reported, in `ComputerManagerService` and the
   mDNS agents, with a test first.
+- **Second device during a launch.** Found in the Sprint 14 device round (2026-10-28); the
+  owner put it here. The host runs `/launch`, `/resume` and `/cancel` one at a time on its
+  launch worker (#203, [host contract](host-contract/luminalshine.md) 7.3), so a second device
+  waits until the first launch ends. On 26.10.0-beta.1 it then got the "An app is already
+  running" dialog, not the retry of "Another device is starting a stream".
+  Decide whether the same app that the device asked for joins without asking, and the dialog
+  stays for a different app. A yes changes
+  [UC-003](use-cases/0003-join-or-replace-a-running-app.md), where every choice is explicit. See
+  [device-validation section 19](development/device-validation.md#19-results-sprint-14).
 
 ### Sprint 16: SecOps
 
@@ -1771,6 +1785,22 @@ pins the item.
       formatted".
   - Robolectric has 39 distinct configurations at the end of Sprint 14 (41 before `s14-tests-app`).
     The limit is 42 sandboxes, so a new one needs a look at what the tests share.
+- **(d) Found in the Sprint 14 device round (2026-10-28).** The owner put both in the backlog
+  on 2026-10-28. Nothing here is scheduled, and none is a Sprint 14 regression. The results
+  are in [device-validation section 19](development/device-validation.md#19-results-sprint-14).
+  - **Audio runs on the S22.** `AndroidAudioRenderer` drops a decoded packet while 40 ms or
+    more of audio are pending (`PENDING_AUDIO_LIMIT_MS`, the upstream rule, which bounds the
+    latency), and logs "Too much pending audio data". LuminalShine sends audio only while the PC
+    plays sound, so each sound after silence arrives at once. On the S22 the queue reaches about
+    90 ms and about 14 packets are dropped (the log lines of one run), which may cut the start of
+    short sounds. The TV does not show it, and the `main` build does the same. Possible ways: ask
+    the host for continuous audio, or a short start buffer.
+  - **`findExternalAddressIP4` with a VPN.** It is not reached on the LAN:
+    `ComputerManagerService.populateExternalAddress` calls it only when the active network is a
+    VPN (the same structure as the inherited Java and upstream), so the round did not reach it
+    (see [device-validation section 3.27](development/device-validation.md#327-sprint-14-checks),
+    step 10). Test it with a VPN on the device (Tailscale is a VPN on Android): the Library
+    finds the host, and the log has no JNI error.
 
 ## Host-side items (LuminalShine)
 

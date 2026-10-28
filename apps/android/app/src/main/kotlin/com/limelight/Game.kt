@@ -2617,13 +2617,11 @@ class Game :
         }
     }
 
-    // BOREALIS: stops the connection, then tells [done] (leave)
-    internal fun stopConnectionThen(done: Runnable) {
-        stopConnection()
-        done.run()
-    }
+    // BOREALIS: stops the connection and runs [done] once it has stopped, from the thread that
+    // stopped it; at once when no connection runs (leave)
+    internal fun stopConnectionThen(done: Runnable) = stopConnection(done)
 
-    private fun stopConnection() {
+    private fun stopConnection(done: Runnable? = null) {
         startupGuard.cancel() // BOREALIS: first-frame watchdog
         if (connected) {
             connected = false
@@ -2649,9 +2647,12 @@ class Game :
                             "connection stop done",
                             "ms" to TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - stopStarted),
                         )
+                        done?.run()
                     }
                 }
                 .start()
+        } else {
+            done?.run() // BOREALIS: nothing runs, so nothing to wait for (leave)
         }
     }
 

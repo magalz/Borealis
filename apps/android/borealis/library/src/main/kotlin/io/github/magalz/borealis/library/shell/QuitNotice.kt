@@ -6,10 +6,20 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 
+/** What the stream leaves for the Library when the user leaves it: the notice the Library shows. */
+sealed interface LeaveNotice {
+    /** The app was quit on the PC: the "App quit." that a Quit from the Apps sheet shows. */
+    data object Quit : LeaveNotice
+
+    /** The user disconnected and the app keeps running on the PC; [appName] is blank if unknown. */
+    data class Disconnected(val appName: String) : LeaveNotice
+}
+
 /**
- * The notice that a Quit in the stream leaves for the Library: the same "App quit." that a Quit
- * from the Apps sheet shows. The stream [post]s it, and the Library, which is behind the stream and
- * comes to the front when it ends, shows it once with the host of its shell.
+ * The notice that leaving the stream leaves for the Library: "App quit." after a Quit, which a Quit
+ * from the Apps sheet shows too, or that the app is still running after a Disconnect. The stream
+ * [post]s it, and the Library, which is behind the stream and comes to the front when it ends,
+ * shows it once with the host of its shell.
  *
  * A notice is for a Library that is there: it is dropped when none is, and when the Library that it
  * waits for goes before it was shown. Without that, a stream that nothing in the Library started (a
@@ -21,14 +31,14 @@ import kotlinx.coroutines.flow.receiveAsFlow
 @Singleton
 class QuitNotice @Inject constructor() {
     private var libraries = 0
-    private val waiting = Channel<Unit>(Channel.CONFLATED)
+    private val waiting = Channel<LeaveNotice>(Channel.CONFLATED)
 
     /** The notices to show, each delivered once, to one collector at a time. */
-    val notices: Flow<Unit> = waiting.receiveAsFlow()
+    val notices: Flow<LeaveNotice> = waiting.receiveAsFlow()
 
-    /** Leaves the notice, if a Library is there to show it. */
-    fun post() {
-        if (libraries > 0) waiting.trySend(Unit)
+    /** Leaves [notice], if a Library is there to show it. */
+    fun post(notice: LeaveNotice) {
+        if (libraries > 0) waiting.trySend(notice)
     }
 
     /** A Library is there to show the notices; pair it with [detach]. */

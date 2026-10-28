@@ -82,7 +82,7 @@ class LibraryQuitNoticeTest {
     fun `a quit in the stream shows App quit on the Library, as wide as its text`() {
         launch()
 
-        quitNotice.post()
+        quitNotice.post(LeaveNotice.Quit)
         composeRule.waitForIdle()
 
         composeRule.onNodeWithText("App quit.").assertIsDisplayed()
@@ -92,7 +92,7 @@ class LibraryQuitNoticeTest {
     @Test
     fun `the notice shows once and not again after the activity is recreated`() {
         launch()
-        quitNotice.post()
+        quitNotice.post(LeaveNotice.Quit)
         composeRule.waitForIdle()
         composeRule.onNodeWithText("App quit.").assertIsDisplayed()
 
@@ -108,7 +108,7 @@ class LibraryQuitNoticeTest {
         launch()
         scenario!!.moveToState(Lifecycle.State.CREATED)
 
-        quitNotice.post()
+        quitNotice.post(LeaveNotice.Quit)
         scenario!!.moveToState(Lifecycle.State.RESUMED)
         composeRule.waitForIdle()
 
@@ -121,7 +121,7 @@ class LibraryQuitNoticeTest {
         scenario!!.close()
         scenario = null
 
-        quitNotice.post()
+        quitNotice.post(LeaveNotice.Quit)
         launch()
 
         composeRule.onNodeWithTag("host:desk").assertIsDisplayed()

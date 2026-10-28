@@ -11,7 +11,7 @@ class QuitNoticeTest {
     fun `a notice left while a Library is there is delivered once`() = runTest {
         notice.attach()
 
-        notice.post()
+        notice.post(LeaveNotice.Quit)
 
         notice.notices.test {
             awaitItem()
@@ -25,14 +25,14 @@ class QuitNoticeTest {
         notice.attach()
 
         notice.notices.test { expectNoEvents() }
-        notice.post()
+        notice.post(LeaveNotice.Quit)
 
         notice.notices.test { awaitItem() }
     }
 
     @Test
     fun `a notice left with no Library is dropped`() = runTest {
-        notice.post()
+        notice.post(LeaveNotice.Quit)
 
         notice.attach()
 
@@ -42,7 +42,7 @@ class QuitNoticeTest {
     @Test
     fun `a notice that waits goes with the Library that leaves`() = runTest {
         notice.attach()
-        notice.post()
+        notice.post(LeaveNotice.Quit)
 
         notice.detach()
         notice.attach()
@@ -54,7 +54,7 @@ class QuitNoticeTest {
     fun `a notice stays while another Library is still there`() = runTest {
         notice.attach()
         notice.attach()
-        notice.post()
+        notice.post(LeaveNotice.Quit)
 
         notice.detach()
 

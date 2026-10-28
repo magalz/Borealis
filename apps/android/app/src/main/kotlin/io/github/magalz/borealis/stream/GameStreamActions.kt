@@ -18,6 +18,7 @@ import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.R as LibraryR
 import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.domain.WakeResult
+import io.github.magalz.borealis.library.shell.LeaveNotice
 import io.github.magalz.borealis.library.shell.LibraryActivity
 import io.github.magalz.borealis.stream.host.HeldKeys
 import io.github.magalz.borealis.stream.keys.KeyChord
@@ -176,7 +177,7 @@ internal constructor(
                 QuitResult.Quit -> {
                     SessionAudit.quit()
                     // The Library behind the stream shows the notice that the Apps sheet shows.
-                    entryPoint().quitNotice().post()
+                    entryPoint().quitNotice().post(LeaveNotice.Quit)
                     activity.finish()
                 }
                 is QuitResult.Failed -> {

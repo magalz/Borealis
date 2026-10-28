@@ -3,6 +3,8 @@ package io.github.magalz.borealis.stream
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.host.launch.ConflictAnswer
 import io.github.magalz.borealis.host.launch.ConflictChoice
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.stream.keys.KeyChord
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -56,6 +58,9 @@ class StreamSession(
     private val sessionInfo = AtomicReference<SessionInfo?>(null)
     private val firstFrameSeen = AtomicBoolean(false)
     private val pendingAnswer = AtomicReference<ConflictAnswer?>(null)
+
+    // When the quit was accepted, for the time that the end of the stream is logged with.
+    @Volatile private var quitAcceptedAtMs = 0L
 
     val state: StateFlow<StreamUiState> = mutableState
 
@@ -177,7 +182,16 @@ class StreamSession(
      * The stream ended with [code], reported from the connection thread. True when that is the end
      * of the quit the user asked for, which the log then says with the time since the quit.
      */
-    fun endedByQuit(code: Int): Boolean = false
+    fun endedByQuit(code: Int): Boolean {
+        if (mutableState.value.phase !is StreamPhase.Quitting) return false
+        BorealisLog.i(
+            LogTag.APP,
+            "quit stream ended",
+            "code" to code,
+            "since_quit_ms" to clockMs() - quitAcceptedAtMs,
+        )
+        return true
+    }
 
     fun onPerf(snapshot: PerfSnapshot) {
         mutablePerf.value = snapshot
@@ -281,7 +295,10 @@ class StreamSession(
             asked = phase !is StreamPhase.Failed && phase !is StreamPhase.Quitting
             if (asked) it.copy(phase = StreamPhase.Quitting(phase)) else it
         }
-        if (asked) actions.quitApp(::onQuitFailed)
+        if (!asked) return
+        quitAcceptedAtMs = clockMs()
+        BorealisLog.i(LogTag.APP, "quit accepted")
+        actions.quitApp(::onQuitFailed)
     }
 
     override fun leave() = actions.leave()

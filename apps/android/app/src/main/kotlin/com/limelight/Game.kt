@@ -2684,15 +2684,23 @@ class Game :
     }
 
     override fun connectionTerminated(errorCode: Int) {
+        // BOREALIS: the host ends the stream when it gets the Quit that the user confirmed; that
+        // end is the quit's, so no connectivity test and no error (leave)
+        val endedByQuit = ::streamSession.isInitialized && streamSession.endedByQuit(errorCode)
+
         // Perform a connection test if the failure could be due to a blocked port
         // This does network I/O, so don't do it on the main thread.
         val portFlags = MoonBridge.getPortFlagsFromTerminationErrorCode(errorCode)
         val portTestResult =
-            MoonBridge.testClientConnectivity(
-                ServerHelper.CONNECTION_TEST_SERVER,
-                CONNECTION_TEST_PORT,
-                portFlags,
-            )
+            if (endedByQuit) {
+                MoonBridge.ML_TEST_RESULT_INCONCLUSIVE
+            } else {
+                MoonBridge.testClientConnectivity(
+                    ServerHelper.CONNECTION_TEST_SERVER,
+                    CONNECTION_TEST_PORT,
+                    portFlags,
+                )
+            }
 
         runOnUiThread {
             startupGuard.cancel() // BOREALIS: first-frame watchdog
@@ -2709,7 +2717,7 @@ class Game :
 
             if (!displayedFailureDialog) {
                 displayedFailureDialog = true
-                LimeLog.severe("Connection terminated: $errorCode")
+                if (!endedByQuit) LimeLog.severe("Connection terminated: $errorCode")
                 stopConnection()
 
                 // Display the error dialog if it was an unexpected termination.

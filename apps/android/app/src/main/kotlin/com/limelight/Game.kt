@@ -72,6 +72,8 @@ import io.github.magalz.borealis.host.launch.ConflictAnswer
 import io.github.magalz.borealis.host.launch.ConflictChoice
 import io.github.magalz.borealis.host.launch.SessionAudit
 import io.github.magalz.borealis.host.video.StreamStartupGuard
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.stream.ChromeMode
 import io.github.magalz.borealis.stream.GameStreamActions
 import io.github.magalz.borealis.stream.GamepadMouseSync
@@ -94,6 +96,7 @@ import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
@@ -2632,7 +2635,13 @@ class Game :
             // during the process of stopping this one.
             object : Thread() {
                     override fun run() {
+                        val stopStarted = System.nanoTime() // BOREALIS: leave log
                         conn.stop()
+                        BorealisLog.i(
+                            LogTag.APP,
+                            "connection stop done",
+                            "ms" to TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - stopStarted),
+                        )
                     }
                 }
                 .start()

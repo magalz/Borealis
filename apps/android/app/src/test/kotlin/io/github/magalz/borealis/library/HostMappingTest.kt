@@ -19,19 +19,20 @@ import org.robolectric.RobolectricTestRunner
 class HostMappingTest {
     @Test
     fun `the id, the name and the pairing come from the details`() {
-        val host = details(uuid = "u1", name = "Den PC", pairState = PairState.PAIRED).toHost()
+        val host =
+            details(uuid = "u1", name = "Den PC").reported(pairState = PairState.PAIRED).toHost()
 
         assertThat(host.id).isEqualTo("u1")
         assertThat(host.name).isEqualTo("Den PC")
         assertThat(host.paired).isTrue()
-        assertThat(details(pairState = PairState.NOT_PAIRED).toHost().paired).isFalse()
-        assertThat(details(pairState = PairState.FAILED).toHost().paired).isFalse()
+        assertThat(details().reported(pairState = PairState.NOT_PAIRED).toHost().paired).isFalse()
+        assertThat(details().reported(pairState = PairState.FAILED).toHost().paired).isFalse()
     }
 
     @Test
     fun `reachability follows the state`() {
         fun reachability(state: ComputerDetails.State) =
-            details(state = state).toHost().reachability
+            details().reported(state = state).toHost().reachability
 
         assertThat(reachability(ComputerDetails.State.ONLINE)).isEqualTo(Reachability.ONLINE)
         assertThat(reachability(ComputerDetails.State.OFFLINE)).isEqualTo(Reachability.OFFLINE)
@@ -40,8 +41,8 @@ class HostMappingTest {
 
     @Test
     fun `a host can be woken when its MAC address is known`() {
-        assertThat(details(mac = "AA:BB:CC:DD:EE:FF").toHost().canWake).isTrue()
-        assertThat(details(mac = null).toHost().canWake).isFalse()
+        assertThat(details().reported(mac = "AA:BB:CC:DD:EE:FF").toHost().canWake).isTrue()
+        assertThat(details().reported(mac = null).toHost().canWake).isFalse()
     }
 
     @Test
@@ -64,10 +65,13 @@ class HostMappingTest {
     @Test
     fun `a host that is not paired shows no running app`() {
         for (pairState in listOf(PairState.NOT_PAIRED, PairState.FAILED)) {
-            assertThat(details(pairState = pairState, runningGameId = 7).toHost().runningApp)
+            assertThat(
+                    details(runningGameId = 7).reported(pairState = pairState).toHost().runningApp
+                )
                 .isNull()
             assertThat(
-                    details(pairState = pairState, runningGameId = 7, rawAppList = APP_LIST)
+                    details(runningGameId = 7, rawAppList = APP_LIST)
+                        .reported(pairState = pairState)
                         .toHost()
                         .runningApp
                 )
@@ -92,10 +96,7 @@ class HostMappingTest {
     @Test
     fun `the running app is Desktop when its title is Desktop`() {
         fun running(title: String) =
-            details(runningGameId = 8)
-                .toHost(listOf(NvApp(title, 8, false)))
-                .runningApp
-                ?.isDesktop
+            details(runningGameId = 8).toHost(listOf(NvApp(title, 8, false))).runningApp?.isDesktop
 
         assertThat(running("Desktop")).isTrue()
         assertThat(running(" desktop ")).isTrue()
@@ -105,17 +106,16 @@ class HostMappingTest {
     @Test
     fun `the running app is not Desktop when it is a game or its name is not known`() {
         fun running(title: String) =
-            details(runningGameId = 8)
-                .toHost(listOf(NvApp(title, 8, false)))
-                .runningApp
-                ?.isDesktop
+            details(runningGameId = 8).toHost(listOf(NvApp(title, 8, false))).runningApp?.isDesktop
 
         assertThat(running("Steam")).isFalse()
         assertThat(running("Desktop 2")).isFalse()
         assertThat(running("My Desktop")).isFalse()
         assertThat(details(runningGameId = 7, rawAppList = null).toHost().runningApp?.isDesktop)
             .isFalse()
-        assertThat(details(runningGameId = 99, rawAppList = APP_LIST).toHost().runningApp?.isDesktop)
+        assertThat(
+                details(runningGameId = 99, rawAppList = APP_LIST).toHost().runningApp?.isDesktop
+            )
             .isFalse()
     }
 
@@ -157,8 +157,7 @@ class HostMappingTest {
         assertThat(capabilities(caps(hevcMain10 = true)))
             .containsExactly(HostCapability.HEVC_10_BIT)
         assertThat(capabilities(caps(av1 = true))).containsExactly(HostCapability.AV1)
-        assertThat(capabilities(caps(av1Main10 = true)))
-            .containsExactly(HostCapability.AV1_10_BIT)
+        assertThat(capabilities(caps(av1Main10 = true))).containsExactly(HostCapability.AV1_10_BIT)
         assertThat(capabilities(caps(yuv444 = true))).containsExactly(HostCapability.YUV_444)
         assertThat(capabilities(caps(hevc = true, hevcMain10 = true, av1 = true)))
             .containsExactly(
@@ -173,12 +172,7 @@ class HostMappingTest {
         val withInfo = details(rawAppList = APP_LIST).withInfo(caps())
 
         assertThat(withInfo.toHost().capabilities).containsExactly(HostCapability.HDR)
-        assertThat(
-                details(rawAppList = APP_LIST)
-                    .withInfo(caps(hevc = true))
-                    .toHost()
-                    .capabilities
-            )
+        assertThat(details(rawAppList = APP_LIST).withInfo(caps(hevc = true)).toHost().capabilities)
             .containsExactly(HostCapability.HEVC, HostCapability.HDR)
         assertThat(
                 details(rawAppList = APP_LIST_WITHOUT_HDR)
@@ -187,16 +181,13 @@ class HostMappingTest {
                     .capabilities
             )
             .containsExactly(HostCapability.HEVC)
-        assertThat(
-                details(rawAppList = null).withInfo(caps(hevc = true)).toHost().capabilities
-            )
+        assertThat(details(rawAppList = null).withInfo(caps(hevc = true)).toHost().capabilities)
             .containsExactly(HostCapability.HEVC)
     }
 
     @Test
     fun `HDR is read from an app list that was already parsed`() {
-        val host =
-            details(rawAppList = null).withInfo(caps()).toHost(parseApps(APP_LIST))
+        val host = details(rawAppList = null).withInfo(caps()).toHost(parseApps(APP_LIST))
 
         assertThat(host.capabilities).containsExactly(HostCapability.HDR)
     }
@@ -221,7 +212,10 @@ class HostMappingTest {
     @Test
     fun `the same raw app list is parsed once across updates`() {
         val parsed = mutableListOf<String?>()
-        val appLists = ParsedAppLists { raw -> parsed += raw; parseApps(raw) }
+        val appLists = ParsedAppLists { raw ->
+            parsed += raw
+            parseApps(raw)
+        }
         val host = details(rawAppList = APP_LIST).withInfo(caps(hevc = true))
 
         repeat(3) { host.toHost(appLists = appLists) }
@@ -234,7 +228,10 @@ class HostMappingTest {
     @Test
     fun `a changed app list is parsed again`() {
         val parsed = mutableListOf<String?>()
-        val appLists = ParsedAppLists { raw -> parsed += raw; parseApps(raw) }
+        val appLists = ParsedAppLists { raw ->
+            parsed += raw
+            parseApps(raw)
+        }
 
         details(rawAppList = APP_LIST).withInfo(caps()).toHost(appLists = appLists)
         details(rawAppList = APP_LIST_WITHOUT_HDR).withInfo(caps()).toHost(appLists = appLists)
@@ -245,7 +242,10 @@ class HostMappingTest {
     @Test
     fun `an unreadable app list is parsed once, not at every update`() {
         val parsed = mutableListOf<String?>()
-        val appLists = ParsedAppLists { raw -> parsed += raw; parseApps(raw) }
+        val appLists = ParsedAppLists { raw ->
+            parsed += raw
+            parseApps(raw)
+        }
         val host = details(rawAppList = "not xml").withInfo(caps())
 
         repeat(3) { host.toHost(appLists = appLists) }
@@ -256,10 +256,14 @@ class HostMappingTest {
     @Test
     fun `an offline host neither parses its app list nor shows HDR`() {
         val parsed = mutableListOf<String?>()
-        val appLists = ParsedAppLists { raw -> parsed += raw; parseApps(raw) }
+        val appLists = ParsedAppLists { raw ->
+            parsed += raw
+            parseApps(raw)
+        }
 
         val host =
-            details(state = ComputerDetails.State.OFFLINE, rawAppList = APP_LIST)
+            details(rawAppList = APP_LIST)
+                .reported(state = ComputerDetails.State.OFFLINE)
                 .withInfo(caps(hevc = true))
                 .toHost(appLists = appLists)
 
@@ -277,7 +281,17 @@ class HostMappingTest {
         av1: Boolean = false,
         av1Main10: Boolean = false,
         yuv444: Boolean = false,
-    ) = HostCaps(HostFamily.SUNSHINE, listOf(7, 1, 431, -1), hevc, hevcMain10, av1, av1Main10, yuv444, emptySet())
+    ) =
+        HostCaps(
+            HostFamily.SUNSHINE,
+            listOf(7, 1, 431, -1),
+            hevc,
+            hevcMain10,
+            av1,
+            av1Main10,
+            yuv444,
+            emptySet(),
+        )
 
     private companion object {
         const val APP_LIST_WITHOUT_HDR =

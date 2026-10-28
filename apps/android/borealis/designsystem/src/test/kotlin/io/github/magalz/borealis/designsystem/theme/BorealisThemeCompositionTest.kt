@@ -95,7 +95,8 @@ class BorealisThemeCompositionTest {
             contentColor = LocalContentColor.current,
         )
 
-    private class Seen(
+    /** What the theme gave the content: a value holder, so a data class. */
+    private data class Seen(
         val formFactor: FormFactor,
         val titleSize: TextUnit,
         val background: Color,

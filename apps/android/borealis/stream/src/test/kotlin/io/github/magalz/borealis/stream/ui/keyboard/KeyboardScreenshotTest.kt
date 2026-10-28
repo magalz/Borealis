@@ -18,12 +18,12 @@ import androidx.compose.ui.test.requestFocus
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
 import io.github.magalz.borealis.stream.testing.TV
-import io.github.magalz.borealis.stream.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.stream.ui.StreamKeyboard
 import org.junit.Rule
 import org.junit.Test

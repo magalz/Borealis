@@ -21,7 +21,7 @@ object DefaultBitrate {
     /**
      * The automatic bitrate in kbps for a [resolution] such as `1920x1080` and a [frameRate] such
      * as `60`. Throws [NumberFormatException] or [IndexOutOfBoundsException] for a value that is
-     * not of that form, as the Java does.
+     * not of that form, as the inherited code does.
      */
     fun kbps(resolution: String, frameRate: String): Int {
         val parts = resolution.split("x")
@@ -40,7 +40,10 @@ object DefaultBitrate {
         return mbps * KBPS_PER_MBPS
     }
 
-    /** Linear interpolation of the factor table; the arithmetic is in Float, as in the Java. */
+    /**
+     * Linear interpolation of the factor table; the arithmetic is in Float, as in the inherited
+     * code.
+     */
     private fun resolutionFactor(pixels: Int): Float {
         val index = PIXELS.indexOfFirst { pixels <= it }
         return when {

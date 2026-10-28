@@ -15,12 +15,12 @@ import io.github.magalz.borealis.logging.LogRecord
 import io.github.magalz.borealis.logging.LogSink
 import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.catalog.Settings
+import io.github.magalz.borealis.settings.testing.WorkerDispatcherRule
 import io.github.magalz.borealis.settings.testing.eventually
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
@@ -46,6 +46,7 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class DataStoreBackingTest {
     @get:Rule val folder = TemporaryFolder()
+    @get:Rule val workers = WorkerDispatcherRule()
 
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val preferences: SharedPreferences =
@@ -88,7 +89,7 @@ class DataStoreBackingTest {
     }
 
     private fun newScope(): CoroutineScope =
-        CoroutineScope(SupervisorJob() + Dispatchers.IO).also { scopes += it }
+        CoroutineScope(SupervisorJob() + workers.dispatcher).also { scopes += it }
 
     private fun backing(scope: CoroutineScope = newScope()) =
         DataStoreBacking(DataStoreBacking.create(preferences, scope, file), scope)

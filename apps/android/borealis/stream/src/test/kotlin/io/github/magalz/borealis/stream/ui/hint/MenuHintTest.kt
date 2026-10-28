@@ -27,15 +27,16 @@ class MenuHintTest {
 
     private fun layer(formFactor: FormFactor, showHint: Boolean = true): LayerFixture {
         composeRule.mainClock.autoAdvance = false
-        return LayerFixture(composeRule, formFactor, aStreaming(showMenuHint = showHint)).also {
-            it.show()
-        }
+        return LayerFixture(composeRule, formFactor, aStreaming().copy(showMenuHint = showHint))
+            .also {
+                it.show()
+            }
     }
 
     /** Opens or closes a panel; the clock is paused, so the write is applied by hand. */
     private fun show(fixture: LayerFixture, panel: Panel) {
         composeRule.runOnUiThread {
-            fixture.phase = aStreaming(panel, showMenuHint = true)
+            fixture.phase = aStreaming(panel).copy(showMenuHint = true)
             Snapshot.sendApplyNotifications()
         }
     }

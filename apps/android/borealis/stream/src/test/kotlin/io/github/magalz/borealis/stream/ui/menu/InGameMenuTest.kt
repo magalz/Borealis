@@ -15,6 +15,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -54,6 +55,14 @@ private const val DESKTOP_QUIT = "Ends the stream.\nThe display and controls go 
 // What it says for a game: the game closes and its unsaved progress is lost.
 private const val GAME_QUIT = "Closes Hades II on the PC.\nUnsaved progress in it is lost."
 
+/** Shows the menu of [phase], in the keyboard input mode unless the form factor is a phone's. */
+private fun ComposeContentTestRule.showMenu(
+    formFactor: FormFactor,
+    phase: StreamPhase.Streaming,
+    keyboardMode: Boolean = formFactor != FormFactor.Phone,
+    appName: String = "Desktop",
+) = LayerFixture(this, formFactor, phase, aPerf(), keyboardMode, appName).also { it.show() }
+
 /** UC-004: the in-game menu, a side panel over the stream. */
 @RunWith(AndroidJUnit4::class)
 class InGameMenuTest {
@@ -64,24 +73,13 @@ class InGameMenuTest {
         overlay: OverlayMode = OverlayMode.OFF,
         touchMode: TouchMode? = TouchMode.TRACKPAD,
         gamepadMouse: Boolean? = null,
-        withPerf: Boolean = true,
-        keyboardMode: Boolean = formFactor != FormFactor.Phone,
-        pointerSpeed: PointerSpeed = PointerSpeed.NORMAL,
         appName: String = "Desktop",
-    ): LayerFixture {
-        val phase =
-            aStreaming(Panel.MENU, overlay, touchMode, gamepadMouse, pointerSpeed = pointerSpeed)
-        val perf = if (withPerf) aPerf() else null
-        return LayerFixture(
-                composeRule,
-                formFactor,
-                phase,
-                perf,
-                keyboardMode = keyboardMode,
-                appName = appName,
-            )
-            .also { it.show() }
-    }
+    ) =
+        composeRule.showMenu(
+            formFactor,
+            aStreaming(Panel.MENU, overlay, touchMode, gamepadMouse),
+            appName = appName,
+        )
 
     private fun text(text: String) = composeRule.onNodeWithText(text)
 
@@ -313,7 +311,11 @@ class InGameMenuTest {
     @Test
     @Config(qualifiers = TV)
     fun `Pointer speed shows the speed of the session`() {
-        menu(FormFactor.Tv, touchMode = null, gamepadMouse = true, pointerSpeed = PointerSpeed.SLOW)
+        composeRule.showMenu(
+            FormFactor.Tv,
+            aStreaming(Panel.MENU, touchMode = null, gamepadMouse = true)
+                .copy(pointerSpeed = PointerSpeed.SLOW),
+        )
 
         text("Slow").assertIsSelected()
     }
@@ -749,7 +751,12 @@ class InGameMenuTest {
     @Config(qualifiers = PHONE)
     fun `OK on the Touch row cycles Trackpad, Direct, Off and back to Trackpad`() {
         // A phone with a keyboard or a gamepad attached: the keys reach the row.
-        val fixture = menu(FormFactor.Phone, touchMode = TouchMode.TRACKPAD, keyboardMode = true)
+        val fixture =
+            composeRule.showMenu(
+                FormFactor.Phone,
+                aStreaming(Panel.MENU, touchMode = TouchMode.TRACKPAD),
+                keyboardMode = true,
+            )
 
         pressOk("Touch")
         fixture.reflect { it.copy(touchMode = TouchMode.DIRECT) }

@@ -53,7 +53,11 @@ class JavaVisibleApiTest {
         val constructor = AndroidCryptoProvider::class.java.getConstructor(Context::class.java)
 
         assertThat(Modifier.isPublic(constructor.modifiers)).isTrue()
-        assertThat(LimelightCryptoProvider::class.java.isAssignableFrom(AndroidCryptoProvider::class.java))
+        assertThat(
+                LimelightCryptoProvider::class
+                    .java
+                    .isAssignableFrom(AndroidCryptoProvider::class.java)
+            )
             .isTrue()
     }
 

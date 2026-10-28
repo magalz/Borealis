@@ -33,7 +33,9 @@ class UpstreamSeamsTest {
     @Test
     fun `wake packets are sent to the addresses of a host`() {
         val host =
-            details(mac = "AA:BB:CC:DD:EE:FF").also { it.manualAddress = AddressTuple("127.0.0.1", 47989) }
+            details().reported(mac = "AA:BB:CC:DD:EE:FF").also {
+                it.manualAddress = AddressTuple("127.0.0.1", 47989)
+            }
 
         UpstreamWakeSender().send(host)
     }
@@ -51,6 +53,8 @@ class UpstreamSeamsTest {
         assertThat(other.listFiles()).hasLength(1)
     }
 
+    // The test pins which dispatcher the module provides: it has to name it.
+    @Suppress("InjectDispatcher")
     @Test
     fun `blocking work runs on the IO dispatcher`() {
         assertThat(LibraryAdapterModule.ioDispatcher()).isSameInstanceAs(Dispatchers.IO)

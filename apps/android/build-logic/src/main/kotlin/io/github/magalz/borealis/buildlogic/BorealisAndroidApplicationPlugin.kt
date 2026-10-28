@@ -50,6 +50,7 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
                     "robolectric",
                     "androidx-test-core",
                     "kotlinx-coroutines-test",
+                    "asm",
                 )) {
                 dependencies.add("testImplementation", libs.findLibrary(name).get())
             }

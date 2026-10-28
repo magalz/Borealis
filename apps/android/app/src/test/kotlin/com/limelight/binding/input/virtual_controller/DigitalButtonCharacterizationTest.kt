@@ -2,7 +2,9 @@ package com.limelight.binding.input.virtual_controller
 
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
-import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.testing.OwnedResources
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -36,9 +38,10 @@ class ButtonLog(private val name: String = "", private val shared: MutableList<S
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class DigitalButtonCharacterizationTest {
-    private val kit = ElementRig()
+    @get:Rule val owned = OwnedResources()
+    private val kit = owned.own(ElementRig())
     private val controller = kit.controller
     private val activity = kit.rig.activity
     private val a = kit.add(DigitalButton(controller, 6, 1, activity), 100, 100, 200, 100)
@@ -109,8 +112,12 @@ class DigitalButtonCharacterizationTest {
     fun `a second finger is ignored`() {
         press(a)
 
-        assertThat(a.deliver(twoFingers(MotionEvent.ACTION_POINTER_DOWN, 1, 10f, 10f, 50f, 50f))).isTrue()
-        assertThat(a.deliver(twoFingers(MotionEvent.ACTION_POINTER_UP, 1, 10f, 10f, 50f, 50f))).isTrue()
+        assertThat(
+                a.deliver(twoFingers(MotionEvent.ACTION_POINTER_DOWN, 1, 10f to 10f, 50f to 50f))
+            )
+            .isTrue()
+        assertThat(a.deliver(twoFingers(MotionEvent.ACTION_POINTER_UP, 1, 10f to 10f, 50f to 50f)))
+            .isTrue()
 
         assertThat(aLog.events).containsExactly("click")
         assertThat(a.isPressed).isTrue()

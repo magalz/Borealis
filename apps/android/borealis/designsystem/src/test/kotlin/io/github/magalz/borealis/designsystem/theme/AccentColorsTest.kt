@@ -29,8 +29,8 @@ class AccentColorsTest {
             BorealisLook(accent = accent, highContrast = highContrast, colourVision = colourVision)
         )
 
-    @Suppress("LongParameterList") // the seven roles of a set
-    private class Roles(
+    /** The seven roles of a set. */
+    private data class Roles(
         val accent: Color,
         val accentSoft: Color,
         val accentStrong: Color,

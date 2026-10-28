@@ -17,6 +17,7 @@ import android.view.MotionEvent
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.nvstream.NvConnection
 import com.limelight.preferences.PreferenceConfiguration
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
@@ -26,10 +27,10 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.InputDeviceBuilder
-import org.robolectric.util.ReflectionHelpers
-import org.robolectric.util.ReflectionHelpers.ClassParameter
 import org.robolectric.shadows.ShadowContextImpl
 import org.robolectric.shadows.ShadowInputEvent
+import org.robolectric.util.ReflectionHelpers
+import org.robolectric.util.ReflectionHelpers.ClassParameter
 
 /** One controller packet, with the signed bytes and shorts the handler handed the connection. */
 data class InputPacket(
@@ -62,7 +63,10 @@ data class Motion(
     val z: Float,
 )
 
-/** Records what the handler reports to the PC; the real connection would hand it to the native library. */
+/**
+ * Records what the handler reports to the PC; the real connection would hand it to the native
+ * library.
+ */
 class FeedbackConnection(activity: Activity) :
     NvConnection(activity, null, 0, "test", null, null, null) {
     val packets = CopyOnWriteArrayList<InputPacket>()
@@ -136,7 +140,7 @@ class Pad(val device: InputDevice, val features: DeviceFeatures) {
  * battery of each pad. The phone's hardware is installed as the activity's system services, so the
  * handler finds it the way it does on a device.
  *
- * The shadows of [ShadowFeedbackInputDevice] and [ShadowFeedbackBridge] must be set on the test.
+ * The shadows of [ShadowFeedbackInputDevice] and [ShadowRecordingBridge] must be set on the test.
  * [close] stops the handler's own thread; call it after each test.
  */
 class FeedbackRig(
@@ -151,7 +155,7 @@ class FeedbackRig(
     val activity: Activity
 
     init {
-        ShadowFeedbackBridge.reset()
+        ShadowRecordingBridge.reset()
         ShadowSceManager.reset()
         ShadowFeedbackInputDevice.reset()
         // The SHIELD extension service does not exist here; without this the bind answers with no
@@ -181,7 +185,10 @@ class FeedbackRig(
 
     private val downTimes = mutableMapOf<Int, Long>()
 
-    /** `handleRumble` with the values as ints, so that a value past the sign bit reads as it is written. */
+    /**
+     * `handleRumble` with the values as ints, so that a value past the sign bit reads as it is
+     * written.
+     */
     fun rumble(low: Int, high: Int, controller: Int = 0) =
         handler.handleRumble(controller.toShort(), low.toShort(), high.toShort())
 
@@ -192,13 +199,20 @@ class FeedbackRig(
         handler.handleSetMotionEventState(controller.toShort(), type.toByte(), rateHz.toShort())
 
     fun led(red: Int, green: Int, blue: Int, controller: Int = 0) =
-        handler.handleSetControllerLED(controller.toShort(), red.toByte(), green.toByte(), blue.toByte())
+        handler.handleSetControllerLED(
+            controller.toShort(),
+            red.toByte(),
+            green.toByte(),
+            blue.toByte(),
+        )
 
     /** Robolectric's looper clock, which [advanceBackgroundBy] moves. */
     val now: Long
         get() = SystemClock.uptimeMillis()
 
-    /** The looper of the handler's own `HandlerThread`, which batteries, sensors and LEDs run on. */
+    /**
+     * The looper of the handler's own `HandlerThread`, which batteries, sensors and LEDs run on.
+     */
     val backgroundLooper: Looper
         get() = backgroundHandler().looper
 
@@ -252,15 +266,17 @@ class FeedbackRig(
     }
 
     /**
-     * Gives [pad] its context in the handler, and its controller number, with a first button
-     * press: that is what a real pad does the first time it is used.
+     * Gives [pad] its context in the handler, and its controller number, with a first button press:
+     * that is what a real pad does the first time it is used.
      */
     fun wake(pad: Pad) {
         press(pad, KeyEvent.KEYCODE_BUTTON_A)
         // The arrival report posts the battery poll: let it run now, at this time of the clock
         awaitBackground()
-        // The clock does not move here, so what the handler's thread schedules is due at a known time;
-        // the handler sleeps 25 ms of real time before it lets go of a button that was down for less
+        // The clock does not move here, so what the handler's thread schedules is due at a known
+        // time;
+        // the handler sleeps 25 ms of real time before it lets go of a button that was down for
+        // less
         release(pad, KeyEvent.KEYCODE_BUTTON_A)
     }
 
@@ -280,14 +296,24 @@ class FeedbackRig(
         }
 
     /** An input device with the joystick axes X and Y. */
-    private fun newPadDevice(id: Int, vendorId: Int, productId: Int, external: Boolean): InputDevice =
+    private fun newPadDevice(
+        id: Int,
+        vendorId: Int,
+        productId: Int,
+        external: Boolean,
+    ): InputDevice =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             builtPadDevice(id, vendorId, productId, external)
         } else {
             fieldPadDevice(id, vendorId, productId, external)
         }
 
-    private fun builtPadDevice(id: Int, vendorId: Int, productId: Int, external: Boolean): InputDevice {
+    private fun builtPadDevice(
+        id: Int,
+        vendorId: Int,
+        productId: Int,
+        external: Boolean,
+    ): InputDevice {
         val builder =
             InputDeviceBuilder.newBuilder()
                 .setId(id)
@@ -303,8 +329,16 @@ class FeedbackRig(
         return builder.build()
     }
 
-    /** Made field by field before Android 14, which `InputDeviceBuilder` needs (`InputDevice.Builder`). */
-    private fun fieldPadDevice(id: Int, vendorId: Int, productId: Int, external: Boolean): InputDevice {
+    /**
+     * Made field by field before Android 14, which `InputDeviceBuilder` needs
+     * (`InputDevice.Builder`).
+     */
+    private fun fieldPadDevice(
+        id: Int,
+        vendorId: Int,
+        productId: Int,
+        external: Boolean,
+    ): InputDevice {
         val device = Shadow.newInstanceOf(InputDevice::class.java)
         ReflectionHelpers.setField(device, "mId", id)
         ReflectionHelpers.setField(device, "mName", "pad-$id")
@@ -312,7 +346,11 @@ class FeedbackRig(
         ReflectionHelpers.setField(device, "mVendorId", vendorId)
         ReflectionHelpers.setField(device, "mProductId", productId)
         ReflectionHelpers.setField(device, "mIsExternal", external)
-        ReflectionHelpers.setField(device, "mSources", InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_JOYSTICK)
+        ReflectionHelpers.setField(
+            device,
+            "mSources",
+            InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_JOYSTICK,
+        )
         ReflectionHelpers.setField(device, "mMotionRanges", ArrayList<Any>())
         for (axis in listOf(MotionEvent.AXIS_X, MotionEvent.AXIS_Y)) {
             ReflectionHelpers.callInstanceMethod<Any>(

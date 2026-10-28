@@ -8,7 +8,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Android 13 is where the handler starts to set the media usage and to ask every pad for its sensors. */
+/**
+ * Android 13 is where the handler starts to set the media usage and to ask every pad for its
+ * sensors.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class FeedbackAndroid13Test : FeedbackTestBase() {
@@ -49,9 +52,7 @@ class FeedbackAndroid13Test : FeedbackTestBase() {
         rig.rumble(0x6400, 0)
 
         assertThat(Hardware.calls(own))
-            .containsExactly(
-                VibratorCall.Play(Effects.oneShot(80), VibrationExpectations.media())
-            )
+            .containsExactly(VibratorCall.Play(Effects.oneShot(80), VibrationExpectations.media()))
     }
 
     @Test
@@ -85,11 +86,14 @@ class FeedbackAndroid13Test : FeedbackTestBase() {
     }
 }
 
-/** Android 14 is where `Light.hasRgbControl()` can be trusted, so every vendor's pad takes a colour. */
+/**
+ * Android 14 is where `Light.hasRgbControl()` can be trusted, so every vendor's pad takes a colour.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class FeedbackAndroid14Test : FeedbackTestBase() {
-    private val lights = Hardware.lightsManager(listOf(Hardware.plainLight(2), Hardware.rgbLight(1)))
+    private val lights =
+        Hardware.lightsManager(listOf(Hardware.plainLight(2), Hardware.rgbLight(1)))
 
     @Test
     fun `an Xbox pad takes the colour on its coloured light only`() {
@@ -131,10 +135,11 @@ class FeedbackAndroid14Test : FeedbackTestBase() {
 
     @Test
     fun `the battery is reported`() {
-        val battery = Hardware.battery(status = android.hardware.BatteryState.STATUS_FULL, capacity = 1f)
+        val battery =
+            Hardware.battery(status = android.hardware.BatteryState.STATUS_FULL, capacity = 1f)
         val rig = rig()
         rig.wake(rig.connectPad(features = DeviceFeatures(batteryState = battery)))
 
-        assertThat(ShadowFeedbackBridge.batteryEvents).containsExactly(BatteryEvent(0, 5, 100))
+        assertThat(batteryEvents).containsExactly(BatteryEvent(0, 5, 100))
     }
 }

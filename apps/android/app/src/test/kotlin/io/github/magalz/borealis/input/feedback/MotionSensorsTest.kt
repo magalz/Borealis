@@ -12,20 +12,26 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 
-/** The motion sensors of a pad, as the host asks for them and as they report, on Android 13 and later. */
-// One suite for one feature: detekt's size limit is passed, and the helpers are shared by every test.
+/**
+ * The motion sensors of a pad, as the host asks for them and as they report, on Android 13 and
+ * later.
+ */
+// One suite for one feature: detekt's size limit is passed, and the helpers are shared by every
+// test.
 @Suppress("LargeClass")
 @RunWith(RobolectricTestRunner::class)
 class MotionSensorsTest : FeedbackTestBase() {
-    private val padSensors = Hardware.sensorManager(Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE)
+    private val padSensors =
+        Hardware.sensorManager(Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE)
     private val sensors
         get() = Hardware.sensors(padSensors)
 
-    private fun sensorRig(configure: com.limelight.preferences.PreferenceConfiguration.() -> Unit = {}) =
-        rig {
-            gamepadMotionSensors = true
-            configure()
-        }
+    private fun sensorRig(
+        configure: com.limelight.preferences.PreferenceConfiguration.() -> Unit = {}
+    ) = rig {
+        gamepadMotionSensors = true
+        configure()
+    }
 
     private fun wake(
         rig: FeedbackRig,
@@ -34,7 +40,11 @@ class MotionSensorsTest : FeedbackTestBase() {
         vendorId: Int = FeedbackRig.XBOX_VENDOR,
     ): Pad {
         val pad =
-            rig.connectPad(id = id, vendorId = vendorId, features = DeviceFeatures(sensorManager = manager))
+            rig.connectPad(
+                id = id,
+                vendorId = vendorId,
+                features = DeviceFeatures(sensorManager = manager),
+            )
         rig.wake(pad)
         return pad
     }
@@ -51,7 +61,11 @@ class MotionSensorsTest : FeedbackTestBase() {
                 .apply { isAccessible = true }
                 .get(rig.handler) as SparseArray<Any>
         val context = contexts.get(pad.id)
-        return context.javaClass.getDeclaredField(name).apply { isAccessible = true }.getShort(context).toInt()
+        return context.javaClass
+            .getDeclaredField(name)
+            .apply { isAccessible = true }
+            .getShort(context)
+            .toInt()
     }
 
     @Test
@@ -134,7 +148,9 @@ class MotionSensorsTest : FeedbackTestBase() {
         rig.motionState(GYRO, -5)
         rig.motionState(ACCEL, -8)
 
-        assertThat(sensors.log).containsExactly("register 4 -200000", "register 1 -125000").inOrder()
+        assertThat(sensors.log)
+            .containsExactly("register 4 -200000", "register 1 -125000")
+            .inOrder()
     }
 
     @Test
@@ -711,8 +727,10 @@ class MotionSensorsTest : FeedbackTestBase() {
         wake(rig)
 
         val capabilities = rig.connection.arrivals.single().capabilities
-        assertThat(capabilities and MoonBridge.LI_CCAP_ACCEL.toInt()).isEqualTo(MoonBridge.LI_CCAP_ACCEL.toInt())
-        assertThat(capabilities and MoonBridge.LI_CCAP_GYRO.toInt()).isEqualTo(MoonBridge.LI_CCAP_GYRO.toInt())
+        assertThat(capabilities and MoonBridge.LI_CCAP_ACCEL.toInt())
+            .isEqualTo(MoonBridge.LI_CCAP_ACCEL.toInt())
+        assertThat(capabilities and MoonBridge.LI_CCAP_GYRO.toInt())
+            .isEqualTo(MoonBridge.LI_CCAP_GYRO.toInt())
     }
 
     @Test
@@ -723,7 +741,8 @@ class MotionSensorsTest : FeedbackTestBase() {
 
         val capabilities = rig.connection.arrivals.single().capabilities
         assertThat(capabilities and MoonBridge.LI_CCAP_ACCEL.toInt()).isEqualTo(0)
-        assertThat(capabilities and MoonBridge.LI_CCAP_GYRO.toInt()).isEqualTo(MoonBridge.LI_CCAP_GYRO.toInt())
+        assertThat(capabilities and MoonBridge.LI_CCAP_GYRO.toInt())
+            .isEqualTo(MoonBridge.LI_CCAP_GYRO.toInt())
     }
 
     @Test
@@ -733,7 +752,8 @@ class MotionSensorsTest : FeedbackTestBase() {
         wake(rig, onlyAccel)
 
         val capabilities = rig.connection.arrivals.single().capabilities
-        assertThat(capabilities and MoonBridge.LI_CCAP_ACCEL.toInt()).isEqualTo(MoonBridge.LI_CCAP_ACCEL.toInt())
+        assertThat(capabilities and MoonBridge.LI_CCAP_ACCEL.toInt())
+            .isEqualTo(MoonBridge.LI_CCAP_ACCEL.toInt())
         assertThat(capabilities and MoonBridge.LI_CCAP_GYRO.toInt()).isEqualTo(0)
     }
 
@@ -743,7 +763,10 @@ class MotionSensorsTest : FeedbackTestBase() {
         rig.wake(rig.connectPad())
 
         val capabilities = rig.connection.arrivals.single().capabilities
-        assertThat(capabilities and (MoonBridge.LI_CCAP_ACCEL.toInt() or MoonBridge.LI_CCAP_GYRO.toInt()))
+        assertThat(
+                capabilities and
+                    (MoonBridge.LI_CCAP_ACCEL.toInt() or MoonBridge.LI_CCAP_GYRO.toInt())
+            )
             .isEqualTo(0)
     }
 
@@ -752,7 +775,8 @@ class MotionSensorsTest : FeedbackTestBase() {
         val rig = sensorRig()
         wake(rig, vendorId = FeedbackRig.XBOX_VENDOR)
 
-        assertThat(rig.connection.arrivals.single().type).isEqualTo(MoonBridge.LI_CTYPE_UNKNOWN.toInt())
+        assertThat(rig.connection.arrivals.single().type)
+            .isEqualTo(MoonBridge.LI_CTYPE_UNKNOWN.toInt())
     }
 
     @Test
@@ -760,7 +784,8 @@ class MotionSensorsTest : FeedbackTestBase() {
         val rig = sensorRig()
         wake(rig, vendorId = FeedbackRig.NINTENDO_VENDOR)
 
-        assertThat(rig.connection.arrivals.single().type).isEqualTo(MoonBridge.LI_CTYPE_UNKNOWN.toInt())
+        assertThat(rig.connection.arrivals.single().type)
+            .isEqualTo(MoonBridge.LI_CTYPE_UNKNOWN.toInt())
     }
 
     @Test
@@ -776,7 +801,8 @@ class MotionSensorsTest : FeedbackTestBase() {
         val rig = sensorRig()
         rig.wake(rig.connectPad(vendorId = FeedbackRig.XBOX_VENDOR))
 
-        assertThat(rig.connection.arrivals.single().type).isEqualTo(MoonBridge.LI_CTYPE_XBOX.toInt())
+        assertThat(rig.connection.arrivals.single().type)
+            .isEqualTo(MoonBridge.LI_CTYPE_XBOX.toInt())
     }
 
     @Test

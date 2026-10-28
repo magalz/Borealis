@@ -6,9 +6,11 @@ import android.widget.FrameLayout
 import android.widget.Toast
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.input.Packet
-import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.testing.OwnedResources
 import org.json.JSONObject
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -22,9 +24,10 @@ import org.robolectric.shadows.ShadowToast
  * the controls press to the controller handler, again shortly after, in case the PC lost it.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class VirtualControllerCharacterizationTest {
-    private val rig = OscRig()
+    @get:Rule val owned = OwnedResources()
+    private val rig = owned.own(OscRig())
     private val controller = rig.controller
 
     private fun context() = controller.controllerInputContext
@@ -80,7 +83,9 @@ class VirtualControllerCharacterizationTest {
 
         assertThat(rig.frame.childCount).isEqualTo(15)
         assertThat(rig.frame.getChildAt(0)).isInstanceOf(Button::class.java)
-        assertThat(rig.layout()).containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, false, true)).inOrder()
+        assertThat(rig.layout())
+            .containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, false, true))
+            .inOrder()
         controller.elements.forEachIndexed { index, element ->
             assertThat(rig.frame.getChildAt(index + 1)).isSameInstanceAs(element)
         }
@@ -109,7 +114,8 @@ class VirtualControllerCharacterizationTest {
 
         rig.screen(OscRig.TABLET_16_10)
         controller.refreshLayout()
-        assertThat(rig.configureButton.layoutParams.width).isEqualTo(96) // 1600 * 0.06f = 96.0 in float
+        assertThat(rig.configureButton.layoutParams.width)
+            .isEqualTo(96) // 1600 * 0.06f = 96.0 in float
     }
 
     @Test
@@ -132,7 +138,9 @@ class VirtualControllerCharacterizationTest {
         rig.settings(onlyL3R3 = true, showGuideButton = false)
         controller.refreshLayout()
 
-        assertThat(rig.layout()).containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, true, false)).inOrder()
+        assertThat(rig.layout())
+            .containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, true, false))
+            .inOrder()
         assertThat(rig.frame.childCount).isEqualTo(3)
     }
 
@@ -143,7 +151,9 @@ class VirtualControllerCharacterizationTest {
         rig.screen(OscRig.TV)
         controller.refreshLayout()
 
-        assertThat(rig.layout()).containsExactlyElementsIn(GoldenLayouts.of(OscRig.TV, false, true)).inOrder()
+        assertThat(rig.layout())
+            .containsExactlyElementsIn(GoldenLayouts.of(OscRig.TV, false, true))
+            .inOrder()
     }
 
     @Test
@@ -153,7 +163,8 @@ class VirtualControllerCharacterizationTest {
 
         controller.refreshLayout()
 
-        assertThat(controller.controllerMode).isEqualTo(VirtualController.ControllerMode.MoveButtons)
+        assertThat(controller.controllerMode)
+            .isEqualTo(VirtualController.ControllerMode.MoveButtons)
     }
 
     // removeElements, addElement
@@ -204,11 +215,13 @@ class VirtualControllerCharacterizationTest {
         controller.refreshLayout()
 
         controller.hide()
-        assertThat(controller.elements.map { it.visibility }.distinct()).containsExactly(View.INVISIBLE)
+        assertThat(controller.elements.map { it.visibility }.distinct())
+            .containsExactly(View.INVISIBLE)
         assertThat(rig.configureButton.visibility).isEqualTo(View.INVISIBLE)
 
         controller.show()
-        assertThat(controller.elements.map { it.visibility }.distinct()).containsExactly(View.VISIBLE)
+        assertThat(controller.elements.map { it.visibility }.distinct())
+            .containsExactly(View.VISIBLE)
         assertThat(rig.configureButton.visibility).isEqualTo(View.VISIBLE)
     }
 
@@ -219,7 +232,8 @@ class VirtualControllerCharacterizationTest {
 
         controller.refreshLayout()
 
-        assertThat(controller.elements.map { it.visibility }.distinct()).containsExactly(View.VISIBLE)
+        assertThat(controller.elements.map { it.visibility }.distinct())
+            .containsExactly(View.VISIBLE)
         assertThat(rig.configureButton.visibility).isEqualTo(View.INVISIBLE)
     }
 
@@ -275,9 +289,11 @@ class VirtualControllerCharacterizationTest {
 
         click()
 
-        assertThat(controller.controllerMode).isEqualTo(VirtualController.ControllerMode.MoveButtons)
+        assertThat(controller.controllerMode)
+            .isEqualTo(VirtualController.ControllerMode.MoveButtons)
         assertThat(ShadowToast.shownToastCount()).isEqualTo(1)
-        assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("Entering configuration mode (Move buttons)")
+        assertThat(ShadowToast.getTextOfLatestToast())
+            .isEqualTo("Entering configuration mode (Move buttons)")
         assertThat(ShadowToast.getLatestToast().duration).isEqualTo(Toast.LENGTH_SHORT)
         assertThat(rig.saved.all).isEmpty()
     }
@@ -289,9 +305,11 @@ class VirtualControllerCharacterizationTest {
         click()
         click()
 
-        assertThat(controller.controllerMode).isEqualTo(VirtualController.ControllerMode.ResizeButtons)
+        assertThat(controller.controllerMode)
+            .isEqualTo(VirtualController.ControllerMode.ResizeButtons)
         assertThat(ShadowToast.shownToastCount()).isEqualTo(2)
-        assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("Entering configuration mode (Resize buttons)")
+        assertThat(ShadowToast.getTextOfLatestToast())
+            .isEqualTo("Entering configuration mode (Resize buttons)")
         assertThat(rig.saved.all).isEmpty()
     }
 
@@ -306,9 +324,10 @@ class VirtualControllerCharacterizationTest {
         assertThat(controller.controllerMode).isEqualTo(VirtualController.ControllerMode.Active)
         assertThat(ShadowToast.shownToastCount()).isEqualTo(3)
         assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("Exiting configuration mode")
-        assertThat(rig.savedLayout()).containsExactlyEntriesIn(
-            GoldenLayouts.of(OscRig.PHONE, false, true).associateBy { it.id.toString() }
-        )
+        assertThat(rig.savedLayout())
+            .containsExactlyEntriesIn(
+                GoldenLayouts.of(OscRig.PHONE, false, true).associateBy { it.id.toString() }
+            )
     }
 
     @Test
@@ -320,15 +339,18 @@ class VirtualControllerCharacterizationTest {
         click()
         click()
 
-        assertThat(controller.controllerMode).isEqualTo(VirtualController.ControllerMode.MoveButtons)
-        assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("Entering configuration mode (Move buttons)")
+        assertThat(controller.controllerMode)
+            .isEqualTo(VirtualController.ControllerMode.MoveButtons)
+        assertThat(ShadowToast.getTextOfLatestToast())
+            .isEqualTo("Entering configuration mode (Move buttons)")
     }
 
     @Test
     fun `what the user moved while configuring is what the third click saves`() {
         controller.refreshLayout()
         click()
-        rig.element(6).loadConfiguration(JSONObject("""{"LEFT":5,"TOP":6,"WIDTH":70,"HEIGHT":80}"""))
+        rig.element(6)
+            .loadConfiguration(JSONObject("""{"LEFT":5,"TOP":6,"WIDTH":70,"HEIGHT":80}"""))
         click()
 
         click()
@@ -461,7 +483,8 @@ class VirtualControllerCharacterizationTest {
 
         rig.advanceBy(10_000)
         assertThat(rig.packets).hasSize(4)
-        assertThat(rig.packets.map { it.buttons }.distinct()).containsExactly(ControllerPacket.A_FLAG)
+        assertThat(rig.packets.map { it.buttons }.distinct())
+            .containsExactly(ControllerPacket.A_FLAG)
     }
 
     @Test
@@ -488,7 +511,9 @@ class VirtualControllerCharacterizationTest {
         context().inputMap = 0
 
         rig.advanceBy(25)
-        assertThat(rig.packets.map { it.buttons }).containsExactly(ControllerPacket.A_FLAG, 0).inOrder()
+        assertThat(rig.packets.map { it.buttons })
+            .containsExactly(ControllerPacket.A_FLAG, 0)
+            .inOrder()
     }
 
     @Test
@@ -509,7 +534,7 @@ class VirtualControllerCharacterizationTest {
 
     @Test
     fun `a controller without a handler sends nothing and does not fail`() {
-        val bare = OscRig(withHandler = false)
+        val bare = owned.own(OscRig(withHandler = false))
         bare.controller.controllerInputContext.inputMap = ControllerPacket.A_FLAG.toShort()
 
         bare.controller.sendControllerInputContext()

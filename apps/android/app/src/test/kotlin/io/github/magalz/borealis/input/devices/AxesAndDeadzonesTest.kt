@@ -36,7 +36,14 @@ class AxesAndDeadzonesTest : DevicesTestBase() {
     ): ContextView = rig(devices = listOf(device), configure = configure).touch(device)
 
     private fun axesOf(vararg axes: Int, vendorId: Int = 0, keys: IntArray = intArrayOf()): Axes =
-        contextOf(pad(1, vendorId = vendorId, axes = axes(*axes), keys = keys)).axes()
+        contextOf(
+                pad(1) {
+                    this.vendorId = vendorId
+                    this.axes = axes(*axes)
+                    this.keys = keys
+                }
+            )
+            .axes()
 
     @Test
     fun `a pad with a stick and Z and RZ uses Z and RZ for the right stick`() {
@@ -50,7 +57,7 @@ class AxesAndDeadzonesTest : DevicesTestBase() {
 
     @Test
     fun `a pad without a left stick keeps the left stick axes and has no joystick axes`() {
-        val context = contextOf(pad(1, axes = axes(z, rz)))
+        val context = contextOf(pad(1) { axes = axes(z, rz) })
 
         assertThat(context.axes()).isEqualTo(Axes(rightStickX = z, rightStickY = rz))
         assertThat(context.bool("hasJoystickAxes")).isFalse()
@@ -58,15 +65,17 @@ class AxesAndDeadzonesTest : DevicesTestBase() {
 
     @Test
     fun `a pad with only one of X and Y has no joystick axes`() {
-        assertThat(contextOf(pad(1, axes = axes(x))).bool("hasJoystickAxes")).isFalse()
-        assertThat(contextOf(pad(2, axes = axes(y))).bool("hasJoystickAxes")).isFalse()
-        assertThat(contextOf(pad(3, axes = axes(x, y))).bool("hasJoystickAxes")).isTrue()
+        assertThat(contextOf(pad(1) { axes = axes(x) }).bool("hasJoystickAxes")).isFalse()
+        assertThat(contextOf(pad(2) { axes = axes(y) }).bool("hasJoystickAxes")).isFalse()
+        assertThat(contextOf(pad(3) { axes = axes(x, y) }).bool("hasJoystickAxes")).isTrue()
     }
 
     @Test
     fun `the left stick may come from the gamepad source`() {
         val context =
-            contextOf(pad(1, axes = listOf(x, y).map { Axis(it, source = InputDevice.SOURCE_GAMEPAD) }))
+            contextOf(
+                pad(1) { axes = listOf(x, y).map { Axis(it, source = InputDevice.SOURCE_GAMEPAD) } }
+            )
 
         assertThat(context.bool("hasJoystickAxes")).isTrue()
     }
@@ -80,14 +89,21 @@ class AxesAndDeadzonesTest : DevicesTestBase() {
     @Test
     fun `triggers on BRAKE and GAS come next`() {
         assertThat(axesOf(x, y, z, rz, brake, gas))
-            .isEqualTo(Axes(rightStickX = z, rightStickY = rz, leftTrigger = brake, rightTrigger = gas))
+            .isEqualTo(
+                Axes(rightStickX = z, rightStickY = rz, leftTrigger = brake, rightTrigger = gas)
+            )
     }
 
     @Test
     fun `triggers on BRAKE and THROTTLE come after those`() {
         assertThat(axesOf(x, y, z, rz, brake, throttle))
             .isEqualTo(
-                Axes(rightStickX = z, rightStickY = rz, leftTrigger = brake, rightTrigger = throttle)
+                Axes(
+                    rightStickX = z,
+                    rightStickY = rz,
+                    leftTrigger = brake,
+                    rightTrigger = throttle,
+                )
             )
     }
 
@@ -112,8 +128,7 @@ class AxesAndDeadzonesTest : DevicesTestBase() {
 
     @Test
     fun `triggers that are not read as axes leave the right stick to Z and RZ`() {
-        assertThat(axesOf(x, y, z, rz, throttle))
-            .isEqualTo(Axes(rightStickX = z, rightStickY = rz))
+        assertThat(axesOf(x, y, z, rz, throttle)).isEqualTo(Axes(rightStickX = z, rightStickY = rz))
     }
 
     @Test
@@ -150,7 +165,9 @@ class AxesAndDeadzonesTest : DevicesTestBase() {
     @Test
     fun `RX and RY are the right stick when there is no Z and RZ and triggers are elsewhere`() {
         assertThat(axesOf(x, y, rx, ry, brake, gas))
-            .isEqualTo(Axes(rightStickX = rx, rightStickY = ry, leftTrigger = brake, rightTrigger = gas))
+            .isEqualTo(
+                Axes(rightStickX = rx, rightStickY = ry, leftTrigger = brake, rightTrigger = gas)
+            )
     }
 
     @Test
@@ -210,12 +227,13 @@ class AxesAndDeadzonesTest : DevicesTestBase() {
     @Test
     fun `the triggers may come from the gamepad source`() {
         val device =
-            pad(
-                1,
+            pad(1) {
                 axes =
                     axes(x, y) +
-                        listOf(lt, rt).map { Axis(it, source = InputDevice.SOURCE_GAMEPAD, flat = 0.2f) },
-            )
+                        listOf(lt, rt).map {
+                            Axis(it, source = InputDevice.SOURCE_GAMEPAD, flat = 0.2f)
+                        }
+            }
 
         val context = contextOf(device)
 
@@ -226,8 +244,7 @@ class AxesAndDeadzonesTest : DevicesTestBase() {
     @Test
     fun `the joystick source is read before the gamepad source`() {
         val device =
-            pad(
-                1,
+            pad(1) {
                 axes =
                     axes(x, y) +
                         listOf(
@@ -235,14 +252,19 @@ class AxesAndDeadzonesTest : DevicesTestBase() {
                             Axis(rt, source = InputDevice.SOURCE_JOYSTICK, flat = 0.2f),
                             Axis(lt, source = InputDevice.SOURCE_GAMEPAD, flat = 0.25f),
                             Axis(rt, source = InputDevice.SOURCE_GAMEPAD, flat = 0.25f),
-                        ),
-            )
+                        )
+            }
 
         assertThat(contextOf(device).float("triggerDeadzone")).isEqualTo(0.2f)
     }
 
     private fun triggerDeadzone(flatLeft: Float, flatRight: Float = flatLeft): Float =
-        contextOf(pad(1, axes = axes(x, y) + listOf(Axis(lt, flat = flatLeft), Axis(rt, flat = flatRight))))
+        contextOf(
+                pad(1) {
+                    axes =
+                        axes(x, y) + listOf(Axis(lt, flat = flatLeft), Axis(rt, flat = flatRight))
+                }
+            )
             .float("triggerDeadzone")
 
     @Test
@@ -273,19 +295,27 @@ class AxesAndDeadzonesTest : DevicesTestBase() {
 
     @Test
     fun `a pad without triggers has no trigger deadzone`() {
-        assertThat(contextOf(pad(1, axes = axes(x, y, z, rz))).float("triggerDeadzone")).isEqualTo(0f)
+        assertThat(contextOf(pad(1) { axes = axes(x, y, z, rz) }).float("triggerDeadzone"))
+            .isEqualTo(0f)
     }
 
     @Test
     fun `the ADT-1 and the ASUS Gamepad have a trigger deadzone of 30 percent`() {
-        val adt = pad(1, vendorId = 0x18d1, productId = 0x2c40)
-        val asus = pad(2, name = "ASUS Gamepad", keys = intArrayOf(KeyEvent.KEYCODE_BUTTON_START))
+        val adt =
+            pad(1) {
+                vendorId = 0x18d1
+                productId = 0x2c40
+            }
+        val asus =
+            pad(2) {
+                name = "ASUS Gamepad"
+                keys = intArrayOf(KeyEvent.KEYCODE_BUTTON_START)
+            }
         val asusTriggers =
-            pad(
-                3,
-                name = "ASUS Gamepad",
-                axes = axes(x, y) + listOf(Axis(lt, flat = 0.05f), Axis(rt, flat = 0.05f)),
-            )
+            pad(3) {
+                name = "ASUS Gamepad"
+                axes = axes(x, y) + listOf(Axis(lt, flat = 0.05f), Axis(rt, flat = 0.05f))
+            }
 
         assertThat(contextOf(adt).float("triggerDeadzone")).isEqualTo(0.3f)
         assertThat(contextOf(asus).float("triggerDeadzone")).isEqualTo(0.3f)
@@ -320,8 +350,8 @@ class AxesAndDeadzonesTest : DevicesTestBase() {
 
     @Test
     fun `the left stick always has the deadzone and the right stick only when it exists`() {
-        val none = contextOf(pad(1, axes = axes(x, y))) { deadzonePercentage = 20 }
-        val withoutLeft = contextOf(pad(2, axes = axes(z, rz))) { deadzonePercentage = 20 }
+        val none = contextOf(pad(1) { axes = axes(x, y) }) { deadzonePercentage = 20 }
+        val withoutLeft = contextOf(pad(2) { axes = axes(z, rz) }) { deadzonePercentage = 20 }
 
         assertThat(none.float("leftStickDeadzoneRadius")).isEqualTo(deadzone(20).toFloat())
         assertThat(none.float("rightStickDeadzoneRadius")).isEqualTo(0f)
@@ -374,7 +404,12 @@ class AxesAndDeadzonesTest : DevicesTestBase() {
                 Axis(it, source = InputDevice.SOURCE_TOUCHPAD)
             }
         val context =
-            contextOf(pad(1, sources = PAD_SOURCES or InputDevice.SOURCE_TOUCHPAD, axes = axes(x, y) + touchpad))
+            contextOf(
+                pad(1) {
+                    sources = PAD_SOURCES or InputDevice.SOURCE_TOUCHPAD
+                    axes = axes(x, y) + touchpad
+                }
+            )
 
         assertThat(context["touchpadXRange"]).isNotNull()
         assertThat(context["touchpadYRange"]).isNotNull()
@@ -392,7 +427,8 @@ class AxesAndDeadzonesTest : DevicesTestBase() {
 
     @Test
     fun `each touchpad range is read on its own`() {
-        val onlyX = contextOf(pad(1, axes = axes(x, y) + Axis(x, source = InputDevice.SOURCE_TOUCHPAD)))
+        val onlyX =
+            contextOf(pad(1) { axes = axes(x, y) + Axis(x, source = InputDevice.SOURCE_TOUCHPAD) })
 
         assertThat(onlyX["touchpadXRange"]).isNotNull()
         assertThat(onlyX["touchpadYRange"]).isNull()

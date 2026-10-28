@@ -17,7 +17,8 @@ class ControllerLedAndroid12Test : FeedbackTestBase() {
     private val lights = Hardware.lightsManager(listOf(Hardware.rgbLight(1)))
 
     private fun padOf(rig: FeedbackRig, vendorId: Int): Pad {
-        val pad = rig.connectPad(vendorId = vendorId, features = DeviceFeatures(lightsManager = lights))
+        val pad =
+            rig.connectPad(vendorId = vendorId, features = DeviceFeatures(lightsManager = lights))
         rig.wake(pad)
         return pad
     }

@@ -5,15 +5,16 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.view.InputDevice
 import android.view.KeyEvent
-import android.view.MotionEvent
 import android.view.KeyEvent.KEYCODE_BUTTON_A
 import android.view.KeyEvent.KEYCODE_BUTTON_SELECT
 import android.view.KeyEvent.KEYCODE_BUTTON_START
 import android.view.KeyEvent.KEYCODE_BUTTON_Y
+import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
 import io.github.magalz.borealis.stream.input.ChromeKeySink
 import io.github.magalz.borealis.stream.input.GamepadButtons
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -21,7 +22,7 @@ import org.robolectric.RobolectricTestRunner
 /** While the menu or a modal screen is open, no gamepad reaches the PC. */
 @RunWith(RobolectricTestRunner::class)
 class GamepadCaptureTest {
-    private val rig = ControllerHandlerRig(multiController = true)
+    @get:Rule val rig = ControllerHandlerRig(multiController = true)
     private val padOne = FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) }
     private val padTwo = FakeUsbController(2, rig.handler).also { rig.handler.deviceAdded(it) }
 
@@ -191,7 +192,9 @@ class GamepadCaptureTest {
 
     @Test
     fun `capturing stops the gyro of a pad that was sending it`() {
-        rig.setDefaultContextField("gyroListener", object : SensorEventListener {
+        rig.setDefaultContextField(
+            "gyroListener",
+            object : SensorEventListener {
                 override fun onSensorChanged(event: SensorEvent) {
                     // Only the registration matters here: no sensor event is ever delivered.
                 }
@@ -199,12 +202,20 @@ class GamepadCaptureTest {
                 override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
                     // Only the registration matters here: no sensor event is ever delivered.
                 }
-            })
-        rig.connection.motion.clear()
+            },
+        )
+        try {
+            rig.connection.motion.clear()
 
-        rig.handler.setCaptured(true)
+            rig.handler.setCaptured(true)
 
-        assertThat(rig.connection.motion).containsExactly("motion 0 2 0.0 0.0 0.0")
+            assertThat(rig.connection.motion).containsExactly("motion 0 2 0.0 0.0 0.0")
+        } finally {
+            // The listener is a stand-in with no sensor manager to leave: take it out, even when
+            // the assertion fails, or destroying the handler after the test would look for the
+            // sensor manager and hide the failure.
+            rig.setDefaultContextField("gyroListener", null)
+        }
     }
 
     @Test
@@ -237,7 +248,10 @@ class GamepadCaptureTest {
     }
 
     private fun motionRange(axis: Int): InputDevice.MotionRange {
-        val constructor = InputDevice.MotionRange::class.java.declaredConstructors.first { it.parameterCount == 7 }
+        val constructor =
+            InputDevice.MotionRange::class.java.declaredConstructors.first {
+                it.parameterCount == 7
+            }
         constructor.isAccessible = true
         return constructor.newInstance(axis, InputDevice.SOURCE_TOUCHPAD, 0f, 1f, 0f, 0f, 0f)
             as InputDevice.MotionRange

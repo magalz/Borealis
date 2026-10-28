@@ -2,9 +2,9 @@ package io.github.magalz.borealis.connection
 
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.NvConnection
-import io.github.magalz.borealis.crypto.LimeLogCapture
 import io.github.magalz.borealis.host.failure.CauseKind
 import io.github.magalz.borealis.nvhttp.HostReply
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.util.logging.Level
 import org.junit.Rule
 import org.junit.Test
@@ -79,12 +79,12 @@ class StartResumeTest {
     fun `a resume is logged`() {
         rig.script.running(DESKTOP_ID)
 
-        LimeLogCapture().use { log ->
+        LimeLogCapture().start().use { log ->
             rig.start(rig.connection())
             ShadowRecordingBridge.await("startConnection")
             listener.awaitEnded()
 
-            assertThat(log.records).contains(Level.INFO to "Resumed existing game session")
+            assertThat(log.entries).contains(Level.INFO to "Resumed existing game session")
         }
     }
 

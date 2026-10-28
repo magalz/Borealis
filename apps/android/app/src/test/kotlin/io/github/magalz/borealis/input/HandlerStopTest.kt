@@ -5,6 +5,7 @@ import android.view.KeyEvent.KEYCODE_BUTTON_SELECT
 import android.view.KeyEvent.KEYCODE_BUTTON_START
 import com.google.common.truth.Truth.assertThat
 import java.time.Duration
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -13,7 +14,7 @@ import org.robolectric.Shadows.shadowOf
 /** Stopping the handler ends all the work it scheduled, for every context. */
 @RunWith(RobolectricTestRunner::class)
 class HandlerStopTest {
-    private val rig = ControllerHandlerRig()
+    @get:Rule val rig = ControllerHandlerRig()
 
     @Test
     fun `stopping cancels the chord check of the default context`() {

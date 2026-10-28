@@ -11,10 +11,10 @@ import org.junit.Test
 import org.robolectric.RuntimeEnvironment
 
 /**
- * `ControllerHandler.getAttachedControllerMask` counts the gamepads that are attached, one bit
- * each from bit 0 up: the input devices with joystick axes, then the USB devices the USB driver
- * would claim. The on-screen controller sets bit 0 too. The handler reads the same mask when it is
- * made, as the controllers it expects to hear from.
+ * `ControllerHandler.getAttachedControllerMask` counts the gamepads that are attached, one bit each
+ * from bit 0 up: the input devices with joystick axes, then the USB devices the USB driver would
+ * claim. The on-screen controller sets bit 0 too. The handler reads the same mask when it is made,
+ * as the controllers it expects to hear from.
  */
 class AttachedControllerMaskTest : DevicesTestBase() {
     private val context: Context = RuntimeEnvironment.getApplication()
@@ -22,7 +22,10 @@ class AttachedControllerMaskTest : DevicesTestBase() {
     private fun mask() = ControllerHandler.getAttachedControllerMask(context).toInt()
 
     private fun setPreference(key: String, value: Boolean) {
-        PreferenceManager.getDefaultSharedPreferences(context).edit().putBoolean(key, value).commit()
+        PreferenceManager.getDefaultSharedPreferences(context)
+            .edit()
+            .putBoolean(key, value)
+            .commit()
     }
 
     private fun connectAll(vararg pads: Pad) = pads.forEach(::connectPad)
@@ -49,13 +52,15 @@ class AttachedControllerMaskTest : DevicesTestBase() {
     @Test
     fun `a device without joystick axes is not counted`() {
         connectAll(
-            pad(1, sources = InputDevice.SOURCE_GAMEPAD, axes = emptyList()),
-            pad(
-                2,
-                sources = InputDevice.SOURCE_MOUSE,
-                axes = emptyList(),
-                keyboardType = InputDevice.KEYBOARD_TYPE_NONE,
-            ),
+            pad(1) {
+                sources = InputDevice.SOURCE_GAMEPAD
+                axes = emptyList()
+            },
+            pad(2) {
+                sources = InputDevice.SOURCE_MOUSE
+                axes = emptyList()
+                keyboardType = InputDevice.KEYBOARD_TYPE_NONE
+            },
         )
 
         assertThat(mask()).isEqualTo(0)
@@ -63,7 +68,13 @@ class AttachedControllerMaskTest : DevicesTestBase() {
 
     @Test
     fun `axes without the joystick source are not counted`() {
-        connectAll(pad(1, sources = InputDevice.SOURCE_GAMEPAD, axes = LEFT_STICK), pad(2))
+        connectAll(
+            pad(1) {
+                sources = InputDevice.SOURCE_GAMEPAD
+                axes = LEFT_STICK
+            },
+            pad(2),
+        )
 
         assertThat(mask()).isEqualTo(0b1)
     }
@@ -71,12 +82,11 @@ class AttachedControllerMaskTest : DevicesTestBase() {
     @Test
     fun `an alphabetic keyboard with joystick axes is not counted`() {
         connectAll(
-            pad(
-                1,
-                sources = InputDevice.SOURCE_KEYBOARD or InputDevice.SOURCE_JOYSTICK,
-                keyboardType = InputDevice.KEYBOARD_TYPE_ALPHABETIC,
-                axes = LEFT_STICK,
-            ),
+            pad(1) {
+                sources = InputDevice.SOURCE_KEYBOARD or InputDevice.SOURCE_JOYSTICK
+                keyboardType = InputDevice.KEYBOARD_TYPE_ALPHABETIC
+                axes = LEFT_STICK
+            },
             pad(2),
         )
 
@@ -125,8 +135,11 @@ class AttachedControllerMaskTest : DevicesTestBase() {
                 "/dev/usb-1",
                 vendorId = 0x045e,
                 productId = 0x02ea,
-                subclass = XBOX_ONE_INTERFACE_SUBCLASS,
-                protocol = XBOX_ONE_INTERFACE_PROTOCOL,
+                type =
+                    UsbInterfaceType(
+                        subclass = XBOX_ONE_INTERFACE_SUBCLASS,
+                        protocol = XBOX_ONE_INTERFACE_PROTOCOL,
+                    ),
             )
         )
 
@@ -135,7 +148,12 @@ class AttachedControllerMaskTest : DevicesTestBase() {
 
     @Test
     fun `a USB pad that Android shows as an input device is counted once`() {
-        connectAll(pad(1, vendorId = 0x045e, productId = 0x028e))
+        connectAll(
+            pad(1) {
+                vendorId = 0x045e
+                productId = 0x028e
+            }
+        )
         plugUsb(usbDevice("/dev/usb-1", vendorId = 0x045e, productId = 0x028e))
 
         assertThat(mask()).isEqualTo(0b1)
@@ -144,14 +162,13 @@ class AttachedControllerMaskTest : DevicesTestBase() {
     @Test
     fun `a USB pad is counted when Android only shows another device of its ids`() {
         connectAll(
-            pad(
-                1,
-                vendorId = 0x045e,
-                productId = 0x028e,
-                sources = InputDevice.SOURCE_KEYBOARD,
-                keyboardType = InputDevice.KEYBOARD_TYPE_ALPHABETIC,
-                axes = emptyList(),
-            )
+            pad(1) {
+                vendorId = 0x045e
+                productId = 0x028e
+                sources = InputDevice.SOURCE_KEYBOARD
+                keyboardType = InputDevice.KEYBOARD_TYPE_ALPHABETIC
+                axes = emptyList()
+            }
         )
         plugUsb(usbDevice("/dev/usb-1", vendorId = 0x045e, productId = 0x028e))
 
@@ -174,7 +191,7 @@ class AttachedControllerMaskTest : DevicesTestBase() {
                 "/dev/usb-2",
                 vendorId = 0x045e,
                 productId = 0x0002,
-                interfaceClass = UsbConstants.USB_CLASS_HID,
+                type = UsbInterfaceType(interfaceClass = UsbConstants.USB_CLASS_HID),
             )
         )
 

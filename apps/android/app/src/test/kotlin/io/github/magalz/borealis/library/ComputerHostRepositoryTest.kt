@@ -80,7 +80,9 @@ class ComputerHostRepositoryTest {
 
         val seen = collectHosts(repository)
         binder.emit(details(uuid = "b", name = "zed"))
-        binder.emit(details(uuid = "a", name = "Alpha", state = ComputerDetails.State.OFFLINE))
+        binder.emit(
+            details(uuid = "a", name = "Alpha").reported(state = ComputerDetails.State.OFFLINE)
+        )
 
         assertThat(seen.first()).isEmpty()
         assertThat(seen.last().map { it.name }).containsExactly("Alpha", "zed").inOrder()
@@ -110,15 +112,15 @@ class ComputerHostRepositoryTest {
     }
 
     @Test
-    fun `the first emission after connecting lists the hosts the service already knew`() =
-        runTest {
-            binder.computers["a"] = details(uuid = "a", name = "Alpha")
-            binder.computers["b"] = details(uuid = "b", name = "Beta", pairState = PairState.NOT_PAIRED)
+    fun `the first emission after connecting lists the hosts the service already knew`() = runTest {
+        binder.computers["a"] = details(uuid = "a", name = "Alpha")
+        binder.computers["b"] =
+            details(uuid = "b", name = "Beta").reported(pairState = PairState.NOT_PAIRED)
 
-            val seen = collectHosts(repository())
+        val seen = collectHosts(repository())
 
-            assertThat(seen.first().map { it.name }).containsExactly("Alpha", "Beta").inOrder()
-        }
+        assertThat(seen.first().map { it.name }).containsExactly("Alpha", "Beta").inOrder()
+    }
 
     @Test
     fun `an update that changes nothing the screen shows is not emitted again`() = runTest {
@@ -135,9 +137,10 @@ class ComputerHostRepositoryTest {
     @Test
     fun `the last collector leaving stops polling`() = runTest {
         val repository = repository()
-        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
-            repository.hosts.collect {}
-        }
+        val job =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                repository.hosts.collect {}
+            }
 
         job.cancelAndJoin()
 
@@ -201,23 +204,23 @@ class ComputerHostRepositoryTest {
     }
 
     @Test
-    fun `a private address on another subnet that does not answer is the wrong subnet`() =
-        runTest {
-            val repository = repository()
-            localNetworks = listOf(LocalIpv4(InetAddress.getByName("192.168.1.20") as Inet4Address, 24))
-            binder.onAdd = { false }
+    fun `a private address on another subnet that does not answer is the wrong subnet`() = runTest {
+        val repository = repository()
+        localNetworks = listOf(LocalIpv4(InetAddress.getByName("192.168.1.20") as Inet4Address, 24))
+        binder.onAdd = { false }
 
-            assertThat(repository.addHost(HostAddress("10.0.0.7")))
-                .isEqualTo(AddHostResult.WrongSubnet)
-        }
+        assertThat(repository.addHost(HostAddress("10.0.0.7"))).isEqualTo(AddHostResult.WrongSubnet)
+    }
 
     @Test
-    fun `a service that cannot be bound makes the host unreachable instead of crashing`() = runTest {
-        val repository = repository()
-        connector.failure = IOException("The computer manager service could not be bound")
+    fun `a service that cannot be bound makes the host unreachable instead of crashing`() =
+        runTest {
+            val repository = repository()
+            connector.failure = IOException("The computer manager service could not be bound")
 
-        assertThat(repository.addHost(HostAddress("192.168.1.9"))).isEqualTo(AddHostResult.Unreachable)
-    }
+            assertThat(repository.addHost(HostAddress("192.168.1.9")))
+                .isEqualTo(AddHostResult.Unreachable)
+        }
 
     @Test
     fun `an address that cannot be a host is invalid, and the service is not asked`() = runTest {
@@ -247,7 +250,7 @@ class ComputerHostRepositoryTest {
     fun `an online host is already awake`() = runTest {
         val repository = repository()
         val job = launch(UnconfinedTestDispatcher(testScheduler)) { repository.hosts.collect {} }
-        binder.emit(details(uuid = "a", mac = "AA:BB:CC:DD:EE:FF"))
+        binder.emit(details(uuid = "a").reported(mac = "AA:BB:CC:DD:EE:FF"))
 
         assertThat(repository.wake("a")).isEqualTo(WakeResult.ALREADY_ONLINE)
         assertThat(woken).isEmpty()
@@ -258,7 +261,7 @@ class ComputerHostRepositoryTest {
     fun `a host without a MAC address cannot be woken`() = runTest {
         val repository = repository()
         val job = launch(UnconfinedTestDispatcher(testScheduler)) { repository.hosts.collect {} }
-        binder.emit(details(uuid = "a", state = ComputerDetails.State.OFFLINE, mac = null))
+        binder.emit(details(uuid = "a").reported(state = ComputerDetails.State.OFFLINE, mac = null))
 
         assertThat(repository.wake("a")).isEqualTo(WakeResult.NO_MAC_ADDRESS)
         assertThat(woken).isEmpty()
@@ -270,7 +273,8 @@ class ComputerHostRepositoryTest {
         val repository = repository()
         val job = launch(UnconfinedTestDispatcher(testScheduler)) { repository.hosts.collect {} }
         binder.emit(
-            details(uuid = "a", state = ComputerDetails.State.OFFLINE, mac = "AA:BB:CC:DD:EE:FF")
+            details(uuid = "a")
+                .reported(state = ComputerDetails.State.OFFLINE, mac = "AA:BB:CC:DD:EE:FF")
         )
 
         assertThat(repository.wake("a")).isEqualTo(WakeResult.SENT)
@@ -283,7 +287,8 @@ class ComputerHostRepositoryTest {
         val repository = repository()
         val job = launch(UnconfinedTestDispatcher(testScheduler)) { repository.hosts.collect {} }
         binder.emit(
-            details(uuid = "a", state = ComputerDetails.State.OFFLINE, mac = "AA:BB:CC:DD:EE:FF")
+            details(uuid = "a")
+                .reported(state = ComputerDetails.State.OFFLINE, mac = "AA:BB:CC:DD:EE:FF")
         )
         wakeFailure = IOException("network unreachable")
 
@@ -300,7 +305,7 @@ class ComputerHostRepositoryTest {
     fun `forgetting a paired online host unpairs it, removes it and clears what was kept for it`() =
         runTest {
             val repository = repository()
-            val live = details(uuid = "a", pairState = PairState.PAIRED)
+            val live = details(uuid = "a").reported(pairState = PairState.PAIRED)
             binder.computers["a"] = live
             hiddenApps.set("a", 7, hidden = true)
 
@@ -338,8 +343,9 @@ class ComputerHostRepositoryTest {
     @Test
     fun `an offline or unpaired host is removed without asking it to unpair`() = runTest {
         val repository = repository()
-        binder.computers["off"] = details(uuid = "off", state = ComputerDetails.State.OFFLINE)
-        binder.computers["new"] = details(uuid = "new", pairState = PairState.NOT_PAIRED)
+        binder.computers["off"] =
+            details(uuid = "off").reported(state = ComputerDetails.State.OFFLINE)
+        binder.computers["new"] = details(uuid = "new").reported(pairState = PairState.NOT_PAIRED)
 
         repository.forget("off")
         repository.forget("new")
@@ -373,7 +379,7 @@ class ComputerHostRepositoryTest {
     fun `the details say what a user needs in plain words`() = runTest {
         val repository = repository()
         binder.computers["a"] =
-            details(uuid = "3f2a-uuid", name = "Den PC", mac = "AA:BB:CC:DD:EE:FF")
+            details(uuid = "3f2a-uuid", name = "Den PC").reported(mac = "AA:BB:CC:DD:EE:FF")
 
         val text = repository.details("a")
 
@@ -392,7 +398,8 @@ class ComputerHostRepositoryTest {
     fun `the details show neither null, the UUID, the HTTPS port nor a raw enum name`() = runTest {
         val repository = repository()
         binder.computers["a"] =
-            details(uuid = "3f2a-uuid", state = ComputerDetails.State.OFFLINE, address = null)
+            details(uuid = "3f2a-uuid", address = null)
+                .reported(state = ComputerDetails.State.OFFLINE)
                 .also { it.pairState = null }
 
         val text = repository.details("a")!!
@@ -408,7 +415,7 @@ class ComputerHostRepositoryTest {
     @Test
     fun `the status of a host that was not checked yet is checking`() = runTest {
         val repository = repository()
-        binder.computers["a"] = details(state = ComputerDetails.State.UNKNOWN)
+        binder.computers["a"] = details().reported(state = ComputerDetails.State.UNKNOWN)
 
         assertThat(repository.details("a")).contains("Status: Checking…\n")
     }
@@ -464,7 +471,7 @@ class ComputerHostRepositoryTest {
     @Test
     fun `a host that is not paired says so`() = runTest {
         val repository = repository()
-        binder.computers["a"] = details(pairState = PairState.NOT_PAIRED)
+        binder.computers["a"] = details().reported(pairState = PairState.NOT_PAIRED)
 
         assertThat(repository.details("a")).contains("Paired: No")
     }
@@ -472,7 +479,7 @@ class ComputerHostRepositoryTest {
     @Test
     fun `the zero MAC address placeholder is not shown`() = runTest {
         val repository = repository()
-        binder.computers["a"] = details(mac = "00:00:00:00:00:00")
+        binder.computers["a"] = details().reported(mac = "00:00:00:00:00:00")
 
         assertThat(repository.details("a")).doesNotContain("MAC")
     }

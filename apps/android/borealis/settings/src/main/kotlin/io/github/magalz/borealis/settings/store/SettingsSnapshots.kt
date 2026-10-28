@@ -12,7 +12,7 @@ import kotlinx.coroutines.cancel
 
 /**
  * The one settings repository of the process, and the synchronous way into its snapshot for code
- * that Hilt does not reach (the inherited Java, `Application.onCreate`).
+ * that Hilt does not reach (`Application.onCreate`, the stream activity).
  *
  * The first call builds the repository and primes the snapshot, blocking while it reads both stores
  * once. It is safe to call before `Application.onCreate`, from any thread. After that, [current] is

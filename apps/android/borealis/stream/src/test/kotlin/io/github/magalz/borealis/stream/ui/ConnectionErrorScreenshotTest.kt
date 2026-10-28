@@ -35,8 +35,6 @@ class ConnectionErrorScreenshotTest {
         shoot(
             "error_tv_busy_focused",
             FormFactor.Tv,
-            "Desktop",
-            "Desk PC",
             StreamFailure(FailureKind.HOST_BUSY, "Error 503 · launch · HTTP 503", null),
         )
 
@@ -46,9 +44,8 @@ class ConnectionErrorScreenshotTest {
         shoot(
             "error_phone_offline",
             FormFactor.Phone,
-            "Desktop",
-            "Living Room PC",
             StreamFailure(FailureKind.HOST_OFFLINE, "Error 0 · serverinfo", null),
+            Target(hostName = "Living Room PC"),
         )
 
     @Test
@@ -57,8 +54,6 @@ class ConnectionErrorScreenshotTest {
         shoot(
             "error_phone_certificate",
             FormFactor.Phone,
-            "Desktop",
-            "Desk PC",
             StreamFailure(
                 FailureKind.CERTIFICATE_CHANGED,
                 "Error 401 · serverinfo · HTTP 401",
@@ -72,13 +67,12 @@ class ConnectionErrorScreenshotTest {
         shoot(
             "error_tv_generic-ports",
             FormFactor.Tv,
-            "Steam Big Picture",
-            "Desk PC",
             StreamFailure(
                 FailureKind.GENERIC,
                 "Error -1 · RTSP handshake",
                 "Ports 47984, 47989, 48010 and 47998 to 48000 may be blocked",
             ),
+            Target(appName = "Steam Big Picture"),
         )
 
     @Test
@@ -87,8 +81,6 @@ class ConnectionErrorScreenshotTest {
         shoot(
             "error_tv_stopped_focused",
             FormFactor.Tv,
-            "Desktop",
-            "Desk PC",
             StreamFailure(FailureKind.STOPPED, "Error -1", null),
         )
 
@@ -98,8 +90,6 @@ class ConnectionErrorScreenshotTest {
         shoot(
             "error_phone_stopped",
             FormFactor.Phone,
-            "Desktop",
-            "Desk PC",
             StreamFailure(FailureKind.STOPPED, "Error -1", null),
         )
 
@@ -109,8 +99,6 @@ class ConnectionErrorScreenshotTest {
         shoot(
             "error_phone-landscape_certificate-large-text",
             FormFactor.Phone,
-            "Desktop",
-            "Desk PC",
             StreamFailure(
                 FailureKind.CERTIFICATE_CHANGED,
                 "Error 401 · serverinfo · HTTP 401",
@@ -119,19 +107,21 @@ class ConnectionErrorScreenshotTest {
             fontScale = 2f,
         )
 
+    /** The app and the host that the failed connection was to. */
+    private data class Target(val appName: String = "Desktop", val hostName: String = "Desk PC")
+
     private fun shoot(
         name: String,
         formFactor: FormFactor,
-        appName: String,
-        hostName: String,
         failure: StreamFailure,
+        target: Target = Target(),
         fontScale: Float = 1f,
     ) {
         composeRule.setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
                 BorealisTheme(formFactor) {
-                    ConnectionErrorScreen(appName, hostName, failure, aSession())
+                    ConnectionErrorScreen(target.appName, target.hostName, failure, aSession())
                 }
             }
         }

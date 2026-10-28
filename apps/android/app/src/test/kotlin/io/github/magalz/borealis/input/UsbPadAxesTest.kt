@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.input
 
 import com.google.common.truth.Truth.assertThat
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -11,7 +12,7 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class UsbPadAxesTest {
-    private val rig = ControllerHandlerRig()
+    @get:Rule val rig = ControllerHandlerRig()
 
     init {
         rig.handler.deviceAdded(FakeUsbController(PAD_ID, rig.handler))

@@ -3,6 +3,7 @@ package io.github.magalz.borealis.input
 import android.view.KeyEvent
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -10,7 +11,7 @@ import org.robolectric.RobolectricTestRunner
 /** Pins how the handler turns Start and Select into the Guide button, before the menu chord. */
 @RunWith(RobolectricTestRunner::class)
 class GuideChordCharacterizationTest {
-    private val rig = ControllerHandlerRig()
+    @get:Rule val rig = ControllerHandlerRig()
 
     @Test
     fun `Start then Select on a pad without a Mode button wait for the menu chord, not the Guide button`() {

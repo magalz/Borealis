@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 /**
  * The only writer of the settings from Kotlin (ADR 0055). It reads and writes through the store of
- * each [Setting]; the inherited Java readers keep reading the default SharedPreferences file.
+ * each [Setting]; the inherited readers keep reading the default SharedPreferences file.
  *
  * Writes apply at once and there is no Save step. Writes are applied in the order of the calls, per
  * repository.
@@ -44,10 +44,10 @@ interface SettingsRepository {
     suspend fun <T> set(setting: Setting<T>, value: T)
 
     /**
-     * A write-through for Java wiring. It is optimistic: it updates [snapshot] before it returns
-     * and stores the value in the background, also when it equals the default. If the store fails,
-     * the backing rolls the key back to the stored value, updates [snapshot] and logs. Kotlin code
-     * uses [set].
+     * A synchronous write-through for callers that cannot suspend. It is optimistic: it updates
+     * [snapshot] before it returns and stores the value in the background, also when it equals the
+     * default. If the store fails, the backing rolls the key back to the stored value, updates
+     * [snapshot] and logs. Code that can suspend uses [set].
      */
     fun <T> setNow(setting: Setting<T>, value: T)
 

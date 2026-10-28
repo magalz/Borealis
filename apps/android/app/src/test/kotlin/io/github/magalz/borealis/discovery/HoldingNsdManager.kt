@@ -92,7 +92,8 @@ class HoldingNsdManager : ShadowNsdManager() {
         override fun onStopDiscoveryFailed(serviceType: String?, errorCode: Int) =
             agent.onStopDiscoveryFailed(serviceType, errorCode)
 
-        override fun onDiscoveryStarted(serviceType: String?) = agent.onDiscoveryStarted(serviceType)
+        override fun onDiscoveryStarted(serviceType: String?) =
+            agent.onDiscoveryStarted(serviceType)
 
         override fun onDiscoveryStopped(serviceType: String?) {
             if (holdStops) {

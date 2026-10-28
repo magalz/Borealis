@@ -34,7 +34,8 @@ class ShortcutIconTest {
 
     @Test
     fun `the shortcut icon is an adaptive icon`() {
-        assertThat(context.getDrawable(R.mipmap.ic_pc_scut)).isInstanceOf(AdaptiveIconDrawable::class.java)
+        assertThat(context.getDrawable(R.mipmap.ic_pc_scut))
+            .isInstanceOf(AdaptiveIconDrawable::class.java)
     }
 
     @Test

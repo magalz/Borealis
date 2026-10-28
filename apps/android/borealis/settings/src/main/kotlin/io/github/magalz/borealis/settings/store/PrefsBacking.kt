@@ -7,8 +7,8 @@ import io.github.magalz.borealis.settings.catalog.Settings
 import java.io.IOException
 
 /**
- * The default SharedPreferences file, which the inherited Java code reads. Keys and stored types
- * are those of the catalog, so `PreferenceConfiguration.readPreferences` sees what is written here.
+ * The default SharedPreferences file, which the inherited code reads. Keys and stored types are
+ * those of the catalog, so `PreferenceConfiguration.readPreferences` sees what is written here.
  */
 internal class PrefsBacking(private val preferences: SharedPreferences) : SettingsBacking {
     override val store = SettingStore.PREFS

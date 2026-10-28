@@ -29,8 +29,7 @@ import org.robolectric.annotation.Config
 class KeyboardTranslatorLayoutCharacterizationTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
-    @Before
-    fun resetLayouts() = ShadowKeyLayoutInputDevice.reset()
+    @Before fun resetLayouts() = ShadowKeyLayoutInputDevice.reset()
 
     private fun keyboard(
         id: Int,
@@ -288,7 +287,9 @@ class KeyboardTranslatorLayoutCharacterizationTest {
         val VK_Z = 0x805A.toShort()
         val VK_ENTER = 0x800D.toShort()
 
-        /** The location of QWERTY's key sends the key on the right: AZERTY swaps A and Q, W and Z. */
+        /**
+         * The location of QWERTY's key sends the key on the right: AZERTY swaps A and Q, W and Z.
+         */
         val AZERTY =
             mapOf(
                 KeyEvent.KEYCODE_A to KeyEvent.KEYCODE_Q,

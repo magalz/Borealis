@@ -47,7 +47,7 @@ Inherited from Moonlight (`decoder-errata.txt` in moonlight-android). This file 
 15. Some devices that support Android 11's FEATURE_LowLatency don't support it on their first compatible H.264/HEVC decoder. It is important to examine *all* decoders for FEATURE_LowLatency before deciding on one.
     - Affected devices: Pixel 4 (c2.qti.avc.decoder.low_latency vs c2.qti.avc.decoder) and Galaxy S21 Exynos (OMX.Exynos.avc.dec [FEATURE_LowLatency] vs C2.Exynos.avc.decoder [no FEATURE_LowLatency])
 
-16. Some decoder have magic undocumented MediaFormat options to enable low latency prior to the introduction of KEY_LOW_LATENCY in Android 11. See MediaCodecHelper.java for info.
+16. Some decoder have magic undocumented MediaFormat options to enable low latency prior to the introduction of KEY_LOW_LATENCY in Android 11. See `MediaCodecHelper.kt` (`apps/android/app/src/main/kotlin/com/limelight/binding/video/`) for info.
     - Affected devices: MediaTek, Amlogic, Amazon, Qualcomm, Exynos, Huawei
 
 17. Fire TV 3's Amlogic HEVC decoder doesn't produce any output frames without setting the magic "vdec-lowlatency" MediaFormat option

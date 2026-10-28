@@ -56,7 +56,7 @@ object StreamSessionFactory {
      * resumed app it has no name for is dropped here, so the screens never show it.
      */
     @JvmStatic
-    @Suppress("LongParameterList") // The Java call site in Game.java passes what the activity has.
+    @Suppress("LongParameterList") // The call site in Game.kt passes what the activity has.
     fun create(
         activity: Activity,
         prefs: PreferenceConfiguration,

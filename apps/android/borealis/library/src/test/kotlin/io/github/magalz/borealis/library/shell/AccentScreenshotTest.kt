@@ -9,6 +9,7 @@ import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.noAnimations
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.AccentChoice
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.ColourVision
@@ -21,7 +22,6 @@ import io.github.magalz.borealis.library.hosts.livingRoomPc
 import io.github.magalz.borealis.library.hosts.studio
 import io.github.magalz.borealis.library.hosts.withHosts
 import io.github.magalz.borealis.library.testing.TV
-import io.github.magalz.borealis.library.testing.setContentInKeyboardMode
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test

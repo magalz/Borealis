@@ -1,11 +1,13 @@
 package io.github.magalz.borealis.input.events
 
-import com.google.common.truth.Truth.assertThat
 import android.view.KeyEvent.KEYCODE_BUTTON_A
 import android.view.KeyEvent.KEYCODE_BUTTON_START
+import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket.A_FLAG
 import com.limelight.preferences.PreferenceConfiguration.AnalogStickForScrolling
 import io.github.magalz.borealis.input.FakeUsbController
+import io.github.magalz.borealis.testing.OwnedResources
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -13,19 +15,23 @@ import org.robolectric.shadows.ShadowToast
 
 /**
  * What the 16 ms ticks of a pad in mouse mode send for its sticks: the pointer moves, or scrolls in
- * high resolution, by the stick that the setting gives to scrolling. A system pad holds its sticks in
- * the handler's own range, where up and right are positive. A full stick at 100 percent speed is
+ * high resolution, by the stick that the setting gives to scrolling. A system pad holds its sticks
+ * in the handler's own range, where up and right are positive. A full stick at 100 percent speed is
  * 1280 pixels a second, so a tick is 20.48 pixels, which the motion rounds down and carries over.
  */
 @RunWith(RobolectricTestRunner::class)
 class PointerEmulationCharacterizationTest {
     private val full = 32766.toShort()
 
+    @get:Rule val owned = OwnedResources()
+
     private fun rigWith(scrolling: AnalogStickForScrolling?, speed: Int = 100) =
-        EventsRig {
-            gamepadMouseSpeed = speed
-            analogStickForScrolling = scrolling
-        }
+        owned.own(
+            EventsRig {
+                gamepadMouseSpeed = speed
+                analogStickForScrolling = scrolling
+            }
+        )
 
     private fun EventsRig.mousePad(vararg sticks: Pair<String, Short>): Pad {
         val pad = addPad(7, fields = sticks.toMap())
@@ -41,18 +47,27 @@ class PointerEmulationCharacterizationTest {
     // The pixels of ten ticks: 20.48 each, carried over
     private val pixels = listOf(20, 20, 21, 20, 21, 20, 21, 20, 21, 20)
 
-    // A stick pushed into a corner is held to the unit circle, so each axis of it is 20.48 / sqrt(2) = 14.48 a tick
+    // A stick pushed into a corner is held to the unit circle, so each axis of it is 20.48 /
+    // sqrt(2) = 14.48 a tick
     private val scrolls = listOf(14, 14, 15, 14, 15, 14, 15, 14, 15, 14)
 
     @Test
     fun `with the right stick for scrolling the left moves the pointer and the right scrolls`() {
         val rig = rigWith(AnalogStickForScrolling.RIGHT)
-        rig.mousePad("leftStickX" to full, "rightStickY" to full, "rightStickX" to (-32766).toShort())
+        rig.mousePad(
+            "leftStickX" to full,
+            "rightStickY" to full,
+            "rightStickX" to (-32766).toShort(),
+        )
 
         assertThat(rig.mouseAfter(160))
             .containsExactlyElementsIn(
                 pixels.indices.flatMap { tick ->
-                    listOf("move ${pixels[tick]} 0", "hires scroll ${scrolls[tick]}", "hires hscroll -${scrolls[tick]}")
+                    listOf(
+                        "move ${pixels[tick]} 0",
+                        "hires scroll ${scrolls[tick]}",
+                        "hires hscroll -${scrolls[tick]}",
+                    )
                 }
             )
             .inOrder()
@@ -61,7 +76,11 @@ class PointerEmulationCharacterizationTest {
     @Test
     fun `with the left stick for scrolling the right moves the pointer and the left scrolls`() {
         val rig = rigWith(AnalogStickForScrolling.LEFT)
-        rig.mousePad("rightStickX" to full, "leftStickY" to full, "leftStickX" to (-32766).toShort())
+        rig.mousePad(
+            "rightStickX" to full,
+            "leftStickY" to full,
+            "leftStickX" to (-32766).toShort(),
+        )
 
         assertThat(rig.mouseAfter(32))
             .containsExactly(

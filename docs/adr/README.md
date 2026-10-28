@@ -87,3 +87,4 @@ Never rewrite an accepted ADR to change its decision. If a decision changes, wri
 | 0057 | [Add glass surfaces and the Accessibility settings](0057-glass-surfaces-and-the-accessibility-settings.md) | accepted | 2026-10-20 |
 | 0058 | [Add the appearance and reading options](0058-appearance-and-reading-options.md) | accepted | 2026-10-21 |
 | 0059 | [Convert the inherited Java to Kotlin](0059-convert-the-inherited-java-to-kotlin.md) | accepted | 2026-10-23 |
+| 0060 | [Convert MoonBridge to a Kotlin object](0060-convert-moonbridge-to-a-kotlin-object.md) | accepted | 2026-10-26 |

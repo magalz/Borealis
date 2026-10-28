@@ -10,7 +10,7 @@ import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.PreferenceConfiguration.AnalogStickForScrolling
 import com.limelight.preferences.PreferenceConfiguration.FormatOption
-import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import java.lang.reflect.Modifier
 import org.junit.Assert.assertThrows
 import org.junit.Before
@@ -29,7 +29,7 @@ import org.robolectric.annotation.Config
  */
 @Suppress("DEPRECATION", "LargeClass")
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class PreferenceConfigurationReadTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val preferences: SharedPreferences =
@@ -58,7 +58,8 @@ class PreferenceConfigurationReadTest {
 
     @Test
     fun `empty preferences give the stereo audio configuration constant itself`() {
-        assertThat(read().audioConfiguration).isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_STEREO)
+        assertThat(read().audioConfiguration)
+            .isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_STEREO)
     }
 
     @Test
@@ -202,7 +203,8 @@ class PreferenceConfigurationReadTest {
         for (stored in listOf("axb", "1280xabc", "x720")) {
             preferences.edit().putString("list_resolution", stored).commit()
 
-            assertWithMessage("list_resolution = $stored").that(runCatching { read() }.exceptionOrNull())
+            assertWithMessage("list_resolution = $stored")
+                .that(runCatching { read() }.exceptionOrNull())
                 .isInstanceOf(NumberFormatException::class.java)
         }
     }
@@ -221,7 +223,8 @@ class PreferenceConfigurationReadTest {
         for (stored in listOf("", "abc", "60.0", " 60")) {
             preferences.edit().putString("list_fps", stored).commit()
 
-            assertWithMessage("list_fps = '$stored'").that(runCatching { read() }.exceptionOrNull())
+            assertWithMessage("list_fps = '$stored'")
+                .that(runCatching { read() }.exceptionOrNull())
                 .isInstanceOf(NumberFormatException::class.java)
         }
     }
@@ -281,7 +284,11 @@ class PreferenceConfigurationReadTest {
 
     @Test
     fun `the new bitrate key wins over the legacy one`() {
-        preferences.edit().putInt("seekbar_bitrate_kbps", 15_000).putInt("seekbar_bitrate", 20).commit()
+        preferences
+            .edit()
+            .putInt("seekbar_bitrate_kbps", 15_000)
+            .putInt("seekbar_bitrate", 20)
+            .commit()
 
         assertThat(read().bitrate).isEqualTo(15_000)
     }

@@ -5,7 +5,7 @@ import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.StreamConfiguration
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.jni.MoonBridge
-import io.github.magalz.borealis.settings.ShadowMoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -14,12 +14,12 @@ import org.robolectric.annotation.Config
 /**
  * What a [StreamConfiguration] holds right after construction, and what each `Builder` setter
  * changes. The configuration is built here with its real constructor, which needs
- * [ShadowMoonBridge]: the defaults read the audio configuration of `MoonBridge`.
+ * [ShadowRecordingBridge]: the defaults read the audio configuration of `MoonBridge`.
  *
  * Characterization: these tests pass on the Java class and on its Kotlin conversion.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class StreamConfigurationCharacterizationTest {
     private class Case(
         val setter: String,
@@ -69,7 +69,8 @@ class StreamConfigurationCharacterizationTest {
         assertThat(config.sops).isTrue()
         assertThat(config.adaptiveResolutionEnabled).isFalse()
         assertThat(config.playLocalAudio).isFalse()
-        assertThat(config.audioConfiguration).isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_STEREO)
+        assertThat(config.audioConfiguration)
+            .isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_STEREO)
         assertThat(config.supportedVideoFormats).isEqualTo(MoonBridge.VIDEO_FORMAT_H264)
         assertThat(config.attachedGamepadMask).isEqualTo(0)
         assertThat(config.persistGamepadsAfterDisconnect).isFalse()

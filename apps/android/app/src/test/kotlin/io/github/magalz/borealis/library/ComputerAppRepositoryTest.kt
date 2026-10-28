@@ -56,9 +56,10 @@ class ComputerAppRepositoryTest {
         hostId: String = "host-1",
     ): Pair<List<AppsSnapshot>, kotlinx.coroutines.Job> {
         val seen = mutableListOf<AppsSnapshot>()
-        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
-            repository.apps(hostId).collect { seen += it }
-        }
+        val job =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                repository.apps(hostId).collect { seen += it }
+            }
         return seen to job
     }
 
@@ -141,7 +142,9 @@ class ComputerAppRepositoryTest {
             assertThat(shortcuts.calls).containsExactly("hidden host-1 7")
 
             repository.setHidden("host-1", 7, hidden = false)
-            assertThat(shortcuts.calls).containsExactly("hidden host-1 7", "shown host-1 7").inOrder()
+            assertThat(shortcuts.calls)
+                .containsExactly("hidden host-1 7", "shown host-1 7")
+                .inOrder()
         }
 
     @Test
@@ -168,7 +171,8 @@ class ComputerAppRepositoryTest {
     fun `a host that is no longer known has no host and no apps, and is not loading`() = runTest {
         val (seen, job) = collect(repository(), hostId = "gone")
 
-        assertThat(seen.last()).isEqualTo(AppsSnapshot(host = null, apps = emptyList(), loading = false))
+        assertThat(seen.last())
+            .isEqualTo(AppsSnapshot(host = null, apps = emptyList(), loading = false))
         job.cancelAndJoin()
     }
 
@@ -276,7 +280,7 @@ class ComputerAppRepositoryTest {
         assertThat(repository.quit("nobody")).isEqualTo(QuitResult.Failed(null))
 
         binder.computers["host-1"] =
-            details(state = ComputerDetails.State.ONLINE, pairState = PairState.PAIRED)
+            details().reported(state = ComputerDetails.State.ONLINE, pairState = PairState.PAIRED)
         clients.failure = IOException("No active address")
         assertThat(repository.quit("host-1")).isEqualTo(QuitResult.Failed("No active address"))
     }

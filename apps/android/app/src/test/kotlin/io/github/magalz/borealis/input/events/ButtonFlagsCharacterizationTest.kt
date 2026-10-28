@@ -34,8 +34,8 @@ import android.view.KeyEvent.KEYCODE_VOLUME_UP
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.input.ControllerPacket.A_FLAG
-import com.limelight.nvstream.input.ControllerPacket.B_FLAG
 import com.limelight.nvstream.input.ControllerPacket.BACK_FLAG
+import com.limelight.nvstream.input.ControllerPacket.B_FLAG
 import com.limelight.nvstream.input.ControllerPacket.DOWN_FLAG
 import com.limelight.nvstream.input.ControllerPacket.LB_FLAG
 import com.limelight.nvstream.input.ControllerPacket.LEFT_FLAG
@@ -54,6 +54,8 @@ import com.limelight.nvstream.input.ControllerPacket.TOUCHPAD_FLAG
 import com.limelight.nvstream.input.ControllerPacket.UP_FLAG
 import com.limelight.nvstream.input.ControllerPacket.X_FLAG
 import com.limelight.nvstream.input.ControllerPacket.Y_FLAG
+import io.github.magalz.borealis.testing.OwnedResources
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -65,7 +67,8 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class ButtonFlagsCharacterizationTest {
-    private val rig = EventsRig()
+    @get:Rule val owned = OwnedResources()
+    @get:Rule val rig = EventsRig()
     private val pad = rig.addPad(7)
 
     /** Every key that is one button, with the flag it sets. */
@@ -115,7 +118,8 @@ class ButtonFlagsCharacterizationTest {
     fun `a button key sends one packet to controller 0 with the gamepad mask of the setting`() {
         pad.press(KEYCODE_BUTTON_A)
 
-        assertThat(rig.packets).containsExactly(Sent(controller = 0, activeMask = 1, buttons = A_FLAG))
+        assertThat(rig.packets)
+            .containsExactly(Sent(controller = 0, activeMask = 1, buttons = A_FLAG))
     }
 
     @Test
@@ -131,7 +135,10 @@ class ButtonFlagsCharacterizationTest {
             pad.release(keyCode)
 
             assertWithMessage("$keyCode at once").that(atOnce).containsExactly(0)
-            assertWithMessage("$keyCode after 60 ms").that(later).containsExactly(0, BACK_FLAG).inOrder()
+            assertWithMessage("$keyCode after 60 ms")
+                .that(later)
+                .containsExactly(0, BACK_FLAG)
+                .inOrder()
             assertWithMessage("$keyCode up").that(rig.packets.last().buttons).isEqualTo(0)
         }
     }
@@ -201,7 +208,9 @@ class ButtonFlagsCharacterizationTest {
     fun `a key the handler does not know is left to the system, down and up`() {
         for (keyCode in listOf(KEYCODE_A, KEYCODE_VOLUME_UP, KEYCODE_SEARCH, KEYCODE_BUTTON_C)) {
             assertWithMessage("down $keyCode").that(pad.press(keyCode)).isFalse()
-            assertWithMessage("up $keyCode").that(pad.release(keyCode, downTime = rig.now - 100)).isFalse()
+            assertWithMessage("up $keyCode")
+                .that(pad.release(keyCode, downTime = rig.now - 100))
+                .isFalse()
         }
 
         assertThat(rig.packets).isEmpty()
@@ -209,8 +218,11 @@ class ButtonFlagsCharacterizationTest {
 
     @Test
     fun `an unknown key code with no paddles on the pad is left to the system`() {
-        assertThat(pad.press(KEYCODE_UNKNOWN, scanCode = 0x2c4)).isFalse()
-        assertThat(pad.release(KEYCODE_UNKNOWN, scanCode = 0x2c4, downTime = rig.now - 100)).isFalse()
+        assertThat(pad.press(KEYCODE_UNKNOWN, KeyDetail(scanCode = 0x2c4))).isFalse()
+        assertThat(
+                pad.release(KEYCODE_UNKNOWN, KeyDetail(scanCode = 0x2c4), downTime = rig.now - 100)
+            )
+            .isFalse()
 
         assertThat(rig.packets).isEmpty()
     }
@@ -219,13 +231,24 @@ class ButtonFlagsCharacterizationTest {
     fun `the paddles are the evdev trigger-happy buttons 5 to 8 on a pad that has paddles`() {
         pad.set("hasPaddles", true)
         val paddles =
-            listOf(0x2c4 to PADDLE1_FLAG, 0x2c5 to PADDLE2_FLAG, 0x2c6 to PADDLE3_FLAG, 0x2c7 to PADDLE4_FLAG)
+            listOf(
+                0x2c4 to PADDLE1_FLAG,
+                0x2c5 to PADDLE2_FLAG,
+                0x2c6 to PADDLE3_FLAG,
+                0x2c7 to PADDLE4_FLAG,
+            )
 
         for ((scanCode, flag) in paddles) {
-            assertWithMessage("down $scanCode").that(pad.press(KEYCODE_UNKNOWN, scanCode)).isTrue()
-            assertWithMessage("down $scanCode flag").that(rig.packets.last().buttons).isEqualTo(flag)
+            assertWithMessage("down $scanCode")
+                .that(pad.press(KEYCODE_UNKNOWN, KeyDetail(scanCode = scanCode)))
+                .isTrue()
+            assertWithMessage("down $scanCode flag")
+                .that(rig.packets.last().buttons)
+                .isEqualTo(flag)
             rig.advanceBy(100)
-            assertWithMessage("up $scanCode").that(pad.release(KEYCODE_UNKNOWN, scanCode)).isTrue()
+            assertWithMessage("up $scanCode")
+                .that(pad.release(KEYCODE_UNKNOWN, KeyDetail(scanCode = scanCode)))
+                .isTrue()
             assertWithMessage("up $scanCode flag").that(rig.packets.last().buttons).isEqualTo(0)
         }
     }
@@ -235,9 +258,17 @@ class ButtonFlagsCharacterizationTest {
         pad.set("hasPaddles", true)
 
         for (scanCode in listOf(0x2c8, 0x2c9, 0)) {
-            assertWithMessage("down $scanCode").that(pad.press(KEYCODE_UNKNOWN, scanCode)).isFalse()
+            assertWithMessage("down $scanCode")
+                .that(pad.press(KEYCODE_UNKNOWN, KeyDetail(scanCode = scanCode)))
+                .isFalse()
             assertWithMessage("up $scanCode")
-                .that(pad.release(KEYCODE_UNKNOWN, scanCode, downTime = rig.now - 100))
+                .that(
+                    pad.release(
+                        KEYCODE_UNKNOWN,
+                        KeyDetail(scanCode = scanCode),
+                        downTime = rig.now - 100,
+                    )
+                )
                 .isFalse()
         }
 
@@ -254,15 +285,20 @@ class ButtonFlagsCharacterizationTest {
         pad.release(KEYCODE_BUTTON_X)
 
         assertThat(rig.buttons())
-            .containsExactly(A_FLAG, A_FLAG or X_FLAG, A_FLAG or X_FLAG or LB_FLAG, A_FLAG or LB_FLAG)
+            .containsExactly(
+                A_FLAG,
+                A_FLAG or X_FLAG,
+                A_FLAG or X_FLAG or LB_FLAG,
+                A_FLAG or LB_FLAG,
+            )
             .inOrder()
     }
 
     @Test
     fun `a key that goes down again while it is held sends its packet again`() {
         pad.press(KEYCODE_BUTTON_A)
-        pad.press(KEYCODE_BUTTON_A, repeat = 1)
-        pad.press(KEYCODE_BUTTON_A, repeat = 2)
+        pad.press(KEYCODE_BUTTON_A, KeyDetail(repeat = 1))
+        pad.press(KEYCODE_BUTTON_A, KeyDetail(repeat = 2))
 
         assertThat(rig.buttons()).containsExactly(A_FLAG, A_FLAG, A_FLAG)
     }
@@ -276,7 +312,7 @@ class ButtonFlagsCharacterizationTest {
 
     @Test
     fun `flipping the face buttons swaps A and B and X and Y, on the way down and up`() {
-        val flipped = EventsRig { flipFaceButtons = true }
+        val flipped = owned.own(EventsRig { flipFaceButtons = true })
         val flippedPad = flipped.addPad(7)
         val faces =
             listOf(

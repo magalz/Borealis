@@ -7,7 +7,7 @@ import io.github.magalz.borealis.logging.BorealisAudit
 import io.github.magalz.borealis.logging.Redactor
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.testing.FakeSettingsRepository
-import kotlinx.coroutines.Dispatchers
+import io.github.magalz.borealis.settings.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -33,7 +33,7 @@ class AuditViewModelTest {
 
     // Lazy: a ViewModel must be created after the rule has set the main dispatcher.
     private val viewModel by lazy {
-        AuditViewModel(trail, settings, fixedFormatter(), Dispatchers.Unconfined)
+        AuditViewModel(trail, settings, fixedFormatter(), UnconfinedTestDispatcher())
     }
 
     @Before

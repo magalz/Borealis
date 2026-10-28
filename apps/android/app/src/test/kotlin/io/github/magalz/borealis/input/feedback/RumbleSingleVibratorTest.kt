@@ -10,9 +10,9 @@ import org.robolectric.annotation.Config
 /**
  * A pad that has one vibrator, or that the phone's vibrator stands in for: the two motors become
  * one amplitude, 80% of the low motor's high byte plus 33% of the high motor's, cut at 255, and
- * truncated to an int. A vibrator without amplitude control gets the same amplitude as a duty
- * cycle of 20 ms. What the vibrator is handed depends on the Android version: the media usage
- * of `VibrationAttributes` from Android 13, a game `AudioAttributes` before it.
+ * truncated to an int. A vibrator without amplitude control gets the same amplitude as a duty cycle
+ * of 20 ms. What the vibrator is handed depends on the Android version: the media usage of
+ * `VibrationAttributes` from Android 13, a game `AudioAttributes` before it.
  */
 abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     /** What a vibrator is handed for a one-shot of [amplitude]. */
@@ -87,12 +87,13 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
         rig.rumble(0, 0x0300) // 0.99
         rig.rumble(0x00FF, 0x00FF)
 
-        assertThat(Hardware.calls(padVibrator)).containsExactly(
-            VibratorCall.Cancel,
-            VibratorCall.Cancel,
-            VibratorCall.Cancel,
-            VibratorCall.Cancel,
-        )
+        assertThat(Hardware.calls(padVibrator))
+            .containsExactly(
+                VibratorCall.Cancel,
+                VibratorCall.Cancel,
+                VibratorCall.Cancel,
+                VibratorCall.Cancel,
+            )
     }
 
     @Test
@@ -168,10 +169,11 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     @Test
     fun `the phone vibrates for the on-screen controller with the raw motor values`() {
         val phone = Hardware.vibrator()
-        val rig = rig(phoneVibrator = phone) {
-            onscreenController = true
-            vibrateOsc = true
-        }
+        val rig =
+            rig(phoneVibrator = phone) {
+                onscreenController = true
+                vibrateOsc = true
+            }
 
         rig.rumble(0x6400, 0x6400)
 
@@ -183,11 +185,12 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
         val calls = mutableListOf<List<VibratorCall>>()
         for (setting in listOf("onscreenController", "vibrateOsc", "onlyL3R3")) {
             val phone = Hardware.vibrator()
-            val rig = rig(phoneVibrator = phone) {
-                onscreenController = setting != "onscreenController"
-                vibrateOsc = setting != "vibrateOsc"
-                onlyL3R3 = setting == "onlyL3R3"
-            }
+            val rig =
+                rig(phoneVibrator = phone) {
+                    onscreenController = setting != "onscreenController"
+                    vibrateOsc = setting != "vibrateOsc"
+                    onlyL3R3 = setting == "onlyL3R3"
+                }
             rig.rumble(0x6400, 0x6400)
             calls += Hardware.calls(phone).toList()
         }
@@ -199,10 +202,11 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     @Test
     fun `the phone does not vibrate for the on-screen controller on another controller number`() {
         val phone = Hardware.vibrator()
-        val rig = rig(phoneVibrator = phone) {
-            onscreenController = true
-            vibrateOsc = true
-        }
+        val rig =
+            rig(phoneVibrator = phone) {
+                onscreenController = true
+                vibrateOsc = true
+            }
 
         rig.rumble(0x6400, 0x6400, controller = 1)
 
@@ -212,10 +216,11 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     @Test
     fun `the phone without amplitude control gets a duty cycle for the on-screen controller`() {
         val phone = Hardware.vibrator(amplitudeControl = false)
-        val rig = rig(phoneVibrator = phone) {
-            onscreenController = true
-            vibrateOsc = true
-        }
+        val rig =
+            rig(phoneVibrator = phone) {
+                onscreenController = true
+                vibrateOsc = true
+            }
 
         rig.rumble(0xFF00, 0)
 
@@ -225,10 +230,11 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     @Test
     fun `a pad without a vibrator makes the phone vibrate when the setting asks for it`() {
         val phone = Hardware.vibrator()
-        val rig = rig(phoneVibrator = phone) {
-            vibrateFallbackToDevice = true
-            vibrateFallbackToDeviceStrength = 100
-        }
+        val rig =
+            rig(phoneVibrator = phone) {
+                vibrateFallbackToDevice = true
+                vibrateFallbackToDeviceStrength = 100
+            }
         rig.wake(rig.connectPad())
 
         rig.rumble(0x8000, 0)
@@ -241,10 +247,11 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
         val results = mutableListOf<VibratorCall>()
         for ((strength, low) in listOf(100 to 0xFFFF, 50 to 0xFFFF, 200 to 0x8000, 100 to 0x8000)) {
             val phone = Hardware.vibrator()
-            val rig = rig(phoneVibrator = phone) {
-                vibrateFallbackToDevice = true
-                vibrateFallbackToDeviceStrength = strength
-            }
+            val rig =
+                rig(phoneVibrator = phone) {
+                    vibrateFallbackToDevice = true
+                    vibrateFallbackToDeviceStrength = strength
+                }
             rig.wake(rig.connectPad())
             rig.rumble(low, 0)
             results += Hardware.calls(phone).single()
@@ -263,10 +270,11 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     @Test
     fun `the fallback strength applies to the high motor as well`() {
         val phone = Hardware.vibrator()
-        val rig = rig(phoneVibrator = phone) {
-            vibrateFallbackToDevice = true
-            vibrateFallbackToDeviceStrength = 50
-        }
+        val rig =
+            rig(phoneVibrator = phone) {
+                vibrateFallbackToDevice = true
+                vibrateFallbackToDeviceStrength = 50
+            }
         rig.wake(rig.connectPad())
 
         rig.rumble(0, 0xFFFF)
@@ -277,10 +285,11 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     @Test
     fun `the fallback strength scales the unsigned high motor value before the cut`() {
         val phone = Hardware.vibrator()
-        val rig = rig(phoneVibrator = phone) {
-            vibrateFallbackToDevice = true
-            vibrateFallbackToDeviceStrength = 100
-        }
+        val rig =
+            rig(phoneVibrator = phone) {
+                vibrateFallbackToDevice = true
+                vibrateFallbackToDeviceStrength = 100
+            }
         rig.wake(rig.connectPad())
 
         rig.rumble(0, 0xFFFF)
@@ -292,10 +301,11 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     @Test
     fun `a fallback strength of zero cancels the phone`() {
         val phone = Hardware.vibrator()
-        val rig = rig(phoneVibrator = phone) {
-            vibrateFallbackToDevice = true
-            vibrateFallbackToDeviceStrength = 0
-        }
+        val rig =
+            rig(phoneVibrator = phone) {
+                vibrateFallbackToDevice = true
+                vibrateFallbackToDeviceStrength = 0
+            }
         rig.wake(rig.connectPad())
 
         rig.rumble(0xFFFF, 0xFFFF)
@@ -317,10 +327,11 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     @Test
     fun `the phone stays quiet for another controller number`() {
         val phone = Hardware.vibrator()
-        val rig = rig(phoneVibrator = phone) {
-            vibrateFallbackToDevice = true
-            vibrateFallbackToDeviceStrength = 100
-        }
+        val rig =
+            rig(phoneVibrator = phone) {
+                vibrateFallbackToDevice = true
+                vibrateFallbackToDeviceStrength = 100
+            }
         rig.wake(rig.connectPad())
 
         rig.rumble(0x6400, 0x6400, controller = 1)
@@ -331,10 +342,11 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     @Test
     fun `the phone does not stand in for a pad that has a vibrator`() {
         val phone = Hardware.vibrator()
-        val rig = rig(phoneVibrator = phone) {
-            vibrateFallbackToDevice = true
-            vibrateFallbackToDeviceStrength = 100
-        }
+        val rig =
+            rig(phoneVibrator = phone) {
+                vibrateFallbackToDevice = true
+                vibrateFallbackToDeviceStrength = 100
+            }
         rig.wake(rig.connectPad(features = DeviceFeatures(vibrator = padVibrator)))
 
         rig.rumble(0x6400, 0x6400)
@@ -346,10 +358,11 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     @Test
     fun `the on-screen setting is not used when a pad answered the controller number`() {
         val phone = Hardware.vibrator()
-        val rig = rig(phoneVibrator = phone) {
-            onscreenController = true
-            vibrateOsc = true
-        }
+        val rig =
+            rig(phoneVibrator = phone) {
+                onscreenController = true
+                vibrateOsc = true
+            }
         rig.wake(rig.connectPad())
 
         rig.rumble(0x6400, 0x6400)
@@ -368,7 +381,10 @@ class RumbleSingleVibratorTest : RumbleSingleVibratorContract() {
         VibratorCall.Play(Effects.waveform(on, off), VibrationExpectations.media())
 }
 
-/** Android 12: the pad has a vibrator manager API but a single vibrator is driven with a game `AudioAttributes`. */
+/**
+ * Android 12: the pad has a vibrator manager API but a single vibrator is driven with a game
+ * `AudioAttributes`.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [31])
 class RumbleSingleVibratorAndroid12Test : RumbleSingleVibratorContract() {

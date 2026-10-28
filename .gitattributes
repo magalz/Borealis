@@ -16,6 +16,10 @@ apps/android/borealis/** text=auto eol=lf
 apps/android/build-logic/** text=auto eol=lf
 apps/android/app/src/main/jni/borealis/** text=auto eol=lf
 
+# The Kotlin of the :app module is Borealis code since ADR 0054 and Sprints 12 to 14 (the inherited
+# Java is gone), so it is normalized to LF as well. The rest of apps/android/app keeps -text.
+apps/android/app/src/**/*.kt text eol=lf
+
 # Binary assets
 *.png binary
 *.jpg binary

@@ -105,7 +105,8 @@ class AdaptiveShortcutIconTest {
         val YELLOW = Color.parseColor("#FFFFE000")
         val RED = Color.parseColor("#FFE02020")
 
-        // The first and last colour of the launcher background gradient: the borealis_launcher_background vector.
+        // The first and last colour of the launcher background gradient: the
+        // borealis_launcher_background vector.
         val SKY_TOP = Color.parseColor("#FF1B0E3A")
         val SKY_BOTTOM = Color.parseColor("#FF3D1E7E")
     }

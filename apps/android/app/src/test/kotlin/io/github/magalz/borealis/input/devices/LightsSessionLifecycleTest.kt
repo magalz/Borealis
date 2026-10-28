@@ -10,8 +10,8 @@ import org.junit.Test
  * A pad that the host painted keeps a session with the device's lights open. The handler closes it
  * when the context goes (the device is removed, or the handler stops) and hands it to the new
  * context when the device only changed, so that the color stays and the host sees no gap. The
- * session is the framework's `LightsManager.LightsSession`; the tests give the context one of
- * their own ([recordingLightsSession]), which records what the handler asks of it.
+ * session is the framework's `LightsManager.LightsSession`; the tests give the context one of their
+ * own ([recordingLightsSession]), which records what the handler asks of it.
  */
 class LightsSessionLifecycleTest : DevicesTestBase() {
     private val hat = listOf(MotionEvent.AXIS_HAT_X, MotionEvent.AXIS_HAT_Y).map { Axis(it) }
@@ -73,7 +73,7 @@ class LightsSessionLifecycleTest : DevicesTestBase() {
         val session = recordingLightsSession()
         setField(old.context, "lightsSession", session)
 
-        val after = pad(1, axes = STICKS_AND_Z + hat)
+        val after = pad(1) { axes = STICKS_AND_Z + hat }
         disconnectPad(before)
         connectPad(after)
         rig.change(after)
@@ -92,7 +92,7 @@ class LightsSessionLifecycleTest : DevicesTestBase() {
         setField(old.context, "lightsSession", session)
         setField(old.context, "ledArgbValue", 0xFF112233.toInt())
 
-        val after = pad(1, axes = STICKS_AND_Z + hat)
+        val after = pad(1) { axes = STICKS_AND_Z + hat }
         disconnectPad(before)
         connectPad(after)
         rig.change(after)

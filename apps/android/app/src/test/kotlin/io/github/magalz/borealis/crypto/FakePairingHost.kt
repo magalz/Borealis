@@ -40,7 +40,9 @@ private fun hexOf(bytes: ByteArray, digits: String): String = buildString {
     }
 }
 
-/** Strict, case-insensitive hex decoding: the reference that the code under test is held against. */
+/**
+ * Strict, case-insensitive hex decoding: the reference that the code under test is held against.
+ */
 internal fun unhex(text: String): ByteArray {
     require(text.length % 2 == 0) { "odd hex length" }
     return ByteArray(text.length / 2) { text.substring(it * 2, it * 2 + 2).toInt(16).toByte() }
@@ -81,7 +83,8 @@ internal class PairingReply(val status: Int, val reason: String, val body: Strin
  * A host that runs the four phases of the GameStream pairing with its own implementation of the
  * protocol (`javax.crypto`, `java.security`), over HTTP for the first four phases and over TLS,
  * with a client certificate, for the challenge. It checks what a real host checks: the AES key from
- * the salt and the PIN, the challenge hashes and the client signature. What it saw is in [requests].
+ * the salt and the PIN, the challenge hashes and the client signature. What it saw is in
+ * [requests].
  *
  * [intercept] decides each answer; its `default` argument computes the answer of a correct host.
  */
@@ -285,7 +288,9 @@ internal class FakePairingHost(
                 .generateCertificate(ByteArrayInputStream(unhex(query.getValue("clientcert"))))
                 as X509Certificate
         aesKey = hash(salt + pinBytes).copyOf(AES_BLOCK)
-        return PairingReply.root("<paired>1</paired><plaincert>${hex(hostIdentity.pem)}</plaincert>")
+        return PairingReply.root(
+            "<paired>1</paired><plaincert>${hex(hostIdentity.pem)}</plaincert>"
+        )
     }
 
     private fun clientChallenge(encrypted: String): PairingReply {

@@ -24,9 +24,7 @@ class KeyboardTranslatorTableCharacterizationTest {
     @Test
     fun `every key code in the table, and no other, has a code behind the prefix`() {
         val actual =
-            (SWEEP_FROM..SWEEP_TO)
-                .associateWith { translate(it) }
-                .filterValues { it != NO_KEY }
+            (SWEEP_FROM..SWEEP_TO).associateWith { translate(it) }.filterValues { it != NO_KEY }
 
         assertThat(actual).isEqualTo(TRANSLATED.mapValues { it.value.toShort() })
     }
@@ -42,15 +40,18 @@ class KeyboardTranslatorTableCharacterizationTest {
     @Test
     fun `the digits, the letters, the numpad digits and the function keys count up from one base`() {
         for (offset in 0..9) {
-            assertThat(translate(KeyEvent.KEYCODE_0 + offset)).isEqualTo((0x8030 + offset).toShort())
+            assertThat(translate(KeyEvent.KEYCODE_0 + offset))
+                .isEqualTo((0x8030 + offset).toShort())
             assertThat(translate(KeyEvent.KEYCODE_NUMPAD_0 + offset))
                 .isEqualTo((0x8060 + offset).toShort())
         }
         for (offset in 0..25) {
-            assertThat(translate(KeyEvent.KEYCODE_A + offset)).isEqualTo((0x8041 + offset).toShort())
+            assertThat(translate(KeyEvent.KEYCODE_A + offset))
+                .isEqualTo((0x8041 + offset).toShort())
         }
         for (offset in 0..11) {
-            assertThat(translate(KeyEvent.KEYCODE_F1 + offset)).isEqualTo((0x8070 + offset).toShort())
+            assertThat(translate(KeyEvent.KEYCODE_F1 + offset))
+                .isEqualTo((0x8070 + offset).toShort())
             assertThat(translate(KeyEvent.KEYCODE_F13 + offset))
                 .isEqualTo((0x807C + offset).toShort())
         }

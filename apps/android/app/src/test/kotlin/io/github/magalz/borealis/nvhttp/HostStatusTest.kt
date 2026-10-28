@@ -165,7 +165,9 @@ class HostStatusTest {
             val body = checkNotNull(Regex("<root[^>]*/>").find(text)).value
 
             val error =
-                assertThrows(HostHttpResponseException::class.java) { http.getComputerDetails(body) }
+                assertThrows(HostHttpResponseException::class.java) {
+                    http.getComputerDetails(body)
+                }
 
             assertWithMessage("$version $name").that(error.errorCode).isEqualTo(404)
             assertWithMessage("$version $name").that(error.errorMessage).isNull()

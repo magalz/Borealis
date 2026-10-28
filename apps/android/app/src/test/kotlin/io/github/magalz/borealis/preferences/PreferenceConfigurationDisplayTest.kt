@@ -17,7 +17,10 @@ import org.robolectric.shadows.ShadowDisplayManager
  */
 @RunWith(RobolectricTestRunner::class)
 class PreferenceConfigurationDisplayTest {
-    /** A display whose mode is [width] by [height] pixels (the qualifiers use mdpi, one dp per pixel). */
+    /**
+     * A display whose mode is [width] by [height] pixels (the qualifiers use mdpi, one dp per
+     * pixel).
+     */
     private fun displayOf(width: Int, height: Int): Display {
         val id = ShadowDisplayManager.addDisplay("w${width}dp-h${height}dp-mdpi")
         val context: Context = ApplicationProvider.getApplicationContext()

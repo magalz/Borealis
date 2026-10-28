@@ -6,10 +6,11 @@ import android.os.Binder
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.computers.ComputerManagerService
+import io.github.magalz.borealis.testing.WorkerDispatcherRule
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -17,6 +18,8 @@ import org.robolectric.Shadows.shadowOf
 
 @RunWith(RobolectricTestRunner::class)
 class ServiceCmsConnectorTest {
+    @get:Rule val workers = WorkerDispatcherRule()
+
     private val app = ApplicationProvider.getApplicationContext<Application>()
 
     @Test
@@ -27,13 +30,14 @@ class ServiceCmsConnectorTest {
                 Binder(),
             )
         val connecting =
-            CoroutineScope(Dispatchers.Default).launch {
-                ServiceCmsConnector(app, Dispatchers.IO) {}.connect()
+            CoroutineScope(workers.dispatcher).launch {
+                ServiceCmsConnector(app, workers.dispatcher) {}.connect()
             }
         // The service callback needs the main looper, which this test never runs.
         val deadline = System.currentTimeMillis() + WAIT_MS
-        while (shadowOf(app).boundServiceConnections.isEmpty() &&
-            System.currentTimeMillis() < deadline) {
+        while (
+            shadowOf(app).boundServiceConnections.isEmpty() && System.currentTimeMillis() < deadline
+        ) {
             Thread.sleep(POLL_MS)
         }
         assertThat(shadowOf(app).boundServiceConnections).hasSize(1)

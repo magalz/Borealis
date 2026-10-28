@@ -42,7 +42,7 @@ object StreamFailures {
         errorCode: Int,
         portFlags: Int,
         session: SessionState,
-        rtspStageName: () -> String = {
+        rtspStageName: () -> String? = {
             MoonBridge.getStageName(ResumeCollisions.STAGE_RTSP_HANDSHAKE)
         },
     ): FailureFacts {
@@ -77,7 +77,7 @@ object StreamFailures {
             facts,
             portBlocked,
             { id, args -> context.getString(id, *args) },
-            { MoonBridge.stringifyPortFlags(it, ", ") },
+            { checkNotNull(MoonBridge.stringifyPortFlags(it, ", ")) },
         )
 
     internal fun failure(

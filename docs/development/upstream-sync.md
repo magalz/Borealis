@@ -63,8 +63,22 @@ package path:
   `RightTrigger.java`, `VirtualController.java`, `VirtualControllerConfigurationLoader.java`,
   `VirtualControllerElement.java`
 
-The Java that remains is in the Sprint 14 area of the roadmap. Upstream fixes
-for those files still come by cherry-pick until their area is converted.
+Sprint 14 converted these last Java paths under `apps/android/app/src/main/java/`. No whole
+file was removed. The removals of the sprint are methods, fields and constants (see the
+roadmap). The converted code is in `apps/android/app/src/main/kotlin/`, at the same
+package path:
+
+- `com/limelight/Game.java`
+- `binding/audio/AndroidAudioRenderer.java`
+- `binding/video/CrashListener.java`, `MediaCodecDecoderRenderer.java`,
+  `MediaCodecHelper.java`, `VideoStats.java`
+- `nvstream/jni/MoonBridge.java` (a Kotlin `object`, see
+  [ADR 0060](../adr/0060-convert-moonbridge-to-a-kotlin-object.md))
+
+No Java is left in the app, so an upstream commit to any `.java` file is ported by hand into
+the Kotlin file. Upstream fixes to the files that are not Java still come by cherry-pick: the
+resources, the manifest and the Gradle files of `apps/android/`, the inherited native code under
+`app/src/main/jni/moonlight-core/`, and moonlight-common-c.
 
 ## 1. Prepare
 

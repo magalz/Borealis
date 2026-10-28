@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.binding.crypto.AndroidCryptoProvider
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.io.File
 import java.math.BigInteger
 import java.security.KeyFactory
@@ -47,7 +48,8 @@ class AndroidCryptoProviderTest {
             as X509Certificate
 
     private fun privateKeyOf(pkcs8: ByteArray): RSAPrivateCrtKey =
-        KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(pkcs8)) as RSAPrivateCrtKey
+        KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(pkcs8))
+            as RSAPrivateCrtKey
 
     /** The files of an identity that something else than the provider has written. */
     private fun writeIdentity(identity: TestIdentity) {
@@ -89,10 +91,10 @@ class AndroidCryptoProviderTest {
 
     @Test
     fun `the first use logs that it generates and saves an identity`() {
-        LimeLogCapture().use { log ->
+        LimeLogCapture().start().use { log ->
             AndroidCryptoProvider(context).clientCertificate
 
-            assertThat(log.records)
+            assertThat(log.entries)
                 .containsExactly(
                     Level.INFO to "Missing cert or key; need to generate a new one",
                     Level.INFO to "Generated a new key pair",
@@ -106,13 +108,13 @@ class AndroidCryptoProviderTest {
     fun `a provider that loads an identity logs nothing`() {
         AndroidCryptoProvider(context).clientCertificate
 
-        LimeLogCapture().use { log ->
+        LimeLogCapture().start().use { log ->
             val provider = AndroidCryptoProvider(context)
             provider.clientCertificate
             provider.clientPrivateKey
             provider.pemEncodedClientCertificate
 
-            assertThat(log.records).isEmpty()
+            assertThat(log.entries).isEmpty()
         }
     }
 
@@ -221,7 +223,10 @@ class AndroidCryptoProviderTest {
         assertThat(second.pemEncodedClientCertificate).isEqualTo(certBytes)
         assertThat(certFile.readBytes()).isEqualTo(certBytes)
         assertThat(keyFile.readBytes()).isEqualTo(keyBytes)
-        assertSamePair(checkNotNull(second.clientCertificate), checkNotNull(second.clientPrivateKey))
+        assertSamePair(
+            checkNotNull(second.clientCertificate),
+            checkNotNull(second.clientPrivateKey),
+        )
     }
 
     @Test
@@ -251,7 +256,10 @@ class AndroidCryptoProviderTest {
             .isEqualTo((identity.keyPair.private as RSAPrivateCrtKey).privateExponent)
         assertThat(certFile.readBytes()).isEqualTo(identity.pem)
         assertThat(keyFile.readBytes()).isEqualTo(identity.keyPair.private.encoded)
-        assertSamePair(checkNotNull(provider.clientCertificate), checkNotNull(provider.clientPrivateKey))
+        assertSamePair(
+            checkNotNull(provider.clientCertificate),
+            checkNotNull(provider.clientPrivateKey),
+        )
     }
 
     @Test
@@ -263,7 +271,8 @@ class AndroidCryptoProviderTest {
 
         assertThat(certificate.encoded).isNotEqualTo(TestIdentities.clientRsa.certificate.encoded)
         assertThat(keyFile.exists()).isTrue()
-        assertThat(keyFile.readBytes()).isNotEqualTo(TestIdentities.clientRsa.keyPair.private.encoded)
+        assertThat(keyFile.readBytes())
+            .isNotEqualTo(TestIdentities.clientRsa.keyPair.private.encoded)
         assertThat(parse(certFile.readBytes()).encoded).isEqualTo(certificate.encoded)
         assertSamePair(certificate, privateKeyOf(keyFile.readBytes()))
     }
@@ -276,7 +285,8 @@ class AndroidCryptoProviderTest {
         val certificate = checkNotNull(AndroidCryptoProvider(context).clientCertificate)
 
         assertThat(certificate.encoded).isNotEqualTo(TestIdentities.clientRsa.certificate.encoded)
-        assertThat(keyFile.readBytes()).isNotEqualTo(TestIdentities.clientRsa.keyPair.private.encoded)
+        assertThat(keyFile.readBytes())
+            .isNotEqualTo(TestIdentities.clientRsa.keyPair.private.encoded)
         assertSamePair(certificate, privateKeyOf(keyFile.readBytes()))
     }
 
@@ -285,15 +295,16 @@ class AndroidCryptoProviderTest {
         writeIdentity(TestIdentities.clientRsa)
         certFile.writeText("this is not a certificate")
 
-        val log = LimeLogCapture()
+        val log = LimeLogCapture().start()
         val certificate = checkNotNull(AndroidCryptoProvider(context).clientCertificate)
         log.close()
 
-        assertThat(log.records.first()).isEqualTo(Level.WARNING to "Corrupted certificate")
+        assertThat(log.entries.first()).isEqualTo(Level.WARNING to "Corrupted certificate")
 
         assertThat(certificate.encoded).isNotEqualTo(TestIdentities.clientRsa.certificate.encoded)
         assertThat(parse(certFile.readBytes()).encoded).isEqualTo(certificate.encoded)
-        assertThat(keyFile.readBytes()).isNotEqualTo(TestIdentities.clientRsa.keyPair.private.encoded)
+        assertThat(keyFile.readBytes())
+            .isNotEqualTo(TestIdentities.clientRsa.keyPair.private.encoded)
     }
 
     @Test
@@ -301,12 +312,12 @@ class AndroidCryptoProviderTest {
         writeIdentity(TestIdentities.clientRsa)
         keyFile.writeText("this is not a key")
 
-        val log = LimeLogCapture()
+        val log = LimeLogCapture().start()
         val provider = AndroidCryptoProvider(context)
         val certificate = checkNotNull(provider.clientCertificate)
         log.close()
 
-        assertThat(log.records.first()).isEqualTo(Level.WARNING to "Corrupted key")
+        assertThat(log.entries.first()).isEqualTo(Level.WARNING to "Corrupted key")
 
         assertThat(certificate.encoded).isNotEqualTo(TestIdentities.clientRsa.certificate.encoded)
         assertThat(provider.pemEncodedClientCertificate).isEqualTo(certFile.readBytes())
@@ -336,13 +347,14 @@ class AndroidCryptoProviderTest {
 
         assertThat(certificate.encoded).isNotEqualTo(TestIdentities.clientRsa.certificate.encoded)
         assertThat(parse(certFile.readBytes()).encoded).isEqualTo(certificate.encoded)
-        assertThat(keyFile.readBytes()).isNotEqualTo(TestIdentities.clientRsa.keyPair.private.encoded)
+        assertThat(keyFile.readBytes())
+            .isNotEqualTo(TestIdentities.clientRsa.keyPair.private.encoded)
     }
 
     @Test
     fun `a certificate path that cannot be written still gives an identity in memory`() {
         certFile.mkdirs()
-        val log = LimeLogCapture()
+        val log = LimeLogCapture().start()
         val provider = AndroidCryptoProvider(context)
 
         val certificate = provider.clientCertificate

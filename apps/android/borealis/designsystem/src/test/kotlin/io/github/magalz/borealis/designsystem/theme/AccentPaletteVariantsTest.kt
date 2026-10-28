@@ -32,8 +32,8 @@ class AccentPaletteVariantsTest {
             BorealisLook(accent = accent, colourVision = vision, highContrast = highContrast)
         )
 
-    @Suppress("LongParameterList") // the roles of a set and its high contrast roles
-    private class Variant(
+    /** The roles of a set and its high contrast roles. */
+    private data class Variant(
         val accent: Color,
         val accentSoft: Color,
         val accentStrong: Color,

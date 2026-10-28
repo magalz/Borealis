@@ -21,8 +21,8 @@ import org.robolectric.util.ReflectionHelpers.ClassParameter
 /**
  * What the framework tells the handler about the vibrators and the lights of an input device.
  * Robolectric answers every one of those questions with null, which the handler does not expect
- * from a real device, so [ShadowDeviceHardware] answers them from here. The sensors of a device
- * are the ones Robolectric's sensor manager has (they are shared by every sensor manager).
+ * from a real device, so [ShadowDeviceHardware] answers them from here. The sensors of a device are
+ * the ones Robolectric's sensor manager has (they are shared by every sensor manager).
  */
 data class Hardware(
     /** How many vibrators the device's vibrator manager has. */
@@ -129,7 +129,11 @@ class ShadowDeviceHardware {
     @Implementation
     fun isExternal(): Boolean {
         check(!DeviceHardware.externalFails) { "the framework cannot say" }
-        return Shadow.directlyOn<Boolean, InputDevice>(device, InputDevice::class.java, "isExternal")
+        return Shadow.directlyOn<Boolean, InputDevice>(
+            device,
+            InputDevice::class.java,
+            "isExternal",
+        )
     }
 }
 

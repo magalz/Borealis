@@ -43,7 +43,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.assertPixel
 import io.github.magalz.borealis.designsystem.pixelAt
-import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors

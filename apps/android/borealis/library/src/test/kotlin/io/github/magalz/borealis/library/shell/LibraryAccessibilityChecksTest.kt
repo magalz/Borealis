@@ -21,6 +21,7 @@ import io.github.magalz.borealis.designsystem.testing.AcceptedFinding
 import io.github.magalz.borealis.designsystem.testing.NoTouchOnTv
 import io.github.magalz.borealis.designsystem.testing.StaysAsSnackbar
 import io.github.magalz.borealis.designsystem.testing.assertAccessible
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.testing.showing
 import io.github.magalz.borealis.designsystem.testing.taggedWith
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -41,7 +42,6 @@ import io.github.magalz.borealis.library.pairing.PairingUiState
 import io.github.magalz.borealis.library.testing.HANDHELD
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.TV
-import io.github.magalz.borealis.library.testing.setContentInKeyboardMode
 import org.hamcrest.CoreMatchers.anyOf
 import org.junit.Rule
 import org.junit.Test

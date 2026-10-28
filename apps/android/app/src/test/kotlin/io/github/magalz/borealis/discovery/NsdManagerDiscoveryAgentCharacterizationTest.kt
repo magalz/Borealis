@@ -7,6 +7,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.mdns.MdnsComputer
 import com.limelight.nvstream.mdns.NsdManagerDiscoveryAgent
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.net.InetAddress
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
@@ -21,8 +22,8 @@ import org.robolectric.annotation.Config
 
 /**
  * The agent that discovers hosts with the Android `NsdManager` (Android 14 and later): which
- * discovery it asks for, how it follows the start, the failures and the stop of that discovery,
- * and which computers it reports from the services that the platform resolves. [HoldingNsdManager]
+ * discovery it asks for, how it follows the start, the failures and the stop of that discovery, and
+ * which computers it reports from the services that the platform resolves. [HoldingNsdManager]
  * stands in for the platform and lets the test confirm a start when it chooses.
  *
  * Characterization: these tests pass on the Java class and on its Kotlin conversion.
@@ -30,10 +31,11 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [HoldingNsdManager::class])
 class NsdManagerDiscoveryAgentCharacterizationTest {
-    @get:Rule val log = LimeLogRecords()
+    @get:Rule val log = LimeLogCapture()
 
     private val app = ApplicationProvider.getApplicationContext<Application>()
-    private val platform = shadowOf(app.getSystemService(NsdManager::class.java)) as HoldingNsdManager
+    private val platform =
+        shadowOf(app.getSystemService(NsdManager::class.java)) as HoldingNsdManager
     private val listener = RecordingDiscoveryListener()
     private val agent = NsdManagerDiscoveryAgent(app, listener)
 
@@ -107,7 +109,8 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
         assertThat(listener.failures.map { it.message })
             .containsExactly("onStartDiscoveryFailed(): 3")
         assertThat(listener.failures.single()).isInstanceOf(RuntimeException::class.java)
-        assertThat(log.messages(Level.SEVERE)).containsExactly("NSD: Service discovery start failed: 3")
+        assertThat(log.messages(Level.SEVERE))
+            .containsExactly("NSD: Service discovery start failed: 3")
 
         agent.startDiscovery(INTERVAL_MS)
         assertThat(discoveries()).hasSize(2)
@@ -122,7 +125,8 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
         stale.onStartDiscoveryFailed(SERVICE_TYPE, 3)
 
         assertThat(listener.failures).isEmpty()
-        assertThat(log.messages(Level.SEVERE)).containsExactly("NSD: Service discovery start failed: 3")
+        assertThat(log.messages(Level.SEVERE))
+            .containsExactly("NSD: Service discovery start failed: 3")
     }
 
     @Test
@@ -324,7 +328,8 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
 
         discovery.onStopDiscoveryFailed(SERVICE_TYPE, 4)
 
-        assertThat(log.messages(Level.SEVERE)).containsExactly("NSD: Service discovery stop failed: 4")
+        assertThat(log.messages(Level.SEVERE))
+            .containsExactly("NSD: Service discovery stop failed: 4")
         agent.startDiscovery(INTERVAL_MS)
         assertThat(discoveries()).hasSize(2)
     }
@@ -355,7 +360,8 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
 
     @Test
     fun `a lost service is forgotten, so stopping later does not unregister it again`() {
-        // The platform refuses a callback that is not registered, so a second unregistration throws.
+        // The platform refuses a callback that is not registered, so a second unregistration
+        // throws.
         val discovery = startAndConfirm()
         val found = service("Den PC")
         discovery.onServiceFound(found)

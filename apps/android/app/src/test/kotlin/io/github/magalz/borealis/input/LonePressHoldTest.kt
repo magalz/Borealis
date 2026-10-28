@@ -7,6 +7,7 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket.A_FLAG
 import com.limelight.nvstream.input.ControllerPacket.BACK_FLAG
 import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -18,7 +19,7 @@ import org.robolectric.shadows.ShadowToast
  */
 @RunWith(RobolectricTestRunner::class)
 class LonePressHoldTest {
-    private val rig = ControllerHandlerRig()
+    @get:Rule val rig = ControllerHandlerRig()
 
     private fun sent(button: Int) = rig.buttons().any { it and button != 0 }
 

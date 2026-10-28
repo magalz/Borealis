@@ -32,16 +32,18 @@ class HostInfoTextTest {
 
     private val english = strings("values")
 
-    private fun caps(
-        family: HostFamily = HostFamily.SUNSHINE,
-        version: List<Int> = listOf(7, 1, 431, -1),
-        hevc: Boolean = false,
-        hevcMain10: Boolean = false,
-        av1: Boolean = false,
-        av1Main10: Boolean = false,
-        yuv444: Boolean = false,
-        pyroWave: Set<PyroWaveProfile> = emptySet(),
-    ) = HostCaps(family, version, hevc, hevcMain10, av1, av1Main10, yuv444, pyroWave)
+    /** A Sunshine host that offers H.264 only, which is what every host offers. */
+    private val sunshine =
+        HostCaps(
+            family = HostFamily.SUNSHINE,
+            version = listOf(7, 1, 431, -1),
+            hevc = false,
+            hevcMain10 = false,
+            av1 = false,
+            av1Main10 = false,
+            yuv444 = false,
+            pyroWaveProfiles = emptySet(),
+        )
 
     private fun info(caps: HostCaps) = BorealisHostInfo(caps, httpsPort = 47984, httpPort = 47989)
 
@@ -52,12 +54,12 @@ class HostInfoTextTest {
     fun `a LuminalShine host shows its software, codecs, PyroWave profiles and ports`() {
         val text =
             block(
-                caps(
+                sunshine.copy(
                     hevc = true,
                     hevcMain10 = true,
                     av1 = true,
                     yuv444 = true,
-                    pyroWave = setOf(PyroWaveProfile.HDR_420, PyroWaveProfile.SDR_420),
+                    pyroWaveProfiles = setOf(PyroWaveProfile.HDR_420, PyroWaveProfile.SDR_420),
                 )
             )
 
@@ -77,38 +79,46 @@ class HostInfoTextTest {
     @Test
     fun `every codec flag has its own label`() {
         val text =
-            block(caps(hevc = true, hevcMain10 = true, av1 = true, av1Main10 = true, yuv444 = true))
+            block(
+                sunshine.copy(
+                    hevc = true,
+                    hevcMain10 = true,
+                    av1 = true,
+                    av1Main10 = true,
+                    yuv444 = true,
+                )
+            )
 
         assertThat(text).contains("Video: HEVC, HEVC 10-bit, AV1, AV1 10-bit, 4:4:4")
     }
 
     @Test
     fun `a host without HEVC or AV1 is H264 only`() {
-        assertThat(block(caps())).contains("Video: H.264 only")
+        assertThat(block(sunshine)).contains("Video: H.264 only")
     }
 
     @Test
     fun `a host without PyroWave says it is off`() {
-        assertThat(block(caps())).contains("PyroWave: off")
+        assertThat(block(sunshine)).contains("PyroWave: off")
     }
 
     @Test
     fun `every PyroWave profile has its own label in a fixed order`() {
-        val text = block(caps(pyroWave = PyroWaveProfile.entries.toSet()))
+        val text = block(sunshine.copy(pyroWaveProfiles = PyroWaveProfile.entries.toSet()))
 
         assertThat(text).contains("PyroWave: SDR 4:2:0, SDR 4:4:4, HDR 4:2:0, HDR 4:4:4")
     }
 
     @Test
     fun `a GeForce Experience host shows its version`() {
-        val text = block(caps(family = HostFamily.GFE, version = listOf(3, 28, 0, 677)))
+        val text = block(sunshine.copy(family = HostFamily.GFE, version = listOf(3, 28, 0, 677)))
 
         assertThat(text).contains("Host software: GeForce Experience, version 3.28.0.677")
     }
 
     @Test
     fun `an unknown host shows no version`() {
-        val text = block(caps(family = HostFamily.UNKNOWN, version = listOf(0, 0, 0, 0)))
+        val text = block(sunshine.copy(family = HostFamily.UNKNOWN, version = listOf(0, 0, 0, 0)))
 
         assertThat(text).contains("Host software: Unknown")
         assertThat(text).doesNotContain("version")
@@ -116,7 +126,7 @@ class HostInfoTextTest {
 
     @Test
     fun `the block follows the details text after a blank line`() {
-        val text = HostInfoText.appendTo(english, "Name: PC\nUUID: 1\n", info(caps()))
+        val text = HostInfoText.appendTo(english, "Name: PC\nUUID: 1\n", info(sunshine))
 
         assertThat(text).startsWith("Name: PC\nUUID: 1\n\nHost capabilities\n")
     }

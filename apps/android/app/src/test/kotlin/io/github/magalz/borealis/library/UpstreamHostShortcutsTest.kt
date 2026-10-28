@@ -35,7 +35,8 @@ class UpstreamHostShortcutsTest {
     private val boxArt = FakeBoxArt()
     private val shortcuts = UpstreamHostShortcuts(context, UnconfinedTestDispatcher(), boxArt)
 
-    // ShortcutInfo.getIcon and the Icon accessors are hidden API: the tests read them by reflection.
+    // ShortcutInfo.getIcon and the Icon accessors are hidden API: the tests read them by
+    // reflection.
     private fun iconOf(shortcut: ShortcutInfo): Icon =
         ShortcutInfo::class.java.getMethod("getIcon").invoke(shortcut) as Icon
 
@@ -54,7 +55,8 @@ class UpstreamHostShortcutsTest {
         val shortcut = shortcutManager.dynamicShortcuts.single()
         assertThat(shortcut.id).isEqualTo("uuid-1")
         assertThat(shortcut.shortLabel.toString()).isEqualTo("Desk PC")
-        assertThat(shortcut.intent?.component?.className).isEqualTo(ShortcutTrampoline::class.java.name)
+        assertThat(shortcut.intent?.component?.className)
+            .isEqualTo(ShortcutTrampoline::class.java.name)
         assertThat(ShortcutIntentParser.parse(shortcut.intent?.extras))
             .isEqualTo(LibraryLaunchRequest.Apps("uuid-1"))
     }
@@ -152,13 +154,17 @@ class UpstreamHostShortcutsTest {
 
         // The platform (and its Robolectric shadow) rejects a pin request for a disabled shortcut.
         assertThrows(IllegalArgumentException::class.java) {
-            runBlocking { shortcuts.pinApp("uuid-1", "Desk PC", 42, "Hades II", hdrSupported = false) }
+            runBlocking {
+                shortcuts.pinApp("uuid-1", "Desk PC", 42, "Hades II", hdrSupported = false)
+            }
         }
-        assertThat(shortcuts.pinApp("uuid-1", "Desk PC", 43, "Steam", hdrSupported = false)).isTrue()
+        assertThat(shortcuts.pinApp("uuid-1", "Desk PC", 43, "Steam", hdrSupported = false))
+            .isTrue()
 
         shortcuts.appShown("uuid-1", 42)
 
-        assertThat(shortcuts.pinApp("uuid-1", "Desk PC", 42, "Hades II", hdrSupported = false)).isTrue()
+        assertThat(shortcuts.pinApp("uuid-1", "Desk PC", 42, "Hades II", hdrSupported = false))
+            .isTrue()
     }
 
     @Test
@@ -175,13 +181,21 @@ class UpstreamHostShortcutsTest {
         shortcuts.pinApp("uuid-1", "Desk PC", 42, "Hades II", hdrSupported = false)
         shortcuts.pinApp("uuid-2", "Study PC", 7, "Steam", hdrSupported = false)
 
-        shortcuts.hostForgotten(ComputerDetails().also { it.uuid = "uuid-1"; it.name = "Desk PC" })
+        shortcuts.hostForgotten(
+            ComputerDetails().also {
+                it.uuid = "uuid-1"
+                it.name = "Desk PC"
+            }
+        )
 
         // The platform (and its Robolectric shadow) rejects a pin request for a disabled shortcut.
         assertThrows(IllegalArgumentException::class.java) {
-            runBlocking { shortcuts.pinApp("uuid-1", "Desk PC", 42, "Hades II", hdrSupported = false) }
+            runBlocking {
+                shortcuts.pinApp("uuid-1", "Desk PC", 42, "Hades II", hdrSupported = false)
+            }
         }
-        assertThat(shortcuts.pinApp("uuid-2", "Study PC", 7, "Steam", hdrSupported = false)).isTrue()
+        assertThat(shortcuts.pinApp("uuid-2", "Study PC", 7, "Steam", hdrSupported = false))
+            .isTrue()
     }
 
     private companion object {

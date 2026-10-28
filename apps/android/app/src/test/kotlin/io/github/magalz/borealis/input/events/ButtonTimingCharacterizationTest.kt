@@ -13,24 +13,26 @@ import com.limelight.nvstream.input.ControllerPacket.A_FLAG
 import com.limelight.nvstream.input.ControllerPacket.BACK_FLAG
 import com.limelight.nvstream.input.ControllerPacket.LB_FLAG
 import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
-import com.limelight.nvstream.input.ControllerPacket.RB_FLAG
 import com.limelight.nvstream.input.ControllerPacket.SPECIAL_BUTTON_FLAG
 import com.limelight.nvstream.input.ControllerPacket.TOUCHPAD_FLAG
+import io.github.magalz.borealis.testing.OwnedResources
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import org.junit.Assert.assertThrows
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
  * The times `handleButtonUp` and `handleButtonDown` read from key events: the 25 ms a key is held
- * before the release goes out, the Start hold that turns the gamepad mouse on, the 100 ms in which a
- * released bumper still counts for Start, the 50 ms Guide tap, and the quit combo.
+ * before the release goes out, the Start hold that turns the gamepad mouse on, the 100 ms in which
+ * a released bumper still counts for Start, the 50 ms Guide tap, and the quit combo.
  */
 @RunWith(RobolectricTestRunner::class)
 class ButtonTimingCharacterizationTest {
-    private val rig = EventsRig()
+    @get:Rule val owned = OwnedResources()
+    @get:Rule val rig = EventsRig()
     private val pad = rig.addPad(7)
 
     // ----- The wait before a short press goes up -----
@@ -55,7 +57,9 @@ class ButtonTimingCharacterizationTest {
     private fun waited(heldMs: Long): Boolean {
         Thread.currentThread().interrupt()
         try {
-            val output = errorOutput { pad.release(KEYCODE_BUTTON_A, at = rig.now, downTime = rig.now - heldMs) }
+            val output = errorOutput {
+                pad.release(KEYCODE_BUTTON_A, at = rig.now, downTime = rig.now - heldMs)
+            }
             return "InterruptedException" in output
         } finally {
             // The handler puts the interrupt flag back, so this test must clear it.
@@ -84,7 +88,8 @@ class ButtonTimingCharacterizationTest {
         assertThat(instant).isAtLeast(22.0)
         // A long hold waits for nothing.
         assertThat(instant - long).isAtLeast(12.0)
-        // Held for 24 ms, only the missing millisecond is waited. On Windows a 1 ms sleep can take a
+        // Held for 24 ms, only the missing millisecond is waited. On Windows a 1 ms sleep can take
+        // a
         // whole timer tick (15.6 ms), so the gap is usually about 15 ms and its floor about 9.4 ms
         // (it came out at 9.6 and 9.9 in the phase review); only a clear gap is asked for.
         // The 25 ms threshold itself is pinned without a clock by the test after this one.
@@ -185,7 +190,7 @@ class ButtonTimingCharacterizationTest {
     fun `the Start hold counts from the first key down, not from its repeats`() {
         pad.press(KEYCODE_BUTTON_START)
         rig.advanceBy(600)
-        pad.press(KEYCODE_BUTTON_START, repeat = 1)
+        pad.press(KEYCODE_BUTTON_START, KeyDetail(repeat = 1))
         rig.advanceBy(200)
         pad.release(KEYCODE_BUTTON_START)
 
@@ -196,7 +201,9 @@ class ButtonTimingCharacterizationTest {
     fun `the Start hold counts from the event time of the key down, not from its down time`() {
         val start = rig.now
         // A key down that claims to have gone down a second before the event was made
-        rig.handler.handleButtonDown(pad.keyEvent(start - 1_000, start, ACTION_DOWN, KEYCODE_BUTTON_START))
+        rig.handler.handleButtonDown(
+            pad.keyEvent(start - 1_000, start, ACTION_DOWN, KEYCODE_BUTTON_START)
+        )
         rig.advanceBy(700)
 
         pad.release(KEYCODE_BUTTON_START, downTime = start - 1_000)
@@ -225,7 +232,7 @@ class ButtonTimingCharacterizationTest {
 
     @Test
     fun `the Start hold does nothing when the mouse emulation setting is off`() {
-        val off = EventsRig { mouseEmulation = false }
+        val off = owned.own(EventsRig { mouseEmulation = false })
         val offPad = off.addPad(7)
 
         offPad.press(KEYCODE_BUTTON_START)
@@ -290,7 +297,7 @@ class ButtonTimingCharacterizationTest {
     fun `a repeat of Start while Select is emulated adds Start, and the next key up still ends that Select`() {
         pad.press(KEYCODE_BUTTON_L1)
         pad.press(KEYCODE_BUTTON_START)
-        pad.press(KEYCODE_BUTTON_START, repeat = 1)
+        pad.press(KEYCODE_BUTTON_START, KeyDetail(repeat = 1))
         rig.advanceBy(100)
         assertThat(rig.buttons().last()).isEqualTo(BACK_FLAG or PLAY_FLAG)
 
@@ -376,7 +383,8 @@ class ButtonTimingCharacterizationTest {
 
     @Test
     fun `Select with the left bumper is the touchpad button on a pad that stands in for a PS4 pad`() {
-        val clickpad = rig.addPad(8, fields = mapOf("hasSelect" to true, "needsClickpadEmulation" to true))
+        val clickpad =
+            rig.addPad(8, fields = mapOf("hasSelect" to true, "needsClickpadEmulation" to true))
 
         clickpad.press(KEYCODE_BUTTON_L1)
         clickpad.press(KEYCODE_BUTTON_SELECT)
@@ -387,7 +395,8 @@ class ButtonTimingCharacterizationTest {
 
     @Test
     fun `that touchpad button ends when the bumper is let go`() {
-        val clickpad = rig.addPad(8, fields = mapOf("hasSelect" to true, "needsClickpadEmulation" to true))
+        val clickpad =
+            rig.addPad(8, fields = mapOf("hasSelect" to true, "needsClickpadEmulation" to true))
         clickpad.press(KEYCODE_BUTTON_L1)
         clickpad.press(KEYCODE_BUTTON_SELECT)
         rig.advanceBy(100)
@@ -400,7 +409,8 @@ class ButtonTimingCharacterizationTest {
 
     @Test
     fun `Select within 100 ms of the left bumper going up is the touchpad button, and 101 ms is Select`() {
-        val clickpad = rig.addPad(8, fields = mapOf("hasSelect" to true, "needsClickpadEmulation" to true))
+        val clickpad =
+            rig.addPad(8, fields = mapOf("hasSelect" to true, "needsClickpadEmulation" to true))
         clickpad.press(KEYCODE_BUTTON_L1)
         rig.advanceBy(100)
         clickpad.release(KEYCODE_BUTTON_L1)
@@ -423,7 +433,8 @@ class ButtonTimingCharacterizationTest {
 
     @Test
     fun `a button other than Select within 100 ms of the left bumper going up is not the touchpad button`() {
-        val clickpad = rig.addPad(8, fields = mapOf("hasSelect" to true, "needsClickpadEmulation" to true))
+        val clickpad =
+            rig.addPad(8, fields = mapOf("hasSelect" to true, "needsClickpadEmulation" to true))
         clickpad.press(KEYCODE_BUTTON_L1)
         rig.advanceBy(100)
         clickpad.release(KEYCODE_BUTTON_L1)
@@ -436,10 +447,11 @@ class ButtonTimingCharacterizationTest {
 
     @Test
     fun `a repeat of Select while the touchpad button is emulated adds Select, and the next key up ends that button`() {
-        val clickpad = rig.addPad(8, fields = mapOf("hasSelect" to true, "needsClickpadEmulation" to true))
+        val clickpad =
+            rig.addPad(8, fields = mapOf("hasSelect" to true, "needsClickpadEmulation" to true))
         clickpad.press(KEYCODE_BUTTON_L1)
         clickpad.press(KEYCODE_BUTTON_SELECT)
-        clickpad.press(KEYCODE_BUTTON_SELECT, repeat = 1)
+        clickpad.press(KEYCODE_BUTTON_SELECT, KeyDetail(repeat = 1))
         rig.advanceBy(100)
         assertThat(rig.buttons().last()).isEqualTo(TOUCHPAD_FLAG or BACK_FLAG)
 
@@ -632,7 +644,13 @@ class ButtonTimingCharacterizationTest {
         pressAllFour(pad)
         pad.press(KEYCODE_BUTTON_A)
         rig.advanceBy(100)
-        for (keyCode in listOf(KEYCODE_BUTTON_START, KEYCODE_BUTTON_L1, KEYCODE_BUTTON_SELECT, KEYCODE_BUTTON_R1)) {
+        for (keyCode in
+            listOf(
+                KEYCODE_BUTTON_START,
+                KEYCODE_BUTTON_L1,
+                KEYCODE_BUTTON_SELECT,
+                KEYCODE_BUTTON_R1,
+            )) {
             pad.release(keyCode)
         }
         assertThat(rig.activity.isFinishing).isFalse()

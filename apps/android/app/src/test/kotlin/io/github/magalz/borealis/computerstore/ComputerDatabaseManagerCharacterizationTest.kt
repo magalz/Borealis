@@ -54,30 +54,6 @@ class ComputerDatabaseManagerCharacterizationTest {
             )
             .use(block)
 
-    private fun SQLiteDatabase.rows(sql: String): List<List<Any?>> =
-        rawQuery(sql, null).use { cursor ->
-            buildList {
-                while (cursor.moveToNext()) {
-                    add((0 until cursor.columnCount).map { column -> cursor.valueAt(column) })
-                }
-            }
-        }
-
-    private fun Cursor.valueAt(column: Int): Any? =
-        when (getType(column)) {
-            Cursor.FIELD_TYPE_NULL -> null
-            Cursor.FIELD_TYPE_INTEGER -> getLong(column)
-            Cursor.FIELD_TYPE_BLOB -> getBlob(column).toList()
-            else -> getString(column)
-        }
-
-    /** The rows of the table as the three columns that hold a host's text, plus its certificate. */
-    private fun SQLiteDatabase.hostRows() =
-        rows(
-            "SELECT UUID, ComputerName, Addresses, MacAddress, typeof(ServerCert), ServerCert " +
-                "FROM Computers ORDER BY rowid"
-        )
-
     private fun insertRaw(
         uuid: String?,
         name: String?,
@@ -94,54 +70,15 @@ class ComputerDatabaseManagerCharacterizationTest {
         }
     }
 
-    private fun details(
-        uuid: String? = "00000000-0000-0000-0000-0000000000a1",
-        name: String? = "LUMINALSHINE-HOST-A",
-        local: AddressTuple? = null,
-        remote: AddressTuple? = null,
-        manual: AddressTuple? = null,
-        ipv6: AddressTuple? = null,
-        mac: String? = null,
-    ): ComputerDetails =
-        ComputerDetails().also {
-            it.uuid = uuid
-            it.name = name
-            it.localAddress = local
-            it.remoteAddress = remote
-            it.manualAddress = manual
-            it.ipv6Address = ipv6
-            it.macAddress = mac
-        }
-
-    private fun assertStored(details: ComputerDetails, host: FixtureHost) {
-        assertThat(details.uuid).isEqualTo(host.uuid)
-        assertThat(details.name).isEqualTo(host.name)
-        assertThat(details.localAddress).isEqualTo(host.local)
-        assertThat(details.remoteAddress).isEqualTo(host.remote)
-        assertThat(details.manualAddress).isEqualTo(host.manual)
-        assertThat(details.ipv6Address).isEqualTo(host.ipv6)
-        assertThat(details.macAddress).isEqualTo(host.mac)
-        assertThat(details.serverCert).isEqualTo(host.certificate?.let(::fixtureCertificate))
-        // The external port is not a column: it follows the remote address.
-        assertThat(details.externalPort).isEqualTo(host.remote?.port ?: NvHTTP.DEFAULT_HTTP_PORT)
-        // The list keeps no dynamic state.
-        assertThat(details.state).isEqualTo(ComputerDetails.State.UNKNOWN)
-        assertThat(details.activeAddress).isNull()
-        assertThat(details.httpsPort).isEqualTo(0)
-        assertThat(details.pairState).isNull()
-        assertThat(details.runningGameId).isEqualTo(0)
-        assertThat(details.rawAppList).isNull()
-        assertThat(details.nvidiaServer).isFalse()
-        assertThat(details.borealis).isNull()
-    }
-
     // The database file that the Java build wrote.
 
     @Test
     fun `the list that the Java build saved is read back field by field, in saving order`() {
         val computers = openFixture().getAllComputers()
 
-        assertThat(computers.map { it.uuid }).containsExactlyElementsIn(FIXTURE_HOSTS.map { it.uuid }).inOrder()
+        assertThat(computers.map { it.uuid })
+            .containsExactlyElementsIn(FIXTURE_HOSTS.map { it.uuid })
+            .inOrder()
         computers.zip(FIXTURE_HOSTS).forEach { (details, host) -> assertStored(details, host) }
     }
 
@@ -200,7 +137,9 @@ class ComputerDatabaseManagerCharacterizationTest {
                 """{"manual":{"address":"luminalshine-host-5.test","port":47989}}""",
             )
             .inOrder()
-        assertThat(rows.map { it[4] }).containsExactly("blob", "null", "null", "blob", "null").inOrder()
+        assertThat(rows.map { it[4] })
+            .containsExactly("blob", "null", "null", "blob", "null")
+            .inOrder()
         assertThat(rows.map { it[3] })
             .containsExactly("02:00:00:00:00:01", null, "02:00:00:00:00:03", null, null)
             .inOrder()
@@ -237,12 +176,16 @@ class ComputerDatabaseManagerCharacterizationTest {
 
     @Test
     fun `opening the list again keeps the table and its rows`() {
-        open().updateComputer(details(local = AddressTuple("192.0.2.1", 47989)))
+        open()
+            .updateComputer(
+                details(addresses = Addresses(local = AddressTuple("192.0.2.1", 47989)))
+            )
         managers.forEach { it.close() }
 
         val computers = open().getAllComputers()
 
-        assertThat(computers.map { it.uuid }).containsExactly("00000000-0000-0000-0000-0000000000a1")
+        assertThat(computers.map { it.uuid })
+            .containsExactly("00000000-0000-0000-0000-0000000000a1")
     }
 
     @Test
@@ -258,10 +201,13 @@ class ComputerDatabaseManagerCharacterizationTest {
 
         manager.updateComputer(
             details(
-                local = AddressTuple("192.0.2.1", 47989),
-                remote = AddressTuple("192.0.2.2", 47990),
-                manual = AddressTuple("host.test", 47991),
-                ipv6 = AddressTuple("[2001:db8::1]", 47992),
+                addresses =
+                    Addresses(
+                        local = AddressTuple("192.0.2.1", 47989),
+                        remote = AddressTuple("192.0.2.2", 47990),
+                        manual = AddressTuple("host.test", 47991),
+                        ipv6 = AddressTuple("[2001:db8::1]", 47992),
+                    )
             )
         )
 
@@ -281,13 +227,22 @@ class ComputerDatabaseManagerCharacterizationTest {
         val manager = open()
 
         manager.updateComputer(
-            details(uuid = "u-1", remote = AddressTuple("192.0.2.2", 47990), ipv6 = AddressTuple("2001:db8::1", 1))
+            details(
+                uuid = "u-1",
+                addresses =
+                    Addresses(
+                        remote = AddressTuple("192.0.2.2", 47990),
+                        ipv6 = AddressTuple("2001:db8::1", 1),
+                    ),
+            )
         )
         manager.updateComputer(details(uuid = "u-2"))
 
         assertThat(raw { it.rows("SELECT Addresses FROM Computers ORDER BY rowid") })
             .containsExactly(
-                listOf("""{"remote":{"address":"192.0.2.2","port":47990},"ipv6":{"address":"2001:db8::1","port":1}}"""),
+                listOf(
+                    """{"remote":{"address":"192.0.2.2","port":47990},"ipv6":{"address":"2001:db8::1","port":1}}"""
+                ),
                 listOf("{}"),
             )
             .inOrder()
@@ -301,7 +256,13 @@ class ComputerDatabaseManagerCharacterizationTest {
         manager.updateComputer(details(uuid = "with").also { it.serverCert = certificate })
         manager.updateComputer(details(uuid = "without"))
 
-        assertThat(raw { it.rows("SELECT UUID, typeof(ServerCert), ServerCert FROM Computers ORDER BY rowid") })
+        assertThat(
+                raw {
+                    it.rows(
+                        "SELECT UUID, typeof(ServerCert), ServerCert FROM Computers ORDER BY rowid"
+                    )
+                }
+            )
             .containsExactly(
                 listOf("with", "blob", certificate.encoded.toList()),
                 listOf("without", "null", null),
@@ -316,8 +277,15 @@ class ComputerDatabaseManagerCharacterizationTest {
         manager.updateComputer(details(uuid = "with", name = "N 1", mac = "02:00:00:00:00:09"))
         manager.updateComputer(details(uuid = "without", name = "N 2"))
 
-        assertThat(raw { it.rows("SELECT UUID, ComputerName, MacAddress FROM Computers ORDER BY rowid") })
-            .containsExactly(listOf("with", "N 1", "02:00:00:00:00:09"), listOf("without", "N 2", null))
+        assertThat(
+                raw {
+                    it.rows("SELECT UUID, ComputerName, MacAddress FROM Computers ORDER BY rowid")
+                }
+            )
+            .containsExactly(
+                listOf("with", "N 1", "02:00:00:00:00:09"),
+                listOf("without", "N 2", null),
+            )
             .inOrder()
     }
 
@@ -325,7 +293,7 @@ class ComputerDatabaseManagerCharacterizationTest {
     fun `the dynamic state and the external port of the details are not saved`() {
         val manager = open()
         val saved =
-            details(local = AddressTuple("192.0.2.1", 47989)).also {
+            details(addresses = Addresses(local = AddressTuple("192.0.2.1", 47989))).also {
                 it.externalPort = 41000
                 it.httpsPort = 47984
                 it.state = ComputerDetails.State.ONLINE
@@ -354,21 +322,32 @@ class ComputerDatabaseManagerCharacterizationTest {
         assertThat(manager.updateComputer(details(uuid = "u-1", name = "First"))).isTrue()
         assertThat(manager.updateComputer(details(uuid = "u-2", name = "Second"))).isTrue()
 
-        assertThat(manager.getAllComputers().map { it.name }).containsExactly("First", "Second").inOrder()
+        assertThat(manager.getAllComputers().map { it.name })
+            .containsExactly("First", "Second")
+            .inOrder()
     }
 
     @Test
     fun `updating a known host replaces every column of its row and moves it to the end`() {
         val manager = open()
         manager.updateComputer(
-            details(uuid = "u-1", name = "Old", local = AddressTuple("192.0.2.1", 47989), mac = "02:00:00:00:00:01")
+            details(
+                    uuid = "u-1",
+                    name = "Old",
+                    addresses = Addresses(local = AddressTuple("192.0.2.1", 47989)),
+                    mac = "02:00:00:00:00:01",
+                )
                 .also { it.serverCert = fixtureCertificate("host-ec.pem") }
         )
         manager.updateComputer(details(uuid = "u-2", name = "Other"))
 
         assertThat(
                 manager.updateComputer(
-                    details(uuid = "u-1", name = "New", remote = AddressTuple("192.0.2.9", 48000))
+                    details(
+                        uuid = "u-1",
+                        name = "New",
+                        addresses = Addresses(remote = AddressTuple("192.0.2.9", 48000)),
+                    )
                 )
             )
             .isTrue()
@@ -387,13 +366,26 @@ class ComputerDatabaseManagerCharacterizationTest {
     @Test
     fun `the external port is the port of the remote address, or the default one without it`() {
         val manager = open()
-        manager.updateComputer(details(uuid = "remote", remote = AddressTuple("192.0.2.2", 41234)))
         manager.updateComputer(
-            details(uuid = "local", local = AddressTuple("192.0.2.1", 41235), manual = AddressTuple("h.test", 41236))
+            details(
+                uuid = "remote",
+                addresses = Addresses(remote = AddressTuple("192.0.2.2", 41234)),
+            )
+        )
+        manager.updateComputer(
+            details(
+                uuid = "local",
+                addresses =
+                    Addresses(
+                        local = AddressTuple("192.0.2.1", 41235),
+                        manual = AddressTuple("h.test", 41236),
+                    ),
+            )
         )
 
         assertThat(manager.getComputerByUUID("remote")!!.externalPort).isEqualTo(41234)
-        assertThat(manager.getComputerByUUID("local")!!.externalPort).isEqualTo(NvHTTP.DEFAULT_HTTP_PORT)
+        assertThat(manager.getComputerByUUID("local")!!.externalPort)
+            .isEqualTo(NvHTTP.DEFAULT_HTTP_PORT)
         assertThat(NvHTTP.DEFAULT_HTTP_PORT).isEqualTo(47989)
     }
 
@@ -425,10 +417,13 @@ class ComputerDatabaseManagerCharacterizationTest {
         val manager = open()
 
         val saved =
-            manager.updateComputer(details(uuid = "u-1").also { it.serverCert = UnencodableCertificate() })
+            manager.updateComputer(
+                details(uuid = "u-1").also { it.serverCert = UnencodableCertificate() }
+            )
 
         assertThat(saved).isTrue()
-        assertThat(raw { it.rows("SELECT typeof(ServerCert) FROM Computers") }).containsExactly(listOf("null"))
+        assertThat(raw { it.rows("SELECT typeof(ServerCert) FROM Computers") })
+            .containsExactly(listOf("null"))
         assertThat(manager.getComputerByUUID("u-1")!!.serverCert).isNull()
     }
 
@@ -503,7 +498,9 @@ class ComputerDatabaseManagerCharacterizationTest {
 
         manager.deleteComputer(details(uuid = null))
 
-        assertThat(manager.getAllComputers().map { it.name }).containsExactly("No id", "Kept").inOrder()
+        assertThat(manager.getAllComputers().map { it.name })
+            .containsExactly("No id", "Kept")
+            .inOrder()
     }
 
     @Test
@@ -566,7 +563,8 @@ class ComputerDatabaseManagerCharacterizationTest {
             )) {
             insertRaw(uuid, uuid, addresses)
 
-            val failure = assertThrows(uuid, RuntimeException::class.java) { manager.getComputerByUUID(uuid) }
+            val failure =
+                assertThrows(uuid, RuntimeException::class.java) { manager.getComputerByUUID(uuid) }
 
             assertThat(failure).hasCauseThat().isInstanceOf(JSONException::class.java)
         }
@@ -585,7 +583,8 @@ class ComputerDatabaseManagerCharacterizationTest {
         val manager = open()
         insertRaw("u-1", "Text port", """{"local":{"address":"192.0.2.1","port":"47990"}}""")
 
-        assertThat(manager.getComputerByUUID("u-1")!!.localAddress).isEqualTo(AddressTuple("192.0.2.1", 47990))
+        assertThat(manager.getComputerByUUID("u-1")!!.localAddress)
+            .isEqualTo(AddressTuple("192.0.2.1", 47990))
     }
 
     @Test
@@ -593,7 +592,8 @@ class ComputerDatabaseManagerCharacterizationTest {
         val manager = open()
         insertRaw("u-1", "Bracketed", """{"ipv6":{"address":"[2001:db8::2]","port":47989}}""")
 
-        assertThat(manager.getComputerByUUID("u-1")!!.ipv6Address).isEqualTo(AddressTuple("2001:db8::2", 47989))
+        assertThat(manager.getComputerByUUID("u-1")!!.ipv6Address)
+            .isEqualTo(AddressTuple("2001:db8::2", 47989))
     }
 
     @Test
@@ -629,10 +629,15 @@ class ComputerDatabaseManagerCharacterizationTest {
 
     @Test
     fun `a tuple is read back from the JSON object under the given key`() {
-        val json = JSONObject("""{"a":{"address":"192.0.2.1","port":47989},"b":{"address":"h.test","port":2}}""")
+        val json =
+            JSONObject(
+                """{"a":{"address":"192.0.2.1","port":47989},"b":{"address":"h.test","port":2}}"""
+            )
 
-        assertThat(ComputerDatabaseManager.tupleFromJson(json, "a")).isEqualTo(AddressTuple("192.0.2.1", 47989))
-        assertThat(ComputerDatabaseManager.tupleFromJson(json, "b")).isEqualTo(AddressTuple("h.test", 2))
+        assertThat(ComputerDatabaseManager.tupleFromJson(json, "a"))
+            .isEqualTo(AddressTuple("192.0.2.1", 47989))
+        assertThat(ComputerDatabaseManager.tupleFromJson(json, "b"))
+            .isEqualTo(AddressTuple("h.test", 2))
     }
 
     @Test
@@ -643,7 +648,8 @@ class ComputerDatabaseManagerCharacterizationTest {
 
     @Test
     fun `a tuple that cannot be read throws the JSON exception`() {
-        for (text in listOf("""{"a":null}""", """{"a":1}""", """{"a":{}}""", """{"a":{"address":"h"}}""")) {
+        for (text in
+            listOf("""{"a":null}""", """{"a":1}""", """{"a":{}}""", """{"a":{"address":"h"}}""")) {
             assertThrows(text, JSONException::class.java) {
                 ComputerDatabaseManager.tupleFromJson(JSONObject(text), "a")
             }
@@ -653,7 +659,8 @@ class ComputerDatabaseManagerCharacterizationTest {
     // The database that cannot be opened.
 
     /** Lets the real context do the work and notes which database calls reach it, in order. */
-    private class RecordingContext(base: Context, private val failOpens: Int = 0) : ContextWrapper(base) {
+    private class RecordingContext(base: Context, private val failOpens: Int = 0) :
+        ContextWrapper(base) {
         val calls = mutableListOf<String>()
         private var opens = 0
 
@@ -711,7 +718,8 @@ class ComputerDatabaseManagerCharacterizationTest {
     fun `when the second open fails too the exception is thrown`() {
         val recording = RecordingContext(context, failOpens = 2)
 
-        val failure = assertThrows(SQLiteException::class.java) { ComputerDatabaseManager(recording) }
+        val failure =
+            assertThrows(SQLiteException::class.java) { ComputerDatabaseManager(recording) }
 
         assertThat(failure).hasMessageThat().contains("cannot open computers4.db")
         assertThat(recording.calls)
@@ -736,12 +744,82 @@ class ComputerDatabaseManagerCharacterizationTest {
         assertThat(manager.getAllComputers()).isEmpty()
         assertThat(manager.updateComputer(details())).isTrue()
         assertThat(manager.getAllComputers()).hasSize(1)
-        // The framework deletes a corrupt file and opens it again by itself: no exception reaches the
-        // constructor, so it opens the database once and deletes nothing.
+        // The framework deletes a corrupt file and opens it again by itself: no exception reaches
+        // the constructor, so it opens the database once and deletes nothing.
         assertThat(recording.calls).containsExactly("open computers4.db 0 no factory")
     }
 
     private companion object {
         const val GARBAGE_BYTES = 4096
     }
+}
+
+private fun SQLiteDatabase.rows(sql: String): List<List<Any?>> =
+    rawQuery(sql, null).use { cursor ->
+        buildList {
+            while (cursor.moveToNext()) {
+                add((0 until cursor.columnCount).map { column -> cursor.valueAt(column) })
+            }
+        }
+    }
+
+private fun Cursor.valueAt(column: Int): Any? =
+    when (getType(column)) {
+        Cursor.FIELD_TYPE_NULL -> null
+        Cursor.FIELD_TYPE_INTEGER -> getLong(column)
+        Cursor.FIELD_TYPE_BLOB -> getBlob(column).toList()
+        else -> getString(column)
+    }
+
+/** The rows of the table as the three columns that hold a host's text, plus its certificate. */
+private fun SQLiteDatabase.hostRows() =
+    rows(
+        "SELECT UUID, ComputerName, Addresses, MacAddress, typeof(ServerCert), ServerCert " +
+            "FROM Computers ORDER BY rowid"
+    )
+
+/** The addresses of a host that a test sets; each one it leaves out is absent. */
+private class Addresses(
+    val local: AddressTuple? = null,
+    val remote: AddressTuple? = null,
+    val manual: AddressTuple? = null,
+    val ipv6: AddressTuple? = null,
+)
+
+private fun details(
+    uuid: String? = "00000000-0000-0000-0000-0000000000a1",
+    name: String? = "LUMINALSHINE-HOST-A",
+    addresses: Addresses = Addresses(),
+    mac: String? = null,
+): ComputerDetails =
+    ComputerDetails().also {
+        it.uuid = uuid
+        it.name = name
+        it.localAddress = addresses.local
+        it.remoteAddress = addresses.remote
+        it.manualAddress = addresses.manual
+        it.ipv6Address = addresses.ipv6
+        it.macAddress = mac
+    }
+
+private fun assertStored(details: ComputerDetails, host: FixtureHost) {
+    assertThat(details.uuid).isEqualTo(host.uuid)
+    assertThat(details.name).isEqualTo(host.name)
+    assertThat(details.localAddress).isEqualTo(host.local)
+    assertThat(details.remoteAddress).isEqualTo(host.remote)
+    assertThat(details.manualAddress).isEqualTo(host.manual)
+    assertThat(details.ipv6Address).isEqualTo(host.ipv6)
+    assertThat(details.macAddress).isEqualTo(host.mac)
+    assertThat(details.serverCert).isEqualTo(host.certificate?.let(::fixtureCertificate))
+    // The external port is not a column: it follows the remote address.
+    assertThat(details.externalPort).isEqualTo(host.remote?.port ?: NvHTTP.DEFAULT_HTTP_PORT)
+    // The list keeps no dynamic state.
+    assertThat(details.state).isEqualTo(ComputerDetails.State.UNKNOWN)
+    assertThat(details.activeAddress).isNull()
+    assertThat(details.httpsPort).isEqualTo(0)
+    assertThat(details.pairState).isNull()
+    assertThat(details.runningGameId).isEqualTo(0)
+    assertThat(details.rawAppList).isNull()
+    assertThat(details.nvidiaServer).isFalse()
+    assertThat(details.borealis).isNull()
 }

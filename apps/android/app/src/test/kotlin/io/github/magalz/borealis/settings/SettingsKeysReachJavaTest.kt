@@ -7,6 +7,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.preferences.PreferenceConfiguration
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.settings.catalog.BooleanSetting
 import io.github.magalz.borealis.settings.catalog.IntSetting
 import io.github.magalz.borealis.settings.catalog.OptionalIntSetting
@@ -27,7 +28,7 @@ import org.robolectric.annotation.Config
  */
 @Suppress("DEPRECATION")
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class SettingsKeysReachJavaTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val preferences: SharedPreferences =

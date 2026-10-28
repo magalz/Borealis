@@ -23,7 +23,8 @@ class PlatformBindingTest {
         val certificate = provider.clientCertificate
         assertThat(certificate?.subjectX500Principal?.name).isEqualTo("CN=NVIDIA GameStream Client")
         assertThat(provider.clientPrivateKey).isNotNull()
-        assertThat(provider.pemEncodedClientCertificate).isEqualTo(File(context.filesDir, "client.crt").readBytes())
+        assertThat(provider.pemEncodedClientCertificate)
+            .isEqualTo(File(context.filesDir, "client.crt").readBytes())
         assertThat(File(context.filesDir, "client.key").exists()).isTrue()
     }
 

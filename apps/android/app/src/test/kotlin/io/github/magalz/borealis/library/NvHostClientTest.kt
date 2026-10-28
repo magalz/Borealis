@@ -17,7 +17,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/** A host on the loopback interface that answers `GET <path>` with a fixed body, over plain HTTP. */
+/**
+ * A host on the loopback interface that answers `GET <path>` with a fixed body, over plain HTTP.
+ */
 private class FakeHostServer(private val answers: Map<String, String>) : Closeable {
     private val server = ServerSocket(0)
     val port: Int
@@ -73,14 +75,11 @@ class NvHostClientTest {
             override fun encodeBase64String(data: ByteArray): String = ""
         }
 
-    @After
-    fun tearDown() = closeables.forEach { it.close() }
+    @After fun tearDown() = closeables.forEach { it.close() }
 
     private fun clientFor(answers: Map<String, String>): NvHostClient {
         val host = FakeHostServer(answers).also { closeables += it }
-        return NvHostClient(
-            NvHTTP(AddressTuple("127.0.0.1", host.port), 0, "id", null, crypto)
-        )
+        return NvHostClient(NvHTTP(AddressTuple("127.0.0.1", host.port), 0, "id", null, crypto))
     }
 
     private fun serverInfo(paired: Boolean) =

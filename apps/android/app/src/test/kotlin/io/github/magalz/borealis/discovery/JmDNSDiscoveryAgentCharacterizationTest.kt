@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.mdns.JmDNSDiscoveryAgent
 import com.limelight.nvstream.mdns.MdnsComputer
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.util.logging.Level
 import javax.jmdns.JmmDNS
 import javax.jmdns.ServiceEvent
@@ -27,7 +28,7 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class JmDNSDiscoveryAgentCharacterizationTest {
     @get:Rule(order = 0) val network = NoMdnsNetwork()
-    @get:Rule(order = 1) val log = LimeLogRecords()
+    @get:Rule(order = 1) val log = LimeLogCapture()
 
     private val app = ApplicationProvider.getApplicationContext<Application>()
     private val listener = RecordingDiscoveryListener()
@@ -98,20 +99,26 @@ class JmDNSDiscoveryAgentCharacterizationTest {
     }
 
     /** What a resolved service holds. */
-    private class MdnsInfo(val port: Int, val v4: List<String>, val v6: List<String> = emptyList()) {
+    private class MdnsInfo(
+        val port: Int,
+        val v4: List<String>,
+        val v6: List<String> = emptyList(),
+    ) {
         fun toServiceInfo(name: String) =
             serviceInfo(name, port, v4.map { ip4(it) }, v6.map { ip6(it) })
     }
 
     @Test
     fun `an announced service that resolves at once is reported with its addresses and port`() {
-        val (dns, event) = announce("Den PC" to MdnsInfo(47989, listOf("192.168.1.5"), listOf("2001:db8::1")))
+        val (dns, event) =
+            announce("Den PC" to MdnsInfo(47989, listOf("192.168.1.5"), listOf("2001:db8::1")))
 
         agent.serviceAdded(event)
 
         assertThat(listener.added)
             .containsExactly(MdnsComputer("Den PC", ip4("192.168.1.5"), ip6("2001:db8::1"), 47989))
-        assertThat(dns.requests).containsExactly(InfoRequest("_nvstream._tcp.local.", "Den PC", 500))
+        assertThat(dns.requests)
+            .containsExactly(InfoRequest("_nvstream._tcp.local.", "Den PC", 500))
         assertThat(log.messages(Level.INFO))
             .containsAtLeast("mDNS: Machine appeared: Den PC", "mDNS: Resolved (blocking)")
             .inOrder()
@@ -119,7 +126,10 @@ class JmDNSDiscoveryAgentCharacterizationTest {
 
     @Test
     fun `the computer takes its name and port from the resolved service, not from the event`() {
-        val dns = FakeJmDns(mapOf("Event PC" to serviceInfo("Resolved PC", 5000, listOf(ip4("10.0.0.2")))))
+        val dns =
+            FakeJmDns(
+                mapOf("Event PC" to serviceInfo("Resolved PC", 5000, listOf(ip4("10.0.0.2"))))
+            )
         val event = FakeServiceEvent(dns, serviceInfo("Event PC", 47989))
 
         agent.serviceAdded(event)
@@ -131,7 +141,8 @@ class JmDNSDiscoveryAgentCharacterizationTest {
 
     @Test
     fun `an announced service with only IPv6 addresses is reported through them`() {
-        val (_, event) = announce("Den PC" to MdnsInfo(47989, emptyList(), listOf("fe80::1", "2001:db8::1")))
+        val (_, event) =
+            announce("Den PC" to MdnsInfo(47989, emptyList(), listOf("fe80::1", "2001:db8::1")))
 
         agent.serviceAdded(event)
 

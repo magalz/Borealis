@@ -9,7 +9,6 @@ import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.logging.BorealisAudit
 import io.github.magalz.borealis.logging.Redactor
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
@@ -19,13 +18,16 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class AuditTrailTest {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    @get:Rule val workers = WorkerDispatcherRule()
+
+    private val scope = CoroutineScope(SupervisorJob() + workers.dispatcher)
     private lateinit var db: AuditDatabase
     private lateinit var store: AuditStore
     private lateinit var trail: AuditTrail
@@ -39,7 +41,7 @@ class AuditTrailTest {
                 )
                 .allowMainThreadQueries()
                 .build()
-        store = AuditStore(db.dao(), scope, Dispatchers.IO)
+        store = AuditStore(db.dao(), scope, workers.dispatcher)
         trail = AuditModule.trail(db, store)
     }
 

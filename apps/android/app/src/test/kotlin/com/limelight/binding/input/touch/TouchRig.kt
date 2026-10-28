@@ -101,8 +101,9 @@ internal fun AbsoluteTouchContext.moveTo(x: Int, y: Int, time: Long = T0) {
 }
 
 /** What `Game` does before every touch down and every lift: all the contexts get the count. */
-internal fun setPointerCount(count: Int, vararg contexts: TouchContext) =
-    contexts.forEach { it.setPointerCount(count) }
+internal fun setPointerCount(count: Int, vararg contexts: TouchContext) = contexts.forEach {
+    it.setPointerCount(count)
+}
 
 /** A first finger down, then a second finger down: the touches of a two-finger gesture. */
 internal fun twoFingers(first: RelativeTouchContext, second: RelativeTouchContext) {

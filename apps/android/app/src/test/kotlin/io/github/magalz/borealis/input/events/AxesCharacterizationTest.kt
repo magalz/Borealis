@@ -26,6 +26,8 @@ import com.limelight.nvstream.input.ControllerPacket.DOWN_FLAG
 import com.limelight.nvstream.input.ControllerPacket.LEFT_FLAG
 import com.limelight.nvstream.input.ControllerPacket.RIGHT_FLAG
 import com.limelight.nvstream.input.ControllerPacket.UP_FLAG
+import io.github.magalz.borealis.testing.OwnedResources
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -35,12 +37,13 @@ import org.robolectric.annotation.Config
  * `handleMotionEvent` and `handleAxisSet`: sticks to signed shorts, triggers to bytes, the hat to
  * the D-pad, the deadzones, and which axes a context reads. Events of device id 0 reach the default
  * context, which reads the left stick from X and Y, the right stick from Z and RZ, the triggers
- * from BRAKE and GAS and the hat from HAT_X and HAT_Y; it has a stick deadzone from the setting
- * and no trigger deadzone.
+ * from BRAKE and GAS and the hat from HAT_X and HAT_Y; it has a stick deadzone from the setting and
+ * no trigger deadzone.
  */
 @RunWith(RobolectricTestRunner::class)
 class AxesCharacterizationTest {
-    private val rig = EventsRig { deadzonePercentage = 15 }
+    @get:Rule val owned = OwnedResources()
+    @get:Rule val rig = EventsRig { deadzonePercentage = 15 }
     private val pad = rig.default
 
     private fun send(vararg axes: Pair<Int, Float>): Sent {
@@ -66,7 +69,14 @@ class AxesCharacterizationTest {
     @Test
     fun `a stick between the extremes is cut toward zero, for both signs`() {
         val expected =
-            mapOf(0.5f to 16383, 0.3f to 9829, 0.25f to 8191, 0.999f to 32733, 0.8f to 26212, 0.6f to 19659)
+            mapOf(
+                0.5f to 16383,
+                0.3f to 9829,
+                0.25f to 8191,
+                0.999f to 32733,
+                0.8f to 26212,
+                0.6f to 19659,
+            )
 
         for ((value, short) in expected) {
             assertWithMessage("x $value").that(send(AXIS_X to value).leftStickX).isEqualTo(short)
@@ -78,7 +88,8 @@ class AxesCharacterizationTest {
 
     @Test
     fun `a stick value past 1 wraps at the sign bit`() {
-        // Android never reports more than 1, but the cast is a short of an int: 1.5 * 0x7FFE is 49149.
+        // Android never reports more than 1, but the cast is a short of an int: 1.5 * 0x7FFE is
+        // 49149.
         assertThat(send(AXIS_X to 1.5f).leftStickX).isEqualTo(-16387)
         assertThat(send(AXIS_X to -1.5f).leftStickX).isEqualTo(16387)
         assertThat(send(AXIS_X to 2f).leftStickX).isEqualTo(-4)
@@ -107,7 +118,12 @@ class AxesCharacterizationTest {
 
     @Test
     fun `a batched event is read at its latest value, whatever its history holds`() {
-        assertThat(pad.motion(mapOf(AXIS_X to 0.5f), history = listOf(mapOf(AXIS_X to 1f), mapOf(AXIS_X to -1f))))
+        assertThat(
+                pad.motion(
+                    mapOf(AXIS_X to 0.5f),
+                    history = listOf(mapOf(AXIS_X to 1f), mapOf(AXIS_X to -1f)),
+                )
+            )
             .isTrue()
 
         assertThat(rig.packets.last()).isEqualTo(Sent(0, 1, 0, leftStickX = 16383))
@@ -166,7 +182,7 @@ class AxesCharacterizationTest {
     @Test
     fun `a deadzone setting of zero or less is 1 percent`() {
         for (percentage in listOf(0, -5)) {
-            val small = EventsRig { deadzonePercentage = percentage }
+            val small = owned.own(EventsRig { deadzonePercentage = percentage })
 
             small.default.motion(mapOf(AXIS_X to 0.0099f))
             small.default.motion(mapOf(AXIS_X to 0.02f))
@@ -180,7 +196,7 @@ class AxesCharacterizationTest {
 
     @Test
     fun `the deadzone follows the setting`() {
-        val wide = EventsRig { deadzonePercentage = 50 }
+        val wide = owned.own(EventsRig { deadzonePercentage = 50 })
 
         wide.default.motion(mapOf(AXIS_X to 0.49f))
         wide.default.motion(mapOf(AXIS_X to 0.51f))
@@ -192,11 +208,16 @@ class AxesCharacterizationTest {
 
     @Test
     fun `a trigger is its value times 255 in a byte, so it turns negative above one half`() {
-        val expected = listOf(0.25f to 63, 0.5f to 127, 0.502f to -128, 0.75f to -65, 1f to -1, 1.2f to 50)
+        val expected =
+            listOf(0.25f to 63, 0.5f to 127, 0.502f to -128, 0.75f to -65, 1f to -1, 1.2f to 50)
 
         for ((value, byte) in expected) {
-            assertWithMessage("left $value").that(send(AXIS_BRAKE to value).leftTrigger).isEqualTo(byte)
-            assertWithMessage("right $value").that(send(AXIS_GAS to value).rightTrigger).isEqualTo(byte)
+            assertWithMessage("left $value")
+                .that(send(AXIS_BRAKE to value).leftTrigger)
+                .isEqualTo(byte)
+            assertWithMessage("right $value")
+                .that(send(AXIS_GAS to value).rightTrigger)
+                .isEqualTo(byte)
         }
     }
 
@@ -241,7 +262,11 @@ class AxesCharacterizationTest {
 
     @Test
     fun `a trigger that is used sets the flag that silences its digital key, and a zero does not`() {
-        val used = rig.addPad(7, fields = mapOf("leftTriggerAxis" to AXIS_BRAKE, "rightTriggerAxis" to AXIS_GAS))
+        val used =
+            rig.addPad(
+                7,
+                fields = mapOf("leftTriggerAxis" to AXIS_BRAKE, "rightTriggerAxis" to AXIS_GAS),
+            )
 
         used.motion(mapOf(AXIS_BRAKE to 0f, AXIS_GAS to 0f))
         assertThat(used.getBoolean("leftTriggerAxisUsed")).isFalse()
@@ -339,8 +364,10 @@ class AxesCharacterizationTest {
         assertThat(send(AXIS_HAT_X to 1f).buttons).isEqualTo(RIGHT_FLAG)
         assertThat(send(AXIS_HAT_Y to -1f).buttons).isEqualTo(UP_FLAG)
         assertThat(send(AXIS_HAT_Y to 1f).buttons).isEqualTo(DOWN_FLAG)
-        assertThat(send(AXIS_HAT_X to -1f, AXIS_HAT_Y to -1f).buttons).isEqualTo(LEFT_FLAG or UP_FLAG)
-        assertThat(send(AXIS_HAT_X to 1f, AXIS_HAT_Y to 1f).buttons).isEqualTo(RIGHT_FLAG or DOWN_FLAG)
+        assertThat(send(AXIS_HAT_X to -1f, AXIS_HAT_Y to -1f).buttons)
+            .isEqualTo(LEFT_FLAG or UP_FLAG)
+        assertThat(send(AXIS_HAT_X to 1f, AXIS_HAT_Y to 1f).buttons)
+            .isEqualTo(RIGHT_FLAG or DOWN_FLAG)
         assertThat(send().buttons).isEqualTo(0)
     }
 
@@ -396,7 +423,11 @@ class AxesCharacterizationTest {
             )
 
         directions.forEachIndexed { index, (axis, x, y) ->
-            val hat = rig.addPad(20 + index, fields = mapOf("hatXAxis" to AXIS_HAT_X, "hatYAxis" to AXIS_HAT_Y))
+            val hat =
+                rig.addPad(
+                    20 + index,
+                    fields = mapOf("hatXAxis" to AXIS_HAT_X, "hatYAxis" to AXIS_HAT_Y),
+                )
 
             hat.motion(mapOf(axis))
 
@@ -448,7 +479,12 @@ class AxesCharacterizationTest {
     @Test
     fun `a diagonal key is ignored only once both axes of the hat were used`() {
         val diagonals =
-            listOf(KEYCODE_DPAD_UP_LEFT, KEYCODE_DPAD_UP_RIGHT, KEYCODE_DPAD_DOWN_LEFT, KEYCODE_DPAD_DOWN_RIGHT)
+            listOf(
+                KEYCODE_DPAD_UP_LEFT,
+                KEYCODE_DPAD_UP_RIGHT,
+                KEYCODE_DPAD_DOWN_LEFT,
+                KEYCODE_DPAD_DOWN_RIGHT,
+            )
         send(AXIS_HAT_X to 1f)
         send()
         val oneAxis = rig.packets.size
@@ -489,11 +525,21 @@ class AxesCharacterizationTest {
                     ),
             )
 
-        xbox.motion(mapOf(AXIS_RX to 1f, AXIS_RY to -1f, AXIS_Z to 1f, AXIS_RZ to 0.25f, AXIS_BRAKE to 1f))
+        xbox.motion(
+            mapOf(AXIS_RX to 1f, AXIS_RY to -1f, AXIS_Z to 1f, AXIS_RZ to 0.25f, AXIS_BRAKE to 1f)
+        )
 
         assertThat(rig.packets.last())
             .isEqualTo(
-                Sent(0, 1, 0, leftTrigger = -1, rightTrigger = 63, rightStickX = 32766, rightStickY = 32766)
+                Sent(
+                    0,
+                    1,
+                    0,
+                    leftTrigger = -1,
+                    rightTrigger = 63,
+                    rightStickX = 32766,
+                    rightStickY = 32766,
+                )
             )
     }
 
@@ -518,7 +564,17 @@ class AxesCharacterizationTest {
         half.motion(mapOf(AXIS_X to 1f, AXIS_Y to 1f, AXIS_Z to 1f, AXIS_RZ to 1f))
 
         assertThat(rig.packets.last())
-            .isEqualTo(Sent(0, 1, 0, leftStickX = 111, leftStickY = 222, rightStickX = 333, rightStickY = 444))
+            .isEqualTo(
+                Sent(
+                    0,
+                    1,
+                    0,
+                    leftStickX = 111,
+                    leftStickY = 222,
+                    rightStickX = 333,
+                    rightStickY = 444,
+                )
+            )
     }
 
     @Test

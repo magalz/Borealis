@@ -27,8 +27,10 @@ class JmDNSTopologyCharacterizationTest {
 
         val made = NetworkTopologyDiscovery.Factory.classDelegate().newNetworkTopologyDiscovery()
 
-        // By name: jmDNS is shared by the Robolectric sandboxes, and each one has its own agent class.
-        assertThat(made.javaClass.name).isEqualTo(JmDNSDiscoveryAgent.MyNetworkTopologyDiscovery::class.java.name)
+        // By name: jmDNS is shared by the Robolectric sandboxes, and each one has its own agent
+        // class.
+        assertThat(made.javaClass.name)
+            .isEqualTo(JmDNSDiscoveryAgent.MyNetworkTopologyDiscovery::class.java.name)
     }
 
     @Test

@@ -20,7 +20,7 @@ object FailureCauses {
      * ([CauseKind.UNREACHABLE]); after the connection was made the host is there but slow
      * ([CauseKind.TIMEOUT], the exhausted `/serverinfo` retry of a busy host). An interrupt is no
      * timeout. [hostHttpCode] is the status of the upstream `HostHttpResponseException`, or null
-     * when [error] is not one (the class is Java, in `:app`).
+     * when [error] is not one (the class is in `:app`).
      */
     @JvmStatic
     fun of(error: Throwable, hostHttpCode: Int?): CauseKind =

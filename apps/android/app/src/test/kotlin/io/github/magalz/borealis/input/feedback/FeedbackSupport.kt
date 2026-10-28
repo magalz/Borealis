@@ -72,7 +72,10 @@ object Effects {
     /** The one-shot effect of the handler's rumble: 60 seconds at [amplitude]. */
     fun oneShot(amplitude: Int): VibrationEffect = VibrationEffect.createOneShot(60_000, amplitude)
 
-    /** The waveform of a vibrator without amplitude control: off, [on] ms on, [off] ms off, repeating. */
+    /**
+     * The waveform of a vibrator without amplitude control: off, [on] ms on, [off] ms off,
+     * repeating.
+     */
     fun waveform(on: Long, off: Long): VibrationEffect =
         VibrationEffect.createWaveform(longArrayOf(0, on, off), 0)
 
@@ -81,7 +84,9 @@ object Effects {
         AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).build()
 }
 
-/** The vibration objects the handler is expected to hand a vibrator manager. Android 12 and later. */
+/**
+ * The vibration objects the handler is expected to hand a vibrator manager. Android 12 and later.
+ */
 object VibrationExpectations {
     private fun oneShot(amplitude: Int) = Effects.oneShot(amplitude)
 

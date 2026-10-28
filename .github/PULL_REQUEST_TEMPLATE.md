@@ -18,7 +18,7 @@
 ## Inherited files
 
 - [ ] This PR does not touch inherited files (files under `apps/android/` that come from Moonlight, or vendored files under `core/third_party/`)
-- [ ] It touches inherited files; edits to inherited Java are wiring only, new logic is in Kotlin, and nothing was reformatted wholesale
+- [ ] It touches inherited files; no Java file is added (the app has no Java since Sprint 14), new logic is in Kotlin, and nothing was reformatted wholesale
 - [ ] It touches vendored files under `core/third_party/`; each change is recorded in `core/third_party/README.md` as that README describes
 
 <!-- List the inherited files touched and why. -->

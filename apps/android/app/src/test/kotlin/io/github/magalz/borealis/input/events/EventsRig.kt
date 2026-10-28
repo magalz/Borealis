@@ -2,7 +2,6 @@ package io.github.magalz.borealis.input.events
 
 import android.app.Activity
 import android.content.ComponentName
-import android.hardware.input.InputManager
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -10,12 +9,15 @@ import android.view.MotionEvent
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.nvstream.NvConnection
 import com.limelight.preferences.PreferenceConfiguration
+import io.github.magalz.borealis.testing.addInputDeviceContext
+import io.github.magalz.borealis.testing.addSystemInputDevice
+import java.io.Closeable
 import java.util.concurrent.TimeUnit
-import org.robolectric.RuntimeEnvironment
+import org.junit.rules.ExternalResource
 import org.robolectric.Robolectric
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadow.api.Shadow
-import org.robolectric.shadows.ShadowInputDevice
 import org.robolectric.shadows.ShadowInputEvent
 import org.robolectric.shadows.ShadowLooper
 
@@ -146,7 +148,7 @@ class EventsConnection(activity: Activity) :
 class EventsRig(
     multiController: Boolean = false,
     configure: PreferenceConfiguration.() -> Unit = {},
-) {
+) : ExternalResource(), Closeable {
     init {
         // The SHIELD extension service does not exist here; without this the bind answers with no
         // binder.
@@ -176,6 +178,23 @@ class EventsRig(
         handler.setMenuChordListener { chords++ }
     }
 
+    private var destroyed = false
+
+    /**
+     * Ends the thread of the handler and what it scheduled, as the stream does when it ends. The
+     * rig does it by itself after the test when it is a rule, and when `use` closes it.
+     */
+    fun destroy() {
+        if (!destroyed) {
+            destroyed = true
+            handler.destroy()
+        }
+    }
+
+    override fun after() = destroy()
+
+    override fun close() = destroy()
+
     /** The events of device id 0, which the handler gives its default context. */
     val default = Pad(this, 0, null, handlerField("defaultContext"))
 
@@ -196,10 +215,18 @@ class EventsRig(
 
     /** A field of the handler itself. */
     fun handlerField(name: String): Any? =
-        ControllerHandler::class.java.getDeclaredField(name).apply { isAccessible = true }.get(handler)
+        ControllerHandler::class
+            .java
+            .getDeclaredField(name)
+            .apply { isAccessible = true }
+            .get(handler)
 
     fun setHandlerField(name: String, value: Any?) {
-        ControllerHandler::class.java.getDeclaredField(name).apply { isAccessible = true }.set(handler, value)
+        ControllerHandler::class
+            .java
+            .getDeclaredField(name)
+            .apply { isAccessible = true }
+            .set(handler, value)
     }
 
     /**
@@ -208,25 +235,22 @@ class EventsRig(
      * not have. It has a controller number, so no arrival is reported. [fields] are set on it by
      * name before it goes in.
      */
-    fun addPad(deviceId: Int, controllerNumber: Int = 0, fields: Map<String, Any?> = emptyMap()): Pad {
-        val device = ShadowInputDevice.makeInputDeviceNamed("pad $deviceId")
-        InputDevice::class.java.getDeclaredField("mId").apply { isAccessible = true }.setInt(device, deviceId)
-        val inputManager = RuntimeEnvironment.getApplication().getSystemService(InputManager::class.java)
-        shadowOf(inputManager).addInputDevice(device)
-
-        val contextClass = Class.forName("com.limelight.binding.input.ControllerHandler\$InputDeviceContext")
+    fun addPad(
+        deviceId: Int,
+        controllerNumber: Int = 0,
+        fields: Map<String, Any?> = emptyMap(),
+    ): Pad {
+        val device = addSystemInputDevice("pad $deviceId", deviceId)
         val context =
-            contextClass
-                .getDeclaredConstructor(ControllerHandler::class.java)
-                .apply { isAccessible = true }
-                .newInstance(handler)
+            handler.addInputDeviceContext(
+                deviceId,
+                mapOf(
+                    "name" to "pad $deviceId",
+                    "assignedControllerNumber" to true,
+                    "controllerNumber" to controllerNumber.toShort(),
+                ) + fields,
+            )
         val pad = Pad(this, deviceId, device, context)
-        pad.set("name", "pad $deviceId")
-        pad.set("assignedControllerNumber", true)
-        pad.set("controllerNumber", controllerNumber.toShort())
-        fields.forEach { (name, value) -> pad.set(name, value) }
-        @Suppress("UNCHECKED_CAST") // The field holds the handler's contexts by construction.
-        (handlerField("inputDeviceContexts") as android.util.SparseArray<Any?>).put(deviceId, context)
         return pad
     }
 }
@@ -271,42 +295,41 @@ class Pad(
         eventTime: Long,
         action: Int,
         keyCode: Int,
-        scanCode: Int = 0,
-        repeat: Int = 0,
-        metaState: Int = 0,
-        flags: Int = 0,
+        detail: KeyDetail = KeyDetail(),
     ): KeyEvent =
-        KeyEvent(downTime, eventTime, action, keyCode, repeat, metaState, deviceId, scanCode, flags)
+        KeyEvent(
+                downTime,
+                eventTime,
+                action,
+                keyCode,
+                detail.repeat,
+                detail.metaState,
+                deviceId,
+                detail.scanCode,
+                detail.flags,
+            )
             .also { event -> device?.let { Shadow.extract<ShadowInputEvent>(event).setDevice(it) } }
 
     private val downTimes = mutableMapOf<Int, Long>()
 
     /** Presses a key and answers what the handler answered. */
-    fun press(
-        keyCode: Int,
-        scanCode: Int = 0,
-        at: Long = rig.now,
-        repeat: Int = 0,
-        metaState: Int = 0,
-        flags: Int = 0,
-    ): Boolean {
+    fun press(keyCode: Int, detail: KeyDetail = KeyDetail(), at: Long = rig.now): Boolean {
         downTimes[keyCode] = at
-        return rig.handler.handleButtonDown(
-            keyEvent(at, at, KeyEvent.ACTION_DOWN, keyCode, scanCode, repeat, metaState, flags)
-        )
+        return rig.handler.handleButtonDown(keyEvent(at, at, KeyEvent.ACTION_DOWN, keyCode, detail))
     }
 
-    /** Releases a key, held since [press] unless [downTime] says otherwise. */
+    /**
+     * Releases a key, held since [press] unless [downTime] says otherwise. A release never repeats:
+     * the repeat count of [detail] is not used.
+     */
     fun release(
         keyCode: Int,
-        scanCode: Int = 0,
+        detail: KeyDetail = KeyDetail(),
         at: Long = rig.now,
         downTime: Long = downTimes[keyCode] ?: at,
-        metaState: Int = 0,
-        flags: Int = 0,
     ): Boolean =
         rig.handler.handleButtonUp(
-            keyEvent(downTime, at, KeyEvent.ACTION_UP, keyCode, scanCode, 0, metaState, flags)
+            keyEvent(downTime, at, KeyEvent.ACTION_UP, keyCode, detail.copy(repeat = 0))
         )
 
     /**
@@ -314,22 +337,23 @@ class Pad(
      * enough that the handler does not wait for a short press.
      */
     fun tap(keyCode: Int, scanCode: Int = 0, heldMs: Long = 100): Boolean {
-        press(keyCode, scanCode)
+        press(keyCode, KeyDetail(scanCode = scanCode))
         rig.advanceBy(heldMs)
-        return release(keyCode, scanCode)
+        return release(keyCode, KeyDetail(scanCode = scanCode))
     }
 
     /**
-     * Presses a key, waits 100 ms so that a lone Start or Select has reached the PC, lets the key go
-     * and waits again so that the next key is not a bumper release away from this one. Answers
+     * Presses a key, waits 100 ms so that a lone Start or Select has reached the PC, lets the key
+     * go and waits again so that the next key is not a bumper release away from this one. Answers
      * whether the handler took the press and the last packet it caused.
      */
     fun observe(keyCode: Int, scanCode: Int = 0, metaState: Int = 0, flags: Int = 0): KeyResult {
+        val detail = KeyDetail(scanCode = scanCode, metaState = metaState, flags = flags)
         val before = rig.packets.size
-        val handled = press(keyCode, scanCode, metaState = metaState, flags = flags)
+        val handled = press(keyCode, detail)
         rig.advanceBy(100)
         val sent = rig.packets.drop(before).lastOrNull()
-        release(keyCode, scanCode, metaState = metaState, flags = flags)
+        release(keyCode, detail)
         rig.advanceBy(150)
         return KeyResult(handled, sent)
     }
@@ -342,45 +366,114 @@ class Pad(
     ): Boolean {
         val event =
             motionEvent(
-                deviceId,
                 source,
                 MotionEvent.ACTION_MOVE,
                 listOf(PointerState(0, axes)),
-                device,
                 history = history,
             )
         return rig.handler.handleMotionEvent(event)
     }
 
-    /** A touch event: [pointers] are in the event's order and [index] is the one the action is for. */
+    /**
+     * A touch event: [pointers] are in the event's order and [index] is the one the action is for.
+     */
     fun touch(
         action: Int,
         pointers: List<PointerState>,
         index: Int = 0,
         source: Int = InputDevice.SOURCE_TOUCHPAD,
-        flags: Int = 0,
-        actionButton: Int = 0,
+        extras: TouchExtras = TouchExtras(),
     ): Boolean {
         val event =
             motionEvent(
-                deviceId,
                 source,
                 action or (index shl MotionEvent.ACTION_POINTER_INDEX_SHIFT),
                 pointers,
-                device,
-                flags,
+                extras.flags,
             )
         // setActionButton is hidden API: the framework sets it for button press and release events.
-        if (actionButton != 0) {
+        if (extras.actionButton != 0) {
             MotionEvent::class
                 .java
                 .getDeclaredMethod("setActionButton", Int::class.javaPrimitiveType)
                 .apply { isAccessible = true }
-                .invoke(event, actionButton)
+                .invoke(event, extras.actionButton)
         }
         return rig.handler.tryHandleTouchpadEvent(event)
     }
+
+    /**
+     * A motion event of this device with the pointers given; the device is what `getDevice()`
+     * answers.
+     */
+    private fun motionEvent(
+        source: Int,
+        action: Int,
+        pointers: List<PointerState>,
+        flags: Int = 0,
+        history: List<Map<Int, Float>> = emptyList(),
+    ): MotionEvent {
+        val properties =
+            pointers
+                .map { pointer ->
+                    MotionEvent.PointerProperties().apply {
+                        id = pointer.id
+                        toolType = MotionEvent.TOOL_TYPE_FINGER
+                    }
+                }
+                .toTypedArray()
+        val coords =
+            pointers
+                .map { pointer ->
+                    MotionEvent.PointerCoords().apply {
+                        pointer.axes.forEach { (axis, value) -> setAxisValue(axis, value) }
+                    }
+                }
+                .toTypedArray()
+        // The oldest sample is what the event is made with; the later ones are batched on it, so
+        // the
+        // last sample is the current value and the earlier ones are the history.
+        val samples = history + listOf(pointers.first().axes)
+        val event =
+            MotionEvent.obtain(
+                0L,
+                0L,
+                action,
+                pointers.size,
+                properties,
+                if (history.isEmpty()) coords else arrayOf(coordsOf(samples.first())),
+                0,
+                0,
+                1f,
+                1f,
+                deviceId,
+                0,
+                source,
+                flags,
+            )
+        if (history.isNotEmpty()) {
+            samples.drop(1).forEachIndexed { index, sample ->
+                event.addBatch(index + 1L, arrayOf(coordsOf(sample)), 0)
+            }
+        }
+        device?.let { Shadow.extract<ShadowInputEvent>(event).setDevice(it) }
+        return event
+    }
 }
+
+/**
+ * What a key event carries besides its key code: the scan code, the repeat count, the meta state
+ * and the flags.
+ */
+data class KeyDetail(
+    val scanCode: Int = 0,
+    val repeat: Int = 0,
+    val metaState: Int = 0,
+    val flags: Int = 0,
+)
+
+/** What a touch event carries besides its action and pointers: its flags and its action button. */
+data class TouchExtras(val flags: Int = 0, val actionButton: Int = 0)
 
 /** What a key press did: whether the handler took it, and the last packet it sent, if any. */
 data class KeyResult(val handled: Boolean, val sent: Sent?)
@@ -388,64 +481,10 @@ data class KeyResult(val handled: Boolean, val sent: Sent?)
 /** One pointer of a motion event: its id and the axis values it carries. */
 data class PointerState(val id: Int, val axes: Map<Int, Float>)
 
-/** A motion event with the pointers given; [device] is what `getDevice()` answers, null for none. */
-fun motionEvent(
-    deviceId: Int,
-    source: Int,
-    action: Int,
-    pointers: List<PointerState>,
-    device: InputDevice?,
-    flags: Int = 0,
-    history: List<Map<Int, Float>> = emptyList(),
-): MotionEvent {
-    val properties =
-        pointers
-            .map { pointer ->
-                MotionEvent.PointerProperties().apply {
-                    id = pointer.id
-                    toolType = MotionEvent.TOOL_TYPE_FINGER
-                }
-            }
-            .toTypedArray()
-    val coords =
-        pointers
-            .map { pointer ->
-                MotionEvent.PointerCoords().apply {
-                    pointer.axes.forEach { (axis, value) -> setAxisValue(axis, value) }
-                }
-            }
-            .toTypedArray()
-    // The oldest sample is what the event is made with; the later ones are batched on it, so the
-    // last sample is the current value and the earlier ones are the history.
-    val samples = history + listOf(pointers.first().axes)
-    val event =
-        MotionEvent.obtain(
-            0L,
-            0L,
-            action,
-            pointers.size,
-            properties,
-            if (history.isEmpty()) coords else arrayOf(coordsOf(samples.first())),
-            0,
-            0,
-            1f,
-            1f,
-            deviceId,
-            0,
-            source,
-            flags,
-        )
-    if (history.isNotEmpty()) {
-        samples.drop(1).forEachIndexed { index, sample ->
-            event.addBatch(index + 1L, arrayOf(coordsOf(sample)), 0)
-        }
-    }
-    device?.let { Shadow.extract<ShadowInputEvent>(event).setDevice(it) }
-    return event
-}
-
 private fun coordsOf(axes: Map<Int, Float>) =
-    MotionEvent.PointerCoords().apply { axes.forEach { (axis, value) -> setAxisValue(axis, value) } }
+    MotionEvent.PointerCoords().apply {
+        axes.forEach { (axis, value) -> setAxisValue(axis, value) }
+    }
 
 /** A motion range as the framework builds one from the kernel's axis description. */
 fun motionRange(axis: Int, min: Float, max: Float, source: Int = InputDevice.SOURCE_TOUCHPAD) =

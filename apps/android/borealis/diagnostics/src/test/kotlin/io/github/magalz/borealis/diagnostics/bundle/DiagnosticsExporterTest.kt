@@ -10,7 +10,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.diagnostics.DiagnosticSection
 import java.io.File
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Before
@@ -22,6 +23,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 
 /** The public export API of the Privacy and diagnostics screen, through its real flow. */
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class DiagnosticsExporterTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
@@ -42,7 +44,7 @@ class DiagnosticsExporterTest {
             context = context,
             sections = { sections },
             switches = switches,
-            ioDispatcher = Dispatchers.Unconfined,
+            ioDispatcher = UnconfinedTestDispatcher(),
             // androidx FileProvider cannot map Windows paths under Robolectric; the real one is
             // covered by FileProviderConfigTest (not on Windows) and ManifestXmlTest.
             uriFor = { Uri.parse("content://test.fileprovider/diagnostics/${it.name}") },

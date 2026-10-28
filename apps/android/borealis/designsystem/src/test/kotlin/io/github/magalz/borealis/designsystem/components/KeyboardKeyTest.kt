@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
-import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule

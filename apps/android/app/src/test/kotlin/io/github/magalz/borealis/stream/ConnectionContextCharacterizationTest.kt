@@ -47,7 +47,8 @@ class ConnectionContextCharacterizationTest {
 
     @Test
     fun `the context has exactly these public mutable fields`() {
-        val declared = ConnectionContext::class.java.fields.filterNot { Modifier.isStatic(it.modifiers) }
+        val declared =
+            ConnectionContext::class.java.fields.filterNot { Modifier.isStatic(it.modifiers) }
 
         assertThat(declared.map { it.name }).containsExactlyElementsIn(fields.keys)
         for (field in declared) {

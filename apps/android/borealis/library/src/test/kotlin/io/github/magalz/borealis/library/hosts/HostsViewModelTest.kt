@@ -132,7 +132,7 @@ class HostsViewModelTest {
     fun `the items carry the address`() = runTest {
         subscribe(viewModel.uiState)
 
-        repository.emit(aHost(address = "192.168.1.20"))
+        repository.emit(aHost().copy(address = "192.168.1.20"))
         runCurrent()
 
         assertThat(viewModel.uiState.value.items.single().address).isEqualTo("192.168.1.20")
@@ -160,15 +160,16 @@ class HostsViewModelTest {
         subscribe(viewModel.uiState)
 
         repository.emit(
-            aHost(
-                capabilities =
-                    setOf(
-                        HostCapability.YUV_444,
-                        HostCapability.HDR,
-                        HostCapability.HEVC,
-                        HostCapability.HEVC_10_BIT,
-                    )
-            )
+            aHost()
+                .copy(
+                    capabilities =
+                        setOf(
+                            HostCapability.YUV_444,
+                            HostCapability.HDR,
+                            HostCapability.HEVC,
+                            HostCapability.HEVC_10_BIT,
+                        )
+                )
         )
         runCurrent()
 
@@ -188,11 +189,12 @@ class HostsViewModelTest {
         val av1 = setOf(HostCapability.AV1)
 
         repository.emit(
-            aHost(id = "a", name = "A", capabilities = hevc + av1),
-            aHost(id = "b", name = "B", capabilities = hevc + HostCapability.AV1_10_BIT),
-            aHost(id = "c", name = "C", capabilities = setOf(HostCapability.HEVC_10_BIT) + av1),
-            aHost(id = "d", name = "D", capabilities = setOf(HostCapability.AV1_10_BIT)),
-            aHost(id = "e", name = "E", capabilities = av1),
+            aHost(id = "a", name = "A").copy(capabilities = hevc + av1),
+            aHost(id = "b", name = "B").copy(capabilities = hevc + HostCapability.AV1_10_BIT),
+            aHost(id = "c", name = "C")
+                .copy(capabilities = setOf(HostCapability.HEVC_10_BIT) + av1),
+            aHost(id = "d", name = "D").copy(capabilities = setOf(HostCapability.AV1_10_BIT)),
+            aHost(id = "e", name = "E").copy(capabilities = av1),
         )
         runCurrent()
 
@@ -213,14 +215,10 @@ class HostsViewModelTest {
         val everything = HostCapability.entries.toSet()
 
         repository.emit(
-            aHost(id = "a", name = "A", capabilities = emptySet()),
-            aHost(
-                id = "b",
-                name = "B",
-                reachability = Reachability.OFFLINE,
-                capabilities = everything,
-            ),
-            aHost(id = "c", name = "C", capabilities = everything),
+            aHost(id = "a", name = "A").copy(capabilities = emptySet()),
+            aHost(id = "b", name = "B", reachability = Reachability.OFFLINE)
+                .copy(capabilities = everything),
+            aHost(id = "c", name = "C").copy(capabilities = everything),
         )
         runCurrent()
 
@@ -254,7 +252,7 @@ class HostsViewModelTest {
     fun `an offline host with a MAC address offers to wake`() = runTest {
         subscribe(viewModel.uiState)
 
-        repository.emit(aHost(reachability = Reachability.OFFLINE, canWake = true))
+        repository.emit(aHost(reachability = Reachability.OFFLINE).copy(canWake = true))
         runCurrent()
 
         assertThat(viewModel.uiState.value.items.single().action).isEqualTo(HostAction.WAKE)
@@ -265,8 +263,8 @@ class HostsViewModelTest {
         subscribe(viewModel.uiState)
 
         repository.emit(
-            aHost(id = "a", name = "A", reachability = Reachability.OFFLINE, canWake = false),
-            aHost(id = "b", name = "B", reachability = Reachability.UNKNOWN, canWake = true),
+            aHost(id = "a", name = "A", reachability = Reachability.OFFLINE).copy(canWake = false),
+            aHost(id = "b", name = "B", reachability = Reachability.UNKNOWN).copy(canWake = true),
         )
         runCurrent()
 
@@ -351,7 +349,7 @@ class HostsViewModelTest {
     @Test
     fun `selecting an offline host wakes it`() = runTest {
         subscribe(viewModel.uiState)
-        repository.emit(aHost(id = "h", reachability = Reachability.OFFLINE, canWake = true))
+        repository.emit(aHost(id = "h", reachability = Reachability.OFFLINE).copy(canWake = true))
         runCurrent()
 
         viewModel.onHostSelected("h")
@@ -376,7 +374,7 @@ class HostsViewModelTest {
     @Test
     fun `selecting an offline host that cannot wake says it is unavailable`() = runTest {
         subscribe(viewModel.uiState)
-        repository.emit(aHost(id = "h", reachability = Reachability.OFFLINE, canWake = false))
+        repository.emit(aHost(id = "h", reachability = Reachability.OFFLINE).copy(canWake = false))
         runCurrent()
 
         viewModel.onHostSelected("h")

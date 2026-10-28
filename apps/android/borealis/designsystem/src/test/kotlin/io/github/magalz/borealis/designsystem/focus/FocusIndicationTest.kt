@@ -25,9 +25,9 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.assertPixel
-import io.github.magalz.borealis.designsystem.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.testing.FakeInputModeManager
 import io.github.magalz.borealis.designsystem.testing.noAnimations
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion

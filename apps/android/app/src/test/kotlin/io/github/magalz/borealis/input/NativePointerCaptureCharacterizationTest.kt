@@ -7,9 +7,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The native pointer capture of `Game`: capture is the pointer capture of Android, asked for on
- * the stream view while a mouse or a touchpad is there. It is released with the cursor, and asked
- * for again half a second after the window gets focus back. Robolectric does not shadow pointer
+ * The native pointer capture of `Game`: capture is the pointer capture of Android, asked for on the
+ * stream view while a mouse or a touchpad is there. It is released with the cursor, and asked for
+ * again half a second after the window gets focus back. Robolectric does not shadow pointer
  * capture, so the view of [CaptureRig] records the requests and the releases.
  */
 @RunWith(RobolectricTestRunner::class)

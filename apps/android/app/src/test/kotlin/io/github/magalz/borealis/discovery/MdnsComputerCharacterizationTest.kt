@@ -6,8 +6,8 @@ import org.junit.Assert.assertThrows
 import org.junit.Test
 
 /**
- * The computer that mDNS discovery reports, in the inherited code: what it keeps, and when two
- * of them are the same host. `ComputerManagerService` (Java) reads it.
+ * The computer that mDNS discovery reports, in the inherited code: what it keeps, and when two of
+ * them are the same host. `ComputerManagerService` (Java) reads it.
  *
  * Characterization: these tests pass on the Java class and on its Kotlin conversion.
  */
@@ -87,7 +87,9 @@ class MdnsComputerCharacterizationTest {
 
     @Test
     fun `the hash code of a computer with no name throws a NullPointerException`() {
-        assertThrows(NullPointerException::class.java) { MdnsComputer(null, v4, v6, 47989).hashCode() }
+        assertThrows(NullPointerException::class.java) {
+            MdnsComputer(null, v4, v6, 47989).hashCode()
+        }
     }
 
     @Test

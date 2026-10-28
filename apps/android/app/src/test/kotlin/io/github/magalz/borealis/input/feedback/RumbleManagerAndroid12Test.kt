@@ -23,7 +23,8 @@ class RumbleManagerAndroid12Test : FeedbackTestBase() {
 
         assertThat(Hardware.manager(manager).vibrations.map { it.combined to it.attributes })
             .containsExactly(
-                VibrationExpectations.combo(10 to 192, 11 to 64) to VibrationExpectations.unspecified()
+                VibrationExpectations.combo(10 to 192, 11 to 64) to
+                    VibrationExpectations.unspecified()
             )
     }
 
@@ -38,7 +39,8 @@ class RumbleManagerAndroid12Test : FeedbackTestBase() {
 
         assertThat(Hardware.manager(manager).vibrations.map { it.combined to it.attributes })
             .containsExactly(
-                VibrationExpectations.combo(10 to 192, 11 to 64) to VibrationExpectations.unspecified(),
+                VibrationExpectations.combo(10 to 192, 11 to 64) to
+                    VibrationExpectations.unspecified(),
                 VibrationExpectations.combo(10 to 192, 11 to 64, 12 to 32, 13 to 96) to
                     VibrationExpectations.unspecified(),
             )

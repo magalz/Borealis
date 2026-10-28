@@ -12,6 +12,7 @@ import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.FitCase
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.testing.cardFitCases
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
@@ -23,7 +24,6 @@ import io.github.magalz.borealis.library.hosts.withHosts
 import io.github.magalz.borealis.library.testing.HANDHELD
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.TV
-import io.github.magalz.borealis.library.testing.setContentInKeyboardMode
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

@@ -6,8 +6,10 @@ import android.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.preferences.PreferenceConfiguration
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.store.SettingsSnapshots
+import io.github.magalz.borealis.testing.ANDROID_12
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
@@ -22,7 +24,7 @@ import org.robolectric.annotation.Config
  */
 @Suppress("DEPRECATION")
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowMoonBridge::class])
+@Config(shadows = [ShadowRecordingBridge::class])
 class SettingsStoreJavaTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val preferences: SharedPreferences =
@@ -33,7 +35,8 @@ class SettingsStoreJavaTest {
         preferences.edit().clear().commit()
     }
 
-    private fun readByJava(): PreferenceConfiguration = PreferenceConfiguration.readPreferences(context)
+    private fun readByJava(): PreferenceConfiguration =
+        PreferenceConfiguration.readPreferences(context)
 
     @Test
     fun `values that the repository wrote are what Java reads, for every stored type`() =
@@ -58,22 +61,25 @@ class SettingsStoreJavaTest {
         }
 
     @Test
-    fun `clearing the bitrate makes Java compute the automatic bitrate again`() = runBlocking<Unit> {
-        val repository = SettingsSnapshots.repository(context)
-        repository.set(Settings.BITRATE_KBPS, 25_000)
+    fun `clearing the bitrate makes Java compute the automatic bitrate again`() =
+        runBlocking<Unit> {
+            val repository = SettingsSnapshots.repository(context)
+            repository.set(Settings.BITRATE_KBPS, 25_000)
 
-        repository.clear(Settings.BITRATE_KBPS)
+            repository.clear(Settings.BITRATE_KBPS)
 
-        assertThat(readByJava().bitrate).isEqualTo(PreferenceConfiguration.getDefaultBitrate("1280x720", "60"))
-        assertThat(preferences.contains(Settings.BITRATE_KBPS.key)).isFalse()
-    }
+            assertThat(readByJava().bitrate)
+                .isEqualTo(PreferenceConfiguration.getDefaultBitrate("1280x720", "60"))
+            assertThat(preferences.contains(Settings.BITRATE_KBPS.key)).isFalse()
+        }
 
     @Test
-    fun `a stored default is stored, so Java sees the key`() = runBlocking<Unit> {
-        SettingsSnapshots.repository(context).set(Settings.GAMEPAD_MOTION_SENSORS, true)
+    fun `a stored default is stored, so Java sees the key`() =
+        runBlocking<Unit> {
+            SettingsSnapshots.repository(context).set(Settings.GAMEPAD_MOTION_SENSORS, true)
 
-        assertThat(preferences.contains(Settings.GAMEPAD_MOTION_SENSORS.key)).isTrue()
-    }
+            assertThat(preferences.contains(Settings.GAMEPAD_MOTION_SENSORS.key)).isTrue()
+        }
 
     @Test
     fun `an old bitrate in Mbps that Java still reads is in the snapshot in kbps`() {
@@ -86,20 +92,21 @@ class SettingsStoreJavaTest {
     }
 
     @Test
-    fun `a reset that Java makes on its own reaches the snapshot`() = runBlocking<Unit> {
-        val repository = SettingsSnapshots.repository(context)
-        repository.set(Settings.FRAME_RATE, "120")
-        repository.set(Settings.BITRATE_KBPS, 25_000)
+    fun `a reset that Java makes on its own reaches the snapshot`() =
+        runBlocking<Unit> {
+            val repository = SettingsSnapshots.repository(context)
+            repository.set(Settings.FRAME_RATE, "120")
+            repository.set(Settings.BITRATE_KBPS, 25_000)
 
-        PreferenceConfiguration.resetStreamingSettings(context)
+            PreferenceConfiguration.resetStreamingSettings(context)
 
-        val snapshot = SettingsSnapshots.current(context)
-        assertThat(snapshot[Settings.FRAME_RATE]).isEqualTo("60")
-        assertThat(snapshot.isBitrateAutomatic).isTrue()
-    }
+            val snapshot = SettingsSnapshots.current(context)
+            assertThat(snapshot[Settings.FRAME_RATE]).isEqualTo("60")
+            assertThat(snapshot.isBitrateAutomatic).isTrue()
+        }
 
     @Test
-    @Config(sdk = [ANDROID_12], shadows = [ShadowMoonBridge::class])
+    @Config(sdk = [ANDROID_12], shadows = [ShadowRecordingBridge::class])
     fun `the motion sensors that Java turns off on Android 12 reach the snapshot`() {
         val before = SettingsSnapshots.current(context)
         assertThat(before[Settings.GAMEPAD_MOTION_SENSORS]).isTrue()
@@ -107,9 +114,5 @@ class SettingsStoreJavaTest {
         readByJava()
 
         assertThat(SettingsSnapshots.current(context)[Settings.GAMEPAD_MOTION_SENSORS]).isFalse()
-    }
-
-    private companion object {
-        const val ANDROID_12 = 31
     }
 }

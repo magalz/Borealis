@@ -41,14 +41,23 @@ class ComputerManagerConnectionCacheTest {
     private fun ComputerDetails.withInfo() = also {
         it.borealis =
             BorealisHostInfo(
-                HostCaps(HostFamily.SUNSHINE, listOf(7, 1, 431, -1), true, false, false, false, false, emptySet()),
+                HostCaps(
+                    HostFamily.SUNSHINE,
+                    listOf(7, 1, 431, -1),
+                    true,
+                    false,
+                    false,
+                    false,
+                    false,
+                    emptySet(),
+                ),
                 httpsPort = 47984,
                 httpPort = 47989,
             )
     }
 
     private fun kotlinx.coroutines.test.TestScope.collecting(
-        connection: ComputerManagerConnection,
+        connection: ComputerManagerConnection
     ) =
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             connection.hostUpdates().collect {}
@@ -76,7 +85,9 @@ class ComputerManagerConnectionCacheTest {
 
         binder.emit(details(uuid = "a", rawAppList = null))
         binder.emit(details(uuid = "a", rawAppList = null))
-        binder.emit(details(uuid = "a", rawAppList = null, state = ComputerDetails.State.OFFLINE))
+        binder.emit(
+            details(uuid = "a", rawAppList = null).reported(state = ComputerDetails.State.OFFLINE)
+        )
 
         assertThat(reads.map { it.first }).containsExactly("a")
         assertThat(connection.updates.value.getValue("a").rawAppList).isEqualTo(APP_LIST)

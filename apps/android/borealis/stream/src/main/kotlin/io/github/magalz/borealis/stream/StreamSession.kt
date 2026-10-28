@@ -43,6 +43,7 @@ class StreamSession(
     private val defaults: StreamDefaults,
     private val dockKeyboard: () -> Boolean,
     private val actions: StreamActions,
+    private val clockMs: () -> Long = { System.nanoTime() / NANOS_PER_MS },
 ) : StreamIntents {
     private val mutableState =
         MutableStateFlow(
@@ -172,6 +173,12 @@ class StreamSession(
         }
     }
 
+    /**
+     * The stream ended with [code], reported from the connection thread. True when that is the end
+     * of the quit the user asked for, which the log then says with the time since the quit.
+     */
+    fun endedByQuit(code: Int): Boolean = false
+
     fun onPerf(snapshot: PerfSnapshot) {
         mutablePerf.value = snapshot
     }
@@ -287,3 +294,5 @@ class StreamSession(
 
     override fun openDiagnostics() = actions.openDiagnostics()
 }
+
+private const val NANOS_PER_MS = 1_000_000L

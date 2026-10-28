@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
@@ -233,6 +234,66 @@ class MenuRowTest {
             pressKey(Key.DirectionLeft)
         }
         composeRule.onNodeWithText("Codec").assertIsFocused()
+    }
+
+    // Sprint 12 round finding D4: Right on a row whose end is only a mark lost the focus.
+    @Test
+    fun `Right and Left keep the focus on a row whose trailing is only a mark`() {
+        composeRule.setContentInKeyboardMode {
+            Specimen {
+                MenuRow(
+                    "Send keys",
+                    {},
+                    trailing = { Icon(BorealisIcons.ChevronRight, contentDescription = null) },
+                )
+                MenuRow("Keyboard", {})
+            }
+        }
+        composeRule.onNodeWithText("Send keys").requestFocus()
+
+        composeRule.onNodeWithText("Send keys").performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithText("Send keys").assertIsFocused()
+
+        composeRule.onNodeWithText("Send keys").performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithText("Send keys").assertIsFocused()
+    }
+
+    @Test
+    fun `a row whose trailing is only a mark still has the rows around it one key away`() {
+        composeRule.setContentInKeyboardMode {
+            Specimen {
+                MenuRow("Keyboard", {})
+                MenuRow(
+                    "Send keys",
+                    {},
+                    trailing = { Icon(BorealisIcons.ChevronRight, contentDescription = null) },
+                )
+                MenuRow("Refresh", {})
+            }
+        }
+        composeRule.onNodeWithText("Send keys").requestFocus()
+        composeRule.onNodeWithText("Send keys").performKeyInput { pressKey(Key.DirectionRight) }
+
+        composeRule.onNodeWithText("Send keys").performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithText("Refresh").assertIsFocused()
+
+        composeRule.onNodeWithText("Refresh").performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithText("Send keys").performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithText("Keyboard").assertIsFocused()
+    }
+
+    @Test
+    fun `a button as the trailing takes the focus on Right and Left gives it back to the row`() {
+        composeRule.setContentInKeyboardMode {
+            Specimen { MenuRow("Bitrate", {}, trailing = { Chip("Max", onClick = {}) }) }
+        }
+        composeRule.onNodeWithText("Bitrate").requestFocus()
+
+        composeRule.onNodeWithText("Bitrate").performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithText("Max").assertIsFocused()
+
+        composeRule.onNodeWithText("Max").performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithText("Bitrate").assertIsFocused()
     }
 
     @Composable

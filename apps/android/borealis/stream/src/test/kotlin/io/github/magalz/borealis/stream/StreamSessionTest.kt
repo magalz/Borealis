@@ -474,6 +474,60 @@ class StreamSessionTest {
     }
 
     @Test
+    fun `disconnecting shows Disconnecting at once and tells the actions which app keeps running`() {
+        val started = startStreaming()
+
+        started.disconnect()
+
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Disconnecting)
+        assertThat(started.chromeMode).isEqualTo(ChromeMode.MODAL)
+        assertThat(actions.calls).containsExactly("disconnect Desktop")
+    }
+
+    @Test
+    fun `a disconnect that is under way is not asked for again`() {
+        val started = startStreaming()
+        started.disconnect()
+
+        started.disconnect()
+
+        assertThat(actions.calls).containsExactly("disconnect Desktop")
+    }
+
+    @Test
+    fun `the end of the stream while disconnecting changes nothing`() {
+        val started = startStreaming()
+        started.disconnect()
+
+        started.onFailed(aFailure)
+
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Disconnecting)
+    }
+
+    @Test
+    fun `a quit while disconnecting is not asked for`() {
+        val started = startStreaming()
+        started.disconnect()
+
+        started.quitApp()
+
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Disconnecting)
+        assertThat(actions.calls).containsExactly("disconnect Desktop")
+    }
+
+    @Test
+    fun `a disconnect while quitting is not asked for`() {
+        val started = startStreaming()
+        val streaming = started.state.value.phase
+        started.quitApp()
+
+        started.disconnect()
+
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Quitting(streaming))
+        assertThat(actions.calls).containsExactly("quitApp")
+    }
+
+    @Test
     fun `an end of the stream while a quit is pending is quiet, not a failure`() {
         val started = startStreaming()
         val streaming = started.state.value.phase
@@ -536,8 +590,6 @@ class StreamSessionTest {
         session.sendText("hi")
         session.openSystemKeyboard()
         session.requestKeyframe()
-        session.disconnect()
-        session.quitApp()
         session.leave()
         session.retry()
         session.wakeHost()
@@ -550,8 +602,6 @@ class StreamSessionTest {
                 "sendText hi",
                 "openSystemKeyboard",
                 "requestKeyframe",
-                "disconnect Desktop",
-                "quitApp",
                 "leave",
                 "retry",
                 "wakeHost",

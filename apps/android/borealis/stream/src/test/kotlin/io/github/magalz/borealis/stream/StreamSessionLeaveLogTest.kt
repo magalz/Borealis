@@ -35,6 +35,16 @@ class StreamSessionLeaveLogTest {
     }
 
     @Test
+    fun `confirming a disconnect logs that it was accepted, at info`() {
+        val session = streaming()
+
+        session.disconnect()
+
+        val accepted = log.records.single { it.message == "disconnect accepted" }
+        assertThat(accepted.level).isEqualTo(LogLevel.INFO)
+    }
+
+    @Test
     fun `a quit that is under way is accepted once`() {
         val session = streaming()
         session.quitApp()

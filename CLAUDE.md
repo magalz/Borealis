@@ -1,3 +1,5 @@
+# Claude Code instructions
+
 @AGENTS.md
 
 <!-- entire-agent:begin -->

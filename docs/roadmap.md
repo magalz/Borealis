@@ -948,10 +948,11 @@ Items:
   and the owner's end-of-migration UAT, with the orchestrator reading the logs and running some
   steps. The UAT is
   [section 3.28](development/device-validation.md#328-owners-30-minute-gameplay-uat-sprint-14):
-  play on one game while the stream options change (resolution, frame rate, bitrate, codec, HDR,
-  frame pacing, audio and input), then pairing, a wrong PIN, Add host, Forget, Wake-on-LAN, the
-  pinned shortcut, the TV channel, resume and Quit. The results are in
-  [section 19](development/device-validation.md#19-results-sprint-14). The findings went to
+  at least 30 minutes of play on one game while the stream options change (resolution, frame
+  rate, bitrate, codec, HDR, frame pacing, audio and input), then pairing, a wrong PIN, Add host,
+  Forget, Wake-on-LAN, the pinned shortcut, the TV channel, resume and Quit. The results are in
+  [section 19](development/device-validation.md#19-results-sprint-14); no stopwatch figure of the
+  play time was recorded. The findings went to
   Sprint 15, to Sprint 16 and to the backlog (item (d) of the Sprint 14 block), and the host
   crashed twice, the known #204 (see the [host-side items](#host-side-items-luminalshine)).
   Wake-on-LAN could not be tested with the PC on Wi-Fi; it needs Ethernet, or Wi-Fi wake
@@ -1845,8 +1846,11 @@ pins the item.
     be typeable. See B2 and finding U6.
   - **Pad battery.** No battery reaches the PC. By default the host makes the pad an Xbox 360
     controller, which has no battery, and with DualShock 4 emulation ViGEmBus makes a wired (USB)
-    pad, which has none either. The client sends the battery state (`sendControllerBatteryEvent`,
-    3.27 step 10). Investigate on the host side. See A6, C5 and finding U7.
+    pad, which has none either. The client sends the battery state only when Android reports one
+    for the pad (`InputDevice.batteryState.isPresent` on Android 12 and later, or the SHIELD API;
+    `ControllerHandler.sendControllerBatteryPacket` returns otherwise; 3.27 step 10). First check
+    whether Android reports a battery for the Pro 3, through the receiver and over Bluetooth
+    (`dumpsys input` or a log line). The host side comes next. See A6, C5 and finding U7.
   - **Pad gyro.** The gyro of the 8BitDo Pro 3 works on Windows (Steam's controller test), but
     neither Android device exposes it to the app: the Streamer sees the pad through the USB
     receiver as a plain HID gamepad (no sensor in `dumpsys input`), and the S22 sees it in the

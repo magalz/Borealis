@@ -1662,7 +1662,8 @@ Steps:
      ([roadmap](../roadmap.md#backlog-not-scheduled), Sprint 14 block, item (d)).
    - 5.1 surround, if the host offers it, and 7.1 likewise. Expected: the speaker test of the PC
      plays each speaker in its place. The PC offers 5.1 and 7.1 through the virtual audio sink of
-     the host, which switches to the layout that the client asks for. The logcat has
+     the host, which switches to the layout that the client asks for at a launch; on a resume it
+     does not (3.28, the Channels note of "How a block runs"). The logcat has
      `Audio channel config: 0xFC` for 5.1 and `0x18FC` for 7.1. For 5.1, the host log has
      `Changed virtual audio sink format to [S16 48000 5.1]` and
      `Opus initialized: 48 kHz, 6 channels`. Record `not applicable` where the host does not
@@ -1747,10 +1748,11 @@ Steps:
       `sendControllerBatteryEvent`. Connect the 8BitDo Pro 3 (Switch mode) or the Ultimate 2 and
       stream. Expected: the arrival works, with its controller type (3.26, steps 7 and 8). With the
       motion sensors setting on (Android 12 and later) and a host test that shows the gyro (for
-      example Steam's controller test), the motion works. The battery state goes to the host,
-      but the host shows no battery: with the default emulation it makes the pad an Xbox 360
-      controller, which has no battery, and with DualShock 4 emulation the virtual pad is
-      wired (ViGEmBus), so it has none either. The round of 2026-10-28 found this
+      example Steam's controller test), the motion works. The battery state goes to the host
+      only when Android reports a battery for the pad (`sendControllerBatteryPacket` returns
+      otherwise), and the host showed none in the round of 2026-10-28: with the default
+      emulation it makes the pad an Xbox 360 controller, which has no battery, and with
+      DualShock 4 emulation the virtual pad is wired (ViGEmBus), so it has none either
       ([section 19](#19-results-sprint-14), finding U7). Source: `ControllerHandler.kt`.
     - `getPendingAudioDuration`. Reached by every audio packet: step 5.
     - `requestIdrFrame`. In the in-game menu, choose "Refresh the picture". Expected: the menu
@@ -1971,10 +1973,10 @@ are the plan; the total is what the stopwatch shows.
     `the stream is 10-bit but the decoder does not declare HEVC Main10`. No toast "Display does not
     support HDR10" or "Decoder does not support HDR10 profile" shows, and the picture is not black
     or washed out. The overlay shows the negotiated 10-bit format, not the host's HDR state
-    (contract 9.2 and 9.3). To check that state, read the client logcat line `Display HDR mode: enabled`
-    (or `disabled`; tag `Borealis.UPSTREAM`), and the host log line `Sent HDR mode: true` (or
-    `false`). With AV1, where the host
-    offers it: as 3.27, step 3. Then Quit.
+    (contract 9.2 and 9.3). To check that state, read the client logcat line
+    `Display HDR mode: enabled` (or `disabled`; tag `Borealis.UPSTREAM`), and the host log line
+    `Sent HDR mode: true` (or `false`). With AV1, where the host offers it: as 3.27, step 3. Then
+    Quit.
 
 #### Part B: the flows around the stream
 
@@ -4708,8 +4710,8 @@ Sprint 14 block.
   - The release APK can fail to install over an older release build, and it has its own
     identity.
   - The tombstone is written by a push to `/data/local/tmp`, then a `run-as ... cp`.
-  - The S22 audio runs at the start and the end of a stream are not a `fail`, and the PC
-    offers 5.1 and 7.1 through the virtual audio sink of the host.
+  - The audio runs at the start and the end of a stream show on both devices, and are not a
+    `fail`. The PC offers 5.1 and 7.1 through the virtual audio sink of the host.
   - The second device can get the conflict dialog instead of the retry (3.5 too).
   - The buttons of the small PiP window hide quickly, so expand and close it by hand.
   - `testClientConnectivity` runs on every termination, `findExternalAddressIP4` needs a VPN,
@@ -4749,7 +4751,7 @@ to. The rows that start with 3.28 are items of
 | 9 Samsung keyboard capture | S22 | pass | The owner, with a hardware keyboard and mouse (UAT step A9): the Windows key with the grab and without it (released with Ctrl+Alt+Shift+Z) was all right, and so was Alt+Tab. Whether the first Tab of Alt+Tab was lost was not reported. |
 | 10 testClientConnectivity | S22 | pass | Reached through `connectionTerminated`: while the S22 streamed, the TV joined and quit. S22 `Connection terminated: -1`, no JNI error. The S22 screen showed "Steam Big Picture stopped", "The stream ended. The PC may have quit the app, or the connection dropped.", "Error -1", and Try again, Diagnostics and Close. It had no "blocked ports" text (UAT step C4). |
 | 10 findExternalAddressIP4 | both | not applicable (not reached) | `ComputerManagerService.populateExternalAddress` runs the STUN call only when the active network is a VPN (the structure of the inherited Java and of upstream). On the LAN it is never called. The test needs a VPN on the device (finding 3). |
-| 10 sendUtf8Text | S22 | pass | The owner typed "ação café" through the in-game menu, Keyboard, System keyboard (UAT step A9), and it arrived right. |
+| 10 sendUtf8Text | S22 | pass | The owner typed "ação café" through the in-game menu, Keyboard, System keyboard (UAT step A9), and it arrived right. Whether it reached the native through `ACTION_MULTIPLE` was not read from the log. |
 | 10 Controller natives | TV, S22 | pass, backlog U7, U8 | The 8BitDo Pro 3 arrived on both devices, and no JNI error showed. On the TV (Switch mode) the buttons, sticks, triggers, rumble, menu chord, gamepad mouse and quit combo worked (A6). On the S22 (Bluetooth, 8BitDo mode) the layout responded to the pad (A8). The host showed no battery and no gyro (findings U7 and U8). |
 | 10 getPendingAudioDuration | both | pass | Step 5. |
 | 10 requestIdrFrame | TV | pass | The menu "Refresh the picture": the menu closes, `IDR frame request sent`, and a new SPS follows. Host log: `Debug: type [IDX_REQUEST_IDR_FRAME]`, then "Video worker: issued one immediate bounded recovery IDR". |
@@ -4773,7 +4775,7 @@ to. The rows that start with 3.28 are items of
   question whether the same app should join without asking in Sprint 15
   ([roadmap](../roadmap.md#sprint-15-the-stream-screens-and-glass)).
 
-#### 2. Backlog: audio runs on the S22
+#### 2. Backlog: audio runs on the S22 and on the TV
 
 - Device: S22, stereo, at the first packet after silence and while the stream ends: short runs
   of `Too much pending audio data`, from about 90 ms down to 40 ms.
@@ -4793,7 +4795,9 @@ The owner ran the end-of-migration UAT of
 [section 3.28](#328-owners-30-minute-gameplay-uat-sprint-14) on the TV and on the S22. The
 orchestrator read the logs and ran some steps (marked as agent steps in the notes of a row).
 Part A played a turn-based RPG through Steam Big Picture. The UAT found no regression of
-Sprint 14.
+Sprint 14. The UAT captures also hold no E-level `AndroidRuntime`, FATAL or JNI line on either
+device. The `AndroidRuntime` I and D lines in the S22 capture are the shell `am` and `input` VMs
+exiting with result code 0, not app crashes.
 
 #### Block and step results
 
@@ -4809,16 +4813,16 @@ emulation). C2, the release build on the S22 (optional), was not reported: see t
 | A2 Resolution | TV | 1080p at 20 Mbps, 4K at 80 Mbps, smooth | 1080p, Automatic 20 Mbps: host 5.4, 5.7 and 8.2 ms (min, avg and max), round trip 4 ± 1 ms, 12.7 Mbps. 4K, Automatic 80 Mbps: the overlay read `3840×2160 · 60 fps · HEVC`, host 17.7, 27.1 and 35.2 ms, round trip 6 ± 4 ms, loss 0.0 %, 47.2 Mbps, decode 15.7 ms. | pass, backlog U2 | The 4K stream was a resume after a Disconnect, not a start after a Quit. The owner heard audio stutters at 1080p. The log has runs at 07:57:52 to 07:58:04 and at 07:58:16 to 07:58:21 (pending 45 to 65 ms), with no loss. |
 | A3 Codec | TV | H.264, AV1 where offered, HEVC; a decoder for each | H.264: `c2.mtk.avc.decoder.lowlatency`, host 4.4, 6.4 and 7.6 ms, round trip 4 ± 1 ms, 11.7 Mbps, decode 6.5 ms. HEVC: host 5.2, 5.5 and 7.6 ms, round trip 3 ± 1 ms, 14.0 Mbps, decode 6.7 ms. | pass, backlog U2 | AV1: not applicable (the host GPU has no AV1 encoder). The owner hears audio loss in the first seconds of each stream (the start run in the log). |
 | A4 Frame pacing | TV | four modes play; 59 fps with the limit | Balanced: 60 fps. Balanced with fps limit: 59 fps and the log line "Adjusting FPS target for screen to 59". Smoothest video: 60 fps. No freeze. | pass, backlog U2 | Lowest latency was the baseline of A1. The log has a mid-play audio run at 08:20:00 to 08:20:12, in Balanced. |
-| A5 Audio | TV | stereo, 5.1 (`0xFC`), sound on the PC | 5.1: `0xFC`. 7.1: `0x18FC`. Play audio on the PC: `localAudioPlayMode=1` sent. | pass, backlog U3 | On a resume the host switched its Opus encoder to 6 channels but not its virtual audio sink, so Quit before a Channels change stays the rule. 7.1 was a new launch (the host had restarted). The owner: the audio lags the picture in every mode, stereo too. Not reported: the speaker positions, and whether the PC also played the sound. |
+| A5 Audio | TV | stereo, 5.1 (`0xFC`), sound on the PC | 5.1: `0xFC`. 7.1: `0x18FC`. Play audio on the PC: `localAudioPlayMode=1` sent. | pass (log), backlog U3; speaker positions and whether the PC also played the sound not reported | On a resume the host switched its Opus encoder to 6 channels but not its virtual audio sink, so Quit before a Channels change stays the rule. 7.1 was a new launch (the host had restarted). The owner: the audio lags the picture in every mode, stereo too. |
 | A6 Pad | TV | inputs, rumble, gyro, battery; menu; quit combo | The 8BitDo Pro 3 in Switch mode: buttons, sticks, triggers, rumble, menu chord, gamepad mouse and quit combo all worked. The host emulated an Xbox 360 controller (the default), so it showed no battery and no gyro. | pass, backlog U7, U8 | Gyro and battery were checked again with DualShock 4 emulation in C5. |
 | A7 Bitrate | TV | 5 Mbps blocky, 60 Mbps clean | Host log: "Client configured bitrate is 5000 Kbps" (video 2909 Kbps), then 60000 Kbps (video 45452 Kbps). Quality and latency changed as expected. | pass | No "Poor connection to PC" or "Slow connection to PC" notice. Channels stayed 7.1 from A5. |
-| A8 Pad | S22 | as A6, Bluetooth | The Pro 3 over Bluetooth arrived in 8BitDo mode, as controller 0, and the layout responded to the pad (owner). Host log: "Gamepad 0 is emulating a DualShock 4 controller, but the client gamepad doesn't have motion sensors active", then "DS4 gyro stale". | pass, backlog U8 | The rumble and the overlay figures were not reported (no game with rumble at hand). The streams at 10:29 and 10:35 were meant for the Motion fallback check, but no pad reached the host in them, so the fallback path was not exercised. |
+| A8 Pad | S22 | as A6, Bluetooth | The Pro 3 over Bluetooth arrived in 8BitDo mode, as controller 0, and the layout responded to the pad (owner). Host log: "Gamepad 0 is emulating a DualShock 4 controller, but the client gamepad doesn't have motion sensors active", then "DS4 gyro stale". | pass (pad arrives, layout responds); rumble, overlay figures and battery not reported; gyro not delivered, U8 | No game with rumble at hand. The streams at 10:29 and 10:35 were meant for the Motion fallback check, but no pad reached the host in them, so the fallback path was not exercised. |
 | A9 Keyboard and mouse | S22 | typing, mouse, Windows key and grab | Typing, the mouse, Alt+Tab and the Windows key, with the grab and without it (released with Ctrl+Alt+Shift+Z), were all right (owner). "ação café" through the in-game menu, Keyboard, System keyboard (`sendUtf8Text`) arrived right. | pass, backlog U10 | Whether the first Tab of Alt+Tab was lost was not reported. |
 | A10 Touch | S22 | Trackpad and Direct gestures | Trackpad and Direct gestures work (owner). | pass | The owner found the game hard to play by touch. |
 | A11 On-screen controller | S22 | all controls, Opacity | Works perfectly (owner). | pass | |
 | A12 Frame rate | S22 | 30 and 120 fps; 5 and 14 Mbps | 30 fps: host `effective_display_fps` 30, "Client configured bitrate is 5000 Kbps", 31 frames a second in the decoder window. 120 fps: the host display at 120 Hz, 14000 Kbps, 116 to 123 frames a second. | pass | Run by the agent while the owner was away, on Steam Big Picture with no game launched. |
 | A13 HDR | S22 | "HEVC 10-bit HDR", right colours | The stream of 11:04 had `hdrMode=1`: SPS Main10, depth 10/10, `Display HDR mode: enabled`, the decoder restarted for the HDR metadata, no Main10 warning. The owner saw "HEVC 10-bit HDR" in the overlay, and the picture was fine. | pass | Two earlier streams (10:56 and 10:58) had no `hdrMode`, because HDR was not on yet. |
-| Total play time | TV, S22 | at least 30 minutes (stopwatch, and the SESSION_END durations) | No stopwatch figure was recorded. A1 to A7 (TV) were played as planned. A12 (S22) was run by the agent while the owner was away, on Steam Big Picture with no game. | not run | The notes give no total, and the SESSION_END durations were not added up. |
+| Total play time | TV, S22 | at least 30 minutes (stopwatch, and the SESSION_END durations) | No stopwatch figure was recorded. A1 to A7 (TV) were played. A12 (S22) was run by the agent while the owner was away, on Steam Big Picture with no game. | not run | The notes give no total, and the SESSION_END durations were not added up. |
 | B1 Forget | TV, S22 | dialog text; the card goes | TV: the texts were right, and the log has `unpair not confirmed status=404`. S22 (11:41): Forget worked, and the log has `unpair not confirmed status=404` at 11:41:30. | pass | On the TV the host came back only after the app was killed: the known Sprint 15 item. On the S22 Add host (B2) brought the forgotten host back. |
 | B2 Add host | TV, S22 | "Not paired" card; the three errors | TV: the three error texts, and "added. Pair it" with the "Not paired" card, were right. S22: Add host worked, and the forgotten host came back through it. | pass, backlog U5, U6 | The three error texts are reported for the TV only. |
 | B3 Wrong PIN | S22; TV optional | "The PIN was wrong."; known 409 retry | TV: the log has `unpair not confirmed status=404` at 09:57:31.472, then `PIN_WRONG` at 09:57:31.486, and the screen has no 404 text. Try again twice gave 409 `IN_PROGRESS`, with no loop. S22: `unpair not confirmed status=404` at 11:44:43.491, then `PIN_WRONG` at 11:44:43.493, with no 404 text on the screen. Each Try again, or a tap on the card, showed a PIN for about 1 s and then "Another pairing is already in progress on the PC." The log has one 409 `IN_PROGRESS` request for each attempt (11:44:46, 11:44:47 and 11:44:59), none automatic. | pass, backlog U12 | The known host lockout (Sprint 16). The owner saw it as a loop. After the screen went off and on, the card stayed "Not paired": this closes the open point of section 17 (a pairing with no PIN). |
@@ -4863,8 +4867,8 @@ regression. Each one says where it went in the [roadmap](../roadmap.md).
 - **U6. The Add host field opens the full keyboard.** A keyboard with `.`, `/` and `:` at hand
   would fit an address better. Item (d).
 - **U7. No pad battery reaches the PC.** The host makes an Xbox 360 controller by default, which
-  has no battery, and ViGEmBus emulates a wired DualShock 4. To investigate on the host side.
-  Item (d).
+  has no battery, and ViGEmBus emulates a wired DualShock 4. To investigate: first whether Android
+  reports a battery for the pad, then the host side. Item (d).
 - **U8. No pad gyro.** The gyro of the Pro 3 works on Windows (Steam's test), but neither device
   exposes it: the Streamer does not, through the USB receiver, and the S22 does not, in the
   pad's 8BitDo mode. To try: Switch mode over Bluetooth on the S22, and the Motion fallback check with a pad

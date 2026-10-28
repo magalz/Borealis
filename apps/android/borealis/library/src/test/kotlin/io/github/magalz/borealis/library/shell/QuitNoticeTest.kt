@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.library.shell
 
 import app.cash.turbine.test
+import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
@@ -18,6 +19,17 @@ class QuitNoticeTest {
             expectNoEvents()
         }
         notice.notices.test { expectNoEvents() }
+    }
+
+    @Test
+    fun `a disconnect notice is delivered as it was posted, with the app name`() = runTest {
+        notice.attach()
+
+        notice.post(LeaveNotice.Disconnected("Desktop"))
+
+        notice.notices.test {
+            assertThat(awaitItem()).isEqualTo(LeaveNotice.Disconnected("Desktop"))
+        }
     }
 
     @Test

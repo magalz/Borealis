@@ -26,12 +26,15 @@ UTC), read with `git show`, `git diff` and `git grep` on the tags `26.10.0-beta.
 references inside those items are lines at `dba21a9e`. `src/` is the same at
 `a9928254` and at `dba21a9e`, except for `src/platform/windows/desktop_guard_win32.h`,
 which is new in 26.10.1.
-**Nothing client-facing changed since 26.10.0-beta.1:** `src/nvhttp.cpp`,
-`src/rtsp.cpp`, `src/config.cpp` and `src/nvhttp.h` are the same file (the same git
-blob) at `e2662a44`, `46f6936d`, `a9928254` and `dba21a9e`, so pairing, launch,
-resume, cancel, `/serverinfo`, RTSP, audio and the defaults are as the sections below
-say. The only edits in `src/stream.cpp` and `src/input.cpp` since then concern the check
-for a missing gamepad driver (`src/stream.cpp:3376-3385`, `src/input.cpp:1755-1763`).
+**The HTTP, RTSP and configuration code did not change since 26.10.0-beta.1:**
+`src/nvhttp.cpp`, `src/rtsp.cpp`, `src/config.cpp` and `src/nvhttp.h` are the same file
+(the same git blob) at `e2662a44`, `46f6936d`, `a9928254` and `dba21a9e`, so pairing,
+launch, resume, cancel, `/serverinfo`, RTSP, audio and the defaults are as the sections
+below say, and no change to pairing, launch or RTSP is needed. **The exception is the
+gamepad backend** and the control-stream messages it sends: trigger rumble (`0x5500`)
+and adaptive triggers (`0x5503`) have an emitter now (sections 12 and 13). The only
+edits in `src/stream.cpp` and `src/input.cpp` since then concern the check for a missing
+gamepad driver (`src/stream.cpp:3376-3385`, `src/input.cpp:1755-1763`).
 What changed is on the host side: the encoder probe (section 9), the virtual gamepads
 (sections 12, 13, 17.2 and 18, item 13) and, in 26.10.1, the desktop helper (Exclusive
 mode with OLED Protection), which by the release notes does not alter the networking
@@ -923,11 +926,11 @@ the stream is encrypted and unencrypted messages are dropped
 | 0x0109 | host to client | Host termination | Sent on shutdown with reason `0x80030023` (graceful) | `src/stream.cpp:1618-1625` |
 | 0x010b | host to client | Rumble | Large and small motor values | `src/stream.cpp:1124-1140` |
 | 0x010e | host to client | HDR mode | Section 9.3 | `src/stream.cpp:1221-1246` |
-| 0x5500 | host to client | Trigger rumble (Sunshine extension) | Defined; no emitter in `src/platform/windows/input.cpp` (searched). **Changed in 26.10.0:** the VHF gamepad backend sends it (note below the table) | `src/stream.cpp:1141-1157` |
-| 0x5501 | host to client | Set motion event (Sunshine extension) | Windows input asks for accelerometer and gyroscope at 100 Hz when it emulates a DualShock 4. **Changed in 26.10.0:** the VHF backend asks, for a DualShock 4, a DualSense or a Switch Pro Controller (note below the table) | `src/stream.cpp:1158-1172`, `src/platform/windows/input.cpp:277-278` |
-| 0x5502 | host to client | Set RGB LED (Sunshine extension) | Sent when the emulated DualShock 4 light bar changes. **Changed in 26.10.0:** sent when the light colour of a PlayStation profile changes (note below the table) | `src/stream.cpp:1173-1189`, `src/platform/windows/input.cpp:385-396` |
+| 0x5500 | host to client | Trigger rumble (Sunshine extension) | Before 26.10.0: defined, with no emitter in `src/platform/windows/input.cpp` (searched at `5afdbdc6`). **Changed in 26.10.0:** the VHF gamepad backend sends it (note below the table) | `src/stream.cpp:1141-1157` |
+| 0x5501 | host to client | Set motion event (Sunshine extension) | Before 26.10.0: Windows input asks for accelerometer and gyroscope at 100 Hz when it emulates a DualShock 4 (`src/platform/windows/input.cpp:277-278` at `5afdbdc6`). **Changed in 26.10.0:** the VHF backend asks, for a DualShock 4, a DualSense or a Switch Pro Controller (note below the table) | `src/stream.cpp:1158-1172` |
+| 0x5502 | host to client | Set RGB LED (Sunshine extension) | Before 26.10.0: sent when the emulated DualShock 4 light bar changes (`src/platform/windows/input.cpp:385-396` at `5afdbdc6`). **Changed in 26.10.0:** sent when the light colour of a PlayStation profile changes (note below the table) | `src/stream.cpp:1173-1189` |
 | 0x5502 | client to host | PyroWave frame FEC status | See [pyrowave.md](pyrowave.md); the host accepts it only when the session's format is PyroWave and only with an exact 21-byte payload | `src/stream.cpp:1322-1361` |
-| 0x5503 | host to client | Set adaptive triggers (Sunshine extension) | Defined; no emitter in `src/platform/windows/input.cpp` (searched). **Changed in 26.10.0:** the VHF backend sends it for a DualSense (note below the table) | `src/stream.cpp:1190-1200` |
+| 0x5503 | host to client | Set adaptive triggers (Sunshine extension) | Before 26.10.0: defined, with no emitter in `src/platform/windows/input.cpp` (searched at `5afdbdc6`). **Changed in 26.10.0:** the VHF backend sends it for a DualSense (note below the table) | `src/stream.cpp:1190-1200` |
 
 `0x5502` is used in both directions with different payloads. A client must
 discriminate by direction, not by type.
@@ -952,9 +955,14 @@ host raises these messages:
 - Trigger rumble (`0x5500`) when a decoded `xbox_rumble` driver event carries trigger
   motors that changed (`vhf_gamepad.cpp:383-393`, `vhf_gamepad_policy.cpp:315-333`).
   The host's comment ties the event to Xbox controllers, which have impulse triggers
-  (`vhf_gamepad_policy.h:109-111`); which driver profile produces it is the driver's
-  business, and the driver source is a submodule that is not checked out
-  (`third-party/libvirtualgamepad`).
+  (`vhf_gamepad_policy.h:109-111`). The driver is public: Nonary/libvirtualgamepad at the
+  commit the host pins, `7b000a2b` (`git ls-tree 26.10.1 third-party/libvirtualgamepad`,
+  `docs/virtual-gamepad-driver.md:5`; read with `gh api`, not from a checkout). It defines
+  the `xbox_rumble` event (`include/libvirtualgamepad/protocol.h:91`) and builds it in
+  `driver/src/xbox_series.cpp:301-312`. Both Xbox profiles use that code, because they
+  take the same rumble report (`driver/src/driver.cpp:568-572`, `1018-1040`,
+  `1160-1165`); `driver/src/xbox_one.cpp` has no encoder of its own. So trigger rumble
+  comes from an Xbox Series and from an Xbox One, not from the other profiles.
 - Set motion event (`0x5501`, accelerometer and gyroscope at 100 Hz) when a
   DualShock 4, DualSense or Switch Pro controller is created (`vhf_gamepad.cpp:188-192`,
   `662-669`), and again by the DualShock 4 maintenance when its gyro stream goes stale
@@ -967,7 +975,8 @@ host raises these messages:
   touch, controller arrival, controller touch, controller motion and controller
   battery (`src/input.cpp:1593`, `src/input.cpp:1640-1682`).
 - Feature bits advertised in DESCRIBE `x-ss-general.featureFlags`
-  (`src/platform/common.h:254-260`, `src/platform/windows/input.cpp:1811-1829`):
+  (`src/platform/common.h:254-260`; `src/platform/windows/input.cpp:1811-1829` before
+  26.10.0, `835-853` from 26.10.0):
   `0x01` pen and touch events (set only if the Windows API
   `CreateSyntheticPointerDevice` is present and `native_pen_touch` is true,
   default true at `src/config.cpp:893`); `0x02` controller touch events (set
@@ -983,7 +992,8 @@ host raises these messages:
     (`docs/virtual-gamepad-driver.md:3-9`; release notes of 26.10.0 and 26.10.1). The
     profiles the host names are Xbox Series, Xbox One, DualSense, DualShock 4 and
     Switch Pro (`src/platform/windows/vhf_gamepad.cpp:574-579`). There is no Xbox 360
-    profile (`docs/configuration.md:350-365`).
+    profile (`docs/configuration.md:350-365`; the driver at `7b000a2b` returns none for
+    it, `driver/src/profile.cpp:174-180`, `193-212`).
   - **No driver.** The host probes the driver once at start
     (`src/platform/windows/input.cpp:57`). Without it the host allocates no gamepad: it
     logs `LuminalShine virtual gamepad driver is not available` with a status
@@ -1034,10 +1044,12 @@ host raises these messages:
     controller with motion is created, the host asks the client for accelerometer and
     gyroscope events at 100 Hz (`:662-669`). The touchpad-click and miscellaneous button
     bits go to the driver as they come (`vhf_gamepad_policy.cpp:98-100`,
-    `vhf_gamepad_policy.h:258-269`); what
-    each profile does with them is the driver's, and the driver source is a submodule that
-    is not checked out. `ds4_back_as_touchpad_click` applies only when `gamepad` is `ds4`
-    (`vhf_gamepad.cpp:871-875`).
+    `vhf_gamepad_policy.h:258-269`). In the driver at the pinned `7b000a2b` they become
+    Share on an Xbox Series (`driver/src/xbox_series.cpp:275`) and Capture on a Switch Pro
+    Controller (`driver/src/switch_pro.cpp:237-239`). An Xbox One report is the Series
+    report cut short (`driver/src/xbox_one.cpp:169-178`), without the Share button
+    (`driver/src/driver.cpp:568-569`). `ds4_back_as_touchpad_click` applies only when
+    `gamepad` is `ds4` (`vhf_gamepad.cpp:871-875`).
   - **Feature bit `0x02`** (controller touch events) is now set unless `gamepad` is
     `x360`, `xbox_series`, `xbox_one` or `switch_pro`
     (`vhf_gamepad_policy.cpp:78-87`, `src/platform/windows/input.cpp:835-841`); the old
@@ -1054,6 +1066,14 @@ host raises these messages:
     arrives and is dropped. A search of `apps/android` and `core` for `adaptive trigger`,
     `TRIGGER_EFFECT` and `setAdaptiveTriggers` finds only the vendored library. Trigger
     rumble has a handler (`callbacks.c:431`, `ControllerHandler.handleRumbleTriggers`).
+- **Before 26.10.0** (at `5afdbdc6`, the 26.09.1 line, and unchanged at `e2662a44`,
+  26.10.0-beta.1): the Windows host drove ViGEmBus. The modes were `auto`, `x360` and `ds4`
+  (`src/platform/windows/input.cpp:1779-1795`). In `auto` it chose a DualShock 4 for a
+  PlayStation type, or for motion or touchpad capability (`motion_as_ds4`,
+  `touchpad_as_ds4`), and an Xbox 360 controller for an Xbox type and by default
+  (`input.cpp:1199-1220`). Without ViGEmBus the host allocated no gamepad
+  (`input.cpp:1191-1194`), and it sent no trigger rumble and no adaptive triggers (no
+  emitter in `input.cpp`, searched).
 - The host settings `mouse` and `keyboard` gate all client input. With
   `mouse = disabled` the host drops every relative and absolute mouse, button,
   scroll, touch and pen packet (`src/input.cpp:452-983`); with

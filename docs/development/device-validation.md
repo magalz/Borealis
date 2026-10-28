@@ -4993,8 +4993,9 @@ with the pads that the earlier rounds used. The decisions that followed are in t
 
 - The driver is VHF driver 0.1.0.53 (protocol 2). The owner installed it with Windows PowerShell
   5.1 (`powershell.exe`), after an attempt in PowerShell 7 failed with "Class not registered"
-  from `Get-WindowsDriver`. The host's driver guide asks for elevated 64-bit Windows PowerShell
-  (`docs/virtual-gamepad-driver.md:23-27` at `dba21a9e`).
+  from `Get-WindowsDriver`. For a portable package the host's driver guide asks for elevated
+  64-bit Windows PowerShell (`docs/virtual-gamepad-driver.md:23-27` at `dba21a9e`); the round
+  did not record whether the owner used that package or the installer.
 - After a restart of the host, at 16:07, its log read "virtual gamepad driver is available (up
   to 16 controllers; offers Xbox Series, Xbox One, DualSense, DualShock 4, Switch Pro)".
   ViGEmBus stayed installed and was not used.
@@ -5059,8 +5060,8 @@ rounds. On the S22 an XInput pad or a PlayStation pad would vibrate, and a Ninte
 
 - The XInput receiver in this round, and two pads together.
 - Trigger rumble, and keyboard and mouse on the TV.
-- Battery and gyro: Android reported no battery and no sensor for any of the pads, so nothing
-  about them reached the host. The host made an Xbox Series, an Xbox One and a Switch Pro
+- Battery and gyro: Android reported no battery and no sensor for any of the pads, so the
+  client had nothing to send. The host made an Xbox Series, an Xbox One and a Switch Pro
   Controller, not a DualShock 4 or a DualSense.
 - The Win+Tab check against Windows' Task View on purpose, for Home held, is still to do
   ([roadmap, Sprint 17](../roadmap.md#sprint-17-general-fixes), Input).

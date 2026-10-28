@@ -1256,11 +1256,17 @@ facts of both items and added the third item and the open decision. See the
   the VHF round of 2026-10-28, Android showed no battery for either pad: the Ultimate 2 (over
   Bluetooth on the S22, and through its receiver in D-input on the TV) and the Pro 3 (on its
   receiver in Switch mode, on the S22). The host side has changed: it no longer makes an Xbox 360
-  controller by default, nor a wired DualShock 4 through ViGEmBus. It makes an Xbox Series, an
-  Xbox One or a Switch Pro Controller from these pads (and a DualShock 4 or a DualSense for other
-  pads), and it accepts a battery state only for the DualShock 4, the DualSense and the Switch
-  Pro Controller, not for an Xbox Series or an Xbox One. The round made an Xbox Series for the
-  Ultimate 2 on the S22, an Xbox One for it on the TV, and a Switch Pro Controller for the Pro 3.
+  controller by default, nor a wired DualShock 4 through ViGEmBus. Under `auto`, its default, it
+  makes an Xbox Series for an Xbox pad or for a pad of unknown type, a Switch Pro Controller for a
+  Nintendo pad, and a DualShock 4 for a PlayStation pad or for a pad of unknown type that reports
+  a sensor or a touchpad (with `motion_as_ds4` and `touchpad_as_ds4` on, the defaults); an Xbox
+  pad stays an Xbox Series whatever else it reports. An Xbox One or a DualSense comes only from
+  the host's `gamepad` setting (global or per client), and `auto` falls back to a DualSense only
+  when the driver lacks the Xbox Series profile. The host accepts a battery state only for the
+  DualShock 4, the DualSense and the Switch Pro Controller, not for an Xbox Series or an Xbox One.
+  The round made an Xbox Series for the Ultimate 2 on the S22, an Xbox One for it on the TV (so
+  the setting was `xbox_one` for that launch; the round did not read it), and a Switch Pro
+  Controller for the Pro 3.
   Still to check: whether Android reports a battery for the Pro 3 over Bluetooth (`dumpsys input` or
   a log line); the round used its receiver only. See A6, C5 and finding U7.
 - **Pad gyro.** The gyro of the 8BitDo Pro 3 works on Windows (Steam's controller test), but neither
@@ -1814,7 +1820,7 @@ conversion keeps behaviour (ADR 0059, rule 10). Paths are under
       that has a sensor manager (a matching pad without one is skipped with `continue`). So when
       two pads on one number both have a sensor manager, only the first gets the state.
     - `handleRumbleTriggers` passes a possibly null `vibratorManager` to `rumbleQuadVibrators`.
-      The same host can send it trigger rumble now (LuminalShine 26.10.0, VHF backend), so
+      A host of LuminalShine 26.10.0 or later (VHF backend) can send trigger rumble now, so
       this path can run. The VHF round of 2026-10-28 did not test trigger rumble.
     - The controller-input fusing block is written out three times (about lines 1479 to 1514 of
       the Java).
@@ -2129,7 +2135,7 @@ These are proposals and known issues in the LuminalShine host. The client works
 without them. The states are as of 2026-10-20. #199, #200 and #203 were merged
 on 2026-10-20, and 26.10.0-beta.1 (a prerelease of 2026-10-20) ships them
 (release notes). #194 and #202 are fixed on the host (release notes). The open
-ones are #198, #201, #204 and #205.
+ones are #198, #201, #204 and #205; they were checked again on 2026-10-28 and are still open.
 
 | Item | Kind | Summary |
 | --- | --- | --- |

@@ -4249,7 +4249,8 @@ belongs to.
     `client.crt`, `client.key`, the preferences, the datastore, the host database
     rows (2) and the shortcuts (1 dynamic, 0 pinned).
 - Verdict: not a regression. The Sprint 12 build behaves as the Sprint 11 build
-  does. Asking for `continuousAudio` is an optional feature in the backlog. To check
+  does. Asking for `continuousAudio` was an optional feature in the backlog; on 2026-10-28 it
+  joined the audio runs item in [Sprint 17](../roadmap.md#sprint-17-general-fixes). To check
   audio, play a sound on the PC during the
   stream (see the note in [section 3.25](#325-sprint-12-checks), step 4).
 - Steps to reproduce: start Desktop on the TV, play a sound on the PC, then quit.

@@ -100,7 +100,8 @@ class NativeGamepadSupportTest {
 
     @Test
     fun `a gamepad with the same VID and PID blocks the driver`() {
-        val pad = InputDeviceFacts(vid, pid, InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_JOYSTICK)
+        val pad =
+            InputDeviceFacts(vid, pid, InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_JOYSTICK)
 
         assertThat(blocks(InputDeviceFacts(vid, pid, dongleSources), pad)).isTrue()
     }

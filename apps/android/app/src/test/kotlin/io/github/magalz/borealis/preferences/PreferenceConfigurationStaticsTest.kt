@@ -233,7 +233,10 @@ class PreferenceConfigurationStaticsTest {
     private data class Row(val resolution: String, val fps: String, val kbps: Int)
 
     private companion object {
-        /** The bitrate in kbps that the Java code gave per resolution and frame rate before the conversion. */
+        /**
+         * The bitrate in kbps that the Java code gave per resolution and frame rate before the
+         * conversion.
+         */
         val BITRATE_TABLE =
             listOf(
                 Row("640x360", "30", 1000),

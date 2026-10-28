@@ -9,9 +9,9 @@ import org.objectweb.asm.Opcodes
 /**
  * The compiled `MoonBridge`, read as bytes. `MoonBridge` cannot be initialised in a unit test: its
  * static initialiser loads the native `moonlight-core` library. Reading the class file never loads
- * or initialises the class, and it sees the modifiers that the instrumentation of Robolectric
- * hides (it turns a native method into a plain one), so the tests of the JNI contract use it. The
- * ASM library comes with Robolectric.
+ * or initialises the class, and it sees the modifiers that the instrumentation of Robolectric hides
+ * (it turns a native method into a plain one), so the tests of the JNI contract use it. The ASM
+ * library comes with Robolectric.
  */
 internal object MoonBridgeClassFile {
     const val NAME = "com.limelight.nvstream.jni.MoonBridge"

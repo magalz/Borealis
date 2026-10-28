@@ -75,7 +75,9 @@ internal class HostReply private constructor(val bytes: ByteArray?, val closeAft
         /** `<root status_code="200">inner</root>`, the shape of every answer of a healthy host. */
         fun root(inner: String): HostReply = xml("""<root status_code="200">$inner</root>""")
 
-        /** `<root status_code="code" status_message="message"/>`, an answer that reports a failure. */
+        /**
+         * `<root status_code="code" status_message="message"/>`, an answer that reports a failure.
+         */
         fun failure(code: String, message: String? = null): HostReply =
             xml(
                 """<root status_code="$code"""" +

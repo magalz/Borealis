@@ -61,13 +61,20 @@ private fun session(
 class StreamFailuresTest {
     @Test
     fun `a failed stage carries the stage, the code and the port flags`() {
-        val facts = StreamFailures.facts("RTSP handshake", -1, 0x8, session()) {
+        val facts =
+            StreamFailures.facts("RTSP handshake", -1, 0x8, session()) {
                 "RTSP handshake"
             }
 
         assertThat(facts)
             .isEqualTo(
-                FailureFacts("RTSP handshake", -1, 0x8, terminated = false, rtspReplyUnreadable = true)
+                FailureFacts(
+                    "RTSP handshake",
+                    -1,
+                    0x8,
+                    terminated = false,
+                    rtspReplyUnreadable = true,
+                )
             )
     }
 
@@ -96,7 +103,8 @@ class StreamFailuresTest {
 
     @Test
     fun `an http status of zero is no status`() {
-        val facts = StreamFailures.facts("Launch", 1, 0, session(FailedConnection(CauseKind.TIMEOUT)))
+        val facts =
+            StreamFailures.facts("Launch", 1, 0, session(FailedConnection(CauseKind.TIMEOUT)))
 
         assertThat(facts.cause).isEqualTo(CauseKind.TIMEOUT)
         assertThat(facts.httpCode).isNull()
@@ -262,7 +270,9 @@ class StreamFailuresTest {
         val failed = failure(facts, portBlocked = true)
 
         assertThat(failed.portHint)
-            .isEqualTo("${HostR.string.failure_port_hint}:ports8\n\n${R.string.nettest_text_blocked}")
+            .isEqualTo(
+                "${HostR.string.failure_port_hint}:ports8\n\n${R.string.nettest_text_blocked}"
+            )
     }
 
     @Test

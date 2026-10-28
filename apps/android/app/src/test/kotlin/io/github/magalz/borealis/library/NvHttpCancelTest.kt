@@ -41,9 +41,16 @@ class NvHttpCancelTest {
 
     @Test
     fun `a request that the host never answers ends when the pending requests are cancelled`() {
-        // The HTTPS port is the silent socket: the request has no read timeout and waits for the host.
+        // The HTTPS port is the silent socket: the request has no read timeout and waits for the
+        // host.
         val http =
-            NvHTTP(AddressTuple("127.0.0.1", silentHost.localPort), silentHost.localPort, "id", null, crypto)
+            NvHTTP(
+                AddressTuple("127.0.0.1", silentHost.localPort),
+                silentHost.localPort,
+                "id",
+                null,
+                crypto,
+            )
         val failure = AtomicReference<Throwable?>()
         val finished = CountDownLatch(1)
         val request = Thread {

@@ -8,8 +8,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * A pad whose vibrator manager has four vibrators: the high motor, the low motor, the left trigger
- * and the right trigger, in that order. The trigger values are kept by the handler, so a rumble
- * and a trigger rumble each send all four.
+ * and the right trigger, in that order. The trigger values are kept by the handler, so a rumble and
+ * a trigger rumble each send all four.
  */
 @RunWith(RobolectricTestRunner::class)
 class RumbleQuadTest : FeedbackTestBase() {
@@ -83,7 +83,10 @@ class RumbleQuadTest : FeedbackTestBase() {
         rig.handler.handleRumbleTriggers(0, 0x4000, 0)
 
         assertThat(combos())
-            .containsExactly(VibrationExpectations.combo(13 to 64), VibrationExpectations.combo(12 to 64))
+            .containsExactly(
+                VibrationExpectations.combo(13 to 64),
+                VibrationExpectations.combo(12 to 64),
+            )
             .inOrder()
     }
 

@@ -16,13 +16,19 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [31])
 class MotionSensorsAndroid12Test : FeedbackTestBase() {
-    private val padSensors = Hardware.sensorManager(Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE)
+    private val padSensors =
+        Hardware.sensorManager(Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE)
     private val log
         get() = Hardware.sensors(padSensors).log
 
     private fun requestFrom(vendorId: Int): FeedbackRig {
         val rig = rig { gamepadMotionSensors = true }
-        rig.wake(rig.connectPad(vendorId = vendorId, features = DeviceFeatures(sensorManager = padSensors)))
+        rig.wake(
+            rig.connectPad(
+                vendorId = vendorId,
+                features = DeviceFeatures(sensorManager = padSensors),
+            )
+        )
         rig.motionState(GYRO, 100)
         return rig
     }

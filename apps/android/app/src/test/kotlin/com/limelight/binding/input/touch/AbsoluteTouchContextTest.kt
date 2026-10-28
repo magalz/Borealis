@@ -38,7 +38,8 @@ class AbsoluteTouchContextTest {
         context.start(x, y, time)
         rig.advance(100)
         val sent = rig.sent()
-        context.cancelTouch() // the timers of a touch go to the main looper that the next call shares
+        context
+            .cancelTouch() // the timers of a touch go to the main looper that the next call shares
         return sent
     }
 
@@ -51,10 +52,11 @@ class AbsoluteTouchContextTest {
     @Test
     fun `the timers run on the main looper, whichever thread built the context`() {
         val built = AtomicReference<AbsoluteTouchContext>()
-        Thread { built.set(rig.absolute()) }.apply {
-            start()
-            join()
-        }
+        Thread { built.set(rig.absolute()) }
+            .apply {
+                start()
+                join()
+            }
         val context = built.get()
         assertThat(context).isNotNull()
 
@@ -95,9 +97,7 @@ class AbsoluteTouchContextTest {
 
         context.touchUpEvent(100, 200, T0 + 300)
         rig.advance(2000) // the long press was removed, and there is no release to wait for
-        assertThat(rig.sent())
-            .containsExactly(position(100, 200), "down LEFT", "up LEFT")
-            .inOrder()
+        assertThat(rig.sent()).containsExactly(position(100, 200), "down LEFT", "up LEFT").inOrder()
     }
 
     @Test
@@ -226,7 +226,9 @@ class AbsoluteTouchContextTest {
 
         // The release of the first tap was due now: the second tap removed it
         rig.advance(99)
-        assertThat(rig.sent()).containsExactly(position(100, 100), "down LEFT", "down LEFT").inOrder()
+        assertThat(rig.sent())
+            .containsExactly(position(100, 100), "down LEFT", "down LEFT")
+            .inOrder()
         rig.advance(1)
         assertThat(rig.sent())
             .containsExactly(position(100, 100), "down LEFT", "down LEFT", "up LEFT")
@@ -312,7 +314,9 @@ class AbsoluteTouchContextTest {
         rig.advance(549)
         assertThat(rig.sent()).containsExactlyElementsIn(click).inOrder()
         rig.advance(1)
-        assertThat(rig.sent()).containsExactlyElementsIn(click + listOf("up LEFT", "down RIGHT")).inOrder()
+        assertThat(rig.sent())
+            .containsExactlyElementsIn(click + listOf("up LEFT", "down RIGHT"))
+            .inOrder()
 
         context.touchUpEvent(100, 100, T0 + 700)
         rig.advance(2000)

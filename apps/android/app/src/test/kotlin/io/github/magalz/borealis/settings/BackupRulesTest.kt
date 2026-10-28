@@ -20,7 +20,8 @@ class BackupRulesTest {
         context.resources.getXml(xmlRes).use { xml ->
             while (xml.next() != XmlPullParser.END_DOCUMENT) {
                 if (xml.eventType == XmlPullParser.START_TAG && xml.name == "exclude") {
-                    found += "${xml.getAttributeValue(null, "domain")}:${xml.getAttributeValue(null, "path")}"
+                    found +=
+                        "${xml.getAttributeValue(null, "domain")}:${xml.getAttributeValue(null, "path")}"
                 }
             }
         }

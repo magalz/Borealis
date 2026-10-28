@@ -34,7 +34,11 @@ class GlPreferencesTest {
 
     @Test
     fun `the renderer and the fingerprint are read from the keys Renderer and Fingerprint`() {
-        file.edit().putString("Renderer", "Adreno (TM) 740").putString("Fingerprint", "a/b/c").commit()
+        file
+            .edit()
+            .putString("Renderer", "Adreno (TM) 740")
+            .putString("Fingerprint", "a/b/c")
+            .commit()
 
         val saved = GlPreferences.readPreferences(context)
 
@@ -79,7 +83,12 @@ class GlPreferencesTest {
         saved.writePreferences()
 
         assertThat(recording.log)
-            .containsExactly("edit", "putString(Renderer=PowerVR)", "putString(Fingerprint=fp)", "commit()")
+            .containsExactly(
+                "edit",
+                "putString(Renderer=PowerVR)",
+                "putString(Fingerprint=fp)",
+                "commit()",
+            )
             .inOrder()
     }
 

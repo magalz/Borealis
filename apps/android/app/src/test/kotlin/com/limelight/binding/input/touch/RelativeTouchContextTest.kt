@@ -29,10 +29,11 @@ class RelativeTouchContextTest {
     @Test
     fun `the timers run on the main looper, whichever thread built the context`() {
         val built = AtomicReference<RelativeTouchContext>()
-        Thread { built.set(rig.relative()) }.apply {
-            start()
-            join()
-        }
+        Thread { built.set(rig.relative()) }
+            .apply {
+                start()
+                join()
+            }
         val context = built.get()
         assertThat(context).isNotNull()
 
@@ -53,7 +54,8 @@ class RelativeTouchContextTest {
         context.moveTo(110, 110)
         context.moveTo(100, 100)
 
-        assertThat(rig.sent()).containsExactly("sendMouseMove(5, 20)", "sendMouseMove(-5, -20)")
+        assertThat(rig.sent())
+            .containsExactly("sendMouseMove(5, 20)", "sendMouseMove(-5, -20)")
             .inOrder()
     }
 

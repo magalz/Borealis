@@ -17,7 +17,9 @@ class MediaCodecDecoderProbeTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val probe = MediaCodecDecoderProbe(context)
 
-    /** The highest level of the codec, so that the framework does not cap the sizes at 384 pixels. */
+    /**
+     * The highest level of the codec, so that the framework does not cap the sizes at 384 pixels.
+     */
     private fun highestLevel(mime: String) =
         MediaCodecInfo.CodecProfileLevel().apply {
             if (mime == "video/hevc") {
@@ -29,7 +31,9 @@ class MediaCodecDecoderProbeTest {
             }
         }
 
-    /** A hardware decoder of [mime] that reports [sizeRange], as `WxH-WxH` (smallest to largest). */
+    /**
+     * A hardware decoder of [mime] that reports [sizeRange], as `WxH-WxH` (smallest to largest).
+     */
     private fun decoder(mime: String, sizeRange: String): MediaCodecInfo {
         val format =
             MediaFormat().apply {

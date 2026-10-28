@@ -8,8 +8,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * The life of the handler: it starts a thread for the work that can block (batteries, sensors,
- * LEDs), listens for input devices, and gives all of it back on `stop` and `destroy`. `stop` is
- * the end of the input and is safe to repeat; `destroy` also ends the thread.
+ * LEDs), listens for input devices, and gives all of it back on `stop` and `destroy`. `stop` is the
+ * end of the input and is safe to repeat; `destroy` also ends the thread.
  */
 @RunWith(RobolectricTestRunner::class)
 class HandlerLifecycleTest : FeedbackTestBase() {

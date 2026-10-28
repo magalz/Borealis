@@ -21,7 +21,9 @@ class DecodeTimeTrackerTest {
 
     // The queue time of an input is its timestamp in nanoseconds, so a test says how long a frame
     // took with [out] and does not repeat the queue time.
-    private fun input(vararg timestamps: Long) = timestamps.forEach { tracker.onInput(it, it * 1000) }
+    private fun input(vararg timestamps: Long) = timestamps.forEach {
+        tracker.onInput(it, it * 1000)
+    }
 
     private fun out(timestampUs: Long, decodeUs: Long = 0, outputUs: Long = timestampUs) =
         tracker.onOutput(outputUs, timestampUs * 1000 + decodeUs * 1000)

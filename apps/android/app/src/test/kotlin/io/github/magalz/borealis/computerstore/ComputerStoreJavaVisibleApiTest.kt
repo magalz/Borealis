@@ -16,15 +16,14 @@ import org.junit.Test
  */
 class ComputerStoreJavaVisibleApiTest {
     /** `[static] Return name(Parameters) [throws Exceptions]`, with simple class names. */
-    private fun describe(method: Method): String =
-        buildString {
-            if (Modifier.isStatic(method.modifiers)) append("static ")
-            append(method.returnType.simpleName).append(' ').append(method.name)
-            append(method.parameterTypes.joinToString(prefix = "(", postfix = ")") { it.simpleName })
-            if (method.exceptionTypes.isNotEmpty()) {
-                append(" throws ").append(method.exceptionTypes.joinToString { it.simpleName })
-            }
+    private fun describe(method: Method): String = buildString {
+        if (Modifier.isStatic(method.modifiers)) append("static ")
+        append(method.returnType.simpleName).append(' ').append(method.name)
+        append(method.parameterTypes.joinToString(prefix = "(", postfix = ")") { it.simpleName })
+        if (method.exceptionTypes.isNotEmpty()) {
+            append(" throws ").append(method.exceptionTypes.joinToString { it.simpleName })
         }
+    }
 
     private fun publicMethods(type: Class<*>): List<String> =
         type.declaredMethods
@@ -35,7 +34,9 @@ class ComputerStoreJavaVisibleApiTest {
         type.declaredConstructors
             .filter { Modifier.isPublic(it.modifiers) && !it.isSynthetic }
             .map { constructor: Constructor<*> ->
-                constructor.parameterTypes.joinToString(prefix = "(", postfix = ")") { it.simpleName }
+                constructor.parameterTypes.joinToString(prefix = "(", postfix = ")") {
+                    it.simpleName
+                }
             }
 
     @Test
@@ -55,10 +56,15 @@ class ComputerStoreJavaVisibleApiTest {
 
     @Test
     fun `the saved host list has one public constructor that takes a context`() {
-        assertThat(publicConstructors(ComputerDatabaseManager::class.java)).containsExactly("(Context)")
+        assertThat(publicConstructors(ComputerDatabaseManager::class.java))
+            .containsExactly("(Context)")
         assertThat(Modifier.isPublic(ComputerDatabaseManager::class.java.modifiers)).isTrue()
         assertThat(
-                ComputerDatabaseManager::class.java.getConstructor(Context::class.java).exceptionTypes.toList()
+                ComputerDatabaseManager::class
+                    .java
+                    .getConstructor(Context::class.java)
+                    .exceptionTypes
+                    .toList()
             )
             .isEmpty()
     }
@@ -66,7 +72,8 @@ class ComputerStoreJavaVisibleApiTest {
     @Test
     fun `the client id has one public constructor that takes a context, and a getter`() {
         assertThat(publicConstructors(IdentityManager::class.java)).containsExactly("(Context)")
-        assertThat(publicMethods(IdentityManager::class.java)).containsExactly("String getUniqueId()")
+        assertThat(publicMethods(IdentityManager::class.java))
+            .containsExactly("String getUniqueId()")
         assertThat(Modifier.isPublic(IdentityManager::class.java.modifiers)).isTrue()
     }
 }

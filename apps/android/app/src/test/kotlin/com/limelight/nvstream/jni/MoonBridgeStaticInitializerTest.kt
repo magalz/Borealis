@@ -39,16 +39,19 @@ internal object StaticInitializerProbe {
  * two calls, and the three audio configurations. A wrong library name, a missing `init()` or a
  * wrong audio configuration would otherwise show only on a device.
  *
- * Plain JUnit, like [MoonBridgeJniContractTest]: the class is never initialized in this class loader.
+ * Plain JUnit, like [MoonBridgeJniContractTest]: the class is never initialized in this class
+ * loader.
  */
 class MoonBridgeStaticInitializerTest {
     /**
-     * Defines `MoonBridge` and its nested classes afresh, with the initializer rewritten; every other
-     * class comes from the parent, the probe included.
+     * Defines `MoonBridge` and its nested classes afresh, with the initializer rewritten; every
+     * other class comes from the parent, the probe included.
      */
     private class InitializerLoader(parent: ClassLoader) : ClassLoader(parent) {
         override fun loadClass(name: String, resolve: Boolean): Class<*> {
-            if (name != MoonBridgeClassFile.NAME && !name.startsWith(MoonBridgeClassFile.NAME + "$")) {
+            if (
+                name != MoonBridgeClassFile.NAME && !name.startsWith(MoonBridgeClassFile.NAME + "$")
+            ) {
                 return super.loadClass(name, resolve)
             }
             synchronized(this) {
@@ -74,7 +77,8 @@ class MoonBridgeStaticInitializerTest {
                             signature: String?,
                             exceptions: Array<out String>?,
                         ): MethodVisitor {
-                            val next = super.visitMethod(access, name, descriptor, signature, exceptions)
+                            val next =
+                                super.visitMethod(access, name, descriptor, signature, exceptions)
                             return if (name == "<clinit>") probed(next) else next
                         }
                     },
@@ -133,7 +137,9 @@ class MoonBridgeStaticInitializerTest {
     fun `the initializer loads moonlight-core and then initializes the native side, once each`() {
         initialized()
 
-        assertThat(StaticInitializerProbe.events).containsExactly("loadLibrary moonlight-core", "init").inOrder()
+        assertThat(StaticInitializerProbe.events)
+            .containsExactly("loadLibrary moonlight-core", "init")
+            .inOrder()
     }
 
     @Test
@@ -152,7 +158,8 @@ class MoonBridgeStaticInitializerTest {
     fun `the audio configurations are the macro MAKE_AUDIO_CONFIGURATION of Limelight h`() {
         val header = NativeSources.limelightHeader
 
-        // The formula that AudioConfiguration.toInt implements, and the three values it is applied to
+        // The formula that AudioConfiguration.toInt implements, and the three values it is applied
+        // to
         assertThat(header.replace(Regex("\\s+"), " "))
             .contains("(((channelMask) << 16) | (channelCount << 8) | 0xCA)")
         assertThat(macro("STEREO")).isEqualTo(0x000302CA)
@@ -163,7 +170,9 @@ class MoonBridgeStaticInitializerTest {
     /** The value of `AUDIO_CONFIGURATION_<name>` in Limelight.h, computed from its macro. */
     private fun macro(name: String): Int {
         val definition =
-            Regex("#define AUDIO_CONFIGURATION_$name MAKE_AUDIO_CONFIGURATION\\((\\d+), 0x([0-9A-F]+)\\)")
+            Regex(
+                    "#define AUDIO_CONFIGURATION_$name MAKE_AUDIO_CONFIGURATION\\((\\d+), 0x([0-9A-F]+)\\)"
+                )
                 .find(NativeSources.limelightHeader)
         val (count, mask) = checkNotNull(definition) { name }.destructured
         return (mask.toInt(HEX) shl MASK_SHIFT) or (count.toInt() shl COUNT_SHIFT) or MAGIC

@@ -9,12 +9,13 @@ import org.objectweb.asm.Type
  * The agreement between `MoonBridge` and the C code that `moonlight-core` is built from. The C code
  * finds every native by the JNI name `Java_com_limelight_nvstream_jni_MoonBridge_<name>` (there is
  * no `RegisterNatives`) and every callback by a `GetStaticMethodID` lookup with a name and a
- * descriptor; a mistake in either shows only when the library runs on a device. The test reads the C
- * sources and the class file of `MoonBridge` (see [NativeSources] and [MoonBridgeClassFile]), so it
- * needs neither the native library nor the Android runtime, and it never initializes `MoonBridge`.
+ * descriptor; a mistake in either shows only when the library runs on a device. The test reads the
+ * C sources and the class file of `MoonBridge` (see [NativeSources] and [MoonBridgeClassFile]), so
+ * it needs neither the native library nor the Android runtime, and it never initializes
+ * `MoonBridge`.
  *
- * It runs in plain JUnit on purpose: the Robolectric runner instruments the class and turns a native
- * method into a plain one, which would hide what is checked here.
+ * It runs in plain JUnit on purpose: the Robolectric runner instruments the class and turns a
+ * native method into a plain one, which would hide what is checked here.
  */
 class MoonBridgeJniContractTest {
     /** One `Java_com_limelight_nvstream_jni_MoonBridge_*` function of the C code. */
@@ -74,7 +75,9 @@ class MoonBridgeJniContractTest {
         val problems =
             MoonBridgeClassFile.natives
                 .filter { it.name !in exports }
-                .map { "${it.name}${it.descriptor}: no Java_com_limelight_nvstream_jni_MoonBridge_*" }
+                .map {
+                    "${it.name}${it.descriptor}: no Java_com_limelight_nvstream_jni_MoonBridge_*"
+                }
 
         assertThat(problems).isEmpty()
     }
@@ -84,27 +87,28 @@ class MoonBridgeJniContractTest {
         val problems =
             exports.values
                 .filter { it.params.take(2) != listOf("JNIEnv", "jclass") }
-                .map { "${it.name} (${it.file}): the first two parameters are ${it.params.take(2)}" }
+                .map {
+                    "${it.name} (${it.file}): the first two parameters are ${it.params.take(2)}"
+                }
 
         assertThat(problems).isEmpty()
     }
 
     @Test
     fun `every callback that the C code looks up is a static method with that descriptor`() {
-        val problems =
-            lookups.mapNotNull { lookup ->
-                val method =
-                    MoonBridgeClassFile.methods.firstOrNull {
-                        it.name == lookup.name && it.descriptor == lookup.descriptor
-                    }
-                when {
-                    method == null ->
-                        "${lookup.name}${lookup.descriptor} (${lookup.file}): MoonBridge has none"
-                    !method.isStatic -> "${lookup.name}: the callback is not static"
-                    method.isNative -> "${lookup.name}: the callback is native"
-                    else -> null
+        val problems = lookups.mapNotNull { lookup ->
+            val method =
+                MoonBridgeClassFile.methods.firstOrNull {
+                    it.name == lookup.name && it.descriptor == lookup.descriptor
                 }
+            when {
+                method == null ->
+                    "${lookup.name}${lookup.descriptor} (${lookup.file}): MoonBridge has none"
+                !method.isStatic -> "${lookup.name}: the callback is not static"
+                method.isNative -> "${lookup.name}: the callback is native"
+                else -> null
             }
+        }
 
         assertThat(problems).isEmpty()
     }
@@ -119,7 +123,8 @@ class MoonBridgeJniContractTest {
                 .map { "${it.name}${it.descriptor}: the C code never looks it up" }
 
         assertThat(problems).isEmpty()
-        // init() looks up 21 callbacks and borealis_log.c the log one: the parse must have seen them.
+        // init() looks up 21 callbacks and borealis_log.c the log one: the parse must have seen
+        // them.
         assertThat(looked).hasSize(CALLBACKS)
     }
 
@@ -136,7 +141,8 @@ class MoonBridgeJniContractTest {
                 }
                 .map { it.name }
 
-        // The only difference: Limelight.h counts the 4:4:4 formats as 10-bit ones, MoonBridge never
+        // The only difference: Limelight.h counts the 4:4:4 formats as 10-bit ones, MoonBridge
+        // never
         // asks for them (see the test after the next one).
         assertThat(differing).containsExactly("VIDEO_FORMAT_MASK_10BIT")
     }

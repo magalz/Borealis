@@ -17,8 +17,8 @@ import java.io.InputStream
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.async
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
@@ -75,7 +75,12 @@ class BoxArtLoaderTest {
                     halfSent.countDown()
                     release.await(5, TimeUnit.SECONDS)
                 }
-                val count = stream.read(buffer, offset, minOf(length, body.size / 2 - sent).coerceAtLeast(1))
+                val count =
+                    stream.read(
+                        buffer,
+                        offset,
+                        minOf(length, body.size / 2 - sent).coerceAtLeast(1),
+                    )
                 if (count > 0) sent += count
                 return count
             }
@@ -124,15 +129,14 @@ class BoxArtLoaderTest {
     }
 
     @Test
-    fun `art that is cached makes no request, also for a loader that did not fetch it`() =
-        runTest {
-            loader().bitmap("host-1", 7)
+    fun `art that is cached makes no request, also for a loader that did not fetch it`() = runTest {
+        loader().bitmap("host-1", 7)
 
-            val art = loader().bitmap("host-1", 7)
+        val art = loader().bitmap("host-1", 7)
 
-            assertThat(art).isNotNull()
-            assertThat(clients.client.boxArtRequests).containsExactly(7)
-        }
+        assertThat(art).isNotNull()
+        assertThat(clients.client.boxArtRequests).containsExactly(7)
+    }
 
     @Test
     fun `art that is cached needs no connection to the host`() = runTest {
@@ -356,7 +360,8 @@ class BoxArtLoaderTest {
 
                     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
                         try {
-                            // Far longer than the deadline of this test; it ends in an error anyway.
+                            // Far longer than the deadline of this test; it ends in an error
+                            // anyway.
                             CountDownLatch(1).await(3, TimeUnit.SECONDS)
                         } catch (e: InterruptedException) {
                             interrupted = true

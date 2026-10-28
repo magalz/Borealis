@@ -96,8 +96,8 @@ internal fun fixtureBytes(name: String): ByteArray =
 
 /** A public certificate of the fixtures, as parsed from its PEM file. */
 internal fun fixtureCertificate(name: String): X509Certificate =
-    CertificateFactory.getInstance("X.509").generateCertificate(ByteArrayInputStream(fixtureBytes(name)))
-        as X509Certificate
+    CertificateFactory.getInstance("X.509")
+        .generateCertificate(ByteArrayInputStream(fixtureBytes(name))) as X509Certificate
 
 /** Puts a fixture file where the app keeps [target], as it was before the app first ran. */
 internal fun installFixture(name: String, target: File) {

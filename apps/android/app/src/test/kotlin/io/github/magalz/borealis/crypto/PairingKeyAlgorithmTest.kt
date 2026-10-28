@@ -21,8 +21,7 @@ private val UP_TO_THE_SIGNATURE =
 class PairingKeyAlgorithmTest {
     private val closeables = mutableListOf<Closeable>()
 
-    @After
-    fun tearDown() = closeables.forEach { it.close() }
+    @After fun tearDown() = closeables.forEach { it.close() }
 
     private fun host(identity: TestIdentity = TestIdentities.hostRsa) =
         FakePairingHost(hostIdentity = identity).also { closeables += it }
@@ -81,7 +80,11 @@ class PairingKeyAlgorithmTest {
         val rig =
             PairingRig(
                 host,
-                providerOf(client.certificate, RenamedKey(client.keyPair.private, "rsa"), client.pem),
+                providerOf(
+                    client.certificate,
+                    RenamedKey(client.keyPair.private, "rsa"),
+                    client.pem,
+                ),
             )
 
         val error = assertThrows(RuntimeException::class.java) { rig.pair() }

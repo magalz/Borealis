@@ -33,8 +33,7 @@ class AddressTupleTest {
 
     @Test
     fun `a null address is rejected`() {
-        val error =
-            assertThrows(IllegalArgumentException::class.java) { AddressTuple(null, 47989) }
+        val error = assertThrows(IllegalArgumentException::class.java) { AddressTuple(null, 47989) }
 
         assertThat(error).hasMessageThat().isEqualTo("Address cannot be null")
     }

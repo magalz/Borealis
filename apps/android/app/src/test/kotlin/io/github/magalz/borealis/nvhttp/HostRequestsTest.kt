@@ -327,7 +327,13 @@ class HostRequestsTest {
     @Test
     fun `other addresses keep their form`() {
         fun urlOf(address: String) =
-            NvHTTP(AddressTuple(address, HTTP_PORT), 47984, "id", null, providerOf(null, null, null))
+            NvHTTP(
+                    AddressTuple(address, HTTP_PORT),
+                    47984,
+                    "id",
+                    null,
+                    providerOf(null, null, null),
+                )
                 .getHttpsUrl(true)
                 .toString()
 

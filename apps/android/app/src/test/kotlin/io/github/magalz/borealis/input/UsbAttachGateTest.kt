@@ -81,7 +81,8 @@ class UsbAttachGateTest {
     @Test
     fun `toggling the setting flips the component without a restart`() {
         setUsbDriver(true)
-        // SharedPreferences holds its listeners weakly: the gate must stay referenced until the end.
+        // SharedPreferences holds its listeners weakly: the gate must stay referenced until the
+        // end.
         val gate = UsbAttachGate.start(context)
 
         setUsbDriver(false)
@@ -138,7 +139,8 @@ class UsbAttachGateTest {
     fun `on a TV toggling the setting leaves the activity out`() {
         asTelevision()
         setUsbDriver(false)
-        // SharedPreferences holds its listeners weakly: the gate must stay referenced until the end.
+        // SharedPreferences holds its listeners weakly: the gate must stay referenced until the
+        // end.
         val gate = UsbAttachGate.start(context)
 
         setUsbDriver(true)

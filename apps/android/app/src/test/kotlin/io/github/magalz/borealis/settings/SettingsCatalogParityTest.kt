@@ -9,8 +9,8 @@ import org.junit.Test
 
 /**
  * The shape of the Kotlin settings catalog (ADR 0055): unique keys, the keys that were not ported,
- * the overlay choice, the background choice and the DataStore settings. The defaults are
- * compared with what the Java readers use in [SettingsDefaultsParityTest].
+ * the overlay choice, the background choice and the DataStore settings. The defaults are compared
+ * with what the Java readers use in [SettingsDefaultsParityTest].
  */
 class SettingsCatalogParityTest {
     private fun settingByKey(key: String): Setting<*>? = Settings.all.firstOrNull { it.key == key }

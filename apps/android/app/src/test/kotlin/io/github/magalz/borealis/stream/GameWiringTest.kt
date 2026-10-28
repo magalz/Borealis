@@ -35,8 +35,7 @@ class GameWiringTest {
 
     @Test
     fun `the connection never hands an exception text to the listener`() {
-        val connection =
-            File("src/main/kotlin/com/limelight/nvstream/NvConnection.kt").readText()
+        val connection = File("src/main/kotlin/com/limelight/nvstream/NvConnection.kt").readText()
 
         assertThat(connection).doesNotContain("displayMessage(e.message")
         assertThat(connection).doesNotContain("stageFailed(appName")
@@ -44,8 +43,7 @@ class GameWiringTest {
 
     @Test
     fun `sending the launch or the resume is the step that fails after the serverinfo`() {
-        val connection =
-            File("src/main/kotlin/com/limelight/nvstream/NvConnection.kt").readText()
+        val connection = File("src/main/kotlin/com/limelight/nvstream/NvConnection.kt").readText()
         val start = connection.indexOf("private fun launchWithRetry(")
         val launch = connection.substring(start, connection.indexOf("\n    }\n", start))
 
@@ -57,8 +55,7 @@ class GameWiringTest {
 
     @Test
     fun `a failed quit is the quit step, set before the quit request is sent`() {
-        val connection =
-            File("src/main/kotlin/com/limelight/nvstream/NvConnection.kt").readText()
+        val connection = File("src/main/kotlin/com/limelight/nvstream/NvConnection.kt").readText()
         val start = connection.indexOf("protected open fun quitAndLaunch(")
         val quit = connection.substring(start, connection.indexOf("\n    }\n", start))
 
@@ -104,7 +101,8 @@ class GameWiringTest {
 
     @Test
     fun `the strings of the old error dialogs are gone in every language`() {
-        val names = listOf("check_ports_msg", "conn_error_msg", "conn_terminated_msg", "error_code_prefix")
+        val names =
+            listOf("check_ports_msg", "conn_error_msg", "conn_terminated_msg", "error_code_prefix")
         val leftovers =
             File("src/main/res")
                 .walkTopDown()

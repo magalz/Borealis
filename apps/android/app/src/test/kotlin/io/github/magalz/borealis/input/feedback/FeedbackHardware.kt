@@ -29,10 +29,16 @@ sealed interface VibratorCall {
     /** `cancel()`. */
     data object Cancel : VibratorCall
 
-    /** `vibrate(effect, attributes)`: [attributes] is a `VibrationAttributes` or an `AudioAttributes`. */
+    /**
+     * `vibrate(effect, attributes)`: [attributes] is a `VibrationAttributes` or an
+     * `AudioAttributes`.
+     */
     data class Play(val effect: VibrationEffect, val attributes: Any?) : VibratorCall
 
-    /** `vibrate(pattern, repeat, audioAttributes)`, the call for a vibrator without amplitude control. */
+    /**
+     * `vibrate(pattern, repeat, audioAttributes)`, the call for a vibrator without amplitude
+     * control.
+     */
     data class Pattern(val timings: List<Long>, val repeat: Int, val attributes: AudioAttributes?) :
         VibratorCall
 }
@@ -122,7 +128,10 @@ class ShadowRecordingSystemVibratorManager : ShadowRecordingVibratorManager() {
     }
 }
 
-/** A sensor manager that records the listeners of the handler and the sampling period each asked for. */
+/**
+ * A sensor manager that records the listeners of the handler and the sampling period each asked
+ * for.
+ */
 @Implements(SensorManager::class)
 open class ShadowRecordingSensorManager {
     /** The sensors this manager has, by type. */
@@ -360,7 +369,9 @@ object Hardware {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) COLOR_RGB else 0,
         )
 
-    /** A light that has no colour of its own. Android 14 and later: before it, every light says RGB. */
+    /**
+     * A light that has no colour of its own. Android 14 and later: before it, every light says RGB.
+     */
     fun plainLight(id: Int): Any = newLight(id, BRIGHTNESS)
 
     private fun newLight(id: Int, capabilities: Int): Any =

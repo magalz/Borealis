@@ -154,7 +154,7 @@ class StreamSession(
     fun onFailed(failure: StreamFailure) = mutableState.update {
         when {
             it.phase is StreamPhase.Failed || it.phase is StreamPhase.Quitting -> it
-            quitPending.get() -> it.copy(phase = StreamPhase.Quitting(failure))
+            quitPending.get() -> it.copy(phase = StreamPhase.Quitting(it.phase, failure))
             else -> it.copy(phase = StreamPhase.Failed(failure))
         }
     }
@@ -164,8 +164,11 @@ class StreamSession(
         quitPending.set(false)
         mutableState.update {
             val phase = it.phase
-            if (phase is StreamPhase.Quitting) it.copy(phase = StreamPhase.Failed(phase.ended))
-            else it
+            if (phase is StreamPhase.Quitting) {
+                it.copy(phase = phase.ended?.let(StreamPhase::Failed) ?: phase.resumeTo)
+            } else {
+                it
+            }
         }
     }
 

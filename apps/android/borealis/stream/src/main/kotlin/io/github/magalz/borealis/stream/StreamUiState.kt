@@ -36,11 +36,13 @@ sealed interface StreamPhase {
     data class Failed(val failure: StreamFailure) : StreamPhase
 
     /**
-     * The user asked to quit the app and the host ended the stream before it answered: [ended] is
-     * how the stream ended. The screen is quiet; the activity finishes when the quit answers, and a
-     * quit that fails turns this into [Failed] with [ended].
+     * The user asked to quit the app and the host has not answered yet. [resumeTo] is the phase the
+     * user was in, which a quit that fails returns to while the stream still runs; [ended] is how
+     * the stream ended when the host ended it before it answered, and a quit that fails after that
+     * turns this into [Failed] with [ended]. The screen is quiet; the activity finishes when the
+     * quit answers.
      */
-    data class Quitting(val ended: StreamFailure) : StreamPhase
+    data class Quitting(val resumeTo: StreamPhase, val ended: StreamFailure? = null) : StreamPhase
 
     /**
      * The first frame is on screen. [touchMode] is null when the device has no touchscreen and

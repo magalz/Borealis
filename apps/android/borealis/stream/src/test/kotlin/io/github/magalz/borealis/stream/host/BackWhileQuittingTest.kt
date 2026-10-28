@@ -16,9 +16,10 @@ class BackWhileQuittingTest {
         val session = aSession(actions)
         session.onConnectionStarted(aSessionInfo)
         session.onFirstFrame()
+        val streaming = session.state.value.phase
         session.quitApp()
         session.onFailed(aFailure)
-        assertThat(session.state.value.phase).isEqualTo(StreamPhase.Quitting(aFailure))
+        assertThat(session.state.value.phase).isEqualTo(StreamPhase.Quitting(streaming, aFailure))
         actions.calls.clear()
 
         handleBack(session)

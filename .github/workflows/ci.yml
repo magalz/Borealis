@@ -170,7 +170,7 @@ jobs:
     # and Codecov always posts the required codecov/* statuses (ADR 0049).
     needs: changes
     # Pinned: the distribution clang-tidy on Ubuntu 26.04 adds modernize-use-designated-initializers
-    # findings (core/src/pair.cpp). Moving this job to ubuntu-latest is planned for Sprint 19 (docs/roadmap.md).
+    # findings (core/src/pair.cpp). Moving this job to ubuntu-latest is planned for Sprint 20 (docs/roadmap.md).
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:

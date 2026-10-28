@@ -28,8 +28,9 @@ data class StreamDefaults(
  *
  * A failure is final: once the session is [StreamPhase.Failed], no later event changes it, and
  * `retry()` starts the stream again in a new activity and a new session. Cancelling a conflict
- * leaves the phase at [StreamPhase.Conflict]; the activity finishes itself. When the host ends the
- * stream while a quit is pending, the phase is [StreamPhase.Quitting] until the quit answers.
+ * leaves the phase at [StreamPhase.Conflict]; the activity finishes itself. A quit that is asked
+ * for puts the phase at [StreamPhase.Quitting] at once and keeps it there, whether or not the host
+ * ends the stream, until the quit answers.
  *
  * The keyboard is docked or covering as [dockKeyboard] says at the moment it opens, and keeps that
  * type until it closes (see [StreamPhase.Streaming.dockedKeyboard]): a pad that connects or
@@ -54,9 +55,6 @@ class StreamSession(
     private val sessionInfo = AtomicReference<SessionInfo?>(null)
     private val firstFrameSeen = AtomicBoolean(false)
     private val pendingAnswer = AtomicReference<ConflictAnswer?>(null)
-
-    // A quit was asked for and has no answer yet; it makes the end of the stream a quiet one.
-    private val quitPending = AtomicBoolean(false)
 
     val state: StateFlow<StreamUiState> = mutableState
 
@@ -147,21 +145,23 @@ class StreamSession(
     }
 
     /**
-     * The start failed or the stream ended with an error. The first failure stays. While a quit is
-     * pending the end is the quit, not a failure: the host ends the stream before it answers the
-     * cancel, so the phase is [StreamPhase.Quitting].
+     * The start failed or the stream ended with an error. The first failure stays. While the phase
+     * is [StreamPhase.Quitting] the end is the quit, not a failure: the host ends the stream before
+     * it answers the cancel, so the phase stays and keeps how the stream ended.
      */
     fun onFailed(failure: StreamFailure) = mutableState.update {
+        val phase = it.phase
         when {
-            it.phase is StreamPhase.Failed || it.phase is StreamPhase.Quitting -> it
-            quitPending.get() -> it.copy(phase = StreamPhase.Quitting(it.phase, failure))
+            phase is StreamPhase.Failed -> it
+            phase is StreamPhase.Quitting ->
+                if (phase.ended == null) it.copy(phase = phase.copy(ended = failure)) else it
             else -> it.copy(phase = StreamPhase.Failed(failure))
         }
     }
 
-    // The quit did not happen: a stream that already ended with it ended by failing.
+    // The quit did not happen: a stream that already ended with it ended by failing, and one that
+    // still runs goes on as it was.
     private fun onQuitFailed() {
-        quitPending.set(false)
         mutableState.update {
             val phase = it.phase
             if (phase is StreamPhase.Quitting) {
@@ -268,8 +268,13 @@ class StreamSession(
     override fun disconnect() = actions.disconnect()
 
     override fun quitApp() {
-        quitPending.set(true)
-        actions.quitApp(::onQuitFailed)
+        var asked = false
+        mutableState.update {
+            val phase = it.phase
+            asked = phase !is StreamPhase.Failed && phase !is StreamPhase.Quitting
+            if (asked) it.copy(phase = StreamPhase.Quitting(phase)) else it
+        }
+        if (asked) actions.quitApp(::onQuitFailed)
     }
 
     override fun leave() = actions.leave()

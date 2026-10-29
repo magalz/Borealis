@@ -375,6 +375,24 @@ class GameStreamActionsTest {
     }
 
     @Test
+    fun `retrying is the choice to resume the app of this stream if it runs`() {
+        val intent = Intent().putExtra(Game.EXTRA_PC_UUID, "host-1").putExtra(Game.EXTRA_APP_ID, 42)
+
+        retryOf(intent)
+
+        assertThat(entryPoint.resumeChoice.take("host-1", 42)).isTrue()
+    }
+
+    @Test
+    fun `retrying without an app or without a host chooses nothing`() {
+        retryOf(Intent().putExtra(Game.EXTRA_PC_UUID, "host-1"))
+        retryOf(Intent().putExtra(Game.EXTRA_APP_ID, 42))
+
+        assertThat(entryPoint.resumeChoice.take("host-1", 0)).isFalse()
+        assertThat(entryPoint.resumeChoice.take("host-1", 42)).isFalse()
+    }
+
+    @Test
     fun `retrying without an app opens the apps of the host, without a host the hosts`() {
         val noApp = Intent().putExtra(Game.EXTRA_PC_UUID, "host-1")
         assertThat(LibraryLaunchRequest.fromExtras(retryOf(noApp).second?.extras))

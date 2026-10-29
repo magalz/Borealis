@@ -31,8 +31,13 @@ internal interface CmsBinder {
 
     fun createAppListPoller(computer: ComputerDetails): AppListPoller
 
-    /** `ServerHelper.doStart`. */
-    fun startStream(activity: Activity, app: NvApp, computer: ComputerDetails)
+    /** `ServerHelper.doStart`; [resumeChosen] is `StreamRequest.resumeChosen`. */
+    fun startStream(
+        activity: Activity,
+        app: NvApp,
+        computer: ComputerDetails,
+        resumeChosen: Boolean,
+    )
 }
 
 /** The upstream `ApplistPoller`: its results arrive through the polling listener. */

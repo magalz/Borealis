@@ -231,6 +231,10 @@ class Game :
         const val EXTRA_APP_HDR = "HDR"
         const val EXTRA_SERVER_CERT = "ServerCert"
 
+        // BOREALIS: true when the user chose Resume or Continue on the app that runs; absent, as
+        // in an older shortcut, it is false (stream)
+        const val EXTRA_RESUME_CHOSEN = "ResumeChosen"
+
         private const val STYLUS_DOWN_DEAD_ZONE_DELAY = 100
         private const val STYLUS_DOWN_DEAD_ZONE_RADIUS = 20
 

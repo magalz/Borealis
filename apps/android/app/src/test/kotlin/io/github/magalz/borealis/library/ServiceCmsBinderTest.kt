@@ -137,7 +137,7 @@ class ServiceCmsBinderTest {
         val activity = Robolectric.buildActivity(Activity::class.java).create().get()
         val computer = details(uuid = "host-1", name = "Den PC", address = "192.168.1.5")
 
-        binder.startStream(activity, NvApp("Steam", 7, true), computer)
+        binder.startStream(activity, NvApp("Steam", 7, true), computer, resumeChosen = false)
 
         val intent = shadowOf(activity).nextStartedActivity
         assertThat(intent.component?.className).isEqualTo(Game::class.java.name)

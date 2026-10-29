@@ -106,8 +106,16 @@ internal constructor(
     fun isOpen(): Boolean = !used.get()
 
     /**
+     * The stream joins the running app because the user chose Resume or Continue on it in the
+     * Library: nothing is asked. The audit and the log say that this is how the stream entered.
+     */
+    fun joinedByChoice(host: String?, runningAppId: Int) = Unit
+
+    /**
      * Runs the resolution and returns whether the launch went through; false also means that the
      * user cancelled (the connection then ends quietly). Blocks, so call it off the main thread.
+     * [resumeChosen] is true when the user chose Resume or Continue on the requested app, which
+     * then is joined without a question when it is the one that runs.
      */
     @Throws(IOException::class, XmlPullParserException::class)
     fun resolve(
@@ -116,6 +124,7 @@ internal constructor(
         requested: RequestedApp,
         actions: ConflictActions,
         host: String? = null,
+        resumeChosen: Boolean = false,
     ): Boolean {
         used.set(true)
         return when (val seen = pollRunningApp(reader)) {

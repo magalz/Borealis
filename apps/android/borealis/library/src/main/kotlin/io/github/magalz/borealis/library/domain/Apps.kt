@@ -40,6 +40,12 @@ data class StreamRequest(
     /** Null when the name is not known; the launcher then uses the name upstream uses to resume. */
     val appName: String?,
     val hdrSupported: Boolean,
+    /**
+     * True only when the user chose Resume or Continue on an app that the Library showed running.
+     * The stream then joins that app without asking. A start, a launch request (a pinned shortcut,
+     * a TV program, Retry) and every other way in leave it false, and the stream asks.
+     */
+    val resumeChosen: Boolean = false,
 )
 
 /** Starts or resumes a stream in the upstream stream activity. */

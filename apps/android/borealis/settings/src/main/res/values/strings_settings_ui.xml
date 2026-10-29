@@ -103,6 +103,10 @@
     <string name="settings_accent_title">Accent colour</string>
     <string name="settings_background_title">Background</string>
     <string name="settings_background_intensity_title">Background intensity</string>
+    <string name="settings_stream_background_title">Background before and after the stream</string>
+    <string name="settings_stream_background_summary">Moving, Still or Off behind the screens before and after a stream.</string>
+    <string name="settings_stream_menu_glass_title">Menu glass in the stream</string>
+    <string name="settings_stream_menu_glass_summary">Blur shows the blurred video behind the menu, Solid a plain panel.</string>
     <string name="settings_card_density_title">Card density</string>
     <string name="settings_glass_tint_title">Glass tint</string>
     <string name="settings_glass_tint_summary">How much the panels tint the background. Higher is more opaque.</string>
@@ -175,6 +179,11 @@
     <string name="settings_choice_motion_follow">Follow system</string>
     <string name="settings_choice_motion_on">On</string>
     <string name="settings_choice_motion_off">Off</string>
+    <string name="settings_choice_stream_moving">Moving</string>
+    <string name="settings_choice_stream_still">Still</string>
+    <string name="settings_choice_stream_off">Off</string>
+    <string name="settings_choice_glass_blur">Blur</string>
+    <string name="settings_choice_glass_solid">Solid</string>
     <string name="settings_choice_transparency_standard">Standard</string>
     <string name="settings_choice_transparency_reduced">Reduced</string>
     <string name="settings_choice_transparency_off">Off</string>

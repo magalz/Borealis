@@ -29,7 +29,8 @@ import org.junit.runner.RunWith
 /**
  * The look that the host is built with is the look that the screens of the chrome draw with: the
  * colours and the text size of what the Starting screen puts on the screen, which the host composes
- * (the host name under the title is in the muted ink, which high contrast brightens).
+ * (the host name under the title stands on the background, so it is in the second ink with the
+ * halo, and high contrast brightens it).
  */
 @RunWith(AndroidJUnit4::class)
 class StreamChromeHostLookTest {
@@ -66,8 +67,8 @@ class StreamChromeHostLookTest {
 
         showChrome(chosen)
 
-        assertThat(composeRule.textColor(HOST_NAME)).isEqualTo(borealisColors(chosen).ink3)
-        assertThat(composeRule.textColor(HOST_NAME)).isNotEqualTo(BorealisColors().ink3)
+        assertThat(composeRule.textColor(HOST_NAME)).isEqualTo(borealisColors(chosen).ink2)
+        assertThat(composeRule.textColor(HOST_NAME)).isNotEqualTo(BorealisColors().ink2)
     }
 
     @Test
@@ -114,7 +115,7 @@ class StreamChromeHostLookTest {
     fun `a host built with no look draws its screens with the default look`() {
         showChrome(null)
 
-        assertThat(composeRule.textColor(HOST_NAME)).isEqualTo(BorealisColors().ink3)
+        assertThat(composeRule.textColor(HOST_NAME)).isEqualTo(BorealisColors().ink2)
         assertThat(fontScale()).isWithin(EPSILON).of(1f)
     }
 

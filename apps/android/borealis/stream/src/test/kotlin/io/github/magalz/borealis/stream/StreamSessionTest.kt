@@ -255,7 +255,7 @@ class StreamSessionTest {
     @Test
     fun `no event changes a failure once it is shown`() {
         session.onFailed(aFailure)
-        val failed = session.state.value
+        val failed = session.state.value.phase
 
         session.onStage(StartStage.STARTING_APP)
         session.onLaunchRetry(LaunchRetry(LaunchCategory.PENDING, 1, 3, 1000))
@@ -266,7 +266,7 @@ class StreamSessionTest {
         session.openMenu()
         session.openKeyboard()
 
-        assertThat(session.state.value).isEqualTo(failed)
+        assertThat(session.state.value.phase).isEqualTo(failed)
     }
 
     @Test

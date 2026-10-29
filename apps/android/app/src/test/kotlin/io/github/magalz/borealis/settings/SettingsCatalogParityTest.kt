@@ -74,6 +74,8 @@ class SettingsCatalogParityTest {
                 Settings.FONT.key,
                 Settings.ACCENT.key,
                 Settings.BACKGROUND_INTENSITY.key,
+                Settings.STREAM_BACKGROUND.key,
+                Settings.STREAM_MENU_GLASS.key,
                 Settings.CARD_DENSITY.key,
                 Settings.TEXT_SPACING.key,
             )

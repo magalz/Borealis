@@ -12,12 +12,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
-/** What a stream starts with: the user's settings when the first frame arrives. */
+/**
+ * What a stream starts with: the user's settings when the first frame arrives, and the [visuals] of
+ * the stream, which it keeps from the start.
+ */
 data class StreamDefaults(
     val overlay: OverlayMode,
     val touchMode: TouchMode?,
     val gamepadMouse: Boolean?,
     val showMenuHint: Boolean,
+    val visuals: StreamVisuals = StreamVisuals(),
 )
 
 /**
@@ -50,7 +54,12 @@ class StreamSession(
 ) : StreamIntents {
     private val mutableState =
         MutableStateFlow(
-            StreamUiState(appName, hostName, StreamPhase.Starting(StartStage.CONNECTING))
+            StreamUiState(
+                appName,
+                hostName,
+                StreamPhase.Starting(StartStage.CONNECTING),
+                visuals = defaults.visuals,
+            )
         )
     private val mutablePerf = MutableStateFlow<PerfSnapshot?>(null)
 
@@ -91,9 +100,23 @@ class StreamSession(
      * A step of the start is reached; clears a retry that was showing. A step before the current
      * one is ignored, so the list of steps never goes backwards whatever order the events arrive
      * in.
+     *
+     * The first step after the app is requested is the first stage of the connection itself, which
+     * comes before the stream's decoder is configured (at the stage that establishes the video
+     * stream). A decoder is held from that step on (see [StreamUiState.decoderHeld]), so the clip
+     * of the background is released a few stages before the decoder is configured, and no handshake
+     * with the connection thread is needed.
      */
-    fun onStage(stage: StartStage) = whileStarting {
-        if (stage < it.stage) it else StreamPhase.Starting(stage)
+    fun onStage(stage: StartStage) = mutableState.update {
+        val phase = it.phase
+        when {
+            phase !is StreamPhase.Starting || stage < phase.stage -> it
+            else ->
+                it.copy(
+                    phase = StreamPhase.Starting(stage),
+                    decoderHeld = it.decoderHeld || stage >= StartStage.PREPARING_DISPLAY,
+                )
+        }
     }
 
     /** The host asked for a retry of the current stage. */
@@ -128,6 +151,7 @@ class StreamSession(
      */
     fun onConnectionStarted(info: SessionInfo) {
         sessionInfo.set(info)
+        holdDecoder()
         if (firstFrameSeen.get()) {
             startStreaming(info)
         } else {
@@ -138,6 +162,7 @@ class StreamSession(
     /** The first frame is on screen; streams once [onConnectionStarted] has reported the stream. */
     fun onFirstFrame() {
         firstFrameSeen.set(true)
+        holdDecoder()
         sessionInfo.get()?.let(::startStreaming)
     }
 
@@ -198,6 +223,15 @@ class StreamSession(
         )
         return true
     }
+
+    /**
+     * The connection has stopped and the decoder of the stream is released: a clip of the
+     * background plays again. Called from the thread that stopped it.
+     */
+    fun onConnectionStopped() = mutableState.update { it.copy(decoderHeld = false) }
+
+    // The stream is up, so its decoder is: whatever stage events came before.
+    private fun holdDecoder() = mutableState.update { it.copy(decoderHeld = true) }
 
     fun onPerf(snapshot: PerfSnapshot) {
         mutablePerf.value = snapshot

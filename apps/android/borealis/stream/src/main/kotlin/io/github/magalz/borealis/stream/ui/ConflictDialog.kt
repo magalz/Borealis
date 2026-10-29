@@ -31,6 +31,10 @@ private const val WARNING_TINT = 0.1f
  * start again. It is a [StreamDialog], inside the chrome and not a window of its own: see there for
  * why, and for the focus on Cancel, which a stray OK cannot make costly, and for the gamepad B
  * button and Back, which cancel.
+ *
+ * It stands over the background of the screens outside the game, as a solid panel for now. ADR 0061
+ * decision 5 (ADR 0057 decision 8: the window blur and the frozen background under a dialog, and
+ * its tinted panel) is still to be done; the orchestrator schedules it.
  */
 @Composable
 fun ConflictDialog(phase: StreamPhase.Conflict, intents: StreamIntents) {

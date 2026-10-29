@@ -141,39 +141,47 @@ internal fun StreamDialog(
                 .padding(BorealisTokens.Space.DialogPadding),
             verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
         ) {
-            // The text colours and the halo of the video glass, the same composition without it.
-            OnVideoGlass(glass) {
-                // Over the glass the content is on an offscreen layer of its own: the text and its
-                // halos are drawn into it once and the layer is kept, so the glass behind it, drawn
-                // again at each copy of the video, composites it and does not draw them again. On
-                // the solid surface nothing behind it changes, and it is drawn as it was.
-                Column(
-                    Modifier.graphicsLayer {
-                        compositingStrategy =
-                            if (glass != null) {
-                                CompositingStrategy.Offscreen
-                            } else {
-                                CompositingStrategy.Auto
-                            }
-                    },
-                    verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
-                ) {
-                    Column(
-                        Modifier.semantics(mergeDescendants = true) {
-                            liveRegion = LiveRegionMode.Polite
-                        },
-                        verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
-                    ) {
-                        Text(
-                            title,
-                            Modifier.semantics { heading() },
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                        content()
-                    }
-                    Actions(actions)
-                }
+            DialogContent(title, actions, glass != null, content)
+        }
+    }
+}
+
+/**
+ * The title, the body and the buttons of a [StreamDialog], in the text colours and with the halo of
+ * the video glass where [onGlass], and the same composition without it.
+ *
+ * Over the glass the content is on an offscreen layer of its own: the text and its halos are drawn
+ * into it once and the layer is kept, so the glass behind it, drawn again at each copy of the
+ * video, composites it and does not draw them again. On the solid surface nothing behind it
+ * changes, and it is drawn as it was.
+ */
+@Composable
+private fun DialogContent(
+    title: String,
+    actions: List<StreamDialogAction>,
+    onGlass: Boolean,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    OnVideoGlass(LocalVideoGlass.current) {
+        Column(
+            Modifier.graphicsLayer {
+                compositingStrategy =
+                    if (onGlass) CompositingStrategy.Offscreen else CompositingStrategy.Auto
+            },
+            verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
+        ) {
+            Column(
+                Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+                verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
+            ) {
+                Text(
+                    title,
+                    Modifier.semantics { heading() },
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                content()
             }
+            Actions(actions)
         }
     }
 }

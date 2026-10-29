@@ -220,11 +220,12 @@ open class NvConnection(
         return joined
     }
 
-    // BOREALIS: another app is running although /serverinfo said none: Join, Quit and relaunch or
-    // Cancel, asked once (host.launch)
+    // BOREALIS: an app is running that the user did not choose to resume, or another app is running
+    // although /serverinfo said none: Join, Quit and relaunch or Cancel, asked once (host.launch)
     @Throws(IOException::class, XmlPullParserException::class)
     private fun resolveConflict(h: NvHTTP, context: ConnectionContext): Boolean {
-        val app = checkNotNull(checkNotNull(context.streamConfig).app)
+        val streamConfig = checkNotNull(context.streamConfig)
+        val app = checkNotNull(streamConfig.app)
         val listener = context.listener
         return conflicts.resolve(
             RunningAppReader { h.getCurrentGame(h.getServerInfo(true)) },
@@ -245,6 +246,7 @@ open class NvConnection(
                 LaunchAttempt { quitAndLaunch(h, context) },
             ),
             checkNotNull(context.serverAddress).address,
+            streamConfig.resumeChosen,
         )
     }
 
@@ -510,6 +512,15 @@ open class NvConnection(
             var resumed = LaunchOutcome.SUCCEEDED
             try {
                 if (h.getCurrentGame(serverInfo) == app.appId) {
+                    // BOREALIS: nothing tells this session from another device's: ask, unless the
+                    // user chose Resume or Continue on this app (host contract 7.6)
+                    if (!streamConfig.resumeChosen) {
+                        return resolveConflict(h, context)
+                    }
+                    conflicts.joinedByChoice(
+                        checkNotNull(context.serverAddress).address,
+                        app.appId,
+                    )
                     // BOREALIS: wait while the host is busy; retries, cancellation and the no-app
                     // fallback
                     resumed =

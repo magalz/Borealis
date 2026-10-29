@@ -104,9 +104,9 @@
     <string name="settings_background_title">Background</string>
     <string name="settings_background_intensity_title">Background intensity</string>
     <string name="settings_stream_background_title">Background before and after the stream</string>
-    <string name="settings_stream_background_summary">Behind the screens before and after a stream: Starting, errors, Quitting. Moving plays the Background style, Still shows one frame of it.</string>
+    <string name="settings_stream_background_summary">Moving, Still or Off behind the screens before and after a stream.</string>
     <string name="settings_stream_menu_glass_title">Menu glass in the stream</string>
-    <string name="settings_stream_menu_glass_summary">Blur shows the video, blurred, behind the menu. Solid is a plain panel.</string>
+    <string name="settings_stream_menu_glass_summary">Blur shows the blurred video behind the menu, Solid a plain panel.</string>
     <string name="settings_card_density_title">Card density</string>
     <string name="settings_glass_tint_title">Glass tint</string>
     <string name="settings_glass_tint_summary">How much the panels tint the background. Higher is more opaque.</string>

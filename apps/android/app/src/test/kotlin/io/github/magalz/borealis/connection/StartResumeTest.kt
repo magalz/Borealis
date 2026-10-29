@@ -214,7 +214,7 @@ class StartResumeTest {
     fun `a failed handshake after a launch is reported as it is`() {
         ShadowRecordingBridge.onStartConnection = rtspFails()
 
-        rig.start(rig.resumingConnection())
+        rig.start(rig.connection())
         listener.await("stageFailed")
         listener.awaitEnded()
 

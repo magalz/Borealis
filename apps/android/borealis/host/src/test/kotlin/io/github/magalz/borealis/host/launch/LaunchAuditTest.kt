@@ -230,6 +230,27 @@ class LaunchAuditTest {
     }
 
     @Test
+    fun `an answer to the question that skips the poll is recorded as asked`() {
+        val conflicts = LaunchConflicts({ false }, {}, 0L, { 0L }, {})
+
+        conflicts.askAbout(
+            7,
+            { null },
+            RequestedApp(7, "Steam"),
+            ConflictActions(
+                prompt = { _, _, _, _, answer -> answer.choose(ConflictChoice.JOIN) },
+                relaunch = { true },
+                join = { LaunchOutcome.SUCCEEDED },
+                quitAndRelaunch = { true },
+            ),
+            host,
+        )
+
+        assertThat(audit.events.map { it.detail })
+            .containsExactly("choice=join running_app=7 entry=asked")
+    }
+
+    @Test
     fun `no conflict to resolve records nothing`() {
         resolve(ConflictChoice.JOIN, running = 0)
 

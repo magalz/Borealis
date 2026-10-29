@@ -536,8 +536,8 @@ open class NvConnection(
             try {
                 if (h.getCurrentGame(serverInfo) == app.appId) {
                     // BOREALIS: nothing tells this session from another device's: ask, unless the
-                    // user chose Resume or Continue on this app (host contract 7.6). A restart
-                    // went through that already
+                    // user chose Resume, Continue or Try again for this app (host contract 7.6). A
+                    // restart went through that already
                     val restart = collisions.isRestart()
                     if (!restart && !streamConfig.resumeChosen) {
                         return askAboutRunning(h, context, app.appId)

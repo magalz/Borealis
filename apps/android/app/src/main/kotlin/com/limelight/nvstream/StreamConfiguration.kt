@@ -59,8 +59,8 @@ class StreamConfiguration private constructor() {
     var persistGamepadsAfterDisconnect = false
         private set
 
-    // BOREALIS: the user chose Resume or Continue on the app that runs, so a start that finds it
-    // running joins it without asking (host.launch)
+    // BOREALIS: the user chose Resume, Continue or Try again for the app that runs, so a start
+    // that finds it running joins it without asking (host.launch)
     var resumeChosen = false
         private set
 

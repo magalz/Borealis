@@ -61,8 +61,8 @@ fun interface ConflictJoin {
 
 /**
  * The app the refused `/launch` asked for: its id and name, or null when the name is unknown, and
- * whether the user chose Resume or Continue on it in the Library, so the same app that runs is
- * joined without a question.
+ * whether the user chose Resume, Continue or Try again for it, so the same app that runs is joined
+ * without a question.
  */
 data class RequestedApp(val id: Int, val name: String?, val resumeChosen: Boolean = false)
 
@@ -86,7 +86,7 @@ class ConflictActions(
  * It never ends another client's app on its own: only the user's explicit choice does. Nothing
  * tells this device's session from another device's, so the same app that runs is put to the user
  * too. The one exception is the choice the user made earlier: Resume or Continue on that app in the
- * Library (UC-003, host contract 7.6).
+ * Library, or Try again on the stream error screen (UC-003, host contract 7.6).
  */
 class LaunchConflicts
 internal constructor(
@@ -113,8 +113,8 @@ internal constructor(
     fun isOpen(): Boolean = !used.get()
 
     /**
-     * The stream joins the running app because the user chose Resume or Continue on it in the
-     * Library: nothing is asked. The audit and the log say that this is how the stream entered.
+     * The stream joins the running app because the user chose Resume, Continue or Try again for it:
+     * nothing is asked. The audit and the log say that this is how the stream entered.
      */
     fun joinedByChoice(host: String?, runningAppId: Int) {
         BorealisLog.i(LogTag.LAUNCH, "running app joined on the user's choice")

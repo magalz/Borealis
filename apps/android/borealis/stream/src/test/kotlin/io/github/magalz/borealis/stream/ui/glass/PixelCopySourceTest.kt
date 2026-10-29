@@ -61,7 +61,12 @@ class PixelCopySourceTest {
         override fun getSurfaceFrame(): Rect = Rect()
     }
 
-    private fun validSurface() = Surface(SurfaceTexture(0))
+    /** A surface that is valid, as the one of a created `SurfaceView` is. */
+    private class ValidSurface : Surface(SurfaceTexture(0)) {
+        override fun isValid() = true
+    }
+
+    private fun validSurface() = ValidSurface()
 
     private fun sized(view: SurfaceView, width: Int = 1280, height: Int = 720) = view.apply {
         layout(0, 0, width, height)

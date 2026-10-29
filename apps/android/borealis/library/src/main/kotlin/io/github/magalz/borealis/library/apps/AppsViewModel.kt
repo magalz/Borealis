@@ -69,34 +69,34 @@ constructor(
     val effects: Flow<AppsEffect> = effectChannel.receiveAsFlow()
 
     /**
-     * A launch request, such as a shortcut: a tap on [appId], also when the user hid the app since,
-     * unless the screen is closing because the host is gone, offline or not paired. The caller
-     * waits until the apps are loaded.
+     * A launch request: a tap on [appId], also when the user hid the app since, unless the screen
+     * is closing because the host is gone, offline or not paired. The caller waits until the apps
+     * are loaded. It is the user's choice to resume only after Try again on the stream error
+     * screen, which [resumeChoice] says; a shortcut or a TV program is not, so the stream asks.
      */
     fun onLaunchRequested(appId: Int) {
+        // Taken first: the request ends the choice whatever comes of it.
+        val chosen = resumeChoice.take(hostId, appId)
         if (closed) return
         val snapshot = latest ?: return
         val running = snapshot.host?.runningApp?.id
         val app = snapshot.items(running).firstOrNull { it.id == appId } ?: return
-        select(app, running, tapped = false)
-    }
-
-    /** A tap: start or resume when that is unambiguous, otherwise open the actions. */
-    fun onAppSelected(appId: Int) {
-        val state = uiState.value
-        val app = state.items.firstOrNull { it.id == appId } ?: return
-        select(app, state.runningAppId, tapped = true)
+        select(app, running, resumeChosen = chosen)
     }
 
     /**
-     * Only the tap on the running app is the user's Resume: a launch request for it, such as a
-     * pinned shortcut or Retry, is not, so the stream asks.
+     * A tap: start or resume when that is unambiguous, otherwise open the actions. A tap on the
+     * running app is the user's choice to resume it.
      */
-    private fun select(app: AppItemUiState, runningAppId: Int?, tapped: Boolean) {
+    fun onAppSelected(appId: Int) {
+        val state = uiState.value
+        val app = state.items.firstOrNull { it.id == appId } ?: return
+        select(app, state.runningAppId, resumeChosen = app.running)
+    }
+
+    private fun select(app: AppItemUiState, runningAppId: Int?, resumeChosen: Boolean) {
         if (runningAppId == null || app.running) {
-            send(
-                AppsEffect.StartStream(app.toRequest(hostId, resumeChosen = tapped && app.running))
-            )
+            send(AppsEffect.StartStream(app.toRequest(hostId, resumeChosen)))
         } else {
             actionsAppId.value = app.id
         }

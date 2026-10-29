@@ -23,13 +23,17 @@ accident.
 
 1. The user opens the menu. On a TV, the user presses Back. On a gamepad, the
    user holds Select + Start for one second. On a phone, the user pulls the top
-   handle down or presses Back.
+   handle down or presses Back. With a keyboard, the user presses
+   Ctrl+Alt+Shift+M, and with a mouse the user holds its Back button for one
+   second (A8).
 2. The system opens the menu over the stream. On a TV, focus starts on Back to
    stream.
 3. The user changes an item. The items are listed in
    [the Phase 2 proposal](../ux/phase-2-proposal.md#in-game-menu-items). Start
-   and Select never activate a row. OK or A on an option row (Touch, Gamepad
-   mouse, Pointer speed, Overlay) changes its option; the row does not move the
+   and Select never activate a row. The menu has no lateral movement: Left and
+   Right do nothing, and Up and Down reach every row in one order (A9). OK or A
+   on an option row (Touch, Gamepad mouse, Pointer speed, Overlay) selects its
+   next option, and wraps from the last to the first; the row does not move the
    focus.
 4. The user closes the menu with Back to stream, Back, B, a tap outside the
    panel, or the same Select + Start hold. The stream continues.
@@ -43,10 +47,18 @@ accident.
 
 ### A2: The user disconnects (branches from step 3)
 
-1. The user chooses Disconnect. The menu lists the consequence: the app keeps
-   running on the PC.
-2. The stream ends. The system writes SESSION_END with the reason.
-3. The system returns to the Apps screen. The app is still running on the host.
+1. The user chooses Disconnect, or presses Ctrl+Alt+Shift+Q, which does the
+   same. The menu lists the consequence: the app keeps running on the PC.
+2. The screen says "Disconnecting from `<app>`…" (the running app, when the
+   name is not known), over the background of the screens outside the game
+   ([UC-002](0002-start-a-stream.md), A6). It stays up for about one second at
+   least, so it can be read, and until the connection has stopped, for five
+   seconds at most. Back does nothing meanwhile. The system writes SESSION_END
+   with the reason `disconnect`.
+3. The activity finishes once, and the system returns to the Apps screen. The
+   app is still running on the host. The Library shows "Disconnected. `<app>` is
+   still running on the PC." once, in the snackbar that "App quit." uses (when
+   the name is not known: "Disconnected. The app is still running on the PC.").
 
 ### A3: The user quits the app (branches from step 3)
 
@@ -57,19 +69,35 @@ accident.
    - for any other app, also one whose name is not known: "Closes `<app>` on the
      PC." and "Unsaved progress in it is lost."
 
-   The menu asks for confirmation first. The title of the confirmation is only
-   "Quit `<app>`?", and its body is the same two lines. Cancel has the focus, and
-   Cancel returns to the menu.
-2. The user confirms. The screen shows "Quitting `<app>`…" until the host answers
-   the quit. The host may end the stream before it answers. The stream ends, and
-   the system writes SESSION_END with the reason.
+   The menu asks for confirmation first, in the Quit popup (Sprint 15). It is a
+   panel centred in the chrome layer over the menu, not a dialog window. The
+   title is only "Quit `<app>`?", and its body is the same two lines. Cancel
+   and Quit sit side by side, also on a phone, and Cancel has the focus. Cancel,
+   a tap outside the panel, gamepad B and Back close only the popup, and the
+   focus goes back to the Quit row. The menu stays drawn behind the popup but is
+   out of reach of the focus, the touch and the screen reader. A screen reader
+   announces the title with the body when the popup opens. The words come from
+   `QuitCopy`, the one text that the actions sheet of the Library, this popup
+   and the question about a running app ([UC-003](0003-join-or-replace-a-running-app.md))
+   share.
+2. The user confirms. The screen shows "Quitting `<app>`…" from the
+   confirmation until the host answers the quit, over the background of the
+   screens outside the game. Back leaves the screen, and the quit goes on. The
+   host may end the stream before it answers, with error -1, because
+   LuminalShine closes the control stream when it gets the cancel. That end is the quit's,
+   not an error: the system logs it at info with the time since the quit, runs
+   no connectivity test and shows no error. Another code while a quit is under
+   way is a network drop and goes the way of an error. The stream ends, and the
+   system writes SESSION_END with the reason.
 3. The system returns to the Apps screen. The app is no longer running on the
    host.
 4. The Library shows "App quit." once (Sprint 10), in a snackbar as wide as its
    text, the same notice that a Quit from the Apps sheet shows. The notice waits
    for a Library that is there and is dropped when none is, as after a stream that
-   a launcher shortcut started. A Quit that fails shows no notice, and the stream
-   goes on.
+   a launcher shortcut started. A Quit that fails shows no notice and says so in
+   a message, and the stream goes on. When the host had already ended the stream,
+   the Quit that fails turns the screen into the error popup instead
+   ([UC-002](0002-start-a-stream.md), E5).
 
 ### A4: Select or Start on a system pad (Sprint 6; branches from step 1)
 
@@ -116,14 +144,87 @@ for it.
    mouse on or off while the combo is pending, however long Start was held.
 5. After every button has been let go, Start and Select arm the chord again.
 
-No failure flow is defined in the approved design. The Display for next launch
+### A8: Open the menu from a keyboard or a mouse (Sprint 15; branches from step 1)
+
+1. Ctrl+Alt+Shift+M opens the menu. The system takes the combination before
+   the PC sees it, also when the input is not grabbed, and it acts when the
+   modifier keys come up, as Ctrl+Alt+Shift+Z (grab) and Ctrl+Alt+Shift+C
+   (cursor) do. The M key does not reach the PC.
+2. Ctrl+Alt+Shift+Q disconnects, as A2: the screen, the notice and the audit are
+   those of the Disconnect row. Before Sprint 15 it finished the activity and
+   left no notice.
+3. The Back button of the mouse, held for one second, opens the menu and sends
+   nothing to the PC. It works only with Mouse back and forward buttons on in
+   Settings, Input. A press shorter than one second is the X1 button for the PC,
+   sent when the button comes up. A hold that the window losing its focus or the
+   activity stopping ends does not open the menu. The Back that Android makes of
+   a right click never opens it, and a right click held for seconds does not
+   either.
+4. The first-run hint names the way. With a keyboard or a mouse and no pad it
+   says "Press Ctrl+Alt+Shift+M for the menu", and with Mouse back and forward
+   buttons on "Press Ctrl+Alt+Shift+M or hold the mouse Back button for the
+   menu". A game controller wins over a keyboard and a mouse, and a virtual
+   keyboard, a remote and a touchscreen do not count as them. The hint shows
+   for six seconds, once.
+
+### A9: The focus in the menu has no lateral movement (Sprint 15; branches from step 3)
+
+1. Left and Right do nothing on every row and chip. The chrome takes the keys,
+   so none reaches the game or the PC: a D-pad, a keyboard, and the left stick
+   of a pad on the USB driver alike.
+2. Up and Down walk every focusable of the menu in the order that it is drawn,
+   one after the other, and stop at the first and the last, with no wrap. The
+   chips of Send keys, which wrap over several lines, come in reading order. An
+   open Session info has nothing to focus, and Down goes on to the next row.
+3. OK, Enter or A on an option row selects the next option. The segments of the
+   control are not focus stops, so the keys never go into them. A tap on a
+   segment still selects it, and so does a screen reader, which hears "Change
+   `<row>`" for the row.
+4. Owner decision of 2026-10-28, after the bug of issue #98 did not reproduce.
+   Quit is reached with Down and OK alone, also through open Send keys.
+
+### A10: The menu is glass over the video (Sprint 15; branches from step 2)
+
+1. With Menu glass in the stream on Blur, the default, the side panel of the
+   menu and the Quit popup are glass over a live copy of the video: a quarter of
+   its size, blurred, refreshed 30 times a second while the menu is open and the
+   activity is started. Until the first copy arrives the panel is solid. With
+   Solid it is a solid panel and no copy is made.
+2. The glass is solid, and no copy is made, with Solid, with Transparency Off,
+   with High contrast, with Reduce motion, with the battery saver on (followed
+   live, while the menu is open), below API 31, and where there is no stream view
+   to copy. The tint and the blur are those of the viewer's Transparency: 40 % at 8
+   dp at Standard, 85 % at 48 dp at Reduced.
+3. Every text on the glass has a halo of 3 dp, so it keeps 4.5:1 over any frame,
+   and ink-3 and ink-4 are ink-2 there. The segmented controls sit on a solid
+   container of the `surface` colour. The focus outline has a casing in the
+   `page` colour, which keeps its 3:1 over the lightest glass. The measures are in
+   [ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md),
+   decision 10, and in [accessibility](../ux/accessibility.md).
+4. The stream reads the option, the transparency and the other look settings
+   when it starts, so a change shows in the next stream.
+
+### E1: The stream ends in error (Sprint 15; branches from any step)
+
+1. The stream ends in error while the user streams, with the menu open or not:
+   the connection drops, or another device quits the app on the host (error -1).
+2. The system asks for one copy of the last frame at once, before the decoder is
+   released, and the Connection error popup replaces the menu and the Quit popup
+   over that frame, frozen and blurred ([UC-002](0002-start-a-stream.md), E5).
+   Try again has the focus; Diagnostics and Close are the other buttons. Back and
+   the gamepad B button close the popup, which leaves the stream, and a tap
+   outside it does nothing.
+3. The end that the user's own Quit caused is not an error (A3), and a graceful
+   end of the stream is not either, so neither has this popup.
+
+The approved design defines no other failure flow. The Display for next launch
 row is disabled; it needs the Phase 3 host API and cannot be chosen.
 
 ## Postconditions
 
 - On close: the stream continues, with the overlay state the user chose.
 - On Disconnect: the app keeps running on the host. SESSION_END is in the
-  audit trail.
+  audit trail, and the Library shows the notice.
 - On Quit: the app is no longer running on the host. SESSION_END is in the
   audit trail.
 
@@ -139,8 +240,8 @@ row is disabled; it needs the Phase 3 host API and cannot be chosen.
 | UC-004-T6 | Given the Overlay row is set to Off, Compact or Detailed, when the menu closes, then the overlay shows that choice. | UI | partly exists (Sprint 5, UI; device round) |
 | UC-004-T7 | Given the menu is open, when the user reads the Display for next launch row, then the row is disabled and cannot be chosen. | UI | exists (Sprint 5, UI) |
 | UC-004-T8 | Given the menu is open, when the user presses Start or Select, then no row is activated. | unit | exists (Sprint 5, unit; device round) |
-| UC-004-T9 | Given an option row has focus, when the user presses OK or A, then its option changes and the focus stays on the row. | UI | exists (Sprint 5, UI; device round) |
-| UC-004-T10 | Given a USB-driver pad is in use, when the menu is open, then its D-pad, left stick, A and B act as they do on a system pad, and Start holds toggle the gamepad mouse. | unit | exists (Sprint 5, unit; device round) |
+| UC-004-T9 | Given an option row has focus, when the user presses OK or A, then its next option is selected, the last wraps to the first, and the focus stays on the row. | UI | exists (Sprint 5, UI; device round; Sprint 15: `InGameMenuFocusTest`) |
+| UC-004-T10 | Given a USB-driver pad is in use, when the menu is open, then its D-pad and left stick move the focus up and down only, A and B act as they do on a system pad, and Start holds toggle the gamepad mouse. | unit | exists (Sprint 5, unit; device round; Sprint 15: `UsbChromeMenuFocusTest`) |
 | UC-004-T11 | Given Select and Start are held, when the chord is pending, then neither reaches the PC, and a release before one second sends the PC a short press of Back and Start (a Guide tap on a pad with Select and no Guide button). | unit | exists (Sprint 5, unit; device round) |
 | UC-004-T12 | Given a system window has just closed and the stream window has its focus back, when OK, Enter, DPAD_CENTER or A is pressed within one second, then the key is ignored. | unit | exists (Sprint 5, unit; device round) |
 | UC-004-T13 | Given a system pad with a Select button, when Select is pressed alone, then it reaches the PC within 60 ms unless the other button arrives first. | unit | exists (Sprint 6, unit) |
@@ -165,6 +266,16 @@ row is disabled; it needs the Phase 3 host API and cannot be chosen.
 | UC-004-T32 | Given a Quit in the stream that the host answers, when the stream ends, then the Library shows "App quit." once, as wide as its text; given a Quit that fails, then no notice is left. | unit, UI | exists (Sprint 10): `GameStreamActionsTest`, `LibraryQuitNoticeTest` |
 | UC-004-T33 | Given a notice that a Quit left, then it is delivered once; it waits while the Library is stopped; it is dropped when no Library is there, and is not shown again after the activity is recreated. | unit, UI | exists (Sprint 10): `QuitNoticeTest`, `LibraryQuitNoticeTest` |
 | UC-004-T34 | Given a snackbar, when it shows, then it is as wide as its text, centred and at most 600 dp, a long message wraps, and a screen reader is told of it. | UI | exists (Sprint 10, UI): `BorealisSnackbarHostTest` |
+| UC-004-T35 | Given the menu is open, when the user chooses Quit, then the Quit popup is a panel in the chrome layer with the question as its heading and the two lines as its body, Cancel focused, a tap outside, B and Back close only the popup and the focus returns to the Quit row, and the menu behind is out of reach. | UI | exists (Sprint 15, UI): `QuitPopupTest`, `StreamDialogBackTest`, `QuitCopyTest` |
+| UC-004-T36 | Given the stream runs, when Ctrl+Alt+Shift+M is pressed, then the menu opens, also with the input not grabbed, and the M does not reach the host; when Ctrl+Alt+Shift+Q is pressed, then the session disconnects. | unit | exists (Sprint 15, unit): `GameSpecialKeysTest` |
+| UC-004-T37 | Given the Back button of the mouse with Mouse back and forward buttons on, when it is held for one second, then the menu opens and nothing goes to the host; a shorter press is X1 sent when the button comes up; a right click never opens the menu. | unit | exists (Sprint 15, unit): `MouseBackHoldTest` |
+| UC-004-T38 | Given a keyboard or a mouse and no pad, when the hint shows, then it names the chord, and the Back button too when the navigation buttons are on; a pad, a virtual keyboard, a remote and a touchscreen do not count. | UI | exists (Sprint 15, UI): `MenuHintTest`, `StreamingLayerHintTest` |
+| UC-004-T39 | Given Left, Right, Up, Down, OK and A on every row and chip, when the menu is open, then Left and Right do nothing, Up and Down walk the rows and chips in drawing order and stop at the ends, and Quit is reached with Down and OK alone. | UI, unit | exists (Sprint 15): `InGameMenuFocusTest`, `UsbChromeMenuFocusTest`, `SegmentedControlTest` |
+| UC-004-T40 | Given Disconnect, when the user chooses it, then the phase is Disconnecting at once, the screen names the app, it stays up about a second at least and five seconds at most, Back does nothing, the activity finishes once, and the Library shows the Disconnected notice once. | unit, UI | exists (Sprint 15): `StreamSessionTest`, `DisconnectingScreenTest`, `GameStreamActionsLeaveTest`, `BackWhileDisconnectingTest`, `LibraryQuitNoticeTest`, `QuitNoticeTest` |
+| UC-004-T41 | Given a Quit that is under way, when the host ends the stream with -1, then no connectivity test runs, the end is logged at info with the time since the quit, and the screen stays on Quitting; any other code is a network drop. | unit | exists (Sprint 15, unit): `GameQuitEndTest`, `StreamSessionLeaveLogTest`, `QuitLogTest` |
+| UC-004-T42 | Given Menu glass in the stream on Blur, the transparency, High contrast, Reduce motion, the battery saver and the API level, when the menu opens, then the panel and the Quit popup are glass or solid as A10 says, the copies run only while the menu is open and the activity is started, and the Solid option and API 28 to 30 register no battery saver listener. | UI, unit | exists (Sprint 15): `MenuGlassRulesTest`, `MenuGlassOptionTest`, `MenuGlassCopiesTest`, `MenuGlassDrawTest`, `MenuGlassApi30Test`, `VideoGlassSpecTest`, `VideoGlassFramesTest`, `PixelCopySourceTest`, `StreamAppearanceTest` |
+| UC-004-T43 | Given the glass, when text stands on it, then every text colour of the menu and the popup keeps 4.5:1 on the ring of its halo over the lightest glass, the segmented controls keep 4.5:1 on their solid container, and the focus outline keeps 3:1 with its casing. | UI, tool | exists (Sprint 15): `TextHaloTest`, `MenuGlassHaloTest`, `MenuGlassCasingTest`, `MenuGlassFocusTest`, `FocusOverGlassTest`, `VideoGlassHaloTest` in `design/accessibility/test_contrast.py` |
+| UC-004-T44 | Given a stream that ends in error after its first frame, when the popup shows, then it stands on the frozen last frame as [UC-002](0002-start-a-stream.md), E5 says. | UI, unit | see UC-002-T20 to UC-002-T23 |
 
 Sprint 5 built the in-game menu and its logic. A test marked "exists (Sprint 5,
 unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose test
@@ -195,6 +306,12 @@ T27), and `SystemPadQuitComboTest` checks the Start hold on a system pad (T28).
 Sprint 9 device round checks the quit combo on the S22 with a pad
 ([device validation](../development/device-validation.md#322-sprint-9-checks)).
 
+UC-004-T35 to T44 are Sprint 15 rows (issues #97, #98, #100, #102 and #104,
+and #105 for the error popup). The unit tests of the keys, the hold and the end of a Quit run on the
+`Game` rig of `:app`. No test sees the live copy of a real video, and no
+screenshot reference stands for the colour of an HDR copy, which has not been
+judged: the owner's device round checks the glass on the TV and on the S22.
+
 UC-004-T32 to T34 are Sprint 10 rows. `GameStreamActionsTest` checks that a Quit
 that worked leaves the notice and a failed one leaves none (T32). The Sprint 10
 device round saw "App quit." once on the Streamer, 3 s after the Library came
@@ -202,8 +319,14 @@ back and gone 5 s later
 ([device validation](../development/device-validation.md#15-results-sprint-10)).
 That round also saw "Quitting `<app>`…" stay on screen about 17 s once, in the
 night round, and 5.5 to 6.7 s in the morning smoke, until the host answered
-`/cancel`. The cause is not known. The Quit logged `Connection terminated: -1`
-as an error; [Sprint 15](../roadmap.md#sprint-15-the-stream-screens-and-glass) of the roadmap has both.
+`/cancel`. The Quit logged `Connection terminated: -1` as an error. Sprint 15
+(issue #97) made the -1 after the user's own Quit the quit's end (UC-004-T41),
+and logs where the time goes (`quit cancel sent`, `quit cancel answered ms=`,
+`quit check answered ms=`, `connection stop done ms=`, `activity finished`). The
+wait and the -1 are on the host's side: LuminalShine issues #217 (`/cancel`
+answers 5 to 17 s after a quit) and #218 (`/cancel` drops the control stream
+without the termination message, so clients log the user's own Quit as -1), both
+filed on 2026-10-29. See the [roadmap](../roadmap.md#sprint-15-the-stream-screens-and-glass).
 
 Partly covered:
 
@@ -221,13 +344,17 @@ Partly covered:
 
 Disconnect and Quit use the host's stop and quit paths. Quit ends the app for
 every client ([host contract, section 7.6](../host-contract/luminalshine.md)).
+How long `/cancel` takes to answer, and that the host drops the control stream
+without a termination message, are LuminalShine issues #217 and #218.
 Display for next launch needs the Phase 3 host API
 ([host contract, section 17.2](../host-contract/luminalshine.md#172-endpoints-relevant-to-a-client)).
 Until then the row is disabled.
 
 ## Related
 
-- ADRs: [0052](../adr/0052-structure-the-phase-2-ui.md).
+- ADRs: [0052](../adr/0052-structure-the-phase-2-ui.md),
+  [0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md) (the
+  glass of the menu, its halo, and the screens outside the game).
 - Host contract sections: [7.6](../host-contract/luminalshine.md#76-cancel),
   [17.2](../host-contract/luminalshine.md#172-endpoints-relevant-to-a-client).
 - Policies: [privacy and logging](../policies/privacy-and-logging.md#audit-trail).
@@ -238,12 +365,20 @@ Until then the row is disabled.
   stream screen is `reason=user`, and a session the host ends with a graceful
   end is recorded with `reason=host_ended`. While a quit is pending, any end of
   the stream is recorded as `reason=quit`, and the screen shows "Quitting". If
-  the quit fails after the stream has ended, the failure screen shows. If the
-  stream still runs, it stays on.
+  the quit fails after the stream has ended, the error popup shows. If the
+  stream still runs, it stays on. Since Sprint 15 the menu is a side panel
+  with the glass of `ui/glass/` (`VideoGlass`), the Quit popup is a
+  `StreamDialog`, and the phases include Disconnecting.
 - Existing tests: `InGameMenuTest`, `MenuHandleTest`, `MenuHintTest`,
   `StreamBackTest`, `MenuChordTest`, `MenuChordDetectorTest`,
   `UsbMenuChordTest`, `ChromeGamepadKeysTest`, `StreamChromeHostTest`,
   `GameStreamActionsTest`, `SessionAuditTest`, `StreamSessionTest`,
   `PointerMotionTest`, `GamepadMouseSpeedTest`, `QuitComboTest`,
   `UsbStartHoldTest`, `GuideTapTest`, `SystemPadQuitComboTest`,
-  `QuitNoticeTest`, `LibraryQuitNoticeTest`, `BorealisSnackbarHostTest`.
+  `QuitNoticeTest`, `LibraryQuitNoticeTest`, `BorealisSnackbarHostTest`, and
+  from Sprint 15 `QuitPopupTest`, `InGameMenuFocusTest`,
+  `UsbChromeMenuFocusTest`, `GameSpecialKeysTest`, `MouseBackHoldTest`,
+  `MenuHintTest`, `StreamingLayerHintTest`, `DisconnectingScreenTest`,
+  `GameStreamActionsLeaveTest`, `GameQuitEndTest`, `StreamSessionLeaveLogTest`,
+  `QuitLogTest`, `MenuGlassRulesTest`, `MenuGlassOptionTest`,
+  `MenuGlassCopiesTest`, `TextHaloTest`, `FocusOverGlassTest`.

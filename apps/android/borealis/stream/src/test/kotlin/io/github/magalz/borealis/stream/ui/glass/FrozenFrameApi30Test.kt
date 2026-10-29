@@ -81,7 +81,7 @@ class FrozenFrameApi30Test {
     private companion object {
         const val LIGHT_GREY = 0xFFC0C0C0.toInt()
         const val MARGIN_X = 60
-        const val FRAME_SHOWS = 0.12f
+        const val FRAME_SHOWS = 0.035f
         const val SOLID = 0.01f
     }
 }

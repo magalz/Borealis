@@ -52,14 +52,15 @@ private const val PERCENT = 100f
 internal val LocalVideoGlass = staticCompositionLocalOf<VideoGlass?> { null }
 
 /**
- * The live glass behind the in-game menu and its Quit popup: the copies of the stream video that
- * [frames] makes, a blurred copy of the last of them in [small], and [spec], what to draw it with.
- * The panels draw their region of [small] ([drawBackdrop]) once the host of the glass has recorded
- * it ([recordBackdrop]); until a first copy has arrived they are the solid surface.
+ * The glass behind a panel over the stream video: the copy of the video that [current] answers (the
+ * last of the live copies behind the in-game menu and its Quit popup, or the one frozen copy behind
+ * the error popup), a blurred copy of it in [small], and [spec], what to draw it with. The panels
+ * draw their region of [small] ([drawBackdrop]) once the host of the glass has recorded it
+ * ([recordBackdrop]); until a first copy has arrived they are the solid surface.
  */
 internal class VideoGlass(
     val spec: VideoGlassSpec,
-    private val frames: VideoGlassFrames,
+    private val current: () -> VideoFrame?,
     private val blurred: GraphicsLayer,
     private val small: GraphicsLayer,
 ) {
@@ -73,7 +74,7 @@ internal class VideoGlass(
      */
     fun recordBackdrop(scope: DrawScope) {
         with(scope) {
-            val frame = frames.frame ?: return@with
+            val frame = current() ?: return@with
             val next = spec.blurDp.dp.toPx() / frame.scaleX
             if (next != sigma) {
                 sigma = next
@@ -94,16 +95,30 @@ internal class VideoGlass(
      */
     fun drawBackdrop(scope: DrawScope, position: Offset, surface: Color) {
         with(scope) {
-            val frame = frames.frame
+            val frame = current()
             if (frame == null) {
                 drawRect(surface)
                 return@with
             }
-            drawRect(Color.Black)
-            translate(frame.left - position.x, frame.top - position.y) {
-                scale(frame.scaleX, frame.scaleY, Offset.Zero) { drawLayer(small) }
-            }
+            drawBlurredCopy(frame, position)
             drawRect(surface.copy(alpha = spec.tintPercent / PERCENT))
+        }
+    }
+
+    /**
+     * Draws the blurred copy alone, with no tint, from the corner of the chrome: the window behind
+     * the popup of the error, which is blurred as a whole while the panel is glass over it.
+     */
+    fun drawBlurred(scope: DrawScope) {
+        val frame = current() ?: return
+        scope.drawBlurredCopy(frame, Offset.Zero)
+    }
+
+    /** The blurred copy where the video is, as seen from a corner at [position], over black. */
+    private fun DrawScope.drawBlurredCopy(frame: VideoFrame, position: Offset) {
+        drawRect(Color.Black)
+        translate(frame.left - position.x, frame.top - position.y) {
+            scale(frame.scaleX, frame.scaleY, Offset.Zero) { drawLayer(small) }
         }
     }
 }
@@ -153,10 +168,12 @@ private fun rememberRunningGlass(source: VideoSource, spec: VideoGlassSpec): Vid
     }
     val blurred = rememberGraphicsLayer()
     val small = rememberGraphicsLayer()
-    return remember(spec, frames, blurred, small) { VideoGlass(spec, frames, blurred, small) }
+    return remember(spec, frames, blurred, small) {
+        VideoGlass(spec, { frames.frame }, blurred, small)
+    }
 }
 
-private fun View.originOnScreen(): IntOffset {
+internal fun View.originOnScreen(): IntOffset {
     val at = IntArray(2)
     getLocationOnScreen(at)
     return IntOffset(at[0], at[1])

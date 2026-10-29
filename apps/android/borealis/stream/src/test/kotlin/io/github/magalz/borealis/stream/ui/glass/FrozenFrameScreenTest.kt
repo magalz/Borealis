@@ -261,9 +261,9 @@ class FrozenFrameScreenTest {
         const val PERCENT = 100
         const val MARGIN_X = 60
         const val EDGE_REACH = 70
-        const val FRAME_SHOWS = 0.12f
+        const val FRAME_SHOWS = 0.035f
         const val SHARP_EDGE = 0.01f
-        const val GLASS_OVER_LIGHT = 0.2f
+        const val GLASS_OVER_LIGHT = 0.12f
         const val SOLID = 0.01f
     }
 }

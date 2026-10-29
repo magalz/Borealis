@@ -18,6 +18,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.Panel
+import io.github.magalz.borealis.stream.PointerSpeed
 import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.aPerf
@@ -75,11 +76,11 @@ private fun withChips(rows: List<String>): List<String> {
 class InGameMenuFocusTest {
     @get:Rule val composeRule = createComposeRule()
 
-    private fun tvMenu() =
+    private fun tvMenu(gamepadMouse: Boolean = false) =
         LayerFixture(
                 composeRule,
                 FormFactor.Tv,
-                aStreaming(Panel.MENU, touchMode = null, gamepadMouse = false),
+                aStreaming(Panel.MENU, touchMode = null, gamepadMouse = gamepadMouse),
                 aPerf(),
                 keyboardMode = true,
             )
@@ -204,6 +205,30 @@ class InGameMenuFocusTest {
 
         assertThat(walk(Key.DirectionDown, 1)).containsExactly("Display for next launch")
         assertThat(walk(Key.DirectionUp, 2)).containsExactly("Session info", "Refresh the picture")
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `OK on the Pointer speed row cycles Normal, Fast, Slow and back to Normal`() {
+        val fixture = tvMenu(gamepadMouse = true)
+        text("Pointer speed").performScrollTo().requestFocus()
+
+        press(Key.DirectionCenter)
+        fixture.phase = fixture.phase.copy(pointerSpeed = PointerSpeed.FAST)
+        composeRule.waitForIdle()
+        press(Key.DirectionCenter)
+        fixture.phase = fixture.phase.copy(pointerSpeed = PointerSpeed.SLOW)
+        composeRule.waitForIdle()
+        press(Key.DirectionCenter)
+
+        assertThat(fixture.intents.calls)
+            .containsExactly(
+                "setPointerSpeed FAST",
+                "setPointerSpeed SLOW",
+                "setPointerSpeed NORMAL",
+            )
+            .inOrder()
+        text("Pointer speed").assertIsFocused()
     }
 
     // The round finding D4: Down several times, OK, Right, OK, and Quit was never reached.

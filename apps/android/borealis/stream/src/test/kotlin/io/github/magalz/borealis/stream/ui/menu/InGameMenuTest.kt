@@ -794,26 +794,6 @@ class InGameMenuTest {
 
     @Test
     @Config(qualifiers = TV)
-    fun `OK on the Pointer speed row cycles Normal, Fast, Slow and back to Normal`() {
-        val fixture = menu(FormFactor.Tv, touchMode = null, gamepadMouse = true)
-
-        pressOk("Pointer speed")
-        fixture.reflect { it.copy(pointerSpeed = PointerSpeed.FAST) }
-        pressOk("Pointer speed")
-        fixture.reflect { it.copy(pointerSpeed = PointerSpeed.SLOW) }
-        pressOk("Pointer speed")
-
-        assertThat(fixture.intents.calls)
-            .containsExactly(
-                "setPointerSpeed FAST",
-                "setPointerSpeed SLOW",
-                "setPointerSpeed NORMAL",
-            )
-            .inOrder()
-    }
-
-    @Test
-    @Config(qualifiers = TV)
     fun `an option row announces its value and that activating it changes the value`() {
         menu(FormFactor.Tv, overlay = OverlayMode.COMPACT, touchMode = null, gamepadMouse = true)
 

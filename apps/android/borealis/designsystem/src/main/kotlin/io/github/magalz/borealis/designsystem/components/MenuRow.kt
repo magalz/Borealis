@@ -1,10 +1,8 @@
 package io.github.magalz.borealis.designsystem.components
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,21 +10,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
@@ -68,6 +55,10 @@ private val TRAILING_GAP = 12.dp
  * The control at the end sits beside the title. When the title and the control do not fit side by
  * side, as with a large text size, the control goes under the title instead of squeezing it.
  *
+ * The row is the one focus stop, and OK on it runs [onClick], which changes the option the control
+ * shows: the keys never go into the control, so it must not be a focus stop (a [SegmentedControl]
+ * takes `focusable = false`). A tap on the control still works.
+ *
  * The outline of a focused row reaches 5dp outside it, 7dp when it is the thicker one, so a list of
  * rows needs 8dp of padding around it and 10dp between rows, as in the [ActionSheet].
  */
@@ -88,16 +79,8 @@ fun MenuRow(
     val minHeight =
         if (LocalFormFactor.current == FormFactor.Phone) PHONE_MIN_HEIGHT else TV_MIN_HEIGHT
     val dim = if (enabled) 1f else DISABLED_ALPHA
-    val rowFocus = remember { FocusRequester() }
-    val trailingFocus = remember { FocusRequester() }
     FlowRow(
         modifier
-            .focusRequester(rowFocus)
-            .then(
-                // The control is inside the row, so the focus search would not reach it: point at
-                // it.
-                if (trailing == null) Modifier else Modifier.focusProperties { end = trailingFocus }
-            )
             .borealisFocusIndication(shape)
             .clip(shape)
             .then(if (value == null) Modifier else Modifier.semantics { stateDescription = value })
@@ -110,7 +93,7 @@ fun MenuRow(
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         RowText(title, consequence, note, style, dim, Modifier.weight(1f))
-        if (trailing != null) TrailingSlot(rowFocus, trailingFocus, trailing)
+        if (trailing != null) trailing()
     }
 }
 
@@ -164,35 +147,5 @@ private fun RowText(
         if (note != null) {
             Text(note, color = colors.ink3, style = MaterialTheme.typography.bodySmall)
         }
-    }
-}
-
-/**
- * The control at the end of a row, a focus group the D-pad enters from the row and leaves to it.
- */
-@Composable
-private fun TrailingSlot(
-    rowFocus: FocusRequester,
-    trailingFocus: FocusRequester,
-    trailing: @Composable () -> Unit,
-) {
-    val focusManager = LocalFocusManager.current
-    Box(
-        Modifier.focusRequester(trailingFocus)
-            // Inherited from the row: reset, or Right would loop back to the control.
-            .focusProperties { end = FocusRequester.Default }
-            .onKeyEvent { event ->
-                // The row is an ancestor of the control, so the search never finds it to the left:
-                // when nothing is left of the focused segment, go back to the row. (A focus group's
-                // `exit` property does not return focus to an ancestor.)
-                val left = event.key == Key.DirectionLeft
-                if (left && event.type == KeyEventType.KeyDown) {
-                    if (!focusManager.moveFocus(FocusDirection.Left)) rowFocus.requestFocus()
-                }
-                left
-            }
-            .focusGroup()
-    ) {
-        trailing()
     }
 }

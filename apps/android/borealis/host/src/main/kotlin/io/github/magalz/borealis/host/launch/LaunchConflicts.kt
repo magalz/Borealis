@@ -123,6 +123,9 @@ internal constructor(
      * [resumeChosen] is true when the user chose Resume or Continue on the requested app, which
      * then is joined without a question when it is the one that runs.
      */
+    // The reader, the names, the request, the actions, the host label and the user's choice: the
+    // six values of one resolution.
+    @Suppress("LongParameterList")
     @Throws(IOException::class, XmlPullParserException::class)
     fun resolve(
         reader: RunningAppReader,

@@ -302,6 +302,35 @@ class StartSameAppTest {
     }
 
     @Test
+    fun `a launch refused because the app runs, a Join and a failed handshake restart once and ask once`() {
+        raceWithDesktop()
+        listener.conflictChoice = ConflictChoice.JOIN
+        ShadowRecordingBridge.onStartConnection = rtspFailsOnce()
+        val connection = rig.connection()
+
+        rig.start(connection)
+        awaitRestartOrFailure()
+
+        assertThat(listener.events)
+            .containsExactly(
+                "stageStarting $DESKTOP_NAME",
+                "launchStarting resume=false",
+                conflict,
+                "launchStarting resume=true",
+                "stageComplete $DESKTOP_NAME",
+                "stageStarting $DESKTOP_NAME",
+                "launchRetrying category=1 attempt=1 max=1 delay=3000",
+                "launchStarting resume=true",
+                "stageComplete $DESKTOP_NAME",
+            )
+            .inOrder()
+        assertThat(ShadowRecordingBridge.named("startConnection")).hasSize(2)
+        assertThat(connection.endedByResumeCollision()).isFalse()
+        assertThat(auditDetails())
+            .containsExactly("choice=join running_app=$DESKTOP_ID entry=asked")
+    }
+
+    @Test
     fun `a chosen resume and a failed handshake restart the start once and record the choice once`() {
         rig.script.running(DESKTOP_ID)
         ShadowRecordingBridge.onStartConnection = rtspFailsOnce()

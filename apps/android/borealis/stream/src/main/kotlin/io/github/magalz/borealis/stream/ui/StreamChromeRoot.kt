@@ -43,8 +43,9 @@ internal fun StreamChromeTheme(look: BorealisLook, content: @Composable () -> Un
  * between them (Starting, the question about a running app, a failure, Quitting, Disconnecting),
  * and that goes when the phase becomes Streaming: the first frame can come before the connection
  * reports the stream, so the cut follows the phase and not the stage. The one exception is the
- * failure of a stream that ran, when the activity copied its last frame ([LocalFrozenFrame]): the
- * popup of the error stands on that frame, frozen, in place of the background.
+ * failure of a stream that ran, when the activity asked for a copy of its last frame
+ * ([LocalFrozenFrame]): the popup of the error stands on that frame, frozen, in place of the
+ * background, and on black while the copy is not there yet.
  */
 @Composable
 internal fun StreamChromeRoot(session: StreamSession, report: (Rect?) -> Unit, look: BorealisLook) {
@@ -64,15 +65,23 @@ internal fun StreamChromeRoot(session: StreamSession, report: (Rect?) -> Unit, l
                     videoGlass = state.visuals.menuGlass == MenuGlass.BLUR,
                 )
             } else {
-                // The failure of a stream that ran stands on its last frame, when one was copied.
+                // The failure of a stream that ran stands on its last frame once the copy of it is
+                // asked for. The host of the background and the popup stay the same in all that the
+                // failure goes through (no copy, a pending one, the frame, a failed copy): only
+                // what
+                // is drawn behind the popup changes, so the popup is not made again.
                 val frozen = LocalFrozenFrame.current
-                val frame = if (phase is StreamPhase.Failed) frozen?.frame else null
-                if (frozen != null && frame != null) {
-                    OverFrozenFrame(frozen, frame, state.visuals.menuGlass == MenuGlass.BLUR) {
-                        OutsideGameScreen(state, session)
-                    }
-                } else {
-                    OutsideGameBackground(state.visuals, state.decoderHeld) {
+                val failed = frozen != null && phase is StreamPhase.Failed
+                OutsideGameBackground(
+                    state.visuals,
+                    state.decoderHeld,
+                    showsBackground = !(failed && (frozen.frame != null || frozen.pending)),
+                ) {
+                    if (failed) {
+                        OverFrozenFrame(frozen, state.visuals.menuGlass == MenuGlass.BLUR) {
+                            OutsideGameScreen(state, session)
+                        }
+                    } else {
                         OutsideGameScreen(state, session)
                     }
                 }

@@ -18,20 +18,27 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 
 /**
- * The screen of the failed stream that has a frame: [frame], the last one of the video, frozen
- * behind [content], which is the error popup. Where the device can blur and the settings allow it
- * the frame is blurred with the glass of the menu ([frozenFrameLook]) and sharp otherwise, and the
- * popup is the glass over it where [menuGlass], the menu glass option, is Blur. The scrim of the
- * popup stays over the frame.
+ * What stands behind [content], the error popup of a stream that failed, over the glass host of the
+ * screens outside the game, from the moment the copy of the last frame is asked for:
+ * - while the copy is pending, the black that the frame is drawn over, so the background of the
+ *   viewer does not show for the few frames that the copy takes;
+ * - the frame of [frozen], frozen, once it has arrived: blurred with the glass of the menu where
+ *   the device can blur and the settings allow it ([frozenFrameLook]), sharp otherwise, and the
+ *   popup is the glass over it where [menuGlass], the menu glass option, is Blur;
+ * - nothing where no copy was asked for or the copy failed: the background of the host shows.
+ *
+ * The one call site of [content] is the same in all three, so the popup is composed once, and keeps
+ * its focus and what a screen reader has said of it, when the frame arrives or the copy fails. The
+ * scrim of the popup stays over the frame.
  *
  * The glass is [LocalVideoGlass] for [content], as the menu provides it for its Quit popup, so the
- * popup is drawn with the one code. What is blurred is one copy that never changes, so the glass
- * records it once and draws it as it is; no clock and no receiver for the battery saver runs.
+ * popup is drawn with the one code. The copy never changes, and the glass records it again only
+ * when the layer is drawn, which is when something on the popup changes, a focus outline say; no
+ * clock runs for it, as it does for the live copies of the menu.
  */
 @Composable
 internal fun OverFrozenFrame(
     frozen: FrozenFrame,
-    frame: VideoFrame,
     menuGlass: Boolean,
     content: @Composable () -> Unit,
 ) {
@@ -41,8 +48,9 @@ internal fun OverFrozenFrame(
         remember(look, colors, menuGlass) {
             frozenFrameLook(look, colors, Build.VERSION.SDK_INT, menuGlass)
         }
-    val glass = rules.blur?.let { rememberFrozenGlass(frozen, it) }
-    Box(Modifier.fillMaxSize().frozenFrameBackdrop(frame, glass)) {
+    val frame = frozen.frame
+    val glass = if (frame != null) rules.blur?.let { rememberFrozenGlass(frozen, it) } else null
+    Box(Modifier.fillMaxSize().frozenFrameBackdrop(frame, frozen.pending, glass)) {
         CompositionLocalProvider(
             LocalVideoGlass provides glass.takeIf { rules.panelIsGlass },
             content = content,
@@ -61,17 +69,22 @@ private fun rememberFrozenGlass(frozen: FrozenFrame, spec: VideoGlassSpec): Vide
 
 /**
  * Draws [frame] behind what is inside: the blurred copy of [glass], which records it first, or the
- * sharp frame where there is no glass.
+ * sharp frame where there is no glass; the black alone while the copy is [pending]; nothing else.
  */
-private fun Modifier.frozenFrameBackdrop(frame: VideoFrame, glass: VideoGlass?): Modifier =
-    drawBehind {
-        if (glass != null) {
+private fun Modifier.frozenFrameBackdrop(
+    frame: VideoFrame?,
+    pending: Boolean,
+    glass: VideoGlass?,
+): Modifier = drawBehind {
+    when {
+        frame != null && glass != null -> {
             glass.recordBackdrop(this)
             glass.drawBlurred(this)
-        } else {
-            drawSharp(frame)
         }
+        frame != null -> drawSharp(frame)
+        pending -> drawRect(Color.Black)
     }
+}
 
 /** The frame as it is, over black where the video is not, at the place and scale of the video. */
 private fun DrawScope.drawSharp(frame: VideoFrame) {

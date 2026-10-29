@@ -126,7 +126,7 @@ class ConnectionErrorFrameScreenshotTest {
         frozen.request()
         composeRule.setContent {
             BorealisTheme(formFactor, look) {
-                OverFrozenFrame(frozen, checkNotNull(frozen.frame), menuGlass = true) {
+                OverFrozenFrame(frozen, menuGlass = true) {
                     ConnectionErrorScreen("Desktop", "Desk PC", failure, aSession())
                 }
             }

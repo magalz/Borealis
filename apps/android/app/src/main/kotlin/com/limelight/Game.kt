@@ -2659,6 +2659,9 @@ class Game :
                             "connection stop done",
                             "ms" to TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - stopStarted),
                         )
+                        // BOREALIS: the stream's decoder is released with the connection, so a
+                        // clip of the background plays again (stream)
+                        runOnUiThread { streamSession.onConnectionStopped() }
                         done?.run()
                     }
                 }

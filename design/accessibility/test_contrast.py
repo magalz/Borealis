@@ -655,6 +655,84 @@ class GlassColoursTest(unittest.TestCase):
         self.assertEqual(out.getvalue().strip(), contrast.glass_colour_tables(self.table).strip())
 
 
+class VideoGlassWorstFrameTest(unittest.TestCase):
+    """The glass over the stream video (ADR 0061, decision 4), measured by the tool's own glass.
+
+    The video behind the menu is any frame, so the tint is chosen for the lightest one: a white
+    frame, which a blur leaves white and no other frame is lighter than. `VideoGlassSpecTest` pins
+    the floor that the app works out; this is the same figure from the tool's blur, tint and WCAG
+    maths, over a white frame, a busy bright one and a dark one. The frame is a quarter of the
+    stream, as the copy is, so a radius of 8 dp at xhdpi, 16 px, is 4 px.
+    """
+
+    # The floor that VideoGlassSpecTest pins for the default look (violet, Standard).
+    FLOOR = 83
+    BLUR_PX = 4
+    TEXTS = ("ink", "ink-2", "accent-soft", "danger-ink")
+
+    def setUp(self):
+        self.colors = contrast.load_colors(TOKENS, (*WORDS, "danger-ink", "accent-tint"))
+        self.surface = contrast.parse_hex(self.colors["surface"])
+
+    def backdrop(self, frame, percent):
+        """The glass at `percent` over `frame`, as the relative luminance of every pixel."""
+        glass = contrast.glass(frame, self.surface, percent / 100, self.BLUR_PX)
+        return glass, contrast.relative_luminance(glass)
+
+    def ratios(self, glass, luminance):
+        """The lowest ratio of each text colour of the menu, over every pixel of the glass."""
+        out = {}
+        for token in self.TEXTS:
+            text = float(contrast.relative_luminance(contrast.parse_hex(self.colors[token][:7])))
+            out[token] = contrast.contrast_stats(luminance, text)["min"]
+        # The selected label: accent-soft over the tint of the accent laid on the glass.
+        rgb, alpha = contrast.parse_rgba(self.colors["accent-tint"])
+        laid = contrast.relative_luminance(alpha * rgb + (1 - alpha) * glass)
+        soft = float(contrast.relative_luminance(contrast.parse_hex(self.colors["accent-soft"])))
+        out["accent-soft on the selected tint"] = contrast.contrast_stats(laid, soft)["min"]
+        # ink-3 and ink-4 are moved toward ink by the glass until they keep it.
+        target = contrast.glass_text_target(float(luminance.max()))
+        for token in ("ink-3", "ink-4"):
+            walked = contrast.walk_colour(self.colors[token], self.colors["ink"], target)
+            text = float(contrast.relative_luminance(contrast.parse_hex(walked)))
+            out[token] = contrast.contrast_stats(luminance, text)["min"]
+        return out
+
+    def white(self):
+        return uniform(480, 270, (1.0, 1.0, 1.0))
+
+    def test_every_text_keeps_4_5_over_a_white_frame_at_the_floor(self):
+        glass, luminance = self.backdrop(self.white(), self.FLOOR)
+        for token, ratio in self.ratios(glass, luminance).items():
+            with self.subTest(token=token):
+                self.assertGreaterEqual(ratio, 4.5)
+
+    def test_a_text_falls_short_two_percent_under_the_floor(self):
+        glass, luminance = self.backdrop(self.white(), self.FLOOR - 2)
+        shorts = [t for t, ratio in self.ratios(glass, luminance).items() if ratio < 4.5]
+        # The check can fail: it is the red of the Quit row, danger-ink, that is the first to.
+        self.assertEqual(shorts, ["danger-ink"])
+
+    def test_a_busy_bright_frame_is_no_lighter_than_a_white_one(self):
+        # Squares of white and black, 8 px: the blur mixes them, and none of the glass is lighter.
+        busy = self.white()
+        busy[(np.indices(busy.shape[:2]).sum(axis=0) // 8) % 2 == 1] = 0.0
+        _, whitest = self.backdrop(self.white(), self.FLOOR)
+        glass, luminance = self.backdrop(busy, self.FLOOR)
+        self.assertLessEqual(float(luminance.max()), float(whitest.max()))
+        for token, ratio in self.ratios(glass, luminance).items():
+            with self.subTest(token=token):
+                self.assertGreaterEqual(ratio, 4.5)
+
+    def test_a_dark_frame_keeps_every_text_at_the_tint_of_the_look_under_the_floor(self):
+        # The floor is about bright frames: a dark one is legible at the 40 % of the default look.
+        black = uniform(480, 270, (0.0, 0.0, 0.0))
+        glass, luminance = self.backdrop(black, 40)
+        for token, ratio in self.ratios(glass, luminance).items():
+            with self.subTest(token=token):
+                self.assertGreaterEqual(ratio, 4.5)
+
+
 class HaloGridTest(unittest.TestCase):
     """The halo of text straight on the background: the grid of what is tried, and the text."""
 

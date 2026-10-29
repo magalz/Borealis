@@ -18,6 +18,8 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.app.PictureInPictureModeChangedInfo
 import androidx.core.util.Consumer
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import io.github.magalz.borealis.designsystem.adaptive.FormFactorFacts
 import io.github.magalz.borealis.designsystem.adaptive.formFactorOf
@@ -34,6 +36,7 @@ import io.github.magalz.borealis.stream.input.ChromeChord
 import io.github.magalz.borealis.stream.input.MenuChordDetector
 import io.github.magalz.borealis.stream.ui.StreamChromeRoot
 import io.github.magalz.borealis.stream.ui.glass.FrozenFrame
+import io.github.magalz.borealis.stream.ui.glass.LocalFrozenFrame
 import io.github.magalz.borealis.stream.ui.glass.LocalVideoSource
 import io.github.magalz.borealis.stream.ui.glass.PixelCopySource
 import io.github.magalz.borealis.stream.ui.glass.originOnScreen
@@ -56,7 +59,9 @@ import kotlinx.coroutines.launch
  *
  * The in-game menu and its Quit popup are glass over a live copy of [streamView], which is the
  * `SurfaceView` that the decoder renders to: the chrome gets the view as its video source, and it
- * copies it only while the menu is open (ADR 0061).
+ * copies it only while the menu is open (ADR 0061). The popup of the error stands on one more copy,
+ * the last frame of the stream: the activity asks for it with [freezeFrame] when the stream ends in
+ * error, before the decoder is released, and the host lets it go when the activity is destroyed.
  *
  * [onCaptured] runs when the chrome starts taking the input (the mode becomes MODAL): the caller
  * releases what is held and drops the pointer capture. [onReleased] runs, posted, when it stops:
@@ -113,8 +118,12 @@ class StreamChromeHost(
     private val composeView =
         ComposeView(activity).apply {
             setContent {
-                // The video that the menu glass copies is the stream view below this one.
-                CompositionLocalProvider(LocalVideoSource provides videoSource) {
+                // The video that the menu glass copies is the stream view below this one, and the
+                // frame that the error popup stands on is the copy of it that was taken at the end.
+                CompositionLocalProvider(
+                    LocalVideoSource provides videoSource,
+                    LocalFrozenFrame provides frozenFrame,
+                ) {
                     StreamChromeRoot(session, ::setMenuHandleBounds, look)
                 }
             }
@@ -142,6 +151,13 @@ class StreamChromeHost(
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() = handleBack(session)
             },
+        )
+        // Nothing draws the frame once the activity is destroyed, which is also how Try again ends
+        // it: the new stream is another activity, with a host of its own.
+        activity.lifecycle.addObserver(
+            object : DefaultLifecycleObserver {
+                override fun onDestroy(owner: LifecycleOwner) = frozenFrame.release()
+            }
         )
     }
 

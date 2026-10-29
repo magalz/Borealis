@@ -2759,7 +2759,8 @@ class Game :
                         )
                     )
                 } else {
-                    finish()
+                    // BOREALIS: another exit may have finished the activity already (leave)
+                    if (!isFinishing) finish()
                 }
             }
         }

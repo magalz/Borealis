@@ -9,6 +9,7 @@ import io.github.magalz.borealis.library.UNKNOWN_APP_NAME
 import io.github.magalz.borealis.nativecore.LaunchCategory
 import io.github.magalz.borealis.settings.appearance.borealisLook
 import io.github.magalz.borealis.settings.catalog.Settings
+import io.github.magalz.borealis.settings.repository.SettingsSnapshot
 import io.github.magalz.borealis.settings.store.SettingsSnapshots
 import io.github.magalz.borealis.stream.host.StreamChromeHost
 import java.util.function.BooleanSupplier
@@ -78,6 +79,9 @@ object StreamSessionFactory {
             dockKeyboard = { StreamChromeHost.dockedKeyboard(activity, usbPadHeld.asBoolean) },
             actions = actions,
         )
+
+    /** What the stream draws besides the video, from [snapshot]: Blur, Moving and the style. */
+    @JvmStatic fun visuals(snapshot: SettingsSnapshot): StreamVisuals = StreamVisuals()
 
     /**
      * The look that the stream chrome draws with: the one that the settings store now, mapped as

@@ -12,12 +12,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
-/** What a stream starts with: the user's settings when the first frame arrives. */
+/**
+ * What a stream starts with: the user's settings when the first frame arrives, and the [visuals] of
+ * the stream, which it keeps from the start.
+ */
 data class StreamDefaults(
     val overlay: OverlayMode,
     val touchMode: TouchMode?,
     val gamepadMouse: Boolean?,
     val showMenuHint: Boolean,
+    val visuals: StreamVisuals = StreamVisuals(),
 )
 
 /**
@@ -198,6 +202,9 @@ class StreamSession(
         )
         return true
     }
+
+    /** The connection has stopped and its decoder is released. */
+    fun onConnectionStopped() = Unit
 
     fun onPerf(snapshot: PerfSnapshot) {
         mutablePerf.value = snapshot

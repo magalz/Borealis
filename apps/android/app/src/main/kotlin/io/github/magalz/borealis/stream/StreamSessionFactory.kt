@@ -7,6 +7,7 @@ import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.library.UNKNOWN_APP_NAME
 import io.github.magalz.borealis.nativecore.LaunchCategory
+import io.github.magalz.borealis.settings.appearance.backgroundStyle
 import io.github.magalz.borealis.settings.appearance.borealisLook
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot
@@ -65,23 +66,48 @@ object StreamSessionFactory {
         pcName: String?,
         actions: StreamActions,
         usbPadHeld: BooleanSupplier,
-    ): StreamSession =
-        StreamSession(
+    ): StreamSession {
+        // One read of the settings for the whole stream: a change shows in the next one.
+        val settings = SettingsSnapshots.current(activity)
+        return StreamSession(
             appName = appName.takeUnless { it == UNKNOWN_APP_NAME }.orEmpty(),
             hostName = pcName.orEmpty(),
             defaults =
                 defaults(
-                    prefs,
-                    SettingsSnapshots.current(activity)[Settings.PERF_OVERLAY],
-                    activity.packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN),
-                    GameStreamActions.menuHintPending(activity),
-                ),
+                        prefs,
+                        settings[Settings.PERF_OVERLAY],
+                        activity.packageManager.hasSystemFeature(
+                            PackageManager.FEATURE_TOUCHSCREEN
+                        ),
+                        GameStreamActions.menuHintPending(activity),
+                    )
+                    .copy(visuals = visuals(settings)),
             dockKeyboard = { StreamChromeHost.dockedKeyboard(activity, usbPadHeld.asBoolean) },
             actions = actions,
         )
+    }
 
-    /** What the stream draws besides the video, from [snapshot]: Blur, Moving and the style. */
-    @JvmStatic fun visuals(snapshot: SettingsSnapshot): StreamVisuals = StreamVisuals()
+    /**
+     * What the stream draws besides the video, from [snapshot] (ADR 0061): the glass of the menu,
+     * how the background behaves outside the game, and the style that the viewer chose for it. A
+     * stored id that no choice has stands for the default of its setting.
+     */
+    @JvmStatic
+    fun visuals(snapshot: SettingsSnapshot): StreamVisuals =
+        StreamVisuals(
+            menuGlass =
+                when (snapshot[Settings.STREAM_MENU_GLASS]) {
+                    Settings.STREAM_MENU_GLASS_SOLID -> MenuGlass.SOLID
+                    else -> MenuGlass.BLUR
+                },
+            background =
+                when (snapshot[Settings.STREAM_BACKGROUND]) {
+                    Settings.STREAM_BACKGROUND_STILL -> BackgroundMode.STILL
+                    Settings.STREAM_BACKGROUND_OFF -> BackgroundMode.OFF
+                    else -> BackgroundMode.MOVING
+                },
+            backgroundStyle = backgroundStyle(snapshot),
+        )
 
     /**
      * The look that the stream chrome draws with: the one that the settings store now, mapped as

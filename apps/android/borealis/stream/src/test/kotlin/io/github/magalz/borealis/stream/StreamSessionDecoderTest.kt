@@ -90,6 +90,17 @@ class StreamSessionDecoderTest {
     }
 
     @Test
+    fun `a connection that starts after a failure holds its decoder, and the failure stays`() {
+        session.onStage(StartStage.STARTING_APP)
+        session.onFailed(aFailure)
+
+        session.onConnectionStarted(aSessionInfo)
+
+        assertThat(held).isTrue()
+        assertThat(session.state.value.phase).isEqualTo(StreamPhase.Failed(aFailure))
+    }
+
+    @Test
     fun `none is held once the connection has stopped`() {
         session.onStage(StartStage.PREPARING_DISPLAY)
         session.onConnectionStarted(aSessionInfo)

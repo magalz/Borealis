@@ -150,7 +150,13 @@ class AppsViewModelTest {
             assertThat(awaitItem())
                 .isEqualTo(
                     AppsEffect.StartStream(
-                        StreamRequest("host-1", 1, "Desktop", hdrSupported = false)
+                        StreamRequest(
+                            "host-1",
+                            1,
+                            "Desktop",
+                            hdrSupported = false,
+                            resumeChosen = true,
+                        )
                     )
                 )
         }
@@ -335,7 +341,13 @@ class AppsViewModelTest {
             assertThat(awaitItem())
                 .isEqualTo(
                     AppsEffect.StartStream(
-                        StreamRequest("host-1", 1, "Desktop", hdrSupported = false)
+                        StreamRequest(
+                            "host-1",
+                            1,
+                            "Desktop",
+                            hdrSupported = false,
+                            resumeChosen = true,
+                        )
                     )
                 )
         }
@@ -561,6 +573,23 @@ class AppsViewModelTest {
             assertThat(awaitItem())
                 .isEqualTo(
                     AppsEffect.StartStream(StreamRequest("host-1", 2, "steam", hdrSupported = true))
+                )
+        }
+    }
+
+    @Test
+    fun `a launch request for the running app is not the user's choice to resume`() = runTest {
+        repository.emit(snapshot(desktop, steam, running = desktop))
+        subscribe(viewModel.uiState)
+
+        viewModel.onLaunchRequested(1)
+
+        viewModel.effects.test {
+            assertThat(awaitItem())
+                .isEqualTo(
+                    AppsEffect.StartStream(
+                        StreamRequest("host-1", 1, "Desktop", hdrSupported = false)
+                    )
                 )
         }
     }

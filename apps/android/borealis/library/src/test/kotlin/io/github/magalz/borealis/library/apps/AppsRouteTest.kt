@@ -86,7 +86,8 @@ class AppsRouteTest {
         composeRule.onNodeWithContentDescription("Desktop").performClick()
         composeRule.waitForIdle()
 
-        assertThat(streams).containsExactly(StreamRequest("host-1", 1, "Desktop", false))
+        assertThat(streams)
+            .containsExactly(StreamRequest("host-1", 1, "Desktop", false, resumeChosen = true))
     }
 
     @Test
@@ -164,7 +165,8 @@ class AppsRouteTest {
         composeRule.waitForIdle()
 
         composeRule.onNodeWithText("The host refused.").assertIsDisplayed()
-        assertThat(streams).containsExactly(StreamRequest("host-1", 1, "Desktop", false))
+        assertThat(streams)
+            .containsExactly(StreamRequest("host-1", 1, "Desktop", false, resumeChosen = true))
     }
 
     @Test

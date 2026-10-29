@@ -190,7 +190,9 @@ class LibraryActivityTest {
         composeRule.waitForIdle()
 
         assertThat(streams.requests)
-            .containsExactly(StreamRequest("desk", 7, "Steam", hdrSupported = false))
+            .containsExactly(
+                StreamRequest("desk", 7, "Steam", hdrSupported = false, resumeChosen = true)
+            )
     }
 
     @Test

@@ -126,6 +126,30 @@ internal object LookLists {
             ),
         )
 
+    /**
+     * The stream's own options: the stream maps the stored id to what it draws, so each choice is
+     * its own value. They are here so that the row shows the default for an id that no choice has.
+     */
+    val STREAM_BACKGROUND =
+        LookList(
+            Settings.STREAM_BACKGROUND,
+            listOf(
+                    Settings.STREAM_BACKGROUND_MOVING,
+                    Settings.STREAM_BACKGROUND_STILL,
+                    Settings.STREAM_BACKGROUND_OFF,
+                )
+                .map { LookChoice(it, it) },
+        )
+
+    /** The glass of the menu in the stream, as [STREAM_BACKGROUND]. */
+    val STREAM_MENU_GLASS =
+        LookList(
+            Settings.STREAM_MENU_GLASS,
+            listOf(Settings.STREAM_MENU_GLASS_BLUR, Settings.STREAM_MENU_GLASS_SOLID).map {
+                LookChoice(it, it)
+            },
+        )
+
     val CARD_DENSITY =
         LookList(
             Settings.CARD_DENSITY,
@@ -170,6 +194,8 @@ internal object LookLists {
             FONT,
             ACCENT,
             BACKGROUND_INTENSITY,
+            STREAM_BACKGROUND,
+            STREAM_MENU_GLASS,
             CARD_DENSITY,
             TEXT_SPACING,
             GLASS_TINT,

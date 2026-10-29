@@ -736,6 +736,8 @@ private val UC_009_ROWS =
                 SettingsItem.ACCENT,
                 SettingsItem.BACKGROUND,
                 SettingsItem.BACKGROUND_INTENSITY,
+                SettingsItem.STREAM_BACKGROUND,
+                SettingsItem.STREAM_MENU_GLASS,
                 SettingsItem.CARD_DENSITY,
                 SettingsItem.GLASS_TINT,
                 SettingsItem.GLASS_BLUR,

@@ -515,6 +515,8 @@ object Settings {
             ACCENT,
             BACKGROUND,
             BACKGROUND_INTENSITY,
+            STREAM_BACKGROUND,
+            STREAM_MENU_GLASS,
             CARD_DENSITY,
             GLASS_TINT,
             GLASS_BLUR,

@@ -76,19 +76,25 @@ constructor(
         val snapshot = latest ?: return
         val running = snapshot.host?.runningApp?.id
         val app = snapshot.items(running).firstOrNull { it.id == appId } ?: return
-        select(app, running)
+        select(app, running, tapped = false)
     }
 
     /** A tap: start or resume when that is unambiguous, otherwise open the actions. */
     fun onAppSelected(appId: Int) {
         val state = uiState.value
         val app = state.items.firstOrNull { it.id == appId } ?: return
-        select(app, state.runningAppId)
+        select(app, state.runningAppId, tapped = true)
     }
 
-    private fun select(app: AppItemUiState, runningAppId: Int?) {
+    /**
+     * Only the tap on the running app is the user's Resume: a launch request for it, such as a
+     * pinned shortcut or Retry, is not, so the stream asks.
+     */
+    private fun select(app: AppItemUiState, runningAppId: Int?, tapped: Boolean) {
         if (runningAppId == null || app.running) {
-            send(AppsEffect.StartStream(app.toRequest(hostId)))
+            send(
+                AppsEffect.StartStream(app.toRequest(hostId, resumeChosen = tapped && app.running))
+            )
         } else {
             actionsAppId.value = app.id
         }
@@ -104,7 +110,8 @@ constructor(
         val app = sheet.app
         actionsAppId.value = null
         when (action) {
-            AppAction.RESUME,
+            AppAction.RESUME ->
+                send(AppsEffect.StartStream(app.toRequest(hostId, resumeChosen = true)))
             AppAction.START -> send(AppsEffect.StartStream(app.toRequest(hostId)))
             AppAction.QUIT ->
                 viewModelScope.launch {
@@ -248,7 +255,8 @@ private fun choicesFor(
     return if (canPin) choices + AppAction.ADD_TO_HOME_SCREEN else choices
 }
 
-private fun AppItemUiState.toRequest(hostId: String) = StreamRequest(hostId, id, name, hdrSupported)
+private fun AppItemUiState.toRequest(hostId: String, resumeChosen: Boolean = false) =
+    StreamRequest(hostId, id, name, hdrSupported, resumeChosen)
 
 private fun QuitResult.toMessage(): AppsMessage =
     when (this) {

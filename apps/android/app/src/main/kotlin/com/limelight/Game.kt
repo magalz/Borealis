@@ -1401,8 +1401,12 @@ class Game :
                         }
                     }
 
-                    // Quit
-                    KeyEvent.KEYCODE_Q -> finish()
+                    // Disconnect (BOREALIS: the flow of the menu's Disconnect, with its screen and
+                    // its notice, not a finish)
+                    KeyEvent.KEYCODE_Q -> streamSession.disconnect()
+
+                    // BOREALIS: open the in-game menu
+                    KeyEvent.KEYCODE_M -> streamSession.openMenu()
 
                     // Toggle cursor visibility
                     KeyEvent.KEYCODE_C -> {
@@ -1440,7 +1444,8 @@ class Game :
             when (androidKeyCode) {
                 KeyEvent.KEYCODE_Z,
                 KeyEvent.KEYCODE_Q,
-                KeyEvent.KEYCODE_C -> {
+                KeyEvent.KEYCODE_C,
+                KeyEvent.KEYCODE_M -> {
                     // Remember that a special key combo was activated, so we can consume all key
                     // events until the modifiers come up
                     specialKeyCode = androidKeyCode

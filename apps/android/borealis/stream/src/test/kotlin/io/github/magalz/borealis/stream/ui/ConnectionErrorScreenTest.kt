@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextEquals
@@ -405,6 +406,21 @@ class ConnectionErrorScreenTest {
         show(failure(FailureKind.HOST_BUSY))
 
         assertThat(composeRule.paneTitles()).containsExactly("Desk PC is busy")
+    }
+
+    @Test
+    fun `the title is the only heading of the popup`() {
+        show(failure(FailureKind.HOST_BUSY, "Error -1", "Ports 47984 may be blocked"))
+
+        // In the unmerged tree: the merged node of the announcement carries the heading of its
+        // title.
+        val headings =
+            composeRule.onAllNodes(
+                SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading),
+                useUnmergedTree = true,
+            )
+        headings.assertCountEquals(1)
+        headings[0].assertTextEquals("Desk PC is busy")
     }
 
     @Test

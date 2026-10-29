@@ -70,6 +70,17 @@ class StreamSessionLeaveLogTest {
     }
 
     @Test
+    fun `any other end of the stream while quitting is a network drop, not the quit's`() {
+        val session = streaming()
+        session.quitApp()
+
+        val byQuit = session.endedByQuit(-100)
+
+        assertThat(byQuit).isFalse()
+        assertThat(lines()).doesNotContain("quit stream ended")
+    }
+
+    @Test
     fun `the end of a stream nobody quit is not the quit's and logs nothing`() {
         val session = streaming()
 

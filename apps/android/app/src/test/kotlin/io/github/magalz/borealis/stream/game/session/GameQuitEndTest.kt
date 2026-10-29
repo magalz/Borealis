@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.stream.game.session
 
 import com.google.common.truth.Truth.assertThat
+import com.limelight.nvstream.jni.MoonBridge
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.library.RecordingLog
 import io.github.magalz.borealis.logging.LogLevel
@@ -74,6 +75,22 @@ internal class GameQuitEndTest : GameTestBase() {
         val quitting = rig.phase as StreamPhase.Quitting
         assertThat(quitting.ended).isNotNull()
         assertThat(ShadowRecordingBridge.names).contains("stopConnection")
+    }
+
+    @Test
+    fun `another end while a quit is under way is a network drop and is tested and logged`() {
+        streamWithQuitUnderWay()
+
+        rig.game.connectionTerminated(MoonBridge.ML_ERROR_NO_VIDEO_TRAFFIC)
+        rig.awaitStop()
+
+        assertThat(connectivityTests()).hasSize(1)
+        assertThat(limeLog.entries)
+            .contains(
+                Level.SEVERE to "Connection terminated: ${MoonBridge.ML_ERROR_NO_VIDEO_TRAFFIC}"
+            )
+        assertThat(borealisLog.records.map { it.message }).doesNotContain("quit stream ended")
+        assertThat((rig.phase as StreamPhase.Quitting).ended).isNotNull()
     }
 
     @Test

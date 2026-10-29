@@ -2191,16 +2191,22 @@ Steps:
      the confirmation to the Library, `since_quit_ms`, `cancel answered ms` and `check answered ms`. Earlier
      rounds measured 5 to 7 s, and about 17 s once (section 15). A Quit over 10 s is a finding for
      [#217](https://github.com/NortheBridge/luminalshine/issues/217), not a `fail` of Borealis.
-   - Read the host log for each Quit, between `CLIENT DISCONNECTED` and the answer. The lines that say where
-     the time went (contract 7.6) are `Successfully requested the app to exit. Waiting up to N seconds for it
-     to close.`, then `All app processes have successfully exited.` or `App did not fully exit within the
+   - Read the host log for each Quit from the first info line after the client's `quit cancel sent` time.
+     The clocks of the PC and the device can differ by a second or so, so compare the spans between the
+     host lines, not the wall times. Do not anchor on `CLIENT DISCONNECTED`: a user's Quit probably never
+     writes it, because `/cancel` removes the peer with `enet_peer_disconnect_now`, which raises no event
+     (from the source, not run). The lines that say where the time went (contract 7.6) are
+     `Successfully requested the app to exit. Waiting up to N seconds for it to close.`, then `All app processes have successfully exited.` or `App did not fully exit within the
      timeout. Terminating the app's remaining processes.`, `Executing Undo Cmd: [...]` (do not copy the
      command: it can hold a path) and `Undo command timed out after N seconds`, `Display helper:
      transactional REVERT completed and helper exited after verification.`, `Virtual display cleanup:
      begin` and `Virtual display cleanup: finished`, and `Virtual display cleanup: helper restore was not
      verified; restarting the helper and retrying.` A Desktop has no process to close, so its exit lines can
-     be missing. Expected: the time of each Quit is accounted for by those lines, and the client's
-     `since_quit_ms` and `cancel answered ms` agree with the host's times to about a second.
+     be missing. The host logs no answer time at info. In the usual case `Virtual display cleanup:
+     finished` is the last info line of the teardown (the config revert after it logs nothing), so it stands
+     for the end of `/cancel`; with no virtual display to clean, the last of the other lines stands. Expected:
+     the time of each Quit is accounted for by the span from the first line to that one, and the client's
+     `cancel answered ms` agrees with it to about a second.
    - From Apps, with the game left running by a Disconnect: open its actions and choose Quit. Expected:
      "App quit.", with the lines `quit cancel sent`, `quit cancel answered ms=N` and `quit check answered
      ms=N` and none of the stream lines. On the TV on 2026-10-29, with no stream running, `/cancel` answered
@@ -2224,22 +2230,25 @@ Steps:
      and after the last it goes back to the first.
    - Press Down from the top to Quit and Up back to the top. Expected: every row and every Send keys chip is
      reached once, in one order (the chips are a vertical list).
-   - The sequence of D4 of the Sprint 12 round: Down several times, OK on a row, Right, OK, then Down to Quit.
-     Expected: Quit is reached, and OK opens the popup of step 1.
+   - The sequence of D4 of the Sprint 12 round, adapted. The round pressed 25 Downs, OK, Right, OK on the
+     S22 and 14 Downs on the TV, and Quit was not reached. Press Down to Send keys, OK (its chips open),
+     Right, OK (they close), then Down to Quit. Expected: Quit is reached, and OK opens the popup of step 1
+     (the tests `InGameMenuFocusTest` and `UsbChromeMenuFocusTest` pin this form).
    - S22, touch: tap a segment of Overlay and Touch (the phone layout, no pad), and with a pad of Gamepad
      mouse and Pointer speed. Expected: the tapped value is chosen.
 4. Combos (S22, with a keyboard and a mouse; the set-up of 3.28, A9; a Notepad test file open on the PC,
    section 5). Source: `Game.kt` (`handleSpecialKeys`, the Back hold of the mouse), issue #102.
    - With the input grabbed, press Ctrl+Alt+Shift+M and release the keys. Expected: the menu opens when
-     the keys are released, and Notepad shows nothing (the PC did not see the keys). Close the menu. Release
-     the grab with Ctrl+Alt+Shift+Z and repeat. Expected: the same.
+     the keys are released, and Notepad shows nothing (the modifiers reach the PC; only the M is eaten). Close
+     the menu. Release the grab with Ctrl+Alt+Shift+Z and repeat. Expected: the same.
    - Press Ctrl+Alt+Shift+Q. Expected: the flow of step 2 (Disconnecting, then the Library notice), with
      `disconnect accepted` in the log.
    - Settings, Input, "Mouse back and forward buttons": On. In a stream, hold the Back (side) button of
      the mouse. Expected: the menu opens after about 1 s, and the PC gets no Back. Press the button briefly.
      Expected: the PC gets Back on release (use a browser on the PC that has gone through two pages).
-     Hold the right click for 2 s. Expected: the menu does not open, and the PC gets a held right click
-     (the context menu of Notepad stays open). With the setting Off, holding Back opens no menu either.
+     Hold the right click for 2 s. Expected: the Borealis menu does not open, and the PC gets a held right
+     click (the context menu of Notepad opens when you release it). With the setting Off, holding the side
+     button opens no menu either.
      A game that uses the side button as push-to-talk opens the menu after 1 s: known.
    - The hint, once. It shows the first time for six seconds, or until a panel opens, and the app remembers
      it (`menu_hint_shown` in `shared_prefs/BorealisStream.xml`). To see it again, stop the app and run
@@ -2270,10 +2279,11 @@ Steps:
      Desktop is already running and can be joined, or quit and `<game>` started, with Join, Quit and start,
      and Cancel focused. Nothing is quit before the answer: `quit cancel sent` appears only after Quit and
      start. Run it with the TV first and the S22 second, then the other way round.
-   - **Try again.** Cause a drop as in step 7 while the game runs, and choose Try again on the popup.
-     Expected: the Library opens on that game and the stream resumes it with no dialog (`entry=chosen`).
-     Then drop a stream, quit the game on the PC, and choose Try again. Expected: the game is launched anew,
-     with no dialog. The choice is used once: a pinned shortcut tapped afterwards asks.
+   - **Try again.** Cause a drop as in step 7 while the game runs. Restore the network, then choose Try again
+     on the popup (with the network still blocked the start only fails again). Expected: the Library opens
+     on that game and the stream resumes it with no dialog (`entry=chosen`). Then drop a stream, quit the
+     game on the PC, restore the network and choose Try again. Expected: the game is launched anew, with no
+     dialog. The choice is used once: a pinned shortcut tapped afterwards asks.
    - Known limit, not a `fail`: if another device restarted the app that the Library shows running, Resume
      enters it without asking (the host gives no session id; discussion
      [#221](https://github.com/NortheBridge/luminalshine/discussions/221)). Record it if you see it.
@@ -2401,6 +2411,9 @@ Steps, with the minutes that the plan gives them:
   Ctrl+Alt+Shift+M and release: does the menu open? Close it. Set "Mouse back and forward buttons" to On, and
   hold the Back button of the mouse for a second: does the menu open? Press it briefly: does the PC go back?
   Put the setting back to what it was.
+
+At the end, put the Appearance and Accessibility settings back to the defaults named above, quit the game on
+the S22, and end with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the Streamer.
 
 Record the result in this table, one row for each step. Use `pass`, `fail` or `not applicable`, and write
 what you saw in the notes. A `fail` needs a note.

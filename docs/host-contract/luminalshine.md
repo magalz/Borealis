@@ -41,21 +41,24 @@ mode with OLED Protection), which by the release notes does not alter the networ
 protocols, authentication, encoder selection or capture-start logic. An upgrade ends a
 running stream (section 18, item 18). The rest of the document was not re-verified: its
 line numbers are the ones at `5afdbdc6`, or at `46f6936d` where an item says so, except
-the references of sections 7.5 and 7.6, which are at `dba21a9e`. The plain-HTTP responses of a
+the references of sections 4.1 to 4.3, 7.5 and 7.6, which are at `dba21a9e`. The plain-HTTP responses of a
 running 26.10.0 or 26.10.1 host were not captured.
 
 **Revision of 2026-10-29 (Sprint 15).** The host code is that of `dba21a9e`; what changed
 is the record. Section 7.6 was rewritten and its references moved to `dba21a9e`. Notes
-marked **Filed upstream (2026-10-29)** were added to sections 4, 7.3, 9.1 and 20 and to the
-appendix: the owner filed issues #216 to #220 and discussions #221 to #225 on
+marked **Filed upstream (2026-10-29)** were added to sections 4, 7.3, 7.6, 9.1 and 20 and to
+the appendix: the owner filed issues #216 to #220 and discussions #221 to #225 on
 `NortheBridge/luminalshine` that day, and closed #204 and #205 (read with `gh` on
-2026-10-29). The 400 row of section 7.5 and item 8 of section 18 were changed to match section 7.6. Notes marked **Client behaviour (Sprint 15)** describe what Borealis does at
+2026-10-29). The 400 row of section 7.5 and item 8 of section 18 were changed to match
+section 7.6. Notes marked **Client behaviour (Sprint 15)** describe what Borealis does at
 `2e76dfcfb` (the head of `phase/s15-stream-screens` when this was written). The `src/`
 references inside those notes are lines at `dba21a9e`. The pairing code of section 4 was read
-again at `dba21a9e` on 2026-10-29: each of the 33 ranges that sections 4.1 to 4.3 cite
-(`src/nvhttp.cpp`, `src/confighttp.cpp` and `src/network.cpp`) holds the same lines at
-`5afdbdc6` and at `dba21a9e`, moved down by 0 to 118 lines, so the claims hold at 26.10.1
-and only the line numbers of those rows are the ones of `5afdbdc6`.
+again at `dba21a9e` on 2026-10-29: each of the 36 ranges that sections 4.1 to 4.3 and the
+paragraph on the wrong PIN of 26.09.1 cite (`src/nvhttp.cpp`, `src/confighttp.cpp` and
+`src/network.cpp`) holds the same lines at `5afdbdc6` and at `dba21a9e`, moved down by 0 to 118
+lines, so the claims hold at 26.10.1, and those references were moved to `dba21a9e`. The
+references of the "Changed since 26.09.1" notes were already at `46f6936d`, where
+`src/nvhttp.cpp` is the same file.
 
 Everything here comes from static reading of the host source, except the items
 marked **Observed** (runtime observations from the Sprint 2 and 3 device rounds and,
@@ -205,18 +208,18 @@ Desktop, the client treats it as any other app, which is the cautious reading.
 
 The cryptographic exchange is the standard four-phase GameStream pairing
 (`getservercert`, `clientchallenge`, `serverchallengeresp`, `clientpairingsecret`,
-then `pairchallenge` over HTTPS): `src/nvhttp.cpp:1941-2106`, dispatched at
-`src/nvhttp.cpp:2204-2345`. The differences that matter to a client:
+then `pairchallenge` over HTTPS): `src/nvhttp.cpp:1961-2126`, dispatched at
+`src/nvhttp.cpp:2221-2362`. The differences that matter to a client:
 
 ### 4.1 PIN and name are entered on the host
 
 - The client derives its key from a four-digit decimal PIN and the salt in the
   usual way. The PIN must be exactly four ASCII digits
-  (`src/nvhttp.cpp:1706-1710`).
+  (`src/nvhttp.cpp:1726-1730`).
 - The user enters the PIN and the client's display name in the host Web UI,
   which calls `POST /api/pin` with `{"pin","name","pairing_id"}`
-  (`src/confighttp.cpp:3988-4038`; `pairing_id` is optional). The paired name is
-  taken from that submission and trimmed (`src/nvhttp.cpp:2434`). Any
+  (`src/confighttp.cpp:4100-4150`; `pairing_id` is optional). The paired name is
+  taken from that submission and trimmed (`src/nvhttp.cpp:2451`). Any
   `devicename` the client sends is not used for the name.
 - The HTTP request for phase 1 (`phrase=getservercert`) is held open until the
   user submits the PIN. Moonlight Android already uses a client with no read
@@ -224,42 +227,42 @@ then `pairchallenge` over HTTPS): `src/nvhttp.cpp:1941-2106`, dispatched at
   (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/PairingManager.java:205-209`).
   Any other client must do the same.
 - A host that has the PIN-on-stdin flag set reads the PIN from standard input
-  instead (`src/nvhttp.cpp:2280-2282`). This is a host operator mode; it is not
+  instead (`src/nvhttp.cpp:2297-2299`). This is a host operator mode; it is not
   expected in normal installs.
 
 ### 4.2 Pairing sessions and limits
 
 | Limit | Value | Reference |
 | --- | --- | --- |
-| Pending pairing session lifetime | 5 minutes | `src/nvhttp.cpp:917` |
-| Completed-outcome retention | 5 minutes | `src/nvhttp.cpp:918` |
-| Maximum concurrent pending pairings | 32 | `src/nvhttp.cpp:919` |
-| Maximum retained outcomes | 64 | `src/nvhttp.cpp:920` |
+| Pending pairing session lifetime | 5 minutes | `src/nvhttp.cpp:918` |
+| Completed-outcome retention | 5 minutes | `src/nvhttp.cpp:919` |
+| Maximum concurrent pending pairings | 32 | `src/nvhttp.cpp:920` |
+| Maximum retained outcomes | 64 | `src/nvhttp.cpp:921` |
 
 - Concurrent pairing requests are told apart by an opaque `pairing_id` that the
-  host generates (`src/nvhttp.cpp:2243-2250`) and that the Web UI lists through
-  `GET /api/pin` (`src/confighttp.cpp:3949-3970`). The client never sees it.
+  host generates (`src/nvhttp.cpp:2260-2267`) and that the Web UI lists through
+  `GET /api/pin` (`src/confighttp.cpp:4061-4082`). The client never sees it.
   Pairing states are `pending_pin`, `awaiting_client`, `paired`, `failed`,
-  `expired` (`src/nvhttp.cpp:1661-1676`).
+  `expired` (`src/nvhttp.cpp:1681-1696`).
 - Every phase after the first must come from the same normalized IP address as
   phase 1, or the host answers 403 `Pairing request peer mismatch`
-  (`src/nvhttp.cpp:2312-2317`). The address is compared after normalization, so
+  (`src/nvhttp.cpp:2329-2334`). The address is compared after normalization, so
   an IPv4-mapped IPv6 address equals its IPv4 form
-  (`src/network.cpp:270-272`, `src/nvhttp.cpp:2173-2174`). A client that switches
+  (`src/network.cpp:270-272`, `src/nvhttp.cpp:2190-2191`). A client that switches
   between IPv4 and IPv6 between phases, for example when Android changes
   network, will fail pairing.
 - A phase 1 retry with the same certificate and salt is answered idempotently
   only after the PIN was applied, while the session is in the `getservercert`
-  phase (`last_phase == GETSERVERCERT`, `src/nvhttp.cpp:2210-2233`). Any other
+  phase (`last_phase == GETSERVERCERT`, `src/nvhttp.cpp:2227-2250`). Any other
   non-initial phase, including a same-certificate retry in a later phase, gets
-  409 `Pairing exchange already in progress` (`src/nvhttp.cpp:2230`). A retry
+  409 `Pairing exchange already in progress` (`src/nvhttp.cpp:2247`). A retry
   while the PIN is still pending re-arms the held response and answers the
   previous held request with 409 `Pairing request superseded by retry`
-  (`src/nvhttp.cpp:2184`, `src/nvhttp.cpp:2252-2271`).
+  (`src/nvhttp.cpp:2201`, `src/nvhttp.cpp:2269-2288`).
 - Any out-of-order phase, short salt, short secret, invalid certificate or
   failed hash makes the host delete the session and answer 400 with a message
   such as `Out of order call to getservercert`
-  (`src/nvhttp.cpp:1933-1939`, `1941-1950`, `2040-2060`).
+  (`src/nvhttp.cpp:1953-1959`, `1961-1970`, `2060-2080`).
 
 ### 4.3 Pairing status codes
 
@@ -268,18 +271,18 @@ noted otherwise by the web server).
 
 | Code | Message | Meaning | Reference |
 | --- | --- | --- | --- |
-| 400 | `Missing uniqueid parameter` | Client bug | `src/nvhttp.cpp:2166` |
-| 400 | `Invalid uniqueid` | Phase 2 to 4 for an unknown session (expired or reset) | `src/nvhttp.cpp:2306` |
-| 400 | various (`Out of order call to ...`, `Salt too short`, `Client pairing secret too short`, `Invalid client certificate`) | Protocol error; session deleted; restart pairing | `src/nvhttp.cpp:1933-1939` |
-| 400 | `Pairing exchange invalidated` | A held phase 1 response was invalidated by an out-of-order phase | `src/nvhttp.cpp:2191` |
-| 403 | `Pairing request peer mismatch` | A later phase came from a different IP | `src/nvhttp.cpp:2314` |
-| 404 | `Invalid pairing request` | Unknown query | `src/nvhttp.cpp:2342` |
-| 408 | `Pairing request expired` | The 5 minute window elapsed before the PIN was entered | `src/nvhttp.cpp:1908-1910` |
-| 409 | `Pairing exchange already in progress` | A phase 1 request arrived after the PIN was applied and it is not an exact retry in the `getservercert` phase (this includes a same-certificate retry in a later phase) | `src/nvhttp.cpp:2230` |
-| 409 | `Pairing request identity mismatch` | Retry used a different certificate or salt while the PIN is pending | `src/nvhttp.cpp:2265` |
-| 409 | `Pairing request superseded by retry` | The held phase 1 request was replaced by a retry | `src/nvhttp.cpp:2184` |
-| 410 | `Host pairing state was reset` | The host operator reset stored state | `src/nvhttp.cpp:3905` |
-| 503 | `Too many pending pairing requests` | 32 pending pairings exist | `src/nvhttp.cpp:2239` |
+| 400 | `Missing uniqueid parameter` | Client bug | `src/nvhttp.cpp:2183` |
+| 400 | `Invalid uniqueid` | Phase 2 to 4 for an unknown session (expired or reset) | `src/nvhttp.cpp:2323` |
+| 400 | various (`Out of order call to ...`, `Salt too short`, `Client pairing secret too short`, `Invalid client certificate`) | Protocol error; session deleted; restart pairing | `src/nvhttp.cpp:1953-1959` |
+| 400 | `Pairing exchange invalidated` | A held phase 1 response was invalidated by an out-of-order phase | `src/nvhttp.cpp:2208` |
+| 403 | `Pairing request peer mismatch` | A later phase came from a different IP | `src/nvhttp.cpp:2331` |
+| 404 | `Invalid pairing request` | Unknown query | `src/nvhttp.cpp:2359` |
+| 408 | `Pairing request expired` | The 5 minute window elapsed before the PIN was entered | `src/nvhttp.cpp:1928-1930` |
+| 409 | `Pairing exchange already in progress` | A phase 1 request arrived after the PIN was applied and it is not an exact retry in the `getservercert` phase (this includes a same-certificate retry in a later phase) | `src/nvhttp.cpp:2247` |
+| 409 | `Pairing request identity mismatch` | Retry used a different certificate or salt while the PIN is pending | `src/nvhttp.cpp:2282` |
+| 409 | `Pairing request superseded by retry` | The held phase 1 request was replaced by a retry | `src/nvhttp.cpp:2201` |
+| 410 | `Host pairing state was reset` | The host operator reset stored state | `src/nvhttp.cpp:4023` |
+| 503 | `Too many pending pairing requests` | 32 pending pairings exist | `src/nvhttp.cpp:2256` |
 
 Recommended client behaviour: do not retry 400, 403, 404 or 410 automatically;
 tell the user to restart pairing. 408 means "enter the PIN faster and restart".
@@ -301,7 +304,7 @@ by status and case-insensitive message text:
 **After a wrong PIN (LuminalShine 26.09.1).** LuminalShine has no `/unpair` route, so it keeps the
 session of the failed attempt. The next attempt's phase 1 is held until the PIN is
 typed in the Web UI, then fails with 400 `Out of order call to getservercert`;
-that failure deletes the session (`fail_pair`, `src/nvhttp.cpp:1929-1945`), so the
+that failure deletes the session (`fail_pair`, `src/nvhttp.cpp:1949-1965`), so the
 attempt after it succeeds. The automatic restart turns this into one extra PIN
 dialog instead of a raw error.
 
@@ -343,14 +346,25 @@ commits change `.github/`, `scripts/` and `tests/` only).
   "No restart" (the table above). The user waits up to 5 minutes, or restarts
   LuminalShine, before pairing again.
 - **From the source and the client code, not run:** the lockout is not limited to the
-  device that typed the wrong PIN. Every Moonlight-family request carries one fixed
-  `uniqueid` (section 5.1; Borealis sets the same constant on every request,
-  `NvHTTP.uniqueId` in `:app`), and the pairing gate reads only whether a session with
-  that key exists and has left phase `NONE` (`src/nvhttp.cpp:2227-2251`). Only a retry in
-  the `getservercert` phase is then matched on the certificate, the salt and the address,
-  and a wrong PIN leaves the session in phase `SERVERCHALLENGERESP`, where nothing is
-  compared. So a second device that starts pairing inside the window gets the same 409.
-  A second device was not tried.
+  device that typed the wrong PIN. The host keys a pairing session on the `uniqueid` query
+  value. Moonlight Android 12.2 and Borealis send the constant `0123456789ABCDEF` on every
+  request, and the host's own comment says so
+  (`src/nvhttp.cpp:1446-1451`, section 5.1;
+  `borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:216`;
+  `borealis@2e76dfcfb:apps/android/app/src/main/kotlin/com/limelight/nvstream/http/NvHTTP.kt:72`
+  and `:395`). The pairing gate reads only whether a session with that key exists and has left
+  phase `NONE` (`src/nvhttp.cpp:2227-2251`). Only a retry in the `getservercert` phase is then
+  matched on the certificate, the salt and the address, and a wrong PIN leaves the session in
+  phase `SERVERCHALLENGERESP`, where nothing is compared. So a second device that sends the same
+  constant and starts pairing inside the window gets the same 409. A client that sends its own id
+  is not affected: Artemis at `c5cf27f4` sends a random id of its own for each install
+  (`artemis:app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:204-205`,
+  `artemis:app/src/main/java/com/limelight/computers/IdentityManager.java`). Nothing is claimed here about any other client. A second device was
+  not tried.
+- **Related, with no wrong PIN at all:** while the first device waits for its PIN, a second device
+  that sends the constant gets 409 `Pairing request identity mismatch`
+  (`src/nvhttp.cpp:2272-2284`), because its certificate and salt differ from those of the held
+  session. Also from the source, not run.
 - It was seen live again on 2026-10-24, in a night round: twelve attempts in a row each got
   the 409 (the issue below).
 
@@ -604,9 +618,9 @@ for resume the equivalent is `resume` 1 (`src/nvhttp.cpp:3471-3486`).
   crash is not fixed in 26.10.1. Borealis does nothing about it on the client: a `/resume`
   inside the restart window gets a connection reset, and the Library may read "Nothing
   running" for an app that was left running.
-- **Client behaviour (Sprint 5):** the Borealis error screen (a popup over the last frame of
-  the stream since Sprint 15, [roadmap](../roadmap.md#sprint-15-the-stream-screens-and-glass),
-  issue #105) classifies three
+- **Client behaviour (Sprint 5):** the Borealis error popup (over the last frame of the
+  stream, or over the background when there is no frame; a full-screen error before Sprint 15,
+  [roadmap](../roadmap.md#sprint-15-the-stream-screens-and-glass), issue #105) classifies three
   host states: host busy (the retries of the start ran out, or the host
   reported a launch collision), host offline, and certificate changed. The
   client requests a keyframe (`LiRequestIdrFrame`, through
@@ -699,7 +713,7 @@ revisions, so their references did not move. The codes and messages are those of
 | --- | --- | --- | --- | --- |
 | 400 | `Missing a required launch parameter` | launch `src/nvhttp.cpp:2848` | A required query parameter is missing | No retry; client bug |
 | 400 | `Missing a required resume parameter` | resume `src/nvhttp.cpp:3299` | As above | No retry; client bug |
-| 400 | `An app is already running on this host` | launch `src/nvhttp.cpp:2859` | `/launch` was called while an app runs | No retry of `/launch`. Moonlight's `startApp` already resumes or quits first when `/serverinfo` shows a running app (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:395-430`; Borealis turned the quit into a user choice, section 7.6); the 400 arrives when another device's launch started after that read. Borealis then re-reads `/serverinfo` for up to 3 s: `currentgame` 0 launches again once, otherwise the user chooses Join (`/resume`), Quit and relaunch (`/cancel`, then `/launch`) or Cancel, unless the user chose Resume, Continue or Try again for that same app earlier, and then Borealis joins it (section 7.6). `/cancel` is never called without a choice of the user (section 7.6) |
+| 400 | `An app is already running on this host` | launch `src/nvhttp.cpp:2859` | `/launch` was called while an app runs | No retry of `/launch`. Moonlight's `startApp` already resumes or quits first when `/serverinfo` shows a running app (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:395-430`; Borealis turned the quit into a user choice and asks on that path too, section 7.6); the 400 arrives when another device's launch started after that read. Borealis then re-reads `/serverinfo` for up to 3 s: `currentgame` 0 launches again once, otherwise the user chooses Join (`/resume`), Quit and relaunch (`/cancel`, then `/launch`) or Cancel, unless the user chose Resume, Continue or Try again for that same app earlier, and then Borealis joins it (section 7.6). `/cancel` is never called without a choice of the user (section 7.6) |
 | 409 | `Another client launch is already pending; retry the connection.` | launch `src/nvhttp.cpp:2874-2875`, `2896-2897`, `3200-3201`; resume `3308-3309`, `3324-3325`, `3538-3539` | A previous `/launch` or `/resume` has not been claimed by an RTSP connection yet; the pending launch expires after `ping_timeout` (`src/rtsp.cpp:606`) | Retry with backoff for up to about 12 s in total (for example 1, 2, 3, 5 s), then show the host message. Do not call `/cancel`: it would also cancel another client's pending launch (`src/rtsp.cpp:1132-1136`) |
 | 503 | `The previous stream is still restoring the display; retry the connection.` | launch `src/nvhttp.cpp:2888-2889`; resume `3317-3318` | The host waited 8 s (`acquire_launch(8s)`, `src/nvhttp.cpp:2884`, `3313`) for the previous session's cleanup and gave up | Retry, 2 to 3 attempts with 2 to 5 s delays (each attempt can itself take 8 s), then show the message |
 | 503 | `GPU/display stack is not ready; retry after recovery or reboot the host.` | launch `src/nvhttp.cpp:3011-3012`; resume `3374-3375` | The D3D11 health probe failed | Limited retries (for example 2 with 5 s delay), then tell the user to restart the host or its GPU driver |
@@ -733,7 +747,7 @@ Notes on the table:
   `startApp` calls for `/resume` and, through `launchNotRunningApp`, for `/launch`
   (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:171-179`).
   It also changed the catch blocks of the start thread, so a failure goes to the
-  error screen, which never shows the exception text
+  error popup (a full-screen error before Sprint 15), which never shows the exception text
   (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:492-510`).
 
 ### 7.6 Cancel
@@ -1629,5 +1643,5 @@ discussions are lines at `dba21a9e`.
 
 | Statement | Location | Actual behaviour |
 | --- | --- | --- |
-| `/cancel` does not pop the pending launch | root `architecture.md:103` at `dba21a9e` (line 101 at `5afdbdc6`; `docs/architecture.md` has no such sentence). Filed upstream as [#220](https://github.com/NortheBridge/luminalshine/issues/220), open (2026-10-29) | `/cancel` calls `terminate_sessions`, which calls `cancel_pending_launch`, which pops the pending launch: `launch_event.pop(0s)` at `src/rtsp.cpp:693` (function at `673-699`), `terminate_sessions` at `1132-1135`, called by `/cancel` at `src/nvhttp.cpp:3574`. The sentence came with `0deea71e` (PR #180, from #220). The false "client is connecting" refusal it describes does not follow a `/cancel`, because `launch_session_pending()` reads the same `launch_event` that `/cancel` pops (`src/rtsp.cpp:665-668`, `1117-1119`). (At `5afdbdc6`: `src/nvhttp.cpp:3531`, `src/rtsp.cpp:1132-1135`) |
+| `/cancel` does not pop the pending launch | root `architecture.md:103` at `dba21a9e` (line 101 at `5afdbdc6`; `docs/architecture.md` has no such sentence). Filed upstream as [#220](https://github.com/NortheBridge/luminalshine/issues/220), open (2026-10-29) | `/cancel` calls `terminate_sessions`, which calls `cancel_pending_launch`, which pops the pending launch: `launch_event.pop(0s)` at `src/rtsp.cpp:693` (function at `673-699`), `terminate_sessions` at `1132-1135`, called by `/cancel` at `src/nvhttp.cpp:3574`. The sentence came with `0deea71e` (PR #180; cited in #220). The false "client is connecting" refusal it describes does not follow a `/cancel`, because `launch_session_pending()` reads the same `launch_event` that `/cancel` pops (`src/rtsp.cpp:665-668`, `1117-1119`). (At `5afdbdc6`: `src/nvhttp.cpp:3531`, `src/rtsp.cpp:1132-1135`) |
 | The 4:4:4 fallback tells the client the chroma changed | `src/yuv444_fallback.h:23-24`. Filed upstream as [#219](https://github.com/NortheBridge/luminalshine/issues/219), open (2026-10-29) | Only the session statistics are updated; no client message (`src/stream.cpp:1572-1584`; section 9.1) |

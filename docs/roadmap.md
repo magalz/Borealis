@@ -367,8 +367,10 @@ acceptance test (UAT) of the same day ran on `20861a28`
      colours. Every status also gets a shape or a text, not colour alone.
 
    The stream follows the text size, the focus outline, high contrast, the
-   palette and reduce motion, read once when the stream starts. The stream gets
-   no glass, because the video is behind it.
+   palette and reduce motion, read once when the stream starts. The stream got
+   no glass then, because the video is behind it; Sprint 15 gives the menu and
+   the popups of the stream glass from a copy of the video
+   ([ADR 0061](adr/0061-glass-and-the-animated-background-in-the-stream.md)).
 4. **TalkBack.** Done (issue #36, merge `c6e4b92a`). The app works with
    TalkBack on a phone and on a TV:
    - labels, headings and traversal order;
@@ -991,8 +993,7 @@ Items:
 Built in the phase branch `phase/s15-stream-screens`, one merged task per issue
 ([#97](https://github.com/magalz/Borealis/issues/97) to
 [#105](https://github.com/magalz/Borealis/issues/105)). The head of the phase was `2e76dfcfb` when this
-was written. The phase pull request is not open yet, and the device round and the owner's UAT have not run:
-their checks are
+was written. The device round and the owner's UAT have not run: their checks are
 [device-validation section 3.29](development/device-validation.md#329-sprint-15-checks) and
 [section 3.30](development/device-validation.md#330-owners-20-minute-uat-sprint-15). On 2026-10-28 the
 owner moved the Library, Settings and layout items that this section held to
@@ -1037,8 +1038,8 @@ Items, with what each became:
 - **In-game menu in the Library's glass style.** Added at the Sprint 10 UAT (2026-10-21). Done: the spike
   and ADR 0061 (#99), and #104. The menu, its side panel and the Quit popup draw the copy of the video
   under the viewer's tint, with the Appearance option "Menu glass in the stream" at Blur (the default) or
-  Solid. The copies stop when the menu closes and in picture-in-picture. This changes the rule of
-  [ADR 0057](adr/0057-glass-surfaces-and-the-accessibility-settings.md) that the stream has no glass.
+  Solid. The copies stop when the menu closes and in picture-in-picture. ADR 0061 amends decision 10 of
+  [ADR 0057](adr/0057-glass-surfaces-and-the-accessibility-settings.md), which gave the stream no glass.
 - **Quit confirmation of the stream as a centred popup.** Added at the Sprint 10 UAT (2026-10-21). Done in
   #100. The popup is inside the chrome layer, not a dialog window, and shares `StreamDialog` with the
   conflict dialog. A tap outside, B and Back close only the popup, and the focus returns to the Quit row.
@@ -1068,8 +1069,9 @@ Items, with what each became:
   (2026-10-24). Done in #98, by a decision and not a fix: the bug did not reproduce, and on 2026-10-28
   the owner decided that the menu has no lateral movement. Left and Right are consumed, an option row
   changes its value on OK or A and wraps, and Up and Down reach every row and every Send keys chip, in one
-  order. A touch on a segment still works on the phone. The old sequence of D4 (Down several times, OK,
-  Right, OK) reaches Quit.
+  order. A touch on a segment still works on the phone. The sequence of D4 (the round pressed 25 Downs, OK,
+  Right, OK on the S22 and 14 Downs on the TV) reaches Quit in an adapted form that two tests pin: Down to
+  Send keys, OK, Right, OK, then Down to Quit. The round checks it on the devices.
 - **Second device during a launch.** Found in the Sprint 14 device round (2026-10-28). Done in #101: a
   start that finds an app running asks on both paths, the `/serverinfo` path and the 400 path, unless the
   user chose Resume, Continue or Try again for that app. The audit trail records `entry=asked` or

@@ -68,3 +68,17 @@ private fun isSolid(look: BorealisLook, sdk: Int, batterySaver: Boolean, removed
         look.transparency == Transparency.Off ||
         batterySaver ||
         removed
+
+/**
+ * What the error popup draws over the frozen last frame of the stream: [blur] is the glass that the
+ * frame is blurred with, or null where it shows sharp, and [panelIsGlass] says whether the panel of
+ * the popup is that glass over the blurred frame, or the solid surface.
+ */
+internal class FrozenFrameLook(val blur: VideoGlassSpec?, val panelIsGlass: Boolean)
+
+internal fun frozenFrameLook(
+    look: BorealisLook,
+    colors: BorealisColors,
+    sdk: Int,
+    menuGlass: Boolean,
+): FrozenFrameLook = FrozenFrameLook(null, false)

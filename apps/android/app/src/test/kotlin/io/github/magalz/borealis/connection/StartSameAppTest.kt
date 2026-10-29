@@ -331,6 +331,23 @@ class StartSameAppTest {
     }
 
     @Test
+    fun `a start that is cancelled while it waits for a busy host before the join ends without a word`() {
+        rig.script.running(DESKTOP_ID)
+        rig.script.onServerInfo = { count -> if (count == 1) Thread.sleep(SLOW_SERVERINFO_MS) }
+        listener.conflictChoice = ConflictChoice.JOIN
+        val connection = rig.connection()
+        listener.onEvent = { if (it.startsWith("launchConflict")) connection.cancelLaunch() }
+
+        startAndEnd(connection)
+
+        assertThat(listener.events)
+            .containsExactly("stageStarting $DESKTOP_NAME", conflict)
+            .inOrder()
+        assertThat(rig.paths()).doesNotContain("/resume")
+        assertThat(ShadowRecordingBridge.calls).isEmpty()
+    }
+
+    @Test
     fun `a join of another app does not wait for a host that was slow to answer`() {
         rig.script.running(OTHER_ID)
         rig.script.onServerInfo = { count -> if (count == 1) Thread.sleep(SLOW_SERVERINFO_MS) }

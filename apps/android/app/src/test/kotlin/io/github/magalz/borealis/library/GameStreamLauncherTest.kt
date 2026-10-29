@@ -51,6 +51,29 @@ class GameStreamLauncherTest {
     }
 
     @Test
+    fun `the choice of the user to resume goes on to the binder, and is false by default`() =
+        runTest {
+            val launcher = launcher(details(uuid = "a", rawAppList = null))
+
+            launcher.start(
+                activity,
+                StreamRequest(
+                    "a",
+                    appId = 3,
+                    appName = "Game",
+                    hdrSupported = false,
+                    resumeChosen = true,
+                ),
+            )
+            launcher.start(
+                activity,
+                StreamRequest("a", appId = 3, appName = "Game", hdrSupported = false),
+            )
+
+            assertThat(binder.resumeChoices).containsExactly(true, false).inOrder()
+        }
+
+    @Test
     fun `the HDR flag comes from the cached app list when the app is in it`() = runTest {
         val launcher = launcher(details(uuid = "a", rawAppList = APP_LIST))
 

@@ -53,10 +53,12 @@ Decision details:
 2. **Every screen outside the game** (Starting, the conflict, the error, Quitting and Disconnecting) shows that background, with no difference between the screens. The background goes when the phase becomes Streaming. The first frame can come before the connection reports that the stream started, so the cut follows the phase and not the stage.
 3. **The accessibility settings still win** ([0057](0057-glass-surfaces-and-the-accessibility-settings.md)).
    * Transparency Off and High contrast give a solid surface and no copy.
-   * Reduce motion and the battery saver turn the blur and the motion off, whatever the option. The background is then still.
-   * Below API 31 the glass is solid, with no `RenderEffect`. This differs from the Reduced tint that [0057](0057-glass-surfaces-and-the-accessibility-settings.md) decision 5 gives the panels on API 28 to 30.
+   * Reduce motion and the battery saver turn the copy off, so the menu glass is solid, and keep the background still, whatever the options.
+   * Below API 31 the stream glass is solid, with no `RenderEffect`. The owner allows only Blur or Solid, with no tint-only option. This differs from the Reduced tint that [0057](0057-glass-surfaces-and-the-accessibility-settings.md) decision 5 gives the Library panels on API 28 to 30.
 4. **Text on the blurred video.** The contrast is recalibrated in the implementation, either with a text halo or shadow, as [0057](0057-glass-surfaces-and-the-accessibility-settings.md) decision 13 does on the background, or with a stronger blur and a tint floor. The result is checked with the contrast tool in `design/accessibility/` before the owner's visual gate (G1).
-5. **This amends** [0056](0056-add-an-animated-background-and-the-appearance-group.md) decision 5 and [0057](0057-glass-surfaces-and-the-accessibility-settings.md) decisions 10 and 13.
+5. **Dialogs.** In the Streaming phase, the stream's dialogs (the Quit popup and the conflict dialog) are panels inside the chrome layer. They use the same live copy as the menu. [0057](0057-glass-surfaces-and-the-accessibility-settings.md) decision 8 (the window blur and a frozen background) does not apply there. Outside the game, the screens and their dialogs sit on the background in a glass host, and follow [0057](0057-glass-surfaces-and-the-accessibility-settings.md) as the Library does, decision 8 included.
+6. **Frame pace.** The background outside the game follows [0057](0057-glass-surfaces-and-the-accessibility-settings.md) decision 9 unchanged. On a TV it runs at 24 frames a second while a blur is drawn. The copy rate of 30 a second is separate, and it applies only to the menu glass in the Streaming phase.
+7. **This amends** [0056](0056-add-an-animated-background-and-the-appearance-group.md) decision 5 and [0057](0057-glass-surfaces-and-the-accessibility-settings.md) decisions 10 and 13.
 
 ### Measurements behind the decision
 

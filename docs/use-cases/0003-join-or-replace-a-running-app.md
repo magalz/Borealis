@@ -20,9 +20,11 @@ app (A3).
 ## Preconditions
 
 - The host is paired with this device ([UC-001](0001-pair-with-a-host.md)).
-- The host reports an app that is running, started from another device. The
+- The host reports an app that is running. It was started from another device,
+  or by this one earlier (Try again after a dropped stream, for example). The
   stream cannot tell a session of this device from one of another: LuminalShine
-  gives a paired client no session id.
+  gives a paired client no session id, so it asks, unless the user chose to
+  resume that app (A3).
 
 ## Main flow
 

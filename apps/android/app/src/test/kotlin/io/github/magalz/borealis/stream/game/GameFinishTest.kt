@@ -23,6 +23,17 @@ internal class GameFinishTest : GameTestBase() {
     }
 
     @Test
+    fun `a graceful end after another exit finished the activity is not asked again`() {
+        rig.streaming()
+        rig.game.finish()
+
+        rig.game.connectionTerminated(MoonBridge.ML_ERROR_GRACEFUL_TERMINATION)
+        rig.stop()
+
+        assertThat(rig.game.finishRequests).isEqualTo(1)
+    }
+
+    @Test
     fun `an exit that finished the activity first, a Quit or a Disconnect, is not asked again`() {
         rig.streaming()
         rig.game.finish()

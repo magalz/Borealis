@@ -2,6 +2,7 @@ package io.github.magalz.borealis.stream.ui.background
 
 import android.app.Application
 import android.os.Build
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -21,9 +22,12 @@ import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamVisuals
 import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
+import io.github.magalz.borealis.stream.testing.aFailure
 import io.github.magalz.borealis.stream.testing.setChrome
 import io.github.magalz.borealis.stream.ui.CONFLICT_PANEL_TAG
 import io.github.magalz.borealis.stream.ui.ConflictDialog
+import io.github.magalz.borealis.stream.ui.ConnectionErrorScreen
+import io.github.magalz.borealis.stream.ui.ERROR_PANEL_TAG
 import io.github.magalz.borealis.stream.ui.glass.leftPixel
 import kotlin.math.abs
 import org.junit.Rule
@@ -44,6 +48,12 @@ class DialogOverBackgroundApi30Test {
     private val surface = BorealisColors().surface
     private val page = BorealisColors().page
     private var open by mutableStateOf(false)
+    private var dialog: @Composable () -> Unit = {
+        ConflictDialog(
+            StreamPhase.Conflict("Steam", "Desktop", sameApp = false),
+            RecordingIntents(),
+        )
+    }
 
     private fun show() {
         val app = ApplicationProvider.getApplicationContext<Application>()
@@ -52,15 +62,14 @@ class DialogOverBackgroundApi30Test {
             .grantPermissions("${app.packageName}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION")
         composeRule.setChrome(FormFactor.Phone) {
             OutsideGameBackground(StreamVisuals(background = BackgroundMode.STILL), false) {
-                if (open) {
-                    ConflictDialog(
-                        StreamPhase.Conflict("Steam", "Desktop", sameApp = false),
-                        RecordingIntents(),
-                    )
-                }
+                if (open) dialog()
             }
         }
         composeRule.waitForIdle()
+    }
+
+    private fun errorPopup() {
+        dialog = { ConnectionErrorScreen("Desktop", "Desk PC", aFailure, RecordingIntents()) }
     }
 
     private fun picture(): PixelMap = composeRule.frame(OUTSIDE_GAME_BACKGROUND_TAG)
@@ -73,8 +82,7 @@ class DialogOverBackgroundApi30Test {
         composeRule.waitForIdle()
     }
 
-    @Test
-    fun `the scrim dims the background where the dialog is over it`() {
+    private fun assertScrim() {
         show()
         val before = picture()
         val (x, y) =
@@ -88,14 +96,34 @@ class DialogOverBackgroundApi30Test {
         assertWithMessage("how much of the background is left").that(shown).isLessThan(DIMMED)
     }
 
-    @Test
-    fun `the panel stays the solid surface`() {
+    private fun assertSolid(panelTag: String) {
         show()
         openDialog()
 
-        val panel = composeRule.onNodeWithTag(CONFLICT_PANEL_TAG).leftPixel()
+        val panel = composeRule.onNodeWithTag(panelTag).leftPixel()
 
         assertThat(panel.distanceFrom(surface)).isLessThan(SOLID)
+    }
+
+    @Test
+    fun `the scrim dims the background where the question about a running app is over it`() =
+        assertScrim()
+
+    @Test
+    fun `the scrim dims the background where the error popup is over it`() {
+        errorPopup()
+
+        assertScrim()
+    }
+
+    @Test
+    fun `the panel of the question stays the solid surface`() = assertSolid(CONFLICT_PANEL_TAG)
+
+    @Test
+    fun `the panel of the error popup stays the solid surface`() {
+        errorPopup()
+
+        assertSolid(ERROR_PANEL_TAG)
     }
 
     private companion object {

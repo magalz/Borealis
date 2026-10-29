@@ -73,12 +73,12 @@ class OutsideGameClipTest {
     }
 
     @Test
-    fun `an error before the connection plays the clip`() {
+    fun `an error before the connection holds the clip on its still, as a dialog does`() {
         val session = sessionAt(OutsideScreen.FAILED, clip)
 
         show(session)
 
-        assertClipPlays()
+        assertStillOnly()
     }
 
     @Test

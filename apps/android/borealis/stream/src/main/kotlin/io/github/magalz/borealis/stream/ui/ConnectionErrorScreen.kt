@@ -34,6 +34,9 @@ import io.github.magalz.borealis.stream.ui.common.onGamepadB
 import io.github.magalz.borealis.stream.ui.error.ErrorActions
 import io.github.magalz.borealis.stream.ui.error.errorCopy
 
+/** Marks the panel of the popup, so a test can measure it. */
+internal const val ERROR_PANEL_TAG = "error_panel"
+
 private val CONTENT_GAP = 14.dp
 private val SUPPORT_LINE_GAP = 2.dp
 

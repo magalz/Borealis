@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.stream.ui
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.platform.LocalDensity
@@ -10,29 +11,41 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performKeyPress
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.headings
+import io.github.magalz.borealis.designsystem.testing.paneTitles
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.stream.testing.RecordingActions
 import io.github.magalz.borealis.stream.testing.aSession
+import io.github.magalz.borealis.stream.testing.assertWidthNear
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
-/** The connection error screen: what happened, what the host was doing and the next step. */
+/**
+ * The connection error popup: what happened, what the host was doing and the next step, in a dialog
+ * over the background of the screens outside the game or over the last frame of the stream.
+ */
 @RunWith(AndroidJUnit4::class)
 class ConnectionErrorScreenTest {
     @get:Rule val composeRule = createComposeRule()
@@ -303,30 +316,32 @@ class ConnectionErrorScreenTest {
 
     @Test
     @Config(qualifiers = "w360dp-h640dp-xhdpi")
-    fun `on a phone Diagnostics and Close are in a row below Try again and Wake PC`() {
+    fun `on a phone the buttons are stacked, in order, as the buttons of a dialog are`() {
         show(failure(FailureKind.HOST_OFFLINE))
 
-        val tryAgain = composeRule.onNodeWithText("Try again").getUnclippedBoundsInRoot()
-        val wake = composeRule.onNodeWithText("Wake PC").getUnclippedBoundsInRoot()
-        val diagnostics = composeRule.onNodeWithText("Diagnostics").getUnclippedBoundsInRoot()
-        val close = composeRule.onNodeWithText("Close").getUnclippedBoundsInRoot()
+        val tops =
+            listOf("Try again", "Wake PC", "Diagnostics", "Close").map {
+                composeRule.onNodeWithText(it).getUnclippedBoundsInRoot()
+            }
 
-        assertThat(wake.top).isEqualTo(tryAgain.top)
-        assertThat(diagnostics.top).isAtLeast(tryAgain.bottom)
-        assertThat(diagnostics.top).isAtLeast(wake.bottom)
-        assertThat(close.top).isEqualTo(diagnostics.top)
-        assertThat(diagnostics.left).isLessThan(close.left)
+        tops.zipWithNext().forEach { (above, below) ->
+            assertThat(below.top).isAtLeast(above.bottom)
+        }
     }
 
     @Test
     @Config(qualifiers = "w360dp-h640dp-xhdpi")
-    fun `on a phone without a state action Diagnostics and Close are still below Try again`() {
+    fun `on a phone without a state action the three buttons are still stacked`() {
         show(failure(FailureKind.HOST_BUSY))
 
-        val tryAgain = composeRule.onNodeWithText("Try again").getUnclippedBoundsInRoot()
-        val diagnostics = composeRule.onNodeWithText("Diagnostics").getUnclippedBoundsInRoot()
+        val buttons =
+            listOf("Try again", "Diagnostics", "Close").map {
+                composeRule.onNodeWithText(it).getUnclippedBoundsInRoot()
+            }
 
-        assertThat(diagnostics.top).isAtLeast(tryAgain.bottom)
+        buttons.zipWithNext().forEach { (above, below) ->
+            assertThat(below.top).isAtLeast(above.bottom)
+        }
     }
 
     @Test
@@ -357,9 +372,11 @@ class ConnectionErrorScreenTest {
 
     @Test
     @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
-    fun `the content is as wide as 560dp, not less`() {
+    fun `the popup is as wide as a standard dialog, and the body wraps inside it`() {
         show(failure(FailureKind.HOST_BUSY), FormFactor.Tv)
 
+        composeRule.onNodeWithTag(ERROR_PANEL_TAG).assertWidthNear(STANDARD_DIALOG.dp)
+        val panel = composeRule.onNodeWithTag(ERROR_PANEL_TAG).getUnclippedBoundsInRoot()
         val body =
             composeRule
                 .onNodeWithText(
@@ -368,9 +385,77 @@ class ConnectionErrorScreenTest {
                 )
                 .getUnclippedBoundsInRoot()
 
-        // The body wraps at the content width: wider than the old 460dp cap, within the new one.
-        assertThat((body.right - body.left).value).isGreaterThan(MAX_OLD_CONTENT)
-        assertThat((body.right - body.left).value).isAtMost(MAX_CONTENT)
+        assertThat(body.left.value).isAtLeast(panel.left.value)
+        assertThat(body.right.value).isAtMost(panel.right.value)
+    }
+
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    fun `the popup is centred on the screen`() {
+        show(failure(FailureKind.HOST_BUSY), FormFactor.Tv)
+
+        val panel = composeRule.onNodeWithTag(ERROR_PANEL_TAG).getUnclippedBoundsInRoot()
+        val root = composeRule.onRoot().getUnclippedBoundsInRoot()
+
+        assertThat((panel.left + panel.right).value).isWithin(1f).of((root.left + root.right).value)
+        assertThat((panel.top + panel.bottom).value).isWithin(1f).of((root.top + root.bottom).value)
+    }
+
+    @Test
+    fun `the popup is announced by its title, which is the only heading`() {
+        show(failure(FailureKind.HOST_BUSY))
+
+        assertThat(composeRule.paneTitles()).containsExactly("Desk PC is busy")
+        assertThat(composeRule.headings()).containsExactly("Desk PC is busy")
+    }
+
+    @Test
+    fun `a tap outside the popup does nothing`() {
+        show(failure(FailureKind.HOST_BUSY))
+
+        composeRule.onRoot().performTouchInput { click(Offset(CORNER, CORNER)) }
+
+        assertThat(actions.calls).isEmpty()
+    }
+
+    @Test
+    fun `a tap in the popup that is not on a button does nothing`() {
+        show(failure(FailureKind.HOST_BUSY))
+
+        composeRule.onNodeWithTag(ERROR_PANEL_TAG).performTouchInput {
+            click(Offset(CORNER, CORNER))
+        }
+
+        assertThat(actions.calls).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    fun `the Back key closes the popup, which leaves the stream`() {
+        show(failure(FailureKind.HOST_BUSY), FormFactor.Tv)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Try again").performKeyInput { pressKey(Key.Back) }
+
+        assertThat(actions.calls).containsExactly("leave")
+    }
+
+    @Test
+    fun `the raw code and the port hint are outside the announcement of the title and the body`() {
+        show(failure(FailureKind.HOST_BUSY, "Error -1 · launch", "Ports 47984 may be blocked"))
+
+        composeRule
+            .onNode(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.LiveRegion,
+                    LiveRegionMode.Polite,
+                )
+            )
+            .assertTextEquals(
+                "Desk PC is busy",
+                "The host did not answer in time. It is probably building a display for " +
+                    "another device.",
+            )
     }
 
     @Test
@@ -415,8 +500,8 @@ class ConnectionErrorScreenTest {
 
     private companion object {
         const val MIN_GAP = 10f
-        const val MAX_OLD_CONTENT = 460f
-        const val MAX_CONTENT = 560f
+        const val CORNER = 4f
+        const val STANDARD_DIALOG = 560
         const val ACTION_DOWN = android.view.KeyEvent.ACTION_DOWN
         const val ACTION_UP = android.view.KeyEvent.ACTION_UP
     }

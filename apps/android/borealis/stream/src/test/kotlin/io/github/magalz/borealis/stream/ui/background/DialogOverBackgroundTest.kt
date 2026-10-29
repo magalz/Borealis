@@ -19,9 +19,12 @@ import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamVisuals
 import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
+import io.github.magalz.borealis.stream.testing.aFailure
 import io.github.magalz.borealis.stream.testing.setChrome
 import io.github.magalz.borealis.stream.ui.CONFLICT_PANEL_TAG
 import io.github.magalz.borealis.stream.ui.ConflictDialog
+import io.github.magalz.borealis.stream.ui.ConnectionErrorScreen
+import io.github.magalz.borealis.stream.ui.ERROR_PANEL_TAG
 import io.github.magalz.borealis.stream.ui.glass.leftPixel
 import kotlin.math.abs
 import org.junit.Rule
@@ -33,8 +36,8 @@ import org.robolectric.annotation.Config
  * A dialog of the screens outside the game over their background (ADR 0061, decision 5; ADR 0057,
  * decision 8): while it is open the background is blurred and held on its still frame, the dialog
  * draws no scrim, and its panel takes the glass tint. Where the host cannot blur (API 30) the scrim
- * and the solid panel stay. The dialog here is the question about a running app; the failure popup
- * is made from the same dialog.
+ * and the solid panel stay. The two dialogs are the question about a running app and the failure
+ * popup, which are made from the same dialog.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = PHONE_LANDSCAPE)
@@ -44,11 +47,12 @@ class DialogOverBackgroundTest {
     private val surface = BorealisColors().surface
     private val page = BorealisColors().page
     private var open by mutableStateOf(false)
+    private var dialog: @Composable () -> Unit = { Question() }
 
     private fun show(background: BackgroundMode = BackgroundMode.STILL) {
         composeRule.setChrome(FormFactor.Phone) {
             OutsideGameBackground(StreamVisuals(background = background), decoderHeld = false) {
-                if (open) Question()
+                if (open) dialog()
             }
         }
         composeRule.waitForIdle()
@@ -60,6 +64,9 @@ class DialogOverBackgroundTest {
             StreamPhase.Conflict("Steam", "Desktop", sameApp = false),
             RecordingIntents(),
         )
+
+    @Composable
+    private fun Error() = ConnectionErrorScreen("Desktop", "Desk PC", aFailure, RecordingIntents())
 
     private fun picture(): PixelMap = composeRule.frame(OUTSIDE_GAME_BACKGROUND_TAG)
 
@@ -77,8 +84,7 @@ class DialogOverBackgroundTest {
             .flatMap { x -> (0 until picture.height / BAND).map { y -> x to y } }
             .maxBy { (x, y) -> picture[x, y].distanceFrom(page) }
 
-    @Test
-    fun `no scrim dims the background where the dialog is over it`() {
+    private fun assertNoScrim() {
         show()
         val before = picture()
         val (x, y) = brightestSpot(before)
@@ -90,18 +96,16 @@ class DialogOverBackgroundTest {
         assertWithMessage("how much of the background is left").that(shown).isGreaterThan(KEPT)
     }
 
-    @Test
-    fun `the panel is the glass tint over the blurred background, not the solid surface`() {
+    private fun assertTinted(panelTag: String) {
         show()
         openDialog()
 
-        val panel = composeRule.onNodeWithTag(CONFLICT_PANEL_TAG).leftPixel()
+        val panel = composeRule.onNodeWithTag(panelTag).leftPixel()
 
         assertThat(panel.distanceFrom(surface)).isGreaterThan(TINTED)
     }
 
-    @Test
-    fun `the background moves with no dialog, and is held still while the dialog is open`() {
+    private fun assertFrozen() {
         composeRule.mainClock.autoAdvance = false
         show(BackgroundMode.MOVING)
         assertThat(moves()).isTrue()
@@ -110,6 +114,39 @@ class DialogOverBackgroundTest {
         composeRule.mainClock.advanceTimeBy(SETTLE_MS)
 
         assertThat(moves()).isFalse()
+    }
+
+    @Test
+    fun `no scrim dims the background where the question about a running app is over it`() =
+        assertNoScrim()
+
+    @Test
+    fun `no scrim dims the background where the error popup is over it`() {
+        dialog = { Error() }
+
+        assertNoScrim()
+    }
+
+    @Test
+    fun `the panel of the question is the glass tint over the blurred background`() =
+        assertTinted(CONFLICT_PANEL_TAG)
+
+    @Test
+    fun `the panel of the error popup is the glass tint over the blurred background`() {
+        dialog = { Error() }
+
+        assertTinted(ERROR_PANEL_TAG)
+    }
+
+    @Test
+    fun `the background moves with no dialog, and is held still while the question is open`() =
+        assertFrozen()
+
+    @Test
+    fun `the background moves with no dialog, and is held still while the error popup is open`() {
+        dialog = { Error() }
+
+        assertFrozen()
     }
 
     /** Whether the picture of the background changes over a few seconds of animation time. */

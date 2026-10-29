@@ -20,11 +20,13 @@ import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.nativecore.LaunchCategory
+import io.github.magalz.borealis.stream.BackgroundMode
 import io.github.magalz.borealis.stream.LaunchRetry
 import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamPhase
+import io.github.magalz.borealis.stream.StreamVisuals
 import io.github.magalz.borealis.stream.testing.HANDHELD
 import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
@@ -33,6 +35,7 @@ import io.github.magalz.borealis.stream.testing.RecordingIntents
 import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.aPerf
 import io.github.magalz.borealis.stream.testing.aSession
+import io.github.magalz.borealis.stream.ui.background.OutsideGameBackground
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -40,8 +43,11 @@ import org.robolectric.annotation.Config
 
 /**
  * Google's Accessibility Test Framework over the stream chrome: the in-game menu, the keyboard, the
- * Starting, Quitting and error screens, the conflict dialog and the hint. The chrome has no glass:
- * the video is behind it.
+ * Starting, Quitting and error screens, the conflict dialog and the hint. The game has no glass:
+ * the video is behind it. The screens outside the game stand on the plain page here, as the checks
+ * of the Library do: the check reads the colour behind a text from a picture, which a moving
+ * background would make different at every run, and what keeps the text of a moving background at
+ * 4.5:1 is the halo, which the contrast tool measures.
  */
 @RunWith(AndroidJUnit4::class)
 class StreamAccessibilityChecksTest {
@@ -149,7 +155,7 @@ class StreamAccessibilityChecksTest {
     @Test
     @Config(qualifiers = PHONE)
     fun `the Starting screen on a phone`() {
-        show(FormFactor.Phone) { Starting(starting) }
+        showOutside(FormFactor.Phone) { Starting(starting) }
 
         composeRule.assertAccessible()
     }
@@ -157,7 +163,7 @@ class StreamAccessibilityChecksTest {
     @Test
     @Config(qualifiers = TV)
     fun `the Starting screen on a TV`() {
-        show(FormFactor.Tv) { Starting(starting) }
+        showOutside(FormFactor.Tv) { Starting(starting) }
 
         composeRule.assertAccessible(NoTouchOnTv)
     }
@@ -167,7 +173,9 @@ class StreamAccessibilityChecksTest {
     fun `the Starting screen while the host is busy`() {
         val retry =
             LaunchRetry(LaunchCategory.PENDING, attempt = 1, maxAttempts = 4, delayMs = 1000)
-        show(FormFactor.Phone) { Starting(StreamPhase.Starting(StartStage.STARTING_APP, retry)) }
+        showOutside(FormFactor.Phone) {
+            Starting(StreamPhase.Starting(StartStage.STARTING_APP, retry))
+        }
 
         composeRule.assertAccessible()
     }
@@ -175,7 +183,7 @@ class StreamAccessibilityChecksTest {
     @Test
     @Config(qualifiers = PHONE)
     fun `the Quitting screen`() {
-        show(FormFactor.Phone) { QuittingScreen("Desktop") }
+        showOutside(FormFactor.Phone) { QuittingScreen("Desktop") }
 
         composeRule.assertAccessible()
     }
@@ -183,7 +191,7 @@ class StreamAccessibilityChecksTest {
     @Test
     @Config(qualifiers = PHONE)
     fun `the Disconnecting screen`() {
-        show(FormFactor.Phone) { DisconnectingScreen("Desktop") }
+        showOutside(FormFactor.Phone) { DisconnectingScreen("Desktop") }
 
         composeRule.assertAccessible()
     }
@@ -191,7 +199,7 @@ class StreamAccessibilityChecksTest {
     @Test
     @Config(qualifiers = PHONE)
     fun `the error screen on a phone`() {
-        show(FormFactor.Phone) { ErrorScreen(FailureKind.CERTIFICATE_CHANGED) }
+        showOutside(FormFactor.Phone) { ErrorScreen(FailureKind.CERTIFICATE_CHANGED) }
 
         composeRule.assertAccessible()
     }
@@ -199,7 +207,7 @@ class StreamAccessibilityChecksTest {
     @Test
     @Config(qualifiers = TV)
     fun `the error screen on a TV`() {
-        show(FormFactor.Tv) { ErrorScreen(FailureKind.HOST_OFFLINE) }
+        showOutside(FormFactor.Tv) { ErrorScreen(FailureKind.HOST_OFFLINE) }
 
         composeRule.assertAccessible(NoTouchOnTv)
     }
@@ -207,7 +215,7 @@ class StreamAccessibilityChecksTest {
     @Test
     @Config(qualifiers = PHONE)
     fun `the conflict dialog on a phone`() {
-        show(FormFactor.Phone) { Conflict() }
+        showOutside(FormFactor.Phone) { Conflict() }
 
         composeRule.assertAccessible()
     }
@@ -215,7 +223,7 @@ class StreamAccessibilityChecksTest {
     @Test
     @Config(qualifiers = TV)
     fun `the conflict dialog on a TV`() {
-        show(FormFactor.Tv) { Conflict() }
+        showOutside(FormFactor.Tv) { Conflict() }
 
         composeRule.assertAccessible(NoTouchOnTv)
     }
@@ -223,6 +231,18 @@ class StreamAccessibilityChecksTest {
     private fun show(formFactor: FormFactor, screen: @Composable () -> Unit) {
         composeRule.setContent {
             BorealisTheme(formFactor) { Box(Modifier.fillMaxSize()) { screen() } }
+        }
+        composeRule.waitForIdle()
+    }
+
+    /** A screen outside the game, on the plain page that the chrome puts behind it. */
+    private fun showOutside(formFactor: FormFactor, screen: @Composable () -> Unit) {
+        composeRule.setContent {
+            BorealisTheme(formFactor) {
+                OutsideGameBackground(StreamVisuals(background = BackgroundMode.OFF), false) {
+                    Box(Modifier.fillMaxSize()) { screen() }
+                }
+            }
         }
         composeRule.waitForIdle()
     }

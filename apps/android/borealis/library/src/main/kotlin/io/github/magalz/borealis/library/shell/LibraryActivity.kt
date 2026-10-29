@@ -29,6 +29,7 @@ class LibraryActivity : Hilt_LibraryActivity() {
     @Inject lateinit var legacyBridge: LegacyBridge
     @Inject lateinit var settings: SettingsRepository
     @Inject lateinit var quitNotice: QuitNotice
+    @Inject lateinit var resumeChoice: ResumeChoice
 
     private var request by mutableStateOf<LibraryLaunchRequest?>(null)
 
@@ -67,5 +68,18 @@ class LibraryActivity : Hilt_LibraryActivity() {
     override fun onResume() {
         super.onResume()
         legacyBridge.onLauncherResumed(this)
+    }
+
+    override fun onStop() {
+        // The choice of Try again is for the request that came with it: a Library that is left
+        // before it handled the request must not leave it for a later shortcut.
+        resumeChoice.clear()
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        // A Library can go without having been stopped, when it finishes while it is created.
+        resumeChoice.clear()
+        super.onDestroy()
     }
 }

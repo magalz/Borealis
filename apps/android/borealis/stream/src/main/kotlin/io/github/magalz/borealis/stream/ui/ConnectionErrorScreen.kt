@@ -1,6 +1,5 @@
 package io.github.magalz.borealis.stream.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,9 +21,9 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import io.github.magalz.borealis.designsystem.components.Text
+import io.github.magalz.borealis.designsystem.components.BackdropInk
+import io.github.magalz.borealis.designsystem.components.BackdropText
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
-import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisType
 import io.github.magalz.borealis.host.failure.FailureKind
@@ -39,9 +38,10 @@ private val CONTENT_GAP = 14.dp
 private val SUPPORT_LINE_GAP = 2.dp
 
 /**
- * What happened to the connection, what the host was doing, and the next step (ADR 0052, UC-002).
- * The raw code and the port hint stay visible for support. Gamepad B leaves; Back is handled by the
- * host.
+ * What happened to the connection, what the host was doing, and the next step (ADR 0052, UC-002),
+ * over the background of the screens outside the game. The text stands on the background, so it has
+ * its halo; the page is the background's, not this screen's. The raw code and the port hint stay
+ * visible for support. Gamepad B leaves; Back is handled by the host.
  */
 @Composable
 fun ConnectionErrorScreen(
@@ -50,7 +50,6 @@ fun ConnectionErrorScreen(
     failure: StreamFailure,
     intents: StreamIntents,
 ) {
-    val colors = LocalBorealisColors.current
     val gutter = LocalBorealisSpacing.current.gutter
     val copy = errorCopy(failure.kind)
     // The title of a generic failure and of a stopped stream names the app; every other kind names
@@ -63,7 +62,6 @@ fun ConnectionErrorScreen(
         }
     Box(
         Modifier.fillMaxSize()
-            .background(colors.page)
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .onGamepadB(intents::leave),
         contentAlignment = Alignment.CenterStart,
@@ -80,15 +78,15 @@ fun ConnectionErrorScreen(
                 Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 verticalArrangement = Arrangement.spacedBy(CONTENT_GAP),
             ) {
-                Text(
+                BackdropText(
                     stringResource(copy.title, subject),
                     Modifier.semantics { heading() },
                     style = MaterialTheme.typography.titleLarge,
                 )
-                Text(
+                BackdropText(
                     stringResource(copy.body),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = colors.ink2,
+                    ink = BackdropInk.Ink2,
                 )
             }
             SupportLines(failure)
@@ -100,12 +98,9 @@ fun ConnectionErrorScreen(
 /** The raw code and, when the classifier has one, the port hint, in monospace for support. */
 @Composable
 private fun SupportLines(failure: StreamFailure) {
-    val style =
-        LocalBorealisType.current
-            .codes(MaterialTheme.typography.bodySmall)
-            .copy(color = LocalBorealisColors.current.ink3)
+    val style = LocalBorealisType.current.codes(MaterialTheme.typography.bodySmall)
     Column(verticalArrangement = Arrangement.spacedBy(SUPPORT_LINE_GAP)) {
-        Text(failure.rawCode, style = style)
-        failure.portHint?.let { Text(it, style = style) }
+        BackdropText(failure.rawCode, style = style, ink = BackdropInk.Ink3)
+        failure.portHint?.let { BackdropText(it, style = style, ink = BackdropInk.Ink3) }
     }
 }

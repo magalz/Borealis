@@ -10,15 +10,17 @@ import io.github.magalz.borealis.stream.testing.HANDHELD
 import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.setChrome
+import io.github.magalz.borealis.stream.ui.background.OnStillBackground
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
- * Screenshots of the screens of leaving a stream, named `<screen>_<device>`. The loader fills for
- * ever: the clock is frozen at a time at which the bands are fully drawn, so the capture shows the
- * loader whole and is the same every run.
+ * Screenshots of the screens of leaving a stream, named `<screen>_<device>`, on one frame of the
+ * background of the screens outside the game. The loader fills for ever: the clock is frozen at a
+ * time at which the bands are fully drawn, so the capture shows the loader whole and is the same
+ * every run.
  */
 @RunWith(AndroidJUnit4::class)
 class LeavingScreenshotTest {
@@ -54,7 +56,7 @@ class LeavingScreenshotTest {
 
     private fun shoot(name: String, formFactor: FormFactor, screen: @Composable () -> Unit) {
         composeRule.mainClock.autoAdvance = false
-        composeRule.setChrome(formFactor) { screen() }
+        composeRule.setChrome(formFactor) { OnStillBackground { screen() } }
         composeRule.mainClock.advanceTimeBy(LOADER_TIME_MS)
         composeRule.onRoot().captureRoboImage("src/test/screenshots/$name.png")
     }

@@ -11,18 +11,20 @@ import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
+import io.github.magalz.borealis.stream.testing.HANDHELD
 import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.aSession
+import io.github.magalz.borealis.stream.ui.background.OnStillBackground
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
- * Screenshots of the connection error screen; the references live in `src/test/screenshots`, named
- * `<screen>_<device>_<state>.png`. The TV captures show Try again with the focus outline, as the
- * screen opens.
+ * Screenshots of the connection error screen on one frame of the background of the screens outside
+ * the game; the references live in `src/test/screenshots`, named `<screen>_<device>_<state>.png`.
+ * The TV captures show Try again with the focus outline, as the screen opens.
  */
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalRoborazziApi::class)
@@ -94,6 +96,16 @@ class ConnectionErrorScreenshotTest {
         )
 
     @Test
+    @Config(qualifiers = HANDHELD)
+    fun errorHandheldOffline() =
+        shoot(
+            "error_handheld_offline",
+            FormFactor.Handheld,
+            StreamFailure(FailureKind.HOST_OFFLINE, "Error 0 · serverinfo", null),
+            Target(hostName = "Living Room PC"),
+        )
+
+    @Test
     @Config(qualifiers = "w640dp-h300dp-land-xhdpi")
     fun errorPhoneLandscapeCertificateLargeText() =
         shoot(
@@ -121,7 +133,9 @@ class ConnectionErrorScreenshotTest {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
                 BorealisTheme(formFactor) {
-                    ConnectionErrorScreen(target.appName, target.hostName, failure, aSession())
+                    OnStillBackground {
+                        ConnectionErrorScreen(target.appName, target.hostName, failure, aSession())
+                    }
                 }
             }
         }

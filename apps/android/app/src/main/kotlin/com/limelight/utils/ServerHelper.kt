@@ -46,11 +46,13 @@ object ServerHelper {
     // Kept as the Java had it: a certificate that cannot be encoded is printed and left out.
     @Suppress("PrintStackTrace")
     @JvmStatic
+    @JvmOverloads
     fun createStartIntent(
         parent: Activity,
         app: NvApp,
         computer: ComputerDetails,
         managerBinder: ComputerManagerService.ComputerManagerBinder,
+        resumeChosen: Boolean = false,
     ): Intent {
         val intent = Intent(parent, Game::class.java)
         val activeAddress = checkNotNull(computer.activeAddress)
@@ -63,6 +65,7 @@ object ServerHelper {
         intent.putExtra(Game.EXTRA_UNIQUEID, managerBinder.uniqueId)
         intent.putExtra(Game.EXTRA_PC_UUID, computer.uuid)
         intent.putExtra(Game.EXTRA_PC_NAME, computer.name)
+        intent.putExtra(Game.EXTRA_RESUME_CHOSEN, resumeChosen)
         try {
             computer.serverCert?.let { intent.putExtra(Game.EXTRA_SERVER_CERT, it.encoded) }
         } catch (e: CertificateEncodingException) {
@@ -72,11 +75,13 @@ object ServerHelper {
     }
 
     @JvmStatic
+    @JvmOverloads
     fun doStart(
         parent: Activity,
         app: NvApp,
         computer: ComputerDetails,
         managerBinder: ComputerManagerService.ComputerManagerBinder,
+        resumeChosen: Boolean = false,
     ) {
         if (computer.state == ComputerDetails.State.OFFLINE || computer.activeAddress == null) {
             Toast.makeText(
@@ -87,6 +92,6 @@ object ServerHelper {
                 .show()
             return
         }
-        parent.startActivity(createStartIntent(parent, app, computer, managerBinder))
+        parent.startActivity(createStartIntent(parent, app, computer, managerBinder, resumeChosen))
     }
 }

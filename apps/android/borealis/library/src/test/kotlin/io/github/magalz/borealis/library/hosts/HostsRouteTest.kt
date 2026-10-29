@@ -95,7 +95,10 @@ class HostsRouteTest {
 
         composeRule.onNodeWithTag("continue:desk").performClick()
 
-        assertThat(streams).containsExactly(StreamRequest("desk", 7, "Steam", hdrSupported = false))
+        assertThat(streams)
+            .containsExactly(
+                StreamRequest("desk", 7, "Steam", hdrSupported = false, resumeChosen = true)
+            )
     }
 
     @Test

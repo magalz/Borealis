@@ -145,6 +145,9 @@ internal class FakeCmsBinder : CmsBinder {
     val pollers = mutableListOf<FakeAppListPoller>()
     val streams = mutableListOf<Triple<Activity, NvApp, ComputerDetails>>()
 
+    /** The `resumeChosen` of each of [streams], in order. */
+    val resumeChoices = mutableListOf<Boolean>()
+
     /** Run inside the call of the same name, like something happening on another thread. */
     var onStartPolling: () -> Unit = {}
     var onStopPolling: () -> Unit = {}
@@ -189,8 +192,14 @@ internal class FakeCmsBinder : CmsBinder {
             onCreatePoller()
         }
 
-    override fun startStream(activity: Activity, app: NvApp, computer: ComputerDetails) {
+    override fun startStream(
+        activity: Activity,
+        app: NvApp,
+        computer: ComputerDetails,
+        resumeChosen: Boolean,
+    ) {
         streams += Triple(activity, app, computer)
+        resumeChoices += resumeChosen
     }
 
     /** What the service does on a polling thread. */

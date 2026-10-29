@@ -73,6 +73,8 @@ class DataStoreBackingTest {
             Settings.FONT,
             Settings.ACCENT,
             Settings.BACKGROUND_INTENSITY,
+            Settings.STREAM_BACKGROUND,
+            Settings.STREAM_MENU_GLASS,
             Settings.CARD_DENSITY,
             Settings.TEXT_SPACING,
         )
@@ -147,6 +149,24 @@ class DataStoreBackingTest {
                     Settings.BACKGROUND_INTENSITY to listOf("100", "75", "50", "25"),
                     Settings.CARD_DENSITY to listOf("comfortable", "compact", "dense"),
                     Settings.TEXT_SPACING to listOf("normal", "wide", "wider"),
+                )
+            val backing = backing()
+
+            for ((setting, values) in ids) {
+                for (id in values) {
+                    backing.write(setting, id)
+                    assertThat(backing.read()[setting]).isEqualTo(id)
+                }
+            }
+        }
+
+    @Test
+    fun `every id of the menu glass and the background of the stream reads back as written`() =
+        runBlocking<Unit> {
+            val ids =
+                mapOf(
+                    Settings.STREAM_MENU_GLASS to listOf("blur", "solid"),
+                    Settings.STREAM_BACKGROUND to listOf("moving", "still", "off"),
                 )
             val backing = backing()
 

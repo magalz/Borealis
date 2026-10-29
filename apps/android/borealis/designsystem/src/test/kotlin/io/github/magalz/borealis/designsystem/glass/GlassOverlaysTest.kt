@@ -311,7 +311,7 @@ class GlassOverlaysTest {
                 LocalLifecycleOwner provides lifecycle,
             ) {
                 if (useBackground) {
-                    GlassHost(style, Modifier.testTag(ROOT), content)
+                    GlassHost(style, Modifier.testTag(ROOT), content = content)
                 } else {
                     GlassHostOver(style, background, Modifier.testTag(ROOT), content)
                 }

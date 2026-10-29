@@ -58,6 +58,7 @@ internal data class GameIntent(
     val pcName: String? = PC_NAME,
     val hdr: Boolean? = false,
     val serverCert: ByteArray? = null,
+    val resumeChosen: Boolean? = null,
 ) {
     fun build(application: Application): Intent =
         Intent().setClassName(application, Game::class.java.name).also { intent ->
@@ -71,6 +72,7 @@ internal data class GameIntent(
             pcName?.let { intent.putExtra("PcName", it) }
             hdr?.let { intent.putExtra("HDR", it) }
             serverCert?.let { intent.putExtra("ServerCert", it) }
+            resumeChosen?.let { intent.putExtra("ResumeChosen", it) }
         }
 
     companion object {

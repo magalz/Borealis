@@ -210,43 +210,68 @@ open class NvConnection(
     }
 
     // BOREALIS: Join: /resume of the running app, with upstream's message when the host answers 200
-    // without resuming (host.launch)
+    // without resuming. When it is the app that this start asked for, it waits for a busy host and
+    // lets a failed RTSP handshake right after it restart the start, as the chosen resume does
+    // (host.launch)
     @Throws(IOException::class, XmlPullParserException::class)
     private fun joinRunning(h: NvHTTP, context: ConnectionContext, appId: Int): LaunchOutcome {
+        val askedFor = appId == checkNotNull(checkNotNull(context.streamConfig).app).appId
+        if (askedFor && !collisions.settleBeforeResume()) {
+            return LaunchOutcome.CANCELLED
+        }
         val joined = launchWithRetry(h, "resume", appId)
         if (joined == LaunchOutcome.FAILED) {
             context.listener.displayMessage("Failed to resume existing session")
         }
+        if (joined == LaunchOutcome.SUCCEEDED && askedFor) {
+            collisions.resumeAccepted(context.isNvidiaServerSoftware)
+        }
         return joined
     }
 
-    // BOREALIS: another app is running although /serverinfo said none: Join, Quit and relaunch or
-    // Cancel, asked once (host.launch)
-    @Throws(IOException::class, XmlPullParserException::class)
-    private fun resolveConflict(h: NvHTTP, context: ConnectionContext): Boolean {
-        val app = checkNotNull(checkNotNull(context.streamConfig).app)
+    // BOREALIS: what the user can answer about the app that is running: Join, Quit and relaunch or
+    // Cancel (host.launch)
+    private fun conflictActions(h: NvHTTP, context: ConnectionContext): ConflictActions {
         val listener = context.listener
-        return conflicts.resolve(
-            RunningAppReader { h.getCurrentGame(h.getServerInfo(true)) },
-            AppNameLookup { id -> h.getAppById(id)?.appName },
-            RequestedApp(app.appId, app.appName),
-            ConflictActions(
-                ConflictPrompt { runningId, runningName, requestedId, requestedName, answer ->
-                    listener.launchConflict(
-                        runningId,
-                        runningName,
-                        requestedId,
-                        requestedName,
-                        answer,
-                    )
-                },
-                LaunchAttempt { launchNotRunningApp(h, context) },
-                ConflictJoin { id -> joinRunning(h, context, id) },
-                LaunchAttempt { quitAndLaunch(h, context) },
-            ),
-            checkNotNull(context.serverAddress).address,
+        return ConflictActions(
+            ConflictPrompt { runningId, runningName, requestedId, requestedName, answer ->
+                listener.launchConflict(runningId, runningName, requestedId, requestedName, answer)
+            },
+            LaunchAttempt { launchNotRunningApp(h, context) },
+            ConflictJoin { id -> joinRunning(h, context, id) },
+            LaunchAttempt { quitAndLaunch(h, context) },
         )
     }
+
+    private fun requestedApp(context: ConnectionContext): RequestedApp {
+        val streamConfig = checkNotNull(context.streamConfig)
+        val app = checkNotNull(streamConfig.app)
+        return RequestedApp(app.appId, app.appName, streamConfig.resumeChosen)
+    }
+
+    // BOREALIS: another app is running although /serverinfo said none, or a launch was refused
+    // because an app runs: wait for it to end, then ask, once (host.launch)
+    @Throws(IOException::class, XmlPullParserException::class)
+    private fun resolveConflict(h: NvHTTP, context: ConnectionContext): Boolean =
+        conflicts.resolve(
+            RunningAppReader { h.getCurrentGame(h.getServerInfo(true)) },
+            AppNameLookup { id -> h.getAppById(id)?.appName },
+            requestedApp(context),
+            conflictActions(h, context),
+            checkNotNull(context.serverAddress).address,
+        )
+
+    // BOREALIS: /serverinfo has just shown the app that this start asked for, and the user did not
+    // choose to resume it: ask at once, once (host.launch)
+    @Throws(IOException::class, XmlPullParserException::class)
+    private fun askAboutRunning(h: NvHTTP, context: ConnectionContext, runningAppId: Int): Boolean =
+        conflicts.askAbout(
+            runningAppId,
+            AppNameLookup { id -> h.getAppById(id)?.appName },
+            requestedApp(context),
+            conflictActions(h, context),
+            checkNotNull(context.serverAddress).address,
+        )
 
     @Suppress("PrintStackTrace")
     @Throws(IOException::class)
@@ -510,6 +535,19 @@ open class NvConnection(
             var resumed = LaunchOutcome.SUCCEEDED
             try {
                 if (h.getCurrentGame(serverInfo) == app.appId) {
+                    // BOREALIS: nothing tells this session from another device's: ask, unless the
+                    // user chose Resume, Continue or Try again for this app (host contract 7.6). A
+                    // restart went through that already
+                    val restart = collisions.isRestart()
+                    if (!restart && !streamConfig.resumeChosen) {
+                        return askAboutRunning(h, context, app.appId)
+                    }
+                    if (!restart) {
+                        conflicts.joinedByChoice(
+                            checkNotNull(context.serverAddress).address,
+                            app.appId,
+                        )
+                    }
                     // BOREALIS: wait while the host is busy; retries, cancellation and the no-app
                     // fallback
                     resumed =

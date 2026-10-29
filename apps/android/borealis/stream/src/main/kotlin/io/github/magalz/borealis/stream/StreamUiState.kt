@@ -1,18 +1,55 @@
 package io.github.magalz.borealis.stream
 
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.nativecore.LaunchCategory
 
 /**
  * What the stream chrome shows: the app and the host it streams, the phase of the session and
  * whether the activity is in picture-in-picture, which hides the chrome and leaves the phase alone.
+ * [visuals] are what the stream started with, and [decoderHeld] says whether a decoder of the
+ * stream is, or is about to be, configured.
  */
 data class StreamUiState(
     val appName: String,
     val hostName: String,
     val phase: StreamPhase,
     val inPip: Boolean = false,
+    val visuals: StreamVisuals = StreamVisuals(),
+    val decoderHeld: Boolean = false,
 )
+
+/**
+ * What the stream draws besides the video, read once when the stream starts (ADR 0061): the glass
+ * of the in-game menu, how the background behaves on the screens outside the game, and the style of
+ * that background, the one the viewer chose in Settings. Its intensity is the one of the look.
+ */
+data class StreamVisuals(
+    val menuGlass: MenuGlass = MenuGlass.BLUR,
+    val background: BackgroundMode = BackgroundMode.MOVING,
+    val backgroundStyle: BackgroundStyle = BackgroundStyle.Default,
+)
+
+/** The glass of the in-game menu in a stream. */
+enum class MenuGlass {
+    /** A live copy of the video, blurred. */
+    BLUR,
+
+    /** A solid surface. */
+    SOLID,
+}
+
+/** How the background behaves on the screens outside the game. */
+enum class BackgroundMode {
+    /** The style as it moves. */
+    MOVING,
+
+    /** One still frame of the style. */
+    STILL,
+
+    /** The plain page colour. */
+    OFF,
+}
 
 /** The phase of a stream session, from the first connection step to the stream or a failure. */
 sealed interface StreamPhase {

@@ -12,6 +12,7 @@ import io.github.magalz.borealis.library.domain.HostShortcuts
 import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.StreamRequest
+import io.github.magalz.borealis.library.shell.ResumeChoice
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +34,7 @@ constructor(
     @Assisted private val hostId: String,
     private val repository: AppRepository,
     private val shortcuts: HostShortcuts,
+    private val resumeChoice: ResumeChoice,
 ) : ViewModel() {
     private val showHidden = MutableStateFlow(false)
     private val actionsAppId = MutableStateFlow<Int?>(null)
@@ -67,28 +69,34 @@ constructor(
     val effects: Flow<AppsEffect> = effectChannel.receiveAsFlow()
 
     /**
-     * A launch request, such as a shortcut: a tap on [appId], also when the user hid the app since,
-     * unless the screen is closing because the host is gone, offline or not paired. The caller
-     * waits until the apps are loaded.
+     * A launch request: a tap on [appId], also when the user hid the app since, unless the screen
+     * is closing because the host is gone, offline or not paired. The caller waits until the apps
+     * are loaded. It is the user's choice to resume only after Try again on the stream error
+     * screen, which [resumeChoice] says; a shortcut or a TV program is not, so the stream asks.
      */
     fun onLaunchRequested(appId: Int) {
+        // Taken first: the request ends the choice whatever comes of it.
+        val chosen = resumeChoice.take(hostId, appId)
         if (closed) return
         val snapshot = latest ?: return
         val running = snapshot.host?.runningApp?.id
         val app = snapshot.items(running).firstOrNull { it.id == appId } ?: return
-        select(app, running)
+        select(app, running, resumeChosen = chosen)
     }
 
-    /** A tap: start or resume when that is unambiguous, otherwise open the actions. */
+    /**
+     * A tap: start or resume when that is unambiguous, otherwise open the actions. A tap on the
+     * running app is the user's choice to resume it.
+     */
     fun onAppSelected(appId: Int) {
         val state = uiState.value
         val app = state.items.firstOrNull { it.id == appId } ?: return
-        select(app, state.runningAppId)
+        select(app, state.runningAppId, resumeChosen = app.running)
     }
 
-    private fun select(app: AppItemUiState, runningAppId: Int?) {
+    private fun select(app: AppItemUiState, runningAppId: Int?, resumeChosen: Boolean) {
         if (runningAppId == null || app.running) {
-            send(AppsEffect.StartStream(app.toRequest(hostId)))
+            send(AppsEffect.StartStream(app.toRequest(hostId, resumeChosen)))
         } else {
             actionsAppId.value = app.id
         }
@@ -104,7 +112,8 @@ constructor(
         val app = sheet.app
         actionsAppId.value = null
         when (action) {
-            AppAction.RESUME,
+            AppAction.RESUME ->
+                send(AppsEffect.StartStream(app.toRequest(hostId, resumeChosen = true)))
             AppAction.START -> send(AppsEffect.StartStream(app.toRequest(hostId)))
             AppAction.QUIT ->
                 viewModelScope.launch {
@@ -248,7 +257,8 @@ private fun choicesFor(
     return if (canPin) choices + AppAction.ADD_TO_HOME_SCREEN else choices
 }
 
-private fun AppItemUiState.toRequest(hostId: String) = StreamRequest(hostId, id, name, hdrSupported)
+private fun AppItemUiState.toRequest(hostId: String, resumeChosen: Boolean = false) =
+    StreamRequest(hostId, id, name, hdrSupported, resumeChosen)
 
 private fun QuitResult.toMessage(): AppsMessage =
     when (this) {

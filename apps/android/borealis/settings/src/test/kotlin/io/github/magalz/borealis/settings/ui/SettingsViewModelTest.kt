@@ -258,6 +258,37 @@ class SettingsViewModelTest {
             .isEqualTo("aurora_curtains")
     }
 
+    private fun rowOf(setting: Setting<*>) = SettingsItem.entries.single { it.setting == setting }
+
+    @Test
+    fun `the lists of the stream store the stable id of the chosen entry`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onChoiceSelected(rowOf(Settings.STREAM_MENU_GLASS), "solid")
+        viewModel.onChoiceSelected(rowOf(Settings.STREAM_BACKGROUND), "still")
+        advanceUntilIdle()
+
+        assertThat(repository.writes)
+            .containsExactly(
+                Write(Settings.STREAM_MENU_GLASS, "solid"),
+                Write(Settings.STREAM_BACKGROUND, "still"),
+            )
+            .inOrder()
+    }
+
+    @Test
+    fun `an entry that the lists of the stream do not offer is not stored`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onChoiceSelected(rowOf(Settings.STREAM_MENU_GLASS), "tint")
+        viewModel.onChoiceSelected(rowOf(Settings.STREAM_MENU_GLASS), "Blur")
+        viewModel.onChoiceSelected(rowOf(Settings.STREAM_BACKGROUND), "paused")
+        viewModel.onChoiceSelected(rowOf(Settings.STREAM_BACKGROUND), "aurora_curtains")
+        advanceUntilIdle()
+
+        assertThat(repository.writes).isEmpty()
+    }
+
     @Test
     fun `each list of Sprint 11 stores the stable id of the chosen entry`() = runTest {
         val viewModel = viewModel()
@@ -705,6 +736,8 @@ private val UC_009_ROWS =
                 SettingsItem.ACCENT,
                 SettingsItem.BACKGROUND,
                 SettingsItem.BACKGROUND_INTENSITY,
+                SettingsItem.STREAM_BACKGROUND,
+                SettingsItem.STREAM_MENU_GLASS,
                 SettingsItem.CARD_DENSITY,
                 SettingsItem.GLASS_TINT,
                 SettingsItem.GLASS_BLUR,

@@ -88,7 +88,7 @@ class StartRetriesTest {
         rig.script.running(DESKTOP_ID)
         rig.script.resumeReplies += HostReply.failure("503", "capture is not ready")
 
-        rig.start(rig.connection())
+        rig.start(rig.resumingConnection())
         ShadowRecordingBridge.await("startConnection")
         listener.awaitEnded()
 
@@ -198,7 +198,7 @@ class StartRetriesTest {
         rig.script.serverInfoReplies += HostReply.HOLD
         val began = System.nanoTime()
 
-        rig.start(rig.connection())
+        rig.start(rig.resumingConnection())
         ShadowRecordingBridge.await("startConnection")
         val tookMs = (System.nanoTime() - began) / NANOS_PER_MS
         listener.awaitEnded()

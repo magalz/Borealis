@@ -87,7 +87,7 @@ val TITLES: Map<AuditType, String> =
         AuditType.TLS_FAILURE to "Secure connection failed",
         AuditType.LAUNCH_ATTEMPT to "App started",
         AuditType.LAUNCH_RETRY to "Host asked to retry",
-        AuditType.LAUNCH_CONFLICT to "Another app was already running",
+        AuditType.LAUNCH_CONFLICT to "An app was already running on the PC",
         AuditType.SESSION_START to "Stream started",
         AuditType.SESSION_END to "Stream ended",
     )

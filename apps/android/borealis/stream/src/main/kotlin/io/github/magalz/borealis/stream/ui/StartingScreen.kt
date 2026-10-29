@@ -49,6 +49,9 @@ import io.github.magalz.borealis.stream.ui.common.onGamepadB
 /** Marks the column of the starting screen, so a test can measure it. */
 internal const val STARTING_CONTENT_TAG = "starting_content"
 
+/** Marks the glass panel of the steps of the starting screen, so a test can measure it. */
+internal const val STARTING_PANEL_TAG = "starting_panel"
+
 private const val CONTENT_WIDTH_FRACTION = 0.86f
 private val CONTENT_GAP = 16.dp
 private val TEXT_GAP = 4.dp

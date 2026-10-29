@@ -93,6 +93,8 @@ sealed interface StreamPhase {
      * the speed of the gamepad mouse for this session. [dockedKeyboard] says whether the keyboard
      * docks under the stream (the stream keeps the keys) or covers it (the chrome takes them, and a
      * pad can use it). It is decided when the keyboard opens and means nothing while none is open.
+     * [mouseNavButtons] is the setting of that name: the Back button of the mouse opens the menu
+     * when it is held, which the first-run hint says for a stream with a keyboard or a mouse.
      */
     data class Streaming(
         val panel: Panel = Panel.NONE,
@@ -103,6 +105,7 @@ sealed interface StreamPhase {
         val showMenuHint: Boolean,
         val pointerSpeed: PointerSpeed = PointerSpeed.NORMAL,
         val dockedKeyboard: Boolean = false,
+        val mouseNavButtons: Boolean = false,
     ) : StreamPhase
 }
 

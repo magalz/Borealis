@@ -14,7 +14,8 @@ import kotlinx.coroutines.flow.update
 
 /**
  * What a stream starts with: the user's settings when the first frame arrives, and the [visuals] of
- * the stream, which it keeps from the start.
+ * the stream, which it keeps from the start. [mouseNavButtons] says whether the Back button of the
+ * mouse is a button of its own (the setting of that name) and so can open the menu.
  */
 data class StreamDefaults(
     val overlay: OverlayMode,
@@ -22,6 +23,7 @@ data class StreamDefaults(
     val gamepadMouse: Boolean?,
     val showMenuHint: Boolean,
     val visuals: StreamVisuals = StreamVisuals(),
+    val mouseNavButtons: Boolean = false,
 )
 
 /**
@@ -173,6 +175,7 @@ class StreamSession(
             gamepadMouse = defaults.gamepadMouse,
             info = info,
             showMenuHint = defaults.showMenuHint,
+            mouseNavButtons = defaults.mouseNavButtons,
         )
     }
 

@@ -30,6 +30,7 @@ object StreamSessionFactory {
             touchMode = if (hasTouchscreen) TouchContexts.initialMode(prefs) else null,
             gamepadMouse = prefs.mouseEmulation,
             showMenuHint = showMenuHint,
+            mouseNavButtons = prefs.mouseNavButtons,
         )
 
     /**

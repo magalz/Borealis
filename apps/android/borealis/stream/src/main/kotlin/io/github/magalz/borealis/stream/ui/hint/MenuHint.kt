@@ -33,9 +33,10 @@ private val PADDING_VERTICAL = 6.dp
 
 /**
  * The line that tells a new user how to open the menu on this device, while [show] is true: the
- * chord and the Back button of the mouse when the stream has a keyboard or a mouse and no pad, else
- * the way of the form factor. It goes after six seconds, or when a panel opens, and then calls
- * [onDismiss] once, so the session remembers that it was seen. It takes no input.
+ * chord when the stream has a keyboard or a mouse and no pad, with the Back button of the mouse too
+ * when [mouseNavButtons] says that it opens the menu, else the way of the form factor. It goes
+ * after six seconds, or when a panel opens, and then calls [onDismiss] once, so the session
+ * remembers that it was seen. It takes no input.
  */
 @Composable
 internal fun MenuHint(
@@ -43,6 +44,7 @@ internal fun MenuHint(
     panelOpen: Boolean,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    mouseNavButtons: Boolean = false,
 ) {
     val dismiss by rememberUpdatedState(onDismiss)
     var done by remember { mutableStateOf(false) }
@@ -59,7 +61,7 @@ internal fun MenuHint(
     val colors = LocalBorealisColors.current
     val shape = LocalBorealisShapes.current.pill
     Text(
-        stringResource(hintText(LocalFormFactor.current, keyboardOrMouse)),
+        stringResource(hintText(LocalFormFactor.current, keyboardOrMouse, mouseNavButtons)),
         modifier
             .semantics { liveRegion = LiveRegionMode.Polite }
             .background(colors.surfaceRaised, shape)
@@ -70,9 +72,13 @@ internal fun MenuHint(
     )
 }
 
-private fun hintText(formFactor: FormFactor, keyboardOrMouse: Boolean) =
+private fun hintText(
+    formFactor: FormFactor,
+    keyboardOrMouse: Boolean,
+    mouseNavButtons: Boolean,
+) =
     if (keyboardOrMouse) {
-        R.string.stream_hint_keyboard_mouse
+        if (mouseNavButtons) R.string.stream_hint_keyboard_mouse else R.string.stream_hint_keyboard
     } else {
         when (formFactor) {
             FormFactor.Phone -> R.string.stream_hint_phone

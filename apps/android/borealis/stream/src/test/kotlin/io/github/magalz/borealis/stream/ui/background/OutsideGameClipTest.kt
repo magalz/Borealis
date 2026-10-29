@@ -82,10 +82,10 @@ class OutsideGameClipTest {
     }
 
     @Test
-    fun `the question about a running app plays the clip`() {
+    fun `the question about a running app holds the clip on its still`() {
         show(sessionAt(OutsideScreen.CONFLICT, clip))
 
-        assertClipPlays()
+        assertStillOnly()
     }
 
     @Test

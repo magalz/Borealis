@@ -4,4 +4,8 @@
     <string name="stream_hint_phone">Pull the handle down or press Back for the menu</string>
     <string name="stream_hint_handheld">Hold Select + Start for the menu</string>
     <string name="stream_hint_tv">Press Back for the menu</string>
+    <!-- With a keyboard or a mouse and no pad: the chord, and the side button of the mouse when
+         its navigation buttons are on. -->
+    <string name="stream_hint_keyboard">Press Ctrl+Alt+Shift+M for the menu</string>
+    <string name="stream_hint_keyboard_mouse">Press Ctrl+Alt+Shift+M or hold the mouse Back button for the menu</string>
 </resources>

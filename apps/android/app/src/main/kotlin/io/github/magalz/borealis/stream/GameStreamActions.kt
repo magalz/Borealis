@@ -216,10 +216,10 @@ internal constructor(
         }
     }
 
-    override fun leave() = activity.finish()
+    override fun leave() = finishActivity()
 
     // Every exit asks the system once: the activity may be finishing already, for instance because
-    // the user left the app while the screen of a Disconnect was up.
+    // the user left the app while the screen of a Disconnect was up, or pressed Back twice.
     private fun finishActivity() {
         if (activity.isFinishing) return
         activity.finish()
@@ -280,7 +280,7 @@ internal constructor(
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 .putExtras(request.toExtras())
         )
-        activity.finish()
+        finishActivity()
     }
 
     private fun toast(text: String) =
@@ -297,7 +297,7 @@ internal constructor(
      * the session at the question, so the activity ends here.
      */
     override fun answerConflict(choice: ConflictChoice) {
-        if (choice == ConflictChoice.CANCEL) activity.finish()
+        if (choice == ConflictChoice.CANCEL) finishActivity()
     }
 
     companion object {

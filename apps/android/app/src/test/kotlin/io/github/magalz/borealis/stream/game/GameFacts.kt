@@ -4,14 +4,26 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.ConnectionContext
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.StreamConfiguration
+import io.github.magalz.borealis.stream.RecordingStreamActions
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamSession
+import io.github.magalz.borealis.stream.streamingSession
 import org.robolectric.shadows.ShadowToast
 import org.robolectric.util.ReflectionHelpers
 
 /** The stream session that the activity reports to. */
 internal val GameRig.session: StreamSession
     get() = field("streamSession")
+
+/**
+ * Puts a streaming session whose actions only record in the place of the session of the activity,
+ * and returns the actions. The real actions send the quit or the disconnect to the host through
+ * Hilt, which the rig does not have.
+ */
+internal fun GameRig.recordSession(): RecordingStreamActions =
+    RecordingStreamActions().also {
+        ReflectionHelpers.setField(game, "streamSession", streamingSession(actions = it))
+    }
 
 /** What the stream chrome shows now. */
 internal val GameRig.phase: StreamPhase

@@ -9,6 +9,7 @@ import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.RunningApp
 import io.github.magalz.borealis.library.domain.StreamRequest
+import io.github.magalz.borealis.library.shell.ResumeChoice
 import io.github.magalz.borealis.library.testing.FakeAppRepository
 import io.github.magalz.borealis.library.testing.FakeHostShortcuts
 import io.github.magalz.borealis.library.testing.MainDispatcherRule
@@ -27,7 +28,7 @@ class AppsViewModelTest {
     private val repository = FakeAppRepository()
     private val shortcuts = FakeHostShortcuts(canPinApps = false)
     // Lazy: a ViewModel must be created after the rule has set the main dispatcher.
-    private val viewModel by lazy { AppsViewModel("host-1", repository, shortcuts) }
+    private val viewModel by lazy { AppsViewModel("host-1", repository, shortcuts, ResumeChoice()) }
 
     private val desktop = anApp(id = 1, name = "Desktop")
     private val steam = anApp(id = 2, name = "steam", hdrSupported = true)

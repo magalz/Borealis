@@ -12,6 +12,7 @@ import io.github.magalz.borealis.library.domain.HostShortcuts
 import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.StreamRequest
+import io.github.magalz.borealis.library.shell.ResumeChoice
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +34,7 @@ constructor(
     @Assisted private val hostId: String,
     private val repository: AppRepository,
     private val shortcuts: HostShortcuts,
+    private val resumeChoice: ResumeChoice,
 ) : ViewModel() {
     private val showHidden = MutableStateFlow(false)
     private val actionsAppId = MutableStateFlow<Int?>(null)

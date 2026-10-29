@@ -52,7 +52,7 @@ internal object LaunchAudit {
         )
     }
 
-    /** What the user decided about the app that is already running. */
+    /** What the user answered when asked about the app that is already running. */
     fun conflict(host: String?, choice: ConflictChoice, runningAppId: Int) {
         val (name, outcome) =
             when (choice) {
@@ -64,7 +64,20 @@ internal object LaunchAudit {
             AuditType.LAUNCH_CONFLICT,
             outcome,
             host,
-            "choice=$name running_app=$runningAppId",
+            "choice=$name running_app=$runningAppId entry=asked",
+        )
+    }
+
+    /**
+     * The user chose Resume or Continue on the app that runs, so the stream joined it without
+     * asking.
+     */
+    fun resumeChosen(host: String?, runningAppId: Int) {
+        BorealisAudit.record(
+            AuditType.LAUNCH_CONFLICT,
+            AuditOutcome.SUCCESS,
+            host,
+            "choice=join running_app=$runningAppId entry=chosen",
         )
     }
 

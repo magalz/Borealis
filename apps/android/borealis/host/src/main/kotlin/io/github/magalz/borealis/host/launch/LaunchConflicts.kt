@@ -79,7 +79,10 @@ class ConflictActions(
  * (host contract 7.5). One instance per connection: it allows one resolution per launch, so a
  * second refusal after Join or Quit fails like any other error instead of looping.
  *
- * It never ends another client's app on its own: only the user's explicit choice does.
+ * It never ends another client's app on its own: only the user's explicit choice does. Nothing
+ * tells this device's session from another device's, so the same app that runs is put to the user
+ * too. The one exception is the choice the user made earlier: Resume or Continue on that app in the
+ * Library (UC-003, host contract 7.6).
  */
 class LaunchConflicts
 internal constructor(
@@ -109,7 +112,10 @@ internal constructor(
      * The stream joins the running app because the user chose Resume or Continue on it in the
      * Library: nothing is asked. The audit and the log say that this is how the stream entered.
      */
-    fun joinedByChoice(host: String?, runningAppId: Int) = Unit
+    fun joinedByChoice(host: String?, runningAppId: Int) {
+        BorealisLog.i(LogTag.LAUNCH, "running app joined on the user's choice")
+        LaunchAudit.resumeChosen(host, runningAppId)
+    }
 
     /**
      * Runs the resolution and returns whether the launch went through; false also means that the
@@ -130,19 +136,34 @@ internal constructor(
         return when (val seen = pollRunningApp(reader)) {
             Seen.Cancelled -> false
             Seen.Nothing -> actions.relaunch.run()
-            is Seen.App -> {
-                val name = nameOrNull(names, seen.id)
-                val choice = ask(actions.prompt, seen.id, name, requested.id, requested.name)
-                BorealisLog.i(LogTag.LAUNCH, "running app conflict answered", "choice" to choice)
-                LaunchAudit.conflict(host, choice, seen.id)
-                when (choice) {
-                    ConflictChoice.JOIN -> afterJoin(actions.join.join(seen.id), actions.relaunch)
-                    ConflictChoice.QUIT_AND_RELAUNCH -> actions.quitAndRelaunch.run()
-                    ConflictChoice.CANCEL -> {
-                        cancel.run()
-                        false
-                    }
+            is Seen.App ->
+                if (resumeChosen && seen.id == requested.id) {
+                    joinedByChoice(host, seen.id)
+                    afterJoin(actions.join.join(seen.id), actions.relaunch)
+                } else {
+                    askAndAct(seen.id, names, requested, actions, host)
                 }
+        }
+    }
+
+    /** Puts the running app to the user and does what they answer. */
+    private fun askAndAct(
+        runningAppId: Int,
+        names: AppNameLookup,
+        requested: RequestedApp,
+        actions: ConflictActions,
+        host: String?,
+    ): Boolean {
+        val name = nameOrNull(names, runningAppId)
+        val choice = ask(actions.prompt, runningAppId, name, requested.id, requested.name)
+        BorealisLog.i(LogTag.LAUNCH, "running app conflict answered", "choice" to choice)
+        LaunchAudit.conflict(host, choice, runningAppId)
+        return when (choice) {
+            ConflictChoice.JOIN -> afterJoin(actions.join.join(runningAppId), actions.relaunch)
+            ConflictChoice.QUIT_AND_RELAUNCH -> actions.quitAndRelaunch.run()
+            ConflictChoice.CANCEL -> {
+                cancel.run()
+                false
             }
         }
     }

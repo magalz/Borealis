@@ -11,6 +11,8 @@ import io.github.magalz.borealis.host.launch.LaunchFrameRate
 import io.github.magalz.borealis.host.pairing.BestEffortUnpair
 import io.github.magalz.borealis.host.pairing.CertificateMismatchException
 import io.github.magalz.borealis.host.pairing.TlsAudit
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogTag
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
@@ -795,19 +797,26 @@ constructor(
 
     @Throws(IOException::class, XmlPullParserException::class)
     fun quitApp(): Boolean {
+        // BOREALIS: where the time of a Quit goes (leave)
+        BorealisLog.i(LogTag.HOST, "quit cancel sent")
+        val cancelSent = System.nanoTime()
         val xmlStr =
             openHttpConnectionToString(
                 httpClientLongConnectNoReadTimeout,
                 getHttpsUrl(true),
                 "cancel",
             )
+        BorealisLog.i(LogTag.HOST, "quit cancel answered", "ms" to elapsedMs(cancelSent))
         if (requireXmlString(xmlStr, "cancel") == "0") {
             return false
         }
 
         // Newer GFE versions will just return success even if quitting fails
         // if we're not the original requestor.
-        if (getCurrentGame(getServerInfo(true)) != 0) {
+        val checkSent = System.nanoTime()
+        val runningGame = getCurrentGame(getServerInfo(true))
+        BorealisLog.i(LogTag.HOST, "quit check answered", "ms" to elapsedMs(checkSent))
+        if (runningGame != 0) {
             // Generate a synthetic GfeResponseException letting the caller know
             // that they can't kill someone else's stream.
             throw HostHttpResponseException(HTTP_SYNTHETIC_OTHER_CLIENT, "")
@@ -815,6 +824,9 @@ constructor(
 
         return true
     }
+
+    private fun elapsedMs(sinceNanos: Long): Long =
+        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - sinceNanos)
 
     companion object {
         private const val DEFAULT_HTTPS_PORT = 47984

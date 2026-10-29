@@ -72,6 +72,8 @@ import io.github.magalz.borealis.host.launch.ConflictAnswer
 import io.github.magalz.borealis.host.launch.ConflictChoice
 import io.github.magalz.borealis.host.launch.SessionAudit
 import io.github.magalz.borealis.host.video.StreamStartupGuard
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.stream.ChromeMode
 import io.github.magalz.borealis.stream.GameStreamActions
 import io.github.magalz.borealis.stream.GamepadMouseSync
@@ -94,6 +96,7 @@ import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
@@ -639,6 +642,7 @@ class Game :
                     streamView,
                     { streamSession.closePanel() },
                     { mode -> TouchContexts.build(mode, conn, streamView, prefConfig) },
+                    { done -> stopConnectionThen(done) },
                 ),
                 heldKeys,
             )
@@ -1272,7 +1276,8 @@ class Game :
             }
         }
 
-        finish()
+        // BOREALIS: every exit that finished the activity already asks once (leave)
+        if (!isFinishing) finish()
     }
 
     // BOREALIS: who gets the input, from the stream session; the stream gets it until the session
@@ -2612,7 +2617,11 @@ class Game :
         }
     }
 
-    private fun stopConnection() {
+    // BOREALIS: stops the connection and runs [done] once it has stopped, from the thread that
+    // stopped it; at once when no connection runs (leave)
+    internal fun stopConnectionThen(done: Runnable) = stopConnection(done)
+
+    private fun stopConnection(done: Runnable? = null) {
         startupGuard.cancel() // BOREALIS: first-frame watchdog
         if (connected) {
             connected = false
@@ -2631,10 +2640,19 @@ class Game :
             // during the process of stopping this one.
             object : Thread() {
                     override fun run() {
+                        val stopStarted = System.nanoTime() // BOREALIS: leave log
                         conn.stop()
+                        BorealisLog.i(
+                            LogTag.APP,
+                            "connection stop done",
+                            "ms" to TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - stopStarted),
+                        )
+                        done?.run()
                     }
                 }
                 .start()
+        } else {
+            done?.run() // BOREALIS: nothing runs, so nothing to wait for (leave)
         }
     }
 
@@ -2684,15 +2702,24 @@ class Game :
     }
 
     override fun connectionTerminated(errorCode: Int) {
+        // BOREALIS: the host ends the stream when it gets the Quit that the user confirmed, and the
+        // control stream reports the ENet disconnect (-1); that end is the quit's, so no
+        // connectivity test and no error. Any other code is a network drop (leave)
+        val endedByQuit = ::streamSession.isInitialized && streamSession.endedByQuit(errorCode)
+
         // Perform a connection test if the failure could be due to a blocked port
         // This does network I/O, so don't do it on the main thread.
         val portFlags = MoonBridge.getPortFlagsFromTerminationErrorCode(errorCode)
         val portTestResult =
-            MoonBridge.testClientConnectivity(
-                ServerHelper.CONNECTION_TEST_SERVER,
-                CONNECTION_TEST_PORT,
-                portFlags,
-            )
+            if (endedByQuit) {
+                MoonBridge.ML_TEST_RESULT_INCONCLUSIVE
+            } else {
+                MoonBridge.testClientConnectivity(
+                    ServerHelper.CONNECTION_TEST_SERVER,
+                    CONNECTION_TEST_PORT,
+                    portFlags,
+                )
+            }
 
         runOnUiThread {
             startupGuard.cancel() // BOREALIS: first-frame watchdog
@@ -2709,7 +2736,7 @@ class Game :
 
             if (!displayedFailureDialog) {
                 displayedFailureDialog = true
-                LimeLog.severe("Connection terminated: $errorCode")
+                if (!endedByQuit) LimeLog.severe("Connection terminated: $errorCode")
                 stopConnection()
 
                 // Display the error dialog if it was an unexpected termination.
@@ -2732,7 +2759,8 @@ class Game :
                         )
                     )
                 } else {
-                    finish()
+                    // BOREALIS: another exit may have finished the activity already (leave)
+                    if (!isFinishing) finish()
                 }
             }
         }

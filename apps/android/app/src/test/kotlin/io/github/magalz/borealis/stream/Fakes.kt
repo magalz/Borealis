@@ -130,8 +130,8 @@ class RecordingStreamActions : StreamActions {
         calls += "menuHintShown"
     }
 
-    override fun disconnect() {
-        calls += "disconnect"
+    override fun disconnect(appName: String) {
+        calls += "disconnect $appName"
     }
 
     override fun quitApp(onFailed: () -> Unit) {

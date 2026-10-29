@@ -52,4 +52,6 @@
     <string name="stream_app_unknown">the running app</string>
     <!-- Shown while the host answers a quit; %1$s is the app. -->
     <string name="stream_quitting">Quitting %1$s…</string>
+    <!-- Shown while the connection ends after Disconnect; %1$s is the app, which keeps running. -->
+    <string name="stream_disconnecting">Disconnecting from %1$s…</string>
 </resources>

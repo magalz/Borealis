@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.library.shell
 
+import android.content.res.Resources
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -13,7 +14,8 @@ import kotlinx.coroutines.launch
 
 /**
  * Shows the notices of [quitNotice] in [snackbarHostState] while this is in the composition, and
- * only while the screen is started: a notice that comes before waits for it.
+ * only while the screen is started: a notice that comes before waits for it. A Quit says "App
+ * quit."; a Disconnect says that the app is still running on the PC.
  */
 @Composable
 internal fun ShowQuitNotice(quitNotice: QuitNotice, snackbarHostState: SnackbarHostState) {
@@ -25,14 +27,21 @@ internal fun ShowQuitNotice(quitNotice: QuitNotice, snackbarHostState: SnackbarH
     }
     LaunchedEffect(quitNotice, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            quitNotice.notices.collect {
+            quitNotice.notices.collect { notice ->
                 // A snackbar waits for its own end; the next notice must not wait with it.
-                launch {
-                    snackbarHostState.showSnackbar(
-                        resources.getString(R.string.apps_message_quit_done)
-                    )
-                }
+                launch { snackbarHostState.showSnackbar(resources.text(notice)) }
             }
         }
     }
 }
+
+private fun Resources.text(notice: LeaveNotice): String =
+    when (notice) {
+        LeaveNotice.Quit -> getString(R.string.apps_message_quit_done)
+        is LeaveNotice.Disconnected ->
+            if (notice.appName.isBlank()) {
+                getString(R.string.apps_message_disconnected_unknown)
+            } else {
+                getString(R.string.apps_message_disconnected, notice.appName)
+            }
+    }

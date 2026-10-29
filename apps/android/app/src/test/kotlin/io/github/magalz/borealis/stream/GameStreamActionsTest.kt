@@ -108,6 +108,7 @@ class GameStreamActionsTest {
                 builtFor += mode
                 if (mode == TouchMode.OFF) null else replacements
             },
+            stopConnection = {},
         )
 
     private fun actionsFor(target: Activity) =
@@ -230,13 +231,6 @@ class GameStreamActionsTest {
     @Test
     fun `leaving finishes the activity`() {
         actions.leave()
-
-        assertThat(activity.isFinishing).isTrue()
-    }
-
-    @Test
-    fun `disconnect finishes the activity`() {
-        actions.disconnect()
 
         assertThat(activity.isFinishing).isTrue()
     }
@@ -435,11 +429,10 @@ class GameStreamActionsTest {
     private fun endReasons() = audit.filter { it.type == AuditType.SESSION_END }.map { it.detail }
 
     @Test
-    fun `disconnect writes the session end with its own reason, then finishes`() {
-        actions.disconnect()
+    fun `disconnect writes the session end with its own reason at once`() {
+        actions.disconnect("Desktop")
 
         assertThat(endReasons()).containsExactly("reason=disconnect duration_s=0")
-        assertThat(activity.isFinishing).isTrue()
     }
 
     @Test

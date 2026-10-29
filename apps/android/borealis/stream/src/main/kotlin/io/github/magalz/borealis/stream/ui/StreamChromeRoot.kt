@@ -48,6 +48,7 @@ internal fun StreamChromeRoot(session: StreamSession, report: (Rect?) -> Unit, l
                 is StreamPhase.Failed ->
                     ConnectionErrorScreen(state.appName, state.hostName, phase.failure, session)
                 is StreamPhase.Quitting -> QuittingScreen(state.appName)
+                is StreamPhase.Disconnecting -> DisconnectingScreen(state.appName)
                 is StreamPhase.Streaming ->
                     StreamingLayer(state.appName, state.hostName, phase, perf, session)
             }

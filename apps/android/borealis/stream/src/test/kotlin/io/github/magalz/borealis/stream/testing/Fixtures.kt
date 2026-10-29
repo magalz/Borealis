@@ -48,4 +48,5 @@ fun aSession(
     actions: RecordingActions = RecordingActions(),
     defaults: StreamDefaults = aDefaults,
     dockKeyboard: () -> Boolean = { false },
-) = StreamSession("Desktop", "Gaming PC", defaults, dockKeyboard, actions)
+    clockMs: () -> Long = { 0L },
+) = StreamSession("Desktop", "Gaming PC", defaults, dockKeyboard, actions, clockMs)

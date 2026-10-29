@@ -82,7 +82,7 @@ class LibraryQuitNoticeTest {
     fun `a quit in the stream shows App quit on the Library, as wide as its text`() {
         launch()
 
-        quitNotice.post()
+        quitNotice.post(LeaveNotice.Quit)
         composeRule.waitForIdle()
 
         composeRule.onNodeWithText("App quit.").assertIsDisplayed()
@@ -90,9 +90,60 @@ class LibraryQuitNoticeTest {
     }
 
     @Test
+    fun `a disconnect in the stream says the app is still running, as wide as its text`() {
+        launch()
+
+        quitNotice.post(LeaveNotice.Disconnected("Desktop"))
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText(DISCONNECTED).assertIsDisplayed()
+        composeRule.onNodeWithText("App quit.").assertDoesNotExist()
+        composeRule.assertSnackbarIsAsWideAsItsText(DISCONNECTED)
+    }
+
+    @Test
+    fun `a disconnect from an app the stream has no name for says the app is still running`() {
+        launch()
+
+        quitNotice.post(LeaveNotice.Disconnected(""))
+        composeRule.waitForIdle()
+
+        composeRule
+            .onNodeWithText("Disconnected. The app is still running on the PC.")
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `the disconnect notice shows once and not again after the activity is recreated`() {
+        launch()
+        quitNotice.post(LeaveNotice.Disconnected("Desktop"))
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(DISCONNECTED).assertIsDisplayed()
+
+        scenario!!.recreate()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
+        composeRule.onNodeWithText(DISCONNECTED).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a disconnect notice left with no Library there is not shown by the next one`() {
+        launch()
+        scenario!!.close()
+        scenario = null
+
+        quitNotice.post(LeaveNotice.Disconnected("Desktop"))
+        launch()
+
+        composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
+        composeRule.onNodeWithText(DISCONNECTED).assertDoesNotExist()
+    }
+
+    @Test
     fun `the notice shows once and not again after the activity is recreated`() {
         launch()
-        quitNotice.post()
+        quitNotice.post(LeaveNotice.Quit)
         composeRule.waitForIdle()
         composeRule.onNodeWithText("App quit.").assertIsDisplayed()
 
@@ -108,7 +159,7 @@ class LibraryQuitNoticeTest {
         launch()
         scenario!!.moveToState(Lifecycle.State.CREATED)
 
-        quitNotice.post()
+        quitNotice.post(LeaveNotice.Quit)
         scenario!!.moveToState(Lifecycle.State.RESUMED)
         composeRule.waitForIdle()
 
@@ -121,10 +172,14 @@ class LibraryQuitNoticeTest {
         scenario!!.close()
         scenario = null
 
-        quitNotice.post()
+        quitNotice.post(LeaveNotice.Quit)
         launch()
 
         composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
         composeRule.onNodeWithText("App quit.").assertDoesNotExist()
+    }
+
+    private companion object {
+        const val DISCONNECTED = "Disconnected. Desktop is still running on the PC."
     }
 }

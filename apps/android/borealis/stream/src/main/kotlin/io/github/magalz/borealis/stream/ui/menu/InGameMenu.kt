@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +28,7 @@ import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -54,6 +56,12 @@ import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.ui.common.appLabel
 import io.github.magalz.borealis.stream.ui.common.onBackKey
 import io.github.magalz.borealis.stream.ui.common.onGamepadB
+import io.github.magalz.borealis.stream.ui.glass.LocalVideoGlass
+import io.github.magalz.borealis.stream.ui.glass.OnVideoGlass
+import io.github.magalz.borealis.stream.ui.glass.glassContentLayer
+import io.github.magalz.borealis.stream.ui.glass.recordsVideoBackdrop
+import io.github.magalz.borealis.stream.ui.glass.rememberVideoGlass
+import io.github.magalz.borealis.stream.ui.glass.videoGlassSurface
 
 private val HEADER_PADDING_HORIZONTAL = 16.dp
 private val HEADER_PADDING_TOP = 14.dp
@@ -75,6 +83,11 @@ private val HEADER_PADDING_BOTTOM = 8.dp
  * for everyone and closes a game (its texts say which). The menu stays drawn behind the popup but
  * is out of reach of the focus, the touch and the screen reader. Disconnect does not ask: the app
  * keeps running.
+ *
+ * The side panel and the popup are glass over a live blurred copy of the stream video where
+ * [videoGlass] is true and the device and the accessibility settings allow it (ADR 0061); the
+ * copies run for as long as the menu is open, and everywhere else the surface is solid. The text of
+ * the panel has the colours that keep 4.5:1 over that glass.
  */
 @Composable
 internal fun InGameMenu(
@@ -83,7 +96,9 @@ internal fun InGameMenu(
     phase: StreamPhase.Streaming,
     perf: PerfSnapshot?,
     intents: StreamIntents,
+    videoGlass: Boolean = true,
 ) {
+    val glass = rememberVideoGlass(videoGlass)
     var confirmingQuit by remember { mutableStateOf(false) }
     val quitFocus = remember { FocusRequester() }
     var backFromConfirmation by remember { mutableStateOf(false) }
@@ -101,48 +116,66 @@ internal fun InGameMenu(
     val header =
         if (appName.isBlank()) hostName
         else stringResource(R.string.stream_menu_header, appName, hostName)
-    Box(Modifier.fillMaxSize()) {
-        SidePanel(
-            onDismiss = intents::closePanel,
-            modifier =
-                Modifier.onGamepadB(intents::closePanel)
-                    .onBackKey(intents::closePanel)
-                    .inertWhen(confirmingQuit),
-        ) {
-            Column(
-                Modifier.windowInsetsPadding(
-                        WindowInsets.safeDrawing.only(
-                            WindowInsetsSides.Vertical + WindowInsetsSides.End
-                        )
-                    )
-                    .semantics { paneTitle = header }
+    Box(Modifier.fillMaxSize().recordsVideoBackdrop(glass)) {
+        CompositionLocalProvider(LocalVideoGlass provides glass) {
+            SidePanel(
+                onDismiss = intents::closePanel,
+                modifier =
+                    Modifier.onGamepadB(intents::closePanel)
+                        .onBackKey(intents::closePanel)
+                        .inertWhen(confirmingQuit),
+                panelBackground = glass?.let { Modifier.videoGlassSurface(it, RectangleShape) },
             ) {
-                Text(
-                    header,
-                    Modifier.padding(
-                            start = HEADER_PADDING_HORIZONTAL,
-                            top = HEADER_PADDING_TOP,
-                            end = HEADER_PADDING_HORIZONTAL,
-                            bottom = HEADER_PADDING_BOTTOM,
-                        )
-                        .semantics { heading() },
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                // The rows stay composed under the popup, out of reach, so what the user
-                // opened in them is still open when the popup goes.
-                MenuRows(
-                    appName,
-                    phase,
-                    perf,
-                    intents,
-                    quitFocus,
-                    onQuit = { confirmingQuit = true },
-                )
+                // The same composition whatever the glass is, so that nothing in the panel is
+                // composed again, and loses its focus and its state, when the battery saver
+                // changes it.
+                OnVideoGlass(glass) {
+                    MenuPanel(header, appName, phase, perf, intents, quitFocus) {
+                        confirmingQuit = true
+                    }
+                }
+            }
+            if (confirmingQuit) {
+                QuitConfirmation(appName, onCancel = cancelQuit, onQuit = intents::quitApp)
             }
         }
-        if (confirmingQuit) {
-            QuitConfirmation(appName, onCancel = cancelQuit, onQuit = intents::quitApp)
-        }
+    }
+}
+
+/** The header and the rows of the menu, inside its side panel. */
+@Composable
+private fun MenuPanel(
+    header: String,
+    appName: String,
+    phase: StreamPhase.Streaming,
+    perf: PerfSnapshot?,
+    intents: StreamIntents,
+    quitFocus: FocusRequester,
+    onQuit: () -> Unit,
+) {
+    // The layer, over the glass, is explained in glassContentLayer.
+    val onGlass = LocalVideoGlass.current != null
+    Column(
+        Modifier.glassContentLayer(onGlass)
+            .windowInsetsPadding(
+                WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical + WindowInsetsSides.End)
+            )
+            .semantics { paneTitle = header }
+    ) {
+        Text(
+            header,
+            Modifier.padding(
+                    start = HEADER_PADDING_HORIZONTAL,
+                    top = HEADER_PADDING_TOP,
+                    end = HEADER_PADDING_HORIZONTAL,
+                    bottom = HEADER_PADDING_BOTTOM,
+                )
+                .semantics { heading() },
+            style = MaterialTheme.typography.titleMedium,
+        )
+        // The rows stay composed under the popup, out of reach, so what the user
+        // opened in them is still open when the popup goes.
+        MenuRows(appName, phase, perf, intents, quitFocus, onQuit)
     }
 }
 

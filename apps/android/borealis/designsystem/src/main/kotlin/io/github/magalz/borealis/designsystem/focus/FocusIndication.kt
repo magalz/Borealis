@@ -24,6 +24,9 @@ import androidx.compose.ui.node.currentValueOf
 import androidx.compose.ui.node.invalidateDraw
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.BackdropHalo
+import io.github.magalz.borealis.designsystem.components.LocalTextHalo
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
@@ -41,6 +44,12 @@ import kotlinx.coroutines.launch
  * surface and the brightest backdrop of a glass panel (ADR 0057). With [scaleOnFocus] the element
  * also grows to [BorealisTokens.Focus.TileScale], animated unless animations are removed (Reduce
  * motion, or the system when that follows it).
+ *
+ * Under [io.github.magalz.borealis.designsystem.components.LocalTextHalo], which a screen sets over
+ * a surface that shows a picture it cannot measure (the glass over the video of a stream), the
+ * outline has a casing: a stroke 1.5dp wider on each side, in the `page` colour at the opacity of
+ * the halo. The outline keeps 3:1 (WCAG 1.4.11) against that, where against the lightest glass the
+ * accent-soft one is 1.39:1 and the thick one in ink 2.1:1. Without the hook there is no casing.
  *
  * The outline shows only when focus did not come from touch (keyboard input mode), so a tap on a
  * phone never leaves an outline behind. It is [shape] laid out on the rectangle grown by the offset
@@ -142,16 +151,22 @@ private class BorealisFocusNode(var shape: Shape, var scaleOnFocus: Boolean) :
                 layoutDirection,
                 this,
             )
+        val colors = currentValueOf(LocalBorealisColors)
+        val halo = currentValueOf(LocalTextHalo)
         translate(-grow, -grow) {
-            drawOutline(
-                outline,
-                focusOutlineColor(currentValueOf(LocalBorealisColors), thick),
-                style = Stroke(stroke),
-            )
+            if (halo != null) {
+                drawOutline(
+                    outline,
+                    BackdropHalo.color(colors.page, halo),
+                    style = Stroke(stroke + 2 * CASING.toPx()),
+                )
+            }
+            drawOutline(outline, focusOutlineColor(colors, thick), style = Stroke(stroke))
         }
     }
 
     private companion object {
         const val SCALE_MILLIS = 150
+        val CASING = 1.5.dp
     }
 }

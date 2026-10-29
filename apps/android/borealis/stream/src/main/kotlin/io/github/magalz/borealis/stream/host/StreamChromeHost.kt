@@ -12,6 +12,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.ComposeView
@@ -32,6 +33,8 @@ import io.github.magalz.borealis.stream.input.CaptureEnd
 import io.github.magalz.borealis.stream.input.ChromeChord
 import io.github.magalz.borealis.stream.input.MenuChordDetector
 import io.github.magalz.borealis.stream.ui.StreamChromeRoot
+import io.github.magalz.borealis.stream.ui.glass.LocalVideoSource
+import io.github.magalz.borealis.stream.ui.glass.PixelCopySource
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -48,6 +51,10 @@ import kotlinx.coroutines.launch
  *
  * The chrome draws with the [look] that the viewer chose, read by the caller when the stream
  * starts: a change of a setting during a stream shows in the next one.
+ *
+ * The in-game menu and its Quit popup are glass over a live copy of [streamView], which is the
+ * `SurfaceView` that the decoder renders to: the chrome gets the view as its video source, and it
+ * copies it only while the menu is open (ADR 0061).
  *
  * [onCaptured] runs when the chrome starts taking the input (the mode becomes MODAL): the caller
  * releases what is held and drops the pointer capture. [onReleased] runs, posted, when it stops:
@@ -97,9 +104,16 @@ class StreamChromeHost(
     private val pipListener =
         Consumer<PictureInPictureModeChangedInfo> { session.onPip(it.isInPictureInPictureMode) }
 
+    private val videoSource = PixelCopySource(streamView)
+
     private val composeView =
         ComposeView(activity).apply {
-            setContent { StreamChromeRoot(session, ::setMenuHandleBounds, look) }
+            setContent {
+                // The video that the menu glass copies is the stream view below this one.
+                CompositionLocalProvider(LocalVideoSource provides videoSource) {
+                    StreamChromeRoot(session, ::setMenuHandleBounds, look)
+                }
+            }
             // Compose cannot take the focus before its first layout (its root nodes are not
             // attached
             // yet), so the focus waits for it.

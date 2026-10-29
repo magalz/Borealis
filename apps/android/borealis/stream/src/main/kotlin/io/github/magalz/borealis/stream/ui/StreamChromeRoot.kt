@@ -9,6 +9,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.magalz.borealis.designsystem.adaptive.rememberFormFactor
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
+import io.github.magalz.borealis.stream.MenuGlass
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.StreamUiState
@@ -50,7 +51,14 @@ internal fun StreamChromeRoot(session: StreamSession, report: (Rect?) -> Unit, l
         CompositionLocalProvider(LocalMenuHandleBounds provides report) {
             val phase = state.phase
             if (phase is StreamPhase.Streaming) {
-                StreamingLayer(state.appName, state.hostName, phase, perf, session)
+                StreamingLayer(
+                    state.appName,
+                    state.hostName,
+                    phase,
+                    perf,
+                    session,
+                    videoGlass = state.visuals.menuGlass == MenuGlass.BLUR,
+                )
             } else {
                 OutsideGameBackground(state.visuals, state.decoderHeld) {
                     OutsideGameScreen(state, session)

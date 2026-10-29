@@ -2,6 +2,7 @@ package io.github.magalz.borealis.stream.game
 
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamControls
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
@@ -63,6 +64,30 @@ internal class GameStopThenTest : GameTestBase() {
     @Test
     fun `the session learns it too when the activity stops the connection`() {
         rig.streaming()
+
+        rig.stop()
+        ShadowLooper.idleMainLooper()
+
+        assertThat(rig.session.state.value.decoderHeld).isFalse()
+    }
+
+    @Test
+    fun `a start that failed after the decoder stage lets go of the decoder when it is stopped`() {
+        rig.create()
+        // The decoder is held from this stage on, and the connection never started.
+        rig.session.onStage(StartStage.PREPARING_DISPLAY)
+        assertThat(rig.session.state.value.decoderHeld).isTrue()
+
+        rig.game.stopConnectionThen {}
+        ShadowLooper.idleMainLooper()
+
+        assertThat(rig.session.state.value.decoderHeld).isFalse()
+    }
+
+    @Test
+    fun `the stop of an activity whose start failed lets go of the decoder too`() {
+        rig.create()
+        rig.session.onStage(StartStage.PREPARING_DISPLAY)
 
         rig.stop()
         ShadowLooper.idleMainLooper()

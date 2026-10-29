@@ -33,6 +33,7 @@ class MenuGlassApi30Test {
         glass.run(1_000)
 
         assertThat(glass.source!!.requests).isEmpty()
+        assertThat(powerSaveReceivers()).isEmpty()
         assertThat(glass.panel().leftPixel().red).isWithin(0.012f).of(BorealisColors().surface.red)
     }
 }

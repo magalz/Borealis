@@ -1,15 +1,12 @@
 package io.github.magalz.borealis.stream.ui.glass
 
-import android.app.Application
 import android.graphics.Color as AndroidColor
-import android.os.PowerManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.requestFocus
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
@@ -21,7 +18,6 @@ import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
@@ -128,11 +124,6 @@ class MenuGlassRulesTest {
 
     // The battery saver
 
-    private fun powerSaveReceivers() =
-        shadowOf(ApplicationProvider.getApplicationContext<Application>())
-            .registeredReceivers
-            .filter { it.intentFilter.hasAction(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED) }
-
     @Test
     fun `the glass listens for the battery saver, once`() {
         showsGlass()
@@ -145,6 +136,15 @@ class MenuGlassRulesTest {
         glass.videoGlass = false
         glass.show()
         glass.run(100)
+
+        assertThat(powerSaveReceivers()).isEmpty()
+    }
+
+    @Test
+    fun `a stream with no video registers no receiver for the battery saver`() {
+        val noVideo = GlassFixture(composeRule, source = null)
+        noVideo.show()
+        noVideo.run(100)
 
         assertThat(powerSaveReceivers()).isEmpty()
     }

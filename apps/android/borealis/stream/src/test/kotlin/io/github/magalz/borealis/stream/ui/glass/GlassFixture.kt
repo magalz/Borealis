@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.stream.ui.glass
 
+import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Looper
@@ -158,3 +159,9 @@ internal fun setPowerSave(on: Boolean) {
     context.sendBroadcast(Intent(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED))
     shadowOf(Looper.getMainLooper()).idle()
 }
+
+/** The receivers of the battery saver that the app has registered now. */
+internal fun powerSaveReceivers() =
+    shadowOf(ApplicationProvider.getApplicationContext<Application>()).registeredReceivers.filter {
+        it.intentFilter.hasAction(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
+    }

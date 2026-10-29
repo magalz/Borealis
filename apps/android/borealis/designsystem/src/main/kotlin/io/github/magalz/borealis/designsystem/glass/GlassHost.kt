@@ -70,6 +70,8 @@ internal val LocalGlassScene = staticCompositionLocalOf {
 fun GlassHost(
     backgroundStyle: BackgroundStyle,
     modifier: Modifier = Modifier,
+    frozen: Boolean = false,
+    clipsPlay: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     GlassHostOver(backgroundStyle, { HostBackground(backgroundStyle) }, modifier, content)

@@ -1,11 +1,9 @@
 package io.github.magalz.borealis.stream.ui.glass
 
 import android.os.Build
-import androidx.compose.ui.graphics.Color
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.theme.AccentChoice
-import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.ColourVision
 import io.github.magalz.borealis.designsystem.theme.Transparency
@@ -14,9 +12,9 @@ import org.junit.Test
 
 /**
  * What the glass over the stream video is, and when it is not there (ADR 0061, decisions 3 and 4):
- * the tint and the blur of the viewer's transparency level, raised to the tint under which no text
- * colour of the menu keeps 4.5:1 over the whitest frame a video can show, and the rules that make
- * it a solid surface.
+ * the tint and the blur of the viewer's transparency level as they are, and the rules that make it
+ * a solid surface. The text on it stands on a halo and not on a heavier tint, so the tint is never
+ * raised for the contrast.
  */
 class VideoGlassSpecTest {
     private fun spec(
@@ -36,18 +34,19 @@ class VideoGlassSpecTest {
     // The tint and the blur
 
     @Test
-    fun `Standard blurs by the radius of the look`() {
-        assertThat(glassOf(BorealisLook(glassBlurDp = 24)).blurDp).isEqualTo(24)
+    fun `Standard is the tint and the blur of the look, 40 percent at 8 dp by default`() {
+        val glass = glassOf()
+
+        assertThat(glass.tintPercent).isEqualTo(40)
+        assertThat(glass.blurDp).isEqualTo(8)
     }
 
     @Test
-    fun `Standard keeps a tint above the floor as the viewer chose it`() {
-        assertThat(glassOf(BorealisLook(glassTintPercent = 95)).tintPercent).isEqualTo(95)
-    }
+    fun `Standard follows the tint and the blur that the viewer chose`() {
+        val glass = glassOf(BorealisLook(glassTintPercent = 70, glassBlurDp = 24))
 
-    @Test
-    fun `Standard at the default tint is raised to the floor of the whitest frame, 83 percent`() {
-        assertThat(glassOf().tintPercent).isEqualTo(DEFAULT_FLOOR)
+        assertThat(glass.tintPercent).isEqualTo(70)
+        assertThat(glass.blurDp).isEqualTo(24)
     }
 
     @Test
@@ -56,6 +55,17 @@ class VideoGlassSpecTest {
 
         assertThat(glass.tintPercent).isEqualTo(85)
         assertThat(glass.blurDp).isEqualTo(48)
+    }
+
+    @Test
+    fun `the tint is the viewer's whatever the accent or the palette, it is never raised`() {
+        for (accent in AccentChoice.entries) {
+            for (vision in ColourVision.entries) {
+                val glass = glassOf(BorealisLook(accent = accent, colourVision = vision))
+
+                assertWithMessage("$accent $vision").that(glass.tintPercent).isEqualTo(40)
+            }
+        }
     }
 
     // The rules that make it solid
@@ -90,76 +100,29 @@ class VideoGlassSpecTest {
         assertThat(spec(batterySaver = true)).isNull()
     }
 
-    // The contrast
-
-    private fun looks(): List<BorealisLook> =
-        listOf(Transparency.Standard, Transparency.Reduced).flatMap { level ->
-            AccentChoice.entries.flatMap { accent ->
-                ColourVision.entries.flatMap { vision ->
-                    listOf(0, 40, 70, 100).map { tint ->
-                        BorealisLook(
-                            transparency = level,
-                            accent = accent,
-                            colourVision = vision,
-                            glassTintPercent = tint,
-                        )
-                    }
-                }
-            }
-        }
-
-    /** What the menu and the popup draw as text over the glass, and the ratio each one has. */
-    private fun BorealisColors.textOver(backdrop: Color) =
-        mapOf(
-            "ink" to contrastOver(ink, wcagLuminance(backdrop)),
-            "ink-2" to contrastOver(ink2, wcagLuminance(backdrop)),
-            "ink-3" to contrastOver(ink3, wcagLuminance(backdrop)),
-            "ink-4" to contrastOver(ink4, wcagLuminance(backdrop)),
-            "accent-soft" to contrastOver(accentSoft, wcagLuminance(backdrop)),
-            "danger-ink" to contrastOver(dangerInk, wcagLuminance(backdrop)),
-            "accent-soft on the selected tint" to
-                contrastOver(accentSoft, wcagLuminance(selectedOver(this, backdrop))),
-        )
+    // The text colours
 
     @Test
-    fun `over the whitest frame every text colour keeps 4_5 to 1 for every accent, palette and tint`() {
-        for (look in looks()) {
-            val glass = glassOf(look)
-            val backdrop = whitestBackdrop(glass.colors, glass.tintPercent)
-
-            for ((role, ratio) in glass.colors.textOver(backdrop)) {
-                assertWithMessage("${look.accent} ${look.colourVision} $role")
-                    .that(ratio)
-                    .isAtLeast(AA_RATIO)
-            }
-        }
-    }
-
-    @Test
-    fun `the floor is the lowest tint that does, one percent less leaves a text colour short`() {
-        val colors = borealisColors(BorealisLook())
-        val lower = whitestBackdrop(colors, glassOf().tintPercent - 1)
-        // The glass is worked out for 4.5:1 with 2 percent to spare, as GlassRules does; ink-3
-        // and ink-4 are moved to keep it at any tint, so the floor is about the others.
-        val unchanged = colors.textOver(lower).filterKeys { it != "ink-3" && it != "ink-4" }
-
-        assertThat(unchanged.values.min()).isLessThan(AA_RATIO * AA_MARGIN)
-    }
-
-    @Test
-    fun `the glass keeps ink and ink-2 as they are, and lightens ink-3 and ink-4 toward ink`() {
+    fun `on the glass ink-3 and ink-4 are ink-2, as on a background with a halo, and the rest stay`() {
         val tokens = borealisColors(BorealisLook())
         val glass = glassOf().colors
 
+        assertThat(glass.ink3).isEqualTo(tokens.ink2)
+        assertThat(glass.ink4).isEqualTo(tokens.ink2)
         assertThat(glass.ink).isEqualTo(tokens.ink)
         assertThat(glass.ink2).isEqualTo(tokens.ink2)
-        assertThat(wcagLuminance(glass.ink3)).isGreaterThan(wcagLuminance(tokens.ink3))
-        assertThat(wcagLuminance(glass.ink4)).isGreaterThan(wcagLuminance(tokens.ink4))
-        assertThat(wcagLuminance(glass.ink3)).isAtMost(wcagLuminance(tokens.ink))
+        assertThat(glass.accentSoft).isEqualTo(tokens.accentSoft)
+        assertThat(glass.dangerInk).isEqualTo(tokens.dangerInk)
     }
 
-    private companion object {
-        /** `design/accessibility/test_contrast.py` pins the same figure, from the tool's maths. */
-        const val DEFAULT_FLOOR = 83
+    @Test
+    fun `what sits on the solid surface keeps the colours of the look, ink-3 included`() {
+        for (accent in AccentChoice.entries) {
+            val look = BorealisLook(accent = accent)
+
+            assertWithMessage("$accent")
+                .that(glassOf(look).surfaceColors)
+                .isEqualTo(borealisColors(look))
+        }
     }
 }

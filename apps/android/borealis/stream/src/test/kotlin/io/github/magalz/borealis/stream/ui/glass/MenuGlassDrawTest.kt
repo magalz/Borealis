@@ -1,17 +1,11 @@
 package io.github.magalz.borealis.stream.ui.glass
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.test.hasAnyAncestor
-import androidx.compose.ui.test.hasText
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
-import com.google.common.truth.Truth.assertWithMessage
-import io.github.magalz.borealis.designsystem.testing.textColor
-import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
-import io.github.magalz.borealis.designsystem.theme.BorealisLook
-import io.github.magalz.borealis.designsystem.theme.borealisColors
 import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import org.junit.Rule
 import org.junit.Test
@@ -38,13 +32,12 @@ class MenuGlassDrawTest {
     }
 
     /**
-     * [pixel] is the `surface` colour at a tint over a red frame: the tint is the viewer's 40
-     * percent or more (the floor raises it), and the other channels follow from it.
+     * [pixel] is the `surface` colour at the tint of the look over a red frame: 40 percent, as the
+     * viewer chose, and the other channels follow from it.
      */
     private fun assertGlassOverRed(pixel: Color) {
         val tint = (1f - pixel.red) / (1f - surface.red)
-        assertThat(tint).isAtLeast(0.4f)
-        assertThat(tint).isAtMost(1f)
+        assertThat(tint).isWithin(TINT_TOLERANCE).of(0.4f)
         assertThat(pixel.green).isWithin(TOLERANCE).of(surface.green * tint)
         assertThat(pixel.blue).isWithin(TOLERANCE).of(surface.blue * tint)
     }
@@ -107,59 +100,30 @@ class MenuGlassDrawTest {
         assertGlassOverRed(glass.popup().rightPixel())
     }
 
-    // Text over the whitest frame
+    // The lightest frame
 
     @Test
-    fun `over a white frame the text of the menu keeps 4_5 to 1, in the colours that are drawn`() {
+    fun `over a white frame the panel and the popup are the lightest glass of 40 percent, no more`() {
         val source = FakeVideoSource(frameColor = android.graphics.Color.WHITE, completing = true)
         val glass = fixture(source)
         glass.show()
         glass.run(100)
-        val pixel = glass.panel().leftPixel()
-        // The video shows through: this is not the solid surface.
-        assertThat(pixel.red).isGreaterThan(surface.red + 0.05f)
-        val colors = borealisColors(BorealisLook())
-        val drawn =
-            mapOf(
-                "ink" to colors.ink,
-                "ink-2" to colors.ink2,
-                "accent-soft" to colors.accentSoft,
-                "danger-ink" to colors.dangerInk,
-                "the secondary text of a row, as drawn" to composeRule.textColor(REFRESH_NOTE),
-            )
+        // The surface at 40 percent over white: what the halo of the text is measured over.
+        val lightest = surface.copy(alpha = 0.4f).compositeOver(Color.White)
 
-        for ((role, color) in drawn) {
-            assertWithMessage(role)
-                .that(contrastOver(color, wcagLuminance(pixel)))
-                .isAtLeast(AA_RATIO)
-        }
-        assertThat(composeRule.textColor(REFRESH_NOTE)).isNotEqualTo(colors.ink3)
+        assertNear(glass.panel().leftPixel(), lightest)
+        glass.openQuitPopup()
+        assertNear(glass.popup().rightPixel(), lightest)
     }
 
-    @Test
-    fun `the secondary text of the Quit popup keeps 4_5 to 1 over a white frame`() {
-        val source = FakeVideoSource(frameColor = android.graphics.Color.WHITE, completing = true)
-        val glass = fixture(source)
-        glass.show()
-        glass.run(100)
-        glass.openQuitPopup()
-        val pixel = glass.popup().rightPixel()
-        assertThat(pixel.red).isGreaterThan(surface.red + 0.05f)
-        // The menu has the same sentence under its Quit row, out of reach behind the popup.
-        val body =
-            composeRule.onNode(
-                hasText(QUIT_BODY) and hasAnyAncestor(glass.popupMatcher()),
-                useUnmergedTree = true,
-            )
-
-        val color = body.textLayout().layoutInput.style.color
-
-        assertThat(contrastOver(color, wcagLuminance(pixel))).isAtLeast(AA_RATIO)
-        assertThat(color).isNotEqualTo(borealisColors(BorealisLook()).ink3)
+    private fun assertNear(pixel: Color, expected: Color) {
+        assertThat(pixel.red).isWithin(TOLERANCE).of(expected.red)
+        assertThat(pixel.green).isWithin(TOLERANCE).of(expected.green)
+        assertThat(pixel.blue).isWithin(TOLERANCE).of(expected.blue)
     }
 
     private companion object {
-        const val QUIT_BODY = "Ends the stream.\nThe display and controls go back to the PC."
+        const val TINT_TOLERANCE = 0.02f
         const val TOLERANCE = 0.012f
     }
 }

@@ -655,82 +655,91 @@ class GlassColoursTest(unittest.TestCase):
         self.assertEqual(out.getvalue().strip(), contrast.glass_colour_tables(self.table).strip())
 
 
-class VideoGlassWorstFrameTest(unittest.TestCase):
-    """The glass over the stream video (ADR 0061, decision 4), measured by the tool's own glass.
+class VideoGlassHaloTest(unittest.TestCase):
+    """The text on the glass over the stream video (ADR 0061, decision 4), measured by the tool.
 
-    The video behind the menu is any frame, so the tint is chosen for the lightest one: a white
-    frame, which a blur leaves white and no other frame is lighter than. `VideoGlassSpecTest` pins
-    the floor that the app works out; this is the same figure from the tool's blur, tint and WCAG
-    maths, over a white frame, a busy bright one and a dark one. The frame is a quarter of the
-    stream, as the copy is, so a radius of 8 dp at xhdpi, 16 px, is 4 px.
+    The glass is the viewer's 40 percent of `surface` over the video, and the video is any frame.
+    The text on it has a halo, the halo of the text on a background but at the opacity of 100 %.
+    This takes the lightest frame there is, a white one, and a busy bright one of squares of white
+    and black, lays the glass of the app on them (a blur of 8 dp on the copy, which is a fourth of
+    the video, and the tint), and asks the tool's own model of the halo what the text keeps over
+    its ring: the least ratio over every colour of the frame with every alpha of the ring, as
+    `halo` takes it. The segmented controls are on the `surface` colour, which no frame reaches.
+    `MenuGlassHaloTest` and `TextHaloTest` of the app read the same in what is drawn.
     """
 
-    # The floor that VideoGlassSpecTest pins for the default look (violet, Standard).
-    FLOOR = 83
+    TINT = 0.40
     BLUR_PX = 4
+    # The halo that the app draws on the glass: 3 dp wide, a blur of 2 dp, and 100 % opaque.
+    HALO = (3, 2, 1.0)
     TEXTS = ("ink", "ink-2", "accent-soft", "danger-ink")
+    DEVICES = ("phone", "tv")
 
     def setUp(self):
         self.colors = contrast.load_colors(TOKENS, (*WORDS, "danger-ink", "accent-tint"))
         self.surface = contrast.parse_hex(self.colors["surface"])
-
-    def backdrop(self, frame, percent):
-        """The glass at `percent` over `frame`, as the relative luminance of every pixel."""
-        glass = contrast.glass(frame, self.surface, percent / 100, self.BLUR_PX)
-        return glass, contrast.relative_luminance(glass)
-
-    def ratios(self, glass, luminance):
-        """The lowest ratio of each text colour of the menu, over every pixel of the glass."""
-        out = {}
-        for token in self.TEXTS:
-            text = float(contrast.relative_luminance(contrast.parse_hex(self.colors[token][:7])))
-            out[token] = contrast.contrast_stats(luminance, text)["min"]
-        # The selected label: accent-soft over the tint of the accent laid on the glass.
-        rgb, alpha = contrast.parse_rgba(self.colors["accent-tint"])
-        laid = contrast.relative_luminance(alpha * rgb + (1 - alpha) * glass)
-        soft = float(contrast.relative_luminance(contrast.parse_hex(self.colors["accent-soft"])))
-        out["accent-soft on the selected tint"] = contrast.contrast_stats(laid, soft)["min"]
-        # ink-3 and ink-4 are moved toward ink by the glass until they keep it.
-        target = contrast.glass_text_target(float(luminance.max()))
-        for token in ("ink-3", "ink-4"):
-            walked = contrast.walk_colour(self.colors[token], self.colors["ink"], target)
-            text = float(contrast.relative_luminance(contrast.parse_hex(walked)))
-            out[token] = contrast.contrast_stats(luminance, text)["min"]
-        return out
-
-    def white(self):
-        return uniform(480, 270, (1.0, 1.0, 1.0))
-
-    def test_every_text_keeps_4_5_over_a_white_frame_at_the_floor(self):
-        glass, luminance = self.backdrop(self.white(), self.FLOOR)
-        for token, ratio in self.ratios(glass, luminance).items():
-            with self.subTest(token=token):
-                self.assertGreaterEqual(ratio, 4.5)
-
-    def test_a_text_falls_short_two_percent_under_the_floor(self):
-        glass, luminance = self.backdrop(self.white(), self.FLOOR - 2)
-        shorts = [t for t, ratio in self.ratios(glass, luminance).items() if ratio < 4.5]
-        # The check can fail: it is the red of the Quit row, danger-ink, that is the first to.
-        self.assertEqual(shorts, ["danger-ink"])
-
-    def test_a_busy_bright_frame_is_no_lighter_than_a_white_one(self):
-        # Squares of white and black, 8 px: the blur mixes them, and none of the glass is lighter.
-        busy = self.white()
+        self.page = contrast.parse_hex(self.colors["page"])
+        self.lights = {
+            token: float(contrast.relative_luminance(contrast.parse_hex(self.colors[token][:7])))
+            for token in self.TEXTS
+        }
+        white = uniform(400, 800, (1.0, 1.0, 1.0))
+        busy = white.copy()
         busy[(np.indices(busy.shape[:2]).sum(axis=0) // 8) % 2 == 1] = 0.0
-        _, whitest = self.backdrop(self.white(), self.FLOOR)
-        glass, luminance = self.backdrop(busy, self.FLOOR)
-        self.assertLessEqual(float(luminance.max()), float(whitest.max()))
-        for token, ratio in self.ratios(glass, luminance).items():
-            with self.subTest(token=token):
-                self.assertGreaterEqual(ratio, 4.5)
+        self.frames = {
+            name: contrast.frame_colours(contrast.glass(frame, self.surface, self.TINT, self.BLUR_PX))
+            for name, frame in (("white", white), ("busy", busy))
+        }
 
-    def test_a_dark_frame_keeps_every_text_at_the_tint_of_the_look_under_the_floor(self):
-        # The floor is about bright frames: a dark one is legible at the 40 % of the default look.
-        black = uniform(480, 270, (0.0, 0.0, 0.0))
-        glass, luminance = self.backdrop(black, 40)
-        for token, ratio in self.ratios(glass, luminance).items():
+    def worst(self, config):
+        """The least ratio of each text colour with `config` over every frame, device and style."""
+        found = {}
+        for device in self.DEVICES:
+            for text in contrast.HALO_TEXTS:
+                geometry = contrast.halo_geometry(text, device)
+                alphas = geometry.alphas[geometry.configs.index(config)]
+                for colours in self.frames.values():
+                    for token in self.TEXTS:
+                        ratio = contrast.halo_worst_ratio(
+                            colours, (alphas.min(), alphas.max()), self.page, self.lights[token]
+                        )
+                        found[token] = min(found.get(token, ratio), ratio)
+        return found
+
+    def test_every_text_keeps_4_5_over_the_lightest_glass_with_the_halo(self):
+        for token, ratio in self.worst(self.HALO).items():
             with self.subTest(token=token):
-                self.assertGreaterEqual(ratio, 4.5)
+                self.assertGreaterEqual(ratio, 4.5 * contrast.HALO_MARGIN)
+
+    def test_without_a_halo_the_text_falls_short_over_it(self):
+        # The check can fail: ink is 2.1:1 over the glass of 40 % over white, ink-2 1.5:1.
+        for token, ratio in self.worst(contrast.HALO_NONE).items():
+            with self.subTest(token=token):
+                self.assertLess(ratio, 4.5)
+
+    def test_the_halo_of_the_text_on_a_background_falls_short_for_the_danger_ink_on_a_tv(self):
+        # The halo of the Library, 3 dp, 2 dp, 80 %, keeps ink and ink-2 but the red of the Quit row
+        # is 4.40:1 on a TV, which is why the glass takes 100 %.
+        worst = self.worst((3, 2, 0.8))
+        self.assertLess(worst["danger-ink"], 4.5)
+        self.assertGreaterEqual(worst["ink"], 4.5)
+        self.assertGreaterEqual(worst["ink-2"], 4.5)
+
+    def test_it_is_the_smallest_candidate_of_the_grid_that_keeps_all_four(self):
+        passing = [
+            config
+            for config in contrast.halo_configs()
+            if min(self.worst(config).values()) >= 4.5 * contrast.HALO_MARGIN
+        ]
+        self.assertEqual(passing[0], self.HALO)
+
+    def test_the_labels_of_a_segmented_control_keep_4_5_over_their_solid_container(self):
+        # An unselected label is ink-3 on the surface; the selected one is accent-soft over the
+        # tint of the accent on the surface.
+        self.assertGreaterEqual(contrast.hex_contrast(self.colors["ink-3"], self.colors["surface"]), 4.5)
+        laid = contrast.over(self.colors["accent-tint"], self.surface)
+        soft = contrast.parse_hex(self.colors["accent-soft"])
+        self.assertGreaterEqual(contrast.rgb_contrast(soft, laid), 4.5)
 
 
 class HaloGridTest(unittest.TestCase):

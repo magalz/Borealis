@@ -30,7 +30,12 @@ private const val WALK_STEPS = 100
  * blurred by [blurDp], with the text [colors] that keep 4.5:1 over it.
  */
 @Immutable
-internal class VideoGlassSpec(val tintPercent: Int, val blurDp: Int, val colors: BorealisColors)
+internal class VideoGlassSpec(
+    val tintPercent: Int,
+    val blurDp: Int,
+    val colors: BorealisColors,
+    val surfaceColors: BorealisColors = colors,
+)
 
 /**
  * The glass over the stream video for a viewer's [look], or null where the surface is solid (ADR
